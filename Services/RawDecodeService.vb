@@ -2234,6 +2234,16 @@ Namespace Services
         Private Shared _cachedRawDemosaic As Integer = -1
         Private Shared _cachedRawUnclip As Boolean = True
         Private Shared _cachedRawColorPath As Integer = -1
+        ''' <summary>Haelt der Speicher die halbe Kantenlaenge? Nur unter
+        ''' <see cref="HalfSizeRawCacheForMeasurement"/>, sonst immer False.</summary>
+        Private Shared _cachedRawHalf As Boolean
+
+        ''' <summary>Messschalter: auch die halbe Kantenlaenge in den 16-Bit-Zwischenspeicher legen,
+        ''' damit eine Messung (Diagnostics/Rohmessung) dieselbe Datei mit verschiedener
+        ''' Grundbelichtung umsetzen kann, ohne LibRaw erneut laufen zu lassen. Ab Werk aus: in der
+        ''' Anwendung verdraengte eine Kachel sonst die linearen Daten des offenen Bilds. Der
+        ''' Schluessel unterscheidet beide Groessen, ein halbes Bild kommt nie als Arbeitsbild heraus.</summary>
+        Friend Shared HalfSizeRawCacheForMeasurement As Boolean = False
 
         ''' <summary>Die Schalter, die VOR dem Sichern der linearen Daten auf die Farbe wirken, als
         ''' eine Zahl fuer den Schluessel des Zwischenspeichers.</summary>
@@ -2253,6 +2263,7 @@ Namespace Services
             End Try
             SyncLock _cacheLock
                 Return _cachedRawBytes IsNot Nothing AndAlso
+                       Not _cachedRawHalf AndAlso
                        String.Equals(_cachedRawPath, path, StringComparison.Ordinal) AndAlso
                        _cachedRawWriteTimeUtc = writeTime AndAlso
                        _cachedRawDemosaic = ConfiguredDemosaic() AndAlso
@@ -2355,12 +2366,14 @@ Namespace Services
         ''' der Zwischenspeicher eine andere Datei haelt.</summary>
         Private Shared Function TryBuildFromCachedRaw(path As String, writeTime As DateTime, demosaic As Integer,
                                                       lens As LensDataService.Korrektur,
-                                                      baseEv As Double, knee As Double, sliderEv As Double) As SKBitmap
+                                                      baseEv As Double, knee As Double, sliderEv As Double,
+                                                      halfSize As Boolean) As SKBitmap
             Dim bytes As Byte() = Nothing
             Dim width = 0, height = 0
             Dim normalization = 1.0
             SyncLock _cacheLock
                 If _cachedRawBytes Is Nothing Then Return Nothing
+                If _cachedRawHalf <> halfSize Then Return Nothing
                 If Not String.Equals(_cachedRawPath, path, StringComparison.Ordinal) Then Return Nothing
                 If _cachedRawWriteTimeUtc <> writeTime OrElse _cachedRawDemosaic <> demosaic Then Return Nothing
                 If _cachedRawUnclip <> ConfiguredHighlightUnclip() Then Return Nothing
@@ -3032,17 +3045,19 @@ Namespace Services
             ' ZUERST DER 16-BIT-ZWISCHENSPEICHER. Alles, was die Rampe steuert, wird erst in
             ' Convert16 angewandt; liegen die linearen Daten noch da, ist ein LibRaw-Lauf
             ' vergeudet. Die halbe Kantenlaenge bleibt aussen vor: sie hat eine andere Groesse
-            ' und darf nie als Arbeitsbild herauskommen.
+            ' und darf nie als Arbeitsbild herauskommen (ausser unter dem Messschalter
+            ' HalfSizeRawCacheForMeasurement, dann mit eigenem Schluessel).
             ' sliderEv: der Anteil des Belichtungsreglers an baseEv (ToneRampFor).
             Dim wantedKnee = If(recoverHighlights, knee, 1.0)
             DiagnosticLogService.LogAlways("RawDecodeService.HighlightRecovery",
                 $"request file={IO.Path.GetFileName(path)}; enabled={recoverHighlights}; knee={wantedKnee:F2}; half={useHalfSize}")
             Dim writeTime As DateTime = Nothing
             Dim demosaic = ConfiguredDemosaic()
-            If Not useHalfSize Then
+            Dim keepRaw = Not useHalfSize OrElse HalfSizeRawCacheForMeasurement
+            If keepRaw Then
                 Try
                     writeTime = File.GetLastWriteTimeUtc(path)
-                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, sliderEv)
+                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, sliderEv, useHalfSize)
                     If reused IsNot Nothing Then
                         Threading.Interlocked.Increment(RawCacheHits)
                         DiagnosticLogService.LogAlways("RawDecodeService.RawCache", "Treffer, LibRaw uebersprungen")
@@ -3302,8 +3317,8 @@ Namespace Services
                     ' DIE LINEAREN DATEN ZUERST SICHERN, dann daraus umsetzen. Der Umweg ueber
                     ' den eigenen Puffer kostet eine Kopie (bei 24 Megapixeln rund 145 MB) und
                     ' spart dafuer jeden weiteren LibRaw-Lauf, solange dieselbe Datei offen ist.
-                    ' Die halbe Kantenlaenge wird NICHT abgelegt.
-                    If Not useHalfSize Then
+                    ' Die halbe Kantenlaenge wird NICHT abgelegt (ausser unter dem Messschalter).
+                    If keepRaw Then
                         Try
                             Dim keep(CInt(pixelCount * 3L * 2L) - 1) As Byte
                             Marshal.Copy(pixels, keep, 0, keep.Length)
@@ -3317,6 +3332,7 @@ Namespace Services
                                 _cachedRawDemosaic = demosaic
                                 _cachedRawUnclip = ConfiguredHighlightUnclip()
                                 _cachedRawColorPath = ColorPathState()
+                                _cachedRawHalf = useHalfSize
                             End SyncLock
                             DiagnosticLogService.LogAlways("RawDecodeService.RawCache",
                                 $"abgelegt, {keep.Length \ (1024 * 1024)} MB")

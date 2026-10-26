@@ -206,11 +206,8 @@ Namespace Services
             If source Is Nothing OrElse adj Is Nothing Then Return source
             Dim chain = BuildPointOpChain(adj, source, toneReference)
             If chain.IsIdentity Then Return source
-            ' Der Messversuch im ProPhoto-HSV hat keinen Shader: dann immer auf dem Prozessor.
-            If Not (MixerInProPhoto AndAlso chain.Hsl IsNot Nothing) Then
-                Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
-                If onGpu IsNot Nothing Then Return onGpu
-            End If
+            Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
+            If onGpu IsNot Nothing Then Return onGpu
             Return RunPointOpChain(source, chain)
         End Function
 
@@ -1580,8 +1577,10 @@ Namespace Services
         ''' <summary>MESSVERSUCH, ab Werk aus: der Farbmischer im HSV von LINEAREM ProPhoto statt in
         ''' HSL von sRGB. Zwei Messungen am Referenzprogramm (Fremdprojekte RAWMAKASE.md, Punkt 23,
         ''' und RAPIDONE.md) legen ihn dort hin: ein Farbtonregler laesst HSV-Saettigung und Wert
-        ''' in diesem Raum unveraendert. Gesetzt nur von der Reglereichung (REGLER_MISCHER_PROPHOTO);
-        ''' die Grafikkarte kennt den Zweig nicht.
+        ''' in diesem Raum unveraendert. Gesetzt nur von der Reglereichung (REGLER_MISCHER_PROPHOTO)
+        ''' und von der Vergleichspruefung Diagnostics/Mischershader; in der Anwendung bleibt er aus.
+        ''' Der Shader rechnet den Zweig mit (mixerProPhotoPixel), solange die Kodierung linear bleibt
+        ''' und die Luminanz auf dem alten Weg (CanRunPointOpChainShader).
         '''
         ''' Die Bandmitten sind die Nennwerte des Referenzprogramms im ProPhoto-HSV; fuenf der acht
         ''' gemessenen Mitten in sRGB-HSL (ReferenceBandFrom) sind deren Abbild auf 2 bis 5 Grad.
@@ -1604,6 +1603,8 @@ Namespace Services
         ''' <summary>Zusaetzlich das Tor des alten Wegs an der echten Buntheit in sRGB (siehe
         ''' ApplyMixerInProPhoto).</summary>
         Friend Shared MixerProPhotoChromaGate As Boolean = True
+        ''' <summary>Buntheit, ab der dieses Tor voll oeffnet (wie im alten Weg 0,2).</summary>
+        Friend Shared MixerProPhotoChromaGateFull As Double = 0.2
         ''' <summary>Staerken JE BAND (Rot, Orange, Gelb, Gruen, Aqua, Blau, Lila, Magenta), mal den
         ''' Gesamtwerten oben. Aus der zweiten Runde (2026-10-25, 57 Bilder, je Stellung +-60): der
         ''' Kehrwert des gemessenen Faktors. Aqua beim Farbton auf 2,5 gedeckelt (gemessen 0,25, der
@@ -1700,7 +1701,7 @@ Namespace Services
                 ' Rauschen gross; ohne dieses Tor faerbte Cool Glow die dunklen Flaechen der
                 ' Konzertbilder rot (Tiefen R +8 statt +4 gegen den Export).
                 Dim chroma = Math.Max(guideR, Math.Max(guideG, guideB)) - Math.Min(guideR, Math.Min(guideG, guideB))
-                Dim cg = Math.Min(1.0, Math.Max(0.0, chroma) / 0.2)
+                Dim cg = Math.Min(1.0, Math.Max(0.0, chroma) / MixerProPhotoChromaGateFull)
                 gate *= cg * cg * (3.0 - 2.0 * cg)
             End If
             If gate <= 0.0 Then Return

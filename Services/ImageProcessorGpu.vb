@@ -281,7 +281,11 @@ Namespace Services
         Private Const RowRawStageTone As Integer = 18
         Private Const RowRawShadow As Integer = 19
         Private Const RowToneChroma As Integer = 20
-        Private Const ShaderTableRows As Integer = 21
+        ' Nur mit dem Farbmischer im ProPhoto-HSV (chain.HslReference gesetzt): die Entsaettigung der
+        ' Baender auf dem alten Weg. Die Zeilen 11 und 12 tragen dann Farbton und Saettigung ueber dem
+        ' Farbton im ProPhoto-HSV, Zeile 13 die Luminanz des alten Wegs.
+        Private Const RowHslDownSat As Integer = 21
+        Private Const ShaderTableRows As Integer = 22
 
         Private Shared _pointOpEffect As SKRuntimeEffect
         Private Shared ReadOnly _pointOpEffectLock As New Object()
@@ -301,6 +305,9 @@ Namespace Services
             End If
             If chain.CubeTable IsNot Nothing AndAlso chain.CubeSize * chain.CubeSize > 16384 Then
                 reason = $"Cube-LUT mit {chain.CubeSize} Stufen" : Return False
+            End If
+            If chain.HslReference IsNot Nothing AndAlso (MixerProPhotoEncoding <> 0 OrElse Not MixerProPhotoLumFromHsl) Then
+                reason = "Farbmischer im ProPhoto-HSV mit Messschalter ohne Shader" : Return False
             End If
             Return True
         End Function
@@ -710,6 +717,9 @@ Namespace Services
             u("useToneChroma") = If(chain.ToneChroma IsNot Nothing, 1.0F, 0.0F)
             u("useLum") = If(chain.LuminanceCurve IsNot Nothing, 1.0F, 0.0F)
             u("useHsl") = If(chain.Hsl IsNot Nothing, 1.0F, 0.0F)
+            u("mixerProPhoto") = If(chain.Hsl IsNot Nothing AndAlso chain.HslReference IsNot Nothing, 1.0F, 0.0F)
+            u("ppGate") = CSng(MixerProPhotoGate)
+            u("ppChromaGate") = If(MixerProPhotoChromaGate, CSng(MixerProPhotoChromaGateFull), 0.0F)
             ' Wie hslBlockAktiv in RunPointOpChain: auch Farbgradierung und Punktfarbe gehen durch
             ' den HSL-Hin- und Rueckweg.
             Dim hslActive = chain.LuminanceCurve IsNot Nothing OrElse chain.Hsl IsNot Nothing OrElse chain.Vibrance <> 0.0F OrElse
@@ -932,10 +942,25 @@ Namespace Services
             If chain.Hsl IsNot Nothing OrElse chain.VibranceByHue IsNot Nothing Then
                 Dim hue(ShaderTableWidth - 1) As Single, sat(ShaderTableWidth - 1) As Single
                 Dim lum(ShaderTableWidth - 1) As Single, vib(ShaderTableWidth - 1) As Single
+                Dim down(ShaderTableWidth - 1) As Single
                 For i = 0 To ShaderTableWidth - 1
                     Dim h = i * 360.0 / (ShaderTableWidth - 1)
                     If h >= 360.0 Then h -= 360.0
-                    If chain.Hsl IsNot Nothing Then
+                    If chain.Hsl IsNot Nothing AndAlso chain.HslReference IsNot Nothing Then
+                        ' Farbmischer im ProPhoto-HSV (ApplyMixerInProPhoto): Farbton und Saettigung
+                        ' ueber dem Farbton der Fuehrung in DIESEM Raum, Staerke und Richtung schon
+                        ' eingerechnet; die Luminanz ueber der Bandlage des alten Wegs.
+                        Dim hs As Single = 0, ss As Single = 0, ls As Single = 0
+                        GetBandAdjustmentsAt(h, MixerProPhotoCenters, chain.Hsl, hs, ss, ls)
+                        hue(i) = CSng(hs * MixerProPhotoHueGain / 360.0)
+                        sat(i) = CSng(ss * If(ss < 0, MixerProPhotoSatDown, MixerProPhotoSatUp) / 100.0)
+                        GetHslBandAdjustments(ReferenceBandHue(h), chain.HslReference, hs, ss, ls)
+                        lum(i) = ls / 100.0F
+                        If chain.HslDownReference IsNot Nothing Then
+                            GetHslBandAdjustments(ReferenceBandHue(h), chain.HslDownReference, hs, ss, ls)
+                            down(i) = ss / 100.0F
+                        End If
+                    ElseIf chain.Hsl IsNot Nothing Then
                         Dim hs As Single = 0, ss As Single = 0, ls As Single = 0
                         GetHslBandAdjustments(ReferenceBandHue(h), chain.Hsl, hs, ss, ls)
                         ' Normiert, damit halbe Gleitkomma genau genug bleibt: Grad durch 360,
@@ -945,6 +970,7 @@ Namespace Services
                     If chain.VibranceByHue IsNot Nothing Then vib(i) = CSng(SampleVibranceByHue(chain.VibranceByHue, h))
                 Next
                 put(RowHslHue, hue) : put(RowHslSat, sat) : put(RowHslLum, lum) : put(RowVibranceHue, vib)
+                put(RowHslDownSat, down)
             End If
             Dim info = New SKImageInfo(ShaderTableWidth, ShaderTableRows, SKColorType.RgbaF16, SKAlphaType.Premul)
             Using bitmap = New SKBitmap(info)
@@ -985,6 +1011,7 @@ uniform float useWb; uniform float3 wb0; uniform float3 wb1; uniform float3 wb2;
 uniform float useCm; uniform float3 cm0; uniform float3 cm1; uniform float3 cm2; uniform float3 cmOff;
 uniform float useScalar; uniform float useToneBefore; uniform float useToneZones; uniform float useToneChroma;
 uniform float hslActive; uniform float useLum; uniform float useHsl;
+uniform float mixerProPhoto; uniform float ppGate; uniform float ppChromaGate;
 uniform float vibMode; uniform float vibrance;
 uniform float shadowTint;
 uniform float shadowTintK;
@@ -1179,6 +1206,33 @@ float3 fromHsv(float h, float s, float v) {
     else if (sector == 4.0) o = float3(x, 0.0, c);
     else o = float3(c, 0.0, x);
     return o + m;
+}
+// Der Farbmischer im HSV von linearem ProPhoto (ApplyMixerInProPhoto): c ist der Bildpunkt, q die
+// Fuehrung, beide in sRGB mit Gamma. Zeile 11 und 12 tragen Farbton und Saettigung ueber dem
+// Farbton der Fuehrung in Grad.
+float3 toProPhotoLinear(float3 c) {
+    float3 l = float3(srgbDecode(clamp(c.r, 0.0, 1.0)), srgbDecode(clamp(c.g, 0.0, 1.0)), srgbDecode(clamp(c.b, 0.0, 1.0)));
+    return max(float3(dot(toPro0, l), dot(toPro1, l), dot(toPro2, l)), float3(0.0));
+}
+float3 mixerProPhotoPixel(float3 c, float3 q) {
+    float4 hsv = toHsv(toProPhotoLinear(c));
+    if (hsv.w < 0.5) return c;
+    float4 g = toHsv(toProPhotoLinear(q));
+    if (g.w < 0.5) return c;
+    float gate = min(1.0, g.y / ppGate);
+    gate = gate * gate * (3.0 - 2.0 * gate);
+    if (ppChromaGate > 0.0) {
+        float chroma = max(q.r, max(q.g, q.b)) - min(q.r, min(q.g, q.b));
+        float cg = min(1.0, max(0.0, chroma) / ppChromaGate);
+        gate *= cg * cg * (3.0 - 2.0 * cg);
+    }
+    if (gate <= 0.0) return c;
+    float gh = g.x * 360.0 / TWO_PI;
+    float h = hsv.x + hueTab(11.0, gh) * 360.0 * gate * TWO_PI / 360.0;
+    float s = satGain(hsv.y, hueTab(12.0, gh) * gate);
+    float3 o = max(fromHsv(h, s, hsv.z), float3(0.0));
+    o = float3(dot(fromPro0, o), dot(fromPro1, o), dot(fromPro2, o));
+    return float3(srgbEncode(clamp(o.r, 0.0, 1.0)), srgbEncode(clamp(o.g, 0.0, 1.0)), srgbEncode(clamp(o.b, 0.0, 1.0)));
 }
 float wrapAngle(float d) {
     float r = vbMod(d + 3.141592653589793, TWO_PI);
@@ -1417,11 +1471,13 @@ half4 main(float2 p) {
     // Die Fuehrungsfarbe des Farbmischers (MixerGuideSigma): dieselbe Stelle des geglaetteten
     // Bilds durch dieselben Stufen, dann nach HSL und durch die Luminanzkurve.
     float3 guideHsl = float3(-1.0);
+    float3 guideRgb = float3(0.0);
     if (useGuide > 0.5) {
         half4 gpix = guide.eval(p);
         float ga255 = floor(float(gpix.a) * 255.0 + 0.5);
         if (ga255 > 0.0) {
             float4 gpre = preMixer(decodePixel(gpix, ga255), p);
+            guideRgb = gpre.rgb;
             guideHsl = rgbToHsl(gpre.rgb);
             if (useLum > 0.5) guideHsl.z = tab(10.0, clamp(guideHsl.z, 0.0, 1.0));
         }
@@ -1454,7 +1510,32 @@ half4 main(float2 p) {
         } else if (vibMode == 3.0) {
             sat = clamp(sat * (1.0 + vibrance * (1.0 - sat)), 0.0, 1.0);
         }
-        if (useHsl > 0.5) {
+        if (useHsl > 0.5 && mixerProPhoto > 0.5) {
+            // Wie im Prozessor: nach sRGB, dort im ProPhoto-HSV mischen, zurueck nach HSL; dann die
+            // Luminanz und die Entsaettigung einzelner Baender auf dem alten Weg (Zeilen 13 und 21).
+            bool hasGuide = guideHsl.x >= 0.0;
+            float3 m = hslToRgb(h, sat, lum);
+            m = mixerProPhotoPixel(m, hasGuide ? guideRgb : m);
+            float3 back = rgbToHsl(m);
+            h = back.x; sat = back.y; lum = back.z;
+            float bandHue = hasGuide ? guideHsl.x : h;
+            float gateSat = hasGuide ? guideHsl.y : sat;
+            float gateLum = hasGuide ? guideHsl.z : lum;
+            float chromaC = gateSat * (1.0 - abs(2.0 * gateLum - 1.0));
+            float chromaW = min(1.0, (gateLum > 0.5 ? chromaC : gateSat) / 0.1);
+            chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW);
+            if (gateLum <= 0.5) {
+                float darkGate = min(1.0, chromaC / 0.1);
+                chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate);
+            }
+            lum = bandGain(lum, hueTab(13.0, bandHue) * chromaW);
+            float downSat = hueTab(21.0, bandHue);
+            if (downSat < 0.0) {
+                float gateCs = min(1.0, chromaC / 0.2);
+                gateCs = gateCs * gateCs * (3.0 - 2.0 * gateCs);
+                sat = satGain(sat, downSat * gateCs);
+            }
+        } else if (useHsl > 0.5) {
             bool hasGuide = guideHsl.x >= 0.0;
             float bandHue = hasGuide ? guideHsl.x : h;
             float gateSat = hasGuide ? guideHsl.y : sat;
