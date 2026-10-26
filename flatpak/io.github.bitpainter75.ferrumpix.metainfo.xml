@@ -99,6 +99,37 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.71-1" date="2026-10-26">
+      <description>
+        <p>This update improves RAW development and preset compatibility, makes it easier to copy adjustments between photos and brings a few welcome improvements to face recognition:</p>
+        <p xml:lang="de">Mit diesem Update werden RAW-Fotos und Presets noch besser verarbeitet. Außerdem kannst du Anpassungen jetzt direkt in der Galerie auf andere Fotos übertragen, und auch die Gesichtserkennung lässt sich einfacher nutzen:</p>
+        <ul>
+          <li>Sharpening now works on brightness information without affecting colours, while colour noise reduction adapts to the noise in each photo. Both have been fine-tuned to produce results closer to the reference program. Unedited RAW photos now start with Sharpness set to 40 and Colour Noise Reduction to 25. You can change these defaults in Settings.</li>
+          <li xml:lang="de">Beim Schärfen werden jetzt nur noch Helligkeitsdetails bearbeitet, ohne die Farben zu beeinflussen. Die Farbrauschreduzierung passt sich außerdem an das Rauschen im jeweiligen Foto an. Beide Funktionen wurden so abgestimmt, dass die Ergebnisse näher am Referenzprogramm liegen. Unbearbeitete RAW-Fotos starten jetzt standardmäßig mit Schärfe 40 und Farbrauschreduzierung 25. Diese Werte kannst du in den Einstellungen ändern.</li>
+
+          <li>XMP presets are now applied more accurately and completely. A new Amount slider lets you adjust their strength from 0 to 200%. Camera calibration and the colour mixer also produce results much closer to the reference program, without the blotchy or speckled colours that some presets caused before.</li>
+          <li xml:lang="de">XMP-Presets werden jetzt vollständiger und genauer übernommen. Mit einem neuen Stärkeregler kannst du ihre Wirkung zwischen 0 und 200 % einstellen. Auch die Kamerakalibrierung und der Farbmischer liefern jetzt Ergebnisse, die deutlich näher am Referenzprogramm liegen. Fleckige oder gesprenkelte Farben, die bei manchen Presets aufgetreten sind, gehören ebenfalls der Vergangenheit an.</li>
+
+          <li>Colours now look much more accurate under warm lighting, such as tungsten bulbs or stage lights. FerrumPix combines the camera's two colour profiles based on each RAW photo's white balance, giving more natural results in different lighting conditions. Overexposed highlights also retain more of their original colour.</li>
+          <li xml:lang="de">Farben wirken bei warmem Licht, etwa unter Glühlampen oder Bühnenbeleuchtung, jetzt deutlich natürlicher. FerrumPix kombiniert dafür die beiden Farbprofile der Kamera passend zum Weißabgleich des jeweiligen RAW-Fotos. So stimmen die Farben auch bei schwierigen Lichtverhältnissen besser. Überbelichtete Bereiche behalten außerdem mehr von ihrer ursprünglichen Farbe.</li>
+
+          <li>JPEG files are now saved at full colour resolution, keeping fine coloured details and edges sharper.</li>
+          <li xml:lang="de">JPEG-Dateien werden jetzt mit voller Farbauflösung gespeichert. Dadurch bleiben feine farbige Details und Kanten besser erhalten.</li>
+
+          <li>You can now copy adjustments from one photo in the gallery and paste them onto multiple selected photos at once, without having to create a preset first.</li>
+          <li xml:lang="de">Du kannst jetzt die Anpassungen eines Fotos direkt in der Galerie kopieren und auf mehrere ausgewählte Fotos gleichzeitig übertragen, ohne vorher ein Preset erstellen zu müssen.</li>
+
+          <li>The People tab now stays open as you browse through photos, even when a photo has no detected faces. Automatically suggested names are also shown, and you can confirm them directly. Face detection now works with RAW, HEIC, JPEG XL, TIFF and PSD files too.</li>
+          <li xml:lang="de">Der Reiter Personen bleibt jetzt auch beim Wechsel zwischen Fotos geöffnet, selbst wenn auf einem Bild keine Gesichter erkannt wurden. Automatisch vorgeschlagene Namen werden angezeigt und lassen sich direkt bestätigen. Außerdem funktioniert die Gesichtserkennung jetzt auch mit RAW-, HEIC-, JPEG-XL-, TIFF- und PSD-Dateien.</li>
+
+          <li>FerrumPix now uses the correct display colour profile for each connected monitor on Windows and Linux. Fujifilm RAW photos can also use the lens corrections stored by the camera. Sensor borders are now cropped automatically by default, and a new gallery setting lets you show complete photos in the grid instead of cropping their thumbnails.</li>
+          <li xml:lang="de">Unter Windows und Linux verwendet FerrumPix jetzt für jeden angeschlossenen Monitor das passende Farbprofil. Bei Fujifilm-RAWs können außerdem die in der Kamera gespeicherten Objektivkorrekturen genutzt werden. Sensorränder werden standardmäßig automatisch entfernt. Und mit einer neuen Einstellung kannst du Fotos im Galerieraster vollständig anzeigen lassen, statt die Vorschaubilder zuzuschneiden.</li>
+
+          <li>There are a few smaller fixes as well. Gallery thumbnails now update correctly after batch processing, custom gradient presets can be saved again, and FerrumPix uses less memory during longer editing sessions. The GPU option on macOS has also been fixed.</li>
+          <li xml:lang="de">Auch ein paar kleinere Fehler wurden behoben: Vorschaubilder in der Galerie aktualisieren sich nach der Stapelverarbeitung wieder richtig, eigene Verlaufsvorlagen lassen sich wieder speichern, und FerrumPix benötigt bei längeren Arbeitssitzungen weniger Speicher. Außerdem wurde die GPU-Option unter macOS korrigiert.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.70-1" date="2026-10-23">
       <description>
         <p>This update introduces optional GPU acceleration for image editing, makes sliders more responsive and improves how PSD files handle text and locked layers. There are also several other improvements and fixes:</p>
