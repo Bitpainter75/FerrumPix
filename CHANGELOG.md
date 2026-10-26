@@ -5,6 +5,9 @@
 - **Canon EOS R8 Mark II colours:** its RAW files were developed as if shot in daylight, because
   the camera's white balance was not read. They now use the white balance set in the camera.
 
+- **Smoother sliders:** dragging a slider in the editor stuttered again in 0.9.71. It runs
+  smoothly again.
+
 ## 0.9.71
 
 ### What's new
