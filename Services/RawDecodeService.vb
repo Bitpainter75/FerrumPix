@@ -2633,6 +2633,7 @@ Namespace Services
         ' absichtlich nicht fest verdrahtet: sie liegt z.B. bei 5024 (LibRaw 0.21.4) bzw. 5232
         ' (0.22.2) und kann sich bei jeder Systembibliothek wieder verschieben.
         Private Const HalfSizeOffset As Integer = 136
+        Private Const UseAutoWbOffset As Integer = 148
         Private Const OutputColorOffset As Integer = 160
         Private Const OutputBpsOffset As Integer = 200
         Private Const DemosaicOffset As Integer = 216
@@ -2651,6 +2652,18 @@ Namespace Services
             ' passive Plausibilitaetspruefung gegen zufaellige Treffermuster im Handle.
             If Marshal.ReadInt32(handle, foundBase + HalfSizeOffset) <> 0 Then Return False
             Marshal.WriteInt32(handle, foundBase + HalfSizeOffset, 1)
+            Return True
+        End Function
+
+        ''' <summary>Setzt params.use_auto_wb: LibRaw rechnet den Weissabgleich aus dem Bild. Nur
+        ''' fuer Dateien, deren Kamera auf Automatik stand und die den Wert nicht lesbar ablegen
+        ''' (cam_mul[0] = -1, siehe DecodeCore). Wie bei half_size wird vorher geprueft, dass das
+        ''' Feld seinen Vorgabewert 0 traegt.</summary>
+        Private Shared Function TryEnableAutoWhiteBalance(handle As IntPtr) As Boolean
+            Dim foundBase = FindParamsBase(handle)
+            If foundBase < 0 Then Return False
+            If Marshal.ReadInt32(handle, foundBase + UseAutoWbOffset) <> 0 Then Return False
+            Marshal.WriteInt32(handle, foundBase + UseAutoWbOffset, 1)
             Return True
         End Function
 
@@ -3166,6 +3179,13 @@ Namespace Services
                     For i = 0 To 3
                         _setUserMul(handle, i, camMul(i))
                     Next
+                ElseIf camMul(0) = -1.0F Then
+                    ' -1 IST DCRAWS ZEICHEN FUER "KAMERA AUF AUTOMATIK": die Datei traegt den Wert,
+                    ' den die Kamera ausgerechnet hat, nicht lesbar (Canons CRW der G3, G5, D30).
+                    ' dcraw und LibRaw rechnen dann mit use_camera_wb einen automatischen Abgleich
+                    ' aus dem Bild; ohne ihn bliebe es bei Tageslicht (pre_mul), und eine Aufnahme
+                    ' unter Kunstlicht kam tief gelb heraus (bis 39 dE gegen die Referenz).
+                    TryEnableAutoWhiteBalance(handle)
                 End If
 
                 ' DER NORMIERUNGSFAKTOR KOMMT AUS DEN MULTIPLIKATOREN, DIE DCRAW WIRKLICH NIMMT.

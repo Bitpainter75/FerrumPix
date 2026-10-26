@@ -1667,6 +1667,9 @@ Namespace Services
         Private Structure RecipeFetch
             ''' <summary>Der Server hat geantwortet, mit oder ohne Rezept.</summary>
             Public Reachable As Boolean
+            ''' <summary>Der Server kennt den Endpunkt nicht (vor Immich 2.5): über das Rezept
+            ''' ist damit nichts gesagt, auch nicht, dass es fehlt.</summary>
+            Public Unsupported As Boolean
             Public Found As Boolean
             Public Content As String
             Public UpdatedAt As String
@@ -1680,6 +1683,16 @@ Namespace Services
             Dim result As New RecipeFetch()
             Using resp = Await GetClient().GetAsync(RecipeUrl(assetId), cancellationToken).ConfigureAwait(False)
                 Dim body = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                ' Ein 404 kann zweierlei heissen: der Schluessel fehlt am Asset, oder der Server kennt
+                ' den Endpunkt gar nicht (vor Immich 2.5, etwa nach einem Downgrade). Den zweiten Fall
+                ' meldet das Routing mit "Cannot GET ..."; dann ist ueber das Rezept nichts bekannt,
+                ' und keiner der Aufrufer darf daraus schliessen, es sei entfernt.
+                If resp.StatusCode = Net.HttpStatusCode.NotFound AndAlso
+                   body.IndexOf("Cannot GET", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                    result.Reachable = True
+                    result.Unsupported = True
+                    Return result
+                End If
                 If resp.StatusCode = Net.HttpStatusCode.NotFound OrElse
                    (resp.StatusCode = Net.HttpStatusCode.BadRequest AndAlso body.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0) Then
                     result.Reachable = True
@@ -1717,7 +1730,7 @@ Namespace Services
                 Using timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
                     timeout.CancelAfter(TimeSpan.FromSeconds(5))
                     Dim fetched = Await FetchRecipeAsync(assetId, timeout.Token).ConfigureAwait(False)
-                    If Not fetched.Reachable Then Return
+                    If Not fetched.Reachable OrElse fetched.Unsupported Then Return
                     Dim sidecar = RawSidecarService.SidecarPathFor(localImagePath)
                     If fetched.Found Then
                         Dim tempPath = $"{sidecar}.{Guid.NewGuid():N}.part"
@@ -1751,6 +1764,7 @@ Namespace Services
                 If Not overwrite Then
                     Dim current = Await FetchRecipeAsync(assetId, cancellationToken).ConfigureAwait(False)
                     If Not current.Reachable Then Return RecipeSaveResult.Failed
+                    If current.Unsupported Then Return RecipeSaveResult.Unsupported
                     Dim known As String = Nothing
                     Dim hadStamp = _recipeStamps.TryGetValue(assetId, known)
                     If current.Found AndAlso (Not hadStamp OrElse Not String.Equals(known, current.UpdatedAt, StringComparison.Ordinal)) Then
