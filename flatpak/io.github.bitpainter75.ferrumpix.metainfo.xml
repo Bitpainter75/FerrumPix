@@ -96,6 +96,11 @@
   <url type="homepage">https://github.com/Bitpainter75/FerrumPix</url>
   <url type="bugtracker">https://github.com/Bitpainter75/FerrumPix/issues</url>
 
+  <branding>
+    <color type="primary" scheme_preference="light">#ffc58f</color>
+    <color type="primary" scheme_preference="dark">#6e3a10</color>
+  </branding>
+
   <content_rating type="oars-1.1"/>
 
   <releases>
