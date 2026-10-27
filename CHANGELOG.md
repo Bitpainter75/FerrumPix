@@ -2,10 +2,6 @@
 
 ### Changes
 
-- **Fewer sliders under Grain:** the sliders that added noise, colour noise and dust and
-  scratches are gone from the Effects panel. Pictures that already use them keep their look, and
-  resetting the Grain group clears them.
-
 - **Stronger luminance noise reduction with a working Detail slider:** the luminance noise
   reduction now smooths as strongly as other photo programs at the same value; before, even 100
   did less than they do at 25. The Detail slider now keeps fine texture such as hair and fabric
@@ -45,17 +41,7 @@
   and saturated clothing intact further into the development, so they come out closer to what
   you saw, with smoother gradations.
 
-- **Exposure slider without a jump in strong colours:** while you drag the exposure slider on a
-  RAW, strongly coloured areas now look almost the same as after the picture has been rebuilt.
-
 - **Converted DNG files no longer too bright:** a DNG made from another RAW file with a converter
   or another photo program often started brighter than the original RAW. It now develops like
   the original.
-
-- **Smoother sliders:** dragging a slider in the editor stuttered again in 0.9.71. It runs
-  smoothly again.
-
-- **Colour noise reduction off by default again:** a RAW without edits now starts with colour
-  noise reduction at 0, because reds looked too strong with bold presets. If you set your own
-  value in Settings, it stays.
 
