@@ -10161,4 +10161,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Bildspelet visar bilderna i slumpmässig ordning. Varje bild visas en gång innan de blandas igen.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Nästa bild efter betyg</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>När du har gett stjärnor går visaren direkt vidare till nästa bild. Tar du bort betyget igen stannar bilden kvar.</value>
+  </data>
 </root>

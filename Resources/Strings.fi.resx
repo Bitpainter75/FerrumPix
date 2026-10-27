@@ -10161,4 +10161,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Diaesitys näyttää kuvat satunnaisessa järjestyksessä. Jokainen kuva näytetään kerran ennen uutta sekoitusta.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Seuraava kuva arvioinnin jälkeen</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Kun annat tähtiä, katselin siirtyy heti seuraavaan kuvaan. Jos poistat arvion, kuva jää näkyviin.</value>
+  </data>
 </root>

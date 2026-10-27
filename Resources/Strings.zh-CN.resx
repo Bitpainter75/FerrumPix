@@ -10119,4 +10119,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>幻灯片以随机顺序显示图片。每张图片显示一次后再重新打乱顺序。</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>评分后转到下一张</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>打星后，查看器会直接转到下一张图片。如果再次取消评分，图片保持不变。</value>
+  </data>
 </root>

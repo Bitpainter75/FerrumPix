@@ -10139,4 +10139,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Die Diashow mischt die Bilder. Jedes Bild kommt einmal dran, bevor neu gemischt wird.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Nach dem Bewerten zum nächsten Bild</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Nach dem Vergeben von Sternen geht der Betrachter gleich zum nächsten Bild. Nimmt man die Bewertung wieder weg, bleibt das Bild stehen.</value>
+  </data>
 </root>

@@ -10140,4 +10140,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>The slideshow plays the pictures in random order. Every picture is shown once before they are shuffled again.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Next picture after rating</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>After you give stars, the viewer moves straight on to the next picture. If you remove the rating again, the picture stays.</value>
+  </data>
 </root>

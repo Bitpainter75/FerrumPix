@@ -17,6 +17,9 @@
   colour sliders no longer redoes the noise reduction each time, and the noise reduction itself
   runs faster and on the graphics card when that is switched on.
 
+- **Next picture after rating:** a new viewer setting moves on to the next picture as soon as you
+  give it stars, so you can rate a whole folder with the number keys alone.
+
 - **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
   picture is shown once before the order is mixed again.
 

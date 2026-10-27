@@ -1407,6 +1407,18 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nach dem Bewerten zum nächsten Bild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Nach dem Vergeben von Sternen geht der Betrachter gleich zum nächsten Bild. Nimmt man die Bewertung wieder weg, bleibt das Bild stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerAdvanceAfterRating}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                     </StackPanel>
                 </Border>
 

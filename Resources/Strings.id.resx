@@ -10165,4 +10165,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Pertunjukan salindia menampilkan gambar dalam urutan acak. Setiap gambar tampil sekali sebelum diacak lagi.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Gambar berikutnya setelah menilai</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Setelah memberi bintang, penampil langsung pindah ke gambar berikutnya. Jika penilaian dihapus lagi, gambar tetap ditampilkan.</value>
+  </data>
 </root>

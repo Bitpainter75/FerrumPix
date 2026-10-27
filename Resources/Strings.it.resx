@@ -10121,4 +10121,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>La presentazione mostra le immagini in ordine casuale. Ogni immagine compare una volta prima di un nuovo rimescolamento.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Immagine successiva dopo la valutazione</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Dopo aver assegnato le stelle, il visualizzatore passa subito all'immagine successiva. Se togli la valutazione, l'immagine resta.</value>
+  </data>
 </root>

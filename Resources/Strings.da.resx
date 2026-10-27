@@ -10161,4 +10161,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Diasshowet viser billederne i tilfældig rækkefølge. Hvert billede vises én gang, før de blandes igen.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Næste billede efter bedømmelse</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Når du har givet stjerner, går fremviseren straks videre til næste billede. Fjerner du bedømmelsen igen, bliver billedet stående.</value>
+  </data>
 </root>

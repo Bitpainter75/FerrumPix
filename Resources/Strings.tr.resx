@@ -10165,4 +10165,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Slayt gösterisi resimleri rastgele sırada gösterir. Her resim yeniden karıştırılmadan önce bir kez gösterilir.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Puanladıktan sonra sonraki resim</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Yıldız verdikten sonra görüntüleyici hemen sonraki resme geçer. Puanı yeniden kaldırırsanız resim yerinde kalır.</value>
+  </data>
 </root>

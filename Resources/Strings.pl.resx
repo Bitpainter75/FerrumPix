@@ -10161,4 +10161,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Pokaz slajdów wyświetla obrazy w losowej kolejności. Każdy obraz pojawia się raz, zanim zostaną ponownie przetasowane.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Następny obraz po ocenie</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Po przyznaniu gwiazdek przeglądarka od razu przechodzi do następnego obrazu. Jeśli usuniesz ocenę, obraz pozostanie.</value>
+  </data>
 </root>

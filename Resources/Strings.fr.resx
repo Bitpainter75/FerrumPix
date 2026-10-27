@@ -10121,4 +10121,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>Le diaporama affiche les images dans un ordre aléatoire. Chaque image passe une fois avant un nouveau mélange.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>Image suivante après la note</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>Après avoir attribué des étoiles, la visionneuse passe directement à l'image suivante. Si vous retirez la note, l'image reste affichée.</value>
+  </data>
 </root>

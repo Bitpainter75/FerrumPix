@@ -10165,4 +10165,10 @@
   <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
     <value>슬라이드 쇼가 사진을 무작위 순서로 보여 줍니다. 모든 사진이 한 번씩 나온 뒤에 다시 섞습니다.</value>
   </data>
+  <data name="Nach_dem_Bewerten_zum_n_chsten_Bild_748a22cf" xml:space="preserve">
+    <value>평가 후 다음 사진으로</value>
+  </data>
+  <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
+    <value>별점을 매기면 뷰어가 바로 다음 사진으로 넘어갑니다. 평가를 다시 지우면 사진이 그대로 남습니다.</value>
+  </data>
 </root>

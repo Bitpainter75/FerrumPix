@@ -888,9 +888,18 @@ Namespace ViewModels
             OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
             ' Dieselben drei Befehle bedienen das Kontextmenue und die Fusszeile. Sie wirken auf das
             ' Panel, damit Leiste und Menue denselben Stand zeigen - vorher lagen die Werte zweimal.
+            ' Mit der Einstellung "Nach dem Bewerten zum naechsten Bild" geht es danach weiter, aber
+            ' nur, wenn eine Bewertung gesetzt wurde: dieselbe Ziffer noch einmal nimmt sie weg, und
+            ' wer korrigiert, will auf dem Bild bleiben.
             SetRatingCommand = ReactiveCommand.Create(Of String)(Sub(r)
                                                                      Dim v As Integer
-                                                                     If Integer.TryParse(r, v) Then InfoPanel.Rating = If(InfoPanel.Rating = v, 0, v)
+                                                                     If Not Integer.TryParse(r, v) Then Return
+                                                                     Dim newValue = If(InfoPanel.Rating = v, 0, v)
+                                                                     InfoPanel.Rating = newValue
+                                                                     If newValue > 0 AndAlso _mainVm?.Settings IsNot Nothing AndAlso
+                                                                        _mainVm.Settings.ViewerAdvanceAfterRating Then
+                                                                         NavigateNext()
+                                                                     End If
                                                                  End Sub)
             ToggleFavoriteCommand = ReactiveCommand.Create(Sub() InfoPanel.IsFavorite = Not InfoPanel.IsFavorite)
             ' Gleiche Farbe erneut = Etikett entfernen (wie im Galerie-Kontextmenü).
