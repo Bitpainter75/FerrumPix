@@ -104,7 +104,7 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="0.9.71-1" date="2026-10-26">
+    <release version="0.9.71-4" date="2026-10-26">
       <description>
         <p>This update improves RAW development and preset compatibility, makes it easier to copy adjustments between photos and brings a few welcome improvements to face recognition:</p>
         <p xml:lang="de">Mit diesem Update werden RAW-Fotos und Presets noch besser verarbeitet. Außerdem kannst du Anpassungen jetzt direkt in der Galerie auf andere Fotos übertragen, und auch die Gesichtserkennung lässt sich einfacher nutzen:</p>
