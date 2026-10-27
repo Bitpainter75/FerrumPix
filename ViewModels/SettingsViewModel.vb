@@ -77,6 +77,7 @@ Namespace ViewModels
         Private _viewerShowFooter As Boolean = True
         Private _editorShowFooter As Boolean = True
         Private _viewerSlideshowIntervalSeconds As Integer = 3
+        Private _viewerSlideshowShuffle As Boolean = False
         Private _editorShowFilmstrip As Boolean = True
         Private _editorGridSize As Integer = 50
         Private _editorShowRulers As Boolean = False
@@ -256,6 +257,7 @@ Namespace ViewModels
         Private _savedViewerShowFooter As Boolean = True
         Private _savedEditorShowFooter As Boolean = True
         Private _savedViewerSlideshowIntervalSeconds As Integer = 3
+        Private _savedViewerSlideshowShuffle As Boolean = False
         Private _savedEditorShowFilmstrip As Boolean = True
         Private _savedEditorGridSize As Integer = 50
         Private _savedEditorShowRulers As Boolean = False
@@ -2285,6 +2287,17 @@ Namespace ViewModels
                 value = AppSettingsService.NormalizeViewerSlideshowIntervalSeconds(value)
                 If _viewerSlideshowIntervalSeconds = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerSlideshowIntervalSeconds, value)
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property ViewerSlideshowShuffle As Boolean
+            Get
+                Return _viewerSlideshowShuffle
+            End Get
+            Set(value As Boolean)
+                If _viewerSlideshowShuffle = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerSlideshowShuffle, value)
                 SaveLayoutSettings()
             End Set
         End Property
@@ -4452,6 +4465,7 @@ Namespace ViewModels
             _viewerShowFooter = _appSettings.ViewerShowFooter
             _editorShowFooter = _appSettings.EditorShowFooter
             _viewerSlideshowIntervalSeconds = _appSettings.ViewerSlideshowIntervalSeconds
+            _viewerSlideshowShuffle = _appSettings.ViewerSlideshowShuffle
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerDoubleClickTarget = AppSettingsService.NormalizeViewerDoubleClickTarget(_appSettings.ViewerDoubleClickTarget)
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
@@ -4879,6 +4893,7 @@ Namespace ViewModels
             _savedViewerShowFooter = _viewerShowFooter
             _savedEditorShowFooter = _editorShowFooter
             _savedViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
+            _savedViewerSlideshowShuffle = _viewerSlideshowShuffle
             _savedEditorShowFilmstrip = _editorShowFilmstrip
             _savedEditorGridSize = _editorGridSize
             _savedEditorShowRulers = _editorShowRulers
@@ -5060,6 +5075,7 @@ Namespace ViewModels
             ViewerShowFooter = _savedViewerShowFooter
             EditorShowFooter = _savedEditorShowFooter
             ViewerSlideshowIntervalSeconds = _savedViewerSlideshowIntervalSeconds
+            ViewerSlideshowShuffle = _savedViewerSlideshowShuffle
             EditorShowFilmstrip = _savedEditorShowFilmstrip
             EditorGridSize = _savedEditorGridSize
             EditorShowRulers = _savedEditorShowRulers
@@ -5200,6 +5216,7 @@ Namespace ViewModels
             ViewerShowFooter = True
             EditorShowFooter = True
             ViewerSlideshowIntervalSeconds = 3
+            ViewerSlideshowShuffle = False
             EditorShowFilmstrip = True
             EditorGridSize = 50
             EditorShowRulers = False
@@ -5521,6 +5538,7 @@ Namespace ViewModels
                                           s.ViewerShowFooter = _viewerShowFooter
                                           s.EditorShowFooter = _editorShowFooter
                                           s.ViewerSlideshowIntervalSeconds = _viewerSlideshowIntervalSeconds
+                                          s.ViewerSlideshowShuffle = _viewerSlideshowShuffle
                                           s.ViewerOpenFitToWindow = _viewerOpenFitToWindow
                                           s.ViewerDoubleClickTarget = _viewerDoubleClickTarget
                                           s.ViewerFitBehavior = _viewerFitBehavior

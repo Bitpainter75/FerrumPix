@@ -66,6 +66,9 @@ Namespace ViewModels
         Private _isSlideshowPlaying As Boolean = False
         Private _slideshowTimer As Timer
         Private _slideshowIntervalMs As Double = 3000
+        ''' <summary>Noch nicht gezeigte Bilder der Diashow in zufälliger Reihenfolge. Gemerkt werden
+        ''' Pfade statt Stellen, weil sich die Ordnerliste während der Diashow ändern kann.</summary>
+        Private ReadOnly _slideshowShuffleQueue As New Queue(Of String)()
         Private _folderPaths As New List(Of String)()
         ''' <summary>Bindet einen NACHGEREICHTEN Ordnerkontext an das Bild, für das er gesucht wurde.
         ''' Der Zähler steigt bei jedem Öffnen; trifft ein Suchergebnis mit altem Stand ein, wird es
@@ -2891,7 +2894,7 @@ Namespace ViewModels
                 Await Task.Delay(1000)
                 If Not _isSlideshowPlaying OrElse sequence <> _slideshowVideoEndSequence Then Return
                 If Not IsVideoFile Then Return
-                NavigateNext()
+                AdvanceSlideshow()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
@@ -4104,6 +4107,7 @@ Namespace ViewModels
             IsSlideshowPlaying = True
             Dim intervalSeconds = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerSlideshowIntervalSeconds, 3)
             _slideshowIntervalMs = Math.Max(1, intervalSeconds) * 1000.0
+            _slideshowShuffleQueue.Clear()
             _slideshowTimer = New Timer(_slideshowIntervalMs)
             AddHandler _slideshowTimer.Elapsed, AddressOf OnSlideshowTick
             _slideshowTimer.AutoReset = True
@@ -4128,8 +4132,44 @@ Namespace ViewModels
                     If Not IsVideoPlaying Then StartPendingVideoAutoplay()
                     Return
                 End If
-                NavigateNext()
+                AdvanceSlideshow()
             End Sub)
+        End Sub
+
+        ''' <summary>Der nächste Schritt der Diashow: der Reihe nach, oder mit „Zufällige Reihenfolge"
+        ''' das nächste Bild aus einer gemischten Runde. Jedes Bild kommt einmal dran, bevor neu
+        ''' gemischt wird; das gerade gezeigte steht in der neuen Runde nicht vorn.</summary>
+        Private Async Sub AdvanceSlideshow()
+            Try
+                If _mainVm?.Settings Is Nothing OrElse Not _mainVm.Settings.ViewerSlideshowShuffle OrElse _folderPaths.Count < 2 Then
+                    NavigateNext()
+                    Return
+                End If
+                Dim currentPath = If(_currentIndex >= 0 AndAlso _currentIndex < _folderPaths.Count, _folderPaths(_currentIndex), Nothing)
+                For pass = 1 To 2
+                    If _slideshowShuffleQueue.Count = 0 Then RefillSlideshowShuffleQueue(currentPath)
+                    While _slideshowShuffleQueue.Count > 0
+                        Dim nextPath = _slideshowShuffleQueue.Dequeue()
+                        If String.Equals(nextPath, currentPath, PathIdentity.Comparison) Then Continue While
+                        Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, nextPath, PathIdentity.Comparison))
+                        If idx < 0 Then Continue While
+                        Await CommitNavigateAsync(idx)
+                        Return
+                    End While
+                Next
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("ViewerViewModel.AdvanceSlideshow", ex)
+            End Try
+        End Sub
+
+        Private Sub RefillSlideshowShuffleQueue(currentPath As String)
+            Dim order = _folderPaths.Where(Function(p) Not String.Equals(p, currentPath, PathIdentity.Comparison)).ToArray()
+            Random.Shared.Shuffle(order)
+            For Each path In order
+                _slideshowShuffleQueue.Enqueue(path)
+            Next
         End Sub
     End Class
 

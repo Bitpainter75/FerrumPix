@@ -10155,4 +10155,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>Å dra med venstre museknapp tegner en beskjæringsramme og åpner bildet med den i redigeringsprogrammet. Når det er av, flytter dra et forstørret bilde.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>Lysbildefremvisning i tilfeldig rekkefølge</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>Fremvisningen viser bildene i tilfeldig rekkefølge. Hvert bilde vises én gang før de stokkes på nytt.</value>
+  </data>
 </root>

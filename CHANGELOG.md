@@ -13,6 +13,9 @@
   mouse button now scrolls the picture instead of drawing a crop frame. If you liked the crop
   frame, turn on "Crop by dragging" in the viewer settings.
 
+- **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
+  picture is shown once before the order is mixed again.
+
 ### Fixes
 
 - **Presets only once in the list:** importing the same XMP preset or LUT again, even from

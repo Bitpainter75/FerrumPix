@@ -10133,4 +10133,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>Ziehen mit der linken Maustaste zieht einen Zuschnittrahmen auf und öffnet das Bild damit im Editor. Ausgeschaltet verschiebt das Ziehen ein vergrößertes Bild.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>Diashow in zufälliger Reihenfolge</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>Die Diashow mischt die Bilder. Jedes Bild kommt einmal dran, bevor neu gemischt wird.</value>
+  </data>
 </root>

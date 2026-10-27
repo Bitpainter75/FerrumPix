@@ -10155,4 +10155,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>Slepen met de linkermuisknop tekent een uitsnedekader en opent de afbeelding daarmee in de editor. Uitgeschakeld verschuift slepen een ingezoomde afbeelding.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>Diavoorstelling in willekeurige volgorde</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>De diavoorstelling toont de afbeeldingen in willekeurige volgorde. Elke afbeelding komt één keer aan bod voordat opnieuw wordt geschud.</value>
+  </data>
 </root>

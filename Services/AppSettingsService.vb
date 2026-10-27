@@ -345,6 +345,8 @@ Namespace Services
         Public Property ViewerShowFooter As Boolean = True
         Public Property EditorShowFooter As Boolean = True
         Public Property ViewerSlideshowIntervalSeconds As Integer = 3
+        ''' <summary>Die Diashow zeigt die Bilder in zufälliger Reihenfolge, jedes einmal je Runde.</summary>
+        Public Property ViewerSlideshowShuffle As Boolean = False
         Public Property ViewerOpenFitToWindow As Boolean = True
         ''' <summary>Ziel des Doppelklicks auf das Bild im Viewer: "Editor" (Vorgabe) oder
         ''' "Gallery". Der Rückweg verwendet den normalen Galeriepfad und behält damit Auswahl,

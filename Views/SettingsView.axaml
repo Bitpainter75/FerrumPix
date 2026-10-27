@@ -1395,6 +1395,18 @@
                             </StackPanel>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Diashow in zufälliger Reihenfolge" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Die Diashow mischt die Bilder. Jedes Bild kommt einmal dran, bevor neu gemischt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerSlideshowShuffle}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                     </StackPanel>
                 </Border>
 

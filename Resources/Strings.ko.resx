@@ -10159,4 +10159,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>마우스 왼쪽 단추로 끌면 자르기 틀을 그리고 그 틀로 이미지를 편집기에서 엽니다. 꺼져 있으면 끌어서 확대한 이미지를 이동합니다.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>슬라이드 쇼 무작위 순서</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>슬라이드 쇼가 사진을 무작위 순서로 보여 줍니다. 모든 사진이 한 번씩 나온 뒤에 다시 섞습니다.</value>
+  </data>
 </root>

@@ -10114,4 +10114,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>Arrastar com o botão esquerdo do rato desenha uma moldura de recorte e abre a imagem com ela no editor. Desativado, arrastar move uma imagem ampliada.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>Apresentação em ordem aleatória</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>A apresentação mostra as imagens em ordem aleatória. Cada imagem aparece uma vez antes de serem baralhadas de novo.</value>
+  </data>
 </root>

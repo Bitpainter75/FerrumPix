@@ -10115,4 +10115,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>Faire glisser avec le bouton gauche de la souris trace un cadre de recadrage et ouvre l'image avec celui-ci dans l'éditeur. Désactivé, le glissement déplace une image agrandie.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>Diaporama aléatoire</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>Le diaporama affiche les images dans un ordre aléatoire. Chaque image passe une fois avant un nouveau mélange.</value>
+  </data>
 </root>

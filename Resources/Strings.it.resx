@@ -10115,4 +10115,10 @@
   <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
     <value>Trascinare con il tasto sinistro del mouse disegna una cornice di ritaglio e apre l'immagine con essa nell'editor. Se disattivato, il trascinamento sposta un'immagine ingrandita.</value>
   </data>
+  <data name="Diashow_in_zuf_lliger_Reihenfolge_0c51e906" xml:space="preserve">
+    <value>Presentazione in ordine casuale</value>
+  </data>
+  <data name="Die_Diashow_mischt_die_Bilder_Jedes_Bild_kommt_e_145cc6d0" xml:space="preserve">
+    <value>La presentazione mostra le immagini in ordine casuale. Ogni immagine compare una volta prima di un nuovo rimescolamento.</value>
+  </data>
 </root>
