@@ -142,7 +142,7 @@ FerrumPix authenticates with an API key. A key with `all` works; if you prefer a
 **Read-only** - browse, view, download:
 
 ```
-user.read  asset.read  asset.view  asset.download  album.read  person.read  tag.read
+user.read  asset.read  asset.view  asset.download  asset.statistics  album.read  person.read  tag.read
 ```
 
 **Add for writing metadata** - ratings, favourites, description, keywords:
@@ -157,7 +157,7 @@ asset.update  tag.create  tag.asset
 asset.upload  albumAsset.create  asset.copy
 ```
 
-Plus `album.create` and `album.update` if FerrumPix should create and rename albums, and `asset.delete` with `album.delete` if *Allow deleting* is on.
+Plus `album.create` and `album.update` if FerrumPix should create and rename albums, and `asset.delete` with `album.delete` if *Allow deleting* is on. Immich also asks for `asset.delete` to put photos back from Trash.
 
 *Update existing assets* replaces the file of an existing asset, and the permission for it is named differently across Immich versions. Left off, FerrumPix always creates a new asset instead.
 
