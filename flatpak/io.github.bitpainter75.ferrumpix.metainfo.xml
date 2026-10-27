@@ -2,8 +2,8 @@
 <component type="desktop-application">
   <id>io.github.bitpainter75.ferrumpix</id>
   <name>FerrumPix</name>
-  <summary>RAW/Photo-Editor, Viewer, Gallery</summary>
-  <summary xml:lang="de">Foto/RAW-Editor, Viewer, Galerie</summary>
+  <summary>Photo/RAW-Editor, Viewer, Gallery, Immich and Nextcloud Client</summary>
+  <summary xml:lang="de">Foto/RAW-Editor, Betrachter, Galerie, Immich- und Nextcloud-Client</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
