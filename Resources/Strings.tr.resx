@@ -9946,8 +9946,11 @@
   <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
     <value>Bir test görüntüsünü ekran kartında ve işlemcide hesaplar ve ikisini karşılaştırır.</value>
   </data>
-  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
-    <value>Denetlendi: {0} işlemciyle aynı şekilde hesaplıyor.</value>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_51eb18c5" xml:space="preserve">
+    <value>Denetlendi: {0} işlemciyle aynı sonucu veriyor. Görüntü düzenleme ekran kartını kullanıyor.</value>
+  </data>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_d9caf17c" xml:space="preserve">
+    <value>Denetlendi: {0} işlemciyle aynı sonucu veriyor. Açıldığında görüntü düzenleme ekran kartını kullanır.</value>
   </data>
   <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
     <value>Denetlendi: {0} işlemciden {1} ton basamağı sapıyor. Görüntü düzenleme işlemcide hesaplanır.</value>

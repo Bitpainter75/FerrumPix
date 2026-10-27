@@ -9946,8 +9946,11 @@
   <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
     <value>테스트 이미지를 그래픽 카드와 프로세서에서 각각 계산하고 두 결과를 비교합니다.</value>
   </data>
-  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
-    <value>확인됨: {0}이(가) 프로세서와 같은 결과를 계산합니다.</value>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_51eb18c5" xml:space="preserve">
+    <value>확인됨: {0}은(는) 프로세서와 같은 결과를 냅니다. 이미지 편집은 그래픽 카드를 사용합니다.</value>
+  </data>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_d9caf17c" xml:space="preserve">
+    <value>확인됨: {0}은(는) 프로세서와 같은 결과를 냅니다. 켜면 이미지 편집에 그래픽 카드를 사용합니다.</value>
   </data>
   <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
     <value>확인됨: {0}이(가) 프로세서와 {1}단계 톤 차이가 납니다. 이미지 편집은 프로세서에서 계산됩니다.</value>

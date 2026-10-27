@@ -9946,8 +9946,11 @@
   <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
     <value>एक परीक्षण छवि की गणना ग्राफ़िक्स कार्ड और प्रोसेसर दोनों पर करता है और दोनों की तुलना करता है।</value>
   </data>
-  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
-    <value>जाँचा गया: {0} प्रोसेसर की तरह ही गणना करता है।</value>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_51eb18c5" xml:space="preserve">
+    <value>जाँचा गया: {0} प्रोसेसर जैसा ही परिणाम देता है। छवि संपादन ग्राफ़िक्स कार्ड का उपयोग करता है।</value>
+  </data>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_d9caf17c" xml:space="preserve">
+    <value>जाँचा गया: {0} प्रोसेसर जैसा ही परिणाम देता है। चालू करने पर छवि संपादन ग्राफ़िक्स कार्ड का उपयोग करता है।</value>
   </data>
   <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
     <value>जाँचा गया: {0} प्रोसेसर से {1} टोन स्तर अलग है। छवि संपादन की गणना प्रोसेसर पर होती है।</value>

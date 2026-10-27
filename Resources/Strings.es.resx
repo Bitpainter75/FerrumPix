@@ -9902,8 +9902,11 @@
   <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
     <value>Calcula una imagen de prueba en la tarjeta gráfica y en el procesador y compara ambas.</value>
   </data>
-  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
-    <value>Comprobado: {0} calcula igual que el procesador.</value>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_51eb18c5" xml:space="preserve">
+    <value>Comprobado: {0} da el mismo resultado que el procesador. La edición de imágenes usa la tarjeta gráfica.</value>
+  </data>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_d9caf17c" xml:space="preserve">
+    <value>Comprobado: {0} da el mismo resultado que el procesador. Al activarla, la edición de imágenes usa la tarjeta gráfica.</value>
   </data>
   <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
     <value>Comprobado: {0} difiere del procesador en {1} niveles tonales. La edición de imágenes se calcula en el procesador.</value>

@@ -788,6 +788,17 @@ Namespace Services
                     info.IsKindKnown = True
                     info.IsDiscrete = (value = "1")
                 End If
+                ' Auf einem Mac mit Apple-Chip meldet Metal die Geraetenummer 0 und keine Bauart, und
+                ' eine Liste der Nummern gibt es dort nicht: in der Anzeige stand "Apple 0x0000,
+                ' Grafikkarte". Die Grafikeinheit ist dort immer die des Chips, also traegt sie
+                ' dessen Namen und ist eingebaut.
+                If IsAppleSilicon(info) Then
+                    If String.IsNullOrWhiteSpace(info.DeviceName) Then info.DeviceName = AppleChipName()
+                    If Not info.IsKindKnown Then
+                        info.IsKindKnown = True
+                        info.IsDiscrete = False
+                    End If
+                End If
                 ' Der Steckplatz macht zwei baugleiche Karten unterscheidbar. Fehlt er, muss die
                 ' Nummer des Geraetes genuegen.
                 Dim slot As String = Nothing
@@ -857,6 +868,37 @@ Namespace Services
                 End Try
             Next
             Return ""
+        End Function
+
+        ''' <summary>Ein Mac mit Apple-Chip: dort gibt es nur die Grafikeinheit des Chips. Ein Mac
+        ''' mit Intel-Prozessor meldet seine Karte unter deren Hersteller und faellt nicht hierunter.</summary>
+        Private Shared Function IsAppleSilicon(info As GpuDeviceInfo) As Boolean
+            Return OperatingSystem.IsMacOS() AndAlso
+                   RuntimeInformation.ProcessArchitecture = Architecture.Arm64 AndAlso
+                   String.Equals(info.VendorName, "Apple", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Der Name des Chips ohne den Hersteller davor, etwa "M4 Pro" aus "Apple M4 Pro";
+        ''' der Hersteller steht in der Anzeige schon vorn. Leer, wenn das System ihn nicht hergibt.</summary>
+        Private Shared Function AppleChipName() As String
+            Try
+                Dim length As UIntPtr = UIntPtr.Zero
+                If SysctlByName("machdep.cpu.brand_string", Nothing, length, IntPtr.Zero, UIntPtr.Zero) <> 0 Then Return ""
+                If length.ToUInt64() = 0UL OrElse length.ToUInt64() > 256UL Then Return ""
+                Dim buffer(CInt(length.ToUInt64()) - 1) As Byte
+                If SysctlByName("machdep.cpu.brand_string", buffer, length, IntPtr.Zero, UIntPtr.Zero) <> 0 Then Return ""
+                Dim name = System.Text.Encoding.UTF8.GetString(buffer).TrimEnd(ChrW(0)).Trim()
+                If name.StartsWith("Apple ", StringComparison.OrdinalIgnoreCase) Then name = name.Substring(6).Trim()
+                Return name
+            Catch
+                ' Nicht lesbar: dann bleibt es bei der Nummer.
+                Return ""
+            End Try
+        End Function
+
+        <DllImport("/usr/lib/libSystem.dylib", EntryPoint:="sysctlbyname")>
+        Private Shared Function SysctlByName(<MarshalAs(UnmanagedType.LPStr)> name As String, buffer As Byte(),
+                                             ByRef length As UIntPtr, newValue As IntPtr, newLength As UIntPtr) As Integer
         End Function
 
         ''' <summary>Der Hersteller aus der Kennung, die er auf dem Bus fuehrt. Diese Nummern sind

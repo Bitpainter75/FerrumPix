@@ -3190,7 +3190,12 @@ Namespace ViewModels
                 Dim check = ImageProcessor.LastGpuCheck
                 Select Case check.State
                     Case ImageProcessor.GpuCheckState.Works
-                        Return String.Format(LocalizationService.T("Geprüft: {0} rechnet wie der Prozessor."), check.Renderer)
+                        ' "Rechnet wie der Prozessor" wurde als "rechnet AUF dem Prozessor" gelesen.
+                        ' Deshalb steht ausdruecklich dabei, wer die Bildbearbeitung uebernimmt.
+                        If _gpuImageProcessing Then
+                            Return String.Format(LocalizationService.T("Geprüft: {0} liefert dasselbe Ergebnis wie der Prozessor. Die Bildbearbeitung nutzt die Grafikkarte."), check.Renderer)
+                        End If
+                        Return String.Format(LocalizationService.T("Geprüft: {0} liefert dasselbe Ergebnis wie der Prozessor. Eingeschaltet nutzt die Bildbearbeitung die Grafikkarte."), check.Renderer)
                     Case ImageProcessor.GpuCheckState.Slower
                         Return String.Format(LocalizationService.T("Geprüft: {0} rechnet wie der Prozessor, aber langsamer ({1} ms gegen {2} ms). Die Bildbearbeitung rechnet auf dem Prozessor."),
                                              check.Renderer, check.GpuMilliseconds, check.CpuMilliseconds)

@@ -9900,8 +9900,11 @@
   <data name="Rechnet_ein_Pr_fbild_auf_der_Grafikkarte_und_auf_52e95e3b" xml:space="preserve">
     <value>分别在显卡和处理器上计算一张测试图像，并比较两者。</value>
   </data>
-  <data name="Gepr_ft_0_rechnet_wie_der_Prozessor_b0f38532" xml:space="preserve">
-    <value>已检查：{0} 的计算结果与处理器一致。</value>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_51eb18c5" xml:space="preserve">
+    <value>已检查：{0} 的结果与处理器相同。图像编辑使用显卡。</value>
+  </data>
+  <data name="Gepr_ft_0_liefert_dasselbe_Ergebnis_wie_der_Proz_d9caf17c" xml:space="preserve">
+    <value>已检查：{0} 的结果与处理器相同。开启后，图像编辑将使用显卡。</value>
   </data>
   <data name="Gepr_ft_0_weicht_um_1_Tonstufen_vom_Prozessor_ab_4aa335b8" xml:space="preserve">
     <value>已检查：{0} 与处理器相差 {1} 个色阶。图像编辑将在处理器上计算。</value>
