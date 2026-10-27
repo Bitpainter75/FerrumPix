@@ -195,6 +195,7 @@ All packages are in the [latest release](https://github.com/Bitpainter75/FerrumP
 
 | Package | For | File ends in |
 |---|---|---|
+| Flathub | Any distribution, installs and updates through Flatpak (x64, ARM64) | [FerrumPix on Flathub](https://flathub.org/apps/io.github.bitpainter75.ferrumpix) |
 | AppImage | Any distribution, runs without installing | -x86_64.AppImage |
 | DEB | Debian, Ubuntu, Mint (amd64) | -amd64.deb |
 | RPM | Fedora, openSUSE (x86_64) | -x86_64.rpm |
