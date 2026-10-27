@@ -1125,6 +1125,7 @@ Namespace Services
             Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
                 fileType = MetadataExtractor.Util.FileTypeDetector.DetectFileType(stream, path)
             End Using
+            If fileType = MetadataExtractor.Util.FileType.Heif Then Return ReadHeifMetadataDirectories(path, fileType)
             If Not TiffFamily.Contains(fileType) Then Return ImageMetadataReader.ReadMetadata(path)
 
             ' Der TIFF-Leser mit Pfad haengt "File" schon selbst an, als letztes Verzeichnis. Das
@@ -1136,6 +1137,28 @@ Namespace Services
             Dim fileDirectory = result.FindLastIndex(Function(d) TypeOf d Is MetadataExtractor.Formats.FileSystem.FileMetadataDirectory)
             result.Insert(If(fileDirectory < 0, result.Count, fileDirectory),
                           New MetadataExtractor.Formats.FileType.FileTypeDirectory(fileType))
+            Return result
+        End Function
+
+        Private Shared _heifFallbackLogged As Integer
+
+        ''' <summary>Eine HEIF liest MetadataExtractor nur ganz oder gar nicht: stoesst er auf einen
+        ''' Eintrag, den er nicht versteht (bei Huawei ein eigener Datenblock, den er fuer XMP haelt),
+        ''' wirft er, und auch der intakte EXIF-Block ist verloren. Dann kommt EXIF direkt aus dem
+        ''' Container (<see cref="HeifExifReader"/>), dazu wie im Original "File Type" und "File".
+        ''' XMP, IPTC und ICC fehlen auf diesem Weg; die Aufnahmedaten sind das, was zaehlt.</summary>
+        Private Shared Function ReadHeifMetadataDirectories(path As String, fileType As MetadataExtractor.Util.FileType) As IReadOnlyList(Of MetadataExtractor.Directory)
+            Try
+                Return ImageMetadataReader.ReadMetadata(path)
+            Catch ex As Exception When Not TypeOf ex Is IOException
+                If Threading.Interlocked.Exchange(_heifFallbackLogged, 1) = 0 Then
+                    DiagnosticLogService.LogAlways("HEIF",
+                        $"Metadaten nicht vollstaendig lesbar ({ex.GetType().Name}: {ex.Message}) - EXIF wird direkt aus dem Container gelesen")
+                End If
+            End Try
+            Dim result As New List(Of MetadataExtractor.Directory)(HeifExifReader.ReadExifDirectories(path))
+            result.Add(New MetadataExtractor.Formats.FileType.FileTypeDirectory(fileType))
+            result.Add(New MetadataExtractor.Formats.FileSystem.FileMetadataReader().Read(path))
             Return result
         End Function
 

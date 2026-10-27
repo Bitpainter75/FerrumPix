@@ -143,6 +143,7 @@ Namespace ViewModels
         Private _tabletMode As Boolean = False
         Private _penPressureSize As Boolean = True
         Private _trackpadMode As Boolean = False
+        Private _viewerCropDrag As Boolean = False
         Private _isThumbnailCacheRefreshing As Boolean = False
         Private _isThumbnailCacheRefreshQueued As Boolean = False
         Private _immichEnabled As Boolean = False
@@ -4509,6 +4510,7 @@ Namespace ViewModels
             _tabletMode = _appSettings.TabletMode
             _penPressureSize = _appSettings.PenPressureSize
             _trackpadMode = _appSettings.TrackpadMode
+            _viewerCropDrag = _appSettings.ViewerCropDrag
             _immichEnabled = _appSettings.ImmichEnabled
             _immichServerUrl = _appSettings.ImmichServerUrl
             _immichApiKey = _appSettings.ImmichApiKey
@@ -5427,6 +5429,18 @@ Namespace ViewModels
                 If _trackpadMode = value Then Return
                 Me.RaiseAndSetIfChanged(_trackpadMode, value)
                 AppSettingsService.Update(Sub(s) s.TrackpadMode = value)
+            End Set
+        End Property
+
+        ''' <summary>Zuschnittrahmen per Zug im Viewer, siehe <see cref="AppSettings.ViewerCropDrag"/>.</summary>
+        Public Property ViewerCropDrag As Boolean
+            Get
+                Return _viewerCropDrag
+            End Get
+            Set(value As Boolean)
+                If _viewerCropDrag = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerCropDrag, value)
+                AppSettingsService.Update(Sub(s) s.ViewerCropDrag = value)
             End Set
         End Property
 

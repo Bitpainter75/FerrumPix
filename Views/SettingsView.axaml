@@ -508,7 +508,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Trackpad-Modus" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Aktiviert Trackpad-Gesten: Zwei-Finger-Zoom im Viewer, horizontal wischen zum Blättern sowie Pannen mit Ziehen bei vergrößertem Bild. Im Viewer öffnet SHIFT+Ziehen den Zuschneidebereich. Die Maus-Standardbedienung bleibt bei ausgeschaltetem Modus unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Aktiviert Trackpad-Gesten: Zwei-Finger-Zoom im Viewer, horizontal wischen zum Blättern sowie Pannen mit Ziehen bei vergrößertem Bild. Ist im Viewer Zuschneiden durch Ziehen eingeschaltet, öffnet dort SHIFT+Ziehen den Zuschneidebereich. Die Maus-Standardbedienung bleibt bei ausgeschaltetem Modus unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding TrackpadMode}"
@@ -1262,6 +1262,18 @@
                                         Command="{Binding SetViewerDoubleClickTargetCommand}"
                                         CommandParameter="Editor">Editor</Button>
                             </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Zuschneiden durch Ziehen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ziehen mit der linken Maustaste zieht einen Zuschnittrahmen auf und öffnet das Bild damit im Editor. Ausgeschaltet verschiebt das Ziehen ein vergrößertes Bild." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerCropDrag}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">

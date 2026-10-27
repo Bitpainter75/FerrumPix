@@ -793,6 +793,9 @@ Namespace Services
         Public Property BrushSmoothing As Integer = 100
         ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
         Public Property TrackpadMode As Boolean = False
+        ''' Zieht ein Zug mit der linken Taste im Viewer einen Zuschnittrahmen auf und oeffnet das Bild
+        ''' damit im Editor? Ab Werk aus: dann verschiebt der Zug ein vergroessertes Bild.
+        Public Property ViewerCropDrag As Boolean = False
         Public Property WatermarkPresets As New List(Of WatermarkPresetSettings)()
         ''' <summary>Eigene Verlaufsvorlagen der Gruppe Füllung, in der Reihenfolge des Anlegens.</summary>
         Public Property GradientPresets As New List(Of GradientPresetSettings)()

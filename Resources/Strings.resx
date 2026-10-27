@@ -7934,8 +7934,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Mask layer created from path</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Enables trackpad gestures: two-finger zoom in the viewer, swipe horizontally to browse, and drag to pan a zoomed image. In the viewer, hold SHIFT while dragging to select a crop. Mouse controls remain unchanged while this mode is off.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Enables trackpad gestures: two-finger zoom in the viewer, swipe horizontally to browse, and drag to pan a zoomed image. If crop by dragging is on in the viewer, hold SHIFT while dragging there to select a crop. Mouse controls remain unchanged while this mode is off.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>New location for this folder</value>
@@ -10127,5 +10127,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>This edit has been removed in Immich in the meantime, for example from another computer. Save it again?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Crop by dragging</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Dragging with the left mouse button draws a crop frame and opens the picture in the editor with it. When off, dragging moves a zoomed picture.</value>
   </data>
 </root>

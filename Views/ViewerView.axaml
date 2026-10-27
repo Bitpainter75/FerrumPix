@@ -262,6 +262,27 @@
                                        RenderOptions.BitmapInterpolationMode="HighQuality"
                                        PointerExited="OnImagePointerExited" />
                             </Border>
+                            <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
+                                <Border Name="CropSelectionRect"
+                                        IsVisible="False"
+                                        IsHitTestVisible="False"
+                                        Background="#33F08A1A"
+                                        BorderBrush="{DynamicResource FP.Accent}"
+                                        BorderThickness="1.5">
+                                    <Border Background="#CC1A1D24"
+                                            CornerRadius="4"
+                                            Padding="6,3"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Margin="6,6,0,0">
+                                        <TextBlock Name="CropSelectionSizeBadgeText"
+                                                   Text=""
+                                                   Foreground="White"
+                                                   FontSize="{DynamicResource FP.Font.Small}"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+                                </Border>
+                            </Canvas>
                         </Panel>
                     </ScrollViewer>
 

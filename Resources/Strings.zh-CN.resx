@@ -7931,8 +7931,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>已从路径创建蒙版图层</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。在查看器中，按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。如果在查看器中开启了拖动裁剪，在那里按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>此文件夹的新位置</value>
@@ -10106,5 +10106,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>此编辑在此期间已在 Immich 中移除，例如从另一台电脑。要重新保存吗？</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>拖动裁剪</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>用鼠标左键拖动会绘制裁剪框，并带着该裁剪框在编辑器中打开图像。关闭时，拖动会移动放大的图像。</value>
   </data>
 </root>

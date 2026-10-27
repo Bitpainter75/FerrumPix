@@ -7933,8 +7933,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Capa de máscara creada a partir del trazado</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. En el visor, SHIFT+arrastrar selecciona un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. Si recortar arrastrando está activado en el visor, SHIFT+arrastrar selecciona allí un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Nueva ubicación de esta carpeta</value>
@@ -10108,5 +10108,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>Esta edición se ha eliminado entretanto en Immich, por ejemplo desde otro equipo. ¿Guardarla de nuevo?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Recortar arrastrando</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Arrastrar con el botón izquierdo del ratón dibuja un marco de recorte y abre la imagen con él en el editor. Desactivado, arrastrar desplaza una imagen ampliada.</value>
   </data>
 </root>

@@ -7933,8 +7933,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Livello maschera creato dal tracciato</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Nel visualizzatore, SHIFT+trascina seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Se ritaglia trascinando è attivo nel visualizzatore, SHIFT+trascina vi seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Nuova posizione di questa cartella</value>
@@ -10108,5 +10108,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>Questa modifica è stata nel frattempo rimossa in Immich, ad esempio da un altro computer. Salvarla di nuovo?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Ritaglia trascinando</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Trascinare con il tasto sinistro del mouse disegna una cornice di ritaglio e apre l'immagine con essa nell'editor. Se disattivato, il trascinamento sposta un'immagine ingrandita.</value>
   </data>
 </root>

@@ -7973,8 +7973,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Masklager skapat ur banan</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. I visaren väljer SHIFT+dra en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Aktiverar styrplattegester: zooma med två fingrar i visaren, svep horisontellt för att bläddra och dra för att panorera en inzoomad bild. Är beskär genom att dra på i visaren väljer SHIFT+dra där en beskärning. Musstyrningen förblir oförändrad när läget är av.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Ny plats för den här mappen</value>
@@ -10148,5 +10148,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>Den här redigeringen har under tiden tagits bort i Immich, till exempel från en annan dator. Spara den igen?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Beskär genom att dra</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Att dra med vänster musknapp ritar en beskärningsram och öppnar bilden med den i redigeraren. När det är av flyttar dragning en inzoomad bild.</value>
   </data>
 </root>

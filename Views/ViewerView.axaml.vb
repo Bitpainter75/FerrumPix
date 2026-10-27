@@ -25,7 +25,12 @@ Namespace Views
         Private _isPanningImage As Boolean
         Private _panStartPoint As Point
         Private _panStartOffset As Vector
+        Private _isCropDragging As Boolean
+        Private _cropDragMoved As Boolean
+        Private _cropDragStartNorm As Point
+        Private _cropDragCurrentNorm As Point
         Private _suppressNextImageContextMenu As Boolean = False
+        Private Const CropDragMinPixels As Double = 12
         Private Const FullscreenVideoControlsIdleMs As Integer = 2200
         Private Const FullscreenVideoCursorPollMs As Integer = 120
         Private ReadOnly _fullscreenVideoControlsHideTimer As DispatcherTimer
@@ -675,10 +680,14 @@ Namespace Views
             Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
             If vm Is Nothing OrElse scrollViewer Is Nothing Then Return
 
-            ' Ist das Bild groesser als die Ansicht, verschiebt es ein Zug mit jeder der beiden Tasten,
-            ' wie man es von einem Bildbetrachter erwartet. Einen Zuschnittrahmen zieht der Betrachter
-            ' bewusst nicht mehr auf: das gehoert in den Editor.
-            If CanPanImage(vm, scrollViewer) Then
+            ' Ab Werk verschiebt ein Zug mit jeder der beiden Tasten ein Bild, das groesser ist als die
+            ' Ansicht, wie man es von einem Bildbetrachter erwartet. Den Zuschnittrahmen gibt es nur,
+            ' wenn er in den Einstellungen eingeschaltet ist; dann bleibt links (im Trackpad-Modus
+            ' SHIFT und links) fuer ihn reserviert.
+            Dim cropEnabled = IsViewerCropDragEnabled()
+            If (isRightButton OrElse Not cropEnabled OrElse
+                (IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift))) AndAlso
+               CanPanImage(vm, scrollViewer) Then
                 _isPanningImage = True
                 _panStartPoint = e.GetPosition(scrollViewer)
                 _panStartOffset = scrollViewer.Offset
@@ -691,13 +700,31 @@ Namespace Views
                 Return
             End If
 
-            If isRightButton Then e.Handled = True
+            If isRightButton Then
+                e.Handled = True
+                Return
+            End If
+
+            If cropEnabled AndAlso CanCropDrag(vm) AndAlso (Not IsTrackpadMode() OrElse e.KeyModifiers.HasFlag(KeyModifiers.Shift)) Then
+                Dim image = Me.FindControl(Of Image)("MainImage")
+                If image Is Nothing OrElse image.Bounds.Width <= 0 OrElse image.Bounds.Height <= 0 Then Return
+                _cropDragStartNorm = NormalizeImagePoint(e.GetPosition(image), image.Bounds.Size)
+                _cropDragCurrentNorm = _cropDragStartNorm
+                _isCropDragging = True
+                _cropDragMoved = False
+                If TypeOf sender Is Control Then
+                    e.Pointer.Capture(DirectCast(sender, Control))
+                Else
+                    e.Pointer.Capture(Me)
+                End If
+                e.Handled = True
+            End If
         End Sub
 
         Private Sub OnImageDoubleTapped(sender As Object, e As TappedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.CanEdit Then Return
-            ' Der Handler haengt am Panel der Buehne (der Schwenk-Zug faengt dort den Zeiger,
+            ' Der Handler haengt am Panel der Buehne (der Zuschneide-Zug faengt dort den Zeiger,
             ' am Bild kam der Doppelklick nicht mehr an). Ob das BILD gemeint war, entscheidet
             ' deshalb die Geometrie - ein Doppelklick ins Leere oeffnet weiterhin nichts.
             Dim image = Me.FindControl(Of Image)("MainImage")
@@ -723,12 +750,20 @@ Namespace Views
 
             ' Beim Zeichenstift bleibt das Loslassen aus, wenn der Stift das Tablett verlaesst; der
             ' Fang bleibt dabei bestehen, der Weg ueber den Fangverlust greift also nicht. Ohne
-            ' gedrueckte Taste ist der Zug vorbei: das Bild soll dem Zeiger nicht weiter folgen.
-            If _isPanningImage Then
+            ' gedrueckte Taste ist der Zug vorbei: das Bild soll dem Zeiger nicht weiter folgen, und
+            ' das Zuschnittrechteck nicht weiterwachsen. Abgewickelt wird wie bei einem Fangverlust,
+            ' der Zuschnitt also verworfen statt uebernommen - ein Wechsel in den Editor waere eine
+            ' zu grosse Wirkung fuer eine blosse Zeigerbewegung.
+            If _isPanningImage OrElse _isCropDragging Then
                 Dim buttons = e.GetCurrentPoint(Me).Properties
                 If Not buttons.IsLeftButtonPressed AndAlso Not buttons.IsRightButtonPressed AndAlso
                    Not buttons.IsMiddleButtonPressed Then
                     EndPanning()
+                    If _isCropDragging Then
+                        _isCropDragging = False
+                        _cropDragMoved = False
+                        HideCropSelectionVisual()
+                    End If
                     Return
                 End If
             End If
@@ -742,17 +777,71 @@ Namespace Views
                 Dim targetOffset = New Vector(_panStartOffset.X - delta.X, _panStartOffset.Y - delta.Y)
                 scrollViewer.Offset = ClampOffset(scrollViewer, targetOffset)
                 e.Handled = True
+                Return
+            End If
+
+            If _isCropDragging Then
+                Dim image = Me.FindControl(Of Image)("MainImage")
+                If image Is Nothing Then Return
+                Dim rawPoint = e.GetPosition(image)
+                _cropDragCurrentNorm = NormalizeImagePoint(rawPoint, image.Bounds.Size)
+                If Not _cropDragMoved Then
+                    Dim startPixel = New Point(_cropDragStartNorm.X * image.Bounds.Width, _cropDragStartNorm.Y * image.Bounds.Height)
+                    Dim delta = rawPoint - startPixel
+                    If Math.Abs(delta.X) > CropDragMinPixels OrElse Math.Abs(delta.Y) > CropDragMinPixels Then
+                        _cropDragMoved = True
+                    End If
+                End If
+                UpdateCropSelectionVisual()
+                e.Handled = True
             End If
         End Sub
 
         Private Sub OnImagePointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            If _isCropDragging Then
+                Dim wasMoved = _cropDragMoved
+                Dim startNorm = _cropDragStartNorm
+                Dim endNorm = _cropDragCurrentNorm
+                _isCropDragging = False
+                _cropDragMoved = False
+                HideCropSelectionVisual()
+                e.Pointer.Capture(Nothing)
+
+                If wasMoved Then
+                    Dim vm = GetVm()
+                    If vm IsNot Nothing Then
+                        Dim left = Math.Min(startNorm.X, endNorm.X) * 100.0
+                        Dim right = (1.0 - Math.Max(startNorm.X, endNorm.X)) * 100.0
+                        Dim top = Math.Min(startNorm.Y, endNorm.Y) * 100.0
+                        Dim bottom = (1.0 - Math.Max(startNorm.Y, endNorm.Y)) * 100.0
+                        vm.OpenCropInEditor(left, top, right, bottom)
+                    End If
+                End If
+                Return
+            End If
+
             EndPanning()
             e.Pointer.Capture(Nothing)
         End Sub
 
         Private Sub OnImagePointerCaptureLost(sender As Object, e As PointerCaptureLostEventArgs)
             EndPanning()
+            If _isCropDragging Then
+                _isCropDragging = False
+                _cropDragMoved = False
+                HideCropSelectionVisual()
+            End If
         End Sub
+
+        Private Function CanCropDrag(vm As ViewerViewModel) As Boolean
+            Return vm IsNot Nothing AndAlso vm.CurrentImage IsNot Nothing AndAlso vm.CanEdit AndAlso
+                   vm.RotationAngle = 0 AndAlso vm.ScaleX = 1.0
+        End Function
+
+        Private Function IsViewerCropDragEnabled() As Boolean
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            Return mainVm IsNot Nothing AndAlso mainVm.Settings IsNot Nothing AndAlso mainVm.Settings.ViewerCropDrag
+        End Function
 
         Private Function IsTrackpadMode() As Boolean
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
@@ -790,6 +879,41 @@ Namespace Views
             Dim ny = Math.Max(0, Math.Min(1, p.Y / size.Height))
             Return New Point(nx, ny)
         End Function
+
+        Private Sub UpdateCropSelectionVisual()
+            Dim image = Me.FindControl(Of Image)("MainImage")
+            Dim canvas = Me.FindControl(Of Canvas)("CropSelectionCanvas")
+            Dim rect = Me.FindControl(Of Border)("CropSelectionRect")
+            If image Is Nothing OrElse canvas Is Nothing OrElse rect Is Nothing Then Return
+
+            Dim origin = image.TranslatePoint(New Point(0, 0), canvas)
+            If Not origin.HasValue Then Return
+
+            Dim size = image.Bounds.Size
+            Dim x1 = origin.Value.X + Math.Min(_cropDragStartNorm.X, _cropDragCurrentNorm.X) * size.Width
+            Dim y1 = origin.Value.Y + Math.Min(_cropDragStartNorm.Y, _cropDragCurrentNorm.Y) * size.Height
+            Dim x2 = origin.Value.X + Math.Max(_cropDragStartNorm.X, _cropDragCurrentNorm.X) * size.Width
+            Dim y2 = origin.Value.Y + Math.Max(_cropDragStartNorm.Y, _cropDragCurrentNorm.Y) * size.Height
+
+            Canvas.SetLeft(rect, x1)
+            Canvas.SetTop(rect, y1)
+            rect.Width = Math.Max(0, x2 - x1)
+            rect.Height = Math.Max(0, y2 - y1)
+            rect.IsVisible = True
+
+            Dim badge = Me.FindControl(Of TextBlock)("CropSelectionSizeBadgeText")
+            Dim vm = GetVm()
+            If badge IsNot Nothing AndAlso vm IsNot Nothing AndAlso vm.CurrentImage IsNot Nothing Then
+                Dim pixelWidth = CInt(Math.Round(Math.Max(1, Math.Abs(_cropDragCurrentNorm.X - _cropDragStartNorm.X) * vm.CurrentImage.PixelSize.Width)))
+                Dim pixelHeight = CInt(Math.Round(Math.Max(1, Math.Abs(_cropDragCurrentNorm.Y - _cropDragStartNorm.Y) * vm.CurrentImage.PixelSize.Height)))
+                badge.Text = $"{pixelWidth} × {pixelHeight} px"
+            End If
+        End Sub
+
+        Private Sub HideCropSelectionVisual()
+            Dim rect = Me.FindControl(Of Border)("CropSelectionRect")
+            If rect IsNot Nothing Then rect.IsVisible = False
+        End Sub
 
         Private Sub EndPanning()
             _isPanningImage = False

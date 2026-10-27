@@ -7933,8 +7933,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Calque de masque créé à partir du tracé</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Dans le visualiseur, SHIFT+glisser sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Active les gestes du pavé tactile : zoom à deux doigts dans le visualiseur, balayage horizontal pour parcourir les images et glisser pour déplacer une image agrandie. Si le recadrage en faisant glisser est activé dans le visualiseur, SHIFT+glisser y sélectionne un recadrage. La souris reste inchangée lorsque ce mode est désactivé.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Nouvel emplacement de ce dossier</value>
@@ -10108,5 +10108,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>Cette retouche a été supprimée entre-temps dans Immich, par exemple depuis un autre ordinateur. L’enregistrer à nouveau ?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Recadrer en faisant glisser</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Faire glisser avec le bouton gauche de la souris trace un cadre de recadrage et ouvre l'image avec celui-ci dans l'éditeur. Désactivé, le glissement déplace une image agrandie.</value>
   </data>
 </root>

@@ -7977,8 +7977,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Yoldan maske katmanı oluşturuldu</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Dokunmatik yüzey hareketlerini açar: izleyicide iki parmakla yakınlaştırma, gezinmek için yatay kaydırma ve yakınlaştırılmış bir görüntüyü sürükleyerek kaydırma. İzleyicide sürüklerken SHIFT tuşunu basılı tutmak bir kırpma seçer. Bu kip kapalıyken fare denetimleri değişmeden kalır.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Dokunmatik yüzey hareketlerini açar: izleyicide iki parmakla yakınlaştırma, gezinmek için yatay kaydırma ve yakınlaştırılmış bir görüntüyü sürükleyerek kaydırma. İzleyicide sürükleyerek kırpma açıksa, orada sürüklerken SHIFT tuşunu basılı tutmak bir kırpma seçer. Bu kip kapalıyken fare denetimleri değişmeden kalır.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Bu klasörün yeni konumu</value>
@@ -10152,5 +10152,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>Bu düzenleme bu arada Immich'te kaldırıldı, örneğin başka bir bilgisayardan. Yeniden kaydedilsin mi?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Sürükleyerek kırp</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Sol fare düğmesiyle sürüklemek bir kırpma çerçevesi çizer ve görüntüyü onunla düzenleyicide açar. Kapalıyken sürüklemek yakınlaştırılmış bir görüntüyü kaydırır.</value>
   </data>
 </root>

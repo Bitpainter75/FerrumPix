@@ -7973,8 +7973,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Maskelag opprettet ut fra banen</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>Aktiverer styreflatebevegelser: zoom med to fingre i visningen, sveip vannrett for å bla og dra for å panorere et forstørret bilde. I visningen velger SHIFT+dra et beskjæringsområde. Musebetjeningen er uendret når modusen er av.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>Aktiverer styreflatebevegelser: zoom med to fingre i visningen, sveip vannrett for å bla og dra for å panorere et forstørret bilde. Er beskjær ved å dra slått på i visningen, velger SHIFT+dra der et beskjæringsområde. Musebetjeningen er uendret når modusen er av.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Ny plassering for denne mappen</value>
@@ -10148,5 +10148,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>Denne redigeringen er i mellomtiden fjernet i Immich, for eksempel fra en annen datamaskin. Skal den lagres igjen?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>Beskjær ved å dra</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>Å dra med venstre museknapp tegner en beskjæringsramme og åpner bildet med den i redigeringsprogrammet. Når det er av, flytter dra et forstørret bilde.</value>
   </data>
 </root>

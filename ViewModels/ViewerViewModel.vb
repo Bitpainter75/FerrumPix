@@ -2241,6 +2241,8 @@ Namespace ViewModels
             UpdateStatus()
         End Sub
 
+        ' Öffnet das Bild im Editor mit aktivem Zuschneiden-Werkzeug und übernimmt den im
+        ' Viewer per Ziehgeste ausgewählten Bildausschnitt als Vorschlag.
         ''' <summary>Filmstreifen-Pfade für den Editor: in einer Serversitzung nur das aktuelle
         ''' (heruntergeladene) Bild, da _folderPaths dort Pseudo-Pfade enthält, die der Editor nicht
         ''' laden kann. Der Merker heißt aus der Entstehungszeit heraus nach Immich, gilt aber für
@@ -2249,6 +2251,20 @@ Namespace ViewModels
             If _isImmichSession Then Return New List(Of String) From {_currentImagePath}
             Return _folderPaths.ToList()
         End Function
+
+        Public Async Sub OpenCropInEditor(cropLeft As Double, cropTop As Double, cropRight As Double, cropBottom As Double)
+            Try
+                If String.IsNullOrEmpty(_currentImagePath) OrElse _mainVm Is Nothing Then Return
+                Await OpenCurrentInEditorAsync()
+                If _mainVm.Editor Is Nothing OrElse Not String.Equals(_mainVm.Editor.CurrentImagePath, _currentImagePath, PathIdentity.Comparison) Then Return
+                _mainVm.Editor.CurrentTool = EditorTool.Transform
+                _mainVm.Editor.SetCropPercentages(cropLeft, cropTop, cropRight, cropBottom)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("ViewerViewModel.OpenCropInEditor", ex)
+            End Try
+        End Sub
 
         ''' <summary>Startet das Laden des aktuellen Bildes. Der DECODE laeuft im HINTERGRUND
         ''' (Analyse: vorher synchron auf dem UI-Thread - jeder Bildwechsel fror den

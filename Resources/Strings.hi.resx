@@ -7977,8 +7977,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>पथ से मास्क लेयर बनाई गई</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_9584e359" xml:space="preserve">
-    <value>ट्रैकपैड के इशारे चालू करता है: दर्शक में दो उँगलियों से ज़ूम, आगे-पीछे देखने के लिए आड़ा स्वाइप, और ज़ूम की गई छवि खिसकाने के लिए खींचना। दर्शक में खींचते समय SHIFT दबाए रखने से क्रॉप चुना जाता है। यह मोड बंद रहते हुए माउस के नियंत्रण अपरिवर्तित रहते हैं।</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
+    <value>ट्रैकपैड के इशारे चालू करता है: दर्शक में दो उँगलियों से ज़ूम, आगे-पीछे देखने के लिए आड़ा स्वाइप, और ज़ूम की गई छवि खिसकाने के लिए खींचना। यदि दर्शक में खींचकर क्रॉप करना चालू है, तो वहाँ खींचते समय SHIFT दबाए रखने से क्रॉप चुना जाता है। यह मोड बंद रहते हुए माउस के नियंत्रण अपरिवर्तित रहते हैं।</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>इस फ़ोल्डर का नया स्थान</value>
@@ -10152,5 +10152,11 @@
   </data>
   <data name="In_Immich_wurde_diese_Bearbeitung_inzwischen_ent_1e7f30dc" xml:space="preserve">
     <value>यह संपादन इस बीच Immich में हटा दिया गया है, उदाहरण के लिए किसी दूसरे कंप्यूटर से। क्या इसे फिर से सहेजें?</value>
+  </data>
+  <data name="Zuschneiden_durch_Ziehen_2b316b85" xml:space="preserve">
+    <value>खींचकर क्रॉप करें</value>
+  </data>
+  <data name="Ziehen_mit_der_linken_Maustaste_zieht_einen_Zusc_23ec6db3" xml:space="preserve">
+    <value>बाएँ माउस बटन से खींचने पर क्रॉप फ़्रेम बनता है और छवि उसी के साथ संपादक में खुलती है। बंद रहने पर खींचने से ज़ूम की गई छवि खिसकती है।</value>
   </data>
 </root>
