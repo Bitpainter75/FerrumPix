@@ -596,6 +596,29 @@ Namespace Services
             Return ShadowTintWeights(ShadowTintWeights.Length - 1)
         End Function
 
+        ''' <summary>Wie weit der Saettigungs-Restore der Tiefen greifen darf: 1, solange die Kurven den
+        ''' Farbton um hoechstens 30 Grad gedreht haben, auslaufend bis 0 bei 60 Grad.
+        '''
+        ''' Der Restore setzt die Saettigung von VOR der Tonstufe auf den Farbton von DANACH. Das ist
+        ''' richtig, wenn die Kurven die Tiefen nur anheben (der Farbton bleibt, die Buntheit fiel mit
+        ''' der Steigung). Es ist falsch, wenn Kanalkurven die Farbe ueber Grau hinweg drehen: am Rand
+        ''' eines roten Scheinwerfers unter einer Teal-Tiefenkurve wurde ein fast grauer Punkt je nach
+        ''' Rauschen satt rot oder satt teal, und es entstand eine harte, zackige Kante, wo die
+        ''' Referenz weich verlaeuft. Gemessen wird in Gegenfarben (Rot gegen Gruen-Blau, Gruen gegen
+        ''' Blau), ohne Winkelfunktion; ohne Buntheit danach gibt es keinen Farbton und kein Restore.
+        ''' Derselbe Ausdruck steht im Shader der Punktkette (restoreHueGate).</summary>
+        Private Shared Function RestoreHueGate(r0 As Single, g0 As Single, b0 As Single,
+                                               r1 As Single, g1 As Single, b1 As Single) As Double
+            Dim a0 = r0 - 0.5 * (g0 + b0), c0 = 0.8660254 * (g0 - b0)
+            Dim a1 = r1 - 0.5 * (g1 + b1), c1 = 0.8660254 * (g1 - b1)
+            Dim lengths = Math.Sqrt((a0 * a0 + c0 * c0) * (a1 * a1 + c1 * c1))
+            If lengths < 0.0000001 Then Return 0.0
+            Dim t = ((a0 * a1 + c0 * c1) / lengths - 0.5) / (0.8660254 - 0.5)
+            If t <= 0.0 Then Return 0.0
+            If t >= 1.0 Then Return 1.0
+            Return t * t * (3.0 - 2.0 * t)
+        End Function
+
         ''' <summary>STAERKE JE KALIBRIERUNGSREGLER, in dieser Folge: Rot Farbton, Rot Saettigung plus
         ''' und minus, dann Gruen und Blau ebenso. Ein Feld, damit die Reglereichung sie per Reflexion
         ''' setzen kann (REGLER_KAL_GAINS).
@@ -1780,6 +1803,77 @@ Namespace Services
 
         Private Shared ReadOnly ReferenceBandFrom As Double() = {18.6, 53.8, 108.8, 156.4, 226.9, 278.4, 324.0, 354.5}
         Private Shared ReadOnly ReferenceBandTo As Double() = {30.5, 68.7, 120.1, 171.1, 224.2, 270.2, 314.6, 355.5}
+
+        ''' <summary>DIE BAENDER DER REFERENZ LIEGEN IM HSV VON LINEAREM PROPHOTO. Gemessen gegen den
+        ''' DNG-Konverter (2026-10-27, Diagnostics/Reglereichung/bandgewicht.py und bandmitten.py, 80
+        ''' Bilder, Saettigung -60 je Band): dort haengt das Bandgewicht kaum an der Buntheit (Rot bei
+        ''' 340 bis 350 Grad 0,46 / 0,44 / 0,44 fuer schwache, mittlere und kraeftige Farbe), im HSL von
+        ''' sRGB stark (0,44 / 0,72 / 0,85). Die Verschiebung ReferenceBandHue war an mittelbunten
+        ''' Farben gemessen und traf kraeftige nicht: tiefes Buehnenrot liegt im sRGB-HSL bei rund 328
+        ''' Grad, also im Magenta-Band, und der Rot-Regler erreichte es kaum (Rot -60 bei C* ueber 50:
+        ''' 0,83 der Buntheit statt 0,58).
+        '''
+        ''' Gesucht wird das Band deshalb am ProPhoto-Farbton; die gemessenen Bandmitten dort gehen auf
+        ''' die Anker des Farbmischers (HslBandCenters), dazwischen linear. Nur fuer die SUCHE: Farbton,
+        ''' Saettigung und Luminanz werden weiter im HSL von sRGB verschoben, wo ihre Staerken geeicht
+        ''' sind. Dieselbe Rechnung steht im Shader der Punktkette (proPhotoHue).</summary>
+        Private Shared ReadOnly ProPhotoBandFrom As Double() = {0.3, 29.8, 59.3, 99.9, 154.7, 229.3, 276.7, 323.0}
+
+        ''' <summary>Messschalter fuer die Reglereichung (REGLER_MISCHER_ALT): False stellt auf dem
+        ''' Prozessor die alte Bandsuche (ReferenceBandHue im HSL von sRGB) und das Tor auch fuer die
+        ''' Entsaettigung wieder her, damit beide Fassungen aus demselben Bau verglichen werden. Die
+        ''' Anwendung setzt ihn nie.</summary>
+        Friend Shared MixerBandsInProPhoto As Boolean = True
+
+        ''' <summary>DIE KURVEN LAUFEN HINTER DEM FARBMISCHER, sobald beide im Rezept stehen, wie bei
+        ''' der Referenz. Gemessen an TEL_0674 mit Cool Glow gegen den DNG-Konverter (2026-10-27,
+        ''' Teil-Presets "ohne HSL" gegen "alle"): das Teal, das die Kurven des Presets in die Tiefen
+        ''' legen, laesst der Farbmischer der Referenz trotz Aqua -36 und Gruen -62 stehen (Buntheit
+        ''' danach 0,96 bis 1,01), weil er das Bild VOR den Kurven sieht; unser Mischer hinter den
+        ''' Kurven nahm ihm 0,72 bis 0,60. Nur die Punkt- und Kanalkurven wandern: die Tonregler bleiben
+        ''' davor, samt dem Saettigungs-Restore, den der Schatten-Lift braucht. Mit Kurven liegen die
+        ''' Tonregler ohnehin in ToneBefore und den Tonzonen, die Skalartabellen sind dann reine
+        ''' Kurventabellen. Ohne Farbmischer bleibt alles wie vorher. Auch die Fuehrungsfarbe des
+        ''' Mischers sieht so das Bild vor den Kurven. Derselbe Schalter im Shader (deferCurves).</summary>
+        Friend Shared Function CurvesAfterMixer(chain As PointOpChain) As Boolean
+            Return CurvesAfterMixerEnabled AndAlso chain.CurvesInMelissa AndAlso chain.Hsl IsNot Nothing
+        End Function
+
+        ''' <summary>Messschalter fuer die Reglereichung (REGLER_KURVEN_VOR_MISCHER): False legt die
+        ''' Kurven wieder vor den Farbmischer. Die Anwendung setzt ihn nie.</summary>
+        Friend Shared CurvesAfterMixerEnabled As Boolean = True
+
+        ''' <summary>Der Farbton (Grad) einer sRGB-Farbe im HSV von linearem ProPhoto, abgebildet auf die
+        ''' Anker des Farbmischers. Ohne Buntheit Rot (0), wie der HSL-Farbton eines Graus.</summary>
+        Private Shared Function ProPhotoBandHue(r As Double, g As Double, b As Double) As Double
+            ' Die feste sRGB-Kurve statt der Tabelle toLinear: die Kette legt sie nur an, wenn eine
+            ' Stufe sie braucht.
+            Dim lr = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, r)))
+            Dim lg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, g)))
+            Dim lb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, b)))
+            Return WarpCircular(ProPhotoHue(lr, lg, lb), ProPhotoBandFrom, HslBandCenters)
+        End Function
+
+        ''' <summary>HSV-Farbton (Grad) von linearem sRGB nach der Umrechnung in ProPhoto (dieselbe
+        ''' Matrix wie die Kurven, ApplyCurvesInMelissa).</summary>
+        Private Shared Function ProPhotoHue(lr As Double, lg As Double, lb As Double) As Double
+            Dim pr = 0.529214 * lr + 0.330063 * lg + 0.140723 * lb
+            Dim pg = 0.098324 * lr + 0.873625 * lg + 0.028051 * lb
+            Dim pb = 0.016879 * lr + 0.117714 * lg + 0.865407 * lb
+            Dim mx = Math.Max(pr, Math.Max(pg, pb))
+            Dim d = mx - Math.Min(pr, Math.Min(pg, pb))
+            If d <= 0.0000000001 Then Return 0.0
+            Dim h As Double
+            If mx = pr Then
+                h = (pg - pb) / d
+                If h < 0.0 Then h += 6.0
+            ElseIf mx = pg Then
+                h = (pb - pr) / d + 2.0
+            Else
+                h = (pr - pg) / d + 4.0
+            End If
+            Return h * 60.0
+        End Function
 
         ''' <summary>Stueckweise lineare Abbildung auf dem Kreis: die steigend sortierten Stuetzstellen
         ''' <paramref name="from"/> gehen auf <paramref name="target"/>, dazwischen linear, ueber 360
@@ -3084,6 +3178,10 @@ Namespace Services
             Private ReadOnly negMono, curvesMelissa, rawInProPhoto As Boolean
             Private ReadOnly localBase As LocalToneBase
 
+            ''' <summary>Die Kurven laufen HINTER dem Farbmischer (CurvesAfterMixer): Apply laesst sie
+            ''' aus, der Durchlauf ruft ApplyCurves nach Mischer und Punktfarbe.</summary>
+            Public ReadOnly DefersCurves As Boolean
+
             Public Sub New(chain As PointOpChain, base As LocalToneBase, linearTable As Single(), gammaTable As Single())
                 m = chain.ColorMatrix
                 wbm = chain.WhiteBalanceMatrix
@@ -3107,6 +3205,12 @@ Namespace Services
                 localDetail = chain.LocalDetailGain
                 localColor = chain.LocalColorGain
                 localBase = base
+                DefersCurves = CurvesAfterMixer(chain)
+            End Sub
+
+            ''' <summary>Die Punkt- und Kanalkurven allein, fuer den Durchlauf hinter dem Farbmischer.</summary>
+            Public Sub ApplyCurves(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single)
+                ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
             End Sub
 
             ''' <summary>Rechnet die Stufen auf (rr, gg, bb) und liefert die HSL-Saettigung vor der
@@ -3180,6 +3284,7 @@ Namespace Services
                 ' ist: dunkles Teal (10,25,25) hat 0,059 und kommt voll durch, ein LSB
                 ' Rauschen 0,016 und bleibt draussen.
                 Dim satVorTon As Double = 0.0
+                Dim rVor = rr, gVor = gg, bVor = bb
                 If sr IsNot Nothing Then
                     ' S und L direkt aus max/min statt ueber RgbToHslF: der Farbton wird hier
                     ' nicht gebraucht, und diese Stufe laeuft bei JEDER Tonbearbeitung.
@@ -3223,13 +3328,16 @@ Namespace Services
                         End If
                         If toneChroma IsNot Nothing Then ApplyToneChroma(rr, gg, bb, toneChroma, lightnessBefore)
                     End If
-                    If curvesMelissa Then
+                    If DefersCurves Then
+                        ' Die Kurven kommen erst hinter dem Farbmischer (ApplyCurves).
+                    ElseIf curvesMelissa Then
                         ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
                     Else
                         rr = SampleTable(sr, rr)
                         gg = SampleTable(sg, gg)
                         bb = SampleTable(sb, bb)
                     End If
+                    If satVorTon > 0.0 Then satVorTon *= RestoreHueGate(rVor, gVor, bVor, rr, gg, bb)
                 End If
                 Return satVorTon
             End Function
@@ -3535,11 +3643,20 @@ Namespace Services
                                 ' den Bildpunkt selbst: Nachbarn mit derselben Farbe bekommen dieselbe
                                 ' Behandlung, auch wenn ihr Rauschen sie ueber eine Bandgrenze oder durch
                                 ' den steilen Teil eines Tors traegt.
-                                Dim bandHue = If(hasGuide, guideH, h)
+                                ' Das Band am ProPhoto-Farbton (ProPhotoBandHue), wie die Referenz.
+                                Dim bandR As Double, bandG As Double, bandB As Double
+                                If hasGuide Then
+                                    bandR = guideRgbR : bandG = guideRgbG : bandB = guideRgbB
+                                Else
+                                    HslToRgbF(h, sat, lum, bandR, bandG, bandB)
+                                End If
                                 Dim gateSat = If(hasGuide, guideSat, sat)
                                 Dim gateLum = If(hasGuide, guideLum, lum)
                                 Dim hueShift As Single = 0, satShift As Single = 0, lumShift As Single = 0
-                                GetHslBandAdjustments(ReferenceBandHue(bandHue), hslAdj, hueShift, satShift, lumShift)
+                                GetHslBandAdjustments(If(MixerBandsInProPhoto,
+                                                         ProPhotoBandHue(bandR, bandG, bandB),
+                                                         ReferenceBandHue(If(hasGuide, guideH, h))),
+                                                      hslAdj, hueShift, satShift, lumShift)
                                 ' Bandwirkung mit der Chroma GEWICHTEN: ein neutrales Grau hat keinen
                                 ' Farbton, bekam aber ueber h=0 die volle LUMINANZ des Rot-Bands ab (nur
                                 ' satShift war durch sat*x=0 automatisch neutral) - der Regler
@@ -3578,7 +3695,12 @@ Namespace Services
                                     chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate)
                                 End If
                                 h = (h + hueShift * gateCs + 360.0) Mod 360.0
-                                sat = ApplyHslSaturationGain(sat, satShift * gateCs / 100.0)
+                                ' Das Tor nur fuer Farbton und Anheben: Entsaettigen multipliziert und
+                                ' kann aus Rauschen keine Farbe machen. Mit Tor nahm der Mischer schwach
+                                ' bunten Punkten zu wenig (gegen den DNG-Konverter an 80 Bildern, C* 6
+                                ' bis 15 bei Rot -60: 0,88 gegen 0,73, ohne Tor 0,71), und unter Cool
+                                ' Glow blieb gedaempftes Buehnenrot und Haut zu bunt.
+                                sat = ApplyHslSaturationGain(sat, satShift * If(satShift < 0.0F AndAlso MixerBandsInProPhoto, 1.0, gateCs) / 100.0)
                                 lum = ApplyHslBandGain(lum, lumShift * chromaW / 100.0)
                             End If
 
@@ -3602,6 +3724,9 @@ Namespace Services
                                 hb = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, pb)))
                             End If
                             rr = CSng(hr) : gg = CSng(hg) : bb = CSng(hb)
+
+                            ' Die Kurven hinter Farbmischer und Punktfarbe (CurvesAfterMixer).
+                            If stages.DefersCurves Then stages.ApplyCurves(rr, gg, bb)
 
                             ' Bei S/W wartet die Tonung hinter der Matrix (ToneAfterPreset).
                             If splitAdj IsNot Nothing AndAlso Not toneAfterPreset Then

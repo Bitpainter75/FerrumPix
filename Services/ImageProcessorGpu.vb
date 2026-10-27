@@ -727,6 +727,7 @@ Namespace Services
                             chain.SplitToning IsNot Nothing OrElse chain.PointColors IsNot Nothing
             u("hslActive") = If(hslActive, 1.0F, 0.0F)
             u("useMelissa") = If(chain.CurvesInMelissa, 1.0F, 0.0F)
+            u("deferCurves") = If(CurvesAfterMixer(chain), 1.0F, 0.0F)
             SetColorGradeUniforms(u, chain)
             SetPointColorUniforms(u, chain.PointColors)
             u("useCube") = If(chain.CubeTable IsNot Nothing, 1.0F, 0.0F)
@@ -962,8 +963,10 @@ Namespace Services
                             down(i) = ss / 100.0F
                         End If
                     ElseIf chain.Hsl IsNot Nothing Then
+                        ' Die Spalte ist hier der Farbton im ProPhoto-HSV (proPhotoHue im Shader),
+                        ' das Band dazu wie im Prozessor (ProPhotoBandHue).
                         Dim hs As Single = 0, ss As Single = 0, ls As Single = 0
-                        GetHslBandAdjustments(ReferenceBandHue(h), chain.Hsl, hs, ss, ls)
+                        GetHslBandAdjustments(WarpCircular(h, ProPhotoBandFrom, HslBandCenters), chain.Hsl, hs, ss, ls)
                         ' Normiert, damit halbe Gleitkomma genau genug bleibt: Grad durch 360,
                         ' Reglerwerte durch 100.
                         hue(i) = hs / 360.0F : sat(i) = ss / 100.0F : lum(i) = ls / 100.0F
@@ -1023,7 +1026,7 @@ uniform float useMixer; uniform float3 mix0; uniform float3 mix1; uniform float3
 uniform float useMap; uniform float3 mapS; uniform float3 mapH; uniform float mapAmount;
 uniform float usePreset; uniform float3 pm0; uniform float3 pm1; uniform float3 pm2; uniform float3 pmOff; uniform float presetStrength;
 uniform float posterize; uniform float threshold;
-uniform float useMelissa;
+uniform float useMelissa; uniform float deferCurves;
 uniform float useGrade; uniform float gradeAfterPreset;
 uniform float gradeY[20]; uniform float gradeCb[20]; uniform float gradeCr[20];
 uniform shader cubeA; uniform shader cubeB;
@@ -1088,6 +1091,16 @@ float satGain(float v, float a) {
     if (v <= 0.0) return 0.0;
     if (v >= 1.0) return 1.0;
     return 1.0 - (1.0 - v) * exp(-a * v / (1.0 - v));
+}
+// RestoreHueGate: der Restore der Tiefen nur, solange die Kurven den Farbton hoechstens 30 Grad
+// gedreht haben, auslaufend bis 60 Grad.
+float restoreHueGate(float3 c0, float3 c1) {
+    float a0 = c0.r - 0.5 * (c0.g + c0.b); float k0 = 0.8660254 * (c0.g - c0.b);
+    float a1 = c1.r - 0.5 * (c1.g + c1.b); float k1 = 0.8660254 * (c1.g - c1.b);
+    float lengths = sqrt((a0 * a0 + k0 * k0) * (a1 * a1 + k1 * k1));
+    if (lengths < 0.0000001) return 0.0;
+    float t = clamp(((a0 * a1 + k0 * k1) / lengths - 0.5) / (0.8660254 - 0.5), 0.0, 1.0);
+    return t * t * (3.0 - 2.0 * t);
 }
 float bandGain(float v, float a) {
     a = clamp(a, -1.0, 1.0);
@@ -1175,6 +1188,25 @@ float srgbEncode(float v) {
 float srgbDecode(float v) {
     if (v <= 0.04045) return v / 12.92;
     return pow((v + 0.055) / 1.055, 2.4);
+}
+// ProPhotoHue: HSV-Farbton (Grad) einer sRGB-Farbe in linearem ProPhoto, fuer die Bandsuche des
+// Farbmischers (ProPhotoBandHue). Die feste sRGB-Kurve, weil Zeile 0 der Tabelle nicht immer
+// gefuellt ist. Ohne Buntheit 0 wie im Prozessor.
+float proPhotoHue(float3 c) {
+    float lr = srgbDecode(clamp(c.r, 0.0, 1.0));
+    float lg = srgbDecode(clamp(c.g, 0.0, 1.0));
+    float lb = srgbDecode(clamp(c.b, 0.0, 1.0));
+    float pr = 0.529214 * lr + 0.330063 * lg + 0.140723 * lb;
+    float pg = 0.098324 * lr + 0.873625 * lg + 0.028051 * lb;
+    float pb = 0.016879 * lr + 0.117714 * lg + 0.865407 * lb;
+    float mx = max(pr, max(pg, pb));
+    float d = mx - min(pr, min(pg, pb));
+    if (d <= 0.0000000001) return 0.0;
+    float hh;
+    if (mx == pr) { hh = (pg - pb) / d; if (hh < 0.0) hh += 6.0; }
+    else if (mx == pg) { hh = (pb - pr) / d + 2.0; }
+    else { hh = (pr - pg) / d + 4.0; }
+    return hh * 60.0;
 }
 // x: Farbton, y: Saettigung, z: Wert; w: 0, wenn der Bildpunkt zu dunkel ist.
 float4 toHsv(float3 c) {
@@ -1367,6 +1399,28 @@ float3 scaleShadow(float3 c, float undo) {
 
 // PreMixerStages: die Stufen bis vor den HSL-Block, fuer den Bildpunkt und fuer seine
 // Fuehrungsfarbe. Rueckgabe: Farbe und die Saettigung vor der Tonstufe.
+// ApplyCurvesInMelissa: Kurven in ProPhoto-Primaerfarben mit sRGB-Gammakurve. Vor dem Farbmischer
+// (preMixer) oder dahinter (main, deferCurves), wie CurvesAfterMixer im Prozessor.
+float3 curvesMelissa(float3 c) {
+    float3 l = float3(tab(0.0, c.r), tab(0.0, c.g), tab(0.0, c.b));
+    float3 pp = float3(0.529214 * l.r + 0.330063 * l.g + 0.140723 * l.b,
+                       0.098324 * l.r + 0.873625 * l.g + 0.028051 * l.b,
+                       0.016879 * l.r + 0.117714 * l.g + 0.865407 * l.b);
+    // Ohne verschachtelte Tabellenzugriffe: Skias Prozessor-Weg fuer Laufzeit-Shader rechnete
+    // tab(5.0, tab(1.0, x)) gemessen falsch (viel zu hell), die Karte richtig.
+    float gr0 = tab(1.0, clamp(pp.r, 0.0, 1.0));
+    float gg0 = tab(1.0, clamp(pp.g, 0.0, 1.0));
+    float gb0 = tab(1.0, clamp(pp.b, 0.0, 1.0));
+    float cr0 = tab(5.0, gr0);
+    float cg0 = tab(6.0, gg0);
+    float cb0 = tab(7.0, gb0);
+    pp = float3(tab(0.0, cr0), tab(0.0, cg0), tab(0.0, cb0));
+    float3 nn = float3(2.034515 * pp.r - 0.727257 * pp.g - 0.307258 * pp.b,
+                       -0.228704 * pp.r + 1.23143 * pp.g - 0.002726 * pp.b,
+                       -0.008573 * pp.r - 0.153316 * pp.g + 1.161889 * pp.b);
+    return float3(tab(1.0, clamp(nn.r, 0.0, 1.0)), tab(1.0, clamp(nn.g, 0.0, 1.0)), tab(1.0, clamp(nn.b, 0.0, 1.0)));
+}
+
 float4 preMixer(float3 c, float2 p) {
     float rr = c.r; float gg = c.g; float bb = c.b;
 
@@ -1405,6 +1459,7 @@ float4 preMixer(float3 c, float2 p) {
     }
 
     float satVorTon = 0.0;
+    float3 vorTon = float3(rr, gg, bb);
     if (useScalar > 0.5) {
         float vMax = max(rr, max(gg, bb));
         float vMin = min(rr, min(gg, bb));
@@ -1471,27 +1526,15 @@ float4 preMixer(float3 c, float2 p) {
             bb = clamp(tg + (bb - tg) * tf, 0.0, 1.0);
         }
         if (useMelissa > 0.5) {
-            // ApplyCurvesInMelissa: Kurven in ProPhoto-Primaerfarben mit sRGB-Gammakurve.
-            float3 l = float3(tab(0.0, rr), tab(0.0, gg), tab(0.0, bb));
-            float3 pp = float3(0.529214 * l.r + 0.330063 * l.g + 0.140723 * l.b,
-                               0.098324 * l.r + 0.873625 * l.g + 0.028051 * l.b,
-                               0.016879 * l.r + 0.117714 * l.g + 0.865407 * l.b);
-            // Ohne verschachtelte Tabellenzugriffe: Skias Prozessor-Weg fuer Laufzeit-Shader rechnete
-            // tab(5.0, tab(1.0, x)) gemessen falsch (viel zu hell), die Karte richtig.
-            float gr0 = tab(1.0, clamp(pp.r, 0.0, 1.0));
-            float gg0 = tab(1.0, clamp(pp.g, 0.0, 1.0));
-            float gb0 = tab(1.0, clamp(pp.b, 0.0, 1.0));
-            float cr0 = tab(5.0, gr0);
-            float cg0 = tab(6.0, gg0);
-            float cb0 = tab(7.0, gb0);
-            pp = float3(tab(0.0, cr0), tab(0.0, cg0), tab(0.0, cb0));
-            float3 nn = float3(2.034515 * pp.r - 0.727257 * pp.g - 0.307258 * pp.b,
-                               -0.228704 * pp.r + 1.23143 * pp.g - 0.002726 * pp.b,
-                               -0.008573 * pp.r - 0.153316 * pp.g + 1.161889 * pp.b);
-            rr = tab(1.0, clamp(nn.r, 0.0, 1.0)); gg = tab(1.0, clamp(nn.g, 0.0, 1.0)); bb = tab(1.0, clamp(nn.b, 0.0, 1.0));
+            // Hinter dem Farbmischer (deferCurves) kommen die Kurven erst in main.
+            if (deferCurves < 0.5) {
+                float3 cv = curvesMelissa(float3(rr, gg, bb));
+                rr = cv.r; gg = cv.g; bb = cv.b;
+            }
         } else {
             rr = tab(5.0, rr); gg = tab(6.0, gg); bb = tab(7.0, bb);
         }
+        if (satVorTon > 0.0) satVorTon *= restoreHueGate(vorTon, float3(rr, gg, bb));
     }
     return float4(rr, gg, bb, satVorTon);
 }
@@ -1574,7 +1617,7 @@ half4 main(float2 p) {
             }
         } else if (useHsl > 0.5) {
             bool hasGuide = guideHsl.x >= 0.0;
-            float bandHue = hasGuide ? guideHsl.x : h;
+            float bandHue = proPhotoHue(hasGuide ? guideRgb : hslToRgb(h, sat, lum));
             float gateSat = hasGuide ? guideHsl.y : sat;
             float gateLum = hasGuide ? guideHsl.z : lum;
             float hueShift = hueTab(11.0, bandHue) * 360.0;
@@ -1590,7 +1633,8 @@ half4 main(float2 p) {
                 chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate);
             }
             h = mod(h + hueShift * gateCs + 360.0, 360.0);
-            sat = satGain(sat, satShift * gateCs / 100.0);
+            // Entsaettigen ohne Tor, wie auf dem Prozessor.
+            sat = satGain(sat, satShift * (satShift < 0.0 ? 1.0 : gateCs) / 100.0);
             lum = bandGain(lum, lumShift * chromaW / 100.0);
         }
         float3 o = hslToRgb(h, sat, lum);
@@ -1603,6 +1647,11 @@ half4 main(float2 p) {
             o = float3(srgbEncode(clamp(lin.r, 0.0, 1.0)), srgbEncode(clamp(lin.g, 0.0, 1.0)), srgbEncode(clamp(lin.b, 0.0, 1.0)));
         }
         rr = o.r; gg = o.g; bb = o.b;
+        // Die Kurven hinter Farbmischer und Punktfarbe (CurvesAfterMixer).
+        if (deferCurves > 0.5) {
+            float3 cv = curvesMelissa(float3(rr, gg, bb));
+            rr = cv.r; gg = cv.g; bb = cv.b;
+        }
         if (useGrade > 0.5 && gradeAfterPreset < 0.5) {
             float3 gr = colorGrade(float3(rr, gg, bb));
             rr = gr.r; gg = gr.g; bb = gr.b;
