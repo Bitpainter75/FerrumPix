@@ -85,6 +85,16 @@
                             <TextBlock Text="Verformen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
+                    <Button Classes="ghost" Padding="12,6" Margin="0,0,6,6"
+                            Command="{Binding SetWarpModeCommand}" CommandParameter="Liquify"
+                            Classes.active="{Binding IsWarpLiquify}"
+                            ToolTip.Tip="Mit einem Pinsel schieben, aufblähen, zusammenziehen oder verdrehen">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ripple.svg"
+                                           Width="14" Height="14" />
+                            <TextBlock Text="Verflüssigen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
                 </WrapPanel>
                 <TextBlock Text="Erst wählen, dann liegt das jeweilige Werkzeug über dem Bild. Nochmal darauf klicken blendet es wieder aus."
                            Foreground="{DynamicResource FP.Text.Muted}"
@@ -414,6 +424,108 @@
                             IsVisible="{Binding WarpsTheImage}"
                             IsEnabled="{Binding HasLineChanges}"
                             Command="{Binding ApplyLinesCommand}">
+                        <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                   HorizontalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Expander>
+        </Border>
+
+        <!-- VERFLUESSIGEN: ein Pinsel statt Anfassern. Er schiebt die Knoten eines feinen Rasters,
+             das beim Anwenden wie Gitter und Verformen als Knotenfeld ins Rezept wandert. -->
+        <Border Classes="adjustment-group" IsVisible="{Binding IsWarpLiquify}">
+            <Expander Header="Verflüssigen" icons:ExpanderState.Key="verfluessigen" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/ripple.svg"
+                                    Width="14" Height="14" />
+                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="icon-btn group-reset"
+                                    Width="28" Height="28" Padding="0"
+                                    Command="{Binding DataContext.ResetLiquifyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    ToolTip.Tip="Verflüssigen zurücksetzen">
+                                <icons:SvgIcon
+                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
+                                    Width="14" Height="14" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                <StackPanel Spacing="8" Margin="0,8,0,0">
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="Push"
+                                Classes.active="{Binding IsLiquifyPush}">
+                            <TextBlock Text="Schieben" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="Bloat"
+                                Classes.active="{Binding IsLiquifyBloat}">
+                            <TextBlock Text="Aufblähen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="Pucker"
+                                Classes.active="{Binding IsLiquifyPucker}">
+                            <TextBlock Text="Zusammenziehen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="TwirlRight"
+                                Classes.active="{Binding IsLiquifyTwirlRight}">
+                            <TextBlock Text="Strudel rechts" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="TwirlLeft"
+                                Classes.active="{Binding IsLiquifyTwirlLeft}">
+                            <TextBlock Text="Strudel links" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="Smooth"
+                                Classes.active="{Binding IsLiquifySmooth}"
+                                ToolTip.Tip="Gleicht die Verzerrung unter dem Pinsel aus">
+                            <TextBlock Text="Glätten" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                        <Button Classes="ghost" Padding="10,5" Margin="0,0,6,6"
+                                Command="{Binding SetLiquifyBrushCommand}" CommandParameter="Reconstruct"
+                                Classes.active="{Binding IsLiquifyReconstruct}"
+                                ToolTip.Tip="Holt das ursprüngliche Bild unter dem Pinsel zurück">
+                            <TextBlock Text="Rekonstruieren" FontSize="{DynamicResource FP.Font.Small}" />
+                        </Button>
+                    </WrapPanel>
+                    <StackPanel Spacing="2">
+                        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                            <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
+                                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                            <icons:RoundSlider Grid.Column="1" Minimum="10" Maximum="1000" DefaultValue="150"
+                                               Value="{Binding LiquifySize}" Margin="0,0" />
+                            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                     Value="{Binding LiquifySize, Mode=TwoWay}" Minimum="10" Maximum="1000" />
+                        </Grid>
+                        <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                            <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                                       VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                            <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100" DefaultValue="50"
+                                               Value="{Binding LiquifyStrength}" Margin="0,0" />
+                            <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                     Value="{Binding LiquifyStrength, Mode=TwoWay}" Minimum="1" Maximum="100" />
+                        </Grid>
+                    </StackPanel>
+                    <TextBlock Text="Im Bild mit gedrückter Maustaste malen. Schieben folgt dem Zeiger, die anderen Pinsel wirken, solange die Taste gehalten wird."
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Small}" />
+                    <TextBlock Text="Anwenden übernimmt das Verflüssigen ins Rezept: Masken und eingefügte Objekte gehen mit, und beim nächsten Öffnen steht es wieder da."
+                               IsVisible="{Binding WarpsTheImage}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}" TextWrapping="Wrap" />
+                    <Button Classes="accent" HorizontalAlignment="Stretch" Padding="10,5"
+                            IsVisible="{Binding WarpsTheImage}"
+                            IsEnabled="{Binding HasLiquifyChanges}"
+                            Command="{Binding ApplyLiquifyCommand}">
                         <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center"/>
                     </Button>

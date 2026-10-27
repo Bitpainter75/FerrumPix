@@ -10170,4 +10170,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>星を付けると、ビューアーはすぐに次の画像へ進みます。評価を取り消した場合は、その画像のままです。</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>ゆがみ</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>ブラシで押す、膨張、縮小、渦巻きを行います</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>ゆがみをリセット</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>押す</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>膨張</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>縮小</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>右回りの渦</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>左回りの渦</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>ブラシの下のゆがみをならします</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>ブラシの下の元の画像を戻します</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>復元</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>マウスボタンを押したまま画像上で描きます。押すはポインターに追従し、ほかのブラシはボタンを押している間作用します。</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>適用するとゆがみがレシピに取り込まれます。マスクと挿入したオブジェクトも一緒に動き、次に開いたときにも残っています。</value>
+  </data>
 </root>

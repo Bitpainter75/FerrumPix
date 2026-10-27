@@ -10130,4 +10130,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>Después de poner estrellas, el visor pasa directamente a la siguiente imagen. Si quitas la valoración, la imagen se queda.</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>Licuar</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>Empujar, inflar, desinflar o girar con un pincel</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>Restablecer licuar</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>Empujar</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>Inflar</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>Desinflar</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>Remolino a la derecha</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>Remolino a la izquierda</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>Suaviza la deformación bajo el pincel</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>Recupera la imagen original bajo el pincel</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>Reconstruir</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>Pinta en la imagen con el botón del ratón pulsado. Empujar sigue al puntero, los demás pinceles actúan mientras se mantenga el botón.</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>Aplicar lleva el licuado a la receta: las máscaras y los objetos insertados lo acompañan, y la próxima vez que abras la imagen seguirá ahí.</value>
+  </data>
 </root>

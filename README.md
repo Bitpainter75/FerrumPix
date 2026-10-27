@@ -81,7 +81,7 @@ Two photos can be put side by side for comparison, sharing one zoom so you alway
 
 <img src="Screenshots/Editor_Text.jpg" />
 
-**Geometry.** Crop, resize, rotate, flip and canvas size, plus four ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, and a frame whose edges you bend. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
+**Geometry.** Crop, resize, rotate, flip and canvas size, plus five ways to distort a picture: perspective, a line you lay on an edge and drag, a grid, a frame whose edges you bend, and a liquify brush that pushes, bloats, puckers or twirls. None of them is computed into the pixels, so they can be adjusted or taken off at any time, and with an object selected they distort that object instead.
 
 Two of them can find their own setting. *Level to the horizon* looks for the straight edges in the picture - the horizon, the edge of a house, a row of windows - and turns the photo until they sit level; *Correct perspective automatically* finds the verticals of a building shot that lean together and pulls them upright. Both put their result on the ordinary sliders, to be nudged afterwards like a value you set yourself, and both say so when the picture already stands right. Straightening can trim the empty corners away on its own, and the perspective can fill the frame on its own. To straighten by hand, draw a line along an edge that should be level or upright, and the picture turns to match.
 

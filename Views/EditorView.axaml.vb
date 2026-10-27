@@ -143,6 +143,7 @@ Namespace Views
         ''' Anfang einer Zieh-Auswahl, die ausserhalb ansetzt.</summary>
         Private _maskOutsideClickStart As Avalonia.Point? = Nothing
         Private _isEnvelopeDragging As Boolean = False
+        Private _isLiquifyStroking As Boolean = False
         Private _isLineDragging As Boolean = False
         Private _isObjectCornerDragging As Boolean = False
         Private _isPerspectiveDragging As Boolean = False
@@ -1266,7 +1267,7 @@ Namespace Views
             If toolVm IsNot Nothing AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
                Not _isPanDragging AndAlso Not pointerPoint.Properties.IsRightButtonPressed AndAlso
                (toolVm.CurrentTool = EditorTool.Draw OrElse toolVm.CurrentTool = EditorTool.Retouch OrElse
-                IsMaskBrushActive(toolVm)) Then
+                IsMaskBrushActive(toolVm) OrElse ShowsLiquify(toolVm)) Then
                 AdjustActiveToolSize(toolVm, If(e.Delta.Y > 0, 1, -1))
                 e.Handled = True
                 Return
@@ -2726,6 +2727,23 @@ Namespace Views
                 End If
             End If
 
+            ' VERFLUESSIGEN: ein Pinsel, kein Anfasser. Jeder Druck mit der linken Taste aufs Bild
+            ' beginnt einen Zug; NICHT klemmen, der Pinselkreis darf am Rand halb daneben liegen.
+            If ShowsLiquify(vm) AndAlso e.GetCurrentPoint(canvas).Properties.IsLeftButtonPressed Then
+                Dim liqRect = GetDisplayedImageRect(canvas, vm)
+                If liqRect.Width > 0 AndAlso liqRect.Height > 0 Then
+                    Dim liqPos = e.GetPosition(canvas)
+                    If BrushCircleTouchesImage(liqPos, liqRect, vm) AndAlso
+                       vm.BeginLiquifyStroke((liqPos.X - liqRect.Left) / liqRect.Width * 100.0,
+                                             (liqPos.Y - liqRect.Top) / liqRect.Height * 100.0) Then
+                        _isLiquifyStroking = True
+                        e.Pointer.Capture(canvas)
+                        e.Handled = True
+                        Return
+                    End If
+                End If
+            End If
+
             If ShowsLines(vm) Then
                 Dim linesRect = GetDisplayedImageRect(canvas, vm)
                 If linesRect.Width > 0 AndAlso linesRect.Height > 0 Then
@@ -3514,6 +3532,21 @@ Namespace Views
                 e.Handled = True
                 Return
             End If
+            If _isLiquifyStroking Then
+                Dim qCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+                Dim qVm = TryCast(DataContext, EditorViewModel)
+                If qCanvas Is Nothing OrElse qVm Is Nothing Then Return
+                Dim qRect = GetDisplayedImageRect(qCanvas, qVm)
+                If qRect.Width <= 0 OrElse qRect.Height <= 0 Then Return
+                Dim qPos = e.GetPosition(qCanvas)
+                _lastBrushCursorPosition = qPos
+                UpdateBrushCursorPreview(qPos, qRect, qVm)
+                qVm.UpdateLiquifyStroke((qPos.X - qRect.Left) / qRect.Width * 100.0,
+                                        (qPos.Y - qRect.Top) / qRect.Height * 100.0)
+                UpdateSliderLayout()
+                e.Handled = True
+                Return
+            End If
             If _isObjectCornerDragging Then
                 Dim oCanvas = Me.FindControl(Of Canvas)("PreviewCanvas")
                 Dim oVm = TryCast(DataContext, EditorViewModel)
@@ -3640,6 +3673,7 @@ Namespace Views
                    _isMaskBrushDrawing OrElse _isBrushDrawing OrElse _isRetouching OrElse
                    _isGuideDragging OrElse _objectMarqueeActive OrElse _isMaskMoveDragging OrElse
                    _isPerspectiveDragging OrElse _isWarpDragging OrElse _isEnvelopeDragging OrElse
+                   _isLiquifyStroking OrElse
                    _isLineDragging OrElse _isObjectCornerDragging OrElse _isGradientDragging OrElse
                    _isPathPointerActive
         End Function
@@ -3739,6 +3773,11 @@ Namespace Views
             If _isEnvelopeDragging Then
                 TryCast(DataContext, EditorViewModel)?.EndEnvelopeDrag()
                 _isEnvelopeDragging = False
+                UpdateSliderLayout()
+            End If
+            If _isLiquifyStroking Then
+                TryCast(DataContext, EditorViewModel)?.EndLiquifyStroke()
+                _isLiquifyStroking = False
                 UpdateSliderLayout()
             End If
             If _isLineDragging Then
@@ -4136,13 +4175,16 @@ Namespace Views
 
         Private Function BrushDiameterOnScreen(imageRect As Avalonia.Rect, vm As EditorViewModel) As Double
             If vm Is Nothing Then Return 0
-            If vm.CurrentTool <> EditorTool.Draw AndAlso vm.CurrentTool <> EditorTool.Retouch AndAlso Not IsMaskBrushActive(vm) Then Return 0
+            If vm.CurrentTool <> EditorTool.Draw AndAlso vm.CurrentTool <> EditorTool.Retouch AndAlso
+               Not IsMaskBrushActive(vm) AndAlso Not ShowsLiquify(vm) Then Return 0
             Dim scale = 1.0
             If vm.DisplayImageWidthPixels > 0 AndAlso vm.DisplayImageHeightPixels > 0 Then
                 scale = Math.Min(imageRect.Width / vm.DisplayImageWidthPixels, imageRect.Height / vm.DisplayImageHeightPixels)
             End If
-            ' Retusche misst über RetouchRadius; Zeichnen UND Masken-Pinsel über BrushSize.
-            Dim sizePx = If(vm.CurrentTool = EditorTool.Retouch, vm.RetouchRadius * 2.0, vm.BrushSize)
+            ' Retusche misst über RetouchRadius, Verflüssigen über LiquifySize; Zeichnen UND
+            ' Masken-Pinsel über BrushSize.
+            Dim sizePx = If(vm.CurrentTool = EditorTool.Retouch, vm.RetouchRadius * 2.0,
+                            If(ShowsLiquify(vm), vm.LiquifySize, vm.BrushSize))
             Return Math.Max(4.0, sizePx * scale)
         End Function
 
@@ -4168,7 +4210,8 @@ Namespace Views
             If cursor Is Nothing Then Return
 
             Dim showCursor = imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso
-                              (vm.CurrentTool = EditorTool.Draw OrElse vm.CurrentTool = EditorTool.Retouch OrElse IsMaskBrushActive(vm))
+                              (vm.CurrentTool = EditorTool.Draw OrElse vm.CurrentTool = EditorTool.Retouch OrElse
+                               IsMaskBrushActive(vm) OrElse ShowsLiquify(vm))
             cursor.IsVisible = showCursor
             If Not showCursor Then Return
 
@@ -5549,6 +5592,10 @@ Namespace Views
 
         Private Shared Function ShowsEnvelope(vm As EditorViewModel) As Boolean
             Return IsWarpTool(vm) AndAlso vm.IsWarpEnvelope
+        End Function
+
+        Private Shared Function ShowsLiquify(vm As EditorViewModel) As Boolean
+            Return IsWarpTool(vm) AndAlso vm.IsWarpLiquify
         End Function
 
         ''' <summary>Legt die Live-Vorschau der Gitterverzerrung genau ueber den dargestellten
@@ -8787,6 +8834,8 @@ Namespace Views
                 vm.BrushSize = vm.BrushSize + direction * SizeStep(vm.BrushSize, direction)
             ElseIf vm.CurrentTool = EditorTool.Retouch Then
                 vm.RetouchRadius = vm.RetouchRadius + direction * SizeStep(vm.RetouchRadius, direction)
+            ElseIf ShowsLiquify(vm) Then
+                vm.LiquifySize = vm.LiquifySize + direction * SizeStep(vm.LiquifySize, direction)
             Else
                 Return
             End If

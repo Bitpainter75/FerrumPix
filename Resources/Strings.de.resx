@@ -10148,4 +10148,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>Nach dem Vergeben von Sternen geht der Betrachter gleich zum nächsten Bild. Nimmt man die Bewertung wieder weg, bleibt das Bild stehen.</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>Verflüssigen</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>Mit einem Pinsel schieben, aufblähen, zusammenziehen oder verdrehen</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>Verflüssigen zurücksetzen</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>Schieben</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>Aufblähen</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>Zusammenziehen</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>Strudel rechts</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>Strudel links</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>Gleicht die Verzerrung unter dem Pinsel aus</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>Holt das ursprüngliche Bild unter dem Pinsel zurück</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>Rekonstruieren</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>Im Bild mit gedrückter Maustaste malen. Schieben folgt dem Zeiger, die anderen Pinsel wirken, solange die Taste gehalten wird.</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>Anwenden übernimmt das Verflüssigen ins Rezept: Masken und eingefügte Objekte gehen mit, und beim nächsten Öffnen steht es wieder da.</value>
+  </data>
 </root>

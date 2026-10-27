@@ -10174,4 +10174,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>별점을 매기면 뷰어가 바로 다음 사진으로 넘어갑니다. 평가를 다시 지우면 사진이 그대로 남습니다.</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>픽셀 유동화</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>브러시로 밀기, 부풀리기, 오목하게 하기, 돌리기</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>픽셀 유동화 재설정</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>밀기</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>부풀리기</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>오목하게</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>오른쪽 돌리기</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>왼쪽 돌리기</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>브러시 아래의 왜곡을 고르게 합니다</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>브러시 아래의 원래 이미지를 되돌립니다</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>재구성</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>마우스 버튼을 누른 채 이미지에 그립니다. 밀기는 포인터를 따라가고, 다른 브러시는 버튼을 누르고 있는 동안 작동합니다.</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>적용하면 픽셀 유동화가 레시피에 들어갑니다. 마스크와 삽입한 개체도 함께 따라가며, 다음에 사진을 열 때 그대로 남아 있습니다.</value>
+  </data>
 </root>

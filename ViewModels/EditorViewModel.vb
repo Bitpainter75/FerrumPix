@@ -5501,6 +5501,12 @@ Namespace ViewModels
                         ResetEnvelopePoints()
                         RaiseEnvelopeChanged()
                     End If
+                    ' Und fuer das Verfluessigen: sein Feld ist ebenfalls Sitzungszustand.
+                    If HasLiquifyChanges Then
+                        discarded.Add(LocalizationService.T("Verflüssigen"))
+                        ResetLiquifyNodes()
+                        Me.RaisePropertyChanged(NameOf(HasLiquifyChanges))
+                    End If
                     ' Der Pfad-Stift bleibt nicht scharf, wenn man in ein ANDERES Werkzeug wechselt:
                     ' ein liegengebliebener Entwurf oder eine nur scharfgestellte Grundlinie fing
                     ' sonst im neuen Werkzeug jeden Klick ab (Befund: Bild einfuegen begann einen
@@ -17262,6 +17268,9 @@ Namespace ViewModels
         Public ReadOnly Property ResetImageWarpCommand As ICommand
         Public ReadOnly Property ResetEnvelopeCommand As ICommand
         Public ReadOnly Property ApplyEnvelopeCommand As ICommand
+        Public ReadOnly Property ResetLiquifyCommand As ICommand
+        Public ReadOnly Property ApplyLiquifyCommand As ICommand
+        Public ReadOnly Property SetLiquifyBrushCommand As ICommand
         Public ReadOnly Property ResetLinesCommand As ICommand
         Public ReadOnly Property ResetObjectWarpCommand As ICommand
         Public ReadOnly Property ApplyLinesCommand As ICommand
@@ -17756,6 +17765,9 @@ Namespace ViewModels
             ResetImageWarpCommand = ReactiveCommand.Create(Sub() ResetImageWarp())
             ResetEnvelopeCommand = ReactiveCommand.Create(Sub() ResetEnvelope())
             ApplyEnvelopeCommand = ReactiveCommand.Create(Sub() ApplyEnvelopeWarp())
+            ResetLiquifyCommand = ReactiveCommand.Create(Sub() ResetLiquify())
+            ApplyLiquifyCommand = ReactiveCommand.Create(Sub() ApplyLiquifyWarp())
+            SetLiquifyBrushCommand = ReactiveCommand.Create(Of String)(Sub(b) LiquifyBrush = b)
             ClearDocumentBackgroundCommand = ReactiveCommand.Create(Sub() CanvasBackgroundColor = "#00000000")
             SetWarpModeCommand = ReactiveCommand.Create(Of String)(Sub(m) WarpMode = m)
             ConvertKindCommand = ReactiveCommand.Create(Sub() ConvertSelectionKind(Not ActiveSelectionIsMask))

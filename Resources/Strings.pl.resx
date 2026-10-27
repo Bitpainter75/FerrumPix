@@ -10170,4 +10170,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>Po przyznaniu gwiazdek przeglądarka od razu przechodzi do następnego obrazu. Jeśli usuniesz ocenę, obraz pozostanie.</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>Skraplanie</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>Przesuwaj, nadmuchuj, ściągaj lub skręcaj pędzlem</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>Resetuj skraplanie</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>Przesuń</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>Nadmuchaj</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>Ściągnij</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>Wir w prawo</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>Wir w lewo</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>Wygładza zniekształcenie pod pędzlem</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>Przywraca oryginalny obraz pod pędzlem</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>Rekonstruuj</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>Maluj na obrazie z wciśniętym przyciskiem myszy. Przesuń podąża za wskaźnikiem, pozostałe pędzle działają, dopóki przycisk jest wciśnięty.</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>Zastosuj przenosi skraplanie do przepisu: maski i wstawione obiekty idą za nim, a przy następnym otwarciu znów tam jest.</value>
+  </data>
 </root>

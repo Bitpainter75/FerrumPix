@@ -195,7 +195,8 @@ Namespace ViewModels
 
         Private _warpMode As String = ""
 
-        ''' <summary>"" = keines, "Perspektive", "Gitter", "Linien" oder "Verformen".</summary>
+        ''' <summary>"" = keines, "Perspektive", "Gitter", "Linien", "Verformen" oder "Liquify"
+        ''' (Verfluessigen, siehe EditorViewModelLiquify.vb).</summary>
         Public Property WarpMode As String
             Get
                 Return _warpMode
@@ -203,7 +204,7 @@ Namespace ViewModels
             Set(value As String)
                 Dim v = If(value, "").Trim()
                 If Not (v = "Perspektive" OrElse v = "Gitter" OrElse v = "Linien" OrElse
-                        v = "Verformen") Then v = ""
+                        v = "Verformen" OrElse v = "Liquify") Then v = ""
                 ' Nochmal auf denselben Knopf: wieder abwaehlen. So wird man das Overlay los, ohne
                 ' das Werkzeug zu verlassen.
                 If String.Equals(_warpMode, v, StringComparison.Ordinal) Then v = ""
@@ -215,10 +216,13 @@ Namespace ViewModels
                 _linienDragIndex = -1
                 _linienDragTeil = -1
                 _envelopeDragIndex = -1
+                _liquifyStroking = False
+                StopLiquifyTimer()
                 DisposeGridPreview()
                 DisposeLinePreview()
                 For Each n In {NameOf(WarpMode), NameOf(IsWarpPerspective),
                                NameOf(IsWarpGrid), NameOf(IsWarpLines), NameOf(IsWarpEnvelope),
+                               NameOf(IsWarpLiquify), NameOf(HasLiquifyChanges),
                                NameOf(PerspectiveCornerValues), NameOf(LineValues),
                                NameOf(WarpGridValues), NameOf(EnvelopeValues),
                                NameOf(EnvelopeMeshValues), NameOf(HasEnvelopeChanges)}
@@ -844,10 +848,11 @@ Namespace ViewModels
         End Sub
 
         Private Sub DisposeGridPreview()
-            ' Gitter und Verformen teilen sich Grundlage und Vorschaukanal - sie koennen nie
-            ' gleichzeitig laufen, und beide muessen hier abgeraeumt werden.
+            ' Gitter, Verformen und Verfluessigen teilen sich Grundlage und Vorschaukanal - sie
+            ' koennen nie gleichzeitig laufen, und alle muessen hier abgeraeumt werden.
             If String.Equals(_vorschauQuelle, "Gitter", StringComparison.Ordinal) OrElse
-               String.Equals(_vorschauQuelle, "Verformen", StringComparison.Ordinal) Then
+               String.Equals(_vorschauQuelle, "Verformen", StringComparison.Ordinal) OrElse
+               String.Equals(_vorschauQuelle, "Liquify", StringComparison.Ordinal) Then
                 ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
                 SetToolPreviewMargin(0)
@@ -887,8 +892,12 @@ Namespace ViewModels
             ' man sieht, was hinausgezogen ist. Dieser Teil wird abgedunkelt - beim Anwenden faellt
             ' er weg. Am Objekt bleibt es bei der Vorschau in Bildgroesse.
             If GridEdgesFree Then
-                Dim moved = If(String.Equals(holder, "Verformen", StringComparison.Ordinal),
-                               HasEnvelopeChanges, HasWarpGridChanges)
+                Dim moved As Boolean
+                Select Case holder
+                    Case "Verformen" : moved = HasEnvelopeChanges
+                    Case "Liquify" : moved = HasLiquifyChanges
+                    Case Else : moved = HasWarpGridChanges
+                End Select
                 If Not moved Then
                     DisposeGridPreview()
                     Return
@@ -987,18 +996,26 @@ Namespace ViewModels
             Public GridY As Double()
             Public Envelope As Double()
             Public Lines As List(Of WarpLine)
+            Public LiquifyX As Double()
+            Public LiquifyY As Double()
         End Class
 
         ''' <summary>Den offenen Arbeitsstand sichern - oder Nothing, wenn es keinen gibt. Die Felder
         ''' sind klein (ein 12er-Raster sind 338 Zahlen), das Sichern kostet also nichts.</summary>
         Private Function CaptureWarpSession() As WarpSessionState
-            If _warpX Is Nothing AndAlso _envelope Is Nothing AndAlso _linien.Count = 0 Then Return Nothing
+            If _warpX Is Nothing AndAlso _envelope Is Nothing AndAlso _linien.Count = 0 AndAlso
+               _liquifyX Is Nothing Then Return Nothing
+            ' Das Feld des Verfluessigens ist groesser (33 000 Zahlen), wird aber nur mitgenommen,
+            ' wenn es bewegt ist.
+            Dim liquifyMoved = HasLiquifyChanges
             Return New WarpSessionState With {
                 .Columns = _warpColumns, .Rows = _warpRows,
                 .GridX = If(_warpX Is Nothing, Nothing, CType(_warpX.Clone(), Double())),
                 .GridY = If(_warpY Is Nothing, Nothing, CType(_warpY.Clone(), Double())),
                 .Envelope = If(_envelope Is Nothing, Nothing, CType(_envelope.Clone(), Double())),
-                .Lines = _linien.Select(Function(l) l.Clone()).ToList()}
+                .Lines = _linien.Select(Function(l) l.Clone()).ToList(),
+                .LiquifyX = If(liquifyMoved, CType(_liquifyX.Clone(), Double()), Nothing),
+                .LiquifyY = If(liquifyMoved, CType(_liquifyY.Clone(), Double()), Nothing)}
         End Function
 
         ''' <summary>Den gesicherten Arbeitsstand zurückholen. Ein laufender Zug wird dabei
@@ -1012,14 +1029,28 @@ Namespace ViewModels
             _envelope = If(state.Envelope Is Nothing, Nothing, CType(state.Envelope.Clone(), Double()))
             _linien.Clear()
             If state.Lines IsNot Nothing Then _linien.AddRange(state.Lines.Select(Function(l) l.Clone()))
+            If state.LiquifyX IsNot Nothing AndAlso state.LiquifyY IsNot Nothing Then
+                _liquifyX = CType(state.LiquifyX.Clone(), Double())
+                _liquifyY = CType(state.LiquifyY.Clone(), Double())
+            Else
+                ResetLiquifyNodes()
+            End If
             _warpDragIndex = -1
             _linienDragIndex = -1
             _linienDragTeil = -1
             _envelopeDragIndex = -1
+            _liquifyStroking = False
+            StopLiquifyTimer()
             DisposeGridPreview()
             DisposeLinePreview()
             RaiseLinesChanged()
             RaiseEnvelopeChanged()
+            Me.RaisePropertyChanged(NameOf(HasLiquifyChanges))
+            ' Am Bild zeigt erst die Vorschau, wo das Feld nach dem Zurueckholen steht.
+            If IsWarpLiquify AndAlso Not WarpsTheObject AndAlso HasLiquifyChanges Then
+                PrepareWarpPreview(LiquifySteps, LiquifySteps, AddressOf GridPointToDisplay)
+                RefreshWarpPreview(LiquifySteps, LiquifySteps, LiquifyDisplayValues(), "Liquify")
+            End If
             Me.RaisePropertyChanged(NameOf(WarpGridSize))
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
@@ -1377,11 +1408,12 @@ Namespace ViewModels
                                End Function)
         End Sub
 
-        Private Sub ApplyWarpToObjects(abbildung As Func(Of Double, Double, (X As Double, Y As Double)))
+        Private Sub ApplyWarpToObjects(abbildung As Func(Of Double, Double, (X As Double, Y As Double)),
+                                       Optional steps As Integer = MaxImageWarpSteps)
             If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return
             ' Bild und mitwandernde Objekte muessen auf derselben Feinheit ausgewertet werden.
             ' Ein groberes Objektmesh zeigte sonst im Export andere Knicke als das Bild darunter.
-            Const Steps As Integer = 48
+            ' Das Verfluessigen gibt deshalb seine eigene, feinere Feinheit mit.
             For Each a In _annotations
                 If a Is Nothing Then Continue For
                 Dim alt = a.Warp
@@ -2059,6 +2091,8 @@ Namespace ViewModels
                         Return HasLineChanges
                     Case "Verformen"
                         Return HasEnvelopeChanges
+                    Case "Liquify"
+                        Return HasLiquifyChanges
                     Case Else
                         Return False
                 End Select
@@ -2079,6 +2113,8 @@ Namespace ViewModels
                     ApplyLineWarp()
                 Case "Verformen"
                     ApplyEnvelopeWarp()
+                Case "Liquify"
+                    ApplyLiquifyWarp()
             End Select
         End Sub
 
@@ -2093,6 +2129,8 @@ Namespace ViewModels
                     ResetLines()
                 Case "Verformen"
                     ResetEnvelope()
+                Case "Liquify"
+                    ResetLiquify()
             End Select
             StatusText = LocalizationService.T("Verzerrung verworfen")
         End Sub
@@ -2395,6 +2433,7 @@ Namespace ViewModels
                 _envelopeImage = CType(_envelope.Clone(), Double())
                 _linienBild.Clear()
                 _linienBild.AddRange(_linien)
+                StashImageLiquify()
             End If
 
             _warpSpaceObject = jetzt
@@ -2402,6 +2441,8 @@ Namespace ViewModels
             _linienDragIndex = -1
             _linienDragTeil = -1
             _envelopeDragIndex = -1
+            _liquifyStroking = False
+            StopLiquifyTimer()
             DisposeGridPreview()
             DisposeLinePreview()
             _linien.Clear()
@@ -2428,12 +2469,15 @@ Namespace ViewModels
                     ResetEnvelopePoints()
                 End If
                 _linien.AddRange(_linienBild)
+                RestoreImageLiquify()
             Else
                 LoadWarpFromObject()
+                LoadLiquifyFromObject()
             End If
 
             RaiseLinesChanged()
             RaiseEnvelopeChanged()
+            Me.RaisePropertyChanged(NameOf(HasLiquifyChanges))
             Me.RaisePropertyChanged(NameOf(WarpGridValues))
             Me.RaisePropertyChanged(NameOf(HasWarpGridChanges))
         End Sub
@@ -2661,7 +2705,9 @@ Namespace ViewModels
         ''' Geometriestufe mit - beim naechsten Oeffnen also wieder.</summary>
         Private Sub ApplyNodeWarp(columns As Integer, rows As Integer,
                                   xs As Double(), ys As Double(),
-                                  Optional afterApply As Action = Nothing)
+                                  Optional afterApply As Action = Nothing,
+                                  Optional meshSteps As Integer = MaxImageWarpSteps,
+                                  Optional decimals As Integer = -1)
             If Not HasDocument Then Return
 
             PushUndo(CombineHistoryLabel("Verzerren", "Verformen"))
@@ -2679,7 +2725,7 @@ Namespace ViewModels
             ' Fuer sie rahmt MapDisplayWarpToObjectSpace die sichtbare Abbildung mit dem passenden
             ' Hin- und Rueckweg ein, wie es die Perspektive bereits tut.
             Dim displayMapping = NodeMapping(columns, rows, xs, ys)
-            ApplyWarpToObjects(MapDisplayWarpToObjectSpace(displayMapping))
+            ApplyWarpToObjects(MapDisplayWarpToObjectSpace(displayMapping), meshSteps)
             ' Nicht mit einer eventuell früheren Verzerrung zusammenfalten: ihre Reihenfolge
             ' gegenüber Crop, Drehung und Leinwand ist sichtbar. Jede bestätigte Verzerrung wird
             ' deshalb als eigener Pipeline-Schritt abgelegt. Ein noch aus einem ALTEN Rezept
@@ -2688,7 +2734,7 @@ Namespace ViewModels
             ' schieben - das Bild spraenge beim ersten neuen Zug.
             _geometryOperations.Add(New GeometryOperation With {
                 .Kind = "warp",
-                .Adjustments = New ImageAdjustments With {.ImageWarp = BuildWarpMesh(displayMapping)}})
+                .Adjustments = New ImageAdjustments With {.ImageWarp = BuildWarpMesh(displayMapping, meshSteps, decimals)}})
             RaiseImageWarpChanged()
             afterApply?.Invoke()
             StatusText = LocalizationService.T("Verzerrung angewendet")
@@ -2764,15 +2810,20 @@ Namespace ViewModels
         ''' VERKETTET WIRD HIER NICHTS MEHR. Jede bestaetigte Verzerrung ist ein eigener Schritt der
         ''' Geometriekette und wird in ihrer Reihenfolge ausgefuehrt; sie zusammenzufalten wuerde die
         ''' Reihenfolge gegenueber Beschnitt, Drehung und Leinwand einebnen, und die ist sichtbar.</summary>
-        Private Shared Function BuildWarpMesh(mapping As Func(Of Double, Double, (X As Double, Y As Double))) As ObjectWarp
-            Dim steps = MaxImageWarpSteps
+        ''' <param name="steps">Feinheit des Rezeptrasters. Ab Werk 48; das Verfluessigen braucht
+        ''' feinere Maschen und gibt seine eigene mit.</param>
+        ''' <param name="decimals">Rundung der Knoten in Prozent, -1 fuer keine. Ein feines Raster
+        ''' waere ungerundet doppelt so gross im Rezept, ohne dass man den Unterschied saehe.</param>
+        Private Shared Function BuildWarpMesh(mapping As Func(Of Double, Double, (X As Double, Y As Double)),
+                                              Optional steps As Integer = MaxImageWarpSteps,
+                                              Optional decimals As Integer = -1) As ObjectWarp
             Dim node((steps + 1) * (steps + 1) * 2 - 1) As Double
             For rowIdx = 0 To steps
                 For colIdx = 0 To steps
                     Dim i = (rowIdx * (steps + 1) + colIdx) * 2
                     Dim n = mapping(colIdx / CDbl(steps) * 100.0, rowIdx / CDbl(steps) * 100.0)
-                    node(i) = n.X
-                    node(i + 1) = n.Y
+                    node(i) = If(decimals >= 0, Math.Round(n.X, decimals), n.X)
+                    node(i + 1) = If(decimals >= 0, Math.Round(n.Y, decimals), n.Y)
                 Next
             Next
             Return New ObjectWarp With {

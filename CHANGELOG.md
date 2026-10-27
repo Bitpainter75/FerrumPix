@@ -20,7 +20,7 @@
 - **Next picture after rating:** a new viewer setting moves on to the next picture as soon as you
   give it stars, so you can rate a whole folder with the number keys alone.
 
-- **Colour mixer and curves now acts before the curves:** in presets that use both, the
+- **Colour mixer now acts before the curves:** in presets that use both, the
   colour mixer now acts before the curves, so the colour look the curves add stays as intended.
   The colour mixer also picks its colour ranges more precisely, so strong colours such as stage
   light react to the right slider, and lowering saturation also reaches muted colours.
@@ -30,6 +30,10 @@
 
 - **Crisper sharpening:** the Sharpening slider now brings out fine texture such as hair and
   fabric, without sharpening pixel noise more. Pictures you already sharpened come out a little crisper.
+
+- **Liquify:** the Distort tool has a fifth mode with a brush that pushes, bloats, puckers,
+  twirls, smooths or brings back the original. Like the other distortions it stays editable in
+  the recipe, and masks and inserted objects move along.
 
 ### Fixes
 

@@ -10170,4 +10170,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>Når du har gitt stjerner, går fremviseren rett videre til neste bilde. Fjerner du vurderingen igjen, blir bildet stående.</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>Flyt</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>Skyv, blås opp, trekk sammen eller vri med en pensel</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>Tilbakestill flyt</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>Skyv</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>Blås opp</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>Trekk sammen</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>Virvel høyre</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>Virvel venstre</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>Jevner ut forvrengningen under penselen</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>Henter tilbake det opprinnelige bildet under penselen</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>Rekonstruer</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>Mal i bildet med museknappen holdt nede. Skyv følger pekeren, de andre penslene virker så lenge knappen holdes nede.</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>Bruk tar flytingen inn i oppskriften: masker og innsatte objekter følger med, og neste gang bildet åpnes, er den der igjen.</value>
+  </data>
 </root>

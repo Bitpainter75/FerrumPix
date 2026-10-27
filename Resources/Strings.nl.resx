@@ -10170,4 +10170,43 @@
   <data name="Nach_dem_Vergeben_von_Sternen_geht_der_Betrachte_83979fd4" xml:space="preserve">
     <value>Na het geven van sterren gaat de viewer meteen naar de volgende afbeelding. Haal je de beoordeling weer weg, dan blijft de afbeelding staan.</value>
   </data>
+  <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
+    <value>Uitvloeien</value>
+  </data>
+  <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
+    <value>Met een penseel duwen, opblazen, samentrekken of draaien</value>
+  </data>
+  <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
+    <value>Uitvloeien herstellen</value>
+  </data>
+  <data name="Schieben_8cb6ae32" xml:space="preserve">
+    <value>Duwen</value>
+  </data>
+  <data name="Aufbl_hen_74743ad1" xml:space="preserve">
+    <value>Opblazen</value>
+  </data>
+  <data name="Zusammenziehen_a680600b" xml:space="preserve">
+    <value>Samentrekken</value>
+  </data>
+  <data name="Strudel_rechts_3b742894" xml:space="preserve">
+    <value>Draaien rechtsom</value>
+  </data>
+  <data name="Strudel_links_53133981" xml:space="preserve">
+    <value>Draaien linksom</value>
+  </data>
+  <data name="Gleicht_die_Verzerrung_unter_dem_Pinsel_aus_1577f446" xml:space="preserve">
+    <value>Vlakt de vervorming onder het penseel uit</value>
+  </data>
+  <data name="Holt_das_urspr_ngliche_Bild_unter_dem_Pinsel_zur_9c9b0c5e" xml:space="preserve">
+    <value>Haalt de oorspronkelijke afbeelding onder het penseel terug</value>
+  </data>
+  <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
+    <value>Reconstrueren</value>
+  </data>
+  <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
+    <value>Schilder in de afbeelding met ingedrukte muisknop. Duwen volgt de aanwijzer, de andere penselen werken zolang de knop ingedrukt blijft.</value>
+  </data>
+  <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
+    <value>Toepassen neemt het uitvloeien op in het recept: maskers en ingevoegde objecten gaan mee, en bij de volgende keer openen staat het er weer.</value>
+  </data>
 </root>
