@@ -56,6 +56,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Eine RAW-Entwicklung legt einige Gigabyte grosser Felder an. In der Voreinstellung behaelt
+         die Speicherbereinigung die freigewordenen Bereiche: ein Messlauf ueber dieselben Wege
+         belegte nach zehn Aufnahmen 10 bis 16 GB, mit diesem Schalter (dort Stufe 9) 2 bis 7.
+         In 0.9.71-2 war er draussen, weil er die Regler zaeh machen sollte; das Stocken kam aber
+         vom Startwert der Farbrauschminderung (0.9.71-3). -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="Assets\**" Exclude="Assets\Objektivdaten\**;Assets\FerrumPix_Icon.icns" />
     <!-- Die macOS-Symboldatei wird ausschliesslich beim Paketieren gelesen und nie zur
          Laufzeit. Ohne diesen Ausschluss laege sie in JEDEM Build mit drin, auch im

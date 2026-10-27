@@ -10126,9 +10126,6 @@
   <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
     <value>เพิ่มนอยส์</value>
   </data>
-  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
-    <value>ใส่นอยส์สม่ำเสมอลงบนภาพ</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>การเพิ่มความคมชัดสำหรับ RAW ที่ยังไม่แก้ไข</value>
   </data>
@@ -10147,14 +10144,8 @@
   <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
     <value>ค่าเริ่มต้นของแถบเลื่อนสีในการลดนอยส์เมื่อเปิด RAW ที่ยังไม่แก้ไข ลบนอยส์สีที่วัดได้ในภาพและคงสีจริงไว้ ใช้เวลาประมวลผลทุกครั้งที่เปลี่ยนภาพ 0 คือปิด</value>
   </data>
-  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
-    <value>เพิ่มนอยส์สีลงบนภาพ ความสว่างยังคงเดิม</value>
-  </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>ลบสัญญาณรบกวนสี: ปรับให้เรียบเฉพาะส่วนประกอบสี (โครมา) ความสว่างและรายละเอียดยังคงอยู่</value>
-  </data>
-  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
-    <value>เพิ่มจุดฝุ่นและรอยขีดข่วนเหมือนบนฟิล์มที่สแกน</value>
   </data>
   <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
     <value>การแก้ไขถูกลบใน Immich</value>

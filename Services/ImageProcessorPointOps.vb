@@ -1979,7 +1979,23 @@ Namespace Services
             ' danach bei der neuen Helligkeit wieder angewandt, wie es der Neuaufbau tut.
             If shadow IsNot Nothing Then ScaleShadowSaturation(rr, gg, bb, shadow, toLinear, toGamma, True)
             If inProPhoto Then
-                ApplyRawStageToneProPhoto(rr, gg, bb, table, toLinear, toGamma)
+                ' Steht ein Kanal schon am Anschlag von sRGB, hat das Quellbild die Farbe dort
+                ' abgeschnitten, und ihre ProPhoto-Werte sind geraten: an der blauen Wand der K10D lag
+                ' der Vorgriff bei +1 Blende um 10 Tonwerte zu hell. Dort die Rechnung des sRGB-Wegs,
+                ' der eine abgeschnittene 0 bei 0 laesst wie der Neuaufbau, weich ueber 12 Tonwerte.
+                Dim weight = RawStageProPhotoWeight(rr, gg, bb)
+                If weight >= 1.0F Then
+                    ApplyRawStageToneProPhoto(rr, gg, bb, table, toLinear, toGamma)
+                ElseIf weight <= 0.0F Then
+                    ApplyRawStageToneCore(rr, gg, bb, table, toLinear, toGamma)
+                Else
+                    Dim pr = rr, pg = gg, pb = bb
+                    ApplyRawStageToneProPhoto(pr, pg, pb, table, toLinear, toGamma)
+                    ApplyRawStageToneCore(rr, gg, bb, table, toLinear, toGamma)
+                    rr += (pr - rr) * weight
+                    gg += (pg - gg) * weight
+                    bb += (pb - bb) * weight
+                End If
             Else
                 ApplyRawStageToneCore(rr, gg, bb, table, toLinear, toGamma)
             End If
@@ -2023,6 +2039,15 @@ Namespace Services
             gg = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, gg) - loLin) * scale, 0.0F, 1.0F))
             bb = SampleTable(toGamma, Clamp(loOutLin + (SampleTable(toLinear, bb) - loLin) * scale, 0.0F, 1.0F))
         End Sub
+
+        ''' <summary>Wie weit der Vorgriff in ProPhoto rechnet (1) oder im sRGB-Weg (0): 0, solange der
+        ''' dunkelste Kanal hoechstens 2 Tonwerte ueber null liegt, 1 ab 14, dazwischen linear. Nur
+        ''' der UNTERE Anschlag: ein Kanal bei 255 sagt der ProPhoto-Rechnung mehr als dem sRGB-Weg
+        ''' (bei -2,5 Blenden lag RYN03000 mit beiden Anschlaegen bei 1,98, mit dem unteren allein
+        ''' bei 0,79). Der Shader rechnet dasselbe.</summary>
+        Private Shared Function RawStageProPhotoWeight(rr As Single, gg As Single, bb As Single) As Single
+            Return Clamp((Math.Min(rr, Math.Min(gg, bb)) - 2.0F / 255.0F) / (12.0F / 255.0F), 0.0F, 1.0F)
+        End Function
 
         Private Shared ReadOnly RawToProPhoto As Single() = PointColorMath.SrgbToProPhoto.Select(Function(v) CSng(v)).ToArray()
         Private Shared ReadOnly RawFromProPhoto As Single() = PointColorMath.ProPhotoToSrgb.Select(Function(v) CSng(v)).ToArray()

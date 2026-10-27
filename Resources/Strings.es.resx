@@ -10082,9 +10082,6 @@
   <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
     <value>Añadir ruido</value>
   </data>
-  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
-    <value>Pone un ruido uniforme sobre la imagen.</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Enfoque en RAW sin editar</value>
   </data>
@@ -10103,14 +10100,8 @@
   <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
     <value>Valor inicial del control Color de la reducción de ruido al abrir un RAW sin ediciones. Elimina el ruido de color medido en la imagen y conserva el color real. Requiere tiempo de cálculo en cada cambio de imagen. 0 lo desactiva.</value>
   </data>
-  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
-    <value>Añade ruido de color a la imagen, el brillo se mantiene.</value>
-  </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>Elimina el ruido de color: solo se suavizan los componentes de color (croma), el brillo y los detalles se conservan.</value>
-  </data>
-  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
-    <value>Añade motas de polvo y arañazos como en una película escaneada.</value>
   </data>
   <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
     <value>Edición eliminada en Immich</value>

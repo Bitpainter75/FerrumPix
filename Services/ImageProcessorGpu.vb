@@ -1307,6 +1307,54 @@ float3 decodePixel(half4 pix, float a255) {
     return c;
 }
 
+// ApplyRawStageTone: die Tabelle auf hellstem und dunkelstem Kanal, der mittlere linear dazwischen.
+float3 rawToneSrgb(float3 c) {
+    float rr = c.r; float gg = c.g; float bb = c.b;
+    float hi = max(rr, max(gg, bb)); float lo = min(rr, min(gg, bb));
+    float hiOut = tab(18.0, hi);
+    float hiLin = tab(0.0, hi); float loLin = tab(0.0, lo);
+    float span = hiLin - loLin;
+    if (hi - lo < 0.000001 || span < 0.0000001) {
+        rr = hiOut; gg = hiOut; bb = hiOut;
+    } else {
+        // Jeder Tabellenzugriff fuer sich, nie tab im Argument von tab: verschachtelt lieferte
+        // Skia auf dem Raster-Weg der Pruefung falsche Werte (gemessen, Ergebnis fast schwarz).
+        float loOut = tab(18.0, lo);
+        float loOutLin = tab(0.0, loOut);
+        float hiOutLin = tab(0.0, hiOut);
+        float s = (hiOutLin - loOutLin) / span;
+        float rLin = tab(0.0, rr); float gLin = tab(0.0, gg); float bLin = tab(0.0, bb);
+        float rOut = clamp(loOutLin + (rLin - loLin) * s, 0.0, 1.0);
+        float gOut = clamp(loOutLin + (gLin - loLin) * s, 0.0, 1.0);
+        float bOut = clamp(loOutLin + (bLin - loLin) * s, 0.0, 1.0);
+        rr = tab(1.0, rOut); gg = tab(1.0, gOut); bb = tab(1.0, bOut);
+    }
+    return float3(rr, gg, bb);
+}
+
+// ApplyRawStageToneProPhoto: der Vorgriff in linearem ProPhoto, wie die RAW-Stufe mit WideToneStage.
+float3 rawTonePro(float3 c) {
+    float rr = c.r; float gg = c.g; float bb = c.b;
+    float3 l = float3(tab(0.0, rr), tab(0.0, gg), tab(0.0, bb));
+    float3 q = max(float3(dot(toPro0, l), dot(toPro1, l), dot(toPro2, l)), float3(0.0));
+    float hi = max(q.r, max(q.g, q.b)); float lo = min(q.r, min(q.g, q.b));
+    // Jeder Tabellenzugriff fuer sich, nie tab im Argument von tab (siehe unten).
+    float hiG = tab(1.0, clamp(hi, 0.0, 1.0));
+    float hiT = tab(18.0, hiG);
+    float hiOut = tab(0.0, hiT);
+    float3 o = float3(hiOut);
+    if (hi - lo >= 0.0000001) {
+        float loG = tab(1.0, clamp(lo, 0.0, 1.0));
+        float loT = tab(18.0, loG);
+        float loOut = tab(0.0, loT);
+        float k = (hiOut - loOut) / (hi - lo);
+        o = float3(loOut) + (q - float3(lo)) * k;
+    }
+    float3 sl = clamp(float3(dot(fromPro0, o), dot(fromPro1, o), dot(fromPro2, o)), 0.0, 1.0);
+    rr = tab(1.0, sl.r); gg = tab(1.0, sl.g); bb = tab(1.0, sl.b);
+    return float3(rr, gg, bb);
+}
+
 // ScaleShadowSaturation: die Daempfung der Tiefen der RAW-Stufe, linear um die Helligkeit.
 float3 scaleShadow(float3 c, float undo) {
     float3 l = float3(tab(0.0, c.r), tab(0.0, c.g), tab(0.0, c.b));
@@ -1326,46 +1374,15 @@ float4 preMixer(float3 c, float2 p) {
         float3 u0 = scaleShadow(float3(rr, gg, bb), 1.0);
         rr = u0.r; gg = u0.g; bb = u0.b;
     }
-    if (useRawStage > 0.5 && rawPro > 0.5) {
-        // ApplyRawStageToneProPhoto: dasselbe in linearem ProPhoto, wie die RAW-Stufe mit WideToneStage.
-        float3 l = float3(tab(0.0, rr), tab(0.0, gg), tab(0.0, bb));
-        float3 q = max(float3(dot(toPro0, l), dot(toPro1, l), dot(toPro2, l)), float3(0.0));
-        float hi = max(q.r, max(q.g, q.b)); float lo = min(q.r, min(q.g, q.b));
-        // Jeder Tabellenzugriff fuer sich, nie tab im Argument von tab (siehe unten).
-        float hiG = tab(1.0, clamp(hi, 0.0, 1.0));
-        float hiT = tab(18.0, hiG);
-        float hiOut = tab(0.0, hiT);
-        float3 o = float3(hiOut);
-        if (hi - lo >= 0.0000001) {
-            float loG = tab(1.0, clamp(lo, 0.0, 1.0));
-            float loT = tab(18.0, loG);
-            float loOut = tab(0.0, loT);
-            float k = (hiOut - loOut) / (hi - lo);
-            o = float3(loOut) + (q - float3(lo)) * k;
+    if (useRawStage > 0.5) {
+        float3 c0 = float3(rr, gg, bb);
+        float3 t = rawToneSrgb(c0);
+        if (rawPro > 0.5) {
+            // RawStageProPhotoWeight: am unteren Anschlag von sRGB der sRGB-Weg, weich ueber 12 Tonwerte.
+            float w = clamp((min(c0.r, min(c0.g, c0.b)) - 2.0 / 255.0) / (12.0 / 255.0), 0.0, 1.0);
+            if (w > 0.0) t = mix(t, rawTonePro(c0), w);
         }
-        float3 sl = clamp(float3(dot(fromPro0, o), dot(fromPro1, o), dot(fromPro2, o)), 0.0, 1.0);
-        rr = tab(1.0, sl.r); gg = tab(1.0, sl.g); bb = tab(1.0, sl.b);
-    } else if (useRawStage > 0.5) {
-        // ApplyRawStageTone: die Tabelle auf hellstem und dunkelstem Kanal, der mittlere linear dazwischen.
-        float hi = max(rr, max(gg, bb)); float lo = min(rr, min(gg, bb));
-        float hiOut = tab(18.0, hi);
-        float hiLin = tab(0.0, hi); float loLin = tab(0.0, lo);
-        float span = hiLin - loLin;
-        if (hi - lo < 0.000001 || span < 0.0000001) {
-            rr = hiOut; gg = hiOut; bb = hiOut;
-        } else {
-            // Jeder Tabellenzugriff fuer sich, nie tab im Argument von tab: verschachtelt lieferte
-            // Skia auf dem Raster-Weg der Pruefung falsche Werte (gemessen, Ergebnis fast schwarz).
-            float loOut = tab(18.0, lo);
-            float loOutLin = tab(0.0, loOut);
-            float hiOutLin = tab(0.0, hiOut);
-            float s = (hiOutLin - loOutLin) / span;
-            float rLin = tab(0.0, rr); float gLin = tab(0.0, gg); float bLin = tab(0.0, bb);
-            float rOut = clamp(loOutLin + (rLin - loLin) * s, 0.0, 1.0);
-            float gOut = clamp(loOutLin + (gLin - loLin) * s, 0.0, 1.0);
-            float bOut = clamp(loOutLin + (bLin - loLin) * s, 0.0, 1.0);
-            rr = tab(1.0, rOut); gg = tab(1.0, gOut); bb = tab(1.0, bOut);
-        }
+        rr = t.r; gg = t.g; bb = t.b;
     }
     if (useRawStage > 0.5 && useRawShadow > 0.5) {
         float3 u1 = scaleShadow(float3(rr, gg, bb), 0.0);

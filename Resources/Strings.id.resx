@@ -10126,9 +10126,6 @@
   <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
     <value>Tambah noise</value>
   </data>
-  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
-    <value>Menaruh noise yang merata di atas gambar.</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Penajaman untuk RAW yang belum disunting</value>
   </data>
@@ -10147,14 +10144,8 @@
   <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
     <value>Nilai awal penggeser Warna pada pengurangan noise saat RAW tanpa suntingan dibuka. Menghapus noise warna yang diukur pada gambar dan mempertahankan warna asli. Memerlukan waktu proses setiap kali gambar berganti. 0 mematikannya.</value>
   </data>
-  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
-    <value>Menambahkan derau berwarna pada gambar, kecerahan tetap.</value>
-  </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>Menghapus derau warna: hanya komponen warna (kroma) yang dihaluskan, kecerahan dan detail tetap terjaga.</value>
-  </data>
-  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
-    <value>Menambahkan bintik debu dan goresan seperti pada film hasil pindai.</value>
   </data>
   <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
     <value>Suntingan dihapus di Immich</value>

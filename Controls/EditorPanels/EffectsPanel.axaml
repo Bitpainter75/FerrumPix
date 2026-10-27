@@ -80,36 +80,6 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding GrainColor, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
-                    <!-- Die Regler, die Rauschen und Staub HINZUFUEGEN, stehen hier bei der Koernung
-                         und nicht in der Rauschreduzierung: dort wird nur entfernt, wie beim
-                         Referenzprogramm. Alle drei sind eigene Stufen der Pixelkette ohne XMP-Feld. -->
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" Margin="0,6,0,0">
-                        <TextBlock Text="Rauschen" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                                   ToolTip.Tip="Legt gleichmäßiges Rauschen über das Bild." />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                           Value="{Binding AddNoise}" Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding AddNoise, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                    </Grid>
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Farbrauschen" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                                   ToolTip.Tip="Legt farbiges Rauschen über das Bild, die Helligkeit bleibt." />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                           Value="{Binding ColorNoiseAdd}" Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding ColorNoiseAdd, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                    </Grid>
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
-                        <TextBlock Text="Staub/Kratzer" Foreground="{DynamicResource FP.Text.Secondary}"
-                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                                   ToolTip.Tip="Fügt Staubkörner und Kratzer hinzu wie auf gescanntem Film." />
-                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                           Value="{Binding DustScratches}" Margin="0,0" />
-                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding DustScratches, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                    </Grid>
                 </StackPanel>
             </Expander>
         </Border>

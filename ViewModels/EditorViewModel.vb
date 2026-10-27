@@ -1970,11 +1970,23 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Laedt die Liste und raeumt dabei Doppel ab, die frueher hineinkamen, als nur der Pfad
+        ''' verglichen wurde (<see cref="IsSamePresetFile"/>): der erste Eintrag bleibt, und die Liste
+        ''' wird einmal neu gespeichert.</summary>
         Private Sub LoadSavedXmpPresets()
             SavedXmpPresets.Clear()
+            Dim dropped = False
             For Each preset In AppSettingsService.Load().LightroomPresets
-                SavedXmpPresets.Add(preset)
+                If SavedXmpPresets.Any(Function(p) IsSamePresetFile(p.Path, preset.Path)) Then
+                    dropped = True
+                Else
+                    SavedXmpPresets.Add(preset)
+                End If
             Next
+            If dropped Then
+                PersistSavedXmpPresets()
+                Return
+            End If
             SyncLastAppliedXmpPreset()
         End Sub
 
@@ -1989,11 +2001,21 @@ Namespace ViewModels
             LoadSavedXmpPresets()
         End Sub
 
+        ''' <summary>Wie <see cref="LoadSavedXmpPresets"/> fuer die LUTs.</summary>
         Private Sub LoadSavedLutPresets()
             SavedLutPresets.Clear()
+            Dim dropped = False
             For Each preset In AppSettingsService.Load().LutPresets
-                SavedLutPresets.Add(preset)
+                If SavedLutPresets.Any(Function(p) IsSamePresetFile(p.Path, preset.Path)) Then
+                    dropped = True
+                Else
+                    SavedLutPresets.Add(preset)
+                End If
             Next
+            If dropped Then
+                PersistSavedLutPresets()
+                Return
+            End If
             SyncLastAppliedLutPreset()
         End Sub
 
@@ -31260,19 +31282,61 @@ Namespace ViewModels
             LoadCurvePointsFromString(_curveBluePoints, look.CurveBluePoints)
         End Sub
 
-        Public Sub SaveXmpPresetToSettings(xmpPath As String)
-            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return
+        ''' <summary>Ist es dasselbe Preset? Derselbe Pfad, oder dieselbe Datei an anderer Stelle: gleiche
+        ''' Groesse und gleicher Inhalt. Nur am Pfad gemessen kam dasselbe Preset aus einem zweiten Ordner
+        ''' (oder ein zweites Mal heruntergeladen) als weitere Kachel in die Liste.
+        '''
+        ''' Der Inhalt wird ueber einen Fingerabdruck verglichen (<see cref="PresetFingerprint"/>), erst
+        ''' wenn die Groesse stimmt. Ein Bytevergleich las beide Dateien ganz in den Speicher, beim
+        ''' Ordnerimport gegen jeden Eintrag der Liste erneut und auf dem Anzeigefaden; bei grossen
+        ''' gleich grossen .cube-Dateien haengt das die Oberflaeche auf.</summary>
+        Private Shared Function IsSamePresetFile(a As String, b As String) As Boolean
+            If String.IsNullOrWhiteSpace(a) OrElse String.IsNullOrWhiteSpace(b) Then Return False
+            If String.Equals(a.Trim(), b.Trim(), PathIdentity.Comparison) Then Return True
+            Try
+                Dim fa = New FileInfo(a.Trim()), fb = New FileInfo(b.Trim())
+                If Not fa.Exists OrElse Not fb.Exists OrElse fa.Length <> fb.Length Then Return False
+                Dim ha = PresetFingerprint(fa), hb = PresetFingerprint(fb)
+                Return ha IsNot Nothing AndAlso String.Equals(ha, hb, StringComparison.Ordinal)
+            Catch
+                Return False
+            End Try
+        End Function
+
+        Private Shared ReadOnly PresetFingerprints As New Concurrent.ConcurrentDictionary(Of String, (Length As Long, Written As DateTime, Hash As String))(PathIdentity.Comparer)
+
+        ''' <summary>SHA-256 des Dateiinhalts, gestreamt gelesen, je Datei einmal und gemerkt, solange
+        ''' Groesse und Aenderungszeit gleich bleiben. Nothing, wenn die Datei nicht lesbar ist.</summary>
+        Private Shared Function PresetFingerprint(file As FileInfo) As String
+            Dim known As (Length As Long, Written As DateTime, Hash As String) = Nothing
+            If PresetFingerprints.TryGetValue(file.FullName, known) AndAlso
+               known.Length = file.Length AndAlso known.Written = file.LastWriteTimeUtc Then Return known.Hash
+            Try
+                Using stream = New FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.SequentialScan)
+                    Dim hash = Convert.ToHexString(Security.Cryptography.SHA256.HashData(stream))
+                    PresetFingerprints(file.FullName) = (file.Length, file.LastWriteTimeUtc, hash)
+                    Return hash
+                End Using
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Nimmt das Preset in die Liste auf, wenn es dort noch nicht steht. True, wenn es neu
+        ''' dazugekommen ist.</summary>
+        Public Function SaveXmpPresetToSettings(xmpPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return False
             Dim normalizedPath = xmpPath.Trim()
-            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, PathIdentity.Comparison))
-            If existing Is Nothing Then
-                SavedXmpPresets.Add(New XmpPresetSettings With {
-                    .Id = Guid.NewGuid().ToString("N"),
-                    .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
-                    .Path = normalizedPath
-                })
-                PersistSavedXmpPresets()
-            End If
-        End Sub
+            Dim existing = SavedXmpPresets.FirstOrDefault(Function(p) IsSamePresetFile(p.Path, normalizedPath))
+            If existing IsNot Nothing Then Return False
+            SavedXmpPresets.Add(New XmpPresetSettings With {
+                .Id = Guid.NewGuid().ToString("N"),
+                .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
+                .Path = normalizedPath
+            })
+            PersistSavedXmpPresets()
+            Return True
+        End Function
 
         Public Sub RemoveXmpPresetFromSettings(xmpPath As String)
             If String.IsNullOrWhiteSpace(xmpPath) Then Return
@@ -31296,15 +31360,16 @@ Namespace ViewModels
 
         Public Sub ImportXmpPresetsFromFolder(folderPath As String)
             If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
-            Dim count = 0
+            Dim count = 0, found = 0
             Try
+                ' Gezaehlt wird nur, was neu dazukommt; ein zweiter Import desselben Ordners meldet 0.
                 For Each file In Directory.EnumerateFiles(folderPath, "*.xmp", CaseInsensitiveFileSearch)
-                    SaveXmpPresetToSettings(file)
-                    count += 1
+                    found += 1
+                    If SaveXmpPresetToSettings(file) Then count += 1
                 Next
             Catch
             End Try
-            StatusText = If(count > 0,
+            StatusText = If(found > 0,
                              LocalizationService.T("Presets importiert: ") & count.ToString(),
                              LocalizationService.T("Keine XMP-Dateien im Ordner gefunden"))
         End Sub
@@ -31325,19 +31390,20 @@ Namespace ViewModels
             SchedulePreviewForCurrentTarget()
         End Sub
 
-        Public Sub SaveLutPresetToSettings(cubePath As String)
-            If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
+        ''' <summary>Wie <see cref="SaveXmpPresetToSettings"/> fuer eine LUT.</summary>
+        Public Function SaveLutPresetToSettings(cubePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return False
             Dim normalizedPath = cubePath.Trim()
-            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) String.Equals(p.Path, normalizedPath, PathIdentity.Comparison))
-            If existing Is Nothing Then
-                SavedLutPresets.Add(New LutPresetSettings With {
-                    .Id = Guid.NewGuid().ToString("N"),
-                    .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
-                    .Path = normalizedPath
-                })
-                PersistSavedLutPresets()
-            End If
-        End Sub
+            Dim existing = SavedLutPresets.FirstOrDefault(Function(p) IsSamePresetFile(p.Path, normalizedPath))
+            If existing IsNot Nothing Then Return False
+            SavedLutPresets.Add(New LutPresetSettings With {
+                .Id = Guid.NewGuid().ToString("N"),
+                .Name = IO.Path.GetFileNameWithoutExtension(normalizedPath),
+                .Path = normalizedPath
+            })
+            PersistSavedLutPresets()
+            Return True
+        End Function
 
         Public Sub RemoveLutPresetFromSettings(cubePath As String)
             If String.IsNullOrWhiteSpace(cubePath) Then Return
@@ -31459,15 +31525,15 @@ Namespace ViewModels
 
         Public Sub ImportLutPresetsFromFolder(folderPath As String)
             If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
-            Dim count = 0
+            Dim count = 0, found = 0
             Try
                 For Each file In Directory.EnumerateFiles(folderPath, "*.cube", CaseInsensitiveFileSearch)
-                    SaveLutPresetToSettings(file)
-                    count += 1
+                    found += 1
+                    If SaveLutPresetToSettings(file) Then count += 1
                 Next
             Catch
             End Try
-            StatusText = If(count > 0,
+            StatusText = If(found > 0,
                              LocalizationService.T("LUTs importiert: ") & count.ToString(),
                              LocalizationService.T("Keine .cube-Dateien im Ordner gefunden"))
         End Sub

@@ -10122,9 +10122,6 @@
   <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
     <value>ノイズを追加</value>
   </data>
-  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
-    <value>画像全体に均一なノイズを加えます。</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>未編集 RAW のシャープ</value>
   </data>
@@ -10143,14 +10140,8 @@
   <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
     <value>編集されていない RAW を開いたときのノイズ軽減のカラースライダーの初期値です。画像で測定したカラーノイズを取り除き、本来の色は残します。画像を切り替えるたびに計算時間がかかります。0 でオフになります。</value>
   </data>
-  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
-    <value>画像に色付きのノイズを加えます。明るさは変わりません。</value>
-  </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>カラーノイズを除去します。滑らかにするのは色成分 (クロマ) だけで、明るさとディテールは保たれます。</value>
-  </data>
-  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
-    <value>スキャンしたフィルムのようなほこりと傷を加えます。</value>
   </data>
   <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
     <value>Immich で編集が削除されました</value>

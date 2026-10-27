@@ -10080,9 +10080,6 @@
   <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
     <value>添加杂色</value>
   </data>
-  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
-    <value>在整幅图像上叠加均匀的杂色。</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>未编辑 RAW 的锐化</value>
   </data>
@@ -10101,14 +10098,8 @@
   <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
     <value>打开未编辑的 RAW 时减少杂色中颜色滑块的初始值。去除图像中测得的颜色杂色并保留真实颜色。每次切换图像都需要计算时间。0 表示关闭。</value>
   </data>
-  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
-    <value>在图片上添加彩色杂色，亮度保持不变。</value>
-  </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>去除彩色杂色：只平滑颜色成分（色度），亮度和细节保持不变。</value>
-  </data>
-  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
-    <value>添加灰尘颗粒和划痕，如同扫描的胶片。</value>
   </data>
   <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
     <value>Immich 中的编辑已移除</value>

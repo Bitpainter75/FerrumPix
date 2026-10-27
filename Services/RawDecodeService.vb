@@ -2298,23 +2298,12 @@ Namespace Services
         ''' <see cref="ColorPathState"/>).</summary>
         Friend Shared WideToneStage As Boolean = True
 
-        ''' <summary>Die Matrix vom Kameraraum (nach Weissabgleich) nach linearem ProPhoto, aus der nach
-        ''' linearem sRGB; ohne sie (LibRaw lieferte schon sRGB) die Umrechnung sRGB nach ProPhoto.</summary>
+        ''' <summary>Die Matrix vom Kameraraum (nach Weissabgleich) nach linearem sRGB fuer die Tonstufe;
+        ''' ohne sie (LibRaw lieferte schon sRGB) die Einheitsmatrix. Nach ProPhoto geht es erst in
+        ''' <see cref="Convert16Rows"/>, nach der Korrektur rosa Lichter, die in sRGB gemessen ist.</summary>
         Private Shared Function ToneStageMatrix(cameraToSrgb As Single()) As Single()
-            Dim p = PointColorMath.SrgbToProPhoto
-            Dim result(8) As Single
-            For row = 0 To 2
-                For column = 0 To 2
-                    If cameraToSrgb Is Nothing Then
-                        result(row * 3 + column) = CSng(p(row * 3 + column))
-                    Else
-                        result(row * 3 + column) = CSng(p(row * 3) * cameraToSrgb(column) +
-                                                        p(row * 3 + 1) * cameraToSrgb(3 + column) +
-                                                        p(row * 3 + 2) * cameraToSrgb(6 + column))
-                    End If
-                Next
-            Next
-            Return result
+            If cameraToSrgb IsNot Nothing Then Return CType(cameraToSrgb.Clone(), Single())
+            Return New Single() {1, 0, 0, 0, 1, 0, 0, 0, 1}
         End Function
 
         ''' <summary>Liegen die linearen Daten dieser Datei schon im 16-Bit-Zwischenspeicher, mit
@@ -3650,9 +3639,58 @@ Namespace Services
         ''' <summary>Tontabellen je Grundbelichtung. Frueher gab es genau EINE, weil die
         ''' Grundbelichtung eine Konstante war; mit den Kamera-Referenzwerten gibt es je Kamera eine.
         ''' Der Aufbau kostet 65536 Schritte, in der Praxis liegen aber nur eine Handvoll Werte an -
-        ''' deshalb ein kleiner Speicher statt Neuaufbau je Bild.</summary>
+        ''' deshalb ein kleiner Speicher statt Neuaufbau je Bild.
+        '''
+        ''' BEGRENZT auf die zuletzt gebrauchten <see cref="ToneTableLimit"/>: der Schluessel traegt
+        ''' auch die Reglerbelichtung und das Knie, und jede neue Stellung legte 256 KB dazu, die nie
+        ''' wieder frei wurden. Daneben die Tabelle als Gleitkomma fuer die Tonstufe in ProPhoto
+        ''' (<see cref="ToneTableFloatFor"/>), unter demselben Schluessel; sie entstand vorher bei
+        ''' jeder Umsetzung neu, auf dem Haufen fuer grosse Objekte.</summary>
         Private Shared ReadOnly ToneTables As New Dictionary(Of String, Integer())
+        Private Shared ReadOnly ToneTablesFloat As New Dictionary(Of String, Single())
+        Private Shared ReadOnly ToneTableOrder As New LinkedList(Of String)
         Private Shared ReadOnly ToneTablesLock As New Object()
+        Private Const ToneTableLimit As Integer = 16
+
+        Private Shared Function ToneTableKey(ev As Double, blackLevel As Double, knee As Double) As String
+            Return CInt(Math.Round(ev * 1000.0)).ToString(Globalization.CultureInfo.InvariantCulture) &
+                   "/" & CInt(Math.Round(blackLevel * 1000000.0)).ToString(Globalization.CultureInfo.InvariantCulture) &
+                   "/" & CInt(Math.Round(knee * 1000.0)).ToString(Globalization.CultureInfo.InvariantCulture)
+        End Function
+
+        ''' <summary>Merkt <paramref name="key"/> als zuletzt gebraucht und wirft die aeltesten
+        ''' Tabellen hinaus, wenn mehr als <see cref="ToneTableLimit"/> da sind. Nur unter
+        ''' <see cref="ToneTablesLock"/> aufrufen.</summary>
+        Private Shared Sub TouchToneTable(key As String)
+            ToneTableOrder.Remove(key)
+            ToneTableOrder.AddFirst(key)
+            While ToneTableOrder.Count > ToneTableLimit
+                Dim oldest = ToneTableOrder.Last.Value
+                ToneTableOrder.RemoveLast()
+                ToneTables.Remove(oldest)
+                ToneTablesFloat.Remove(oldest)
+            End While
+        End Sub
+
+        ''' <summary>Die Tontabelle wie <see cref="ToneTableFor"/>, als Gleitkomma 0..1.</summary>
+        Private Shared Function ToneTableFloatFor(ev As Double, blackLevel As Double, knee As Double) As Single()
+            Dim table = ToneTableFor(ev, blackLevel, knee)
+            Dim key = ToneTableKey(ev, blackLevel, knee)
+            SyncLock ToneTablesLock
+                Dim existing As Single() = Nothing
+                If ToneTablesFloat.TryGetValue(key, existing) Then Return existing
+                Dim built(65535) As Single
+                For i = 0 To 65535
+                    built(i) = table(i) / 65535.0F
+                Next
+                ToneTablesFloat(key) = built
+                ' Auch hier merken: haette ein anderer Faden den Schluessel zwischen den beiden
+                ' Sperren verdraengt, bliebe die Gleitkommatabelle sonst fuer immer liegen.
+                If Not ToneTables.ContainsKey(key) Then ToneTables(key) = table
+                TouchToneTable(key)
+                Return built
+            End SyncLock
+        End Function
 
         ''' <summary>Die Tontabelle zu einer Grundbelichtung und einem Schwarzabzug.
         '''
@@ -3664,14 +3702,16 @@ Namespace Services
         Friend Shared Function ToneTableFor(ev As Double,
                                             Optional blackLevel As Double = BlackSubtraction,
                                             Optional knee As Double = 1.0) As Integer()
-            Dim key = CInt(Math.Round(ev * 1000.0)).ToString(Globalization.CultureInfo.InvariantCulture) &
-                      "/" & CInt(Math.Round(blackLevel * 1000000.0)).ToString(Globalization.CultureInfo.InvariantCulture) &
-                      "/" & CInt(Math.Round(knee * 1000.0)).ToString(Globalization.CultureInfo.InvariantCulture)
+            Dim key = ToneTableKey(ev, blackLevel, knee)
             SyncLock ToneTablesLock
                 Dim existing As Integer() = Nothing
-                If ToneTables.TryGetValue(key, existing) Then Return existing
+                If ToneTables.TryGetValue(key, existing) Then
+                    TouchToneTable(key)
+                    Return existing
+                End If
                 Dim built = BuildToneTable(ev, blackLevel, knee)
                 ToneTables(key) = built
+                TouchToneTable(key)
                 Return built
             End SyncLock
         End Function
@@ -3855,22 +3895,20 @@ Namespace Services
                                          Optional toneMatrix As Single() = Nothing)
             Dim thresholds = If(DitherEnabled, DitherThresholds, Enumerable.Repeat(32767, 64).ToArray())
             Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
-            ' Tonstufe in ProPhoto (WideToneStage): die Matrix nach ProPhoto, schon durch 65535 geteilt,
-            ' und der Rueckweg nach linearem sRGB.
+            ' Tonstufe in ProPhoto (WideToneStage): die Kameramatrix nach linearem sRGB, schon durch
+            ' 65535 geteilt, von dort nach ProPhoto und der Rueckweg nach sRGB.
             Dim wide = toneMatrix IsNot Nothing
-            Dim pm(8) As Single, sm(8) As Single
-            ' Die Tontabelle als Gleitkomma 0..1, einmal je Umsetzung; der Schleife spart das
-            ' die Umrechnung je Bildpunkt.
+            Dim pm(8) As Single, sm(8) As Single, tp(8) As Single
+            ' Die Tontabelle als Gleitkomma 0..1, aus dem Speicher der Tontabellen; der Schleife spart
+            ' das die Umrechnung je Bildpunkt.
             Dim tonF As Single() = Nothing
             If wide Then
                 For i = 0 To 8
                     pm(i) = toneMatrix(i) / 65535.0F
+                    tp(i) = CSng(PointColorMath.SrgbToProPhoto(i))
                     sm(i) = CSng(PointColorMath.ProPhotoToSrgb(i))
                 Next
-                tonF = New Single(65535) {}
-                For i = 0 To 65535
-                    tonF(i) = ton(i) / 65535.0F
-                Next
+                tonF = ToneTableFloatFor(exposureEv, blackLevel, knee)
             End If
             Dim beyond = ToneBeyondWhite(exposureEv, blackLevel, knee)
             Dim shadowSteps = If(shadowSaturation Is Nothing, 0, shadowSaturation.Length - 1)
@@ -3960,6 +3998,9 @@ Namespace Services
                             Dim g = rowShorts(x * 3 + 1) And &HFFFF
                             Dim r As Integer, b As Integer
                             Dim vignetteGain = 1.0F
+                            ' Farbquerfehler auf dem Weg in ProPhoto: Rot und Blau schon in linearem sRGB.
+                            Dim tcaSrgb = False
+                            Dim tcaRed = 0.0F, tcaBlue = 0.0F
                             If korrigiert Then
                                 Dim dxPix = x - cx
                                 ' EIN Radius fuer beide Korrekturen - die Wurzel ist der teuerste Anteil
@@ -3979,8 +4020,26 @@ Namespace Services
                                     ' (Nutzerbefund Issue #66: "Farbsaeume korrigieren wirkt nicht").
                                     Dim fr = LensDataService.ChromaticAberrationFactor(lens, rNorm, True)
                                     Dim fb = LensDataService.ChromaticAberrationFactor(lens, rNorm, False)
-                                    r = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fr, cy + dyPix * fr, 0)
-                                    b = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fb, cy + dyPix * fb, 2)
+                                    If wide Then
+                                        ' Auf dem Weg in ProPhoto liegen hier noch Kameradaten. Verschoben
+                                        ' wird aber ROT UND BLAU VON sRGB, wie auf dem alten Weg: die
+                                        ' Profile und die Feinkorrektur von Hand sind daran geeicht. Mit
+                                        ' Kamerakanaelen machte +35 von Hand den Saum doppelt so breit.
+                                        Dim rx = cx + dxPix * fr, ry = cy + dyPix * fr
+                                        Dim bx = cx + dxPix * fb, by = cy + dyPix * fb
+                                        tcaRed = pm(0) * AbtastenBilinear(FetchRow, width, height, rx, ry, 0) +
+                                                 pm(1) * AbtastenBilinear(FetchRow, width, height, rx, ry, 1) +
+                                                 pm(2) * AbtastenBilinear(FetchRow, width, height, rx, ry, 2)
+                                        tcaBlue = pm(6) * AbtastenBilinear(FetchRow, width, height, bx, by, 0) +
+                                                  pm(7) * AbtastenBilinear(FetchRow, width, height, bx, by, 1) +
+                                                  pm(8) * AbtastenBilinear(FetchRow, width, height, bx, by, 2)
+                                        tcaSrgb = True
+                                        r = rowShorts(x * 3) And &HFFFF
+                                        b = rowShorts(x * 3 + 2) And &HFFFF
+                                    Else
+                                        r = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fr, cy + dyPix * fr, 0)
+                                        b = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fb, cy + dyPix * fb, 2)
+                                    End If
                                 Else
                                     r = rowShorts(x * 3) And &HFFFF
                                     b = rowShorts(x * 3 + 2) And &HFFFF
@@ -4019,19 +4078,27 @@ Namespace Services
                             ' laeuft die Korrektur immer. Gemessen an 60 Bestandsdateien ohne
                             ' Rettung: sichtbar mehr als 0,1 Prozent der Flaeche nur bei zweien,
                             ' beide rosa Lichter; echte Farben wie Petunien bleiben unberuehrt.
-                            If MagentaHighlightRecovery Then RecoverMagentaHighlight(r, g, b)
+                            ' Auf dem Weg in ProPhoto laeuft sie erst nach der Kameramatrix (unten), wie
+                            ' hier auf dem alten Weg: im Kameraraum zog die Matrix die Kanaele danach
+                            ' wieder auseinander, und rosa Lichter blieben rosa.
+                            If MagentaHighlightRecovery AndAlso Not wide Then RecoverMagentaHighlight(r, g, b)
                             ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
                             ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                             ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
                             ' CByte kann nicht ueberlaufen.
                             Dim rr As Integer, gg As Integer, bb As Integer
                             If wide Then
-                                ' Kameraraum nach linearem ProPhoto, in Gleitkomma. Unter null wird
-                                ' auf null gesetzt wie im DNG-SDK; ueber 1 bleibt, was es ist.
+                                ' Kameraraum nach linearem sRGB, in Gleitkomma und unbegrenzt; dort die
+                                ' Korrektur rosa Lichter, dann nach ProPhoto. Unter null wird auf null
+                                ' gesetzt wie im DNG-SDK; ueber 1 bleibt, was es ist.
                                 Dim fr = r * vignetteGain, fg = g * vignetteGain, fb = b * vignetteGain
-                                Dim pr = Math.Max(0.0F, pm(0) * fr + pm(1) * fg + pm(2) * fb)
-                                Dim pg = Math.Max(0.0F, pm(3) * fr + pm(4) * fg + pm(5) * fb)
-                                Dim pb = Math.Max(0.0F, pm(6) * fr + pm(7) * fg + pm(8) * fb)
+                                Dim sr = If(tcaSrgb, tcaRed * vignetteGain, pm(0) * fr + pm(1) * fg + pm(2) * fb)
+                                Dim sg = pm(3) * fr + pm(4) * fg + pm(5) * fb
+                                Dim sb = If(tcaSrgb, tcaBlue * vignetteGain, pm(6) * fr + pm(7) * fg + pm(8) * fb)
+                                If MagentaHighlightRecovery Then RecoverMagentaHighlightFloat(sr, sg, sb)
+                                Dim pr = Math.Max(0.0F, tp(0) * sr + tp(1) * sg + tp(2) * sb)
+                                Dim pg = Math.Max(0.0F, tp(3) * sr + tp(4) * sg + tp(5) * sb)
+                                Dim pb = Math.Max(0.0F, tp(6) * sr + tp(7) * sg + tp(8) * sb)
                                 ' RGBTone: die Kurve auf dem hellsten und dem dunkelsten Kanal, der
                                 ' mittlere zwischen beiden, im Verhaeltnis seiner Lage.
                                 Dim hi = Math.Max(pr, Math.Max(pg, pb))
@@ -4155,6 +4222,26 @@ Namespace Services
             Dim target = Math.Min(r, b) * 0.8 + (r + b) * 0.1
             Dim correction = Math.Max(0.0, target - g) * blend
             g = Math.Min(65535, CInt(Math.Round(g + correction)))
+        End Sub
+
+        ''' <summary><see cref="RecoverMagentaHighlight"/> fuer die Tonstufe in Gleitkomma: dieselbe
+        ''' Rechnung auf den auf 0..1 begrenzten Werten, wie sie der alte Weg in 16 Bit sah. Gruen wird
+        ''' angehoben, und Rot und Blau gehen mit derselben Gewichtung auf den Anschlag zurueck, an dem
+        ''' sie auf dem alten Weg standen: blieben sie ueber 1, hob die Tonstufe sie ueber das
+        ''' angehobene Gruen, und das Licht blieb rosa (ausgefressene Haelfte der LX3-Pruefdatei, im
+        ''' Mittel 44 statt 0,3 Tonwerte neben dem Anker). Wo die Korrektur nicht greift, bleibt alles
+        ''' unbegrenzt.</summary>
+        Private Shared Sub RecoverMagentaHighlightFloat(ByRef r As Single, ByRef g As Single, ByRef b As Single)
+            Dim cr = Math.Max(0.0F, Math.Min(1.0F, r)), cg = Math.Max(0.0F, Math.Min(1.0F, g)), cb = Math.Max(0.0F, Math.Min(1.0F, b))
+            Dim maximum = Math.Max(cr, Math.Max(cg, cb))
+            If maximum <= 0.5F Then Return
+            If Math.Min(cr, cb) - cg <= 0.0F Then Return
+            Dim t = Math.Min(1.0F, (maximum - 0.5F) / 0.5F)
+            Dim blend = t * t * (3.0F - 2.0F * t)
+            Dim target = Math.Min(cr, cb) * 0.8F + (cr + cb) * 0.1F
+            g += Math.Max(0.0F, target - cg) * blend
+            r += (cr - r) * blend
+            b += (cb - b) * blend
         End Sub
 
         ''' <summary>Einen Kanal bilinear an einer beliebigen Stelle abtasten. Die Raender werden

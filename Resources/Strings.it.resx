@@ -10082,9 +10082,6 @@
   <data name="Rauschen_hinzuf_gen_69b1c750" xml:space="preserve">
     <value>Aggiungi disturbo</value>
   </data>
-  <data name="Legt_gleichm_iges_Rauschen_ber_das_Bild_44c6a0d9" xml:space="preserve">
-    <value>Applica un disturbo uniforme sull’immagine.</value>
-  </data>
   <data name="Sch_rfen_bei_unbearbeiteten_RAWs_2070c2f9" xml:space="preserve">
     <value>Nitidezza per RAW non modificati</value>
   </data>
@@ -10103,14 +10100,8 @@
   <data name="Startwert_des_Reglers_Farbe_in_der_Rauschreduzie_788f2f27" xml:space="preserve">
     <value>Valore iniziale del cursore Colore della riduzione disturbo quando si apre un RAW senza modifiche. Rimuove il disturbo di colore misurato nell’immagine e mantiene il colore reale. Richiede tempo di calcolo a ogni cambio di immagine. 0 lo disattiva.</value>
   </data>
-  <data name="Legt_farbiges_Rauschen_ber_das_Bild_die_Helligke_c3730661" xml:space="preserve">
-    <value>Aggiunge rumore colorato all'immagine, la luminosità resta invariata.</value>
-  </data>
   <data name="Entfernt_Farbrauschen_gegl_ttet_werden_nur_die_F_a42219ec" xml:space="preserve">
     <value>Rimuove il rumore cromatico: vengono levigate solo le componenti di colore (croma), luminosità e dettagli restano invariati.</value>
-  </data>
-  <data name="F_gt_Staubk_rner_und_Kratzer_hinzu_wie_auf_gesca_1bb5f58f" xml:space="preserve">
-    <value>Aggiunge granelli di polvere e graffi come su una pellicola scansionata.</value>
   </data>
   <data name="Bearbeitung_in_Immich_entfernt_1cf9e19e" xml:space="preserve">
     <value>Modifica rimossa in Immich</value>
