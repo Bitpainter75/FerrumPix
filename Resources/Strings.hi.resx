@@ -10213,4 +10213,40 @@
   <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
     <value>लागू करना द्रवण को नुस्खे में ले लेता है: मास्क और डाली गई वस्तुएँ साथ चलती हैं, और अगली बार तस्वीर खोलने पर वह फिर वहीं होता है।</value>
   </data>
+  <data name="Hintergrund_wird_entfernt_fcbf96ed" xml:space="preserve">
+    <value>पृष्ठभूमि हटाई जा रही है</value>
+  </data>
+  <data name="Hintergrund_entfernen_fehlgeschlagen_dcac4c00" xml:space="preserve">
+    <value>पृष्ठभूमि हटाना विफल रहा</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_hat_keine_einheitliche_Farbe_61d131b7" xml:space="preserve">
+    <value>परत के किनारे का रंग एक जैसा नहीं है</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_ist_schon_durchsichtig_6bd7d540" xml:space="preserve">
+    <value>परत का किनारा पहले से पारदर्शी है</value>
+  </data>
+  <data name="Kein_Hintergrund_gefunden_091137ac" xml:space="preserve">
+    <value>कोई पृष्ठभूमि नहीं मिली</value>
+  </data>
+  <data name="Hintergrund_entfernt_3cceb90e" xml:space="preserve">
+    <value>पृष्ठभूमि हटाई गई</value>
+  </data>
+  <data name="Hintergrund_nach_Randfarbe_entfernen_3d30788c" xml:space="preserve">
+    <value>किनारे के रंग से पृष्ठभूमि हटाएँ</value>
+  </data>
+  <data name="Hintergrund_des_Fotos_nach_Randfarbe_entfernen_b2f30c2f" xml:space="preserve">
+    <value>किनारे के रंग से फ़ोटो की पृष्ठभूमि हटाएँ</value>
+  </data>
+  <data name="Freigestelltes_Foto_b01637cc" xml:space="preserve">
+    <value>काटी गई फ़ोटो</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_hat_keine_einheitliche_Farbe_b64e2900" xml:space="preserve">
+    <value>फ़ोटो के किनारे का रंग एक जैसा नहीं है</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_ist_schon_durchsichtig_e2ed4fa4" xml:space="preserve">
+    <value>फ़ोटो का किनारा पहले से पारदर्शी है</value>
+  </data>
+  <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
+    <value>पृष्ठभूमि हटाई गई, दस्तावेज़ का पृष्ठभूमि रंग अब पारदर्शी है</value>
+  </data>
 </root>

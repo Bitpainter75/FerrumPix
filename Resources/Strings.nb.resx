@@ -10171,13 +10171,13 @@
     <value>Når du har gitt stjerner, går fremviseren rett videre til neste bilde. Fjerner du vurderingen igjen, blir bildet stående.</value>
   </data>
   <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
-    <value>Flyt</value>
+    <value>Flytende</value>
   </data>
   <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
     <value>Skyv, blås opp, trekk sammen eller vri med en pensel</value>
   </data>
   <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
-    <value>Tilbakestill flyt</value>
+    <value>Tilbakestill flytende</value>
   </data>
   <data name="Schieben_8cb6ae32" xml:space="preserve">
     <value>Skyv</value>
@@ -10207,6 +10207,42 @@
     <value>Mal i bildet med museknappen holdt nede. Skyv følger pekeren, de andre penslene virker så lenge knappen holdes nede.</value>
   </data>
   <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
-    <value>Bruk tar flytingen inn i oppskriften: masker og innsatte objekter følger med, og neste gang bildet åpnes, er den der igjen.</value>
+    <value>Bruk tar den flytende forvrengningen inn i oppskriften: masker og innsatte objekter følger med, og neste gang bildet åpnes, er den der igjen.</value>
+  </data>
+  <data name="Hintergrund_wird_entfernt_fcbf96ed" xml:space="preserve">
+    <value>Bakgrunnen fjernes</value>
+  </data>
+  <data name="Hintergrund_entfernen_fehlgeschlagen_dcac4c00" xml:space="preserve">
+    <value>Fjerning av bakgrunnen mislyktes</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_hat_keine_einheitliche_Farbe_61d131b7" xml:space="preserve">
+    <value>Kanten av laget har ingen ensartet farge</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_ist_schon_durchsichtig_6bd7d540" xml:space="preserve">
+    <value>Kanten av laget er allerede gjennomsiktig</value>
+  </data>
+  <data name="Kein_Hintergrund_gefunden_091137ac" xml:space="preserve">
+    <value>Fant ingen bakgrunn</value>
+  </data>
+  <data name="Hintergrund_entfernt_3cceb90e" xml:space="preserve">
+    <value>Bakgrunn fjernet</value>
+  </data>
+  <data name="Hintergrund_nach_Randfarbe_entfernen_3d30788c" xml:space="preserve">
+    <value>Fjern bakgrunn etter kantfarge</value>
+  </data>
+  <data name="Hintergrund_des_Fotos_nach_Randfarbe_entfernen_b2f30c2f" xml:space="preserve">
+    <value>Fjern bakgrunnen i bildet etter kantfarge</value>
+  </data>
+  <data name="Freigestelltes_Foto_b01637cc" xml:space="preserve">
+    <value>Frilagt bilde</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_hat_keine_einheitliche_Farbe_b64e2900" xml:space="preserve">
+    <value>Kanten av bildet har ingen ensartet farge</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_ist_schon_durchsichtig_e2ed4fa4" xml:space="preserve">
+    <value>Kanten av bildet er allerede gjennomsiktig</value>
+  </data>
+  <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
+    <value>Bakgrunn fjernet, dokumentets bakgrunnsfarge er nå gjennomsiktig</value>
   </data>
 </root>

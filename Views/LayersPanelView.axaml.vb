@@ -370,6 +370,11 @@ Namespace Views
             If vm.CanTrimSelectedLayer Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene trimmen"), "crop", vm.TrimSelectedLayerCommand))
             End If
+            ' Einen einfarbigen Hintergrund vom Rand her durchsichtig machen, ohne Modell.
+            If vm.CanRemoveEdgeBackground Then
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Hintergrund nach Randfarbe entfernen"), "droplet-minus",
+                                            vm.RemoveEdgeBackgroundCommand))
+            End If
             ' Die markierten Ebenen allein an G'MIC, das Ergebnis als neue Ebene darueber. Das
             ' Kontextmenue der Buehne schickt dagegen immer das ganze Bild.
             If vm.CanEditLayersWithGmic Then

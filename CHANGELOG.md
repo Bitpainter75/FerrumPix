@@ -35,6 +35,12 @@
   twirls, smooths or brings back the original. Like the other distortions it stays editable in
   the recipe, and masks and inserted objects move along.
 
+- **Remove a plain background:** a photo or image layer on a plain background, such as a
+  product shot on white, can have that background made transparent, for the photo from the
+  right-click menu, for a layer from the layer menu. Soft edges stay soft, without a light fringe.
+  For the photo, the result comes as a layer above it, the removed area is transparent, and the
+  photo itself stays unchanged.
+
 ### Fixes
 
 - **Clearer graphics card check:** after a successful check, the performance settings now say

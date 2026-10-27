@@ -10213,4 +10213,40 @@
   <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
     <value>Uygula sıvılaştırmayı tarife alır: maskeler ve eklenen nesneler de birlikte gider ve resmi bir sonraki açışınızda yine oradadır.</value>
   </data>
+  <data name="Hintergrund_wird_entfernt_fcbf96ed" xml:space="preserve">
+    <value>Arka plan kaldırılıyor</value>
+  </data>
+  <data name="Hintergrund_entfernen_fehlgeschlagen_dcac4c00" xml:space="preserve">
+    <value>Arka plan kaldırılamadı</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_hat_keine_einheitliche_Farbe_61d131b7" xml:space="preserve">
+    <value>Katmanın kenarında tek tip bir renk yok</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_ist_schon_durchsichtig_6bd7d540" xml:space="preserve">
+    <value>Katmanın kenarı zaten saydam</value>
+  </data>
+  <data name="Kein_Hintergrund_gefunden_091137ac" xml:space="preserve">
+    <value>Arka plan bulunamadı</value>
+  </data>
+  <data name="Hintergrund_entfernt_3cceb90e" xml:space="preserve">
+    <value>Arka plan kaldırıldı</value>
+  </data>
+  <data name="Hintergrund_nach_Randfarbe_entfernen_3d30788c" xml:space="preserve">
+    <value>Arka planı kenar rengine göre kaldır</value>
+  </data>
+  <data name="Hintergrund_des_Fotos_nach_Randfarbe_entfernen_b2f30c2f" xml:space="preserve">
+    <value>Fotoğrafın arka planını kenar rengine göre kaldır</value>
+  </data>
+  <data name="Freigestelltes_Foto_b01637cc" xml:space="preserve">
+    <value>Dekupe fotoğraf</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_hat_keine_einheitliche_Farbe_b64e2900" xml:space="preserve">
+    <value>Fotoğrafın kenarında tek tip bir renk yok</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_ist_schon_durchsichtig_e2ed4fa4" xml:space="preserve">
+    <value>Fotoğrafın kenarı zaten saydam</value>
+  </data>
+  <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
+    <value>Arka plan kaldırıldı, belgenin arka plan rengi artık saydam</value>
+  </data>
 </root>

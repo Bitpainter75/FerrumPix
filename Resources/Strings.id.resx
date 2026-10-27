@@ -10213,4 +10213,40 @@
   <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
     <value>Terapkan memasukkan pencairan ke resep: masker dan objek yang disisipkan ikut, dan saat gambar dibuka lagi hasilnya tetap ada.</value>
   </data>
+  <data name="Hintergrund_wird_entfernt_fcbf96ed" xml:space="preserve">
+    <value>Menghapus latar belakang</value>
+  </data>
+  <data name="Hintergrund_entfernen_fehlgeschlagen_dcac4c00" xml:space="preserve">
+    <value>Gagal menghapus latar belakang</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_hat_keine_einheitliche_Farbe_61d131b7" xml:space="preserve">
+    <value>Tepi lapisan tidak memiliki warna yang seragam</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_ist_schon_durchsichtig_6bd7d540" xml:space="preserve">
+    <value>Tepi lapisan sudah transparan</value>
+  </data>
+  <data name="Kein_Hintergrund_gefunden_091137ac" xml:space="preserve">
+    <value>Latar belakang tidak ditemukan</value>
+  </data>
+  <data name="Hintergrund_entfernt_3cceb90e" xml:space="preserve">
+    <value>Latar belakang dihapus</value>
+  </data>
+  <data name="Hintergrund_nach_Randfarbe_entfernen_3d30788c" xml:space="preserve">
+    <value>Hapus latar belakang menurut warna tepi</value>
+  </data>
+  <data name="Hintergrund_des_Fotos_nach_Randfarbe_entfernen_b2f30c2f" xml:space="preserve">
+    <value>Hapus latar belakang foto menurut warna tepi</value>
+  </data>
+  <data name="Freigestelltes_Foto_b01637cc" xml:space="preserve">
+    <value>Foto terpotong</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_hat_keine_einheitliche_Farbe_b64e2900" xml:space="preserve">
+    <value>Tepi foto tidak memiliki warna yang seragam</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_ist_schon_durchsichtig_e2ed4fa4" xml:space="preserve">
+    <value>Tepi foto sudah transparan</value>
+  </data>
+  <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
+    <value>Latar belakang dihapus, warna latar dokumen sekarang transparan</value>
+  </data>
 </root>

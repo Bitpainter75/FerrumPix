@@ -10201,12 +10201,48 @@
     <value>Возвращает исходное изображение под кистью</value>
   </data>
   <data name="Rekonstruieren_5fa49f55" xml:space="preserve">
-    <value>Восстановить</value>
+    <value>Реконструировать</value>
   </data>
   <data name="Im_Bild_mit_gedr_ckter_Maustaste_malen_Schieben__da5cfa90" xml:space="preserve">
     <value>Рисуйте на изображении с нажатой кнопкой мыши. Сдвиг следует за указателем, остальные кисти действуют, пока кнопка удерживается.</value>
   </data>
   <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
     <value>Применение переносит пластику в рецепт: маски и вставленные объекты идут следом, и при следующем открытии она снова на месте.</value>
+  </data>
+  <data name="Hintergrund_wird_entfernt_fcbf96ed" xml:space="preserve">
+    <value>Удаление фона</value>
+  </data>
+  <data name="Hintergrund_entfernen_fehlgeschlagen_dcac4c00" xml:space="preserve">
+    <value>Не удалось удалить фон</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_hat_keine_einheitliche_Farbe_61d131b7" xml:space="preserve">
+    <value>Край слоя не имеет однородного цвета</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_ist_schon_durchsichtig_6bd7d540" xml:space="preserve">
+    <value>Край слоя уже прозрачен</value>
+  </data>
+  <data name="Kein_Hintergrund_gefunden_091137ac" xml:space="preserve">
+    <value>Фон не найден</value>
+  </data>
+  <data name="Hintergrund_entfernt_3cceb90e" xml:space="preserve">
+    <value>Фон удалён</value>
+  </data>
+  <data name="Hintergrund_nach_Randfarbe_entfernen_3d30788c" xml:space="preserve">
+    <value>Удалить фон по цвету края</value>
+  </data>
+  <data name="Hintergrund_des_Fotos_nach_Randfarbe_entfernen_b2f30c2f" xml:space="preserve">
+    <value>Удалить фон фотографии по цвету края</value>
+  </data>
+  <data name="Freigestelltes_Foto_b01637cc" xml:space="preserve">
+    <value>Вырезанное фото</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_hat_keine_einheitliche_Farbe_b64e2900" xml:space="preserve">
+    <value>Край фотографии не имеет однородного цвета</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_ist_schon_durchsichtig_e2ed4fa4" xml:space="preserve">
+    <value>Край фотографии уже прозрачен</value>
+  </data>
+  <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
+    <value>Фон удалён, цвет фона документа теперь прозрачный</value>
   </data>
 </root>

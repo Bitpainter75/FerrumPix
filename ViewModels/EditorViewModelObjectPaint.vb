@@ -1789,6 +1789,230 @@ Namespace ViewModels
             Return (CSng(centerX - newWidth / 2.0), CSng(centerY - newHeight / 2.0), CSng(newWidth), CSng(newHeight))
         End Function
 
+        Private _removeEdgeBackgroundCommand As ICommand
+
+        ''' <summary>Kontextmenue der Ebene: den einfarbigen Hintergrund durchsichtig machen, siehe
+        ''' <see cref="RemoveEdgeBackgroundAsync"/>.</summary>
+        Public ReadOnly Property RemoveEdgeBackgroundCommand As ICommand
+            Get
+                If _removeEdgeBackgroundCommand Is Nothing Then
+                    _removeEdgeBackgroundCommand = New DelegateCommand(Sub()
+                                                                           Dim ignored = RemoveEdgeBackgroundAsync()
+                                                                       End Sub)
+                End If
+                Return _removeEdgeBackgroundCommand
+            End Get
+        End Property
+
+        ''' <summary>Genau EINE Bild- oder Malebene, wie beim Trimmen. Anders als dort darf sie eine
+        ''' eigene Verzerrung tragen: das Raster behaelt seine Masse, nur Deckung und Kantenfarbe
+        ''' aendern sich.</summary>
+        Public ReadOnly Property CanRemoveEdgeBackground As Boolean
+            Get
+                If SelectedAdjustmentLayers.Count > 0 Then Return False
+                Dim selected = SelectedAnnotations.Where(Function(a) a IsNot Nothing).ToList()
+                If selected.Count <> 1 Then Return False
+                Select Case NormalizeAnnotationKind(selected(0).Kind)
+                    Case "Image", "SelectionImage"
+                    Case Else
+                        Return False
+                End Select
+                Return IsPaintableImageAnnotation(selected(0))
+            End Get
+        End Property
+
+        ''' <summary>Hintergrund nach Randfarbe entfernen: was vom Rand aus zusammenhaengend der
+        ''' Randfarbe gleicht, wird durchsichtig, der Saum darum wird entmischt
+        ''' (<see cref="EdgeColorTransparency"/>). Lage und Groesse der Ebene bleiben.
+        '''
+        ''' Derselbe Ablauf wie beim Trimmen: auf laufende Pinselzuege warten, im Hintergrund
+        ''' rechnen und schreiben, danach pruefen, ob die Ebene noch dasselbe Bild traegt.</summary>
+        Friend Async Function RemoveEdgeBackgroundAsync() As Task
+            If Not CanRemoveEdgeBackground Then Return
+            Dim targets = CommitObjectAdjustModeAndRefresh(SelectedAnnotations.Where(Function(a) a IsNot Nothing).ToList())
+            If targets.Count <> 1 Then Return
+            Dim target = targets(0)
+
+            Await _objectPaintChain
+            If Not _annotations.Contains(target) OrElse Not IsPaintableImageAnnotation(target) Then Return
+            Dim sourcePath = target.ImagePath
+            Dim targetPath = CreateSelectionAssetTempPath("layer")
+            Dim documentStamp = _selectionAssetTempDir
+            StatusText = LocalizationService.T("Hintergrund wird entfernt")
+
+            Dim result As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
+            Try
+                result = Await Task.Run(Function() RemoveEdgeBackgroundFile(sourcePath, targetPath))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.RemoveEdgeBackground", ex)
+                StatusText = LocalizationService.T("Hintergrund entfernen fehlgeschlagen")
+                Return
+            End Try
+
+            If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
+            If Not _annotations.Contains(target) OrElse
+               Not String.Equals(target.ImagePath, sourcePath, StringComparison.Ordinal) Then Return
+            If Not ReportEdgeBackgroundOutcome(result.Status, result.Written, forPhoto:=False) Then Return
+
+            Dim dirty = ComputeSceneDirtyRectFor(target)
+            RegisterObjectPaintFile(targetPath)
+            Dim label = LocalizationService.T("Hintergrund entfernt")
+            PushUndo(label)
+            target.ImagePath = targetPath
+            _annotationModelVersion += 1
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            RebuildLayerRows()
+            StatusText = label
+            RefreshOverlayAfterAnnotationChange(dirty)
+        End Function
+
+        ''' <summary>Der schwere Teil im Hintergrund: Raster lesen, Hintergrund entfernen, neue Datei
+        ''' schreiben.</summary>
+        Private Shared Function RemoveEdgeBackgroundFile(sourcePath As String, targetPath As String) As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
+            Using decoded = ObjectImageMemory.DecodeOrCopy(sourcePath)
+                If decoded Is Nothing OrElse decoded.Width <= 0 OrElse decoded.Height <= 0 Then
+                    Return (EdgeColorTransparency.Outcome.NothingRemoved, False)
+                End If
+                Dim status As EdgeColorTransparency.Outcome
+                Dim background As SKColor
+                Using cleared = EdgeColorTransparency.Apply(decoded, status, background)
+                    If cleared Is Nothing Then Return (status, False)
+                    Return (status, WriteObjectPaintFile(cleared, targetPath))
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Sagt in der Statuszeile, warum nichts geschehen ist, und gibt dann False
+        ''' zurueck. True heisst: das Ergebnis liegt geschrieben bereit.</summary>
+        Private Function ReportEdgeBackgroundOutcome(status As EdgeColorTransparency.Outcome, written As Boolean,
+                                                     forPhoto As Boolean) As Boolean
+            Select Case status
+                Case EdgeColorTransparency.Outcome.NoUniformEdge
+                    StatusText = If(forPhoto, LocalizationService.T("Der Rand des Fotos hat keine einheitliche Farbe"),
+                                    LocalizationService.T("Der Rand der Ebene hat keine einheitliche Farbe"))
+                    Return False
+                Case EdgeColorTransparency.Outcome.NoOpaqueEdge
+                    StatusText = If(forPhoto, LocalizationService.T("Der Rand des Fotos ist schon durchsichtig"),
+                                    LocalizationService.T("Der Rand der Ebene ist schon durchsichtig"))
+                    Return False
+                Case EdgeColorTransparency.Outcome.NothingRemoved
+                    StatusText = LocalizationService.T("Kein Hintergrund gefunden")
+                    Return False
+            End Select
+            If Not written Then
+                StatusText = LocalizationService.T("Hintergrund entfernen fehlgeschlagen")
+                Return False
+            End If
+            Return True
+        End Function
+
+        Private _removePhotoBackgroundCommand As ICommand
+
+        ''' <summary>Kontextmenue der Buehne und der Fussleiste: den einfarbigen Hintergrund des
+        ''' FOTOS entfernen, siehe <see cref="RemovePhotoBackgroundAsync"/>.</summary>
+        Public ReadOnly Property RemovePhotoBackgroundCommand As ICommand
+            Get
+                If _removePhotoBackgroundCommand Is Nothing Then
+                    _removePhotoBackgroundCommand = New DelegateCommand(Sub()
+                                                                            Dim ignored = RemovePhotoBackgroundAsync()
+                                                                        End Sub)
+                End If
+                Return _removePhotoBackgroundCommand
+            End Get
+        End Property
+
+        ''' <summary>Hintergrund des Fotos nach Randfarbe entfernen. Das Foto selbst ist kein Raster,
+        ''' das man aendern koennte, sondern Quelle plus Rezept. Deshalb geht derselbe Weg wie beim
+        ''' G'MIC-Rundweg: das Foto wird mit allen Anpassungen in voller Aufloesung gerechnet, aber
+        ''' OHNE die Ebenen darueber (sie bleiben veraenderbar liegen), dann freigestellt
+        ''' (<see cref="EdgeColorTransparency"/>), und das Ergebnis kommt als UNTERSTE Ebene
+        ''' deckungsgleich ueber das Foto. Das Foto wird ausgeblendet, sein Rezept bleibt unberuehrt.
+        ''' Alles ist EIN Rueckgaengig-Schritt.
+        '''
+        ''' Der Preis: wer danach Regler am Foto aendert, sieht das nicht in der Ebene, weil sie ein
+        ''' fertiges Raster ist. Eine Maske am Foto bliebe im Rezept, kennt aber nur Deckung; das
+        ''' Entmischen der Kantenfarbe, das den hellen Saum wegnimmt, ginge damit nicht.</summary>
+        Friend Async Function RemovePhotoBackgroundAsync() As Task
+            If Not HasDocument Then Return
+            Dim sourcePath = RenderSourcePath
+            If String.IsNullOrWhiteSpace(sourcePath) Then Return
+            ' Das Foto immer sichtbar rechnen: ist es gerade ausgeblendet, faende der Rand nur
+            ' Durchsichtiges.
+            Dim adjustments = WithoutObjectLayers(GetCurrentAdjustments())
+            adjustments.BackgroundHidden = False
+            Dim working = CloneWorkingFullForRender()
+            Dim renderPath = CreateSelectionAssetTempPath("render")
+            Dim targetPath = CreateSelectionAssetTempPath("layer")
+            Dim documentStamp = _selectionAssetTempDir
+            StatusText = LocalizationService.T("Hintergrund wird entfernt")
+
+            Dim result As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
+            Try
+                result = Await Task.Run(Function() As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
+                                            Try
+                                                If Not ImageProcessor.SaveImage(sourcePath, renderPath, adjustments, 100,
+                                                                                preserveMetadata:=False, workingFull:=working) Then
+                                                    Return (EdgeColorTransparency.Outcome.NothingRemoved, False)
+                                                End If
+                                                Return RemoveEdgeBackgroundFile(renderPath, targetPath)
+                                            Finally
+                                                working?.Dispose()
+                                                Try
+                                                    File.Delete(renderPath)
+                                                Catch
+                                                End Try
+                                            End Try
+                                        End Function)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.RemovePhotoBackground", ex)
+                StatusText = LocalizationService.T("Hintergrund entfernen fehlgeschlagen")
+                Return
+            End Try
+
+            ' Inzwischen ein anderes Bild: das Ergebnis gehoert nicht dorthin.
+            If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
+            If Not ReportEdgeBackgroundOutcome(result.Status, result.Written, forPhoto:=True) Then Return
+
+            RegisterObjectPaintFile(targetPath)
+            ' AddSelectionImageAnnotationAt legt den Rueckgaengig-Schritt an und die Ebene OBEN ab;
+            ' danach kommt sie nach unten, direkt ueber das Foto, und das Foto geht aus - alles im
+            ' selben Schritt.
+            AddSelectionImageAnnotationAt(targetPath, 0, 0, 100, 100, LocalizationService.T("Freigestelltes Foto"))
+            Dim layer = _annotations(_annotations.Count - 1)
+            _annotations.RemoveAt(_annotations.Count - 1)
+            _annotations.Insert(0, layer)
+            SelectedAnnotationIndex = 0
+            _backgroundHidden = True
+            Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            ' Der entfernte Bereich soll DURCHSICHTIG werden. Eine Hintergrundfarbe des Dokuments
+            ' legt der Renderer aber auch bei ausgeblendetem Foto wieder auf (ApplyAnnotations), und
+            ' dann stuende sie dort, wo der Hintergrund weg sein soll. Sie geht deshalb im selben
+            ' Schritt auf durchsichtig; das Feld direkt, der Setter legte einen zweiten
+            ' Rueckgaengig-Schritt an.
+            Dim hadDocumentBackground = HasDocumentBackground
+            If hadDocumentBackground Then
+                _canvasBackgroundColor = "#00000000"
+                For Each n In {NameOf(CanvasBackgroundColor), NameOf(HasDocumentBackground), NameOf(IsDocumentBackgroundBlack),
+                               NameOf(IsDocumentBackgroundWhite), NameOf(IsDocumentBackgroundTransparent),
+                               NameOf(CanvasBackgroundColorValue), NameOf(CanvasBackgroundBrush)}
+                    Me.RaisePropertyChanged(n)
+                Next
+                RaiseBrushColorChanged()
+            End If
+            _annotationModelVersion += 1
+            _hasChanges = True
+            Dim label = LocalizationService.T("Hintergrund entfernt")
+            NameHistoryStep(label)
+            RaiseResetButtonStateChanged()
+            RebuildLayerRows()
+            ' Wer eine Hintergrundfarbe gesetzt hatte, soll wissen, wohin sie verschwunden ist.
+            StatusText = If(hadDocumentBackground,
+                            LocalizationService.T("Hintergrund entfernt, die Hintergrundfarbe des Dokuments ist jetzt durchsichtig"),
+                            label)
+            RefreshPreviewImmediately()
+        End Function
+
     End Class
 
 End Namespace

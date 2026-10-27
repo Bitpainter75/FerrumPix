@@ -18358,6 +18358,7 @@ Namespace ViewModels
                                                     .CopyPath = CopyPathCommand,
                                                     .ShowInFileManager = OpenFileManagerCommand,
                                                     .EditWithGmic = If(GmicService.IsAvailable, EditWithGmicCommand, Nothing),
+                                                    .RemovePhotoBackground = RemovePhotoBackgroundCommand,
                                                     .Delete = DeleteCurrentCommand})
             End Get
         End Property

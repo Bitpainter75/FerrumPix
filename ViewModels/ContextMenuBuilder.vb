@@ -128,6 +128,8 @@ Namespace ViewModels
             ' eine andere Kachel, dort gehoert der Eintrag nicht hin.
             If site = MenuSite.EditorFooter OrElse site = MenuSite.EditorStage Then
                 AddIfOffered(list, commands.EditWithGmic, FooterMenuCatalog.EditWithGmic(commands.EditWithGmic))
+                AddIfOffered(list, commands.RemovePhotoBackground,
+                             FooterMenuCatalog.RemovePhotoBackground(commands.RemovePhotoBackground))
             End If
             Divider(list)
 

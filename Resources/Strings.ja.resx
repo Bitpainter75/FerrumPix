@@ -10171,22 +10171,22 @@
     <value>星を付けると、ビューアーはすぐに次の画像へ進みます。評価を取り消した場合は、その画像のままです。</value>
   </data>
   <data name="Verfl_ssigen_c19d2d37" xml:space="preserve">
-    <value>ゆがみ</value>
+    <value>ゆがみブラシ</value>
   </data>
   <data name="Mit_einem_Pinsel_schieben_aufbl_hen_zusammenzieh_9aef22e3" xml:space="preserve">
     <value>ブラシで押す、膨張、縮小、渦巻きを行います</value>
   </data>
   <data name="Verfl_ssigen_zur_cksetzen_25393eb6" xml:space="preserve">
-    <value>ゆがみをリセット</value>
+    <value>ゆがみブラシをリセット</value>
   </data>
   <data name="Schieben_8cb6ae32" xml:space="preserve">
     <value>押す</value>
   </data>
   <data name="Aufbl_hen_74743ad1" xml:space="preserve">
-    <value>膨張</value>
+    <value>膨張ブラシ</value>
   </data>
   <data name="Zusammenziehen_a680600b" xml:space="preserve">
-    <value>縮小</value>
+    <value>縮小ブラシ</value>
   </data>
   <data name="Strudel_rechts_3b742894" xml:space="preserve">
     <value>右回りの渦</value>
@@ -10207,6 +10207,42 @@
     <value>マウスボタンを押したまま画像上で描きます。押すはポインターに追従し、ほかのブラシはボタンを押している間作用します。</value>
   </data>
   <data name="Anwenden_bernimmt_das_Verfl_ssigen_ins_Rezept_Ma_97f5748f" xml:space="preserve">
-    <value>適用するとゆがみがレシピに取り込まれます。マスクと挿入したオブジェクトも一緒に動き、次に開いたときにも残っています。</value>
+    <value>適用するとゆがみブラシの結果がレシピに取り込まれます。マスクと挿入したオブジェクトも一緒に動き、次に開いたときにも残っています。</value>
+  </data>
+  <data name="Hintergrund_wird_entfernt_fcbf96ed" xml:space="preserve">
+    <value>背景を削除しています</value>
+  </data>
+  <data name="Hintergrund_entfernen_fehlgeschlagen_dcac4c00" xml:space="preserve">
+    <value>背景を削除できませんでした</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_hat_keine_einheitliche_Farbe_61d131b7" xml:space="preserve">
+    <value>レイヤーの縁が均一な色ではありません</value>
+  </data>
+  <data name="Der_Rand_der_Ebene_ist_schon_durchsichtig_6bd7d540" xml:space="preserve">
+    <value>レイヤーの縁はすでに透明です</value>
+  </data>
+  <data name="Kein_Hintergrund_gefunden_091137ac" xml:space="preserve">
+    <value>背景が見つかりません</value>
+  </data>
+  <data name="Hintergrund_entfernt_3cceb90e" xml:space="preserve">
+    <value>背景を削除しました</value>
+  </data>
+  <data name="Hintergrund_nach_Randfarbe_entfernen_3d30788c" xml:space="preserve">
+    <value>縁の色で背景を削除</value>
+  </data>
+  <data name="Hintergrund_des_Fotos_nach_Randfarbe_entfernen_b2f30c2f" xml:space="preserve">
+    <value>縁の色で写真の背景を削除</value>
+  </data>
+  <data name="Freigestelltes_Foto_b01637cc" xml:space="preserve">
+    <value>切り抜いた写真</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_hat_keine_einheitliche_Farbe_b64e2900" xml:space="preserve">
+    <value>写真の縁が均一な色ではありません</value>
+  </data>
+  <data name="Der_Rand_des_Fotos_ist_schon_durchsichtig_e2ed4fa4" xml:space="preserve">
+    <value>写真の縁はすでに透明です</value>
+  </data>
+  <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
+    <value>背景を削除しました。ドキュメントの背景色は透明になりました</value>
   </data>
 </root>

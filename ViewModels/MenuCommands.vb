@@ -109,6 +109,10 @@ Namespace ViewModels
         ''' Nur der Editor setzt es, und nur, wenn G'MIC gefunden wurde.</summary>
         Public Property EditWithGmic As ICommand
 
+        ''' <summary>Den einfarbigen Hintergrund des Fotos entfernen, das Ergebnis als Ebene darueber.
+        ''' Nur der Editor setzt es.</summary>
+        Public Property RemovePhotoBackground As ICommand
+
     End Class
 
 End Namespace

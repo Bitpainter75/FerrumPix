@@ -232,6 +232,10 @@ Namespace ViewModels
             Return Build("In G'MIC bearbeiten", "color-filter", c)
         End Function
 
+        Public Shared Function RemovePhotoBackground(c As ICommand) As AppAction
+            Return Build("Hintergrund des Fotos nach Randfarbe entfernen", "droplet-minus", c)
+        End Function
+
         Public Shared Function Delete(c As ICommand) As AppAction
             Return Build("Löschen", "trash", c)
         End Function
