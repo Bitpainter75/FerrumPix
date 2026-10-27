@@ -798,7 +798,7 @@ Namespace ViewModels
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
                        _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
-                       _autoGeometryRunning OrElse _layerImportRunning
+                       _autoGeometryRunning OrElse _layerImportRunning OrElse _presetImportRunning
             End Get
         End Property
 
@@ -1976,8 +1976,9 @@ Namespace ViewModels
         Private Sub LoadSavedXmpPresets()
             SavedXmpPresets.Clear()
             Dim dropped = False
+            Dim index As New PresetDuplicateIndex()
             For Each preset In AppSettingsService.Load().LightroomPresets
-                If SavedXmpPresets.Any(Function(p) IsSamePresetFile(p.Path, preset.Path)) Then
+                If Not index.TryAdd(preset.Path) Then
                     dropped = True
                 Else
                     SavedXmpPresets.Add(preset)
@@ -2005,8 +2006,9 @@ Namespace ViewModels
         Private Sub LoadSavedLutPresets()
             SavedLutPresets.Clear()
             Dim dropped = False
+            Dim index As New PresetDuplicateIndex()
             For Each preset In AppSettingsService.Load().LutPresets
-                If SavedLutPresets.Any(Function(p) IsSamePresetFile(p.Path, preset.Path)) Then
+                If Not index.TryAdd(preset.Path) Then
                     dropped = True
                 Else
                     SavedLutPresets.Add(preset)
@@ -31358,21 +31360,110 @@ Namespace ViewModels
             .MatchCasing = MatchCasing.CaseInsensitive
         }
 
-        Public Sub ImportXmpPresetsFromFolder(folderPath As String)
-            If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
-            Dim count = 0, found = 0
+        ''' <summary>Dieselbe Regel wie <see cref="IsSamePresetFile"/>, aber fuer eine ganze Liste auf
+        ''' einmal: Fingerabdruecke entstehen nur, wo zwei Dateien gleich gross sind. Paarweise
+        ''' verglichen kostete ein Ordner mit n Presets n mal n Dateiabfragen, auf einer Netzfreigabe
+        ''' Minuten. Faedenneutral, solange jede Instanz nur einem Faden gehoert.</summary>
+        Private NotInheritable Class PresetDuplicateIndex
+            Private ReadOnly _paths As New HashSet(Of String)(PathIdentity.Comparer)
+            Private ReadOnly _bySize As New Dictionary(Of Long, List(Of FileInfo))
+
+            ''' <summary>False, wenn die Datei ein Doppel einer schon aufgenommenen ist; sonst wird sie
+            ''' aufgenommen. Eine fehlende Datei zaehlt wie bei IsSamePresetFile nur ueber den Pfad.</summary>
+            Public Function TryAdd(path As String) As Boolean
+                If String.IsNullOrWhiteSpace(path) Then Return True
+                Dim trimmed = path.Trim()
+                If Not _paths.Add(trimmed) Then Return False
+                Dim info As FileInfo
+                Try
+                    info = New FileInfo(trimmed)
+                    If Not info.Exists Then Return True
+                Catch
+                    Return True
+                End Try
+                Dim sameSize As List(Of FileInfo) = Nothing
+                If Not _bySize.TryGetValue(info.Length, sameSize) Then
+                    _bySize(info.Length) = New List(Of FileInfo) From {info}
+                    Return True
+                End If
+                Dim hash = PresetFingerprint(info)
+                If hash IsNot Nothing AndAlso
+                   sameSize.Any(Function(other) String.Equals(PresetFingerprint(other), hash, StringComparison.Ordinal)) Then Return False
+                sameSize.Add(info)
+                Return True
+            End Function
+        End Class
+
+        Private _presetImportRunning As Boolean
+
+        ''' <summary>Liest einen Ordner voller Presets ein. Suche, Abgleich und Fingerabdruecke laufen im
+        ''' Hintergrund, solange zeigt die Buehne die Warteanzeige mit Fortschritt, und die Liste wird am
+        ''' Ende EINMAL geschrieben. Vorher lief alles auf dem Anzeigefaden und schrieb und lud die Liste
+        ''' nach jeder Datei neu: bei einem Ordner mit vielen Presets stand die Oberflaeche lange still.
+        ''' Gezaehlt wird nur, was neu dazukommt; ein zweiter Import desselben Ordners meldet 0.</summary>
+        Public Async Function ImportXmpPresetsFromFolderAsync(folderPath As String) As Task
+            If _presetImportRunning OrElse String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
+            Dim result = Await CollectNewPresetFilesAsync(folderPath, "*.xmp", SavedXmpPresets.Select(Function(p) p.Path).ToList())
+            If result.Added.Count > 0 Then
+                AppSettingsService.Update(Sub(s) s.LightroomPresets.AddRange(result.Added.Select(Function(path) New XmpPresetSettings With {
+                                                                                  .Id = Guid.NewGuid().ToString("N"),
+                                                                                  .Name = IO.Path.GetFileNameWithoutExtension(path),
+                                                                                  .Path = path
+                                                                              })))
+                LoadSavedXmpPresets()
+            End If
+            StatusText = If(result.Found > 0,
+                             LocalizationService.T("Presets importiert: ") & result.Added.Count.ToString(),
+                             LocalizationService.T("Keine XMP-Dateien im Ordner gefunden"))
+        End Function
+
+        Private Async Function CollectNewPresetFilesAsync(folderPath As String, pattern As String,
+                                                          known As List(Of String)) As Task(Of (Found As Integer, Added As List(Of String)))
+            _presetImportRunning = True
+            SetBusyReason(LocalizationService.T("Wird geladen…"))
+            RefreshBusyState()
+            ' Eine Meldung, die erst nach dem Ende ankommt, darf den Balken des naechsten Vorgangs
+            ' nicht mehr setzen.
+            Dim progress As New Progress(Of Double)(Sub(percent)
+                                                        If _presetImportRunning Then SetBusyProgress(percent)
+                                                    End Sub)
             Try
-                ' Gezaehlt wird nur, was neu dazukommt; ein zweiter Import desselben Ordners meldet 0.
-                For Each file In Directory.EnumerateFiles(folderPath, "*.xmp", CaseInsensitiveFileSearch)
-                    found += 1
-                    If SaveXmpPresetToSettings(file) Then count += 1
+                Return Await Task.Run(Function() CollectNewPresetFiles(folderPath, pattern, known, progress))
+            Finally
+                _presetImportRunning = False
+                SetBusyProgress(-1.0)
+                RefreshBusyState()
+            End Try
+        End Function
+
+        ''' <summary>Alle Dateien des Ordners samt Unterordnern, die noch nicht in
+        ''' <paramref name="known"/> stehen und untereinander keine Doppel sind. Laeuft im Hintergrund.
+        ''' Bricht die Suche unterwegs ab (Rechte, Freigabe weg), zaehlt, was bis dahin gefunden war.</summary>
+        Private Shared Function CollectNewPresetFiles(folderPath As String, pattern As String, known As List(Of String),
+                                                      progress As IProgress(Of Double)) As (Found As Integer, Added As List(Of String))
+            Dim files As New List(Of String)
+            Try
+                For Each file In Directory.EnumerateFiles(folderPath, pattern, CaseInsensitiveFileSearch)
+                    files.Add(file)
                 Next
             Catch
             End Try
-            StatusText = If(found > 0,
-                             LocalizationService.T("Presets importiert: ") & count.ToString(),
-                             LocalizationService.T("Keine XMP-Dateien im Ordner gefunden"))
-        End Sub
+            Dim index As New PresetDuplicateIndex()
+            For Each path In known
+                index.TryAdd(path)
+            Next
+            Dim added As New List(Of String)
+            Dim reported = -1
+            For i = 0 To files.Count - 1
+                If index.TryAdd(files(i)) Then added.Add(files(i).Trim())
+                Dim percent = CInt((i + 1) * 100L \ files.Count)
+                If percent <> reported Then
+                    reported = percent
+                    progress?.Report(percent)
+                End If
+            Next
+            Return (files.Count, added)
+        End Function
 
         Public Sub ApplyLutPreset(cubePath As String)
             If String.IsNullOrWhiteSpace(cubePath) OrElse Not File.Exists(cubePath) Then Return
@@ -31523,20 +31614,22 @@ Namespace ViewModels
             Return True
         End Function
 
-        Public Sub ImportLutPresetsFromFolder(folderPath As String)
-            If String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
-            Dim count = 0, found = 0
-            Try
-                For Each file In Directory.EnumerateFiles(folderPath, "*.cube", CaseInsensitiveFileSearch)
-                    found += 1
-                    If SaveLutPresetToSettings(file) Then count += 1
-                Next
-            Catch
-            End Try
-            StatusText = If(found > 0,
-                             LocalizationService.T("LUTs importiert: ") & count.ToString(),
+        ''' <summary>Wie <see cref="ImportXmpPresetsFromFolderAsync"/> fuer die LUTs.</summary>
+        Public Async Function ImportLutPresetsFromFolderAsync(folderPath As String) As Task
+            If _presetImportRunning OrElse String.IsNullOrWhiteSpace(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
+            Dim result = Await CollectNewPresetFilesAsync(folderPath, "*.cube", SavedLutPresets.Select(Function(p) p.Path).ToList())
+            If result.Added.Count > 0 Then
+                AppSettingsService.Update(Sub(s) s.LutPresets.AddRange(result.Added.Select(Function(path) New LutPresetSettings With {
+                                                                            .Id = Guid.NewGuid().ToString("N"),
+                                                                            .Name = IO.Path.GetFileNameWithoutExtension(path),
+                                                                            .Path = path
+                                                                        })))
+                LoadSavedLutPresets()
+            End If
+            StatusText = If(result.Found > 0,
+                             LocalizationService.T("LUTs importiert: ") & result.Added.Count.ToString(),
                              LocalizationService.T("Keine .cube-Dateien im Ordner gefunden"))
-        End Sub
+        End Function
 
         Private Shared Function HasInvalidFileNameChars(fileName As String) As Boolean
             If String.IsNullOrEmpty(fileName) Then Return True

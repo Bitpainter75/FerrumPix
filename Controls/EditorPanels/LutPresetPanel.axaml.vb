@@ -60,7 +60,7 @@ Namespace Controls.EditorPanels
                 })
                 Dim folder = folders?.FirstOrDefault()
                 If folder Is Nothing Then Return
-                vm.ImportLutPresetsFromFolder(folder.Path.LocalPath)
+                Await vm.ImportLutPresetsFromFolderAsync(folder.Path.LocalPath)
             Catch
             End Try
         End Sub

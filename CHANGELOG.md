@@ -13,11 +13,18 @@
   Presets with a luminance value now look as intended. Pictures you already edited with luminance
   noise reduction come out smoother.
 
+- **Dragging in the viewer moves the picture:** when you are zoomed in, dragging with the left
+  mouse button now scrolls the picture instead of drawing a crop frame. Cropping is done in the
+  editor.
+
 ### Fixes
 
 - **Presets only once in the list:** importing the same XMP preset or LUT again, even from
   another folder or under another name, no longer adds a second tile. Duplicates already in the
   list are removed once.
+
+- **Loading a folder of presets or LUTs:** a large folder no longer freezes the window. A progress
+  bar shows while it is read.
 
 - **Canon EOS R8 Mark II colours:** its RAW files were developed as if shot in daylight, because
   the camera's white balance was not read. They now use the white balance set in the camera.

@@ -60,7 +60,7 @@ Namespace Controls.EditorPanels
                 })
                 Dim folder = folders?.FirstOrDefault()
                 If folder Is Nothing Then Return
-                vm.ImportXmpPresetsFromFolder(folder.Path.LocalPath)
+                Await vm.ImportXmpPresetsFromFolderAsync(folder.Path.LocalPath)
             Catch
             End Try
         End Sub
