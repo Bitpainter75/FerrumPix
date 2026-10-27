@@ -862,8 +862,8 @@ float lumaOf(float3 c) {
                                    input = corrected
                                End If
                                Try
-                                   denoised = GuidedLevelOnGpu(gr, input, If(level = 0, amount * MultiScaleFineWeight, amount),
-                                                               If(level = 0, detail, 0.0F), adaptive)
+                                   denoised = GuidedLevelOnGpu(gr, input, If(level = 0, amount, amount * MultiScaleCoarseWeight),
+                                                               detail, adaptive)
                                    If denoised Is Nothing Then Return Nothing
                                Finally
                                    corrected?.Dispose()
@@ -930,13 +930,13 @@ float lumaOf(float3 c) {
             Using meanLuma = prepare(0.0F), meanChroma = prepare(1.0F), epsImage = EpsilonTableImage(epsTable)
                 If meanLuma Is Nothing OrElse meanChroma Is Nothing Then Return Nothing
                 Dim cu = New SKRuntimeEffectUniforms(coef)
+                cu("texture") = GuidedDetailTexture(amount, detail)
                 Using lines = DrawInto(NewFloatSurface(gr, w, h), w, h, coef, cu, ("means", meanLuma), ("eps", epsImage))
                     If lines Is Nothing Then Return Nothing
                     Using lineImage = lines.Snapshot(), meanLines = boxMean(lineImage)
                         If meanLines Is Nothing Then Return Nothing
                         Using meanLineImage = meanLines.Snapshot()
                             Dim au = New SKRuntimeEffectUniforms(apply)
-                            au("detail") = Clamp(detail, 0, 1)
                             Return DrawStage(gr, w, h, apply, au, ("src", image), ("chroma", meanChroma), ("lines", meanLineImage))
                         End Using
                     End Using
@@ -1078,10 +1078,12 @@ half4 main(float2 p) {
 "
 
         ' Die Gerade je Bildpunkt: a = Varianz / (Varianz + Schwelle), b = (1 - a) * Mittel. Die
-        ' Schwelle nach dem Mittel, gerundet wie CInt (zur geraden Zahl).
+        ' Schwelle nach dem Mittel, gerundet wie CInt (zur geraden Zahl), und gesenkt nach dem
+        ' Detail-Regler wie in GuidedTile.
         Private Const GuidedCoefShader As String = "
 uniform shader means;
 uniform shader eps;
+uniform float texture;
 half4 main(float2 p) {
     half4 t = means.eval(p);
     float meanI = joinValue(t.xy);
@@ -1089,6 +1091,10 @@ half4 main(float2 p) {
     float variance = max(0.0, joinValue(t.zw) - centered * centered);
     float index = clamp(roundHalfEven(meanI), 0.0, 255.0);
     float e = joinValue(eps.eval(float2(index + 0.5, 0.5)).xy);
+    if (texture > 0.0 && e > 0.0) {
+        float ratio = variance / e;
+        e /= 1.0 + texture * ratio * ratio;
+    }
     float a = variance / (variance + e);
     float2 sa = splitValue(a);
     float2 sb = splitValue((1.0 - a) * meanI);
@@ -1101,7 +1107,6 @@ half4 main(float2 p) {
 uniform shader src;
 uniform shader chroma;
 uniform shader lines;
-uniform float detail;
 half4 main(float2 p) {
     float4 b = toBytes(src.eval(p));
     float3 c = unpremulBytes(b);
@@ -1110,15 +1115,10 @@ half4 main(float2 p) {
     float a = joinValue(l.xy);
     float after = a * before + joinValue(l.zw);
     float shift = after - before;
-    float keep = 0.0;
-    if (detail > 0.0) {
-        keep = clamp(abs(shift) / 16.0, 0.0, 1.0) * detail;
-        shift *= (1.0 - keep);
-    }
     half4 m = chroma.eval(p);
     float chromaR = c.r - before;
     float chromaB = c.b - before;
-    float mixv = (1.0 - a) * (1.0 - keep);
+    float mixv = 1.0 - a;
     float newChromaR = chromaR + (joinValue(m.xy) - chromaR) * mixv;
     float newChromaB = chromaB + (joinValue(m.zw) - chromaB) * mixv;
     float newLuma = before + shift;

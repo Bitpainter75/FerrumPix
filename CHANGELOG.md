@@ -6,6 +6,13 @@
   scratches are gone from the Effects panel. Pictures that already use them keep their look, and
   resetting the Grain group clears them.
 
+- **Stronger luminance noise reduction with a working Detail slider:** the luminance noise
+  reduction now smooths as strongly as other photo programs at the same value; before, even 100
+  did less than they do at 25. The Detail slider now keeps fine texture such as hair and fabric
+  while flat areas stay smooth, and it has a visible effect from about the middle of its range.
+  Presets with a luminance value now look as intended. Pictures you already edited with luminance
+  noise reduction come out smoother.
+
 ### Fixes
 
 - **Presets only once in the list:** importing the same XMP preset or LUT again, even from

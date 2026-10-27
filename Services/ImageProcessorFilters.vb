@@ -471,11 +471,16 @@ Namespace Services
         ''' kam die Schaetzung jedes Mal auf das 0,86-Fache.</summary>
         Private Const NoiseProfileCalibration As Single = 1.11F
 
-        ''' <summary>Obergrenze des Rauschprofils als Anteil seines Medians. Gemessen am M50-Portraet,
-        ''' mehrstufig, Staerke 100: ohne Grenze 66 Prozent Rauschabbau bei 40 Prozent
-        ''' Kantensteilheit, mit 1,0 bei 48, mit 0,8 bei 55, mit 0,6 bei 65 - der Rauschabbau im
-        ''' Flachen bleibt dabei gleich, und im Bild kommt der Bart zurueck.</summary>
-        Private Const NoiseProfileCapOfMedian As Single = 0.6F
+        ''' <summary>Obergrenze des Rauschprofils als Anteil seines Medians. Ohne Grenze folgt die
+        ''' Schwelle dem Rauschen beliebig weit in die Tiefen, wo Rauschen und Zeichnung gleich stark
+        ''' sind; am M50-Portraet, Staerke 100, stand die Kantensteilheit dann bei 40 Prozent, mit
+        ''' 1,0 bei 48, mit 0,6 bei 65.
+        '''
+        ''' 1,0 UND NICHT 0,6, weil die Staerke gegen den DNG-Konverter geeicht ist: mit 0,6 blieb
+        ''' an den zwoelf verrauschten Messaufnahmen bei Luminanz 50 im Flachen 47 statt 27 Prozent
+        ''' des feinen Rauschens stehen, der Regler glaettete also nur halb so stark wie dort. Dunkle
+        ''' Zeichnung wird bei hoher Staerke damit weicher, wie in der Referenz auch.</summary>
+        Private Const NoiseProfileCapOfMedian As Single = 1.0F
 
         ''' <summary>Wie stark das Bild bei jedem Helligkeitswert rauscht, als Standardabweichung in
         ''' Grauwerten (256 Eintraege), oder Nothing, wenn das Bild zu klein fuer eine Schaetzung ist.
@@ -782,20 +787,21 @@ Namespace Services
 
         ''' <summary>Die Schwelle je Helligkeitswert fuer das angepasste Verfahren, als Varianz.
         '''
-        ''' Der Regler ist hier ein VIELFACHES DES RAUSCHENS und kein fester Grauwert: bei 100 gilt als
-        ''' glatt, was bis zum 2,4-Fachen der geschaetzten Streuung schwankt. Die Kennlinie ist so
-        ''' gelegt, dass sie am stark verrauschten Messbild (Streuung im Flachen 5,2) dieselbe
-        ''' Schwelle ergibt wie der feste Fuehrungsfilter; dort, wo weniger rauscht, glaettet sie
-        ''' weniger.
+        ''' Der Regler ist hier ein VIELFACHES DES RAUSCHENS und kein fester Grauwert: als glatt gilt,
+        ''' was bis zum <see cref="AdaptiveNoiseStrengthScale"/>-Fachen der geschaetzten Streuung mal
+        ''' Regler hoch <see cref="AdaptiveNoiseStrengthPower"/> schwankt (bei 100 das 2,08-Fache, bei
+        ''' 50 das 1,42-Fache). Geeicht gegen den DNG-Konverter an zwoelf Aufnahmen mit ISO 3200 bis
+        ''' 25600 (Reglereichung/rauschdetail.py): bei gleichem Zahlenwert bleibt im Flachen gleich
+        ''' viel feines Rauschen stehen, bei 25 rund die Haelfte, bei 50 ein gutes Viertel, bei 80 ein
+        ''' Zehntel. Die Wurzelform laesst den Regler gleich am Anfang greifen.
         '''
         ''' NACH OBEN IST DAS PROFIL BEGRENZT, auf <see cref="NoiseProfileCapOfMedian"/> seines
         ''' Medians. In dunklen Bildteilen sind Rauschen und Zeichnung gleich stark (Bart, Fell, dunkler
-        ''' Stoff), und die Schaetzung kann beides nicht trennen: ohne Grenze wurde am M50-Portraet der
-        ''' Bart zu Brei. Das Verfahren glaettet deshalb dort, wo WENIG rauscht, schonender, folgt dem
-        ''' Rauschen aber nicht beliebig weit in die Tiefen.</summary>
+        ''' Stoff), und die Schaetzung kann beides nicht trennen: ohne Grenze folgte die Schwelle dem
+        ''' Rauschen beliebig weit in die Tiefen, und am M50-Portraet wurde der Bart zu Brei.</summary>
         Friend Shared Function AdaptiveNoiseEpsilonTable(profile As Single(), amount As Single) As Single()
             Dim a = Clamp(amount, 0, 1)
-            Dim factor = (1.0F + a * 11.0F) / 5.2F
+            Dim factor = AdaptiveNoiseStrengthScale * CSng(Math.Pow(a, AdaptiveNoiseStrengthPower))
             Dim table = New Single(255) {}
             Dim sorted = profile.ToArray()
             Array.Sort(sorted)
@@ -820,8 +826,9 @@ Namespace Services
         ''' zweimal an derselben Sache zu drehen ergaebe zwei Regler, die sich gegenseitig
         ''' aufheben.</para>
         '''
-        ''' <para>Der Detail-Regler mischt danach an Kanten das Original zurueck, wie beim Gauss-Weg:
-        ''' derselbe Regler soll dasselbe bedeuten, egal welches Verfahren darunter liegt.</para></summary>
+        ''' <para>Der Detail-Regler senkt die Schwelle dort, wo die Umgebung deutlich mehr streut als
+        ''' das Rauschen (siehe <see cref="GuidedDetailTexture"/>): Zeichnung bleibt stehen, flache
+        ''' Flaechen werden kaum weniger geglaettet.</para></summary>
         Private Shared Function ApplyGuidedNoiseReduction(source As SKBitmap, amount As Single,
                                                           Optional detail As Single = 0,
                                                           Optional adaptive As Boolean = False) As SKBitmap
@@ -846,7 +853,7 @@ Namespace Services
                     epsTable = New Single(255) {}
                     Array.Fill(epsTable, GuidedNoiseEpsilon(amount))
                 End If
-                Dim d = Clamp(detail, 0, 1)
+                Dim texture = GuidedDetailTexture(amount, detail)
 
                 ' Die Kacheln laufen NEBENEINANDER, aber jede fuer sich: sie lesen aus derselben
                 ' Quelle und schreiben in getrennte Bereiche des Ziels.
@@ -866,7 +873,7 @@ Namespace Services
                     Sub(index)
                         GuidedTile(srcBuf, dstBuf, stride, ri, gi, bi, ai, w, h,
                                    (index Mod tilesX) * GuidedTileEdge,
-                                   (index \ tilesX) * GuidedTileEdge, epsTable, d)
+                                   (index \ tilesX) * GuidedTileEdge, epsTable, texture)
                     End Sub)
 
                 Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
@@ -882,14 +889,43 @@ Namespace Services
         Private Const MultiScaleGuidedLevels As Integer = 2
         Private Const MultiScaleGuidedMinEdge As Integer = 64
 
-        ''' <summary>Mit welchem Anteil der Reglerstaerke die VOLLE Groesse geglaettet wird; die
-        ''' verkleinerten Stufen bekommen die ganze.
+        ''' <summary>Mit welchem Anteil der Reglerstaerke die VERKLEINERTEN Stufen glaetten; die volle
+        ''' Groesse bekommt die ganze.
         '''
-        ''' Die groben Stufen nehmen die Wolken, die volle Groesse nur noch einen Teil des feinen
-        ''' Korns. Mit voller Staerke auch dort wurde das Bild wachsig: bei gleichem Rauschabbau im
-        ''' Flachen stand weniger Kantensteilheit, und im Bild war feines Korn, das Haar und Stoff
-        ''' traegt, ganz verschwunden.</summary>
-        Private Const MultiScaleFineWeight As Single = 0.5F
+        ''' Gegen den DNG-Konverter gemessen bleibt dort im groben Band (Wolken von einigen Punkten)
+        ''' mehr stehen als im feinen. Mit voller Staerke auf allen Stufen nahm unser Filter die
+        ''' Wolken fast ganz weg (bei 25 blieb ein Fuenftel statt drei Fuenftel), und das Bild
+        ''' wirkte wachsig. Auch mit einem Viertel liegt das grobe Band noch etwas unter dem der
+        ''' Referenz; weniger aendert daran kaum etwas, weil die volle Groesse es mitglaettet.</summary>
+        Private Const MultiScaleCoarseWeight As Single = 0.25F
+
+        ''' <summary>Die Kennlinie des Reglers im angepassten Verfahren: Schwelle = Faktor mal
+        ''' Rauschen, Faktor = Scale mal Regler hoch Power (siehe AdaptiveNoiseEpsilonTable).</summary>
+        Private Const AdaptiveNoiseStrengthScale As Single = 2.08F
+        Private Const AdaptiveNoiseStrengthPower As Double = 0.55
+
+        ''' <summary>Wie weit der Detail-Regler die Schwelle in Zeichnung senkt.
+        '''
+        ''' WIE: die Schwelle eines Bildpunkts wird durch 1 + t * (Streuung / Schwelle)^2 geteilt. In
+        ''' flachen Flaechen liegt die Streuung beim Rauschen und damit unter der Schwelle, das Quadrat
+        ''' haelt t dort klein; wo die Umgebung deutlich mehr streut, faellt die Schwelle, und der
+        ''' Filter laesst stehen. t waechst mit Detail hoch drei und Staerke zum Quadrat.
+        '''
+        ''' WARUM SO: gemessen am DNG-Konverter tut Detail von 0 bis 50 fast nichts und von 50 bis
+        ''' 100 vor allem an Zeichnung (bei Luminanz 50 dort von 37 auf 47 Prozent des feinen
+        ''' Rauschens, im Flachen nur von 27 auf 31). Bis zum 2026-10-27 mischte der Regler nach dem
+        ''' Glaetten das Original zurueck, mit fester Schwelle von 16 Grauwerten; feine Struktur
+        ''' verschiebt die Glaettung aber nur um wenige, und er war kaum zu sehen. Die Staerke steht
+        ''' dabei, weil die Schwelle bei schwacher Glaettung klein ist und dieselbe Streuung dort als
+        ''' viel mehr Zeichnung zaehlte: ohne sie holte Detail 100 bei Luminanz 25 auch im Flachen
+        ''' ein Drittel des Rauschens zurueck.</summary>
+        Private Const GuidedDetailReach As Single = 2.0F
+
+        Private Shared Function GuidedDetailTexture(amount As Single, detail As Single) As Single
+            Dim d = Clamp(detail, 0, 1)
+            Dim a = Clamp(amount, 0, 1)
+            Return GuidedDetailReach * d * d * d * a * a
+        End Function
 
         ''' <summary>Der angepasste Fuehrungsfilter ueber mehrere Groessen.
         '''
@@ -932,10 +968,10 @@ Namespace Services
                         input = corrected
                     End If
                     Try
-                        ' Der Detail-Regler gilt nur auf der vollen Groesse: er vergleicht mit dem
-                        ' Bild vor der Glaettung, und auf den kleinen Stufen gibt es kein solches.
-                        denoised = ApplyGuidedNoiseReduction(input, If(level = 0, amount * MultiScaleFineWeight, amount),
-                                                             If(level = 0, detail, 0.0F), adaptive:=True)
+                        ' Der Detail-Regler gilt auf jeder Stufe: auch eine grobe Wolke ist auf der
+                        ' kleinsten Stufe Zeichnung, wenn ihre Umgebung mehr streut als das Rauschen.
+                        denoised = ApplyGuidedNoiseReduction(input, If(level = 0, amount, amount * MultiScaleCoarseWeight),
+                                                             detail, adaptive:=True)
                     Finally
                         corrected?.Dispose()
                     End Try
@@ -1070,7 +1106,7 @@ Namespace Services
                                       ri As Integer, gi As Integer, bi As Integer, ai As Integer,
                                       imageWidth As Integer, imageHeight As Integer,
                                       tileLeft As Integer, tileTop As Integer,
-                                      epsTable As Single(), detail As Single)
+                                      epsTable As Single(), texture As Single)
             Dim innerRight = Math.Min(tileLeft + GuidedTileEdge, imageWidth)
             Dim innerBottom = Math.Min(tileTop + GuidedTileEdge, imageHeight)
             Dim left = Math.Max(0, tileLeft - GuidedMargin)
@@ -1139,6 +1175,12 @@ Namespace Services
                 ' Die Schwelle der HELLIGKEIT DER UMGEBUNG, nicht des einzelnen Bildpunkts: der
                 ' traegt das Rauschen selbst und spraenge sonst zwischen zwei Tabellenfeldern hin und her.
                 Dim eps = epsTable(Math.Min(255, Math.Max(0, CInt(meanI(i)))))
+                ' Der Detail-Regler: wo die Umgebung mehr streut als die Schwelle, sinkt sie (siehe
+                ' GuidedDetailReach).
+                If texture > 0.0F AndAlso eps > 0.0F Then
+                    Dim ratio = variance / eps
+                    eps /= 1.0F + texture * ratio * ratio
+                End If
                 Dim a = variance / (variance + eps)
                 aCoef(i) = a
                 bCoef(i) = (1.0F - a) * meanI(i)
@@ -1161,23 +1203,13 @@ Namespace Services
                     Dim a = meanA(i)
                     Dim after = a * before + meanB(i)
                     Dim shift = after - before
-                    ' Der Detail-Regler haelt an Kanten das Original: je weiter die Glaettung vom
-                    ' Ausgangswert abweicht, desto mehr davon kommt zurueck. Dieselbe Schwelle wie
-                    ' im Gauss-Weg, damit der Regler dort und hier dasselbe bedeutet.
-                    Dim keep = 0.0F
-                    If detail > 0.0F Then
-                        keep = Clamp(Math.Abs(shift) / 16.0F, 0, 1) * detail
-                        shift *= (1.0F - keep)
-                    End If
-
                     Dim o = row + x * 4
                     Dim cr As Integer, cg As Integer, cb As Integer, al As Integer
                     ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, al)
 
                     ' Die Farbe folgt derselben Gerade: wo geglaettet wird, wandert auch der
-                    ' Farbabstand auf seinen Umgebungsmittelwert zu. Der Detail-Rueckhalt gilt
-                    ' dabei mit, sonst faerbte eine Kante nach, an der die Helligkeit stehenblieb.
-                    Dim mix = (1.0F - a) * (1.0F - keep)
+                    ' Farbabstand auf seinen Umgebungsmittelwert zu.
+                    Dim mix = 1.0F - a
                     Dim newChromaR = chromaR(i) + (meanChromaR(i) - chromaR(i)) * mix
                     Dim newChromaB = chromaB(i) + (meanChromaB(i) - chromaB(i)) * mix
                     Dim newLuma = before + shift
