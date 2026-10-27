@@ -6205,31 +6205,36 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         ' ── Die Unschärfemaske, an der Referenz geeicht ────────────────────────────────────
         '
-        ' GESCHAERFT WIRD NUR DIE HELLIGKEIT: der Hochpass der Rec.-709-Luma des fertigen Bildes,
-        ' derselbe Betrag auf alle drei Kanaele. Die Vorgaengerin schaerfte jeden Kanal fuer sich und
-        ' hob damit Farbsaeume, Farbrauschen und Fehlfarben des Demosaic gleich mit an; gemessen
-        ' aenderte sie bei 150 die Farbe fast so stark wie die Helligkeit (1,56 gegen 1,80), die
-        ' Referenz kaum (0,25).
+        ' GESCHAERFT WIRD NUR DIE HELLIGKEIT: ein Bandpass der Rec.-709-Luma des fertigen Bildes
+        ' (leicht weichgezeichnet minus stark weichgezeichnet), derselbe Betrag auf alle drei Kanaele.
+        ' Eine fruehere Fassung schaerfte jeden Kanal fuer sich und hob damit Farbsaeume, Farbrauschen
+        ' und Fehlfarben des Demosaic gleich mit an; gemessen aenderte sie bei 150 die Farbe fast so
+        ' stark wie die Helligkeit (1,56 gegen 1,80), die Referenz kaum (0,25).
         '
-        ' DIE WIRKUNG HAENGT AN DER KANTE: der Hochpass d wird zu d / (1 + (|d| / Hof)^3) geformt,
+        ' DIE WIRKUNG HAENGT AN DER KANTE: der Bandpass d wird zu d / (1 + (|d| / Hof)^3) geformt,
         ' starke Kanten bekommen also weniger als schwache, und dunkle Hoefe sind schwaecher als
-        ' helle. Stärke je Reglerwert, Sigma je Radius und die Faktoren von Detail sind an
-        ' Renderings der Referenz geeicht (Diagnostics/Reglereichung mit REGLER_KANTE=0, zwei
-        ' Konzertbilder bei ISO 200 und 12800), als Steigung der Wirkung je Kantenstaerke.
+        ' helle. Stärke je Reglerwert, die Sigmas je Radius und die Faktoren von Detail sind an
+        ' Vorschauen des DNG-Konverters in voller Groesse geeicht (Diagnostics/Lightroommessung,
+        ' schaerfeeichung.py, fuenf Bilder aus drei Kameras): die Uebertragung je Frequenz, also
+        ' geschaerftes Bild gegen das eigene Nullbild, im selben Programm gemessen und zwischen 0,05
+        ' und 0,35 Zyklen je Punkt angeglichen.
         '
         ' Die Regler meinen dasselbe wie in einem Preset: Schaerfe 0 bis 150, Radius 1,0 bis 3,0
         ' (unser Regler 0 bis 100), Detail 0 bis 100 mit 25 als Mitte der Referenz.
 
         ''' <summary>Stuetzstellen der Staerke: Reglerwert und Verstaerkung bei Radius 1, Detail 25.</summary>
-        Private Shared ReadOnly SharpenAmounts As Single() = {0.0F, 25.0F, 40.0F, 75.0F, 110.0F, 150.0F}
-        Private Shared ReadOnly SharpenGains As Single() = {0.0F, 0.3436F, 0.6312F, 1.3649F, 1.8733F, 2.1614F}
-        ''' <summary>Radius der Referenz und das Sigma der Unschaerfe dazu, dazu ein Faktor der Staerke.</summary>
+        Private Shared ReadOnly SharpenAmounts As Single() = {0.0F, 25.0F, 40.0F, 60.0F, 80.0F, 150.0F}
+        Private Shared ReadOnly SharpenGains As Single() = {0.0F, 1.19F, 2.01F, 3.13F, 4.28F, 7.01F}
+        ''' <summary>Radius der Referenz, die Sigmas der grossen und der kleinen Unschaerfe dazu und ein
+        ''' Faktor der Staerke. Skias Weichzeichner kennt nur ganze Fensterbreiten: 0,9 und 1,4 liegen
+        ''' auf den Breiten 2 und 3, 2,0 auf 4; dazwischen springt die grosse Unschaerfe.</summary>
         Private Shared ReadOnly SharpenRadii As Single() = {1.0F, 1.5F, 2.0F, 3.0F}
-        Private Shared ReadOnly SharpenSigmas As Single() = {0.9F, 1.3F, 1.8F, 2.7F}
-        Private Shared ReadOnly SharpenRadiusGains As Single() = {1.0F, 0.887F, 0.722F, 0.517F}
+        Private Shared ReadOnly SharpenSigmas As Single() = {0.9F, 1.4F, 1.4F, 2.0F}
+        Private Shared ReadOnly SharpenInnerSigmas As Single() = {0.7F, 0.7F, 0.8F, 1.0F}
+        Private Shared ReadOnly SharpenRadiusGains As Single() = {1.0F, 0.794F, 0.858F, 0.596F}
         ''' <summary>Detail 0, 25, 50, 75, 100: Faktor der Staerke.</summary>
         Private Shared ReadOnly SharpenDetails As Single() = {0.0F, 0.25F, 0.5F, 0.75F, 1.0F}
-        Private Shared ReadOnly SharpenDetailGains As Single() = {0.293F, 1.0F, 1.417F, 1.718F, 1.95F}
+        Private Shared ReadOnly SharpenDetailGains As Single() = {0.47F, 1.0F, 1.274F, 1.493F, 1.673F}
         ''' <summary>Hof-Massstab (Anteil der vollen Helligkeit) und Staerke dunkler Hoefe.</summary>
         Private Const SharpenHalo As Single = 0.11F
         Private Const SharpenDark As Single = 0.4F
@@ -6242,17 +6247,29 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return ys(ys.Length - 1)
         End Function
 
-        ''' <summary>Sigma, Verstaerkung (Anteil der vollen Helligkeit je Anteil Hochpass) und Hof fuer
-        ''' Schaerfe als Anteil von 100 (0 bis 1,5), Radius- und Detailregler als Anteil von 100.</summary>
-        Friend Shared Function SharpenParameters(amount As Single, radiusAmount As Single, detailAmount As Single) As (Sigma As Single, Gain As Single, Halo As Single, Dark As Single)
+        ''' <summary>Sigma der grossen Unschaerfe, Sigma der kleinen (der Bandpass beginnt dort),
+        ''' Verstaerkung (Anteil der vollen Helligkeit je Anteil Bandpass) und Hof fuer Schaerfe als
+        ''' Anteil von 100 (0 bis 1,5), Radius- und Detailregler als Anteil von 100.</summary>
+        Friend Shared Function SharpenParameters(amount As Single, radiusAmount As Single, detailAmount As Single) As (Sigma As Single, InnerSigma As Single, Gain As Single, Halo As Single, Dark As Single)
             Dim radius = 1.0F + Clamp(radiusAmount, 0, 1) * 2.0F
             Dim gain = SharpenInterpolate(Clamp(amount, 0, 1.5F) * 100.0F, SharpenAmounts, SharpenGains) *
                        SharpenInterpolate(radius, SharpenRadii, SharpenRadiusGains) *
                        SharpenInterpolate(Clamp(detailAmount, 0, 1), SharpenDetails, SharpenDetailGains)
-            Return (SharpenInterpolate(radius, SharpenRadii, SharpenSigmas), gain, SharpenHalo, SharpenDark)
+            Return (SharpenInterpolate(radius, SharpenRadii, SharpenSigmas),
+                    SharpenInterpolate(radius, SharpenRadii, SharpenInnerSigmas), gain, SharpenHalo, SharpenDark)
         End Function
 
-        ''' <summary>Die geformte Aenderung der Helligkeit fuer Hochpass <paramref name="d"/> (Anteil der
+        ''' <summary>Die Gewichte der kleinen Unschaerfe: Gaussglocke mit Radius 2, Summe 1, fuer
+        ''' Mitte, Abstand 1 und Abstand 2. Ein eigener Kern, weil Skias Weichzeichner unter Sigma 0,8
+        ''' gar nichts tut (Fensterbreite 1). Der Shader bekommt dieselben drei Zahlen.</summary>
+        Friend Shared Function SharpenInnerWeights(sigma As Single) As (W0 As Single, W1 As Single, W2 As Single)
+            Dim e1 = CSng(Math.Exp(-1.0 / (2.0 * sigma * sigma)))
+            Dim e2 = CSng(Math.Exp(-4.0 / (2.0 * sigma * sigma)))
+            Dim sum = 1.0F + 2.0F * e1 + 2.0F * e2
+            Return (1.0F / sum, e1 / sum, e2 / sum)
+        End Function
+
+        ''' <summary>Die geformte Aenderung der Helligkeit fuer Bandpass <paramref name="d"/> (Anteil der
         ''' vollen Helligkeit).</summary>
         Private Shared Function SharpenDelta(d As Single, gain As Single, halo As Single, dark As Single) As Single
             Dim r = Math.Abs(d) / halo
@@ -6299,9 +6316,15 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return edge * edge * (3.0F - 2.0F * edge)
         End Function
 
-        ''' <summary>Unschärfemaske auf der Helligkeit: Luma minus ihre Gaußunschärfe ist der Hochpass,
-        ''' geformt nach <see cref="SharpenDelta"/> und gleich auf alle drei Kanäle addiert. Sigma,
-        ''' Stärke und Hof aus <see cref="SharpenParameters"/>.
+        ''' <summary>Unschärfemaske auf der Helligkeit: die Luma leicht weichgezeichnet (eigener Kern,
+        ''' <see cref="SharpenInnerWeights"/>) minus ihre große Unschärfe ist der Bandpass, geformt nach
+        ''' <see cref="SharpenDelta"/> und gleich auf alle drei Kanäle addiert. Sigma, Stärke und Hof
+        ''' aus <see cref="SharpenParameters"/>.
+        '''
+        ''' BANDPASS STATT HOCHPASS: die Referenz hebt am stärksten um 0,3 Zyklen je Punkt an und
+        ''' lässt die Nähe der Nyquist-Grenze stehen oder senkt sie sogar. Der Hochpass hob genau
+        ''' dort am meisten an, also Rauschen und Demosaic-Reste, und blieb in der feinen Zeichnung
+        ''' darunter zu schwach.
         '''
         ''' MASKIERUNG (Adobes „Maskieren", crs:SharpenEdgeMasking): die Verstärkung wird je Pixel mit der
         ''' lokalen Kantenstärke gewichtet. 0 = überall voll (wie bisher), 100 = nur noch an Kanten. Die
@@ -6322,6 +6345,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim blurred = GaussianClamped(source, p.Sigma)
 
             Dim srcBuf As Byte() = Nothing, blurBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim lumaPlane As Single() = Nothing, innerPlane As Single() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim bStride, bri, bgi, bbi, bai As Integer
             Dim sLen = 0, bLen = 0
@@ -6335,10 +6359,40 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim w = source.Width, h = source.Height
 
+            ' Die kleine Unschaerfe der Luma: erst waagerecht in eine eigene Ebene, unten senkrecht
+            ' daraus, Rand fortgesetzt. Der Shader summiert in derselben Reihenfolge.
+            Dim k = SharpenInnerWeights(p.InnerSigma)
+            Dim k0 = k.W0, k1 = k.W1, k2 = k.W2
+            lumaPlane = ArrayPool(Of Single).Shared.Rent(w * h)
+            innerPlane = ArrayPool(Of Single).Shared.Rent(w * h)
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim rowOffset = y * stride
+                    Dim at = y * w
+                    For x = 0 To w - 1
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(srcBuf, rowOffset + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                        lumaPlane(at + x) = 0.2126F * cr + 0.7152F * cg + 0.0722F * cb
+                    Next
+                End Sub)
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim at = y * w
+                    For x = 0 To w - 1
+                        Dim l1 = at + Math.Max(x - 1, 0), r1 = at + Math.Min(x + 1, w - 1)
+                        Dim l2 = at + Math.Max(x - 2, 0), r2 = at + Math.Min(x + 2, w - 1)
+                        innerPlane(at + x) = k0 * lumaPlane(at + x) + k1 * (lumaPlane(l1) + lumaPlane(r1)) +
+                                             k2 * (lumaPlane(l2) + lumaPlane(r2))
+                    Next
+                End Sub)
+
             ForEachRow(w, h,
                 Sub(y)
                     Dim rowOffset = y * stride
                     Dim bRow = y * bStride
+                    Dim at = y * w
+                    Dim u1 = Math.Max(y - 1, 0) * w, d1 = Math.Min(y + 1, h - 1) * w
+                    Dim u2 = Math.Max(y - 2, 0) * w, d2 = Math.Min(y + 2, h - 1) * w
                     ' Zeilen ober-/unterhalb für den senkrechten Gradienten; am Bildrand auf die eigene
                     ' Zeile geklemmt (wie die restliche Randbehandlung dieser Datei).
                     Dim upRow = If(y > 0, (y - 1) * stride, rowOffset)
@@ -6357,8 +6411,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                             pixelGain = gain * ((1.0F - masking) + masking * edge)
                         End If
 
-                        Dim d = ((0.2126F * cr + 0.7152F * cg + 0.0722F * cb) -
-                                 (0.2126F * lr + 0.7152F * lg + 0.0722F * lb)) / 255.0F
+                        Dim inner = k0 * innerPlane(at + x) + k1 * (innerPlane(u1 + x) + innerPlane(d1 + x)) +
+                                    k2 * (innerPlane(u2 + x) + innerPlane(d2 + x))
+                        Dim d = (inner - (0.2126F * lr + 0.7152F * lg + 0.0722F * lb)) / 255.0F
                         Dim delta = SharpenDelta(d, pixelGain, halo, dark) * 255.0F
                         WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
                             ClampToByte(cr + delta), ClampToByte(cg + delta), ClampToByte(cb + delta), a)
@@ -6372,6 +6427,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(blurBuf)
                 ReturnPooledBuffer(dstBuf)
+                If lumaPlane IsNot Nothing Then ArrayPool(Of Single).Shared.Return(lumaPlane)
+                If innerPlane IsNot Nothing Then ArrayPool(Of Single).Shared.Return(innerPlane)
             End Try
         End Function
 

@@ -20,6 +20,10 @@
 - **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
   picture is shown once before the order is mixed again.
 
+- **Crisper sharpening:** the Sharpening slider now brings out fine texture such as hair and
+  fabric the way other photo programs do at the same value, without sharpening pixel noise more.
+  Pictures you already sharpened come out a little crisper.
+
 ### Fixes
 
 - **Presets only once in the list:** importing the same XMP preset or LUT again, even from

@@ -2970,21 +2970,25 @@ half4 main(float2 p) {
         ' ── Schaerfe ─────────────────────────────────────────────────────────────
 
         ''' <summary>Die Schaerfe auf der Karte, oder Nothing fuer das Zurueckrechnen (das bleibt auf
-        ''' dem Prozessor). Rechnet wie ApplyUnsharpMask.</summary>
+        ''' dem Prozessor). Rechnet wie ApplyUnsharpMask, die kleine Unschaerfe des Bandpasses im
+        ''' Shader (25 Punkte je Bildpunkt, in derselben Summenfolge wie der Prozessor).</summary>
         Private Shared Function SharpnessOnGpu(amount As Single, radiusAmount As Single, detailAmount As Single,
                                                maskingAmount As Single, method As SharpenMethod) As Func(Of GRContext, SKImage, SKSurface)
             If method = SharpenMethod.Deconvolution Then Return DeconvolutionOnGpu(amount, radiusAmount, detailAmount, maskingAmount)
             Dim p = SharpenParameters(amount, radiusAmount, detailAmount)
             Dim sigma = p.Sigma
+            Dim inner = SharpenInnerWeights(p.InnerSigma)
             Dim masking = Clamp(maskingAmount, 0, 1)
             If Not RasterBlurSupported(sigma) Then Return Nothing
             Return Function(gr, image)
-                       ' Die Unschaerfe wie Skia auf dem Prozessor (SKImageFilter.CreateBlur).
+                       ' Die grosse Unschaerfe wie Skia auf dem Prozessor (SKImageFilter.CreateBlur),
+                       ' die kleine rechnet der Shader selbst.
                        Using blurSurface = RasterBlurOnGpu(gr, image, sigma, clampEdges:=True)
                            If blurSurface Is Nothing Then Return Nothing
                            Using blurred = blurSurface.Snapshot()
                                Dim effect = StageEffect("Unschaerfemaske", UnsharpMaskShader)
                                Dim u = New SKRuntimeEffectUniforms(effect)
+                               u("inner") = New Single() {inner.W0, inner.W1, inner.W2}
                                u("gain") = p.Gain
                                u("halo") = p.Halo
                                u("dark") = p.Dark
@@ -2998,6 +3002,7 @@ half4 main(float2 p) {
         Private Const UnsharpMaskShader As String = "
 uniform shader src;
 uniform shader blur;
+uniform float3 inner;
 uniform float gain;
 uniform float halo;
 uniform float dark;
@@ -3005,6 +3010,16 @@ uniform float masking;
 float lumaAt(float2 q) {
     float3 v = unpremulBytes(toBytes(src.eval(q)));
     return 0.299 * v.r + 0.587 * v.g + 0.114 * v.b;
+}
+float luma709At(float2 q) {
+    float3 v = unpremulBytes(toBytes(src.eval(q)));
+    return 0.2126 * v.r + 0.7152 * v.g + 0.0722 * v.b;
+}
+// Die kleine Unschaerfe einer Zeile wie im Prozessor: Mitte, dann die Paare je Abstand. Den Rand
+// setzt das Klemmen der Kinder fort.
+float innerRow(float2 q) {
+    return inner.x * luma709At(q) + inner.y * (luma709At(q + float2(-1.0, 0.0)) + luma709At(q + float2(1.0, 0.0))) +
+           inner.z * (luma709At(q + float2(-2.0, 0.0)) + luma709At(q + float2(2.0, 0.0)));
 }
 half4 main(float2 p) {
     float4 c = toBytes(src.eval(p));
@@ -3018,8 +3033,10 @@ half4 main(float2 p) {
         edge = edge * edge * (3.0 - 2.0 * edge);
         pixelGain = gain * ((1.0 - masking) + masking * edge);
     }
-    // SharpenDelta: Hochpass der Rec.-709-Luma, geformt, gleich auf alle Kanaele.
-    float d = (dot(cc, float3(0.2126, 0.7152, 0.0722)) - dot(lb, float3(0.2126, 0.7152, 0.0722))) / 255.0;
+    // SharpenDelta: Bandpass der Rec.-709-Luma, geformt, gleich auf alle Kanaele.
+    float small = inner.x * innerRow(p) + inner.y * (innerRow(p + float2(0.0, -1.0)) + innerRow(p + float2(0.0, 1.0))) +
+                  inner.z * (innerRow(p + float2(0.0, -2.0)) + innerRow(p + float2(0.0, 2.0)));
+    float d = (small - (0.2126 * lb.r + 0.7152 * lb.g + 0.0722 * lb.b)) / 255.0;
     float r = abs(d) / halo;
     float shaped = d / (1.0 + r * r * r);
     if (shaped < 0.0) { shaped = shaped * dark; }
