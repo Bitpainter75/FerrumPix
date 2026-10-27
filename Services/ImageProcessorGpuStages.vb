@@ -1760,6 +1760,460 @@ half4 main(float2 p) {
                    End Function
         End Function
 
+        ' ── Farbrauschen (ApplyColorNoiseReduction) ──────────────────────────────
+        '
+        ' Dieselbe Laplace-Pyramide wie auf dem Prozessor: Rot und Blau gegen Gruen aus den Wurzeln
+        ' des Linearlichts, je Ebene halbiert (Binomial 1-4-6-4-1, Rand gespiegelt) und wieder
+        ' aufgeweitet. Was nur der Prozessor auswerten kann, kommt klein zurueck: je Ebene die
+        ' 8x8-Bloecke (mittleres Quadrat, Anteil an Schwarz), ausgewertet mit derselben
+        ' ChromaNoiseFromBlocks; daraus rechnen ChromaNoiseOfLevel und ChromaThresholdPow die
+        ' Schwellen wie dort. Zusammengesetzt wird von grob nach fein, die feinste Ebene gleich
+        ' in Bytes, mit denselben Tabellen fuer Wurzel und Rueckweg.
+        '
+        ' Die Stufe liegt vor der Punktkette, also ausserhalb der Sitzung der Umgebungsstufen: sie
+        ' hat ihre eigene, laedt hoch und gleich wieder zurueck. Nicht bytegleich: die Ebenen liegen
+        ' in halber Gleitkomma mit zwei Kanaelen je Wert (rund 22 Bit), und die Karte rundet anders.
+        '
+        ' Bloecke und Maske stehen skaliert auf der Karte (Quadrate mal 16, Schwarz mal 16384, beides
+        ' Zweierpotenzen): sonst laegen kleine Werte der groben Ebenen im Unternormalbereich der
+        ' halben Gleitkomma, und ein Block mit einem einzigen schwarzen Punkt saehe aus wie keiner.
+
+        Private Const ChromaEnergyScale As Double = 16.0
+        Private Const ChromaBlackScale As Double = 16384.0
+
+        ''' <summary>Das Farbrauschen auf der Grafikkarte, in einer eigenen Sitzung. Nothing, wenn die
+        ''' Karte nicht genommen wird (Einstellung, Groesse, Format) oder scheitert; dann rechnet
+        ''' der Prozessor, wie bisher.</summary>
+        Private Shared Function TryColorNoiseReductionOnGpu(source As SKBitmap, amount As Single) As SKBitmap
+            If source Is Nothing OrElse source.Width < 4 OrElse source.Height < 4 Then Return Nothing
+            Dim session = GpuDetailSession.TryCreate(source)
+            If session Is Nothing Then Return Nothing
+            Using session
+                Dim done = PerformanceTraceService.Measure("Pixel: Farbrauschen (Grafikkarte)",
+                                                           Function() session.TryApply(source, ColorNoiseReductionOnGpu(amount)))
+                If Not done Then
+                    NoteGpuFallback("Pixel: Farbrauschen: Lauf auf der Grafikkarte gescheitert (Fehlerdatei)")
+                    Return Nothing
+                End If
+                Dim back = PerformanceTraceService.Measure("Pixel: Zuruecklesen (Grafikkarte)", Function() session.Download())
+                If back Is Nothing Then NoteGpuFallback("Pixel: Farbrauschen: Zuruecklesen gescheitert, rechnet auf dem Prozessor")
+                Return back
+            End Using
+        End Function
+
+        ''' <summary>ApplyColorNoiseReduction als Folge von Shadern; siehe Kopf des Abschnitts.</summary>
+        Private Shared Function ColorNoiseReductionOnGpu(amount As Single) As Func(Of GRContext, SKImage, SKSurface)
+            amount = Clamp(amount, 0, 1)
+            Return Function(gr, image)
+                       Dim w = image.Width, h = image.Height
+                       If w < 4 OrElse h < 4 Then Return Nothing
+                       Dim rootSplit = StageEffect("Farbrauschen zerlegen", FloatShaderCommon & ChromaPyramidCommon & ChromaRootSplitShader)
+                       Dim maskStart = StageEffect("Farbrauschen Maske", FloatShaderCommon & ChromaPyramidCommon & ChromaMaskStartShader)
+                       Dim down = StageEffect("Farbrauschen halbieren", FloatShaderCommon & ChromaPyramidCommon & ChromaDownShader)
+                       Dim upWide = StageEffect("Farbrauschen aufweiten", FloatShaderCommon & ChromaPyramidCommon & ChromaUpWideShader)
+                       Dim detailEffect = StageEffect("Farbrauschen Unterschied", FloatShaderCommon & ChromaPyramidCommon & ChromaUpRowsCommon & ChromaDetailShader)
+                       Dim maskDown = StageEffect("Farbrauschen Maske halbieren", FloatShaderCommon & ChromaPyramidCommon & ChromaMaskDownShader)
+                       Dim combine = StageEffect("Farbrauschen zusammensetzen", FloatShaderCommon & ChromaPyramidCommon & ChromaUpRowsCommon & ChromaCombineShader)
+                       Dim final = StageEffect("Farbrauschen Bytes", FloatShaderCommon & ChromaPyramidCommon & ChromaUpRowsCommon & ChromaFinalShader)
+
+                       Dim planes As New List(Of SKImage)()
+                       Dim details As New List(Of SKImage)()
+                       Dim measured As New List(Of Double)()
+                       Dim mask As SKImage = Nothing
+                       Dim result As SKImage = Nothing
+                       Using roots = EpsilonTableImage(ChromaToRoot.Value), bytes = ChromaByteTableImage()
+                           Try
+                               Dim ru = New SKRuntimeEffectUniforms(rootSplit)
+                               planes.Add(DrawFloatImage(gr, w, h, rootSplit, ru, ("src", image), ("roots", roots)))
+                               Dim mu = New SKRuntimeEffectUniforms(maskStart)
+                               mu("blackScale") = CSng(ChromaBlackScale)
+                               mask = DrawFloatImage(gr, w, h, maskStart, mu, ("src", image))
+                               If planes(0) Is Nothing OrElse mask Is Nothing Then Return Nothing
+
+                               ' Abwaerts: je Ebene die groebere, ihr Unterschied zur Ebene und die Messung.
+                               Dim level = 0
+                               Do While level <= ChromaLevels AndAlso planes(level).Width >= 4 AndAlso planes(level).Height >= 4
+                                   Dim p = planes(level)
+                                   Dim pw = p.Width, ph = p.Height
+                                   Dim cw = (pw + 1) \ 2, ch = (ph + 1) \ 2
+                                   Dim coarse As SKImage
+                                   Using across = DrawFloatImage(gr, cw, ph, down, ChromaAxisUniforms(down, True, pw), ("plane", p))
+                                       If across Is Nothing Then Return Nothing
+                                       coarse = DrawFloatImage(gr, cw, ch, down, ChromaAxisUniforms(down, False, ph), ("plane", across))
+                                   End Using
+                                   If coarse Is Nothing Then Return Nothing
+                                   planes.Add(coarse)
+                                   Using upper = DrawFloatImage(gr, pw, ch, upWide, ChromaAxisUniforms(upWide, True, cw), ("plane", coarse))
+                                       If upper Is Nothing Then Return Nothing
+                                       Dim du = New SKRuntimeEffectUniforms(detailEffect)
+                                       du("wideHeight") = CSng(ch)
+                                       Dim d = DrawFloatImage(gr, pw, ph, detailEffect, du, ("plane", p), ("wide", upper))
+                                       If d Is Nothing Then Return Nothing
+                                       details.Add(d)
+                                   End Using
+                                   measured.Add(ChromaLevelNoiseOnGpu(gr, details(level), mask))
+                                   If level + 1 <= ChromaLevels AndAlso cw >= 4 AndAlso ch >= 4 Then
+                                       Dim mdu = New SKRuntimeEffectUniforms(maskDown)
+                                       mdu("inSize") = New Single() {pw, ph}
+                                       Dim nextMask = DrawFloatImage(gr, cw, ch, maskDown, mdu, ("mask", mask))
+                                       mask.Dispose()
+                                       mask = nextMask
+                                       If mask Is Nothing Then Return Nothing
+                                   End If
+                                   ' Die Ebene selbst braucht niemand mehr: aufwaerts zaehlen nur ihr
+                                   ' Unterschied und die groebere.
+                                   p.Dispose()
+                                   planes(level) = Nothing
+                                   level += 1
+                               Loop
+                               Dim levels = details.Count
+                               If levels = 0 Then Return Nothing
+
+                               ' Die Schwellen wie auf dem Prozessor, Ebene fuer Ebene.
+                               Dim thresholdPow = New Double(levels - 1) {}
+                               Dim finer = 0.0, finest = 0.0
+                               For l = 0 To levels - 1
+                                   Dim noise = ChromaNoiseOfLevel(measured(l), finer, l)
+                                   If l = 0 Then finest = noise
+                                   thresholdPow(l) = ChromaThresholdPow(l, amount, noise, finest)
+                                   finer = noise
+                               Next
+
+                               ' Aufwaerts: die gefilterte groebere aufweiten, den Unterschied nach der
+                               ' Schwelle dazu. Die feinste Ebene geht gleich in Bytes.
+                               result = planes(levels)
+                               planes(levels) = Nothing
+                               For l = levels - 1 To 0 Step -1
+                                   Dim dw = details(l).Width, dh = details(l).Height
+                                   Using coarseUp = DrawFloatImage(gr, dw, result.Height, upWide,
+                                                                   ChromaAxisUniforms(upWide, True, result.Width), ("plane", result))
+                                       If coarseUp Is Nothing Then Return Nothing
+                                       If l = 0 Then
+                                           Dim fu = New SKRuntimeEffectUniforms(final)
+                                           fu("wideHeight") = CSng(coarseUp.Height)
+                                           fu("tPow") = CSng(thresholdPow(0))
+                                           Return DrawStage(gr, w, h, final, fu, ("src", image), ("roots", roots), ("bytes", bytes),
+                                                            ("wide", coarseUp), ("detail", details(0)))
+                                       End If
+                                       Dim cu = New SKRuntimeEffectUniforms(combine)
+                                       cu("wideHeight") = CSng(coarseUp.Height)
+                                       cu("tPow") = CSng(thresholdPow(l))
+                                       Dim combined = DrawFloatImage(gr, dw, dh, combine, cu, ("wide", coarseUp), ("detail", details(l)))
+                                       result.Dispose()
+                                       result = combined
+                                       If result Is Nothing Then Return Nothing
+                                   End Using
+                               Next
+                               Return Nothing
+                           Finally
+                               For Each item In planes
+                                   item?.Dispose()
+                               Next
+                               For Each item In details
+                                   item?.Dispose()
+                               Next
+                               mask?.Dispose()
+                               result?.Dispose()
+                           End Try
+                       End Using
+                   End Function
+        End Function
+
+        ''' <summary>Zeichnet einen Shader in eine neue Flaeche fuer Zwischenwerte und liefert ihr Bild.</summary>
+        Private Shared Function DrawFloatImage(gr As GRContext, width As Integer, height As Integer, effect As SKRuntimeEffect,
+                                               uniforms As SKRuntimeEffectUniforms,
+                                               ParamArray children As (Name As String, Image As SKImage)()) As SKImage
+            Using surface = DrawInto(NewFloatSurface(gr, width, height), width, height, effect, uniforms, children)
+                If surface Is Nothing Then Return Nothing
+                Return surface.Snapshot()
+            End Using
+        End Function
+
+        ''' <summary>Richtung und Laenge der Eingabe entlang dieser Richtung fuer die Shader, die
+        ''' entlang einer Achse halbieren oder aufweiten.</summary>
+        Private Shared Function ChromaAxisUniforms(effect As SKRuntimeEffect, horizontal As Boolean, inLength As Integer) As SKRuntimeEffectUniforms
+            Dim u = New SKRuntimeEffectUniforms(effect)
+            u("direction") = If(horizontal, New Single() {1, 0}, New Single() {0, 1})
+            u("inLength") = CSng(inLength)
+            Return u
+        End Function
+
+        ''' <summary>Die Messung einer Ebene: Bloecke auf der Karte, zurueckgelesen als kleines Feld
+        ''' und ausgewertet wie ChromaLevelNoise.</summary>
+        Private Shared Function ChromaLevelNoiseOnGpu(gr As GRContext, detail As SKImage, mask As SKImage) As Double
+            Dim bw = detail.Width \ ChromaBlock, bh = detail.Height \ ChromaBlock
+            If bw <= 0 OrElse bh <= 0 Then Return -1
+            Dim effect = StageEffect("Farbrauschen Bloecke", FloatShaderCommon & ChromaPyramidCommon & ChromaBlockShader)
+            Dim u = New SKRuntimeEffectUniforms(effect)
+            u("energyScale") = CSng(ChromaEnergyScale)
+            Using stats = DrawInto(NewFloatSurface(gr, bw, bh), bw, bh, effect, u, ("detail", detail), ("mask", mask))
+                If stats Is Nothing Then Throw New InvalidOperationException("Zielflaeche auf der Grafikkarte nicht anlegbar.")
+                Dim values = New Single(bw * bh * 4 - 1) {}
+                Dim handle = Runtime.InteropServices.GCHandle.Alloc(values, Runtime.InteropServices.GCHandleType.Pinned)
+                Try
+                    If Not stats.ReadPixels(New SKImageInfo(bw, bh, SKColorType.RgbaF32, SKAlphaType.Premul),
+                                            handle.AddrOfPinnedObject(), bw * 16, 0, 0) Then
+                        Throw New InvalidOperationException("Zuruecklesen der Bloecke von der Grafikkarte gescheitert.")
+                    End If
+                Finally
+                    handle.Free()
+                End Try
+                Dim energy = New Double(bw * bh - 1) {}
+                Dim black = New Double(bw * bh - 1) {}
+                For i = 0 To energy.Length - 1
+                    Dim e = CDbl(values(i * 4)) + values(i * 4 + 1)
+                    energy(i) = If(e < 0, -1.0, e / (ChromaEnergyScale * ChromaBlock * ChromaBlock))
+                    black(i) = values(i * 4 + 2) / ChromaBlackScale
+                Next
+                Return ChromaNoiseFromBlocks(energy, black)
+            End Using
+        End Function
+
+        ''' <summary>Der Rueckweg aus der Wurzel (ChromaToByte) als Bild ChromaBackSize + 1 x 1,
+        ''' der Wert im Rotkanal.</summary>
+        Private Shared Function ChromaByteTableImage() As SKImage
+            Dim table = ChromaToByte.Value
+            Dim data = New Byte(table.Length * 4 - 1) {}
+            For i = 0 To table.Length - 1
+                data(i * 4) = table(i)
+                data(i * 4 + 3) = 255
+            Next
+            Using bitmap = New SKBitmap(New SKImageInfo(table.Length, 1, SKColorType.Rgba8888, SKAlphaType.Premul))
+                Runtime.InteropServices.Marshal.Copy(data, 0, bitmap.GetPixels(), data.Length)
+                Return SKImage.FromBitmap(bitmap)
+            End Using
+        End Function
+
+        ' Gemeinsam: Spiegeln am Rand wie MirrorIndex, ein Wertepaar (Rot, Blau) in vier Kanaelen.
+        Private Const ChromaPyramidCommon As String = "
+float mirrorIndex(float v, float n) {
+    v = abs(v);
+    if (v >= n) v = 2.0 * n - 2.0 - v;
+    return clamp(v, 0.0, n - 1.0);
+}
+half4 packPair(float2 v) {
+    float2 a = splitValue(v.x);
+    float2 b = splitValue(v.y);
+    return half4(half(a.x), half(a.y), half(b.x), half(b.y));
+}
+float2 unpackPair(half4 t) {
+    return float2(joinValue(t.xy), joinValue(t.zw));
+}
+"
+
+        ' Der senkrechte Teil des Aufweitens (ChromaUpRow), aus dem waagerecht aufgeweiteten Bild
+        ' wide mit der Hoehe wideHeight der groeberen Ebene.
+        Private Const ChromaUpRowsCommon As String = "
+uniform shader wide;
+uniform float wideHeight;
+float2 upVertical(float2 p) {
+    float y = floor(p.y);
+    float c = floor(y / 2.0);
+    float x = floor(p.x) + 0.5;
+    if (y - 2.0 * c < 0.5) {
+        half4 t0 = wide.eval(float2(x, mirrorIndex(c - 1.0, wideHeight) + 0.5));
+        half4 t1 = wide.eval(float2(x, mirrorIndex(c, wideHeight) + 0.5));
+        half4 t2 = wide.eval(float2(x, mirrorIndex(c + 1.0, wideHeight) + 0.5));
+        return 0.125 * unpackPair(t0) + 0.75 * unpackPair(t1) + 0.125 * unpackPair(t2);
+    }
+    half4 u0 = wide.eval(float2(x, mirrorIndex(c, wideHeight) + 0.5));
+    half4 u1 = wide.eval(float2(x, mirrorIndex(c + 1.0, wideHeight) + 0.5));
+    return 0.5 * (unpackPair(u0) + unpackPair(u1));
+}
+"
+
+        ' Die feinste Ebene aus den Bytes: Wurzel des Linearlichts je Kanal (Tabelle), Rot und Blau
+        ' gegen Gruen.
+        Private Const ChromaRootSplitShader As String = "
+uniform shader src;
+uniform shader roots;
+float rootOf(float v) {
+    half4 t = roots.eval(float2(v + 0.5, 0.5));
+    return joinValue(t.xy);
+}
+half4 main(float2 p) {
+    float3 c = unpremulBytes(toBytes(src.eval(p)));
+    float sr = rootOf(c.r);
+    float sg = rootOf(c.g);
+    float sb = rootOf(c.b);
+    return packPair(float2(sr - sg, sb - sg));
+}
+"
+
+        ' Die Maske der feinsten Ebene: messbar (kein Kanal ab 249) im Rotkanal, Schwarz
+        ' (ein Kanal 0) skaliert im Gruenkanal.
+        Private Const ChromaMaskStartShader As String = "
+uniform shader src;
+uniform float blackScale;
+half4 main(float2 p) {
+    float3 c = unpremulBytes(toBytes(src.eval(p)));
+    float unclipped = (c.r < 249.0 && c.g < 249.0 && c.b < 249.0) ? 1.0 : 0.0;
+    float black = (c.r == 0.0 || c.g == 0.0 || c.b == 0.0) ? blackScale : 0.0;
+    return half4(half(unclipped), half(black), 0.0, 1.0);
+}
+"
+
+        ' Binomial 1-4-6-4-1 entlang direction, jeder zweite Punkt (ChromaDown).
+        Private Const ChromaDownShader As String = "
+uniform shader plane;
+uniform float2 direction;
+uniform float inLength;
+half4 main(float2 p) {
+    float2 base = floor(p);
+    float coord = dot(base, direction);
+    float2 other = base * (float2(1.0) - direction);
+    float2 s = float2(0.0);
+    for (int k = 0; k < 5; k++) {
+        float weight = (k == 2) ? 0.375 : ((k == 1 || k == 3) ? 0.25 : 0.0625);
+        float index = mirrorIndex(2.0 * coord + float(k) - 2.0, inLength);
+        half4 t = plane.eval(other + direction * index + 0.5);
+        s += weight * unpackPair(t);
+    }
+    return packPair(s);
+}
+"
+
+        ' Verdoppeln entlang direction (ChromaUpWide; hier nur waagerecht gebraucht).
+        Private Const ChromaUpWideShader As String = "
+uniform shader plane;
+uniform float2 direction;
+uniform float inLength;
+float2 tap(float2 other, float index) {
+    half4 t = plane.eval(other + direction * mirrorIndex(index, inLength) + 0.5);
+    return unpackPair(t);
+}
+half4 main(float2 p) {
+    float2 base = floor(p);
+    float coord = dot(base, direction);
+    float2 other = base * (float2(1.0) - direction);
+    float c = floor(coord / 2.0);
+    if (coord - 2.0 * c < 0.5) {
+        float2 a = tap(other, c - 1.0);
+        float2 b = tap(other, c);
+        float2 d = tap(other, c + 1.0);
+        return packPair(0.125 * a + 0.75 * b + 0.125 * d);
+    }
+    float2 e = tap(other, c);
+    float2 f = tap(other, c + 1.0);
+    return packPair(0.5 * (e + f));
+}
+"
+
+        ' Der Unterschied einer Ebene zur aufgeweiteten groeberen.
+        Private Const ChromaDetailShader As String = "
+uniform shader plane;
+half4 main(float2 p) {
+    half4 t = plane.eval(p);
+    float2 up = upVertical(p);
+    return packPair(unpackPair(t) - up);
+}
+"
+
+        ' ChromaMaskDown: 5 x 5 gespiegelt, messbar nur wenn alle es sind, Schwarz gemittelt.
+        Private Const ChromaMaskDownShader As String = "
+uniform shader mask;
+uniform float2 inSize;
+half4 main(float2 p) {
+    float2 base = floor(p);
+    float ok = 1.0;
+    float black = 0.0;
+    for (int dy = -2; dy <= 2; dy++) {
+        float yy = mirrorIndex(2.0 * base.y + float(dy), inSize.y) + 0.5;
+        for (int dx = -2; dx <= 2; dx++) {
+            float xx = mirrorIndex(2.0 * base.x + float(dx), inSize.x) + 0.5;
+            half4 t = mask.eval(float2(xx, yy));
+            if (t.r < 0.5) ok = 0.0;
+            black += joinValue(t.gb) / 25.0;
+        }
+    }
+    float2 b = splitValue(black);
+    return half4(half(ok), half(b.x), half(b.y), 1.0);
+}
+"
+
+        ' Je 8x8-Block: Summe der Quadrate (skaliert, negativ wenn ein Punkt nicht messbar ist) und
+        ' der mittlere Anteil an Schwarz (skaliert wie die Maske).
+        Private Const ChromaBlockShader As String = "
+uniform shader detail;
+uniform shader mask;
+uniform float energyScale;
+half4 main(float2 p) {
+    float2 origin = floor(p) * 8.0;
+    float sum = 0.0;
+    float dark = 0.0;
+    float valid = 1.0;
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            float2 q = origin + float2(float(x) + 0.5, float(y) + 0.5);
+            half4 m = mask.eval(q);
+            if (m.r < 0.5) valid = 0.0;
+            dark += joinValue(m.gb);
+            half4 t = detail.eval(q);
+            float2 d = unpackPair(t);
+            sum += d.x * d.x + d.y * d.y;
+        }
+    }
+    float2 e = splitValue(valid > 0.5 ? sum * energyScale : -1.0);
+    return half4(half(e.x), half(e.y), half(dark / 64.0), 1.0);
+}
+"
+
+        ' Eine gefilterte Ebene: die aufgeweitete groebere plus der Unterschied nach der weichen
+        ' Schwelle (ChromaCombineRow).
+        Private Const ChromaKeepCommon As String = "
+uniform float tPow;
+float keepOf(float2 d) {
+    float size = sqrt(d.x * d.x + d.y * d.y);
+    float sizePow = size * size * size;
+    return (sizePow + tPow > 0.0) ? sizePow / (sizePow + tPow) : 1.0;
+}
+"
+
+        Private Const ChromaCombineShader As String = ChromaKeepCommon & "
+uniform shader detail;
+half4 main(float2 p) {
+    half4 t = detail.eval(p);
+    float2 d = unpackPair(t);
+    float2 up = upVertical(p);
+    return packPair(up + d * keepOf(d));
+}
+"
+
+        ' Die feinste Ebene gleich in Bytes, wie der letzte Durchgang von ApplyColorNoiseReduction:
+        ' Helligkeit aus der Quelle, Gruen daraus und aus den gefilterten Farbanteilen, zurueck
+        ' ueber die Tabelle der Wurzel (Index gerundet wie CInt; 4096 ist ChromaBackSize).
+        Private Const ChromaFinalShader As String = ChromaKeepCommon & "
+uniform shader src;
+uniform shader roots;
+uniform shader bytes;
+uniform shader detail;
+float rootOf(float v) {
+    half4 t = roots.eval(float2(v + 0.5, 0.5));
+    return joinValue(t.xy);
+}
+float byteOf(float v) {
+    float index = min(4096.0, roundHalfEven(v * 4096.0));
+    half4 t = bytes.eval(float2(index + 0.5, 0.5));
+    return floor(float(t.r) * 255.0 + 0.5);
+}
+half4 main(float2 p) {
+    float4 b = toBytes(src.eval(p));
+    float3 c = unpremulBytes(b);
+    float sr = rootOf(c.r);
+    float sg = rootOf(c.g);
+    float sb = rootOf(c.b);
+    float luma = (sr + 2.0 * sg + sb) * 0.25;
+    half4 t = detail.eval(p);
+    float2 d = unpackPair(t);
+    float2 f = upVertical(p) + d * keepOf(d);
+    float g = luma - (f.x + f.y) * 0.25;
+    float r = max(0.0, g + f.x);
+    float bl = max(0.0, g + f.y);
+    g = max(0.0, g);
+    return writePremul(float3(byteOf(r), byteOf(g), byteOf(bl)), b.a);
+}
+"
+
         ' ── Grobes Farbrauschen (ApplyMultiScaleDenoise) ─────────────────────────
 
         ''' <summary>ApplyMultiScaleDenoise: die beiden Farbdifferenzen ueber bis zu sieben Stufen

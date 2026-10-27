@@ -1071,7 +1071,9 @@ Namespace ViewModels
                                                If(_workingImage.RenderDownscale(detailTarget),
                                                   ImageProcessor.LoadPreviewSource(path, detailTarget)))
                                    If source Is Nothing Then Return
-                                   rendered = ImageProcessor.RenderPreviewSkBitmap(source, adj)
+                                   ' Die Quelle bleibt ueber mehrere Details dieselbe (siehe oben):
+                                   ' der Stand nach dem Farbrauschen darf deshalb gemerkt werden.
+                                   rendered = ImageProcessor.RenderPreviewSkBitmapKeepingColorNoise(source, adj)
                                    If wantBefore Then
                                        ' Die Kamera-Vorschau wird auf die Masse der Gegenseite gebracht - und
                                        ' das ist hier `source`, das gerade gerenderte Nachher. Es hat dieselben

@@ -1049,6 +1049,18 @@ Namespace Services
             Return ProcessBitmap(source, adj)
         End Function
 
+        ''' <summary>Wie <see cref="RenderPreviewSkBitmap"/>, merkt sich aber den Stand nach Geometrie
+        ''' und Farbrauschen fuer diese Quelle und nimmt ihn beim naechsten Mal wieder (siehe
+        ''' TakeColorNoiseState). Nur fuer eine Quelle, die ueber mehrere Aufrufe dieselbe bleibt,
+        ''' wie die des Zoom-Details; sonst kostet es eine Abschrift und verdraengt einen
+        ''' brauchbaren Eintrag. Ein eigener Name statt eines weiteren Parameters, weil der
+        ''' Pruefstand ProcessBitmap und ProcessBitmapBase ueber Reflexion mit genau zwei Argumenten ruft.</summary>
+        Public Shared Function RenderPreviewSkBitmapKeepingColorNoise(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Dim processed = ProcessBitmapBaseCore(source, adj, useColorNoiseCache:=True)
+            Return ReplaceBitmap(processed, ApplyAnnotations(processed, WithAnnotationSourceSpace(adj, source)))
+        End Function
+
         ''' <summary>STUFE 5: Klon der warmen Basis (Pixel-Pipeline INKL. committeter Retusche, OHNE
         ''' Objekte) - das ist exakt das "Zielbild" der Retusche-Live-Puffer. Spart den vollen
         ''' Pipeline-Render, wenn der Cache zur aktuellen Einstellung passt; sonst Nothing.</summary>
@@ -2606,7 +2618,14 @@ Namespace Services
         ''' Beide Haelften gibt es einzeln, weil der Zwischenspeicher sie getrennt haelt - hier
         ''' bleiben sie zusammen, damit jeder vorhandene Aufrufer bekommt, was er immer bekam.</summary>
         Private Shared Function ProcessBitmapBase(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            Dim preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj)
+            Return ProcessBitmapBaseCore(source, adj, useColorNoiseCache:=False)
+        End Function
+
+        ''' <summary><see cref="ProcessBitmapBase"/>, wahlweise mit dem Zwischenspeicher nach dem
+        ''' Farbrauschen (siehe RenderPreviewSkBitmapKeepingColorNoise).</summary>
+        Private Shared Function ProcessBitmapBaseCore(source As SKBitmap, adj As ImageAdjustments,
+                                                      useColorNoiseCache As Boolean) As SKBitmap
+            Dim preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj, useColorNoiseCache:=useColorNoiseCache)
             ' Der Zwischenstand gehoert uns, die Ebenen duerfen also direkt hineinschreiben - und
             ' genau deshalb wird er hier NICHT noch einmal entsorgt. Liefert die Ebenenkette ein
             ' neues Bild, hat sie den Zwischenstand beim ersten Ersetzen selbst entsorgt
@@ -2621,7 +2640,9 @@ Namespace Services
         ''' Masken haengt. Das Ergebnis gehoert dem Aufrufer.</summary>
         Private Shared Function ProcessBitmapBaseBeforeMaskedLayers(source As SKBitmap, adj As ImageAdjustments,
                                                                      Optional cachedTone As SKBitmap = Nothing,
-                                                                     Optional ByRef builtTone As SKBitmap = Nothing) As SKBitmap
+                                                                     Optional ByRef builtTone As SKBitmap = Nothing,
+                                                                     Optional useColorNoiseCache As Boolean = False,
+                                                                     Optional keepBuiltTone As Boolean = False) As SKBitmap
             ' Copy-on-write: die Kette startet auf der FREMDEN Quelle und kopiert erst, wenn eine Stufe
             ' wirklich ein neues Bild liefert. Siehe ReplaceBitmapOwned.
             '
@@ -2633,13 +2654,33 @@ Namespace Services
             Dim processed As SKBitmap = If(cachedTone, source)
             Dim owned = cachedTone IsNot Nothing
 
+            ' DER STAND NACH GEOMETRIE UND FARBRAUSCHEN, aus dem eigenen Zwischenspeicher
+            ' (TakeColorNoiseState). Der Tonspeicher haelt den Stand NACH der Punktkette; ohne diesen
+            ' rechnete jeder Zug an Belichtung, Kurve oder Farbmischer das Farbrauschen neu, obwohl
+            ' seine Eingabe gleich blieb. Auch hier eine Abschrift, die der Kette gehoert.
+            Dim noiseKey As String = Nothing
+            Dim noiseStamp As Long = 0
+            Dim noiseFromCache = False
+            If cachedTone Is Nothing AndAlso useColorNoiseCache AndAlso ColorNoiseCacheApplies(adj) Then
+                noiseKey = ComputeColorNoiseCacheKey(adj)
+                noiseStamp = Interlocked.Read(_baseSourceStamp)
+                Dim key = noiseKey, stamp = noiseStamp
+                Dim hit = PerformanceTraceService.Measure("Pixel: Farbrauschen (Zwischenspeicher)",
+                                                          Function() TakeColorNoiseState(source, stamp, key))
+                If hit IsNot Nothing Then
+                    processed = hit
+                    owned = True
+                    noiseFromCache = True
+                End If
+            End If
+
             ' EIN MESSPUNKT UM DIE GANZE GEOMETRIE. Diese acht Stufen haengen ausschliesslich an den
             ' Geometriewerten - kein Ton-, Farb- oder Effektregler, keine Retusche und keine Maske
             ' aendert daran etwas. Damit sind sie der erste Kandidat fuer eine Abkuerzung, und die
             ' Zahl hier sagt, ob sie sich lohnt. Steht keine Geometrie an, liefert jede Stufe ihre
             ' Quelle unveraendert zurueck (Copy-on-write) und der Messwert liegt bei null - genau
             ' das muss man wissen, bevor man einen Zwischenspeicher dafuer baut.
-            If cachedTone Is Nothing Then
+            If cachedTone Is Nothing AndAlso Not noiseFromCache Then
                 PerformanceTraceService.Measure("Pixel: Geometrie",
                     Sub()
                         processed = ApplyGeometryPipelineOwned(processed, adj, owned)
@@ -2656,8 +2697,18 @@ Namespace Services
                 If SelectionScopeIsEnabled(adj) Then selectionBaseline = CloneBitmap(processed)
 
                 If cachedTone Is Nothing Then
-                    processed = ApplyToneAdjustmentStagesCore(processed, adj, owned)
-                    If selectionBaseline Is Nothing Then builtTone = CloneBitmap(processed)
+                    ' Die Tonstufe in ihren zwei Haelften (ApplyToneAdjustmentStagesCore), damit der
+                    ' Stand dazwischen gemerkt werden kann. Mit aktivem Auswahl-Skopus gibt es keinen
+                    ' Treffer (ColorNoiseCacheApplies): der Vergleichsstand oben braucht die Geometrie.
+                    If Not noiseFromCache Then
+                        processed = ApplyColorNoiseStageCore(processed, adj, owned)
+                        If noiseKey IsNot Nothing Then RememberColorNoiseState(source, noiseStamp, noiseKey, processed)
+                    End If
+                    processed = ApplyPointChainStageCore(processed, adj, owned)
+                    ' Die Abschrift nur fuer den, der sie haben will (keepBuiltTone): ohne den
+                    ' Schalter landete sie in der verworfenen Vorgabe des optionalen ByRef-Parameters,
+                    ' eine Vollkopie je Aufruf, die erst der Finalizer freigab.
+                    If selectionBaseline Is Nothing AndAlso keepBuiltTone Then builtTone = CloneBitmap(processed)
                 End If
                 processed = ApplyDetailAdjustmentStagesCore(processed, adj, owned)
 
@@ -2741,6 +2792,15 @@ Namespace Services
         Private Shared Function ApplyToneAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
                                                               ByRef owned As Boolean,
                                                               Optional toneReference As ToneReference = Nothing) As SKBitmap
+            Dim processed = ApplyColorNoiseStageCore(source, adj, owned)
+            Return ApplyPointChainStageCore(processed, adj, owned, toneReference)
+        End Function
+
+        ''' <summary>Die erste Haelfte der Tonstufe: das Farbrauschen. Getrennt, weil der
+        ''' Zwischenspeicher nach Geometrie und Farbrauschen genau zwischen den beiden Haelften
+        ''' liegt (siehe ProcessBitmapBaseBeforeMaskedLayers).</summary>
+        Private Shared Function ApplyColorNoiseStageCore(source As SKBitmap, adj As ImageAdjustments,
+                                                         ByRef owned As Boolean) As SKBitmap
             Dim processed = source
 
             ' FARBRAUSCHEN VOR ALLEN FARB- UND TONSTUFEN, wie beim Referenzprogramm am Kamerabild.
@@ -2748,11 +2808,24 @@ Namespace Services
             ' Baender, die ein Preset verschieden behandelt (Cool Glow: Lila entsaettigt und
             ' aufgehellt, Blau satt und dunkel), entschied das Rauschen je Bildpunkt, welches Band
             ' griff, und auf einer ruhigen Flaeche standen dunkelblaue Sprenkel.
+            '
+            ' Auf der Grafikkarte, wenn die Einstellung an ist (TryColorNoiseReductionOnGpu); sonst
+            ' und bei jedem Fehlschlag dort auf dem Prozessor.
             If adj IsNot Nothing AndAlso adj.ColorNoiseReduction > 0 Then
                 Dim input = processed
-                processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
-                    "Pixel: Farbrauschen", Function() ApplyColorNoiseReduction(input, adj.ColorNoiseReduction / 100.0F)), owned)
+                Dim amount = adj.ColorNoiseReduction / 100.0F
+                Dim onGpu = TryColorNoiseReductionOnGpu(input, amount)
+                processed = ReplaceBitmapOwned(processed, If(onGpu, PerformanceTraceService.Measure(
+                    "Pixel: Farbrauschen", Function() ApplyColorNoiseReduction(input, amount))), owned)
             End If
+            Return processed
+        End Function
+
+        ''' <summary>Die zweite Haelfte der Tonstufe: die verschmolzene Punktkette.</summary>
+        Private Shared Function ApplyPointChainStageCore(source As SKBitmap, adj As ImageAdjustments,
+                                                         ByRef owned As Boolean,
+                                                         Optional toneReference As ToneReference = Nothing) As SKBitmap
+            Dim processed = source
 
             ' Alle Farb-Punktoperationen laufen in EINER verschmolzenen Gleitkomma-Stufe
             ' (ImageProcessorPointOps.vb): Filmnegativ, Farbmatrix, Tonwertkurve, Lichter/Tiefen/
@@ -4214,6 +4287,7 @@ Namespace Services
             _toneCacheBitmap?.Dispose()
             _toneCacheBitmap = Nothing
             _toneCacheKey = Nothing
+            ClearColorNoiseStates()
             _baseCacheBitmap?.Dispose()
             _baseCacheBitmap = Nothing
             _baseCacheKey = Nothing
@@ -4255,7 +4329,8 @@ Namespace Services
                 Dim builtTone As SKBitmap = Nothing
                 ' Die Abschrift cachedTone gehoert ab hier der Kette: entweder ist sie das Ergebnis,
                 ' oder die Kette hat sie beim Ersetzen schon entsorgt.
-                preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj, cachedTone, builtTone)
+                preMask = ProcessBitmapBaseBeforeMaskedLayers(source, adj, cachedTone, builtTone,
+                                                              useColorNoiseCache:=True, keepBuiltTone:=useToneCache)
                 If builtTone IsNot Nothing Then
                     _toneCacheBitmap?.Dispose()
                     _toneCacheBitmap = builtTone
@@ -4331,6 +4406,14 @@ Namespace Services
         ''' Geometrie und jede Ton-/Farbentscheidung bleiben im gemeinsamen Bauplan enthalten.</summary>
         Private Shared Function ComputeToneCacheKey(adj As ImageAdjustments) As String
             Dim tone = adj.Clone()
+            NeutralizeDetailStages(tone)
+            Return ComputeBaseKeyBeforeMasks(tone)
+        End Function
+
+        ''' <summary>Setzt alle Regler der raeumlichen Details und Effekte
+        ''' (ApplyDetailAdjustmentStagesCore) auf ihren Ausgangswert. Die Liste muss Stufe fuer
+        ''' Stufe dazu passen, siehe ComputeToneCacheKey.</summary>
+        Private Shared Sub NeutralizeDetailStages(tone As ImageAdjustments)
             Dim neutral = New ImageAdjustments()
             tone.Clarity = neutral.Clarity : tone.Structure = neutral.Structure : tone.Haze = neutral.Haze
             tone.NoiseReduction = neutral.NoiseReduction : tone.NoiseReductionMethod = neutral.NoiseReductionMethod
@@ -4355,8 +4438,174 @@ Namespace Services
             If String.Equals(If(tone.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
                 tone.FilterPreset = "" : tone.FilterStrength = 0
             End If
-            Return ComputeBaseKeyBeforeMasks(tone)
+        End Sub
+
+        ' ── Zwischenspeicher nach Geometrie und Farbrauschen ─────────────────────
+        '
+        ' Der Tonspeicher haelt den Stand NACH der Punktkette. Ein Zug an Belichtung, Kurve oder
+        ' Farbmischer verfehlt ihn also jedesmal und rechnete bis hierher auch das Farbrauschen neu,
+        ' obwohl dessen Eingabe gleich blieb: im Betrieb gemessen 313 ms im Mittel je Vorschau,
+        ' hoechstens 1066 ms. Dieser Speicher haelt den Stand dazwischen. Ein Eintrag je Quelle, weil
+        ' Vorschau und Zoom-Detail abwechselnd mit verschiedenen Quellen kommen (wie
+        ' FindLocalToneBase); gueltig nur fuer dieselbe Quelle mit demselben Aenderungsstempel wie
+        ' Basis-, Detail- und Tonspeicher.
+        '
+        ' Der Schluessel ist der Schluessel vor den Masken, in dem alle Stufen NACH dem Farbrauschen
+        ' auf ihren Ausgangswert gesetzt sind. Wie beim Tonspeicher ist die Richtung des Irrtums
+        ' gutartig: ein Regler der Punktkette, der hier nicht neutralisiert wird, kostet nur einen
+        ' Treffer; Geometrie und Farbrauschen bleiben unangetastet im Schluessel.
+
+        ''' <summary>Ein gemerkter Stand nach Geometrie und Farbrauschen.</summary>
+        Private NotInheritable Class ColorNoiseState
+            ''' <summary>Nur die Identitaet der Quelle; schwach gehalten, damit ein gemerkter Eintrag
+            ''' kein fremdes Bild am Leben haelt.</summary>
+            Public Source As WeakReference(Of SKBitmap)
+            Public Stamp As Long
+            Public Key As String
+            Public Bitmap As SKBitmap
+        End Class
+
+        ''' <summary>Vorschau, Zugvorschau und Zoom-Detail; mehr Quellen wechseln sich nicht ab.</summary>
+        Private Const ColorNoiseStateCount As Integer = 3
+        ''' <summary>Hoechstens so viel Speicher fuer alle Eintraege zusammen: ein Zoom-Detail mit
+        ''' 8192 Punkten belegt allein rund 180 MB.</summary>
+        Private Const ColorNoiseStateBudgetBytes As Long = 256L * 1024 * 1024
+        Private Shared ReadOnly _colorNoiseStates As New List(Of ColorNoiseState)()
+        Private Shared ReadOnly _colorNoiseStatesLock As New Object()
+
+        ''' <summary>Lohnt und taugt der Zwischenspeicher fuer dieses Rezept? Ohne Farbrauschen gibt
+        ''' es nichts zu sparen; mit aktivem Auswahl-Skopus braucht die Kette den Stand nach der
+        ''' Geometrie als Vergleich, und der liegt hier nicht vor.</summary>
+        Private Shared Function ColorNoiseCacheApplies(adj As ImageAdjustments) As Boolean
+            Return adj IsNot Nothing AndAlso Not adj.GlobalAdjustmentsHidden AndAlso
+                   adj.ColorNoiseReduction > 0 AndAlso Not SelectionScopeIsEnabled(adj)
         End Function
+
+        ''' <summary>Schluessel des Zwischenspeichers nach dem Farbrauschen: die Detailstufen wie
+        ''' beim Tonspeicher und dazu jede Stufe der Punktkette neutralisiert.</summary>
+        Private Shared Function ComputeColorNoiseCacheKey(adj As ImageAdjustments) As String
+            Dim state = adj.Clone()
+            NeutralizeDetailStages(state)
+            Dim neutral = New ImageAdjustments()
+            state.Exposure = neutral.Exposure : state.Brightness = neutral.Brightness : state.Contrast = neutral.Contrast
+            state.Saturation = neutral.Saturation : state.Vibrance = neutral.Vibrance
+            state.Highlights = neutral.Highlights : state.ShadowsLevel = neutral.ShadowsLevel
+            state.Whites = neutral.Whites : state.Blacks = neutral.Blacks
+            state.Temperature = neutral.Temperature : state.Tint = neutral.Tint
+            state.WhiteBalanceModel = neutral.WhiteBalanceModel
+            state.WhiteBalanceAnchorX = neutral.WhiteBalanceAnchorX : state.WhiteBalanceAnchorY = neutral.WhiteBalanceAnchorY
+            state.WhiteBalanceKelvin = neutral.WhiteBalanceKelvin : state.WhiteBalanceKelvinTint = neutral.WhiteBalanceKelvinTint
+            state.CalibrationRedHue = neutral.CalibrationRedHue : state.CalibrationRedSaturation = neutral.CalibrationRedSaturation
+            state.CalibrationGreenHue = neutral.CalibrationGreenHue : state.CalibrationGreenSaturation = neutral.CalibrationGreenSaturation
+            state.CalibrationBlueHue = neutral.CalibrationBlueHue : state.CalibrationBlueSaturation = neutral.CalibrationBlueSaturation
+            state.CalibrationShadowTint = neutral.CalibrationShadowTint
+            state.ChannelMixerRedRed = neutral.ChannelMixerRedRed : state.ChannelMixerRedGreen = neutral.ChannelMixerRedGreen
+            state.ChannelMixerRedBlue = neutral.ChannelMixerRedBlue : state.ChannelMixerRedConstant = neutral.ChannelMixerRedConstant
+            state.ChannelMixerGreenRed = neutral.ChannelMixerGreenRed : state.ChannelMixerGreenGreen = neutral.ChannelMixerGreenGreen
+            state.ChannelMixerGreenBlue = neutral.ChannelMixerGreenBlue : state.ChannelMixerGreenConstant = neutral.ChannelMixerGreenConstant
+            state.ChannelMixerBlueRed = neutral.ChannelMixerBlueRed : state.ChannelMixerBlueGreen = neutral.ChannelMixerBlueGreen
+            state.ChannelMixerBlueBlue = neutral.ChannelMixerBlueBlue : state.ChannelMixerBlueConstant = neutral.ChannelMixerBlueConstant
+            state.ChannelMixerMonochrome = neutral.ChannelMixerMonochrome
+            state.ChannelMixerGrayRed = neutral.ChannelMixerGrayRed : state.ChannelMixerGrayGreen = neutral.ChannelMixerGrayGreen
+            state.ChannelMixerGrayBlue = neutral.ChannelMixerGrayBlue : state.ChannelMixerGrayConstant = neutral.ChannelMixerGrayConstant
+            state.GradientMapShadowColor = neutral.GradientMapShadowColor
+            state.GradientMapHighlightColor = neutral.GradientMapHighlightColor : state.GradientMapAmount = neutral.GradientMapAmount
+            state.PosterizeLevels = neutral.PosterizeLevels : state.ThresholdLevel = neutral.ThresholdLevel
+            state.CurveRgbPoints = neutral.CurveRgbPoints : state.CurveRedPoints = neutral.CurveRedPoints
+            state.CurveGreenPoints = neutral.CurveGreenPoints : state.CurveBluePoints = neutral.CurveBluePoints
+            state.CurveLuminancePoints = neutral.CurveLuminancePoints
+            state.RedHue = neutral.RedHue : state.RedSaturation = neutral.RedSaturation : state.RedLuminance = neutral.RedLuminance
+            state.OrangeHue = neutral.OrangeHue : state.OrangeSaturation = neutral.OrangeSaturation : state.OrangeLuminance = neutral.OrangeLuminance
+            state.YellowHue = neutral.YellowHue : state.YellowSaturation = neutral.YellowSaturation : state.YellowLuminance = neutral.YellowLuminance
+            state.GreenHue = neutral.GreenHue : state.GreenSaturation = neutral.GreenSaturation : state.GreenLuminance = neutral.GreenLuminance
+            state.AquaHue = neutral.AquaHue : state.AquaSaturation = neutral.AquaSaturation : state.AquaLuminance = neutral.AquaLuminance
+            state.BlueHue = neutral.BlueHue : state.BlueSaturation = neutral.BlueSaturation : state.BlueLuminance = neutral.BlueLuminance
+            state.PurpleHue = neutral.PurpleHue : state.PurpleSaturation = neutral.PurpleSaturation : state.PurpleLuminance = neutral.PurpleLuminance
+            state.MagentaHue = neutral.MagentaHue : state.MagentaSaturation = neutral.MagentaSaturation : state.MagentaLuminance = neutral.MagentaLuminance
+            state.PointColors = neutral.PointColors
+            state.ColorGradeShadowHue = neutral.ColorGradeShadowHue : state.ColorGradeShadowSaturation = neutral.ColorGradeShadowSaturation
+            state.ColorGradeShadowLuminance = neutral.ColorGradeShadowLuminance
+            state.ColorGradeMidtoneHue = neutral.ColorGradeMidtoneHue : state.ColorGradeMidtoneSaturation = neutral.ColorGradeMidtoneSaturation
+            state.ColorGradeMidtoneLuminance = neutral.ColorGradeMidtoneLuminance
+            state.ColorGradeHighlightHue = neutral.ColorGradeHighlightHue : state.ColorGradeHighlightSaturation = neutral.ColorGradeHighlightSaturation
+            state.ColorGradeHighlightLuminance = neutral.ColorGradeHighlightLuminance
+            state.ColorGradeGlobalHue = neutral.ColorGradeGlobalHue : state.ColorGradeGlobalSaturation = neutral.ColorGradeGlobalSaturation
+            state.ColorGradeGlobalLuminance = neutral.ColorGradeGlobalLuminance
+            state.ColorGradeBalance = neutral.ColorGradeBalance : state.ColorGradeBlending = neutral.ColorGradeBlending
+            state.NegativeEnabled = neutral.NegativeEnabled : state.NegativeMonochrome = neutral.NegativeMonochrome
+            state.NegativeBaseColor = neutral.NegativeBaseColor : state.NegativeDensityColor = neutral.NegativeDensityColor
+            state.NegativeGamma = neutral.NegativeGamma
+            ' Die Farbvorgaben sind eine Matrix der Punktkette; "weich" hat NeutralizeDetailStages schon geleert.
+            state.FilterPreset = neutral.FilterPreset : state.FilterStrength = neutral.FilterStrength
+            state.LutPath = neutral.LutPath : state.LutStrength = neutral.LutStrength
+            Return ComputeBaseKeyBeforeMasks(state)
+        End Function
+
+        ''' <summary>Eine Abschrift des gemerkten Stands fuer genau diese Quelle, diesen Stempel und
+        ''' diesen Schluessel, oder Nothing. Die Abschrift gehoert dem Aufrufer; der Eintrag selbst
+        ''' bleibt unangetastet.</summary>
+        Private Shared Function TakeColorNoiseState(source As SKBitmap, stamp As Long, key As String) As SKBitmap
+            SyncLock _colorNoiseStatesLock
+                For i = 0 To _colorNoiseStates.Count - 1
+                    Dim entry = _colorNoiseStates(i)
+                    Dim target As SKBitmap = Nothing
+                    If Not entry.Source.TryGetTarget(target) OrElse Not Object.ReferenceEquals(target, source) Then Continue For
+                    If entry.Stamp <> stamp OrElse Not String.Equals(entry.Key, key, StringComparison.Ordinal) Then Return Nothing
+                    ' Nach vorn: die Eintraege stehen nach letzter Nutzung.
+                    _colorNoiseStates.RemoveAt(i)
+                    _colorNoiseStates.Insert(0, entry)
+                    Return CloneBitmap(entry.Bitmap)
+                Next
+            End SyncLock
+            Return Nothing
+        End Function
+
+        ''' <summary>Merkt eine Abschrift von <paramref name="state"/> als Stand nach Geometrie und
+        ''' Farbrauschen fuer diese Quelle. Ein vorhandener Eintrag derselben Quelle wird ersetzt;
+        ''' danach faellt, was ueber Zahl oder Speicherrahmen hinausgeht, ab dem am laengsten nicht
+        ''' benutzten.</summary>
+        Private Shared Sub RememberColorNoiseState(source As SKBitmap, stamp As Long, key As String, state As SKBitmap)
+            If source Is Nothing OrElse state Is Nothing Then Return
+            Dim bytes = CLng(state.RowBytes) * state.Height
+            If bytes > ColorNoiseStateBudgetBytes Then Return
+            Dim copy = CloneBitmap(state)
+            If copy Is Nothing Then Return
+            SyncLock _colorNoiseStatesLock
+                For i = _colorNoiseStates.Count - 1 To 0 Step -1
+                    Dim target As SKBitmap = Nothing
+                    Dim entry = _colorNoiseStates(i)
+                    ' Dieselbe Quelle oder eine, die es nicht mehr gibt: weg damit.
+                    If Not entry.Source.TryGetTarget(target) OrElse Object.ReferenceEquals(target, source) Then
+                        entry.Bitmap.Dispose()
+                        _colorNoiseStates.RemoveAt(i)
+                    End If
+                Next
+                _colorNoiseStates.Insert(0, New ColorNoiseState With {
+                    .Source = New WeakReference(Of SKBitmap)(source), .Stamp = stamp, .Key = key, .Bitmap = copy})
+                Dim total = 0L
+                For i = 0 To _colorNoiseStates.Count - 1
+                    Dim entry = _colorNoiseStates(i)
+                    total += CLng(entry.Bitmap.RowBytes) * entry.Bitmap.Height
+                    If i >= ColorNoiseStateCount OrElse total > ColorNoiseStateBudgetBytes Then
+                        For j = _colorNoiseStates.Count - 1 To i Step -1
+                            _colorNoiseStates(j).Bitmap.Dispose()
+                            _colorNoiseStates.RemoveAt(j)
+                        Next
+                        Exit For
+                    End If
+                Next
+            End SyncLock
+        End Sub
+
+        ''' <summary>Entsorgt alle Eintraege; gerufen mit dem Leeren des Basis-Caches.</summary>
+        Private Shared Sub ClearColorNoiseStates()
+            SyncLock _colorNoiseStatesLock
+                For Each entry In _colorNoiseStates
+                    entry.Bitmap.Dispose()
+                Next
+                _colorNoiseStates.Clear()
+            End SyncLock
+        End Sub
 
         Private Shared Function ComputeBaseKeyCore(adj As ImageAdjustments, includeMasks As Boolean) As String
             ' HasActiveSelection und ihre editierbare Display-Maske sind reine UI-Zustände. Seit

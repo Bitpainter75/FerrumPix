@@ -13,6 +13,10 @@
   mouse button now scrolls the picture instead of drawing a crop frame. If you liked the crop
   frame, turn on "Crop by dragging" in the viewer settings.
 
+- **Faster colour noise reduction:** with colour noise reduction on, moving exposure, curves or
+  colour sliders no longer redoes the noise reduction each time, and the noise reduction itself
+  runs faster and on the graphics card when that is switched on.
+
 - **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
   picture is shown once before the order is mixed again.
 

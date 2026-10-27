@@ -14,6 +14,7 @@ Imports System.Text.RegularExpressions
 Imports System.Text.Json.Serialization
 Imports System.Runtime.InteropServices
 Imports QRCoder
+Imports SingleVector = System.Numerics.Vector(Of Single)
 
 ' Die Filterstufen der Pixelkette, die nicht Punktoperation sind: Rauschminderung in Farbe und
 ' Helligkeit, Median, lokaler Kontrast, Klarheit, Struktur, Dunst, Leuchten, Staub und Kratzer,
@@ -58,32 +59,67 @@ Namespace Services
         Private Const ChromaCoarserNoise As Single = 0.6F
         Private Shared ReadOnly ChromaTaps As Single() = {1.0F / 16, 4.0F / 16, 6.0F / 16, 4.0F / 16, 1.0F / 16}
 
-        ''' <summary>Die beiden Farbanteile einer Pyramidenebene.</summary>
+        ''' <summary>Die beiden Farbanteile einer Pyramidenebene. Die Felder sind aus dem ArrayPool
+        ''' gemietet und meist laenger als Width * Height; Dispose gibt sie zurueck. Vorher legte
+        ''' jede Ebene neue Felder an, zusammen rund 70 Byte je Bildpunkt und Aufruf, alles im Large
+        ''' Object Heap.</summary>
         Private NotInheritable Class ChromaPlane
+            Implements IDisposable
             Public ReadOnly Width As Integer
             Public ReadOnly Height As Integer
-            Public ReadOnly Red As Single()
-            Public ReadOnly Blue As Single()
+            Public Red As Single()
+            Public Blue As Single()
             Public Sub New(planeWidth As Integer, planeHeight As Integer)
                 Width = planeWidth
                 Height = planeHeight
-                Red = New Single(planeWidth * planeHeight - 1) {}
-                Blue = New Single(planeWidth * planeHeight - 1) {}
+                Red = ArrayPool(Of Single).Shared.Rent(planeWidth * planeHeight)
+                Blue = ArrayPool(Of Single).Shared.Rent(planeWidth * planeHeight)
+            End Sub
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If Red IsNot Nothing Then ArrayPool(Of Single).Shared.Return(Red)
+                If Blue IsNot Nothing Then ArrayPool(Of Single).Shared.Return(Blue)
+                Red = Nothing
+                Blue = Nothing
             End Sub
         End Class
 
         ''' <summary>Wo das Rauschen einer Ebene gemessen werden darf: kein Kanal nahe am
-        ''' Ausbrennen, und der Anteil schwarzer Bildpunkte.</summary>
+        ''' Ausbrennen, und der Anteil schwarzer Bildpunkte. Gemietet wie <see cref="ChromaPlane"/>.</summary>
         Private NotInheritable Class ChromaMeasureMask
+            Implements IDisposable
             Public ReadOnly Width As Integer
             Public ReadOnly Height As Integer
-            Public ReadOnly Unclipped As Boolean()
-            Public ReadOnly Black As Single()
+            Public Unclipped As Boolean()
+            Public Black As Single()
             Public Sub New(maskWidth As Integer, maskHeight As Integer)
                 Width = maskWidth
                 Height = maskHeight
-                Unclipped = New Boolean(maskWidth * maskHeight - 1) {}
-                Black = New Single(maskWidth * maskHeight - 1) {}
+                Unclipped = ArrayPool(Of Boolean).Shared.Rent(maskWidth * maskHeight)
+                Black = ArrayPool(Of Single).Shared.Rent(maskWidth * maskHeight)
+            End Sub
+            Public Sub Dispose() Implements IDisposable.Dispose
+                If Unclipped IsNot Nothing Then ArrayPool(Of Boolean).Shared.Return(Unclipped)
+                If Black IsNot Nothing Then ArrayPool(Of Single).Shared.Return(Black)
+                Unclipped = Nothing
+                Black = Nothing
+            End Sub
+        End Class
+
+        ''' <summary>Was der letzte Durchgang einer Ebene braucht: die waagerecht aufgeweitete
+        ''' groebere Ebene vor und nach ihrer Filterung (je so breit wie die Ebene, aber nur so hoch
+        ''' wie die groebere) und die Schwelle. Senkrecht aufgeweitet wird erst zeilenweise im
+        ''' letzten Durchgang (<see cref="ChromaUpRow"/>); die beiden vollen Ebenen, die das vorher
+        ''' als ganzes Bild anlegte, entfallen.</summary>
+        Private NotInheritable Class ChromaLevel
+            Implements IDisposable
+            Public UpperWide As ChromaPlane
+            Public CoarseUpWide As ChromaPlane
+            Public ThresholdPow As Double
+            Public Sub Dispose() Implements IDisposable.Dispose
+                UpperWide?.Dispose()
+                CoarseUpWide?.Dispose()
+                UpperWide = Nothing
+                CoarseUpWide = Nothing
             End Sub
         End Class
 
@@ -93,102 +129,240 @@ Namespace Services
             Return Math.Max(0, Math.Min(n - 1, v))
         End Function
 
+        ' JE BILDPUNKT BILLIGER, BYTEGLEICH. Die Abgriffe im Innenbereich lesen ohne MirrorIndex,
+        ' nur die wenigen Randpunkte gehen ueber die alte Schleife; die senkrechten Durchgaenge
+        ' rechnen mit Vector(Of Single) ueber zusammenhaengende Spalten. Jede Summe hat dabei
+        ' dieselben Glieder in derselben Reihenfolge wie vorher (beginnend bei 0, Gewicht mal Wert),
+        ' und weder die Laufzeit noch die Vektorbefehle fassen Multiplikation und Addition
+        ' zusammen: die Werte sind Bit fuer Bit dieselben.
+
         ''' <summary>Weichgezeichnet (Binomial 1-4-6-4-1) und halbiert.</summary>
         Private Shared Function ChromaDown(p As ChromaPlane) As ChromaPlane
             Dim w = (p.Width + 1) \ 2
             Dim h = (p.Height + 1) \ 2
-            Dim wide = New ChromaPlane(w, p.Height)
-            ForEachRow(w, p.Height,
-                Sub(y)
-                    For x = 0 To w - 1
-                        Dim sr = 0.0F, sb = 0.0F
-                        For k = 0 To 4
-                            Dim i = y * p.Width + MirrorIndex(2 * x + k - 2, p.Width)
-                            sr += ChromaTaps(k) * p.Red(i)
-                            sb += ChromaTaps(k) * p.Blue(i)
+            Dim pw = p.Width
+            ' Innen liegt x, wenn alle fuenf Abgriffe 2x - 2 bis 2x + 2 im Bild liegen.
+            Dim innerStart = Math.Min(1, w)
+            Dim innerEnd = Math.Max(innerStart, Math.Min((pw - 3) \ 2 + 1, w))
+            Dim t0 = ChromaTaps(0), t1 = ChromaTaps(1), t2 = ChromaTaps(2), t3 = ChromaTaps(3), t4 = ChromaTaps(4)
+            Using wide = New ChromaPlane(w, p.Height)
+                ForEachRow(w, p.Height,
+                    Sub(y)
+                        Dim row = y * pw
+                        Dim o = y * w
+                        Dim pr = p.Red, pb = p.Blue
+                        For x = 0 To innerStart - 1
+                            ChromaDownEdge(p, row, x, wide.Red, wide.Blue, o + x)
                         Next
-                        wide.Red(y * w + x) = sr
-                        wide.Blue(y * w + x) = sb
-                    Next
-                End Sub)
-            Dim result = New ChromaPlane(w, h)
-            ForEachRow(w, h,
-                Sub(y)
-                    For x = 0 To w - 1
-                        Dim sr = 0.0F, sb = 0.0F
-                        For k = 0 To 4
-                            Dim i = MirrorIndex(2 * y + k - 2, p.Height) * w + x
-                            sr += ChromaTaps(k) * wide.Red(i)
-                            sb += ChromaTaps(k) * wide.Blue(i)
+                        For x = innerStart To innerEnd - 1
+                            Dim i = row + 2 * x - 2
+                            Dim sr = 0.0F, sb = 0.0F
+                            sr += t0 * pr(i) : sb += t0 * pb(i)
+                            sr += t1 * pr(i + 1) : sb += t1 * pb(i + 1)
+                            sr += t2 * pr(i + 2) : sb += t2 * pb(i + 2)
+                            sr += t3 * pr(i + 3) : sb += t3 * pb(i + 3)
+                            sr += t4 * pr(i + 4) : sb += t4 * pb(i + 4)
+                            wide.Red(o + x) = sr
+                            wide.Blue(o + x) = sb
                         Next
-                        result.Red(y * w + x) = sr
-                        result.Blue(y * w + x) = sb
-                    Next
-                End Sub)
-            Return result
+                        For x = innerEnd To w - 1
+                            ChromaDownEdge(p, row, x, wide.Red, wide.Blue, o + x)
+                        Next
+                    End Sub)
+                Dim result = New ChromaPlane(w, h)
+                ForEachRow(w, h,
+                    Sub(y)
+                        Dim r0 = MirrorIndex(2 * y - 2, p.Height) * w, r1 = MirrorIndex(2 * y - 1, p.Height) * w
+                        Dim r2 = MirrorIndex(2 * y, p.Height) * w, r3 = MirrorIndex(2 * y + 1, p.Height) * w
+                        Dim r4 = MirrorIndex(2 * y + 2, p.Height) * w
+                        WeightedRows5(wide.Red, r0, r1, r2, r3, r4, result.Red, y * w, w)
+                        WeightedRows5(wide.Blue, r0, r1, r2, r3, r4, result.Blue, y * w, w)
+                    End Sub)
+                Return result
+            End Using
         End Function
 
-        ''' <summary>Auf <paramref name="width"/> x <paramref name="height"/> verdoppelt und
-        ''' weichgezeichnet, wie eine Laplace-Pyramide eine Ebene aufweitet.</summary>
-        Private Shared Function ChromaUp(p As ChromaPlane, width As Integer, height As Integer) As ChromaPlane
+        ''' <summary>Ein Randpunkt des waagerechten Durchgangs von <see cref="ChromaDown"/>, gespiegelt.</summary>
+        Private Shared Sub ChromaDownEdge(p As ChromaPlane, row As Integer, x As Integer,
+                                          red As Single(), blue As Single(), o As Integer)
+            Dim sr = 0.0F, sb = 0.0F
+            For k = 0 To 4
+                Dim i = row + MirrorIndex(2 * x + k - 2, p.Width)
+                sr += ChromaTaps(k) * p.Red(i)
+                sb += ChromaTaps(k) * p.Blue(i)
+            Next
+            red(o) = sr
+            blue(o) = sb
+        End Sub
+
+        ''' <summary>Fuenf Zeilen mit den Gewichten aus ChromaTaps: dst(o + x) = Summe ueber k von
+        ''' ChromaTaps(k) * src(rk + x), fuer x von 0 bis count - 1.</summary>
+        Private Shared Sub WeightedRows5(src As Single(), r0 As Integer, r1 As Integer, r2 As Integer, r3 As Integer, r4 As Integer,
+                                         dst As Single(), o As Integer, count As Integer)
+            Dim t0 = ChromaTaps(0), t1 = ChromaTaps(1), t2 = ChromaTaps(2), t3 = ChromaTaps(3), t4 = ChromaTaps(4)
+            Dim x = 0
+            If Numerics.Vector.IsHardwareAccelerated Then
+                Dim n = SingleVector.Count
+                Dim v0 = New SingleVector(t0), v1 = New SingleVector(t1), v2 = New SingleVector(t2)
+                Dim v3 = New SingleVector(t3), v4 = New SingleVector(t4)
+                Do While x <= count - n
+                    Dim s = SingleVector.Zero
+                    s += v0 * New SingleVector(src, r0 + x)
+                    s += v1 * New SingleVector(src, r1 + x)
+                    s += v2 * New SingleVector(src, r2 + x)
+                    s += v3 * New SingleVector(src, r3 + x)
+                    s += v4 * New SingleVector(src, r4 + x)
+                    s.CopyTo(dst, o + x)
+                    x += n
+                Loop
+            End If
+            Do While x < count
+                Dim s = 0.0F
+                s += t0 * src(r0 + x)
+                s += t1 * src(r1 + x)
+                s += t2 * src(r2 + x)
+                s += t3 * src(r3 + x)
+                s += t4 * src(r4 + x)
+                dst(o + x) = s
+                x += 1
+            Loop
+        End Sub
+
+        ''' <summary>Der waagerechte Teil des Aufweitens einer Laplace-Pyramide: <paramref name="p"/>
+        ''' auf <paramref name="width"/> verdoppelt und weichgezeichnet, die Hoehe bleibt. Den
+        ''' senkrechten Teil rechnet <see cref="ChromaUpRow"/> je Zeile.</summary>
+        Private Shared Function ChromaUpWide(p As ChromaPlane, width As Integer) As ChromaPlane
+            Dim pw = p.Width
+            ' Innen liegt x, wenn c - 1 (gerade) und c + 1 im Bild liegen, mit c = x \ 2.
+            Dim innerStart = Math.Min(2, width)
+            Dim innerEnd = Math.Max(innerStart, Math.Min(2 * pw - 2, width))
             Dim wide = New ChromaPlane(width, p.Height)
             ForEachRow(width, p.Height,
                 Sub(y)
-                    Dim row = y * p.Width
-                    For x = 0 To width - 1
-                        Dim c = x \ 2
+                    Dim row = y * pw
+                    Dim o = y * width
+                    Dim pr = p.Red, pb = p.Blue
+                    Dim wr = wide.Red, wb = wide.Blue
+                    For x = 0 To innerStart - 1
+                        ChromaUpEdge(p, row, x, wr, wb, o + x)
+                    Next
+                    For x = innerStart To innerEnd - 1
+                        Dim i = row + x \ 2
                         If x Mod 2 = 0 Then
-                            Dim i0 = row + MirrorIndex(c - 1, p.Width), i1 = row + MirrorIndex(c, p.Width), i2 = row + MirrorIndex(c + 1, p.Width)
-                            wide.Red(y * width + x) = 0.125F * p.Red(i0) + 0.75F * p.Red(i1) + 0.125F * p.Red(i2)
-                            wide.Blue(y * width + x) = 0.125F * p.Blue(i0) + 0.75F * p.Blue(i1) + 0.125F * p.Blue(i2)
+                            wr(o + x) = 0.125F * pr(i - 1) + 0.75F * pr(i) + 0.125F * pr(i + 1)
+                            wb(o + x) = 0.125F * pb(i - 1) + 0.75F * pb(i) + 0.125F * pb(i + 1)
                         Else
-                            Dim i0 = row + MirrorIndex(c, p.Width), i1 = row + MirrorIndex(c + 1, p.Width)
-                            wide.Red(y * width + x) = 0.5F * (p.Red(i0) + p.Red(i1))
-                            wide.Blue(y * width + x) = 0.5F * (p.Blue(i0) + p.Blue(i1))
+                            wr(o + x) = 0.5F * (pr(i) + pr(i + 1))
+                            wb(o + x) = 0.5F * (pb(i) + pb(i + 1))
                         End If
                     Next
+                    For x = innerEnd To width - 1
+                        ChromaUpEdge(p, row, x, wr, wb, o + x)
+                    Next
                 End Sub)
-            Dim result = New ChromaPlane(width, height)
-            ForEachRow(width, height,
-                Sub(y)
-                    Dim c = y \ 2
-                    Dim o = y * width
-                    If y Mod 2 = 0 Then
-                        Dim r0 = MirrorIndex(c - 1, p.Height) * width, r1 = MirrorIndex(c, p.Height) * width, r2 = MirrorIndex(c + 1, p.Height) * width
-                        For x = 0 To width - 1
-                            result.Red(o + x) = 0.125F * wide.Red(r0 + x) + 0.75F * wide.Red(r1 + x) + 0.125F * wide.Red(r2 + x)
-                            result.Blue(o + x) = 0.125F * wide.Blue(r0 + x) + 0.75F * wide.Blue(r1 + x) + 0.125F * wide.Blue(r2 + x)
-                        Next
-                    Else
-                        Dim r0 = MirrorIndex(c, p.Height) * width, r1 = MirrorIndex(c + 1, p.Height) * width
-                        For x = 0 To width - 1
-                            result.Red(o + x) = 0.5F * (wide.Red(r0 + x) + wide.Red(r1 + x))
-                            result.Blue(o + x) = 0.5F * (wide.Blue(r0 + x) + wide.Blue(r1 + x))
-                        Next
-                    End If
-                End Sub)
-            Return result
+            Return wide
         End Function
+
+        ''' <summary>Ein Randpunkt von <see cref="ChromaUpWide"/>, gespiegelt.</summary>
+        Private Shared Sub ChromaUpEdge(p As ChromaPlane, row As Integer, x As Integer,
+                                        red As Single(), blue As Single(), o As Integer)
+            Dim c = x \ 2
+            If x Mod 2 = 0 Then
+                Dim i0 = row + MirrorIndex(c - 1, p.Width), i1 = row + MirrorIndex(c, p.Width), i2 = row + MirrorIndex(c + 1, p.Width)
+                red(o) = 0.125F * p.Red(i0) + 0.75F * p.Red(i1) + 0.125F * p.Red(i2)
+                blue(o) = 0.125F * p.Blue(i0) + 0.75F * p.Blue(i1) + 0.125F * p.Blue(i2)
+            Else
+                Dim i0 = row + MirrorIndex(c, p.Width), i1 = row + MirrorIndex(c + 1, p.Width)
+                red(o) = 0.5F * (p.Red(i0) + p.Red(i1))
+                blue(o) = 0.5F * (p.Blue(i0) + p.Blue(i1))
+            End If
+        End Sub
+
+        ''' <summary>Zeile <paramref name="y"/> der aufgeweiteten Ebene: der senkrechte Teil zu
+        ''' <see cref="ChromaUpWide"/>, geschrieben nach red(redOffset + x) und blue(blueOffset + x).</summary>
+        Private Shared Sub ChromaUpRow(wide As ChromaPlane, y As Integer,
+                                       red As Single(), redOffset As Integer, blue As Single(), blueOffset As Integer)
+            Dim c = y \ 2
+            Dim w = wide.Width
+            Dim wr = wide.Red, wb = wide.Blue
+            If y Mod 2 = 0 Then
+                Dim r0 = MirrorIndex(c - 1, wide.Height) * w, r1 = MirrorIndex(c, wide.Height) * w, r2 = MirrorIndex(c + 1, wide.Height) * w
+                Dim x = 0
+                If Numerics.Vector.IsHardwareAccelerated Then
+                    Dim n = SingleVector.Count
+                    Dim outer = New SingleVector(0.125F), center = New SingleVector(0.75F)
+                    Do While x <= w - n
+                        Dim vr = outer * New SingleVector(wr, r0 + x) + center * New SingleVector(wr, r1 + x) + outer * New SingleVector(wr, r2 + x)
+                        Dim vb = outer * New SingleVector(wb, r0 + x) + center * New SingleVector(wb, r1 + x) + outer * New SingleVector(wb, r2 + x)
+                        vr.CopyTo(red, redOffset + x)
+                        vb.CopyTo(blue, blueOffset + x)
+                        x += n
+                    Loop
+                End If
+                Do While x < w
+                    red(redOffset + x) = 0.125F * wr(r0 + x) + 0.75F * wr(r1 + x) + 0.125F * wr(r2 + x)
+                    blue(blueOffset + x) = 0.125F * wb(r0 + x) + 0.75F * wb(r1 + x) + 0.125F * wb(r2 + x)
+                    x += 1
+                Loop
+            Else
+                Dim r0 = MirrorIndex(c, wide.Height) * w, r1 = MirrorIndex(c + 1, wide.Height) * w
+                Dim x = 0
+                If Numerics.Vector.IsHardwareAccelerated Then
+                    Dim n = SingleVector.Count
+                    Dim half = New SingleVector(0.5F)
+                    Do While x <= w - n
+                        Dim vr = half * (New SingleVector(wr, r0 + x) + New SingleVector(wr, r1 + x))
+                        Dim vb = half * (New SingleVector(wb, r0 + x) + New SingleVector(wb, r1 + x))
+                        vr.CopyTo(red, redOffset + x)
+                        vb.CopyTo(blue, blueOffset + x)
+                        x += n
+                    Loop
+                End If
+                Do While x < w
+                    red(redOffset + x) = 0.5F * (wr(r0 + x) + wr(r1 + x))
+                    blue(blueOffset + x) = 0.5F * (wb(r0 + x) + wb(r1 + x))
+                    x += 1
+                Loop
+            End If
+        End Sub
 
         ''' <summary>Halbiert wie <see cref="ChromaDown"/>: messbar, wo jeder gelesene Bildpunkt es
         ''' ist, mit dem mittleren Anteil an Schwarz.</summary>
         Private Shared Function ChromaMaskDown(m As ChromaMeasureMask) As ChromaMeasureMask
             Dim w = (m.Width + 1) \ 2
             Dim h = (m.Height + 1) \ 2
+            Dim mw = m.Width
+            Dim innerStart = Math.Min(1, w)
+            Dim innerEnd = Math.Max(innerStart, Math.Min((mw - 3) \ 2 + 1, w))
             Dim result = New ChromaMeasureMask(w, h)
             ForEachRow(w, h,
                 Sub(y)
+                    ' Die fuenf Zeilen einmal je Zeile gespiegelt, im Innenbereich die Spalten ohne.
+                    Dim rows = New Integer(4) {}
+                    For dy = -2 To 2
+                        rows(dy + 2) = MirrorIndex(2 * y + dy, m.Height) * mw
+                    Next
+                    Dim unclipped = m.Unclipped, blackIn = m.Black
                     For x = 0 To w - 1
                         Dim ok = True
                         Dim black = 0.0F
-                        For dy = -2 To 2
-                            Dim row = MirrorIndex(2 * y + dy, m.Height) * m.Width
-                            For dx = -2 To 2
-                                Dim i = row + MirrorIndex(2 * x + dx, m.Width)
-                                ok = ok AndAlso m.Unclipped(i)
-                                black += m.Black(i) / 25.0F
+                        If x >= innerStart AndAlso x < innerEnd Then
+                            For dy = 0 To 4
+                                Dim i = rows(dy) + 2 * x - 2
+                                For dx = 0 To 4
+                                    ok = ok AndAlso unclipped(i + dx)
+                                    black += blackIn(i + dx) / 25.0F
+                                Next
                             Next
-                        Next
+                        Else
+                            For dy = 0 To 4
+                                For dx = -2 To 2
+                                    Dim i = rows(dy) + MirrorIndex(2 * x + dx, mw)
+                                    ok = ok AndAlso unclipped(i)
+                                    black += blackIn(i) / 25.0F
+                                Next
+                            Next
+                        End If
                         result.Unclipped(y * w + x) = ok
                         result.Black(y * w + x) = black
                     Next
@@ -196,88 +370,223 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Das Farbrauschen einer Ebene (<paramref name="p"/> minus <paramref name="upper"/>):
-        ''' Effektivwert in den glattesten zehn Prozent der messbaren 8x8-Bloecke, bevorzugt ohne
-        ''' Schwarz. -1, wenn es weniger als 16 solcher Bloecke gibt.</summary>
-        Private Shared Function ChromaLevelNoise(p As ChromaPlane, upper As ChromaPlane, mask As ChromaMeasureMask) As Double
-            Const block = 8
+        Private Const ChromaBlock As Integer = 8
+
+        ''' <summary>Das Farbrauschen einer Ebene (<paramref name="p"/> minus der aufgeweiteten
+        ''' groeberen, deren waagerechter Teil <paramref name="upperWide"/> ist): Effektivwert in den
+        ''' glattesten zehn Prozent der messbaren 8x8-Bloecke, bevorzugt ohne Schwarz. -1, wenn es
+        ''' weniger als 16 solcher Bloecke gibt.</summary>
+        Private Shared Function ChromaLevelNoise(p As ChromaPlane, upperWide As ChromaPlane, mask As ChromaMeasureMask) As Double
+            Const block = ChromaBlock
             Dim bw = p.Width \ block
             Dim bh = p.Height \ block
             If bw <= 0 OrElse bh <= 0 Then Return -1
             Dim energy = New Double(bw * bh - 1) {}
             Dim black = New Double(bw * bh - 1) {}
+            Dim w = p.Width
             ForEachRow(bw, bh,
                 Sub(by)
-                    For bx = 0 To bw - 1
-                        Dim sum = 0.0, dark = 0.0
-                        Dim valid = True
-                        For y = by * block To by * block + block - 1
-                            For x = bx * block To bx * block + block - 1
-                                Dim i = y * p.Width + x
-                                If Not mask.Unclipped(i) Then valid = False : Exit For
-                                dark += mask.Black(i)
-                                Dim dr = p.Red(i) - upper.Red(i)
-                                Dim db = p.Blue(i) - upper.Blue(i)
-                                sum += dr * dr + db * db
-                            Next
-                            If Not valid Then Exit For
+                    ' Die acht Zeilen der aufgeweiteten Ebene fuer diese Blockzeile, je Zeile
+                    ' Rot ab 0 und Blau ab w. Summiert wird wie vorher Block fuer Block, Zeile fuer
+                    ' Zeile, also in derselben Reihenfolge.
+                    Dim rows = ArrayPool(Of Single).Shared.Rent(block * 2 * w)
+                    Try
+                        For dy = 0 To block - 1
+                            ChromaUpRow(upperWide, by * block + dy, rows, dy * 2 * w, rows, dy * 2 * w + w)
                         Next
-                        energy(by * bw + bx) = If(valid, sum / (block * block), -1.0)
-                        black(by * bw + bx) = dark / (block * block)
-                    Next
+                        For bx = 0 To bw - 1
+                            Dim sum = 0.0, dark = 0.0
+                            Dim valid = True
+                            For y = by * block To by * block + block - 1
+                                Dim u = (y - by * block) * 2 * w
+                                For x = bx * block To bx * block + block - 1
+                                    Dim i = y * w + x
+                                    If Not mask.Unclipped(i) Then valid = False : Exit For
+                                    dark += mask.Black(i)
+                                    Dim dr = p.Red(i) - rows(u + x)
+                                    Dim db = p.Blue(i) - rows(u + w + x)
+                                    sum += dr * dr + db * db
+                                Next
+                                If Not valid Then Exit For
+                            Next
+                            energy(by * bw + bx) = If(valid, sum / (block * block), -1.0)
+                            black(by * bw + bx) = dark / (block * block)
+                        Next
+                    Finally
+                        ArrayPool(Of Single).Shared.Return(rows)
+                    End Try
                 End Sub)
-            ' Im dunklen, verrauschten Bild erreicht das Rauschen in vielen Bildpunkten Schwarz und
-            ' ist trotzdem Rauschen; nur wenn es ohne solche Bloecke zu wenige sind, zaehlen sie mit.
-            Dim pick = Function(mostBlack As Double) As List(Of Double)
-                           Dim list As New List(Of Double)
-                           For i = 0 To energy.Length - 1
-                               If energy(i) >= 0 AndAlso black(i) <= mostBlack Then list.Add(energy(i))
-                           Next
-                           Return list
-                       End Function
-            Dim energies = pick(0.0)
-            If energies.Count < 16 Then energies = pick(0.9)
-            If energies.Count < 16 Then Return -1
-            energies.Sort()
-            Return Math.Sqrt(energies(CInt(Math.Floor(energies.Count * 0.1))))
+            Return ChromaNoiseFromBlocks(energy, black)
         End Function
 
-        Private Shared Function ChromaFilter(p As ChromaPlane, mask As ChromaMeasureMask, finerNoise As Double,
-                                             finestNoise As Double, level As Integer, amount As Single) As ChromaPlane
-            If level > ChromaLevels OrElse p.Width < 4 OrElse p.Height < 4 Then Return p
-            Dim coarse = ChromaDown(p)
-            Dim upper = ChromaUp(coarse, p.Width, p.Height)
-            Dim measured = ChromaLevelNoise(p, upper, mask)
-            Dim noise As Double
-            If measured < 0 Then
-                noise = finerNoise * ChromaCoarserNoise
-            ElseIf level = 0 Then
-                noise = measured
-            Else
-                ' Entmosaiktes Rauschen ist nach grob hin nie staerker; mehr als in der feineren
-                ' Ebene ist echte Farbe.
-                noise = Math.Min(measured, finerNoise)
-            End If
-            If level = 0 Then finestNoise = noise
-            coarse = ChromaFilter(coarse, ChromaMaskDown(mask), noise, finestNoise, level + 1, amount)
-            Dim coarseUp = ChromaUp(coarse, p.Width, p.Height)
+        ''' <summary>Die Auswertung der Bloecke, fuer Prozessor und Grafikkarte dieselbe:
+        ''' <paramref name="energy"/> ist das mittlere Quadrat je Block (negativ: nicht messbar),
+        ''' <paramref name="black"/> sein Anteil an Schwarz.</summary>
+        Private Shared Function ChromaNoiseFromBlocks(energy As Double(), black As Double()) As Double
+            ' Im dunklen, verrauschten Bild erreicht das Rauschen in vielen Bildpunkten Schwarz und
+            ' ist trotzdem Rauschen; nur wenn es ohne solche Bloecke zu wenige sind, zaehlen sie mit.
+            Dim values = New Double(energy.Length - 1) {}
+            Dim pick = Function(mostBlack As Double) As Integer
+                           Dim n = 0
+                           For i = 0 To energy.Length - 1
+                               If energy(i) >= 0 AndAlso black(i) <= mostBlack Then values(n) = energy(i) : n += 1
+                           Next
+                           Return n
+                       End Function
+            Dim count = pick(0.0)
+            If count < 16 Then count = pick(0.9)
+            If count < 16 Then Return -1
+            ' Gebraucht wird nur der Wert an der Stelle des Zehntels; eine Auswahl findet ihn ohne
+            ' das Ganze zu sortieren, und es ist derselbe Wert wie nach Sort.
+            Return Math.Sqrt(NthSmallest(values, count, CInt(Math.Floor(count * 0.1))))
+        End Function
+
+        ''' <summary>Der k-kleinste der ersten <paramref name="count"/> Werte (k ab 0), wie nach
+        ''' einem Sortieren an der Stelle k. Ordnet das Feld dabei um. Kein NaN in den Werten.</summary>
+        Private Shared Function NthSmallest(values As Double(), count As Integer, k As Integer) As Double
+            Dim lo = 0, hi = count - 1
+            Do While lo < hi
+                Dim pivot = values(lo + (hi - lo) \ 2)
+                Dim i = lo, j = hi
+                Do While i <= j
+                    Do While values(i) < pivot
+                        i += 1
+                    Loop
+                    Do While values(j) > pivot
+                        j -= 1
+                    Loop
+                    If i <= j Then
+                        Dim swap = values(i)
+                        values(i) = values(j)
+                        values(j) = swap
+                        i += 1
+                        j -= 1
+                    End If
+                Loop
+                ' Links von i steht nichts Groesseres als der Teiler, rechts von j nichts Kleineres;
+                ' dazwischen nur er selbst.
+                If k <= j Then
+                    hi = j
+                ElseIf k >= i Then
+                    lo = i
+                Else
+                    Return values(k)
+                End If
+            Loop
+            Return values(k)
+        End Function
+
+        ''' <summary>Zerlegt eine Ebene, misst ihr Rauschen und filtert die groeberen rekursiv.
+        ''' Nothing, wenn die Ebene unveraendert bleibt (zu tief oder zu klein).</summary>
+        Private Shared Function ChromaPrepareLevel(p As ChromaPlane, mask As ChromaMeasureMask, finerNoise As Double,
+                                                   finestNoise As Double, level As Integer, amount As Single) As ChromaLevel
+            If level > ChromaLevels OrElse p.Width < 4 OrElse p.Height < 4 Then Return Nothing
+            Dim result = New ChromaLevel()
+            Try
+                Dim noise As Double
+                Using coarse = ChromaDown(p)
+                    result.UpperWide = ChromaUpWide(coarse, p.Width)
+                    noise = ChromaNoiseOfLevel(ChromaLevelNoise(p, result.UpperWide, mask), finerNoise, level)
+                    If level = 0 Then finestNoise = noise
+                    ' Die Maske der groeberen Ebene nur, wenn dort noch gefiltert wird.
+                    Dim filtered = coarse
+                    If level + 1 <= ChromaLevels AndAlso coarse.Width >= 4 AndAlso coarse.Height >= 4 Then
+                        Using coarseMask = ChromaMaskDown(mask)
+                            filtered = ChromaFilter(coarse, coarseMask, noise, finestNoise, level + 1, amount)
+                        End Using
+                    End If
+                    Try
+                        result.CoarseUpWide = ChromaUpWide(filtered, p.Width)
+                    Finally
+                        If filtered IsNot coarse Then filtered.Dispose()
+                    End Try
+                End Using
+                result.ThresholdPow = ChromaThresholdPow(level, amount, noise, finestNoise)
+                Return result
+            Catch
+                result.Dispose()
+                Throw
+            End Try
+        End Function
+
+        ''' <summary>Das Rauschen, mit dem eine Ebene rechnet, aus ihrer Messung (-1: nicht messbar)
+        ''' und dem der feineren. Fuer Prozessor und Grafikkarte dieselbe Rechnung.</summary>
+        Private Shared Function ChromaNoiseOfLevel(measured As Double, finerNoise As Double, level As Integer) As Double
+            If measured < 0 Then Return finerNoise * ChromaCoarserNoise
+            If level = 0 Then Return measured
+            ' Entmosaiktes Rauschen ist nach grob hin nie staerker; mehr als in der feineren
+            ' Ebene ist echte Farbe.
+            Return Math.Min(measured, finerNoise)
+        End Function
+
+        ''' <summary>Die Schwelle einer Ebene hoch ChromaSteepness, wie sie die weiche Schwelle braucht.</summary>
+        Private Shared Function ChromaThresholdPow(level As Integer, amount As Single, noise As Double, finestNoise As Double) As Double
             Dim threshold = ChromaThreshold(level) * Math.Pow(amount / 0.25, ChromaThresholdRise(level)) *
                             noise * Math.Pow(Math.Max(finestNoise, 0.000001) / 0.01, ChromaNoiseRise(level))
-            Dim tPow = Math.Pow(threshold, ChromaSteepness)
-            Dim result = New ChromaPlane(p.Width, p.Height)
-            ForEachRow(p.Width, p.Height,
-                Sub(y)
-                    For i = y * p.Width To y * p.Width + p.Width - 1
-                        Dim dr = p.Red(i) - upper.Red(i)
-                        Dim db = p.Blue(i) - upper.Blue(i)
-                        Dim sizePow = Math.Pow(Math.Sqrt(dr * dr + db * db), ChromaSteepness)
-                        Dim keep = If(sizePow + tPow > 0, sizePow / (sizePow + tPow), 1.0)
-                        result.Red(i) = CSng(coarseUp.Red(i) + dr * keep)
-                        result.Blue(i) = CSng(coarseUp.Blue(i) + db * keep)
-                    Next
-                End Sub)
-            Return result
+            Return Math.Pow(threshold, ChromaSteepness)
         End Function
+
+        ''' <summary>Eine Ebene gefiltert: eine NEUE Ebene, oder <paramref name="p"/> selbst, wenn
+        ''' sie unveraendert bleibt.</summary>
+        Private Shared Function ChromaFilter(p As ChromaPlane, mask As ChromaMeasureMask, finerNoise As Double,
+                                             finestNoise As Double, level As Integer, amount As Single) As ChromaPlane
+            Using prepared = ChromaPrepareLevel(p, mask, finerNoise, finestNoise, level, amount)
+                If prepared Is Nothing Then Return p
+                Dim result = New ChromaPlane(p.Width, p.Height)
+                ForEachRow(p.Width, p.Height,
+                    Sub(y) ChromaCombineRow(p, prepared, y, result.Red, y * p.Width, result.Blue, y * p.Width))
+                Return result
+            End Using
+        End Function
+
+        ''' <summary>Der letzte Durchgang einer Ebene fuer Zeile <paramref name="y"/>: die groebere,
+        ''' gefilterte Ebene plus der Anteil des Unterschieds, der die Schwelle uebersteht.</summary>
+        Private Shared Sub ChromaCombineRow(p As ChromaPlane, prepared As ChromaLevel, y As Integer,
+                                            red As Single(), redOffset As Integer, blue As Single(), blueOffset As Integer)
+            Dim w = p.Width
+            ' Je Zeile vier Zwischenzeilen: Rot und Blau der aufgeweiteten Ebene vor und nach dem Filtern.
+            Dim rows = ArrayPool(Of Single).Shared.Rent(4 * w)
+            Try
+                ChromaUpRow(prepared.UpperWide, y, rows, 0, rows, w)
+                ChromaUpRow(prepared.CoarseUpWide, y, rows, 2 * w, rows, 3 * w)
+                Dim tPow = prepared.ThresholdPow
+                Dim row = y * w
+                For x = 0 To w - 1
+                    Dim i = row + x
+                    Dim dr = p.Red(i) - rows(x)
+                    Dim db = p.Blue(i) - rows(w + x)
+                    Dim sizePow = Math.Pow(Math.Sqrt(dr * dr + db * db), ChromaSteepness)
+                    Dim keep = If(sizePow + tPow > 0, sizePow / (sizePow + tPow), 1.0)
+                    red(redOffset + x) = CSng(rows(2 * w + x) + dr * keep)
+                    blue(blueOffset + x) = CSng(rows(3 * w + x) + db * keep)
+                Next
+            Finally
+                ArrayPool(Of Single).Shared.Return(rows)
+            End Try
+        End Sub
+
+        Private Const ChromaBackSize As Integer = 4096
+
+        ''' <summary>Byte -> Wurzel des Linearlichts.</summary>
+        Private Shared ReadOnly ChromaToRoot As New Lazy(Of Single())(
+            Function()
+                Dim table = New Single(255) {}
+                For v = 0 To 255
+                    table(v) = CSng(Math.Sqrt(SrgbToLinear(v / 255.0F)))
+                Next
+                Return table
+            End Function)
+
+        ''' <summary>Und zurueck ueber eine feine Tabelle der Wurzel (ChromaBackSize + 1 Werte).</summary>
+        Private Shared ReadOnly ChromaToByte As New Lazy(Of Byte())(
+            Function()
+                Dim table = New Byte(ChromaBackSize) {}
+                For j = 0 To ChromaBackSize
+                    Dim root = j / CSng(ChromaBackSize)
+                    table(j) = ClampToByte(LinearToSrgb(root * root) * 255.0F)
+                Next
+                Return table
+            End Function)
 
         Private Shared Function ApplyColorNoiseReduction(source As SKBitmap, amount As Single) As SKBitmap
             amount = Clamp(amount, 0, 1)
@@ -286,65 +595,76 @@ Namespace Services
             Dim dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim sLen = 0
+            Dim plane As ChromaPlane = Nothing
+            Dim prepared As ChromaLevel = Nothing
             Try
                 If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
                 Dim w = source.Width, h = source.Height
-                ' Byte -> Wurzel des Linearlichts, und zurueck ueber eine feine Tabelle der Wurzel.
-                Dim toRoot = New Single(255) {}
-                For v = 0 To 255
-                    toRoot(v) = CSng(Math.Sqrt(SrgbToLinear(v / 255.0F)))
-                Next
-                Const backSize = 4096
-                Dim toByte = New Byte(backSize) {}
-                For j = 0 To backSize
-                    Dim root = j / CSng(backSize)
-                    toByte(j) = ClampToByte(LinearToSrgb(root * root) * 255.0F)
-                Next
+                Dim toRoot = ChromaToRoot.Value
+                Const backSize = ChromaBackSize
+                Dim toByte = ChromaToByte.Value
 
-                Dim plane = New ChromaPlane(w, h)
-                Dim luma = New Single(w * h - 1) {}
-                Dim alpha = New Byte(w * h - 1) {}
-                Dim mask = New ChromaMeasureMask(w, h)
-                ForEachRow(w, h,
-                    Sub(y)
-                        For x = 0 To w - 1
-                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                            ReadUnpremultiplied(srcBuf, y * stride + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
-                            Dim i = y * w + x
-                            Dim sr = toRoot(cr), sg = toRoot(cg), sb = toRoot(cb)
-                            luma(i) = (sr + 2.0F * sg + sb) * 0.25F
-                            plane.Red(i) = sr - sg
-                            plane.Blue(i) = sb - sg
-                            alpha(i) = CByte(a)
-                            ' Nahe am Ausbrennen hat ein Bildpunkt kein Rauschen zu messen (Linearlicht
-                            ' 0,95 entspricht 249 in sRGB).
-                            mask.Unclipped(i) = cr < 249 AndAlso cg < 249 AndAlso cb < 249
-                            mask.Black(i) = If(cr = 0 OrElse cg = 0 OrElse cb = 0, 1.0F, 0.0F)
-                        Next
-                    End Sub)
-
-                plane = ChromaFilter(plane, mask, 0, 0, 0, amount)
+                ' Helligkeit und Deckung stehen in keinem eigenen Feld mehr: der letzte Durchgang
+                ' liest sie mit derselben Rechnung noch einmal aus der Quelle.
+                plane = New ChromaPlane(w, h)
+                Using mask = New ChromaMeasureMask(w, h)
+                    ForEachRow(w, h,
+                        Sub(y)
+                            For x = 0 To w - 1
+                                Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                                ReadUnpremultiplied(srcBuf, y * stride + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                                Dim i = y * w + x
+                                Dim sr = toRoot(cr), sg = toRoot(cg), sb = toRoot(cb)
+                                plane.Red(i) = sr - sg
+                                plane.Blue(i) = sb - sg
+                                ' Nahe am Ausbrennen hat ein Bildpunkt kein Rauschen zu messen (Linearlicht
+                                ' 0,95 entspricht 249 in sRGB).
+                                mask.Unclipped(i) = cr < 249 AndAlso cg < 249 AndAlso cb < 249
+                                mask.Black(i) = If(cr = 0 OrElse cg = 0 OrElse cb = 0, 1.0F, 0.0F)
+                            Next
+                        End Sub)
+                    prepared = ChromaPrepareLevel(plane, mask, 0, 0, 0, amount)
+                End Using
 
                 dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
                 If stride <> w * 4 Then Array.Clear(dstBuf, 0, sLen)
-                Dim filtered = plane
+                ' Die feinste Ebene entsteht nicht als ganzes Feld: jede Zeile wird gefiltert und
+                ' gleich geschrieben.
+                Dim finest = plane
+                Dim level0 = prepared
                 ForEachRow(w, h,
                     Sub(y)
-                        For x = 0 To w - 1
-                            Dim i = y * w + x
-                            Dim g = luma(i) - (filtered.Red(i) + filtered.Blue(i)) * 0.25F
-                            Dim r = Math.Max(0.0F, g + filtered.Red(i))
-                            Dim b = Math.Max(0.0F, g + filtered.Blue(i))
-                            g = Math.Max(0.0F, g)
-                            WritePremultiplied(dstBuf, y * stride + x * 4, ri, gi, bi, ai,
-                                               toByte(Math.Min(backSize, CInt(r * backSize))),
-                                               toByte(Math.Min(backSize, CInt(g * backSize))),
-                                               toByte(Math.Min(backSize, CInt(b * backSize))), alpha(i))
-                        Next
+                        Dim filtered = ArrayPool(Of Single).Shared.Rent(2 * w)
+                        Try
+                            If level0 IsNot Nothing Then
+                                ChromaCombineRow(finest, level0, y, filtered, 0, filtered, w)
+                            Else
+                                Array.Copy(finest.Red, y * w, filtered, 0, w)
+                                Array.Copy(finest.Blue, y * w, filtered, w, w)
+                            End If
+                            For x = 0 To w - 1
+                                Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                                ReadUnpremultiplied(srcBuf, y * stride + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                                Dim luma = (toRoot(cr) + 2.0F * toRoot(cg) + toRoot(cb)) * 0.25F
+                                Dim fr = filtered(x), fb = filtered(w + x)
+                                Dim g = luma - (fr + fb) * 0.25F
+                                Dim r = Math.Max(0.0F, g + fr)
+                                Dim b = Math.Max(0.0F, g + fb)
+                                g = Math.Max(0.0F, g)
+                                WritePremultiplied(dstBuf, y * stride + x * 4, ri, gi, bi, ai,
+                                                   toByte(Math.Min(backSize, CInt(r * backSize))),
+                                                   toByte(Math.Min(backSize, CInt(g * backSize))),
+                                                   toByte(Math.Min(backSize, CInt(b * backSize))), a)
+                            Next
+                        Finally
+                            ArrayPool(Of Single).Shared.Return(filtered)
+                        End Try
                     End Sub)
                 Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
                 Return result
             Finally
+                prepared?.Dispose()
+                plane?.Dispose()
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(dstBuf)
             End Try
