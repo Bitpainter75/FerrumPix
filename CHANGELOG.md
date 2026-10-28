@@ -29,6 +29,12 @@
   presets more closely. Pictures you already edited with hue changes in the colour mixer may
   look slightly different.
 
+- **Temperature and tint of RAW photos now use the same scale as other RAW converters:** the
+  numbers in the editor, in saved edits and in XMP presets now mean the same thing, so a preset
+  with a green or magenta tint looks as intended. The tint shown for a photo "as shot" is now a
+  small, familiar value. Pictures you already edited keep their look; only the numbers shown for
+  them change.
+
 - **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
   picture is shown once before the order is mixed again.
 

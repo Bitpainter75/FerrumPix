@@ -153,6 +153,9 @@ Namespace Services
             If adj.WhiteBalanceModel <= 0 AndAlso (adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F) Then
                 adj.WhiteBalanceModel = 1
             End If
+            ' Modell 2 rechnete Kelvin und Tönung noch nicht nach der DNG-Spezifikation: auf
+            ' denselben Weißpunkt in Zahlen von Modell 3 umschreiben.
+            ImageProcessor.UpgradeWhiteBalanceModel(adj)
 
             ' Ein Feld ToneModel aus aelteren Dateien wird beim Lesen uebergangen: es gibt nur noch
             ' eine Rechnung der Tonregler, und jedes Rezept laedt mit ihr.

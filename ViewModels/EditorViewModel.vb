@@ -6272,7 +6272,7 @@ Namespace ViewModels
         Private Sub EnsureCaptureWhiteBalanceAnchor(path As String)
             If _whiteBalanceModel = 1 Then Return
             If _whiteBalanceAnchorX > 0.0 AndAlso _whiteBalanceAnchorY > 0.0 Then
-                If _whiteBalanceModel < 2 Then _whiteBalanceModel = 2
+                If _whiteBalanceModel < 2 Then _whiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
                 RaiseWhiteBalanceModeChanged()
                 Return
             End If
@@ -6281,7 +6281,7 @@ Namespace ViewModels
             If capture Is Nothing Then Return
             _whiteBalanceAnchorX = capture.X
             _whiteBalanceAnchorY = capture.Y
-            _whiteBalanceModel = 2
+            _whiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
             RaiseWhiteBalanceModeChanged()
         End Sub
 
@@ -24706,6 +24706,13 @@ Namespace ViewModels
             _lensTcaBlue = adj.LensTcaBlue
             _lensVignettingAmount = adj.LensVignettingAmount
             _lensModel = If(adj.LensModel, "")
+            ' Ein Rezept mit Weißabgleich Modell 2 (etwa aus einem älteren Verlaufsschritt) zeigt
+            ' sonst Zahlen, die in der heutigen Rechnung einen anderen Weißpunkt bedeuten.
+            If adj.WhiteBalanceModel = 2 Then
+                ImageProcessor.UpgradeWhiteBalanceModel(adj)
+                _temperature = adj.Temperature
+                _tint = adj.Tint
+            End If
             _whiteBalanceModel = adj.WhiteBalanceModel
             _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
             _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY

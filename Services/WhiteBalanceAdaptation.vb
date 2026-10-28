@@ -61,59 +61,118 @@ Namespace Services
         Public Const MinKelvin As Double = 2000.0
         Public Const MaxKelvin As Double = 12000.0
 
-        ''' <summary>Wie viel v (CIE 1960) ein Tönungspunkt verschiebt. Adobes Tönung läuft von
-        ''' -150 bis +150; der Faktor hier ist NICHT auf Adobes Skala geeicht, sondern so gewählt,
-        ''' dass ±150 ein sichtbarer, aber noch physikalischer Farbstich ist. Die Eichung gegen
-        ''' Adobe ist eine eigene Messung und steht noch aus.
-        '''
-        ''' GEMESSENE OBERGRENZE: mit 0,0004 je Punkt liegt der Weißpunkt bei +150 ausserhalb des
-        ''' Sichtbaren (bei 5500 K auf y = 0,558), die Zapfenantwort wird negativ und es gäbe gar
-        ''' keine Matrix mehr. Ein Regler, der am Ende nicht mehr wirkt, ist schlimmer als ein
-        ''' schwächerer - deshalb dieser Wert, und zusätzlich die Rücknahme in
-        ''' <see cref="ShiftTint"/> für die Ränder des Kelvin-Bereichs.</summary>
-        Private Const TintPerPoint As Double = 0.0001
+        ' ── Farbort aus Kelvin und Tönung, nach der DNG-Spezifikation ────────────
 
-        ' ── Farbort aus Kelvin und Tönung ────────────────────────────────────────
+        ''' <summary>Die Isothermen nach Robertson (1968), wie sie die DNG-Spezifikation für
+        ''' Temperatur und Tönung verwendet: je Zeile mired, u und v des Planckschen Strahlers
+        ''' (CIE 1960) und die Steigung der Isotherme durch diesen Punkt.
+        '''
+        ''' <para>WARUM DIESE DEFINITION. Kelvin-Zahl und Tönung einer XMP-Datei SIND nach ihr
+        ''' festgelegt, und unser Regler soll dieselben Zahlen tragen (Import und Export ohne
+        ''' Umrechnung). Gemessen gegen den DNG-Konverter: mit der früheren eigenen Rechnung (Kurve
+        ''' aus Planck und Tageslicht, Tönung 0,0001 v je Punkt) wirkte Tönung -66 vier- bis
+        ''' fünfmal zu schwach und in einer anderen Richtung, weil die Isotherme nicht senkrecht
+        ''' in v liegt, und oberhalb von 4500 K lag schon Tönung 0 rund 10 Punkte daneben, weil
+        ''' die Kurve dort die Tageslichtreihe war.</para></summary>
+        Private Shared ReadOnly RobertsonMired As Double() = {
+            0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325,
+            350, 375, 400, 425, 450, 475, 500, 525, 550, 575, 600}
+        Private Shared ReadOnly RobertsonU As Double() = {
+            0.18006, 0.18066, 0.18133, 0.18208, 0.18293, 0.18388, 0.18494, 0.18611, 0.1874, 0.1888,
+            0.19032, 0.19462, 0.19962, 0.20525, 0.21142, 0.21807, 0.22511, 0.23247, 0.2401, 0.24792,
+            0.25591, 0.264, 0.27218, 0.28039, 0.28863, 0.29685, 0.30505, 0.3132, 0.32129, 0.32931,
+            0.33724}
+        Private Shared ReadOnly RobertsonV As Double() = {
+            0.26352, 0.26589, 0.26846, 0.27119, 0.27407, 0.27709, 0.28021, 0.28342, 0.28668, 0.28997,
+            0.29326, 0.30141, 0.30921, 0.31647, 0.32312, 0.32909, 0.33439, 0.33904, 0.34308, 0.34655,
+            0.34951, 0.352, 0.35407, 0.35577, 0.35714, 0.35823, 0.35907, 0.35968, 0.36011, 0.36038,
+            0.36051}
+        Private Shared ReadOnly RobertsonSlope As Double() = {
+            -0.24341, -0.25479, -0.26876, -0.28539, -0.3047, -0.32675, -0.35156, -0.37915, -0.40955,
+            -0.44278, -0.47888, -0.58204, -0.70471, -0.84901, -1.0182, -1.2168, -1.4512, -1.7298,
+            -2.0637, -2.4681, -2.9641, -3.5814, -4.3633, -5.3762, -6.7262, -8.5955, -11.324, -15.628,
+            -23.325, -40.77, -116.45}
 
-        ''' <summary>Der Weißpunkt zu einer Temperatur und einer Tönung.
-        '''
-        ''' Zwei Kurven: unterhalb von 4000 K der Plancksche Strahler, oberhalb von 4500 K die
-        ''' genormte Tageslichtreihe, dazwischen überblendet mit einem Smoothstep. Der Smoothstep
-        ''' und nicht eine Gerade, weil seine Steigung an beiden Enden null ist - damit hängen nicht
-        ''' nur die Werte der beiden Kurven zusammen, sondern auch ihre Steigungen, und der Regler
-        ''' läuft ohne Knick durch den Übergang.
-        '''
-        ''' Die Tönung verschiebt danach quer zur Kurve, in v der CIE-1960-Ebene: positiv nach
-        ''' Magenta, negativ nach Grün. Quer zur Kurve ist nur dort vergleichbar; in x/y hinge der
-        ''' gleiche Zahlenwert von der Temperatur ab.</summary>
-        Public Shared Function FromKelvinAndTint(kelvin As Double, tint As Double) As WhitePoint
-            If Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return D65
-            Dim locus = LocusPoint(kelvin)
-            If Not locus.IsValid Then Return D65
-            If Not Double.IsFinite(tint) OrElse tint = 0.0 Then Return locus
-            Return ShiftTint(locus, tint)
+        ''' <summary>Wie viele Tönungspunkte ein Schritt von 1 in uv entlang der Isotherme ist, mit
+        ''' Vorzeichen: ein POSITIVER Wert legt den behaupteten Weißpunkt ins Grüne, das Bild wird
+        ''' also magenta, wie am Regler. Der Wert der DNG-Spezifikation.</summary>
+        Private Const TintScale As Double = -3000.0
+
+        ''' <summary>Der Punkt der Planckschen Linie und die Richtung der Isotherme (Länge 1, u
+        ''' positiv) zu einer Temperatur, zwischen den Tabellenzeilen linear in mired.</summary>
+        Private Shared Function IsothermAt(kelvin As Double) As (U As Double, V As Double, Du As Double, Dv As Double)
+            Dim r = 1000000.0 / kelvin
+            Dim last = RobertsonMired.Length - 1
+            For index = 0 To last - 1
+                If r < RobertsonMired(index + 1) OrElse index = last - 1 Then
+                    Dim f = (RobertsonMired(index + 1) - r) / (RobertsonMired(index + 1) - RobertsonMired(index))
+                    Dim u = RobertsonU(index) * f + RobertsonU(index + 1) * (1.0 - f)
+                    Dim v = RobertsonV(index) * f + RobertsonV(index + 1) * (1.0 - f)
+                    Dim len1 = Math.Sqrt(1.0 + RobertsonSlope(index) * RobertsonSlope(index))
+                    Dim len2 = Math.Sqrt(1.0 + RobertsonSlope(index + 1) * RobertsonSlope(index + 1))
+                    Dim du = f / len1 + (1.0 - f) / len2
+                    Dim dv = RobertsonSlope(index) / len1 * f + RobertsonSlope(index + 1) / len2 * (1.0 - f)
+                    Dim len3 = Math.Sqrt(du * du + dv * dv)
+                    Return (u, v, du / len3, dv / len3)
+                End If
+            Next
+            Return (Double.NaN, Double.NaN, Double.NaN, Double.NaN)
         End Function
 
-        ''' <summary>Verschiebt den Farbort quer zur Kurve, und nimmt die Verschiebung so weit
-        ''' zurück, dass ein rechenbarer Weißpunkt herauskommt.
+        ''' <summary>Der Weißpunkt zu einer Temperatur und einer Tönung, nach der DNG-Spezifikation:
+        ''' der Punkt der Planckschen Linie, verschoben um Tönung / -3000 entlang der Isotherme.
         '''
-        ''' Ohne diese Rücknahme läuft der Regler an den Rändern des Kelvin-Bereichs aus dem
-        ''' Sichtbaren heraus: bei 2000 K liegt die Kurve schon nahe am Rand, und ein voller
-        ''' Tönungsausschlag schiebt sie darüber. Die Folge wäre keine sichtbare Grenze, sondern
-        ''' eine Stufe, die stillschweigend nichts mehr tut. Zurückgenommen wird in Zehnteln, damit
-        ''' der Regler auch dort noch so weit trägt, wie es physikalisch geht.</summary>
-        Private Shared Function ShiftTint(locus As WhitePoint, tint As Double) As WhitePoint
-            Dim uv = ToCie1960(locus)
-            If Double.IsNaN(uv.U) Then Return locus
-            Dim wanted = tint * TintPerPoint
+        ''' Liegt das Ergebnis ausserhalb des Sichtbaren, wird die Tönung in Zehnteln
+        ''' zurückgenommen, bis ein rechenbarer Weißpunkt herauskommt. Sonst wäre die Folge an den
+        ''' Rändern keine sichtbare Grenze, sondern eine Stufe, die stillschweigend nichts mehr tut.</summary>
+        Public Shared Function FromKelvinAndTint(kelvin As Double, tint As Double) As WhitePoint
+            If Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return D65
+            If Not Double.IsFinite(tint) Then tint = 0.0
+            Dim iso = IsothermAt(kelvin)
+            If Double.IsNaN(iso.U) Then Return D65
+            Dim locus = FromCie1960(New Cie1960(iso.U, iso.V))
+            If tint = 0.0 Then Return locus
+            Dim offset = tint / TintScale
             For attempt = 0 To 20
                 Dim factor = Math.Pow(0.9, attempt)
-                Dim candidate = FromCie1960(New Cie1960(uv.U, uv.V + wanted * factor))
+                Dim candidate = FromCie1960(New Cie1960(iso.U + iso.Du * offset * factor, iso.V + iso.Dv * offset * factor))
                 If candidate.IsValid AndAlso candidate.X + candidate.Y < 1.0 AndAlso HasPositiveConeResponse(candidate) Then
                     Return candidate
                 End If
             Next
             Return locus
+        End Function
+
+        ''' <summary>Temperatur und Tönung eines Farborts, nach der DNG-Spezifikation und ohne
+        ''' Klemmen: die genaue Umkehrung von <see cref="FromKelvinAndTint"/>. Gesucht wird das
+        ''' Paar Isothermen, zwischen denen der Farbort liegt; die Temperatur ist dazwischen
+        ''' linear in mired, die Tönung der Abstand entlang der gemittelten Isotherme.</summary>
+        Friend Shared Function KelvinAndTintOf(point As WhitePoint) As (Kelvin As Double, Tint As Double)
+            Dim uv = ToCie1960(point)
+            If Double.IsNaN(uv.U) Then Return (Double.NaN, Double.NaN)
+            Dim lastDt = 0.0, lastDu = 0.0, lastDv = 0.0
+            Dim last = RobertsonMired.Length - 1
+            For index = 1 To last
+                Dim len = Math.Sqrt(1.0 + RobertsonSlope(index) * RobertsonSlope(index))
+                Dim du = 1.0 / len
+                Dim dv = RobertsonSlope(index) / len
+                ' Abstand über oder unter der Isotherme; darunter ist das Paar gefunden.
+                Dim dt = -(uv.U - RobertsonU(index)) * dv + (uv.V - RobertsonV(index)) * du
+                If dt <= 0.0 OrElse index = last Then
+                    If dt > 0.0 Then dt = 0.0
+                    dt = -dt
+                    Dim f = If(index = 1, 0.0, dt / (lastDt + dt))
+                    Dim kelvin = 1000000.0 / (RobertsonMired(index - 1) * f + RobertsonMired(index) * (1.0 - f))
+                    Dim uu = uv.U - (RobertsonU(index - 1) * f + RobertsonU(index) * (1.0 - f))
+                    Dim vv = uv.V - (RobertsonV(index - 1) * f + RobertsonV(index) * (1.0 - f))
+                    du = du * (1.0 - f) + lastDu * f
+                    dv = dv * (1.0 - f) + lastDv * f
+                    len = Math.Sqrt(du * du + dv * dv)
+                    Return (kelvin, (uu * du / len + vv * dv / len) * TintScale)
+                End If
+                lastDt = dt : lastDu = du : lastDv = dv
+            Next
+            Return (Double.NaN, Double.NaN)
         End Function
 
         ''' <summary>Trägt der Farbort positive Zapfenantworten? Nur dann ist er als Weißpunkt
@@ -129,17 +188,65 @@ Namespace Services
         ''' <summary>Der behauptete Weißpunkt für einen RELATIVEN Regler: verschiebt den Anker um
         ''' <paramref name="miredShift"/> und <paramref name="tintPoints"/>.
         '''
-        ''' NICHT über den Umweg „Anker in Kelvin, Kelvin plus Versatz, zurück auf die Kurve".
-        ''' Der Aufnahme-Weißpunkt liegt fast nie genau auf der Kurve, und dieser Umweg würde ihn
-        ''' bei Reglerstellung 0 auf sie ziehen - also einen Farbstich einbauen, ohne dass jemand
-        ''' etwas verstellt hat. Verschoben wird deshalb um die DIFFERENZ zweier Kurvenpunkte,
-        ''' angewandt auf den Anker selbst. Bei Versatz 0 kommt der Anker unverändert zurück, und
-        ''' die Matrix ist dann garantiert die Einheitsmatrix.
+        ''' Der Anker wird als Paar aus Temperatur und Tönung gelesen (<see cref="KelvinAndTintOf"/>,
+        ''' die genaue Umkehrung), beide Versätze kommen darauf, und das Paar geht über
+        ''' <see cref="FromKelvinAndTint"/> zurück. Liegt der Anker neben der Planckschen Linie,
+        ''' bleibt er dort: seine eigene Tönung steckt im Paar. Bei Versatz 0 kommt der Anker
+        ''' unverändert zurück, und die Matrix ist dann garantiert die Einheitsmatrix.
         '''
         ''' Vorzeichen wie beim gespeicherten Regler: ein POSITIVER Wert ist wärmer, weil höhere
         ''' Kelvin niedrigere mired haben.</summary>
         Public Shared Function ShiftFromAnchor(anchor As WhitePoint, miredShift As Double,
                                                tintPoints As Double) As WhitePoint
+            If Not anchor.IsValid Then Return D65
+            If miredShift = 0.0 AndAlso tintPoints = 0.0 Then Return anchor
+            If Not Double.IsFinite(miredShift) OrElse Not Double.IsFinite(tintPoints) Then Return anchor
+            Dim pair = KelvinAndTintOf(anchor)
+            If Not Double.IsFinite(pair.Kelvin) OrElse pair.Kelvin <= 0.0 OrElse Not Double.IsFinite(pair.Tint) Then Return anchor
+            Dim targetMired = 1000000.0 / pair.Kelvin - miredShift
+            If targetMired < 1000000.0 / 50000.0 Then targetMired = 1000000.0 / 50000.0
+            If targetMired > 1000000.0 / 1000.0 Then targetMired = 1000000.0 / 1000.0
+            Dim candidate = FromKelvinAndTint(1000000.0 / targetMired, pair.Tint + tintPoints)
+            Return If(candidate.IsValid, candidate, anchor)
+        End Function
+
+        ' ── Die fruehere Rechnung, nur noch fuer die Umrechnung alter Rezepte ───
+
+        ''' <summary>Wie viel v (CIE 1960) ein Tönungspunkt in der früheren Rechnung verschob.</summary>
+        Private Const LegacyTintPerPoint As Double = 0.0001
+
+        ''' <summary>Der Weißpunkt zu Temperatur und Tönung in der FRÜHEREN Rechnung (Weißabgleich
+        ''' Modell 2): Kurve aus Planck und Tageslicht, Tönung 0,0001 v je Punkt. Nur für
+        ''' <c>ImageProcessor.UpgradeWhiteBalanceModel</c>, das alte Rezepte auf denselben
+        ''' Weißpunkt in der heutigen Rechnung umschreibt.</summary>
+        Friend Shared Function LegacyFromKelvinAndTint(kelvin As Double, tint As Double) As WhitePoint
+            If Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return D65
+            Dim locus = LocusPoint(kelvin)
+            If Not locus.IsValid Then Return D65
+            If Not Double.IsFinite(tint) OrElse tint = 0.0 Then Return locus
+            Return LegacyShiftTint(locus, tint)
+        End Function
+
+        ''' <summary>Die Tönung der früheren Rechnung: quer zur Kurve in v, mit Rücknahme in
+        ''' Zehnteln am Rand des Sichtbaren.</summary>
+        Private Shared Function LegacyShiftTint(locus As WhitePoint, tint As Double) As WhitePoint
+            Dim uv = ToCie1960(locus)
+            If Double.IsNaN(uv.U) Then Return locus
+            Dim wanted = tint * LegacyTintPerPoint
+            For attempt = 0 To 20
+                Dim factor = Math.Pow(0.9, attempt)
+                Dim candidate = FromCie1960(New Cie1960(uv.U, uv.V + wanted * factor))
+                If candidate.IsValid AndAlso candidate.X + candidate.Y < 1.0 AndAlso HasPositiveConeResponse(candidate) Then
+                    Return candidate
+                End If
+            Next
+            Return locus
+        End Function
+
+        ''' <summary>Die Verschiebung vom Anker in der FRÜHEREN Rechnung: um die Differenz zweier
+        ''' Kurvenpunkte, danach die Tönung in v. Nur für die Umrechnung alter Rezepte.</summary>
+        Friend Shared Function LegacyShiftFromAnchor(anchor As WhitePoint, miredShift As Double,
+                                                     tintPoints As Double) As WhitePoint
             If Not anchor.IsValid Then Return D65
             If miredShift = 0.0 AndAlso tintPoints = 0.0 Then Return anchor
             If Not Double.IsFinite(miredShift) OrElse Not Double.IsFinite(tintPoints) Then Return anchor
@@ -169,7 +276,7 @@ Namespace Services
                 End If
             End If
 
-            If tintPoints <> 0.0 Then shifted = ShiftTint(shifted, tintPoints)
+            If tintPoints <> 0.0 Then shifted = LegacyShiftTint(shifted, tintPoints)
             Return shifted
         End Function
 
@@ -224,59 +331,30 @@ Namespace Services
 
         ''' <summary>Die Temperatur zu einem Farbort, geklemmt auf den Reglerbereich.
         '''
-        ''' <para>DIE GENAUE UMKEHRUNG von <see cref="FromKelvinAndTint"/>. Die Tönung verschiebt
-        ''' dort nur v der CIE-1960-Ebene, u bleibt stehen. Gesucht wird deshalb die Temperatur,
-        ''' deren Kurvenpunkt dasselbe u hat wie der Farbort; die Tönung ist danach der Rest in v
-        ''' (<see cref="TintPointsOf"/>). Damit ergeben Kelvin-Zahl und Tönung zusammen wieder
-        ''' genau den Farbort.</para>
-        '''
-        ''' <para>FRÜHER STAND HIER DIE NÄHERUNG NACH McCAMY. Sie misst die Temperatur an einer
-        ''' anderen Kurve als der, auf der der Regler läuft, und das Paar aus ihr und der Tönung
-        ''' traf den Aufnahmepunkt nicht: gemessen (whitebalanceprobe --anker) sprang der Weißpunkt
-        ''' bei einer D850 schon bei Kelvin +50 um 0,0039 in uv, mehr als fünfmal so weit wie 50 K
-        ''' entlang der Kurve.</para></summary>
+        ''' <para>DIE GENAUE UMKEHRUNG von <see cref="FromKelvinAndTint"/>, nach der
+        ''' DNG-Spezifikation (<see cref="KelvinAndTintOf"/>): die Temperatur der Isotherme, auf
+        ''' der der Farbort liegt. Die Tönung dazu liefert <see cref="TintPointsOf"/>; Kelvin-Zahl
+        ''' und Tönung ergeben zusammen wieder genau den Farbort, solange die Zahl nicht geklemmt
+        ''' ist.</para></summary>
         Public Shared Function KelvinOf(point As WhitePoint) As Double
             If Not point.IsValid Then Return CaptureWhiteBalanceService.ReferenceKelvin
-            Dim pointUv = ToCie1960(point)
-            If Double.IsNaN(pointUv.U) Then Return CaptureWhiteBalanceService.ReferenceKelvin
-            Dim kelvin = KelvinAtU(pointUv.U)
+            Dim kelvin = KelvinAndTintOf(point).Kelvin
             If Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return CaptureWhiteBalanceService.ReferenceKelvin
             Return Math.Max(MinKelvin, Math.Min(MaxKelvin, kelvin))
         End Function
 
-        ''' <summary>Die Temperatur, deren Kurvenpunkt das gegebene u hat. u fällt entlang der Kurve
-        ''' mit steigender Temperatur, also genügt eine Halbierung. Gesucht wird über einen Bereich
-        ''' weit über den Regler hinaus, damit das Klemmen in <see cref="KelvinOf"/> geschieht und
-        ''' nicht hier als stiller Randwert.</summary>
-        Private Shared Function KelvinAtU(u As Double) As Double
-            Dim low = 1000.0
-            Dim high = 25000.0
-            Dim uLow = ToCie1960(LocusPoint(low)).U
-            Dim uHigh = ToCie1960(LocusPoint(high)).U
-            If Double.IsNaN(uLow) OrElse Double.IsNaN(uHigh) Then Return Double.NaN
-            If u >= uLow Then Return low
-            If u <= uHigh Then Return high
-            For i = 1 To 60
-                Dim mid = (low + high) / 2.0
-                Dim uMid = ToCie1960(LocusPoint(mid)).U
-                If Double.IsNaN(uMid) Then Return Double.NaN
-                If uMid > u Then low = mid Else high = mid
-            Next
-            Return (low + high) / 2.0
-        End Function
-
-        ''' <summary>Die Tönung zu einem Farbort, in Reglerpunkten - die Umkehrung von
-        ''' <see cref="ShiftTint"/>: der Abstand quer zur Kurve, geteilt durch den Faktor eines
-        ''' Punktes. Die Temperatur wird mitgegeben, statt sie hier noch einmal zu bestimmen; der
-        ''' Aufrufer hat sie ohnehin schon.</summary>
+        ''' <summary>Die Tönung zu einem Farbort, in Reglerpunkten, bezogen auf die Isotherme von
+        ''' <paramref name="kelvin"/>: der Abstand vom Punkt der Planckschen Linie, entlang der
+        ''' Isotherme gemessen. Liegt der Farbort auf dieser Isotherme (die Temperatur kam aus
+        ''' <see cref="KelvinOf"/> und ist nicht geklemmt), ist das genau die Tönung der
+        ''' DNG-Spezifikation. Die Temperatur wird mitgegeben, statt sie hier noch einmal zu
+        ''' bestimmen; der Aufrufer hat sie ohnehin schon.</summary>
         Public Shared Function TintPointsOf(point As WhitePoint, kelvin As Double) As Double
-            If Not point.IsValid Then Return 0.0
-            Dim locus = LocusPoint(kelvin)
-            If Not locus.IsValid Then Return 0.0
+            If Not point.IsValid OrElse Not Double.IsFinite(kelvin) OrElse kelvin <= 0.0 Then Return 0.0
+            Dim iso = IsothermAt(kelvin)
             Dim pointUv = ToCie1960(point)
-            Dim locusUv = ToCie1960(locus)
-            If Double.IsNaN(pointUv.V) OrElse Double.IsNaN(locusUv.V) Then Return 0.0
-            Return (pointUv.V - locusUv.V) / TintPerPoint
+            If Double.IsNaN(iso.U) OrElse Double.IsNaN(pointUv.U) Then Return 0.0
+            Return ((pointUv.U - iso.U) * iso.Du + (pointUv.V - iso.V) * iso.Dv) * TintScale
         End Function
 
         ''' <summary>Matrix mal Vektor, beides mit drei Gliedern.</summary>
@@ -288,7 +366,9 @@ Namespace Services
             }
         End Function
 
-        ''' <summary>Der Farbort auf der Kurve, ohne Tönung.</summary>
+        ''' <summary>Der Farbort auf der Kurve der FRÜHEREN Rechnung, ohne Tönung: unterhalb von
+        ''' 4000 K Planck, oberhalb von 4500 K die Tageslichtreihe, dazwischen ein Smoothstep. Nur
+        ''' noch für die Umrechnung alter Rezepte.</summary>
         Private Shared Function LocusPoint(kelvin As Double) As WhitePoint
             Const planckOnlyBelow As Double = 4000.0
             Const daylightOnlyAbove As Double = 4500.0
@@ -501,6 +581,27 @@ Namespace Services
             Dim d65 = DaylightPoint(6504.0)
             results.Add(New CheckResult With {.Name = "Tageslicht 6504 K, x", .Value = d65.X, .Expected = D65.X, .Tolerance = 0.0015})
             results.Add(New CheckResult With {.Name = "Tageslicht 6504 K, y", .Value = d65.Y, .Expected = D65.Y, .Tolerance = 0.0015})
+
+            ' 2a. Die DNG-Rechnung trifft Normlicht A ebenso, und Tönung 0 liegt auf Planck.
+            Dim dngA = ToCie1960(FromKelvinAndTint(2856.0, 0.0))
+            results.Add(New CheckResult With {.Name = "DNG 2856 K, u", .Value = dngA.U, .Expected = 0.256, .Tolerance = 0.0005})
+            results.Add(New CheckResult With {.Name = "DNG 2856 K, v", .Value = dngA.V, .Expected = 0.3495, .Tolerance = 0.0005})
+
+            ' 2b. Hin und zurück über Kelvin und Tönung muss genau dieselben Zahlen ergeben. Nur
+            '     mit Tönungen, die überall rechenbar sind: bei 2500 K und +60 läge der Weißpunkt
+            '     ausserhalb, und die Rücknahme in FromKelvinAndTint liefert gewollt weniger.
+            Dim worstPair = 0.0
+            For Each kelvin In {2500.0, 3200.0, 5500.0, 9000.0}
+                For Each tint In {-80.0, 0.0, 40.0}
+                    Dim pair = KelvinAndTintOf(FromKelvinAndTint(kelvin, tint))
+                    worstPair = Math.Max(worstPair, Math.Max(Math.Abs(pair.Kelvin - kelvin) / kelvin * 1000.0, Math.Abs(pair.Tint - tint)))
+                Next
+            Next
+            results.Add(New CheckResult With {.Name = "DNG Kelvin und Tönung hin und zurück", .Value = worstPair, .Expected = 0.0, .Tolerance = 0.01})
+
+            ' 2c. Positive Tönung behauptet grüneres Licht (größeres v), das Bild wird magenta.
+            Dim greener = ToCie1960(FromKelvinAndTint(5500.0, 50.0)).V - ToCie1960(FromKelvinAndTint(5500.0, 0.0)).V
+            results.Add(New CheckResult With {.Name = "Tönung +50: Behauptung grüner", .Value = If(greener > 0.0, 1.0, 0.0), .Expected = 1.0, .Tolerance = 0.0})
 
             ' 3. Anker gleich Behauptung: keine Matrix, nicht bloß eine fast neutrale.
             Dim identity = BuildMatrix(D65, D65)

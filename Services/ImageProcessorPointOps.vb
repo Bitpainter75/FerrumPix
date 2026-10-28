@@ -793,6 +793,57 @@ Namespace Services
             Return anchor
         End Function
 
+        ''' <summary>Das Weißabgleichsmodell, das neue Rezepte bekommen: chromatische Adaption mit
+        ''' Kelvin-Zahl und Tönung nach der DNG-Spezifikation (ImageAdjustments.WhiteBalanceModel).</summary>
+        Public Const CurrentWhiteBalanceModel As Integer = 3
+
+        ''' <summary>Schreibt ein Rezept mit Weißabgleich Modell 2 auf Modell 3 um, OHNE dass sich
+        ''' der Weißpunkt ändert. Modell 2 rechnete Kelvin und Tönung auf einer Kurve aus Planck und
+        ''' Tageslicht mit 0,0001 v je Tönungspunkt; Modell 3 nach der DNG-Spezifikation. Der
+        ''' behauptete Weißpunkt wird deshalb mit der früheren Rechnung bestimmt und in Zahlen der
+        ''' heutigen zurückgelesen:
+        '''
+        ''' <list type="bullet">
+        ''' <item>Kelvin-Zahl gesetzt, oder nur ein Tönungsversatz bei „wie aufgenommen": das Paar
+        ''' aus Kelvin und Tönung, das genau auf diesen Weißpunkt fällt. Der Tönungsversatz wird
+        ''' damit zur absoluten Angabe.</item>
+        ''' <item>Relative Regler: mired- und Tönungsversatz zwischen dem Paar des Ankers und dem
+        ''' des Weißpunkts. ShiftFromAnchor trifft damit genau denselben Punkt.</item>
+        ''' </list>
+        '''
+        ''' Modell 1 und Rezepte ohne Weißabgleich bleiben, wie sie sind. Aufgerufen beim Laden
+        ''' (FpxService) und beim Übernehmen eines Rezepts in den Editor; ein Rezept mit Modell 2
+        ''' im Speicher würde sonst mit Zahlen angezeigt, die in der heutigen Rechnung etwas
+        ''' anderes bedeuten.</summary>
+        Public Shared Sub UpgradeWhiteBalanceModel(adj As ImageAdjustments)
+            If adj Is Nothing OrElse adj.WhiteBalanceModel <> 2 Then Return
+            adj.WhiteBalanceModel = CurrentWhiteBalanceModel
+            Dim anchor = WhiteBalanceAnchorOf(adj)
+
+            If adj.WhiteBalanceKelvin >= 1000.0 OrElse adj.WhiteBalanceKelvinTint <> 0.0 Then
+                Dim claimed = If(adj.WhiteBalanceKelvin >= 1000.0,
+                    WhiteBalanceAdaptation.LegacyFromKelvinAndTint(adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint),
+                    WhiteBalanceAdaptation.LegacyShiftFromAnchor(anchor, 0.0, adj.WhiteBalanceKelvinTint))
+                Dim pair = WhiteBalanceAdaptation.KelvinAndTintOf(claimed)
+                If Double.IsFinite(pair.Kelvin) AndAlso Double.IsFinite(pair.Tint) Then
+                    adj.WhiteBalanceKelvin = pair.Kelvin
+                    adj.WhiteBalanceKelvinTint = pair.Tint
+                End If
+                Return
+            End If
+
+            If adj.Temperature <> 0.0F OrElse adj.Tint <> 0.0F Then
+                Dim claimed = WhiteBalanceAdaptation.LegacyShiftFromAnchor(anchor, adj.Temperature, adj.Tint)
+                Dim from = WhiteBalanceAdaptation.KelvinAndTintOf(anchor)
+                Dim upto = WhiteBalanceAdaptation.KelvinAndTintOf(claimed)
+                If Double.IsFinite(from.Kelvin) AndAlso Double.IsFinite(upto.Kelvin) AndAlso
+                   Double.IsFinite(from.Tint) AndAlso Double.IsFinite(upto.Tint) Then
+                    adj.Temperature = CSng(1000000.0 / from.Kelvin - 1000000.0 / upto.Kelvin)
+                    adj.Tint = CSng(upto.Tint - from.Tint)
+                End If
+            End If
+        End Sub
+
         ''' <summary>sRGB-Gamma nach Linearlicht und zurueck, als Tabellen mit der Aufloesung der
         ''' Kette. Einmal gebaut, danach nur noch gelesen: die Adaptionsstufe braucht sie je
         ''' Bildpunkt sechsmal, und <c>Math.Pow</c> wuerde dort die ganze Kette ausbremsen.

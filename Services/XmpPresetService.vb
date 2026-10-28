@@ -288,9 +288,12 @@ Namespace Services
             Dim capture = CaptureWhiteBalanceService.ForRawFile(imagePath)
             Dim absoluteWhiteBalance = capture IsNot Nothing AndAlso adj.WhiteBalanceModel <> 1
             If absoluteWhiteBalance Then
+                ' Ein Rezept mit Modell 2 erst auf die heutige Rechnung umschreiben, damit
+                ' stehenbleibende Werte (etwa bei „wie Aufnahme") ihren Weißpunkt behalten.
+                ImageProcessor.UpgradeWhiteBalanceModel(adj)
                 adj.WhiteBalanceAnchorX = capture.X
                 adj.WhiteBalanceAnchorY = capture.Y
-                adj.WhiteBalanceModel = 2
+                adj.WhiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
             End If
 
             If Not keepsCaptureWhiteBalance AndAlso absoluteWhiteBalance Then

@@ -357,7 +357,11 @@ Namespace Services
         ''' <summary>Welches Weißabgleichsmodell für dieses Rezept gilt.
         '''
         ''' 1 = die alte Verstärkung auf Rot und Blau, gerechnet im Gamma-Raum. 2 = chromatische
-        ''' Adaption im Linearlicht (<see cref="WhiteBalanceAdaptation"/>).
+        ''' Adaption im Linearlicht (<see cref="WhiteBalanceAdaptation"/>) mit Kelvin und Tönung auf
+        ''' der früheren eigenen Kurve. 3 = dieselbe Adaption, Kelvin und Tönung nach der
+        ''' DNG-Spezifikation. Ein Rezept mit 2 wird beim Laden auf denselben Weißpunkt in Zahlen
+        ''' von 3 umgeschrieben (<c>ImageProcessor.UpgradeWhiteBalanceModel</c>); gerechnet wird
+        ''' ab 2 immer die heutige Rechnung.
         '''
         ''' WARUM ÜBERHAUPT ZWEI: die beiden geben demselben Reglerwert eine ANDERE Bedeutung.
         ''' Würde die Kette einfach umschalten, sähe jede bereits gespeicherte Bearbeitung anders
