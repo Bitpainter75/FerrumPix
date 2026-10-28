@@ -43,6 +43,11 @@ Namespace Services
         ''' Kanals (0 bis 255). Ein verrauschter Grund hebt sie an (siehe Estimate).</summary>
         Private Const MinimumTolerance As Integer = 12
 
+        ''' <summary>Groesste Toleranz. Ohne Deckel wuchs sie mit einem bunten Rand mit: aus vier
+        ''' gleich grossen Farbflaechen kamen drei in den Mittelwert, die Toleranz lag ueber 255, und
+        ''' der Rand galt als einheitlich. Ein einfarbiger Grund mit Rauschen braucht weit weniger.</summary>
+        Private Const MaximumTolerance As Integer = 60
+
         ''' <summary>Breite des Saums, in dem entmischt wird, in Punkten. Kantenglaettung und eine
         ''' leichte Unschaerfe liegen darin; ein weicher Schatten reicht weiter und bleibt deshalb
         ''' zum Teil stehen.</summary>
@@ -172,7 +177,8 @@ Namespace Services
 
         ''' <summary>Median je Kanal ueber den Randstreifen, nur deckende Punkte. Die Toleranz waechst
         ''' mit der Streuung des Randes: das Dreifache des mittleren Abstands vom Median, wenigstens
-        ''' MinimumTolerance. So bleibt ein rauschender Scan-Grund nicht als Sprenkel stehen.</summary>
+        ''' MinimumTolerance, hoechstens MaximumTolerance. So bleibt ein rauschender Scan-Grund nicht als
+        ''' Sprenkel stehen, und ein bunter Rand gilt nicht als einheitlich.</summary>
         Private Shared Function EstimateBackground(pixels As Byte(), width As Integer, height As Integer) As BackgroundEstimate
             Dim rs As New List(Of Byte)(), gs As New List(Of Byte)(), bs As New List(Of Byte)()
             Dim depth = Math.Max(1, Math.Min(EdgeSampleDepth, Math.Min(width, height) \ 2))
@@ -208,7 +214,7 @@ Namespace Services
                 meanDistance += distances(i)
             Next
             meanDistance /= inner
-            result.Tolerance = Math.Max(MinimumTolerance, CInt(Math.Ceiling(meanDistance * 3.0)))
+            result.Tolerance = Math.Min(MaximumTolerance, Math.Max(MinimumTolerance, CInt(Math.Ceiling(meanDistance * 3.0))))
             Dim matching = 0
             For Each d In distances
                 If d <= result.Tolerance Then matching += 1

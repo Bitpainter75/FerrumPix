@@ -1271,6 +1271,23 @@ Namespace Services
                 Catch
                 End Try
             End If
+            ' Aufnahme-Anker und Weissabgleichmodell wie im Editor (EnsureCaptureWhiteBalanceAnchor):
+            ' erst mit ihnen rechnet die Kalibrierung aus der Kameratabelle auf der Rampe vor der
+            ' Tonkurve (WhiteBalanceOnRamp). Ohne sie rechneten Betrachter, Galerie und Farbsuche
+            ' dieselbe Datei hinter der Kurve, der Editor davor. Die Felder gehoeren der Datei und
+            ' zaehlen nicht als Bearbeitung (FileOwnedPropertyNames).
+            If Not String.IsNullOrWhiteSpace(path) Then
+                Try
+                    Dim capture = CaptureWhiteBalanceService.ForRawFile(path)
+                    If capture IsNot Nothing Then
+                        values.WhiteBalanceAnchorX = capture.X
+                        values.WhiteBalanceAnchorY = capture.Y
+                        values.WhiteBalanceCamera = capture.Camera
+                        values.WhiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
+                    End If
+                Catch
+                End Try
+            End If
             Return values
         End Function
 

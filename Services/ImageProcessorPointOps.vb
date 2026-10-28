@@ -696,19 +696,19 @@ Namespace Services
                adj.CalibrationBlueHue = 0 AndAlso adj.CalibrationBlueSaturation = 0 Then Return Nothing
 
             Dim gains = If(WhiteBalanceOnRamp(adj), CalibrationGainsOnRamp, CalibrationGains)
-            Dim hues = {adj.CalibrationRedHue, adj.CalibrationGreenHue, adj.CalibrationBlueHue}
-            Dim sats = {adj.CalibrationRedSaturation, adj.CalibrationGreenSaturation, adj.CalibrationBlueSaturation}
+            Dim hueValues = {adj.CalibrationRedHue, adj.CalibrationGreenHue, adj.CalibrationBlueHue}
+            Dim saturationValues = {adj.CalibrationRedSaturation, adj.CalibrationGreenSaturation, adj.CalibrationBlueSaturation}
             ' Spalten der verschobenen Primaerfarben, zeilenweise abgelegt: primaries(Zeile * 3 + Spalte).
             Dim primaries(8) As Double
             For p = 0 To 2
                 ' Drehung um die Grauachse (1,1,1)/sqrt(3), Standardform, angewandt auf den Einheitsvektor.
-                Dim angle = hues(p) / 100.0 * gains(p * 3) * Math.PI / 180.0
+                Dim angle = hueValues(p) / 100.0 * gains(p * 3) * Math.PI / 180.0
                 Dim c = Math.Cos(angle), sn = Math.Sin(angle)
                 Dim k = (1.0 - c) / 3.0
                 Dim w = Math.Sqrt(1.0 / 3.0) * sn
                 Dim m = {c + k, k - w, k + w, k + w, c + k, k - w, k - w, k + w, c + k}
                 Dim q = {m(p), m(3 + p), m(6 + p)}
-                Dim factor = Math.Exp(sats(p) / 100.0 * If(sats(p) >= 0, gains(p * 3 + 1), gains(p * 3 + 2)))
+                Dim factor = Math.Exp(saturationValues(p) / 100.0 * If(saturationValues(p) >= 0, gains(p * 3 + 1), gains(p * 3 + 2)))
                 Dim mean = (q(0) + q(1) + q(2)) / 3.0
                 For row = 0 To 2
                     primaries(row * 3 + p) = mean + (q(row) - mean) * factor
@@ -3772,7 +3772,7 @@ Namespace Services
             Dim curvesMelissa = chain.CurvesInMelissa
             Dim hslAdj = chain.Hsl
             Dim schattenToenung = chain.ShadowTint
-            Dim schattenAbdunkeln = chain.ShadowTintDark
+            Dim shadowTintDark = chain.ShadowTintDark
             Dim splitAdj = chain.SplitToning
             Dim pm = chain.PresetMatrix
             Dim pmStrength = chain.PresetStrength
@@ -4108,7 +4108,7 @@ Namespace Services
                             ' Helligkeit (Rec.601), das Abdunkeln kommt getrennt dazu.
                             Dim dr = ShadowTintRed * strength
                             Dim db = ShadowTintBlue * strength
-                            Dim dark = schattenAbdunkeln * weight
+                            Dim dark = shadowTintDark * weight
                             rr = Clamp(rr + dr - dark, 0.0F, 1.0F)
                             bb = Clamp(bb + db - dark, 0.0F, 1.0F)
                             gg = Clamp(gg - (0.299F * dr + 0.114F * db) / 0.587F - dark, 0.0F, 1.0F)
