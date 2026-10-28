@@ -2,8 +2,8 @@
 <component type="desktop-application">
   <id>io.github.bitpainter75.ferrumpix</id>
   <name>FerrumPix</name>
-  <summary>Photo/RAW-Editor, Viewer, Gallery, Immich and Nextcloud Client</summary>
-  <summary xml:lang="de">Foto/RAW-Editor, Betrachter, Galerie, Immich- und Nextcloud-Client</summary>
+  <summary>Photo-Editor, Viewer, Gallery, Immich and Nextcloud Client</summary>
+  <summary xml:lang="de">Foto-Editor, Viewer, Galerie, Immich und Nextcloud Client</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
@@ -104,6 +104,34 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.72-1" date="2026-10-28">
+      <description>
+        <p>This update makes presets look much closer to their original appearance, adds a new Liquify brush and an easy way to remove solid-colour backgrounds. Noise reduction and sharpening have also been improved, along with several other features:</p>
+        <p xml:lang="de">Mit diesem Update werden Presets noch originalgetreuer dargestellt. Dazu kommen ein neuer Verflüssigen-Pinsel und eine einfache Möglichkeit, einfarbige Hintergründe zu entfernen. Auch die Rauschreduzierung und das Schärfen wurden verbessert, und an einigen anderen Stellen hat sich ebenfalls etwas getan:</p>
+        <ul>
+          <li>White balance, camera calibration, the colour mixer, split toning and tone curves have all been improved to produce results much closer to the reference program. Strong white balance adjustments no longer add unwanted colour to bright areas, and temperature and tint now use the familiar standard scale. Presets with their own distinctive look should appear much closer to how they were originally intended. Photos you've already edited with white balance adjustments will keep their appearance, although edits involving camera calibration or hue changes in the colour mixer may look slightly different.</li>
+          <li xml:lang="de">Weißabgleich, Kamerakalibrierung, Farbmischer, Teiltonung und Gradationskurven wurden überarbeitet und liefern jetzt Ergebnisse, die deutlich näher am Referenzprogramm liegen. Starke Weißabgleich-Anpassungen verfärben helle Bildbereiche nicht mehr unnötig, und Temperatur und Tönung verwenden jetzt die gewohnte Standardskala. Besonders Presets mit einem eigenen Farbstil sehen dadurch wesentlich näher am Original aus. Bereits bearbeitete Fotos mit angepasstem Weißabgleich behalten ihr bisheriges Aussehen. Bei Änderungen an der Kamerakalibrierung oder den Farbtönen im Farbmischer kann es dagegen zu leichten Unterschieden kommen.</li>
+
+          <li>Luminance noise reduction is now much more effective at smoothing noisy areas, while the Detail slider helps preserve fine textures like hair and fabric. Sharpening also brings out fine details more clearly without making noise stand out. Colour noise reduction is now faster too, and can take advantage of your graphics card.</li>
+          <li xml:lang="de">Die Helligkeitsrauschreduzierung glättet verrauschte Bereiche jetzt deutlich stärker. Mit dem Detailregler bleiben feine Strukturen wie Haare oder Stoff trotzdem erhalten. Auch beim Schärfen kommen feine Details besser zur Geltung, ohne dass das Bildrauschen unnötig verstärkt wird. Die Farbrauschreduzierung arbeitet außerdem schneller und kann jetzt auch die Grafikkarte nutzen.</li>
+
+          <li>The Distort tool now includes a Liquify mode. With its brushes, you can push, expand, pinch, twirl, smooth or restore parts of an image. Just like the other distortion tools, your changes remain editable, and masks and objects follow the transformations automatically.</li>
+          <li xml:lang="de">Das Verzerren-Werkzeug hat jetzt einen neuen Modus zum Verflüssigen. Mit verschiedenen Pinseln kannst du Bildbereiche verschieben, aufblähen, zusammenziehen, verdrehen, glätten oder wiederherstellen. Wie bei den anderen Verzerrungen bleiben deine Änderungen jederzeit bearbeitbar. Masken und Objekte werden dabei automatisch mitverformt.</li>
+
+          <li>You can now remove solid-colour backgrounds, such as the white background of a product photo, and make them transparent. This works with both photos and individual image layers. Soft edges are preserved, without leaving unwanted bright outlines.</li>
+          <li xml:lang="de">Einfarbige Hintergründe lassen sich jetzt ganz einfach entfernen und transparent machen, zum Beispiel der weiße Hintergrund eines Produktfotos. Das funktioniert sowohl bei ganzen Fotos als auch bei einzelnen Bildebenen. Weiche Übergänge bleiben dabei erhalten, ohne störende helle Ränder.</li>
+
+          <li>In the viewer, you can now drag a zoomed-in photo to move around the image instead of accidentally creating a crop selection. There are also two new options: automatically move to the next photo after rating it, and play slideshows in random order.</li>
+          <li xml:lang="de">Im Bildbetrachter kannst du vergrößerte Fotos jetzt einfach mit der Maus verschieben, ohne dabei versehentlich einen Auswahlrahmen zum Zuschneiden aufzuziehen. Außerdem gibt es zwei neue Einstellungen: Nach dem Bewerten kann automatisch zum nächsten Foto gewechselt werden, und Diashows lassen sich in zufälliger Reihenfolge abspielen.</li>
+
+          <li>RAW development now preserves strong colours, such as intense stage lighting, much better, with smoother transitions into overexposed areas. Converted DNG files also open at the correct brightness instead of appearing too bright. The Canon EOS R8 Mark II now uses the camera's original white balance, and the EOS R6 has received its own calibrated brightness settings.</li>
+          <li xml:lang="de">Bei der RAW-Entwicklung bleiben kräftige Farben, etwa bei intensiver Bühnenbeleuchtung, jetzt besser erhalten. Auch die Übergänge zu überbelichteten Bereichen wirken weicher und natürlicher. Konvertierte DNG-Dateien werden nicht mehr zu hell geöffnet. Außerdem übernimmt FerrumPix bei der Canon EOS R8 Mark II jetzt den Weißabgleich der Kamera, während die EOS R6 eine eigene, abgestimmte Helligkeitskorrektur erhalten hat.</li>
+
+          <li>There are a few smaller fixes as well. Presets and LUTs no longer appear multiple times in the list, and large folders now show a progress bar while loading. Camera details, dates and GPS locations are correctly read from Huawei HEIC photos again. Hiding a photo now immediately reveals transparency, and the GPU compatibility check gives clearer feedback about its results.</li>
+          <li xml:lang="de">Auch ein paar kleinere Fehler wurden behoben: Presets und LUTs erscheinen nicht mehr mehrfach in der Liste, und beim Laden großer Ordner wird jetzt ein Fortschrittsbalken angezeigt. Bei HEIC-Fotos von Huawei werden Kameradaten, Aufnahmedatum und GPS-Standort wieder richtig erkannt. Beim Ausblenden eines Fotos wird die Transparenz sofort sichtbar, und die GPU-Kompatibilitätsprüfung zeigt ihr Ergebnis jetzt verständlicher an.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.71-4" date="2026-10-26">
       <description>
         <p>This update improves RAW development and preset compatibility, makes it easier to copy adjustments between photos and brings a few welcome improvements to face recognition:</p>

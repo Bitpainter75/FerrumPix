@@ -5,7 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FerrumPix</RootNamespace>
     <AssemblyName>FerrumPix</AssemblyName>
-    <Version>0.9.71</Version>
+    <Version>0.9.72</Version>
     <AssemblyVersion>0.9.71.0</AssemblyVersion>
     <FileVersion>0.9.71.0</FileVersion>
     <InformationalVersion>0.9.71-1</InformationalVersion>
