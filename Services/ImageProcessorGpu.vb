@@ -736,6 +736,7 @@ Namespace Services
             u("vibMode") = If(chain.VibranceExponential, 1.0F, If(chain.VibranceByHue IsNot Nothing, 2.0F, If(chain.Vibrance <> 0.0F, 3.0F, 0.0F)))
             u("vibrance") = chain.Vibrance
             u("shadowTint") = chain.ShadowTint
+            u("shadowTintDark") = chain.ShadowTintDark
             Dim tint = ShadowTintParameters()
             u("shadowTintK") = tint.Strength
             u("shadowTintRB") = New Single() {tint.Red, tint.Blue}
@@ -1019,6 +1020,7 @@ uniform float mixerProPhoto; uniform float ppGate; uniform float ppChromaGate;
 uniform float vibMode; uniform float vibrance;
 uniform float shadowTint;
 uniform float shadowTintK;
+uniform float shadowTintDark;
 uniform float2 shadowTintRB;
 uniform float4 stw0;
 uniform float4 stw1;
@@ -1706,9 +1708,10 @@ half4 main(float2 p) {
         float strength = shadowTint / 100.0 * shadowTintK * w;
         float dr = shadowTintRB.x * strength;
         float db = shadowTintRB.y * strength;
-        rr = clamp(rr + dr, 0.0, 1.0);
-        bb = clamp(bb + db, 0.0, 1.0);
-        gg = clamp(gg - (0.299 * dr + 0.114 * db) / 0.587, 0.0, 1.0);
+        float dark = shadowTintDark * shadowTintK * w;
+        rr = clamp(rr + dr - dark, 0.0, 1.0);
+        bb = clamp(bb + db - dark, 0.0, 1.0);
+        gg = clamp(gg - (0.299 * dr + 0.114 * db) / 0.587 - dark, 0.0, 1.0);
     }
     if (useMixer > 0.5) {
         float3 v = float3(rr, gg, bb);

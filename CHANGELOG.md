@@ -58,6 +58,13 @@
   highlights no longer brightens the picture, and presets that use both the parametric and the
   point curve keep more detail in the shadows.
 
+- **Camera calibration looks as intended:** the hue and saturation sliders of the red, green and
+  blue primaries now act on all colours that contain them, so lowering blue saturation also
+  softens warm tones, and several sliders together no longer pile up. Calibration now acts on the
+  white balanced picture, and the shadow tint darkens slightly as it tints. Pictures you already
+  edited with camera calibration, and the setting that adapts colours to the camera model, may
+  look different.
+
 - **Hiding the photo shows transparency right away:** after hiding the photo in the layers panel,
   the empty areas showed black until the next change. They now show the transparency background
   at once.

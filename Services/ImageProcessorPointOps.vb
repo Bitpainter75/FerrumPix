@@ -161,8 +161,11 @@ Namespace Services
             Public SplitLumTable As Single()
 
             ''' Gruen-/Magenta-Verschiebung, am staerksten in den Tiefen (crs:ShadowTint).
-            ''' Luminanzabhaengig, laesst sich also nicht in die Matrix falten.
+            ''' Luminanzabhaengig, laesst sich also nicht in die Matrix falten. Steht hier schon
+            ''' mit der Kennlinie aus ShadowTintResponse, nicht als roher Reglerwert.
             Public ShadowTint As Single
+            ''' Abdunkeln aller Kanaele, das mit der Schattentoenung einhergeht (gleiches Gewicht).
+            Public ShadowTintDark As Single
 
             ''' Preset-Farbmatrix samt Ueberblendstaerke (das Preset wird ueber das Original geblendet).
             Public PresetMatrix As Single()
@@ -251,14 +254,18 @@ Namespace Services
             Dim wantsColor = adj.ChainExposure() <> 0 OrElse adj.Temperature <> 0 OrElse adj.Tint <> 0 OrElse
                              adj.Saturation <> 0 OrElse adj.Contrast <> 0 OrElse
                              adj.Brightness <> 0
-            ' Kalibrierung wirkt auf die Primaerfarben und gehoert damit VOR Weissabgleich und
-            ' Saettigung - dieselbe Reihenfolge wie ueblich.
+            ' Kalibrierung wirkt auf die Primaerfarben des ABGEGLICHENEN Bildes, also NACH dem
+            ' Weissabgleich und vor der Saettigung. Davor gerechnet traf sie mit einem kraeftigen
+            ' Weissabgleich nicht: an 20 Bildern mit Sandlot (2850 K, Toenung -66) und dessen
+            ' Kalibrierung, die Matrix direkt auf die Referenz mit Weissabgleich allein gelegt, lag
+            ' die Vorhersage danach bei 7,5 dE, davor bei 17,1, ohne Kalibrierung bei 20,5
+            ' (kalreihenfolge.py). Ohne Weissabgleich ist die Reihenfolge gleichgueltig.
             '
             ' SIE RECHNET LINEAR, in derselben Matrix wie der Weissabgleich (3x3 ohne Versatz), der
             ' Pixeldurchlauf bleibt also unveraendert schnell. Als Matrix auf gammakodierten Werten
             ' schaukelte sie sich mit den Kurven eines Presets auf: an TEL_0674 mit Cool Glow Rot
             ' 1,34 statt 1,20 der Buntheit der Referenz, der Farbton 6 statt 3 Grad daneben. Linear
-            ' und neu geeicht trifft auch jeder Regler fuer sich besser (CalibrationGains).
+            ' und neu geeicht trifft auch jeder Regler fuer sich besser (BuildCalibrationMatrix).
             Dim kalibrierung = BuildCalibrationMatrix(adj)
             If kalibrierung IsNot Nothing Then
                 Dim cal = {kalibrierung(0), kalibrierung(1), kalibrierung(2),
@@ -266,10 +273,11 @@ Namespace Services
                            kalibrierung(10), kalibrierung(11), kalibrierung(12)}
                 Dim w = chain.WhiteBalanceMatrix
                 If w IsNot Nothing Then
+                    ' Kalibrierung mal Weissabgleich: auf den Bildpunkt wirkt zuerst der Weissabgleich.
                     Dim combined(8) As Single
                     For i = 0 To 2
                         For j = 0 To 2
-                            combined(i * 3 + j) = w(i * 3) * cal(j) + w(i * 3 + 1) * cal(3 + j) + w(i * 3 + 2) * cal(6 + j)
+                            combined(i * 3 + j) = cal(i * 3) * w(j) + cal(i * 3 + 1) * w(3 + j) + cal(i * 3 + 2) * w(6 + j)
                         Next
                     Next
                     cal = combined
@@ -438,7 +446,9 @@ Namespace Services
             End If
 
             If adj.CalibrationShadowTint <> 0 Then
-                chain.ShadowTint = adj.CalibrationShadowTint
+                Dim tint = ShadowTintResponse(adj.CalibrationShadowTint)
+                chain.ShadowTint = 100.0F * tint
+                chain.ShadowTintDark = ShadowTintDarkening * Math.Abs(tint) + ShadowTintDarkeningMagenta * tint
                 chain.IsIdentity = False
             End If
 
@@ -578,7 +588,15 @@ Namespace Services
         ' und zu den Lichtern hin auslaufend, und laesst die Helligkeit stehen. Die Vorgaengerin wirkte
         ' nur unter der Bildmitte, in den tiefsten Schatten doppelt so stark und drehte Rot- und
         ' Hauttoene dort sechsmal so weit (Farbton der Rottoene +35,7 Grad gegen +5,6 bei -50).
+        ' Die Helligkeit laesst sie dort aber NICHT stehen (nachgemessen 2026-10-28 an 20 Bildern
+        ' bei +-50 und +-100, schattentoenung_modell.py): beide Richtungen dunkeln mit demselben
+        ' Gewicht ab, Magenta etwas mehr (bei +100 rund 3,4 L in den Tiefen, bei -100 rund 1,1),
+        ' und die Wirkung waechst flacher als linear (bei 100 nicht doppelt so stark wie bei 50).
         Private Const ShadowTintStrength As Single = 0.062F
+        Private Const ShadowTintExponent As Double = 0.81
+        Private Const ShadowTintScale As Single = 0.95F
+        Private Const ShadowTintDarkening As Single = 0.42F
+        Private Const ShadowTintDarkeningMagenta As Single = 0.044F
         Private Const ShadowTintRed As Single = 0.7F
         Private Const ShadowTintBlue As Single = 0.483F
         Private Shared ReadOnly ShadowTintLevels As Single() = {0.0F, 0.05F, 0.15F, 0.27F, 0.42F, 0.6F, 0.85F, 1.0F}
@@ -587,6 +605,12 @@ Namespace Services
         ''' <summary>Dieselben Zahlen fuer den Shader der Punktkette.</summary>
         Private Shared Function ShadowTintParameters() As (Strength As Single, Red As Single, Blue As Single, Weights As Single())
             Return (ShadowTintStrength, ShadowTintRed, ShadowTintBlue, ShadowTintWeights)
+        End Function
+
+        ''' <summary>Wirksame Staerke der Schattentoenung (-0,95 bis 0,95) zum Reglerwert (-100 bis 100).</summary>
+        Private Shared Function ShadowTintResponse(slider As Single) As Single
+            Dim magnitude = ShadowTintScale * CSng(Math.Pow(Math.Abs(slider) / 100.0, ShadowTintExponent))
+            Return If(slider < 0, -magnitude, magnitude)
         End Function
 
         ''' <summary>Gewicht der Schattentoenung ueber der Helligkeit (Rec.601, 0 bis 1).</summary>
@@ -624,109 +648,93 @@ Namespace Services
             Return t * t * (3.0 - 2.0 * t)
         End Function
 
-        ''' <summary>STAERKE JE KALIBRIERUNGSREGLER, in dieser Folge: Rot Farbton, Rot Saettigung plus
-        ''' und minus, dann Gruen und Blau ebenso. Ein Feld, damit die Reglereichung sie per Reflexion
-        ''' setzen kann (REGLER_KAL_GAINS).
+        ''' <summary>DIE KALIBRIERUNG JE PRIMAERFARBE, in dieser Folge: Rot Farbton (Grad bei 100), Rot
+        ''' Saettigung nach oben und nach unten (k in e^(k Wert/100)), dann Gruen und Blau ebenso. Ein
+        ''' Feld, damit die Reglereichung sie per Reflexion setzen kann (REGLER_KAL_GAINS).
         '''
-        ''' Geeicht 2026-10-25 an 62 Bildern fuer die lineare Kalibrierung (Reglereichung kal-* +-50):
-        ''' je Regler der Kehrwert unserer Wirkungsstaerke durch die der Referenz. Treffer gegen die
-        ''' fruehere Matrix auf gammakodierten Werten: Rot Farbton 43/43 auf 61/60 %, Rot Saettigung
-        ''' 53/59 auf 58/64, Gruen Farbton 39/39 auf 53/47, Gruen Saettigung 58/59 auf 68/72, Blau
-        ''' Farbton 57/59 auf 62/64, Blau Saettigung +50 58 wie vorher, -50 50 auf 51.</summary>
-        Friend Shared CalibrationGains As Single() = {0.8F, 0.97F, 1.38F, 1.04F, 0.56F, 0.78F, 1.66F, 2.97F, 3.2F}
+        ''' Angepasst 2026-10-28 an 20 Bildern, Einzelregler bei +-50 und +-100, direkt an den
+        ''' Referenzbildern (Diagnostics/Reglereichung/kalmodell.py): das Nullbild der Referenz
+        ''' linearisiert, mit der Matrix multipliziert und gegen ihre Kalibrierungsstellung gemessen.
+        ''' Drei Primaerfarben fast gleich: 27 bis 30 Grad, nach oben k 1,3 bis 1,4, nach unten 1.</summary>
+        Friend Shared CalibrationGains As Single() = {29.0F, 1.32F, 1.0F, 27.0F, 1.3F, 1.0F, 30.0F, 1.38F, 0.98F}
 
-        ''' <summary>Wie weit Blau entsaettigt werden darf: Faktor bis -1, also ueber Grau hinaus.
-        ''' Bei 0 (wie Rot und Gruen) blieb Blau -50 an dieser Grenze stehen, Staerke 2,55 gegen 4,09
-        ''' der Referenz und 41 % Treffer; mit -1 und der Verstaerkung 3,2 sind es 3,76 und 51 %. Rot
-        ''' und Gruen behalten Grau als Grenze, gemessen ist dort nur +-50, wo sie nicht greift.</summary>
-        Private Const BlueSaturationFloor As Single = -1.0F
-
+        ''' <summary>Die Kalibrierung als EINE lineare Matrix auf sRGB, oder Nothing.
+        '''
+        ''' Wie die Referenz verschiebt sie die Primaerfarben eines weiten Farbraums und skaliert die
+        ''' Spalten so, dass Weiss weiss bleibt: hier lineares ProPhoto als Stellvertreter der
+        ''' Kameraprimaerfarben, jede Primaerfarbe um die Grauachse gedreht, ihr Abstand von der
+        ''' Grauachse mal e^(k Wert/100), dann die Spalten mal s mit P s = (1,1,1), hin und zurueck ueber
+        ''' dieselbe Matrix wie die Kurven (ApplyCurvesInMelissa).
+        '''
+        ''' Vorher drehte und saettigte jede Primaerfarbe in linearem sRGB mit eigener, zeilennormierter
+        ''' Matrix, nacheinander. Einzeln trafen die Regler damit leidlich, zusammen gar nicht: die
+        ''' Kalibrierung von Sandlot (Rot +100/+45, Gruen -62/-33, Blau -62/-100) lag 17,1 dE neben der
+        ''' Referenz bei 16,7 Wirkung, die Blau-Saettigung wirkte nur auf Blau statt vor allem Gelb und
+        ''' Gruen zu entfaerben. Mit diesem Modell 5,7; die Einzelregler bei +-100 im Mittel 3,3 statt
+        ''' 5,0 (alles in der Naeherung von kalmodell.py, ohne Tonkurve).</summary>
         Private Shared Function BuildCalibrationMatrix(adj As ImageAdjustments) As Single()
             If adj.CalibrationRedHue = 0 AndAlso adj.CalibrationRedSaturation = 0 AndAlso
                adj.CalibrationGreenHue = 0 AndAlso adj.CalibrationGreenSaturation = 0 AndAlso
                adj.CalibrationBlueHue = 0 AndAlso adj.CalibrationBlueSaturation = 0 Then Return Nothing
 
-            ' Primaerfarbe drehen und saettigen. Rueckgabe: die neue Spalte der Matrix.
-            Dim Wandeln =
-                Function(p As Single(), hue As Single, sat As Single, floor As Single) As Single()
-                    ' +/-100 entsprechen +/-30 Grad - der Bereich, in dem sich die Regler der Referenz bewegen.
-                    Dim angle = hue / 100.0 * 30.0 * Math.PI / 180.0
-                    Dim c = Math.Cos(angle), sn = Math.Sin(angle)
-                    ' Drehung um die Grauachse (1,1,1)/sqrt(3), Standardform.
-                    Dim k = (1.0 - c) / 3.0
-                    Dim w = Math.Sqrt(1.0 / 3.0) * sn
-                    Dim m = {
-                        c + k, k - w, k + w,
-                        k + w, c + k, k - w,
-                        k - w, k + w, c + k
-                    }
-                    Dim r = CSng(m(0) * p(0) + m(1) * p(1) + m(2) * p(2))
-                    Dim g = CSng(m(3) * p(0) + m(4) * p(1) + m(5) * p(2))
-                    Dim b = CSng(m(6) * p(0) + m(7) * p(1) + m(8) * p(2))
-                    ' Saettigung: Abstand von der Grauachse skalieren, Helligkeit unangetastet.
-                    Dim factor = Math.Max(floor, 1.0F + sat / 100.0F)
-                    Dim grau = 0.299F * r + 0.587F * g + 0.114F * b
-                    Return New Single() {grau + (r - grau) * factor,
-                                         grau + (g - grau) * factor,
-                                         grau + (b - grau) * factor}
-                End Function
-
-            ' Staerke je Primaerfarbe und Richtung: CalibrationGains.
-            Dim DirectedSaturation = Function(sat As Single, plus As Single, minus As Single) As Single
-                                 Return sat * If(sat >= 0, plus, minus)
-                             End Function
             Dim gains = CalibrationGains
-            Dim pr = Wandeln(New Single() {1, 0, 0}, adj.CalibrationRedHue * gains(0), DirectedSaturation(adj.CalibrationRedSaturation, gains(1), gains(2)), 0.0F)
-            Dim pg = Wandeln(New Single() {0, 1, 0}, adj.CalibrationGreenHue * gains(3), DirectedSaturation(adj.CalibrationGreenSaturation, gains(4), gains(5)), 0.0F)
-            Dim pb = Wandeln(New Single() {0, 0, 1}, adj.CalibrationBlueHue * gains(6), DirectedSaturation(adj.CalibrationBlueSaturation, gains(7), gains(8)), BlueSaturationFloor)
-
-            ' Spalten sind die gewandelten Primaerfarben - Skia-Layout (5 Spalten je Zeile).
-            ' JEDE PRIMAERFARBE IHRE EIGENE MATRIX, nacheinander (erst Blau, dann Gruen, dann Rot).
-            ' Alle drei Spalten in EINE Matrix gelegt und dann normiert, hoben sich die Regler
-            ' gegenseitig auf: am Konzertbild mit Cool Glow (Rot +22/-15, Blau -15/+11) nahm die
-            ' Referenz dem Rot 1,11 Chroma, wir 0,18, obwohl jeder Regler fuer sich traf. Nacheinander
-            ' addieren sich die Wirkungen wie dort.
-            Dim identity = {New Single() {1, 0, 0}, New Single() {0, 1, 0}, New Single() {0, 0, 1}}
-            Dim mr = NormalizedCalibrationColumns(pr, identity(1), identity(2))
-            Dim mg = NormalizedCalibrationColumns(identity(0), pg, identity(2))
-            Dim mb = NormalizedCalibrationColumns(identity(0), identity(1), pb)
-            Dim combined = MultiplyMatrix3(mr, MultiplyMatrix3(mg, mb))
-
-            Return New Single() {
-                combined(0)(0), combined(0)(1), combined(0)(2), 0, 0,
-                combined(1)(0), combined(1)(1), combined(1)(2), 0, 0,
-                combined(2)(0), combined(2)(1), combined(2)(2), 0, 0,
-                0, 0, 0, 1, 0
-            }
-        End Function
-
-        ''' <summary>Matrix aus drei Spalten, die Zeilensummen auf 1 normiert.
-        ''' Ohne die Normierung bleibt Neutralgrau nicht neutral: Grau ist (1,1,1), die Matrix bildet
-        ''' es auf die SUMME der Spalten ab, und sobald eine gedreht wurde, ist die Summe nicht mehr
-        ''' grau. Gemessen wurde aus (128,128,128) ein (116,170,96).</summary>
-        Private Shared Function NormalizedCalibrationColumns(c0 As Single(), c1 As Single(), c2 As Single()) As Single()()
-            Dim rows = {
-                New Single() {c0(0), c1(0), c2(0)},
-                New Single() {c0(1), c1(1), c2(1)},
-                New Single() {c0(2), c1(2), c2(2)}
-            }
-            For Each row In rows
-                Dim sum = row(0) + row(1) + row(2)
-                If Math.Abs(sum) > 0.0001F Then
-                    row(0) /= sum : row(1) /= sum : row(2) /= sum
-                End If
+            Dim hues = {adj.CalibrationRedHue, adj.CalibrationGreenHue, adj.CalibrationBlueHue}
+            Dim sats = {adj.CalibrationRedSaturation, adj.CalibrationGreenSaturation, adj.CalibrationBlueSaturation}
+            ' Spalten der verschobenen Primaerfarben, zeilenweise abgelegt: primaries(Zeile * 3 + Spalte).
+            Dim primaries(8) As Double
+            For p = 0 To 2
+                ' Drehung um die Grauachse (1,1,1)/sqrt(3), Standardform, angewandt auf den Einheitsvektor.
+                Dim angle = hues(p) / 100.0 * gains(p * 3) * Math.PI / 180.0
+                Dim c = Math.Cos(angle), sn = Math.Sin(angle)
+                Dim k = (1.0 - c) / 3.0
+                Dim w = Math.Sqrt(1.0 / 3.0) * sn
+                Dim m = {c + k, k - w, k + w, k + w, c + k, k - w, k - w, k + w, c + k}
+                Dim q = {m(p), m(3 + p), m(6 + p)}
+                Dim factor = Math.Exp(sats(p) / 100.0 * If(sats(p) >= 0, gains(p * 3 + 1), gains(p * 3 + 2)))
+                Dim mean = (q(0) + q(1) + q(2)) / 3.0
+                For row = 0 To 2
+                    primaries(row * 3 + p) = mean + (q(row) - mean) * factor
+                Next
             Next
-            Return rows
-        End Function
-
-        Private Shared Function MultiplyMatrix3(a As Single()(), b As Single()()) As Single()()
-            Dim r = {New Single(2) {}, New Single(2) {}, New Single(2) {}}
+            ' Spalten skalieren: P s = (1,1,1), damit Weiss weiss bleibt.
+            Dim inv = Invert3(primaries)
+            If inv Is Nothing Then Return Nothing
+            Dim sc = {inv(0) + inv(1) + inv(2), inv(3) + inv(4) + inv(5), inv(6) + inv(7) + inv(8)}
+            Dim scaled(8) As Double
             For i = 0 To 2
                 For j = 0 To 2
-                    r(i)(j) = a(i)(0) * b(0)(j) + a(i)(1) * b(1)(j) + a(i)(2) * b(2)(j)
+                    scaled(i * 3 + j) = primaries(i * 3 + j) * sc(j)
+                Next
+            Next
+            Dim toProPhoto = {0.529214, 0.330063, 0.140723, 0.098324, 0.873625, 0.028051, 0.016879, 0.117714, 0.865407}
+            Dim toSrgb = {2.034515, -0.727257, -0.307258, -0.228704, 1.23143, -0.002726, -0.008573, -0.153316, 1.161889}
+            Dim t = Multiply3(toSrgb, Multiply3(scaled, toProPhoto))
+            Return New Single() {
+                CSng(t(0)), CSng(t(1)), CSng(t(2)), 0, 0,
+                CSng(t(3)), CSng(t(4)), CSng(t(5)), 0, 0,
+                CSng(t(6)), CSng(t(7)), CSng(t(8)), 0, 0,
+                0, 0, 0, 1, 0}
+        End Function
+
+        ''' <summary>Produkt zweier 3x3-Matrizen, zeilenweise abgelegt.</summary>
+        Private Shared Function Multiply3(a As Double(), b As Double()) As Double()
+            Dim r(8) As Double
+            For i = 0 To 2
+                For j = 0 To 2
+                    r(i * 3 + j) = a(i * 3) * b(j) + a(i * 3 + 1) * b(3 + j) + a(i * 3 + 2) * b(6 + j)
                 Next
             Next
             Return r
+        End Function
+
+        ''' <summary>Inverse einer 3x3-Matrix, zeilenweise abgelegt, oder Nothing, wenn sie singulaer ist.</summary>
+        Private Shared Function Invert3(m As Double()) As Double()
+            Dim det = m(0) * (m(4) * m(8) - m(5) * m(7)) - m(1) * (m(3) * m(8) - m(5) * m(6)) + m(2) * (m(3) * m(7) - m(4) * m(6))
+            If Math.Abs(det) < 0.000000001 Then Return Nothing
+            Dim d = 1.0 / det
+            Return {(m(4) * m(8) - m(5) * m(7)) * d, (m(2) * m(7) - m(1) * m(8)) * d, (m(1) * m(5) - m(2) * m(4)) * d,
+                    (m(5) * m(6) - m(3) * m(8)) * d, (m(0) * m(8) - m(2) * m(6)) * d, (m(2) * m(3) - m(0) * m(5)) * d,
+                    (m(3) * m(7) - m(4) * m(6)) * d, (m(1) * m(6) - m(0) * m(7)) * d, (m(0) * m(4) - m(1) * m(3)) * d}
         End Function
 
         ''' <summary>Die Adaptionsmatrix fuer diese Anpassungen, oder Nothing.
@@ -3595,6 +3603,7 @@ Namespace Services
             Dim curvesMelissa = chain.CurvesInMelissa
             Dim hslAdj = chain.Hsl
             Dim schattenToenung = chain.ShadowTint
+            Dim schattenAbdunkeln = chain.ShadowTintDark
             Dim splitAdj = chain.SplitToning
             Dim pm = chain.PresetMatrix
             Dim pmStrength = chain.PresetStrength
@@ -3924,13 +3933,16 @@ Namespace Services
                         ' --- Schattentoenung (Kalibrierung): Gruen/Magenta, am staerksten in den Tiefen ---
                         If schattenToenung <> 0.0F Then
                             Dim brightness = 0.299F * rr + 0.587F * gg + 0.114F * bb
-                            Dim strength = schattenToenung / 100.0F * ShadowTintStrength * ShadowTintWeight(brightness)
-                            ' Positiv = Magenta, negativ = Gruen; die Helligkeit bleibt (Rec.601).
+                            Dim weight = ShadowTintStrength * ShadowTintWeight(brightness)
+                            Dim strength = schattenToenung / 100.0F * weight
+                            ' Positiv = Magenta, negativ = Gruen; der Farbversatz haelt die
+                            ' Helligkeit (Rec.601), das Abdunkeln kommt getrennt dazu.
                             Dim dr = ShadowTintRed * strength
                             Dim db = ShadowTintBlue * strength
-                            rr = Clamp(rr + dr, 0.0F, 1.0F)
-                            bb = Clamp(bb + db, 0.0F, 1.0F)
-                            gg = Clamp(gg - (0.299F * dr + 0.114F * db) / 0.587F, 0.0F, 1.0F)
+                            Dim dark = schattenAbdunkeln * weight
+                            rr = Clamp(rr + dr - dark, 0.0F, 1.0F)
+                            bb = Clamp(bb + db - dark, 0.0F, 1.0F)
+                            gg = Clamp(gg - (0.299F * dr + 0.114F * db) / 0.587F - dark, 0.0F, 1.0F)
                         End If
 
                         ' --- 6b. Weitere Korrekturen: auf das fertig korrigierte Farbbild, vor Preset
