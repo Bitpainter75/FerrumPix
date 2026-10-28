@@ -3,8 +3,8 @@
 ### Changes
 
 - **Stronger luminance noise reduction with a working Detail slider:** the luminance noise
-  reduction now smooths as strongly as other photo programs at the same value; before, even 100
-  did less than they do at 25. The Detail slider now keeps fine texture such as hair and fabric
+  reduction now smooths much more strongly at the same value; before, even 100 did little. The
+  Detail slider now keeps fine texture such as hair and fabric
   while flat areas stay smooth, and it has a visible effect from about the middle of its range.
   Presets with a luminance value now look as intended. Pictures you already edited with luminance
   noise reduction come out smoother.
@@ -29,11 +29,12 @@
   presets more closely. Pictures you already edited with hue changes in the colour mixer may
   look slightly different.
 
-- **Temperature and tint of RAW photos now use the same scale as other RAW converters:** the
-  numbers in the editor, in saved edits and in XMP presets now mean the same thing, so a preset
+- **Temperature and tint of RAW photos on the standard scale:** the numbers in the editor, in
+  saved edits and in XMP presets now mean the same thing, so a preset
   with a green or magenta tint looks as intended. The tint shown for a photo "as shot" is now a
-  small, familiar value. Pictures you already edited keep their look; only the numbers shown for
-  them change.
+  small, familiar value. When you set a very different light, colours now shift the way the
+  camera would have recorded them under that light, not just the white. Pictures you already
+  edited keep their look; only the numbers shown for them change.
 
 - **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
   picture is shown once before the order is mixed again.

@@ -501,6 +501,14 @@ Namespace Services
         Public Property WhiteBalanceAnchorX As Double = 0
         Public Property WhiteBalanceAnchorY As Double = 0
 
+        ''' <summary>Die Kamera, mit deren zwei Kameramatrizen der Decode das Bild entwickelt und den
+        ''' Anker bestimmt hat (Schlüssel von <see cref="CameraIlluminantMatrixTable"/>, etwa
+        ''' "Canon|EOS R6"), oder leer. Steht sie da, rechnet der Weißabgleich ab Modell 3 die
+        ''' Kameramatrix für das behauptete Licht neu, wie die DNG-Spezifikation
+        ''' (<see cref="WhiteBalanceAdaptation.BuildMatrix(WhitePoint, WhitePoint, CameraIlluminantMatrixTable.Entry)"/>).
+        ''' Gehört wie der Anker dem Bild.</summary>
+        Public Property WhiteBalanceCamera As String = ""
+
         ''' <summary>Die behauptete Farbtemperatur in Kelvin, für Modell 2 an RAW-Dateien. 0 heißt
         ''' „wie aufgenommen", und das ist etwas anderes als 6504: es ist der Anker selbst, also
         ''' garantiert keine Stufe und kein Rundungsrest.
@@ -1161,7 +1169,7 @@ Namespace Services
         ''' ausdruecklich mit.</remarks>
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
-            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
+            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceCamera", "WhiteBalanceModel", "WhiteBalanceMode",
             "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
             "RampBlackShareInSource", "ShadowSaturationInSource",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
@@ -1325,6 +1333,7 @@ Namespace Services
             result.WhiteBalanceModel = WhiteBalanceModel
             result.WhiteBalanceAnchorX = WhiteBalanceAnchorX
             result.WhiteBalanceAnchorY = WhiteBalanceAnchorY
+            result.WhiteBalanceCamera = WhiteBalanceCamera
             Return result
         End Function
 
@@ -1430,7 +1439,7 @@ Namespace Services
         ''' sichtbar.</summary>
         Private Shared ReadOnly FileOwnedPropertyNames As String() = {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
-            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceModel", "WhiteBalanceMode",
+            "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceCamera", "WhiteBalanceModel", "WhiteBalanceMode",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure", "BakedOperationsApplied",
             "SelectionScopeEnabled", "HasActiveSelection", "ActiveSelectionIsMask",
             "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent", "SelectionHeightPercent",
@@ -1494,6 +1503,7 @@ Namespace Services
                 .WhiteBalanceMode = WhiteBalanceMode,
                 .WhiteBalanceAnchorX = WhiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = WhiteBalanceAnchorY,
+                .WhiteBalanceCamera = WhiteBalanceCamera,
                 .WhiteBalanceKelvin = WhiteBalanceKelvin,
                 .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
                 .RawHighlightRecovery = RawHighlightRecovery,

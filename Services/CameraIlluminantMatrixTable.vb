@@ -262,6 +262,57 @@ Namespace Services
             }
         End Function
 
+        ''' <summary>Die Matrix in LINEAREM sRGB (zeilenweise), die ein Bild, das der Decode mit dem
+        ''' Aufnahmeweiss (<paramref name="anchorX"/>, <paramref name="anchorY"/>) entwickelt hat, so
+        ''' umrechnet, als haette er es mit dem behaupteten Weiss entwickelt. Nothing, wenn sie sich
+        ''' nicht bilden laesst. Ohne Luminanz-Normierung; die macht der Aufrufer.
+        '''
+        ''' <para>WARUM NICHT BLOSS BRADFORD. Die DNG-Spezifikation mischt die Kameramatrix nach dem
+        ''' Weissabgleich zwischen ColorMatrix1 und ColorMatrix2. Wird ein anderes Licht behauptet,
+        ''' gilt also auch eine andere Matrix. Bradford allein trifft das Weiss, aber nicht die
+        ''' bunten Farben: gemessen an einer EOS R6 bei behaupteten 2850 K (Aufnahme 4850 K) lagen
+        ''' unscharfe weisse Blueten unter einem gruenen Weissabgleich bei uns auf ProPhoto-Farbton
+        ''' 160 bis 180 statt 120 bis 160, und der Farbmischer eines Presets griff dort nicht
+        ''' (Diagnostics/Reglereichung/weissmatrix.py).</para>
+        '''
+        ''' <code>sRGB_neu = S · Bradford(behauptet nach D65) · CM(behauptet)^-1 · CM(Aufnahme) ·
+        ''' Bradford(D65 nach Aufnahme) · S^-1 · sRGB_alt</code>
+        ''' Mit gleicher Matrix fuer beide Lichter ist das genau die reine Bradford-Adaption vom
+        ''' behaupteten Licht auf den Anker.</summary>
+        Public Shared Function RebalanceMatrix(entry As Entry, anchorX As Double, anchorY As Double,
+                                               claimedX As Double, claimedY As Double) As Double()
+            If entry Is Nothing Then Return Nothing
+            Dim cameraAnchor = Mix(entry, MixWeight(entry, anchorX, anchorY))
+            Dim claimedInverse = Invert3x3(Mix(entry, MixWeight(entry, claimedX, claimedY)))
+            Dim toD65 = BradfordAdaptation(claimedX, claimedY)
+            Dim anchorToD65 = BradfordAdaptation(anchorX, anchorY)
+            If claimedInverse Is Nothing OrElse toD65 Is Nothing OrElse anchorToD65 Is Nothing Then Return Nothing
+            Dim fromD65 = Invert3x3(anchorToD65)
+            If fromD65 Is Nothing Then Return Nothing
+            Return Multiply(SrgbFromXyz, Multiply(toD65, Multiply(claimedInverse,
+                   Multiply(cameraAnchor, Multiply(fromD65, XyzFromSrgb)))))
+        End Function
+
+        ''' <summary>Das Licht, unter dem ein Bildpunkt neutral wird, nach der DNG-Spezifikation:
+        ''' der Bildpunkt (LINEARES sRGB, so wie der Decode ihn mit dem Aufnahmeweiss entwickelt
+        ''' hat) zurueck in den Kameraraum, dort als neutrale Kameraantwort genommen und wie ein
+        ''' Aufnahmeweiss geloest. Nothing, wenn das nicht geht. Die Umkehrung von
+        ''' <see cref="RebalanceMatrix"/> fuer die Pipette.</summary>
+        Public Shared Function NeutralWhite(entry As Entry, anchorX As Double, anchorY As Double,
+                                            linearSrgb As Double()) As Solution
+            If entry Is Nothing OrElse linearSrgb Is Nothing OrElse linearSrgb.Length < 3 Then Return Nothing
+            Dim anchorToD65 = BradfordAdaptation(anchorX, anchorY)
+            If anchorToD65 Is Nothing Then Return Nothing
+            Dim fromD65 = Invert3x3(anchorToD65)
+            If fromD65 Is Nothing Then Return Nothing
+            Dim cameraAnchor = Mix(entry, MixWeight(entry, anchorX, anchorY))
+            Dim camera = Apply(Multiply(cameraAnchor, Multiply(fromD65, XyzFromSrgb)), linearSrgb)
+            For i = 0 To 2
+                If Not (Double.IsFinite(camera(i)) AndAlso camera(i) > 0.0) Then Return Nothing
+            Next
+            Return SolveNeutral(entry, camera)
+        End Function
+
         ''' <summary>Anteil der waermeren Matrix: linear in mired zwischen den beiden Lichtarten,
         ''' ausserhalb geklemmt (DNG SDK, FindXYZtoCamera).</summary>
         Private Shared Function MixWeight(entry As Entry, x As Double, y As Double) As Double

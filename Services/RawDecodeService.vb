@@ -1959,7 +1959,8 @@ Namespace Services
                 .CamMul = camMul,
                 .PreMul = If(own?.DaylightMultipliers, ReadFourMultipliers(_getPreMul, handle)),
                 .RgbCam = If(own?.RgbFromCamera, ReadRgbCamMatrix(handle)),
-                .IlluminantWhite = If(illuminant Is Nothing, Nothing, New Double() {illuminant.WhiteX, illuminant.WhiteY})
+                .IlluminantWhite = If(illuminant Is Nothing, Nothing, New Double() {illuminant.WhiteX, illuminant.WhiteY}),
+                .IlluminantCamera = If(illuminant Is Nothing, Nothing, IlluminantCameraKey(handle))
             }
         End Function
 
@@ -1997,6 +1998,15 @@ Namespace Services
         ''' wird unter LibRaws vereinheitlichtem Namen, wie bei der eigenen D65-Tabelle. Gueltig nach
         ''' open_file.</summary>
         Private Shared Function IlluminantSolution(handle As IntPtr, camMul As Single()) As CameraIlluminantMatrixTable.Solution
+            Dim key = IlluminantCameraKey(handle)
+            If key Is Nothing Then Return Nothing
+            Return CameraIlluminantMatrixTable.Solve(CameraIlluminantMatrixTable.Entries(key), camMul)
+        End Function
+
+        ''' <summary>Der Schluessel der Kamera dieses Handles in der Tabelle mit zwei Kameramatrizen
+        ''' ("Marke|Modell" unter LibRaws vereinheitlichtem Namen), oder Nothing, wenn die Tabelle
+        ''' sie nicht kennt. Gueltig nach open_file.</summary>
+        Private Shared Function IlluminantCameraKey(handle As IntPtr) As String
             If handle = IntPtr.Zero OrElse _getIparams Is Nothing Then Return Nothing
             If CameraIlluminantMatrixTable.Entries.Count = 0 Then Return Nothing
             Dim iparams = _getIparams(handle)
@@ -2004,7 +2014,8 @@ Namespace Services
             Dim make = FixedText(iparams, IparamsNormalizedMakeOffset)
             Dim model = FixedText(iparams, IparamsNormalizedModelOffset)
             If Not IsPlausibleText(make) OrElse Not IsPlausibleText(model) Then Return Nothing
-            Return CameraIlluminantMatrixTable.Solve(CameraIlluminantMatrixTable.ForCamera(make, model), camMul)
+            Dim key = make.Trim() & "|" & model.Trim()
+            Return If(CameraIlluminantMatrixTable.Entries.ContainsKey(key), key, Nothing)
         End Function
 
         ''' <summary>Wendet rgb_cam auf LibRaws lineare 16-Bit-Ausgabe an, an Ort und Stelle.

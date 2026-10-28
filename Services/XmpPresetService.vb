@@ -293,6 +293,7 @@ Namespace Services
                 ImageProcessor.UpgradeWhiteBalanceModel(adj)
                 adj.WhiteBalanceAnchorX = capture.X
                 adj.WhiteBalanceAnchorY = capture.Y
+                adj.WhiteBalanceCamera = capture.Camera
                 adj.WhiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
             End If
 

@@ -194,6 +194,7 @@ Namespace ViewModels
         End Property
         Private _whiteBalanceAnchorX As Double = 0
         Private _whiteBalanceAnchorY As Double = 0
+        Private _whiteBalanceCamera As String = ""
         Private _whiteBalanceKelvin As Double = 0
         Private _whiteBalanceKelvinTint As Double = 0
         Private _colorGradeShadowHue As Double = 0
@@ -6273,6 +6274,17 @@ Namespace ViewModels
             If _whiteBalanceModel = 1 Then Return
             If _whiteBalanceAnchorX > 0.0 AndAlso _whiteBalanceAnchorY > 0.0 Then
                 If _whiteBalanceModel < 2 Then _whiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
+                ' Die Kamera der zwei Kameramatrizen nachtragen, wenn das Rezept sie noch nicht
+                ' kennt, aber nur solange am Weissabgleich nichts verstellt ist: sonst sähe eine
+                ' gespeicherte Bearbeitung danach anders aus. Und nur, wenn der Anker derselbe ist.
+                If String.IsNullOrEmpty(_whiteBalanceCamera) AndAlso _whiteBalanceKelvin = 0.0 AndAlso
+                   _whiteBalanceKelvinTint = 0.0 AndAlso _temperature = 0.0 AndAlso _tint = 0.0 Then
+                    Dim known = CaptureWhiteBalanceService.ForRawFile(path)
+                    If known IsNot Nothing AndAlso Math.Abs(known.X - _whiteBalanceAnchorX) < 0.000001 AndAlso
+                       Math.Abs(known.Y - _whiteBalanceAnchorY) < 0.000001 Then
+                        _whiteBalanceCamera = known.Camera
+                    End If
+                End If
                 RaiseWhiteBalanceModeChanged()
                 Return
             End If
@@ -6281,6 +6293,7 @@ Namespace ViewModels
             If capture Is Nothing Then Return
             _whiteBalanceAnchorX = capture.X
             _whiteBalanceAnchorY = capture.Y
+            _whiteBalanceCamera = capture.Camera
             _whiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
             RaiseWhiteBalanceModeChanged()
         End Sub
@@ -6440,8 +6453,12 @@ Namespace ViewModels
                     ' Der ANKER, nicht der jetzige Reglerstand: das nachgeschlagene Bild trägt
                     ' keinen Weissabgleich, der Bildpunkt steht also auf dem Anker.
                     Dim anchor = New WhitePoint(_whiteBalanceAnchorX, _whiteBalanceAnchorY)
+                    ' Mit den Kameramatrizen der Aufnahme, wenn die Kette sie nimmt: dieselbe
+                    ' Entscheidung wie dort (ImageProcessor.WhiteBalanceCameraOf).
+                    Dim camera = ImageProcessor.WhiteBalanceCameraOf(New ImageAdjustments With {
+                        .WhiteBalanceModel = _whiteBalanceModel, .WhiteBalanceCamera = _whiteBalanceCamera})
                     Dim neutral = WhiteBalanceAdaptation.NeutralizeSample(anchor, New Double() {
-                        SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b)})
+                        SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b)}, camera)
                     Dim kelvin = WhiteBalanceAdaptation.KelvinOf(neutral)
                     Dim tintPoints = WhiteBalanceAdaptation.TintPointsOf(neutral, kelvin)
                     ' Als Paar, wie im Setter des Reglers: trifft die Stelle die Aufnahme, steht
@@ -23171,6 +23188,7 @@ Namespace ViewModels
                 .WhiteBalanceMode = _whiteBalance,
                 .WhiteBalanceAnchorX = _whiteBalanceAnchorX,
                 .WhiteBalanceAnchorY = _whiteBalanceAnchorY,
+                .WhiteBalanceCamera = _whiteBalanceCamera,
                 .WhiteBalanceKelvin = _whiteBalanceKelvin,
                 .WhiteBalanceKelvinTint = _whiteBalanceKelvinTint,
                 .Exposure = CSng(_exposure),
@@ -24716,6 +24734,7 @@ Namespace ViewModels
             _whiteBalanceModel = adj.WhiteBalanceModel
             _whiteBalanceAnchorX = adj.WhiteBalanceAnchorX
             _whiteBalanceAnchorY = adj.WhiteBalanceAnchorY
+            _whiteBalanceCamera = If(adj.WhiteBalanceCamera, "")
             _whiteBalanceKelvin = adj.WhiteBalanceKelvin
             _whiteBalanceKelvinTint = adj.WhiteBalanceKelvinTint
             _exposure = adj.Exposure
@@ -25303,6 +25322,7 @@ Namespace ViewModels
             _whiteBalanceKelvinTint = 0
             _whiteBalanceAnchorX = 0
             _whiteBalanceAnchorY = 0
+            _whiteBalanceCamera = ""
             _whiteBalanceModel = 0
             _colorGradeShadowHue = 0
             _colorGradeShadowSaturation = 0

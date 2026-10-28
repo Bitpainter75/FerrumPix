@@ -30,6 +30,10 @@ Namespace Services
         ''' genau diesem Weiss.</summary>
         Public Property IlluminantWhite As Double()
 
+        ''' <summary>Der Schlüssel der Kamera in <see cref="CameraIlluminantMatrixTable"/>, mit der
+        ''' <see cref="IlluminantWhite"/> gelöst ist, oder Nothing.</summary>
+        Public Property IlluminantCamera As String
+
     End Class
 
     ''' <summary>Der Weißabgleich der Aufnahme als Zahl.</summary>
@@ -46,6 +50,10 @@ Namespace Services
         ''' <summary>Farbort des Aufnahmelichts (CIE 1931).</summary>
         Public Property X As Double
         Public Property Y As Double
+
+        ''' <summary>Die Kamera der Tabelle mit zwei Kameramatrizen, aus der der Farbort stammt
+        ''' (<see cref="CameraColorFacts.IlluminantCamera"/>), oder leer.</summary>
+        Public Property Camera As String = ""
 
     End Class
 
@@ -96,7 +104,11 @@ Namespace Services
         ''' Multiplikatoren, und dann gibt es die Zahl eben nicht.</summary>
         Public Shared Function FromCameraFacts(facts As CameraColorFacts) As CaptureWhiteBalance
             If facts Is Nothing Then Return Nothing
-            If facts.IlluminantWhite IsNot Nothing Then Return FromWhitePoint(facts.IlluminantWhite(0), facts.IlluminantWhite(1))
+            If facts.IlluminantWhite IsNot Nothing Then
+                Dim result = FromWhitePoint(facts.IlluminantWhite(0), facts.IlluminantWhite(1))
+                If result IsNot Nothing Then result.Camera = If(facts.IlluminantCamera, "")
+                Return result
+            End If
             Dim matrix = If(facts.RgbCamAfterProcess, facts.RgbCam)
             Return FromMultipliers(facts.CamMul, facts.PreMul, matrix)
         End Function

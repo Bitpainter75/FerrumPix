@@ -466,6 +466,44 @@ Namespace Services
             Return NormalizeLuminance(Multiply(XyzToLinearSrgb, Multiply(m, LinearSrgbToXyz)))
         End Function
 
+        ''' <summary>Wie <see cref="BuildMatrix(WhitePoint, WhitePoint)"/>, aber mit den beiden
+        ''' Kameramatrizen der Aufnahme: das Bild wird so umgerechnet, als hätte der Decode es mit
+        ''' dem behaupteten Licht entwickelt, samt der dafür gemischten Kameramatrix
+        ''' (<see cref="CameraIlluminantMatrixTable.RebalanceMatrix"/>). Ohne Kamera der reine
+        ''' Bradford-Weg.</summary>
+        Public Shared Function BuildMatrix(anchor As WhitePoint, claimed As WhitePoint,
+                                           camera As CameraIlluminantMatrixTable.Entry) As Double()
+            If camera Is Nothing Then Return BuildMatrix(anchor, claimed)
+            If Not anchor.IsValid OrElse Not claimed.IsValid Then Return Nothing
+            If Math.Abs(anchor.X - claimed.X) < 0.0000005 AndAlso Math.Abs(anchor.Y - claimed.Y) < 0.0000005 Then
+                Return Nothing
+            End If
+            If Not HasPositiveConeResponse(claimed) Then Return Nothing
+            Dim m = CameraIlluminantMatrixTable.RebalanceMatrix(camera, anchor.X, anchor.Y, claimed.X, claimed.Y)
+            If m Is Nothing Then Return BuildMatrix(anchor, claimed)
+            For i = 0 To 8
+                If Not Double.IsFinite(m(i)) Then Return BuildMatrix(anchor, claimed)
+            Next
+            Return NormalizeLuminance(m)
+        End Function
+
+        ''' <summary>Wie <see cref="NeutralizeSample(WhitePoint, Double())"/>, mit den Kameramatrizen
+        ''' der Aufnahme: der Bildpunkt wird im Kameraraum als neutral genommen und wie ein
+        ''' Aufnahmeweiss gelöst (<see cref="CameraIlluminantMatrixTable.NeutralWhite"/>). So trifft
+        ''' die Pipette in einem Zug, auch wenn die Kette die Matrix mit dem Licht wechselt.
+        ''' <paramref name="anchor"/> ist das Licht, mit dem <paramref name="displayed"/> entwickelt
+        ''' ist; ohne Kamera der reine Bradford-Weg.</summary>
+        Public Shared Function NeutralizeSample(anchor As WhitePoint, displayed As Double(),
+                                                camera As CameraIlluminantMatrixTable.Entry) As WhitePoint
+            If camera Is Nothing Then Return NeutralizeSample(anchor, displayed)
+            If displayed Is Nothing OrElse displayed.Length < 3 OrElse Not anchor.IsValid Then Return anchor
+            Dim solution = CameraIlluminantMatrixTable.NeutralWhite(camera, anchor.X, anchor.Y, displayed)
+            If solution Is Nothing Then Return NeutralizeSample(anchor, displayed)
+            Dim candidate = New WhitePoint(solution.WhiteX, solution.WhiteY)
+            If Not candidate.IsValid OrElse candidate.X + candidate.Y >= 1.0 OrElse Not HasPositiveConeResponse(candidate) Then Return anchor
+            Return candidate
+        End Function
+
         ''' <summary>Zieht die Matrix so, dass Weiß seine Luminanz behält.
         '''
         ''' WARUM ÜBERHAUPT: eine reine Adaption hält die Luminanz nur für DEN Weißpunkt, auf den

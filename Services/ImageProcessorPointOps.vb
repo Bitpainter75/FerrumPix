@@ -738,13 +738,23 @@ Namespace Services
 
             Dim anchor = WhiteBalanceAnchorOf(adj)
             Dim claimed = ClaimedWhitePointOf(adj)
-            Dim m = WhiteBalanceAdaptation.BuildMatrix(anchor, claimed)
+            Dim m = WhiteBalanceAdaptation.BuildMatrix(anchor, claimed, WhiteBalanceCameraOf(adj))
             If m Is Nothing Then Return Nothing
             Dim result(8) As Single
             For i = 0 To 8
                 result(i) = CSng(m(i))
             Next
             Return result
+        End Function
+
+        ''' <summary>Die beiden Kameramatrizen, mit denen der Anker bestimmt ist, oder Nothing: nur
+        ''' ab Weissabgleich Modell 3 und nur, wenn die Tabelle die Kamera kennt. Oeffentlich, weil
+        ''' die Pipette dieselbe Entscheidung braucht.</summary>
+        Public Shared Function WhiteBalanceCameraOf(adj As ImageAdjustments) As CameraIlluminantMatrixTable.Entry
+            If adj Is Nothing OrElse adj.WhiteBalanceModel < CurrentWhiteBalanceModel Then Return Nothing
+            If String.IsNullOrWhiteSpace(adj.WhiteBalanceCamera) Then Return Nothing
+            Dim entry As CameraIlluminantMatrixTable.Entry = Nothing
+            Return If(CameraIlluminantMatrixTable.Entries.TryGetValue(adj.WhiteBalanceCamera, entry), entry, Nothing)
         End Function
 
         ''' <summary>Der Anker dieser Anpassungen: das Licht der Aufnahme, oder D65 fuer alles ohne

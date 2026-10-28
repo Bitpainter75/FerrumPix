@@ -4494,6 +4494,7 @@ Namespace Services
             state.Temperature = neutral.Temperature : state.Tint = neutral.Tint
             state.WhiteBalanceModel = neutral.WhiteBalanceModel
             state.WhiteBalanceAnchorX = neutral.WhiteBalanceAnchorX : state.WhiteBalanceAnchorY = neutral.WhiteBalanceAnchorY
+            state.WhiteBalanceCamera = neutral.WhiteBalanceCamera
             state.WhiteBalanceKelvin = neutral.WhiteBalanceKelvin : state.WhiteBalanceKelvinTint = neutral.WhiteBalanceKelvinTint
             state.CalibrationRedHue = neutral.CalibrationRedHue : state.CalibrationRedSaturation = neutral.CalibrationRedSaturation
             state.CalibrationGreenHue = neutral.CalibrationGreenHue : state.CalibrationGreenSaturation = neutral.CalibrationGreenSaturation
@@ -4631,7 +4632,7 @@ Namespace Services
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
-                adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY,
+                adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY, adj.WhiteBalanceCamera,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
                 adj.SharpenMasking, adj.SharpenMethod,
                 adj.NoiseReduction, adj.NoiseReductionMethod, adj.NoiseReductionDetail, adj.Blur, adj.ColorNoiseReduction,
