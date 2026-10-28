@@ -43,6 +43,10 @@
 
 ### Fixes
 
+- **Hiding the photo shows transparency right away:** after hiding the photo in the layers panel,
+  the empty areas showed black until the next change. They now show the transparency background
+  at once.
+
 - **Clearer graphics card check:** after a successful check, the performance settings now say
   plainly that image editing uses the graphics card. On a Mac with an Apple chip, the card shows
   up with the chip's name as a built-in graphics unit instead of a number.

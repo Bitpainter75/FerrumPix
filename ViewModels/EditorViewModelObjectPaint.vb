@@ -1985,6 +1985,9 @@ Namespace ViewModels
             SelectedAnnotationIndex = 0
             _backgroundHidden = True
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            ' Ohne diese Meldung blieb der Grund hinter dem entfernten Bereich schwarz, bis eine
+            ' andere Aenderung den Pinsel zufaellig nachzog.
+            Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             ' Der entfernte Bereich soll DURCHSICHTIG werden. Eine Hintergrundfarbe des Dokuments
             ' legt der Renderer aber auch bei ausgeblendetem Foto wieder auf (ApplyAnnotations), und
             ' dann stuende sie dort, wo der Hintergrund weg sein soll. Sie geht deshalb im selben

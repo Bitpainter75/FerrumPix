@@ -24962,6 +24962,9 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             _backgroundHidden = adj.BackgroundHidden
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            ' Der Grund hinter durchsichtigen Stellen haengt am ausgeblendeten Foto (siehe
+            ' TransparencyBackgroundBrush); ohne Meldung blieb dort Schwarz stehen.
+            Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             _baseLayerLockPosition = adj.BaseLayerLockPosition
             _baseLayerLockTransparency = adj.BaseLayerLockTransparency
             _pixelLayerHidden = adj.PixelLayerHidden
@@ -25697,6 +25700,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsLayerStackVisible))
             Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             RaisePixelLayerVisibilityChanged()
             Me.RaisePropertyChanged(NameOf(ShapeIconSearchText))
             UpdateShapeIconStates()
@@ -27230,6 +27234,9 @@ Namespace ViewModels
             CaptureUndoState("BackgroundVisibility")
             _backgroundHidden = Not _backgroundHidden
             Me.RaisePropertyChanged(NameOf(IsBackgroundVisible))
+            ' Ausgeblendet zeigt die Anzeige den Grund fuer durchsichtige Stellen (Schachbrett oder
+            ' Farbe aus den Einstellungen); der Pinsel dafuer haengt an diesem Schalter.
+            Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
         End Sub
