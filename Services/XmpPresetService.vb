@@ -577,6 +577,10 @@ Namespace Services
             ' Die Knoten unten trafen gemessen nur die Haelfte von Dunkel und Hell und setzten die
             ' Zonen zu weit in die Mitte (Dunkel +50 hob die Tiefen um 2,3 statt 6,9 L). Andere
             ' Teilungen verschieben die Kurve stueckweise linear auf die Standardteilung.
+            ' Die Parametrik wirkt VOR der Punktkurve, die Punktkurve liest also ihr Ergebnis. Gemessen
+            ' an 79 Aufnahmen mit Cool Glow (Punktkurve und Parametrik): Treffer 58 auf 62 Prozent,
+            ' die Tiefen +2,7 statt +1,0 L gegen +2,5 der Referenz; beide addiert lagen die Tiefen zu
+            ' dunkel, Punktkurve zuerst traf 61 Prozent.
             If ToneSliderCurves.Has("ParametricShadows") Then
                 Dim measuredBase = ImageProcessor.ParseCurvePoints(pointCurve)
                 Dim fromX = {0.0, shadowSplit, midtoneSplit, highlightSplit, 255.0}
@@ -585,11 +589,12 @@ Namespace Services
                 Dim mx = 0
                 Do
                     Dim u = InterpolateLinear(fromX, toX, mx) / 255.0
-                    Dim y = ImageProcessor.EvaluateCurveSpline(measuredBase, mx) + 255.0 * (
+                    Dim lifted = mx + 255.0 * (
                         ToneSliderCurves.Lift("ParametricShadows", shadowsAmount, u) +
                         ToneSliderCurves.Lift("ParametricDarks", darksAmount, u) +
                         ToneSliderCurves.Lift("ParametricLights", lightsAmount, u) +
                         ToneSliderCurves.Lift("ParametricHighlights", highlightsAmount, u))
+                    Dim y = ImageProcessor.EvaluateCurveSpline(measuredBase, Math.Max(0.0, Math.Min(255.0, lifted)))
                     measured.Add($"{mx},{CInt(Math.Max(0, Math.Min(255, Math.Round(y))))}")
                     If mx = 255 Then Exit Do
                     mx = Math.Min(255, mx + 8)

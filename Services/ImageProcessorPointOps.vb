@@ -460,6 +460,11 @@ Namespace Services
                 GradeVector(If(hasMidtone, adj.ColorGradeMidtoneHue, 0), If(hasMidtone, adj.ColorGradeMidtoneSaturation, 0), chain.SplitOffsets, 3)
                 GradeVector(If(hasHighlight, adj.ColorGradeHighlightHue, 0), If(hasHighlight, adj.ColorGradeHighlightSaturation, 0), chain.SplitOffsets, 6)
                 GradeVector(If(hasGlobal, adj.ColorGradeGlobalHue, 0), If(hasGlobal, adj.ColorGradeGlobalSaturation, 0), chain.SplitOffsets, 9)
+                ' Tiefen und Lichter toenen bei der Referenz ohne Helligkeitsversatz (gemessen an
+                ' gg-tiefen/lichter-h30/h210: dL unter 0,7 in jeder Zone, global und Mitten dagegen bis
+                ' 2,5); der Farbtonanteil dY gilt deshalb nur fuer Mitten und Global.
+                chain.SplitOffsets(0) = 0.0F
+                chain.SplitOffsets(6) = 0.0F
                 chain.IsIdentity = False
             End If
 
@@ -1534,7 +1539,8 @@ Namespace Services
         ''' (Diagnostics/Reglereichung/gradmodell.py): die Referenz legt einen GLEICHEN Farbversatz auf
         ''' alle Bildpunkte der Zone, statt sie zur Tonfarbe hin zu mischen; ihr Farbrad ist nicht der
         ''' HSL-Farbkreis; ihre Zonen sind breiter (Tiefen bis Y 0,9, Lichter ab Y 0,15); und die
-        ''' Helligkeit aendert sich nur um den kleinen Anteil, den der Farbton selbst mitbringt.
+        ''' Helligkeit aendert sich nur um den kleinen Anteil, den der Farbton selbst mitbringt, und
+        ''' das nur in Mitten und Global (Tiefen und Lichter halten Y).
         ''' Gerechnet in Y/Cb/Cr (BT.601) auf den Gammawerten: der Versatz je Zone mal deren Gewicht an
         ''' der Helligkeit Y des Bildpunkts, alle vier Zonen addiert.</summary>
         Private Shared Sub ApplyColorGrade(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,

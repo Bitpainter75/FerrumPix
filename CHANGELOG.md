@@ -54,6 +54,10 @@
 
 ### Fixes
 
+- **Presets with split toning and tone curves look as intended:** split toning in the shadows and
+  highlights no longer brightens the picture, and presets that use both the parametric and the
+  point curve keep more detail in the shadows.
+
 - **Hiding the photo shows transparency right away:** after hiding the photo in the layers panel,
   the empty areas showed black until the next change. They now show the transparency background
   at once.
