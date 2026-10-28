@@ -799,7 +799,8 @@ Namespace ViewModels
                 Return _pendingWorkingCommits > 0 OrElse _depthRunning OrElse _subjectRunning OrElse
                        _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
-                       _autoGeometryRunning OrElse _layerImportRunning OrElse _presetImportRunning
+                       _autoGeometryRunning OrElse _layerImportRunning OrElse _presetImportRunning OrElse
+                       _edgeBackgroundRunning
             End Get
         End Property
 
@@ -852,6 +853,54 @@ Namespace ViewModels
             If _previewRunning = value Then Return
             _previewRunning = value
             Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
+        End Sub
+
+        ''' <summary>Ein Preset, eine LUT oder ein Filter ist angewendet, und das Bild dazu wird noch
+        ''' gerechnet. Bei einer grossen RAW mit Rauschminderung dauert das Sekunden, und ohne Anzeige
+        ''' sah es aus, als taete die Anwendung nichts (Nutzerbefund). Bewusst OHNE Sperre wie die
+        ''' Live-Vorschau: wer Presets durchklickt, soll den naechsten waehlen koennen, ohne auf den
+        ''' vorigen zu warten.
+        '''
+        ''' Endet, sobald kein Render mehr laeuft und keine Aenderung mehr ansteht
+        ''' (<see cref="RegisterPreviewRenderEnd"/>), egal ob fertig, abgebrochen oder fehlgeschlagen;
+        ''' sonst bliebe die Anzeige nach einem Fehler stehen.</summary>
+        Private _lookRenderWaiting As Boolean
+        Private _lookRenderVisible As Boolean
+        Private _lookRenderRun As Integer
+
+        Public ReadOnly Property ShowsLookRenderBusy As Boolean
+            Get
+                Return _lookRenderVisible AndAlso Not _showsBusy
+            End Get
+        End Property
+
+        Private Sub BeginLookRenderWait()
+            _lookRenderWaiting = True
+            _lookRenderRun += 1
+            Dim ignored = ShowLookRenderAfterDelay(_lookRenderRun)
+        End Sub
+
+        Private Async Function ShowLookRenderAfterDelay(pass As Integer) As Task
+            ' Dieselbe Frist wie bei der Sperre: ein schnelles Bild soll nichts aufblitzen lassen.
+            Await Task.Delay(BusyDelayMs)
+            If pass <> _lookRenderRun OrElse Not _lookRenderWaiting OrElse _lookRenderVisible Then Return
+            ' Hat die Aenderung gar keinen Render ausgeloest (dasselbe Preset noch einmal) oder ist er
+            ' schon durch, gibt es nichts zu warten; ohne diese Abfrage bliebe die Anzeige stehen.
+            If Not _previewPending AndAlso Volatile.Read(_activePreviewRenders) = 0 Then
+                EndLookRenderWait()
+                Return
+            End If
+            _lookRenderVisible = True
+            Me.RaisePropertyChanged(NameOf(ShowsLookRenderBusy))
+        End Function
+
+        Private Sub EndLookRenderWait()
+            If Not _lookRenderWaiting Then Return
+            _lookRenderWaiting = False
+            _lookRenderRun += 1
+            If Not _lookRenderVisible Then Return
+            _lookRenderVisible = False
+            Me.RaisePropertyChanged(NameOf(ShowsLookRenderBusy))
         End Sub
 
         ''' <summary>Umgekehrt, fuer die Bedienbarkeit ganzer Panelbereiche. Der Ladezustand zaehlt
@@ -1009,6 +1058,7 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(ShowsBusy))
                     Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
                     Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
+                    Me.RaisePropertyChanged(NameOf(ShowsLookRenderBusy))
                 End If
                 Return
             End If
@@ -1025,6 +1075,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowsBusy))
             Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
             Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
+            Me.RaisePropertyChanged(NameOf(ShowsLookRenderBusy))
         End Function
 
         ''' <param name="onAlwaysUi">Aufraeumen, das AUF JEDEN FALL laufen muss - auch wenn der
@@ -17992,10 +18043,12 @@ Namespace ViewModels
             SetFilterPresetCommand = ReactiveCommand.Create(Of String)(Sub(preset)
                                                                           PushUndo(LocalizationService.T("Filter"))
                                                                           ApplyExclusiveFilterPreset(preset)
+                                                                          BeginLookRenderWait()
                                                                       End Sub)
             SetBuiltInLookCommand = ReactiveCommand.Create(Of String)(Sub(id)
                                                                              PushUndo(LocalizationService.T("Filter"))
                                                                              ApplyBuiltInLook(id)
+                                                                             BeginLookRenderWait()
                                                                          End Sub)
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
             AutoStraightenCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoStraightenAsync)
@@ -21769,6 +21822,7 @@ Namespace ViewModels
                 ' RestartPreviewTimer nichts, solange ein Render laeuft - sonst braeche der naechste
                 ' den laufenden ab. Ist er durch und liegt eine Aenderung an, geht es sofort weiter.
                 If _sliderDragActive AndAlso _previewPending Then RestartPreviewTimer(1.0)
+                If Not _previewPending Then EndLookRenderWait()
             End If
         End Sub
 
@@ -30945,6 +30999,7 @@ Namespace ViewModels
                     StatusText = LocalizationService.T("XMP-Preset angewendet")
                 End If
                 SchedulePreviewForCurrentTarget()
+                BeginLookRenderWait()
             Catch ex As Exception
                 StatusText = LocalizationService.T("XMP-Preset konnte nicht geladen werden: ") & ex.Message
             End Try
@@ -31539,6 +31594,7 @@ Namespace ViewModels
             SetLastAppliedLutPreset(cubePath)
             StatusText = LocalizationService.T("LUT angewendet")
             SchedulePreviewForCurrentTarget()
+            BeginLookRenderWait()
         End Sub
 
         ''' <summary>Wie <see cref="SaveXmpPresetToSettings"/> fuer eine LUT.</summary>

@@ -1828,7 +1828,7 @@ Namespace ViewModels
         ''' Derselbe Ablauf wie beim Trimmen: auf laufende Pinselzuege warten, im Hintergrund
         ''' rechnen und schreiben, danach pruefen, ob die Ebene noch dasselbe Bild traegt.</summary>
         Friend Async Function RemoveEdgeBackgroundAsync() As Task
-            If Not CanRemoveEdgeBackground Then Return
+            If Not CanRemoveEdgeBackground OrElse _edgeBackgroundRunning Then Return
             Dim targets = CommitObjectAdjustModeAndRefresh(SelectedAnnotations.Where(Function(a) a IsNot Nothing).ToList())
             If targets.Count <> 1 Then Return
             Dim target = targets(0)
@@ -1841,12 +1841,15 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Hintergrund wird entfernt")
 
             Dim result As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
+            BeginEdgeBackgroundBusy()
             Try
                 result = Await Task.Run(Function() RemoveEdgeBackgroundFile(sourcePath, targetPath))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.RemoveEdgeBackground", ex)
                 StatusText = LocalizationService.T("Hintergrund entfernen fehlgeschlagen")
                 Return
+            Finally
+                EndEdgeBackgroundBusy()
             End Try
 
             If Not String.Equals(documentStamp, _selectionAssetTempDir, StringComparison.Ordinal) Then Return
@@ -1866,6 +1869,23 @@ Namespace ViewModels
             StatusText = label
             RefreshOverlayAfterAnnotationChange(dirty)
         End Function
+
+        ''' <summary>Laeuft gerade ein Hintergrund-Entfernen? Zaehlt in IsBusy. Beim Foto wird erst
+        ''' das ganze Bild in voller Aufloesung gerechnet, das dauert Sekunden; ohne Warte-Anzeige sah
+        ''' das aus, als taete die Anwendung nichts (Nutzerbefund). Die Sperre haelt zugleich
+        ''' Aenderungen fern, die das Ergebnis danach verwerfen wuerde.</summary>
+        Private _edgeBackgroundRunning As Boolean
+
+        Private Sub BeginEdgeBackgroundBusy()
+            _edgeBackgroundRunning = True
+            SetBusyReason(LocalizationService.T("Hintergrund wird entfernt"))
+            RefreshBusyState()
+        End Sub
+
+        Private Sub EndEdgeBackgroundBusy()
+            _edgeBackgroundRunning = False
+            RefreshBusyState()
+        End Sub
 
         ''' <summary>Der schwere Teil im Hintergrund: Raster lesen, Hintergrund entfernen, neue Datei
         ''' schreiben.</summary>
@@ -1934,7 +1954,7 @@ Namespace ViewModels
         ''' fertiges Raster ist. Eine Maske am Foto bliebe im Rezept, kennt aber nur Deckung; das
         ''' Entmischen der Kantenfarbe, das den hellen Saum wegnimmt, ginge damit nicht.</summary>
         Friend Async Function RemovePhotoBackgroundAsync() As Task
-            If Not HasDocument Then Return
+            If Not HasDocument OrElse _edgeBackgroundRunning Then Return
             Dim sourcePath = RenderSourcePath
             If String.IsNullOrWhiteSpace(sourcePath) Then Return
             ' Das Foto immer sichtbar rechnen: ist es gerade ausgeblendet, faende der Rand nur
@@ -1948,6 +1968,7 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Hintergrund wird entfernt")
 
             Dim result As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
+            BeginEdgeBackgroundBusy()
             Try
                 result = Await Task.Run(Function() As (Status As EdgeColorTransparency.Outcome, Written As Boolean)
                                             Try
@@ -1968,6 +1989,8 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("Editor.RemovePhotoBackground", ex)
                 StatusText = LocalizationService.T("Hintergrund entfernen fehlgeschlagen")
                 Return
+            Finally
+                EndEdgeBackgroundBusy()
             End Try
 
             ' Inzwischen ein anderes Bild: das Ergebnis gehoert nicht dorthin.

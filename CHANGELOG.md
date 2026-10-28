@@ -70,6 +70,11 @@
   bright areas fully and presets with their own white balance look closer to how they were
   made. Pictures you already edited with a changed white balance keep their look.
 
+- **Waiting indicator while the picture is computed:** removing a plain background, and applying
+  a preset, LUT or filter, now show a progress indicator on the picture until the result is
+  ready, instead of looking as if nothing happened. While presets are computed you can still
+  pick the next one.
+
 - **Hiding the photo shows transparency right away:** after hiding the photo in the layers panel,
   the empty areas showed black until the next change. They now show the transparency background
   at once.

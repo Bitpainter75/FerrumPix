@@ -630,149 +630,176 @@
   },
   "referenceOffsetEv": -0.26,
   "colorCalibrations": {
+    "CANONEOS1000D": {
+      "redHue": -4,
+      "redSaturation": 8,
+      "greenHue": 10,
+      "greenSaturation": 21,
+      "blueHue": 1,
+      "blueSaturation": -10,
+      "shadowTint": 1
+    },
     "CANONEOS1200D": {
-      "redHue": -7,
-      "redSaturation": 3,
-      "greenHue": 18,
-      "greenSaturation": 31,
-      "blueHue": 32,
-      "blueSaturation": -20,
-      "shadowTint": -4
+      "redHue": -13,
+      "redSaturation": 16,
+      "greenHue": 14,
+      "greenSaturation": 6,
+      "blueHue": 11,
+      "blueSaturation": -7,
+      "shadowTint": -3
     },
     "CANONEOS550D": {
-      "redHue": -6,
-      "redSaturation": 24,
-      "greenHue": 1,
+      "redHue": -15,
+      "redSaturation": 21,
+      "greenHue": 11,
       "greenSaturation": 23,
-      "blueHue": 0,
-      "blueSaturation": -4,
+      "blueHue": 3,
+      "blueSaturation": -2,
+      "shadowTint": 0
+    },
+    "CANONEOSM6": {
+      "redHue": -16,
+      "redSaturation": 6,
+      "greenHue": 12,
+      "greenSaturation": 8,
+      "blueHue": 6,
+      "blueSaturation": -17,
       "shadowTint": 3
     },
     "CANONEOSR6": {
-      "redHue": 1,
-      "redSaturation": -4,
-      "greenHue": 16,
-      "greenSaturation": 13,
-      "blueHue": 2,
-      "blueSaturation": -14,
-      "shadowTint": 4
+      "redHue": 2,
+      "redSaturation": -5,
+      "greenHue": 17,
+      "greenSaturation": 6,
+      "blueHue": -1,
+      "blueSaturation": -11,
+      "shadowTint": 2
     },
     "CANONEOSR7": {
-      "redHue": -14,
-      "redSaturation": -10,
-      "greenHue": 17,
-      "greenSaturation": 14,
-      "blueHue": 6,
-      "blueSaturation": -4,
-      "shadowTint": -1
+      "redHue": -9,
+      "redSaturation": -6,
+      "greenHue": 18,
+      "greenSaturation": 4,
+      "blueHue": 4,
+      "blueSaturation": -1,
+      "shadowTint": 1
     },
     "CANONPOWERSHOTSX710HS": {
-      "redHue": -15,
-      "redSaturation": -12,
-      "greenHue": 14,
-      "greenSaturation": -34,
-      "blueHue": -24,
+      "redHue": -5,
+      "redSaturation": -31,
+      "greenHue": 22,
+      "greenSaturation": -28,
+      "blueHue": 4,
       "blueSaturation": -40,
       "shadowTint": -1
     },
-    "HASSELBLAD5015COATED5FFF": {
-      "redHue": 0,
-      "redSaturation": 4,
-      "greenHue": 9,
-      "greenSaturation": -6,
-      "blueHue": 0,
-      "blueSaturation": -15,
-      "shadowTint": 1
-    },
-    "NIKOND200": {
-      "redHue": -15,
-      "redSaturation": 19,
-      "greenHue": 4,
-      "greenSaturation": 35,
-      "blueHue": 3,
-      "blueSaturation": -16,
-      "shadowTint": 9
-    },
-    "OLYMPUSE5": {
-      "redHue": -1,
-      "redSaturation": -6,
-      "greenHue": 9,
-      "greenSaturation": 4,
-      "blueHue": 4,
-      "blueSaturation": -8,
-      "shadowTint": -2
-    },
-    "OLYMPUSE510": {
-      "redHue": -18,
-      "redSaturation": 31,
-      "greenHue": -4,
-      "greenSaturation": 0,
-      "blueHue": 6,
-      "blueSaturation": -16,
-      "shadowTint": 8
-    },
-    "OLYMPUSOM1": {
-      "redHue": -12,
-      "redSaturation": 8,
-      "greenHue": 17,
-      "greenSaturation": 21,
-      "blueHue": 12,
-      "blueSaturation": -11,
-      "shadowTint": 6
-    },
-    "PANASONICDCS1R": {
+    "FUJIFILMXE5": {
       "redHue": -3,
-      "redSaturation": 8,
-      "greenHue": 15,
-      "greenSaturation": -4,
-      "blueHue": -8,
-      "blueSaturation": -18,
-      "shadowTint": 0
-    },
-    "PANASONICDCS1RM2": {
-      "redHue": -4,
-      "redSaturation": -4,
-      "greenHue": 14,
-      "greenSaturation": 22,
+      "redSaturation": -3,
+      "greenHue": 19,
+      "greenSaturation": 11,
       "blueHue": 5,
-      "blueSaturation": -12,
+      "blueSaturation": -40,
       "shadowTint": 2
     },
-    "PANASONICDMCFZ28": {
-      "redHue": -3,
-      "redSaturation": -14,
+    "HASSELBLAD5015COATED5FFF": {
+      "redHue": 0,
+      "redSaturation": -7,
       "greenHue": 12,
-      "greenSaturation": 28,
-      "blueHue": 0,
-      "blueSaturation": 4,
-      "shadowTint": 8
+      "greenSaturation": 0,
+      "blueHue": -1,
+      "blueSaturation": -14,
+      "shadowTint": 1
+    },
+    "NIKOND2X": {
+      "redHue": -29,
+      "redSaturation": 20,
+      "greenHue": -10,
+      "greenSaturation": 6,
+      "blueHue": -10,
+      "blueSaturation": -17,
+      "shadowTint": 3
+    },
+    "OLYMPUSE5": {
+      "redHue": -3,
+      "redSaturation": -4,
+      "greenHue": 7,
+      "greenSaturation": 6,
+      "blueHue": 4,
+      "blueSaturation": -12,
+      "shadowTint": -1
+    },
+    "OLYMPUSE510": {
+      "redHue": -12,
+      "redSaturation": 4,
+      "greenHue": 3,
+      "greenSaturation": 9,
+      "blueHue": -2,
+      "blueSaturation": -13,
+      "shadowTint": 6
+    },
+    "OLYMPUSOM1": {
+      "redHue": -13,
+      "redSaturation": 9,
+      "greenHue": 17,
+      "greenSaturation": 11,
+      "blueHue": 6,
+      "blueSaturation": -12,
+      "shadowTint": 4
+    },
+    "PANASONICDCS1RM2": {
+      "redHue": -13,
+      "redSaturation": -3,
+      "greenHue": 5,
+      "greenSaturation": 10,
+      "blueHue": 1,
+      "blueSaturation": -7,
+      "shadowTint": 1
     },
     "PANASONICDMCFZ35": {
-      "redHue": 4,
-      "redSaturation": 35,
+      "redHue": -4,
+      "redSaturation": 36,
       "greenHue": 9,
-      "greenSaturation": 1,
-      "blueHue": 8,
-      "blueSaturation": 7,
-      "shadowTint": 28
+      "greenSaturation": 18,
+      "blueHue": 14,
+      "blueSaturation": -7,
+      "shadowTint": 19
+    },
+    "PANASONICDMCG3": {
+      "redHue": 1,
+      "redSaturation": -4,
+      "greenHue": 6,
+      "greenSaturation": 6,
+      "blueHue": -2,
+      "blueSaturation": -9,
+      "shadowTint": 1
     },
     "PANASONICDMCGF2": {
-      "redHue": -17,
-      "redSaturation": 29,
-      "greenHue": -6,
-      "greenSaturation": 13,
-      "blueHue": 4,
-      "blueSaturation": -4,
-      "shadowTint": 20
+      "redHue": -26,
+      "redSaturation": 12,
+      "greenHue": -7,
+      "greenSaturation": 29,
+      "blueHue": 2,
+      "blueSaturation": -17,
+      "shadowTint": 17
+    },
+    "PANASONICDMCGM1": {
+      "redHue": 13,
+      "redSaturation": -10,
+      "greenHue": -3,
+      "greenSaturation": 22,
+      "blueHue": 3,
+      "blueSaturation": -5,
+      "shadowTint": 2
     },
     "PANASONICDMCLX5": {
-      "redHue": 2,
-      "redSaturation": 2,
-      "greenHue": 2,
-      "greenSaturation": 11,
+      "redHue": 4,
+      "redSaturation": 8,
+      "greenHue": 7,
+      "greenSaturation": 7,
       "blueHue": 0,
-      "blueSaturation": -4,
-      "shadowTint": 6
+      "blueSaturation": -9,
+      "shadowTint": 3
     }
   },
   "levelOverrides": {
@@ -874,10 +901,10 @@
     "redHue": -3,
     "redSaturation": 6,
     "greenHue": 10,
-    "greenSaturation": 10,
-    "blueHue": 0,
-    "blueSaturation": -8,
-    "shadowTint": 2
+    "greenSaturation": 6,
+    "blueHue": -2,
+    "blueSaturation": -9,
+    "shadowTint": 1
   },
   "colorCalibrationsDescription": "Start values for the seven calibration sliders of an unedited raw file, applied only with the setting that matches colors to the camera model. colorCalibrationDefault is fitted over all reference pictures of all cameras; an entry in colorCalibrations replaces it completely and exists only where it matched held-out pictures of that model better than the default.",
   "profileGenerationDefault": 1,

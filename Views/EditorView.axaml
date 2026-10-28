@@ -1260,6 +1260,27 @@
                                        FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Border>
+                    <!-- PRESET, LUT ODER FILTER wird gerechnet. Sieht aus wie die Warte-Anzeige darunter,
+                         aber ohne Abdunkeln und ohne Sperre: wer Presets durchklickt, soll den
+                         naechsten waehlen koennen, ohne auf den vorigen zu warten. -->
+                    <Border Grid.Row="1" Grid.Column="1"
+                            IsVisible="{Binding ShowsLookRenderBusy}"
+                            IsHitTestVisible="False"
+                            Background="{DynamicResource FP.Bg.Elevated}"
+                            BorderBrush="{DynamicResource FP.Border.Strong}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="18,12"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <ProgressBar IsIndeterminate="True" Width="120" Height="4"
+                                         VerticalAlignment="Center" />
+                            <TextBlock Text="Vorschau wird berechnet…"
+                                       VerticalAlignment="Center"
+                                       FontSize="{DynamicResource FP.Font.Body}" />
+                        </StackPanel>
+                    </Border>
                     <!-- BESCHAEFTIGT. Auf dem Bild, nicht im Fuss: dorthin schaut man, waehrend man
                          arbeitet. Faengt auch die Maus ab, damit ein Zug ins Leere gar nicht erst
                          anfaengt. Erscheint erst nach einer Viertelsekunde - sonst blitzt es bei
