@@ -13,6 +13,11 @@ Namespace Services
     ''' Galerie, und zwei Abbildungen derselben XMP-Schlüssel würden garantiert auseinanderlaufen.</summary>
     Public Class XmpPresetService
 
+        ''' <summary>Faktor von HueAdjustment* auf die Grad-Drehung unseres Farbmischers, je Band (Rot
+        ''' bis Magenta); Erklaerung beim Einlesen. Ein Feld, damit die Reglereichung ihn per
+        ''' Reflexion setzen kann (REGLER_MISCHER_FARBTON_SKALEN).</summary>
+        Friend Shared HueImportScales As Double() = {0.3, 0.3, 0.3, 0.5, 0.6, 0.45, 0.4, 0.3}
+
         ''' <summary>Die nicht-destruktiven Teile eines Lightroom-XMPs, die nicht zum Look
         ''' gehören. Der Editor kann sie einzeln anbieten, statt Geometrie stillschweigend mit
         ''' einem Preset zu übernehmen.</summary>
@@ -370,40 +375,41 @@ Namespace Services
                 End If
             End If
 
-            ' HUE-Skalierung: Adobes HueAdjustment* ±100 verschiebt den Farbton
-            ' nur etwa bis zum NACHBARBAND (Bandabstand 30°, also ~±30°). Unsere Engine wendet den
-            ' Bandwert dagegen direkt als Grad-Rotation an (±100 => ±100°) - 1:1 uebernommen drehte
-            ' ein importiertes Preset Farbtoene rund dreimal so weit wie im Original (Rot wurde
-            ' Gelbgruen statt Orange). Nur die Hue-Werte skalieren; Saettigung/Luminanz sind
-            ' Prozent-Faktoren mit vergleichbarer Semantik. Kein Rueckweg betroffen: HueAdjustment*
-            ' wird nirgends exportiert (nur gelesen).
-            Const HueImportScale As Double = 0.3
-            Const HueImportScaleAqua As Double = 0.12
-            If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then adj.RedHue = Clamp100(d * HueImportScale)
+            ' HUE-Skalierung: HueAdjustment* ±100 verschiebt den Farbton beim Referenzprogramm nur
+            ' etwa bis zum NACHBARBAND. Unser Mischer wendet den Bandwert dagegen direkt als Drehung
+            ' in Grad an (±100 sind ±100 Grad im HSV von linearem ProPhoto); 1:1 uebernommen drehte
+            ' ein importiertes Preset Farbtoene rund dreimal so weit wie im Original. Die Faktoren
+            ' je Band sind gegen den DNG-Konverter an 79 Aufnahmen gemessen (Stellungen ±60, Median
+            ' der Lab-Drehung je Farbtonfeld): Gruen, Aqua, Blau und Lila liegen im ProPhoto-Kreis
+            ' weiter auseinander als im sRGB-Kreis und brauchen deshalb mehr als 0,3. Aqua bleibt
+            ' der schwaechste Regler: das Band des Referenzprogramms reicht fuer den Farbton weiter
+            ' ins Himmelsblau als unseres, das ist Bandform, nicht Staerke (mit 0,85 drehte der
+            ' Kern schon zu weit, der Himmel noch zu wenig). Nur die Hue-Werte skalieren;
+            ' Saettigung und Luminanz sind Prozent-Faktoren mit vergleichbarer Semantik. Kein
+            ' Rueckweg betroffen: HueAdjustment* wird nirgends exportiert (nur gelesen).
+            Dim scales = HueImportScales
+            If TryGetXmpDouble(values, "HueAdjustmentRed", d) Then adj.RedHue = Clamp100(d * scales(0))
             If TryGetXmpDouble(values, "SaturationAdjustmentRed", d) Then adj.RedSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentRed", d) Then adj.RedLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then adj.OrangeHue = Clamp100(d * HueImportScale)
+            If TryGetXmpDouble(values, "HueAdjustmentOrange", d) Then adj.OrangeHue = Clamp100(d * scales(1))
             If TryGetXmpDouble(values, "SaturationAdjustmentOrange", d) Then adj.OrangeSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentOrange", d) Then adj.OrangeLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then adj.YellowHue = Clamp100(d * HueImportScale)
+            If TryGetXmpDouble(values, "HueAdjustmentYellow", d) Then adj.YellowHue = Clamp100(d * scales(2))
             If TryGetXmpDouble(values, "SaturationAdjustmentYellow", d) Then adj.YellowSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentYellow", d) Then adj.YellowLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then adj.GreenHue = Clamp100(d * HueImportScale)
+            If TryGetXmpDouble(values, "HueAdjustmentGreen", d) Then adj.GreenHue = Clamp100(d * scales(3))
             If TryGetXmpDouble(values, "SaturationAdjustmentGreen", d) Then adj.GreenSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentGreen", d) Then adj.GreenLuminance = Clamp100(d)
-            ' Aqua eigens: gemessen an 57 Aufnahmen drehte es mit 0,3 auf Aqua-Pixeln rund 2,5-mal so
-            ' weit wie das Original (gleiche Richtung). Die anderen Baender blieben beim Einzelfaktor
-            ' schlechter, weil dort die Bandform abweicht, nicht die Staerke (XMP_PRESETS.md).
-            If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then adj.AquaHue = Clamp100(d * HueImportScaleAqua)
+            If TryGetXmpDouble(values, "HueAdjustmentAqua", d) Then adj.AquaHue = Clamp100(d * scales(4))
             If TryGetXmpDouble(values, "SaturationAdjustmentAqua", d) Then adj.AquaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentAqua", d) Then adj.AquaLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then adj.BlueHue = Clamp100(d * HueImportScale)
+            If TryGetXmpDouble(values, "HueAdjustmentBlue", d) Then adj.BlueHue = Clamp100(d * scales(5))
             If TryGetXmpDouble(values, "SaturationAdjustmentBlue", d) Then adj.BlueSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentBlue", d) Then adj.BlueLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then adj.PurpleHue = Clamp100(d * HueImportScale)
+            If TryGetXmpDouble(values, "HueAdjustmentPurple", d) Then adj.PurpleHue = Clamp100(d * scales(6))
             If TryGetXmpDouble(values, "SaturationAdjustmentPurple", d) Then adj.PurpleSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentPurple", d) Then adj.PurpleLuminance = Clamp100(d)
-            If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then adj.MagentaHue = Clamp100(d * HueImportScale)
+            If TryGetXmpDouble(values, "HueAdjustmentMagenta", d) Then adj.MagentaHue = Clamp100(d * scales(7))
             If TryGetXmpDouble(values, "SaturationAdjustmentMagenta", d) Then adj.MagentaSaturation = Clamp100(d)
             If TryGetXmpDouble(values, "LuminanceAdjustmentMagenta", d) Then adj.MagentaLuminance = Clamp100(d)
 

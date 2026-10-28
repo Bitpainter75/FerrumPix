@@ -24,6 +24,10 @@
   colour mixer now acts before the curves, so the colour look the curves add stays as intended.
   The colour mixer also picks its colour ranges more precisely, so strong colours such as stage
   light react to the right slider, and lowering saturation also reaches muted colours.
+  Turning the hue of a colour range now moves greens, blues, aquas and purples towards the
+  colour you expect instead of a wrong neighbour, and saturation and luminance per range match
+  presets more closely. Pictures you already edited with hue changes in the colour mixer may
+  look slightly different.
 
 - **Shuffle the slideshow:** a new viewer setting plays the slideshow in random order. Every
   picture is shown once before the order is mixed again.

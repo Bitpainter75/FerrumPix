@@ -1441,21 +1441,33 @@ Namespace Services
         ''' unten -3,7 L bei der Referenz gegen -7,2 mit 0,3, also 0,15; nach oben das Mittel.
         ''' Eine leichte Kopie nur der 24 Bandwerte; mehr liest GetHslBandAdjustments nicht.</summary>
         Private Shared Function ReferenceHslLuminance(adj As ImageAdjustments) As ImageAdjustments
-            ' Nach der Bandlage (ReferenceBandHue) nachgemessen; Aqua nach oben und Magenta nach oben
-            ' sind in keinem Messbild genug vertreten und behalten den Wert vor der Bandlage.
-            Dim up = {0.71F, 0.61F, 0.42F, 0.48F, 0.34F, 0.67F, 0.84F, 0.57F}
-            Dim down = {0.36F, 0.34F, 0.24F, 0.34F, 0.15F, 0.28F, 0.39F, 0.15F}
+            ' Nach der Bandsuche im ProPhoto-HSV (ProPhotoBandHue) nachgemessen, 57 Bilder, je Band
+            ' der alte Faktor mal Adobes Wirkung durch unsere bei +-60 (2026-10-27). Aqua und Magenta
+            ' sind in den Messbildern zu schwach vertreten und behalten ihren Wert.
+            Dim up = {0.585F, 0.614F, 0.509F, 0.488F, 0.34F, 0.698F, 0.741F, 0.57F}
+            Dim down = {0.359F, 0.316F, 0.289F, 0.35F, 0.15F, 0.369F, 0.354F, 0.15F}
             Dim S = Function(value As Single, band As Integer) value * If(value >= 0, up(band), down(band))
+            Dim T = Function(value As Single, band As Integer) value * If(value >= 0, MixerSatUpGains(band), MixerSatDownGains(band))
             Return New ImageAdjustments With {
-                .RedHue = adj.RedHue, .RedSaturation = adj.RedSaturation, .RedLuminance = S(adj.RedLuminance, 0),
-                .OrangeHue = adj.OrangeHue, .OrangeSaturation = adj.OrangeSaturation, .OrangeLuminance = S(adj.OrangeLuminance, 1),
-                .YellowHue = adj.YellowHue, .YellowSaturation = adj.YellowSaturation, .YellowLuminance = S(adj.YellowLuminance, 2),
-                .GreenHue = adj.GreenHue, .GreenSaturation = adj.GreenSaturation, .GreenLuminance = S(adj.GreenLuminance, 3),
-                .AquaHue = adj.AquaHue, .AquaSaturation = adj.AquaSaturation, .AquaLuminance = S(adj.AquaLuminance, 4),
-                .BlueHue = adj.BlueHue, .BlueSaturation = adj.BlueSaturation, .BlueLuminance = S(adj.BlueLuminance, 5),
-                .PurpleHue = adj.PurpleHue, .PurpleSaturation = adj.PurpleSaturation, .PurpleLuminance = S(adj.PurpleLuminance, 6),
-                .MagentaHue = adj.MagentaHue, .MagentaSaturation = adj.MagentaSaturation, .MagentaLuminance = S(adj.MagentaLuminance, 7)}
+                .RedHue = adj.RedHue, .RedSaturation = T(adj.RedSaturation, 0), .RedLuminance = S(adj.RedLuminance, 0),
+                .OrangeHue = adj.OrangeHue, .OrangeSaturation = T(adj.OrangeSaturation, 1), .OrangeLuminance = S(adj.OrangeLuminance, 1),
+                .YellowHue = adj.YellowHue, .YellowSaturation = T(adj.YellowSaturation, 2), .YellowLuminance = S(adj.YellowLuminance, 2),
+                .GreenHue = adj.GreenHue, .GreenSaturation = T(adj.GreenSaturation, 3), .GreenLuminance = S(adj.GreenLuminance, 3),
+                .AquaHue = adj.AquaHue, .AquaSaturation = T(adj.AquaSaturation, 4), .AquaLuminance = S(adj.AquaLuminance, 4),
+                .BlueHue = adj.BlueHue, .BlueSaturation = T(adj.BlueSaturation, 5), .BlueLuminance = S(adj.BlueLuminance, 5),
+                .PurpleHue = adj.PurpleHue, .PurpleSaturation = T(adj.PurpleSaturation, 6), .PurpleLuminance = S(adj.PurpleLuminance, 6),
+                .MagentaHue = adj.MagentaHue, .MagentaSaturation = T(adj.MagentaSaturation, 7), .MagentaLuminance = S(adj.MagentaLuminance, 7)}
         End Function
+
+        ''' <summary>Staerke der Bandsaettigung je Band (Rot bis Magenta) nach UNTEN und OBEN: der
+        ''' Kehrwert unserer Wirkung durch Adobes bei -60 und +60 (Rot unten aus -20, -40, -60), gemessen
+        ''' mit der Bandsuche im ProPhoto-HSV an 57 Bildern (2026-10-27), aber NUR WO WIR ZU STARK SIND.
+        ''' Abschwaechen half (Rot -60 66 auf 71 Prozent, Gelb +60 29 auf 41, Orange +60 36 auf 40),
+        ''' Verstaerken schadete trotz dann passender Staerke (Blau +60 30 auf 21, Lila +60 45 auf 36,
+        ''' Rot +60 30 auf 23): dort ist die Form anders, nicht die Staerke. Felder, damit die
+        ''' Reglereichung sie per Reflexion setzen kann.</summary>
+        Friend Shared MixerSatDownGains As Single() = {0.91F, 1.0F, 0.93F, 1.0F, 1.0F, 1.0F, 1.0F, 1.0F}
+        Friend Shared MixerSatUpGains As Single() = {1.0F, 0.91F, 0.81F, 0.95F, 1.0F, 1.0F, 1.0F, 1.0F}
 
         ''' <summary>Toenung der Farbgradierung, gemessen an 34 Aufnahmen
         ''' (Diagnostics/Reglereichung/gradmodell.py): die Referenz legt einen GLEICHEN Farbversatz auf
@@ -1838,6 +1850,93 @@ Namespace Services
         Friend Shared Function CurvesAfterMixer(chain As PointOpChain) As Boolean
             Return CurvesAfterMixerEnabled AndAlso chain.CurvesInMelissa AndAlso chain.Hsl IsNot Nothing
         End Function
+
+        ''' <summary>Messversuch (REGLER_MISCHER_SAT_PROPHOTO): die Bandsaettigung als Faktor auf die
+        ''' HSV-Saettigung in linearem ProPhoto statt auf die HSL-Saettigung von sRGB, mit derselben
+        ''' Kennlinie (ApplyHslSaturationGain). Nur auf dem Prozessor; die Anwendung setzt ihn nie.</summary>
+        Friend Shared MixerSatInProPhotoHsv As Boolean = False
+
+        ''' <summary>Daempfung dazu (REGLER_MISCHER_SAT_PROPHOTO_STAERKE), Faktor auf den Reglerwert.</summary>
+        Friend Shared MixerSatProPhotoStrength As Double = 1.0
+
+        ''' <summary>Wendet <paramref name="amount"/> auf die HSV-Saettigung der Farbe in linearem
+        ''' ProPhoto an: Wert und Farbton bleiben, die Kanaele ruecken anteilig zum groessten hin oder
+        ''' von ihm weg. Ein- und Ausgabe als HSL von sRGB.</summary>
+        Private Shared Sub ApplySaturationInProPhotoHsv(ByRef h As Double, ByRef sat As Double, ByRef lum As Double, amount As Double)
+            Dim r As Double, g As Double, b As Double
+            HslToRgbF(h, sat, lum, r, g, b)
+            Dim lr = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, r)))
+            Dim lg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, g)))
+            Dim lb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, b)))
+            Dim pr = 0.529214 * lr + 0.330063 * lg + 0.140723 * lb
+            Dim pg = 0.098324 * lr + 0.873625 * lg + 0.028051 * lb
+            Dim pb = 0.016879 * lr + 0.117714 * lg + 0.865407 * lb
+            Dim mx = Math.Max(pr, Math.Max(pg, pb))
+            Dim mn = Math.Min(pr, Math.Min(pg, pb))
+            If mx <= 0.0000001 OrElse mx - mn <= 0.0000001 Then Return
+            Dim s0 = (mx - mn) / mx
+            Dim k = ApplyHslSaturationGain(s0, amount * MixerSatProPhotoStrength) / s0
+            pr = mx - (mx - pr) * k : pg = mx - (mx - pg) * k : pb = mx - (mx - pb) * k
+            Dim nr = 2.034515 * pr - 0.727257 * pg - 0.307258 * pb
+            Dim ng = -0.228704 * pr + 1.23143 * pg - 0.002726 * pb
+            Dim nb = -0.008573 * pr - 0.153316 * pg + 1.161889 * pb
+            r = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, nr)))
+            g = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, ng)))
+            b = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, nb)))
+            RgbToHslF(r, g, b, h, sat, lum)
+        End Sub
+
+        ''' <summary>DER FARBTON EINES BANDS DREHT IM HSV VON LINEAREM PROPHOTO, nicht im HSL von sRGB,
+        ''' wie die Bandsuche. Gemessen gegen den DNG-Konverter an 79 Aufnahmen (Stellungen ±60):
+        ''' im sRGB-Kreis trafen die Farbton-Regler im Mittel 37 %, im ProPhoto-Kreis mit den
+        ''' Importfaktoren je Band (XmpPresetService.HueImportScales) rund 58 %, kein Band wurde
+        ''' schlechter. Im sRGB-Kreis kippten Gruen, Aqua und Lila in falsche Nachbarfarben, weil die
+        ''' Abstaende der Farbtoene dort anders liegen. Saettigung und Wert im ProPhoto-HSV bleiben
+        ''' bei der Drehung stehen. Derselbe Weg im Shader (rotateHueProPhoto). False ist nur der
+        ''' Messschalter der Reglereichung (REGLER_MISCHER_FARBTON_PROPHOTO=0) und wirkt nur auf
+        ''' dem Prozessor; die Anwendung setzt ihn nie.</summary>
+        Friend Shared MixerHueInProPhotoHsv As Boolean = True
+
+        ''' <summary>Messschalter: Faktor auf die Drehung (REGLER_MISCHER_FARBTON_PROPHOTO_STAERKE).</summary>
+        Friend Shared MixerHueProPhotoStrength As Double = 1.0
+
+        ''' <summary>Dreht den HSV-Farbton der Farbe in linearem ProPhoto um <paramref name="degrees"/>;
+        ''' HSV-Saettigung und Wert bleiben. Ein- und Ausgabe als HSL von sRGB.</summary>
+        Private Shared Sub ApplyHueInProPhotoHsv(ByRef h As Double, ByRef sat As Double, ByRef lum As Double, degrees As Double)
+            Dim r As Double, g As Double, b As Double
+            HslToRgbF(h, sat, lum, r, g, b)
+            Dim lr = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, r)))
+            Dim lg = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, g)))
+            Dim lb = PointColorMath.SrgbDecode(Math.Max(0.0, Math.Min(1.0, b)))
+            Dim pr = 0.529214 * lr + 0.330063 * lg + 0.140723 * lb
+            Dim pg = 0.098324 * lr + 0.873625 * lg + 0.028051 * lb
+            Dim pb = 0.016879 * lr + 0.117714 * lg + 0.865407 * lb
+            Dim mx = Math.Max(pr, Math.Max(pg, pb))
+            Dim mn = Math.Min(pr, Math.Min(pg, pb))
+            If mx <= 0.0000001 OrElse mx - mn <= 0.0000001 Then Return
+            ' Neuer Farbton als Sechstel des Kreises; die Kanaele aus Wert, Minimum und Lage im Sechstel.
+            ' Klammer um das Mod: "/" bindet in VB staerker.
+            Dim hp = ((((ProPhotoHue(lr, lg, lb) + degrees) Mod 360.0) + 360.0) Mod 360.0) / 60.0
+            Dim sector = CInt(Math.Floor(hp)) Mod 6
+            Dim f = hp - Math.Floor(hp)
+            Dim rising = mn + (mx - mn) * f
+            Dim falling = mx - (mx - mn) * f
+            Select Case sector
+                Case 0 : pr = mx : pg = rising : pb = mn
+                Case 1 : pr = falling : pg = mx : pb = mn
+                Case 2 : pr = mn : pg = mx : pb = rising
+                Case 3 : pr = mn : pg = falling : pb = mx
+                Case 4 : pr = rising : pg = mn : pb = mx
+                Case Else : pr = mx : pg = mn : pb = falling
+            End Select
+            Dim nr = 2.034515 * pr - 0.727257 * pg - 0.307258 * pb
+            Dim ng = -0.228704 * pr + 1.23143 * pg - 0.002726 * pb
+            Dim nb = -0.008573 * pr - 0.153316 * pg + 1.161889 * pb
+            r = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, nr)))
+            g = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, ng)))
+            b = PointColorMath.SrgbEncode(Math.Max(0.0, Math.Min(1.0, nb)))
+            RgbToHslF(r, g, b, h, sat, lum)
+        End Sub
 
         ''' <summary>Messschalter fuer die Reglereichung (REGLER_KURVEN_VOR_MISCHER): False legt die
         ''' Kurven wieder vor den Farbmischer. Die Anwendung setzt ihn nie.</summary>
@@ -3694,13 +3793,22 @@ Namespace Services
                                     Dim darkGate = Math.Min(1.0, chromaC / 0.1)
                                     chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate)
                                 End If
-                                h = (h + hueShift * gateCs + 360.0) Mod 360.0
+                                If MixerHueInProPhotoHsv AndAlso hueShift <> 0.0F Then
+                                    ApplyHueInProPhotoHsv(h, sat, lum, hueShift * gateCs * MixerHueProPhotoStrength)
+                                Else
+                                    h = (h + hueShift * gateCs + 360.0) Mod 360.0
+                                End If
                                 ' Das Tor nur fuer Farbton und Anheben: Entsaettigen multipliziert und
                                 ' kann aus Rauschen keine Farbe machen. Mit Tor nahm der Mischer schwach
                                 ' bunten Punkten zu wenig (gegen den DNG-Konverter an 80 Bildern, C* 6
                                 ' bis 15 bei Rot -60: 0,88 gegen 0,73, ohne Tor 0,71), und unter Cool
                                 ' Glow blieb gedaempftes Buehnenrot und Haut zu bunt.
-                                sat = ApplyHslSaturationGain(sat, satShift * If(satShift < 0.0F AndAlso MixerBandsInProPhoto, 1.0, gateCs) / 100.0)
+                                Dim satAmount = satShift * If(satShift < 0.0F AndAlso MixerBandsInProPhoto, 1.0, gateCs) / 100.0
+                                If MixerSatInProPhotoHsv AndAlso satAmount <> 0.0 Then
+                                    ApplySaturationInProPhotoHsv(h, sat, lum, satAmount)
+                                Else
+                                    sat = ApplyHslSaturationGain(sat, satAmount)
+                                End If
                                 lum = ApplyHslBandGain(lum, lumShift * chromaW / 100.0)
                             End If
 

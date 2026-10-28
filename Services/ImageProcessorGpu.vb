@@ -1208,6 +1208,34 @@ float proPhotoHue(float3 c) {
     else { hh = (pr - pg) / d + 4.0; }
     return hh * 60.0;
 }
+// Dreht den HSV-Farbton einer sRGB-Farbe in linearem ProPhoto um deg Grad; HSV-Saettigung und
+// Wert bleiben (ApplyHueInProPhotoHsv im Prozessor).
+float3 rotateHueProPhoto(float3 c, float deg) {
+    float lr = srgbDecode(clamp(c.r, 0.0, 1.0));
+    float lg = srgbDecode(clamp(c.g, 0.0, 1.0));
+    float lb = srgbDecode(clamp(c.b, 0.0, 1.0));
+    float pr = 0.529214 * lr + 0.330063 * lg + 0.140723 * lb;
+    float pg = 0.098324 * lr + 0.873625 * lg + 0.028051 * lb;
+    float pb = 0.016879 * lr + 0.117714 * lg + 0.865407 * lb;
+    float mx = max(pr, max(pg, pb));
+    float mn = min(pr, min(pg, pb));
+    if (mx <= 0.0000001 || mx - mn <= 0.0000001) return c;
+    float hp = vbMod(vbMod(proPhotoHue(c) + deg, 360.0) + 360.0, 360.0) / 60.0;
+    float sector = vbMod(floor(hp), 6.0);
+    float f = hp - floor(hp);
+    float rising = mn + (mx - mn) * f;
+    float falling = mx - (mx - mn) * f;
+    if (sector == 0.0) { pr = mx; pg = rising; pb = mn; }
+    else if (sector == 1.0) { pr = falling; pg = mx; pb = mn; }
+    else if (sector == 2.0) { pr = mn; pg = mx; pb = rising; }
+    else if (sector == 3.0) { pr = mn; pg = falling; pb = mx; }
+    else if (sector == 4.0) { pr = rising; pg = mn; pb = mx; }
+    else { pr = mx; pg = mn; pb = falling; }
+    float nr = 2.034515 * pr - 0.727257 * pg - 0.307258 * pb;
+    float ng = -0.228704 * pr + 1.23143 * pg - 0.002726 * pb;
+    float nb = -0.008573 * pr - 0.153316 * pg + 1.161889 * pb;
+    return float3(srgbEncode(clamp(nr, 0.0, 1.0)), srgbEncode(clamp(ng, 0.0, 1.0)), srgbEncode(clamp(nb, 0.0, 1.0)));
+}
 // x: Farbton, y: Saettigung, z: Wert; w: 0, wenn der Bildpunkt zu dunkel ist.
 float4 toHsv(float3 c) {
     float mx = max(c.r, max(c.g, c.b));
@@ -1632,7 +1660,11 @@ half4 main(float2 p) {
                 float darkGate = min(1.0, chromaC / 0.1);
                 chromaW *= darkGate * darkGate * (3.0 - 2.0 * darkGate);
             }
-            h = mod(h + hueShift * gateCs + 360.0, 360.0);
+            // Die Drehung im HSV von linearem ProPhoto, wie auf dem Prozessor (MixerHueInProPhotoHsv).
+            if (hueShift != 0.0) {
+                float3 turned = rgbToHsl(rotateHueProPhoto(hslToRgb(h, sat, lum), hueShift * gateCs));
+                h = turned.x; sat = turned.y; lum = turned.z;
+            }
             // Entsaettigen ohne Tor, wie auf dem Prozessor.
             sat = satGain(sat, satShift * (satShift < 0.0 ? 1.0 : gateCs) / 100.0);
             lum = bandGain(lum, lumShift * chromaW / 100.0);
