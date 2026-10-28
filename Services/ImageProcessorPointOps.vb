@@ -105,6 +105,15 @@ Namespace Services
             ''' einer Matrix, die im selben Raum arbeitet.</summary>
             Public WhiteBalanceMatrix As Single()
 
+            ''' Weissabgleich ab Modell 4 bei RAW: die Matrix wirkt auf der Rampe VOR der ACR3-Kurve
+            ''' (WhiteBalanceOnRamp). RampIn fuehrt einen Gammawert des Bildes auf die Rampe (linear,
+            ''' durch WhiteBalanceRampHeadroom geteilt), RampOut den Gammawert einer solchen Stelle
+            ''' zurueck aufs Bild (linear). WhiteBalanceMatrix steht dann im Tonraum der RAW-Stufe
+            ''' (WhiteBalanceRampProPhoto: lineares ProPhoto, sonst lineares sRGB). Nothing ohne Rampe.
+            Public WhiteBalanceRampIn As Single()
+            Public WhiteBalanceRampOut As Single()
+            Public WhiteBalanceRampProPhoto As Boolean
+
             ''' Farbmatrix (Temperatur/Toenung/Saettigung), 20 Eintraege wie bei Skia.
             ''' Die Offset-Spalte liegt hier bereits in 0..1 vor. Dynamik liegt NICHT mehr hier -
             ''' sie ist chroma-abhaengig und damit keine lineare Matrix (siehe Vibrance).
@@ -285,6 +294,9 @@ Namespace Services
                 chain.WhiteBalanceMatrix = cal
                 chain.IsIdentity = False
                 EnsureGammaTables()
+            End If
+            If chain.WhiteBalanceMatrix IsNot Nothing AndAlso WhiteBalanceOnRamp(adj) Then
+                BuildWhiteBalanceRamp(chain, adj)
             End If
             If wantsColor Then
                 chain.ColorMatrix = BuildPointOpColorMatrix(adj)
@@ -658,6 +670,12 @@ Namespace Services
         ''' Drei Primaerfarben fast gleich: 27 bis 30 Grad, nach oben k 1,3 bis 1,4, nach unten 1.</summary>
         Friend Shared CalibrationGains As Single() = {29.0F, 1.32F, 1.0F, 27.0F, 1.3F, 1.0F, 30.0F, 1.38F, 0.98F}
 
+        ''' <summary>Dieselben Zahlen fuer die Matrix auf der Rampe vor der ACR3-Kurve (Weissabgleich ab
+        ''' Modell 4 bei RAW, WhiteBalanceOnRamp), ebenso angepasst (kalmodell.py mit
+        ''' KALMODELL_RAMPE=1). Rot und Gruen saettigen dort nach oben staerker, Blau schwaecher; die
+        ''' Sandlot-Kalibrierung ohne Schattentoenung trifft damit 5,20 statt 5,72 dE.</summary>
+        Friend Shared CalibrationGainsOnRamp As Single() = {29.0F, 1.48F, 1.03F, 28.0F, 1.45F, 1.03F, 30.0F, 1.13F, 0.97F}
+
         ''' <summary>Die Kalibrierung als EINE lineare Matrix auf sRGB, oder Nothing.
         '''
         ''' Wie die Referenz verschiebt sie die Primaerfarben eines weiten Farbraums und skaliert die
@@ -677,7 +695,7 @@ Namespace Services
                adj.CalibrationGreenHue = 0 AndAlso adj.CalibrationGreenSaturation = 0 AndAlso
                adj.CalibrationBlueHue = 0 AndAlso adj.CalibrationBlueSaturation = 0 Then Return Nothing
 
-            Dim gains = CalibrationGains
+            Dim gains = If(WhiteBalanceOnRamp(adj), CalibrationGainsOnRamp, CalibrationGains)
             Dim hues = {adj.CalibrationRedHue, adj.CalibrationGreenHue, adj.CalibrationBlueHue}
             Dim sats = {adj.CalibrationRedSaturation, adj.CalibrationGreenSaturation, adj.CalibrationBlueSaturation}
             ' Spalten der verschobenen Primaerfarben, zeilenweise abgelegt: primaries(Zeile * 3 + Spalte).
@@ -760,11 +778,172 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Wie weit die Rampe des Weissabgleichs ueber Weiss reicht (Vielfaches von Weiss).
+        ''' Die Lichterschulter der RAW-Stufe staucht alles bis weit darueber unter 1; umgekehrt
+        ''' landet ein Bildpunkt knapp unter Weiss bei rund 2,6, ausgefressenes Weiss bei gut 6.
+        ''' Bis 4 bleibt nach einem Weissabgleich, der einen Kanal halbiert, noch Zeichnung.</summary>
+        Private Const WhiteBalanceRampHeadroom As Double = 4.0
+
+        ''' <summary>Rechnet der Weissabgleich (samt Kalibrierungsmatrix) auf der Rampe der RAW-Stufe,
+        ''' VOR der ACR3-Kurve? Ab Modell 4, nur mit Aufnahme-Anker (also bei einer RAW, deren Bild
+        ''' die RAW-Stufe mit dieser Kurve entwickelt hat) und nicht beim Filmnegativ, dessen Umkehr
+        ''' vor dem Weissabgleich steht.
+        '''
+        ''' WARUM: das Referenzprogramm gleicht vor seiner Tonkurve ab. Hinter der Kurve verfaerbten
+        ''' sich bei einem kraeftigen Weissabgleich die Lichter voll, bei der Referenz laufen sie
+        ''' gegen Weiss aus; an 10 Bildern mit Sandlot (2850 K, Toenung -66) trafen frei gesuchte
+        ''' Kanalgewinne die Referenz vor der Kurve mit 3,67 dE, dahinter mit 5,08, jedes Bild
+        ''' besser (wbreihenfolge.py). Oeffentlich, weil die Pipette dieselbe Entscheidung braucht.</summary>
+        Public Shared Function WhiteBalanceOnRamp(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.WhiteBalanceModel < 4 OrElse adj.NegativeEnabled Then Return False
+            Return adj.WhiteBalanceAnchorX > 0.0 AndAlso adj.WhiteBalanceAnchorY > 0.0
+        End Function
+
+        ''' <summary>Das Knie der Lichterschulter, mit dem das Bild an der Stufe des Weissabgleichs
+        ''' entwickelt ist: das des Quellbilds, solange die Kette keinem anderen vorgreift, sonst das
+        ''' neue (der Vorgriff der RAW-Stufe laeuft vor dem Weissabgleich).</summary>
+        Private Shared Function WhiteBalanceRampKnee(adj As ImageAdjustments) As Double
+            If adj.SourceFollowsRawExposure AndAlso Not adj.ChainFollowsRawKnee() Then Return adj.KneeInSource
+            Return adj.RawHighlightKnee()
+        End Function
+
+        ''' <summary>Baut die beiden Tabellen der Rampe und stellt die Matrix in den Tonraum der
+        ''' RAW-Stufe um (siehe <see cref="PointOpChain.WhiteBalanceRampIn"/>).</summary>
+        Private Shared Sub BuildWhiteBalanceRamp(chain As PointOpChain, adj As ImageAdjustments)
+            Dim knee = WhiteBalanceRampKnee(adj)
+            Dim rampIn = New Single(PointOpTableSize - 1) {}
+            Dim rampOut = New Single(PointOpTableSize - 1) {}
+            For i = 0 To PointOpTableSize - 1
+                Dim v = i / CSng(PointOpTableSize - 1)
+                Dim ramp = RawDecodeService.Acr3CurveInverse(SrgbToLinear(v))
+                Dim scene = RawDecodeService.ShoulderInverse(ramp, knee)
+                rampIn(i) = CSng(Math.Min(scene, WhiteBalanceRampHeadroom) / WhiteBalanceRampHeadroom)
+                Dim back = SrgbToLinear(v) * WhiteBalanceRampHeadroom
+                rampOut(i) = CSng(RawDecodeService.Acr3CurveAt(RawDecodeService.ShoulderAt(back, knee)))
+            Next
+            chain.WhiteBalanceRampIn = rampIn
+            chain.WhiteBalanceRampOut = rampOut
+            chain.WhiteBalanceRampProPhoto = RawDecodeService.WideToneStage
+            If chain.WhiteBalanceRampProPhoto Then
+                ' P * M * P^-1: dieselbe Matrix, ausgedrueckt in linearem ProPhoto.
+                Dim m = chain.WhiteBalanceMatrix
+                Dim p = RawToProPhoto, q = RawFromProPhoto
+                Dim pm(8) As Single, result(8) As Single
+                For i = 0 To 2
+                    For j = 0 To 2
+                        pm(i * 3 + j) = p(i * 3) * m(j) + p(i * 3 + 1) * m(3 + j) + p(i * 3 + 2) * m(6 + j)
+                    Next
+                Next
+                For i = 0 To 2
+                    For j = 0 To 2
+                        result(i * 3 + j) = pm(i * 3) * q(j) + pm(i * 3 + 1) * q(3 + j) + pm(i * 3 + 2) * q(6 + j)
+                    Next
+                Next
+                chain.WhiteBalanceMatrix = result
+            End If
+        End Sub
+
+        ''' <summary>Die Stufe des Weissabgleichs (mit Kalibrierung) auf einem Bildpunkt (Gammawerte).
+        ''' Ohne Rampe linear: dekodieren, 3x3, kodieren. Mit Rampe nach der RGBTone-Regel der
+        ''' RAW-Stufe zurueck vor die Kurve (hellster und dunkelster Kanal durch RampIn, der mittlere
+        ''' im Verhaeltnis), dort die Matrix, dann ebenso wieder durch die Kurve. Die Klemmung liegt
+        ''' im LINEAREN Raum, vor dem Kodieren: eine Adaption kann einen Kanal ueber 1 heben.</summary>
+        Private Shared Sub ApplyWhiteBalanceStage(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
+                                                  wbm As Single(), rampIn As Single(), rampOut As Single(),
+                                                  rampProPhoto As Boolean, toLinear As Single(), toGamma As Single())
+            Dim linR = SampleTable(toLinear, rr)
+            Dim linG = SampleTable(toLinear, gg)
+            Dim linB = SampleTable(toLinear, bb)
+            If rampIn Is Nothing Then
+                Dim ar = wbm(0) * linR + wbm(1) * linG + wbm(2) * linB
+                Dim ag = wbm(3) * linR + wbm(4) * linG + wbm(5) * linB
+                Dim ab = wbm(6) * linR + wbm(7) * linG + wbm(8) * linB
+                rr = SampleTable(toGamma, If(ar < 0.0F, 0.0F, If(ar > 1.0F, 1.0F, ar)))
+                gg = SampleTable(toGamma, If(ag < 0.0F, 0.0F, If(ag > 1.0F, 1.0F, ag)))
+                bb = SampleTable(toGamma, If(ab < 0.0F, 0.0F, If(ab > 1.0F, 1.0F, ab)))
+                Return
+            End If
+            Dim pr = linR, pg = linG, pb = linB
+            If rampProPhoto Then
+                Dim p = RawToProPhoto
+                pr = Math.Max(0.0F, p(0) * linR + p(1) * linG + p(2) * linB)
+                pg = Math.Max(0.0F, p(3) * linR + p(4) * linG + p(5) * linB)
+                pb = Math.Max(0.0F, p(6) * linR + p(7) * linG + p(8) * linB)
+            End If
+            ToneByExtremes(pr, pg, pb, rampIn, toGamma)
+            Dim sr = Clamp(wbm(0) * pr + wbm(1) * pg + wbm(2) * pb, 0.0F, 1.0F)
+            Dim sg = Clamp(wbm(3) * pr + wbm(4) * pg + wbm(5) * pb, 0.0F, 1.0F)
+            Dim sb = Clamp(wbm(6) * pr + wbm(7) * pg + wbm(8) * pb, 0.0F, 1.0F)
+            ToneByExtremes(sr, sg, sb, rampOut, toGamma)
+            If rampProPhoto Then
+                Dim s = RawFromProPhoto
+                Dim nr = s(0) * sr + s(1) * sg + s(2) * sb
+                Dim ng = s(3) * sr + s(4) * sg + s(5) * sb
+                Dim nb = s(6) * sr + s(7) * sg + s(8) * sb
+                sr = nr : sg = ng : sb = nb
+            End If
+            rr = SampleTable(toGamma, Clamp(sr, 0.0F, 1.0F))
+            gg = SampleTable(toGamma, Clamp(sg, 0.0F, 1.0F))
+            bb = SampleTable(toGamma, Clamp(sb, 0.0F, 1.0F))
+        End Sub
+
+        ''' <summary>Die RGBTone-Regel auf linearen Werten: hellster und dunkelster Kanal durch die
+        ''' Tabelle (abgetastet am Gammawert, Ergebnis linear), der mittlere an derselben Stelle
+        ''' zwischen beiden.</summary>
+        Private Shared Sub ToneByExtremes(ByRef r As Single, ByRef g As Single, ByRef b As Single,
+                                          table As Single(), toGamma As Single())
+            Dim hi = Math.Max(r, Math.Max(g, b))
+            Dim lo = Math.Min(r, Math.Min(g, b))
+            Dim hiOut = SampleTable(table, SampleTable(toGamma, Clamp(hi, 0.0F, 1.0F)))
+            If hi - lo < 0.0000001F Then
+                r = hiOut : g = hiOut : b = hiOut
+                Return
+            End If
+            Dim loOut = SampleTable(table, SampleTable(toGamma, Clamp(lo, 0.0F, 1.0F)))
+            Dim k = (hiOut - loOut) / (hi - lo)
+            r = loOut + (r - lo) * k
+            g = loOut + (g - lo) * k
+            b = loOut + (b - lo) * k
+        End Sub
+
+        ''' <summary>Fuer die Pipette: ein linearer Bildpunkt (sRGB) so, wie ihn der Weissabgleich
+        ''' vorfindet. Mit Rampe (<see cref="WhiteBalanceOnRamp"/>) zurueck vor die Kurve, im
+        ''' Tonraum der RAW-Stufe und wieder nach linearem sRGB; der Massstab spielt fuer das
+        ''' Neutralisieren keine Rolle. Ohne Rampe der Bildpunkt selbst.</summary>
+        Public Shared Function WhiteBalanceSample(adj As ImageAdjustments, linear As Double()) As Double()
+            If Not WhiteBalanceOnRamp(adj) Then Return linear
+            EnsureGammaTables()
+            Dim knee = WhiteBalanceRampKnee(adj)
+            Dim wide = RawDecodeService.WideToneStage
+            Dim c = linear.Select(Function(v) Math.Max(0.0, v)).ToArray()
+            If wide Then c = Transform3(PointColorMath.SrgbToProPhoto, c)
+            Dim hi = c.Max(), lo = c.Min()
+            Dim toScene = Function(y As Double) RawDecodeService.ShoulderInverse(RawDecodeService.Acr3CurveInverse(Math.Max(0.0, Math.Min(1.0, y))), knee)
+            Dim hiS = toScene(hi)
+            Dim scene As Double()
+            If hi - lo < 0.0000001 Then
+                scene = {hiS, hiS, hiS}
+            Else
+                Dim loS = toScene(lo)
+                Dim k = (hiS - loS) / (hi - lo)
+                scene = c.Select(Function(v) loS + (v - lo) * k).ToArray()
+            End If
+            If wide Then scene = Transform3(PointColorMath.ProPhotoToSrgb, scene)
+            Return scene
+        End Function
+
+        ''' <summary>Eine 3x3-Matrix (zeilenweise) mal einen Vektor.</summary>
+        Private Shared Function Transform3(m As Double(), v As Double()) As Double()
+            Return {m(0) * v(0) + m(1) * v(1) + m(2) * v(2),
+                    m(3) * v(0) + m(4) * v(1) + m(5) * v(2),
+                    m(6) * v(0) + m(7) * v(1) + m(8) * v(2)}
+        End Function
+
         ''' <summary>Die beiden Kameramatrizen, mit denen der Anker bestimmt ist, oder Nothing: nur
         ''' ab Weissabgleich Modell 3 und nur, wenn die Tabelle die Kamera kennt. Oeffentlich, weil
         ''' die Pipette dieselbe Entscheidung braucht.</summary>
         Public Shared Function WhiteBalanceCameraOf(adj As ImageAdjustments) As CameraIlluminantMatrixTable.Entry
-            If adj Is Nothing OrElse adj.WhiteBalanceModel < CurrentWhiteBalanceModel Then Return Nothing
+            If adj Is Nothing OrElse adj.WhiteBalanceModel < 3 Then Return Nothing
             If String.IsNullOrWhiteSpace(adj.WhiteBalanceCamera) Then Return Nothing
             Dim entry As CameraIlluminantMatrixTable.Entry = Nothing
             Return If(CameraIlluminantMatrixTable.Entries.TryGetValue(adj.WhiteBalanceCamera, entry), entry, Nothing)
@@ -817,8 +996,9 @@ Namespace Services
         End Function
 
         ''' <summary>Das Weißabgleichsmodell, das neue Rezepte bekommen: chromatische Adaption mit
-        ''' Kelvin-Zahl und Tönung nach der DNG-Spezifikation (ImageAdjustments.WhiteBalanceModel).</summary>
-        Public Const CurrentWhiteBalanceModel As Integer = 3
+        ''' Kelvin-Zahl und Tönung nach der DNG-Spezifikation, bei RAW auf der Rampe vor der
+        ''' ACR3-Kurve (ImageAdjustments.WhiteBalanceModel, WhiteBalanceOnRamp).</summary>
+        Public Const CurrentWhiteBalanceModel As Integer = 4
 
         ''' <summary>Schreibt ein Rezept mit Weißabgleich Modell 2 auf Modell 3 um, OHNE dass sich
         ''' der Weißpunkt ändert. Modell 2 rechnete Kelvin und Tönung auf einer Kurve aus Planck und
@@ -3207,12 +3387,8 @@ Namespace Services
             End If
             Dim wbm = chain.WhiteBalanceMatrix
             If wbm IsNot Nothing Then
-                Dim linR = SampleTable(toLinear, rr)
-                Dim linG = SampleTable(toLinear, gg)
-                Dim linB = SampleTable(toLinear, bb)
-                rr = SampleTable(toGamma, Clamp(wbm(0) * linR + wbm(1) * linG + wbm(2) * linB, 0.0F, 1.0F))
-                gg = SampleTable(toGamma, Clamp(wbm(3) * linR + wbm(4) * linG + wbm(5) * linB, 0.0F, 1.0F))
-                bb = SampleTable(toGamma, Clamp(wbm(6) * linR + wbm(7) * linG + wbm(8) * linB, 0.0F, 1.0F))
+                ApplyWhiteBalanceStage(rr, gg, bb, wbm, chain.WhiteBalanceRampIn, chain.WhiteBalanceRampOut,
+                                       chain.WhiteBalanceRampProPhoto, toLinear, toGamma)
             End If
             Dim m = chain.ColorMatrix
             If m IsNot Nothing Then
@@ -3348,8 +3524,9 @@ Namespace Services
         ''' Bildpunkt und fuer seine Fuehrungsfarbe (MixerGuideSigma).</summary>
         Private NotInheritable Class PreMixerStages
             Private ReadOnly m, wbm, toLinear, toGamma, sr, sg, sb, toneBefore, toneZones, rawStageTone,
-                             negR, negG, negB, localZones, localDetail, localColor, rawShadow, toneChroma As Single()
-            Private ReadOnly negMono, curvesMelissa, rawInProPhoto As Boolean
+                             negR, negG, negB, localZones, localDetail, localColor, rawShadow, toneChroma,
+                             wbRampIn, wbRampOut As Single()
+            Private ReadOnly negMono, curvesMelissa, rawInProPhoto, wbRampProPhoto As Boolean
             Private ReadOnly localBase As LocalToneBase
 
             ''' <summary>Die Kurven laufen HINTER dem Farbmischer (CurvesAfterMixer): Apply laesst sie
@@ -3359,6 +3536,9 @@ Namespace Services
             Public Sub New(chain As PointOpChain, base As LocalToneBase, linearTable As Single(), gammaTable As Single())
                 m = chain.ColorMatrix
                 wbm = chain.WhiteBalanceMatrix
+                wbRampIn = chain.WhiteBalanceRampIn
+                wbRampOut = chain.WhiteBalanceRampOut
+                wbRampProPhoto = chain.WhiteBalanceRampProPhoto
                 toLinear = linearTable
                 toGamma = gammaTable
                 sr = chain.ScalarR
@@ -3407,21 +3587,10 @@ Namespace Services
                     End If
                 End If
 
-                ' --- 1b. Weissabgleich als Adaption, im LINEARLICHT ---
-                ' Dekodieren, 3x3, kodieren. Die Klemmung liegt im LINEAREN Raum, also VOR
-                ' dem Kodieren: eine Adaption kann einen Kanal ueber 1 heben (bei starker
-                ' Erwaermung das Rot), und das Kodieren einer Zahl groesser 1 gaebe Werte
-                ' ausserhalb der Tabelle.
+                ' --- 1b. Weissabgleich als Adaption, im LINEARLICHT, ab Modell 4 bei RAW auf der
+                ' Rampe vor der ACR3-Kurve (ApplyWhiteBalanceStage) ---
                 If wbm IsNot Nothing Then
-                    Dim linR = SampleTable(toLinear, rr)
-                    Dim linG = SampleTable(toLinear, gg)
-                    Dim linB = SampleTable(toLinear, bb)
-                    Dim ar = wbm(0) * linR + wbm(1) * linG + wbm(2) * linB
-                    Dim ag = wbm(3) * linR + wbm(4) * linG + wbm(5) * linB
-                    Dim ab = wbm(6) * linR + wbm(7) * linG + wbm(8) * linB
-                    rr = SampleTable(toGamma, If(ar < 0.0F, 0.0F, If(ar > 1.0F, 1.0F, ar)))
-                    gg = SampleTable(toGamma, If(ag < 0.0F, 0.0F, If(ag > 1.0F, 1.0F, ag)))
-                    bb = SampleTable(toGamma, If(ab < 0.0F, 0.0F, If(ab > 1.0F, 1.0F, ab)))
+                    ApplyWhiteBalanceStage(rr, gg, bb, wbm, wbRampIn, wbRampOut, wbRampProPhoto, toLinear, toGamma)
                 End If
 
                 ' --- 2. Farbmatrix. Skia klemmt danach auf [0,1] (gemessen) - hier ebenso. ---

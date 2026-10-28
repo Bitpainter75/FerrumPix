@@ -285,7 +285,10 @@ Namespace Services
         ' Baender auf dem alten Weg. Die Zeilen 11 und 12 tragen dann Farbton und Saettigung ueber dem
         ' Farbton im ProPhoto-HSV, Zeile 13 die Luminanz des alten Wegs.
         Private Const RowHslDownSat As Integer = 21
-        Private Const ShaderTableRows As Integer = 22
+        ' Weissabgleich auf der Rampe (chain.WhiteBalanceRampIn und RampOut, ab Modell 4 bei RAW).
+        Private Const RowWbRampIn As Integer = 22
+        Private Const RowWbRampOut As Integer = 23
+        Private Const ShaderTableRows As Integer = 24
 
         Private Shared _pointOpEffect As SKRuntimeEffect
         Private Shared ReadOnly _pointOpEffectLock As New Object()
@@ -710,6 +713,8 @@ Namespace Services
             u("negMono") = If(chain.NegMonochrome, 1.0F, 0.0F)
             SetMatrixRows(u, "wb", chain.WhiteBalanceMatrix, 3, 0)
             u("useWb") = If(chain.WhiteBalanceMatrix IsNot Nothing, 1.0F, 0.0F)
+            u("wbRamp") = If(chain.WhiteBalanceMatrix IsNot Nothing AndAlso chain.WhiteBalanceRampIn IsNot Nothing, 1.0F, 0.0F)
+            u("wbRampPro") = If(chain.WhiteBalanceRampProPhoto, 1.0F, 0.0F)
             SetMatrixRows(u, "cm", chain.ColorMatrix, 5, 4)
             u("useCm") = If(chain.ColorMatrix IsNot Nothing, 1.0F, 0.0F)
             u("useScalar") = If(chain.ScalarR IsNot Nothing, 1.0F, 0.0F)
@@ -933,6 +938,8 @@ Namespace Services
             put(RowLocalDetail, chain.LocalDetailGain)
             put(RowLocalColor, chain.LocalColorGain)
             put(RowRawStageTone, chain.RawStageTone)
+            put(RowWbRampIn, chain.WhiteBalanceRampIn)
+            put(RowWbRampOut, chain.WhiteBalanceRampOut)
             If chain.RawStageShadowSaturation IsNot Nothing Then
                 ' Ueber die lineare Helligkeit wie im Prozessor (ScaleShadowSaturation).
                 Dim shadow = chain.RawStageShadowSaturation
@@ -1013,6 +1020,7 @@ uniform float2 baseSize; uniform float2 baseOrigin; uniform float baseStep;
 uniform float useRawStage; uniform float useRawShadow; uniform float rawPro;
 uniform float useNeg; uniform float negMono;
 uniform float useWb; uniform float3 wb0; uniform float3 wb1; uniform float3 wb2;
+uniform float wbRamp; uniform float wbRampPro;
 uniform float useCm; uniform float3 cm0; uniform float3 cm1; uniform float3 cm2; uniform float3 cmOff;
 uniform float useScalar; uniform float useToneBefore; uniform float useToneZones; uniform float useToneChroma;
 uniform float hslActive; uniform float useLum; uniform float useHsl;
@@ -1417,6 +1425,33 @@ float3 rawTonePro(float3 c) {
     return float3(rr, gg, bb);
 }
 
+// ToneByExtremes: hellster und dunkelster Kanal (linear) durch die Tabellenzeile, abgetastet am
+// Gammawert, der mittlere an derselben Stelle zwischen beiden. Jeder Tabellenzugriff fuer sich.
+float3 toneByExtremes(float3 q, float row) {
+    float hi = max(q.r, max(q.g, q.b)); float lo = min(q.r, min(q.g, q.b));
+    float hiG = tab(1.0, clamp(hi, 0.0, 1.0));
+    float hiOut = tab(row, hiG);
+    float3 o = float3(hiOut);
+    if (hi - lo >= 0.0000001) {
+        float loG = tab(1.0, clamp(lo, 0.0, 1.0));
+        float loOut = tab(row, loG);
+        float k = (hiOut - loOut) / (hi - lo);
+        o = float3(loOut) + (q - float3(lo)) * k;
+    }
+    return o;
+}
+
+// ApplyWhiteBalanceStage mit Rampe: zurueck vor die ACR3-Kurve, Matrix, wieder durch die Kurve.
+float3 whiteBalanceOnRamp(float3 lin) {
+    float3 q = lin;
+    if (wbRampPro > 0.5) q = max(float3(dot(toPro0, lin), dot(toPro1, lin), dot(toPro2, lin)), float3(0.0));
+    float3 s = toneByExtremes(q, 22.0);
+    float3 a = clamp(float3(dot(wb0, s), dot(wb1, s), dot(wb2, s)), 0.0, 1.0);
+    float3 o = toneByExtremes(a, 23.0);
+    if (wbRampPro > 0.5) o = float3(dot(fromPro0, o), dot(fromPro1, o), dot(fromPro2, o));
+    return clamp(o, 0.0, 1.0);
+}
+
 // ScaleShadowSaturation: die Daempfung der Tiefen der RAW-Stufe, linear um die Helligkeit.
 float3 scaleShadow(float3 c, float undo) {
     float3 l = float3(tab(0.0, c.r), tab(0.0, c.g), tab(0.0, c.b));
@@ -1479,7 +1514,7 @@ float4 preMixer(float3 c, float2 p) {
     }
     if (useWb > 0.5) {
         float3 lin = float3(tab(0.0, rr), tab(0.0, gg), tab(0.0, bb));
-        float3 ad = float3(dot(wb0, lin), dot(wb1, lin), dot(wb2, lin));
+        float3 ad = wbRamp > 0.5 ? whiteBalanceOnRamp(lin) : float3(dot(wb0, lin), dot(wb1, lin), dot(wb2, lin));
         rr = tab(1.0, clamp(ad.r, 0.0, 1.0)); gg = tab(1.0, clamp(ad.g, 0.0, 1.0)); bb = tab(1.0, clamp(ad.b, 0.0, 1.0));
     }
     if (useCm > 0.5) {

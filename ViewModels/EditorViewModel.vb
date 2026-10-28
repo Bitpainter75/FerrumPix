@@ -6274,6 +6274,16 @@ Namespace ViewModels
             If _whiteBalanceModel = 1 Then Return
             If _whiteBalanceAnchorX > 0.0 AndAlso _whiteBalanceAnchorY > 0.0 Then
                 If _whiteBalanceModel < 2 Then _whiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
+                ' Modell 3 rechnet nur dann anders als 4, wenn Weissabgleich oder Kalibrierung
+                ' verstellt sind. Sonst gleich auf 4, damit eine spaetere Aenderung schon im neuen
+                ' Modell landet.
+                If _whiteBalanceModel = 3 AndAlso _whiteBalanceKelvin = 0.0 AndAlso _whiteBalanceKelvinTint = 0.0 AndAlso
+                   _temperature = 0.0 AndAlso _tint = 0.0 AndAlso _calibrationRedHue = 0 AndAlso
+                   _calibrationRedSaturation = 0 AndAlso _calibrationGreenHue = 0 AndAlso
+                   _calibrationGreenSaturation = 0 AndAlso _calibrationBlueHue = 0 AndAlso
+                   _calibrationBlueSaturation = 0 Then
+                    _whiteBalanceModel = ImageProcessor.CurrentWhiteBalanceModel
+                End If
                 ' Die Kamera der zwei Kameramatrizen nachtragen, wenn das Rezept sie noch nicht
                 ' kennt, aber nur solange am Weissabgleich nichts verstellt ist: sonst sähe eine
                 ' gespeicherte Bearbeitung danach anders aus. Und nur, wenn der Anker derselbe ist.
@@ -6457,8 +6467,11 @@ Namespace ViewModels
                     ' Entscheidung wie dort (ImageProcessor.WhiteBalanceCameraOf).
                     Dim camera = ImageProcessor.WhiteBalanceCameraOf(New ImageAdjustments With {
                         .WhiteBalanceModel = _whiteBalanceModel, .WhiteBalanceCamera = _whiteBalanceCamera})
-                    Dim neutral = WhiteBalanceAdaptation.NeutralizeSample(anchor, New Double() {
-                        SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b)}, camera)
+                    ' Ab Modell 4 wirkt der Weissabgleich bei RAW vor der Grundtonkurve: die Stelle
+                    ' dorthin zurueckrechnen, wo er sie vorfindet (ImageProcessor.WhiteBalanceSample).
+                    Dim sample = ImageProcessor.WhiteBalanceSample(GetCurrentAdjustments(forPreview:=True),
+                        New Double() {SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b)})
+                    Dim neutral = WhiteBalanceAdaptation.NeutralizeSample(anchor, sample, camera)
                     Dim kelvin = WhiteBalanceAdaptation.KelvinOf(neutral)
                     Dim tintPoints = WhiteBalanceAdaptation.TintPointsOf(neutral, kelvin)
                     ' Als Paar, wie im Setter des Reglers: trifft die Stelle die Aufnahme, steht

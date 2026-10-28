@@ -65,6 +65,11 @@
   edited with camera calibration, and the setting that adapts colours to the camera model, may
   look different.
 
+- **Strong white balance keeps bright areas clean:** on raw photos, white balance and camera
+  calibration now act before the tone curve, so a strong warm or cool setting no longer tints
+  bright areas fully and presets with their own white balance look closer to how they were
+  made. Pictures you already edited with a changed white balance keep their look.
+
 - **Hiding the photo shows transparency right away:** after hiding the photo in the layers panel,
   the empty areas showed black until the next change. They now show the transparency background
   at once.

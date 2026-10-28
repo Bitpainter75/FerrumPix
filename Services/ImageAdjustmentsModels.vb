@@ -361,7 +361,11 @@ Namespace Services
         ''' der früheren eigenen Kurve. 3 = dieselbe Adaption, Kelvin und Tönung nach der
         ''' DNG-Spezifikation. Ein Rezept mit 2 wird beim Laden auf denselben Weißpunkt in Zahlen
         ''' von 3 umgeschrieben (<c>ImageProcessor.UpgradeWhiteBalanceModel</c>); gerechnet wird
-        ''' ab 2 immer die heutige Rechnung.
+        ''' ab 2 immer die heutige Rechnung. 4 = wie 3, bei einer RAW aber auf der Rampe der
+        ''' RAW-Stufe VOR der ACR3-Kurve, samt der Matrix der Kamerakalibrierung
+        ''' (<c>ImageProcessor.WhiteBalanceOnRamp</c>). Ein Rezept mit 3 bleibt bei 3, solange
+        ''' Weissabgleich oder Kalibrierung verstellt sind; sonst rechnen beide gleich, und der
+        ''' Editor hebt es auf 4.
         '''
         ''' WARUM ÜBERHAUPT ZWEI: die beiden geben demselben Reglerwert eine ANDERE Bedeutung.
         ''' Würde die Kette einfach umschalten, sähe jede bereits gespeicherte Bearbeitung anders
