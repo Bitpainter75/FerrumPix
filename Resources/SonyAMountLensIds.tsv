@@ -1,5 +1,5 @@
 # Objektivkennungen fuer das Sony-A- und Minolta-AF-Bajonett: die Zahl aus dem LensID-Feld des Herstellerteils.
-# Quelle: ExifTool 13.59, lib/Image/ExifTool/Minolta.pm, Tabelle %minoltaLensTypes
+# Quelle: ExifTool 13.60, lib/Image/ExifTool/Minolta.pm, Tabelle %minoltaLensTypes
 # SHA-256 der Quelldatei: e4f77a975e9465ea23c430125d12e53c54d68a4f042e10b23d6cae97758b0f4b
 # ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
 # (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.

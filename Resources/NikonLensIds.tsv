@@ -1,9 +1,9 @@
 # Nikon-Objektivkennungen: sieben Kennbytes aus dem LensData-Block und das LensType-Byte, als Hex.
-# Quelle: ExifTool 13.59, lib/Image/ExifTool/Nikon.pm, Tabelle %nikonLensIDs
-# SHA-256 der Quelldatei: 9410b783cc5e591ec28d6bff66880adc8d9b056a545244bfd244d995a4422298
+# Quelle: ExifTool 13.60, lib/Image/ExifTool/Nikon.pm, Tabelle %nikonLensIDs
+# SHA-256 der Quelldatei: 8cb754e109e41a7d108359b841db9128f6076760b3e4e10299bf8414067b1edd
 # ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
 # (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.
-# 602 Kennungen mit genau einem Objektiv. Mehrdeutige fehlen mit Absicht.
+# 603 Kennungen mit genau einem Objektiv. Mehrdeutige fehlen mit Absicht.
 # Erzeugt mit packaging/ci/lens-ids.py, nicht von Hand bearbeiten.
 0000000000000001	Manual Lens No CPU
 000000000000E112	TC-17E II
@@ -579,6 +579,7 @@ F44C7C7C2C2C4B02	Sigma APO Macro 180mm F3.5 EX DG HSM
 F454565618188406	Tamron SP AF 60mm f/2.0 Di II Macro 1:1 (G005)
 F5402C8A2C40400E	Tamron AF 18-270mm f/3.5-6.3 Di II VC LD Aspherical (IF) Macro (B003)
 F548767624244B06	Sigma APO Macro 150mm F2.8 EX DG HSM
+F54876762424F106	Sigma APO Macro 150mm F2.8 EX DG HSM + 1.4x TC
 F63F18372C348406	Tamron SP AF 10-24mm f/3.5-4.5 Di II LD Aspherical (IF) (B001)
 F63F18372C34DF06	Tamron SP AF 10-24mm f/3.5-4.5 Di II LD Aspherical (IF) (B001)
 F6482D5024244B06	Sigma 18-50mm F2.8 EX DC Macro

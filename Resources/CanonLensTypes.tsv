@@ -1,9 +1,9 @@
 # Canon-Objektivnummern aus LensType der CameraSettings, MIT allen Varianten einer Nummer.
-# Quelle: ExifTool 13.59, lib/Image/ExifTool/Canon.pm, Tabelle %canonLensTypes
-# SHA-256 der Quelldatei: d22b110e7b2e1af2d6e59bb97db97a04ffc2bfd1ba7d078d380ae60fbc70bbba
+# Quelle: ExifTool 13.60, lib/Image/ExifTool/Canon.pm, Tabelle %canonLensTypes
+# SHA-256 der Quelldatei: d341d0ff3cda7116492fefd6d120e76fba584a5635e18f3363915e58bee8be52
 # ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
 # (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.
-# 532 Eintraege, Varianten als Nummer.n; die Auswahl trifft die Laufzeit an Brennweite und Blende.
+# 541 Eintraege, Varianten als Nummer.n; die Auswahl trifft die Laufzeit an Brennweite und Blende.
 # Erzeugt mit packaging/ci/lens-ids.py, nicht von Hand bearbeiten.
 1	Canon EF 50mm f/1.8
 10	Canon EF 50mm f/2.5 Macro or Sigma Lens
@@ -231,6 +231,7 @@
 213.2	Tamron 16-300mm f/3.5-6.3 Di II VC PZD Macro (B016)
 213.3	Tamron SP 35mm f/1.8 Di VC USD (F012)
 213.4	Tamron SP 45mm f/1.8 Di VC USD (F013)
+213.5	Tamron SP 85mm f/1.8 Di VC USD (F012)
 214	Canon EF-S 18-55mm f/3.5-5.6 USM
 215	Canon EF 55-200mm f/4.5-5.6 II USM
 217	Tamron AF 18-270mm f/3.5-6.3 Di II VC PZD
@@ -335,6 +336,8 @@
 368.13	Sigma 24-105mm f/4 DG OS HSM | A
 368.14	Sigma 18-300mm f/3.5-6.3 DC Macro OS HSM | C
 368.15	Sigma 24mm F1.4 DG HSM | A
+368.16	Sigma 100-400mm f/5-6.3 DG OS HSM | C
+368.17	Sigma 100-400mm f/5-6.3 DG OS HSM | C + 1.4x
 368.2	Sigma 50mm f/1.4 DG HSM | A
 368.3	Sigma 40mm f/1.4 DG HSM | A
 368.4	Sigma 60-600mm f/4.5-6.3 DG OS HSM | S
@@ -381,6 +384,7 @@
 4208.1	Sigma 30mm F1.4 DC DN | C
 43	Canon EF 28-105mm f/4-5.6
 44	Canon EF 90-300mm f/4.5-5.6
+4464	Sigma 18-50mm F2.8 DC DN | C
 45	Canon EF-S 18-55mm f/3.5-5.6 [II]
 46	Canon EF 28-90mm f/4-5.6
 47	Zeiss Milvus 35mm f/2 or 50mm f/2
@@ -405,7 +409,7 @@
 495	Canon EF 24-70mm f/2.8L II USM or Sigma Lens
 495.1	Sigma 24-70mm f/2.8 DG OS HSM | A
 496	Canon EF 200-400mm f/4L IS USM
-4976	Sigma 16-300mm F3.5-6.7 DC OS | C (025)
+4976	Sigma 16-300mm F3.5-6.7 DC OS | C
 499	Canon EF 200-400mm f/4L IS USM + 1.4x
 5	Canon EF 35-70mm f/3.5-4.5
 50	Canon EF-S 18-200mm f/3.5-5.6 IS
@@ -478,26 +482,31 @@
 61182.5	Canon RF 85mm F1.2L USM DS
 61182.50	Canon RF 100-300mm F2.8L IS USM + RF1.4x
 61182.51	Canon RF 100-300mm F2.8L IS USM + RF2x
-61182.52	Canon RF 10-20mm F4 L IS STM
-61182.53	Canon RF 28mm F2.8 STM
-61182.54	Canon RF 24-105mm F2.8 L IS USM Z
-61182.55	Canon RF-S 10-18mm F4.5-6.3 IS STM
-61182.56	Canon RF 35mm F1.4 L VCM
-61182.57	Canon RF 70-200mm F2.8 L IS USM Z
-61182.58	Canon RF 70-200mm F2.8 L IS USM Z + RF1.4x
-61182.59	Canon RF 70-200mm F2.8 L IS USM Z + RF2x
+61182.52	Canon RF 200-800mm F6.3-9 IS USM
+61182.53	Canon RF 200-800mm F6.3-9 IS USM + RF1.4x
+61182.54	Canon RF 200-800mm F6.3-9 IS USM + RF2x
+61182.55	Canon RF 10-20mm F4 L IS STM
+61182.56	Canon RF 28mm F2.8 STM
+61182.57	Canon RF 24-105mm F2.8 L IS USM Z
+61182.58	Canon RF-S 10-18mm F4.5-6.3 IS STM
+61182.59	Canon RF 35mm F1.4 L VCM
 61182.6	Canon RF 24-70mm F2.8L IS USM
-61182.60	Canon RF 16-28mm F2.8 IS STM
-61182.61	Canon RF-S 14-30mm F4-6.3 IS STM PZ
-61182.62	Canon RF 50mm F1.4 L VCM
-61182.63	Canon RF 24mm F1.4 L VCM
-61182.64	Canon RF 20mm F1.4 L VCM
-61182.65	Canon RF 85mm F1.4 L VCM
-61182.66	Canon RF 20-50mm F4 L IS USM PZ
-61182.67	Canon RF 45mm F1.2 STM
-61182.68	Canon RF 7-14mm F2.8-3.5 L FISHEYE STM
-61182.69	Canon RF 14mm F1.4 L VCM
+61182.60	Canon RF-S 3.9mm F3.5 STM DUAL FISHEYE
+61182.61	Canon RF 28-70mm F2.8 IS STM
+61182.62	Canon RF 70-200mm F2.8 L IS USM Z
+61182.63	Canon RF 70-200mm F2.8 L IS USM Z + RF1.4x
+61182.64	Canon RF 70-200mm F2.8 L IS USM Z + RF2x
+61182.65	Canon RF 16-28mm F2.8 IS STM
+61182.66	Canon RF-S 14-30mm F4-6.3 IS STM PZ
+61182.67	Canon RF 50mm F1.4 L VCM
+61182.68	Canon RF 24mm F1.4 L VCM
+61182.69	Canon RF 20mm F1.4 L VCM
 61182.7	Canon RF 15-35mm F2.8L IS USM
+61182.70	Canon RF 85mm F1.4 L VCM
+61182.71	Canon RF 20-50mm F4 L IS USM PZ
+61182.72	Canon RF 45mm F1.2 STM
+61182.73	Canon RF 7-14mm F2.8-3.5 L FISHEYE STM
+61182.74	Canon RF 14mm F1.4 L VCM
 61182.8	Canon RF 24-240mm F4-6.3 IS USM
 61182.9	Canon RF 70-200mm F2.8L IS USM
 61491	Canon CN-E 14mm T3.1 L F

@@ -1,6 +1,6 @@
 # Pentax-Objektivkennungen: Serie und Modell aus dem LensType-Feld des Herstellerteils.
-# Quelle: ExifTool 13.59, lib/Image/ExifTool/Pentax.pm, Tabelle %pentaxLensTypes
-# SHA-256 der Quelldatei: fa766226626260a02d483fa1bf16c56200eac102b174d05f1d143abb45d04230
+# Quelle: ExifTool 13.60, lib/Image/ExifTool/Pentax.pm, Tabelle %pentaxLensTypes
+# SHA-256 der Quelldatei: 516dfb04c4bbefa21cce2cb1fad8df89900cd5b12fbed4a9c31ae5961da43fc1
 # ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
 # (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.
 # 241 Kennungen mit genau einem Objektiv. Mehrdeutige fehlen mit Absicht.
