@@ -1471,6 +1471,7 @@ half4 main(float2 p) {
                            u("minTransmission") = CSng(DehazeMinTransmission)
                            u("toe") = CSng(DehazeToe)
                            u("shadowProtection") = CSng(DehazeShadowProtection)
+                           u("blackPoint") = CSng(DehazeBlackPoint * strength)
                            Return DrawStage(gr, width, height, effect, u, ("src", image), ("transmission", tImage))
                        End Using
                    End Function
@@ -1479,9 +1480,11 @@ half4 main(float2 p) {
         Private Const DehazeCellMax As Integer = 24
 
         ''' <summary>Die Flaechenmittel der verkleinerten Kopie, wie Schritt 1 von ApplyDehaze:
-        ''' Zellgrenzen ganzzahlig aus lx * Breite \ lw, Mittel der entmultiplizierten Bytes.</summary>
+        ''' Zellgrenzen ganzzahlig aus lx * Breite \ lw, Mittel der entmultiplizierten Bytes. Mit
+        ''' <paramref name="lowOwn"/> dazu das Mittel des kleinsten Kanals je Zelle (HazeCellMeans).</summary>
         Private Shared Function DehazeCellMeansOnGpu(gr As GRContext, image As SKImage, lw As Integer, lh As Integer,
-                                                     lowR As Double(), lowG As Double(), lowB As Double()) As Boolean
+                                                     lowR As Double(), lowG As Double(), lowB As Double(),
+                                                     Optional lowOwn As Double() = Nothing) As Boolean
             Dim effect = StageEffect("Dunst Zellmittel", FloatShaderCommon & DehazeCellShader)
             Dim read = Function(mode As Single) As Single()
                            Dim u = New SKRuntimeEffectUniforms(effect)
@@ -1509,11 +1512,18 @@ half4 main(float2 p) {
                 lowG(i) = CDbl(first(i * 4 + 2)) + first(i * 4 + 3)
                 lowB(i) = CDbl(second(i * 4)) + second(i * 4 + 1)
             Next
+            If lowOwn IsNot Nothing Then
+                Dim third = read(2.0F)
+                If third Is Nothing Then Return False
+                For i = 0 To lw * lh - 1
+                    lowOwn(i) = CDbl(third(i * 4)) + third(i * 4 + 1)
+                Next
+            End If
             Return True
         End Function
 
-        ' mode 0: Rot und Gruen, mode 1: Blau; je als Mittel 0 bis 1, zwei Kanaele je Wert. Die
-        ' Summen sind ganzzahlig und bleiben unter 2^24, also exakt.
+        ' mode 0: Rot und Gruen, mode 1: Blau, mode 2: der kleinste Kanal; je als Mittel 0 bis 1,
+        ' zwei Kanaele je Wert. Die Summen sind ganzzahlig und bleiben unter 2^24, also exakt.
         Private Const DehazeCellShader As String = "
 uniform shader src;
 uniform float mode;
@@ -1524,6 +1534,7 @@ half4 main(float2 p) {
     float2 a = floor(c * size / lowSize + 0.0001);
     float2 b = max(a + 1.0, floor((c + 1.0) * size / lowSize + 0.0001));
     float3 sum = float3(0.0);
+    float own = 0.0;
     float n = 0.0;
     for (int y = 0; y < 24; y++) {
         float qy = a.y + float(y);
@@ -1531,12 +1542,14 @@ half4 main(float2 p) {
         for (int x = 0; x < 24; x++) {
             float qx = a.x + float(x);
             if (qx >= b.x) break;
-            sum += unpremulBytes(toBytes(src.eval(float2(qx + 0.5, qy + 0.5))));
+            float3 c = unpremulBytes(toBytes(src.eval(float2(qx + 0.5, qy + 0.5))));
+            sum += c;
+            own += min(c.r, min(c.g, c.b));
             n += 1.0;
         }
     }
     float3 m = sum / (255.0 * n);
-    float2 first = splitValue(mode < 0.5 ? m.r : m.b);
+    float2 first = splitValue(mode > 1.5 ? own / (255.0 * n) : (mode < 0.5 ? m.r : m.b));
     float2 second = splitValue(mode < 0.5 ? m.g : 0.0);
     return half4(half(first.x), half(first.y), half(second.x), half(second.y));
 }
@@ -1552,6 +1565,7 @@ uniform float floorFactor;
 uniform float minTransmission;
 uniform float toe;
 uniform float shadowProtection;
+uniform float blackPoint;
 float tAt(float2 c) {
     return joinValue(transmission.eval(c + 0.5).xy);
 }
@@ -1561,6 +1575,10 @@ float channel(float value, float atm, float t, float weight) {
     if (j < toe) j = toe * exp((j - toe) / toe);
     j = c + (j - c) * weight;
     j = max(j, c * floorFactor * (1.0 - weight));
+    if (blackPoint > 0.0) {
+        float k = (j - blackPoint) / (1.0 - blackPoint);
+        j = k < toe ? toe * exp((k - toe) / toe) * min(1.0, j / toe) : k;
+    }
     return clampByte(j * 255.0);
 }
 half4 main(float2 p) {
@@ -2867,30 +2885,84 @@ half4 main(float2 p) {
 
         ' ── Dunst hinzufuegen ────────────────────────────────────────────────────
 
-        ''' <summary>Der positive Dunst (ApplyHaze): ein Anheben zum Weiss hin. Das Entfernen
-        ''' (negativ, ApplyDehaze) ist eine oertliche Stufe und bleibt auf dem Prozessor.</summary>
+        ''' <summary>ApplyAddedHaze: die Zellmittel entstehen auf der Karte, die Karte des
+        ''' hinzugefuegten Dunstes rechnet AddedHazeMap wie fuer den Prozessor, gemischt wird auf der
+        ''' Karte.</summary>
         Private Shared Function HazeOnGpu(amount As Single) As Func(Of GRContext, SKImage, SKSurface)
-            Dim strength = Clamp(amount, -1, 1)
-            If strength <= 0.001F Then Return Nothing
-            Dim sv = strength * 0.45F
+            Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(Clamp(amount, -1, 1))))
+            If strength <= 0.001 Then Return Nothing
             Return Function(gr, image)
-                       Dim effect = StageEffect("Dunst", HazeShader)
-                       Dim u = New SKRuntimeEffectUniforms(effect)
-                       u("sv") = sv
-                       Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image))
+                       Dim width = image.Width, height = image.Height
+                       Dim scale = Math.Min(1.0, DehazeWorkMaxDimension / CDbl(Math.Max(width, height)))
+                       Dim lw = Math.Max(1, CInt(Math.Round(width * scale)))
+                       Dim lh = Math.Max(1, CInt(Math.Round(height * scale)))
+                       If (width + lw - 1) \ lw + 1 > DehazeCellMax OrElse (height + lh - 1) \ lh + 1 > DehazeCellMax Then Return Nothing
+                       Dim count = lw * lh
+                       Dim lowR = New Double(count - 1) {}, lowG = New Double(count - 1) {}, lowB = New Double(count - 1) {}
+                       Dim lowOwn = New Double(count - 1) {}
+                       If Not DehazeCellMeansOnGpu(gr, image, lw, lh, lowR, lowG, lowB, lowOwn) Then Return Nothing
+                       Dim veil As Double() = Nothing
+                       Dim lightFactor As Double
+                       Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
+                       Dim m = New Single(count - 1) {}
+                       For i = 0 To count - 1
+                           m(i) = CSng(map(i))
+                       Next
+                       Using mapImage = PairImage(m, m, lw, lh)
+                           Dim effect = StageEffect("Dunst", FloatShaderCommon & HazeShader)
+                           Dim u = New SKRuntimeEffectUniforms(effect)
+                           u("lowSize") = New Single() {lw, lh}
+                           u("size") = New Single() {width, height}
+                           u("veil") = New Single() {CSng(veil(0)), CSng(veil(1)), CSng(veil(2))}
+                           u("lightFactor") = CSng(lightFactor)
+                           u("amountPow") = CSng(Math.Pow(strength, AddedHazeExponent))
+                           u("strength") = CSng(strength)
+                           u("hazeFloor") = CSng(AddedHazeFloor)
+                           u("hazeScale") = CSng(AddedHazeScale)
+                           u("ceiling") = CSng(AddedHazeCeiling)
+                           u("greying") = CSng(AddedHazeGreying)
+                           u("power") = CSng(AddedHazePower)
+                           Return DrawStage(gr, width, height, effect, u, ("src", image), ("hazeMap", mapImage))
+                       End Using
                    End Function
         End Function
 
         Private Const HazeShader As String = "
 uniform shader src;
-uniform float sv;
+uniform shader hazeMap;
+uniform float2 lowSize;
+uniform float2 size;
+uniform float3 veil;
+uniform float lightFactor;
+uniform float amountPow;
+uniform float strength;
+uniform float hazeFloor;
+uniform float hazeScale;
+uniform float ceiling;
+uniform float greying;
+uniform float power;
+float mapAt(float2 c) {
+    return joinValue(hazeMap.eval(c + 0.5).xy);
+}
+float back(float u) {
+    return clampByte(pow(clamp(u, 0.0, 1.0), 1.0 / power) * 255.0);
+}
 half4 main(float2 p) {
-    float4 c = toBytes(src.eval(p));
-    float3 cc = unpremulBytes(c);
-    float3 o = float3(clampByte(cc.r + (255.0 - cc.r) * sv),
-                      clampByte(cc.g + (255.0 - cc.g) * sv),
-                      clampByte(cc.b + (255.0 - cc.b) * sv));
-    return writePremul(o, c.a);
+    float2 f = clamp((floor(p) + 0.5) * lowSize / size - 0.5, float2(0.0), lowSize - 1.0);
+    float2 c0 = floor(f);
+    float2 c1 = min(lowSize - 1.0, c0 + 1.0);
+    float2 w = f - c0;
+    float haze = (mapAt(c0) * (1.0 - w.x) + mapAt(float2(c1.x, c0.y)) * w.x) * (1.0 - w.y) +
+                 (mapAt(float2(c0.x, c1.y)) * (1.0 - w.x) + mapAt(c1) * w.x) * w.y;
+    haze = max(0.0, haze) * lightFactor;
+    float added = min(1.0 - exp(-amountPow * (hazeFloor + hazeScale * haze)), ceiling);
+    float keep = 1.0 - greying * added * strength;
+    float4 b = toBytes(src.eval(p));
+    float3 cc = unpremulBytes(b);
+    float3 u = pow(cc / 255.0, float3(power)) * (1.0 - added) + veil * added;
+    float mean = 0.25 * u.r + 0.5 * u.g + 0.25 * u.b;
+    u = mean + (u - mean) * keep;
+    return writePremul(float3(back(u.r), back(u.g), back(u.b)), b.a);
 }
 "
 

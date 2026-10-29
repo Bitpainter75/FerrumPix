@@ -285,7 +285,11 @@ Namespace ViewModels
             ' Eine zugeklappte Serie loescht man nicht als Ganzes, siehe GalleryViewModel.DeleteSelected.
             If Not isParentEntry AndAlso first IsNot Nothing AndAlso first.CanFileOperationDelete AndAlso
                Not entries.Any(Function(i) i.IsCollapsedBurst) Then
-                AddIfOffered(list, commands.Delete, FooterMenuCatalog.Delete(commands.Delete))
+                If first.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(first.ServerAlbumId) Then
+                    AddIfOffered(list, commands.Delete, FooterMenuCatalog.RemoveFromAlbum(commands.Delete))
+                Else
+                    AddIfOffered(list, commands.Delete, FooterMenuCatalog.Delete(commands.Delete))
+                End If
             End If
 
             TidySeparators(list)

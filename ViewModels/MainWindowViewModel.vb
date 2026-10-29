@@ -3992,7 +3992,11 @@ Namespace ViewModels
                    _dialogKind = AppDialogKind.BatchConvert OrElse
                    _dialogKind = AppDialogKind.BatchFilter OrElse
                    _dialogKind = AppDialogKind.WatermarkPreset Then Return 840
-                If _dialogKind = AppDialogKind.SaveAs Then Return 570
+                ' Speichern unter: 700 UND NICHT 570. Bei 570 fiel im Englischen mit groesserer
+                ' Schrift EXIF ganz und "Keywords" halb aus der Zeile "Uebernehmen", und der
+                ' Zielordner war kaum zu lesen (Forumsbefund mit Bildschirmaufnahme). Die fuenf
+                ' Schalter brauchen dort samt Beschriftungsspalte rund 620 px.
+                If _dialogKind = AppDialogKind.SaveAs Then Return 700
                 ' Aufnahmedatum: die beiden Wege stehen als Optionen nebeneinander, und bei 440
                 ' wurde "Um eine Zeitspanne verschieben" abgeschnitten (Nutzerbefund).
                 If DialogShowsCaptureDate Then Return 570

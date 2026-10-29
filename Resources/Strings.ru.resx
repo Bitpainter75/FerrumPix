@@ -10245,4 +10245,19 @@
   <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
     <value>Фон удалён, цвет фона документа теперь прозрачный</value>
   </data>
+  <data name="Aus_dem_Album_nehmen_c9806f99" xml:space="preserve">
+    <value>Убрать из альбома</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_nehmen_Sie_bleiben_auf_d_e9982c77" xml:space="preserve">
+    <value>Убрать изображения из альбома ({0})? Они останутся на сервере.</value>
+  </data>
+  <data name="Nicht_aus_dem_Album_genommen_6e929c76" xml:space="preserve">
+    <value>Не убрано из альбома</value>
+  </data>
+  <data name="0_von_1_Bild_ern_aus_dem_Album_genommen_e53e3dcc" xml:space="preserve">
+    <value>Убрано из альбома: {0} из {1}</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
+    <value>Убрано из альбома: {0}</value>
+  </data>
 </root>

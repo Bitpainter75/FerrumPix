@@ -56,6 +56,49 @@ Namespace Services
         ''' +100 4,56 auf 4,04 in der Gegenprobe). Steht wie MedianCurves VOR Curves.</summary>
         Private Shared ReadOnly BrightShareCurves As New Dictionary(Of String, (Medians As Double(), Sets As Double()()()))(StringComparer.Ordinal)
 
+        ''' <summary>Tiefen nach dem ganzen Histogramm (Eintrag "ShadowsByHistogram"): ein lineares
+        ''' Modell, je Knoten der Basis (Dreiecke ueber den Gammawert) eine Gewichtung von 19
+        ''' Merkmalen, erst mit Mittel und Streuung normiert. Die Merkmale sind 11 des ganzen Bildes
+        ''' (Median, Perzentile 0,1 bis 99,9, Anteile unter L 20, ueber L 70 und ueber L 90) und 7 je
+        ''' Stufe der Basis (Abstand unter der Spitze und ueber dem Fuss, Summenanteil, Masse in vier
+        ''' Baendern um die Stufe), dazu die Eins. Die FORM des Histogramms traegt ueber jeden
+        ''' einzelnen Schluessel hinaus. In der Kreuzprobe mit
+        ''' Merkmalen aus unseren Nullbildern gegen die Gruppen nach hellem Anteil: Fehler in L bei
+        ''' -100/+100 von 2,01/2,87 auf 1,77/2,60 (Diagnostics/Reglereichung/histogrammregel.py).
+        ''' Steht wie MedianCurves VOR Curves.</summary>
+        Private Shared HistogramRule As HistogramRuleEntry
+
+        ''' <summary>Lichter nach den naechsten Eichbildern (Eintrag "HighlightsByNeighbours"): je
+        ''' Eichbild die Summenkurve seines Histogramms (100 Faecher von L), der Anteil seiner
+        ''' Bildpunkte je Stufe der Basis und je Stellung die Kurve. Ein Bild bekommt das nach diesem
+        ''' Anteil und nach 1 / (1 + Abstand) gewichtete Mittel der Kurven der Eichbilder mit dem
+        ''' naechsten Histogramm; Abstand ist die Flaeche zwischen den Summenkurven. Ein lineares
+        ''' Modell wie bei den Tiefen gewann hier nur 1 %, die Nachbarn in der Kreuzprobe 5 bis 8 %
+        ''' (Lichter -100/+100 von 1,88/1,77 auf 1,78/1,63). Steht wie MedianCurves VOR Curves.</summary>
+        Private Shared NeighbourSet As NeighbourSetEntry
+
+        ''' <summary>Die Schluessel der vier Stellungen in der Datei, Index wie bei Curves. Steht VOR
+        ''' Curves, weil LoadResource es braucht.</summary>
+        Private Shared ReadOnly StanceKeys As String() = {"-100", "-50", "50", "100"}
+
+        Private NotInheritable Class HistogramRuleEntry
+            Public Knots As Integer
+            Public Mu As Double()
+            Public Sd As Double()
+            ''' <summary>Je Stellung (Index wie bei Curves) Knoten mal Merkmale, zeilenweise.</summary>
+            Public Coefficients As Double()()
+            Public Gains As Double()
+        End Class
+
+        Private NotInheritable Class NeighbourSetEntry
+            Public Count As Integer
+            Public Cdfs As Double()()
+            Public Weights As Double()()
+            ''' <summary>Je Stellung (Index wie bei Curves) je Eichbild die Kurve auf den Stufen.</summary>
+            Public Curves As Double()()()
+            Public Gains As Double()
+        End Class
+
         ''' <summary>Die Grenze, ueber der ein Bildpunkt als hell zaehlt, in L. Muss mit
         ''' Diagnostics/Reglereichung/kennlinien.py (SHARE_LIMITS) uebereinstimmen.</summary>
         Public Const BrightShareLimitL As Double = 70.0
@@ -177,6 +220,23 @@ Namespace Services
                             DetailCenters = centers
                         End If
                         For Each slider In root.GetProperty("curves").EnumerateObject()
+                            ' Die Regeln nach dem ganzen Histogramm haben einen eigenen Aufbau; ein
+                            ' unvollstaendiger Eintrag laesst den Regler bei seinen Gruppen.
+                            If slider.Name = "ShadowsByHistogram" OrElse slider.Name = "HighlightsByNeighbours" Then
+                                Try
+                                    If slider.Name = "ShadowsByHistogram" Then
+                                        HistogramRule = ReadHistogramRule(slider.Value)
+                                    Else
+                                        NeighbourSet = ReadNeighbourSet(slider.Value)
+                                    End If
+                                Catch ex As Exception When TypeOf ex Is KeyNotFoundException OrElse
+                                                           TypeOf ex Is InvalidOperationException OrElse
+                                                           TypeOf ex Is FormatException
+                                    ' Kaputter Eintrag: der Regler bleibt bei seinen Gruppen, die
+                                    ' uebrigen Kennlinien gelten weiter.
+                                End Try
+                                Continue For
+                            End If
                             Dim byMedian = slider.Name.EndsWith("ByMedian", StringComparison.Ordinal)
                             Dim byTop = slider.Name.EndsWith("ByTop", StringComparison.Ordinal)
                             Dim byBrightShare = slider.Name.EndsWith("ByBrightShare", StringComparison.Ordinal)
@@ -227,6 +287,209 @@ Namespace Services
                                         TypeOf ex Is KeyNotFoundException OrElse TypeOf ex Is InvalidOperationException
                 Return Nothing
             End Try
+        End Function
+
+        Private Shared Function ReadNumbers(element As JsonElement) As Double()
+            Return element.EnumerateArray().Select(Function(e) e.GetDouble()).ToArray()
+        End Function
+
+        Private Shared Function ReadStanceGains(element As JsonElement) As Double()
+            Dim g = New Double() {1.0, 1.0, 1.0, 1.0}
+            Dim gainsElement As JsonElement
+            If Not element.TryGetProperty("gains", gainsElement) Then Return g
+            For k = 0 To 3
+                Dim value As JsonElement
+                If gainsElement.TryGetProperty(StanceKeys(k), value) Then g(k) = value.GetDouble()
+            Next
+            Return g
+        End Function
+
+        Private Shared Function ReadHistogramRule(element As JsonElement) As HistogramRuleEntry
+            Dim rule As New HistogramRuleEntry With {
+                .Knots = element.GetProperty("knots").GetInt32(),
+                .Mu = ReadNumbers(element.GetProperty("mu")),
+                .Sd = ReadNumbers(element.GetProperty("sd")),
+                .Coefficients = New Double(3)() {},
+                .Gains = ReadStanceGains(element)}
+            If rule.Knots < 2 OrElse rule.Mu.Length <> HistogramFeatureCount OrElse rule.Sd.Length <> HistogramFeatureCount Then Return Nothing
+            For k = 0 To 3
+                rule.Coefficients(k) = ReadNumbers(element.GetProperty(StanceKeys(k)))
+                If rule.Coefficients(k).Length <> rule.Knots * HistogramFeatureCount Then Return Nothing
+            Next
+            Return rule
+        End Function
+
+        Private Shared Function ReadNeighbourSet(element As JsonElement) As NeighbourSetEntry
+            Dim levels = element.GetProperty("levels").GetInt32()
+            Dim entry As New NeighbourSetEntry With {
+                .Count = element.GetProperty("neighbours").GetInt32(),
+                .Cdfs = element.GetProperty("cdf").EnumerateArray().Select(Function(e) ReadNumbers(e)).ToArray(),
+                .Weights = element.GetProperty("weight").EnumerateArray().Select(Function(e) ReadNumbers(e)).ToArray(),
+                .Curves = New Double(3)()() {},
+                .Gains = ReadStanceGains(element)}
+            Dim images = entry.Cdfs.Length
+            If entry.Count < 1 OrElse images < entry.Count OrElse entry.Weights.Length <> images OrElse
+               entry.Cdfs.Any(Function(c) c.Length <> HistogramBins) OrElse entry.Weights.Any(Function(w) w.Length <> levels) Then Return Nothing
+            For k = 0 To 3
+                entry.Curves(k) = element.GetProperty(StanceKeys(k)).EnumerateArray().Select(Function(e) ReadNumbers(e)).ToArray()
+                If entry.Curves(k).Length <> images OrElse entry.Curves(k).Any(Function(c) c.Length <> levels) Then Return Nothing
+            Next
+            Return entry
+        End Function
+
+        ''' <summary>Faecher des Histogramms von L fuer die Merkmale (je ein L breit), wie
+        ''' histogrammregel.py (bildmerkmale).</summary>
+        Private Const HistogramBins As Integer = 100
+        Private Const HistogramFeatureCount As Integer = 19
+
+        ''' <summary>Die vier Kurven (Stellungen wie bei Curves, schon mit ihrer Verstaerkung) eines
+        ''' Bildes fuer Lichter oder Tiefen nach seinem ganzen Histogramm. <paramref name="shape"/> ist
+        ''' das Histogramm von L in Zehntelstufen (1001 Faecher, Anteile, Summe 1), so wie es bei den
+        ''' Tonzonen ankommt. Nothing, wenn fuer den Regler keine solche Regel vorliegt; dann gelten
+        ''' die Gruppen.</summary>
+        Public Shared Function ShapeCurves(slider As String, shape As Double()) As Double()()
+            If Curves Is Nothing OrElse shape Is Nothing OrElse shape.Length < 1001 Then Return Nothing
+            Dim coarse = New Double(HistogramBins - 1) {}
+            For k = 0 To 1000
+                coarse(Math.Min(HistogramBins - 1, k \ 10)) += shape(k)
+            Next
+            If slider = "Shadows" AndAlso HistogramRule IsNot Nothing Then Return RuleCurves(HistogramRule, shape, coarse)
+            If slider = "Highlights" AndAlso NeighbourSet IsNot Nothing Then Return NeighbourCurves(NeighbourSet, coarse)
+            Return Nothing
+        End Function
+
+        ''' <summary>Hub aus den Kurven eines Bildes (<see cref="ShapeCurves"/>); im Wert wie
+        ''' <see cref="Lift"/> zwischen 0, 50 und 100 linear.</summary>
+        Public Shared Function LiftFromCurves(curvesOfImage As Double()(), value As Double, v As Double) As Double
+            If value = 0.0 OrElse curvesOfImage Is Nothing Then Return 0.0
+            Dim magnitude = Math.Min(100.0, Math.Abs(value))
+            Dim atHalf = Sample(If(value < 0, curvesOfImage(1), curvesOfImage(2)), v)
+            If magnitude <= 50.0 Then Return atHalf * magnitude / 50.0
+            Return atHalf + (Sample(If(value < 0, curvesOfImage(0), curvesOfImage(3)), v) - atHalf) * (magnitude - 50.0) / 50.0
+        End Function
+
+        Private Shared Function RuleCurves(rule As HistogramRuleEntry, shape As Double(), coarse As Double()) As Double()()
+            ' Perzentile aus den Zehntelstufen: die erste Stufe, an der der Summenanteil erreicht ist.
+            Dim percentile = Function(p As Double) As Double
+                                 Dim acc = 0.0
+                                 For k = 0 To 1000
+                                     acc += shape(k)
+                                     If acc >= p Then Return k / 10.0
+                                 Next
+                                 Return 100.0
+                             End Function
+            Dim share = Function(fromBin As Integer, toBin As Integer) As Double
+                            Dim s = 0.0
+                            For k = Math.Max(0, fromBin) To Math.Min(1000, toBin)
+                                s += shape(k)
+                            Next
+                            Return s * 100.0
+                        End Function
+            Dim q0 = percentile(0.001), q999 = percentile(0.999)
+            ' Die Merkmale des ganzen Bildes, Reihenfolge wie bildvektor in histogrammregel.py.
+            Dim image = New Double() {percentile(0.5), q0, percentile(0.05), percentile(0.25), percentile(0.75),
+                                      percentile(0.95), percentile(0.99), q999,
+                                      share(0, 199), share(701, 1000), share(901, 1000)}
+            Dim cdf = New Double(HistogramBins - 1) {}
+            Dim running = 0.0
+            For i = 0 To HistogramBins - 1
+                running += coarse(i)
+                cdf(i) = running
+            Next
+            Dim band = Function(i As Integer, a As Integer, b As Integer) As Double
+                           Dim s = 0.0
+                           For j = Math.Max(0, i + a) To Math.Max(0, Math.Min(HistogramBins, i + b)) - 1
+                               s += coarse(j)
+                           Next
+                           Return s * 100.0
+                       End Function
+            Dim result = New Double(3)() {}
+            For k = 0 To 3
+                result(k) = New Double(_grid - 1) {}
+            Next
+            Dim features = New Double(HistogramFeatureCount - 1) {}
+            For g = 0 To _grid - 1
+                Dim v = g / CDbl(_grid - 1)
+                Dim lc = GammaToLightness(v)
+                Dim i = CInt(Math.Max(0.0, Math.Min(HistogramBins - 1.0, Math.Floor(lc))))
+                features(0) = 1.0
+                Array.Copy(image, 0, features, 1, image.Length)
+                Dim o = 1 + image.Length
+                features(o) = q999 - lc
+                features(o + 1) = lc - q0
+                features(o + 2) = cdf(i) * 100.0
+                features(o + 3) = band(i, -10, 10)
+                features(o + 4) = band(i, -25, -10)
+                features(o + 5) = band(i, 10, 25)
+                features(o + 6) = band(i, 25, 100)
+                For f = 0 To HistogramFeatureCount - 1
+                    features(f) = (features(f) - rule.Mu(f)) / rule.Sd(f)
+                Next
+                ' Dreiecke ueber die Knoten, wie dreiecke() in histogrammregel.py.
+                Dim x = v * (rule.Knots - 1)
+                Dim j0 = CInt(Math.Max(0.0, Math.Min(rule.Knots - 2.0, Math.Floor(x))))
+                Dim t = x - j0
+                For k = 0 To 3
+                    Dim c = rule.Coefficients(k)
+                    Dim at0 = 0.0, at1 = 0.0
+                    For f = 0 To HistogramFeatureCount - 1
+                        at0 += c(j0 * HistogramFeatureCount + f) * features(f)
+                        at1 += c((j0 + 1) * HistogramFeatureCount + f) * features(f)
+                    Next
+                    result(k)(g) = (at0 * (1.0 - t) + at1 * t) * rule.Gains(k)
+                Next
+            Next
+            Return result
+        End Function
+
+        Private Shared Function NeighbourCurves(entry As NeighbourSetEntry, coarse As Double()) As Double()()
+            Dim cdf = New Double(HistogramBins - 1) {}
+            Dim running = 0.0
+            For i = 0 To HistogramBins - 1
+                running += coarse(i)
+                cdf(i) = running
+            Next
+            Dim images = entry.Cdfs.Length
+            Dim distance = New Double(images - 1) {}
+            For n = 0 To images - 1
+                Dim d = 0.0
+                Dim other = entry.Cdfs(n)
+                For i = 0 To HistogramBins - 1
+                    d += Math.Abs(other(i) - cdf(i))
+                Next
+                distance(n) = d
+            Next
+            Dim nearest = Enumerable.Range(0, images).OrderBy(Function(n) distance(n)).Take(entry.Count).ToArray()
+            Dim levels = entry.Weights(0).Length
+            Dim result = New Double(3)() {}
+            For k = 0 To 3
+                ' Je Stufe der Basis das gewichtete Mittel, dann auf das Raster der Kurven.
+                Dim atLevel = New Double(levels - 1) {}
+                For s = 0 To levels - 1
+                    Dim sum = 0.0, weight = 0.0
+                    For Each n In nearest
+                        Dim w = entry.Weights(n)(s) / (distance(n) + 1.0)
+                        sum += entry.Curves(k)(n)(s) * w
+                        weight += w
+                    Next
+                    atLevel(s) = sum / Math.Max(weight, 0.000000001)
+                Next
+                result(k) = New Double(_grid - 1) {}
+                For g = 0 To _grid - 1
+                    ' Stufe s hat ihre Mitte bei (s + 0,5) / levels.
+                    Dim pos = Math.Max(0.0, Math.Min(levels - 1.0, g / CDbl(_grid - 1) * levels - 0.5))
+                    Dim s0 = CInt(Math.Floor(pos)), s1 = Math.Min(levels - 1, s0 + 1)
+                    result(k)(g) = (atLevel(s0) + (atLevel(s1) - atLevel(s0)) * (pos - s0)) * entry.Gains(k)
+                Next
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Gammawert (sRGB) nach L (CIE), wie v_to_l in den Messwerkzeugen.</summary>
+        Private Shared Function GammaToLightness(v As Double) As Double
+            v = Math.Max(0.0, Math.Min(1.0, v))
+            Dim y = If(v <= 0.04045, v / 12.92, Math.Pow((v + 0.055) / 1.055, 2.4))
+            Return If(y > 0.008856, 116.0 * Math.Pow(y, 1.0 / 3.0) - 16.0, 903.3 * y)
         End Function
 
         ''' <summary>Liegt fuer <paramref name="slider"/> eine gemessene Kurve vor?</summary>

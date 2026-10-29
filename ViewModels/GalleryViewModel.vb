@@ -4089,7 +4089,12 @@ Namespace ViewModels
                     If thumbnailToken.IsCancellationRequested Then Return
                     If photos Is Nothing OrElse photos.Count = 0 Then Continue For
 
-                    collected.AddRange(photos.Select(Function(p) ImageItem.CreateNextcloudItem(p, thumbnailToken)))
+                    collected.AddRange(photos.Select(Function(p)
+                                                         Dim item = ImageItem.CreateNextcloudItem(p, thumbnailToken)
+                                                         ' Nur ein echtes Album, keine Person, kein Ort, kein Stichwort.
+                                                         If String.IsNullOrEmpty(clusterId) Then item.ServerAlbumId = If(albumId, "")
+                                                         Return item
+                                                     End Function))
                     total = collected.Count
                     StatusText = String.Format(LocalizationService.T("{0} von {1} geladen…"), total, expectedTotal)
                 Next
@@ -4487,7 +4492,11 @@ Namespace ViewModels
                                 If itemsByAssetId.TryGetValue(asset.Id, known) Then known.ApplyImmichMetadata(asset, replaceMissingDates:=True)
                             Next
                         End If
-                        Dim items = result.Items.Select(Function(a) ImageItem.CreateImmichItem(a, thumbnailToken)).ToList()
+                        Dim items = result.Items.Select(Function(a)
+                                                            Dim item = ImageItem.CreateImmichItem(a, thumbnailToken)
+                                                            item.ServerAlbumId = If(albumId, "")
+                                                            Return item
+                                                        End Function).ToList()
                         AddPrebuiltItemsToVirtualFolder(items, sortNow:=False)
                         total += items.Count
                         ' Zwischensortierungen bewusst selten (das Neuaufbauen der Liste läuft auf dem
@@ -9531,7 +9540,7 @@ Namespace ViewModels
                                     (m.HasIptcMetadata AndAlso String.IsNullOrEmpty(m.IptcSummary)) OrElse
                                     (m.HasXmpMetadata AndAlso String.IsNullOrEmpty(m.XmpSummary)) OrElse
                                     (m.HasIccProfile AndAlso String.IsNullOrEmpty(m.IccSummary)) OrElse
-                                    Not String.Equals(m.SummaryFormat, ExifService.CurrentSummaryFormat, StringComparison.Ordinal)
+                                    Not String.Equals(m.SummaryFormat, ExifService.CurrentSummaryFormatFor(file), StringComparison.Ordinal)
 
                                 item.ImageWidth = m.ImageWidth.Value
                                 item.ImageHeight = m.ImageHeight.Value
@@ -11481,6 +11490,13 @@ Namespace ViewModels
                 Return
             End If
             If _isVirtualFolder Then
+                ' In einem Serveralbum heißt Löschen „aus dem Album nehmen", wie in der Weboberfläche
+                ' beider Server. Das Bild bleibt in der Bibliothek.
+                Dim albumItems = GetSelectedImageItems().Where(Function(i) i.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(i.ServerAlbumId)).ToList()
+                If albumItems.Count > 0 Then
+                    Dim ignored = RemoveFromServerAlbumAsync(albumItems)
+                    Return
+                End If
                 ' Immich-Items haben keinen Dateipfad (Pseudo-Pfad) - sie werden auf dem Server gelöscht,
                 ' alles andere in der virtuellen Ansicht (Suchliste) wie gewohnt lokal.
                 Dim immichItems = GetSelectedImageItems().Where(Function(i) i.IsImmichAsset).ToList()
@@ -11544,6 +11560,66 @@ Namespace ViewModels
             StatusText = If(deletedCount = 0,
                             If(String.IsNullOrEmpty(NextcloudService.LastError), LocalizationService.T("Kein Element ausgewählt"), NextcloudService.LastError),
                             String.Format(LocalizationService.T("{0} Bild(er) gelöscht"), deletedCount))
+        End Function
+
+        ''' <summary>Nimmt Bilder aus dem Serveralbum, aus dem sie geladen wurden (ImageItem.ServerAlbumId).
+        ''' Auf dem Server bleiben sie erhalten. Bei Immich braucht der Schlüssel dafür nur
+        ''' albumAsset.delete; der Schalter „Löschen erlauben" ist nicht nötig, weil nichts verloren
+        ''' geht. Die Rückfrage folgt derselben Einstellung wie beim lokalen Löschen.</summary>
+        Private Async Function RemoveFromServerAlbumAsync(items As List(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            If Not AppSettingsService.Load().DeleteSkipConfirmation Then
+                Dim question = String.Format(LocalizationService.T("{0} Bild(er) aus dem Album nehmen? Sie bleiben auf dem Server erhalten."), items.Count)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Aus dem Album nehmen"), question,
+                                                      LocalizationService.T("Aus dem Album nehmen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
+            End If
+
+            IsLoading = True
+            Try
+                Dim removedCount = 0
+                Dim deletionAnchor = CaptureDeletionAnchor(items.Select(Function(i) i.FilePath))
+                Dim immichRemoved As New List(Of String)()
+                Dim nextcloudRemoved As New List(Of String)()
+                For Each group In items.Where(Function(i) i.IsImmichAsset).GroupBy(Function(i) i.ServerAlbumId, StringComparer.Ordinal)
+                    Dim done = Await ImmichService.RemoveAssetsFromAlbumAsync(group.Key, group.Select(Function(i) i.ImmichAssetId))
+                    If done IsNot Nothing Then immichRemoved.AddRange(done)
+                Next
+                For Each item In items.Where(Function(i) i.IsNextcloudAsset)
+                    Dim name = If(String.IsNullOrEmpty(item.NextcloudPath), item.FileName, item.NextcloudPath)
+                    If Await NextcloudService.RemoveFromAlbumAsync(item.ServerAlbumId, item.NextcloudFileId, name) Then
+                        nextcloudRemoved.Add(item.FilePath)
+                    End If
+                Next
+                removedCount = immichRemoved.Count + nextcloudRemoved.Count
+                If removedCount = 0 Then
+                    StatusText = LocalizationService.T("Nicht aus dem Album genommen")
+                    Return
+                End If
+
+                ClearSelection()
+                If immichRemoved.Count > 0 Then
+                    RemoveImmichItems(immichRemoved)
+                    RefreshImmichAlbumsAsync()
+                End If
+                If nextcloudRemoved.Count > 0 Then
+                    ' Auch aus der Dedup-Menge, sonst käme das Bild nach erneutem Zuordnen nicht wieder.
+                    For Each removedPath In nextcloudRemoved
+                        _virtualPathSet.Remove(removedPath)
+                    Next
+                    RemovePathsFromCurrentView(nextcloudRemoved)
+                    RefreshNextcloudAlbumsAsync()
+                End If
+                SelectAfterDeletion(deletionAnchor)
+                StatusText = If(removedCount < items.Count,
+                                String.Format(LocalizationService.T("{0} von {1} Bild(ern) aus dem Album genommen"), removedCount, items.Count),
+                                String.Format(LocalizationService.T("{0} Bild(er) aus dem Album genommen"), removedCount))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RemoveFromAlbum", ex)
+                StatusText = LocalizationService.T("Nicht aus dem Album genommen")
+            Finally
+                IsLoading = False
+            End Try
         End Function
 
         ''' <summary>Löscht Assets auf dem Immich-Server. Standardmäßig abgeschaltet: ohne die Einstellung

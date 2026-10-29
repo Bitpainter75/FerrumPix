@@ -10249,4 +10249,19 @@
   <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
     <value>배경이 제거되었습니다. 문서 배경색이 이제 투명합니다</value>
   </data>
+  <data name="Aus_dem_Album_nehmen_c9806f99" xml:space="preserve">
+    <value>앨범에서 제거</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_nehmen_Sie_bleiben_auf_d_e9982c77" xml:space="preserve">
+    <value>이미지 {0}개를 앨범에서 제거할까요? 서버에는 그대로 남습니다.</value>
+  </data>
+  <data name="Nicht_aus_dem_Album_genommen_6e929c76" xml:space="preserve">
+    <value>앨범에서 제거되지 않음</value>
+  </data>
+  <data name="0_von_1_Bild_ern_aus_dem_Album_genommen_e53e3dcc" xml:space="preserve">
+    <value>{1}개 중 {0}개를 앨범에서 제거함</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
+    <value>{0}개를 앨범에서 제거함</value>
+  </data>
 </root>

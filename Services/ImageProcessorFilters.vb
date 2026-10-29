@@ -2051,49 +2051,203 @@ Namespace Services
             Return ApplyLocalContrast(source, 3.6F, clamped, 2.4F)
         End Function
 
-        ''' <summary>Dunst. Lief bis ueber GetPixel/SetPixel (P/Invoke je Pixel, gemessen
-        ''' 4,3 s bei 6,3 MP); jetzt ueber geliehene Puffer. Die Alpha-Semantik von GetPixel/SetPixel
-        ''' ist ueber ReadUnpremultiplied/WritePremultiplied exakt nachgebildet.</summary>
+        ''' <summary>Dunst: positiv fuegt Dunst hinzu (<see cref="ApplyAddedHaze"/>), negativ entfernt
+        ''' ihn (<see cref="ApplyDehaze"/>). Beide wirken oertlich.</summary>
         Private Shared Function ApplyHaze(source As SKBitmap, amount As Single) As SKBitmap
             Dim strength = Clamp(amount, -1, 1)
             If Math.Abs(strength) <= 0.001F Then Return source
-            ' DUNST ENTFERNEN (negativ) ist eine eigene, oertliche Stufe - siehe ApplyDehaze. Hier
-            ' bleibt nur das Hinzufuegen: ein Anheben zum Weiss hin.
             If strength < 0 Then Return ApplyDehaze(source, -strength)
-            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            Return ApplyAddedHaze(source, strength)
+        End Function
+
+        ' ── Dunst hinzufuegen ──────────────────────────────────────────────────────────────────
+        '
+        ' BIS HIERHER ein gleichmaessiges Anheben zum Weiss hin (Faktor 0,45 bei vollem Regler):
+        ' gegen den DNG-Konverter gemessen an 95 Bildern doppelt so stark wie das Referenzprogramm
+        ' und in den Tiefen dreimal so stark (bei Dunst entfernen -25 hob es die dunkelsten 2 % um
+        ' 14,3 Oklab-Stufen, die Referenz um 3,7). Die Referenz legt den Schleier dorthin, wo schon
+        ' Dunst ist: in die Ferne und auf helle, wenig bunte Flaechen.
+        '
+        ' Das Verfahren ist das Dunstmodell vorwaerts gerechnet: je Zelle das Mittel des kleinsten
+        ' Kanals der Bildpunkte, relativ zum Dunstlicht, im Minimum ueber 5 mal 5 Zellen (sonst
+        ' laesen die Luecken in Gras oder Laub als klar) und weichgezeichnet ueber ein Zehntel der
+        ' kurzen Kante, ergibt die Karte des hinzugefuegten Dunstes. Danach geht jeder Bildpunkt
+        ' ein Stueck zum Schleier, der die Helligkeit des Dunstlichts hat, leicht kuehl getoent.
+        '
+        ' GEMISCHT wird auf den Gammawerten hoch AddedHazePower: darin liegen dunkle Werte naeher am
+        ' Schleier, und die Tiefen heben sich so wenig mehr als die Mitten, wie bei der Referenz
+        ' (gemischt auf den Gammawerten selbst hob es die Tiefen doppelt so weit wie die Mitten).
+        ' Ein Grundanteil wirkt ueberall, die Karte legt den Rest dazu. Die Werte sind gegen den
+        ' DNG-Konverter gesucht (Diagnostics/Reglereichung/dunst_modell.py): Abstand der Wirkung
+        ' bei -100, -50, -25 von 15,9, 9,6, 5,5 auf rund 10,5, 5,1, 2,7.
+        Private Const AddedHazeFloor As Double = 0.5
+        Private Const AddedHazeScale As Double = 4.0
+        Private Const AddedHazeExponent As Double = 1.3
+        Private Const AddedHazeLight As Double = 0.7
+        Private Const AddedHazeCeiling As Double = 0.97
+        Private Const AddedHazeGreying As Double = 0.25
+        Private Const AddedHazePower As Double = 0.3
+        Private Const AddedHazePatch As Integer = 2
+        Private Const AddedHazeBlurFraction As Double = 0.1
+        Private Const AddedHazeGuideEpsilon As Double = 0.01
+        ' Der Schleier ist leicht kuehl, wie gestreutes Licht; je Kanal Rot, Gruen, Blau.
+        Private Shared ReadOnly AddedHazeTint As Double() = {0.96, 1.0, 1.03}
+
+        Private Shared Function ApplyAddedHaze(source As SKBitmap, amount As Single) As SKBitmap
+            Dim strength = Math.Max(0.0, Math.Min(1.0, CDbl(amount)))
+            If strength <= 0.001 Then Return source
+            Dim width = source.Width, height = source.Height
+            Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
+            If width <= 0 OrElse height <= 0 Then Return result
 
             Dim srcBuf As Byte() = Nothing
+            Dim dstBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim sLen = 0
-            Dim dstBuf As Byte() = Nothing
             Try
-            If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
-            If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
-            Dim width = source.Width
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
-            ForEachRow(width, source.Height,
-                Sub(y)
-                    Dim rowOffset = y * stride
-                    For x = 0 To width - 1
-                        Dim o = rowOffset + x * 4
-                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                        ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                        Dim sv = strength * 0.45F
-                        Dim nr = ClampToByte(cr + (255 - cr) * sv)
-                        Dim ng = ClampToByte(cg + (255 - cg) * sv)
-                        Dim nb = ClampToByte(cb + (255 - cb) * sv)
-                        WritePremultiplied(dstBuf, o, ri, gi, bi, ai, nr, ng, nb, a)
-                    Next
-                End Sub)
+                Dim lw, lh As Integer
+                Dim lowR As Double() = Nothing, lowG As Double() = Nothing, lowB As Double() = Nothing
+                Dim lowOwn As Double() = Nothing
+                HazeCellMeans(srcBuf, stride, ri, gi, bi, ai, width, height, lw, lh, lowR, lowG, lowB, lowOwn)
+                Dim veil As Double() = Nothing
+                Dim lightFactor As Double
+                Dim map = AddedHazeMap(lowR, lowG, lowB, lowOwn, lw, lh, veil, lightFactor)
 
-            Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
-            Return result
+                Dim powLut(255) As Double
+                For v = 0 To 255
+                    powLut(v) = Math.Pow(v / 255.0, AddedHazePower)
+                Next
+                Dim amountPow = Math.Pow(strength, AddedHazeExponent)
+                Dim localBuf = srcBuf, localDst = dstBuf, localStride = stride
+                ForEachRow(width, height,
+                    Sub(y)
+                        Dim fy = Math.Max(0.0, Math.Min(lh - 1.0, (y + 0.5) * lh / height - 0.5))
+                        Dim y0 = CInt(Math.Floor(fy)), y1 = Math.Min(lh - 1, y0 + 1)
+                        Dim wy = fy - y0
+                        Dim rowOffset = y * localStride
+                        For x = 0 To width - 1
+                            Dim fx = Math.Max(0.0, Math.Min(lw - 1.0, (x + 0.5) * lw / width - 0.5))
+                            Dim x0 = CInt(Math.Floor(fx)), x1 = Math.Min(lw - 1, x0 + 1)
+                            Dim wx = fx - x0
+                            Dim haze = (map(y0 * lw + x0) * (1 - wx) + map(y0 * lw + x1) * wx) * (1 - wy) +
+                                       (map(y1 * lw + x0) * (1 - wx) + map(y1 * lw + x1) * wx) * wy
+                            haze = Math.Max(0.0, haze) * lightFactor
+                            Dim added = Math.Min(1.0 - Math.Exp(-amountPow * (AddedHazeFloor + AddedHazeScale * haze)), AddedHazeCeiling)
+                            Dim keep = 1.0 - AddedHazeGreying * added * strength
+                            Dim o = rowOffset + x * 4
+                            Dim cr, cg, cb, a As Integer
+                            ReadUnpremultiplied(localBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+                            Dim ur = powLut(cr) * (1 - added) + veil(0) * added
+                            Dim ug = powLut(cg) * (1 - added) + veil(1) * added
+                            Dim ub = powLut(cb) * (1 - added) + veil(2) * added
+                            Dim mean = 0.25 * ur + 0.5 * ug + 0.25 * ub
+                            WritePremultiplied(localDst, o, ri, gi, bi, ai,
+                                               AddedHazeChannel(mean + (ur - mean) * keep),
+                                               AddedHazeChannel(mean + (ug - mean) * keep),
+                                               AddedHazeChannel(mean + (ub - mean) * keep), a)
+                        Next
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
             Finally
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(dstBuf)
             End Try
         End Function
+
+        ''' <summary>Ein Kanal aus dem Mischraum (Gammawert hoch AddedHazePower) zurueck in ein Byte.</summary>
+        Private Shared Function AddedHazeChannel(u As Double) As Byte
+            Return ClampToByte(Math.Pow(Math.Max(0.0, Math.Min(1.0, u)), 1.0 / AddedHazePower) * 255.0)
+        End Function
+
+        ''' <summary>Die Karte des hinzugefuegten Dunstes auf der verkleinerten Kopie, dazu der Schleier
+        ''' im Mischraum (je Kanal) und der Faktor aus der Helligkeit des Dunstlichts, mit dem die
+        ''' Karte je Bildpunkt malgenommen wird. Eigene Funktion, weil der Weg ueber die Grafikkarte
+        ''' die Zellmittel dort bildet und hier weiterrechnet.</summary>
+        Friend Shared Function AddedHazeMap(lowR As Double(), lowG As Double(), lowB As Double(), lowOwn As Double(),
+                                            lw As Integer, lh As Integer, ByRef veil As Double(),
+                                            ByRef lightFactor As Double) As Double()
+            Dim count = lw * lh
+            Dim atmR, atmG, atmB As Double
+            DehazeAtmosphere(lowR, lowG, lowB, lw, lh, atmR, atmG, atmB)
+            Dim linR = SrgbToLinear(atmR), linG = SrgbToLinear(atmG), linB = SrgbToLinear(atmB)
+            ' Der kleinste Kanal je Zelle relativ zum Dunstlicht, im Licht gerechnet.
+            Dim darkest = Math.Max(0.0001, Math.Min(linR, Math.Min(linG, linB)))
+            Dim relative(count - 1) As Double
+            For i = 0 To count - 1
+                relative(i) = Math.Max(0.0, Math.Min(1.0, SrgbToLinear(lowOwn(i)) / darkest))
+            Next
+            Dim map = MinFilter(relative, lw, lh, AddedHazePatch)
+            Dim sigma = AddedHazeBlurFraction * Math.Min(lw, lh)
+            If sigma >= 0.5 Then
+                Dim blurRadius = Math.Max(1, CInt(Math.Round(sigma)))
+                map = BoxMean(BoxMean(BoxMean(map, lw, lh, blurRadius), lw, lh, blurRadius), lw, lh, blurRadius)
+            End If
+            Dim guide(count - 1) As Double
+            For i = 0 To count - 1
+                guide(i) = (lowR(i) + lowG(i) + lowB(i)) / 3.0
+            Next
+            map = GuidedFilter(guide, map, lw, lh, 2, AddedHazeGuideEpsilon)
+
+            Dim brightness = Math.Max(0.0001, (linR + linG + linB) / 3.0)
+            Dim tintMean = (AddedHazeTint(0) + AddedHazeTint(1) + AddedHazeTint(2)) / 3.0
+            lightFactor = Math.Pow(brightness * tintMean, AddedHazeLight)
+            veil = New Double(2) {}
+            For c = 0 To 2
+                veil(c) = Math.Pow(LinearToSrgb(Math.Min(1.0, brightness * AddedHazeTint(c))), AddedHazePower)
+            Next
+            Return map
+        End Function
+
+        Private Shared Function SrgbToLinear(v As Double) As Double
+            Return If(v <= 0.04045, v / 12.92, Math.Pow((v + 0.055) / 1.055, 2.4))
+        End Function
+
+        Private Shared Function LinearToSrgb(v As Double) As Double
+            v = Math.Max(0.0, Math.Min(1.0, v))
+            Return If(v <= 0.0031308, 12.92 * v, 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055)
+        End Function
+
+        ''' <summary>Schritt 1 von ApplyDehaze und ApplyAddedHaze: die verkleinerte Kopie als
+        ''' Flaechenmittel (Werte 0 bis 1), hoechstens DehazeWorkMaxDimension Punkte Kante. In
+        ''' <paramref name="lowOwn"/> je Zelle das Mittel des kleinsten Kanals der Bildpunkte.</summary>
+        Private Shared Sub HazeCellMeans(buf As Byte(), stride As Integer, ri As Integer, gi As Integer, bi As Integer, ai As Integer,
+                                         width As Integer, height As Integer, ByRef lw As Integer, ByRef lh As Integer,
+                                         ByRef lowR As Double(), ByRef lowG As Double(), ByRef lowB As Double(),
+                                         ByRef lowOwn As Double())
+            Dim scale = Math.Min(1.0, DehazeWorkMaxDimension / CDbl(Math.Max(width, height)))
+            Dim cw = Math.Max(1, CInt(Math.Round(width * scale)))
+            Dim ch = Math.Max(1, CInt(Math.Round(height * scale)))
+            Dim count = cw * ch
+            Dim r(count - 1) As Double, g(count - 1) As Double, b(count - 1) As Double, own(count - 1) As Double
+            ForEachRow(cw, ch,
+                Sub(ly)
+                    Dim y0 = CInt(CLng(ly) * height \ ch)
+                    Dim y1 = Math.Max(y0 + 1, CInt(CLng(ly + 1) * height \ ch))
+                    For lx = 0 To cw - 1
+                        Dim x0 = CInt(CLng(lx) * width \ cw)
+                        Dim x1 = Math.Max(x0 + 1, CInt(CLng(lx + 1) * width \ cw))
+                        Dim sr = 0L, sg = 0L, sb = 0L, so = 0L, n = 0L
+                        For y = y0 To y1 - 1
+                            Dim rowOffset = y * stride
+                            For x = x0 To x1 - 1
+                                Dim cr, cg, cb, a As Integer
+                                ReadUnpremultiplied(buf, rowOffset + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                                sr += cr : sg += cg : sb += cb : so += Math.Min(cr, Math.Min(cg, cb)) : n += 1
+                            Next
+                        Next
+                        Dim i = ly * cw + lx
+                        r(i) = sr / (255.0 * n) : g(i) = sg / (255.0 * n) : b(i) = sb / (255.0 * n) : own(i) = so / (255.0 * n)
+                    Next
+                End Sub)
+            lw = cw : lh = ch
+            lowR = r : lowG = g : lowB = b : lowOwn = own
+        End Sub
 
         ' ── Dunst entfernen ────────────────────────────────────────────────────────────────────
         '
@@ -2127,7 +2281,18 @@ Namespace Services
         Private Const DehazeToe As Double = 0.04
         Private Const DehazeBrightestFraction As Double = 0.001
         ' Unterhalb dieser Helligkeit (Anteil 0 bis 1) laeuft die Wirkung weich aus, siehe ApplyDehaze.
-        Private Const DehazeShadowProtection As Double = 0.4
+        ' Bis 0.9.72 0,4: gegen den DNG-Konverter dunkelte die Referenz bei +100 die dunkelsten 2 %
+        ' um 5,1 Oklab-Stufen ab, wir um 0,9. Mit 0,25 und dem Schwarzpunkt unten 3,8, das Mittel
+        ' des Bildes -7,0 gegen -7,2 der Referenz (vorher -5,4).
+        Private Const DehazeShadowProtection As Double = 0.25
+        ' Schwarzpunkt bei vollem Regler (Anteil 0 bis 1), nach der oertlichen Rechnung fuer das ganze
+        ' Bild. Klare dunkle Flaechen haben eine Durchlaessigkeit nahe 1 und blieben sonst stehen; die
+        ' Referenz dunkelt auch sie ab, am staerksten in den Tiefen (Diagnostics/Reglereichung/
+        ' dunst_modell.py). 0,04 traefe die dunkelsten Stellen der Referenz, druckte aber einen klaren
+        ' dunklen Vordergrund um mehr als ein Viertel herunter, und genau das war der Nutzerbefund,
+        ' der zum oertlichen Verfahren gefuehrt hat. Im Abstand der Wirkung liegen 0,02 und 0,04
+        ' gleichauf (12,6 gegen 12,5, vorher 13,3).
+        Private Const DehazeBlackPoint As Double = 0.02
         ' Kein Punkt wird dunkler als dieser Anteil seines Ausgangswerts, bei vollem Regler; bei
         ' halbem Regler entsprechend die Haelfte des Abstands zu 1. Eine gleichmaessig graue Flaeche
         ' ohne wirklich dunkle Stelle sieht fuer die Schaetzung wie Dunst aus - das ist die bekannte
@@ -2151,32 +2316,11 @@ Namespace Services
                 If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
                 ' 1. Verkleinerte Kopie als Flaechenmittel, Werte 0 bis 1.
-                Dim scale = Math.Min(1.0, DehazeWorkMaxDimension / CDbl(Math.Max(width, height)))
-                Dim lw = Math.Max(1, CInt(Math.Round(width * scale)))
-                Dim lh = Math.Max(1, CInt(Math.Round(height * scale)))
-                Dim count = lw * lh
-                Dim lowR(count - 1) As Double, lowG(count - 1) As Double, lowB(count - 1) As Double
+                Dim lw, lh As Integer
+                Dim lowR As Double() = Nothing, lowG As Double() = Nothing, lowB As Double() = Nothing
+                Dim lowOwn As Double() = Nothing
+                HazeCellMeans(srcBuf, stride, ri, gi, bi, ai, width, height, lw, lh, lowR, lowG, lowB, lowOwn)
                 Dim localBuf = srcBuf, localStride = stride
-                ForEachRow(lw, lh,
-                    Sub(ly)
-                        Dim y0 = CInt(CLng(ly) * height \ lh)
-                        Dim y1 = Math.Max(y0 + 1, CInt(CLng(ly + 1) * height \ lh))
-                        For lx = 0 To lw - 1
-                            Dim x0 = CInt(CLng(lx) * width \ lw)
-                            Dim x1 = Math.Max(x0 + 1, CInt(CLng(lx + 1) * width \ lw))
-                            Dim sr = 0L, sg = 0L, sb = 0L, n = 0L
-                            For y = y0 To y1 - 1
-                                Dim rowOffset = y * localStride
-                                For x = x0 To x1 - 1
-                                    Dim cr, cg, cb, a As Integer
-                                    ReadUnpremultiplied(localBuf, rowOffset + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
-                                    sr += cr : sg += cg : sb += cb : n += 1
-                                Next
-                            Next
-                            Dim i = ly * lw + lx
-                            lowR(i) = sr / (255.0 * n) : lowG(i) = sg / (255.0 * n) : lowB(i) = sb / (255.0 * n)
-                        Next
-                    End Sub)
 
                 Dim atmR, atmG, atmB As Double
                 Dim transmission = DehazeTransmission(lowR, lowG, lowB, lw, lh, strength, atmR, atmG, atmB)
@@ -2184,6 +2328,7 @@ Namespace Services
                 ' 6. Auf voller Aufloesung zurueckrechnen, t bilinear aus der Kopie.
                 Dim localDst = dstBuf
                 Dim floor = 1.0 - (1.0 - DehazeDarkeningFloor) * strength
+                Dim blackPoint = DehazeBlackPoint * strength
                 ForEachRow(width, height,
                     Sub(y)
                         Dim fy = Math.Max(0.0, Math.Min(lh - 1.0, (y + 0.5) * lh / height - 0.5))
@@ -2208,8 +2353,9 @@ Namespace Services
                             Dim u = Math.Min(1.0, luminance / DehazeShadowProtection)
                             Dim weight = u * u * (3.0 - 2.0 * u)
                             WritePremultiplied(localDst, o, ri, gi, bi, ai,
-                                               DehazeChannel(cr, atmR, t, weight, floor), DehazeChannel(cg, atmG, t, weight, floor),
-                                               DehazeChannel(cb, atmB, t, weight, floor), a)
+                                               DehazeChannel(cr, atmR, t, weight, floor, blackPoint),
+                                               DehazeChannel(cg, atmG, t, weight, floor, blackPoint),
+                                               DehazeChannel(cb, atmB, t, weight, floor, blackPoint), a)
                         Next
                     End Sub)
 
@@ -2228,20 +2374,7 @@ Namespace Services
                                                   strength As Double, ByRef atmR As Double, ByRef atmG As Double,
                                                   ByRef atmB As Double) As Double()
                 Dim count = lw * lh
-                ' 2. Dunkelster Kanal, in einer Umgebung erodiert.
-                Dim patch = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazePatchFraction)))
-                Dim minChannel(count - 1) As Double
-                For i = 0 To count - 1
-                    minChannel(i) = Math.Min(lowR(i), Math.Min(lowG(i), lowB(i)))
-                Next
-                Dim dark = MinFilter(minChannel, lw, lh, patch)
-
-                ' 3. Das Licht des Dunstes: Mittel der Farben an den dunstigsten Stellen.
-                Dim brightest = Math.Max(1, CInt(Math.Ceiling(count * DehazeBrightestFraction)))
-                Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(brightest).ToArray()
-                atmR = Math.Max(0.05, order.Average(Function(i) lowR(i)))
-                atmG = Math.Max(0.05, order.Average(Function(i) lowG(i)))
-                atmB = Math.Max(0.05, order.Average(Function(i) lowB(i)))
+                Dim patch = DehazeAtmosphere(lowR, lowG, lowB, lw, lh, atmR, atmG, atmB)
                 Dim atmRValue = atmR, atmGValue = atmG, atmBValue = atmB
 
                 ' 4. Durchlaessigkeit aus dem dunkelsten Kanal relativ zum Dunstlicht.
@@ -2263,10 +2396,31 @@ Namespace Services
                 Return GuidedFilter(guide, raw, lw, lh, guideRadius, DehazeGuideEpsilon)
         End Function
 
+        ''' <summary>Schritte 2 und 3 von ApplyDehaze, auch fuer ApplyAddedHaze: der dunkelste Kanal,
+        ''' in einer Umgebung erodiert, und daraus das Licht des Dunstes als Mittel der Farben an den
+        ''' dunstigsten Stellen. Gibt den Radius der Umgebung zurueck.</summary>
+        Private Shared Function DehazeAtmosphere(lowR As Double(), lowG As Double(), lowB As Double(), lw As Integer, lh As Integer,
+                                                 ByRef atmR As Double, ByRef atmG As Double, ByRef atmB As Double) As Integer
+            Dim count = lw * lh
+            Dim patch = Math.Max(1, CInt(Math.Round(Math.Min(lw, lh) * DehazePatchFraction)))
+            Dim minChannel(count - 1) As Double
+            For i = 0 To count - 1
+                minChannel(i) = Math.Min(lowR(i), Math.Min(lowG(i), lowB(i)))
+            Next
+            Dim dark = MinFilter(minChannel, lw, lh, patch)
+            Dim brightest = Math.Max(1, CInt(Math.Ceiling(count * DehazeBrightestFraction)))
+            Dim order = Enumerable.Range(0, count).OrderByDescending(Function(i) dark(i)).Take(brightest).ToArray()
+            atmR = Math.Max(0.05, order.Average(Function(i) lowR(i)))
+            atmG = Math.Max(0.05, order.Average(Function(i) lowG(i)))
+            atmB = Math.Max(0.05, order.Average(Function(i) lowB(i)))
+            Return patch
+        End Function
+
         ''' <summary>Ein Kanal zurueckgerechnet, mit weichem Auslauf unter <see cref="DehazeToe"/>
-        ''' statt eines harten Schnitts bei null.</summary>
+        ''' statt eines harten Schnitts bei null, danach der Schwarzpunkt
+        ''' (<paramref name="blackPoint"/>, siehe <see cref="DehazeBlackPoint"/>).</summary>
         Private Shared Function DehazeChannel(value As Integer, atmosphere As Double, t As Double, weight As Double,
-                                              floor As Double) As Byte
+                                              floor As Double, blackPoint As Double) As Byte
             Dim c = value / 255.0
             Dim j = (c - atmosphere) / t + atmosphere
             If j < DehazeToe Then j = DehazeToe * Math.Exp((j - DehazeToe) / DehazeToe)
@@ -2274,6 +2428,11 @@ Namespace Services
             ' Die Untergrenze gilt nur, soweit der Tiefenschutz greift: ueber seiner Schwelle ist
             ' weight = 1, und ein dunkler Streifen im Dunst DARF deutlich dunkler werden.
             j = Math.Max(j, c * floor * (1.0 - weight))
+            If blackPoint > 0 Then
+                Dim k = (j - blackPoint) / (1.0 - blackPoint)
+                ' Unter dem Fuss weich gegen null, nie heller als vorher.
+                j = If(k < DehazeToe, DehazeToe * Math.Exp((k - DehazeToe) / DehazeToe) * Math.Min(1.0, j / DehazeToe), k)
+            End If
             Return ClampToByte(j * 255.0)
         End Function
 

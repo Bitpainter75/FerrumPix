@@ -184,7 +184,7 @@ Namespace Services
         Private Const PanasonicChromaticAberrationTag As Integer = &H11B
 
         ''' <summary>Panasonic: der Farbquerfehler im Feld 0x011B des RW2-Kopfes, 32 Werte mit
-        ''' Vorzeichen (Lesart nach RAWmakase 0.4.5, lens/embedded.rs). Wert 14 ist 256, wenn die
+        ''' Vorzeichen. Wert 14 ist 256, wenn die
         ''' Tabelle Daten traegt. Die Werte 17, 16, 4 und 11 sind vier Quellradien in Pixeln, der
         ''' letzte etwa die halbe Diagonale; 12, 23, 8 und 26 (Rot) sowie 27, 10, 20 und 29 (Blau)
         ''' die Verschiebung des Kanals gegen Gruen an diesen Radien in minus Tausendstel Pixel.
@@ -192,8 +192,8 @@ Namespace Services
         ''' Das Referenzprogramm zieht keine Geraden zwischen den Werten, sondern legt ein glattes
         ''' Polynom in der Form seiner Verzerrungsformel hindurch: 1 + c0 + c1 s^2 + c2 s^4 + c3 s^6
         ''' mit s dem Quellradius in halben Diagonalen, kleinste Quadrate mit Gewicht s bis zur Ecke.
-        ''' So gerechnet liegt es laut RAWmakase an 309 Fotos aus 111 Gehaeusen hoechstens 0,15 Pixel
-        ''' neben dessen DNG, die Geraden selbst bis 0,86. Der Faktor gilt am Quellradius von Gruen,
+        ''' So gerechnet liegt es an 309 Fotos aus 111 Gehaeusen hoechstens 0,15 Pixel neben dessen
+        ''' DNG, die Geraden selbst bis 0,86. Der Faktor gilt am Quellradius von Gruen,
         ''' genau dort, wo der Decode ihn anwendet.</summary>
         Private Shared Function ReadPanasonicChromatic(directories As IEnumerable(Of Directory),
                                                        width As Integer, height As Integer) As (Red As Double(), Blue As Double())
@@ -294,7 +294,7 @@ Namespace Services
 
         ''' <summary>Nikon Z: die Objektivkorrektur der Kamera in Feld 0xC7D5 des RAW-Unterverzeichnisses
         ''' (ExifTools NikonNEFInfo), ein kleines TIFF hinter "Nikon\0" und vier Versionsbytes
-        ''' (Lesart nach RAWmakase 0.4.5). Die Eintraege 5 bis 7 sind Saetze, die mit "0100" beginnen,
+        ''' Die Eintraege 5 bis 7 sind Saetze, die mit "0100" beginnen,
         ''' Werte als Brueche mit Vorzeichen, Polynome im Radius q mit den Beiwerten fuer absteigende
         ''' Potenzen bis q^1, q = 1 in der Ecke des Standardausschnitts:
         ''' Verzeichnung (Satz 5): Byte 4 ist der Modus, ohne Bit 0 (Verzeichnungskontrolle der Kamera
@@ -306,8 +306,8 @@ Namespace Services
         ''' ihn am Quellradius an, deshalb wird er dorthin umgerechnet.
         '''
         ''' Die optische Mitte (Satz 8, bis 27 Pixel neben der Bildmitte, mit einem Fremdobjektiv 66)
-        ''' wird NICHT gelesen: die Korrektur sitzt auf der Bildmitte. RAWmakase lag so bis 2,1 Pixel
-        ''' neben dem Referenzprogramm.</summary>
+        ''' wird NICHT gelesen: die Korrektur sitzt auf der Bildmitte, das liegt so bis 2,1 Pixel neben
+        ''' dem Referenzprogramm.</summary>
         Private Shared Function ReadNikon(directories As IEnumerable(Of Directory)) As (Distortion As Double(), Red As Double(), Blue As Double(), Vignetting As Double())
             Dim none As (Distortion As Double(), Red As Double(), Blue As Double(), Vignetting As Double()) = (Nothing, Nothing, Nothing, Nothing)
             Dim info As Byte() = Nothing
@@ -381,7 +381,7 @@ Namespace Services
 
             ' Ohne Bit 0 des Modus (Verzeichnungskontrolle der Kamera aus, Z 8, Z6 III, Z f, Z5 II im
             ' Bestand) traegt die DNG des Referenzprogramms nur den Farbquerfehler: Gruen bleibt,
-            ' keine Vignette. RAWmakase liest dann gar nichts; hier bleibt der Farbquerfehler.
+            ' keine Vignette. Der Farbquerfehler wird dann trotzdem gelesen.
             Dim distortionRecord = record(5, &H48)
             If distortionRecord Is Nothing Then Return none
             Dim cameraCorrects = (distortionRecord(4) And 1) <> 0
@@ -510,8 +510,7 @@ Namespace Services
 
         ''' <summary>Fujifilm: der Farbquerfehler in Feld 0xF00F, gebaut wie die Verzeichnung, nur mit
         ''' zwei Wertereihen: ein Kopfwert, n Stuetzstellen in halben Diagonalen, n Werte fuer Rot,
-        ''' n fuer Blau. 1 plus Wert ist der Faktor des Kanals gegen Gruen am AUSGABEradius (Lesart
-        ''' nach RAWmakase 0.4.5); der Decode wendet ihn am Quellradius an, deshalb wird er mit der
+        ''' n fuer Blau. 1 plus Wert ist der Faktor des Kanals gegen Gruen am AUSGABEradius; der Decode wendet ihn am Quellradius an, deshalb wird er mit der
         ''' Verzeichnung der Datei dorthin umgerechnet. Ohne Verzeichnung sind beide Radien gleich.
         ''' Wie dort muss Kopfwert mal n die halbe Diagonale treffen.</summary>
         Private Shared Function ReadFujifilmChromatic(path As String, width As Integer, height As Integer,

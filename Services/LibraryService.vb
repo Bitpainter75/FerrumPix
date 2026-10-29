@@ -1191,6 +1191,11 @@ Namespace Services
         ''' er SetExifData ohne diese optionalen Parameter aufruft.</summary>
         Public Sub SyncExifData(filePath As String, exif As ExifSearchFields, summary As ExifCatalogSummary)
             If String.IsNullOrWhiteSpace(filePath) OrElse exif Is Nothing OrElse summary Is Nothing Then Return
+            ' Der Stempel traegt die Lesefassung des Formats dieser Datei (ExifService.ReaderVersions);
+            ' die Zusammenfassung kennt nur den allgemeinen Teil.
+            If String.Equals(summary.SummaryFormat, ExifService.CurrentSummaryFormat, StringComparison.Ordinal) Then
+                summary.SummaryFormat = ExifService.CurrentSummaryFormatFor(filePath)
+            End If
 
             Dim currentModifiedAt = ""
             Try

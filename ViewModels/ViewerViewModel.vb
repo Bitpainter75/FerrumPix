@@ -3616,6 +3616,12 @@ Namespace ViewModels
             ' löschen wäre wirkungslos (sie wäre beim nächsten Blättern wieder da). Gemeint ist das
             ' Element auf dem Server, und WELCHER Server sagt das Element selbst: bei Nextcloud ist
             ' die Immich-Kennung leer, und der Weg endete dort wortlos.
+            ' Aus einem Serveralbum geöffnet: Löschen nimmt das Bild nur aus dem Album, wie in der
+            ' Galerie (GalleryViewModel.DeleteSelected).
+            If CurrentAlbumItem() IsNot Nothing Then
+                Dim ignoredAlbum = RemoveCurrentFromAlbumAsync()
+                Return
+            End If
             If CurrentNextcloudItem() IsNot Nothing Then
                 Dim ignoredNextcloud = DeleteCurrentNextcloudFileAsync()
                 Return
@@ -3650,6 +3656,65 @@ Namespace ViewModels
                                                            End If
                                                        End Sub)
         End Sub
+
+        ''' <summary>Das angezeigte Serverbild, wenn es aus einem Album stammt (ImageItem.ServerAlbumId).</summary>
+        Private Function CurrentAlbumItem() As ImageItem
+            If Not _isImmichSession Then Return Nothing
+            If _currentIndex < 0 OrElse _currentIndex >= _immichSessionItems.Count Then Return Nothing
+            Dim item = _immichSessionItems(_currentIndex)
+            If item Is Nothing OrElse Not item.IsRemoteAsset OrElse String.IsNullOrEmpty(item.ServerAlbumId) Then Return Nothing
+            Return item
+        End Function
+
+        ''' <summary>Nimmt das angezeigte Bild aus seinem Serveralbum. Auf dem Server bleibt es
+        ''' erhalten, deshalb braucht es keinen der Schalter für das Löschen. Danach rückt der
+        ''' Betrachter weiter wie nach dem Löschen.</summary>
+        Private Async Function RemoveCurrentFromAlbumAsync() As Task
+            Dim item = CurrentAlbumItem()
+            If item Is Nothing OrElse _currentIndex >= _folderPaths.Count Then Return
+
+            If Not AppSettingsService.Load().DeleteSkipConfirmation Then
+                Dim question = String.Format(LocalizationService.T("{0} Bild(er) aus dem Album nehmen? Sie bleiben auf dem Server erhalten."), 1)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Aus dem Album nehmen"), question,
+                                                      LocalizationService.T("Aus dem Album nehmen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
+            End If
+
+            Dim ok As Boolean
+            If item.IsImmichAsset Then
+                Dim done = Await ImmichService.RemoveAssetsFromAlbumAsync(item.ServerAlbumId, {item.ImmichAssetId})
+                ok = done IsNot Nothing AndAlso done.Count > 0
+            Else
+                Dim name = If(String.IsNullOrEmpty(item.NextcloudPath), item.FileName, item.NextcloudPath)
+                ok = Await NextcloudService.RemoveFromAlbumAsync(item.ServerAlbumId, item.NextcloudFileId, name)
+            End If
+            If Not ok Then
+                StatusInfo = LocalizationService.T("Nicht aus dem Album genommen")
+                Return
+            End If
+
+            Dim idx = _currentIndex
+            Dim removedPath = _folderPaths(idx)
+            _folderPaths.RemoveAt(idx)
+            If idx < _immichSessionItems.Count Then _immichSessionItems.RemoveAt(idx)
+            If item.IsImmichAsset Then
+                _mainVm.Gallery?.RemoveImmichItems({item.ImmichAssetId})
+            Else
+                _mainVm.Gallery?.RemovePathsFromCurrentView({removedPath})
+            End If
+
+            If _folderPaths.Count = 0 Then
+                InvalidatePendingBitmapLoad() : CurrentImage = Nothing
+                CurrentImagePath = ""
+                CurrentFileName = ""
+                _mainVm.CurrentMode = AppMode.Gallery
+                Return
+            End If
+
+            If idx >= _folderPaths.Count Then idx = _folderPaths.Count - 1
+            LoadFilmstrip()
+            LoadImmichAt(idx)
+        End Function
 
         ''' <summary>Löscht die gerade gezeigte Nextcloud-Datei auf dem Server. Gegenstück zum
         ''' Immich-Weg darunter, mit denselben zwei Schaltern: erlaubt sein muss es, und „endgültig"

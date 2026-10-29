@@ -288,7 +288,11 @@ Namespace Services
         ' Weissabgleich auf der Rampe (chain.WhiteBalanceRampIn und RampOut, ab Modell 4 bei RAW).
         Private Const RowWbRampIn As Integer = 22
         Private Const RowWbRampOut As Integer = 23
-        Private Const ShaderTableRows As Integer = 24
+        ' Die Hauptkurve nach der RGBTone-Regel (chain.MelissaMaster), nur mit useMaster.
+        Private Const RowMelissaMaster As Integer = 24
+        ' Der oertliche Hub der Lichter allein (chain.LocalHighlightShift), nur mit useLocalHighlight.
+        Private Const RowLocalHighlight As Integer = 25
+        Private Const ShaderTableRows As Integer = 26
 
         Private Shared _pointOpEffect As SKRuntimeEffect
         Private Shared ReadOnly _pointOpEffectLock As New Object()
@@ -703,6 +707,7 @@ Namespace Services
             u("useLocal") = If(localBase IsNot Nothing, 1.0F, 0.0F)
             u("useLocalDetail") = If(chain.LocalDetailGain IsNot Nothing, 1.0F, 0.0F)
             u("useLocalColor") = If(chain.LocalColorGain IsNot Nothing, 1.0F, 0.0F)
+            u("useLocalHighlight") = If(localBase IsNot Nothing AndAlso chain.LocalHighlightShift IsNot Nothing, 1.0F, 0.0F)
             u("baseSize") = If(localBase IsNot Nothing, New Single() {localBase.Width, localBase.Height}, New Single() {1, 1})
             u("baseOrigin") = If(localBase IsNot Nothing, New Single() {localBase.OriginX, localBase.OriginY}, New Single() {0, 0})
             u("baseStep") = If(localBase IsNot Nothing, CSng(localBase.StepSize), 1.0F)
@@ -732,6 +737,7 @@ Namespace Services
                             chain.SplitToning IsNot Nothing OrElse chain.PointColors IsNot Nothing
             u("hslActive") = If(hslActive, 1.0F, 0.0F)
             u("useMelissa") = If(chain.CurvesInMelissa, 1.0F, 0.0F)
+            u("useMaster") = If(chain.CurvesInMelissa AndAlso chain.MelissaMaster IsNot Nothing, 1.0F, 0.0F)
             u("deferCurves") = If(CurvesAfterMixer(chain), 1.0F, 0.0F)
             SetColorGradeUniforms(u, chain)
             SetPointColorUniforms(u, chain.PointColors)
@@ -940,6 +946,8 @@ Namespace Services
             put(RowRawStageTone, chain.RawStageTone)
             put(RowWbRampIn, chain.WhiteBalanceRampIn)
             put(RowWbRampOut, chain.WhiteBalanceRampOut)
+            put(RowMelissaMaster, chain.MelissaMaster)
+            put(RowLocalHighlight, chain.LocalHighlightShift)
             If chain.RawStageShadowSaturation IsNot Nothing Then
                 ' Ueber die lineare Helligkeit wie im Prozessor (ScaleShadowSaturation).
                 Dim shadow = chain.RawStageShadowSaturation
@@ -1015,7 +1023,7 @@ uniform shader baseGrid;
 uniform shader guide;
 uniform float useGuide;
 uniform float premulIn;
-uniform float useLocal; uniform float useLocalDetail; uniform float useLocalColor;
+uniform float useLocal; uniform float useLocalDetail; uniform float useLocalColor; uniform float useLocalHighlight;
 uniform float2 baseSize; uniform float2 baseOrigin; uniform float baseStep;
 uniform float useRawStage; uniform float useRawShadow; uniform float rawPro;
 uniform float useNeg; uniform float negMono;
@@ -1036,7 +1044,7 @@ uniform float useMixer; uniform float3 mix0; uniform float3 mix1; uniform float3
 uniform float useMap; uniform float3 mapS; uniform float3 mapH; uniform float mapAmount;
 uniform float usePreset; uniform float3 pm0; uniform float3 pm1; uniform float3 pm2; uniform float3 pmOff; uniform float presetStrength;
 uniform float posterize; uniform float threshold;
-uniform float useMelissa; uniform float deferCurves;
+uniform float useMelissa; uniform float deferCurves; uniform float useMaster;
 uniform float useGrade; uniform float gradeAfterPreset;
 uniform float gradeY[20]; uniform float gradeCb[20]; uniform float gradeCr[20];
 uniform shader cubeA; uniform shader cubeB;
@@ -1055,6 +1063,22 @@ float tab(float row, float v) {
     v = clamp(v, 0.0, 1.0);
     half4 t = tables.eval(float2(v * 4096.0 + 0.5, row + 0.5));
     return float(t.r) + float(t.g);
+}
+// L* eines Grauwerts (GrayVToLightness im Prozessor), linear ueber die Tabelle der Zeile 0.
+float lstarOf(float v) {
+    float y = tab(0.0, clamp(v, 0.0, 1.0));
+    return y > 0.008856 ? 116.0 * pow(y, 1.0 / 3.0) - 16.0 : 903.3 * y;
+}
+// HighlightLiftChromaExcess: Buntheit je Bildpunkt aus dem Hub der Lichter, Faktor minus 1.
+float hlChromaExcess(float gray, float shift, float detailShift) {
+    if (shift >= 0.0) return 0.0;
+    float l = lstarOf(gray);
+    float down = l - lstarOf(gray + shift + detailShift);
+    float dark = down > 3.5 ? max(0.75, exp(-0.022 * (down - 3.5))) : 1.0;
+    float bright = down > 4.0 ? min(1.07, exp(0.009 * (down - 4.0))) : 1.0;
+    float w = clamp((l - 50.0) / 20.0, 0.0, 1.0);
+    w = w * w * (3.0 - 2.0 * w);
+    return dark + (bright - dark) * w - 1.0;
 }
 float hueTab(float row, float h) {
     half4 t = tables.eval(float2(h / 360.0 * 4096.0 + 0.5, row + 0.5));
@@ -1476,6 +1500,21 @@ float3 curvesMelissa(float3 c) {
     float gr0 = tab(1.0, clamp(pp.r, 0.0, 1.0));
     float gg0 = tab(1.0, clamp(pp.g, 0.0, 1.0));
     float gb0 = tab(1.0, clamp(pp.b, 0.0, 1.0));
+    // Die Hauptkurve nach der RGBTone-Regel (MasterCurveByExtremes im Prozessor).
+    if (useMaster > 0.5) {
+        float hiM = max(gr0, max(gg0, gb0));
+        float loM = min(gr0, min(gg0, gb0));
+        float hiOutM = tab(24.0, hiM);
+        if (hiM - loM < 0.0000001) {
+            gr0 = hiOutM; gg0 = hiOutM; gb0 = hiOutM;
+        } else {
+            float loOutM = tab(24.0, loM);
+            float kM = (hiOutM - loOutM) / (hiM - loM);
+            gr0 = loOutM + (gr0 - loM) * kM;
+            gg0 = loOutM + (gg0 - loM) * kM;
+            gb0 = loOutM + (gb0 - loM) * kM;
+        }
+    }
     float cr0 = tab(5.0, gr0);
     float cg0 = tab(6.0, gg0);
     float cb0 = tab(7.0, gb0);
@@ -1559,6 +1598,7 @@ float4 preMixer(float3 c, float2 p) {
             float detailShift = useLocalDetail > 0.5 ? tab(16.0, smoothAt) * (gray - smoothValue) : 0.0;
             float colorExcess = useLocalColor > 0.5 ? tab(17.0, smoothAt) : 0.0;
             float at = clamp(baseValue, 0.0, 1.0);
+            if (useLocalHighlight > 0.5) colorExcess += hlChromaExcess(gray, tab(25.0, at), detailShift);
             float shift = tab(15.0, at) - at + detailShift;
             float lMax = max(rr, max(gg, bb));
             float lMin = min(rr, min(gg, bb));

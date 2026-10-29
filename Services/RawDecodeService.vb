@@ -2068,7 +2068,7 @@ Namespace Services
 
         ''' <summary>Ab diesem Abstand zur Unbuntachse wird gestaucht; darunter bleibt jede Farbe,
         ''' wie sie ist. Abstand heisst (max - Kanal) / max, also 1 bei einem Kanal auf null.</summary>
-        ''' Messschalter (GamutThresholdValue): ab Werk 0,8 wie in RapidRAW.
+        ''' Messschalter (GamutThresholdValue): ab Werk 0,8.
         Friend Shared GamutThresholdValue As Double = 0.8
         Private Shared ReadOnly Property GamutThreshold As Single
             Get

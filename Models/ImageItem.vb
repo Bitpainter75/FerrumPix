@@ -426,6 +426,11 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>Das Serveralbum, aus dem dieses Element geladen wurde; leer außerhalb eines Albums.
+        ''' Gesetzt von den Ladewegen der Galerie für Immich- und Nextcloud-Alben. Daran hängt, dass
+        ''' Löschen im Album das Element nur aus dem Album nimmt, statt es auf dem Server zu löschen.</summary>
+        Public Property ServerAlbumId As String = ""
+
         ''' <summary>Spiegel der Einstellung „Löschen in Immich erlauben" (siehe SettingsViewModel). Als
         ''' statisches Feld, weil die Kachel-Bindung CanFileOperationDelete je Element ausgewertet wird und
         ''' AppSettingsService.Load dafür zu teuer wäre.</summary>
@@ -445,6 +450,9 @@ Namespace Models
                 ' endgueltige Loeschen, und dafuer gibt es keine Geste - der Papierkorb kennt genau
                 ' eine Richtung, zurueck.
                 If IsTrashed Then Return False
+                ' Im Album heißt Löschen „aus dem Album nehmen" (siehe ServerAlbumId). Dabei geht
+                ' nichts verloren, deshalb braucht es den Schalter für das Löschen auf dem Server nicht.
+                If IsRemoteAsset AndAlso Not String.IsNullOrEmpty(ServerAlbumId) Then Return True
                 If IsImmichAsset Then Return ImmichDeleteAllowed
                 ' Nextcloud: wie bei Immich entscheidet ein eigener Schalter. Die Pfad-Policy greift
                 ' hier nicht, es gibt ja keinen lokalen Pfad.

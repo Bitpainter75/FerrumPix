@@ -11,8 +11,8 @@ Namespace Services
     '
     ' Ein ausgefressener Bildpunkt klemmt fast nie in allen drei Kanaelen zugleich. Die Kanaele, die
     ' noch unter der Klemmgrenze liegen, tragen das wahre Verhaeltnis - in der Nachbarschaft, wo
-    ' nichts klemmt, laesst es sich ablesen und auf den geklemmten Punkt uebertragen. Das Verfahren
-    ' folgt RAWmakase (develop/quality/highlights.rs, MIT): erst Kanalverhaeltnisse aus
+    ' nichts klemmt, laesst es sich ablesen und auf den geklemmten Punkt uebertragen. Das Verfahren:
+    ' erst Kanalverhaeltnisse aus
     ' ungeklemmten Nachbarn im 7x7-Fenster; findet sich dort keiner, eine grobe Karte (hoechstens 512
     ' Punkte Kante) mit Farben aus GLATTEN, ungeklemmten Punkten derselben zusammenhaengenden hellen
     ' Flaeche; ohne jeden Farbbeleg neutral. Mit EINEM geklemmten Kanal ist sein Wert eine Untergrenze
@@ -76,7 +76,7 @@ Namespace Services
         End Sub
 
         ''' Anteil der Klemmgrenze, ab dem ein Kanal als geklemmt gilt (Demosaic und Rauschminderung
-        ''' verwischen die Grenze; RAWmakase nimmt denselben Wert).
+        ''' verwischen die Grenze).
         Private Const ClipFraction As Single = 0.97F
         ''' Ab diesem Anteil zaehlt ein Punkt als hell fuer die Farbkarte.
         Private Const BrightFraction As Single = 0.75F
@@ -444,14 +444,12 @@ Namespace Services
             Return New Double() {65535.0 * values(0) / largest, 65535.0 * values(1) / largest, 65535.0 * values(2) / largest}
         End Function
 
-        ' ZWEITES VERFAHREN, nur als Messschalter: Gegenkanaele mit Push-Pull, wie RapidRAW 1.6.7
-        ' (highlight_reconstruction.rs, AGPL; uebertragen ist das Verfahren, die Konstanten sind
-        ' dieselben). Ein geklemmter Kanal wird aus dem Mittel der Kubikwurzeln der beiden anderen
+        ' ZWEITES VERFAHREN, nur als Messschalter: Gegenkanaele mit Push-Pull. Ein geklemmter Kanal wird aus dem Mittel der Kubikwurzeln der beiden anderen
         ' geschaetzt, verschoben um einen Versatz, den eine Push-Pull-Karte aus ungeklemmten Punkten
         ' am Rand der hellen Flaeche liefert. Nahe am Vollbeschnitt wird die Farbe zurueckgenommen
         ' (Lichtquellen bleiben neutral), und ganz ausgebrannte Punkte bekommen zur Haelfte die Farbe
         ' der Umgebung aus einer zweiten Push-Pull-Karte. Alles skaliert mit den Daten, die
-        ' Konstanten gelten deshalb auf den 16-Bit-Werten genauso wie auf RapidRAWs 0 bis 1.
+        ' Konstanten gelten deshalb auf den 16-Bit-Werten genauso wie auf Werten von 0 bis 1.
 
         ''' <summary>Welches Verfahren <see cref="HighlightReconstruction"/> nimmt: 0 Nachbarn und
         ''' Farbkarte, 1 Gegenkanaele mit Push-Pull (ab Werk, in der Messung oben das bessere).

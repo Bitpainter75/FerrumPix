@@ -813,6 +813,8 @@ Namespace Services
         ' Pentax); ohne die Erhoehung blieben die Katalogzeilen dieser Gehaeuse ohne Objektiv.
         ' 9 liest die ISO auch dort, wo das gewohnte EXIF-Feld fehlt (ReadFallbackIso, Nikon in
         ' den Hi-Stufen); ohne die Erhoehung blieben solche JPGs im Katalog ohne ISO.
+        ' Betrifft eine Aenderung nur EIN Format, gehoert sie nicht hierher, sondern in
+        ' ReaderVersions: dann liest der Katalog nur dieses Format neu.
         Public Const SummaryFormatVersion As Integer = 9
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
@@ -822,6 +824,30 @@ Namespace Services
                 Return $"{SummaryFormatVersion}:{LocalizationService.EffectiveLanguage}:{MakerLensIdService.TableStamp}:{NikonLensIdService.TableStamp}"
             End Get
         End Property
+
+        ''' <summary>Lesefassung je Formatfamilie, Endung auf Familie und Nummer. Wird der Leser EINES
+        ''' Formats besser (ein neues Feld, ein Rueckweg fuer Dateien, an denen er scheiterte), wird hier
+        ''' dessen Nummer erhoeht statt <see cref="SummaryFormatVersion"/>: dann liest der Katalog nur
+        ''' die Dateien dieses Formats einmal neu, nicht den ganzen Bestand. Eine Familie ohne Eintrag
+        ''' laesst den Stempel, wie er war.
+        '''
+        ''' heif 1: EXIF aus dem Container, wenn MetadataExtractor an einem fremden Eintrag scheitert
+        ''' (Huawei, <see cref="ReadHeifMetadataDirectories"/>). Ohne die Erhoehung blieb die Kamera
+        ''' unter der Kachel leer, waehrend das Infopanel sie frisch las (#100).</summary>
+        Private Shared ReadOnly ReaderVersions As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
+            {".heic", "heif1"}, {".heif", "heif1"}, {".hif", "heif1"}, {".avif", "heif1"}
+        }
+
+        ''' <summary>Der Formatstempel fuer eine bestimmte Datei: <see cref="CurrentSummaryFormat"/>,
+        ''' dazu die Lesefassung ihrer Formatfamilie (<see cref="ReaderVersions"/>). So schreibt ihn
+        ''' der Katalog, und so vergleichen Galerie und Katalogindex.</summary>
+        Public Shared Function CurrentSummaryFormatFor(filePath As String) As String
+            Dim reader As String = Nothing
+            If Not String.IsNullOrEmpty(filePath) AndAlso ReaderVersions.TryGetValue(Path.GetExtension(filePath), reader) Then
+                Return CurrentSummaryFormat & ":" & reader
+            End If
+            Return CurrentSummaryFormat
+        End Function
 
         Private Const MaxSummaryLines As Integer = 10
         Private Const MaxSummaryValueLength As Integer = 80

@@ -6,8 +6,8 @@ Namespace Services
     ''' Das JPEG, das der Nutzer speichert: Export aus Editor und Stapel, Collage.
     '''
     ''' VOLLE FARBAUFLOESUNG (4:4:4). Skias Vorgabe halbiert die Farbe in beide Richtungen (4:2:0).
-    ''' Gemessen an TEL_0674 mit Cool Glow, gegen Lightrooms Export, der wie der von RAWmakase
-    ''' 4:4:4 schreibt: die Steilheit farbiger Kanten (rote Strahlen, Schrift) bei Qualitaet 96
+    ''' Gemessen an TEL_0674 mit Cool Glow, gegen den Export des Referenzprogramms, der 4:4:4
+    ''' schreibt: die Steilheit farbiger Kanten (rote Strahlen, Schrift) bei Qualitaet 96
     ''' 0,73 mit 4:2:0 und 1,10 mit 4:4:4. Die Datei wird gut ein Drittel groesser (3,1 auf
     ''' 4,0 MB). Fuer Kacheln und Zwischenbilder der Anwendung bleibt Skias Vorgabe.
     '''

@@ -240,6 +240,13 @@ Namespace ViewModels
             Return Build("Löschen", "trash", c)
         End Function
 
+        ''' <summary>Derselbe Befehl wie Löschen, aber in einem Serveralbum: dort nimmt er das Bild nur
+        ''' aus dem Album (siehe GalleryViewModel.DeleteSelected). Eigener Name, damit niemand
+        ''' „Löschen" liest und das Bild in der Bibliothek für verloren hält.</summary>
+        Public Shared Function RemoveFromAlbum(c As ICommand) As AppAction
+            Return Build("Aus dem Album nehmen", "photo-minus", c)
+        End Function
+
         ''' <summary>Die einzige Geste im Papierkorb einer Serverquelle. Der Server legt die Datei
         ''' dorthin zurueck, wo sie herkam.</summary>
         Public Shared Function RestoreFromTrash(c As ICommand) As AppAction

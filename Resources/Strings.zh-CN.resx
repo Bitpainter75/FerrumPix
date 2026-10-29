@@ -10203,4 +10203,19 @@
   <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
     <value>已移除背景，文档背景色现在为透明</value>
   </data>
+  <data name="Aus_dem_Album_nehmen_c9806f99" xml:space="preserve">
+    <value>从相册移除</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_nehmen_Sie_bleiben_auf_d_e9982c77" xml:space="preserve">
+    <value>从相册移除 {0} 张图片？它们仍保留在服务器上。</value>
+  </data>
+  <data name="Nicht_aus_dem_Album_genommen_6e929c76" xml:space="preserve">
+    <value>未从相册移除</value>
+  </data>
+  <data name="0_von_1_Bild_ern_aus_dem_Album_genommen_e53e3dcc" xml:space="preserve">
+    <value>已从相册移除 {0}/{1} 张图片</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
+    <value>已从相册移除 {0} 张图片</value>
+  </data>
 </root>

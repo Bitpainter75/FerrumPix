@@ -943,6 +943,10 @@
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="CaretBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="SelectionBrush" Value="{DynamicResource FP.Accent}"/>
+        <!-- Markierter Text liegt auf der vollen Akzentfarbe und braucht deshalb dieselbe Schrift
+             wie jede Akzentflaeche: auf Gelb blieb er sonst weiss und unlesbar (Forumsbefund,
+             Dateiname in Speichern unter). FP.OnAccent waehlt nach Kontrast. -->
+        <Setter Property="SelectionForegroundBrush" Value="{DynamicResource FP.OnAccent}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBox:focus">

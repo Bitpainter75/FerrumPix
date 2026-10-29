@@ -30,8 +30,11 @@
                                    Text="{Binding DialogMessage}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    TextWrapping="Wrap"
-                                   Margin="0,10,0,0"
-                                   LineHeight="18"/>
+                                   Margin="0,10,0,0"/>
+                        <!-- KEINE feste Zeilenhoehe: 18 passte nur zur Schrift ab Werk. Mit
+                             groesserer Schrift wurde die Zeile oben und unten beschnitten
+                             ("Dateiname eingeben" in Speichern unter, Forumsbefund); die
+                             natuerliche Zeilenhoehe waechst mit der Schrift mit. -->
 
                         <views:FileConflictDialogView Grid.Row="2"
                                                       Margin="0,18,0,0"

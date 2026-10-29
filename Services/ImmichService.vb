@@ -382,6 +382,67 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Nimmt Assets aus einem Album (DELETE /albums/{id}/assets). Das Asset selbst bleibt in
+        ''' der Bibliothek; der Schlüssel braucht dafür nur das Recht albumAsset.delete, nicht
+        ''' asset.delete. Der Server antwortet je Kennung einzeln (BulkIdResponseDto) und meldet auch
+        ''' bei Status 200 Fehlschläge wie fehlende Rechte; geliefert werden deshalb nur die Kennungen,
+        ''' die er als erledigt meldet. Nothing heißt: die Anfrage selbst ist gescheitert.</summary>
+        Public Shared Async Function RemoveAssetsFromAlbumAsync(albumId As String, assetIds As IEnumerable(Of String), Optional cancellationToken As CancellationToken = Nothing) As Task(Of List(Of String))
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(albumId) Then Return Nothing
+            Dim ids = If(assetIds, Enumerable.Empty(Of String)()).Where(Function(s) Not String.IsNullOrWhiteSpace(s)).Distinct(StringComparer.Ordinal).ToList()
+            If ids.Count = 0 Then Return New List(Of String)()
+            Try
+                Dim client = GetClient()
+                Dim body = "{""ids"":[" & String.Join(",", ids.Select(Function(i) JsonSerializer.Serialize(i))) & "]}"
+                Using req = New HttpRequestMessage(HttpMethod.Delete, ApiUrl("albums/" & Uri.EscapeDataString(albumId) & "/assets"))
+                    req.Content = New StringContent(body, Encoding.UTF8, "application/json")
+                    Using resp = Await client.SendAsync(req, cancellationToken).ConfigureAwait(False)
+                        Dim answer = Await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(False)
+                        If Not resp.IsSuccessStatusCode Then
+                            DiagnosticLogService.LogAlways("Immich.RemoveFromAlbum", $"HTTP {CInt(resp.StatusCode)} album={albumId} n={ids.Count} {answer.Substring(0, Math.Min(300, answer.Length))}")
+                            Return Nothing
+                        End If
+                        Return ParseBulkIdSuccesses(answer, ids, "Immich.RemoveFromAlbum")
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException When cancellationToken.IsCancellationRequested
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Immich.RemoveFromAlbum", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Liest eine Antwort aus BulkIdResponseDto ({id, success, error} je Kennung) und
+        ''' liefert die erfolgreichen Kennungen. Eine Antwort ohne erkennbare Liste gilt als Erfolg für
+        ''' alle angefragten Kennungen, denn der Status war 200.</summary>
+        Private Shared Function ParseBulkIdSuccesses(answer As String, requested As List(Of String), logTag As String) As List(Of String)
+            Dim done As New List(Of String)()
+            Try
+                Using doc = JsonDocument.Parse(If(String.IsNullOrWhiteSpace(answer), "null", answer))
+                    If doc.RootElement.ValueKind <> JsonValueKind.Array Then Return New List(Of String)(requested)
+                    For Each entry In doc.RootElement.EnumerateArray()
+                        If entry.ValueKind <> JsonValueKind.Object Then Continue For
+                        Dim idElement As JsonElement
+                        If Not entry.TryGetProperty("id", idElement) OrElse idElement.ValueKind <> JsonValueKind.String Then Continue For
+                        Dim successElement As JsonElement
+                        Dim ok = entry.TryGetProperty("success", successElement) AndAlso successElement.ValueKind = JsonValueKind.True
+                        Dim errorElement As JsonElement
+                        Dim reason = If(entry.TryGetProperty("error", errorElement) AndAlso errorElement.ValueKind = JsonValueKind.String, errorElement.GetString(), "")
+                        ' not_found heißt: stand schon nicht (mehr) darin. Das Ziel ist damit erreicht.
+                        If ok OrElse String.Equals(reason, "not_found", StringComparison.Ordinal) Then
+                            done.Add(idElement.GetString())
+                        Else
+                            DiagnosticLogService.LogAlways(logTag, $"id={idElement.GetString()} error={reason}")
+                        End If
+                    Next
+                End Using
+            Catch ex As JsonException
+                Return New List(Of String)(requested)
+            End Try
+            Return done
+        End Function
+
         ''' <summary>Ersetzt das Original eines vorhandenen Assets durch eine lokale Datei und liefert die
         ''' Asset-ID des Ergebnisses (Nothing bei Fehler).
         '''

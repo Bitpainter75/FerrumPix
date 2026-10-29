@@ -96,6 +96,12 @@ Namespace Services
             ''' (ToneSliderCurves.DetailGain). Nothing, wenn kein Faktor von 1 abweicht.</summary>
             Public LocalColorGain As Single()
 
+            ''' <summary>Der oertliche Hub der Lichter allein, ueber dem Basiswert (ohne den Wert
+            ''' selbst), nur bei abgesenkten Lichtern. Daran haengt die Buntheit JE BILDPUNKT
+            ''' (HighlightLiftChromaExcess): ob ein abgedunkelter Punkt Farbe verliert oder gewinnt,
+            ''' entscheidet seine eigene Helligkeit, nicht die der Umgebung. Nothing ohne.</summary>
+            Public LocalHighlightShift As Single()
+
             ''' <summary>Weissabgleich als chromatische Adaption, 3x3 zeilenweise, ODER Nothing.
             ''' Nothing ist der Normalfall: Modell 1 rechnet den Weissabgleich weiter in der
             ''' Farbmatrix, und auch unter Modell 2 steht der Regler meist auf dem Anker.
@@ -136,6 +142,14 @@ Namespace Services
             ''' ScalarR/G/B halten nur die Kurven und wirken in ProPhoto-Primaerfarben mit
             ''' sRGB-Gammakurve (ApplyCurvesInMelissa); die Tonwertkurve steht dann in ToneBefore.
             Public CurvesInMelissa As Boolean
+            ''' Die Hauptkurve im selben Raum, aber nach der RGBTone-Regel statt je Kanal: hellster
+            ''' und dunkelster Kanal durch die Kurve, der mittlere an derselben Stelle zwischen
+            ''' beiden. Gemessen an Null- und Reglerbildern der Referenz
+            ''' (Diagnostics/Reglereichung/parametrikraum.py, 57 bis 62 Bilder): parametrische
+            ''' Zonen und S-Kurve liegen so 5 bis 10 % naeher als je Kanal, und eine abgesenkte
+            ''' dunkle Zone dreht Haut in dieselbe Richtung wie dort. ScalarR/G/B tragen dann nur
+            ''' noch die Kanalkurven. Nothing ohne Hauptkurve.
+            Public MelissaMaster As Single()
 
             ''' Filmnegativ - laeuft als ERSTE Stufe, noch vor der Farbmatrix. Eigene Tabellen statt
             ''' der verschmolzenen, weil im S/W-Fall die Graumatrix DAZWISCHEN liegt.
@@ -365,22 +379,27 @@ Namespace Services
                         If adj.ReadsImageStatistics() Then
                             reference = If(toneReference.IsMeasured, toneReference,
                                            MeasureToneReference(measured, chain))
+                            Dim moved As Func(Of Double, Double) = Nothing
                             If reference.IsMeasured AndAlso (chain.ToneBefore IsNot Nothing OrElse chain.RawStageTone IsNot Nothing) Then
                                 ' Durch beide Stufen davor: den Vorgriff auf die RAW-Stufe (an Grau
                                 ' wirkt er wie je Kanal) und die Tonwertkurve.
                                 Dim toneBefore = chain.ToneBefore
                                 Dim rawStage = chain.RawStageTone
-                                Dim moved = Function(l As Double) As Double
-                                                Dim v = CSng(LightnessToGrayV(l))
-                                                If rawStage IsNot Nothing Then v = SampleTable(rawStage, v)
-                                                If toneBefore IsNot Nothing Then v = SampleTable(toneBefore, v)
-                                                Return GrayVToLightness(v)
-                                            End Function
+                                moved = Function(l As Double) As Double
+                                            Dim v = CSng(LightnessToGrayV(l))
+                                            If rawStage IsNot Nothing Then v = SampleTable(rawStage, v)
+                                            If toneBefore IsNot Nothing Then v = SampleTable(toneBefore, v)
+                                            Return GrayVToLightness(v)
+                                        End Function
                                 reference.MedianL = moved(reference.MedianL)
                                 reference.TopL = moved(reference.TopL)
                                 ' Der Anteil heller Bildpunkte wandert ebenso mit: gezaehlt wird, was
                                 ' NACH der Stufe ueber der Grenze liegt.
                                 reference.BrightShare = reference.ShareAboveAfter(moved, ToneSliderCurves.BrightShareLimitL)
+                            End If
+                            ' Ebenso das ganze Histogramm, nach dem Lichter und Tiefen ihre Kurven waehlen.
+                            If reference.IsMeasured AndAlso (adj.Highlights <> 0 OrElse adj.ShadowsLevel <> 0) Then
+                                reference.PrepareShapeCurves(moved)
                             End If
                         End If
                         ' Lichter und Tiefen in eine eigene Tabelle, die an der Basisschicht
@@ -390,7 +409,8 @@ Namespace Services
                             EnsureGammaTables()
                             chain.LocalToneZones = BuildToneZoneTable(adj, reference, ToneZonePart.Local)
                             chain.LocalDetailGain = BuildLocalDetailTable(adj, True)
-                            chain.LocalColorGain = BuildLocalDetailTable(adj, False)
+                            chain.LocalColorGain = AddLiftChroma(BuildLocalDetailTable(adj, False), adj, reference)
+                            chain.LocalHighlightShift = BuildLocalHighlightShift(adj, reference)
                             ' Die Tabelle am Bildpunkt ist die gemeinsame monotone Tabelle aller fuenf
                             ' Regler MINUS dem oertlichen Hub. Wo Basis und Bildpunkt gleich sind (glatte
                             ' Flaeche, Verlauf), kommt so genau die gemeinsame Tabelle heraus, samt
@@ -413,6 +433,12 @@ Namespace Services
                     EnsureGammaTables()
                 End If
                 Dim common = BuildPointOpScalarTable(adj, wantsTone AndAlso Not wantsTonal AndAlso Not curvesInMelissa, wantsRgbCurve)
+                If curvesInMelissa AndAlso wantsRgbCurve Then
+                    ' Die Hauptkurve (Punktkurve samt gefalteter parametrischer) laeuft nach der
+                    ' RGBTone-Regel (MelissaMaster), die Kanalkurven danach je Kanal auf dem Ergebnis.
+                    chain.MelissaMaster = common
+                    common = BuildPointOpScalarTable(adj, False, False)
+                End If
                 If wantsChannelCurves Then
                     chain.ScalarR = ChainCurveOntoTable(common, adj.CurveRedPoints)
                     chain.ScalarG = ChainCurveOntoTable(common, adj.CurveGreenPoints)
@@ -1057,6 +1083,8 @@ Namespace Services
         ''' 8-Bit-Schritts.</summary>
         Private Shared _srgbToLinearTable As Single()
         Private Shared _linearToSrgbTable As Single()
+        ' L* je Grauwert, fuer HighlightLiftChromaExcess je Bildpunkt statt zweier Potenzen.
+        Private Shared _grayToLightnessTable As Single()
         Private Shared ReadOnly _gammaTableLock As New Object()
 
         Private Shared Sub EnsureGammaTables()
@@ -1065,12 +1093,15 @@ Namespace Services
                 If _srgbToLinearTable IsNot Nothing Then Return
                 Dim decodeTable = New Single(PointOpTableSize - 1) {}
                 Dim encodeTable = New Single(PointOpTableSize - 1) {}
+                Dim lightnessTable = New Single(PointOpTableSize - 1) {}
                 For i = 0 To PointOpTableSize - 1
                     Dim v = i / CDbl(PointOpTableSize - 1)
                     decodeTable(i) = CSng(If(v <= 0.04045, v / 12.92, Math.Pow((v + 0.055) / 1.055, 2.4)))
                     encodeTable(i) = CSng(If(v <= 0.0031308, v * 12.92, 1.055 * Math.Pow(v, 1.0 / 2.4) - 0.055))
+                    lightnessTable(i) = CSng(GrayVToLightness(v))
                 Next
                 _linearToSrgbTable = encodeTable
+                _grayToLightnessTable = lightnessTable
                 ' ZULETZT zuweisen: der Wächter oben prüft dieses Feld, und beide Tabellen müssen
                 ' fertig sein, bevor ein anderer Faden an ihnen vorbeikommt.
                 _srgbToLinearTable = decodeTable
@@ -1171,15 +1202,45 @@ Namespace Services
         ''' sich bleibt monoton; zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
         ''' <paramref name="part"/> Local liefert nur Lichter und Tiefen, die an der Basisschicht der
         ''' Umgebung ausgewertet werden.</summary>
+        ''' <summary>Gegenseitige Daempfung von Lichter und Tiefen. Gesetzt zusammen verliert jeder
+        ''' der beiden beim Referenzprogramm einen Teil seiner Wirkung, um so mehr, je groesser der
+        ''' andere Betrag gegen den eigenen ist. Gemessen mit Diagnostics/Reglereichung/daempfung.py
+        ''' an 57 Bildern (Lichter/Tiefen -50/+50, -100/+100, -100/+50, -50/+100, +50/-50) und den
+        ''' Werten von Cool Glow an 27 Bildern: Lichter verlieren 10 bis 42 %, Tiefen 6 bis 34 %, wir
+        ''' vorher 1 bis 6 %. Angepasst als Anteil je Verhaeltnis der Betraege, gedeckelt.</summary>
+        Private Const HighlightsDampingPerRatio As Double = 0.24
+        Private Const ShadowsDampingPerRatio As Double = 0.19
+        Private Const ToneZoneDampingMax As Double = 0.6
+        ''' Nur fuer die Reglereichung (Messschalter REGLER_DAEMPFUNG=0), in der Anwendung immer an.
+        Private Shared ToneZoneDampingEnabled As Boolean = True
+
+        Private Shared Function ToneZoneDamping(perRatio As Double, own As Double, other As Double) As Double
+            If Not ToneZoneDampingEnabled OrElse own = 0.0 OrElse other = 0.0 Then Return 0.0
+            Return Math.Min(ToneZoneDampingMax, perRatio * Math.Abs(other) / Math.Abs(own))
+        End Function
+
         Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double,
                                              Optional reference As ToneReference = Nothing,
                                              Optional part As ToneZonePart = ToneZonePart.All) As Double
             ' Die gemessenen Kennlinien, Kontrast eingeschlossen; ihre Enden sind gemessen und laufen
-            ' auf null aus. Lichter waehlen ihre Kurve nach dem Median des ganzen Bildes, Tiefen nach
-            ' dem Anteil heller Bildpunkte, Weiss nach der Spitze.
-            Dim highlightsShadows = ToneSliderCurves.LiftByMedian("Highlights", adj.Highlights, d0, reference.MedianL) +
-                                    ToneSliderCurves.LiftByBrightShare("Shadows", adj.ShadowsLevel, d0, reference.BrightShare,
-                                                                       reference.MedianL)
+            ' auf null aus. Lichter und Tiefen nehmen ihre Kurve nach dem ganzen Histogramm des Bildes
+            ' (ToneReference.PrepareShapeCurves), ohne diese Regel Lichter nach dem Median, Tiefen
+            ' nach dem Anteil heller Bildpunkte; Weiss nach der Spitze.
+            Dim highlightLift = If(reference.HighlightCurves IsNot Nothing,
+                                   ToneSliderCurves.LiftFromCurves(reference.HighlightCurves, adj.Highlights, d0),
+                                   ToneSliderCurves.LiftByMedian("Highlights", adj.Highlights, d0, reference.MedianL))
+            Dim shadowLift = If(reference.ShadowCurves IsNot Nothing,
+                                ToneSliderCurves.LiftFromCurves(reference.ShadowCurves, adj.ShadowsLevel, d0),
+                                ToneSliderCurves.LiftByBrightShare("Shadows", adj.ShadowsLevel, d0, reference.BrightShare,
+                                                                   reference.MedianL))
+            ' Zusammen gesetzt daempfen sich beide (ToneZoneDamping).
+            If adj.Highlights <> 0 AndAlso adj.ShadowsLevel <> 0 Then
+                highlightLift *= 1.0 - ToneZoneDamping(HighlightsDampingPerRatio, adj.Highlights, adj.ShadowsLevel)
+                shadowLift *= 1.0 - ToneZoneDamping(ShadowsDampingPerRatio, adj.ShadowsLevel, adj.Highlights)
+            End If
+            If part = ToneZonePart.ShadowsLocal Then Return shadowLift
+            If part = ToneZonePart.HighlightsLocal Then Return highlightLift
+            Dim highlightsShadows = highlightLift + shadowLift
             If part = ToneZonePart.Local Then Return highlightsShadows
             Return ToneSliderCurves.Lift("Contrast", adj.Contrast, d0) +
                    ToneSliderCurves.LiftByTop("Whites", adj.Whites, d0, reference.TopL) +
@@ -1313,6 +1374,9 @@ Namespace Services
         Friend Enum ToneZonePart
             All
             Local
+            ''' Nur der Hub der Tiefen bzw. der Lichter, gedaempft wie im Ganzen (fuer AddLiftChroma).
+            ShadowsLocal
+            HighlightsLocal
         End Enum
 
         ''' <summary>Lichter/Tiefen/Weiss/Schwarz allein als Tabelle, angewandt ueber ApplyToneZones.
@@ -1345,6 +1409,29 @@ Namespace Services
             ''' (<see cref="ShareAboveAfter"/>); der Median wandert einfach durch die Stufe mit.</summary>
             Public Histogram As Long()
             Public Total As Long
+            ''' <summary>Die Kurven von Tiefen und Lichtern nach dem ganzen Histogramm
+            ''' (ToneSliderCurves.ShapeCurves), gesetzt von <see cref="PrepareShapeCurves"/>. Nothing,
+            ''' wenn keine solche Regel vorliegt; dann gelten die Gruppen.</summary>
+            Public ShadowCurves As Double()()
+            Public HighlightCurves As Double()()
+
+            ''' <summary>Rechnet die Kurven nach dem Histogramm, wie es NACH der Abbildung
+            ''' <paramref name="map"/> (L auf L, steigend; Nothing fuer keine) bei den Tonzonen ankommt.
+            ''' Einmal je Bild, nicht je Eintrag der Tabelle.</summary>
+            Public Sub PrepareShapeCurves(map As Func(Of Double, Double))
+                ShadowCurves = Nothing
+                HighlightCurves = Nothing
+                If Histogram Is Nothing OrElse Total <= 0 Then Return
+                Dim shape = New Double(1000) {}
+                For k = 0 To Math.Min(1000, Histogram.Length - 1)
+                    If Histogram(k) = 0 Then Continue For
+                    Dim l = k / 10.0
+                    If map IsNot Nothing Then l = map(l)
+                    shape(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += Histogram(k) / CDbl(Total)
+                Next
+                ShadowCurves = ToneSliderCurves.ShapeCurves("Shadows", shape)
+                HighlightCurves = ToneSliderCurves.ShapeCurves("Highlights", shape)
+            End Sub
 
             Public ReadOnly Property IsMeasured As Boolean
                 Get
@@ -1847,6 +1934,7 @@ Namespace Services
         ''' Kanal, zurueck und auf sRGB geklemmt.</summary>
         Private Shared Sub ApplyCurvesInMelissa(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single,
                                                 sr As Single(), sg As Single(), sb As Single(),
+                                                master As Single(),
                                                 toLinear As Single(), toGamma As Single())
             Dim lr = SampleTable(toLinear, rr)
             Dim lg = SampleTable(toLinear, gg)
@@ -1854,9 +1942,13 @@ Namespace Services
             Dim pr = 0.529214F * lr + 0.330063F * lg + 0.140723F * lb
             Dim pg = 0.098324F * lr + 0.873625F * lg + 0.028051F * lb
             Dim pb = 0.016879F * lr + 0.117714F * lg + 0.865407F * lb
-            pr = SampleTable(sr, SampleTable(toGamma, Clamp(pr, 0.0F, 1.0F)))
-            pg = SampleTable(sg, SampleTable(toGamma, Clamp(pg, 0.0F, 1.0F)))
-            pb = SampleTable(sb, SampleTable(toGamma, Clamp(pb, 0.0F, 1.0F)))
+            pr = SampleTable(toGamma, Clamp(pr, 0.0F, 1.0F))
+            pg = SampleTable(toGamma, Clamp(pg, 0.0F, 1.0F))
+            pb = SampleTable(toGamma, Clamp(pb, 0.0F, 1.0F))
+            If master IsNot Nothing Then MasterCurveByExtremes(pr, pg, pb, master)
+            pr = SampleTable(sr, pr)
+            pg = SampleTable(sg, pg)
+            pb = SampleTable(sb, pb)
             pr = SampleTable(toLinear, pr)
             pg = SampleTable(toLinear, pg)
             pb = SampleTable(toLinear, pb)
@@ -1868,9 +1960,28 @@ Namespace Services
             bb = SampleTable(toGamma, Clamp(nb, 0.0F, 1.0F))
         End Sub
 
+        ''' <summary>Die Hauptkurve nach der RGBTone-Regel auf den gammakodierten ProPhoto-Werten:
+        ''' hellster und dunkelster Kanal durch die Kurve, der mittlere an derselben Stelle zwischen
+        ''' beiden (siehe <see cref="PointOpChain.MelissaMaster"/>). Grau bleibt dabei je Kanal
+        ''' dieselbe Kurve.</summary>
+        Private Shared Sub MasterCurveByExtremes(ByRef r As Single, ByRef g As Single, ByRef b As Single,
+                                                 master As Single())
+            Dim hi = Math.Max(r, Math.Max(g, b))
+            Dim lo = Math.Min(r, Math.Min(g, b))
+            Dim hiOut = SampleTable(master, hi)
+            If hi - lo < 0.0000001F Then
+                r = hiOut : g = hiOut : b = hiOut
+                Return
+            End If
+            Dim loOut = SampleTable(master, lo)
+            Dim k = (hiOut - loOut) / (hi - lo)
+            r = loOut + (r - lo) * k
+            g = loOut + (g - lo) * k
+            b = loOut + (b - lo) * k
+        End Sub
+
         ''' <summary>MESSVERSUCH, ab Werk aus: der Farbmischer im HSV von LINEAREM ProPhoto statt in
-        ''' HSL von sRGB. Zwei Messungen am Referenzprogramm (Fremdprojekte RAWMAKASE.md, Punkt 23,
-        ''' und RAPIDONE.md) legen ihn dort hin: ein Farbtonregler laesst HSV-Saettigung und Wert
+        ''' HSL von sRGB. Messungen am Referenzprogramm legen ihn dort hin: ein Farbtonregler laesst HSV-Saettigung und Wert
         ''' in diesem Raum unveraendert. Gesetzt nur von der Reglereichung (REGLER_MISCHER_PROPHOTO)
         ''' und von der Vergleichspruefung Diagnostics/Mischershader; in der Anwendung bleibt er aus.
         ''' Der Shader rechnet den Zweig mit (mixerProPhotoPixel), solange die Kodierung linear bleibt
@@ -1879,7 +1990,7 @@ Namespace Services
         ''' Die Bandmitten sind die Nennwerte des Referenzprogramms im ProPhoto-HSV; fuenf der acht
         ''' gemessenen Mitten in sRGB-HSL (ReferenceBandFrom) sind deren Abbild auf 2 bis 5 Grad.
         ''' Die Luminanz folgt dem Regler nicht linear (beim Abdunkeln mit Exponent 1,6, beim
-        ''' Aufhellen 0,79, ebenfalls nach RAWmakase) und wirkt als Faktor auf den Wert; die
+        ''' Aufhellen 0,79) und wirkt als Faktor auf den Wert; die
         ''' Staerken sind Startwerte fuer die Eichung.</summary>
         Friend Shared MixerInProPhoto As Boolean = False
         Friend Shared MixerProPhotoCenters As Double() = {0.0, 30.0, 60.0, 120.0, 180.0, 240.0, 270.0, 300.0}
@@ -3066,6 +3177,99 @@ Namespace Services
             End Sub
         End Class
 
+        ''' <summary>Die Buntheit folgt dem oertlichen Hub von Tiefen und Lichtern. Die oertliche
+        ''' Stufe verschiebt hellsten und dunkelsten Kanal um denselben Betrag, die Farbe blieb damit
+        ''' fast gleich, wie weit ein Punkt auch gehoben oder gesenkt wurde. Beim Referenzprogramm
+        ''' haengt sie am Hub, gemessen mit Diagnostics/Reglereichung/buntheit_abdunkeln.py an 57
+        ''' Bildern (je Hubklasse Referenz durch uns, gleich ueber alle Ausgangsbuntheiten):
+        ''' Tiefen +50 und +100 1,03 bei +4,5 L, 1,08 bei +7,5, 1,16 bei +10,5, 1,21 bei +15;
+        ''' Tiefen -50 und -100 0,98 bei -4,5, 0,91 bei -7,5, 0,83 bei -10,5, 0,75 bei -15.
+        ''' Lichter -25 bis -100 haengen an der Helligkeit des Punkts: unter L 60 verliert ein
+        ''' abgedunkelter Punkt Farbe (0,98 bei -4,5, 0,90 bei -7,5, 0,87 bei -10,5, 0,78 bei -15),
+        ''' ueber L 60 gewinnt er etwas (1,04 bei -7,5, 1,06 bei -10,5 und -15); bei -50 und -100
+        ''' gleich, der scheinbare Gegensatz der beiden Stellungen kam aus dem Anteil heller Punkte.
+        ''' Je Regler ein Exponentialgesetz ueber seinem Hub in L (gedaempft wie im Ganzen). Die
+        ''' Tiefen gehen auf die Tabelle LocalColorGain (Faktor minus 1, am geglaetteten Basiswert).
+        ''' Die Lichter rechnen JE BILDPUNKT (HighlightLiftChromaExcess), weil ihr Gesetz an der
+        ''' Helligkeit des Punkts haengt: ein dunkler Punkt in heller Umgebung wird von den Lichtern
+        ''' stark abgesenkt und muss dabei Farbe verlieren; am Basiswert bekam er das Gesetz der
+        ''' hellen Stellen und gewann welche (gemessen: Lichter -36 an Punkten unter L 60 mit Hub
+        ''' -6 bis -9 unveraendert 1,07 gegen 0,95 der Referenz). Lichter positiv sind nicht
+        ''' gemessen und bleiben, wie sie sind.</summary>
+        Private Const ShadowChromaUpPerL As Double = 0.019
+        Private Const ShadowChromaUpFrom As Double = 3.0
+        Private Const ShadowChromaDownPerL As Double = 0.025
+        Private Const ShadowChromaDownFrom As Double = 3.5
+        Private Const ShadowChromaMin As Double = 0.72
+        Private Const ShadowChromaMax As Double = 1.25
+        Private Const HighlightChromaDarkPerL As Double = 0.022
+        Private Const HighlightChromaDarkFrom As Double = 3.5
+        Private Const HighlightChromaDarkMin As Double = 0.75
+        Private Const HighlightChromaBrightPerL As Double = 0.009
+        Private Const HighlightChromaBrightFrom As Double = 4.0
+        Private Const HighlightChromaBrightMax As Double = 1.07
+        Private Const HighlightChromaBlendFromL As Double = 50.0
+        Private Const HighlightChromaBlendToL As Double = 70.0
+        ''' Nur fuer die Reglereichung (Messschalter REGLER_TIEFEN_BUNTHEIT=0 und
+        ''' REGLER_LICHTER_BUNTHEIT=0), in der Anwendung immer an.
+        Private Shared ShadowLiftChromaEnabled As Boolean = True
+        Private Shared HighlightLiftChromaEnabled As Boolean = True
+
+        Private Shared Function AddLiftChroma(table As Single(), adj As ImageAdjustments, reference As ToneReference) As Single()
+            If adj.ShadowsLevel = 0 OrElse Not ShadowLiftChromaEnabled Then Return table
+            Dim result = If(table, New Single(PointOpTableSize - 1) {})
+            Dim any = table IsNot Nothing
+            For i = 0 To PointOpTableSize - 1
+                Dim v = i / CDbl(PointOpTableSize - 1)
+                Dim lift = ToneZoneLift(adj, v, reference, ToneZonePart.ShadowsLocal)
+                Dim dl = GrayVToLightness(Math.Min(1.0, Math.Max(0.0, v + lift))) - GrayVToLightness(v)
+                Dim factor = 1.0
+                If dl > ShadowChromaUpFrom Then
+                    factor = Math.Min(ShadowChromaMax, Math.Exp(ShadowChromaUpPerL * (dl - ShadowChromaUpFrom)))
+                ElseIf dl < -ShadowChromaDownFrom Then
+                    factor = Math.Max(ShadowChromaMin, Math.Exp(-ShadowChromaDownPerL * (-dl - ShadowChromaDownFrom)))
+                End If
+                If factor <> 1.0 Then
+                    result(i) += CSng(factor - 1.0)
+                    any = True
+                End If
+            Next
+            Return If(any, result, Nothing)
+        End Function
+
+        ''' <summary>Der oertliche Hub der Lichter allein ueber dem Basiswert (PointOpChain.
+        ''' LocalHighlightShift), oder Nothing ohne abgesenkte Lichter.</summary>
+        Private Shared Function BuildLocalHighlightShift(adj As ImageAdjustments, reference As ToneReference) As Single()
+            If adj.Highlights >= 0 OrElse Not HighlightLiftChromaEnabled Then Return Nothing
+            Dim table = New Single(PointOpTableSize - 1) {}
+            For i = 0 To PointOpTableSize - 1
+                table(i) = CSng(ToneZoneLift(adj, i / CDbl(PointOpTableSize - 1), reference, ToneZonePart.HighlightsLocal))
+            Next
+            Return table
+        End Function
+
+        ''' <summary>Buntheit je Bildpunkt aus dem Hub der Lichter, als Faktor minus 1 (wie
+        ''' LocalColorGain): <paramref name="gray"/> ist der Grauwert des Punkts, <paramref
+        ''' name="shift"/> der Hub der Lichter an seiner Basis. Unter L 50 das dunkle Gesetz (Farbe
+        ''' geht), ueber L 70 das helle (Farbe kommt), dazwischen weich uebergeblendet. Derselbe
+        ''' Rechenweg steht im Shader (hlChromaExcess).</summary>
+        Friend Shared Function HighlightLiftChromaExcess(gray As Single, shift As Single, detailShift As Single) As Single
+            If shift >= 0.0F Then Return 0.0F
+            ' Das tatsaechliche Abdunkeln des Punkts: Hub an der Basis plus Strukturglied. Bei
+            ' Lichter -36 kam ein Gutteil davon aus dem Strukturglied, mit dem Hub allein blieb
+            ' die Regel dort fast wirkungslos.
+            EnsureGammaTables()
+            Dim l As Double = SampleTable(_grayToLightnessTable, Clamp(gray, 0.0F, 1.0F))
+            Dim down = l - SampleTable(_grayToLightnessTable, Clamp(gray + shift + detailShift, 0.0F, 1.0F))
+            Dim dark = If(down > HighlightChromaDarkFrom,
+                          Math.Max(HighlightChromaDarkMin, Math.Exp(-HighlightChromaDarkPerL * (down - HighlightChromaDarkFrom))), 1.0)
+            Dim bright = If(down > HighlightChromaBrightFrom,
+                            Math.Min(HighlightChromaBrightMax, Math.Exp(HighlightChromaBrightPerL * (down - HighlightChromaBrightFrom))), 1.0)
+            Dim w = Math.Min(1.0, Math.Max(0.0, (l - HighlightChromaBlendFromL) / (HighlightChromaBlendToL - HighlightChromaBlendFromL)))
+            w = w * w * (3.0 - 2.0 * w)
+            Return CSng(dark + (bright - dark) * w - 1.0)
+        End Function
+
         ''' <summary>Das Strukturglied als Tabelle ueber dem geglaetteten Grauwert: Faktor minus 1,
         ''' Lichter und Tiefen addiert, fuer die Helligkeit (<paramref name="luminance"/>) oder fuer
         ''' den Abstand der Kanaele vom Grau. Nothing, wenn beide Faktoren ueberall 1 sind. Der
@@ -3525,7 +3729,7 @@ Namespace Services
         Private NotInheritable Class PreMixerStages
             Private ReadOnly m, wbm, toLinear, toGamma, sr, sg, sb, toneBefore, toneZones, rawStageTone,
                              negR, negG, negB, localZones, localDetail, localColor, rawShadow, toneChroma,
-                             wbRampIn, wbRampOut As Single()
+                             wbRampIn, wbRampOut, master, localHighlight As Single()
             Private ReadOnly negMono, curvesMelissa, rawInProPhoto, wbRampProPhoto As Boolean
             Private ReadOnly localBase As LocalToneBase
 
@@ -3544,6 +3748,7 @@ Namespace Services
                 sr = chain.ScalarR
                 sg = chain.ScalarG
                 sb = chain.ScalarB
+                master = chain.MelissaMaster
                 toneBefore = chain.ToneBefore
                 toneZones = chain.ToneZones
                 toneChroma = chain.ToneChroma
@@ -3558,13 +3763,14 @@ Namespace Services
                 localZones = chain.LocalToneZones
                 localDetail = chain.LocalDetailGain
                 localColor = chain.LocalColorGain
+                localHighlight = chain.LocalHighlightShift
                 localBase = base
                 DefersCurves = CurvesAfterMixer(chain)
             End Sub
 
             ''' <summary>Die Punkt- und Kanalkurven allein, fuer den Durchlauf hinter dem Farbmischer.</summary>
             Public Sub ApplyCurves(ByRef rr As Single, ByRef gg As Single, ByRef bb As Single)
-                ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
+                ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, master, toLinear, toGamma)
             End Sub
 
             ''' <summary>Rechnet die Stufen auf (rr, gg, bb) und liefert die HSL-Saettigung vor der
@@ -3665,6 +3871,9 @@ Namespace Services
                                                  SampleTable(localDetail, smoothAt) * (gray - smoothValue),
                                                  0.0F)
                             Dim colorExcess = If(localColor IsNot Nothing, SampleTable(localColor, smoothAt), 0.0F)
+                            If localHighlight IsNot Nothing Then
+                                colorExcess += HighlightLiftChromaExcess(gray, SampleTable(localHighlight, Clamp(baseValue, 0.0F, 1.0F)), detailShift)
+                            End If
                             ApplyLocalToneZones(rr, gg, bb, toneZones, localZones, baseValue, gray, detailShift, colorExcess)
                         ElseIf toneZones IsNot Nothing Then
                             ApplyToneZones(rr, gg, bb, toneZones)
@@ -3674,7 +3883,7 @@ Namespace Services
                     If DefersCurves Then
                         ' Die Kurven kommen erst hinter dem Farbmischer (ApplyCurves).
                     ElseIf curvesMelissa Then
-                        ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, toLinear, toGamma)
+                        ApplyCurvesInMelissa(rr, gg, bb, sr, sg, sb, master, toLinear, toGamma)
                     Else
                         rr = SampleTable(sr, rr)
                         gg = SampleTable(sg, gg)

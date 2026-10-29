@@ -312,7 +312,6 @@ Namespace Services
             ' genuegt die jeweils letzte Auflistung.
             Dim sidecars As FolderSidecarStamps = Nothing
 
-            Dim summaryFormat = ExifService.CurrentSummaryFormat
             Dim lastFolder = ""
             Dim done = 0
             ' Nicht die rohe Directory-Aufzählung zurückgeben: zwischen Aufzählen und dem
@@ -347,7 +346,7 @@ Namespace Services
                     ' UNVERAENDERT? Dann gar nicht erst lesen. Genau die drei Angaben, die auch
                     ' SyncExifData vergleicht - nur eben VOR dem teuren Teil. Ohne das liefe ein
                     ' zweiter Lauf ueber denselben Bestand genauso lange wie der erste.
-                    If Not force AndAlso IsUnchanged(stamps, filePath, info, summaryFormat,
+                    If Not force AndAlso IsUnchanged(stamps, filePath, info, ExifService.CurrentSummaryFormatFor(filePath),
                                                      SidecarsOf(lastFolder, sidecars)) Then
                         result.Unchanged += 1
                         ' Das Vorschaubild trotzdem sicherstellen: der Katalogeintrag kann von einem

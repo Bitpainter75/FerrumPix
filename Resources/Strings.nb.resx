@@ -10245,4 +10245,19 @@
   <data name="Hintergrund_entfernt_die_Hintergrundfarbe_des_Do_4331d01f" xml:space="preserve">
     <value>Bakgrunn fjernet, dokumentets bakgrunnsfarge er nå gjennomsiktig</value>
   </data>
+  <data name="Aus_dem_Album_nehmen_c9806f99" xml:space="preserve">
+    <value>Fjern fra album</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_nehmen_Sie_bleiben_auf_d_e9982c77" xml:space="preserve">
+    <value>Fjerne {0} bilde(r) fra albumet? De blir værende på serveren.</value>
+  </data>
+  <data name="Nicht_aus_dem_Album_genommen_6e929c76" xml:space="preserve">
+    <value>Ikke fjernet fra albumet</value>
+  </data>
+  <data name="0_von_1_Bild_ern_aus_dem_Album_genommen_e53e3dcc" xml:space="preserve">
+    <value>{0} av {1} bilde(r) fjernet fra albumet</value>
+  </data>
+  <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
+    <value>{0} bilde(r) fjernet fra albumet</value>
+  </data>
 </root>
