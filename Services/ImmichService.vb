@@ -414,13 +414,18 @@ Namespace Services
         End Function
 
         ''' <summary>Liest eine Antwort aus BulkIdResponseDto ({id, success, error} je Kennung) und
-        ''' liefert die erfolgreichen Kennungen. Eine Antwort ohne erkennbare Liste gilt als Erfolg für
-        ''' alle angefragten Kennungen, denn der Status war 200.</summary>
+        ''' liefert die erfolgreichen Kennungen. Bestaetigt gilt nur, was der Server einzeln als
+        ''' erledigt meldet: eine Antwort ohne erkennbare Liste (leer, ein Objekt, kein JSON) bestaetigt
+        ''' nichts, auch bei Status 200. Die Kacheln bleiben dann stehen; stand das Bild doch nicht
+        ''' mehr im Album, verschwindet es beim naechsten Laden des Albums.</summary>
         Private Shared Function ParseBulkIdSuccesses(answer As String, requested As List(Of String), logTag As String) As List(Of String)
             Dim done As New List(Of String)()
             Try
                 Using doc = JsonDocument.Parse(If(String.IsNullOrWhiteSpace(answer), "null", answer))
-                    If doc.RootElement.ValueKind <> JsonValueKind.Array Then Return New List(Of String)(requested)
+                    If doc.RootElement.ValueKind <> JsonValueKind.Array Then
+                        DiagnosticLogService.LogAlways(logTag, $"Antwort ohne Liste je Kennung, nichts bestaetigt (n={requested.Count})")
+                        Return done
+                    End If
                     For Each entry In doc.RootElement.EnumerateArray()
                         If entry.ValueKind <> JsonValueKind.Object Then Continue For
                         Dim idElement As JsonElement
@@ -438,7 +443,8 @@ Namespace Services
                     Next
                 End Using
             Catch ex As JsonException
-                Return New List(Of String)(requested)
+                DiagnosticLogService.LogAlways(logTag, $"Antwort kein JSON, nichts bestaetigt (n={requested.Count})")
+                Return New List(Of String)()
             End Try
             Return done
         End Function

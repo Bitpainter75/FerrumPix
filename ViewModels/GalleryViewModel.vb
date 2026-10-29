@@ -11603,10 +11603,6 @@ Namespace ViewModels
                     RefreshImmichAlbumsAsync()
                 End If
                 If nextcloudRemoved.Count > 0 Then
-                    ' Auch aus der Dedup-Menge, sonst käme das Bild nach erneutem Zuordnen nicht wieder.
-                    For Each removedPath In nextcloudRemoved
-                        _virtualPathSet.Remove(removedPath)
-                    Next
                     RemovePathsFromCurrentView(nextcloudRemoved)
                     RefreshNextcloudAlbumsAsync()
                 End If
@@ -14588,12 +14584,18 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Nimmt Elemente aus der offenen Ansicht, ohne den Server zu fragen - für den
-        ''' Betrachter, der auf dem Server bereits gelöscht hat. Gegenstück zu
-        ''' <see cref="RemoveImmichItems"/>, nur über den Pfad statt über die Asset-Kennung: ein
-        ''' Nextcloud-Element hat keine.</summary>
+        ''' Betrachter, der auf dem Server bereits gelöscht oder aus dem Album genommen hat. Gegenstück
+        ''' zu <see cref="RemoveImmichItems"/>, nur über den Pfad statt über die Asset-Kennung: ein
+        ''' Nextcloud-Element hat keine. Wie dort auch aus der Dedup-Menge der virtuellen Ansicht:
+        ''' bliebe der Pseudo-Pfad dort belegt, käme dasselbe Bild nach erneutem Zuordnen oder
+        ''' Zurückholen nie wieder in die Liste.</summary>
         Public Sub RemovePathsFromCurrentView(paths As IEnumerable(Of String))
             If paths Is Nothing Then Return
-            RemovePathsFromVirtualFolder(paths)
+            Dim gone = paths.Where(Function(p) Not String.IsNullOrEmpty(p)).ToList()
+            For Each removedPath In gone
+                _virtualPathSet.Remove(removedPath)
+            Next
+            RemovePathsFromVirtualFolder(gone)
             FilterAndSort()
         End Sub
 
