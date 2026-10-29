@@ -2288,10 +2288,11 @@ Namespace Services
         ' Schwarzpunkt bei vollem Regler (Anteil 0 bis 1), nach der oertlichen Rechnung fuer das ganze
         ' Bild. Klare dunkle Flaechen haben eine Durchlaessigkeit nahe 1 und blieben sonst stehen; die
         ' Referenz dunkelt auch sie ab, am staerksten in den Tiefen (Diagnostics/Reglereichung/
-        ' dunst_modell.py). 0,04 traefe die dunkelsten Stellen der Referenz, druckte aber einen klaren
-        ' dunklen Vordergrund um mehr als ein Viertel herunter, und genau das war der Nutzerbefund,
-        ' der zum oertlichen Verfahren gefuehrt hat. Im Abstand der Wirkung liegen 0,02 und 0,04
-        ' gleichauf (12,6 gegen 12,5, vorher 13,3).
+        ' dunst_modell.py). Zusammen mit dem Schutz von 0,25 dunkelt das einen klaren dunklen
+        ' Vordergrund bei vollem Regler um gut die Haelfte ab, aber kein Punkt saeuft ab; das war der
+        ' Kern des Nutzerbefunds, der zum oertlichen Verfahren gefuehrt hat. Bewusst naeher an der
+        ' Referenz als am alten Waechter (Abstand an 57 Bildern 11,4 gegen 12,2 mit Schutz 0,4 ohne
+        ' Schwarzpunkt). 0,04 lag im Abstand gleichauf und wuerde die Tiefen noch weiter druecken.
         Private Const DehazeBlackPoint As Double = 0.02
         ' Kein Punkt wird dunkler als dieser Anteil seines Ausgangswerts, bei vollem Regler; bei
         ' halbem Regler entsprechend die Haelfte des Abstands zu 1. Eine gleichmaessig graue Flaeche

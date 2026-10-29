@@ -608,6 +608,11 @@ Namespace Services
         ''' Dutzend Bildpunkte - weit über dem Rand von <c>MaskScopeMargin</c>. Aus demselben Grund
         ''' bleibt der WEICHZEICHNER draußen (ApplyImageBlur), dessen Reichweite noch größer ist.
         '''
+        ''' Der DUNST ist in beiden Richtungen draußen: Entfernen wie Hinzufügen schätzen Dunstlicht
+        ''' und Durchlässigkeit aus Zellmitteln des ganzen Bildes (ApplyDehaze, ApplyAddedHaze), über
+        ''' einem Ausschnitt käme ein anderes Dunstlicht und eine andere Karte heraus (gemessen bis
+        ''' 6 Stufen in 93 000 Punkten).
+        '''
         ''' <para>ZWEITE AUSSCHLUSSKLASSE, und sie ist die tückischere: Stufen, die das GANZE BILD
         ''' ANALYSIEREN und aus dem Ergebnis ihre Parameter ableiten. Sie fallen bei einem Vergleich
         ''' Vollbild gegen Ausschnitt nur dann auf, wenn der Ausschnitt zufällig eine andere
@@ -638,6 +643,7 @@ Namespace Services
                    a.Sharpness = 0 AndAlso
                    a.Clarity = 0 AndAlso
                    a.Blur = 0 AndAlso
+                   a.Haze = 0 AndAlso
                    IsNoiseReductionCropSafe(a) AndAlso
                    Not a.NegativeEnabled AndAlso
                    Not a.UsesLocalToneZones()
