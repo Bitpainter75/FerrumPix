@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.BackupDialogView">
+
+    <!-- Sichern und Wiederherstellen (MainWindowViewModelBackup): eine Datei, die Teile zum
+         Abwaehlen und beim Wiederherstellen darunter, was in der Sicherung steckt. Beim
+         Wiederherstellen sind nur die Teile waehlbar, die sie enthaelt. -->
+    <StackPanel Spacing="10">
+
+        <TextBlock Text="Zieldatei"
+                   IsVisible="{Binding DialogShowsBackup}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <TextBlock Text="Sicherung"
+                   IsVisible="{Binding DialogShowsRestore}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding DialogBackupPath, Mode=TwoWay}"
+                     Classes="no-translate"
+                     MinHeight="36"/>
+            <Button Grid.Column="1"
+                    Classes="icon-btn"
+                    Width="38" Height="36"
+                    Click="OnBrowseClick"
+                    ToolTip.Tip="Datei wählen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+            </Button>
+        </Grid>
+
+        <Border IsVisible="{Binding DialogShowsRestore}"
+                Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8">
+            <TextBlock Text="{Binding DialogRestoreSummary}"
+                       Classes="no-translate"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       TextWrapping="Wrap"/>
+        </Border>
+
+        <TextBlock Text="Was gehört dazu"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <CheckBox IsChecked="{Binding DialogBackupCatalog, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupCatalog}">
+            <TextBlock Text="Katalog: Bewertungen, Etiketten, Stichwörter, KI-Stichwörter, Personen und Orte" TextWrapping="Wrap"/>
+        </CheckBox>
+        <CheckBox IsChecked="{Binding DialogBackupServerIndexes, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupServerIndexes}">
+            <TextBlock Text="Immich und Nextcloud: Stichwörter und KI-Stichwörter der Serverbilder" TextWrapping="Wrap"/>
+        </CheckBox>
+        <CheckBox IsChecked="{Binding DialogBackupSettings, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupSettings}">
+            <TextBlock Text="Einstellungen" TextWrapping="Wrap"/>
+        </CheckBox>
+        <CheckBox IsChecked="{Binding DialogBackupSecrets, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupSecrets}"
+                  Margin="24,0,0,0">
+            <TextBlock Text="Mit den Zugangsdaten für Immich und Nextcloud" TextWrapping="Wrap"/>
+        </CheckBox>
+        <CheckBox IsChecked="{Binding DialogBackupFavorites, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupFavorites}">
+            <TextBlock Text="Favoriten" TextWrapping="Wrap"/>
+        </CheckBox>
+        <CheckBox IsChecked="{Binding DialogBackupSearches, Mode=TwoWay}" IsEnabled="{Binding CanChooseBackupSearches}">
+            <TextBlock Text="Gespeicherte Suchen" TextWrapping="Wrap"/>
+        </CheckBox>
+    </StackPanel>
+</UserControl>

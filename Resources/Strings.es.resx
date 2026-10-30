@@ -10385,4 +10385,94 @@
   <data name="Wird_importiert_0_von_1_4e233365" xml:space="preserve">
     <value>Importando: {0} de {1}</value>
   </data>
+  <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
+    <value>El archivo no es una copia de seguridad de FerrumPix.</value>
+  </data>
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+    <value>La copia procede de una versión más reciente de FerrumPix y no se puede restaurar aquí.</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
+    <value>No se ha elegido nada que esté en la copia.</value>
+  </data>
+  <data name="Die_Sicherung_lie_sich_nicht_pr_fen_es_wurde_nic_d9620d32" xml:space="preserve">
+    <value>No se pudo comprobar la copia, no se ha cambiado nada.</value>
+  </data>
+  <data name="Sicherung_w_hlen_ad4ee937" xml:space="preserve">
+    <value>Elegir copia de seguridad</value>
+  </data>
+  <data name="Gesichert_am_0_mit_FerrumPix_1_auf_2_Im_Katalog__8a4ac9c5" xml:space="preserve">
+    <value>Copia hecha el {0} con FerrumPix {1} en {2}. En el catálogo: {3} imágenes, {4} con palabras clave, {5} personas con nombre.</value>
+  </data>
+  <data name="Die_Datei_gibt_es_nicht_d4daa0d1" xml:space="preserve">
+    <value>El archivo no existe.</value>
+  </data>
+  <data name="Sichern_9ed65033" xml:space="preserve">
+    <value>Hacer copia</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_und_Listen_in_eine_55b38f24" xml:space="preserve">
+    <value>Guarda el catálogo, los ajustes y las listas en un archivo ZIP. No incluye fotos, miniaturas ni modelos.</value>
+  </data>
+  <data name="Wird_gesichert_ac30ae7c" xml:space="preserve">
+    <value>Haciendo copia…</value>
+  </data>
+  <data name="Sichern_fehlgeschlagen_72d3d169" xml:space="preserve">
+    <value>Error al hacer la copia</value>
+  </data>
+  <data name="Gesichert_ad919c89" xml:space="preserve">
+    <value>Copia hecha</value>
+  </data>
+  <data name="Die_Sicherung_liegt_unter_0_Im_Katalog_1_Bilder__65d7ba12" xml:space="preserve">
+    <value>La copia está en {0}. En el catálogo: {1} imágenes, {2} personas con nombre.</value>
+  </data>
+  <data name="Holt_die_gew_hlten_Teile_einer_Sicherung_zur_ck__c4deadd2" xml:space="preserve">
+    <value>Restaura las partes elegidas de una copia. El estado actual se guarda antes, y la copia se aplica al iniciar FerrumPix la próxima vez.</value>
+  </data>
+  <data name="Sicherung_wird_gepr_ft_596d48e4" xml:space="preserve">
+    <value>Comprobando la copia…</value>
+  </data>
+  <data name="Bereit_zum_Wiederherstellen_d8be5cc6" xml:space="preserve">
+    <value>Listo para restaurar</value>
+  </data>
+  <data name="Die_Sicherung_ist_gepr_ft_und_wird_beim_n_chsten_062babf7" xml:space="preserve">
+    <value>La copia está comprobada y se aplicará al iniciar FerrumPix la próxima vez. El estado actual está guardado en {0}. ¿Cerrar FerrumPix ahora?</value>
+  </data>
+  <data name="Jetzt_beenden_d4859748" xml:space="preserve">
+    <value>Cerrar ahora</value>
+  </data>
+  <data name="FerrumPix_Sicherung_5f7d9f70" xml:space="preserve">
+    <value>Copia de FerrumPix</value>
+  </data>
+  <data name="Sicherung_speichern_unter_08e86a6a" xml:space="preserve">
+    <value>Guardar copia como</value>
+  </data>
+  <data name="Zieldatei_f34404f4" xml:space="preserve">
+    <value>Archivo de destino</value>
+  </data>
+  <data name="Sicherung_aea7b978" xml:space="preserve">
+    <value>Copia de seguridad</value>
+  </data>
+  <data name="Datei_w_hlen_d388984f" xml:space="preserve">
+    <value>Elegir archivo</value>
+  </data>
+  <data name="Was_geh_rt_dazu_ca5c1e8a" xml:space="preserve">
+    <value>Qué incluye</value>
+  </data>
+  <data name="Katalog_Bewertungen_Etiketten_Stichw_rter_KI_Sti_6ec715be" xml:space="preserve">
+    <value>Catálogo: valoraciones, etiquetas, palabras clave, palabras clave de IA, personas y lugares</value>
+  </data>
+  <data name="Immich_und_Nextcloud_Stichw_rter_und_KI_Stichw_r_474872a3" xml:space="preserve">
+    <value>Immich y Nextcloud: palabras clave y de IA de las imágenes del servidor</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_f_r_Immich_und_Nextcloud_d58ebbdb" xml:space="preserve">
+    <value>Con las credenciales de Immich y Nextcloud</value>
+  </data>
+  <data name="Gespeicherte_Suchen_ec4ee3d1" xml:space="preserve">
+    <value>Búsquedas guardadas</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_Favoriten_und_gesp_d20ccf90" xml:space="preserve">
+    <value>Guarda el catálogo, los ajustes, los favoritos y las búsquedas guardadas en un archivo ZIP y los restaura. No incluye fotos, miniaturas ni modelos.</value>
+  </data>
+  <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
+    <value>Incluir subcarpetas</value>
+  </data>
 </root>

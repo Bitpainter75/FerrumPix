@@ -41,6 +41,9 @@
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
+        <CheckBox IsChecked="{Binding DialogImportIncludeSubfolders, Mode=TwoWay}">
+            <TextBlock Text="Mit Unterordnern"/>
+        </CheckBox>
 
         <!-- AUFNAHMETAGE: je Tag ein Haken, alle ab Werk an. -->
         <TextBlock Text="Aufnahmetage"

@@ -24,6 +24,9 @@ Namespace ViewModels
         ModelDownload
         ''' <summary>Importieren (MainWindowViewModelImport.vb).</summary>
         Import
+        ''' <summary>Sichern und Wiederherstellen (MainWindowViewModelBackup.vb).</summary>
+        Backup
+        Restore
     End Enum
 
     ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,

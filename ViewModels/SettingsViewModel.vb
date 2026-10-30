@@ -4026,6 +4026,13 @@ Namespace ViewModels
         ''' bei der Gesichtssuche.</summary>
         Public ReadOnly Property Cleanup As New CatalogCleanupViewModel()
 
+        ''' <summary>Sichern und Wiederherstellen; die Dialoge stehen im Hauptfenster.</summary>
+        Public ReadOnly Property BackupCommand As ICommand = ReactiveCommand.CreateFromTask(
+            Function() If(_mainVm Is Nothing, Task.CompletedTask, _mainVm.ShowBackupDialogAsync()))
+
+        Public ReadOnly Property RestoreCommand As ICommand = ReactiveCommand.CreateFromTask(
+            Function() If(_mainVm Is Nothing, Task.CompletedTask, _mainVm.ShowRestoreDialogAsync()))
+
         ''' <summary>Die Wege der gruppierten Ordnerliste: je Zeile aufraeumen, ueberwachen an und
         ''' aus, aufklappen, und dieselben drei Aufraeum-Wege ueber die ganze gefilterte Menge.</summary>
         Public ReadOnly Property CleanRowCatalogCommand As ICommand

@@ -34,6 +34,10 @@ Module Program
             EchoStartupBanner()
         End If
 
+        ' EINE BEREITGELEGTE WIEDERHERSTELLUNG VOR ALLEM ANDEREN, was Katalog oder Einstellungen
+        ' oeffnet: schon die Zeile darunter liest die Einstellungen. Siehe CatalogBackupService.
+        CatalogBackupService.ApplyPendingRestore()
+
         ' Der Riegel gegen die Telemetrie der Modelllaufzeit. Er wirkt nur, solange noch keine
         ' ORT-Umgebung entstanden ist, deshalb steht er hier und nicht dort, wo die Laufzeit zum
         ' ersten Mal gebraucht wird. Begruendung und Messung stehen bei

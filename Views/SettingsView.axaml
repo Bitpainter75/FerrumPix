@@ -3429,6 +3429,21 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- SICHERUNG: Katalog, Server-Indizes, Einstellungen, Favoriten und Suchen in
+                             eine ZIP und zurück (MainWindowViewModelBackup, CatalogBackupService). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sicherung" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Sichert Katalog, Einstellungen, Favoriten und gespeicherte Suchen in eine ZIP-Datei und holt sie wieder zurück. Fotos, Vorschaubilder und Modelle gehören nicht dazu." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7"
+                                        Command="{Binding BackupCommand}">Sichern</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        Command="{Binding RestoreCommand}">Wiederherstellen</Button>
+                            </StackPanel>
+                        </Grid>
+
                     </StackPanel>
                 </Border>
 

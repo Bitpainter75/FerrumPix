@@ -10404,4 +10404,94 @@
   <data name="Wird_importiert_0_von_1_4e233365" xml:space="preserve">
     <value>Importing: {0} of {1}</value>
   </data>
+  <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
+    <value>The file is not a FerrumPix backup.</value>
+  </data>
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+    <value>The backup comes from a newer FerrumPix version and cannot be restored here.</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
+    <value>Nothing selected that is in the backup.</value>
+  </data>
+  <data name="Die_Sicherung_lie_sich_nicht_pr_fen_es_wurde_nic_d9620d32" xml:space="preserve">
+    <value>The backup could not be verified, nothing was changed.</value>
+  </data>
+  <data name="Sicherung_w_hlen_ad4ee937" xml:space="preserve">
+    <value>Choose backup</value>
+  </data>
+  <data name="Gesichert_am_0_mit_FerrumPix_1_auf_2_Im_Katalog__8a4ac9c5" xml:space="preserve">
+    <value>Backed up on {0} with FerrumPix {1} on {2}. In the catalogue: {3} pictures, {4} of them with keywords, {5} named people.</value>
+  </data>
+  <data name="Die_Datei_gibt_es_nicht_d4daa0d1" xml:space="preserve">
+    <value>The file does not exist.</value>
+  </data>
+  <data name="Sichern_9ed65033" xml:space="preserve">
+    <value>Back up</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_und_Listen_in_eine_55b38f24" xml:space="preserve">
+    <value>Backs up the catalogue, settings and lists into a ZIP file. Photos, thumbnails and models are not included.</value>
+  </data>
+  <data name="Wird_gesichert_ac30ae7c" xml:space="preserve">
+    <value>Backing up…</value>
+  </data>
+  <data name="Sichern_fehlgeschlagen_72d3d169" xml:space="preserve">
+    <value>Backup failed</value>
+  </data>
+  <data name="Gesichert_ad919c89" xml:space="preserve">
+    <value>Backed up</value>
+  </data>
+  <data name="Die_Sicherung_liegt_unter_0_Im_Katalog_1_Bilder__65d7ba12" xml:space="preserve">
+    <value>The backup is at {0}. In the catalogue: {1} pictures, {2} named people.</value>
+  </data>
+  <data name="Holt_die_gew_hlten_Teile_einer_Sicherung_zur_ck__c4deadd2" xml:space="preserve">
+    <value>Restores the chosen parts of a backup. The current state is backed up first, and the backup is applied the next time FerrumPix starts.</value>
+  </data>
+  <data name="Sicherung_wird_gepr_ft_596d48e4" xml:space="preserve">
+    <value>Checking backup…</value>
+  </data>
+  <data name="Bereit_zum_Wiederherstellen_d8be5cc6" xml:space="preserve">
+    <value>Ready to restore</value>
+  </data>
+  <data name="Die_Sicherung_ist_gepr_ft_und_wird_beim_n_chsten_062babf7" xml:space="preserve">
+    <value>The backup has been checked and will be applied the next time FerrumPix starts. The current state is backed up in {0}. Quit FerrumPix now?</value>
+  </data>
+  <data name="Jetzt_beenden_d4859748" xml:space="preserve">
+    <value>Quit now</value>
+  </data>
+  <data name="FerrumPix_Sicherung_5f7d9f70" xml:space="preserve">
+    <value>FerrumPix backup</value>
+  </data>
+  <data name="Sicherung_speichern_unter_08e86a6a" xml:space="preserve">
+    <value>Save backup as</value>
+  </data>
+  <data name="Zieldatei_f34404f4" xml:space="preserve">
+    <value>Target file</value>
+  </data>
+  <data name="Sicherung_aea7b978" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Datei_w_hlen_d388984f" xml:space="preserve">
+    <value>Choose file</value>
+  </data>
+  <data name="Was_geh_rt_dazu_ca5c1e8a" xml:space="preserve">
+    <value>What is included</value>
+  </data>
+  <data name="Katalog_Bewertungen_Etiketten_Stichw_rter_KI_Sti_6ec715be" xml:space="preserve">
+    <value>Catalogue: ratings, labels, keywords, AI keywords, people and places</value>
+  </data>
+  <data name="Immich_und_Nextcloud_Stichw_rter_und_KI_Stichw_r_474872a3" xml:space="preserve">
+    <value>Immich and Nextcloud: keywords and AI keywords of server pictures</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_f_r_Immich_und_Nextcloud_d58ebbdb" xml:space="preserve">
+    <value>Including the credentials for Immich and Nextcloud</value>
+  </data>
+  <data name="Gespeicherte_Suchen_ec4ee3d1" xml:space="preserve">
+    <value>Saved searches</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_Favoriten_und_gesp_d20ccf90" xml:space="preserve">
+    <value>Backs up the catalogue, settings, favourites and saved searches into a ZIP file and restores them. Photos, thumbnails and models are not included.</value>
+  </data>
+  <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
+    <value>Include subfolders</value>
+  </data>
 </root>

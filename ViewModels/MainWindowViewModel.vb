@@ -3008,6 +3008,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
                 Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
                 Me.RaisePropertyChanged(NameOf(DialogShowsImport))
+                Me.RaisePropertyChanged(NameOf(DialogShowsBackup))
+                Me.RaisePropertyChanged(NameOf(DialogShowsRestore))
+                Me.RaisePropertyChanged(NameOf(DialogShowsBackupOrRestore))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
@@ -3051,7 +3054,9 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.SetPlace AndAlso
                        _dialogKind <> AppDialogKind.CaptureDate AndAlso
                        _dialogKind <> AppDialogKind.ModelDownload AndAlso
-                       _dialogKind <> AppDialogKind.Import
+                       _dialogKind <> AppDialogKind.Import AndAlso
+                       _dialogKind <> AppDialogKind.Backup AndAlso
+                       _dialogKind <> AppDialogKind.Restore
             End Get
         End Property
 
@@ -3427,6 +3432,7 @@ Namespace ViewModels
                 If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
                 If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
                 If _dialogKind = AppDialogKind.Import Then Return IsDialogImportPrimaryEnabled()
+                If _dialogKind = AppDialogKind.Backup OrElse _dialogKind = AppDialogKind.Restore Then Return IsBackupDialogPrimaryEnabled()
                 If BatchFilterHasNothingToDo() Then Return False
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
@@ -4008,6 +4014,7 @@ Namespace ViewModels
                 If DialogShowsSetPlace Then Return 570
                 ' Einlesen: Quelle und Ziel stehen als Pfade da und sollen lesbar bleiben.
                 If DialogShowsImport Then Return 680
+                If DialogShowsBackupOrRestore Then Return 620
                 Return 440
             End Get
         End Property

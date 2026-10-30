@@ -189,6 +189,8 @@ Gallery and editor can be set up to match how you work: what a double-click open
 
 A drawing tablet setting makes buttons and menu entries act the moment the pen touches down instead of when it lifts, for pens that can drag a slider but press nothing. A trackpad mode adds gestures for laptops: pinch to zoom in the viewer, swipe to the next picture, and drag to move around an enlarged one.
 
+The catalogue with ratings, keywords, people and places, the settings, favourites and saved searches can be backed up into a ZIP file and restored, each part on its own; server passwords only go in if you want them to.
+
 File operations stay inside your home folder unless you allow them elsewhere, on other drives, mounted media and network folders; system folders stay locked either way.
 
 Your version is at the top, with a link to the download page when a different one has been published; a newer version is also pointed out next to the logo. The last two sections are reference: all keyboard and mouse shortcuts, and everything FerrumPix is built on with a link to each licence.

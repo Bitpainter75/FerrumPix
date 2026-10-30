@@ -36,6 +36,7 @@ Namespace ViewModels
         Private _dialogImportTargetFolder As String = ""
         Private _dialogImportSelectedPattern As ImportFolderPattern
         Private _dialogImportIncludeRawPartners As Boolean = True
+        Private _dialogImportIncludeSubfolders As Boolean = True
         Private _dialogImportUseBackup As Boolean
         Private _dialogImportBackupFolder As String = ""
 
@@ -125,6 +126,18 @@ Namespace ViewModels
                 If ReferenceEquals(_dialogImportSelectedPattern, value) Then Return
                 Me.RaiseAndSetIfChanged(_dialogImportSelectedPattern, value)
                 RaiseDialogImportSummary()
+            End Set
+        End Property
+
+        ''' <summary>Die Quelle mit ihren Unterordnern lesen. Eine Aenderung liest neu ein.</summary>
+        Public Property DialogImportIncludeSubfolders As Boolean
+            Get
+                Return _dialogImportIncludeSubfolders
+            End Get
+            Set(value As Boolean)
+                If _dialogImportIncludeSubfolders = value Then Return
+                Me.RaiseAndSetIfChanged(_dialogImportIncludeSubfolders, value)
+                StartDialogImportScan()
             End Set
         End Property
 
@@ -238,6 +251,7 @@ Namespace ViewModels
                 RaiseDialogImportScan()
                 Return
             End If
+            Dim subfolders = _dialogImportIncludeSubfolders
             Dim cancel As New CancellationTokenSource()
             _dialogImportScanCancel = cancel
             _dialogImportScanning = True
@@ -246,7 +260,7 @@ Namespace ViewModels
                 Sub()
                     Dim found As List(Of ImportCandidate) = Nothing
                     Try
-                        found = CardImportService.Scan(folder, cancel.Token)
+                        found = CardImportService.Scan(folder, cancel.Token, subfolders)
                     Catch ex As OperationCanceledException
                         Return
                     Catch ex As Exception
@@ -315,6 +329,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(DialogImportSelectedTargetChoice))
             Me.RaisePropertyChanged(NameOf(IsDialogImportPatternVisible))
             _dialogImportIncludeRawPartners = settings.ImportIncludeRawPartners
+            _dialogImportIncludeSubfolders = settings.ImportIncludeSubfolders
+            Me.RaisePropertyChanged(NameOf(DialogImportIncludeSubfolders))
             _dialogImportUseBackup = settings.ImportUseBackup
             _dialogImportBackupFolder = If(settings.ImportBackupFolder, "")
             _dialogImportSourceFolder = ""
@@ -344,6 +360,7 @@ Namespace ViewModels
                                           s.ImportTargetFolder = _dialogImportTargetFolder
                                           s.ImportFolderPattern = pattern
                                           s.ImportIncludeRawPartners = _dialogImportIncludeRawPartners
+                                          s.ImportIncludeSubfolders = _dialogImportIncludeSubfolders
                                           s.ImportUseBackup = _dialogImportUseBackup
                                           s.ImportBackupFolder = _dialogImportBackupFolder
                                       End Sub)

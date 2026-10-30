@@ -184,9 +184,10 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Alle Medien unter <paramref name="root"/>, rekursiv, ohne versteckte Ordner.
-        ''' Liest je Datei nur die Aufnahmedaten.</summary>
-        Public Shared Function Scan(root As String, token As CancellationToken) As List(Of ImportCandidate)
+        ''' <summary>Alle Medien unter <paramref name="root"/>, ohne versteckte Ordner; mit
+        ''' <paramref name="includeSubfolders"/> auch in allen Unterordnern (ab Werk, eine Karte legt ihre
+        ''' Bilder in DCIM/100XXXXX ab). Liest je Datei nur die Aufnahmedaten.</summary>
+        Public Shared Function Scan(root As String, token As CancellationToken, Optional includeSubfolders As Boolean = True) As List(Of ImportCandidate)
             Dim result As New List(Of ImportCandidate)()
             If String.IsNullOrWhiteSpace(root) OrElse Not Directory.Exists(root) Then Return result
             Dim pending As New Stack(Of String)()
@@ -195,10 +196,12 @@ Namespace Services
                 token.ThrowIfCancellationRequested()
                 Dim folder = pending.Pop()
                 Try
-                    For Each subfolder In Directory.EnumerateDirectories(folder)
-                        If Path.GetFileName(subfolder).StartsWith("."c) Then Continue For
-                        pending.Push(subfolder)
-                    Next
+                    If includeSubfolders Then
+                        For Each subfolder In Directory.EnumerateDirectories(folder)
+                            If Path.GetFileName(subfolder).StartsWith("."c) Then Continue For
+                            pending.Push(subfolder)
+                        Next
+                    End If
                     For Each file In Directory.EnumerateFiles(folder)
                         token.ThrowIfCancellationRequested()
                         If Path.GetFileName(file).StartsWith("."c) OrElse Not MediaFileTypes.IsDisplayable(file) Then Continue For

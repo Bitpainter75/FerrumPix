@@ -10425,4 +10425,94 @@
   <data name="Wird_importiert_0_von_1_4e233365" xml:space="preserve">
     <value>取り込み中: {0} / {1}</value>
   </data>
+  <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
+    <value>このファイルは FerrumPix のバックアップではありません。</value>
+  </data>
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+    <value>このバックアップは新しいバージョンの FerrumPix で作成されたため、ここでは復元できません。</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
+    <value>バックアップに含まれる項目が選択されていません。</value>
+  </data>
+  <data name="Die_Sicherung_lie_sich_nicht_pr_fen_es_wurde_nic_d9620d32" xml:space="preserve">
+    <value>バックアップを検証できませんでした。何も変更していません。</value>
+  </data>
+  <data name="Sicherung_w_hlen_ad4ee937" xml:space="preserve">
+    <value>バックアップを選択</value>
+  </data>
+  <data name="Gesichert_am_0_mit_FerrumPix_1_auf_2_Im_Katalog__8a4ac9c5" xml:space="preserve">
+    <value>{0} に FerrumPix {1}（{2}）でバックアップ。カタログ: 画像 {3} 枚、うちキーワード付き {4} 枚、名前付きの人物 {5} 人。</value>
+  </data>
+  <data name="Die_Datei_gibt_es_nicht_d4daa0d1" xml:space="preserve">
+    <value>ファイルが存在しません。</value>
+  </data>
+  <data name="Sichern_9ed65033" xml:space="preserve">
+    <value>バックアップ</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_und_Listen_in_eine_55b38f24" xml:space="preserve">
+    <value>カタログ、設定、リストを ZIP ファイルにバックアップします。写真、サムネイル、モデルは含まれません。</value>
+  </data>
+  <data name="Wird_gesichert_ac30ae7c" xml:space="preserve">
+    <value>バックアップ中…</value>
+  </data>
+  <data name="Sichern_fehlgeschlagen_72d3d169" xml:space="preserve">
+    <value>バックアップに失敗しました</value>
+  </data>
+  <data name="Gesichert_ad919c89" xml:space="preserve">
+    <value>バックアップしました</value>
+  </data>
+  <data name="Die_Sicherung_liegt_unter_0_Im_Katalog_1_Bilder__65d7ba12" xml:space="preserve">
+    <value>バックアップの場所: {0}。カタログ: 画像 {1} 枚、名前付きの人物 {2} 人。</value>
+  </data>
+  <data name="Holt_die_gew_hlten_Teile_einer_Sicherung_zur_ck__c4deadd2" xml:space="preserve">
+    <value>バックアップの選択した部分を復元します。現在の状態を先にバックアップし、次回 FerrumPix の起動時に適用します。</value>
+  </data>
+  <data name="Sicherung_wird_gepr_ft_596d48e4" xml:space="preserve">
+    <value>バックアップを確認中…</value>
+  </data>
+  <data name="Bereit_zum_Wiederherstellen_d8be5cc6" xml:space="preserve">
+    <value>復元の準備ができました</value>
+  </data>
+  <data name="Die_Sicherung_ist_gepr_ft_und_wird_beim_n_chsten_062babf7" xml:space="preserve">
+    <value>バックアップは確認済みで、次回 FerrumPix の起動時に適用されます。現在の状態は {0} にバックアップしました。FerrumPix を今すぐ終了しますか？</value>
+  </data>
+  <data name="Jetzt_beenden_d4859748" xml:space="preserve">
+    <value>今すぐ終了</value>
+  </data>
+  <data name="FerrumPix_Sicherung_5f7d9f70" xml:space="preserve">
+    <value>FerrumPix バックアップ</value>
+  </data>
+  <data name="Sicherung_speichern_unter_08e86a6a" xml:space="preserve">
+    <value>バックアップの保存先</value>
+  </data>
+  <data name="Zieldatei_f34404f4" xml:space="preserve">
+    <value>保存先ファイル</value>
+  </data>
+  <data name="Sicherung_aea7b978" xml:space="preserve">
+    <value>バックアップ</value>
+  </data>
+  <data name="Datei_w_hlen_d388984f" xml:space="preserve">
+    <value>ファイルを選択</value>
+  </data>
+  <data name="Was_geh_rt_dazu_ca5c1e8a" xml:space="preserve">
+    <value>含める内容</value>
+  </data>
+  <data name="Katalog_Bewertungen_Etiketten_Stichw_rter_KI_Sti_6ec715be" xml:space="preserve">
+    <value>カタログ: 評価、ラベル、キーワード、AI キーワード、人物、場所</value>
+  </data>
+  <data name="Immich_und_Nextcloud_Stichw_rter_und_KI_Stichw_r_474872a3" xml:space="preserve">
+    <value>Immich と Nextcloud: サーバー上の画像のキーワードと AI キーワード</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_f_r_Immich_und_Nextcloud_d58ebbdb" xml:space="preserve">
+    <value>Immich と Nextcloud の認証情報も含める</value>
+  </data>
+  <data name="Gespeicherte_Suchen_ec4ee3d1" xml:space="preserve">
+    <value>保存した検索</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_Favoriten_und_gesp_d20ccf90" xml:space="preserve">
+    <value>カタログ、設定、お気に入り、保存した検索を ZIP ファイルにバックアップし、復元します。写真、サムネイル、モデルは含まれません。</value>
+  </data>
+  <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
+    <value>サブフォルダーを含める</value>
+  </data>
 </root>

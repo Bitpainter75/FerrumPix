@@ -477,6 +477,7 @@ Namespace Services
             New ImportTargetSettings With {.Name = "", .Template = "{pictures}/{datetaken:yyyy}/{datetaken:yyyy-MM-dd}"}
         }
         Public Property ImportIncludeRawPartners As Boolean = True
+        Public Property ImportIncludeSubfolders As Boolean = True
         Public Property ImportUseBackup As Boolean = False
         Public Property ImportBackupFolder As String = ""
         ''' Entwickelte RAW-Vorschau statt eingebettetem JPG (Standard AUS). Wirkt NUR, wenn eine .fpxmp
@@ -1055,6 +1056,16 @@ Namespace Services
         ''' gespeichert - ein stiller Fehler. Die Diagnose sucht dieses Muster im Quelltext
         ''' („Einstellungen: geändert wird nur über Update").</para></summary>
         Private Shared _cachedSettings As AppSettings = Nothing
+
+        ''' <summary>Vergisst den gemerkten Stand; das naechste Load liest die Datei neu. Nur fuer den
+        ''' Start nach einer Wiederherstellung (CatalogBackupService.ApplyPendingRestore): wer dort
+        ''' schon gelesen hat, etwa das Protokoll, haette sonst den alten Stand festgehalten.</summary>
+        Friend Shared Sub InvalidateCache()
+            SyncLock _cacheLock
+                _cachedJson = Nothing
+                _cachedSettings = Nothing
+            End SyncLock
+        End Sub
 
         ''' Geschrieben wird verzögert und zusammengefasst. Sonst löste jedes Häkchen im Dialog ein
         ''' vollständiges Serialisieren samt Temporärdatei und Umbenennen aus. Flush erzwingt das Schreiben -

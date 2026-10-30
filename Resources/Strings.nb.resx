@@ -10425,4 +10425,94 @@
   <data name="Wird_importiert_0_von_1_4e233365" xml:space="preserve">
     <value>Importerer: {0} av {1}</value>
   </data>
+  <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
+    <value>Filen er ikke en FerrumPix-sikkerhetskopi.</value>
+  </data>
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+    <value>Sikkerhetskopien kommer fra en nyere FerrumPix-versjon og kan ikke gjenopprettes her.</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
+    <value>Ingenting valgt som finnes i sikkerhetskopien.</value>
+  </data>
+  <data name="Die_Sicherung_lie_sich_nicht_pr_fen_es_wurde_nic_d9620d32" xml:space="preserve">
+    <value>Sikkerhetskopien kunne ikke kontrolleres, ingenting ble endret.</value>
+  </data>
+  <data name="Sicherung_w_hlen_ad4ee937" xml:space="preserve">
+    <value>Velg sikkerhetskopi</value>
+  </data>
+  <data name="Gesichert_am_0_mit_FerrumPix_1_auf_2_Im_Katalog__8a4ac9c5" xml:space="preserve">
+    <value>Sikkerhetskopiert {0} med FerrumPix {1} på {2}. I katalogen: {3} bilder, {4} av dem med nøkkelord, {5} navngitte personer.</value>
+  </data>
+  <data name="Die_Datei_gibt_es_nicht_d4daa0d1" xml:space="preserve">
+    <value>Filen finnes ikke.</value>
+  </data>
+  <data name="Sichern_9ed65033" xml:space="preserve">
+    <value>Sikkerhetskopier</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_und_Listen_in_eine_55b38f24" xml:space="preserve">
+    <value>Sikkerhetskopierer katalog, innstillinger og lister i en ZIP-fil. Bilder, miniatyrer og modeller er ikke med.</value>
+  </data>
+  <data name="Wird_gesichert_ac30ae7c" xml:space="preserve">
+    <value>Sikkerhetskopierer…</value>
+  </data>
+  <data name="Sichern_fehlgeschlagen_72d3d169" xml:space="preserve">
+    <value>Sikkerhetskopiering mislyktes</value>
+  </data>
+  <data name="Gesichert_ad919c89" xml:space="preserve">
+    <value>Sikkerhetskopiert</value>
+  </data>
+  <data name="Die_Sicherung_liegt_unter_0_Im_Katalog_1_Bilder__65d7ba12" xml:space="preserve">
+    <value>Sikkerhetskopien ligger i {0}. I katalogen: {1} bilder, {2} navngitte personer.</value>
+  </data>
+  <data name="Holt_die_gew_hlten_Teile_einer_Sicherung_zur_ck__c4deadd2" xml:space="preserve">
+    <value>Gjenoppretter de valgte delene av en sikkerhetskopi. Nåværende tilstand sikkerhetskopieres først, og gjenopprettingen skjer neste gang FerrumPix starter.</value>
+  </data>
+  <data name="Sicherung_wird_gepr_ft_596d48e4" xml:space="preserve">
+    <value>Kontrollerer sikkerhetskopien…</value>
+  </data>
+  <data name="Bereit_zum_Wiederherstellen_d8be5cc6" xml:space="preserve">
+    <value>Klar til gjenoppretting</value>
+  </data>
+  <data name="Die_Sicherung_ist_gepr_ft_und_wird_beim_n_chsten_062babf7" xml:space="preserve">
+    <value>Sikkerhetskopien er kontrollert og gjenopprettes neste gang FerrumPix starter. Nåværende tilstand ligger sikkerhetskopiert i {0}. Avslutte FerrumPix nå?</value>
+  </data>
+  <data name="Jetzt_beenden_d4859748" xml:space="preserve">
+    <value>Avslutt nå</value>
+  </data>
+  <data name="FerrumPix_Sicherung_5f7d9f70" xml:space="preserve">
+    <value>FerrumPix-sikkerhetskopi</value>
+  </data>
+  <data name="Sicherung_speichern_unter_08e86a6a" xml:space="preserve">
+    <value>Lagre sikkerhetskopi som</value>
+  </data>
+  <data name="Zieldatei_f34404f4" xml:space="preserve">
+    <value>Målfil</value>
+  </data>
+  <data name="Sicherung_aea7b978" xml:space="preserve">
+    <value>Sikkerhetskopi</value>
+  </data>
+  <data name="Datei_w_hlen_d388984f" xml:space="preserve">
+    <value>Velg fil</value>
+  </data>
+  <data name="Was_geh_rt_dazu_ca5c1e8a" xml:space="preserve">
+    <value>Hva hører med</value>
+  </data>
+  <data name="Katalog_Bewertungen_Etiketten_Stichw_rter_KI_Sti_6ec715be" xml:space="preserve">
+    <value>Katalog: vurderinger, etiketter, nøkkelord, KI-nøkkelord, personer og steder</value>
+  </data>
+  <data name="Immich_und_Nextcloud_Stichw_rter_und_KI_Stichw_r_474872a3" xml:space="preserve">
+    <value>Immich og Nextcloud: nøkkelord og KI-nøkkelord for serverbilder</value>
+  </data>
+  <data name="Mit_den_Zugangsdaten_f_r_Immich_und_Nextcloud_d58ebbdb" xml:space="preserve">
+    <value>Med påloggingsopplysningene for Immich og Nextcloud</value>
+  </data>
+  <data name="Gespeicherte_Suchen_ec4ee3d1" xml:space="preserve">
+    <value>Lagrede søk</value>
+  </data>
+  <data name="Sichert_Katalog_Einstellungen_Favoriten_und_gesp_d20ccf90" xml:space="preserve">
+    <value>Sikkerhetskopierer katalog, innstillinger, favoritter og lagrede søk i en ZIP-fil og gjenoppretter dem. Bilder, miniatyrer og modeller er ikke med.</value>
+  </data>
+  <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
+    <value>Med undermapper</value>
+  </data>
 </root>

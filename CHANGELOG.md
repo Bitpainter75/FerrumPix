@@ -27,11 +27,16 @@
   keywords are never written into files.
 
 - **Import:** a new entry above Settings in the gallery sidebar copies pictures and videos from a
-  memory card or any other folder into your collection, by shooting day, into the current folder
-  or one of your own destinations. Destinations are set up in the settings and can use placeholders
+  memory card or any other folder, with or without its subfolders, into your collection, by
+  shooting day, into the current folder or one of your own destinations. Destinations are set up in the settings and can use placeholders
   such as the year or day a picture was taken, or the camera. Every copy is checked against the
   original, nothing on the card is changed and nothing in the destination is replaced; pictures
   already there are skipped.
+
+- **Backup and restore:** the catalogue, the Immich and Nextcloud indexes, the settings, favourites
+  and saved searches can be backed up into a ZIP file from the settings and restored later, each
+  part on its own. Server credentials only go in if you ask for it. Before a restore the current
+  state is backed up, and the restore is applied the next time FerrumPix starts.
 
 - **Disconnected drives are safe in Clean database:** pictures on a drive that is not connected
   are no longer treated as deleted. Their ratings, keywords and people stay, and for each such
