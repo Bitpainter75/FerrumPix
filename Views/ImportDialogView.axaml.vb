@@ -32,7 +32,9 @@ Namespace Views
             Try
                 Dim vm = TryCast(DataContext, MainWindowViewModel)
                 If vm Is Nothing Then Return
-                Dim path = Await PickFolderAsync(LocalizationService.T("Quelle wählen"), vm.DialogImportSourceFolder)
+                ' Eine Geraeteadresse ("mtp:/...") ist kein Startordner fuer den Dialog.
+                Dim start = If(MtpSession.IsAddress(vm.DialogImportSourceFolder), "", vm.DialogImportSourceFolder)
+                Dim path = Await PickFolderAsync(LocalizationService.T("Quelle wählen"), start)
                 If path IsNot Nothing Then vm.DialogImportSourceFolder = path
             Catch ex As Exception
                 DiagnosticLogService.LogException("Import.BrowseSource", ex)

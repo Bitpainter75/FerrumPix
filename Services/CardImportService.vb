@@ -32,6 +32,11 @@ Namespace Services
         Public Property Camera As String = ""
         ''' <summary>Aenderungszeit der Datei, fuer den Platzhalter {date:...}.</summary>
         Public Property ModifiedAt As DateTime
+        ''' <summary>Liegt die Datei auf einem MTP-Geraet hinter kmtpd, dessen Speicher; sonst
+        ''' Nothing. <see cref="SourcePath"/> ist dann die Adresse "mtp:/...".</summary>
+        Public Property MtpStorage As MtpStorage
+        ''' <summary>Der Pfad auf dem Speicher ("/DCIM/Camera/IMG_0001.jpg").</summary>
+        Public Property MtpPath As String = ""
     End Class
 
     ''' <summary>Ein Aufnahmetag der Quelle; im Dialog an- und abwaehlbar.</summary>
@@ -118,21 +123,23 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        ''' <summary>Eingehaengte Wechseldatentraeger. Unter Linux die Einhaengeorte unter /run/media
-        ''' und /media des Benutzers, unter macOS /Volumes ohne das Systemlaufwerk, unter Windows die
+        ''' <summary>Eingehaengte Wechseldatentraeger und angeschlossene Geraete. Unter Linux die
+        ''' Einhaengeorte unter /run/media und /media des Benutzers, dazu die Telefone und Kameras, die
+        ''' gvfs einhaengt (MTP und PTP), und die Speicher der Geraete, die kmtpd unter KDE haelt
+        ''' (<see cref="MtpSession"/>). Unter macOS /Volumes ohne das Systemlaufwerk, unter Windows die
         ''' Laufwerke vom Typ "Wechseldatentraeger". Datentraeger mit einem DCIM-Ordner stehen vorn und
         ''' zeigen gleich auf ihn.</summary>
         Public Shared Function DetectSources() As List(Of ImportSource)
-            Dim roots As New List(Of String)()
+            Dim roots As New List(Of (Path As String, Name As String))()
             Try
                 If OperatingSystem.IsWindows() Then
                     For Each drive In DriveInfo.GetDrives()
-                        If drive.DriveType = DriveType.Removable AndAlso drive.IsReady Then roots.Add(drive.RootDirectory.FullName)
+                        If drive.DriveType = DriveType.Removable AndAlso drive.IsReady Then roots.Add((drive.RootDirectory.FullName, ""))
                     Next
                 ElseIf OperatingSystem.IsMacOS() Then
                     If Directory.Exists("/Volumes") Then
                         For Each volume In Directory.GetDirectories("/Volumes")
-                            If Not IsMacSystemVolume(volume) Then roots.Add(volume)
+                            If Not IsMacSystemVolume(volume) Then roots.Add((volume, ""))
                         Next
                     End If
                 Else
@@ -141,9 +148,10 @@ Namespace Services
                         If Not Directory.Exists(parent) Then Continue For
                         For Each volume In Directory.GetDirectories(parent)
                             If String.Equals(volume, "/media/" & user, StringComparison.Ordinal) Then Continue For
-                            If Not roots.Contains(volume) Then roots.Add(volume)
+                            If Not roots.Any(Function(r) r.Path = volume) Then roots.Add((volume, ""))
                         Next
                     Next
+                    roots.AddRange(GvfsDeviceRoots(Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR")))
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Import.DetectSources", ex)
@@ -151,15 +159,70 @@ Namespace Services
 
             Dim result As New List(Of ImportSource)()
             For Each root In roots
-                Dim dcim = Path.Combine(root, "DCIM")
+                Dim dcim = Path.Combine(root.Path, "DCIM")
                 Dim hasDcim = Directory.Exists(dcim)
-                Dim name = Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar))
-                If String.IsNullOrEmpty(name) Then name = root
+                Dim name = root.Name
+                If String.IsNullOrEmpty(name) Then name = Path.GetFileName(root.Path.TrimEnd(Path.DirectorySeparatorChar))
+                If String.IsNullOrEmpty(name) Then name = root.Path
                 result.Add(New ImportSource With {
-                    .Path = If(hasDcim, dcim, root),
+                    .Path = If(hasDcim, dcim, root.Path),
                     .Label = If(hasDcim, name & "  (DCIM)", name)})
             Next
+            If OperatingSystem.IsLinux() Then result.AddRange(MtpSources())
             Return result.OrderByDescending(Function(s) s.Path.EndsWith("DCIM", StringComparison.OrdinalIgnoreCase)).ToList()
+        End Function
+
+        ''' <summary>Was gvfs unter <c>$XDG_RUNTIME_DIR/gvfs</c> an Geraeten einhaengt. Ein MTP-Geraet
+        ''' ("mtp:host=...") traegt seine Speicher als Unterordner, und jeder Speicher wird eine eigene
+        ''' Quelle; eine Kamera ueber PTP ("gphoto2:host=...") ist selbst die Quelle. Der Name kommt aus
+        ''' dem Teil nach "host=", mit Leerzeichen statt Unterstrichen.</summary>
+        Public Shared Function GvfsDeviceRoots(runtimeDir As String) As List(Of (Path As String, Name As String))
+            Dim result As New List(Of (Path As String, Name As String))()
+            If String.IsNullOrEmpty(runtimeDir) Then Return result
+            Dim gvfs = Path.Combine(runtimeDir, "gvfs")
+            Try
+                If Not Directory.Exists(gvfs) Then Return result
+                For Each mount In Directory.GetDirectories(gvfs).OrderBy(Function(d) d, StringComparer.Ordinal)
+                    Dim mountName = Path.GetFileName(mount)
+                    Dim isMtp = mountName.StartsWith("mtp:", StringComparison.OrdinalIgnoreCase)
+                    Dim isPtp = mountName.StartsWith("gphoto2:", StringComparison.OrdinalIgnoreCase)
+                    If Not isMtp AndAlso Not isPtp Then Continue For
+                    Dim host = mountName.IndexOf("host=", StringComparison.OrdinalIgnoreCase)
+                    Dim deviceName = If(host >= 0, mountName.Substring(host + 5), mountName).Replace("_"c, " "c).Trim()
+                    If isPtp Then
+                        result.Add((mount, deviceName))
+                        Continue For
+                    End If
+                    For Each storage In Directory.GetDirectories(mount).OrderBy(Function(d) d, StringComparer.Ordinal)
+                        result.Add((storage, deviceName & " / " & Path.GetFileName(storage)))
+                    Next
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Import.GvfsDevices", ex)
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Die Speicher der Geraete, die kmtpd haelt, je als Quelle "mtp:/Geraet/Speicher",
+        ''' mit DCIM, wenn es den Ordner gibt.</summary>
+        Private Shared Function MtpSources() As List(Of ImportSource)
+            Dim result As New List(Of ImportSource)()
+            Try
+                Using session = MtpSession.TryOpen()
+                    If session Is Nothing Then Return result
+                    For Each storage In session.ListStorages()
+                        Dim top = session.ListFolder(storage, "/")
+                        Dim hasDcim = top IsNot Nothing AndAlso top.Any(Function(e) e.IsFolder AndAlso e.Name = "DCIM")
+                        Dim label = storage.DeviceName & " / " & storage.StorageName
+                        result.Add(New ImportSource With {
+                            .Path = If(hasDcim, storage.Address & "/DCIM", storage.Address),
+                            .Label = If(hasDcim, label & "  (DCIM)", label)})
+                    Next
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Import.MtpSources", ex)
+            End Try
+            Return result
         End Function
 
         Private Shared Function IsMacSystemVolume(volume As String) As Boolean
@@ -177,6 +240,7 @@ Namespace Services
         ''' <paramref name="includeSubfolders"/> auch in allen Unterordnern (ab Werk, eine Karte legt ihre
         ''' Bilder in DCIM/100XXXXX ab). Liest je Datei nur die Aufnahmedaten.</summary>
         Public Shared Function Scan(root As String, token As CancellationToken, Optional includeSubfolders As Boolean = True) As List(Of ImportCandidate)
+            If MtpSession.IsAddress(root) Then Return ScanMtp(root, token, includeSubfolders)
             Dim result As New List(Of ImportCandidate)()
             If String.IsNullOrWhiteSpace(root) OrElse Not Directory.Exists(root) Then Return result
             Dim pending As New Stack(Of String)()
@@ -210,8 +274,61 @@ Namespace Services
                     DiagnosticLogService.LogException("Import.Scan", ex)
                 End Try
             End While
+            Return Ordered(MarkRawPartners(result))
+        End Function
 
-            ' Die Begleitdatei einer RAW: gleicher Ordner, gleicher Name, JPEG oder HEIF.
+        ''' <summary>Wie <see cref="Scan"/>, aber auf einem Geraet hinter kmtpd. Gelesen wird nur die
+        ''' Ordnerliste: Name, Groesse und Aenderungszeit, ohne die Dateien selbst. Die Aufnahmezeit
+        ''' ist hier deshalb die Aenderungszeit, die ein Telefon beim Fotografieren setzt; die EXIF-Daten
+        ''' liest erst der Lauf aus der geholten Datei (siehe <see cref="Run"/>).</summary>
+        Private Shared Function ScanMtp(address As String, token As CancellationToken, includeSubfolders As Boolean) As List(Of ImportCandidate)
+            Dim result As New List(Of ImportCandidate)()
+            Using session = MtpSession.TryOpen()
+                If session Is Nothing Then Return result
+                Dim storage As MtpStorage = Nothing
+                Dim rootPath = ""
+                If Not session.TryResolve(address, storage, rootPath) Then Return result
+                Dim pending As New Stack(Of String)()
+                pending.Push(rootPath)
+                While pending.Count > 0
+                    token.ThrowIfCancellationRequested()
+                    Dim folder = pending.Pop()
+                    Dim entries As List(Of MtpEntry)
+                    Try
+                        entries = session.ListFolder(storage, folder)
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Import.ScanMtp", ex)
+                        Continue While
+                    End Try
+                    If entries Is Nothing Then Continue While
+                    For Each entry In entries
+                        If entry.Name.StartsWith("."c) Then Continue For
+                        Dim entryPath = folder.TrimEnd("/"c) & "/" & entry.Name
+                        If entry.IsFolder Then
+                            If includeSubfolders Then pending.Push(entryPath)
+                            Continue For
+                        End If
+                        If Not MediaFileTypes.IsDisplayable(entry.Name) Then Continue For
+                        result.Add(New ImportCandidate With {
+                            .SourcePath = storage.Address & entryPath,
+                            .Size = entry.Size,
+                            .CapturedAt = entry.ModifiedAt,
+                            .ModifiedAt = entry.ModifiedAt,
+                            .IsRaw = RawPreviewService.IsSupportedRaw(entry.Name),
+                            .MtpStorage = storage,
+                            .MtpPath = entryPath})
+                    Next
+                End While
+            End Using
+            Return Ordered(MarkRawPartners(result))
+        End Function
+
+        Private Shared Function Ordered(candidates As List(Of ImportCandidate)) As List(Of ImportCandidate)
+            Return candidates.OrderBy(Function(c) c.CapturedAt).ThenBy(Function(c) c.SourcePath, StringComparer.Ordinal).ToList()
+        End Function
+
+        ''' <summary>Die Begleitdatei einer RAW: gleicher Ordner, gleicher Name, JPEG oder HEIF.</summary>
+        Private Shared Function MarkRawPartners(result As List(Of ImportCandidate)) As List(Of ImportCandidate)
             Dim rawStems As New HashSet(Of String)(PathIdentity.Comparer)
             For Each candidate In result.Where(Function(c) c.IsRaw)
                 rawStems.Add(StemOf(candidate.SourcePath))
@@ -222,7 +339,7 @@ Namespace Services
                 If (ext = ".jpg" OrElse ext = ".jpeg" OrElse ext = ".heic" OrElse ext = ".heif" OrElse ext = ".hif") AndAlso
                    rawStems.Contains(StemOf(candidate.SourcePath)) Then candidate.IsRawPartner = True
             Next
-            Return result.OrderBy(Function(c) c.CapturedAt).ThenBy(Function(c) c.SourcePath, StringComparer.Ordinal).ToList()
+            Return result
         End Function
 
         Private Shared Function StemOf(filePath As String) As String
@@ -346,6 +463,8 @@ Namespace Services
         ''' "/fotos" gilt.</summary>
         Public Shared Function IsWithin(folder As String, root As String) As Boolean
             If String.IsNullOrWhiteSpace(folder) OrElse String.IsNullOrWhiteSpace(root) Then Return False
+            ' Ein Geraet hinter kmtpd hat keinen Ordner im Dateisystem, in dem ein Ziel liegen koennte.
+            If MtpSession.IsAddress(root) Then Return False
             ' Wörtlich UND mit aufgelösten Verweisen: zeigt das Ziel über einen symbolischen Verweis
             ' in die Quelle (oder die Quelle über einen auf einen anderen Ort), folgen Anlegen und
             ' Kopieren dem Verweis, und der wörtliche Vergleich allein sähe das nicht.
@@ -375,56 +494,129 @@ Namespace Services
             Dim result As New ImportResult()
             Dim roots = {targetRoot, backupRoot}.Where(Function(r) Not String.IsNullOrWhiteSpace(r)).ToList()
             Dim cleaned As New HashSet(Of String)(PathIdentity.Comparer)
-            For index = 0 To candidates.Count - 1
-                If token.IsCancellationRequested Then
-                    result.Cancelled = True
-                    Exit For
-                End If
-                Dim candidate = candidates(index)
-                Dim ok = True
-                Dim present = False
-                For rootIndex = 0 To roots.Count - 1
-                    Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate)
-                    If IsWithin(folder, sourceRoot) Then
-                        DiagnosticLogService.LogAlways("Import.TargetInSource", folder)
-                        ok = False
-                        Continue For
+            Dim mtp As MtpSession = Nothing
+            Try
+                For index = 0 To candidates.Count - 1
+                    If token.IsCancellationRequested Then
+                        result.Cancelled = True
+                        Exit For
+                    End If
+                    Dim candidate = candidates(index)
+                    Dim ok = True
+                    Dim present = False
+                    Dim fileName = Path.GetFileName(candidate.SourcePath)
+                    ' Vom Geraet hinter kmtpd erst in eine Zwischendatei; sie ist dann die Quelle der
+                    ' gewohnten geprueften Kopie.
+                    Dim fetched = ""
+                    If candidate.MtpStorage IsNot Nothing Then
+                        Try
+                            If mtp Is Nothing Then mtp = MtpSession.TryOpen()
+                            If mtp Is Nothing Then Throw New IOException("Kein Zugang zu kmtpd")
+                            fetched = FetchFromMtp(mtp, candidate, FixedRootOf(roots(0)), cleaned, token)
+                        Catch ex As OperationCanceledException
+                            result.Cancelled = True
+                            Exit For
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("Import.MtpFetch", ex)
+                            ok = False
+                        End Try
                     End If
                     Try
-                        Directory.CreateDirectory(folder)
-                        If cleaned.Add(folder) Then RemoveStaleParts(folder)
-                        Dim outcome = CopyVerified(candidate.SourcePath, folder, token)
-                        ' Vorhanden zaehlt nur am Hauptziel; die Sicherung darf es schon haben.
-                        If rootIndex = 0 AndAlso outcome.Present Then present = True
-                        If rootIndex = 0 AndAlso String.IsNullOrEmpty(result.FirstTargetFolder) Then result.FirstTargetFolder = folder
-                    Catch ex As OperationCanceledException
-                        result.Cancelled = True
-                        ok = False
-                        Exit For
-                    Catch ex As Exception
-                        DiagnosticLogService.LogException("Import.Copy", ex)
-                        ok = False
+                        For rootIndex = 0 To roots.Count - 1
+                            If Not ok AndAlso candidate.MtpStorage IsNot Nothing Then Exit For
+                            Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate)
+                            If IsWithin(folder, sourceRoot) Then
+                                DiagnosticLogService.LogAlways("Import.TargetInSource", folder)
+                                ok = False
+                                Continue For
+                            End If
+                            Try
+                                Directory.CreateDirectory(folder)
+                                If cleaned.Add(folder) Then RemoveStaleParts(folder)
+                                Dim outcome = CopyVerified(If(fetched.Length > 0, fetched, candidate.SourcePath), fileName, folder, token)
+                                ' Vorhanden zaehlt nur am Hauptziel; die Sicherung darf es schon haben.
+                                If rootIndex = 0 AndAlso outcome.Present Then present = True
+                                If rootIndex = 0 AndAlso String.IsNullOrEmpty(result.FirstTargetFolder) Then result.FirstTargetFolder = folder
+                            Catch ex As OperationCanceledException
+                                result.Cancelled = True
+                                ok = False
+                                Exit For
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("Import.Copy", ex)
+                                ok = False
+                            End Try
+                        Next
+                    Finally
+                        If fetched.Length > 0 Then
+                            Try
+                                File.Delete(fetched)
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("Import.MtpCleanup", ex)
+                            End Try
+                        End If
                     End Try
+                    If result.Cancelled Then Exit For
+                    If Not ok Then
+                        result.Failed.Add(fileName)
+                    ElseIf present Then
+                        result.AlreadyPresent += 1
+                    Else
+                        result.Copied += 1
+                    End If
+                    progress?.Invoke(index + 1, candidates.Count)
                 Next
-                If result.Cancelled Then Exit For
-                If Not ok Then
-                    result.Failed.Add(Path.GetFileName(candidate.SourcePath))
-                ElseIf present Then
-                    result.AlreadyPresent += 1
-                Else
-                    result.Copied += 1
-                End If
-                progress?.Invoke(index + 1, candidates.Count)
-            Next
+            Finally
+                mtp?.Dispose()
+            End Try
             Return result
         End Function
 
-        ''' <summary>Eine Datei in einen Ordner, geprueft und ohne Ersetzen. Present = True: dieselbe
-        ''' Datei lag schon dort.</summary>
-        Private Shared Function CopyVerified(source As String, folder As String, token As CancellationToken) As (Present As Boolean, FinalPath As String)
-            Dim fileName = Path.GetFileName(source)
-            Dim partPath = Path.Combine(folder, "." & fileName & "." & DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture) &
-                                                "." & Guid.NewGuid().ToString("N").Substring(0, 8) & PartSuffix)
+        ''' <summary>Holt eine Datei vom Geraet in eine versteckte Zwischendatei im festen Anfang des
+        ''' Ziels, mit demselben Namensschema wie die Zwischendateien der Kopie, damit ein
+        ''' abgebrochener Lauf sie ebenso wegraeumt. Danach stimmt die Groesse mit der Ordnerliste
+        ''' ueberein, die Aenderungszeit ist die des Geraets, und Aufnahmezeit und Kamera kommen aus
+        ''' den EXIF-Daten der geholten Datei.
+        '''
+        ''' Eine Pruefsumme der Quelle gibt es hier nicht: MTP liefert keine. Geprueft wird die
+        ''' Uebertragung vom Geraet deshalb an Groesse und Rueckmeldung von kmtpd; von der
+        ''' Zwischendatei ins Ziel dann wie sonst mit SHA-256.</summary>
+        Private Shared Function FetchFromMtp(session As MtpSession, candidate As ImportCandidate, stagingFolder As String,
+                                             cleaned As HashSet(Of String), token As CancellationToken) As String
+            If String.IsNullOrWhiteSpace(stagingFolder) Then Throw New IOException("Kein Ordner fuer die Zwischendatei")
+            Directory.CreateDirectory(stagingFolder)
+            If cleaned.Add(stagingFolder) Then RemoveStaleParts(stagingFolder)
+            Dim staged = PartPathFor(stagingFolder, Path.GetFileName(candidate.SourcePath))
+            Try
+                session.FetchFile(candidate.MtpStorage, candidate.MtpPath, staged, token)
+                Dim info As New FileInfo(staged)
+                If info.Length <> candidate.Size Then
+                    Throw New IOException("Vom Geraet kamen " & info.Length.ToString(CultureInfo.InvariantCulture) & " statt " &
+                                          candidate.Size.ToString(CultureInfo.InvariantCulture) & " Byte: " & candidate.MtpPath)
+                End If
+                File.SetLastWriteTime(staged, candidate.ModifiedAt)
+                info.Refresh()
+                Dim camera = ""
+                candidate.CapturedAt = CaptureTimeOf(staged, info, camera)
+                candidate.Camera = camera
+                Return staged
+            Catch
+                Try
+                    If File.Exists(staged) Then File.Delete(staged)
+                Catch
+                End Try
+                Throw
+            End Try
+        End Function
+
+        Private Shared Function PartPathFor(folder As String, fileName As String) As String
+            Return Path.Combine(folder, "." & fileName & "." & DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture) &
+                                        "." & Guid.NewGuid().ToString("N").Substring(0, 8) & PartSuffix)
+        End Function
+
+        ''' <summary>Eine Datei in einen Ordner, geprueft und ohne Ersetzen, unter
+        ''' <paramref name="fileName"/>. Present = True: dieselbe Datei lag schon dort.</summary>
+        Private Shared Function CopyVerified(source As String, fileName As String, folder As String, token As CancellationToken) As (Present As Boolean, FinalPath As String)
+            Dim partPath = PartPathFor(folder, fileName)
             Dim sourceHash As Byte()
             Dim sourceInfo As New FileInfo(source)
             Try

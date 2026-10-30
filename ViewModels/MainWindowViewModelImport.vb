@@ -247,7 +247,9 @@ Namespace ViewModels
             _dialogImportCandidates = New List(Of ImportCandidate)()
             DialogImportDays.Clear()
             Dim folder = _dialogImportSourceFolder
-            If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then
+            ' Ein Geraet hinter kmtpd ("mtp:/...") ist kein Ordner im Dateisystem; ob es die Adresse
+            ' gibt, sagt erst das Lesen.
+            If String.IsNullOrEmpty(folder) OrElse Not (Directory.Exists(folder) OrElse MtpSession.IsAddress(folder)) Then
                 _dialogImportScanning = False
                 RaiseDialogImportScan()
                 Return
