@@ -10396,4 +10396,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0}은(는) FerrumPix가 쓸 수 있는 폴더 밖에 있습니다. 아무것도 복사하지 않았습니다.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>접근할 수 없는 드라이브의 항목 {0}개는 유지됩니다.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>드라이브에 접근할 수 없음</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0}에 지금 접근할 수 없습니다. 연결되어 있지 않을 수 있습니다. 그곳의 사진 {1}장의 파일이 없습니다. 평가, 키워드, 인물을 포함한 항목을 그래도 삭제할까요?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>그래도 삭제</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>유지</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>현재 폴더: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>카메라 없음</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>예: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>자리 표시자: {pictures} 사진 폴더, {datetaken:yyyy} 촬영 연도, {datetaken:yyyy-MM-dd} 날짜, {camera} 카메라.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>가져오기 대상 폴더</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>메모리 카드에서 가져오기가 현재 폴더 외에 제공하는 대상. 자리 표시자: {pictures} 사진 폴더, {home} 홈 폴더, {datetaken:yyyy} 촬영 연도, {datetaken:yyyy-MM-dd} 날짜, {camera} 카메라.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>대상 추가</value>
+  </data>
 </root>

@@ -10350,4 +10350,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} 不在 FerrumPix 允许写入的文件夹内。未复制任何内容。</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>无法访问的驱动器上的 {0} 条记录被保留。</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>无法访问驱动器</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} 当前无法访问，可能未连接。其中 {1} 张图片的文件缺失。仍要删除它们的记录（包括评分、关键词和人物）吗？</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>仍然删除</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>保留</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>当前文件夹：{0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>无相机</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>示例：{0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>占位符：{pictures} 图片文件夹，{datetaken:yyyy} 拍摄年份，{datetaken:yyyy-MM-dd} 日期，{camera} 相机。</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>导入目标文件夹</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>“从存储卡导入”除当前文件夹外提供的目标。占位符：{pictures} 图片文件夹，{home} 个人文件夹，{datetaken:yyyy} 拍摄年份，{datetaken:yyyy-MM-dd} 日期，{camera} 相机。</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>添加目标</value>
+  </data>
 </root>

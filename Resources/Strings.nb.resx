@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} ligger utenfor mappene FerrumPix får skrive til. Ingenting ble kopiert.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>{0} oppføringer på stasjoner som ikke kan nås, beholdes.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Stasjonen kan ikke nås</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} kan ikke nås akkurat nå, kanskje den ikke er tilkoblet. Filene til {1} bilder der mangler. Fjerne oppføringene deres med vurderinger, nøkkelord og personer likevel?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Fjern likevel</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Behold</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Gjeldende mappe: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Uten kamera</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Eksempel: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Plassholdere: {pictures} mappen Bilder, {datetaken:yyyy} opptaksår, {datetaken:yyyy-MM-dd} dag, {camera} kamera.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Målmapper for import</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Mål som Importer fra minnekort tilbyr ved siden av gjeldende mappe. Plassholdere: {pictures} mappen Bilder, {home} hjemmemappe, {datetaken:yyyy} opptaksår, {datetaken:yyyy-MM-dd} dag, {camera} kamera.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Legg til mål</value>
+  </data>
 </root>

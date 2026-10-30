@@ -208,6 +208,28 @@ Namespace Views
             End Try
         End Sub
 
+        ''' <summary>Setzt den gewaehlten Ordner als Vorlage; Platzhalter haengt man danach selbst an.</summary>
+        Private Async Sub OnBrowseImportTargetClick(sender As Object, e As RoutedEventArgs)
+            Dim row = TryCast(TryCast(sender, Control)?.DataContext, ImportTargetRow)
+            If row Is Nothing Then Return
+            e.Handled = True
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim folders = Await topLevel.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                    .Title = LocalizationService.T("Zielordner wählen"),
+                    .AllowMultiple = False,
+                    .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(topLevel, CardImportService.FixedRootOf(row.Template))
+                })
+                Dim folder = folders?.FirstOrDefault()
+                If folder Is Nothing Then Return
+                Dim path = folder.Path.LocalPath
+                If Not String.IsNullOrWhiteSpace(path) Then row.Template = path
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.BrowseImportTarget", ex)
+            End Try
+        End Sub
+
         Private Async Sub OnBrowseGmicClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, SettingsViewModel)
             If vm Is Nothing Then Return

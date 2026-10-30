@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
 Imports System.Linq
+Imports System.Runtime.CompilerServices
 Imports System.Text.RegularExpressions
 Imports System.Threading
 Imports Microsoft.Data.Sqlite
@@ -2122,16 +2123,28 @@ Namespace Services
         ''' sie nichts (Nutzerbefund).</param>
         ''' <param name="token">Abbruch. Er wirkt NUR waehrend des Pruefens - ab dem Loeschen laeuft
         ''' der Durchgang zu Ende, denn ein halb geraeumter Katalog waere schlimmer als ein voller.
-        ''' Wer waehrend des Pruefens abbricht, hat nichts geloescht.</param></summary>
+        ''' Wer waehrend des Pruefens abbricht, hat nichts geloescht.</param>
+        ''' <param name="confirmUnreachable">Fuer Eintraege auf einem Datentraeger, der gerade nicht
+        ''' erreichbar ist (<see cref="VolumePresence"/>): wird JE DATENTRAEGER gerufen, mit seinem
+        ''' Einhaengeort und der Zahl der Eintraege, und entscheidet, ob sie trotzdem entfernt
+        ''' werden. Ohne Rueckfrage bleiben sie stehen - eine nicht eingehaengte Platte sieht fuer
+        ''' File.Exists aus wie lauter geloeschte Fotos.</param>
+        ''' <param name="keptUnreachable">Nimmt auf, wie viele Eintraege auf diese Weise stehen
+        ''' geblieben sind. Eine Box und kein ByRef, damit der Aufruf ohne sie auch aus C# geht.</param></summary>
         Public Function PurgeOrphanedRecords(Optional progress As Action(Of Integer, Integer) = Nothing,
-                                             Optional token As CancellationToken = Nothing) As Integer
+                                             Optional token As CancellationToken = Nothing,
+                                             Optional confirmUnreachable As Func(Of String, Integer, Boolean) = Nothing,
+                                             Optional keptUnreachable As StrongBox(Of Integer) = Nothing) As Integer
             ' Auch hier gilt: erst die Schreiblaeufe anhalten. Er sammelt die verwaisten Pfade in
             ' einem Durchgang und loescht sie danach - was ein Lauf dazwischen anlegt, faellt sonst
             ' entweder mit weg oder erscheint gleich wieder.
+            Dim kept = 0
             Dim klammer = TryBeginCleanup("Library.PurgeOrphanedRecords")
             If klammer Is Nothing Then Return 0
             Using klammer
-                Return PurgeOrphanedRecordsLocked(progress, token)
+                Dim removed = PurgeOrphanedRecordsLocked(progress, token, confirmUnreachable, kept)
+                If keptUnreachable IsNot Nothing Then keptUnreachable.Value = kept
+                Return removed
             End Using
         End Function
 
@@ -2144,11 +2157,15 @@ Namespace Services
         ''' fehlen, etwa wenn eine Platte nicht eingehaengt ist.
         '''
         ''' Auf die Ordner eingegrenzt und nicht ueber den ganzen Katalog: der Lauf hat nur diese
-        ''' Ordner angesehen, und ueber alles andere kann er nichts sagen.</summary>
+        ''' Ordner angesehen, und ueber alles andere kann er nichts sagen.
+        '''
+        ''' Eintraege auf einem Datentraeger, der gerade nicht erreichbar ist, zaehlen NICHT mit
+        ''' (<see cref="VolumePresence"/>): sie fehlen nicht, sie sind nur nicht da.</summary>
         Public Function CountOrphanedRecordsUnder(folders As IReadOnlyList(Of String),
                                                   Optional filesSeenByIndex As ISet(Of String) = Nothing) As Integer
             If folders Is Nothing OrElse folders.Count = 0 Then Return 0
             Dim orphans = 0
+            Dim volumes = VolumePresence.Snapshot()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Dim seen As New HashSet(Of String)(PathIdentity.Comparer)
@@ -2178,7 +2195,7 @@ Namespace Services
                                 ' A completed enumeration already proved that this image exists.
                                 ' Avoid a second network metadata roundtrip for every unchanged row.
                                 If filesSeenByIndex IsNot Nothing AndAlso filesSeenByIndex.Contains(p) Then Continue While
-                                If Not File.Exists(p) Then orphans += 1
+                                If Not File.Exists(p) AndAlso volumes.UnreachableRootOf(p).Length = 0 Then orphans += 1
                             End While
                         End Using
                     End Using
@@ -2187,9 +2204,15 @@ Namespace Services
             Return orphans
         End Function
 
-        Private Function PurgeOrphanedRecordsLocked(Optional progress As Action(Of Integer, Integer) = Nothing,
-                                                    Optional token As CancellationToken = Nothing) As Integer
+        Private Function PurgeOrphanedRecordsLocked(progress As Action(Of Integer, Integer),
+                                                    token As CancellationToken,
+                                                    confirmUnreachable As Func(Of String, Integer, Boolean),
+                                                    ByRef keptUnreachable As Integer) As Integer
             Dim orphans As New List(Of String)()
+            ' Fehlende Dateien auf nicht erreichbaren Datentraegern, je Einhaengeort. Sie gehen erst
+            ' nach der Rueckfrage zu den verwaisten, Laufwerk fuer Laufwerk.
+            Dim unreachable As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+            Dim volumes = VolumePresence.Snapshot()
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
 
@@ -2237,9 +2260,35 @@ Namespace Services
                         progress?.Invoke(checkedCount, allPaths.Count)
                         Continue For
                     End If
-                    If Not File.Exists(p) Then orphans.Add(p)
+                    If Not File.Exists(p) Then
+                        Dim root = volumes.UnreachableRootOf(p)
+                        If root.Length = 0 Then
+                            orphans.Add(p)
+                        Else
+                            Dim list As List(Of String) = Nothing
+                            If Not unreachable.TryGetValue(root, list) Then
+                                list = New List(Of String)()
+                                unreachable(root) = list
+                            End If
+                            list.Add(p)
+                        End If
+                    End If
                     progress?.Invoke(checkedCount, allPaths.Count)
                 Next
+
+                ' JE LAUFWERK EINE FRAGE: das eine kann bewusst abgeschafft sein, das andere liegt nur
+                ' gerade in der Schublade. Wer abbricht, waehrend die Fragen stehen, hat nichts geloescht.
+                For Each entry In unreachable.OrderBy(Function(e) e.Key, StringComparer.Ordinal)
+                    If token.IsCancellationRequested Then Return 0
+                    Dim remove = confirmUnreachable IsNot Nothing AndAlso confirmUnreachable(entry.Key, entry.Value.Count)
+                    If remove Then
+                        orphans.AddRange(entry.Value)
+                    Else
+                        keptUnreachable += entry.Value.Count
+                    End If
+                Next
+                If token.IsCancellationRequested Then Return 0
+
                 If orphans.Count > 0 Then
                     Using transaction = conn.BeginTransaction()
                         ' ALLE Tabellen, die auf den Pfad zeigen - dieselbe Reihenfolge wie in

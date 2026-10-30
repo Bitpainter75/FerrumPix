@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} находится вне папок, в которые FerrumPix может записывать. Ничего не скопировано.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>Записи на недоступных накопителях сохранены: {0}.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Накопитель недоступен</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} сейчас недоступен, возможно, не подключён. Файлов {1} снимков на нём нет. Всё равно удалить их записи с оценками, ключевыми словами и людьми?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Всё равно удалить</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Оставить</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Текущая папка: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Без камеры</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Пример: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Подстановки: {pictures} папка «Изображения», {datetaken:yyyy} год съёмки, {datetaken:yyyy-MM-dd} день, {camera} камера.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Папки назначения для импорта</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Места назначения, которые «Импорт с карты памяти» предлагает помимо текущей папки. Подстановки: {pictures} папка «Изображения», {home} домашняя папка, {datetaken:yyyy} год съёмки, {datetaken:yyyy-MM-dd} день, {camera} камера.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Добавить место назначения</value>
+  </data>
 </root>

@@ -45,6 +45,8 @@ If you switch it on in Settings, bursts and RAW+JPEG pairs are stacked: shots ta
 
 *Show similar pictures* in the filter menu gathers the near duplicates of a folder into groups, such as the shots of a series or the same subject taken twice, with a sharpness bar on each picture and the sharpest one marked. Three levels decide how close "similar" has to be. It works on the pictures themselves, without an AI model.
 
+*Import from memory card* in the sidebar copies pictures and videos from a card or any folder. Pick the shooting days you want and a destination: the current folder, or one of your own destinations from the settings, which can sort pictures into folders by the year, day or camera they were taken with. A second folder can take a backup at the same time. Every copy is checked against the original before it gets its name, nothing on the card is touched, and nothing already in the destination is replaced; pictures that are already there are simply skipped.
+
 The photo wall lays the pictures out edge to edge in their own proportions, without captions; its gap is adjustable, and rounded corners and frames can be turned off.
 
 A map view shows the pictures by where they were taken. It is off until you switch it on in Settings, because the map itself comes from a tile server on the internet, which learns which area you are looking at. The photos themselves never leave your machine, and map tiles you have seen are kept there until you clear them.

@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} ligger utanför de mappar som FerrumPix får skriva till. Inget kopierades.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>{0} poster på enheter som inte nås behålls.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Enheten nås inte</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} nås inte just nu, kanske är den inte ansluten. Filerna för {1} bilder där saknas. Ta ändå bort deras poster med betyg, nyckelord och personer?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Ta bort ändå</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Behåll</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Aktuell mapp: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Utan kamera</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Exempel: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Platshållare: {pictures} mappen Bilder, {datetaken:yyyy} fotograferingsår, {datetaken:yyyy-MM-dd} dag, {camera} kamera.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Målmappar för import</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Mål som Importera från minneskort erbjuder bredvid den aktuella mappen. Platshållare: {pictures} mappen Bilder, {home} hemmappen, {datetaken:yyyy} fotograferingsår, {datetaken:yyyy-MM-dd} dag, {camera} kamera.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Lägg till mål</value>
+  </data>
 </root>

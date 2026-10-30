@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} ligt buiten de mappen waarin FerrumPix mag schrijven. Er is niets gekopieerd.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>{0} items op niet bereikbare stations blijven staan.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Station niet bereikbaar</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} is momenteel niet bereikbaar, misschien niet aangesloten. Van {1} foto's daar ontbreken de bestanden. Hun items met beoordelingen, trefwoorden en personen toch verwijderen?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Toch verwijderen</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Laten staan</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Huidige map: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Zonder camera</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Voorbeeld: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Plaatshouders: {pictures} map Afbeeldingen, {datetaken:yyyy} opnamejaar, {datetaken:yyyy-MM-dd} dag, {camera} camera.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Doelmappen voor importeren</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Doelen die Importeren van geheugenkaart naast de huidige map aanbiedt. Plaatshouders: {pictures} map Afbeeldingen, {home} persoonlijke map, {datetaken:yyyy} opnamejaar, {datetaken:yyyy-MM-dd} dag, {camera} camera.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Doel toevoegen</value>
+  </data>
 </root>

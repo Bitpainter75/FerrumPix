@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} leży poza folderami, do których FerrumPix może zapisywać. Nic nie skopiowano.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>Wpisy na niedostępnych nośnikach zostają zachowane: {0}.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Nośnik niedostępny</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} jest teraz niedostępny, może nie jest podłączony. Brakuje tam plików {1} zdjęć. Usunąć mimo to ich wpisy z ocenami, słowami kluczowymi i osobami?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Usuń mimo to</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Zachowaj</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Bieżący folder: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Bez aparatu</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Przykład: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Symbole zastępcze: {pictures} folder Obrazy, {datetaken:yyyy} rok wykonania, {datetaken:yyyy-MM-dd} dzień, {camera} aparat.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Foldery docelowe importu</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Miejsca docelowe, które Importuj z karty pamięci oferuje obok bieżącego folderu. Symbole zastępcze: {pictures} folder Obrazy, {home} folder domowy, {datetaken:yyyy} rok wykonania, {datetaken:yyyy-MM-dd} dzień, {camera} aparat.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Dodaj miejsce docelowe</value>
+  </data>
 </root>

@@ -87,8 +87,34 @@ Namespace ViewModels
                 value = If(value, "").Trim()
                 If _dialogImportTargetFolder = value Then Return
                 Me.RaiseAndSetIfChanged(_dialogImportTargetFolder, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogImportPatternVisible))
                 RaiseDialogImportSummary()
             End Set
+        End Property
+
+        ''' <summary>Die Ziele zur Auswahl: der aktuelle Ordner der Galerie und die in den
+        ''' Einstellungen definierten. Eine Wahl schreibt ihre Vorlage ins Zielfeld; dort laesst sie
+        ''' sich weiter aendern oder ueber "Ordner wählen" ersetzen.</summary>
+        Public ReadOnly Property DialogImportTargetChoices As New ObservableCollection(Of ImportFolderPattern)()
+
+        Private _dialogImportSelectedTargetChoice As ImportFolderPattern
+        Public Property DialogImportSelectedTargetChoice As ImportFolderPattern
+            Get
+                Return _dialogImportSelectedTargetChoice
+            End Get
+            Set(value As ImportFolderPattern)
+                If ReferenceEquals(_dialogImportSelectedTargetChoice, value) Then Return
+                Me.RaiseAndSetIfChanged(_dialogImportSelectedTargetChoice, value)
+                If value IsNot Nothing Then DialogImportTargetFolder = value.Pattern
+            End Set
+        End Property
+
+        ''' <summary>Die Unterordner nach Datum gibt es nur fuer einen schlichten Ordner. Eine
+        ''' Vorlage mit Platzhaltern legt den Weg selbst fest.</summary>
+        Public ReadOnly Property IsDialogImportPatternVisible As Boolean
+            Get
+                Return Not CardImportService.HasPlaceholders(_dialogImportTargetFolder)
+            End Get
         End Property
 
         Public Property DialogImportSelectedPattern As ImportFolderPattern
@@ -180,9 +206,10 @@ Namespace ViewModels
         Private Function IsDialogImportPrimaryEnabled() As Boolean
             If _dialogImportScanning OrElse String.IsNullOrWhiteSpace(_dialogImportTargetFolder) Then Return False
             If _dialogImportUseBackup AndAlso String.IsNullOrWhiteSpace(_dialogImportBackupFolder) Then Return False
-            If Not FileOperationPolicy.IsInAllowedArea(_dialogImportTargetFolder) Then Return False
+            If Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(_dialogImportTargetFolder)) Then Return False
             ' Die Sicherung ist ein Ziel wie das erste und unterliegt derselben Regel.
-            If _dialogImportUseBackup AndAlso Not FileOperationPolicy.IsInAllowedArea(_dialogImportBackupFolder) Then Return False
+            If _dialogImportUseBackup AndAlso
+               Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(_dialogImportBackupFolder)) Then Return False
             Return DialogImportChosen().Count > 0
         End Function
 
@@ -251,8 +278,9 @@ Namespace ViewModels
             DialogImportSelectedSource = If(again, DialogImportSources.FirstOrDefault())
         End Sub
 
-        ''' <summary>Oeffnet den Dialog. Ohne gemerkten Zielordner steht dort
-        ''' <paramref name="suggestedTarget"/>, sonst der Bilder-Ordner. Nothing heisst abgebrochen.</summary>
+        ''' <summary>Oeffnet den Dialog. Als Ziel steht zuerst <paramref name="suggestedTarget"/>, der
+        ''' aktuelle Ordner der Galerie; ohne ihn der Bilder-Ordner. Zur Auswahl stehen dazu die
+        ''' Ziele aus den Einstellungen. Nothing heisst abgebrochen.</summary>
         Public Async Function ShowImportDialogAsync(suggestedTarget As String) As Task(Of ImportDialogResult)
             Dim settings = AppSettingsService.Load()
             DialogImportPatterns.Clear()
@@ -261,10 +289,22 @@ Namespace ViewModels
             Next
             _dialogImportSelectedPattern = If(DialogImportPatterns.FirstOrDefault(Function(p) p.Pattern = settings.ImportFolderPattern),
                                               DialogImportPatterns.First())
-            Dim target = settings.ImportTargetFolder
-            If String.IsNullOrWhiteSpace(target) OrElse Not Directory.Exists(target) Then target = suggestedTarget
-            If String.IsNullOrWhiteSpace(target) Then target = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            Dim target = suggestedTarget
+            If String.IsNullOrWhiteSpace(target) OrElse Not Directory.Exists(target) Then target = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
             _dialogImportTargetFolder = If(target, "")
+            DialogImportTargetChoices.Clear()
+            Dim current = New ImportFolderPattern With {
+                .Pattern = _dialogImportTargetFolder,
+                .Label = String.Format(LocalizationService.T("Aktueller Ordner: {0}"), _dialogImportTargetFolder)}
+            DialogImportTargetChoices.Add(current)
+            For Each defined In If(settings.ImportTargets, New List(Of ImportTargetSettings)())
+                If defined Is Nothing OrElse String.IsNullOrWhiteSpace(defined.Template) Then Continue For
+                Dim name = If(String.IsNullOrWhiteSpace(defined.Name), defined.Template, defined.Name & ": " & defined.Template)
+                DialogImportTargetChoices.Add(New ImportFolderPattern With {.Pattern = defined.Template.Trim(), .Label = name})
+            Next
+            _dialogImportSelectedTargetChoice = current
+            Me.RaisePropertyChanged(NameOf(DialogImportSelectedTargetChoice))
+            Me.RaisePropertyChanged(NameOf(IsDialogImportPatternVisible))
             _dialogImportIncludeRawPartners = settings.ImportIncludeRawPartners
             _dialogImportUseBackup = settings.ImportUseBackup
             _dialogImportBackupFolder = If(settings.ImportBackupFolder, "")
@@ -310,7 +350,7 @@ Namespace ViewModels
             For Each root In {request.TargetFolder, request.BackupFolder}.Where(Function(r) Not String.IsNullOrWhiteSpace(r))
                 ' Noch einmal hier und nicht nur am Knopf des Dialogs: der Lauf ist der Ort, an dem
                 ' geschrieben wird, und jedes Ziel, auch die Sicherung, unterliegt der Dateiregel.
-                If Not FileOperationPolicy.IsInAllowedArea(root) Then
+                If Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(root)) Then
                     Await ShowMessageAsync(LocalizationService.T("Ziel nicht erlaubt"),
                                            String.Format(LocalizationService.T("{0} liegt außerhalb der Ordner, in die FerrumPix schreiben darf. Es wurde nichts kopiert."), root))
                     Return Nothing

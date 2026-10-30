@@ -10396,4 +10396,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} berada di luar folder yang boleh ditulisi FerrumPix. Tidak ada yang disalin.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>{0} entri pada drive yang tidak terjangkau tetap disimpan.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Drive tidak terjangkau</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} saat ini tidak terjangkau, mungkin tidak tersambung. File dari {1} gambar di sana tidak ada. Tetap hapus entri mereka beserta rating, kata kunci, dan orang?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Tetap hapus</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Biarkan</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Folder saat ini: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Tanpa kamera</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Contoh: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Placeholder: {pictures} folder Gambar, {datetaken:yyyy} tahun pengambilan, {datetaken:yyyy-MM-dd} hari, {camera} kamera.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Folder tujuan impor</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Tujuan yang ditawarkan Impor dari kartu memori selain folder saat ini. Placeholder: {pictures} folder Gambar, {home} folder pribadi, {datetaken:yyyy} tahun pengambilan, {datetaken:yyyy-MM-dd} hari, {camera} kamera.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Tambah tujuan</value>
+  </data>
 </root>

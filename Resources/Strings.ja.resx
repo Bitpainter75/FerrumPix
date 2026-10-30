@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} は FerrumPix が書き込めるフォルダーの外にあります。何もコピーしていません。</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>アクセスできないドライブ上の {0} 件の項目は残します。</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>ドライブにアクセスできません</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} には現在アクセスできません。接続されていない可能性があります。そこにある {1} 枚の画像のファイルが見つかりません。評価、キーワード、人物を含むそれらの項目を削除しますか？</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>削除する</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>残す</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>現在のフォルダー: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>カメラなし</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>例: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>プレースホルダー: {pictures} ピクチャフォルダー、{datetaken:yyyy} 撮影年、{datetaken:yyyy-MM-dd} 日付、{camera} カメラ。</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>取り込み先フォルダー</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>「メモリーカードから取り込む」で現在のフォルダーのほかに選べる保存先。プレースホルダー: {pictures} ピクチャフォルダー、{home} ホームフォルダー、{datetaken:yyyy} 撮影年、{datetaken:yyyy-MM-dd} 日付、{camera} カメラ。</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>保存先を追加</value>
+  </data>
 </root>

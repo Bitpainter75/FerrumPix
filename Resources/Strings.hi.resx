@@ -10396,4 +10396,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} उन फ़ोल्डरों के बाहर है जिनमें FerrumPix लिख सकता है। कुछ भी कॉपी नहीं हुआ।</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>पहुँच से बाहर ड्राइव पर {0} प्रविष्टियाँ बनी रहती हैं।</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>ड्राइव तक पहुँच नहीं</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} तक अभी पहुँच नहीं है, शायद यह जुड़ा नहीं है। वहाँ की {1} तस्वीरों की फ़ाइलें नहीं मिल रहीं। क्या रेटिंग, कीवर्ड और लोगों सहित उनकी प्रविष्टियाँ फिर भी हटाई जाएँ?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>फिर भी हटाएँ</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>रहने दें</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>वर्तमान फ़ोल्डर: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>बिना कैमरा</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>उदाहरण: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>प्लेसहोल्डर: {pictures} चित्र फ़ोल्डर, {datetaken:yyyy} लेने का वर्ष, {datetaken:yyyy-MM-dd} दिन, {camera} कैमरा।</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>इंपोर्ट के गंतव्य फ़ोल्डर</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>मेमोरी कार्ड से इंपोर्ट वर्तमान फ़ोल्डर के साथ जो गंतव्य देता है। प्लेसहोल्डर: {pictures} चित्र फ़ोल्डर, {home} होम फ़ोल्डर, {datetaken:yyyy} लेने का वर्ष, {datetaken:yyyy-MM-dd} दिन, {camera} कैमरा।</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>गंतव्य जोड़ें</value>
+  </data>
 </root>

@@ -28,6 +28,10 @@ Namespace Services
         Public Property IsRaw As Boolean
         ''' <summary>Das JPEG oder HEIF neben einer RAW mit demselben Namen im selben Ordner.</summary>
         Public Property IsRawPartner As Boolean
+        ''' <summary>Kamera aus den EXIF-Daten, fuer den Platzhalter {camera}.</summary>
+        Public Property Camera As String = ""
+        ''' <summary>Aenderungszeit der Datei, fuer den Platzhalter {date:...}.</summary>
+        Public Property ModifiedAt As DateTime
     End Class
 
     ''' <summary>Ein Aufnahmetag der Quelle; im Dialog an- und abwaehlbar.</summary>
@@ -199,10 +203,13 @@ Namespace Services
                         token.ThrowIfCancellationRequested()
                         If Path.GetFileName(file).StartsWith("."c) OrElse Not MediaFileTypes.IsDisplayable(file) Then Continue For
                         Dim info As New FileInfo(file)
+                        Dim camera = ""
                         result.Add(New ImportCandidate With {
                             .SourcePath = file,
                             .Size = info.Length,
-                            .CapturedAt = CaptureTimeOf(file, info),
+                            .CapturedAt = CaptureTimeOf(file, info, camera),
+                            .Camera = camera,
+                            .ModifiedAt = info.LastWriteTime,
                             .IsRaw = RawPreviewService.IsSupportedRaw(file)})
                     Next
                 Catch ex As OperationCanceledException
@@ -230,9 +237,12 @@ Namespace Services
             Return Path.Combine(If(Path.GetDirectoryName(filePath), ""), Path.GetFileNameWithoutExtension(filePath))
         End Function
 
-        Private Shared Function CaptureTimeOf(file As String, info As FileInfo) As DateTime
+        Private Shared Function CaptureTimeOf(file As String, info As FileInfo, ByRef camera As String) As DateTime
+            camera = ""
             Try
-                Dim taken = ExifService.ParseExifDateTime(ExifService.ReadExif(file)?.DateTaken)
+                Dim exif = ExifService.ReadExif(file)
+                camera = If(exif?.Camera, "").Trim()
+                Dim taken = ExifService.ParseExifDateTime(exif?.DateTaken)
                 If taken.HasValue Then Return taken.Value
             Catch
             End Try
@@ -247,6 +257,65 @@ Namespace Services
             Return Path.Combine({targetRoot}.Concat(parts).ToArray())
         End Function
 
+        ''' <summary>Der Zielordner einer Aufnahme. Traegt das Ziel Platzhalter, legt die Vorlage den
+        ''' ganzen Weg fest und das Muster der Unterordner gilt nicht; ein schlichter Ordner bekommt
+        ''' die Unterordner nach dem Muster.</summary>
+        Public Shared Function TargetFolderFor(target As String, pattern As String, candidate As ImportCandidate) As String
+            If HasPlaceholders(target) Then Return ExpandTargetTemplate(target, candidate)
+            Return TargetFolderFor(target, pattern, candidate.CapturedAt)
+        End Function
+
+        Public Shared Function HasPlaceholders(target As String) As Boolean
+            Return If(target, "").Contains("{"c)
+        End Function
+
+        ''' <summary>Loest eine Vorlage fuer eine Aufnahme auf. Dieselben Namen wie beim
+        ''' Stapel-Umbenennen, damit es nur einen Dialekt gibt: {datetaken:FORMAT} (Aufnahmezeit,
+        ''' ersatzweise Aenderungszeit), {date:FORMAT} (Aenderungszeit), {camera}; dazu fuer Ordner
+        ''' {pictures} (Bilder-Ordner des Benutzers) und {home}. Ein Wert, der selbst einen
+        ''' Schraegstrich traegt (eine Kamera "A/B"), wird dabei entschaerft, damit er keine
+        ''' Ordnerebene erfindet. Ein unbekannter Platzhalter bleibt stehen, damit er auffaellt.</summary>
+        Public Shared Function ExpandTargetTemplate(template As String, candidate As ImportCandidate) As String
+            Dim text = If(template, "").Trim()
+            text = text.Replace("{pictures}", Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)).
+                        Replace("{home}", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            Dim camera = SafeSegment(If(candidate?.Camera, ""))
+            If camera.Length = 0 Then camera = LocalizationService.T("Ohne Kamera")
+            text = text.Replace("{camera}", camera)
+            Dim taken = If(candidate Is Nothing, DateTime.Now, candidate.CapturedAt)
+            Dim modified = If(candidate Is Nothing OrElse candidate.ModifiedAt = DateTime.MinValue, taken, candidate.ModifiedAt)
+            text = System.Text.RegularExpressions.Regex.Replace(text, "\{datetaken:([^}]+)\}", Function(m) FormatSafe(taken, m.Groups(1).Value))
+            text = System.Text.RegularExpressions.Regex.Replace(text, "\{date:([^}]+)\}", Function(m) FormatSafe(modified, m.Groups(1).Value))
+            Return text
+        End Function
+
+        Private Shared Function FormatSafe(value As DateTime, format As String) As String
+            Try
+                Return SafeSegment(value.ToString(format, CultureInfo.InvariantCulture))
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        Private Shared Function SafeSegment(value As String) As String
+            Dim invalid = Path.GetInvalidFileNameChars()
+            Return New String(value.Select(Function(c) If(invalid.Contains(c) OrElse c = "/"c OrElse c = "\"c, "_"c, c)).ToArray()).Trim()
+        End Function
+
+        ''' <summary>Der feste Anfang eines Ziels: der Ordner vor dem ersten Platzhalter, mit
+        ''' {pictures} und {home} aufgeloest. An ihm werden Platz und Dateiregel geprueft.</summary>
+        Public Shared Function FixedRootOf(target As String) As String
+            Dim text = If(target, "").Trim().
+                Replace("{pictures}", Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)).
+                Replace("{home}", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            Dim brace = text.IndexOf("{"c)
+            If brace < 0 Then Return text
+            Dim prefix = text.Substring(0, brace)
+            Dim cut = prefix.LastIndexOfAny({"/"c, "\"c})
+            If cut <= 0 Then Return If(cut = 0, prefix.Substring(0, 1), "")
+            Return prefix.Substring(0, cut)
+        End Function
+
         ''' <summary>Wie viele der Dateien schon im Ziel zu liegen scheinen (gleicher Name, gleiche
         ''' Groesse). Nur fuer den Hinweis im Dialog; das Einlesen prueft es genau.</summary>
         Public Shared Function CountProbablyPresent(candidates As IEnumerable(Of ImportCandidate), targetRoot As String, pattern As String) As Integer
@@ -254,7 +323,7 @@ Namespace Services
             Dim count = 0
             For Each candidate In candidates
                 Try
-                    Dim target = Path.Combine(TargetFolderFor(targetRoot, pattern, candidate.CapturedAt), Path.GetFileName(candidate.SourcePath))
+                    Dim target = Path.Combine(TargetFolderFor(targetRoot, pattern, candidate), Path.GetFileName(candidate.SourcePath))
                     Dim info As New FileInfo(target)
                     If info.Exists AndAlso info.Length = candidate.Size Then count += 1
                 Catch
@@ -266,7 +335,8 @@ Namespace Services
         ''' <summary>Freier Platz am Ziel in Byte, oder -1, wenn er sich nicht bestimmen laesst.</summary>
         Public Shared Function FreeSpace(targetRoot As String) As Long
             Try
-                Dim existing = targetRoot
+                ' Bei einer Vorlage zaehlt ihr fester Anfang; ein schlichter Ordner ist es selbst.
+                Dim existing = FixedRootOf(targetRoot)
                 While Not String.IsNullOrEmpty(existing) AndAlso Not Directory.Exists(existing)
                     existing = Path.GetDirectoryName(existing)
                 End While
@@ -294,7 +364,7 @@ Namespace Services
                 Dim ok = True
                 Dim present = False
                 For rootIndex = 0 To roots.Count - 1
-                    Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate.CapturedAt)
+                    Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate)
                     Try
                         Directory.CreateDirectory(folder)
                         If cleaned.Add(folder) Then RemoveStaleParts(folder)

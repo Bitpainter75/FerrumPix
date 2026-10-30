@@ -80,10 +80,15 @@
             <TextBlock Text="JPEG und HEIF neben einer RAW mit einlesen" TextWrapping="Wrap"/>
         </CheckBox>
 
-        <!-- ZIEL: Ordner und Unterordner nach dem Aufnahmetag. -->
+        <!-- ZIEL: zuerst der aktuelle Ordner, zur Wahl die Ziele aus den Einstellungen; das Feld
+             darunter laesst sich frei aendern, auch mit Platzhaltern. -->
         <TextBlock Text="Ziel"
                    FontSize="{DynamicResource FP.Font.Small}"
                    Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <ComboBox ItemsSource="{Binding DialogImportTargetChoices}"
+                  SelectedItem="{Binding DialogImportSelectedTargetChoice, Mode=TwoWay}"
+                  HorizontalAlignment="Stretch"
+                  Classes="no-translate"/>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox Text="{Binding DialogImportTargetFolder, Mode=TwoWay}"
                      Classes="no-translate"
@@ -96,7 +101,11 @@
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <TextBlock Text="Platzhalter: {pictures} Bilder-Ordner, {datetaken:yyyy} Jahr der Aufnahme, {datetaken:yyyy-MM-dd} Tag, {camera} Kamera."
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding IsDialogImportPatternVisible}">
             <TextBlock Text="Unterordner"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>

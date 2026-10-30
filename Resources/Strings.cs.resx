@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} leží mimo složky, do kterých smí FerrumPix zapisovat. Nic nebylo zkopírováno.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>Záznamy na nedostupných jednotkách zůstávají: {0}.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Jednotka není dostupná</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} teď není dostupné, možná není připojené. Chybí tam soubory {1} snímků. Přesto odstranit jejich záznamy s hodnocením, klíčovými slovy a osobami?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Přesto odstranit</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Ponechat</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Aktuální složka: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Bez fotoaparátu</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Příklad: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Zástupné znaky: {pictures} složka Obrázky, {datetaken:yyyy} rok pořízení, {datetaken:yyyy-MM-dd} den, {camera} fotoaparát.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Cílové složky pro import</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Cíle, které Importovat z paměťové karty nabízí vedle aktuální složky. Zástupné znaky: {pictures} složka Obrázky, {home} domovská složka, {datetaken:yyyy} rok pořízení, {datetaken:yyyy-MM-dd} den, {camera} fotoaparát.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Přidat cíl</value>
+  </data>
 </root>

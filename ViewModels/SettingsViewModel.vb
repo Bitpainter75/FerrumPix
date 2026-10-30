@@ -1280,6 +1280,43 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s) s.OpenWithPrograms = programs)
         End Sub
 
+        ' --- Zielordner zum Einlesen von der Karte ----------------------------------------------
+
+        Private _importTargetRows As ObservableCollection(Of ImportTargetRow)
+
+        ''' <summary>Die Zielordner, die der Einlesen-Dialog zur Auswahl anbietet, mit Platzhaltern
+        ''' (CardImportService.ExpandTargetTemplate). Der Dialog liest bei jedem Oeffnen neu.</summary>
+        Public ReadOnly Property ImportTargetRows As ObservableCollection(Of ImportTargetRow)
+            Get
+                If _importTargetRows Is Nothing Then
+                    _importTargetRows = New ObservableCollection(Of ImportTargetRow)()
+                    For Each target In If(AppSettingsService.Load().ImportTargets, New List(Of ImportTargetSettings)())
+                        If target Is Nothing Then Continue For
+                        _importTargetRows.Add(New ImportTargetRow(target, AddressOf SaveImportTargets, AddressOf RemoveImportTargetRow))
+                    Next
+                End If
+                Return _importTargetRows
+            End Get
+        End Property
+
+        Public ReadOnly Property AddImportTargetCommand As ICommand = ReactiveCommand.Create(
+            Sub()
+                ImportTargetRows.Add(New ImportTargetRow(
+                    New ImportTargetSettings With {.Template = "{pictures}/{datetaken:yyyy}/{datetaken:yyyy-MM-dd}"},
+                    AddressOf SaveImportTargets, AddressOf RemoveImportTargetRow))
+                SaveImportTargets()
+            End Sub)
+
+        Private Sub RemoveImportTargetRow(row As ImportTargetRow)
+            If row Is Nothing OrElse Not ImportTargetRows.Remove(row) Then Return
+            SaveImportTargets()
+        End Sub
+
+        Private Sub SaveImportTargets()
+            Dim targets = ImportTargetRows.Select(Function(r) r.ToSettings()).ToList()
+            AppSettingsService.Update(Sub(s) s.ImportTargets = targets)
+        End Sub
+
         ''' <summary>Wo gmic_qt liegt. Leer heisst: im Suchpfad suchen.</summary>
         Public Property GmicQtPath As String
             Get
@@ -4437,6 +4474,17 @@ Namespace ViewModels
                 Sub(s, e)
                     If e.PropertyName = NameOf(CatalogCleanupViewModel.IsRunning) Then RaiseFolderListChanged()
                 End Sub
+            ' Je nicht erreichbarem Laufwerk eine Frage; ab Werk bleiben seine Eintraege stehen.
+            Cleanup.ConfirmUnreachable =
+                Function(root, count)
+                    If _mainVm Is Nothing Then Return Task.FromResult(False)
+                    Return _mainVm.ShowConfirmAsync(
+                        LocalizationService.T("Laufwerk nicht erreichbar"),
+                        String.Format(LocalizationService.T("{0} ist gerade nicht erreichbar, vielleicht nicht angeschlossen. Für {1} Bilder dort fehlen die Dateien. Sollen ihre Einträge mit Bewertungen, Stichwörtern und Personen trotzdem entfernt werden?"),
+                                      root, count),
+                        LocalizationService.T("Trotzdem entfernen"),
+                        LocalizationService.T("Stehen lassen"))
+                End Function
             _appSettings = AppSettingsService.Load()
             ThumbnailCacheFolders = New ObservableCollection(Of ThumbnailCacheFolderInfo)()
             CatalogWatchFolders = New ObservableCollection(Of String)(

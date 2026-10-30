@@ -1223,6 +1223,56 @@
                                 </Grid>
                             </StackPanel>
                         </Grid>
+
+                        <!-- ZIELORDNER ZUM EINLESEN: der Dialog bietet sie neben dem aktuellen Ordner
+                             zur Auswahl an (MainWindowViewModelImport). -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Zielordner zum Einlesen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Ziele, die das Einlesen von der Speicherkarte neben dem aktuellen Ordner anbietet. Platzhalter: {pictures} Bilder-Ordner, {home} persönlicher Ordner, {datetaken:yyyy} Jahr der Aufnahme, {datetaken:yyyy-MM-dd} Tag, {camera} Kamera."
+                                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding AddImportTargetCommand}">Ziel hinzufügen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding ImportTargetRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" Margin="0,0,0,6"
+                                                    AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <Grid ColumnDefinitions="170,*,Auto,Auto" ColumnSpacing="6">
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Name"/>
+                                                <TextBox Grid.Column="1"
+                                                         Classes="no-translate"
+                                                         Text="{Binding Template, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Zielordner"/>
+                                                <Button Grid.Column="2" Classes="ghost" Padding="10,6"
+                                                        Click="OnBrowseImportTargetClick">Auswählen</Button>
+                                                <Button Grid.Column="3" Classes="ghost"
+                                                        Width="30" Height="30" Padding="0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip.Tip="Entfernen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
+                                                                   Width="14" Height="14"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{Binding PreviewText}"
+                                                       Classes="no-translate"
+                                                       Margin="176,0,0,0"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

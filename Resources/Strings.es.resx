@@ -10352,4 +10352,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} está fuera de las carpetas en las que FerrumPix puede escribir. No se copió nada.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>Se conservan {0} entradas de unidades no accesibles.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Unidad no accesible</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} no está accesible ahora, quizá no esté conectada. Faltan los archivos de {1} imágenes allí. ¿Eliminar de todos modos sus entradas con valoraciones, palabras clave y personas?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Eliminar de todos modos</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Conservar</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Carpeta actual: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Sin cámara</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Ejemplo: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Marcadores: {pictures} carpeta Imágenes, {datetaken:yyyy} año de captura, {datetaken:yyyy-MM-dd} día, {camera} cámara.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Carpetas de destino para importar</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Destinos que ofrece Importar desde tarjeta de memoria junto a la carpeta actual. Marcadores: {pictures} carpeta Imágenes, {home} carpeta personal, {datetaken:yyyy} año de captura, {datetaken:yyyy-MM-dd} día, {camera} cámara.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Añadir destino</value>
+  </data>
 </root>

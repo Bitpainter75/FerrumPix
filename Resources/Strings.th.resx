@@ -10396,4 +10396,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} อยู่นอกโฟลเดอร์ที่ FerrumPix เขียนได้ ไม่มีการคัดลอกใด</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>รายการ {0} รายการบนไดรฟ์ที่เข้าถึงไม่ได้ยังคงอยู่</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>เข้าถึงไดรฟ์ไม่ได้</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>ขณะนี้เข้าถึง {0} ไม่ได้ อาจยังไม่ได้เชื่อมต่อ ไฟล์ของภาพ {1} ภาพที่อยู่บนนั้นหายไป ต้องการลบรายการพร้อมคะแนน คีย์เวิร์ด และบุคคลต่อไปหรือไม่</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>ลบต่อไป</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>เก็บไว้</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>โฟลเดอร์ปัจจุบัน: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>ไม่มีกล้อง</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>ตัวอย่าง: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {datetaken:yyyy} ปีที่ถ่าย, {datetaken:yyyy-MM-dd} วัน, {camera} กล้อง</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>โฟลเดอร์ปลายทางสำหรับนำเข้า</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>ปลายทางที่การนำเข้าจากการ์ดหน่วยความจำเสนอเพิ่มจากโฟลเดอร์ปัจจุบัน ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {home} โฟลเดอร์ส่วนตัว, {datetaken:yyyy} ปีที่ถ่าย, {datetaken:yyyy-MM-dd} วัน, {camera} กล้อง</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>เพิ่มปลายทาง</value>
+  </data>
 </root>

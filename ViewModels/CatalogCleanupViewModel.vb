@@ -20,6 +20,11 @@ Namespace ViewModels
 
         Private _cancellation As CancellationTokenSource
 
+        ''' <summary>Die Rueckfrage je nicht erreichbarem Laufwerk (Einhaengeort, Zahl der Eintraege):
+        ''' True heisst, seine Eintraege trotzdem entfernen. Setzt der Besitzer; ohne sie bleiben
+        ''' solche Eintraege immer stehen.</summary>
+        Public Property ConfirmUnreachable As Func(Of String, Integer, Task(Of Boolean))
+
         Protected Overrides Sub RequestCancel()
             _cancellation?.Cancel()
         End Sub
@@ -103,15 +108,42 @@ Namespace ViewModels
         Private Function PurgeOrphans(token As CancellationToken) As String
             Return RunUnderLock(
                 Function()
+                    Dim keptBox As New Runtime.CompilerServices.StrongBox(Of Integer)()
                     Dim removed = LibraryService.Instance.PurgeOrphanedRecords(
                         Sub(done, total) ReportThrottled(
                             String.Format(LocalizationService.T("Prüfe {0} von {1}"), done, total), done, total),
-                        token)
+                        token,
+                        AddressOf AskUnreachable,
+                        keptBox)
+                    Dim kept = keptBox.Value
 
                     If token.IsCancellationRequested Then Return LocalizationService.T("Abgebrochen, es wurde nichts entfernt")
-                    If removed = 0 Then Return LocalizationService.T("Keine verwaisten Einträge gefunden.")
-                    Return String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed)
+                    Dim text = If(removed = 0,
+                                  LocalizationService.T("Keine verwaisten Einträge gefunden."),
+                                  String.Format(LocalizationService.T("{0} verwaiste Einträge entfernt."), removed))
+                    If kept > 0 Then
+                        text &= " " & String.Format(LocalizationService.T("{0} Einträge auf nicht erreichbaren Laufwerken bleiben stehen."), kept)
+                    End If
+                    Return text
                 End Function)
+        End Function
+
+        ''' <summary>Die Rueckfrage kommt vom Hintergrundfaden des Laufs; der Dialog gehoert dem
+        ''' Anzeigefaden. Gewartet wird hier auf die Antwort, der Lauf steht so lange.</summary>
+        Private Function AskUnreachable(root As String, count As Integer) As Boolean
+            Dim ask = ConfirmUnreachable
+            If ask Is Nothing Then Return False
+            Dim answer As New TaskCompletionSource(Of Boolean)()
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Async Sub()
+                    Try
+                        answer.TrySetResult(Await ask(root, count))
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Katalog.Bereinigen.Rueckfrage", ex)
+                        answer.TrySetResult(False)
+                    End Try
+                End Sub)
+            Return answer.Task.GetAwaiter().GetResult()
         End Function
 
     End Class

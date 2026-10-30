@@ -10392,4 +10392,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} on niiden kansioiden ulkopuolella, joihin FerrumPix saa kirjoittaa. Mitään ei kopioitu.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>{0} merkintää asemilla, joihin ei saada yhteyttä, säilytetään.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Asemaan ei saada yhteyttä</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} ei ole nyt tavoitettavissa, ehkä sitä ei ole liitetty. Siellä olevien {1} kuvan tiedostot puuttuvat. Poistetaanko niiden merkinnät arvioineen, avainsanoineen ja henkilöineen silti?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Poista silti</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Säilytä</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Nykyinen kansio: {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Ei kameraa</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Esimerkki: {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Paikkamerkit: {pictures} Kuvat-kansio, {datetaken:yyyy} kuvausvuosi, {datetaken:yyyy-MM-dd} päivä, {camera} kamera.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Tuonnin kohdekansiot</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Kohteet, joita Tuo muistikortilta tarjoaa nykyisen kansion lisäksi. Paikkamerkit: {pictures} Kuvat-kansio, {home} kotikansio, {datetaken:yyyy} kuvausvuosi, {datetaken:yyyy-MM-dd} päivä, {camera} kamera.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Lisää kohde</value>
+  </data>
 </root>

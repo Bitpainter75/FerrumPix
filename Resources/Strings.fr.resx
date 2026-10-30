@@ -10352,4 +10352,40 @@
   <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
     <value>{0} se trouve hors des dossiers dans lesquels FerrumPix peut écrire. Rien n'a été copié.</value>
   </data>
+  <data name="0_Eintr_ge_auf_nicht_erreichbaren_Laufwerken_ble_5f70fe21" xml:space="preserve">
+    <value>{0} entrées sur des supports inaccessibles sont conservées.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_f9f3d527" xml:space="preserve">
+    <value>Support inaccessible</value>
+  </data>
+  <data name="0_ist_gerade_nicht_erreichbar_vielleicht_nicht_a_93a29e7a" xml:space="preserve">
+    <value>{0} est inaccessible pour le moment, peut-être n'est-il pas branché. Les fichiers de {1} images sur ce support manquent. Supprimer quand même leurs entrées avec notes, mots-clés et personnes ?</value>
+  </data>
+  <data name="Trotzdem_entfernen_9be6a1e3" xml:space="preserve">
+    <value>Supprimer quand même</value>
+  </data>
+  <data name="Stehen_lassen_4ca62ac8" xml:space="preserve">
+    <value>Conserver</value>
+  </data>
+  <data name="Aktueller_Ordner_0_21d3381a" xml:space="preserve">
+    <value>Dossier actuel : {0}</value>
+  </data>
+  <data name="Ohne_Kamera_651cafe9" xml:space="preserve">
+    <value>Sans appareil</value>
+  </data>
+  <data name="Beispiel_0_052126c4" xml:space="preserve">
+    <value>Exemple : {0}</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
+    <value>Espaces réservés : {pictures} dossier Images, {datetaken:yyyy} année de prise de vue, {datetaken:yyyy-MM-dd} jour, {camera} appareil.</value>
+  </data>
+  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
+    <value>Dossiers de destination de l'importation</value>
+  </data>
+  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
+    <value>Destinations proposées par Importer depuis la carte mémoire en plus du dossier actuel. Espaces réservés : {pictures} dossier Images, {home} dossier personnel, {datetaken:yyyy} année de prise de vue, {datetaken:yyyy-MM-dd} jour, {camera} appareil.</value>
+  </data>
+  <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
+    <value>Ajouter une destination</value>
+  </data>
 </root>

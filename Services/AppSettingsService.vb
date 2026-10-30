@@ -28,6 +28,15 @@ Namespace Services
         Public Property Arguments As String = ""
     End Class
 
+    ''' <summary>Ein Zielordner fuer das Einlesen von der Karte: Name fuer die Auswahl im Dialog und
+    ''' eine Vorlage mit Platzhaltern ({pictures}, {home}, {camera}, {datetaken:FORMAT},
+    ''' {date:FORMAT}), aufgeloest je Aufnahme (CardImportService.ExpandTargetTemplate).</summary>
+    Public Class ImportTargetSettings
+        Public Property Id As String = Guid.NewGuid().ToString("N")
+        Public Property Name As String = ""
+        Public Property Template As String = ""
+    End Class
+
     ''' <summary>Eine eigene Verlaufsvorlage der Gruppe Füllung: Name und Stoppliste in der Form von
     ''' GradientFillSpec ("#AARRGGBB@Prozent;...").</summary>
     Public Class GradientPresetSettings
@@ -459,10 +468,14 @@ Namespace Services
         ''' Exportieren und Konvertieren; KI-Stichwoerter nie (siehe KeywordFileWriter).
         Public Property WriteKeywordsToFileXmp As Boolean = False
         Public Property WriteKeywordsToFileIptc As Boolean = False
-        ''' Einlesen von der Karte: die zuletzt bestaetigte Wahl (CardImportService). Leerer
-        ''' Zielordner heisst: der Bilder-Ordner des Benutzers.
+        ''' Einlesen von der Karte: die zuletzt bestaetigte Wahl (CardImportService). Der Zielordner
+        ''' ist nur noch ein Rueckfall: vorbelegt wird im Dialog der aktuelle Ordner der Galerie.
         Public Property ImportTargetFolder As String = ""
         Public Property ImportFolderPattern As String = "yyyy/yyyy-MM-dd"
+        ''' Die in den Einstellungen definierten Zielordner, im Dialog zur Auswahl.
+        Public Property ImportTargets As New List(Of ImportTargetSettings) From {
+            New ImportTargetSettings With {.Name = "", .Template = "{pictures}/{datetaken:yyyy}/{datetaken:yyyy-MM-dd}"}
+        }
         Public Property ImportIncludeRawPartners As Boolean = True
         Public Property ImportUseBackup As Boolean = False
         Public Property ImportBackupFolder As String = ""
