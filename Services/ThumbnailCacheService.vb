@@ -443,6 +443,26 @@ Namespace Services
             Return ThumbnailCacheOutcome.Failed
         End Function
 
+        ''' <summary>Der Pfad der Kachel auf der Platte, wenn sie fuer genau diesen Stand der Datei
+        ''' schon da ist, sonst "". Liest nichts und legt nichts an; fuer Wege, die nur ein kleines
+        ''' Bild brauchen (SimilarityService). Derselbe Name wie in LoadCached, ohne Suchlisten-Bereich.</summary>
+        Friend Shared Function FindExactCachedThumbnail(filePath As String, lastWriteTime As DateTime, fileSize As Long) As String
+            If String.IsNullOrEmpty(filePath) OrElse ShouldSkipCache(filePath) Then Return ""
+            Dim enabled As Boolean
+            Dim quality As Integer
+            GetCachedSettings(enabled, quality)
+            If Not enabled Then Return ""
+            Try
+                Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
+                Dim imageHash = HashText(NormalizePath(filePath))
+                Dim cachePath = IO.Path.Combine(GetFolderCachePathById(folderId),
+                                                BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality))
+                Return If(File.Exists(cachePath), cachePath, "")
+            Catch
+                Return ""
+            End Try
+        End Function
+
         Public Shared Function LoadCached(filePath As String,
                                           lastWriteTime As DateTime,
                                           fileSize As Long,

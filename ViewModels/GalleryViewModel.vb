@@ -1522,8 +1522,12 @@ Namespace ViewModels
                 If isMap Then
                     RefreshMapPoints()
                 Else
-                    AppSettingsService.SaveGalleryViewMode(value)
-                    _mainVm?.Settings?.SyncGalleryViewMode(value)
+                    ' Die Gruppenansicht, in die die Aehnlichkeit umschaltet, ist keine Wahl des
+                    ' Nutzers und wird nicht gemerkt.
+                    If Not _switchingViewForSimilar Then
+                        AppSettingsService.SaveGalleryViewMode(value)
+                        _mainVm?.Settings?.SyncGalleryViewMode(value)
+                    End If
                     CloseMapSelection()
                 End If
                 ' Die Eintragsliste der Gruppenansicht gehoert nur ihr. Beim Hineinwechseln wird sie
@@ -1876,17 +1880,17 @@ Namespace ViewModels
         Public ReadOnly Property SetFilterTypeCommand As ICommand
         Public ReadOnly Property ClearFiltersCommand As ICommand
 
-        ' In der Serienansicht sind die Knoepfe immer bedienbar: sie beenden dort nur die Ansicht
-        ' (siehe TryCloseStackFocusInstead).
+        ' In der Serien- und der Aehnlichkeitsansicht sind die Knoepfe immer bedienbar: sie beenden
+        ' dort nur die Ansicht (siehe TryCloseStackFocusInstead).
         Public ReadOnly Property CanNavigateBack As Boolean
             Get
-                Return _historyBack.Count > 0 OrElse IsStackFocused
+                Return _historyBack.Count > 0 OrElse IsStackFocused OrElse IsSimilarView
             End Get
         End Property
 
         Public ReadOnly Property CanNavigateForward As Boolean
             Get
-                Return _historyForward.Count > 0 OrElse IsStackFocused
+                Return _historyForward.Count > 0 OrElse IsStackFocused OrElse IsSimilarView
             End Get
         End Property
 
@@ -1894,7 +1898,7 @@ Namespace ViewModels
         ''' auch die Anzeige des Pfads steuert, die in der Serienansicht unverändert bleibt.</summary>
         Public ReadOnly Property CanNavigateParent As Boolean
             Get
-                Return HasBreadcrumbParent OrElse IsStackFocused
+                Return HasBreadcrumbParent OrElse IsStackFocused OrElse IsSimilarView
             End Get
         End Property
 
@@ -9910,8 +9914,8 @@ Namespace ViewModels
             End If
 
             Dim filteredList = filtered.ToList()
-            filteredList = ApplyStackFocus(filteredList)
-            Items.ReplaceAll(ApplyStacks(filteredList, SortItems(filteredList)))
+            filteredList = ApplySimilarView(ApplyStackFocus(filteredList))
+            Items.ReplaceAll(ApplyStacks(filteredList, SimilarOrder(SortItems(filteredList))))
             RefreshFileTypeFilterOptions()
             If DisplayItems.Count = 0 Then
                 ResetDisplayWindow()
@@ -10119,7 +10123,9 @@ Namespace ViewModels
                     ResetStackState(file)
                 Next
             Next
-            _stacks = If(_stacksEnabled, ImageStackService.Build(filtered), New List(Of ImageStack)())
+            ' In der Aehnlichkeitsansicht keine Stapel: dort sollen die Aufnahmen einer Serie gerade
+            ' einzeln nebeneinander stehen.
+            _stacks = If(_stacksEnabled AndAlso Not IsSimilarView, ImageStackService.Build(filtered), New List(Of ImageStack)())
             If _stacks.Count = 0 Then Return sorted.ToList()
 
             Dim focused = IsStackFocused
@@ -10433,6 +10439,11 @@ Namespace ViewModels
         ''' <summary>Steht die Galerie in einer Serie, beendet das nur die Serienansicht und liefert
         ''' True; der Aufrufer wechselt dann NICHT den Ordner.</summary>
         Private Function TryCloseStackFocusInstead() As Boolean
+            ' Die Aehnlichkeitsansicht gilt hier genauso: gedanklich steht man noch im Ordner.
+            If IsSimilarView Then
+                CloseSimilarView()
+                Return True
+            End If
             If Not IsStackFocused Then Return False
             CloseStackFocus()
             Return True
@@ -10634,6 +10645,7 @@ Namespace ViewModels
         ''' gerade keine beliebige Zahl: gleiche Empfindlichkeiten stehen fuer dieselbe Aufnahme-
         ''' situation zusammen und lassen sich als eigene Abschnitte sinnvoll durchsehen.</summary>
         Public Function GroupingIsAvailable() As Boolean
+            If IsSimilarView Then Return True
             Select Case _sortMode
                 Case "FileModifiedAt", "FileCreatedAt", "ExifDateTaken", "ExifDateModified",
                      "Name", "Camera", "Type", "Iso", "Rating", "Favorite"
@@ -10649,6 +10661,7 @@ Namespace ViewModels
         Private Function GroupKeyFor(item As ImageItem) As String
             If item Is Nothing Then Return "?"
             If item.IsFolder Then Return "folders"
+            If IsSimilarView Then Return SimilarGroupKey(item)
 
             Select Case _sortMode
                 Case "FileModifiedAt" : Return DateGroupKey(item.DateModified)
@@ -10689,6 +10702,7 @@ Namespace ViewModels
         Private Function GroupTitleFor(item As ImageItem) As String
             If item Is Nothing Then Return ""
             If item.IsFolder Then Return LocalizationService.T("Ordner")
+            If IsSimilarView Then Return SimilarGroupTitle(item)
 
             Select Case _sortMode
                 Case "FileModifiedAt" : Return DateGroupTitle(item.DateModified)

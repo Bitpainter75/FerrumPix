@@ -10220,4 +10220,130 @@
   <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
     <value>{0} immagine/i rimosse dall'album</value>
   </data>
+  <data name="Stichw_rter_als_XMP_in_die_Bilddatei_schreiben_87b7808f" xml:space="preserve">
+    <value>Scrivi le parole chiave nel file immagine come XMP</value>
+  </data>
+  <data name="Schreibt_manuelle_Stichw_rter_in_JPEG_PNG_und_We_12ed5787" xml:space="preserve">
+    <value>Scrive le parole chiave manuali direttamente nei file JPEG, PNG e WebP, quando le assegni e con Salva con nome, Esporta e Converti. Le parole chiave IA restano escluse.</value>
+  </data>
+  <data name="Stichw_rter_als_IPTC_in_die_Bilddatei_schreiben_12746675" xml:space="preserve">
+    <value>Scrivi le parole chiave nel file immagine come IPTC</value>
+  </data>
+  <data name="Dasselbe_als_IPTC_Stichw_rter_die_auch_ltere_Pro_4b98daa3" xml:space="preserve">
+    <value>Lo stesso come parole chiave IPTC, lette anche dai programmi più vecchi. Solo JPEG.</value>
+  </data>
+  <data name="0_Gruppen_hnlicher_Bilder_2bb4b3a4" xml:space="preserve">
+    <value>{0} gruppi di immagini simili</value>
+  </data>
+  <data name="Keine_hnlichen_Bilder_gefunden_dfe1c3ae" xml:space="preserve">
+    <value>Nessuna immagine simile trovata</value>
+  </data>
+  <data name="hnliche_Bilder_werden_gesucht_0_von_1_41757c5b" xml:space="preserve">
+    <value>Ricerca di immagini simili: {0} di {1}</value>
+  </data>
+  <data name="Gruppe_0_73f8ae68" xml:space="preserve">
+    <value>Gruppo {0}</value>
+  </data>
+  <data name="HNLICHE_BILDER_709ad1c5" xml:space="preserve">
+    <value>IMMAGINI SIMILI</value>
+  </data>
+  <data name="hnliche_Bilder_zeigen_6d86549b" xml:space="preserve">
+    <value>Mostra immagini simili</value>
+  </data>
+  <data name="Streng_6fd22627" xml:space="preserve">
+    <value>Rigoroso</value>
+  </data>
+  <data name="Ausgewogen_059ab86d" xml:space="preserve">
+    <value>Bilanciato</value>
+  </data>
+  <data name="Locker_99c23e41" xml:space="preserve">
+    <value>Ampio</value>
+  </data>
+  <data name="Nur_fast_gleiche_Aufnahmen_b1c6d113" xml:space="preserve">
+    <value>Solo scatti quasi identici</value>
+  </data>
+  <data name="Dasselbe_Motiv_etwa_eine_Serie_6a9faf06" xml:space="preserve">
+    <value>Lo stesso soggetto, ad esempio una raffica</value>
+  </data>
+  <data name="hnliche_Szenen_mit_mehr_Fehlgriffen_e657cbd1" xml:space="preserve">
+    <value>Scene simili, con più errori</value>
+  </data>
+  <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
+    <value>{0}: {1} file, {2}</value>
+  </data>
+  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
+    <value>Anno e giorno, ad es. 2026/2026-10-30</value>
+  </data>
+  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
+    <value>Giorno, ad es. 2026-10-30</value>
+  </data>
+  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
+    <value>Anno e mese, ad es. 2026/10</value>
+  </data>
+  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
+    <value>Senza sottocartelle</value>
+  </data>
+  <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
+    <value>Scegli l'origine</value>
+  </data>
+  <data name="Quelle_wird_gelesen_f9cc4bf9" xml:space="preserve">
+    <value>Lettura dell'origine…</value>
+  </data>
+  <data name="Keine_Bilder_oder_Videos_gefunden_0902f9f5" xml:space="preserve">
+    <value>Nessuna immagine o video trovati</value>
+  </data>
+  <data name="0_Dateien_gew_hlt_1_c008ecd4" xml:space="preserve">
+    <value>{0} file scelti, {1}</value>
+  </data>
+  <data name="0_davon_liegen_schon_im_Ziel_und_werden_bersprun_9dbb3f00" xml:space="preserve">
+    <value>{0} sono già nella destinazione e verranno saltati</value>
+  </data>
+  <data name="Am_Ziel_sind_nur_0_frei_2d318ea2" xml:space="preserve">
+    <value>Solo {0} liberi nella destinazione</value>
+  </data>
+  <data name="Von_Speicherkarte_einlesen_1b5611e0" xml:space="preserve">
+    <value>Importa dalla scheda di memoria</value>
+  </data>
+  <data name="Kopiert_Bilder_und_Videos_gepr_ft_in_den_Bestand_8e5598ac" xml:space="preserve">
+    <value>Copia immagini e video nella raccolta verificando ogni copia. Nulla viene modificato sull'origine e nessun file esistente nella destinazione viene sostituito.</value>
+  </data>
+  <data name="Einlesen_95f62845" xml:space="preserve">
+    <value>Importa</value>
+  </data>
+  <data name="Nicht_genug_Platz_9c2497ea" xml:space="preserve">
+    <value>Spazio insufficiente</value>
+  </data>
+  <data name="Am_Ziel_0_sind_1_frei_gebraucht_werden_2_Es_wurd_c3bf9492" xml:space="preserve">
+    <value>La destinazione {0} ha {1} liberi, ne servono {2}. Non è stato copiato nulla.</value>
+  </data>
+  <data name="Wird_eingelesen_0_von_1_c03120b6" xml:space="preserve">
+    <value>Importazione: {0} di {1}</value>
+  </data>
+  <data name="Datentr_ger_neu_suchen_a1b5ddd4" xml:space="preserve">
+    <value>Cerca di nuovo le unità</value>
+  </data>
+  <data name="Keine_Speicherkarte_gefunden_W_hle_einen_Ordner_dd74b2d0" xml:space="preserve">
+    <value>Nessuna scheda di memoria trovata. Scegli una cartella.</value>
+  </data>
+  <data name="Aufnahmetage_1a956239" xml:space="preserve">
+    <value>Giorni di scatto</value>
+  </data>
+  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_einlesen_691ba65b" xml:space="preserve">
+    <value>Importa anche JPEG e HEIF accanto a un RAW</value>
+  </data>
+  <data name="Unterordner_95804f80" xml:space="preserve">
+    <value>Sottocartelle</value>
+  </data>
+  <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
+    <value>Esegui anche un backup in una seconda cartella</value>
+  </data>
+  <data name="Eingelesen_0_neu_1_schon_vorhanden_d8c0b1a7" xml:space="preserve">
+    <value>Importati: {0} nuovi, {1} già presenti</value>
+  </data>
+  <data name="0_fehlgeschlagen_cb374ec1" xml:space="preserve">
+    <value>{0} non riusciti</value>
+  </data>
+  <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
+    <value>Non è stato importato tutto</value>
+  </data>
 </root>

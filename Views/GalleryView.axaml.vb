@@ -3421,9 +3421,15 @@ Namespace Views
                     vm.RefreshCommand.Execute(Nothing)
                     e.Handled = True
                 Case Key.Escape
-                    ' Erst die Serienansicht verlassen, erst beim naechsten ESC die Auswahl.
+                    ' Erst die Serien- oder Aehnlichkeitsansicht verlassen, erst beim naechsten ESC
+                    ' die Auswahl.
                     If vm.IsStackFocused Then
                         vm.CloseStackFocus()
+                        e.Handled = True
+                        Return
+                    End If
+                    If vm.IsSimilarView Then
+                        vm.CloseSimilarView()
                         e.Handled = True
                         Return
                     End If

@@ -178,6 +178,14 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20"/>
                     </Button>
+                    <Button Classes="icon-btn"
+                            Width="34"
+                            Height="34"
+                            Command="{Binding ImportFromCardCommand}"
+                            ToolTip.Tip="Von Speicherkarte einlesen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-sd-card.svg"
+                                       Width="20" Height="20"/>
+                    </Button>
                     <!-- Der Brotkrümelpfad weicht im schmalen Fenster als Erstes: er wächst mit der
                          Ordnertiefe und liefe sonst in die Suchleiste. Die Navigation bleibt über die
                          Pfeil- und Haus-Schalter links davon erreichbar, der Pfad steht in der Fußzeile. -->
@@ -823,6 +831,18 @@
                                             </Button>
                                         </StackPanel>
 
+                                        <Separator Margin="4,6"/>
+
+                                        <!-- AEHNLICHE BILDER: rechnet Fingerabdruecke und zeigt die
+                                             Gruppen in einer eigenen Ansicht (GalleryViewModelSimilar). -->
+                                        <TextBlock Text="ÄHNLICHE BILDER" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding OpenSimilarViewCommand}">
+                                            <TextBlock Text="Ähnliche Bilder zeigen" VerticalAlignment="Center"/>
+                                        </Button>
                                         <Separator Margin="4,6"/>
 
                                         <!-- STAPEL: nur bei eingeschalteter Einstellung (Einstellungen,
@@ -1925,6 +1945,53 @@
                         </StackPanel>
                         </StackPanel>
                     </Button>
+                </Border>
+
+                <!-- AEHNLICHE BILDER: dieselbe schwebende Leiste wie in der Serienansicht, dazu die
+                     drei Stufen. Zurueck ueber den Knopf, ESC oder die Navigationsknoepfe. -->
+                <Border Classes="stack-focus-bar"
+                        IsVisible="{Binding IsSimilarView}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="16,6" VerticalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-search.svg"
+                                       Width="18" Height="18"
+                                       IconBrush="{DynamicResource FP.Accent}"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding SimilarViewText}"
+                                   Classes="no-translate"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                            <ToggleButton Classes="ghost" Padding="10,4"
+                                          IsChecked="{Binding IsSimilarLevelStrict, Mode=TwoWay}"
+                                          ToolTip.Tip="Nur fast gleiche Aufnahmen">
+                                <TextBlock Text="Streng"/>
+                            </ToggleButton>
+                            <ToggleButton Classes="ghost" Padding="10,4"
+                                          IsChecked="{Binding IsSimilarLevelBalanced, Mode=TwoWay}"
+                                          ToolTip.Tip="Dasselbe Motiv, etwa eine Serie">
+                                <TextBlock Text="Ausgewogen"/>
+                            </ToggleButton>
+                            <ToggleButton Classes="ghost" Padding="10,4"
+                                          IsChecked="{Binding IsSimilarLevelLoose, Mode=TwoWay}"
+                                          ToolTip.Tip="Ähnliche Szenen, mit mehr Fehlgriffen">
+                                <TextBlock Text="Locker"/>
+                            </ToggleButton>
+                        </StackPanel>
+                        <Button Classes="ghost" Padding="10,4"
+                                Command="{Binding CloseSimilarViewCommand}"
+                                ToolTip.Tip="Zurück zum Ordner (ESC)">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-back-up.svg"
+                                               Width="16" Height="16"
+                                               IconBrush="{DynamicResource FP.Accent}"
+                                               VerticalAlignment="Center"/>
+                                <TextBlock Text="Zurück zum Ordner" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Border>
 
                 <!-- DIE GRUPPENANSICHT VIRTUALISIERT WIE DAS RASTER, nur ueber eine eigene

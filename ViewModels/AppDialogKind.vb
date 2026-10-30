@@ -22,6 +22,8 @@ Namespace ViewModels
         ''' <summary>Modell herunterladen: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
         ''' Dialog (MainWindowViewModelModelDownload.vb).</summary>
         ModelDownload
+        ''' <summary>Von Speicherkarte einlesen (MainWindowViewModelImport.vb).</summary>
+        Import
     End Enum
 
     ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,

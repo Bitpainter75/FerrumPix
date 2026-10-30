@@ -956,6 +956,10 @@ Namespace Services
                     ' TIFF traegt ihn schon: TiffWriterService hat ihn in IFD0 geschrieben, und der Weg
                     ' hier legte fuer alles ausser JPEG eine Beistelldatei an.
                     If Not isPdf AndAlso Not isFpxTarget AndAlso Not isTiff AndAlso Not isJxl Then ApplyCopyright(targetPath, copyrightText)
+                    ' Die manuellen Stichwoerter aus dem Katalog, ebenfalls NACH dem Kopieren der
+                    ' Metadaten. Nur mit Uebernahme der Metadaten: wer sie abschaltet, will eine
+                    ' saubere Datei. Ob und wohin, sagt die Einstellung (ApplyCatalogKeywords).
+                    If preserveMetadata AndAlso Not isPdf AndAlso Not isFpxTarget Then ApplyCatalogKeywords(sourcePath, targetPath)
                     Return True
                 End Using
             Catch ex As Exception

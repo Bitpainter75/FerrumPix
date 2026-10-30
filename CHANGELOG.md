@@ -18,7 +18,23 @@
   curve of presets, now changes brightness and contrast without twisting colours as much. Skin
   tones in particular stay warmer when a preset darkens the shadows. 
 
+- **Similar pictures:** a new view in the gallery groups near duplicates of a folder, such as the
+  shots of a series, with a sharpness bar on each picture and the sharpest one marked. Three levels
+  decide how close the pictures have to be.
+
+- **Import from memory card:** copies pictures and videos from a card or folder into your
+  collection, by shooting day and into date folders, optionally with a second backup folder. Every
+  copy is checked against the original, nothing on the card is changed and nothing in the
+  destination is replaced; pictures already there are skipped.
+
+- **Keywords inside the file:** two new settings write the keywords you add into JPEG, PNG and WebP
+  files themselves, as XMP, IPTC or both, when you add them and when you save or export. AI
+  keywords are never written into files.
+
 ### Fixes
+
+- The thumbnail memory cache now holds at least 1000 thumbnails. With a smaller cache, tiles in
+  large folders could stay dark.
 
 - HEIC photos from Huawei phones that were already in the gallery before 0.9.72 now show the
   camera under their tile too, not only in the info panel.

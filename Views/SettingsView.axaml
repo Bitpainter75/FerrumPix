@@ -3330,6 +3330,22 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding CreateXmpSidecarIfMissing}" IsEnabled="{Binding SyncCatalogToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
+                            <!-- Stichwoerter IN die Bilddatei: zwei Schalter, weil XMP und IPTC
+                                 verschiedene Programme bedienen. KI-Stichwoerter gehen nie mit. -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Stichwörter als XMP in die Bilddatei schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Schreibt manuelle Stichwörter in JPEG, PNG und WebP selbst, beim Vergeben und beim Speichern unter, Exportieren und Konvertieren. KI-Stichwörter bleiben außen vor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding WriteKeywordsToFileXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Stichwörter als IPTC in die Bilddatei schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Dasselbe als IPTC-Stichwörter, die auch ältere Programme lesen. Nur bei JPEG." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding WriteKeywordsToFileIptc}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -3413,9 +3429,9 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
-                                                   Minimum="50"
+                                                   Minimum="1000"
                                                    Maximum="10000"
-                                                   DefaultValue="500"
+                                                   DefaultValue="1000"
                                                    Value="{Binding ThumbnailMemoryCacheCapacity}"/>
                                 <!-- Fuenf Stellen brauchen Platz: bei 34 Punkten stand die
                                      Zehntausend abgeschnitten da. -->

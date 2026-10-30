@@ -436,10 +436,11 @@ Namespace Services
         ''' <summary>KI-Stichwörter zusätzlich in vorhandene bzw. erlaubte neue XMP-Sidecars schreiben.
         ''' Standard AUS: KI-Ergebnisse bleiben sonst ausschließlich in der lokalen Bibliothek.</summary>
         Public Property WriteAiTagsToXmp As Boolean = False
-        ''' <summary>500 statt frueher 250: in einem Ordner mittlerer Groesse
-        ''' reicht das fuer den ganzen Bestand, und Hin- und Herrollen loest dann keinen einzigen
-        ''' neuen Decode mehr aus. Die Obergrenze liegt bei 10.000.</summary>
-        Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 500
+        ''' <summary>1000, zugleich die Untergrenze (siehe NormalizeGalleryThumbnailMemoryCacheCapacity):
+        ''' in einem Ordner mittlerer Groesse reicht das fuer den ganzen Bestand, und Hin- und
+        ''' Herrollen loest dann keinen einzigen neuen Decode mehr aus. Die Obergrenze liegt bei
+        ''' 10.000.</summary>
+        Public Property GalleryThumbnailMemoryCacheCapacity As Integer = 1000
         Public Property JpgSaveQuality As Integer = 90
         ''' Vorgewähltes Zielformat in „Speichern unter", „Konvertieren nach" und „Exportieren nach".
         ''' "JPG" | "PNG" | "WEBP" | "JXL" | "TIFF" | "PDF" | "FPX" - FPX gibt es nur beim Speichern unter,
@@ -453,6 +454,18 @@ Namespace Services
         ''' Ob der Katalog-Sync dabei auch eine FEHLENDE .xmp neu anlegen darf (Standard AUS: nur
         ''' vorhandene Sidecars aktualisieren).
         Public Property CreateXmpSidecarIfMissing As Boolean = False
+        ''' Manuelle Stichwoerter zusaetzlich IN die Bilddatei schreiben (Standard AUS), getrennt nach
+        ''' XMP (JPEG, PNG, WebP) und IPTC (nur JPEG). Gilt beim Vergeben und beim Speichern unter,
+        ''' Exportieren und Konvertieren; KI-Stichwoerter nie (siehe KeywordFileWriter).
+        Public Property WriteKeywordsToFileXmp As Boolean = False
+        Public Property WriteKeywordsToFileIptc As Boolean = False
+        ''' Einlesen von der Karte: die zuletzt bestaetigte Wahl (CardImportService). Leerer
+        ''' Zielordner heisst: der Bilder-Ordner des Benutzers.
+        Public Property ImportTargetFolder As String = ""
+        Public Property ImportFolderPattern As String = "yyyy/yyyy-MM-dd"
+        Public Property ImportIncludeRawPartners As Boolean = True
+        Public Property ImportUseBackup As Boolean = False
+        Public Property ImportBackupFolder As String = ""
         ''' Entwickelte RAW-Vorschau statt eingebettetem JPG (Standard AUS). Wirkt NUR, wenn eine .fpxmp
         ''' existiert - unbearbeitete RAWs bleiben beim schnellen eingebetteten JPG. Getrennt für
         ''' Galerie-Thumbnails und Viewer, weil der Viewer teurer entwickelt.
@@ -1554,9 +1567,14 @@ Namespace Services
         ''' Bildern passte nicht mehr hinein, und beim Zurueckrollen wurde deshalb neu geladen, was
         ''' eben noch da war. Der Preis ist Arbeitsspeicher - eine Kachel belegt je nach eingestellter
         ''' Groesse einige hundert Kilobyte, zehntausend davon also durchaus ein bis zwei Gigabyte.
-        ''' Deshalb bleibt es eine WAHL und wird keine neue Vorgabe.</summary>
+        ''' Deshalb bleibt es eine WAHL und wird keine neue Vorgabe.
+        '''
+        ''' Untergrenze 1000 statt frueher 50: bei 500 meldeten Nutzer in grossen Ordnern Kacheln, die
+        ''' dunkel blieben, und mit einem groesseren Speicher verschwand das. Ein kleinerer Wert spart
+        ''' Arbeitsspeicher, den das Vorladen des ganzen Ordners ohnehin wieder umwaelzt. Ein
+        ''' gemerkter kleinerer Wert wird beim Laden angehoben.</summary>
         Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer) As Integer
-            Return Math.Max(50, Math.Min(10000, value))
+            Return Math.Max(1000, Math.Min(10000, value))
         End Function
 
         ''' <summary>Die Vorgabe der Modellfaeden: die Haelfte der logischen Kerne, mindestens einer.</summary>

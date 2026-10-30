@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.ImportDialogView">
+
+    <!-- Von Speicherkarte einlesen (MainWindowViewModelImport): Quelle, Aufnahmetage, Ziel,
+         Sicherung. Die Zusammenfassung steht oben, damit man vor dem Bestätigen liest, was passiert. -->
+    <StackPanel Spacing="10">
+
+        <Border Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8">
+            <TextBlock Text="{Binding DialogImportSummary}"
+                       Classes="no-translate"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- QUELLE: erkannte Datenträger zur Auswahl, darunter der gelesene Ordner mit eigener Wahl. -->
+        <TextBlock Text="Quelle"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding HasDialogImportSources}">
+            <ComboBox ItemsSource="{Binding DialogImportSources}"
+                      SelectedItem="{Binding DialogImportSelectedSource, Mode=TwoWay}"
+                      HorizontalAlignment="Stretch"
+                      Classes="no-translate"/>
+            <Button Grid.Column="1"
+                    Classes="icon-btn"
+                    Width="38" Height="32"
+                    Click="OnRefreshSourcesClick"
+                    ToolTip.Tip="Datenträger neu suchen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/refresh.svg" Width="18" Height="18"/>
+            </Button>
+        </Grid>
+        <TextBlock Text="Keine Speicherkarte gefunden. Wähle einen Ordner."
+                   IsVisible="{Binding !HasDialogImportSources}"
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding DialogImportSourceFolder, Mode=TwoWay}"
+                     Classes="no-translate"
+                     MinHeight="36"/>
+            <Button Grid.Column="1"
+                    Classes="icon-btn"
+                    Width="38" Height="36"
+                    Click="OnBrowseSourceClick"
+                    ToolTip.Tip="Ordner wählen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+            </Button>
+        </Grid>
+
+        <!-- AUFNAHMETAGE: je Tag ein Haken, alle ab Werk an. -->
+        <TextBlock Text="Aufnahmetage"
+                   IsVisible="{Binding HasDialogImportDays}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <Border IsVisible="{Binding HasDialogImportDays}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="8,4">
+            <ScrollViewer MaxHeight="160" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding DialogImportDays}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}">
+                                <TextBlock Text="{Binding Label}" Classes="no-translate"/>
+                            </CheckBox>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+        <CheckBox IsChecked="{Binding DialogImportIncludeRawPartners, Mode=TwoWay}"
+                  IsVisible="{Binding HasDialogImportRawPartners}">
+            <TextBlock Text="JPEG und HEIF neben einer RAW mit einlesen" TextWrapping="Wrap"/>
+        </CheckBox>
+
+        <!-- ZIEL: Ordner und Unterordner nach dem Aufnahmetag. -->
+        <TextBlock Text="Ziel"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Text="{Binding DialogImportTargetFolder, Mode=TwoWay}"
+                     Classes="no-translate"
+                     MinHeight="36"/>
+            <Button Grid.Column="1"
+                    Classes="icon-btn"
+                    Width="38" Height="36"
+                    Click="OnBrowseTargetClick"
+                    ToolTip.Tip="Ordner wählen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+            </Button>
+        </Grid>
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+            <TextBlock Text="Unterordner"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding DialogImportPatterns}"
+                      SelectedItem="{Binding DialogImportSelectedPattern, Mode=TwoWay}"
+                      HorizontalAlignment="Stretch"
+                      Classes="no-translate"/>
+        </Grid>
+
+        <!-- SICHERUNG: ein zweites Ziel, das genauso geprüft beschrieben wird. -->
+        <CheckBox IsChecked="{Binding DialogImportUseBackup, Mode=TwoWay}">
+            <TextBlock Text="Zusätzlich in einen zweiten Ordner sichern"/>
+        </CheckBox>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding DialogImportUseBackup}">
+            <TextBox Text="{Binding DialogImportBackupFolder, Mode=TwoWay}"
+                     Classes="no-translate"
+                     MinHeight="36"/>
+            <Button Grid.Column="1"
+                    Classes="icon-btn"
+                    Width="38" Height="36"
+                    Click="OnBrowseBackupClick"
+                    ToolTip.Tip="Ordner wählen">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+            </Button>
+        </Grid>
+    </StackPanel>
+</UserControl>

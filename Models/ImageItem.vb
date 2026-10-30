@@ -784,12 +784,27 @@ Namespace Models
             End Set
         End Property
 
-        ''' <summary>Den Balken gibt es nur in der Serienansicht: dort wird eine Serie Aufnahme fuer
-        ''' Aufnahme durchgesehen. Im Ordner steht von einer Serie ohnehin nur die schaerfste vorn.</summary>
+        ''' <summary>Den Balken gibt es nur in der Serien- und der Aehnlichkeitsansicht: dort wird eine
+        ''' Gruppe Aufnahme fuer Aufnahme durchgesehen. Im Ordner steht von einer Serie ohnehin nur
+        ''' die schaerfste vorn.</summary>
         Public ReadOnly Property HasSharpnessBar As Boolean
             Get
-                Return _sharpnessShare >= 0 AndAlso _isInStackFocus
+                Return _sharpnessShare >= 0 AndAlso (_isInStackFocus OrElse _isInSimilarView)
             End Get
+        End Property
+
+        Private _isInSimilarView As Boolean
+        ''' <summary>Steht in der Ansicht "Aehnliche Bilder" (GalleryViewModel.OpenSimilarViewAsync).</summary>
+        Public Property IsInSimilarView As Boolean
+            Get
+                Return _isInSimilarView
+            End Get
+            Set(value As Boolean)
+                If _isInSimilarView = value Then Return
+                _isInSimilarView = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(HasSharpnessBar))
+            End Set
         End Property
 
         Public ReadOnly Property SharpnessBarWidth As Double
@@ -1407,12 +1422,12 @@ Namespace Models
 
         ' Ein bei ~480px Cache-Breite dekodiertes Thumbnail liegt typischerweise bei ca. 400-700KB
         ' (Bgra8888). Der Cap bindet die dauerhaft im Speicher gehaltenen, bereits gesehenen
-        ' Thumbnails auf ca. 200-350MB bei Standardeinstellung (500), unabhängig davon, wie weit
+        ' Thumbnails auf ca. 400-700MB bei Standardeinstellung (1000), unabhängig davon, wie weit
         ' der Nutzer inzwischen weitergescrollt ist - deutlich mehr als der alte, an die
         ' Sichtfenster-Position gekoppelte Keep-Alive-Puffer, damit Hin- und Herscrollen im selben
         ' Bereich keinen Re-Decode mehr auslöst (siehe TouchResident). Über die Einstellungen
         ' (Vorschaubild-Speichercache-Regler) vom Nutzer einstellbar, siehe MaxResidentThumbnails.
-        Private Const DefaultMaxResidentThumbnails As Integer = 500
+        Private Const DefaultMaxResidentThumbnails As Integer = 1000
         Private Shared _maxResidentThumbnails As Integer = DefaultMaxResidentThumbnails
         Private Shared ReadOnly _residentLru As New LinkedList(Of ImageItem)()
 

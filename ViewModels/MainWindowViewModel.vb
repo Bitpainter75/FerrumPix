@@ -3007,6 +3007,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsGpxTrack))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
                 Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
+                Me.RaisePropertyChanged(NameOf(DialogShowsImport))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
@@ -3049,7 +3050,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.ExportTo AndAlso
                        _dialogKind <> AppDialogKind.SetPlace AndAlso
                        _dialogKind <> AppDialogKind.CaptureDate AndAlso
-                       _dialogKind <> AppDialogKind.ModelDownload
+                       _dialogKind <> AppDialogKind.ModelDownload AndAlso
+                       _dialogKind <> AppDialogKind.Import
             End Get
         End Property
 
@@ -3424,6 +3426,7 @@ Namespace ViewModels
                 If _dialogKind = AppDialogKind.GpxTrack Then Return HasDialogGpxMatch
                 If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
                 If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
+                If _dialogKind = AppDialogKind.Import Then Return IsDialogImportPrimaryEnabled()
                 If BatchFilterHasNothingToDo() Then Return False
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
@@ -4003,6 +4006,8 @@ Namespace ViewModels
                 ' Aufnahmeort in derselben Breite: die beiden Metadaten-Dialoge stehen im selben
                 ' Untermenue nebeneinander und sollen nicht unterschiedlich breit aufgehen.
                 If DialogShowsSetPlace Then Return 570
+                ' Einlesen: Quelle und Ziel stehen als Pfade da und sollen lesbar bleiben.
+                If DialogShowsImport Then Return 680
                 Return 440
             End Get
         End Property

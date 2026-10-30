@@ -43,11 +43,17 @@ The group view puts a heading above each block of pictures, following whatever y
 
 If you switch it on in Settings, bursts and RAW+JPEG pairs are stacked: shots taken in quick succession, and the JPEG the camera wrote next to a RAW, show up as one thumbnail. A click on a burst shows just that burst, shot by shot, until you go back to the folder; that is also where its pictures are deleted, one at a time, never the whole burst at once. Within a burst the sharpest shot moves to the front and every shot gets a small sharpness bar, so culling a series is a matter of keeping the best and pressing SHIFT+X to reject the rest. Rejected pictures stay where they are, dimmed, until you hide them with the filter or delete them yourself.
 
+*Show similar pictures* in the filter menu gathers the near duplicates of a folder into groups, such as the shots of a series or the same subject taken twice, with a sharpness bar on each picture and the sharpest one marked. Three levels decide how close "similar" has to be. It works on the pictures themselves, without an AI model.
+
+The card button in the gallery imports pictures and videos from a memory card or any folder. Pick the shooting days you want, a destination and how it is split into folders by date, and optionally a second folder as a backup. Every copy is checked against the original before it gets its name, nothing on the card is touched, and nothing already in the destination is replaced; pictures that are already there are simply skipped.
+
 The photo wall lays the pictures out edge to edge in their own proportions, without captions; its gap is adjustable, and rounded corners and frames can be turned off.
 
 A map view shows the pictures by where they were taken. It is off until you switch it on in Settings, because the map itself comes from a tile server on the internet, which learns which area you are looking at. The photos themselves never leave your machine, and map tiles you have seen are kept there until you clear them.
 
 Ratings, colour labels, keywords and reject marks are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact. Keywords stored inside the picture itself, in its IPTC or XMP data, are picked up as well and can be searched like any other keyword.
+
+If you like, the keywords you add go into JPEG, PNG and WebP files themselves too, as XMP, IPTC or both, when you add them and when you save or export; keywords found by the AI recognition always stay in FerrumPix.
 
 Name the folders your photos live in and they appear at the top of the folder tree, one click away, and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos. Renaming or moving a folder in FerrumPix takes its ratings, labels, keywords, people and thumbnails along; if you moved it outside FerrumPix, you can point the settings at its new location.
 

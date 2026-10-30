@@ -10264,4 +10264,130 @@
   <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
     <value>{0}개를 앨범에서 제거함</value>
   </data>
+  <data name="Stichw_rter_als_XMP_in_die_Bilddatei_schreiben_87b7808f" xml:space="preserve">
+    <value>키워드를 XMP로 이미지 파일에 기록</value>
+  </data>
+  <data name="Schreibt_manuelle_Stichw_rter_in_JPEG_PNG_und_We_12ed5787" xml:space="preserve">
+    <value>수동 키워드를 지정할 때와 다른 이름으로 저장, 내보내기, 변환할 때 JPEG, PNG, WebP 파일 자체에 기록합니다. AI 키워드는 제외됩니다.</value>
+  </data>
+  <data name="Stichw_rter_als_IPTC_in_die_Bilddatei_schreiben_12746675" xml:space="preserve">
+    <value>키워드를 IPTC로 이미지 파일에 기록</value>
+  </data>
+  <data name="Dasselbe_als_IPTC_Stichw_rter_die_auch_ltere_Pro_4b98daa3" xml:space="preserve">
+    <value>같은 내용을 IPTC 키워드로 기록하며, 오래된 프로그램도 읽을 수 있습니다. JPEG만 해당.</value>
+  </data>
+  <data name="0_Gruppen_hnlicher_Bilder_2bb4b3a4" xml:space="preserve">
+    <value>유사한 사진 그룹 {0}개</value>
+  </data>
+  <data name="Keine_hnlichen_Bilder_gefunden_dfe1c3ae" xml:space="preserve">
+    <value>유사한 사진을 찾지 못했습니다</value>
+  </data>
+  <data name="hnliche_Bilder_werden_gesucht_0_von_1_41757c5b" xml:space="preserve">
+    <value>유사한 사진 찾는 중: {0} / {1}</value>
+  </data>
+  <data name="Gruppe_0_73f8ae68" xml:space="preserve">
+    <value>그룹 {0}</value>
+  </data>
+  <data name="HNLICHE_BILDER_709ad1c5" xml:space="preserve">
+    <value>유사한 사진</value>
+  </data>
+  <data name="hnliche_Bilder_zeigen_6d86549b" xml:space="preserve">
+    <value>유사한 사진 보기</value>
+  </data>
+  <data name="Streng_6fd22627" xml:space="preserve">
+    <value>엄격</value>
+  </data>
+  <data name="Ausgewogen_059ab86d" xml:space="preserve">
+    <value>균형</value>
+  </data>
+  <data name="Locker_99c23e41" xml:space="preserve">
+    <value>느슨함</value>
+  </data>
+  <data name="Nur_fast_gleiche_Aufnahmen_b1c6d113" xml:space="preserve">
+    <value>거의 같은 사진만</value>
+  </data>
+  <data name="Dasselbe_Motiv_etwa_eine_Serie_6a9faf06" xml:space="preserve">
+    <value>같은 피사체, 예: 연사</value>
+  </data>
+  <data name="hnliche_Szenen_mit_mehr_Fehlgriffen_e657cbd1" xml:space="preserve">
+    <value>비슷한 장면, 오류가 더 많음</value>
+  </data>
+  <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
+    <value>{0}: 파일 {1}개, {2}</value>
+  </data>
+  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
+    <value>연도와 날짜, 예: 2026/2026-10-30</value>
+  </data>
+  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
+    <value>날짜, 예: 2026-10-30</value>
+  </data>
+  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
+    <value>연도와 월, 예: 2026/10</value>
+  </data>
+  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
+    <value>하위 폴더 없음</value>
+  </data>
+  <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
+    <value>원본 선택</value>
+  </data>
+  <data name="Quelle_wird_gelesen_f9cc4bf9" xml:space="preserve">
+    <value>원본을 읽는 중…</value>
+  </data>
+  <data name="Keine_Bilder_oder_Videos_gefunden_0902f9f5" xml:space="preserve">
+    <value>사진이나 동영상을 찾지 못했습니다</value>
+  </data>
+  <data name="0_Dateien_gew_hlt_1_c008ecd4" xml:space="preserve">
+    <value>파일 {0}개 선택, {1}</value>
+  </data>
+  <data name="0_davon_liegen_schon_im_Ziel_und_werden_bersprun_9dbb3f00" xml:space="preserve">
+    <value>그중 {0}개는 이미 대상에 있어 건너뜁니다</value>
+  </data>
+  <data name="Am_Ziel_sind_nur_0_frei_2d318ea2" xml:space="preserve">
+    <value>대상에 남은 공간은 {0}뿐입니다</value>
+  </data>
+  <data name="Von_Speicherkarte_einlesen_1b5611e0" xml:space="preserve">
+    <value>메모리 카드에서 가져오기</value>
+  </data>
+  <data name="Kopiert_Bilder_und_Videos_gepr_ft_in_den_Bestand_8e5598ac" xml:space="preserve">
+    <value>사진과 동영상을 컬렉션으로 복사하고 각 사본을 검증합니다. 원본은 변경되지 않으며 대상의 기존 파일도 교체되지 않습니다.</value>
+  </data>
+  <data name="Einlesen_95f62845" xml:space="preserve">
+    <value>가져오기</value>
+  </data>
+  <data name="Nicht_genug_Platz_9c2497ea" xml:space="preserve">
+    <value>공간이 부족합니다</value>
+  </data>
+  <data name="Am_Ziel_0_sind_1_frei_gebraucht_werden_2_Es_wurd_c3bf9492" xml:space="preserve">
+    <value>대상 {0}의 여유 공간은 {1}이고 {2}가 필요합니다. 아무것도 복사하지 않았습니다.</value>
+  </data>
+  <data name="Wird_eingelesen_0_von_1_c03120b6" xml:space="preserve">
+    <value>가져오는 중: {0} / {1}</value>
+  </data>
+  <data name="Datentr_ger_neu_suchen_a1b5ddd4" xml:space="preserve">
+    <value>드라이브 다시 찾기</value>
+  </data>
+  <data name="Keine_Speicherkarte_gefunden_W_hle_einen_Ordner_dd74b2d0" xml:space="preserve">
+    <value>메모리 카드를 찾지 못했습니다. 폴더를 선택하세요.</value>
+  </data>
+  <data name="Aufnahmetage_1a956239" xml:space="preserve">
+    <value>촬영일</value>
+  </data>
+  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_einlesen_691ba65b" xml:space="preserve">
+    <value>RAW 옆의 JPEG와 HEIF도 가져오기</value>
+  </data>
+  <data name="Unterordner_95804f80" xml:space="preserve">
+    <value>하위 폴더</value>
+  </data>
+  <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
+    <value>두 번째 폴더에도 백업</value>
+  </data>
+  <data name="Eingelesen_0_neu_1_schon_vorhanden_d8c0b1a7" xml:space="preserve">
+    <value>가져옴: 새 파일 {0}개, 이미 있음 {1}개</value>
+  </data>
+  <data name="0_fehlgeschlagen_cb374ec1" xml:space="preserve">
+    <value>실패 {0}개</value>
+  </data>
+  <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
+    <value>일부를 가져오지 못했습니다</value>
+  </data>
 </root>

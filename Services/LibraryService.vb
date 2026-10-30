@@ -1009,7 +1009,10 @@ Namespace Services
             End Using
 
             SyncCatalogToFpxmp(filePath)
-            If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
+            If syncToXmp Then
+                SyncCatalogToXmpSidecar(filePath)
+                KeywordFileWriter.Queue(filePath)
+            End If
         End Sub
 
         ''' <summary>Ein Stichwort aus einer fremden Quelle so, wie es in der Tags-Spalte stehen darf.

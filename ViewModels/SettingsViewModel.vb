@@ -27,11 +27,13 @@ Namespace ViewModels
         Private _accentColor As String = "#F08A1A"
         Private _accentStrength As Integer = 100
         Private _thumbnailQuality As Integer = 82
-        Private _thumbnailMemoryCacheCapacity As Integer = 250
+        Private _thumbnailMemoryCacheCapacity As Integer = 1000
         Private _jpgSaveQuality As Integer = 90
         Private _preserveMetadataOnSave As Boolean = True
         Private _syncCatalogToXmp As Boolean = False
         Private _createXmpSidecarIfMissing As Boolean = False
+        Private _writeKeywordsToFileXmp As Boolean = False
+        Private _writeKeywordsToFileIptc As Boolean = False
         Private _developRawThumbnails As Boolean = False
         Private _developRawInViewer As Boolean = False
         Private _developRawInViewerWithoutRecipe As Boolean = False
@@ -210,11 +212,13 @@ Namespace ViewModels
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
         Private _savedThumbnailQuality As Integer = 82
-        Private _savedThumbnailMemoryCacheCapacity As Integer = 250
+        Private _savedThumbnailMemoryCacheCapacity As Integer = 1000
         Private _savedJpgSaveQuality As Integer = 90
         Private _savedPreserveMetadataOnSave As Boolean = True
         Private _savedSyncCatalogToXmp As Boolean = False
         Private _savedCreateXmpSidecarIfMissing As Boolean = False
+        Private _savedWriteKeywordsToFileXmp As Boolean = False
+        Private _savedWriteKeywordsToFileIptc As Boolean = False
         Private _savedDevelopRawThumbnails As Boolean = False
         Private _savedDevelopRawInViewer As Boolean = False
         Private _savedDevelopRawInViewerWithoutRecipe As Boolean = False
@@ -624,6 +628,31 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _createXmpSidecarIfMissing = value Then Return
                 Me.RaiseAndSetIfChanged(_createXmpSidecarIfMissing, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Manuelle Stichwoerter auch als XMP IN die Bilddatei (JPEG, PNG, WebP), siehe
+        ''' KeywordFileWriter. Standard AUS.</summary>
+        Public Property WriteKeywordsToFileXmp As Boolean
+            Get
+                Return _writeKeywordsToFileXmp
+            End Get
+            Set(value As Boolean)
+                If _writeKeywordsToFileXmp = value Then Return
+                Me.RaiseAndSetIfChanged(_writeKeywordsToFileXmp, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Manuelle Stichwoerter auch als IPTC IN die Bilddatei (nur JPEG). Standard AUS.</summary>
+        Public Property WriteKeywordsToFileIptc As Boolean
+            Get
+                Return _writeKeywordsToFileIptc
+            End Get
+            Set(value As Boolean)
+                If _writeKeywordsToFileIptc = value Then Return
+                Me.RaiseAndSetIfChanged(_writeKeywordsToFileIptc, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -4430,6 +4459,8 @@ Namespace ViewModels
             _runningScaleFactors = ReadRunningScaleFactors()
             _syncCatalogToXmp = _appSettings.SyncCatalogToXmp
             _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
+            _writeKeywordsToFileXmp = _appSettings.WriteKeywordsToFileXmp
+            _writeKeywordsToFileIptc = _appSettings.WriteKeywordsToFileIptc
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
             _developRawInViewer = _appSettings.DevelopRawInViewer
             _developRawInViewerWithoutRecipe = _appSettings.DevelopRawInViewerWithoutRecipe
@@ -4857,6 +4888,8 @@ Namespace ViewModels
             _savedPreserveMetadataOnSave = _preserveMetadataOnSave
             _savedSyncCatalogToXmp = _syncCatalogToXmp
             _savedCreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
+            _savedWriteKeywordsToFileXmp = _writeKeywordsToFileXmp
+            _savedWriteKeywordsToFileIptc = _writeKeywordsToFileIptc
             _savedDevelopRawThumbnails = _developRawThumbnails
             _savedDevelopRawInViewer = _developRawInViewer
             _savedDevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe
@@ -5039,6 +5072,8 @@ Namespace ViewModels
             PreserveMetadataOnSave = _savedPreserveMetadataOnSave
             SyncCatalogToXmp = _savedSyncCatalogToXmp
             CreateXmpSidecarIfMissing = _savedCreateXmpSidecarIfMissing
+            WriteKeywordsToFileXmp = _savedWriteKeywordsToFileXmp
+            WriteKeywordsToFileIptc = _savedWriteKeywordsToFileIptc
             DevelopRawThumbnails = _savedDevelopRawThumbnails
             DevelopRawInViewer = _savedDevelopRawInViewer
             DevelopRawInViewerWithoutRecipe = _savedDevelopRawInViewerWithoutRecipe
@@ -5188,6 +5223,8 @@ Namespace ViewModels
             StartupNoImageMode = "Gallery"
             SyncCatalogToXmp = False
             CreateXmpSidecarIfMissing = False
+            WriteKeywordsToFileXmp = False
+            WriteKeywordsToFileIptc = False
             DevelopRawThumbnails = False
             DevelopRawInViewer = False
             DevelopRawInViewerWithoutRecipe = False
@@ -5604,6 +5641,8 @@ Namespace ViewModels
                                           s.PreserveMetadataOnSave = _preserveMetadataOnSave
                                           s.SyncCatalogToXmp = _syncCatalogToXmp
                                           s.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
+                                          s.WriteKeywordsToFileXmp = _writeKeywordsToFileXmp
+                                          s.WriteKeywordsToFileIptc = _writeKeywordsToFileIptc
                                           s.DevelopRawThumbnails = _developRawThumbnails
                                           s.DevelopRawInViewer = _developRawInViewer
                                           s.DevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe

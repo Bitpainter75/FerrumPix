@@ -10264,4 +10264,130 @@
   <data name="0_Bild_er_aus_dem_Album_genommen_e8bc0e30" xml:space="preserve">
     <value>{0} gambar dikeluarkan dari album</value>
   </data>
+  <data name="Stichw_rter_als_XMP_in_die_Bilddatei_schreiben_87b7808f" xml:space="preserve">
+    <value>Tulis kata kunci ke dalam file gambar sebagai XMP</value>
+  </data>
+  <data name="Schreibt_manuelle_Stichw_rter_in_JPEG_PNG_und_We_12ed5787" xml:space="preserve">
+    <value>Menulis kata kunci manual langsung ke file JPEG, PNG, dan WebP, saat diberikan serta saat Simpan sebagai, Ekspor, dan Konversi. Kata kunci AI tidak disertakan.</value>
+  </data>
+  <data name="Stichw_rter_als_IPTC_in_die_Bilddatei_schreiben_12746675" xml:space="preserve">
+    <value>Tulis kata kunci ke dalam file gambar sebagai IPTC</value>
+  </data>
+  <data name="Dasselbe_als_IPTC_Stichw_rter_die_auch_ltere_Pro_4b98daa3" xml:space="preserve">
+    <value>Sama seperti kata kunci IPTC, yang juga dibaca program lama. Hanya JPEG.</value>
+  </data>
+  <data name="0_Gruppen_hnlicher_Bilder_2bb4b3a4" xml:space="preserve">
+    <value>{0} grup gambar serupa</value>
+  </data>
+  <data name="Keine_hnlichen_Bilder_gefunden_dfe1c3ae" xml:space="preserve">
+    <value>Tidak ditemukan gambar serupa</value>
+  </data>
+  <data name="hnliche_Bilder_werden_gesucht_0_von_1_41757c5b" xml:space="preserve">
+    <value>Mencari gambar serupa: {0} dari {1}</value>
+  </data>
+  <data name="Gruppe_0_73f8ae68" xml:space="preserve">
+    <value>Grup {0}</value>
+  </data>
+  <data name="HNLICHE_BILDER_709ad1c5" xml:space="preserve">
+    <value>GAMBAR SERUPA</value>
+  </data>
+  <data name="hnliche_Bilder_zeigen_6d86549b" xml:space="preserve">
+    <value>Tampilkan gambar serupa</value>
+  </data>
+  <data name="Streng_6fd22627" xml:space="preserve">
+    <value>Ketat</value>
+  </data>
+  <data name="Ausgewogen_059ab86d" xml:space="preserve">
+    <value>Seimbang</value>
+  </data>
+  <data name="Locker_99c23e41" xml:space="preserve">
+    <value>Longgar</value>
+  </data>
+  <data name="Nur_fast_gleiche_Aufnahmen_b1c6d113" xml:space="preserve">
+    <value>Hanya foto yang hampir sama</value>
+  </data>
+  <data name="Dasselbe_Motiv_etwa_eine_Serie_6a9faf06" xml:space="preserve">
+    <value>Subjek yang sama, misalnya rentetan foto</value>
+  </data>
+  <data name="hnliche_Szenen_mit_mehr_Fehlgriffen_e657cbd1" xml:space="preserve">
+    <value>Adegan serupa, dengan lebih banyak kesalahan</value>
+  </data>
+  <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
+    <value>{0}: {1} file, {2}</value>
+  </data>
+  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
+    <value>Tahun dan hari, mis. 2026/2026-10-30</value>
+  </data>
+  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
+    <value>Hari, mis. 2026-10-30</value>
+  </data>
+  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
+    <value>Tahun dan bulan, mis. 2026/10</value>
+  </data>
+  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
+    <value>Tanpa subfolder</value>
+  </data>
+  <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
+    <value>Pilih sumber</value>
+  </data>
+  <data name="Quelle_wird_gelesen_f9cc4bf9" xml:space="preserve">
+    <value>Membaca sumber…</value>
+  </data>
+  <data name="Keine_Bilder_oder_Videos_gefunden_0902f9f5" xml:space="preserve">
+    <value>Tidak ditemukan gambar atau video</value>
+  </data>
+  <data name="0_Dateien_gew_hlt_1_c008ecd4" xml:space="preserve">
+    <value>{0} file dipilih, {1}</value>
+  </data>
+  <data name="0_davon_liegen_schon_im_Ziel_und_werden_bersprun_9dbb3f00" xml:space="preserve">
+    <value>{0} di antaranya sudah ada di tujuan dan akan dilewati</value>
+  </data>
+  <data name="Am_Ziel_sind_nur_0_frei_2d318ea2" xml:space="preserve">
+    <value>Hanya {0} kosong di tujuan</value>
+  </data>
+  <data name="Von_Speicherkarte_einlesen_1b5611e0" xml:space="preserve">
+    <value>Impor dari kartu memori</value>
+  </data>
+  <data name="Kopiert_Bilder_und_Videos_gepr_ft_in_den_Bestand_8e5598ac" xml:space="preserve">
+    <value>Menyalin gambar dan video ke koleksi dan memeriksa setiap salinan. Tidak ada yang diubah di sumber, dan tidak ada file yang sudah ada di tujuan yang diganti.</value>
+  </data>
+  <data name="Einlesen_95f62845" xml:space="preserve">
+    <value>Impor</value>
+  </data>
+  <data name="Nicht_genug_Platz_9c2497ea" xml:space="preserve">
+    <value>Ruang tidak cukup</value>
+  </data>
+  <data name="Am_Ziel_0_sind_1_frei_gebraucht_werden_2_Es_wurd_c3bf9492" xml:space="preserve">
+    <value>Tujuan {0} memiliki ruang kosong {1}, dibutuhkan {2}. Tidak ada yang disalin.</value>
+  </data>
+  <data name="Wird_eingelesen_0_von_1_c03120b6" xml:space="preserve">
+    <value>Mengimpor: {0} dari {1}</value>
+  </data>
+  <data name="Datentr_ger_neu_suchen_a1b5ddd4" xml:space="preserve">
+    <value>Cari drive lagi</value>
+  </data>
+  <data name="Keine_Speicherkarte_gefunden_W_hle_einen_Ordner_dd74b2d0" xml:space="preserve">
+    <value>Kartu memori tidak ditemukan. Pilih folder.</value>
+  </data>
+  <data name="Aufnahmetage_1a956239" xml:space="preserve">
+    <value>Hari pemotretan</value>
+  </data>
+  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_einlesen_691ba65b" xml:space="preserve">
+    <value>Impor juga JPEG dan HEIF di samping RAW</value>
+  </data>
+  <data name="Unterordner_95804f80" xml:space="preserve">
+    <value>Subfolder</value>
+  </data>
+  <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
+    <value>Cadangkan juga ke folder kedua</value>
+  </data>
+  <data name="Eingelesen_0_neu_1_schon_vorhanden_d8c0b1a7" xml:space="preserve">
+    <value>Diimpor: {0} baru, {1} sudah ada</value>
+  </data>
+  <data name="0_fehlgeschlagen_cb374ec1" xml:space="preserve">
+    <value>{0} gagal</value>
+  </data>
+  <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
+    <value>Tidak semua diimpor</value>
+  </data>
 </root>
