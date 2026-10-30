@@ -1847,17 +1847,17 @@
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <!-- Einlesen von der Karte steht hier, beim Arbeiten am Bestand, und nicht in der
+                    <!-- Importieren steht hier, beim Arbeiten am Bestand, und nicht in der
                          Werkzeugleiste: es ist ein Weg in den Bestand hinein, kein Werkzeug der Ansicht. -->
                     <Button Classes="ghost"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
                             Padding="8,7"
-                            Command="{Binding ImportFromCardCommand}">
+                            Command="{Binding ImportCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-sd-card.svg"
                                            Width="20" Height="20"/>
-                            <TextBlock Text="Von Speicherkarte einlesen"
+                            <TextBlock Text="Importieren"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

@@ -26,8 +26,8 @@
   files themselves, as XMP, IPTC or both, when you add them and when you save or export. AI
   keywords are never written into files.
 
-- **Import from memory card:** a new entry above Settings in the gallery sidebar copies pictures
-  and videos from a card or folder into your collection, by shooting day, into the current folder
+- **Import:** a new entry above Settings in the gallery sidebar copies pictures and videos from a
+  memory card or any other folder into your collection, by shooting day, into the current folder
   or one of your own destinations. Destinations are set up in the settings and can use placeholders
   such as the year or day a picture was taken, or the camera. Every copy is checked against the
   original, nothing on the card is changed and nothing in the destination is replaced; pictures

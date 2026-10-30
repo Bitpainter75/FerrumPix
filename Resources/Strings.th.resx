@@ -10345,14 +10345,8 @@
   <data name="Am_Ziel_sind_nur_0_frei_2d318ea2" xml:space="preserve">
     <value>ปลายทางมีที่ว่างเพียง {0}</value>
   </data>
-  <data name="Von_Speicherkarte_einlesen_1b5611e0" xml:space="preserve">
-    <value>นำเข้าจากการ์ดหน่วยความจำ</value>
-  </data>
   <data name="Kopiert_Bilder_und_Videos_gepr_ft_in_den_Bestand_8e5598ac" xml:space="preserve">
     <value>คัดลอกภาพและวิดีโอเข้าคลังพร้อมตรวจสอบทุกสำเนา ไม่มีการเปลี่ยนแปลงใดในแหล่งที่มา และไม่มีไฟล์เดิมในปลายทางถูกแทนที่</value>
-  </data>
-  <data name="Einlesen_95f62845" xml:space="preserve">
-    <value>นำเข้า</value>
   </data>
   <data name="Nicht_genug_Platz_9c2497ea" xml:space="preserve">
     <value>พื้นที่ไม่พอ</value>
@@ -10360,20 +10354,11 @@
   <data name="Am_Ziel_0_sind_1_frei_gebraucht_werden_2_Es_wurd_c3bf9492" xml:space="preserve">
     <value>ปลายทาง {0} มีที่ว่าง {1} ต้องใช้ {2} ไม่มีการคัดลอกใด</value>
   </data>
-  <data name="Wird_eingelesen_0_von_1_c03120b6" xml:space="preserve">
-    <value>กำลังนำเข้า: {0} จาก {1}</value>
-  </data>
   <data name="Datentr_ger_neu_suchen_a1b5ddd4" xml:space="preserve">
     <value>ค้นหาไดรฟ์อีกครั้ง</value>
   </data>
-  <data name="Keine_Speicherkarte_gefunden_W_hle_einen_Ordner_dd74b2d0" xml:space="preserve">
-    <value>ไม่พบการ์ดหน่วยความจำ โปรดเลือกโฟลเดอร์</value>
-  </data>
   <data name="Aufnahmetage_1a956239" xml:space="preserve">
     <value>วันที่ถ่าย</value>
-  </data>
-  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_einlesen_691ba65b" xml:space="preserve">
-    <value>นำเข้า JPEG และ HEIF ที่อยู่คู่กับ RAW ด้วย</value>
   </data>
   <data name="Unterordner_95804f80" xml:space="preserve">
     <value>โฟลเดอร์ย่อย</value>
@@ -10381,14 +10366,8 @@
   <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
     <value>สำรองไปยังโฟลเดอร์ที่สองด้วย</value>
   </data>
-  <data name="Eingelesen_0_neu_1_schon_vorhanden_d8c0b1a7" xml:space="preserve">
-    <value>นำเข้าแล้ว: ใหม่ {0} มีอยู่แล้ว {1}</value>
-  </data>
   <data name="0_fehlgeschlagen_cb374ec1" xml:space="preserve">
     <value>ล้มเหลว {0}</value>
-  </data>
-  <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
-    <value>นำเข้าไม่ครบทั้งหมด</value>
   </data>
   <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
     <value>ไม่อนุญาตปลายทางนี้</value>
@@ -10423,13 +10402,31 @@
   <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
     <value>ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {datetaken:yyyy} ปีที่ถ่าย, {datetaken:yyyy-MM-dd} วัน, {camera} กล้อง</value>
   </data>
-  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
-    <value>โฟลเดอร์ปลายทางสำหรับนำเข้า</value>
-  </data>
-  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
-    <value>ปลายทางที่การนำเข้าจากการ์ดหน่วยความจำเสนอเพิ่มจากโฟลเดอร์ปัจจุบัน ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {home} โฟลเดอร์ส่วนตัว, {datetaken:yyyy} ปีที่ถ่าย, {datetaken:yyyy-MM-dd} วัน, {camera} กล้อง</value>
-  </data>
   <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
     <value>เพิ่มปลายทาง</value>
+  </data>
+  <data name="Importieren_7d4a3f2a" xml:space="preserve">
+    <value>นำเข้า</value>
+  </data>
+  <data name="Kein_Wechseldatentr_ger_gefunden_W_hle_einen_Ord_24db2148" xml:space="preserve">
+    <value>ไม่พบไดรฟ์แบบถอดได้ โปรดเลือกโฟลเดอร์</value>
+  </data>
+  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_importieren_9d560ee0" xml:space="preserve">
+    <value>นำเข้า JPEG และ HEIF ที่อยู่คู่กับ RAW ด้วย</value>
+  </data>
+  <data name="Importiert_0_neu_1_schon_vorhanden_bef084b2" xml:space="preserve">
+    <value>นำเข้าแล้ว: ใหม่ {0} มีอยู่แล้ว {1}</value>
+  </data>
+  <data name="Nicht_alles_importiert_0579985b" xml:space="preserve">
+    <value>นำเข้าไม่ครบทั้งหมด</value>
+  </data>
+  <data name="Zielordner_f_r_den_Import_d6f98247" xml:space="preserve">
+    <value>โฟลเดอร์ปลายทางสำหรับนำเข้า</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__857bc46e" xml:space="preserve">
+    <value>ปลายทางที่การนำเข้าเสนอเพิ่มจากโฟลเดอร์ปัจจุบัน ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {home} โฟลเดอร์ส่วนตัว, {datetaken:yyyy} ปีที่ถ่าย, {datetaken:yyyy-MM-dd} วัน, {camera} กล้อง</value>
+  </data>
+  <data name="Wird_importiert_0_von_1_4e233365" xml:space="preserve">
+    <value>กำลังนำเข้า: {0} จาก {1}</value>
   </data>
 </root>

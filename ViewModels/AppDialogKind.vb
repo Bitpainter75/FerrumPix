@@ -22,7 +22,7 @@ Namespace ViewModels
         ''' <summary>Modell herunterladen: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
         ''' Dialog (MainWindowViewModelModelDownload.vb).</summary>
         ModelDownload
-        ''' <summary>Von Speicherkarte einlesen (MainWindowViewModelImport.vb).</summary>
+        ''' <summary>Importieren (MainWindowViewModelImport.vb).</summary>
         Import
     End Enum
 

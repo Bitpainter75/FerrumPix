@@ -28,7 +28,7 @@ Namespace Services
         Public Property Arguments As String = ""
     End Class
 
-    ''' <summary>Ein Zielordner fuer das Einlesen von der Karte: Name fuer die Auswahl im Dialog und
+    ''' <summary>Ein Zielordner fuer den Import: Name fuer die Auswahl im Dialog und
     ''' eine Vorlage mit Platzhaltern ({pictures}, {home}, {camera}, {datetaken:FORMAT},
     ''' {date:FORMAT}), aufgeloest je Aufnahme (CardImportService.ExpandTargetTemplate).</summary>
     Public Class ImportTargetSettings
@@ -468,7 +468,7 @@ Namespace Services
         ''' Exportieren und Konvertieren; KI-Stichwoerter nie (siehe KeywordFileWriter).
         Public Property WriteKeywordsToFileXmp As Boolean = False
         Public Property WriteKeywordsToFileIptc As Boolean = False
-        ''' Einlesen von der Karte: die zuletzt bestaetigte Wahl (CardImportService). Der Zielordner
+        ''' Importieren: die zuletzt bestaetigte Wahl (CardImportService). Der Zielordner
         ''' ist nur noch ein Rueckfall: vorbelegt wird im Dialog der aktuelle Ordner der Galerie.
         Public Property ImportTargetFolder As String = ""
         Public Property ImportFolderPattern As String = "yyyy/yyyy-MM-dd"

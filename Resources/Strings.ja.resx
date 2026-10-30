@@ -10341,14 +10341,8 @@
   <data name="Am_Ziel_sind_nur_0_frei_2d318ea2" xml:space="preserve">
     <value>保存先の空きは {0} のみです</value>
   </data>
-  <data name="Von_Speicherkarte_einlesen_1b5611e0" xml:space="preserve">
-    <value>メモリーカードから取り込む</value>
-  </data>
   <data name="Kopiert_Bilder_und_Videos_gepr_ft_in_den_Bestand_8e5598ac" xml:space="preserve">
     <value>画像と動画をコレクションにコピーし、各コピーを検証します。ソースは一切変更せず、保存先の既存ファイルも置き換えません。</value>
-  </data>
-  <data name="Einlesen_95f62845" xml:space="preserve">
-    <value>取り込む</value>
   </data>
   <data name="Nicht_genug_Platz_9c2497ea" xml:space="preserve">
     <value>空き容量が足りません</value>
@@ -10356,20 +10350,11 @@
   <data name="Am_Ziel_0_sind_1_frei_gebraucht_werden_2_Es_wurd_c3bf9492" xml:space="preserve">
     <value>保存先 {0} の空きは {1}、必要なのは {2} です。何もコピーしていません。</value>
   </data>
-  <data name="Wird_eingelesen_0_von_1_c03120b6" xml:space="preserve">
-    <value>取り込み中: {0} / {1}</value>
-  </data>
   <data name="Datentr_ger_neu_suchen_a1b5ddd4" xml:space="preserve">
     <value>ドライブを再検索</value>
   </data>
-  <data name="Keine_Speicherkarte_gefunden_W_hle_einen_Ordner_dd74b2d0" xml:space="preserve">
-    <value>メモリーカードが見つかりません。フォルダーを選択してください。</value>
-  </data>
   <data name="Aufnahmetage_1a956239" xml:space="preserve">
     <value>撮影日</value>
-  </data>
-  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_einlesen_691ba65b" xml:space="preserve">
-    <value>RAW の隣にある JPEG と HEIF も取り込む</value>
   </data>
   <data name="Unterordner_95804f80" xml:space="preserve">
     <value>サブフォルダー</value>
@@ -10377,14 +10362,8 @@
   <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
     <value>2 つ目のフォルダーにもバックアップする</value>
   </data>
-  <data name="Eingelesen_0_neu_1_schon_vorhanden_d8c0b1a7" xml:space="preserve">
-    <value>取り込み完了: 新規 {0}、既存 {1}</value>
-  </data>
   <data name="0_fehlgeschlagen_cb374ec1" xml:space="preserve">
     <value>失敗 {0}</value>
-  </data>
-  <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
-    <value>一部を取り込めませんでした</value>
   </data>
   <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
     <value>許可されていない保存先</value>
@@ -10419,13 +10398,31 @@
   <data name="Platzhalter_pictures_Bilder_Ordner_datetaken_yyy_e45cfe4e" xml:space="preserve">
     <value>プレースホルダー: {pictures} ピクチャフォルダー、{datetaken:yyyy} 撮影年、{datetaken:yyyy-MM-dd} 日付、{camera} カメラ。</value>
   </data>
-  <data name="Zielordner_zum_Einlesen_9c1277cf" xml:space="preserve">
-    <value>取り込み先フォルダー</value>
-  </data>
-  <data name="Ziele_die_das_Einlesen_von_der_Speicherkarte_neb_5a7aea93" xml:space="preserve">
-    <value>「メモリーカードから取り込む」で現在のフォルダーのほかに選べる保存先。プレースホルダー: {pictures} ピクチャフォルダー、{home} ホームフォルダー、{datetaken:yyyy} 撮影年、{datetaken:yyyy-MM-dd} 日付、{camera} カメラ。</value>
-  </data>
   <data name="Ziel_hinzuf_gen_722276c7" xml:space="preserve">
     <value>保存先を追加</value>
+  </data>
+  <data name="Importieren_7d4a3f2a" xml:space="preserve">
+    <value>取り込む</value>
+  </data>
+  <data name="Kein_Wechseldatentr_ger_gefunden_W_hle_einen_Ord_24db2148" xml:space="preserve">
+    <value>リムーバブルドライブが見つかりません。フォルダーを選択してください。</value>
+  </data>
+  <data name="JPEG_und_HEIF_neben_einer_RAW_mit_importieren_9d560ee0" xml:space="preserve">
+    <value>RAW の隣にある JPEG と HEIF も取り込む</value>
+  </data>
+  <data name="Importiert_0_neu_1_schon_vorhanden_bef084b2" xml:space="preserve">
+    <value>取り込み完了: 新規 {0}、既存 {1}</value>
+  </data>
+  <data name="Nicht_alles_importiert_0579985b" xml:space="preserve">
+    <value>一部を取り込めませんでした</value>
+  </data>
+  <data name="Zielordner_f_r_den_Import_d6f98247" xml:space="preserve">
+    <value>取り込み先フォルダー</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__857bc46e" xml:space="preserve">
+    <value>「取り込む」で現在のフォルダーのほかに選べる保存先。プレースホルダー: {pictures} ピクチャフォルダー、{home} ホームフォルダー、{datetaken:yyyy} 撮影年、{datetaken:yyyy-MM-dd} 日付、{camera} カメラ。</value>
+  </data>
+  <data name="Wird_importiert_0_von_1_4e233365" xml:space="preserve">
+    <value>取り込み中: {0} / {1}</value>
   </data>
 </root>

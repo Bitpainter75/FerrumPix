@@ -1229,8 +1229,8 @@
                         <StackPanel Spacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="Zielordner zum Einlesen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Ziele, die das Einlesen von der Speicherkarte neben dem aktuellen Ordner anbietet. Platzhalter: {pictures} Bilder-Ordner, {home} persönlicher Ordner, {datetaken:yyyy} Jahr der Aufnahme, {datetaken:yyyy-MM-dd} Tag, {camera} Kamera."
+                                    <TextBlock Text="Zielordner für den Import" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Ziele, die der Import neben dem aktuellen Ordner anbietet. Platzhalter: {pictures} Bilder-Ordner, {home} persönlicher Ordner, {datetaken:yyyy} Jahr der Aufnahme, {datetaken:yyyy-MM-dd} Tag, {camera} Kamera."
                                                Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Classes="ghost" Padding="12,7"

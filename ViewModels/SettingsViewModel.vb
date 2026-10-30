@@ -1280,7 +1280,7 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s) s.OpenWithPrograms = programs)
         End Sub
 
-        ' --- Zielordner zum Einlesen von der Karte ----------------------------------------------
+        ' --- Zielordner fuer den Import ---------------------------------------------------------
 
         Private _importTargetRows As ObservableCollection(Of ImportTargetRow)
 

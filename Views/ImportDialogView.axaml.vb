@@ -10,7 +10,7 @@ Imports FerrumPix.ViewModels
 
 Namespace Views
 
-    ''' <summary>Der Dialog "Von Speicherkarte einlesen": Quelle, Aufnahmetage, Ziel und Sicherung.
+    ''' <summary>Der Dialog "Importieren": Quelle, Aufnahmetage, Ziel und Sicherung.
     ''' Die Logik steht in MainWindowViewModelImport; hier nur die drei Ordnerwahlen und das Neusuchen
     ''' der Datentraeger.</summary>
     Public Class ImportDialogView

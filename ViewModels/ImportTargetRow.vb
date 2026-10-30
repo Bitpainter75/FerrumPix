@@ -5,7 +5,7 @@ Imports ReactiveUI
 
 Namespace ViewModels
 
-    ''' <summary>Eine Zeile der Liste "Zielordner zum Einlesen" in den Einstellungen: Name und
+    ''' <summary>Eine Zeile der Liste "Zielordner für den Import" in den Einstellungen: Name und
     ''' Vorlage mit Platzhaltern. Jede Aenderung geht sofort in die Einstellungen, wie bei den
     ''' externen Programmen; die Textfelder melden erst beim Verlassen.</summary>
     Public Class ImportTargetRow

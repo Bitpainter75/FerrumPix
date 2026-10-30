@@ -11,7 +11,7 @@ Imports ReactiveUI
 
 Namespace ViewModels
 
-    ''' <summary>Was der Dialog "Von Speicherkarte einlesen" herausgibt.</summary>
+    ''' <summary>Was der Dialog "Importieren" herausgibt.</summary>
     Public Class ImportDialogResult
         Public Property Candidates As List(Of ImportCandidate)
         Public Property TargetFolder As String = ""
@@ -20,7 +20,7 @@ Namespace ViewModels
         Public Property TotalBytes As Long
     End Class
 
-    ''' <summary>Der Dialog "Von Speicherkarte einlesen" und der Lauf danach (CardImportService).
+    ''' <summary>Der Dialog "Importieren" und der Lauf danach (CardImportService).
     '''
     ''' Oben die Quelle: erkannte Wechseldatentraeger zur Auswahl, oder ein beliebiger Ordner.
     ''' Gelesen wird sie beim Waehlen im Hintergrund; darunter stehen die Aufnahmetage zum An- und
@@ -178,7 +178,7 @@ Namespace ViewModels
         ''' gefunden", sonst Zahl, Groesse, schon vorhandene und der freie Platz.</summary>
         Public ReadOnly Property DialogImportSummary As String
             Get
-                If String.IsNullOrEmpty(_dialogImportSourceFolder) Then Return LocalizationService.T("Quelle wählen")
+                If String.IsNullOrEmpty(_dialogImportSourceFolder) Then Return ""
                 If _dialogImportScanning Then Return LocalizationService.T("Quelle wird gelesen…")
                 If _dialogImportCandidates.Count = 0 Then Return LocalizationService.T("Keine Bilder oder Videos gefunden")
                 Dim chosen = DialogImportChosen()
@@ -215,8 +215,17 @@ Namespace ViewModels
 
         Private Sub RaiseDialogImportSummary()
             Me.RaisePropertyChanged(NameOf(DialogImportSummary))
+            Me.RaisePropertyChanged(NameOf(HasDialogImportSummary))
             Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
         End Sub
+
+        ''' <summary>Die Zusammenfassung erscheint erst mit einer Quelle; davor gaebe es nichts
+        ''' zusammenzufassen.</summary>
+        Public ReadOnly Property HasDialogImportSummary As Boolean
+            Get
+                Return Not String.IsNullOrEmpty(_dialogImportSourceFolder)
+            End Get
+        End Property
 
         ''' <summary>Liest die Quelle im Hintergrund. Ein neuer Ordner bricht den laufenden Lauf ab.</summary>
         Private Sub StartDialogImportScan()
@@ -319,10 +328,10 @@ Namespace ViewModels
             RefreshDialogImportSources()
 
             Dim answer = Await ShowDialogAsync(AppDialogKind.Import,
-                                               "Von Speicherkarte einlesen",
+                                               "Importieren",
                                                "Kopiert Bilder und Videos geprüft in den Bestand. Auf der Quelle wird nichts verändert, und im Ziel wird keine vorhandene Datei ersetzt.",
                                                "",
-                                               "Einlesen",
+                                               "Importieren",
                                                "Abbrechen")
             _dialogImportScanCancel?.Cancel()
             If answer Is Nothing Then Return Nothing
@@ -367,14 +376,14 @@ Namespace ViewModels
             Dim token = BeginBusyOverlayCancellation()
             Dim total = request.Candidates.Count
             Try
-                BeginBusyOverlay(String.Format(LocalizationService.T("Wird eingelesen: {0} von {1}"), 0, total))
+                BeginBusyOverlay(String.Format(LocalizationService.T("Wird importiert: {0} von {1}"), 0, total))
                 Return Await Task.Run(
                     Function() CardImportService.Run(request.Candidates, request.TargetFolder, request.FolderPattern,
                                                      request.BackupFolder, token,
                                                      Sub(done, count)
                                                          Dispatcher.UIThread.Post(Sub()
                                                                                       If Not token.IsCancellationRequested Then
-                                                                                          UpdateBusyOverlay(String.Format(LocalizationService.T("Wird eingelesen: {0} von {1}"), done, count))
+                                                                                          UpdateBusyOverlay(String.Format(LocalizationService.T("Wird importiert: {0} von {1}"), done, count))
                                                                                       End If
                                                                                   End Sub)
                                                      End Sub))

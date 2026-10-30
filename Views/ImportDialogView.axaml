@@ -3,21 +3,10 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.ImportDialogView">
 
-    <!-- Von Speicherkarte einlesen (MainWindowViewModelImport): Quelle, Aufnahmetage, Ziel,
-         Sicherung. Die Zusammenfassung steht oben, damit man vor dem Bestätigen liest, was passiert. -->
+    <!-- Importieren (MainWindowViewModelImport): Quelle, Aufnahmetage, Ziel, Sicherung.
+         Die Zusammenfassung steht UNTEN, direkt über den Knöpfen, und erst, wenn eine Quelle
+         gewählt ist: oben ohne Quelle las sich ihr Text wie eine Überschrift. -->
     <StackPanel Spacing="10">
-
-        <Border Background="{DynamicResource FP.Bg.Input}"
-                BorderBrush="{DynamicResource FP.Border.Subtle}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Padding="10,8">
-            <TextBlock Text="{Binding DialogImportSummary}"
-                       Classes="no-translate"
-                       Foreground="{DynamicResource FP.Text.Secondary}"
-                       FontSize="{DynamicResource FP.Font.Small}"
-                       TextWrapping="Wrap"/>
-        </Border>
 
         <!-- QUELLE: erkannte Datenträger zur Auswahl, darunter der gelesene Ordner mit eigener Wahl. -->
         <TextBlock Text="Quelle"
@@ -36,7 +25,7 @@
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/refresh.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
-        <TextBlock Text="Keine Speicherkarte gefunden. Wähle einen Ordner."
+        <TextBlock Text="Kein Wechseldatenträger gefunden. Wähle einen Ordner."
                    IsVisible="{Binding !HasDialogImportSources}"
                    Foreground="{DynamicResource FP.Text.Muted}"
                    FontSize="{DynamicResource FP.Font.Small}"/>
@@ -77,7 +66,7 @@
         </Border>
         <CheckBox IsChecked="{Binding DialogImportIncludeRawPartners, Mode=TwoWay}"
                   IsVisible="{Binding HasDialogImportRawPartners}">
-            <TextBlock Text="JPEG und HEIF neben einer RAW mit einlesen" TextWrapping="Wrap"/>
+            <TextBlock Text="JPEG und HEIF neben einer RAW mit importieren" TextWrapping="Wrap"/>
         </CheckBox>
 
         <!-- ZIEL: zuerst der aktuelle Ordner, zur Wahl die Ziele aus den Einstellungen; das Feld
@@ -132,5 +121,20 @@
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
+
+        <!-- ZUSAMMENFASSUNG: was beim Bestätigen passiert. -->
+        <Border Background="{DynamicResource FP.Bg.Input}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="10,8"
+                Margin="0,4,0,0"
+                IsVisible="{Binding HasDialogImportSummary}">
+            <TextBlock Text="{Binding DialogImportSummary}"
+                       Classes="no-translate"
+                       Foreground="{DynamicResource FP.Text.Secondary}"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       TextWrapping="Wrap"/>
+        </Border>
     </StackPanel>
 </UserControl>
