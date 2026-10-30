@@ -306,7 +306,8 @@ Namespace Services
         ''' Bereitstellungsordner fuer die Fehlersuche als "restore-failed" stehen.</summary>
         Public Shared Sub ApplyPendingRestore()
             ' Zuerst ein abgebrochenes Einspielen erkennen und zurueckbauen, siehe ReplaceAllOrNothing.
-            RecoverInterruptedRestore()
+            ' Lag ein Rueckweg-Ordner, wird das Bereitgelegte in keinem Fall mehr eingespielt.
+            If Not RecoverInterruptedRestore() Then Return
             Dim staging = StagingDirectory
             If Not Directory.Exists(staging) Then Return
             Try
@@ -444,39 +445,51 @@ Namespace Services
 
         Private Const RolledBackMark As String = "ROLLED_BACK"
 
-        ''' <summary>Beim Start, vor allem anderen: liegt ein Journal ohne DONE, ist ein Einspielen
-        ''' mitten im Ersetzen abgebrochen. Dann wird zurueckgebaut, und das Bereitgelegte wandert
-        ''' nach restore-failed: es ist zum Teil schon verschoben und taugt nicht mehr fuer einen
-        ''' zweiten Versuch; die Sicherung selbst gibt es ja noch. Mit DONE stand schon alles, nur
-        ''' das Aufraeumen fehlte.</summary>
-        Private Shared Sub RecoverInterruptedRestore()
+        ''' <summary>Beim Start, vor allem anderen. Liegt ein Rueckweg-Ordner, ist ein Einspielen
+        ''' nicht sauber zu Ende gekommen, und was noch bereitliegt, wird NIE mehr eingespielt: es
+        ''' wandert ZUERST nach restore-failed (die Sicherung selbst gibt es ja noch). Gelingt das
+        ''' nicht, bleibt auch der Rueckweg-Ordner stehen, damit der naechste Start wieder hier
+        ''' haelt, statt das Bereitgelegte doch noch anzuwenden. Danach je nach Journal:
+        ''' <list type="bullet">
+        ''' <item>ohne DONE: mitten im Ersetzen abgebrochen, nach dem Journal zurueckbauen;</item>
+        ''' <item>ROLLED_BACK: schon zurueckgebaut, aber nicht vollstaendig, die Reste bleiben
+        ''' unter neuem Namen zum Nachsehen;</item>
+        ''' <item>DONE: es stand schon alles, nur das Aufraeumen fehlte; der Rest des
+        ''' Bereitgelegten wird dann geloescht statt abgelegt.</item>
+        ''' </list>
+        ''' Gibt True zurueck, wenn kein Rueckweg-Ordner lag und das Bereitgelegte eingespielt werden
+        ''' darf.</summary>
+        Private Shared Function RecoverInterruptedRestore() As Boolean
             Dim rollback = RollbackDirectory
-            If Not Directory.Exists(rollback) Then Return
+            If Not Directory.Exists(rollback) Then Return True
             Try
                 Dim journal = Path.Combine(rollback, JournalName)
                 Dim lines = If(File.Exists(journal), File.ReadAllLines(journal), Array.Empty(Of String)())
-                If lines.Contains(RolledBackMark) Then
-                    ' Schon zurueckgebaut, nur nicht vollstaendig: die Reste bleiben zum Nachsehen.
-                    Directory.Move(rollback, rollback & "-" & DateTime.Now.ToString("yyyyMMdd-HHmmss", Globalization.CultureInfo.InvariantCulture))
-                    Return
-                End If
-                Dim finished = lines.Contains("DONE")
-                If finished Then
-                    If Directory.Exists(StagingDirectory) Then Directory.Delete(StagingDirectory, True)
-                Else
-                    RollBackFromJournal(journal)
-                    If Directory.Exists(StagingDirectory) Then
+                Dim finished = lines.Contains("DONE") AndAlso Not lines.Contains(RolledBackMark)
+                If Directory.Exists(StagingDirectory) Then
+                    If finished Then
+                        Directory.Delete(StagingDirectory, True)
+                    Else
                         Dim failed = Path.Combine(DataDirectory, "restore-failed")
                         If Directory.Exists(failed) Then Directory.Delete(failed, True)
                         Directory.Move(StagingDirectory, failed)
                     End If
+                End If
+                If lines.Contains(RolledBackMark) Then
+                    Directory.Move(rollback, rollback & "-" & DateTime.Now.ToString("yyyyMMdd-HHmmss", Globalization.CultureInfo.InvariantCulture))
+                    DiagnosticLogService.LogAlways("Backup.Recover", "unvollstaendig zurueckgebaut, Reste umbenannt")
+                    Return False
+                End If
+                If Not finished Then
+                    RollBackFromJournal(journal)
                     DiagnosticLogService.LogAlways("Backup.Recover", "abgebrochenes Einspielen zurueckgebaut")
                 End If
                 Directory.Delete(rollback, True)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Backup.Recover", ex)
             End Try
-        End Sub
+            Return False
+        End Function
 
         Private Shared Function PartOf(name As String) As BackupParts
             Dim known = KnownFiles().FirstOrDefault(Function(k) k.Name = name)
