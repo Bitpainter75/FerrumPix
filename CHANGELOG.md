@@ -22,11 +22,6 @@
   shots of a series, with a sharpness bar on each picture and the sharpest one marked. Three levels
   decide how close the pictures have to be.
 
-- **Import from memory card:** copies pictures and videos from a card or folder into your
-  collection, by shooting day and into date folders, optionally with a second backup folder. Every
-  copy is checked against the original, nothing on the card is changed and nothing in the
-  destination is replaced; pictures already there are skipped.
-
 - **Keywords inside the file:** two new settings write the keywords you add into JPEG, PNG and WebP
   files themselves, as XMP, IPTC or both, when you add them and when you save or export. AI
   keywords are never written into files.

@@ -178,9 +178,12 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/home.svg"
                                        Width="20" Height="20"/>
                     </Button>
+                    <!-- EINLESEN VON DER KARTE: vorerst ausgeblendet, der Weg dahinter steht
+                         (CardImportService, MainWindowViewModelImport). -->
                     <Button Classes="icon-btn"
                             Width="34"
                             Height="34"
+                            IsVisible="False"
                             Command="{Binding ImportFromCardCommand}"
                             ToolTip.Tip="Von Speicherkarte einlesen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-sd-card.svg"
