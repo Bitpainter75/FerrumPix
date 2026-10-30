@@ -148,6 +148,13 @@ Namespace ViewModels
         Private _collagePreviewRequestId As Integer
         Private ReadOnly _collagePreviewTimer As DispatcherTimer
         Private ReadOnly _searchDebounceTimer As DispatcherTimer
+        ''' <summary>Drosselt FilterAndSort, solange eine Suchansicht stapelweise gefuellt wird
+        ''' (RequestFilterAndSortDuringFill). Ohne sie sortierte jeder Stapel den ganzen bisherigen
+        ''' Bestand neu: gemessen 556 Laeufe und 15 s auf dem Anzeigefaden fuer 100000 Treffer.</summary>
+        Private ReadOnly _fillSortTimer As DispatcherTimer
+        Private _fillSortPending As Boolean
+        Private _lastFilterSortTimestamp As Long
+        Private Const FillSortIntervalMs As Integer = 250
         Private ReadOnly _backgroundWorkTimer As DispatcherTimer
         Private _thumbnailLoadCts As New CancellationTokenSource()
         Private _activeSearchCts As CancellationTokenSource
@@ -2167,6 +2174,12 @@ Namespace ViewModels
                                                        _searchDebounceTimer.Stop()
                                                        FilterAndSort()
                                                    End Sub
+
+            _fillSortTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(FillSortIntervalMs)}
+            AddHandler _fillSortTimer.Tick, Sub()
+                                                 _fillSortTimer.Stop()
+                                                 FlushPendingFilterAndSort()
+                                             End Sub
 
             ' Die Fusszeile fragt nach, statt sich melden zu lassen: das Erzeugen der Vorschaubilder
             ' meldete sonst je Bild, und das waeren bei einem grossen Ordner tausende Meldungen fuer
@@ -6464,6 +6477,9 @@ Namespace ViewModels
             ' Erst die Ansicht leeren (bricht einen laufenden Suchlauf ab), dann den eigenen Token
             ' anlegen - umgekehrt wuerde StartEmptyVirtualFolder die gerade begonnene Suche abwuergen.
             Dim thumbnailToken = StartEmptyVirtualFolder(node.Name)
+            ' Das Leeren eben war selbst ein Lauf; ohne Zuruecksetzen fiele der erste Stapel in die
+            ' Frist und stuende erst mit dem Zeitgeber da statt sofort.
+            _lastFilterSortTimestamp = 0
             _activeSearchCts = New CancellationTokenSource()
             Dim searchCts = _activeSearchCts
             Dim token = _activeSearchCts.Token
@@ -6616,7 +6632,8 @@ Namespace ViewModels
 
                                            Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                If Not SearchMayPublish(node, token) Then Return
-                                               AddPrebuiltItemsToVirtualFolder(prebuilt)
+                                               AddPrebuiltItemsToVirtualFolder(prebuilt, sortNow:=False)
+                                               RequestFilterAndSortDuringFill()
                                            End Sub, DispatcherPriority.Background)
 
                                            published += prebuilt.Count
@@ -6696,6 +6713,9 @@ Namespace ViewModels
                                                Dim passtJetzt = Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings,
                                                                                               catalogOnly:=True)
                                                If passtJetzt = entry.Matched Then Continue For
+                                               ' Ob die Datei noch da ist, fragt der Hintergrund, nicht
+                                               ' AddMetasToVirtualFolder auf dem Anzeigefaden.
+                                               If passtJetzt AndAlso Not File.Exists(meta.FilePath) Then Continue For
                                                If passtJetzt Then addNow.Add(meta) Else removeNow.Add(meta.FilePath)
                                                If addNow.Count + removeNow.Count >= 120 Then Await flush()
                                            Next
@@ -6834,6 +6854,9 @@ Namespace ViewModels
                                End Function, token)
 
                 If SearchMayPublish(node, token) Then
+                    ' Der letzte gedrosselte Stand gehoert sofort in die Ansicht, nicht erst zum
+                    ' naechsten Tick.
+                    FlushPendingFilterAndSort()
                     CleanupSearchListResults(node, foundThisRun, stillExisting)
                     StatusText = $"{foundCount:N0} {LocalizationService.T("Bilder")}  •  {CurrentFolderName}"
                 End If
@@ -7010,6 +7033,10 @@ Namespace ViewModels
             For Each meta In metas
                 searchToken.ThrowIfCancellationRequested()
                 If Not Await MatchesSavedSearchAsync(node, meta, textQuery, favoriteMode, ratingMin, selectedRatings) Then Continue For
+                ' Die Zeilen kommen aus dem Katalog, die Datei kann weg sein. Gefragt wird HIER im
+                ' Hintergrund und nur fuer Treffer, nicht in AddMetasToVirtualFolder auf dem
+                ' Anzeigefaden.
+                If Not File.Exists(meta.FilePath) Then Continue For
                 matches.Add(meta)
             Next
 
@@ -8055,9 +8082,9 @@ Namespace ViewModels
             Dim added = False
             For Each meta In If(metas, Enumerable.Empty(Of LibraryImageMeta)())
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
-                ' Vor File.Exists: Zeichenkettenarbeit ist billiger als ein Plattenzugriff.
+                ' KEIN File.Exists hier: das waere je Treffer ein Plattenzugriff auf dem Anzeigefaden,
+                ' auf einer Freigabe ein Gang ueber die Leitung. Die Aufrufer pruefen im Hintergrund.
                 If IsTrashedLocalPath(meta.FilePath) Then Continue For
-                If Not File.Exists(meta.FilePath) Then Continue For
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
                 If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
 
@@ -8076,7 +8103,8 @@ Namespace ViewModels
                 _allItems.Add(neu)
                 added = True
             Next
-            If added Then FilterAndSort()
+            ' Nur aus dem stapelweisen Fuellen einer Suche gerufen, deshalb gedrosselt.
+            If added Then RequestFilterAndSortDuringFill()
         End Sub
 
         ''' Nimmt fertig gebaute Elemente - im Hintergrund erzeugt - in den virtuellen Ordner auf,
@@ -8092,7 +8120,7 @@ Namespace ViewModels
             Dim gone As New HashSet(Of String)(If(paths, Enumerable.Empty(Of String)()), PathIdentity.Comparer)
             If gone.Count = 0 Then Return
             _virtualPathSet.ExceptWith(gone)
-            If _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso gone.Contains(i.FilePath)) > 0 Then FilterAndSort()
+            If _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso gone.Contains(i.FilePath)) > 0 Then RequestFilterAndSortDuringFill()
         End Sub
 
         Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
@@ -9856,7 +9884,32 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>FilterAndSort beim stapelweisen Fuellen einer Suchansicht: hoechstens alle
+        ''' FillSortIntervalMs, der erste Stapel sofort, ein angefallener Rest ueber den Zeitgeber.
+        ''' Wer das Ende des Fuellens kennt, ruft FlushPendingFilterAndSort, damit der letzte Stand
+        ''' nicht am Zeitgeber haengt (im Pruefstand laufen dessen Ticks nicht).</summary>
+        Private Sub RequestFilterAndSortDuringFill()
+            Dim elapsedMs = If(_lastFilterSortTimestamp = 0, Double.MaxValue,
+                               Stopwatch.GetElapsedTime(_lastFilterSortTimestamp).TotalMilliseconds)
+            If elapsedMs >= FillSortIntervalMs Then
+                FilterAndSort()
+                Return
+            End If
+            _fillSortPending = True
+            If Not _fillSortTimer.IsEnabled Then
+                _fillSortTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(1.0, FillSortIntervalMs - elapsedMs))
+                _fillSortTimer.Start()
+            End If
+        End Sub
+
+        Private Sub FlushPendingFilterAndSort()
+            If _fillSortPending Then FilterAndSort()
+        End Sub
+
         Private Sub FilterAndSort()
+            ' Jeder Lauf erledigt auch einen vorgemerkten aus dem Fuellen einer Suchansicht.
+            _fillSortPending = False
+            _fillSortTimer?.Stop()
             Dim filtered = _allItems.AsEnumerable()
 
             ' Mehrere asynchrone Quellen dürfen denselben Treffer melden (Katalog-Wiederherstellung
@@ -9947,6 +10000,9 @@ Namespace ViewModels
             Else
                 StatusText = $"{imageCount} {LocalizationService.T("Bilder")}  •  {folderCount} {LocalizationService.T("Ordner")}  •  {CurrentFolderName}"
             End If
+            ' Gemessen ab dem ENDE des Laufs: sonst kaeme bei einem Lauf, der selbst laenger als die
+            ' Frist dauert, jeder Stapel wieder sofort dran.
+            _lastFilterSortTimestamp = Stopwatch.GetTimestamp()
         End Sub
 
         ' ── Stapel: Serien und RAW+JPEG-Paare ───────────────────────────────────
