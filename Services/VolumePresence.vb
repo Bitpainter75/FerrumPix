@@ -78,7 +78,7 @@ Namespace Services
         End Function
 
         ''' <summary>Leer, wenn der Datentraeger des Pfads erreichbar ist; sonst sein Einhaengeort
-        ''' (etwa <c>/run/media/patrick/T7</c>), der in einer Rueckfrage genannt werden kann.</summary>
+        ''' (etwa <c>/run/media/BENUTZER/T7</c>), der in einer Rueckfrage genannt werden kann.</summary>
         Public Function UnreachableRootOf(path As String) As String
             If String.IsNullOrWhiteSpace(path) Then Return ""
             Dim root = ExpectedRoot(path)
