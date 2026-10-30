@@ -1,5 +1,8 @@
 Imports System
+Imports System.Collections.Generic
+Imports System.Collections.ObjectModel
 Imports System.Globalization
+Imports System.Linq
 Imports System.IO
 Imports System.Threading.Tasks
 Imports Avalonia.Controls.ApplicationLifetimes
@@ -23,6 +26,16 @@ Namespace ViewModels
         Private _dialogBackupSecrets As Boolean
         Private _dialogRestoreManifest As BackupManifest
         Private _dialogRestoreProblem As String = ""
+
+        ''' <summary>Je Pfadanfang der Sicherung ein neuer Anfang; vorbelegt ist der alte, ein fremder
+        ''' Benutzerordner wird zum eigenen. Fuer das Zurueckholen auf einem anderen Rechner.</summary>
+        Public ReadOnly Property DialogRestoreRemaps As New ObservableCollection(Of PathRemapRow)()
+
+        Public ReadOnly Property HasDialogRestoreRemaps As Boolean
+            Get
+                Return DialogShowsRestore AndAlso DialogRestoreRemaps.Count > 0 AndAlso _dialogBackupCatalog
+            End Get
+        End Property
 
         Public ReadOnly Property DialogShowsBackup As Boolean
             Get
@@ -193,12 +206,18 @@ Namespace ViewModels
                 Return
             End If
             _dialogRestoreManifest = CatalogBackupService.ReadManifest(_dialogBackupPath, _dialogRestoreProblem)
+            DialogRestoreRemaps.Clear()
+            If _dialogRestoreManifest IsNot Nothing Then
+                For Each root In _dialogRestoreManifest.PathRoots
+                    DialogRestoreRemaps.Add(New PathRemapRow(root.Root, root.Count, CatalogBackupService.SuggestedTargetFor(root.Root)))
+                Next
+            End If
         End Sub
 
         Private Sub RaiseBackupDialog()
             For Each name In {NameOf(CanChooseBackupCatalog), NameOf(CanChooseBackupServerIndexes), NameOf(CanChooseBackupSettings),
                               NameOf(CanChooseBackupFavorites), NameOf(CanChooseBackupSearches), NameOf(CanChooseBackupSecrets),
-                              NameOf(DialogRestoreSummary), NameOf(IsDialogPrimaryEnabled)}
+                              NameOf(DialogRestoreSummary), NameOf(IsDialogPrimaryEnabled), NameOf(HasDialogRestoreRemaps)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub
@@ -212,6 +231,7 @@ Namespace ViewModels
             _dialogBackupSecrets = False
             _dialogRestoreManifest = Nothing
             _dialogRestoreProblem = ""
+            DialogRestoreRemaps.Clear()
             _dialogBackupPath = If(path, "")
             For Each name In {NameOf(DialogBackupCatalog), NameOf(DialogBackupServerIndexes), NameOf(DialogBackupSettings),
                               NameOf(DialogBackupFavorites), NameOf(DialogBackupSearches), NameOf(DialogBackupSecrets),
@@ -269,7 +289,9 @@ Namespace ViewModels
             Dim problem As String = Nothing
             Try
                 BeginBusyOverlay(LocalizationService.T("Sicherung wird geprüft…"))
-                problem = Await Task.Run(Function() CatalogBackupService.StageRestore(source, parts))
+                Dim remaps = DialogRestoreRemaps.Where(Function(r) Not String.IsNullOrWhiteSpace(r.Target) AndAlso r.Target <> r.Root).
+                    ToDictionary(Function(r) r.Root, Function(r) r.Target)
+                problem = Await Task.Run(Function() CatalogBackupService.StageRestore(source, parts, remaps))
             Finally
                 EndBusyOverlay()
             End Try
@@ -287,6 +309,31 @@ Namespace ViewModels
             End If
         End Function
 
+    End Class
+
+    ''' <summary>Eine Zeile "alter Pfadanfang, neuer Pfadanfang" im Wiederherstellen-Dialog.</summary>
+    Public Class PathRemapRow
+        Inherits ReactiveObject
+
+        Private _target As String
+
+        Public Sub New(root As String, count As Integer, target As String)
+            Me.Root = root
+            CountText = String.Format(CultureInfo.CurrentCulture, LocalizationService.T("{0} Bilder"), count)
+            _target = target
+        End Sub
+
+        Public ReadOnly Property Root As String
+        Public ReadOnly Property CountText As String
+
+        Public Property Target As String
+            Get
+                Return _target
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_target, If(value, "").Trim())
+            End Set
+        End Property
     End Class
 
 End Namespace

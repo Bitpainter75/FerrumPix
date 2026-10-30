@@ -10271,18 +10271,6 @@
   <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
     <value>{0}: {1} archivos, {2}</value>
   </data>
-  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
-    <value>Año y día, p. ej. 2026/2026-10-30</value>
-  </data>
-  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
-    <value>Día, p. ej. 2026-10-30</value>
-  </data>
-  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
-    <value>Año y mes, p. ej. 2026/10</value>
-  </data>
-  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
-    <value>Sin subcarpetas</value>
-  </data>
   <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
     <value>Elegir origen</value>
   </data>
@@ -10315,9 +10303,6 @@
   </data>
   <data name="Aufnahmetage_1a956239" xml:space="preserve">
     <value>Días de captura</value>
-  </data>
-  <data name="Unterordner_95804f80" xml:space="preserve">
-    <value>Subcarpetas</value>
   </data>
   <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
     <value>Hacer también una copia en una segunda carpeta</value>
@@ -10363,9 +10348,6 @@
   </data>
   <data name="Importieren_7d4a3f2a" xml:space="preserve">
     <value>Importar</value>
-  </data>
-  <data name="Kein_Wechseldatentr_ger_gefunden_W_hle_einen_Ord_24db2148" xml:space="preserve">
-    <value>No se encontró ninguna unidad extraíble. Elige una carpeta.</value>
   </data>
   <data name="JPEG_und_HEIF_neben_einer_RAW_mit_importieren_9d560ee0" xml:space="preserve">
     <value>Importar también JPEG y HEIF junto a un RAW</value>
@@ -10474,5 +10456,17 @@
   </data>
   <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
     <value>Incluir subcarpetas</value>
+  </data>
+  <data name="0_Bilder_e6144f13" xml:space="preserve">
+    <value>{0} imágenes</value>
+  </data>
+  <data name="Pfade_auf_diesem_Rechner_5639a030" xml:space="preserve">
+    <value>Rutas en este equipo</value>
+  </data>
+  <data name="Liegen_die_Fotos_hier_woanders_den_neuen_Anfang__22b3e171" xml:space="preserve">
+    <value>Si las fotos están en otro sitio aquí, escribe el nuevo comienzo de la ruta. El catálogo, los ajustes, los favoritos y las búsquedas se reescriben con él.</value>
+  </data>
+  <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
+    <value>El destino está dentro del origen. No se cambia nada en el origen, elige otro destino.</value>
   </data>
 </root>

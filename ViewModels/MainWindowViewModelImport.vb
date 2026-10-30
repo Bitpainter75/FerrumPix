@@ -18,6 +18,8 @@ Namespace ViewModels
         Public Property FolderPattern As String = ""
         Public Property BackupFolder As String = ""
         Public Property TotalBytes As Long
+        ''' <summary>Die Quelle; kein Ziel darf darin liegen.</summary>
+        Public Property SourceFolder As String = ""
     End Class
 
     ''' <summary>Der Dialog "Importieren" und der Lauf danach (CardImportService).
@@ -34,7 +36,6 @@ Namespace ViewModels
         Private _dialogImportSourceFolder As String = ""
         Private _dialogImportSelectedSource As ImportSource
         Private _dialogImportTargetFolder As String = ""
-        Private _dialogImportSelectedPattern As ImportFolderPattern
         Private _dialogImportIncludeRawPartners As Boolean = True
         Private _dialogImportIncludeSubfolders As Boolean = True
         Private _dialogImportUseBackup As Boolean
@@ -42,7 +43,6 @@ Namespace ViewModels
 
         Public ReadOnly Property DialogImportSources As New ObservableCollection(Of ImportSource)()
         Public ReadOnly Property DialogImportDays As New ObservableCollection(Of ImportDay)()
-        Public ReadOnly Property DialogImportPatterns As New ObservableCollection(Of ImportFolderPattern)()
 
         Public ReadOnly Property DialogShowsImport As Boolean
             Get
@@ -88,7 +88,6 @@ Namespace ViewModels
                 value = If(value, "").Trim()
                 If _dialogImportTargetFolder = value Then Return
                 Me.RaiseAndSetIfChanged(_dialogImportTargetFolder, value)
-                Me.RaisePropertyChanged(NameOf(IsDialogImportPatternVisible))
                 RaiseDialogImportSummary()
             End Set
         End Property
@@ -96,36 +95,17 @@ Namespace ViewModels
         ''' <summary>Die Ziele zur Auswahl: der aktuelle Ordner der Galerie und die in den
         ''' Einstellungen definierten. Eine Wahl schreibt ihre Vorlage ins Zielfeld; dort laesst sie
         ''' sich weiter aendern oder ueber "Ordner wählen" ersetzen.</summary>
-        Public ReadOnly Property DialogImportTargetChoices As New ObservableCollection(Of ImportFolderPattern)()
+        Public ReadOnly Property DialogImportTargetChoices As New ObservableCollection(Of ImportTargetChoice)()
 
-        Private _dialogImportSelectedTargetChoice As ImportFolderPattern
-        Public Property DialogImportSelectedTargetChoice As ImportFolderPattern
+        Private _dialogImportSelectedTargetChoice As ImportTargetChoice
+        Public Property DialogImportSelectedTargetChoice As ImportTargetChoice
             Get
                 Return _dialogImportSelectedTargetChoice
             End Get
-            Set(value As ImportFolderPattern)
+            Set(value As ImportTargetChoice)
                 If ReferenceEquals(_dialogImportSelectedTargetChoice, value) Then Return
                 Me.RaiseAndSetIfChanged(_dialogImportSelectedTargetChoice, value)
                 If value IsNot Nothing Then DialogImportTargetFolder = value.Pattern
-            End Set
-        End Property
-
-        ''' <summary>Die Unterordner nach Datum gibt es nur fuer einen schlichten Ordner. Eine
-        ''' Vorlage mit Platzhaltern legt den Weg selbst fest.</summary>
-        Public ReadOnly Property IsDialogImportPatternVisible As Boolean
-            Get
-                Return Not CardImportService.HasPlaceholders(_dialogImportTargetFolder)
-            End Get
-        End Property
-
-        Public Property DialogImportSelectedPattern As ImportFolderPattern
-            Get
-                Return _dialogImportSelectedPattern
-            End Get
-            Set(value As ImportFolderPattern)
-                If ReferenceEquals(_dialogImportSelectedPattern, value) Then Return
-                Me.RaiseAndSetIfChanged(_dialogImportSelectedPattern, value)
-                RaiseDialogImportSummary()
             End Set
         End Property
 
@@ -194,12 +174,13 @@ Namespace ViewModels
                 If String.IsNullOrEmpty(_dialogImportSourceFolder) Then Return ""
                 If _dialogImportScanning Then Return LocalizationService.T("Quelle wird gelesen…")
                 If _dialogImportCandidates.Count = 0 Then Return LocalizationService.T("Keine Bilder oder Videos gefunden")
+                If DialogImportTargetInSource() Then Return LocalizationService.T("Das Ziel liegt in der Quelle. Auf der Quelle wird nichts verändert, bitte ein anderes Ziel wählen.")
                 Dim chosen = DialogImportChosen()
                 Dim bytes = chosen.Sum(Function(c) c.Size)
                 Dim text = String.Format(LocalizationService.T("{0} Dateien gewählt, {1}"), chosen.Count, CardImportService.FormatBytes(bytes))
                 Dim target = _dialogImportTargetFolder
                 If Not String.IsNullOrEmpty(target) Then
-                    Dim present = CardImportService.CountProbablyPresent(chosen, target, If(_dialogImportSelectedPattern?.Pattern, ""))
+                    Dim present = CardImportService.CountProbablyPresent(chosen, target, "")
                     If present > 0 Then text &= ". " & String.Format(LocalizationService.T("{0} davon liegen schon im Ziel und werden übersprungen"), present)
                     Dim free = CardImportService.FreeSpace(target)
                     If free >= 0 AndAlso free < bytes Then
@@ -216,8 +197,28 @@ Namespace ViewModels
                                                              (_dialogImportIncludeRawPartners OrElse Not c.IsRawPartner)).ToList()
         End Function
 
+        ''' <summary>Liegt das Ziel oder die Sicherung in der Quelle? Geprueft wird der feste Anfang
+        ''' und, bei einer Vorlage, jeder aufgeloeste Ordner der gewaehlten Aufnahmen: auch
+        ''' {pictures}/{datetaken:yyyy} kann genau die Quelle treffen.</summary>
+        Private Function DialogImportTargetInSource() As Boolean
+            Dim source = _dialogImportSourceFolder
+            If String.IsNullOrWhiteSpace(source) Then Return False
+            Dim pattern = ""
+            For Each target In {_dialogImportTargetFolder, If(_dialogImportUseBackup, _dialogImportBackupFolder, "")}
+                If String.IsNullOrWhiteSpace(target) Then Continue For
+                If CardImportService.IsWithin(CardImportService.FixedRootOf(target), source) Then Return True
+                If CardImportService.HasPlaceholders(target) Then
+                    For Each candidate In DialogImportChosen()
+                        If CardImportService.IsWithin(CardImportService.TargetFolderFor(target, pattern, candidate), source) Then Return True
+                    Next
+                End If
+            Next
+            Return False
+        End Function
+
         Private Function IsDialogImportPrimaryEnabled() As Boolean
             If _dialogImportScanning OrElse String.IsNullOrWhiteSpace(_dialogImportTargetFolder) Then Return False
+            If DialogImportTargetInSource() Then Return False
             If _dialogImportUseBackup AndAlso String.IsNullOrWhiteSpace(_dialogImportBackupFolder) Then Return False
             If Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(_dialogImportTargetFolder)) Then Return False
             ' Die Sicherung ist ein Ziel wie das erste und unterliegt derselben Regel.
@@ -306,28 +307,21 @@ Namespace ViewModels
         ''' Ziele aus den Einstellungen. Nothing heisst abgebrochen.</summary>
         Public Async Function ShowImportDialogAsync(suggestedTarget As String) As Task(Of ImportDialogResult)
             Dim settings = AppSettingsService.Load()
-            DialogImportPatterns.Clear()
-            For Each choice In CardImportService.FolderPatterns()
-                DialogImportPatterns.Add(choice)
-            Next
-            _dialogImportSelectedPattern = If(DialogImportPatterns.FirstOrDefault(Function(p) p.Pattern = settings.ImportFolderPattern),
-                                              DialogImportPatterns.First())
             Dim target = suggestedTarget
             If String.IsNullOrWhiteSpace(target) OrElse Not Directory.Exists(target) Then target = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
             _dialogImportTargetFolder = If(target, "")
             DialogImportTargetChoices.Clear()
-            Dim current = New ImportFolderPattern With {
+            Dim current = New ImportTargetChoice With {
                 .Pattern = _dialogImportTargetFolder,
                 .Label = String.Format(LocalizationService.T("Aktueller Ordner: {0}"), _dialogImportTargetFolder)}
             DialogImportTargetChoices.Add(current)
             For Each defined In If(settings.ImportTargets, New List(Of ImportTargetSettings)())
                 If defined Is Nothing OrElse String.IsNullOrWhiteSpace(defined.Template) Then Continue For
                 Dim name = If(String.IsNullOrWhiteSpace(defined.Name), defined.Template, defined.Name & ": " & defined.Template)
-                DialogImportTargetChoices.Add(New ImportFolderPattern With {.Pattern = defined.Template.Trim(), .Label = name})
+                DialogImportTargetChoices.Add(New ImportTargetChoice With {.Pattern = defined.Template.Trim(), .Label = name})
             Next
             _dialogImportSelectedTargetChoice = current
             Me.RaisePropertyChanged(NameOf(DialogImportSelectedTargetChoice))
-            Me.RaisePropertyChanged(NameOf(IsDialogImportPatternVisible))
             _dialogImportIncludeRawPartners = settings.ImportIncludeRawPartners
             _dialogImportIncludeSubfolders = settings.ImportIncludeSubfolders
             Me.RaisePropertyChanged(NameOf(DialogImportIncludeSubfolders))
@@ -335,7 +329,6 @@ Namespace ViewModels
             _dialogImportBackupFolder = If(settings.ImportBackupFolder, "")
             _dialogImportSourceFolder = ""
             _dialogImportSelectedSource = Nothing
-            Me.RaisePropertyChanged(NameOf(DialogImportSelectedPattern))
             Me.RaisePropertyChanged(NameOf(DialogImportTargetFolder))
             Me.RaisePropertyChanged(NameOf(DialogImportIncludeRawPartners))
             Me.RaisePropertyChanged(NameOf(DialogImportUseBackup))
@@ -354,11 +347,12 @@ Namespace ViewModels
 
             Dim chosen = DialogImportChosen()
             If chosen.Count = 0 Then Return Nothing
-            Dim pattern = If(_dialogImportSelectedPattern?.Pattern, "")
+            ' Keine Unterordner nach eigenem Muster: die Ordnerstruktur kommt allein aus einer Vorlage
+            ' der Einstellungen, ein schlichter Ordner wird direkt beschrieben.
+            Dim pattern = ""
             Dim backup = If(_dialogImportUseBackup, _dialogImportBackupFolder, "")
             AppSettingsService.Update(Sub(s)
                                           s.ImportTargetFolder = _dialogImportTargetFolder
-                                          s.ImportFolderPattern = pattern
                                           s.ImportIncludeRawPartners = _dialogImportIncludeRawPartners
                                           s.ImportIncludeSubfolders = _dialogImportIncludeSubfolders
                                           s.ImportUseBackup = _dialogImportUseBackup
@@ -366,7 +360,8 @@ Namespace ViewModels
                                       End Sub)
             Return New ImportDialogResult With {
                 .Candidates = chosen, .TargetFolder = _dialogImportTargetFolder, .FolderPattern = pattern,
-                .BackupFolder = backup, .TotalBytes = chosen.Sum(Function(c) c.Size)}
+                .BackupFolder = backup, .TotalBytes = chosen.Sum(Function(c) c.Size),
+                .SourceFolder = _dialogImportSourceFolder}
         End Function
 
         ''' <summary>Der Lauf mit Warteanzeige, abbrechbar. Vorher der Platz: reicht er an einem der
@@ -390,6 +385,16 @@ Namespace ViewModels
                 End If
             Next
 
+            ' Kein Zielordner in der Quelle, fuer keine einzige Aufnahme: sonst entstuenden dort
+            ' Zwischendateien und Kopien, und die Zusage "auf der Quelle wird nichts veraendert" fiele.
+            For Each root In {request.TargetFolder, request.BackupFolder}.Where(Function(r) Not String.IsNullOrWhiteSpace(r))
+                If request.Candidates.Any(Function(c) CardImportService.IsWithin(CardImportService.TargetFolderFor(root, request.FolderPattern, c), request.SourceFolder)) Then
+                    Await ShowMessageAsync(LocalizationService.T("Ziel nicht erlaubt"),
+                                           LocalizationService.T("Das Ziel liegt in der Quelle. Auf der Quelle wird nichts verändert, bitte ein anderes Ziel wählen."))
+                    Return Nothing
+                End If
+            Next
+
             Dim token = BeginBusyOverlayCancellation()
             Dim total = request.Candidates.Count
             Try
@@ -403,7 +408,8 @@ Namespace ViewModels
                                                                                           UpdateBusyOverlay(String.Format(LocalizationService.T("Wird importiert: {0} von {1}"), done, count))
                                                                                       End If
                                                                                   End Sub)
-                                                     End Sub))
+                                                     End Sub,
+                                                     request.SourceFolder))
             Finally
                 EndBusyOverlay()
                 EndBusyOverlayCancellation()

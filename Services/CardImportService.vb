@@ -63,8 +63,8 @@ Namespace Services
         End Property
     End Class
 
-    ''' <summary>Eine Wahl fuer die Unterordner im Ziel.</summary>
-    Public Class ImportFolderPattern
+    ''' <summary>Ein Ziel zur Auswahl im Import-Dialog: Anzeige und Vorlage.</summary>
+    Public Class ImportTargetChoice
         Public Property Pattern As String = ""
         Public Property Label As String = ""
 
@@ -117,17 +117,6 @@ Namespace Services
 
         Private Sub New()
         End Sub
-
-        ''' <summary>Die Wahlen fuer die Unterordner im Ziel. Das Muster ist ein Datumsformat, der
-        ''' Schraegstrich trennt Ordnerebenen.</summary>
-        Public Shared Function FolderPatterns() As List(Of ImportFolderPattern)
-            Return New List(Of ImportFolderPattern) From {
-                New ImportFolderPattern With {.Pattern = "yyyy/yyyy-MM-dd", .Label = LocalizationService.T("Jahr und Tag, etwa 2026/2026-10-30")},
-                New ImportFolderPattern With {.Pattern = "yyyy-MM-dd", .Label = LocalizationService.T("Tag, etwa 2026-10-30")},
-                New ImportFolderPattern With {.Pattern = "yyyy/MM", .Label = LocalizationService.T("Jahr und Monat, etwa 2026/10")},
-                New ImportFolderPattern With {.Pattern = "", .Label = LocalizationService.T("Ohne Unterordner")}
-            }
-        End Function
 
         ''' <summary>Eingehaengte Wechseldatentraeger. Unter Linux die Einhaengeorte unter /run/media
         ''' und /media des Benutzers, unter macOS /Volumes ohne das Systemlaufwerk, unter Windows die
@@ -352,9 +341,37 @@ Namespace Services
 
         ''' <summary>Liest die Dateien ein, siehe Klassenbeschreibung. <paramref name="backupRoot"/>
         ''' leer heisst: kein zweites Ziel. Meldet nach jeder Datei den Stand.</summary>
+        ''' <summary>Liegt <paramref name="folder"/> in <paramref name="root"/> oder ist er es selbst?
+        ''' Verglichen werden volle Pfade mit Trennzeichen am Ende, damit "/fotos2" nicht als Teil von
+        ''' "/fotos" gilt.</summary>
+        Public Shared Function IsWithin(folder As String, root As String) As Boolean
+            If String.IsNullOrWhiteSpace(folder) OrElse String.IsNullOrWhiteSpace(root) Then Return False
+            ' Wörtlich UND mit aufgelösten Verweisen: zeigt das Ziel über einen symbolischen Verweis
+            ' in die Quelle (oder die Quelle über einen auf einen anderen Ort), folgen Anlegen und
+            ' Kopieren dem Verweis, und der wörtliche Vergleich allein sähe das nicht.
+            If IsWithinLiteral(folder, root) Then Return True
+            Return IsWithinLiteral(FileOperationPolicy.ResolveLinks(folder), FileOperationPolicy.ResolveLinks(root))
+        End Function
+
+        Private Shared Function IsWithinLiteral(folder As String, root As String) As Boolean
+            If String.IsNullOrWhiteSpace(folder) OrElse String.IsNullOrWhiteSpace(root) Then Return False
+            Try
+                Dim f = Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+                Dim r = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+                Dim comparison = If(PathIdentity.IgnoresCase, StringComparison.OrdinalIgnoreCase, StringComparison.Ordinal)
+                Return f.StartsWith(r, comparison)
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <param name="sourceRoot">Die Quelle. Ein Zielordner darin wird nie beschrieben: die Datei
+        ''' zaehlt dann als fehlgeschlagen. Der Dialog laesst das gar nicht erst zu; das hier ist die
+        ''' letzte Absicherung der Zusage, dass auf der Quelle nichts veraendert wird.</param>
         Public Shared Function Run(candidates As IList(Of ImportCandidate), targetRoot As String, pattern As String,
                                    backupRoot As String, token As CancellationToken,
-                                   progress As Action(Of Integer, Integer)) As ImportResult
+                                   progress As Action(Of Integer, Integer),
+                                   Optional sourceRoot As String = "") As ImportResult
             Dim result As New ImportResult()
             Dim roots = {targetRoot, backupRoot}.Where(Function(r) Not String.IsNullOrWhiteSpace(r)).ToList()
             Dim cleaned As New HashSet(Of String)(PathIdentity.Comparer)
@@ -368,6 +385,11 @@ Namespace Services
                 Dim present = False
                 For rootIndex = 0 To roots.Count - 1
                     Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate)
+                    If IsWithin(folder, sourceRoot) Then
+                        DiagnosticLogService.LogAlways("Import.TargetInSource", folder)
+                        ok = False
+                        Continue For
+                    End If
                     Try
                         Directory.CreateDirectory(folder)
                         If cleaned.Add(folder) Then RemoveStaleParts(folder)

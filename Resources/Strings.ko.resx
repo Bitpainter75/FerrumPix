@@ -10315,18 +10315,6 @@
   <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
     <value>{0}: 파일 {1}개, {2}</value>
   </data>
-  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
-    <value>연도와 날짜, 예: 2026/2026-10-30</value>
-  </data>
-  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
-    <value>날짜, 예: 2026-10-30</value>
-  </data>
-  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
-    <value>연도와 월, 예: 2026/10</value>
-  </data>
-  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
-    <value>하위 폴더 없음</value>
-  </data>
   <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
     <value>원본 선택</value>
   </data>
@@ -10359,9 +10347,6 @@
   </data>
   <data name="Aufnahmetage_1a956239" xml:space="preserve">
     <value>촬영일</value>
-  </data>
-  <data name="Unterordner_95804f80" xml:space="preserve">
-    <value>하위 폴더</value>
   </data>
   <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
     <value>두 번째 폴더에도 백업</value>
@@ -10407,9 +10392,6 @@
   </data>
   <data name="Importieren_7d4a3f2a" xml:space="preserve">
     <value>가져오기</value>
-  </data>
-  <data name="Kein_Wechseldatentr_ger_gefunden_W_hle_einen_Ord_24db2148" xml:space="preserve">
-    <value>이동식 드라이브를 찾지 못했습니다. 폴더를 선택하세요.</value>
   </data>
   <data name="JPEG_und_HEIF_neben_einer_RAW_mit_importieren_9d560ee0" xml:space="preserve">
     <value>RAW 옆의 JPEG와 HEIF도 가져오기</value>
@@ -10518,5 +10500,17 @@
   </data>
   <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
     <value>하위 폴더 포함</value>
+  </data>
+  <data name="0_Bilder_e6144f13" xml:space="preserve">
+    <value>사진 {0}장</value>
+  </data>
+  <data name="Pfade_auf_diesem_Rechner_5639a030" xml:space="preserve">
+    <value>이 컴퓨터의 경로</value>
+  </data>
+  <data name="Liegen_die_Fotos_hier_woanders_den_neuen_Anfang__22b3e171" xml:space="preserve">
+    <value>사진이 이 컴퓨터에서 다른 곳에 있으면 새 경로 시작 부분을 입력하세요. 카탈로그, 설정, 즐겨찾기, 검색이 그에 맞게 바뀝니다.</value>
+  </data>
+  <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
+    <value>대상이 원본 안에 있습니다. 원본은 변경되지 않으므로 다른 대상을 선택하세요.</value>
   </data>
 </root>

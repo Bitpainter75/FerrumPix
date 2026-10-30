@@ -10290,18 +10290,6 @@
   <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
     <value>{0}: {1} files, {2}</value>
   </data>
-  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
-    <value>Year and day, e.g. 2026/2026-10-30</value>
-  </data>
-  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
-    <value>Day, e.g. 2026-10-30</value>
-  </data>
-  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
-    <value>Year and month, e.g. 2026/10</value>
-  </data>
-  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
-    <value>No subfolders</value>
-  </data>
   <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
     <value>Choose source</value>
   </data>
@@ -10334,9 +10322,6 @@
   </data>
   <data name="Aufnahmetage_1a956239" xml:space="preserve">
     <value>Shooting days</value>
-  </data>
-  <data name="Unterordner_95804f80" xml:space="preserve">
-    <value>Subfolders</value>
   </data>
   <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
     <value>Also back up to a second folder</value>
@@ -10382,9 +10367,6 @@
   </data>
   <data name="Importieren_7d4a3f2a" xml:space="preserve">
     <value>Import</value>
-  </data>
-  <data name="Kein_Wechseldatentr_ger_gefunden_W_hle_einen_Ord_24db2148" xml:space="preserve">
-    <value>No removable drive found. Choose a folder.</value>
   </data>
   <data name="JPEG_und_HEIF_neben_einer_RAW_mit_importieren_9d560ee0" xml:space="preserve">
     <value>Also import JPEG and HEIF next to a RAW</value>
@@ -10493,5 +10475,17 @@
   </data>
   <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
     <value>Include subfolders</value>
+  </data>
+  <data name="0_Bilder_e6144f13" xml:space="preserve">
+    <value>{0} pictures</value>
+  </data>
+  <data name="Pfade_auf_diesem_Rechner_5639a030" xml:space="preserve">
+    <value>Paths on this computer</value>
+  </data>
+  <data name="Liegen_die_Fotos_hier_woanders_den_neuen_Anfang__22b3e171" xml:space="preserve">
+    <value>If the photos are somewhere else here, enter the new start of the path. The catalogue, settings, favourites and searches are rewritten to it.</value>
+  </data>
+  <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
+    <value>The destination is inside the source. Nothing on the source is changed, please choose another destination.</value>
   </data>
 </root>

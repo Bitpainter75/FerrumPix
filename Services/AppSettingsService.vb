@@ -471,7 +471,6 @@ Namespace Services
         ''' Importieren: die zuletzt bestaetigte Wahl (CardImportService). Der Zielordner
         ''' ist nur noch ein Rueckfall: vorbelegt wird im Dialog der aktuelle Ordner der Galerie.
         Public Property ImportTargetFolder As String = ""
-        Public Property ImportFolderPattern As String = "yyyy/yyyy-MM-dd"
         ''' Die in den Einstellungen definierten Zielordner, im Dialog zur Auswahl.
         Public Property ImportTargets As New List(Of ImportTargetSettings) From {
             New ImportTargetSettings With {.Name = "", .Template = "{pictures}/{datetaken:yyyy}/{datetaken:yyyy-MM-dd}"}

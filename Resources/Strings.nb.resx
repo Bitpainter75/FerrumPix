@@ -10311,18 +10311,6 @@
   <data name="0_1_Dateien_2_47ae367e" xml:space="preserve">
     <value>{0}: {1} filer, {2}</value>
   </data>
-  <data name="Jahr_und_Tag_etwa_2026_2026_10_30_5b3f528b" xml:space="preserve">
-    <value>År og dag, f.eks. 2026/2026-10-30</value>
-  </data>
-  <data name="Tag_etwa_2026_10_30_db5bce01" xml:space="preserve">
-    <value>Dag, f.eks. 2026-10-30</value>
-  </data>
-  <data name="Jahr_und_Monat_etwa_2026_10_714a78fe" xml:space="preserve">
-    <value>År og måned, f.eks. 2026/10</value>
-  </data>
-  <data name="Ohne_Unterordner_700e44e0" xml:space="preserve">
-    <value>Uten undermapper</value>
-  </data>
   <data name="Quelle_w_hlen_f450e039" xml:space="preserve">
     <value>Velg kilde</value>
   </data>
@@ -10355,9 +10343,6 @@
   </data>
   <data name="Aufnahmetage_1a956239" xml:space="preserve">
     <value>Opptaksdager</value>
-  </data>
-  <data name="Unterordner_95804f80" xml:space="preserve">
-    <value>Undermapper</value>
   </data>
   <data name="Zus_tzlich_in_einen_zweiten_Ordner_sichern_301ef7c1" xml:space="preserve">
     <value>Sikkerhetskopier også til en annen mappe</value>
@@ -10403,9 +10388,6 @@
   </data>
   <data name="Importieren_7d4a3f2a" xml:space="preserve">
     <value>Importer</value>
-  </data>
-  <data name="Kein_Wechseldatentr_ger_gefunden_W_hle_einen_Ord_24db2148" xml:space="preserve">
-    <value>Fant ingen flyttbar stasjon. Velg en mappe.</value>
   </data>
   <data name="JPEG_und_HEIF_neben_einer_RAW_mit_importieren_9d560ee0" xml:space="preserve">
     <value>Importer også JPEG og HEIF ved siden av en RAW</value>
@@ -10514,5 +10496,17 @@
   </data>
   <data name="Mit_Unterordnern_c131073c" xml:space="preserve">
     <value>Med undermapper</value>
+  </data>
+  <data name="0_Bilder_e6144f13" xml:space="preserve">
+    <value>{0} bilder</value>
+  </data>
+  <data name="Pfade_auf_diesem_Rechner_5639a030" xml:space="preserve">
+    <value>Stier på denne datamaskinen</value>
+  </data>
+  <data name="Liegen_die_Fotos_hier_woanders_den_neuen_Anfang__22b3e171" xml:space="preserve">
+    <value>Ligger bildene et annet sted her, skriv inn den nye begynnelsen på stien. Katalog, innstillinger, favoritter og søk skrives om til den.</value>
+  </data>
+  <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
+    <value>Målet ligger i kilden. Ingenting i kilden endres, velg et annet mål.</value>
   </data>
 </root>

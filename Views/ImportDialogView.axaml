@@ -25,10 +25,6 @@
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/refresh.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
-        <TextBlock Text="Kein Wechseldatenträger gefunden. Wähle einen Ordner."
-                   IsVisible="{Binding !HasDialogImportSources}"
-                   Foreground="{DynamicResource FP.Text.Muted}"
-                   FontSize="{DynamicResource FP.Font.Small}"/>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBox Text="{Binding DialogImportSourceFolder, Mode=TwoWay}"
                      Classes="no-translate"
@@ -97,16 +93,6 @@
                    Foreground="{DynamicResource FP.Text.Muted}"
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap"/>
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding IsDialogImportPatternVisible}">
-            <TextBlock Text="Unterordner"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{Binding DialogImportPatterns}"
-                      SelectedItem="{Binding DialogImportSelectedPattern, Mode=TwoWay}"
-                      HorizontalAlignment="Stretch"
-                      Classes="no-translate"/>
-        </Grid>
 
         <!-- SICHERUNG: ein zweites Ziel, das genauso geprüft beschrieben wird. -->
         <CheckBox IsChecked="{Binding DialogImportUseBackup, Mode=TwoWay}">

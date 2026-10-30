@@ -47,6 +47,15 @@ Namespace Services
         Public Property ImageCount As Integer
         Public Property PersonCount As Integer
         Public Property KeywordImageCount As Integer
+        ''' <summary>Die Pfadanfaenge des Katalogs mit ihrer Bildzahl, fuer das Umbiegen beim
+        ''' Zurueckholen auf einem anderen Rechner.</summary>
+        Public Property PathRoots As New List(Of BackupPathRoot)()
+    End Class
+
+    ''' <summary>Ein Pfadanfang im gesicherten Katalog: ein Benutzerordner, ein Laufwerk.</summary>
+    Public Class BackupPathRoot
+        Public Property Root As String = ""
+        Public Property Count As Integer
     End Class
 
     ''' <summary>
@@ -159,7 +168,10 @@ Namespace Services
                 End If
                 If prepared.Count = 0 Then Throw New InvalidOperationException("Nichts zu sichern")
                 Dim catalog = prepared.FirstOrDefault(Function(p) p.Name = "library.db")
-                If catalog.File IsNot Nothing Then FillCounts(catalog.File, manifest)
+                If catalog.File IsNot Nothing Then
+                    FillCounts(catalog.File, manifest)
+                    manifest.PathRoots = ComputePathRoots(catalog.File)
+                End If
 
                 Directory.CreateDirectory(If(Path.GetDirectoryName(zipPath), "."))
                 If File.Exists(tempZip) Then File.Delete(tempZip)
@@ -229,7 +241,11 @@ Namespace Services
 
         ''' <summary>Legt die gewaehlten Teile geprueft fuer den naechsten Start bereit und sichert
         ''' vorher den jetzigen Stand. Rueckgabe: leer bei Erfolg, sonst die Meldung.</summary>
-        Public Shared Function StageRestore(zipPath As String, parts As BackupParts) As String
+        ''' <param name="remaps">Alter Pfadanfang zu neuem, fuer einen anderen Rechner. Umgeschrieben
+        ''' werden die bereitgelegten Dateien, nach der Pruefung ihrer Pruefsummen: der Katalog und
+        ''' jeder Pfad in Einstellungen, Favoriten und gespeicherten Suchen.</param>
+        Public Shared Function StageRestore(zipPath As String, parts As BackupParts,
+                                            Optional remaps As IDictionary(Of String, String) = Nothing) As String
             Dim problem = ""
             Dim manifest = ReadManifest(zipPath, problem)
             If manifest Is Nothing Then Return problem
@@ -255,6 +271,7 @@ Namespace Services
                         End If
                     Next
                 End Using
+                ApplyRemaps(staging, remaps)
                 ' Der Teil "Zugangsdaten" gilt nur, wenn er gewaehlt UND in der Sicherung ist.
                 Dim keepSecrets = (parts And BackupParts.Secrets) <> 0 AndAlso (manifest.Parts And BackupParts.Secrets) <> 0
                 File.WriteAllText(Path.Combine(staging, "restore.json"),
@@ -288,6 +305,8 @@ Namespace Services
         ''' mit weg, sonst spielte SQLite sie in den neuen ein. Schlaegt etwas fehl, bleibt der
         ''' Bereitstellungsordner fuer die Fehlersuche als "restore-failed" stehen.</summary>
         Public Shared Sub ApplyPendingRestore()
+            ' Zuerst ein abgebrochenes Einspielen erkennen und zurueckbauen, siehe ReplaceAllOrNothing.
+            RecoverInterruptedRestore()
             Dim staging = StagingDirectory
             If Not Directory.Exists(staging) Then Return
             Try
@@ -297,22 +316,13 @@ Namespace Services
                     Dim node = JsonNode.Parse(File.ReadAllText(info))
                     useBackupSecrets = If(node?("UseBackupSecrets")?.GetValue(Of Boolean)(), False)
                 End If
-                For Each known In KnownFiles()
-                    Dim staged = Path.Combine(staging, known.Name)
-                    If Not File.Exists(staged) Then Continue For
-                    Directory.CreateDirectory(Path.GetDirectoryName(known.Target))
-                    If known.Name = "settings.json" Then
-                        Dim json = File.ReadAllText(staged)
-                        If Not useBackupSecrets Then json = WithSecretsFrom(json, known.Target)
-                        File.WriteAllText(staged, json)
-                    End If
-                    If known.IsDatabase Then
-                        For Each suffix In {"-wal", "-shm"}
-                            If File.Exists(known.Target & suffix) Then File.Delete(known.Target & suffix)
-                        Next
-                    End If
-                    File.Move(staged, known.Target, overwrite:=True)
-                Next
+                ' Erst alles vorbereiten, was die jetzigen Dateien noch lesen muss.
+                Dim settingsStaged = Path.Combine(staging, "settings.json")
+                If File.Exists(settingsStaged) AndAlso Not useBackupSecrets Then
+                    Dim settingsTarget = KnownFiles().First(Function(k) k.Name = "settings.json").Target
+                    File.WriteAllText(settingsStaged, WithSecretsFrom(File.ReadAllText(settingsStaged), settingsTarget))
+                End If
+                ReplaceAllOrNothing(staging)
                 Directory.Delete(staging, True)
                 AppSettingsService.InvalidateCache()
             Catch ex As Exception
@@ -323,6 +333,148 @@ Namespace Services
                     Directory.Move(staging, failed)
                 Catch
                 End Try
+            End Try
+        End Sub
+
+        ''' <summary>Ersetzt die Dateien ALLE ODER KEINE. Die jetzige Datei wandert zuerst samt ihrer
+        ''' WAL- und SHM-Datei in einen Rueckweg-Ordner, statt geloescht zu werden: so bleibt ein
+        ''' noch nicht eingecheckter Stand erhalten, und SQLite spielt keine fremde WAL in die neue
+        ''' Datenbank. Erst dann kommt die neue an ihren Platz. Scheitert irgendein Schritt, wird in
+        ''' umgekehrter Reihenfolge zurueckgebaut: neue Dateien weg, alte zurueck. Der Rueckweg-Ordner
+        ''' liegt neben dem Datenordner auf demselben Datentraeger, ein Verschieben ist also ein
+        ''' Umbenennen. Wirft nach dem Zurueckbauen weiter.
+        '''
+        ''' <para>AUCH UEBER EINEN ABSTURZ HINWEG: jeder Schritt steht VOR seiner Ausfuehrung im
+        ''' Journal (restore-rollback/journal.txt, je Zeile auf die Platte gezwungen), am Ende die
+        ''' Zeile DONE. Bricht der Prozess mittendrin ab, findet der naechste Start das Journal ohne
+        ''' DONE und baut nach ihm zurueck (<see cref="RecoverInterruptedRestore"/>).</para></summary>
+        Private Shared Sub ReplaceAllOrNothing(staging As String)
+            Dim rollback = RollbackDirectory
+            If Directory.Exists(rollback) Then Directory.Delete(rollback, True)
+            Directory.CreateDirectory(rollback)
+            Dim journal = Path.Combine(rollback, JournalName)
+            Try
+                For Each known In KnownFiles()
+                    Dim staged = Path.Combine(staging, known.Name)
+                    If Not File.Exists(staged) Then Continue For
+                    Directory.CreateDirectory(Path.GetDirectoryName(known.Target))
+                    Dim companions = If(known.IsDatabase, {"", "-wal", "-shm"}, {""})
+                    For Each suffix In companions
+                        Dim original = known.Target & suffix
+                        If Not File.Exists(original) Then Continue For
+                        Dim parked = Path.Combine(rollback, known.Name & suffix)
+                        AppendJournal(journal, "P" & ControlChars.Tab & original & ControlChars.Tab & parked)
+                        File.Move(original, parked)
+                    Next
+                    AppendJournal(journal, "N" & ControlChars.Tab & known.Target)
+                    File.Move(staged, known.Target)
+                Next
+                AppendJournal(journal, "DONE")
+            Catch
+                RollBackFromJournal(journal)
+                ' Das Journal ist abgearbeitet und darf beim naechsten Start nicht noch einmal
+                ' laufen: sein N-Schritt loeschte dann die eben zurueckgeholte Datei.
+                FinishRollback(rollback, journal)
+                Throw
+            End Try
+            ' Alles steht: der Rueckweg wird nicht mehr gebraucht. Die vollstaendige Sicherung des
+            ' alten Stands liegt ohnehin unter backups/.
+            Try
+                Directory.Delete(rollback, True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Backup.Rollback.Cleanup", ex)
+            End Try
+        End Sub
+
+        Private Const JournalName As String = "journal.txt"
+
+        Private Shared ReadOnly Property RollbackDirectory As String
+            Get
+                Return Path.Combine(DataDirectory, "restore-rollback")
+            End Get
+        End Property
+
+        ''' <summary>Eine Zeile ans Journal, bis auf die Platte, bevor der Schritt geschieht.</summary>
+        Private Shared Sub AppendJournal(journal As String, line As String)
+            Using stream As New FileStream(journal, FileMode.Append, FileAccess.Write, FileShare.Read)
+                Dim bytes = Text.Encoding.UTF8.GetBytes(line & ControlChars.Lf)
+                stream.Write(bytes, 0, bytes.Length)
+                stream.Flush(flushToDisk:=True)
+            End Using
+        End Sub
+
+        ''' <summary>Baut nach dem Journal zurueck, in umgekehrter Reihenfolge: eine neu gesetzte
+        ''' Datei weg, eine geparkte zurueck an ihren Ort. Ein Schritt, der im Journal steht, aber
+        ''' nicht mehr geschah, findet seine Datei nicht und wird uebergangen. Schritte vor dem
+        ''' Parken stehen nicht im Journal, ein N-Schritt loescht also nur, was an Stelle einer
+        ''' geparkten oder nicht vorhandenen Datei gesetzt wurde.</summary>
+        Private Shared Sub RollBackFromJournal(journal As String)
+            If Not File.Exists(journal) Then Return
+            Dim lines = File.ReadAllLines(journal)
+            For index = lines.Length - 1 To 0 Step -1
+                Dim fields = lines(index).Split(ControlChars.Tab)
+                Try
+                    If fields(0) = "N" AndAlso fields.Length >= 2 Then
+                        If File.Exists(fields(1)) Then File.Delete(fields(1))
+                    ElseIf fields(0) = "P" AndAlso fields.Length >= 3 Then
+                        If File.Exists(fields(2)) Then File.Move(fields(2), fields(1), overwrite:=True)
+                    End If
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Backup.Rollback", ex)
+                End Try
+            Next
+        End Sub
+
+        ''' <summary>Nach dem Zurueckbauen: ist alles an seinem Platz, faellt der Rueckweg-Ordner weg.
+        ''' Liegt noch eine geparkte Datei darin, die nicht zurueck konnte, bleibt er stehen, mit
+        ''' ROLLED_BACK im Journal; der naechste Start benennt ihn dann um, statt ihn zu loeschen.</summary>
+        Private Shared Sub FinishRollback(rollback As String, journal As String)
+            Try
+                AppendJournal(journal, RolledBackMark)
+                Dim leftovers = Directory.EnumerateFiles(rollback).Any(Function(f) Not String.Equals(Path.GetFileName(f), JournalName, StringComparison.Ordinal))
+                If leftovers Then
+                    DiagnosticLogService.LogAlways("Backup.Rollback", "geparkte Dateien bleiben in " & rollback)
+                Else
+                    Directory.Delete(rollback, True)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Backup.Rollback.Finish", ex)
+            End Try
+        End Sub
+
+        Private Const RolledBackMark As String = "ROLLED_BACK"
+
+        ''' <summary>Beim Start, vor allem anderen: liegt ein Journal ohne DONE, ist ein Einspielen
+        ''' mitten im Ersetzen abgebrochen. Dann wird zurueckgebaut, und das Bereitgelegte wandert
+        ''' nach restore-failed: es ist zum Teil schon verschoben und taugt nicht mehr fuer einen
+        ''' zweiten Versuch; die Sicherung selbst gibt es ja noch. Mit DONE stand schon alles, nur
+        ''' das Aufraeumen fehlte.</summary>
+        Private Shared Sub RecoverInterruptedRestore()
+            Dim rollback = RollbackDirectory
+            If Not Directory.Exists(rollback) Then Return
+            Try
+                Dim journal = Path.Combine(rollback, JournalName)
+                Dim lines = If(File.Exists(journal), File.ReadAllLines(journal), Array.Empty(Of String)())
+                If lines.Contains(RolledBackMark) Then
+                    ' Schon zurueckgebaut, nur nicht vollstaendig: die Reste bleiben zum Nachsehen.
+                    Directory.Move(rollback, rollback & "-" & DateTime.Now.ToString("yyyyMMdd-HHmmss", Globalization.CultureInfo.InvariantCulture))
+                    Return
+                End If
+                Dim finished = lines.Contains("DONE")
+                If finished Then
+                    If Directory.Exists(StagingDirectory) Then Directory.Delete(StagingDirectory, True)
+                Else
+                    RollBackFromJournal(journal)
+                    If Directory.Exists(StagingDirectory) Then
+                        Dim failed = Path.Combine(DataDirectory, "restore-failed")
+                        If Directory.Exists(failed) Then Directory.Delete(failed, True)
+                        Directory.Move(StagingDirectory, failed)
+                    End If
+                    DiagnosticLogService.LogAlways("Backup.Recover", "abgebrochenes Einspielen zurueckgebaut")
+                End If
+                Directory.Delete(rollback, True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Backup.Recover", ex)
             End Try
         End Sub
 
@@ -424,6 +576,196 @@ Namespace Services
             Using stream = IO.File.OpenRead(file)
                 Return Convert.ToHexString(SHA256.HashData(stream))
             End Using
+        End Function
+
+        ' ── Pfadanfaenge ──────────────────────────────────────────────────────────
+
+        ''' <summary>Der Anfang, auf den es fuer einen Pfad ankommt: ein Einhaengeort
+        ''' (/run/media/BENUTZER/NAME, /media/..., /mnt/NAME, /Volumes/NAME), ein Benutzerordner
+        ''' (/home/NAME, /Users/NAME, C:\Users\NAME), ein Laufwerk (D:\), eine Freigabe
+        ''' (\\server\name), sonst die erste Ebene. Arbeitet nur am Text und gilt deshalb auch fuer
+        ''' Pfade eines anderen Systems.</summary>
+        Public Shared Function PathRootOf(path As String) As String
+            If String.IsNullOrWhiteSpace(path) OrElse path.Contains("://") Then Return ""
+            If path.StartsWith("\\", StringComparison.Ordinal) Then
+                Dim uncParts = path.Substring(2).Split("\"c)
+                Return If(uncParts.Length >= 2, "\\" & uncParts(0) & "\" & uncParts(1), "")
+            End If
+            If path.Length >= 3 AndAlso path(1) = ":"c AndAlso (path(2) = "\"c OrElse path(2) = "/"c) Then
+                Dim winParts = path.Split({"\"c, "/"c}, StringSplitOptions.RemoveEmptyEntries)
+                If winParts.Length >= 3 AndAlso String.Equals(winParts(1), "Users", StringComparison.OrdinalIgnoreCase) Then
+                    Return winParts(0) & "\" & winParts(1) & "\" & winParts(2)
+                End If
+                Return path.Substring(0, 3)
+            End If
+            Dim parts = path.Split("/"c, StringSplitOptions.RemoveEmptyEntries)
+            If parts.Length < 2 Then Return ""
+            If parts(0) = "run" AndAlso parts.Length >= 5 AndAlso parts(1) = "media" Then Return "/run/media/" & parts(2) & "/" & parts(3)
+            If parts(0) = "media" AndAlso parts.Length >= 4 Then Return "/media/" & parts(1) & "/" & parts(2)
+            If (parts(0) = "media" OrElse parts(0) = "mnt" OrElse parts(0) = "Volumes" OrElse parts(0) = "home" OrElse parts(0) = "Users") AndAlso parts.Length >= 3 Then
+                Return "/" & parts(0) & "/" & parts(1)
+            End If
+            Return "/" & parts(0)
+        End Function
+
+        ''' <summary>Der Vorschlag fuer einen neuen Anfang: ein fremder Benutzerordner wird zum
+        ''' eigenen, alles andere bleibt, wie es war.</summary>
+        Public Shared Function SuggestedTargetFor(root As String) As String
+            Dim home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            Dim isHome = root.StartsWith("/home/", StringComparison.Ordinal) OrElse root.StartsWith("/Users/", StringComparison.Ordinal) OrElse
+                         (root.Length > 3 AndAlso root(1) = ":"c AndAlso root.IndexOf("\Users\", StringComparison.OrdinalIgnoreCase) = 2)
+            If isHome AndAlso Not String.IsNullOrEmpty(home) Then Return home
+            Return root
+        End Function
+
+        Private Shared Function ComputePathRoots(databaseFile As String) As List(Of BackupPathRoot)
+            Dim counts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+            Try
+                Using conn As New SqliteConnection(New SqliteConnectionStringBuilder With {
+                        .DataSource = databaseFile, .Mode = SqliteOpenMode.ReadOnly, .Pooling = False}.ToString())
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT FilePath FROM ImageMeta UNION SELECT FilePath FROM Face UNION SELECT FilePath FROM ScannedImage"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                Dim root = PathRootOf(reader.GetString(0))
+                                If root.Length = 0 Then Continue While
+                                Dim n As Integer
+                                counts.TryGetValue(root, n)
+                                counts(root) = n + 1
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Backup.PathRoots", ex)
+            End Try
+            Return counts.OrderByDescending(Function(c) c.Value).
+                Select(Function(c) New BackupPathRoot With {.Root = c.Key, .Count = c.Value}).ToList()
+        End Function
+
+        ''' <summary>Ein Pfad mit neuem Anfang, oder Nothing, wenn er nicht darunter liegt. Wechselt
+        ''' dabei die Art der Trennzeichen (Windows nach Linux oder umgekehrt), folgt der Rest.</summary>
+        Friend Shared Function RemapPath(path As String, oldRoot As String, newRoot As String) As String
+            If String.IsNullOrEmpty(path) OrElse String.IsNullOrEmpty(oldRoot) Then Return Nothing
+            If path = oldRoot Then Return newRoot
+            Dim trimmed = oldRoot.TrimEnd("/"c, "\"c)
+            If path.Length <= trimmed.Length OrElse Not path.StartsWith(trimmed, StringComparison.Ordinal) Then Return Nothing
+            Dim sep = path(trimmed.Length)
+            If sep <> "/"c AndAlso sep <> "\"c Then Return Nothing
+            Dim rest = path.Substring(trimmed.Length)
+            Dim newSep = If(newRoot.Contains("\"c) AndAlso Not newRoot.Contains("/"c), "\"c, "/"c)
+            If newSep <> sep Then rest = rest.Replace(sep, newSep)
+            Return newRoot.TrimEnd("/"c, "\"c) & rest
+        End Function
+
+        Private Shared Function RemapAny(path As String, remaps As List(Of KeyValuePair(Of String, String))) As String
+            For Each remap In remaps
+                Dim mapped = RemapPath(path, remap.Key, remap.Value)
+                If mapped IsNot Nothing Then Return mapped
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Schreibt die Pfade der bereitgelegten Dateien um. Der laengste alte Anfang zuerst,
+        ''' damit /mnt/nas/fotos vor /mnt/nas greift. Stoesst ein umgeschriebener Pfad im Katalog auf
+        ''' einen schon vorhandenen, bleibt der alte stehen (UPDATE OR IGNORE).</summary>
+        Private Shared Sub ApplyRemaps(staging As String, remaps As IDictionary(Of String, String))
+            If remaps Is Nothing Then Return
+            Dim active = remaps.Where(Function(r) Not String.IsNullOrWhiteSpace(r.Key) AndAlso Not String.IsNullOrWhiteSpace(r.Value) AndAlso
+                                                  r.Key <> r.Value).
+                OrderByDescending(Function(r) r.Key.Length).ToList()
+            If active.Count = 0 Then Return
+
+            Dim catalog = Path.Combine(staging, "library.db")
+            If File.Exists(catalog) Then
+                Using conn As New SqliteConnection(New SqliteConnectionStringBuilder With {.DataSource = catalog, .Pooling = False}.ToString())
+                    conn.Open()
+                    Using transaction = conn.BeginTransaction()
+                        For Each table In {"ImageMeta", "Face", "ScannedImage", "AiImageTag", "AiTagScan"}
+                            Dim pathsInTable As New List(Of String)()
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = transaction
+                                cmd.CommandText = "SELECT DISTINCT FilePath FROM " & table
+                                Try
+                                    Using reader = cmd.ExecuteReader()
+                                        While reader.Read()
+                                            pathsInTable.Add(reader.GetString(0))
+                                        End While
+                                    End Using
+                                Catch
+                                    Continue For
+                                End Try
+                            End Using
+                            Using update = conn.CreateCommand()
+                                update.Transaction = transaction
+                                update.CommandText = "UPDATE OR IGNORE " & table & " SET FilePath=$n WHERE FilePath=$o"
+                                Dim o = update.Parameters.Add("$o", SqliteType.Text)
+                                Dim n = update.Parameters.Add("$n", SqliteType.Text)
+                                For Each oldPath In pathsInTable
+                                    Dim mapped = RemapAny(oldPath, active)
+                                    If mapped Is Nothing Then Continue For
+                                    o.Value = oldPath
+                                    n.Value = mapped
+                                    update.ExecuteNonQuery()
+                                Next
+                            End Using
+                        Next
+                        transaction.Commit()
+                    End Using
+                End Using
+            End If
+
+            For Each name In {"settings.json", "favorites.json", "searchlists.json"}
+                Dim file = Path.Combine(staging, name)
+                If Not IO.File.Exists(file) Then Continue For
+                Try
+                    Dim root = JsonNode.Parse(IO.File.ReadAllText(file))
+                    Dim changed = RemapJson(root, active)
+                    If changed Then IO.File.WriteAllText(file, root.ToJsonString(New JsonSerializerOptions With {.WriteIndented = True}))
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Backup.RemapJson", ex)
+                End Try
+            Next
+        End Sub
+
+        ''' <summary>Jeder Textwert, der unter einem alten Anfang liegt, bekommt den neuen.</summary>
+        Private Shared Function RemapJson(node As JsonNode, remaps As List(Of KeyValuePair(Of String, String))) As Boolean
+            Dim changed = False
+            Dim obj = TryCast(node, JsonObject)
+            If obj IsNot Nothing Then
+                For Each key In obj.Select(Function(p) p.Key).ToList()
+                    Dim child = obj(key)
+                    Dim value = TryCast(child, JsonValue)
+                    Dim text As String = Nothing
+                    If value IsNot Nothing AndAlso value.TryGetValue(Of String)(text) Then
+                        Dim mapped = RemapAny(text, remaps)
+                        If mapped IsNot Nothing Then
+                            obj(key) = mapped
+                            changed = True
+                        End If
+                    ElseIf child IsNot Nothing Then
+                        changed = RemapJson(child, remaps) OrElse changed
+                    End If
+                Next
+            End If
+            Dim arr = TryCast(node, JsonArray)
+            If arr IsNot Nothing Then
+                For i = 0 To arr.Count - 1
+                    Dim value = TryCast(arr(i), JsonValue)
+                    Dim text As String = Nothing
+                    If value IsNot Nothing AndAlso value.TryGetValue(Of String)(text) Then
+                        Dim mapped = RemapAny(text, remaps)
+                        If mapped IsNot Nothing Then
+                            arr(i) = mapped
+                            changed = True
+                        End If
+                    ElseIf arr(i) IsNot Nothing Then
+                        changed = RemapJson(arr(i), remaps) OrElse changed
+                    End If
+                Next
+            End If
+            Return changed
         End Function
 
         Private Shared Function AppVersion() As String
