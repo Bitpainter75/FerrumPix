@@ -11,6 +11,12 @@
   wide, so the largest gallery tiles no longer look soft. It needs more disk space and memory;
   switching it off again replaces them with the smaller ones.
 
+### Fixes
+
+- **Show the mask only stays on while painting:** brushing on a mask no longer switches back to
+  the red overlay over the photo, so you can see exactly what is left to remove. Parts already
+  brushed away no longer turn red again on the next stroke.
+
 ## 0.9.73
 
 ### Changes

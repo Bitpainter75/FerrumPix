@@ -759,10 +759,14 @@ Namespace ViewModels
         Private _maskOverlayBasis As SKBitmap
         Private _maskOverlayBasisBreite As Integer
         Private _maskOverlayBasisHoehe As Integer
+        ' True, wenn die Basis das Graustufenbild ist und nicht das rote Overlay. Beide teilen sich
+        ' das Feld, weil immer nur eine Ansicht zur Zeit gemalt wird.
+        Private _maskOverlayBasisIsGray As Boolean
 
         Private Sub DiscardMaskOverlayBase()
             _maskOverlayBasis?.Dispose()
             _maskOverlayBasis = Nothing
+            _maskOverlayBasisIsGray = False
             _maskOverlayBasisBreite = 0
             _maskOverlayBasisHoehe = 0
         End Sub
@@ -799,7 +803,7 @@ Namespace ViewModels
             ' Waehrend eines Strichs die eingefaerbte Maske einmal bauen und danach nur kopieren.
             Dim liveStroke = livePts IsNot Nothing AndAlso livePts.Count > 0
             If Not liveStroke Then DiscardMaskOverlayBase()
-            Dim basisTaugt = liveStroke AndAlso _maskOverlayBasis IsNot Nothing AndAlso
+            Dim basisTaugt = liveStroke AndAlso _maskOverlayBasis IsNot Nothing AndAlso Not _maskOverlayBasisIsGray AndAlso
                              _maskOverlayBasisBreite = ow AndAlso _maskOverlayBasisHoehe = oh
 
             Try
@@ -884,6 +888,11 @@ Namespace ViewModels
 
         ''' Rotes Overlay aus der committeten Maske neu bauen und veröffentlichen (nach jedem Strich-Commit).
         Private Sub PublishSelectionRedOverlay()
+            ' Ohne laufenden Strich gilt keine Strich-Basis mehr. Im Graustufenblick kommt
+            ' BuildSelectionRedOverlayBitmap hier nie vorbei und raeumte sie deshalb auch nie ab:
+            ' jeder weitere Strich lag dann auf dem Stand vor dem ersten, und schon Abgezogenes
+            ' erschien wieder (Nutzerbefund).
+            DiscardMaskOverlayBase()
             If _isMaskGrayscaleView Then
                 SetSelectionMaskPreviewImage(BuildMaskGrayscaleBitmap())
                 Return
@@ -962,6 +971,65 @@ Namespace ViewModels
         ''' Gebaut wird es aus derselben Arbeitskopie wie das rote Overlay (_selectionMask im
         ''' Anzeigeraum). Ein zweiter Weg zur Maskenform liefe unweigerlich auseinander.</summary>
         Private Function BuildMaskGrayscaleBitmap() As Bitmap
+            Using overlay = BuildMaskGrayscaleOverlay()
+                If overlay Is Nothing Then Return Nothing
+                Return ImageProcessor.ToAvaloniaBitmap(overlay)
+            End Using
+        End Function
+
+        ''' <summary>Der Graustufenblick WAEHREND eines Pinselstrichs: dasselbe Bild wie ohne Strich,
+        ''' der Strich in Weiss (Hinzufuegen) oder Schwarz (Abziehen) darauf. Vorher sprang die
+        ''' Anzeige fuer die Dauer des Strichs auf das rote Overlay ueber dem Foto, und genau beim
+        ''' Abziehen war dann nicht mehr zu sehen, was noch weg muss (Nutzerbefund).
+        '''
+        ''' Wie beim roten Overlay wird die Maske einmal je Strich gebaut (_maskOverlayBasis, hier mit
+        ''' _maskOverlayBasisIsGray markiert) und danach nur kopiert.</summary>
+        Private Function BuildMaskGrayscaleStrokeBitmap(livePts As List(Of SKPoint), eraseMode As Boolean,
+                                                        softnessPx As Single) As Bitmap
+            Dim selectionSize = GetAnnotationDisplayPixelSize()
+            Dim bw = selectionSize.Width, bh = selectionSize.Height
+            If bw <= 0 OrElse bh <= 0 Then Return Nothing
+            Dim ovScale = Math.Min(1.0, MaskBrushOverlayMaxEdge / CDbl(Math.Max(bw, bh)))
+            Dim ow = Math.Max(1, CInt(Math.Round(bw * ovScale)))
+            Dim oh = Math.Max(1, CInt(Math.Round(bh * ovScale)))
+
+            Dim basisTaugt = _maskOverlayBasis IsNot Nothing AndAlso _maskOverlayBasisIsGray AndAlso
+                             _maskOverlayBasisBreite = ow AndAlso _maskOverlayBasisHoehe = oh
+            If Not basisTaugt Then
+                DiscardMaskOverlayBase()
+                Dim basis = BuildMaskGrayscaleOverlay()
+                If basis Is Nothing Then Return Nothing
+                If basis.Width <> ow OrElse basis.Height <> oh Then
+                    basis.Dispose()
+                    Return Nothing
+                End If
+                _maskOverlayBasis = basis
+                _maskOverlayBasisIsGray = True
+                _maskOverlayBasisBreite = ow
+                _maskOverlayBasisHoehe = oh
+            End If
+
+            Using overlay = _maskOverlayBasis.Copy()
+                Using canvas = New SKCanvas(overlay)
+                    Dim scaled As New List(Of SKPoint)(livePts.Count)
+                    For Each p In livePts
+                        scaled.Add(New SKPoint(CSng(p.X * ovScale), CSng(p.Y * ovScale)))
+                    Next
+                    ' Abziehen malt SCHWARZ statt auszustanzen: der Grund ist deckend, ein Loch
+                    ' darin liesse das Foto durchscheinen.
+                    Dim color = MaskBrushStrokeOverlayColor(If(eraseMode, SKColors.Black, SKColors.White))
+                    ImageProcessor.DrawSoftMaskStroke(canvas, scaled,
+                                                      CSng(Math.Max(0.5, MaskBrushRadiusDisplay() * ovScale)),
+                                                      CSng(softnessPx * ovScale), color, False,
+                                                      _maskBrushPressures)
+                End Using
+                Return ImageProcessor.ToAvaloniaBitmap(overlay)
+            End Using
+        End Function
+
+        ''' <summary>Das Graustufenbild der Maske als Skia-Bitmap in Overlay-Aufloesung, Nothing ohne
+        ''' Anzeigeflaeche. Gemeinsamer Kern fuer den Blick mit und ohne laufenden Strich.</summary>
+        Private Function BuildMaskGrayscaleOverlay() As SKBitmap
             Dim selectionSize = GetAnnotationDisplayPixelSize()
             Dim bw = selectionSize.Width, bh = selectionSize.Height
             If bw <= 0 OrElse bh <= 0 Then Return Nothing
@@ -993,7 +1061,7 @@ Namespace ViewModels
             feather *= CSng(ovScale)
 
             Try
-            Using overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Dim overlay = New SKBitmap(ow, oh, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(overlay)
                     ' Schwarz ueberall: was die Maske nicht deckt, ist frei - und frei heisst hier
                     ' schwarz, nicht durchsichtig.
@@ -1020,8 +1088,7 @@ Namespace ViewModels
                         canvas.Restore()
                     End If
                 End Using
-                Return ImageProcessor.ToAvaloniaBitmap(overlay)
-            End Using
+                Return overlay
             Finally
                 If ownsShape Then shape.Dispose()
             End Try
@@ -1109,6 +1176,15 @@ Namespace ViewModels
                                             Optional nurWennSichtbar As Boolean = False)
             Dim gradient = SelectedGradientMask
             If nurWennSichtbar AndAlso gradient Is Nothing AndAlso Not _activeSelectionIsMask Then Return
+            Dim liveStroke = livePts IsNot Nothing AndAlso livePts.Count > 0
+            If Not liveStroke Then DiscardMaskOverlayBase()
+            ' Der Graustufenblick bleibt auch waehrend des Strichs, fuer Verlauf und gemalte Maske
+            ' gleich. Die Kante des Strichs wie in der jeweiligen roten Vorschau.
+            If liveStroke AndAlso _isMaskGrayscaleView Then
+                Dim softness = If(gradient IsNot Nothing, CSng(Math.Max(0.0, _selectionFeather)), MaskBrushStrokeSoftness())
+                SetSelectionMaskPreviewImage(BuildMaskGrayscaleStrokeBitmap(livePts, eraseMode, softness))
+                Return
+            End If
             If gradient IsNot Nothing Then
                 PublishGradientOverlay(gradient, livePts, eraseMode)
                 Return
@@ -2312,8 +2388,8 @@ Namespace ViewModels
                                            Optional livePts As List(Of SKPoint) = Nothing,
                                            Optional eraseMode As Boolean = False)
             ' Im Graustufenblick zeigt AUCH ein Verlauf seine Deckung als Grauwerte - waere er davon
-            ' ausgenommen, haenge der Blick daran, woher die Maske stammt. Waehrend eines Zuges
-            ' bleibt es beim roten Overlay: dort geht es um die Griffe, nicht um die Deckung.
+            ' ausgenommen, haenge der Blick daran, woher die Maske stammt. Einen laufenden
+            ' Pinselstrich faengt PublishMaskBrushOverlay im Graustufenblick schon vorher ab.
             If _isMaskGrayscaleView AndAlso (livePts Is Nothing OrElse livePts.Count = 0) Then
                 SetSelectionMaskPreviewImage(BuildMaskGrayscaleBitmap())
                 Return
