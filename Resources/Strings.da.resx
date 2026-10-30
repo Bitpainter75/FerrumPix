@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Målet ligger i kilden. Intet i kilden ændres, vælg et andet mål.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Miniaturer i høj opløsning</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Gemmer miniaturer dobbelt så brede, så selv de største felter forbliver skarpe. Kræver mere plads på enheden og mere hukommelse. Mindre miniaturer oprettes igen, når de vises.</value>
+  </data>
 </root>

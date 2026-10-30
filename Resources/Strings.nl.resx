@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Het doel ligt in de bron. Aan de bron wordt niets veranderd, kies een ander doel.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Miniaturen in hoge resolutie</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Slaat miniaturen twee keer zo breed op, zodat ook de grootste tegels scherp blijven. Vraagt meer ruimte op het apparaat en meer geheugen. Kleinere miniaturen worden opnieuw gemaakt wanneer ze worden bekeken.</value>
+  </data>
 </root>

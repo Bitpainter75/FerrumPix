@@ -128,7 +128,8 @@ Namespace Services
         ''' gvfs einhaengt (MTP und PTP), und die Speicher der Geraete, die kmtpd unter KDE haelt
         ''' (<see cref="MtpSession"/>). Unter macOS /Volumes ohne das Systemlaufwerk, unter Windows die
         ''' Laufwerke vom Typ "Wechseldatentraeger". Datentraeger mit einem DCIM-Ordner stehen vorn und
-        ''' zeigen gleich auf ihn.</summary>
+        ''' zeigen gleich auf ihn. Ein traeges Geraet braucht dafuer Sekunden, der Aufruf gehoert also
+        ''' nicht auf den UI-Faden.</summary>
         Public Shared Function DetectSources() As List(Of ImportSource)
             Dim roots As New List(Of (Path As String, Name As String))()
             Try
@@ -204,14 +205,20 @@ Namespace Services
         End Function
 
         ''' <summary>Die Speicher der Geraete, die kmtpd haelt, je als Quelle "mtp:/Geraet/Speicher",
-        ''' mit DCIM, wenn es den Ordner gibt.</summary>
+        ''' mit DCIM, wenn es den Ordner gibt. Nach DCIM wird nur mit dem kurzen Zeitlimit gefragt;
+        ''' antwortet ein Speicher nicht rechtzeitig, steht er ohne DCIM da.</summary>
         Private Shared Function MtpSources() As List(Of ImportSource)
             Dim result As New List(Of ImportSource)()
             Try
                 Using session = MtpSession.TryOpen()
                     If session Is Nothing Then Return result
                     For Each storage In session.ListStorages()
-                        Dim top = session.ListFolder(storage, "/")
+                        Dim top As List(Of MtpEntry) = Nothing
+                        Try
+                            top = session.ListFolder(storage, "/", quick:=True)
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("Import.MtpSources", ex)
+                        End Try
                         Dim hasDcim = top IsNot Nothing AndAlso top.Any(Function(e) e.IsFolder AndAlso e.Name = "DCIM")
                         Dim label = storage.DeviceName & " / " & storage.StorageName
                         result.Add(New ImportSource With {

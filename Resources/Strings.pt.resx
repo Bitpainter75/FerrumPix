@@ -10468,4 +10468,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>O destino está dentro da origem. Nada é alterado na origem, escolha outro destino.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Miniaturas em alta resolução</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Guarda as miniaturas com o dobro da largura, para que até os maiores mosaicos fiquem nítidos. Precisa de mais espaço no dispositivo e de mais memória. Miniaturas menores são criadas novamente ao serem vistas.</value>
+  </data>
 </root>

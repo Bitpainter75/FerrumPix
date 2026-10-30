@@ -129,18 +129,33 @@ Namespace Services
             Return desktop.Split(":"c).Any(Function(d) String.Equals(d, "KDE", StringComparison.OrdinalIgnoreCase))
         End Function
 
-        ''' <summary>Alle Speicher aller angeschlossenen Geraete. Leer, wenn der Dienst nicht antwortet.</summary>
+        ''' <summary>Alle Speicher aller angeschlossenen Geraete. Leer, wenn der Dienst nicht antwortet.
+        ''' Tragen zwei Geraete denselben Namen (zweimal dasselbe Telefonmodell) oder ein Geraet zwei
+        ''' gleich benannte Speicher, bekommt der Name das Ende des D-Bus-Pfads angehaengt, etwa
+        ''' "Pixel 8 (device1)": die Adresse besteht nur aus Namen und muss genau einen Speicher treffen.</summary>
         Public Function ListStorages() As List(Of MtpStorage)
             If _storages IsNot Nothing Then Return _storages
             Dim result As New List(Of MtpStorage)()
             Try
+                Dim devices As New List(Of (Path As String, Name As String))()
                 For Each device In ReadObjectPaths(DaemonPath, DaemonInterface, "listDevices")
                     Dim deviceName = CleanName(ReadStringProperty(device, DeviceInterface, "friendlyName"))
-                    If deviceName.Length = 0 Then deviceName = device.Substring(device.LastIndexOf("/"c) + 1)
-                    For Each storage In ReadObjectPaths(device, DeviceInterface, "listStorages")
+                    If deviceName.Length = 0 Then deviceName = PathTail(device)
+                    devices.Add((device, deviceName))
+                Next
+                For Each device In devices
+                    Dim deviceName = device.Name
+                    If devices.Where(Function(d) d.Name = device.Name).Count() > 1 Then deviceName &= " (" & PathTail(device.Path) & ")"
+                    Dim storages As New List(Of (Path As String, Name As String))()
+                    For Each storage In ReadObjectPaths(device.Path, DeviceInterface, "listStorages")
                         Dim storageName = CleanName(ReadStringProperty(storage, StorageInterface, "description"))
-                        If storageName.Length = 0 Then storageName = storage.Substring(storage.LastIndexOf("/"c) + 1)
-                        result.Add(New MtpStorage With {.DeviceName = deviceName, .StorageName = storageName, .ObjectPath = storage})
+                        If storageName.Length = 0 Then storageName = PathTail(storage)
+                        storages.Add((storage, storageName))
+                    Next
+                    For Each storage In storages
+                        Dim storageName = storage.Name
+                        If storages.Where(Function(s) s.Name = storage.Name).Count() > 1 Then storageName &= " (" & PathTail(storage.Path) & ")"
+                        result.Add(New MtpStorage With {.DeviceName = deviceName, .StorageName = storageName, .ObjectPath = storage.Path})
                     Next
                 Next
             Catch ex As Exception
@@ -148,6 +163,10 @@ Namespace Services
             End Try
             _storages = result
             Return result
+        End Function
+
+        Private Shared Function PathTail(objectPath As String) As String
+            Return objectPath.Substring(objectPath.LastIndexOf("/"c) + 1)
         End Function
 
         ''' <summary>Ein Schraegstrich im Namen wuerde die Adresse zerlegen.</summary>
@@ -160,13 +179,18 @@ Namespace Services
             storage = Nothing
             Dim deviceName = "", storageName = ""
             If Not TrySplitAddress(address, deviceName, storageName, storagePath) Then Return False
-            storage = ListStorages().FirstOrDefault(Function(s) s.DeviceName = deviceName AndAlso s.StorageName = storageName)
-            Return storage IsNot Nothing
+            ' Trifft die Adresse mehr als einen Speicher, wird keiner genommen: lieber nichts lesen als
+            ' vom falschen Geraet.
+            Dim matches = ListStorages().Where(Function(s) s.DeviceName = deviceName AndAlso s.StorageName = storageName).ToList()
+            If matches.Count <> 1 Then Return False
+            storage = matches(0)
+            Return True
         End Function
 
-        ''' <summary>Der Inhalt eines Ordners auf dem Speicher, oder Nothing, wenn es ihn nicht gibt.</summary>
-        Public Function ListFolder(storage As MtpStorage, storagePath As String) As List(Of MtpEntry)
-            Dim reply = CallMethod(storage.ObjectPath, StorageInterface, "getFilesAndFolders", ListTimeoutMs,
+        ''' <summary>Der Inhalt eines Ordners auf dem Speicher, oder Nothing, wenn es ihn nicht gibt.
+        ''' Mit <paramref name="quick"/> gilt das kurze Zeitlimit statt des langen fuer grosse Ordner.</summary>
+        Public Function ListFolder(storage As MtpStorage, storagePath As String, Optional quick As Boolean = False) As List(Of MtpEntry)
+            Dim reply = CallMethod(storage.ObjectPath, StorageInterface, "getFilesAndFolders", If(quick, ShortTimeoutMs, ListTimeoutMs),
                                    Sub(iter) AppendString(iter, storagePath))
             Try
                 Dim entries As New List(Of MtpEntry)()

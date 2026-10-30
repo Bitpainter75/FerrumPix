@@ -419,6 +419,10 @@ Namespace Services
         Public Property DateFormatMode As String = "System"
         Public Property ThumbnailCacheEnabled As Boolean = True
         Public Property ThumbnailQuality As Integer = 82
+        ''' Vorschaubilder im Zwischenspeicher doppelt so breit (960 statt 480 Pixel), damit die
+        ''' groessten Kacheln nicht hochgerechnet werden. AB WERK AUS: kostet Platz auf der Platte
+        ''' und bis zu viermal so viel Arbeitsspeicher je gehaltenem Vorschaubild.
+        Public Property ThumbnailHighResolution As Boolean = False
 
         ''' <summary>Ordner, die der Katalogindex durchgeht - samt Unterordnern.
         '''

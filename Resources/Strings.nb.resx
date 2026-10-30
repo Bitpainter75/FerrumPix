@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Målet ligger i kilden. Ingenting i kilden endres, velg et annet mål.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Miniatyrbilder i høy oppløsning</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Lagrer miniatyrbilder dobbelt så brede, slik at selv de største rutene forblir skarpe. Krever mer plass på enheten og mer minne. Mindre miniatyrbilder lages på nytt når de vises.</value>
+  </data>
 </root>

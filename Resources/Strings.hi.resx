@@ -10513,4 +10513,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>गंतव्य स्रोत के अंदर है। स्रोत में कुछ नहीं बदला जाता, कृपया कोई दूसरा गंतव्य चुनें।</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>उच्च रिज़ॉल्यूशन वाले थंबनेल</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>थंबनेल को दोगुनी चौड़ाई में सहेजता है, ताकि सबसे बड़ी टाइलें भी साफ़ दिखें। डिवाइस पर अधिक जगह और अधिक मेमोरी चाहिए। छोटे थंबनेल देखने पर फिर से बनाए जाते हैं।</value>
+  </data>
 </root>

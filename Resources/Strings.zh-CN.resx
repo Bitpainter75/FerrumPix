@@ -10467,4 +10467,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>目标位于来源之中。来源不会被更改，请选择其他目标。</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>高分辨率缩略图</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>以两倍宽度保存缩略图，使最大的图块也保持清晰。需要更多设备空间和内存。较小的缩略图会在查看时重新生成。</value>
+  </data>
 </root>

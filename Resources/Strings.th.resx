@@ -10513,4 +10513,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>ปลายทางอยู่ภายในแหล่งที่มา จะไม่มีการเปลี่ยนแปลงแหล่งที่มา โปรดเลือกปลายทางอื่น</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>ภาพย่อความละเอียดสูง</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>บันทึกภาพย่อให้กว้างเป็นสองเท่า เพื่อให้แม้แต่ไทล์ที่ใหญ่ที่สุดยังคมชัด ต้องใช้พื้นที่บนอุปกรณ์และหน่วยความจำมากขึ้น ภาพย่อที่เล็กกว่าจะถูกสร้างใหม่เมื่อเปิดดู</value>
+  </data>
 </root>

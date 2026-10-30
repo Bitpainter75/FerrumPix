@@ -10513,4 +10513,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Hedef kaynağın içinde. Kaynakta hiçbir şey değiştirilmez, lütfen başka bir hedef seçin.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Yüksek çözünürlüklü küçük resimler</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Küçük resimleri iki kat geniş kaydeder, böylece en büyük kutucuklar bile net kalır. Cihazda daha fazla alan ve daha fazla bellek gerektirir. Daha küçük küçük resimler görüntülendiğinde yeniden oluşturulur.</value>
+  </data>
 </root>

@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Cíl leží ve zdroji. Na zdroji se nic nemění, vyberte jiný cíl.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Náhledy ve vysokém rozlišení</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Ukládá náhledy dvakrát širší, aby i největší dlaždice zůstaly ostré. Potřebuje více místa v zařízení a více paměti. Menší náhledy se při zobrazení vytvoří znovu.</value>
+  </data>
 </root>

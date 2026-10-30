@@ -10487,4 +10487,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Das Ziel liegt in der Quelle. Auf der Quelle wird nichts verändert, bitte ein anderes Ziel wählen.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Vorschaubilder in hoher Auflösung</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Speichert Vorschaubilder doppelt so breit, damit auch die größten Kacheln scharf bleiben. Braucht mehr Platz auf dem Gerät und mehr Arbeitsspeicher. Kleinere Vorschaubilder werden beim Ansehen neu erzeugt.</value>
+  </data>
 </root>

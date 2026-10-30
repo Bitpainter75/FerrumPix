@@ -2635,6 +2635,36 @@ Namespace Models
             Next
         End Sub
 
+        ''' <summary>Wirft alle gehaltenen Vorschaubilder weg, wenn sich ihre Breite im Zwischenspeicher
+        ''' geaendert hat. Die gerade sichtbaren laden sofort neu, die uebrigen erst, wenn sie wieder ins
+        ''' Bild kommen. Ohne das blieben bis zu MaxResidentThumbnails alte Kacheln stehen, denn die
+        ''' Verdraengung behaelt fertige Kacheln ausdruecklich.</summary>
+        Public Shared Sub ReloadAllResidentThumbnails()
+            Dim visible As New List(Of ImageItem)()
+            Dim released As New List(Of KeyValuePair(Of ImageItem, Bitmap))()
+            SyncLock _thumbnailQueueLock
+                Dim node = _residentLru.First
+                While node IsNot Nothing
+                    Dim nextNode = node.Next
+                    Dim candidate = node.Value
+                    If candidate._isPinnedVisible Then
+                        visible.Add(candidate)
+                    Else
+                        _residentLru.Remove(node)
+                        candidate._residentLruNode = Nothing
+                        candidate._thumbState = 0
+                        released.Add(New KeyValuePair(Of ImageItem, Bitmap)(candidate, candidate._thumbnail))
+                        candidate._thumbnail = Nothing
+                    End If
+                    node = nextNode
+                End While
+            End SyncLock
+            DisposeEvictedThumbnails(released)
+            For Each item In visible
+                item.ReloadThumbnail()
+            Next
+        End Sub
+
         Public Sub ClearThumbnail()
             Dim bmp As Bitmap = Nothing
             SyncLock _thumbnailQueueLock

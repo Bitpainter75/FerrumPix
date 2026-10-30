@@ -10513,4 +10513,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Tujuan berada di dalam sumber. Sumber tidak diubah, pilih tujuan lain.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Gambar mini resolusi tinggi</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Menyimpan gambar mini dua kali lebih lebar, agar ubin terbesar pun tetap tajam. Membutuhkan lebih banyak ruang di perangkat dan lebih banyak memori. Gambar mini yang lebih kecil dibuat ulang saat dilihat.</value>
+  </data>
 </root>

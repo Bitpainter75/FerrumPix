@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>保存先がソースの中にあります。ソースは変更しないため、別の保存先を選んでください。</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>高解像度のサムネイル</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>サムネイルを2倍の幅で保存し、最大のタイルでもくっきり表示します。デバイスの空き容量とメモリをより多く使います。小さいサムネイルは表示時に作り直されます。</value>
+  </data>
 </root>

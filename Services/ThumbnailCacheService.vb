@@ -62,7 +62,23 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        Private Const CacheWidth As Integer = 480
+        Private Const StandardCacheWidth As Integer = 480
+        ''' Mit dem Schalter "hohe Aufloesung": die groesste Kachel ist 640 Punkte breit, bei einer
+        ''' Skalierung von 150 Prozent also 960 Pixel.
+        Private Const HighResolutionCacheWidth As Integer = 960
+
+        ''' <summary>Die Breite der Vorschaubilder im Zwischenspeicher. Sie steht im Dateinamen
+        ''' (<see cref="BuildCacheFileName"/>); ein Umschalten erzeugt die Vorschaubilder also neu, und
+        ''' bis dahin steht das alte da.
+        '''
+        ''' Jeder Vorgang liest sie EINMAL am Anfang und reicht sie an Name, Decode und Schreiben
+        ''' durch. Laese jeder Schritt selbst nach, koennte ein Umschalten mitten im Vorgang eine
+        ''' 480er-Kachel unter einem 960er-Namen ablegen, und die galte danach als passend.</summary>
+        Private Shared Function CurrentCacheWidth() As Integer
+            Dim e As Boolean, q As Integer
+            GetCachedSettings(e, q)
+            Return If(_cachedHighResolution, HighResolutionCacheWidth, StandardCacheWidth)
+        End Function
 
         ''' Entspricht der abgekündigten Stufe SKFilterQuality.Medium (linear mit Mipmaps).
         Private Shared ReadOnly SamplingMedium As New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
@@ -90,6 +106,7 @@ Namespace Services
         Private Shared _cachedEnabled As Boolean = True
         Private Shared _cachedQuality As Integer = 80
         Private Shared _cachedDevelopRawThumbnails As Boolean = False
+        Private Shared _cachedHighResolution As Boolean = False
         Private Shared _settingsCacheExpiry As Long = 0   ' Environment.TickCount64
 
         ' Einmal je Sitzung: jeder Zwischenspeicher-Bereich wird hoechstens einmal im
@@ -214,6 +231,7 @@ Namespace Services
                 _cachedEnabled = s.ThumbnailCacheEnabled
                 _cachedQuality = AppSettingsService.NormalizeThumbnailQuality(s.ThumbnailQuality)
                 _cachedDevelopRawThumbnails = s.DevelopRawThumbnails
+                _cachedHighResolution = s.ThumbnailHighResolution
                 Volatile.Write(_settingsCacheExpiry, Environment.TickCount64 + 10_000L)
             End If
             enabled = _cachedEnabled
@@ -262,14 +280,14 @@ Namespace Services
         ''' herunterskaliert). Nothing, wenn die Option aus ist, keine .fpxmp existiert oder LibRaw fehlt -
         ''' dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
         ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.</summary>
-        Private Shared Function TryRenderDevelopedRawSource(filePath As String) As MemoryStream
+        Private Shared Function TryRenderDevelopedRawSource(filePath As String, width As Integer) As MemoryStream
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.IsAvailable Then Return Nothing
             If Not DevelopsThumbnail(filePath) Then Return Nothing
             Dim adj = RawSidecarService.TryRead(filePath)
             If adj Is Nothing Then Return Nothing
             Try
                 Dim d, p, e As Long
-                Return ImageProcessor.RenderPngStream(filePath, adj, CacheWidth, d, p, e,
+                Return ImageProcessor.RenderPngStream(filePath, adj, width, d, p, e,
                                                       preferReducedRawDecode:=True)
             Catch
                 Return Nothing
@@ -278,20 +296,20 @@ Namespace Services
 
         ''' <summary>Schreibt einen bereits entwickelten+orientierten PNG-Strom als JPEG-Kachel - OHNE
         ''' weitere Orientierung/Sidecar-Drehung (die steckt schon im Rezept).</summary>
-        Private Shared Function WriteDevelopedCacheFile(pngStream As MemoryStream, cachePath As String, quality As Integer, isStillWanted As Func(Of Boolean)) As Boolean
+        Private Shared Function WriteDevelopedCacheFile(pngStream As MemoryStream, cachePath As String, quality As Integer, width As Integer, isStillWanted As Func(Of Boolean)) As Boolean
             pngStream.Position = 0
             Using bmp = SKBitmap.Decode(pngStream)
                 If bmp Is Nothing Then Return False
                 If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
-                Return WriteCacheBitmap(bmp, Nothing, cachePath, quality)
+                Return WriteCacheBitmap(bmp, Nothing, cachePath, quality, width)
             End Using
         End Function
 
         ''' <summary>Verkleinert ein schon aufrechtes Bild auf Kachelbreite und legt es als JPEG ab.
         ''' Mit <paramref name="sourceProfile"/> wird die Kachel nach sRGB gewandelt (Nothing: das
         ''' Bild ist schon sRGB, die Wandlung entfaellt).</summary>
-        Private Shared Function WriteCacheBitmap(bmp As SKBitmap, sourceProfile As SKColorSpace, cachePath As String, quality As Integer) As Boolean
-            Dim targetWidth = Math.Min(CacheWidth, bmp.Width)
+        Private Shared Function WriteCacheBitmap(bmp As SKBitmap, sourceProfile As SKColorSpace, cachePath As String, quality As Integer, width As Integer) As Boolean
+            Dim targetWidth = Math.Min(width, bmp.Width)
             Dim scale = targetWidth / CDbl(bmp.Width)
             Dim targetHeight = Math.Max(1, CInt(Math.Round(bmp.Height * scale)))
             Using resized = bmp.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
@@ -361,9 +379,9 @@ Namespace Services
         ''' trotzdem nichts davon gehabt.</summary>
         Private Shared Function BuildCacheFileName(filePath As String, imageHash As String,
                                                    lastWriteTime As DateTime, fileSize As Long,
-                                                   quality As Integer) As String
+                                                   quality As Integer, width As Integer) As String
             Dim lastWriteTicksUtc = lastWriteTime.ToUniversalTime().Ticks
-            Return $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{CacheWidth}" &
+            Return $"{imageHash}_{lastWriteTicksUtc}_{fileSize}_q{quality}_w{width}" &
                    $"{SidecarRotationSuffix(filePath)}{DevelopedThumbnailSuffix(filePath)}" &
                    $"{DemosaicSuffix(filePath)}_v{CacheFormatVersion}.jpg"
         End Function
@@ -410,13 +428,14 @@ Namespace Services
             Dim enabled As Boolean
             Dim quality As Integer
             GetCachedSettings(enabled, quality)
+            Dim width = CurrentCacheWidth()
             If Not enabled Then Return ThumbnailCacheOutcome.Skipped
 
             Dim folderDisplayPath = ResolveCacheDisplayPath(filePath, Nothing, Nothing)
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
-            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality)
+            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -431,7 +450,7 @@ Namespace Services
                 DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
                 cancellationToken.ThrowIfCancellationRequested()
 
-                If DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality)) AndAlso File.Exists(cachePath) Then
+                If DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality, width)) AndAlso File.Exists(cachePath) Then
                     GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
                     Return ThumbnailCacheOutcome.Written
                 End If
@@ -451,12 +470,13 @@ Namespace Services
             Dim enabled As Boolean
             Dim quality As Integer
             GetCachedSettings(enabled, quality)
+            Dim width = CurrentCacheWidth()
             If Not enabled Then Return ""
             Try
                 Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
                 Dim imageHash = HashText(NormalizePath(filePath))
                 Dim cachePath = IO.Path.Combine(GetFolderCachePathById(folderId),
-                                                BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality))
+                                                BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width))
                 Return If(File.Exists(cachePath), cachePath, "")
             Catch
                 Return ""
@@ -479,6 +499,7 @@ Namespace Services
             Dim enabled As Boolean
             Dim quality As Integer
             GetCachedSettings(enabled, quality)
+            Dim width = CurrentCacheWidth()
             If Not enabled Then Return Nothing
 
             cancellationToken.ThrowIfCancellationRequested()
@@ -486,7 +507,7 @@ Namespace Services
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
-            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality)
+            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -526,13 +547,14 @@ Namespace Services
             Dim enabled As Boolean
             Dim quality As Integer
             GetCachedSettings(enabled, quality)
+            Dim width = CurrentCacheWidth()
             If Not enabled Then Return DecodeDirect(filePath, cancellationToken)
 
             Dim folderDisplayPath = ResolveCacheDisplayPath(filePath, cacheScopeId, cacheScopeName)
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
             Dim folderCachePath = GetFolderCachePathById(folderId)
             Dim imageHash = HashText(NormalizePath(filePath))
-            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality)
+            Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
             Try
@@ -542,7 +564,7 @@ Namespace Services
                 DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
                 cancellationToken.ThrowIfCancellationRequested()
 
-                If TryWriteCacheFile(filePath, cachePath, quality, isStillWanted) AndAlso File.Exists(cachePath) Then
+                If TryWriteCacheFile(filePath, cachePath, quality, width, isStillWanted) AndAlso File.Exists(cachePath) Then
                     GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
                     cancellationToken.ThrowIfCancellationRequested()
                     Using stream = File.OpenRead(cachePath)
@@ -697,13 +719,13 @@ Namespace Services
             Return Task.Run(Function() GetFolderCaches())
         End Function
 
-        Private Shared Function TryWriteCacheFile(filePath As String, cachePath As String, quality As Integer, Optional isStillWanted As Func(Of Boolean) = Nothing) As Boolean
+        Private Shared Function TryWriteCacheFile(filePath As String, cachePath As String, quality As Integer, width As Integer, Optional isStillWanted As Func(Of Boolean) = Nothing) As Boolean
             ' Entwickelte RAW-Kachel (nur bei aktiver Option + vorhandener .fpxmp): bereits orientiert und
             ' mit Rezept-Geometrie - deshalb ein eigener Schreibweg OHNE erneute Drehung.
-            Dim developed = TryRenderDevelopedRawSource(filePath)
+            Dim developed = TryRenderDevelopedRawSource(filePath, width)
             If developed IsNot Nothing Then
                 Using developed
-                    Return WriteDevelopedCacheFile(developed, cachePath, quality, isStillWanted)
+                    Return WriteDevelopedCacheFile(developed, cachePath, quality, width, isStillWanted)
                 End Using
             End If
 
@@ -716,14 +738,14 @@ Namespace Services
                     If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
                     Dim turned = ImageOrientationService.ApplyQuarterRotation(foreign, SidecarRotationFor(filePath))
                     Try
-                        Return WriteCacheBitmap(turned, foreign.ColorSpace, cachePath, quality)
+                        Return WriteCacheBitmap(turned, foreign.ColorSpace, cachePath, quality, width)
                     Finally
                         If Not Object.ReferenceEquals(turned, foreign) Then turned.Dispose()
                     End Try
                 End Using
             End If
 
-            Using source = OpenThumbnailSource(filePath)
+            Using source = OpenThumbnailSource(filePath, width)
                 If source Is Nothing Then Return False
 
                 Using codec = SKCodec.Create(source)
@@ -733,7 +755,7 @@ Namespace Services
                     ' dann gilt das des Containers, sonst steht die Kachel quer zum Editor.
                     Dim origin = PreviewOriginFor(filePath, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
 
-                    Using original = DecodeScaledOriented(codec, CacheWidth)
+                    Using original = DecodeScaledOriented(codec, width)
                         If original Is Nothing Then Return False
 
                         ' Billiger Ausstieg VOR dem teuren Resize/Encode - falls das Element
@@ -749,7 +771,7 @@ Namespace Services
                             ' Zieldimensionen aus dem KORRIGIERTEN Bitmap berechnen, nicht aus
                             ' info.Width/Height - sonst bekommt ein gedrehtes Hochkantfoto ein
                             ' falsches (vertauschtes) Seitenverhältnis.
-                            Dim targetWidth = Math.Min(CacheWidth, oriented.Width)
+                            Dim targetWidth = Math.Min(width, oriented.Width)
                             Dim scale = targetWidth / CDbl(oriented.Width)
                             Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
 
@@ -821,17 +843,17 @@ Namespace Services
         ''' als Rueckfall unverzichtbar: ohne installiertes LibRaw ist er der einzige Weg, und bei
         ''' JPEG-XL-/H265-Vorschauen neuerer Kameras liefert LibRaw etwas, das SkiaSharp nicht
         ''' dekodieren kann.</summary>
-        Private Shared Function OpenRawThumbnailSource(filePath As String) As Stream
+        Private Shared Function OpenRawThumbnailSource(filePath As String, width As Integer) As Stream
             ' Stufe 1: LibRaws Thumbnail-API - formatkundig und schnell (bei einer 50-MP-.arw
             ' 2 ms gegen 26 ms des Scanners, der bis zu 16 MB nach JPEG-Signaturen durchsucht).
             Dim viaLibRaw = RawDecodeService.TryExtractThumbnail(filePath)
-            If IsBigEnoughForTile(viaLibRaw) Then Return viaLibRaw
+            If IsBigEnoughForTile(viaLibRaw, width) Then Return viaLibRaw
             viaLibRaw?.Dispose()
 
             ' Stufe 2: eigener Scanner - er nimmt das GROESSTE eingebettete JPEG und ist damit die
             ' Rettung, wenn die Kamera nur ein Mini-Thumbnail als primaere Vorschau fuehrt.
             Dim scanned = RawPreviewService.ExtractPreview(filePath)
-            If IsBigEnoughForTile(scanned) Then Return scanned
+            If IsBigEnoughForTile(scanned, width) Then Return scanned
             scanned?.Dispose()
 
             ' Stufe 3: wirklich entwickeln. Fuer Dateien ohne jede eingebettete Vorschau (Leica
@@ -848,7 +870,7 @@ Namespace Services
 
         ''' <summary>Taugt diese Vorschau fuer eine Kachel, oder muesste sie hochskaliert (und damit
         ''' unscharf) werden? Liest NUR den Kopf ueber SKCodec - kein voller Decode.</summary>
-        Private Shared Function IsBigEnoughForTile(stream As MemoryStream) As Boolean
+        Private Shared Function IsBigEnoughForTile(stream As MemoryStream, width As Integer) As Boolean
             If stream Is Nothing OrElse stream.Length = 0 Then Return False
             Try
                 ' NICHT SKCodec.Create(Stream): der uebernimmt den Strom und schliesst ihn - der
@@ -862,7 +884,7 @@ Namespace Services
                         Dim info = codec.Info
                         ' Kachelbreite mit etwas Toleranz: eine 460-px-Vorschau auf 480 zu strecken
                         ' faellt nicht auf, ein 320-px-Bild schon.
-                        Return Math.Max(info.Width, info.Height) >= CacheWidth * 0.9
+                        Return Math.Max(info.Width, info.Height) >= width * 0.9
                     End Using
                 End Using
             Catch
@@ -882,12 +904,13 @@ Namespace Services
         ''' beliebigen Datei braucht (siehe <see cref="ImageTaggingService"/>). Ein zweiter Auszug
         ''' dieser Fallunterscheidung wuerde von dieser hier abdriften - derselbe Grund, aus dem die
         ''' Endungen in <see cref="MediaFileTypes"/> nur einmal stehen.</summary>
-        Friend Shared Function OpenThumbnailSource(filePath As String) As Stream
+        Friend Shared Function OpenThumbnailSource(filePath As String, Optional width As Integer = 0) As Stream
+            If width <= 0 Then width = CurrentCacheWidth()
             If RawPreviewService.IsSupportedRaw(filePath) Then
-                Return OpenRawThumbnailSource(filePath)
+                Return OpenRawThumbnailSource(filePath, width)
             End If
             If SvgPreviewService.IsSupportedSvg(filePath) Then
-                Return SvgPreviewService.ExtractPreview(filePath, CacheWidth)
+                Return SvgPreviewService.ExtractPreview(filePath, width)
             End If
             If IcoPreviewService.IsSupportedIco(filePath) Then
                 Return IcoPreviewService.ExtractPreview(filePath)
@@ -911,7 +934,7 @@ Namespace Services
                 Return FpxService.ExtractComposite(filePath)
             End If
             If VideoPreviewService.IsSupportedVideo(filePath) Then
-                Return VideoPreviewService.ExtractPreview(filePath, CacheWidth)
+                Return VideoPreviewService.ExtractPreview(filePath, width)
             End If
 
             Return File.OpenRead(filePath)
@@ -1063,11 +1086,12 @@ Namespace Services
         End Function
 
         Private Shared Function DecodeDirect(filePath As String, cancellationToken As CancellationToken) As Bitmap
+            Dim width = CurrentCacheWidth()
             Try
                 cancellationToken.ThrowIfCancellationRequested()
                 If RawPreviewService.IsSupportedRaw(filePath) Then
                     ' Entwickelte RAW-Vorschau (bereits orientiert + Rezept-Geometrie) hat Vorrang.
-                    Dim developed = TryRenderDevelopedRawSource(filePath)
+                    Dim developed = TryRenderDevelopedRawSource(filePath, width)
                     If developed IsNot Nothing Then
                         Using developed
                             cancellationToken.ThrowIfCancellationRequested()
@@ -1075,14 +1099,14 @@ Namespace Services
                             Return New Bitmap(developed)
                         End Using
                     End If
-                    Using preview = OpenRawThumbnailSource(filePath)
+                    Using preview = OpenRawThumbnailSource(filePath, width)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth, SidecarRotationFor(filePath), rawContainerPath:=filePath)
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, width, SidecarRotationFor(filePath), rawContainerPath:=filePath)
                     End Using
                 ElseIf SvgPreviewService.IsSupportedSvg(filePath) Then
-                    Using preview = SvgPreviewService.ExtractPreview(filePath, CacheWidth)
+                    Using preview = SvgPreviewService.ExtractPreview(filePath, width)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
+                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, width)
                     End Using
                 ElseIf ForeignImageDecoder.CanDecode(filePath) Then
                     ' ICO, PSD, TIFF, HEIF und JPEG XL: der Leser dreht selbst (Orientierungs-Tag,
@@ -1090,22 +1114,22 @@ Namespace Services
                     ' die allein PSD kennt. Das Bitmap direkt, ohne PNG dazwischen.
                     Using decoded = ForeignImageDecoder.TryDecode(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If decoded IsNot Nothing Then Return ResizeDecodedForTile(decoded, CacheWidth, SidecarRotationFor(filePath))
+                        If decoded IsNot Nothing Then Return ResizeDecodedForTile(decoded, width, SidecarRotationFor(filePath))
                     End Using
                 ElseIf FpxService.IsFpx(filePath) Then
                     Using preview = FpxService.ExtractComposite(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, CacheWidth)
+                        If preview IsNot Nothing Then Return DecodeCorrectedAndResize(preview, width)
                     End Using
                 ElseIf VideoPreviewService.IsSupportedVideo(filePath) Then
-                    Using preview = VideoPreviewService.ExtractPreview(filePath, CacheWidth)
+                    Using preview = VideoPreviewService.ExtractPreview(filePath, width)
                         cancellationToken.ThrowIfCancellationRequested()
-                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, CacheWidth)
+                        If preview IsNot Nothing Then Return Bitmap.DecodeToWidth(preview, width)
                     End Using
                 Else
                     Using stream = File.OpenRead(filePath)
                         cancellationToken.ThrowIfCancellationRequested()
-                        Return DecodeCorrectedAndResize(stream, CacheWidth)
+                        Return DecodeCorrectedAndResize(stream, width)
                     End Using
                 End If
             Catch ex As OperationCanceledException

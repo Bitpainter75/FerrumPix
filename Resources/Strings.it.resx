@@ -10469,4 +10469,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>La destinazione si trova nell'origine. Nell'origine non viene modificato nulla, scegli un'altra destinazione.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Miniature ad alta risoluzione</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Salva le miniature larghe il doppio, così anche i riquadri più grandi restano nitidi. Richiede più spazio sul dispositivo e più memoria. Le miniature più piccole vengono ricreate quando vengono visualizzate.</value>
+  </data>
 </root>

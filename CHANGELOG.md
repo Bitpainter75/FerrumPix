@@ -1,3 +1,16 @@
+## Unreleased
+
+### Changes
+
+- **Import from phones and cameras:** phones and cameras connected over USB now show up as
+  sources in the import, each storage of a phone on its own. On KDE they are read through KDE's
+  own device service, elsewhere through the desktop's device mounts. Every picture is still
+  checked after copying.
+
+- **Sharper thumbnails:** a new setting, "High resolution thumbnails", stores thumbnails twice as
+  wide, so the largest gallery tiles no longer look soft. It needs more disk space and memory;
+  switching it off again replaces them with the smaller ones.
+
 ## 0.9.73
 
 ### Changes

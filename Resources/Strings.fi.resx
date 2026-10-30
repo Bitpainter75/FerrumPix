@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Kohde on lähteen sisällä. Lähteeseen ei tehdä muutoksia, valitse toinen kohde.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Esikatselukuvat korkealla tarkkuudella</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Tallentaa esikatselukuvat kaksi kertaa leveämpinä, jotta suurimmatkin ruudut pysyvät terävinä. Vaatii enemmän tilaa laitteella ja enemmän muistia. Pienemmät esikatselukuvat luodaan uudelleen, kun niitä katsotaan.</value>
+  </data>
 </root>

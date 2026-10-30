@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Miejsce docelowe leży w źródle. Źródło nie jest zmieniane, wybierz inne miejsce docelowe.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Miniatury w wysokiej rozdzielczości</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Zapisuje miniatury dwa razy szersze, aby nawet największe kafelki pozostały ostre. Wymaga więcej miejsca na urządzeniu i więcej pamięci. Mniejsze miniatury są tworzone ponownie podczas wyświetlania.</value>
+  </data>
 </root>

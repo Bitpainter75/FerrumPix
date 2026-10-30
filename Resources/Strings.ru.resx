@@ -10509,4 +10509,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>Место назначения находится внутри источника. Источник не изменяется, выберите другое место назначения.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>Миниатюры в высоком разрешении</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Сохраняет миниатюры вдвое шире, чтобы даже самые крупные плитки оставались чёткими. Требует больше места на устройстве и больше памяти. Миниатюры меньшего размера создаются заново при просмотре.</value>
+  </data>
 </root>

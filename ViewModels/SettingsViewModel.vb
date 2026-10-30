@@ -27,6 +27,7 @@ Namespace ViewModels
         Private _accentColor As String = "#F08A1A"
         Private _accentStrength As Integer = 100
         Private _thumbnailQuality As Integer = 82
+        Private _thumbnailHighResolution As Boolean = False
         Private _thumbnailMemoryCacheCapacity As Integer = 1000
         Private _jpgSaveQuality As Integer = 90
         Private _preserveMetadataOnSave As Boolean = True
@@ -212,6 +213,7 @@ Namespace ViewModels
         Private _savedDefaultSaveFormat As String = "JPG"
         Private _savedEditorSaveAsNamePattern As String = "{name}_fx"
         Private _savedThumbnailQuality As Integer = 82
+        Private _savedThumbnailHighResolution As Boolean = False
         Private _savedThumbnailMemoryCacheCapacity As Integer = 1000
         Private _savedJpgSaveQuality As Integer = 90
         Private _savedPreserveMetadataOnSave As Boolean = True
@@ -594,6 +596,20 @@ Namespace ViewModels
                 If _thumbnailQuality = value Then Return
                 Me.RaiseAndSetIfChanged(_thumbnailQuality, value)
                 SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Vorschaubilder doppelt so breit zwischenspeichern (Standard AUS).</summary>
+        Public Property ThumbnailHighResolution As Boolean
+            Get
+                Return _thumbnailHighResolution
+            End Get
+            Set(value As Boolean)
+                If _thumbnailHighResolution = value Then Return
+                Me.RaiseAndSetIfChanged(_thumbnailHighResolution, value)
+                SavePerformanceSettings()
+                ThumbnailCacheService.InvalidateSettingsCache()
+                ImageItem.ReloadAllResidentThumbnails()
             End Set
         End Property
 
@@ -4533,6 +4549,7 @@ Namespace ViewModels
             _macRenderingMode = AppSettingsService.NormalizeMacRenderingMode(_appSettings.MacRenderingMode)
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
+            _thumbnailHighResolution = _appSettings.ThumbnailHighResolution
             _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
             ImageItem.MaxResidentThumbnails = _thumbnailMemoryCacheCapacity
             _jpgSaveQuality = _appSettings.JpgSaveQuality
@@ -4938,6 +4955,7 @@ Namespace ViewModels
             _savedDefaultSaveFormat = _defaultSaveFormat
             _savedEditorSaveAsNamePattern = _editorSaveAsNamePattern
             _savedThumbnailQuality = _thumbnailQuality
+            _savedThumbnailHighResolution = _thumbnailHighResolution
             _savedThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
             _savedJpgSaveQuality = _jpgSaveQuality
             _savedPreserveMetadataOnSave = _preserveMetadataOnSave
@@ -5122,6 +5140,7 @@ Namespace ViewModels
             DefaultSaveFormat = _savedDefaultSaveFormat
             EditorSaveAsNamePattern = _savedEditorSaveAsNamePattern
             ThumbnailQuality = _savedThumbnailQuality
+            ThumbnailHighResolution = _savedThumbnailHighResolution
             ThumbnailMemoryCacheCapacity = _savedThumbnailMemoryCacheCapacity
             JpgSaveQuality = _savedJpgSaveQuality
             PreserveMetadataOnSave = _savedPreserveMetadataOnSave
@@ -5287,6 +5306,7 @@ Namespace ViewModels
             ViewerRawFullResolution = False
             ThumbnailCacheEnabled = True
             ThumbnailQuality = 82
+            ThumbnailHighResolution = New AppSettings().ThumbnailHighResolution
             ' NICHT die Zahl hier pflegen: der Werkswert steht in AppSettings, und eine zweite
             ' Fassung an dieser Stelle lief prompt auseinander - "Standard wiederherstellen" setzte
             ' weiter 250, obwohl der Werkswert längst 500 ist.
@@ -5691,6 +5711,7 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s)
                                           s.ThumbnailCacheEnabled = _thumbnailCacheEnabled
                                           s.ThumbnailQuality = _thumbnailQuality
+                                          s.ThumbnailHighResolution = _thumbnailHighResolution
                                           s.GalleryThumbnailMemoryCacheCapacity = _thumbnailMemoryCacheCapacity
                                           s.JpgSaveQuality = _jpgSaveQuality
                                           s.PreserveMetadataOnSave = _preserveMetadataOnSave

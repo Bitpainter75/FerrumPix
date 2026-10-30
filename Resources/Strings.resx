@@ -10488,4 +10488,10 @@
   <data name="Das_Ziel_liegt_in_der_Quelle_Auf_der_Quelle_wird_bb2f6bcb" xml:space="preserve">
     <value>The destination is inside the source. Nothing on the source is changed, please choose another destination.</value>
   </data>
+  <data name="Vorschaubilder_in_hoher_Aufl_sung_1ef98f1e" xml:space="preserve">
+    <value>High resolution thumbnails</value>
+  </data>
+  <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
+    <value>Stores thumbnails twice as wide, so even the largest tiles stay sharp. Needs more space on the device and more memory. Smaller thumbnails are created again when they are viewed.</value>
+  </data>
 </root>

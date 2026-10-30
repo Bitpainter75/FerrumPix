@@ -35,6 +35,7 @@ Namespace ViewModels
         Private _dialogImportScanning As Boolean
         Private _dialogImportSourceFolder As String = ""
         Private _dialogImportSelectedSource As ImportSource
+        Private _dialogImportSourcesGeneration As Integer
         Private _dialogImportTargetFolder As String = ""
         Private _dialogImportIncludeRawPartners As Boolean = True
         Private _dialogImportIncludeSubfolders As Boolean = True
@@ -292,16 +293,40 @@ Namespace ViewModels
             RaiseDialogImportSummary()
         End Sub
 
+        ''' <summary>Sucht die Quellen im Hintergrund, denn ein traeges Geraet ueber MTP antwortet erst
+        ''' nach Sekunden. Kommt waehrenddessen ein neuer Aufruf, gilt nur dessen Ergebnis. Hat der
+        ''' Benutzer inzwischen selbst einen Ordner gewaehlt, bleibt der stehen.</summary>
         Public Sub RefreshDialogImportSources()
+            _dialogImportSourcesGeneration += 1
+            Dim generation = _dialogImportSourcesGeneration
             Dim selectedPath = _dialogImportSelectedSource?.Path
-            DialogImportSources.Clear()
-            For Each source In CardImportService.DetectSources()
-                DialogImportSources.Add(source)
-            Next
-            Me.RaisePropertyChanged(NameOf(HasDialogImportSources))
-            Dim again = DialogImportSources.FirstOrDefault(Function(s) s.Path = selectedPath)
-            _dialogImportSelectedSource = Nothing
-            DialogImportSelectedSource = If(again, DialogImportSources.FirstOrDefault())
+            Dim folderAtStart = _dialogImportSourceFolder
+            Dim ignored = Task.Run(
+                Sub()
+                    Dim found As List(Of ImportSource)
+                    Try
+                        found = CardImportService.DetectSources()
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Import.RefreshSources", ex)
+                        found = New List(Of ImportSource)()
+                    End Try
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            If generation <> _dialogImportSourcesGeneration Then Return
+                            DialogImportSources.Clear()
+                            For Each source In found
+                                DialogImportSources.Add(source)
+                            Next
+                            Me.RaisePropertyChanged(NameOf(HasDialogImportSources))
+                            Dim again = DialogImportSources.FirstOrDefault(Function(s) s.Path = selectedPath)
+                            _dialogImportSelectedSource = Nothing
+                            If _dialogImportSourceFolder <> folderAtStart Then
+                                Me.RaisePropertyChanged(NameOf(DialogImportSelectedSource))
+                                Return
+                            End If
+                            DialogImportSelectedSource = If(again, DialogImportSources.FirstOrDefault())
+                        End Sub)
+                End Sub)
         End Sub
 
         ''' <summary>Oeffnet den Dialog. Als Ziel steht zuerst <paramref name="suggestedTarget"/>, der
