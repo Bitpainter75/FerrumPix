@@ -10345,4 +10345,10 @@
   <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
     <value>Nem tudo foi importado</value>
   </data>
+  <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
+    <value>Destino não permitido</value>
+  </data>
+  <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
+    <value>{0} está fora das pastas onde o FerrumPix pode escrever. Nada foi copiado.</value>
+  </data>
 </root>

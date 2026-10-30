@@ -10390,4 +10390,10 @@
   <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
     <value>सब कुछ इंपोर्ट नहीं हुआ</value>
   </data>
+  <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
+    <value>गंतव्य की अनुमति नहीं है</value>
+  </data>
+  <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
+    <value>{0} उन फ़ोल्डरों के बाहर है जिनमें FerrumPix लिख सकता है। कुछ भी कॉपी नहीं हुआ।</value>
+  </data>
 </root>

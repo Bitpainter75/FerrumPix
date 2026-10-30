@@ -181,6 +181,8 @@ Namespace ViewModels
             If _dialogImportScanning OrElse String.IsNullOrWhiteSpace(_dialogImportTargetFolder) Then Return False
             If _dialogImportUseBackup AndAlso String.IsNullOrWhiteSpace(_dialogImportBackupFolder) Then Return False
             If Not FileOperationPolicy.IsInAllowedArea(_dialogImportTargetFolder) Then Return False
+            ' Die Sicherung ist ein Ziel wie das erste und unterliegt derselben Regel.
+            If _dialogImportUseBackup AndAlso Not FileOperationPolicy.IsInAllowedArea(_dialogImportBackupFolder) Then Return False
             Return DialogImportChosen().Count > 0
         End Function
 
@@ -306,6 +308,13 @@ Namespace ViewModels
         Public Async Function RunImportAsync(request As ImportDialogResult) As Task(Of ImportResult)
             If request Is Nothing Then Return Nothing
             For Each root In {request.TargetFolder, request.BackupFolder}.Where(Function(r) Not String.IsNullOrWhiteSpace(r))
+                ' Noch einmal hier und nicht nur am Knopf des Dialogs: der Lauf ist der Ort, an dem
+                ' geschrieben wird, und jedes Ziel, auch die Sicherung, unterliegt der Dateiregel.
+                If Not FileOperationPolicy.IsInAllowedArea(root) Then
+                    Await ShowMessageAsync(LocalizationService.T("Ziel nicht erlaubt"),
+                                           String.Format(LocalizationService.T("{0} liegt außerhalb der Ordner, in die FerrumPix schreiben darf. Es wurde nichts kopiert."), root))
+                    Return Nothing
+                End If
                 Dim free = CardImportService.FreeSpace(root)
                 If free >= 0 AndAlso free < request.TotalBytes Then
                     Await ShowMessageAsync(LocalizationService.T("Nicht genug Platz"),

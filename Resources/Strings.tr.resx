@@ -10390,4 +10390,10 @@
   <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
     <value>Her şey içe aktarılamadı</value>
   </data>
+  <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
+    <value>Hedefe izin verilmiyor</value>
+  </data>
+  <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
+    <value>{0}, FerrumPix'in yazabildiği klasörlerin dışında. Hiçbir şey kopyalanmadı.</value>
+  </data>
 </root>

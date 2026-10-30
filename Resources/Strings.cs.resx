@@ -10386,4 +10386,10 @@
   <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
     <value>Nebylo importováno vše</value>
   </data>
+  <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
+    <value>Cíl není povolen</value>
+  </data>
+  <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
+    <value>{0} leží mimo složky, do kterých smí FerrumPix zapisovat. Nic nebylo zkopírováno.</value>
+  </data>
 </root>

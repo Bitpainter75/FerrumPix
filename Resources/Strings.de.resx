@@ -10364,4 +10364,10 @@
   <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
     <value>Nicht alles eingelesen</value>
   </data>
+  <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
+    <value>Ziel nicht erlaubt</value>
+  </data>
+  <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
+    <value>{0} liegt außerhalb der Ordner, in die FerrumPix schreiben darf. Es wurde nichts kopiert.</value>
+  </data>
 </root>

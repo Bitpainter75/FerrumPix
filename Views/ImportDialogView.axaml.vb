@@ -25,28 +25,42 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ' Async Sub: eine Ausnahme dahinter faenge niemand, sie beendete die Anwendung. Deshalb hat
+        ' jeder der drei Wege sein eigenes Try, auch wenn PickFolderAsync selbst schon faengt.
         Private Async Sub OnBrowseSourceClick(sender As Object, e As RoutedEventArgs)
             e.Handled = True
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
-            If vm Is Nothing Then Return
-            Dim path = Await PickFolderAsync(LocalizationService.T("Quelle wählen"), vm.DialogImportSourceFolder)
-            If path IsNot Nothing Then vm.DialogImportSourceFolder = path
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+                If vm Is Nothing Then Return
+                Dim path = Await PickFolderAsync(LocalizationService.T("Quelle wählen"), vm.DialogImportSourceFolder)
+                If path IsNot Nothing Then vm.DialogImportSourceFolder = path
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Import.BrowseSource", ex)
+            End Try
         End Sub
 
         Private Async Sub OnBrowseTargetClick(sender As Object, e As RoutedEventArgs)
             e.Handled = True
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
-            If vm Is Nothing Then Return
-            Dim path = Await PickFolderAsync(LocalizationService.T("Zielordner wählen"), vm.DialogImportTargetFolder)
-            If path IsNot Nothing Then vm.DialogImportTargetFolder = path
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+                If vm Is Nothing Then Return
+                Dim path = Await PickFolderAsync(LocalizationService.T("Zielordner wählen"), vm.DialogImportTargetFolder)
+                If path IsNot Nothing Then vm.DialogImportTargetFolder = path
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Import.BrowseTarget", ex)
+            End Try
         End Sub
 
         Private Async Sub OnBrowseBackupClick(sender As Object, e As RoutedEventArgs)
             e.Handled = True
-            Dim vm = TryCast(DataContext, MainWindowViewModel)
-            If vm Is Nothing Then Return
-            Dim path = Await PickFolderAsync(LocalizationService.T("Zielordner wählen"), vm.DialogImportBackupFolder)
-            If path IsNot Nothing Then vm.DialogImportBackupFolder = path
+            Try
+                Dim vm = TryCast(DataContext, MainWindowViewModel)
+                If vm Is Nothing Then Return
+                Dim path = Await PickFolderAsync(LocalizationService.T("Zielordner wählen"), vm.DialogImportBackupFolder)
+                If path IsNot Nothing Then vm.DialogImportBackupFolder = path
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Import.BrowseBackup", ex)
+            End Try
         End Sub
 
         ''' <summary>Der Ordnerdialog des Systems; Nothing, wenn nichts gewaehlt wurde.</summary>

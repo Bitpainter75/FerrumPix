@@ -10390,4 +10390,10 @@
   <data name="Nicht_alles_eingelesen_3671b5f8" xml:space="preserve">
     <value>일부를 가져오지 못했습니다</value>
   </data>
+  <data name="Ziel_nicht_erlaubt_1c128bb7" xml:space="preserve">
+    <value>허용되지 않은 대상</value>
+  </data>
+  <data name="0_liegt_au_erhalb_der_Ordner_in_die_FerrumPix_sc_116cde08" xml:space="preserve">
+    <value>{0}은(는) FerrumPix가 쓸 수 있는 폴더 밖에 있습니다. 아무것도 복사하지 않았습니다.</value>
+  </data>
 </root>

@@ -252,7 +252,14 @@ Namespace ViewModels
 
         ''' <summary>In FilterAndSort: schraenkt auf die Bilder der Gruppen ein. Steht keine Gruppe mehr
         ''' im Bestand (Ordnerwechsel, alles geloescht), endet die Ansicht von selbst; die vorige
-        ''' Ansicht kommt nach dem Neuaufbau zurueck, nicht mittendrin.</summary>
+        ''' Ansicht kommt nach dem Neuaufbau zurueck, nicht mittendrin.
+        '''
+        ''' Gezeigt wird eine Gruppe nur, wenn nach den uebrigen Filtern noch ZWEI ihrer Bilder
+        ''' dastehen. Eine Gruppe aus einem einzigen Bild ist keine; ohne diese Regel liess ein
+        ''' Sternfilter, der den Partner ausblendet, Einzelbilder unter "Gruppe 3" stehen. Beendet
+        ''' wird die Ansicht dadurch nicht: der Filter laesst sich zuruecknehmen, und die Gruppen
+        ''' kommen wieder (dieselbe Regel wie in der Serienansicht). Die Zahl in der Leiste zaehlt die
+        ''' gezeigten Gruppen.</summary>
         Private Function ApplySimilarView(filtered As List(Of ImageItem)) As List(Of ImageItem)
             If _similarGroups Is Nothing Then Return filtered
             Dim remaining = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
@@ -266,11 +273,20 @@ Namespace ViewModels
                                          End Sub)
                 Return filtered
             End If
-            Dim result = filtered.Where(Function(i) i.IsImage AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
-                                                    _similarGroups.ContainsKey(i.FilePath)).ToList()
-            For Each item In result
-                item.IsInSimilarView = True
+            Dim inGroups = filtered.Where(Function(i) i.IsImage AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
+                                                      _similarGroups.ContainsKey(i.FilePath)).ToList()
+            Dim shownGroups = New HashSet(Of Integer)(inGroups.GroupBy(Function(i) _similarGroups(i.FilePath)).
+                                                      Where(Function(g) g.Count() >= 2).Select(Function(g) g.Key))
+            Dim result As New List(Of ImageItem)(inGroups.Count)
+            For Each item In inGroups
+                Dim shown = shownGroups.Contains(_similarGroups(item.FilePath))
+                item.IsInSimilarView = shown
+                If shown Then result.Add(item)
             Next
+            If _similarGroupCount <> shownGroups.Count Then
+                _similarGroupCount = shownGroups.Count
+                Me.RaisePropertyChanged(NameOf(SimilarViewText))
+            End If
             Return result
         End Function
 
