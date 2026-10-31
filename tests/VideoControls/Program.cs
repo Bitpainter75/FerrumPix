@@ -50,6 +50,8 @@ vm.VideoPositionSeconds = 0;
 vm.EndVideoScrub(55);
 Check(vm.VideoPositionSeconds == 0, "release cannot seek a different file");
 vm.VideoPositionSeconds = 60;
+Set(vm, "_isVideoEnded", true);
+Check(vm.ShowVideoSurface, "EOF keeps native video host visible for capture and seeking");
 Call(vm, "OnVideoEndReached", 0, 0);
 Call(vm, "OnVideoShortcutRequested", player, "other.mp4", "LEFT");
 Dispatcher.UIThread.RunJobs();
@@ -98,8 +100,23 @@ if (args.Length > 0)
     native.PauseChanged += value => Volatile.Write(ref paused, value);
     nativeVm.TryHandleVideoKey(Key.Space, KeyModifiers.None);
     WaitFor(() => Volatile.Read(ref paused), "Space pauses actual libmpv playback");
+    var framePath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(args[0]))!, "capture-test.png");
+    var capture = native.CaptureFrameAsync(framePath, Path.GetFullPath(args[0]));
+    WaitFor(() => capture.IsCompleted, "paused frame capture completes");
+    capture.GetAwaiter().GetResult();
+    using (var frame = SkiaSharp.SKBitmap.Decode(framePath))
+        Check(frame != null && frame.Width == 320 && frame.Height == 180, "capture is a decodable source-resolution PNG");
+    Check(Volatile.Read(ref paused), "capture preserves paused state");
+    var wrongPath = framePath + ".unexpected.png";
+    var mismatch = native.CaptureFrameAsync(wrongPath, "different-video.mp4");
+    WaitFor(() => mismatch.IsCompleted, "stale-file capture completes");
+    Check(mismatch.IsFaulted && !File.Exists(wrongPath), "stale-file capture fails without writing another video");
     nativeVm.TryHandleVideoKey(Key.Space, KeyModifiers.None);
     WaitFor(() => !Volatile.Read(ref paused), "Space resumes actual libmpv playback");
+    var playingCapture = native.CaptureFrameAsync(framePath, Path.GetFullPath(args[0]));
+    WaitFor(() => playingCapture.IsCompleted, "playing frame capture completes");
+    playingCapture.GetAwaiter().GetResult();
+    Check(!Volatile.Read(ref paused), "capture preserves playing state");
     string requestedKey = null;
     native.ShortcutRequested += (source, path, key) => { if (ReferenceEquals(source, native) && path == Path.GetFullPath(args[0])) requestedKey = key; };
     var handle = (IntPtr)typeof(MpvPlayer).GetField("_handle", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(native)!;
@@ -114,10 +131,17 @@ if (args.Length > 0)
     native.EndReached += (reason, error) => { if (reason == 0) Volatile.Write(ref ended, true); };
     native.Seek(30, true);
     WaitFor(() => Volatile.Read(ref ended), "end of video reported");
+    var eofCapture = native.CaptureFrameAsync(framePath, Path.GetFullPath(args[0]));
+    WaitFor(() => eofCapture.IsCompleted, "end-of-video frame capture completes");
+    eofCapture.GetAwaiter().GetResult();
+    using (var frame = SkiaSharp.SKBitmap.Decode(framePath))
+        Check(frame != null && frame.Width == 320 && frame.Height == 180, "end-of-video frame remains capturable");
     Volatile.Write(ref time, -1);
     native.Seek(10, true);
     WaitFor(() => Volatile.Read(ref time) >= 9.8 && Volatile.Read(ref time) < 12, "rewind remains possible after reaching end");
     native.Stop();
+    native.Dispose();
+    Check(native.CaptureFrameAsync(framePath, Path.GetFullPath(args[0])).IsFaulted, "disposed-player capture fails immediately");
 }
 Console.WriteLine($"{passed} checks passed.");
 

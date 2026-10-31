@@ -638,7 +638,9 @@ Namespace ViewModels
         ''' VideoOverlay-Grids bleibt in der richtigen Größe zurück.
         Public ReadOnly Property ShowVideoSurface As Boolean
             Get
-                Return IsVideoPlaybackAvailable AndAlso Not _isVideoEnded
+                ' keep-open retains the last frame. Hiding the native host at EOF destroys
+                ' its window and makes screenshots (and subsequent seeks) unavailable.
+                Return IsVideoPlaybackAvailable
             End Get
         End Property
 
@@ -940,8 +942,6 @@ Namespace ViewModels
         Public ReadOnly Property SlowerSlideshowCommand As ICommand
         Public ReadOnly Property PlayPauseVideoCommand As ICommand
         Public ReadOnly Property SeekVideoCommand As ICommand
-        Public ReadOnly Property SkipVideoBackCommand As ICommand
-        Public ReadOnly Property SkipVideoForwardCommand As ICommand
         Public ReadOnly Property ToggleVideoMuteCommand As ICommand
 
         Public Sub New(mainVm As IViewerHost)
@@ -1051,8 +1051,6 @@ Namespace ViewModels
             FasterSlideshowCommand = ReactiveCommand.Create(Sub() StepSlideshowInterval(longer:=False))
             SlowerSlideshowCommand = ReactiveCommand.Create(Sub() StepSlideshowInterval(longer:=True))
             PlayPauseVideoCommand = ReactiveCommand.Create(Sub() ToggleVideoPlayPause())
-            SkipVideoBackCommand = ReactiveCommand.Create(Sub() SkipVideo(-10))
-            SkipVideoForwardCommand = ReactiveCommand.Create(Sub() SkipVideo(10))
             SeekVideoCommand = ReactiveCommand.Create(Of Double)(Sub(seconds) SeekVideo(seconds))
             ToggleVideoMuteCommand = ReactiveCommand.Create(Sub() IsVideoMuted = Not IsVideoMuted)
         End Sub

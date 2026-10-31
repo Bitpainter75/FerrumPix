@@ -3,6 +3,7 @@ Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
 Imports Avalonia.Input.Platform
+Imports Avalonia.Platform.Storage
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Media.Imaging
@@ -22,6 +23,7 @@ Namespace Views
 
         Private _subscribedVm As ViewerViewModel
         Private _isAttached As Boolean = False
+        Private _isCapturingVideo As Boolean
         Private _isPanningImage As Boolean
         Private _panStartPoint As Point
         Private _panStartOffset As Vector
@@ -1312,8 +1314,7 @@ Namespace Views
                 UpdateFullscreenImageBar()
             End If
 
-            ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
-            ' (Fläche kommt zurück) - im zweiten Fall muss der Player an das neu erzeugte native Fenster.
+            ' Keep the host attached at EOF so the retained last frame remains capturable.
             If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
@@ -1578,6 +1579,56 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.PlayPauseVideoCommand Is Nothing Then Return
             If vm.PlayPauseVideoCommand.CanExecute(Nothing) Then vm.PlayPauseVideoCommand.Execute(Nothing)
+        End Sub
+
+        Private Async Sub OnCaptureVideoClick(sender As Object, e As RoutedEventArgs)
+            If _isCapturingVideo Then Return
+            Dim vm = GetVm()
+            Dim owner = TopLevel.GetTopLevel(Me)
+            Dim player = vm?.VideoMediaPlayer
+            If vm Is Nothing OrElse Not vm.IsVideoFile OrElse player Is Nothing OrElse owner Is Nothing Then Return
+            _isCapturingVideo = True
+            Dim button = TryCast(sender, Button)
+            If button IsNot Nothing Then button.IsEnabled = False
+            Dim temporaryPath = IO.Path.Combine(IO.Path.GetTempPath(), $"FerrumPix-frame-{Guid.NewGuid():N}.png")
+            Dim videoPath = vm.CurrentImagePath
+            Dim position = TimeSpan.FromSeconds(Math.Max(0, vm.VideoPositionSeconds))
+            Dim errorMessage As String = Nothing
+            Try
+                ' Capture before opening the picker, so playback during the dialog cannot change the image.
+                Await player.CaptureFrameAsync(temporaryPath, videoPath)
+                Dim destination = Await owner.StorageProvider.SaveFilePickerAsync(New FilePickerSaveOptions With {
+                    .Title = "動画フレームを保存",
+                    .SuggestedFileName = $"{IO.Path.GetFileNameWithoutExtension(videoPath)}_{CInt(Math.Floor(position.TotalHours)):00}-{position.Minutes:00}-{position.Seconds:00}-{position.Milliseconds:000}.png",
+                    .DefaultExtension = "png",
+                    .FileTypeChoices = {New FilePickerFileType("PNG画像") With {.Patterns = {"*.png"}}},
+                    .ShowOverwritePrompt = True
+                })
+                If destination Is Nothing Then Return
+                Using source = IO.File.OpenRead(temporaryPath), output = Await destination.OpenWriteAsync()
+                    output.SetLength(0)
+                    Await source.CopyToAsync(output)
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.CaptureFrame", ex)
+                errorMessage = ex.Message
+            Finally
+                Try
+                    IO.File.Delete(temporaryPath)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.CaptureCleanup", ex)
+                End Try
+                _isCapturingVideo = False
+                If button IsNot Nothing Then button.IsEnabled = True
+            End Try
+            If errorMessage IsNot Nothing Then
+                Try
+                    Dim mainVm = TryCast(owner.DataContext, MainWindowViewModel)
+                    If mainVm IsNot Nothing Then Await mainVm.ShowMessageAsync("スクリーンキャプチャ", errorMessage)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.CaptureErrorDialog", ex)
+                End Try
+            End If
         End Sub
 
         Private Sub UpdateInfoSidebarLayoutState()

@@ -3,6 +3,7 @@ Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Runtime.InteropServices
 Imports System.Threading
+Imports System.Threading.Tasks
 
 Namespace Services
 
@@ -283,6 +284,28 @@ Namespace Services
                         SetPropertyStringRaw("mute", If(value, "yes", "no"))
                     End Sub)
         End Sub
+
+        Public Function CaptureFrameAsync(path As String, expectedVideoPath As String) As Task
+            Dim completion As New TaskCompletionSource(Of Boolean)(TaskCreationOptions.RunContinuationsAsynchronously)
+            SyncLock _queue
+                If _queueClosed Then Return Task.FromException(New ObjectDisposedException(NameOf(MpvPlayer)))
+                _queue.Enqueue(Sub()
+                                   Try
+                                       If Not ReadyForPlayback() OrElse
+                                          Not String.Equals(LoadedPath, expectedVideoPath, StringComparison.Ordinal) Then
+                                           Throw New InvalidOperationException("動画が切り替わったか、まだ再生できません。")
+                                       End If
+                                       Dim result = CommandRaw(_handle, "screenshot-to-file", path, "video")
+                                       If result < 0 Then Throw New InvalidOperationException($"フレームをキャプチャできませんでした ({result})。")
+                                       completion.TrySetResult(True)
+                                   Catch ex As Exception
+                                       completion.TrySetException(ex)
+                                   End Try
+                               End Sub)
+                Monitor.Pulse(_queue)
+            End SyncLock
+            Return completion.Task
+        End Function
 
         Public Sub Dispose() Implements IDisposable.Dispose
             SyncLock _syncRoot

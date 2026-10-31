@@ -40,7 +40,7 @@ Namespace Controls
         End Function
 
         ''' <summary>Avalonia raeumt das native Fenster ab, sobald die Flaeche unsichtbar wird -
-        ''' beim Videoende und beim Verlassen des Betrachters. Der Spieler muss das erfahren:
+        ''' beim Verlassen des Betrachters. Der Spieler muss das erfahren:
         ''' sonst haelt er den Zeiger auf ein Fenster, das es nicht mehr gibt, laedt den naechsten
         ''' Film dorthin und zeigt nichts. Gemeldet wird nur, DASS es weg ist; mpv umzustellen
         ''' hiesse, es macht sein eigenes Fenster auf (siehe MpvPlayer.ForgetWindow).
