@@ -15,6 +15,19 @@ void Check(bool condition, string name) { if (!condition) throw new Exception(na
 void Set(object target, string name, object value) => target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(target, value);
 void Call(object target, string name, params object[] args) => target.GetType().GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(target, args);
 
+var testProfile = Environment.GetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT");
+var profileConfig = Path.Combine(AppContext.BaseDirectory, "profile-root.txt");
+var oldConfig = File.Exists(profileConfig) ? File.ReadAllBytes(profileConfig) : null;
+try {
+    File.WriteAllText(profileConfig, "%LOCALAPPDATA%\\FerrumPixDev\\Profile");
+    Check(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData) == Path.Combine(testProfile!, "Roaming"), "environment profile overrides installed profile");
+    Environment.SetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT", null);
+    Check(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) == Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPixDev", "Profile", "Local"), "direct executable uses installed isolated profile");
+} finally {
+    Environment.SetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT", testProfile);
+    if (oldConfig is null) File.Delete(profileConfig); else File.WriteAllBytes(profileConfig, oldConfig);
+}
+
 var captureRoot = Path.Combine(Environment.GetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT")!, "capture-output");
 Directory.CreateDirectory(captureRoot);
 var captureTemp = Path.Combine(captureRoot, "source.tmp");

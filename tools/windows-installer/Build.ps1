@@ -12,6 +12,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Application publish failed.' }
 dotnet publish (Join-Path $PSScriptRoot 'Launcher\Open.csproj') -c Release -r win-x64 -o $launcher
 if ($LASTEXITCODE -ne 0) { throw 'Launcher publish failed.' }
 Copy-Item -LiteralPath (Join-Path $launcher 'FerrumPix.Open.exe') -Destination $payload
+'%LOCALAPPDATA%\FerrumPixDev\Profile' | Set-Content (Join-Path $payload 'profile-root.txt') -Encoding utf8
 Copy-Item -LiteralPath (Join-Path $repo 'FerrumPix_Icon.ico') -Destination $payload
 foreach ($name in @('libmpv-2.dll','libraw.dll','libheif.dll','jxl.dll','THIRD-PARTY-NOTICES.txt','LICENSE')) {
     Copy-Item -LiteralPath (Join-Path $repo "local-runtime\$name") -Destination $payload
@@ -25,7 +26,7 @@ foreach ($spec in @(@('Services\MediaFileTypes.vb','Displayable'), @('Services\R
 $extensions = @($extensions | Sort-Object -Unique)
 if ($extensions.Count -lt 24) { throw 'Could not read supported media types.' }
 $registration = foreach ($extension in $extensions) {
-    'Root: HKCU; Subkey: "Software\Classes\Applications\FerrumPix.Open.exe\SupportedTypes"; ValueType: string; ValueName: "' + $extension + '"; ValueData: ""'
+    'Root: HKCU; Subkey: "Software\Classes\Applications\FerrumPix.exe\SupportedTypes"; ValueType: string; ValueName: "' + $extension + '"; ValueData: ""'
     'Root: HKCU; Subkey: "Software\Classes\' + $extension + '\OpenWithProgids"; ValueType: string; ValueName: "FerrumPixDev.Media"; ValueData: ""; Flags: uninsdeletevalue'
     'Root: HKCU; Subkey: "Software\FerrumPixDev\Capabilities\FileAssociations"; ValueType: string; ValueName: "' + $extension + '"; ValueData: "FerrumPixDev.Media"'
 }
