@@ -33,13 +33,13 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
     <!-- Die Grafikbeschleunigung fuer die gelernten Modelle: EINE Bibliothek je System, die
          darunter Vulkan, Direct3D oder Metal nimmt. Es gibt sie fuer win-x64, win-arm64,
          linux-x64, linux-arm64 und osx-arm64; osx-x64 bekommt sie nicht mitgeliefert und
          rechnet weiter auf dem Prozessor - GpuAccelerationService faengt das ab. Kostet rund
          zehn Megabyte im Paket. -->
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.4.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.5.0" />
     <PackageReference Include="ReactiveUI.Avalonia" Version="12.1.2" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     <PackageReference Include="QRCoder" Version="1.8.1" />
