@@ -38,6 +38,7 @@ Namespace Services
         Private Const PropPause As ULong = 3UL
         Private Const PropMute As ULong = 4UL
         Private Const PropEof As ULong = 5UL
+        Private Const PropVolume As ULong = 6UL
 
         ''' <summary>Schützt den Zustand, der zwischen Anzeige-, Befehls- und Ereignisfaden geteilt
         ''' wird. Über einem libmpv-Aufruf darf diese Sperre NIE gehalten werden: sonst wartet der
@@ -80,11 +81,13 @@ Namespace Services
         Private _pendingPlay As Boolean = False
         Private _isPaused As Boolean = True
         Private _isMuted As Boolean = False
+        Private _volume As Double = 100
 
         Public Event TimeChanged(seconds As Double)
         Public Event DurationChanged(seconds As Double)
         Public Event PauseChanged(isPaused As Boolean)
         Public Event MuteChanged(isMuted As Boolean)
+        Public Event VolumeChanged(volume As Double)
         Public Event EndReached(reason As Integer, [error] As Integer)
 
         ''' <summary>Ein Ladebefehl ist WIRKLICH an mpv gegangen. Feuert nicht, wenn der Riegel in
@@ -219,6 +222,7 @@ Namespace Services
         ''' laeuft. Gebraucht fuer das WIEDERHOLEN nach dem Ende: dort ist das erneute Laden der
         ''' ganze Zweck.</summary>
         Public Sub Load(path As String, Optional force As Boolean = False)
+            StartupTimingService.Mark("Video load requested")
             If String.IsNullOrWhiteSpace(path) Then Return
             Interlocked.Increment(_seekVersion)
             SyncLock _syncRoot
@@ -271,6 +275,19 @@ Namespace Services
                         If version <> Volatile.Read(_seekVersion) Then Return
                         If Not ReadyForPlayback() Then Return
                         CommandRaw(_handle, "seek", target.ToString(CultureInfo.InvariantCulture), If(exact, "absolute+exact", "absolute+keyframes"))
+                    End Sub)
+        End Sub
+
+        Public Sub SetVolume(value As Double)
+            If Not Double.IsFinite(value) Then Return
+            value = Math.Clamp(value, 0, 100)
+            SyncLock _syncRoot
+                If _disposed Then Return
+                _volume = value
+            End SyncLock
+            Enqueue(Sub()
+                        If Not ReadyForPlayback() Then Return
+                        SetPropertyStringRaw("volume", value.ToString(CultureInfo.InvariantCulture))
                     End Sub)
         End Sub
 
@@ -484,6 +501,7 @@ Namespace Services
                 Return
             End If
             SetPauseCore(True)
+            StartupTimingService.Mark("mpv loadfile command")
             If CommandAsyncRaw(_handle, "loadfile", path, "replace") < 0 Then
                 LogState("Laden abgewiesen")
                 Return
@@ -556,6 +574,7 @@ Namespace Services
             If Not _usesRenderSurface AndAlso _windowHandle = IntPtr.Zero Then Return
 
             Try
+                StartupTimingService.Mark("mpv initialize begin")
                 MpvInterop.EnsureResolver()
                 _handle = MpvInterop.Create()
                 If _handle = IntPtr.Zero Then Throw New InvalidOperationException("libmpv konnte nicht erstellt werden.")
@@ -563,6 +582,11 @@ Namespace Services
                 SetOptionStringRaw("terminal", "no")
                 ' Siehe VideoPreviewService: FFmpeg-Demuxer-Hinweise nicht auf die Konsole durchlassen.
                 SetOptionStringRaw("msg-level", "all=no")
+                Dim nativeLog = Environment.GetEnvironmentVariable("FERRUMPIX_MPV_LOG")
+                If Not String.IsNullOrWhiteSpace(nativeLog) Then
+                    SetOptionStringRaw("log-file", nativeLog)
+                    SetOptionStringRaw("msg-level", "all=v")
+                End If
                 SetOptionStringRaw("config", "no")
                 SetOptionStringRaw("input-default-bindings", "no")
                 SetOptionStringRaw("osc", "no")
@@ -580,6 +604,15 @@ Namespace Services
                     SetOptionStringRaw("vo", "libmpv")
                     SetOptionStringRaw("hwdec", If(_enableHardwareAcceleration, "auto-copy", "no"))
                 Else
+                    ' Embedded libmpv has no default config/cache directory. Persist GPU shaders
+                    ' in this profile so repeated opens do not compile them again.
+                    Dim shaderCache = IO.Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "mpv-shaders")
+                    Try
+                        IO.Directory.CreateDirectory(shaderCache)
+                        SetOptionStringRaw("gpu-shader-cache-dir", shaderCache)
+                    Catch ex As Exception When TypeOf ex Is IO.IOException OrElse TypeOf ex Is UnauthorizedAccessException
+                        DiagnosticLogService.LogException("VideoPlayback.ShaderCache", ex)
+                    End Try
                     SetOptionStringRaw("hwdec", If(_enableHardwareAcceleration, "auto-safe", "no"))
                     If OperatingSystem.IsLinux() Then
                         SetOptionStringRaw("vo", "gpu")
@@ -595,13 +628,18 @@ Namespace Services
                 ObservePropertyRaw(PropDuration, "duration", MpvInterop.MpvFormat.Double)
                 ObservePropertyRaw(PropPause, "pause", MpvInterop.MpvFormat.Flag)
                 ObservePropertyRaw(PropMute, "mute", MpvInterop.MpvFormat.Flag)
+                ObservePropertyRaw(PropVolume, "volume", MpvInterop.MpvFormat.Double)
+                StartupTimingService.Mark("mpv initialized")
                 ObservePropertyRaw(PropEof, "eof-reached", MpvInterop.MpvFormat.Flag)
 
                 Dim muted As Boolean
+                Dim volume As Double
                 SyncLock _syncRoot
                     muted = _isMuted
+                    volume = _volume
                 End SyncLock
                 SetPropertyStringRaw("mute", If(muted, "yes", "no"))
+                SetPropertyStringRaw("volume", volume.ToString(CultureInfo.InvariantCulture))
 
                 If _usesRenderSurface Then
                     If Not _renderer.TryCreate(_handle) Then
@@ -729,6 +767,8 @@ Namespace Services
                 If eventPtr = IntPtr.Zero Then Continue Do
 
                 Dim ev = Marshal.PtrToStructure(Of MpvInterop.MpvEvent)(eventPtr)
+                If ev.EventId = MpvInterop.MpvEventId.FileLoaded Then StartupTimingService.Mark("mpv file loaded")
+                If ev.EventId = MpvInterop.MpvEventId.PlaybackRestart Then StartupTimingService.Mark("mpv playback ready")
                 Select Case ev.EventId
                     Case MpvInterop.MpvEventId.None
                     Case MpvInterop.MpvEventId.PropertyChange
@@ -762,6 +802,9 @@ Namespace Services
             Dim prop = Marshal.PtrToStructure(Of MpvInterop.MpvEventProperty)(ev.Data)
 
             Select Case ev.ReplyUserData
+                Case PropVolume
+                    If prop.Format <> MpvInterop.MpvFormat.Double OrElse prop.Data = IntPtr.Zero Then Return
+                    RaiseEvent VolumeChanged(Marshal.PtrToStructure(Of Double)(prop.Data))
                 Case PropEof
                     If prop.Format <> MpvInterop.MpvFormat.Flag OrElse prop.Data = IntPtr.Zero Then Return
                     If Marshal.ReadInt32(prop.Data) <> 0 Then RaiseEvent EndReached(CInt(MpvInterop.MpvEndFileReason.Eof), 0)

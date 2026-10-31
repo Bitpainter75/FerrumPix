@@ -1,4 +1,4 @@
-﻿Imports System.Windows.Input
+Imports System.Windows.Input
 Imports System.Linq
 Imports System.IO
 Imports System.Threading
@@ -716,6 +716,7 @@ Namespace ViewModels
 
         Public Sub New(Optional initialImagePath As String = Nothing, Optional initialFolderPath As String = Nothing)
             Settings = New SettingsViewModel(Me)
+            StartupTimingService.Mark("VM: Settings")
             ' Die Rueckfrage nach fehlenden Modellen, fuer Stellen ohne eigenen Weg hierher.
             ModelRequestService.Handler = Function(feature, keys) Settings.RequestModelsAsync(feature, keys)
             AddHandler Settings.PropertyChanged,
@@ -727,9 +728,13 @@ Namespace ViewModels
                     End If
                 End Sub
             People = New PeopleViewModel(Me)
+            StartupTimingService.Mark("VM: People")
             Gallery = New GalleryViewModel(Me)
+            StartupTimingService.Mark("VM: Gallery")
             Viewer = New ViewerViewModel(Me)
+            StartupTimingService.Mark("VM: Viewer")
             Editor = New EditorViewModel(Me)
+            StartupTimingService.Mark("VM: Editor")
             ' Bewertung, Favorit und Etikett: wer sie auch setzt, alle Ansichten ziehen nach.
             AddHandler LibraryService.Instance.AttributesChanged, AddressOf OnCatalogAttributesChanged
 
@@ -1163,6 +1168,7 @@ Namespace ViewModels
         ''' das gewünschte Bild nicht auf das Lesen eines womöglich riesigen Ordners wartet. In der
         ''' Galerie geht das nicht: dort IST die Liste der Inhalt, ohne sie bliebe die Ansicht leer.</summary>
         Public Async Function OpenExternalArgumentsAsync(arguments As String()) As Task
+            StartupTimingService.Mark("External request received")
             If arguments Is Nothing OrElse arguments.Length = 0 Then Return
             Dim target = arguments(0)
             If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then Return

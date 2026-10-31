@@ -14,7 +14,7 @@ if (args.Length > 0 && args[0] == "--forward-test") {
 }
 
 Environment.SetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT", Path.Combine(Path.GetTempPath(), "FerrumPix-tests", Guid.NewGuid().ToString()));
-AppBuilder.Configure<Application>().UseHeadless(new AvaloniaHeadlessPlatformOptions()).SetupWithoutStarting();
+AppBuilder.Configure<FerrumPix.App>().UseHeadless(new AvaloniaHeadlessPlatformOptions()).SetupWithoutStarting();
 var passed = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); Console.WriteLine("PASS " + name); passed++; }
 void Set(object target, string name, object value) => target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(target, value);
@@ -92,7 +92,30 @@ Check(AppSettingsService.Load().VideoCaptureFolder == "", "cancel restores unset
 using var player = new MpvPlayer(false); // no native window needed for the UI-state regression checks
 var vm = new ViewerViewModel(null);
 Set(vm, "_mediaPlayer", player);
+vm.VideoVolume = 37;
+Check(vm.VideoVolume == 37 && AppSettingsService.Load().VideoVolume == 37, "volume is saved for subsequent videos and launches");
+vm.IsVideoMuted = true;
+vm.VideoVolume = 45;
+Check(!vm.IsVideoMuted && vm.VideoVolume == 45, "adjusting volume unmutes without discarding level");
+vm.VideoVolume = -10;
+Check(vm.VideoVolume == 0 && vm.IsVideoSilent, "zero volume is silent and lower bound is clamped");
+vm.VideoVolume = double.NaN;
+Check(vm.VideoVolume == 0, "invalid volume is ignored");
+vm.VideoVolume = 200;
+Check(vm.VideoVolume == 100, "volume is capped at 100 percent");
 vm.CurrentImagePath = "test.mp4";
+Call(vm, "OnVideoPauseChanged", player, false);
+Call(vm, "OnVideoFileLoaded", player, "test.mp4");
+Dispatcher.UIThread.RunJobs();
+Check(vm.IsVideoPlaying, "late file-loaded notification cannot replace actual playing state with play icon");
+using (var obsoletePlayer = new MpvPlayer(false)) {
+    vm.VideoPositionSeconds = 25;
+    Call(vm, "OnVideoFileLoaded", obsoletePlayer, "test.mp4");
+    Call(vm, "OnVideoPauseChanged", obsoletePlayer, true);
+    Dispatcher.UIThread.RunJobs();
+    Check(vm.IsVideoPlaying, "pause notification from replaced player is ignored");
+    Check(vm.VideoPositionSeconds == 25, "file-loaded notification from replaced player cannot reset the same path");
+}
 vm.VideoDurationSeconds = 60;
 vm.VideoPositionSeconds = 25;
 Check(vm.TryHandleVideoKey(Key.Right, KeyModifiers.None) && vm.VideoPositionSeconds == 35, "Right seeks +10 seconds");
@@ -160,6 +183,9 @@ if (args.Length > 0)
     native.TimeChanged += value => Volatile.Write(ref time, value);
     native.DurationChanged += value => Volatile.Write(ref duration, value);
     native.InitializationFailed += error => failure = error.ToString();
+    double nativeVolume = -1;
+    native.VolumeChanged += value => Volatile.Write(ref nativeVolume, value);
+    native.SetVolume(37);
     native.Start(); native.Load(Path.GetFullPath(args[0])); native.Play();
     void WaitFor(Func<bool> predicate, string name)
     {
@@ -168,6 +194,9 @@ if (args.Length > 0)
         Check(failure == null && predicate(), name + (failure == null ? "" : ": " + failure));
     }
     WaitFor(() => Volatile.Read(ref duration) > 25 && Volatile.Read(ref time) >= 0, "bundled libmpv loads generated video");
+    WaitFor(() => Math.Abs(Volatile.Read(ref nativeVolume) - 37) < .01, "volume set before mpv initialization is applied");
+    native.SetVolume(62);
+    WaitFor(() => Math.Abs(Volatile.Read(ref nativeVolume) - 62) < .01, "volume changes reach actual libmpv during playback");
     var nativeVm = new ViewerViewModel(null) { CurrentImagePath = Path.GetFullPath(args[0]) };
     Set(nativeVm, "_mediaPlayer", native);
     var paused = false;
@@ -230,5 +259,30 @@ while (!pendingExternalOpen.IsCompleted && externalDeadline.ElapsedMilliseconds 
     Thread.Sleep(20);
 }
 Check(pendingExternalOpen.IsCompletedSuccessfully && AppSettingsService.Load().OpenInExistingWindow, "queued external request preserves settings cancel and then opens");
+var mainWindow = new FerrumPix.Views.MainWindow { DataContext = mainForExternalOpen };
+var dialogHost = mainWindow.FindControl<ContentControl>("DialogOverlayHost")!;
+var printHost = mainWindow.FindControl<ContentControl>("PrintDialogOverlayHost")!;
+Check(dialogHost.Content == null && printHost.Content == null, "unused dialogs are not constructed on startup");
+var messageTask = mainForExternalOpen.ShowMessageAsync("Test", "Lazy dialog");
+var firstDialog = dialogHost.Content;
+Check(firstDialog is FerrumPix.Views.DialogOverlayView, "first message constructs the dialog with correct data context");
+mainForExternalOpen.DialogCancelCommand.Execute(null);
+mainForExternalOpen.ShowMessageAsync("Test", "Reuse");
+Check(ReferenceEquals(firstDialog, dialogHost.Content), "later messages reuse the dialog instance");
+mainForExternalOpen.DialogCancelCommand.Execute(null);
+mainForExternalOpen.IsPrintDialogOpen = true;
+Check(printHost.Content is FerrumPix.Views.PrintDialogOverlayView, "print dialog is created on demand");
+mainForExternalOpen.IsPrintDialogOpen = false;
+var viewerView = new FerrumPix.Views.ViewerView { DataContext = vm };
+var volumeSlider = viewerView.FindControl<RoundSlider>("VideoVolumeSlider")!;
+Check(!viewerView.FindControl<Avalonia.Controls.Primitives.Popup>("VideoVolumePopup")!.IsOpen, "volume popup is hidden until speaker hover");
+volumeSlider.Value = 28;
+Check(vm.VideoVolume == 28, "volume slider updates the player view model");
+Call(viewerView, "SetCaptureSavedFeedback", firstCapture);
+var notice = viewerView.FindControl<TextBlock>("VideoCaptureSavedText")!;
+Check(notice.IsVisible && notice.Text == "Saved Screenshot: " + firstCapture, "capture feedback displays the actual saved path");
+Call(viewerView, "SetCaptureSavedFeedback", new object[] { null! });
+Check(!notice.IsVisible, "capture feedback can be cleared for timeout or next attempt");
+mainWindow.Close();
 Console.WriteLine($"{passed} checks passed.");
 

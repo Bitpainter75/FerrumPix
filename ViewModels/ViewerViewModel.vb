@@ -97,6 +97,10 @@ Namespace ViewModels
         Private _videoPositionSeconds As Double = 0
         Private _videoDurationSeconds As Double = 0
         Private _isVideoMuted As Boolean = False
+        Private _videoVolume As Double = 100
+        Private _videoPauseHandler As MpvPlayer.PauseChangedEventHandler
+        Private _videoMuteHandler As MpvPlayer.MuteChangedEventHandler
+        Private _videoFileLoadedHandler As MpvPlayer.FileLoadedEventHandler
         Private _isSeekingVideo As Boolean = False
         Private _videoScrubPlayer As MpvPlayer
         Private _videoScrubPath As String
@@ -680,12 +684,42 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property VideoVolume As Double
+            Get
+                Return _videoVolume
+            End Get
+            Set(value As Double)
+                If Not Double.IsFinite(value) Then Return
+                value = Math.Clamp(value, 0, 100)
+                If value > 0 AndAlso IsVideoMuted Then IsVideoMuted = False
+                If _videoVolume = value Then Return
+                Me.RaiseAndSetIfChanged(_videoVolume, value)
+                Me.RaisePropertyChanged(NameOf(VideoVolumeText))
+                Me.RaisePropertyChanged(NameOf(IsVideoSilent))
+                _mediaPlayer?.SetVolume(value)
+                AppSettingsService.Update(Sub(settings) settings.VideoVolume = value)
+            End Set
+        End Property
+
+        Public ReadOnly Property VideoVolumeText As String
+            Get
+                Return $"{_videoVolume:0}%"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsVideoSilent As Boolean
+            Get
+                Return _isVideoMuted OrElse _videoVolume = 0
+            End Get
+        End Property
+
         Public Property IsVideoMuted As Boolean
             Get
                 Return _isVideoMuted
             End Get
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isVideoMuted, value)
+                Me.RaisePropertyChanged(NameOf(IsVideoSilent))
                 If _mediaPlayer IsNot Nothing Then _mediaPlayer.SetMuted(value)
             End Set
         End Property
@@ -946,6 +980,8 @@ Namespace ViewModels
 
         Public Sub New(mainVm As IViewerHost)
             _mainVm = mainVm
+            Dim savedVolume = AppSettingsService.Load().VideoVolume
+            _videoVolume = If(Double.IsFinite(savedVolume), Math.Clamp(savedVolume, 0, 100), 100)
             FilmstripItems = New BulkObservableCollection(Of ImageItem)()
 
             _navDebouncer = New FilmstripNavigationDebouncer(wrapAround:=True,
@@ -3042,12 +3078,17 @@ Namespace ViewModels
             Try
                 _mediaPlayer = New MpvPlayer(AppSettingsService.Load().VideoHardwareAcceleration)
                 _mediaPlayer.SetMuted(_isVideoMuted)
+                _mediaPlayer.SetVolume(_videoVolume)
                 AddHandler _mediaPlayer.TimeChanged, AddressOf OnVideoTimeChanged
                 AddHandler _mediaPlayer.DurationChanged, AddressOf OnVideoLengthChanged
                 AddHandler _mediaPlayer.EndReached, AddressOf OnVideoEndReached
-                AddHandler _mediaPlayer.FileLoaded, AddressOf OnVideoFileLoaded
-                AddHandler _mediaPlayer.PauseChanged, AddressOf OnVideoPauseChanged
-                AddHandler _mediaPlayer.MuteChanged, AddressOf OnVideoMuteChanged
+                Dim source = _mediaPlayer
+                _videoFileLoadedHandler = Sub(path) OnVideoFileLoaded(source, path)
+                AddHandler _mediaPlayer.FileLoaded, _videoFileLoadedHandler
+                _videoPauseHandler = Sub(paused) OnVideoPauseChanged(source, paused)
+                _videoMuteHandler = Sub(muted) OnVideoMuteChanged(source, muted)
+                AddHandler _mediaPlayer.PauseChanged, _videoPauseHandler
+                AddHandler _mediaPlayer.MuteChanged, _videoMuteHandler
                 AddHandler _mediaPlayer.InitializationFailed, AddressOf OnVideoInitializationFailed
                 AddHandler _mediaPlayer.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
                 AddHandler _mediaPlayer.ShortcutRequested, AddressOf OnVideoShortcutRequested
@@ -3110,11 +3151,15 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Der Spieler hat wirklich geladen: die Anzeige faengt von vorn an.</summary>
-        Private Sub OnVideoFileLoaded(path As String)
+        Private Sub OnVideoFileLoaded(source As MpvPlayer, path As String)
+            Dim generation = _videoTimeGeneration
             Dispatcher.UIThread.Post(Sub()
+                                         If Not ReferenceEquals(source, _mediaPlayer) OrElse generation <> _videoTimeGeneration Then Return
+                                         If Not String.Equals(path, CurrentImagePath, PathIdentity.Comparison) Then Return
                                          VideoPositionSeconds = 0
                                          VideoDurationSeconds = 0
-                                         IsVideoPlaying = False
+                                         ' PauseChanged is the authority; a late load notification
+                                         ' must not overwrite an already received playing state.
                                          _isVideoEnded = False
                                          Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
                                      End Sub)
@@ -3162,9 +3207,12 @@ Namespace ViewModels
             RemoveHandler player.TimeChanged, AddressOf OnVideoTimeChanged
             RemoveHandler player.DurationChanged, AddressOf OnVideoLengthChanged
             RemoveHandler player.EndReached, AddressOf OnVideoEndReached
-            RemoveHandler player.FileLoaded, AddressOf OnVideoFileLoaded
-            RemoveHandler player.PauseChanged, AddressOf OnVideoPauseChanged
-            RemoveHandler player.MuteChanged, AddressOf OnVideoMuteChanged
+            If _videoFileLoadedHandler IsNot Nothing Then RemoveHandler player.FileLoaded, _videoFileLoadedHandler
+            _videoFileLoadedHandler = Nothing
+            If _videoPauseHandler IsNot Nothing Then RemoveHandler player.PauseChanged, _videoPauseHandler
+            If _videoMuteHandler IsNot Nothing Then RemoveHandler player.MuteChanged, _videoMuteHandler
+            _videoPauseHandler = Nothing
+            _videoMuteHandler = Nothing
             RemoveHandler player.InitializationFailed, AddressOf OnVideoInitializationFailed
             RemoveHandler player.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
             RemoveHandler player.ShortcutRequested, AddressOf OnVideoShortcutRequested
@@ -3338,8 +3386,9 @@ Namespace ViewModels
                                       End Sub)
         End Sub
 
-        Private Sub OnVideoPauseChanged(isPaused As Boolean)
+        Private Sub OnVideoPauseChanged(source As MpvPlayer, isPaused As Boolean)
             Dispatcher.UIThread.Post(Sub()
+                                         If Not ReferenceEquals(source, _mediaPlayer) OrElse Not IsVideoFile Then Return
                                          If Not isPaused Then
                                              _isVideoEnded = False
                                              Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
@@ -3348,8 +3397,12 @@ Namespace ViewModels
                                      End Sub)
         End Sub
 
-        Private Sub OnVideoMuteChanged(isMuted As Boolean)
-            Dispatcher.UIThread.Post(Sub() IsVideoMuted = isMuted)
+        Private Sub OnVideoMuteChanged(source As MpvPlayer, isMuted As Boolean)
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not ReferenceEquals(source, _mediaPlayer) Then Return
+                                         Me.RaiseAndSetIfChanged(_isVideoMuted, isMuted)
+                                         Me.RaisePropertyChanged(NameOf(IsVideoSilent))
+                                     End Sub)
         End Sub
 
         Private Async Sub ContinueSlideshowAfterVideoEndAsync(sequence As Integer)

@@ -23,6 +23,9 @@ Namespace Views
         Private _subscribedVm As ViewerViewModel
         Private _isAttached As Boolean = False
         Private _isCapturingVideo As Boolean
+        Private ReadOnly _captureSavedTimer As New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(4)}
+        Private ReadOnly _volumeHideTimer As New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(250)}
+        Private _isAdjustingVolume As Boolean
         Private _isPanningImage As Boolean
         Private _panStartPoint As Point
         Private _panStartOffset As Vector
@@ -50,6 +53,25 @@ Namespace Views
         End Property
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            AddHandler Me.PropertyChanged,
+                Sub(sender, e)
+                    If e.Property Is IsVisibleProperty AndAlso Not IsVisible Then CloseVolumePopup()
+                End Sub
+            AddHandler _captureSavedTimer.Tick, Sub() SetCaptureSavedFeedback(Nothing)
+            AddHandler _volumeHideTimer.Tick,
+                Sub()
+                    If _isAdjustingVolume Then Return
+                    _volumeHideTimer.Stop()
+                    Dim popup = Me.FindControl(Of Popup)("VideoVolumePopup")
+                    If Not Me.FindControl(Of Button)("VideoMuteButton").IsPointerOver AndAlso Not popup.Child.IsPointerOver Then popup.IsOpen = False
+                End Sub
+            Dim volumeSlider = Me.FindControl(Of RoundSlider)("VideoVolumeSlider")
+            AddHandler volumeSlider.InteractionStarted, Sub() _isAdjustingVolume = True
+            AddHandler volumeSlider.InteractionCompleted,
+                Sub(value)
+                    _isAdjustingVolume = False
+                    _volumeHideTimer.Start()
+                End Sub
             Dim seekSlider = Me.FindControl(Of RoundSlider)("VideoSeekSlider")
             seekSlider.ResetOnDoubleClick = False
             AddHandler seekSlider.InteractionStarted, Sub() GetVm()?.BeginVideoScrub()
@@ -1141,6 +1163,8 @@ Namespace Views
 
         Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
             MyBase.OnDetachedFromVisualTree(e)
+            SetCaptureSavedFeedback(Nothing)
+            CloseVolumePopup()
             _isAttached = False
             UnsubscribeViewModel()
         End Sub
@@ -1399,6 +1423,7 @@ Namespace Views
         End Sub
 
         Private Sub OnFullscreenVideoControlsIdle(sender As Object, e As EventArgs)
+            If Me.FindControl(Of Popup)("VideoVolumePopup").IsOpen Then Return
             _fullscreenVideoControlsHideTimer.Stop()
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsFullscreenMode Then Return
@@ -1503,6 +1528,7 @@ Namespace Views
 
         Private Sub UpdateActiveVideoView()
             Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsVideoFile Then CloseVolumePopup()
             Dim videoView = Me.FindControl(Of MpvVideoView)("TheVideoView")
             Dim videoSurface = Me.FindControl(Of MpvVideoSurface)("TheVideoSurface")
 
@@ -1580,6 +1606,30 @@ Namespace Views
             If vm.PlayPauseVideoCommand.CanExecute(Nothing) Then vm.PlayPauseVideoCommand.Execute(Nothing)
         End Sub
 
+        Private Sub CloseVolumePopup()
+            _volumeHideTimer.Stop()
+            _isAdjustingVolume = False
+            Me.FindControl(Of Popup)("VideoVolumePopup").IsOpen = False
+        End Sub
+
+        Private Sub OnVolumePointerEntered(sender As Object, e As PointerEventArgs)
+            _volumeHideTimer.Stop()
+            Me.FindControl(Of Popup)("VideoVolumePopup").IsOpen = True
+        End Sub
+
+        Private Sub OnVolumePointerExited(sender As Object, e As PointerEventArgs)
+            _volumeHideTimer.Start()
+        End Sub
+
+        Private Sub SetCaptureSavedFeedback(savedPath As String)
+            _captureSavedTimer.Stop()
+            Dim notice = Me.FindControl(Of TextBlock)("VideoCaptureSavedText")
+            notice.Text = If(savedPath Is Nothing, "", "Saved Screenshot: " & savedPath)
+            ToolTip.SetTip(notice, notice.Text)
+            notice.IsVisible = savedPath IsNot Nothing
+            If savedPath IsNot Nothing Then _captureSavedTimer.Start()
+        End Sub
+
         Private Async Sub OnCaptureVideoClick(sender As Object, e As RoutedEventArgs)
             If _isCapturingVideo Then Return
             Dim vm = GetVm()
@@ -1587,6 +1637,7 @@ Namespace Views
             Dim player = vm?.VideoMediaPlayer
             If vm Is Nothing OrElse Not vm.IsVideoFile OrElse player Is Nothing OrElse owner Is Nothing Then Return
             _isCapturingVideo = True
+            SetCaptureSavedFeedback(Nothing)
             Dim button = TryCast(sender, Button)
             If button IsNot Nothing Then button.IsEnabled = False
             Dim temporaryPath = IO.Path.Combine(IO.Path.GetTempPath(), $"FerrumPix-frame-{Guid.NewGuid():N}.png")
@@ -1596,7 +1647,8 @@ Namespace Views
             Dim errorMessage As String = Nothing
             Try
                 Await player.CaptureFrameAsync(temporaryPath, videoPath)
-                Await Task.Run(Function() VideoCaptureService.SaveCapturedFrame(temporaryPath, folder, videoPath, position))
+                Dim savedPath = Await Task.Run(Function() VideoCaptureService.SaveCapturedFrame(temporaryPath, folder, videoPath, position))
+                SetCaptureSavedFeedback(savedPath)
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.CaptureFrame", ex)
                 errorMessage = ex.Message

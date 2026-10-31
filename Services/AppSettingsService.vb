@@ -708,6 +708,7 @@ Namespace Services
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
         Public Property VideoCaptureFolder As String = ""
+        Public Property VideoVolume As Double = 100
 
         ''' <summary>Die gelernten Modelle auf der Grafikkarte rechnen lassen. AB WERK AUS.
         '''
