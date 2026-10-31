@@ -1162,6 +1162,25 @@ Namespace ViewModels
         ''' Betrachter und Editor zeigen EIN Bild - die Nachbarbilder werden dort nachgereicht, damit
         ''' das gewünschte Bild nicht auf das Lesen eines womöglich riesigen Ordners wartet. In der
         ''' Galerie geht das nicht: dort IST die Liste der Inhalt, ohne sie bliebe die Ansicht leer.</summary>
+        Public Async Function OpenExternalArgumentsAsync(arguments As String()) As Task
+            If arguments Is Nothing OrElse arguments.Length = 0 Then Return
+            Dim target = arguments(0)
+            If Not File.Exists(target) AndAlso Not Directory.Exists(target) Then Return
+            ' Keep pending requests until the user applies/cancels settings or closes a modal.
+            ' Navigating directly out of Settings would bypass its edit-session contract.
+            While CurrentMode = AppMode.Settings OrElse IsDialogOpen OrElse IsModalModelDownloadRunning
+                Await Task.Delay(100)
+            End While
+            If CurrentMode = AppMode.Editor AndAlso Not Await ConfirmEditorLeaveAsync("eine andere Datei öffnest") Then Return
+            If CurrentMode = AppMode.Viewer AndAlso Not Await ConfirmViewerLeaveAsync("eine andere Datei öffnest") Then Return
+            If Directory.Exists(target) Then
+                OpenInitialFolder(target)
+            Else
+                OpenInitialImage(target)
+            End If
+            StartupTimingService.Mark("External file dispatched")
+        End Function
+
         Private Sub OpenInitialImage(imagePath As String)
             Select Case AppSettingsService.Load().StartupImageMode
                 Case "Gallery"

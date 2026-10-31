@@ -127,6 +127,7 @@ Namespace ViewModels
         Private _versteckteAnpassungsgruppen As String = ""
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _galleryInfoSidebarExpanded As Boolean = False
+        Private _openInExistingWindow As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
         Private _languageMode As String = "System"
@@ -281,6 +282,7 @@ Namespace ViewModels
         Private _savedEditorLayersPanelExpanded As Boolean = False
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedGalleryInfoSidebarExpanded As Boolean = False
+        Private _savedOpenInExistingWindow As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
         Private _savedGalleryOpenTarget As String = "Viewer"
         Private _galleryOpenTarget As String = "Viewer"
@@ -1438,6 +1440,18 @@ Namespace ViewModels
                 If _editorFitMargin = value Then Return
                 Me.RaiseAndSetIfChanged(_editorFitMargin, value)
                 SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property OpenInExistingWindow As Boolean
+            Get
+                Return _openInExistingWindow
+            End Get
+            Set(value As Boolean)
+                If _openInExistingWindow = value Then Return
+                Me.RaiseAndSetIfChanged(_openInExistingWindow, value)
+                SaveStartupSettings()
+                AppSettingsService.Flush()
             End Set
         End Property
 
@@ -4683,6 +4697,7 @@ Namespace ViewModels
             _windowButtonsSide = AppSettingsService.NormalizeWindowButtonsSide(_appSettings.WindowButtonsSide)
             _accentColor = _appSettings.AccentColor
             _accentStrength = AppSettingsService.NormalizeAccentStrength(_appSettings.AccentStrength)
+            _openInExistingWindow = _appSettings.OpenInExistingWindow
             _startupImageMode = _appSettings.StartupImageMode
             _galleryOpenTarget = _appSettings.GalleryOpenTarget
             _startupNoImageMode = _appSettings.StartupNoImageMode
@@ -5200,6 +5215,7 @@ Namespace ViewModels
             _savedEditorLayersPanelExpanded = _editorLayersPanelExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedGalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
+            _savedOpenInExistingWindow = _openInExistingWindow
             _savedStartupImageMode = _startupImageMode
             _savedGalleryOpenTarget = _galleryOpenTarget
             _savedStartupNoImageMode = _startupNoImageMode
@@ -5390,6 +5406,7 @@ Namespace ViewModels
             EditorLayersPanelExpanded = _savedEditorLayersPanelExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             GalleryInfoSidebarExpanded = _savedGalleryInfoSidebarExpanded
+            OpenInExistingWindow = _savedOpenInExistingWindow
             StartupImageMode = _savedStartupImageMode
             GalleryOpenTarget = _savedGalleryOpenTarget
             StartupNoImageMode = _savedStartupNoImageMode
@@ -5469,6 +5486,7 @@ Namespace ViewModels
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
+            OpenInExistingWindow = True
             StartupImageMode = "Viewer"
             GalleryOpenTarget = "Viewer"
             StartupNoImageMode = "Gallery"
@@ -5804,6 +5822,7 @@ Namespace ViewModels
 
         Private Sub SaveStartupSettings()
             AppSettingsService.Update(Sub(s)
+                                          s.OpenInExistingWindow = _openInExistingWindow
                                           s.StartupImageMode = _startupImageMode
                                           s.GalleryOpenTarget = _galleryOpenTarget
                                           s.StartupNoImageMode = _startupNoImageMode

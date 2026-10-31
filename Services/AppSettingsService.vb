@@ -415,6 +415,7 @@ Namespace Services
         ''' die Farbigkeit ist weg.</summary>
         Public Property AccentStrength As Integer = 100
 
+        Public Property OpenInExistingWindow As Boolean = True
         Public Property StartupImageMode As String = "Viewer"
         ''' Womit ein Bild aus der Galerie geoeffnet wird: "Viewer" oder "Editor".
         Public Property GalleryOpenTarget As String = "Viewer"

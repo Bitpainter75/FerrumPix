@@ -370,6 +370,7 @@ Public Class App
         ResizeContextMenusToTheirContent()
         RearrangePopupsOnResize()
         If TypeOf ApplicationLifetime Is IClassicDesktopStyleApplicationLifetime Then
+            StartupTimingService.Mark("Avalonia initialized")
             Dim desktop = CType(ApplicationLifetime, IClassicDesktopStyleApplicationLifetime)
 
             Dim initialImagePath As String = Nothing
@@ -395,10 +396,26 @@ Public Class App
             ' diese Sitzung fest, welche Funktionen es gibt; was fehlt, blendet die Oberflaeche aus.
             ' Vor dem ViewModel, damit dessen Bindungen schon den richtigen Stand sehen.
             AiModelService.CheckInventory()
+            StartupTimingService.Mark("Before main view model")
             Dim vm = New MainWindowViewModel(initialImagePath, initialFolderPath)
+            StartupTimingService.Mark("Main view model constructed")
             Dim win = New MainWindow()
+            StartupTimingService.Mark("Main window constructed")
             win.DataContext = vm
+            AddHandler win.Opened, Sub() StartupTimingService.Mark("Window opened")
             desktop.MainWindow = win
+            If Program.InstanceService IsNot Nothing Then
+                AddHandler win.Opened,
+                    Sub()
+                        Dim pending = Program.InstanceService.ProcessRequestsAsync(
+                            Async Function(incoming)
+                                ' Called on the UI context; serialize requests across save prompts.
+                                If win.WindowState = WindowState.Minimized Then win.WindowState = WindowState.Normal
+                                win.Activate()
+                                Await vm.OpenExternalArgumentsAsync(incoming)
+                            End Function)
+                    End Sub
+            End If
             ' Die eine Abfrage nach einer neueren Fassung je Sitzung. Hier und nicht im ViewModel:
             ' der Pruefstand baut das ViewModel dutzendfach und soll dabei nichts abrufen.
             vm.Settings?.BeginUpdateCheck()

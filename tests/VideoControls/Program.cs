@@ -8,12 +8,38 @@ using FerrumPix.Controls;
 using FerrumPix.Services;
 using FerrumPix.ViewModels;
 
+if (args.Length > 0 && args[0] == "--forward-test") {
+    using var forwarder = new SingleInstanceService(args[1]);
+    Environment.Exit(forwarder.ForwardOrListen(args.Skip(2).ToArray()) ? 0 : 2);
+}
+
 Environment.SetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT", Path.Combine(Path.GetTempPath(), "FerrumPix-tests", Guid.NewGuid().ToString()));
 AppBuilder.Configure<Application>().UseHeadless(new AvaloniaHeadlessPlatformOptions()).SetupWithoutStarting();
 var passed = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); Console.WriteLine("PASS " + name); passed++; }
 void Set(object target, string name, object value) => target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(target, value);
 void Call(object target, string name, params object[] args) => target.GetType().GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(target, args);
+
+var ipcProfile = Path.Combine(Path.GetTempPath(), "FerrumPix-ipc", Guid.NewGuid().ToString());
+Check(SingleInstanceService.IsEnabled(ipcProfile), "existing window is enabled for new profiles");
+Directory.CreateDirectory(Path.Combine(ipcProfile, "FerrumPix"));
+File.WriteAllText(Path.Combine(ipcProfile, "FerrumPix", "settings.json"), "{\"OpenInExistingWindow\":false}");
+Check(!SingleInstanceService.IsEnabled(ipcProfile), "existing window opt-out is read before UI startup");
+using (var primary = new SingleInstanceService(ipcProfile)) {
+    Check(!primary.ForwardOrListen(Array.Empty<string>()), "first process owns the profile");
+    var expected = @"F:\日本語 & space\image (1).png";
+    var start = new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
+    foreach (var a in new[] { "--forward-test", ipcProfile, expected }) start.ArgumentList.Add(a);
+    using var child = System.Diagnostics.Process.Start(start)!;
+    Check(child.WaitForExit(10000) && child.ExitCode == 0, "second process forwards without a window before UI is ready");
+    var received = new TaskCompletionSource<string[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var processing = Task.Run(() => primary.ProcessRequestsAsync(a => { received.TrySetResult(a); return Task.CompletedTask; }));
+    Check(received.Task.Wait(5000) && received.Task.Result.SequenceEqual(new[] { expected }), "queued path preserves Unicode and shell metacharacters");
+    using var independent = new SingleInstanceService(ipcProfile + "-other");
+    Check(!independent.ForwardOrListen(Array.Empty<string>()), "different profiles keep independent windows");
+}
+using (var replacement = new SingleInstanceService(ipcProfile))
+    Check(!replacement.ForwardOrListen(Array.Empty<string>()), "closing primary releases the profile");
 
 var testProfile = Environment.GetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT");
 var profileConfig = Path.Combine(AppContext.BaseDirectory, "profile-root.txt");
@@ -32,6 +58,10 @@ var captureRoot = Path.Combine(Environment.GetEnvironmentVariable("FERRUMPIX_PRO
 Directory.CreateDirectory(captureRoot);
 var captureTemp = Path.Combine(captureRoot, "source.tmp");
 File.WriteAllText(captureTemp, "first frame");
+var normalizeArguments = typeof(AppDataPaths).Assembly.GetType("FerrumPix.Program")!.GetMethod("ForwardedArguments", BindingFlags.NonPublic | BindingFlags.Static)!;
+var relativeCapturePath = Path.GetRelativePath(Environment.CurrentDirectory, captureTemp);
+var normalizedArguments = (string[])normalizeArguments.Invoke(null, new object[] { new[] { "--debug", relativeCapturePath } })!;
+Check(normalizedArguments.SequenceEqual(new[] { captureTemp }), "relative file path is resolved before forwarding and debug flag is removed");
 var firstCapture = VideoCaptureService.SaveCapturedFrame(captureTemp, captureRoot, "clip.mp4", 12.5);
 File.WriteAllText(captureTemp, "second frame");
 var secondCapture = VideoCaptureService.SaveCapturedFrame(captureTemp, captureRoot, "clip.mp4", 12.5);
@@ -50,9 +80,13 @@ Check(Path.IsPathFullyQualified(VideoCaptureService.ResolveFolder("")), "unset c
 AppSettingsService.Update(settings => settings.VideoCaptureFolder = "");
 var captureSettings = new SettingsViewModel();
 captureSettings.BeginEditSession();
+Check(captureSettings.OpenInExistingWindow, "existing profiles default to window reuse");
+captureSettings.OpenInExistingWindow = false;
+Check(!SingleInstanceService.IsEnabled(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData)), "settings opt-out persists immediately for next launch");
 Check(captureSettings.VideoCaptureFolder == "" && Path.IsPathFullyQualified(captureSettings.VideoCaptureFolderDisplay), "settings displays default without replacing unset value");
 captureSettings.VideoCaptureFolder = anotherFolder;
 captureSettings.CancelCommand.Execute(null);
+Check(AppSettingsService.Load().OpenInExistingWindow && SingleInstanceService.IsEnabled(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData)), "cancel restores window reuse in memory and on disk");
 Check(AppSettingsService.Load().VideoCaptureFolder == "", "cancel restores unset folder exactly");
 
 using var player = new MpvPlayer(false); // no native window needed for the UI-state regression checks
@@ -183,5 +217,18 @@ if (args.Length > 0)
     native.Dispose();
     Check(native.CaptureFrameAsync(framePath, Path.GetFullPath(args[0])).IsFaulted, "disposed-player capture fails immediately");
 }
+var mainForExternalOpen = new MainWindowViewModel();
+mainForExternalOpen.Settings.BeginEditSession();
+mainForExternalOpen.CurrentMode = AppMode.Settings;
+mainForExternalOpen.Settings.OpenInExistingWindow = false;
+var pendingExternalOpen = mainForExternalOpen.OpenExternalArgumentsAsync(new[] { captureRoot });
+Check(!pendingExternalOpen.IsCompleted && mainForExternalOpen.CurrentMode == AppMode.Settings, "external file waits for settings edit session to finish");
+mainForExternalOpen.Settings.CancelCommand.Execute(null);
+var externalDeadline = System.Diagnostics.Stopwatch.StartNew();
+while (!pendingExternalOpen.IsCompleted && externalDeadline.ElapsedMilliseconds < 5000) {
+    Dispatcher.UIThread.RunJobs();
+    Thread.Sleep(20);
+}
+Check(pendingExternalOpen.IsCompletedSuccessfully && AppSettingsService.Load().OpenInExistingWindow, "queued external request preserves settings cancel and then opens");
 Console.WriteLine($"{passed} checks passed.");
 

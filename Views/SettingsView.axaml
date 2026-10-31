@@ -361,6 +361,12 @@
                             <TextBlock Text="Grundlegende Einstellungen für Startverhalten und Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <StackPanel Spacing="2">
+                            <CheckBox Content="既存ウィンドウで開く"
+                                      IsChecked="{Binding OpenInExistingWindow, Mode=TwoWay}"/>
+                            <TextBlock Text="有効にすると、ファイルを開く際に起動済みのウィンドウを使用します。"
+                                       Foreground="{DynamicResource FP.Text.Secondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Start mit Bilddatei" FontSize="{DynamicResource FP.Font.Body}"/>
