@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FerrumPix.Open</AssemblyName>
+    <AssemblyTitle>FerrumPix Dev</AssemblyTitle>
+    <Product>FerrumPix Dev</Product>
+    <ApplicationIcon>../../../FerrumPix_Icon.ico</ApplicationIcon>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+</Project>
