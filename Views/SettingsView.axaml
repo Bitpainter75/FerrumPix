@@ -362,9 +362,9 @@
                         </StackPanel>
 
                         <StackPanel Spacing="2">
-                            <CheckBox Content="既存ウィンドウで開く"
+                            <CheckBox Content="Im vorhandenen Fenster öffnen"
                                       IsChecked="{Binding OpenInExistingWindow, Mode=TwoWay}"/>
-                            <TextBlock Text="有効にすると、ファイルを開く際に起動済みのウィンドウを使用します。"
+                            <TextBlock Text="Dateien im bereits geöffneten Fenster öffnen."
                                        Foreground="{DynamicResource FP.Text.Secondary}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <Grid ColumnDefinitions="*,Auto">
@@ -1300,12 +1300,12 @@
                         </StackPanel>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="動画キャプチャの保存先" FontSize="{DynamicResource FP.Font.Body}"/>
-                            <TextBlock Text="カメラボタンでPNGを直接保存します。同名ファイルは連番で保存します。"
+                            <TextBlock Text="Speicherordner für Videoaufnahmen" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <TextBlock Text="Das Kamerasymbol speichert ein PNG. Bei gleichem Namen wird eine Nummer angehängt."
                                        Foreground="{DynamicResource FP.Text.Secondary}" TextWrapping="Wrap"/>
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBox Text="{Binding VideoCaptureFolderDisplay, Mode=OneWay}" IsReadOnly="True" Classes="no-translate"/>
-                                <Button Grid.Column="1" Margin="8,0,0,0" Content="フォルダーを選択…" Click="OnBrowseVideoCaptureFolderClick"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0" Content="Ordner auswählen…" Click="OnBrowseVideoCaptureFolderClick"/>
                             </Grid>
                         </StackPanel>
 

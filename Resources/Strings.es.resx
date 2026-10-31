@@ -10589,4 +10589,46 @@
   <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
     <value>Marcar como conservada (otra vez lo deshace)</value>
   </data>
+  <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
+    <value>Abrir en la ventana existente</value>
+  </data>
+  <data name="Dateien_im_bereits_ge_ffneten_Fenster_ffnen_6bedc1a7" xml:space="preserve">
+    <value>Abrir los archivos en la ventana que ya está abierta.</value>
+  </data>
+  <data name="Speicherordner_f_r_Videoaufnahmen_3b7b4c33" xml:space="preserve">
+    <value>Carpeta de capturas de vídeo</value>
+  </data>
+  <data name="Das_Kamerasymbol_speichert_ein_PNG_Bei_gleichem__73f9479d" xml:space="preserve">
+    <value>El botón de cámara guarda un PNG. Se añade un número a los nombres duplicados.</value>
+  </data>
+  <data name="Ordner_ausw_hlen_f6edc68e" xml:space="preserve">
+    <value>Elegir carpeta…</value>
+  </data>
+  <data name="Wiedergabe_Pause_Space_e68c9a36" xml:space="preserve">
+    <value>Reproducir/pausar (Space)</value>
+  </data>
+  <data name="Aktuelles_Videobild_als_PNG_speichern_83e75b0c" xml:space="preserve">
+    <value>Guardar el fotograma actual como PNG</value>
+  </data>
+  <data name="Lautst_rke_096f4c46" xml:space="preserve">
+    <value>Volumen</value>
+  </data>
+  <data name="Bildschirmaufnahme_gespeichert_0_90385570" xml:space="preserve">
+    <value>Captura de pantalla guardada: {0}</value>
+  </data>
+  <data name="Bildschirmaufnahme_c99e1fb3" xml:space="preserve">
+    <value>Captura de pantalla</value>
+  </data>
+  <data name="Der_Speicherordner_f_r_Aufnahmen_muss_ein_absolu_ba6175fa" xml:space="preserve">
+    <value>La carpeta de capturas debe ser una ruta absoluta.</value>
+  </data>
+  <data name="Zu_viele_Aufnahmen_mit_demselben_Namen_Die_Aufna_7677f6f2" xml:space="preserve">
+    <value>Hay demasiadas capturas con el mismo nombre. No se pudo guardar la captura.</value>
+  </data>
+  <data name="Das_Video_wurde_gewechselt_oder_ist_noch_nicht_b_38abde53" xml:space="preserve">
+    <value>El vídeo ha cambiado o todavía no está listo.</value>
+  </data>
+  <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
+    <value>No se pudo capturar el fotograma ({0}).</value>
+  </data>
 </root>

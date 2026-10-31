@@ -10633,4 +10633,46 @@
   <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
     <value>유지로 표시 (다시 누르면 취소)</value>
   </data>
+  <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
+    <value>기존 창에서 열기</value>
+  </data>
+  <data name="Dateien_im_bereits_ge_ffneten_Fenster_ffnen_6bedc1a7" xml:space="preserve">
+    <value>이미 열려 있는 창에서 파일을 엽니다.</value>
+  </data>
+  <data name="Speicherordner_f_r_Videoaufnahmen_3b7b4c33" xml:space="preserve">
+    <value>동영상 캡처 폴더</value>
+  </data>
+  <data name="Das_Kamerasymbol_speichert_ein_PNG_Bei_gleichem__73f9479d" xml:space="preserve">
+    <value>카메라 버튼으로 PNG를 저장합니다. 이름이 같으면 번호가 추가됩니다.</value>
+  </data>
+  <data name="Ordner_ausw_hlen_f6edc68e" xml:space="preserve">
+    <value>폴더 선택…</value>
+  </data>
+  <data name="Wiedergabe_Pause_Space_e68c9a36" xml:space="preserve">
+    <value>재생/일시 정지 (Space)</value>
+  </data>
+  <data name="Aktuelles_Videobild_als_PNG_speichern_83e75b0c" xml:space="preserve">
+    <value>현재 동영상 프레임을 PNG로 저장</value>
+  </data>
+  <data name="Lautst_rke_096f4c46" xml:space="preserve">
+    <value>음량</value>
+  </data>
+  <data name="Bildschirmaufnahme_gespeichert_0_90385570" xml:space="preserve">
+    <value>스크린샷 저장됨: {0}</value>
+  </data>
+  <data name="Bildschirmaufnahme_c99e1fb3" xml:space="preserve">
+    <value>스크린샷</value>
+  </data>
+  <data name="Der_Speicherordner_f_r_Aufnahmen_muss_ein_absolu_ba6175fa" xml:space="preserve">
+    <value>캡처 폴더는 절대 경로여야 합니다.</value>
+  </data>
+  <data name="Zu_viele_Aufnahmen_mit_demselben_Namen_Die_Aufna_7677f6f2" xml:space="preserve">
+    <value>같은 이름의 캡처가 너무 많아 저장할 수 없습니다.</value>
+  </data>
+  <data name="Das_Video_wurde_gewechselt_oder_ist_noch_nicht_b_38abde53" xml:space="preserve">
+    <value>동영상이 변경되었거나 아직 준비되지 않았습니다.</value>
+  </data>
+  <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
+    <value>동영상 프레임을 캡처할 수 없습니다 ({0}).</value>
+  </data>
 </root>

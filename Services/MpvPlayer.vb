@@ -310,10 +310,10 @@ Namespace Services
                                    Try
                                        If Not ReadyForPlayback() OrElse
                                           Not String.Equals(LoadedPath, expectedVideoPath, StringComparison.Ordinal) Then
-                                           Throw New InvalidOperationException("動画が切り替わったか、まだ再生できません。")
+                                           Throw New InvalidOperationException(LocalizationService.T("Das Video wurde gewechselt oder ist noch nicht bereit."))
                                        End If
                                        Dim result = CommandRaw(_handle, "screenshot-to-file", path, "video")
-                                       If result < 0 Then Throw New InvalidOperationException($"フレームをキャプチャできませんでした ({result})。")
+                                       If result < 0 Then Throw New InvalidOperationException(String.Format(LocalizationService.T("Das Videobild konnte nicht aufgenommen werden ({0})."), result))
                                        completion.TrySetResult(True)
                                    Catch ex As Exception
                                        completion.TrySetException(ex)

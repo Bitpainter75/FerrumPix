@@ -10608,4 +10608,46 @@
   <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
     <value>Mark as kept (press again to undo)</value>
   </data>
+  <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
+    <value>Open in the existing window</value>
+  </data>
+  <data name="Dateien_im_bereits_ge_ffneten_Fenster_ffnen_6bedc1a7" xml:space="preserve">
+    <value>Open files in the window that is already open.</value>
+  </data>
+  <data name="Speicherordner_f_r_Videoaufnahmen_3b7b4c33" xml:space="preserve">
+    <value>Video capture folder</value>
+  </data>
+  <data name="Das_Kamerasymbol_speichert_ein_PNG_Bei_gleichem__73f9479d" xml:space="preserve">
+    <value>The camera button saves a PNG. Duplicate names receive a numbered suffix.</value>
+  </data>
+  <data name="Ordner_ausw_hlen_f6edc68e" xml:space="preserve">
+    <value>Choose folder…</value>
+  </data>
+  <data name="Wiedergabe_Pause_Space_e68c9a36" xml:space="preserve">
+    <value>Play/pause (Space)</value>
+  </data>
+  <data name="Aktuelles_Videobild_als_PNG_speichern_83e75b0c" xml:space="preserve">
+    <value>Save the current video frame as PNG</value>
+  </data>
+  <data name="Lautst_rke_096f4c46" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="Bildschirmaufnahme_gespeichert_0_90385570" xml:space="preserve">
+    <value>Saved Screenshot: {0}</value>
+  </data>
+  <data name="Bildschirmaufnahme_c99e1fb3" xml:space="preserve">
+    <value>Screenshot</value>
+  </data>
+  <data name="Der_Speicherordner_f_r_Aufnahmen_muss_ein_absolu_ba6175fa" xml:space="preserve">
+    <value>The capture folder must be an absolute path.</value>
+  </data>
+  <data name="Zu_viele_Aufnahmen_mit_demselben_Namen_Die_Aufna_7677f6f2" xml:space="preserve">
+    <value>Too many captures have the same name. The capture could not be saved.</value>
+  </data>
+  <data name="Das_Video_wurde_gewechselt_oder_ist_noch_nicht_b_38abde53" xml:space="preserve">
+    <value>The video changed or is not ready yet.</value>
+  </data>
+  <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
+    <value>Could not capture the video frame ({0}).</value>
+  </data>
 </root>

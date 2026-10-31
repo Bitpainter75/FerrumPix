@@ -172,7 +172,7 @@ Namespace Views
             If vm Is Nothing OrElse owner Is Nothing Then Return
             Try
                 Dim folders = Await owner.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
-                    .Title = "動画キャプチャの保存先",
+                    .Title = LocalizationService.T("Speicherordner für Videoaufnahmen"),
                     .AllowMultiple = False,
                     .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(owner, vm.VideoCaptureFolderDisplay)
                 })

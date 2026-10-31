@@ -15,6 +15,7 @@ if (args.Length > 0 && args[0] == "--forward-test") {
 
 Environment.SetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT", Path.Combine(Path.GetTempPath(), "FerrumPix-tests", Guid.NewGuid().ToString()));
 AppBuilder.Configure<FerrumPix.App>().UseHeadless(new AvaloniaHeadlessPlatformOptions()).SetupWithoutStarting();
+LocalizationService.LanguageMode = "English";
 var passed = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception(name); Console.WriteLine("PASS " + name); passed++; }
 void Set(object target, string name, object value) => target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(target, value);
@@ -278,11 +279,12 @@ var volumeSlider = viewerView.FindControl<RoundSlider>("VideoVolumeSlider")!;
 Check(!viewerView.FindControl<Avalonia.Controls.Primitives.Popup>("VideoVolumePopup")!.IsOpen, "volume popup is hidden until speaker hover");
 volumeSlider.Value = 28;
 Check(vm.VideoVolume == 28, "volume slider updates the player view model");
+LocalizationService.LanguageMode = "English";
 Call(viewerView, "SetCaptureSavedFeedback", firstCapture);
 var notice = viewerView.FindControl<TextBlock>("VideoCaptureSavedText")!;
 Check(notice.IsVisible && notice.Text == "Saved Screenshot: " + firstCapture, "capture feedback displays the actual saved path");
 Call(viewerView, "SetCaptureSavedFeedback", new object[] { null! });
 Check(!notice.IsVisible, "capture feedback can be cleared for timeout or next attempt");
+LocalizationChecks.Run(Check, viewerView, firstCapture);
 mainWindow.Close();
 Console.WriteLine($"{passed} checks passed.");
-

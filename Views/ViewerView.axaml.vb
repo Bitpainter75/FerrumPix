@@ -1614,7 +1614,9 @@ Namespace Views
 
         Private Sub OnVolumePointerEntered(sender As Object, e As PointerEventArgs)
             _volumeHideTimer.Stop()
-            Me.FindControl(Of Popup)("VideoVolumePopup").IsOpen = True
+            Dim popup = Me.FindControl(Of Popup)("VideoVolumePopup")
+            LocalizationService.ApplyTo(popup.Child)
+            popup.IsOpen = True
         End Sub
 
         Private Sub OnVolumePointerExited(sender As Object, e As PointerEventArgs)
@@ -1624,7 +1626,7 @@ Namespace Views
         Private Sub SetCaptureSavedFeedback(savedPath As String)
             _captureSavedTimer.Stop()
             Dim notice = Me.FindControl(Of TextBlock)("VideoCaptureSavedText")
-            notice.Text = If(savedPath Is Nothing, "", "Saved Screenshot: " & savedPath)
+            notice.Text = If(savedPath Is Nothing, "", String.Format(LocalizationService.T("Bildschirmaufnahme gespeichert: {0}"), savedPath))
             ToolTip.SetTip(notice, notice.Text)
             notice.IsVisible = savedPath IsNot Nothing
             If savedPath IsNot Nothing Then _captureSavedTimer.Start()
@@ -1664,7 +1666,7 @@ Namespace Views
             If errorMessage IsNot Nothing Then
                 Try
                     Dim mainVm = TryCast(owner.DataContext, MainWindowViewModel)
-                    If mainVm IsNot Nothing Then Await mainVm.ShowMessageAsync("スクリーンキャプチャ", errorMessage)
+                    If mainVm IsNot Nothing Then Await mainVm.ShowMessageAsync(LocalizationService.T("Bildschirmaufnahme"), errorMessage)
                 Catch ex As Exception
                     DiagnosticLogService.LogException("VideoPlayback.CaptureErrorDialog", ex)
                 End Try

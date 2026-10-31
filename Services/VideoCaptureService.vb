@@ -6,7 +6,7 @@ Namespace Services
             If String.IsNullOrWhiteSpace(configured) Then
                 Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "FerrumPix Captures")
             End If
-            If Not Path.IsPathFullyQualified(configured) Then Throw New ArgumentException("キャプチャ保存先は絶対パスで指定してください。")
+            If Not Path.IsPathFullyQualified(configured) Then Throw New ArgumentException(LocalizationService.T("Der Speicherordner für Aufnahmen muss ein absoluter Pfad sein."))
             Return Path.GetFullPath(configured)
         End Function
 
@@ -25,7 +25,7 @@ Namespace Services
                     ' Another capture may have claimed the name. Never overwrite it.
                 End Try
             Next
-            Throw New IOException("同名のキャプチャが多すぎるため保存できませんでした。")
+            Throw New IOException(LocalizationService.T("Zu viele Aufnahmen mit demselben Namen. Die Aufnahme konnte nicht gespeichert werden."))
         End Function
     End Class
 End Namespace

@@ -1161,7 +1161,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" RowDefinitions="Auto,Auto" VerticalAlignment="Center">
                     <Button Grid.Column="0" Classes="icon-btn" Width="32" Height="32"
                             Command="{Binding PlayPauseVideoCommand}"
-                            ToolTip.Tip="再生・一時停止 (Space)">
+                            ToolTip.Tip="Wiedergabe/Pause (Space)">
                         <Panel>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="16" Height="16" IsVisible="{Binding !IsVideoPlaying}"/>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-pause.svg" Width="16" Height="16" IsVisible="{Binding IsVideoPlaying}"/>
@@ -1172,7 +1172,7 @@
                                        Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
                     <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <Button Grid.Column="3" Classes="icon-btn" Width="32" Height="32"
-                            Click="OnCaptureVideoClick" ToolTip.Tip="現在の動画フレームをPNG保存">
+                            Click="OnCaptureVideoClick" ToolTip.Tip="Aktuelles Videobild als PNG speichern">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/camera.svg" Width="16" Height="16" IconBrush="White"/>
                     </Button>
                     <Button Grid.Column="4" Name="VideoMuteButton" Classes="icon-btn" Width="32" Height="32"
@@ -1195,7 +1195,7 @@
                           <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:RoundSlider Name="VideoVolumeSlider" Width="110"
                                        Minimum="0" Maximum="100" DefaultValue="100" WheelIncrement="5"
-                                       Value="{Binding VideoVolume, Mode=TwoWay}" ToolTip.Tip="音量"/>
+                                       Value="{Binding VideoVolume, Mode=TwoWay}" ToolTip.Tip="Lautstärke"/>
                     <TextBlock Text="{Binding VideoVolumeText}" Width="36" Foreground="White"
                                FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" TextAlignment="Right"/>
                           </StackPanel>
