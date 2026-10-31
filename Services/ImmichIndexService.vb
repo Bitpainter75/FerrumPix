@@ -29,7 +29,7 @@ Namespace Services
         End Property
 
         Private Sub New()
-            Dim dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
+            Dim dir = Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
             Directory.CreateDirectory(dir)
             _dbPath = Path.Combine(dir, "immich-index.db")
             _connectionString = $"Data Source={_dbPath}"

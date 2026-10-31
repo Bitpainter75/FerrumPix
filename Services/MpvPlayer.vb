@@ -36,6 +36,7 @@ Namespace Services
         Private Const PropDuration As ULong = 2UL
         Private Const PropPause As ULong = 3UL
         Private Const PropMute As ULong = 4UL
+        Private Const PropEof As ULong = 5UL
 
         ''' <summary>Schützt den Zustand, der zwischen Anzeige-, Befehls- und Ereignisfaden geteilt
         ''' wird. Über einem libmpv-Aufruf darf diese Sperre NIE gehalten werden: sonst wartet der
@@ -51,6 +52,7 @@ Namespace Services
 
         Private _commandThread As Thread
         Private _queueClosed As Boolean = False
+        Private _seekVersion As Integer
 
         ' Nur der Befehlsfaden fasst diese Felder an.
         Private _handle As IntPtr = IntPtr.Zero
@@ -104,6 +106,7 @@ Namespace Services
         ''' <summary>mpv selbst hat sich beendet. Der Spieler ist danach unbrauchbar; wer ihn hält,
         ''' muss ihn wegwerfen und für das nächste Video einen neuen anlegen.</summary>
         Public Event PlaybackTerminated()
+        Public Event ShortcutRequested(player As MpvPlayer, path As String, key As String)
 
         ''' <summary>Ob auf DIESEM System das Bild bei mpv abgeholt wird. Steht schon fest, bevor
         ''' ein Spieler existiert: die Oberfläche muss vorher wissen, welche der beiden Flächen
@@ -216,6 +219,7 @@ Namespace Services
         ''' ganze Zweck.</summary>
         Public Sub Load(path As String, Optional force As Boolean = False)
             If String.IsNullOrWhiteSpace(path) Then Return
+            Interlocked.Increment(_seekVersion)
             SyncLock _syncRoot
                 If _disposed Then Return
                 _pendingPath = path
@@ -250,6 +254,7 @@ Namespace Services
         End Sub
 
         Public Sub [Stop]()
+            Interlocked.Increment(_seekVersion)
             SyncLock _syncRoot
                 If _disposed Then Return
                 _pendingPlay = False
@@ -257,11 +262,14 @@ Namespace Services
             Enqueue(AddressOf StopCore)
         End Sub
 
-        Public Sub Seek(seconds As Double)
+        Public Sub Seek(seconds As Double, Optional exact As Boolean = True)
+            If Not Double.IsFinite(seconds) Then Return
             Dim target = Math.Max(0, seconds)
+            Dim version = Interlocked.Increment(_seekVersion)
             Enqueue(Sub()
+                        If version <> Volatile.Read(_seekVersion) Then Return
                         If Not ReadyForPlayback() Then Return
-                        SetPropertyStringRaw("time-pos", target.ToString(CultureInfo.InvariantCulture))
+                        CommandRaw(_handle, "seek", target.ToString(CultureInfo.InvariantCulture), If(exact, "absolute+exact", "absolute+keyframes"))
                     End Sub)
         End Sub
 
@@ -535,7 +543,8 @@ Namespace Services
                 SetOptionStringRaw("config", "no")
                 SetOptionStringRaw("input-default-bindings", "no")
                 SetOptionStringRaw("osc", "no")
-                SetOptionStringRaw("keep-open", "no")
+                ' Keep the file seekable after EOF; eof-reached still drives slideshow/replay UI.
+                SetOptionStringRaw("keep-open", "yes")
                 ' Untertitel unterstuetzt die Anwendung nicht. Ohne diese beiden Zeilen blendete mpv
                 ' eine als Standard markierte Spur oder eine .srt neben dem Video von sich aus ein.
                 SetOptionStringRaw("sid", "no")
@@ -563,6 +572,7 @@ Namespace Services
                 ObservePropertyRaw(PropDuration, "duration", MpvInterop.MpvFormat.Double)
                 ObservePropertyRaw(PropPause, "pause", MpvInterop.MpvFormat.Flag)
                 ObservePropertyRaw(PropMute, "mute", MpvInterop.MpvFormat.Flag)
+                ObservePropertyRaw(PropEof, "eof-reached", MpvInterop.MpvFormat.Flag)
 
                 Dim muted As Boolean
                 SyncLock _syncRoot
@@ -582,7 +592,11 @@ Namespace Services
                     ' Pause-Status fliesst ueber die bestehende pause-Observation zurueck in die
                     ' Oberflaeche (Play-Knopf folgt). Auf dem abholenden Weg braucht es das nicht:
                     ' dort liegt die Fläche in der Oberfläche und bekommt die Klicks selbst.
-                    CommandRaw(_handle, "keybind", "MBTN_LEFT", "cycle pause")
+                    ' Route native-window input through the same UI state machine as Avalonia keys.
+                    CommandRaw(_handle, "keybind", "MBTN_LEFT", "script-message ferrumpix-key SPACE")
+                    CommandRaw(_handle, "keybind", "SPACE", "script-message ferrumpix-key SPACE")
+                    CommandRaw(_handle, "keybind", "LEFT", "script-message ferrumpix-key LEFT")
+                    CommandRaw(_handle, "keybind", "RIGHT", "script-message ferrumpix-key RIGHT")
                 End If
 
                 Dim handle = _handle
@@ -696,6 +710,16 @@ Namespace Services
                     Case MpvInterop.MpvEventId.None
                     Case MpvInterop.MpvEventId.PropertyChange
                         HandlePropertyChange(ev)
+                    Case MpvInterop.MpvEventId.ClientMessage
+                        If ev.Data = IntPtr.Zero Then Continue Do
+                        Dim message = Marshal.PtrToStructure(Of MpvInterop.MpvEventClientMessage)(ev.Data)
+                        If message.NumArgs <> 2 OrElse message.Args = IntPtr.Zero Then Continue Do
+                        Dim namePtr = Marshal.ReadIntPtr(message.Args)
+                        Dim keyPtr = Marshal.ReadIntPtr(message.Args, IntPtr.Size)
+                        If namePtr = IntPtr.Zero OrElse keyPtr = IntPtr.Zero Then Continue Do
+                        If Marshal.PtrToStringUTF8(namePtr) = "ferrumpix-key" Then
+                            RaiseEvent ShortcutRequested(Me, LoadedPath, Marshal.PtrToStringUTF8(keyPtr))
+                        End If
                     Case MpvInterop.MpvEventId.EndFile
                         Dim endData = Marshal.PtrToStructure(Of MpvInterop.MpvEventEndFile)(ev.Data)
                         RaiseEvent EndReached(CInt(endData.Reason), endData.Error)
@@ -715,6 +739,9 @@ Namespace Services
             Dim prop = Marshal.PtrToStructure(Of MpvInterop.MpvEventProperty)(ev.Data)
 
             Select Case ev.ReplyUserData
+                Case PropEof
+                    If prop.Format <> MpvInterop.MpvFormat.Flag OrElse prop.Data = IntPtr.Zero Then Return
+                    If Marshal.ReadInt32(prop.Data) <> 0 Then RaiseEvent EndReached(CInt(MpvInterop.MpvEndFileReason.Eof), 0)
                 Case PropTimePos
                     If prop.Format <> MpvInterop.MpvFormat.Double OrElse prop.Data = IntPtr.Zero Then Return
                     RaiseEvent TimeChanged(Marshal.PtrToStructure(Of Double)(prop.Data))

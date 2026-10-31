@@ -90,7 +90,7 @@ Namespace Services
         End Function
 
         Private Shared ReadOnly SearchListsDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
+            Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
 
         Private Shared ReadOnly SearchListsPath As String =
             Path.Combine(SearchListsDirectory, "searchlists.json")

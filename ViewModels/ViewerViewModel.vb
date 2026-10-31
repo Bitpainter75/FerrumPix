@@ -98,6 +98,10 @@ Namespace ViewModels
         Private _videoDurationSeconds As Double = 0
         Private _isVideoMuted As Boolean = False
         Private _isSeekingVideo As Boolean = False
+        Private _videoScrubPlayer As MpvPlayer
+        Private _videoScrubPath As String
+        Private _lastVideoScrubUtc As DateTime
+        Private _videoTimeGeneration As Integer
         Private _ignoreVideoTimeUpdatesUntilUtc As DateTime = DateTime.MinValue
         Private _videoPlaybackRuntimeFailed As Boolean = False
         Private _slideshowVideoEndSequence As Integer = 0
@@ -936,6 +940,8 @@ Namespace ViewModels
         Public ReadOnly Property SlowerSlideshowCommand As ICommand
         Public ReadOnly Property PlayPauseVideoCommand As ICommand
         Public ReadOnly Property SeekVideoCommand As ICommand
+        Public ReadOnly Property SkipVideoBackCommand As ICommand
+        Public ReadOnly Property SkipVideoForwardCommand As ICommand
         Public ReadOnly Property ToggleVideoMuteCommand As ICommand
 
         Public Sub New(mainVm As IViewerHost)
@@ -1045,6 +1051,8 @@ Namespace ViewModels
             FasterSlideshowCommand = ReactiveCommand.Create(Sub() StepSlideshowInterval(longer:=False))
             SlowerSlideshowCommand = ReactiveCommand.Create(Sub() StepSlideshowInterval(longer:=True))
             PlayPauseVideoCommand = ReactiveCommand.Create(Sub() ToggleVideoPlayPause())
+            SkipVideoBackCommand = ReactiveCommand.Create(Sub() SkipVideo(-10))
+            SkipVideoForwardCommand = ReactiveCommand.Create(Sub() SkipVideo(10))
             SeekVideoCommand = ReactiveCommand.Create(Of Double)(Sub(seconds) SeekVideo(seconds))
             ToggleVideoMuteCommand = ReactiveCommand.Create(Sub() IsVideoMuted = Not IsVideoMuted)
         End Sub
@@ -3044,6 +3052,7 @@ Namespace ViewModels
                 AddHandler _mediaPlayer.MuteChanged, AddressOf OnVideoMuteChanged
                 AddHandler _mediaPlayer.InitializationFailed, AddressOf OnVideoInitializationFailed
                 AddHandler _mediaPlayer.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
+                AddHandler _mediaPlayer.ShortcutRequested, AddressOf OnVideoShortcutRequested
                 ' ERST JETZT anstoßen: der Aufbau läuft auf einem eigenen Faden und kann scheitern,
                 ' bevor diese Zeile erreicht ist. Im Konstruktor angestoßen, ginge die Meldung
                 ' darüber an niemanden.
@@ -3090,6 +3099,8 @@ Namespace ViewModels
         ''' zurueckgesetzt spraenge die Anzeige auf null, waehrend der Film weiterlaeuft, und die
         ''' Laufzeit bliebe dort stehen, weil mpv einen unveraenderten Wert nicht neu meldet.</summary>
         Private Sub LoadVideo(path As String, Optional force As Boolean = False)
+            CancelVideoScrub()
+            _videoTimeGeneration += 1
             EnsureMediaPlayer()
             If _mediaPlayer Is Nothing Then Return
             Try
@@ -3123,6 +3134,8 @@ Namespace ViewModels
         End Sub
 
         Public Sub StopVideoPlayback()
+            CancelVideoScrub()
+            _videoTimeGeneration += 1
             If _mediaPlayer Is Nothing Then Return
             Try
                 _mediaPlayer.Stop()
@@ -3133,6 +3146,8 @@ Namespace ViewModels
         End Sub
 
         Public Sub ShutdownVideo()
+            CancelVideoScrub()
+            _videoTimeGeneration += 1
             ' Kein eigener Merker mehr zu raeumen: was geladen ist, weiss der Spieler, und mit ihm
             ' faellt auch die Auskunft. Ein weggeworfener Spieler kann deshalb nichts Falsches mehr
             ' behaupten - der Fall, der frueher dazu fuehrte, dass sich genau dieses Video nie
@@ -3154,6 +3169,7 @@ Namespace ViewModels
             RemoveHandler player.MuteChanged, AddressOf OnVideoMuteChanged
             RemoveHandler player.InitializationFailed, AddressOf OnVideoInitializationFailed
             RemoveHandler player.PlaybackTerminated, AddressOf OnVideoPlaybackTerminated
+            RemoveHandler player.ShortcutRequested, AddressOf OnVideoShortcutRequested
         End Sub
 
         Private Sub ToggleVideoPlayPause()
@@ -3171,22 +3187,96 @@ Namespace ViewModels
             _mediaPlayer.TogglePause()
         End Sub
 
+        Public Sub BeginVideoScrub()
+            If Not IsVideoFile OrElse _mediaPlayer Is Nothing Then Return
+            _videoScrubPlayer = _mediaPlayer
+            _videoScrubPath = CurrentImagePath
+            _lastVideoScrubUtc = DateTime.MinValue
+            _videoTimeGeneration += 1
+        End Sub
+
+        Private Function HasCurrentVideoScrub() As Boolean
+            Return _videoScrubPlayer IsNot Nothing AndAlso
+                Object.ReferenceEquals(_videoScrubPlayer, _mediaPlayer) AndAlso
+                IsVideoFile AndAlso String.Equals(_videoScrubPath, CurrentImagePath, StringComparison.Ordinal)
+        End Function
+
+        Public Sub UpdateVideoScrub(seconds As Double)
+            If Not HasCurrentVideoScrub() OrElse Not Double.IsFinite(seconds) Then Return
+            VideoPositionSeconds = Math.Clamp(seconds, 0, Math.Max(0, VideoDurationSeconds))
+            If (DateTime.UtcNow - _lastVideoScrubUtc).TotalMilliseconds < 80 Then Return
+            _lastVideoScrubUtc = DateTime.UtcNow
+            _mediaPlayer.Seek(VideoPositionSeconds, exact:=False)
+        End Sub
+
+        Public Sub EndVideoScrub(seconds As Double)
+            Dim commit = HasCurrentVideoScrub()
+            CancelVideoScrub()
+            If commit Then SeekVideo(seconds)
+        End Sub
+
+        Private Sub CancelVideoScrub()
+            _videoScrubPlayer = Nothing
+            _videoScrubPath = Nothing
+        End Sub
+
+        Public Function TryHandleVideoKey(key As Avalonia.Input.Key, modifiers As Avalonia.Input.KeyModifiers) As Boolean
+            If Not IsVideoFile OrElse modifiers <> Avalonia.Input.KeyModifiers.None Then Return False
+            Select Case key
+                Case Avalonia.Input.Key.Space
+                    PlayPauseVideoCommand.Execute(Nothing)
+                Case Avalonia.Input.Key.Left
+                    SkipVideo(-10)
+                Case Avalonia.Input.Key.Right
+                    SkipVideo(10)
+                Case Else
+                    Return False
+            End Select
+            Return True
+        End Function
+
+        Private Sub OnVideoShortcutRequested(player As MpvPlayer, path As String, key As String)
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not Object.ReferenceEquals(player, _mediaPlayer) OrElse
+                                            Not String.Equals(path, CurrentImagePath, StringComparison.Ordinal) Then Return
+                                         Select Case key
+                                             Case "SPACE" : TryHandleVideoKey(Avalonia.Input.Key.Space, Avalonia.Input.KeyModifiers.None)
+                                             Case "LEFT" : TryHandleVideoKey(Avalonia.Input.Key.Left, Avalonia.Input.KeyModifiers.None)
+                                             Case "RIGHT" : TryHandleVideoKey(Avalonia.Input.Key.Right, Avalonia.Input.KeyModifiers.None)
+                                         End Select
+                                     End Sub)
+        End Sub
+
+        Public Sub SkipVideo(delta As Double)
+            If Not IsVideoFile Then Return
+            CancelVideoScrub()
+            SeekVideo(VideoPositionSeconds + delta)
+        End Sub
+
         Private Sub SeekVideo(seconds As Double)
-            If _mediaPlayer Is Nothing Then Return
+            If _mediaPlayer Is Nothing OrElse Not Double.IsFinite(seconds) Then Return
+            seconds = Math.Clamp(seconds, 0, Math.Max(0, VideoDurationSeconds))
             Try
                 _isSeekingVideo = True
+                _videoTimeGeneration += 1
                 _ignoreVideoTimeUpdatesUntilUtc = DateTime.UtcNow.AddMilliseconds(250)
                 _mediaPlayer.Seek(seconds)
                 VideoPositionSeconds = seconds
+                _isVideoEnded = False
+                Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
             Finally
                 _isSeekingVideo = False
             End Try
         End Sub
 
         Private Sub OnVideoTimeChanged(seconds As Double)
-            If _isSeekingVideo Then Return
-            If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
-            Dispatcher.UIThread.Post(Sub() VideoPositionSeconds = seconds)
+            Dim generation = _videoTimeGeneration
+            Dispatcher.UIThread.Post(Sub()
+                                         If generation <> _videoTimeGeneration OrElse Not IsVideoFile Then Return
+                                         If _isSeekingVideo OrElse HasCurrentVideoScrub() Then Return
+                                         If DateTime.UtcNow < _ignoreVideoTimeUpdatesUntilUtc Then Return
+                                         VideoPositionSeconds = seconds
+                                     End Sub)
         End Sub
 
         Private Sub OnVideoInitializationFailed(ex As Exception)
@@ -3229,7 +3319,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub OnVideoEndReached(reason As Integer, [error] As Integer)
+            Dim generation = _videoTimeGeneration
             Dispatcher.UIThread.Post(Sub()
+                                          If generation <> _videoTimeGeneration OrElse Not IsVideoFile Then Return
                                           If reason <> CInt(MpvInterop.MpvEndFileReason.Eof) Then
                                               IsVideoPlaying = False
                                               Return
@@ -3249,7 +3341,13 @@ Namespace ViewModels
         End Sub
 
         Private Sub OnVideoPauseChanged(isPaused As Boolean)
-            Dispatcher.UIThread.Post(Sub() IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded)
+            Dispatcher.UIThread.Post(Sub()
+                                         If Not isPaused Then
+                                             _isVideoEnded = False
+                                             Me.RaisePropertyChanged(NameOf(ShowVideoSurface))
+                                         End If
+                                         IsVideoPlaying = Not isPaused AndAlso Not _isVideoEnded
+                                     End Sub)
         End Sub
 
         Private Sub OnVideoMuteChanged(isMuted As Boolean)

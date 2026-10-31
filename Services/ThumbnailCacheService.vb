@@ -96,7 +96,7 @@ Namespace Services
         Private Const CacheFormatVersion As Integer = 4
 
         Private Shared ReadOnly CacheRoot As String =
-            IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ThumbnailCache")
+            IO.Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ThumbnailCache")
 
         Private Shared ReadOnly RootIndexPath As String = IO.Path.Combine(CacheRoot, IndexFileName)
         Private Shared ReadOnly JsonOptions As New JsonSerializerOptions With {.WriteIndented = True}

@@ -1158,20 +1158,22 @@
                     CornerRadius="8"
                     Padding="12,8"
                     Margin="12">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" VerticalAlignment="Center">
                     <Button Grid.Column="0" Classes="icon-btn" Width="32" Height="32"
                             Command="{Binding PlayPauseVideoCommand}"
-                            ToolTip.Tip="Play/Pause">
+                            ToolTip.Tip="再生・一時停止 (Space)">
                         <Panel>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="16" Height="16" IsVisible="{Binding !IsVideoPlaying}"/>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-pause.svg" Width="16" Height="16" IsVisible="{Binding IsVideoPlaying}"/>
                         </Panel>
                     </Button>
-                    <icons:RoundSlider Grid.Column="1" Name="VideoSeekSlider" Margin="10,0"
+                    <Button Grid.Column="1" Classes="ghost" Foreground="White" Content="−10s" Command="{Binding SkipVideoBackCommand}" ToolTip.Tip="10秒戻す (←)"/>
+                    <Button Grid.Column="2" Classes="ghost" Foreground="White" Content="+10s" Command="{Binding SkipVideoForwardCommand}" ToolTip.Tip="10秒進む (→)"/>
+                    <icons:RoundSlider Grid.Column="3" Name="VideoSeekSlider" Margin="10,0"
                                        Minimum="0" Maximum="{Binding VideoDurationSeconds}"
                                        Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
-                    <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <Button Grid.Column="3" Classes="icon-btn" Width="32" Height="32"
+                    <TextBlock Grid.Column="4" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button Grid.Column="5" Classes="icon-btn" Width="32" Height="32"
                             Command="{Binding ToggleVideoMuteCommand}"
                             ToolTip.Tip="Stumm">
                         <Panel Width="16" Height="16">

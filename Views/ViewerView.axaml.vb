@@ -49,6 +49,12 @@ Namespace Views
         End Property
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            Dim seekSlider = Me.FindControl(Of RoundSlider)("VideoSeekSlider")
+            seekSlider.ResetOnDoubleClick = False
+            AddHandler seekSlider.InteractionStarted, Sub() GetVm()?.BeginVideoScrub()
+            AddHandler seekSlider.ValueEdited, Sub(value) GetVm()?.UpdateVideoScrub(value)
+            AddHandler seekSlider.InteractionCompleted, Sub(value) GetVm()?.EndVideoScrub(value)
+
             _fullscreenVideoControlsHideTimer = New DispatcherTimer With {
                 .Interval = TimeSpan.FromMilliseconds(FullscreenVideoControlsIdleMs)
             }
@@ -71,17 +77,6 @@ Namespace Views
                                    _filmstripController.QueueThumbnailRefresh()
                                    Dispatcher.UIThread.Post(Sub() _filmstripController.RefreshThumbnails(), DispatcherPriority.Background)
 
-                                   ' RoundSlider markt PointerReleased in seiner eigenen Klassen-Behandlung bereits
-                                   ' als "Handled" (siehe Controls/RoundSlider.vb) - ein normal per XAML angehängter
-                                   ' Instanz-Handler würde dadurch riskieren, nie aufgerufen zu werden. handledEventsToo:=True
-                                   ' erzwingt den Aufruf unabhängig davon.
-                                   Dim seekSlider = Me.FindControl(Of Control)("VideoSeekSlider")
-                                   If seekSlider IsNot Nothing Then
-                                       seekSlider.AddHandler(InputElement.PointerPressedEvent, AddressOf OnVideoSeekSliderPointerPressed,
-                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
-                                       seekSlider.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnVideoSeekSliderPointerReleased,
-                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
-                                   End If
                                    UpdateVideoPlaybackBarVisibility()
                                End Sub
             AddHandler Unloaded, Sub(s, e) StopFullscreenVideoControlTimers()
@@ -361,6 +356,11 @@ Namespace Views
 
             If e.Key <> Key.Escape Then
                 NoteFullscreenVideoControlsActivity()
+            End If
+
+            If vm.TryHandleVideoKey(e.Key, e.KeyModifiers) Then
+                e.Handled = True
+                Return
             End If
 
             If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso HandleFullscreenZoomKey(e.Key, e.KeyModifiers) Then
@@ -1578,22 +1578,6 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing OrElse vm.PlayPauseVideoCommand Is Nothing Then Return
             If vm.PlayPauseVideoCommand.CanExecute(Nothing) Then vm.PlayPauseVideoCommand.Execute(Nothing)
-        End Sub
-
-        Public Sub OnVideoSeekSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
-            CommitVideoSeek(sender)
-        End Sub
-
-        Public Sub OnVideoSeekSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
-            If Not e.GetCurrentPoint(TryCast(sender, Control)).Properties.IsLeftButtonPressed Then Return
-            Dispatcher.UIThread.Post(Sub() CommitVideoSeek(sender), DispatcherPriority.Input)
-        End Sub
-
-        Private Sub CommitVideoSeek(sender As Object)
-            Dim slider = TryCast(sender, RoundSlider)
-            Dim vm = GetVm()
-            If slider Is Nothing OrElse vm Is Nothing OrElse vm.SeekVideoCommand Is Nothing Then Return
-            If vm.SeekVideoCommand.CanExecute(slider.Value) Then vm.SeekVideoCommand.Execute(slider.Value)
         End Sub
 
         Private Sub UpdateInfoSidebarLayoutState()

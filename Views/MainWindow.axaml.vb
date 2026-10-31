@@ -1442,6 +1442,13 @@ Namespace Views
 
                 ' SHIFT+PFEIL verschiebt im Betrachter den Ausschnitt, auch im Vollbild. Der Zweig
                 ' darunter prueft keine Zusatztasten und machte daraus sonst ein Blaettern.
+                If vm.CurrentMode = AppMode.Viewer AndAlso vm.Viewer IsNot Nothing AndAlso
+                   Not PlatformShortcutService.IsInputFieldSource(e.Source) AndAlso
+                   vm.Viewer.TryHandleVideoKey(e.Key, e.KeyModifiers) Then
+                    e.Handled = True
+                    Return
+                End If
+
                 Dim isViewerPanKey = e.KeyModifiers = KeyModifiers.Shift AndAlso
                                      (e.Key = Key.Left OrElse e.Key = Key.Right OrElse e.Key = Key.Up OrElse e.Key = Key.Down)
                 If vm.IsFullscreen AndAlso Not isViewerPanKey Then

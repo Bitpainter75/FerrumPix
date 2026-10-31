@@ -20,7 +20,7 @@ Namespace Services
         End Sub
 
         Private Shared ReadOnly LogDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "logs")
+            Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "logs")
 
         Private Shared ReadOnly LogPath As String = Path.Combine(LogDirectory, "diagnostics.log")
 
