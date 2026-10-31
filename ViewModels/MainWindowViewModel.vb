@@ -3102,7 +3102,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.ModelDownload AndAlso
                        _dialogKind <> AppDialogKind.Import AndAlso
                        _dialogKind <> AppDialogKind.Backup AndAlso
-                       _dialogKind <> AppDialogKind.Restore
+                       _dialogKind <> AppDialogKind.Restore AndAlso
+                       _dialogKind <> AppDialogKind.Shortcuts
             End Get
         End Property
 

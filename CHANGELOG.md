@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.74
 
 ### Changes
 
@@ -18,9 +18,8 @@
   picture.
   The bar also switches random order and the filmstrip on and off and sets how long each picture
   stays, and a bar at the top rates, marks as favourite, colour labels and keeps or rejects the
-  picture on screen.
-  While paused the mouse wheel zooms. RAW files no longer leave a black screen between pictures: the next one is
-  developed while the current one is on screen.
+  picture on screen. While paused the mouse wheel zooms. RAW files no longer leave a black screen
+  between pictures: the next one is developed while the current one is on screen.
 
 - **Keyboard shortcuts on F1:** F1 opens the list of keyboard shortcuts from anywhere, also in
   fullscreen. It is the same list as in the settings, now including the slideshow and fullscreen
@@ -28,15 +27,19 @@
 
 - **Keep and reject next to the heart:** in the info panel, in every context and footer menu and
   on both sides of the viewer's comparison, two buttons next to the stars and the heart mark the
-  pictures as kept (green) or rejected (red); pressing the same one again takes the mark back. The separate menu entry for rejecting is gone.
-  The small cross for clearing stars or colour labels is gone too, since clicking the same star
-  or colour again already clears it.
+  pictures as kept (green) or rejected (red); pressing the same one again takes the mark back.
+  The separate menu entry for rejecting is gone, and so is the small cross for clearing stars or
+  colour labels, since clicking the same star or colour again already clears it.
 
 - **Filmstrip on any side:** in the settings the filmstrip can sit below, above, left or right of
   the picture, separately for the viewer, the editor and fullscreen. All filmstrip settings now
   have a section of their own.
 
 ### Fixes
+
+- **Measured monitor profiles work:** monitor profiles made with a calibration device, for example
+  with DisplayCAL, were refused as "not a readable ICC profile". They are read now, with their own
+  curve for each colour channel.
 
 - **Clicks no longer get lost under a tooltip:** buttons in the footers and the slideshow bar, and
   tiles when selecting in the gallery, sometimes ignored a click while their tooltip was showing.

@@ -100,6 +100,13 @@
     <color type="primary" scheme_preference="light">#ffc58f</color>
     <color type="primary" scheme_preference="dark">#6e3a10</color>
   </branding>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
 
   <content_rating type="oars-1.1"/>
 
