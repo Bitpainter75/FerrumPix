@@ -706,6 +706,7 @@ Namespace Services
         Public Property MainWindowMaximized As Boolean = False
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
+        Public Property VideoCaptureFolder As String = ""
 
         ''' <summary>Die gelernten Modelle auf der Grafikkarte rechnen lassen. AB WERK AUS.
         '''

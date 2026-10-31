@@ -15,6 +15,33 @@ void Check(bool condition, string name) { if (!condition) throw new Exception(na
 void Set(object target, string name, object value) => target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(target, value);
 void Call(object target, string name, params object[] args) => target.GetType().GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(target, args);
 
+var captureRoot = Path.Combine(Environment.GetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT")!, "capture-output");
+Directory.CreateDirectory(captureRoot);
+var captureTemp = Path.Combine(captureRoot, "source.tmp");
+File.WriteAllText(captureTemp, "first frame");
+var firstCapture = VideoCaptureService.SaveCapturedFrame(captureTemp, captureRoot, "clip.mp4", 12.5);
+File.WriteAllText(captureTemp, "second frame");
+var secondCapture = VideoCaptureService.SaveCapturedFrame(captureTemp, captureRoot, "clip.mp4", 12.5);
+Check(firstCapture != secondCapture && File.ReadAllText(firstCapture) == "first frame" && File.ReadAllText(secondCapture) == "second frame", "repeated captures use unique names without overwriting");
+Check(Path.GetFileName(firstCapture) == "clip_00-00-12-500.png", "capture filename includes video and playback time");
+var anotherFolder = Path.Combine(captureRoot, "another folder");
+AppSettingsService.Update(settings => settings.VideoCaptureFolder = anotherFolder);
+File.WriteAllText(captureTemp, "third frame");
+var thirdCapture = VideoCaptureService.SaveCapturedFrame(captureTemp, AppSettingsService.Load().VideoCaptureFolder, "clip.mp4", 12.5);
+Check(Path.GetDirectoryName(thirdCapture) == anotherFolder && File.Exists(thirdCapture), "changed folder setting takes effect and creates missing directory");
+var settingsFile = Path.Combine(Environment.GetEnvironmentVariable("FERRUMPIX_PROFILE_ROOT")!, "Roaming", "FerrumPix", "settings.json");
+AppSettingsService.Flush();
+using (var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settingsFile)))
+    Check(json.RootElement.GetProperty("VideoCaptureFolder").GetString() == anotherFolder, "capture folder persists to settings file");
+Check(Path.IsPathFullyQualified(VideoCaptureService.ResolveFolder("")), "unset capture folder resolves to absolute default");
+AppSettingsService.Update(settings => settings.VideoCaptureFolder = "");
+var captureSettings = new SettingsViewModel();
+captureSettings.BeginEditSession();
+Check(captureSettings.VideoCaptureFolder == "" && Path.IsPathFullyQualified(captureSettings.VideoCaptureFolderDisplay), "settings displays default without replacing unset value");
+captureSettings.VideoCaptureFolder = anotherFolder;
+captureSettings.CancelCommand.Execute(null);
+Check(AppSettingsService.Load().VideoCaptureFolder == "", "cancel restores unset folder exactly");
+
 using var player = new MpvPlayer(false); // no native window needed for the UI-state regression checks
 var vm = new ViewerViewModel(null);
 Set(vm, "_mediaPlayer", player);

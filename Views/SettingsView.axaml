@@ -1293,6 +1293,16 @@
                             <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="動画キャプチャの保存先" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <TextBlock Text="カメラボタンでPNGを直接保存します。同名ファイルは連番で保存します。"
+                                       Foreground="{DynamicResource FP.Text.Secondary}" TextWrapping="Wrap"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Text="{Binding VideoCaptureFolderDisplay, Mode=OneWay}" IsReadOnly="True" Classes="no-translate"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0" Content="フォルダーを選択…" Click="OnBrowseVideoCaptureFolderClick"/>
+                            </Grid>
+                        </StackPanel>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Bilder an Fenstergröße anpassen" FontSize="{DynamicResource FP.Font.Body}"/>

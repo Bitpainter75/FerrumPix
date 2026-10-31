@@ -3,7 +3,6 @@ Imports Avalonia.Controls
 Imports Avalonia.Controls.Primitives
 Imports Avalonia.Input
 Imports Avalonia.Input.Platform
-Imports Avalonia.Platform.Storage
 Imports Avalonia.Interactivity
 Imports Avalonia.Markup.Xaml
 Imports Avalonia.Media.Imaging
@@ -1592,23 +1591,12 @@ Namespace Views
             If button IsNot Nothing Then button.IsEnabled = False
             Dim temporaryPath = IO.Path.Combine(IO.Path.GetTempPath(), $"FerrumPix-frame-{Guid.NewGuid():N}.png")
             Dim videoPath = vm.CurrentImagePath
-            Dim position = TimeSpan.FromSeconds(Math.Max(0, vm.VideoPositionSeconds))
+            Dim position = vm.VideoPositionSeconds
+            Dim folder = AppSettingsService.Load().VideoCaptureFolder
             Dim errorMessage As String = Nothing
             Try
-                ' Capture before opening the picker, so playback during the dialog cannot change the image.
                 Await player.CaptureFrameAsync(temporaryPath, videoPath)
-                Dim destination = Await owner.StorageProvider.SaveFilePickerAsync(New FilePickerSaveOptions With {
-                    .Title = "動画フレームを保存",
-                    .SuggestedFileName = $"{IO.Path.GetFileNameWithoutExtension(videoPath)}_{CInt(Math.Floor(position.TotalHours)):00}-{position.Minutes:00}-{position.Seconds:00}-{position.Milliseconds:000}.png",
-                    .DefaultExtension = "png",
-                    .FileTypeChoices = {New FilePickerFileType("PNG画像") With {.Patterns = {"*.png"}}},
-                    .ShowOverwritePrompt = True
-                })
-                If destination Is Nothing Then Return
-                Using source = IO.File.OpenRead(temporaryPath), output = Await destination.OpenWriteAsync()
-                    output.SetLength(0)
-                    Await source.CopyToAsync(output)
-                End Using
+                Await Task.Run(Function() VideoCaptureService.SaveCapturedFrame(temporaryPath, folder, videoPath, position))
             Catch ex As Exception
                 DiagnosticLogService.LogException("VideoPlayback.CaptureFrame", ex)
                 errorMessage = ex.Message
