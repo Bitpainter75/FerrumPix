@@ -105,11 +105,11 @@ Namespace Models
         Public ReadOnly Property ImmichIconSource As String
             Get
                 Select Case Kind
-                    Case "ImmichPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/outline/users.svg"
-                    Case "ImmichPerson" : Return "avares://FerrumPix/Assets/Icons/outline/user.svg"
-                    Case "ImmichPlacesRoot", "ImmichPlace" : Return "avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
-                    Case "ImmichTrash" : Return "avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                    Case Else : Return "avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                    Case "ImmichPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/users.svg"
+                    Case "ImmichPerson" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/user.svg"
+                    Case "ImmichPlacesRoot", "ImmichPlace" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/map-pin.svg"
+                    Case "ImmichTrash" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                    Case Else : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/cloud.svg"
                 End Select
             End Get
         End Property
@@ -119,9 +119,9 @@ Namespace Models
         Public ReadOnly Property FavoriteIconSource As String
             Get
                 Select Case Kind
-                    Case "FavoriteFolder" : Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
-                    Case "SavedSearch" : Return "avares://FerrumPix/Assets/Icons/outline/search.svg"
-                    Case "FavoriteMissing" : Return "avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
+                    Case "FavoriteFolder" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
+                    Case "SavedSearch" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                    Case "FavoriteMissing" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/warning.svg"
                     Case "NextcloudAll", "NextcloudAlbum", "NextcloudPerson", "NextcloudPlace", "NextcloudTag" : Return NextcloudIconSource
                     Case Else : Return ImmichIconSource
                 End Select
@@ -202,13 +202,13 @@ Namespace Models
         Public ReadOnly Property NextcloudIconSource As String
             Get
                 Select Case Kind
-                    Case "NextcloudAlbum" : Return "avares://FerrumPix/Assets/Icons/outline/album.svg"
-                    Case "NextcloudPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/outline/users.svg"
-                    Case "NextcloudPerson" : Return "avares://FerrumPix/Assets/Icons/outline/user.svg"
-                    Case "NextcloudPlacesRoot", "NextcloudPlace" : Return "avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
-                    Case "NextcloudTagsRoot", "NextcloudTag" : Return "avares://FerrumPix/Assets/Icons/outline/tag.svg"
-                    Case "NextcloudTrash" : Return "avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                    Case Else : Return "avares://FerrumPix/Assets/Icons/outline/cloud.svg"
+                    Case "NextcloudAlbum" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/images-square.svg"
+                    Case "NextcloudPeopleRoot" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/users.svg"
+                    Case "NextcloudPerson" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/user.svg"
+                    Case "NextcloudPlacesRoot", "NextcloudPlace" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/map-pin.svg"
+                    Case "NextcloudTagsRoot", "NextcloudTag" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/tag.svg"
+                    Case "NextcloudTrash" : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                    Case Else : Return "avares://FerrumPix/Assets/Icons/phosphor/regular/cloud.svg"
                 End Select
             End Get
         End Property

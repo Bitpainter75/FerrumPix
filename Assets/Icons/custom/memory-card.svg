@@ -1,0 +1,20 @@
+<!--
+Eigene Zeichnung fuer das Importieren: eine Speicherkarte mit abgeschraegter Ecke und drei
+Kontakten, in der Strichstaerke der uebrigen eigenen Symbole.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M7.5 20.75h9a2.25 2.25 0 0 0 2.25 -2.25v-13a2.25 2.25 0 0 0 -2.25 -2.25h-5.57a2 2 0 0 0 -1.42 .59l-3.67 3.67a2 2 0 0 0 -.59 1.42v9.57a2.25 2.25 0 0 0 2.25 2.25z" />
+  <path d="M10.25 7.25v1.5" />
+  <path d="M13 6.25v2.5" />
+  <path d="M15.75 6.25v2.5" />
+</svg>

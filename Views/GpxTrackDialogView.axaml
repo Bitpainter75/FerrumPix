@@ -16,8 +16,8 @@
                 Padding="10,8">
             <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/route.svg"
-                                   Width="16" Height="16"
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/path.svg"
+                                   Width="18" Height="18"
                                    VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding DialogGpxTrackSummary}"
                                Classes="no-translate"
@@ -41,7 +41,7 @@
 
         <Grid ColumnDefinitions="Auto,*">
             <icons:SvgIcon Grid.Column="0"
-                           Source="avares://FerrumPix/Assets/Icons/outline/clock-hour-4.svg"
+                           Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clock.svg"
                            Width="18" Height="18"
                            VerticalAlignment="Center"
                            Margin="2,0,10,0"/>
@@ -86,8 +86,8 @@
                 CornerRadius="6"
                 Padding="10,8">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin-check.svg"
-                               Width="16" Height="16"
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-pin-simple.svg"
+                               Width="18" Height="18"
                                VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding DialogGpxPreview}"
                            Classes="no-translate"

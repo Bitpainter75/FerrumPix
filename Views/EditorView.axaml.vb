@@ -1335,7 +1335,7 @@ Namespace Views
             AddHandler Loaded, Sub(s, e)
                 ' Die Symbolgalerie ("Formen und Symbole") enthält mehrere tausend SVGs. Sie werden hier
                 ' einmalig im Hintergrund geparst, damit das Aufklappen später nicht ruckelt.
-                Dim ignored = SvgIcon.PreloadOutlineIconsAsync()
+                Dim ignored = SvgIcon.PreloadIconsAsync()
                 RestoreRulerAndGridState()
                 UpdateSliderLayout()
                 UpdateInfoSidebarLayoutState()
@@ -5165,7 +5165,7 @@ Namespace Views
             If _pipetteCursor Is Nothing Then
                 Try
                     _pipetteCursor = CreateCursorFromSvgAsset(
-                        "avares://FerrumPix/Assets/Icons/outline/color-picker.svg",
+                        "avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg",
                         New PixelPoint(5, 27))
                 Catch
                     _pipetteCursor = New Cursor(StandardCursorType.Cross)

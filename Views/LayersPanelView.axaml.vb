@@ -308,7 +308,7 @@ Namespace Views
                 items.Add(MakeLayerMenuItem(
                     PlatformShortcutService.FormatShortcutInLabel(
                         text, PlatformShortcutService.FormatPrimaryShortcut("G", includeShift:=True)),
-                    "folder-x", vm.UngroupSelectedAnnotationsCommand))
+                    "folder-simple-minus", vm.UngroupSelectedAnnotationsCommand))
             End If
             If items.Count > 0 Then items.Add(New Separator())
             If Not mehrere Then
@@ -329,18 +329,18 @@ Namespace Views
             ' Ebenenmaske und Schnittmaske gelten fuer GENAU EIN Objekt - bei einer Mehrfachauswahl
             ' sagen die Eigenschaften des ViewModels schon Nein, hier bleiben die Eintraege dann weg.
             If vm.CanAddAnnotationMask Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske hinzufügen"), "mask", vm.AddAnnotationMaskCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske hinzufügen"), "mask-happy", vm.AddAnnotationMaskCommand))
             End If
             If vm.SelectedAnnotationHasMask Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske bearbeiten"), "brush", vm.EditAnnotationMaskCommand))
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske entfernen"), "circle-x", vm.RemoveAnnotationMaskCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske bearbeiten"), "paint-brush", vm.EditAnnotationMaskCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenenmaske entfernen"), "x-circle", vm.RemoveAnnotationMaskCommand))
             End If
             ' Eigene Anpassungen der Ebene verwerfen. Ausschalten geht am Symbol der Zeile; hier
             ' steht der endgültige Weg, denn ein Symbol, das zwei Dinge tut, tut keines davon
             ' verständlich.
             If vm.SelectedLayerHasOwnAdjustments Then
                 items.Add(MakeLayerMenuItem(LocalizationService.T("Anpassungen dieser Ebene verwerfen"),
-                                            "adjustments-cancel", vm.ClearLayerAdjustmentsCommand))
+                                            "eraser", vm.ClearLayerAdjustmentsCommand))
             End If
             ' Transparente Punkte sperren: gilt für eine Ebene, in deren Bild gearbeitet wird, und
             ' wird einmal gesetzt statt dauernd umgelegt - deshalb hier und nicht in der Fußzeile.
@@ -348,23 +348,23 @@ Namespace Views
                 Dim lockText = If(vm.LayerTransparencyLocked,
                                   LocalizationService.T("Transparente Punkte freigeben"),
                                   LocalizationService.T("Transparente Punkte sperren"))
-                items.Add(MakeLayerMenuItem(lockText, "lock-square", vm.ToggleTransparencyLockCommand))
+                items.Add(MakeLayerMenuItem(lockText, "lock-simple", vm.ToggleTransparencyLockCommand))
             End If
             If vm.CanClipSelectedAnnotation Then
                 Dim clipText = If(vm.SelectedAnnotationIsClipped,
                                   LocalizationService.T("Beschränkung auf Ebene darunter aufheben"),
                                   LocalizationService.T("Auf Ebene darunter beschränken"))
-                items.Add(MakeLayerMenuItem(clipText, "layers-intersect", vm.ToggleClipToLayerBelowCommand))
+                items.Add(MakeLayerMenuItem(clipText, "intersect", vm.ToggleClipToLayerBelowCommand))
             End If
             If vm.CanMergeSelectedAnnotations Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenen zusammenlegen"), "layers-subtract", vm.MergeSelectedAnnotationsCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebenen zusammenlegen"), "unite", vm.MergeSelectedAnnotationsCommand))
             End If
             If vm.CanRasterizeSelectedAnnotation Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "layers-union", vm.RasterizeSelectedAnnotationCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Ebene rastern"), "subtract", vm.RasterizeSelectedAnnotationCommand))
             End If
             ' Die markierten Ebenen gehen ins Foto - anders als Rastern, das im Stapel bleibt.
             If vm.CanFlattenToBackground Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Auf Hintergrundebene reduzieren"), "layers-selected-bottom", vm.FlattenToBackgroundCommand))
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Auf Hintergrundebene reduzieren"), "stack-simple", vm.FlattenToBackgroundCommand))
             End If
             ' Den durchsichtigen Rand einer Bild- oder Malebene abschneiden; der Inhalt bleibt liegen.
             If vm.CanTrimSelectedLayer Then
@@ -372,7 +372,7 @@ Namespace Views
             End If
             ' Einen einfarbigen Hintergrund vom Rand her durchsichtig machen, ohne Modell.
             If vm.CanRemoveEdgeBackground Then
-                items.Add(MakeLayerMenuItem(LocalizationService.T("Hintergrund nach Randfarbe entfernen"), "droplet-minus",
+                items.Add(MakeLayerMenuItem(LocalizationService.T("Hintergrund nach Randfarbe entfernen"), "drop-slash",
                                             vm.RemoveEdgeBackgroundCommand))
             End If
             ' Die markierten Ebenen allein an G'MIC, das Ergebnis als neue Ebene darueber. Das
@@ -380,7 +380,7 @@ Namespace Views
             If vm.CanEditLayersWithGmic Then
                 items.Add(MakeLayerMenuItem(If(mehrere, LocalizationService.T("Ebenen in G'MIC bearbeiten"),
                                                LocalizationService.T("Ebene in G'MIC bearbeiten")),
-                                            "color-filter", vm.EditLayersWithGmicCommand))
+                                            "paw-print", vm.EditLayersWithGmicCommand))
             End If
             ' Sperren gilt für alles Markierte - bei einer Gruppen-Kopfzeile also für die ganze Gruppe.
             Dim lockEntry = MakeLayerMenuItem(vm.SelectionLockLabel,
@@ -390,11 +390,11 @@ Namespace Views
             ' Umbenennen gilt für die angeklickte ZEILE - eine Gruppen-Kopfzeile also auch, obwohl mit
             ' ihr alle Mitglieder markiert sind (sonst wäre eine Gruppe nur per F2 umbenennbar).
             If row.IsGroupHeader Then
-                Dim renameGroupItem = MakeLayerMenuItem(LocalizationService.T("Gruppe umbenennen (F2)"), "edit", Nothing)
+                Dim renameGroupItem = MakeLayerMenuItem(LocalizationService.T("Gruppe umbenennen (F2)"), "pencil-simple", Nothing)
                 AddHandler renameGroupItem.Click, Sub(s2, e2) StartRenameSelectedLayer()
                 items.Add(renameGroupItem)
             ElseIf Not mehrere Then
-                Dim renameItem = MakeLayerMenuItem(LocalizationService.T("Ebene umbenennen (F2)"), "edit", Nothing)
+                Dim renameItem = MakeLayerMenuItem(LocalizationService.T("Ebene umbenennen (F2)"), "pencil-simple", Nothing)
                 AddHandler renameItem.Click, Sub(s2, e2) StartRenameSelectedLayer()
                 items.Add(renameItem)
             End If
@@ -433,15 +433,33 @@ Namespace Views
             Return Nothing
         End Function
 
+        ''' <summary>Ein Eintrag des Ebenenmenues, aufgebaut wie die Eintraege der uebrigen Menues:
+        ''' Symbol, 10 Punkte Abstand, Text, alles in der Kopfzeile. Ueber die Icon-Spalte des
+        ''' Menueeintrags sass das Symbol zu weit links und hatte eine breite Luecke zum Text. Die
+        ''' Kopfzeile bleibt dabei der reine Text, gezeichnet wird sie ueber eine Vorlage.</summary>
         Private Function MakeLayerMenuItem(header As String, iconName As String, command As System.Windows.Input.ICommand) As MenuItem
             Dim mi As New MenuItem With {.Header = header}
             If command IsNot Nothing Then mi.Command = command
-            If Not String.IsNullOrEmpty(iconName) Then
-                mi.Icon = New SvgIcon With {
-                    .Source = $"avares://FerrumPix/Assets/Icons/outline/{iconName}.svg",
-                    .Width = 15, .Height = 15
-                }
-            End If
+            Dim iconSource = If(String.IsNullOrEmpty(iconName), "", $"avares://FerrumPix/Assets/Icons/phosphor/regular/{iconName}.svg")
+            mi.HeaderTemplate = New Avalonia.Controls.Templates.FuncDataTemplate(Of Object)(
+                Function(value, scope)
+                    Dim row As New Grid With {.ColumnDefinitions = New ColumnDefinitions("Auto,*")}
+                    row.Children.Add(New SvgIcon With {
+                        .Source = iconSource,
+                        .Width = 18, .Height = 18,
+                        .VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                    })
+                    Dim label As New TextBlock With {
+                        .Text = If(value?.ToString(), ""),
+                        .Margin = New Thickness(10, 0, 0, 0),
+                        .VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                    }
+                    ' Schon uebersetzt; der Baumdurchlauf der Sprache soll sie nicht noch einmal anfassen.
+                    label.Classes.Add("no-translate")
+                    Grid.SetColumn(label, 1)
+                    row.Children.Add(label)
+                    Return row
+                End Function)
             Return mi
         End Function
 

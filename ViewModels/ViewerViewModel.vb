@@ -4554,6 +4554,12 @@ Namespace ViewModels
 
         Private Sub StartSlideshow()
             If _folderPaths.Count < 2 Then Return
+            ' Im Vollbild aus dem Editor mit ungespeicherten Aenderungen ist das Blaettern gesperrt;
+            ' eine Diashow scheiterte dort an jedem Takt mit derselben Meldung.
+            If _mainVm?.IsFullscreenNavigationLocked Then
+                StatusInfo = LocalizationService.T("Bildwechsel ist bei ungespeicherten Änderungen im Vollbild nicht möglich")
+                Return
+            End If
             _mainVm.EnterFullscreen()
             ' Fortsetzen nach dem Anhalten behaelt die gemischte Runde: sonst kaemen nach jeder
             ' Pause Bilder doppelt, die in dieser Runde schon zu sehen waren.
@@ -4576,6 +4582,17 @@ Namespace ViewModels
         Public Sub PauseSlideshow()
             If Not _isSlideshowPlaying Then Return
             StopSlideshowTimer()
+        End Sub
+
+        ''' <summary>Das Vollbild ohne laufende Diashow verhaelt sich wie eine angehaltene: die
+        ''' Sitzung beginnt, der Takt steht. Bedienleiste, die Anzeige "Angehalten", das Zoomen
+        ''' mit dem Rad und das Fortsetzen haengen alle an IsSlideshowPaused. Eine schon
+        ''' laufende Sitzung bleibt, wie sie ist.</summary>
+        Public Sub EnterPausedSlideshowSession()
+            If _slideshowSession Then Return
+            _slideshowShuffleQueue.Clear()
+            _slideshowSession = True
+            Me.RaisePropertyChanged(NameOf(IsSlideshowPaused))
         End Sub
 
         ''' <summary>Beendet die Diashow ganz; das Vollbild verlassen ruft das.</summary>

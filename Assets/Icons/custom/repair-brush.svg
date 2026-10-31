@@ -1,0 +1,22 @@
+<!--
+Eigene Zeichnung fuer den Reparaturpinsel: ein schraeg liegendes Pflaster mit vier Punkten
+in der Mitte. Die Schraeglage steckt in den Koordinaten selbst, weil der Symbolleser keine
+Drehung einzelner Elemente kennt.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M10.586 19.778L19.778 10.586A4.5 4.5 0 0 0 13.414 4.222L4.222 13.414A4.5 4.5 0 0 0 10.586 19.778Z" />
+  <circle cx="12" cy="9.8" r="0.65" />
+  <circle cx="9.8" cy="12" r="0.65" />
+  <circle cx="14.2" cy="12" r="0.65" />
+  <circle cx="12" cy="14.2" r="0.65" />
+</svg>

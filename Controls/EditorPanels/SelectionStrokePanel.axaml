@@ -17,8 +17,8 @@
                               ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
                               IsChecked="{Binding $parent[Expander].DataContext.SelectionStrokeEnabled}" />
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/border-outer.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bounding-box.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>

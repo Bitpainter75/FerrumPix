@@ -1,0 +1,18 @@
+<!--
+Eigene Zeichnung fuer die Form "Kegel", in der Strichstaerke der uebrigen Symbole.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <path d="M12 3.5l-7 14.5" />
+  <path d="M12 3.5l7 14.5" />
+  <ellipse cx="12" cy="18" rx="7" ry="2.5" />
+</svg>

@@ -20,8 +20,8 @@
                               ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
                               IsChecked="{Binding $parent[Expander].DataContext.FillGroupActive}" />
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-bucket.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>
@@ -35,32 +35,32 @@
                 <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
                         Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="Solid"
                         Classes.active="{Binding IsSolidFill}" ToolTip.Tip="Vollfarbe">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/bucket-droplet.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-bucket.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
                         Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="LinearGradient"
                         Classes.active="{Binding IsLinearGradientFill}" ToolTip.Tip="Linearer Verlauf">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/gradient.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
                         Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="RadialGradient"
                         Classes.active="{Binding IsRadialGradientFill}" ToolTip.Tip="Radialer Verlauf">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/custom/gradient-radial.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
                         Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="AngleGradient"
                         Classes.active="{Binding IsAngleGradientFill}" ToolTip.Tip="Winkelverlauf">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chart-pie.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/chart-pie.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
                         Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="ReflectedGradient"
                         Classes.active="{Binding IsReflectedGradientFill}" ToolTip.Tip="Gespiegelter Verlauf">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-horizontal.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrows-horizontal.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Width="34" Height="30" Padding="0" Margin="0,0,4,4"
                         Command="{Binding SetAnnotationFillKindCommand}" CommandParameter="DiamondGradient"
                         Classes.active="{Binding IsDiamondGradientFill}" ToolTip.Tip="Rautenverlauf">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/diamond.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/diamond.svg" Width="18" Height="18" />
                 </Button>
             </WrapPanel>
 
@@ -100,7 +100,7 @@
                     </ComboBox>
                     <Button x:Name="SavePresetButton" Grid.Column="1" Classes="ghost" Width="32" Height="30" Padding="0"
                             ToolTip.Tip="Verlauf als Vorlage speichern">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-floppy.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/floppy-disk.svg" Width="18" Height="18" />
                         <Button.Flyout>
                             <Flyout Placement="Bottom" Opened="OnLocalizedFlyoutOpened">
                                 <StackPanel Spacing="6" Width="220">
@@ -118,7 +118,7 @@
                             Command="{Binding DeleteGradientPresetCommand}"
                             IsVisible="{Binding SelectedGradientPreset.IsCustom, FallbackValue=False}"
                             ToolTip.Tip="Eigene Vorlage löschen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg" Width="18" Height="18" />
                     </Button>
                 </Grid>
 
@@ -147,7 +147,7 @@
                             IsEnabled="{Binding #GradientStops.CanRemoveStop}"
                             Click="OnRemoveStopClick" ToolTip.Tip="Markierten Farbstopp entfernen (ENTF)">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg" Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg" Width="18" Height="18" />
                             <TextBlock Text="Entfernen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -155,7 +155,7 @@
                             Command="{Binding DistributeGradientStopsCommand}"
                             ToolTip.Tip="Farbstopps in gleichen Abständen verteilen">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-distribute-horizontal.svg" Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/columns.svg" Width="18" Height="18" />
                             <TextBlock Text="Verteilen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -163,7 +163,7 @@
                             Command="{Binding ReverseGradientStopsCommand}"
                             ToolTip.Tip="Reihenfolge der Farbstopps umdrehen">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-left-right.svg" Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrows-left-right.svg" Width="18" Height="18" />
                             <TextBlock Text="Umdrehen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -233,7 +233,7 @@
                             Classes.active="{Binding IsGradientRepeatRepeat}"
                             ToolTip.Tip="Verlauf wiederholen">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/repeat.svg" Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/repeat.svg" Width="18" Height="18" />
                             <TextBlock Text="Wiederholung" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -243,7 +243,7 @@
                             IsVisible="{Binding ShowGradientMirrorRepeat}"
                             ToolTip.Tip="Verlauf gespiegelt wiederholen">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flip-horizontal.svg" Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flip-horizontal.svg" Width="18" Height="18" />
                             <TextBlock Text="Gespiegelt" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>

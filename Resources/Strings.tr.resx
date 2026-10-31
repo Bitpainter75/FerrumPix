@@ -3819,8 +3819,8 @@
   <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
     <value>QRCoder 1.6</value>
   </data>
-  <data name="Tabler_Icons_414587a7" xml:space="preserve">
-    <value>Tabler Icons</value>
+  <data name="Phosphor_Icons_db78df19" xml:space="preserve">
+    <value>Phosphor Icons</value>
   </data>
   <data name="LibRaw_e88f46b3" xml:space="preserve">
     <value>LibRaw</value>
@@ -10632,5 +10632,35 @@
   </data>
   <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
     <value>Tutuldu olarak işaretle (tekrar basmak geri alır)</value>
+  </data>
+  <data name="D_nn_c3b84673" xml:space="preserve">
+    <value>İnce</value>
+  </data>
+  <data name="Leicht_42ea0bb0" xml:space="preserve">
+    <value>Hafif</value>
+  </data>
+  <data name="Gef_llt_0b23a7e4" xml:space="preserve">
+    <value>Dolgulu</value>
+  </data>
+  <data name="Mausrad_im_Viewer_90c32243" xml:space="preserve">
+    <value>Görüntüleyicide fare tekerleği</value>
+  </data>
+  <data name="Mausrad_im_Vollbild_und_in_der_Diashow_979d875f" xml:space="preserve">
+    <value>Tam ekranda ve slayt gösterisinde fare tekerleği</value>
+  </data>
+  <data name="Bildwechsel_e184441d" xml:space="preserve">
+    <value>Resim değiştir</value>
+  </data>
+  <data name="Was_das_Mausrad_im_Viewer_tut_Mit_STRG_tut_es_je_72e76877" xml:space="preserve">
+    <value>Fare tekerleğinin görüntüleyicide ne yaptığı. CTRL ile diğerini yapar, sağ fare tuşu basılıyken her zaman yakınlaştırır.</value>
+  </data>
+  <data name="Was_das_Mausrad_im_Vollbild_und_in_der_Diashow_t_23cc7c78" xml:space="preserve">
+    <value>Fare tekerleğinin tam ekranda ve slayt gösterisinde ne yaptığı. CTRL ile diğerini yapar, sağ fare tuşu basılıyken her zaman yakınlaştırır.</value>
+  </data>
+  <data name="Rechtsklick_Mausrad_4d730519" xml:space="preserve">
+    <value>Sağ tık+fare tekerleği</value>
+  </data>
+  <data name="Weiterbl_ttern_oder_am_Mauszeiger_zoomen_wie_in__b40c03ec" xml:space="preserve">
+    <value>Ayarlarda seçildiği gibi resim değiştir veya imleçte yakınlaştır. CTRL ile diğeri</value>
   </data>
 </root>

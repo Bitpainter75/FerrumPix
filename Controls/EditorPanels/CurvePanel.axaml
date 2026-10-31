@@ -9,8 +9,8 @@
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier-circle.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/circle-dashed.svg"
+                            Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
@@ -22,7 +22,7 @@
                             Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="curve"
                             ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
-                        <icons:SvgIcon Width="14" Height="14" />
+                        <icons:SvgIcon Width="16" Height="16" />
                     </Button>
                     <Button Grid.Column="2"
                             Classes="icon-btn group-reset"
@@ -32,8 +32,8 @@
                             Command="{Binding DataContext.ResetCurveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ToolTip.Tip="Kurve zurücksetzen">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                            Width="16" Height="16" />
                     </Button>
                 </Grid>
             </DataTemplate>

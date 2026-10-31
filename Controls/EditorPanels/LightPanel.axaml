@@ -10,8 +10,8 @@
                     <StackPanel Orientation="Horizontal" Spacing="8"
                                 VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"
+                            Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
@@ -28,8 +28,8 @@
                                 Command="{Binding DataContext.ToggleClippingWarningCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 ToolTip.Tip="Ausgefressene Lichter rot und zugelaufene Tiefen blau markieren">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/warning.svg"
+                                Width="18" Height="18" />
                         </Button>
                         <!-- Blendet die Anpassungen der Gruppe vorübergehend aus und wieder ein,
                              wie der Rechtsklick am Regler, nur für alle Regler der Gruppe
@@ -42,7 +42,7 @@
                                 Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="light"
                                 ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
-                            <icons:SvgIcon Width="14" Height="14" />
+                            <icons:SvgIcon Width="16" Height="16" />
                         </Button>
                         <Button Classes="icon-btn group-reset"
                                 Width="28"
@@ -51,8 +51,8 @@
                                 Command="{Binding DataContext.ResetLightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 ToolTip.Tip="Licht zurücksetzen">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                Width="16" Height="16" />
                         </Button>
                     </StackPanel>
                 </Grid>

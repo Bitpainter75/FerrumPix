@@ -41,19 +41,19 @@ Namespace ViewModels
             ' Dasselbe Auge wie an einer Ebenenzeile, also auch derselbe Umschalter: gezeigt wird es
             ' ueber die Klasse layer-eye, abgeblendet wenn nicht gesetzt.
             Me.IsComponentVisible = component Is Nothing OrElse component.IsVisible
-            Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+            Const base As String = "avares://FerrumPix/Assets/Icons/phosphor/regular/"
             If component Is Nothing Then
                 KindLabel = LocalizationService.T("Gemalt")
-                IconSource = base & "brush.svg"
+                IconSource = base & "paint-brush.svg"
             ElseIf component.IsRadialGradient Then
                 KindLabel = LocalizationService.T("Radialer Verlauf")
                 IconSource = base & "circle.svg"
             ElseIf component.IsLinearGradient Then
                 KindLabel = LocalizationService.T("Linearer Verlauf")
-                IconSource = base & "line-shape.svg"
+                IconSource = base & "line-segment.svg"
             Else
                 KindLabel = LocalizationService.T("Gemalt")
-                IconSource = base & "brush.svg"
+                IconSource = base & "paint-brush.svg"
             End If
 
             ' Der ERSTE Bestandteil setzt das Ergebnis - sein Modus stünde da und hieße nichts.
@@ -71,15 +71,15 @@ Namespace ViewModels
                 Select Case If(component.Mode, "").Trim().ToLowerInvariant()
                     Case "subtract"
                         ModeLabel = "-"
-                        ModeIconSource = base & "layers-subtract.svg"
+                        ModeIconSource = base & "subtract.svg"
                         ModeHint = LocalizationService.T("Von der Maske abziehen")
                     Case "intersect"
                         ModeLabel = LocalizationService.T("Schnitt")
-                        ModeIconSource = base & "layers-intersect.svg"
+                        ModeIconSource = base & "intersect.svg"
                         ModeHint = LocalizationService.T("Nur die Überschneidung behalten")
                     Case Else
                         ModeLabel = "+"
-                        ModeIconSource = base & "layers-union.svg"
+                        ModeIconSource = base & "unite.svg"
                         ModeHint = LocalizationService.T("Zur Maske hinzufügen")
                 End Select
             End If

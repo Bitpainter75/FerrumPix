@@ -7,8 +7,8 @@
             <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                 </StackPanel>
             </DataTemplate>
@@ -64,8 +64,8 @@
                             Command="{Binding AddPathNodeCommand}"
                             ToolTip.Tip="Setzt einen Stützpunkt in die Mitte des längsten Abschnitts">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/plus.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Punkt" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -73,8 +73,8 @@
                             Command="{Binding RemovePathNodeCommand}"
                             ToolTip.Tip="Entfernt den zuletzt angefassten Stützpunkt">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/minus.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/minus.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Punkt" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -110,8 +110,8 @@
                         Command="{Binding CreateSelectionFromPathCommand}"
                         ToolTip.Tip="Macht aus der Kurve eine Auswahl. Wer den Freisteller später ändern will, zieht einen Stützpunkt und drückt noch einmal.">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lasso.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Auswahl aus dem Pfad" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -120,8 +120,8 @@
                         Command="{Binding CreateMaskLayerFromPathCommand}"
                         ToolTip.Tip="Erzeugt eine neue, eigenständige Maskenebene aus diesem Pfad. Der Pfad bleibt zum späteren Anpassen erhalten.">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Maskenebene aus Pfad" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -130,8 +130,8 @@
                         Command="{Binding CreateTextOnPathCommand}"
                         ToolTip.Tip="Wandelt diesen Pfad in ein Textobjekt um. Seine Grundlinie bleibt mit dem Pfad-Werkzeug bearbeitbar.">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/abc.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-aa.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="In Text umwandeln" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -142,8 +142,8 @@
                     Command="{Binding BeginNewPathCommand}"
                     ToolTip.Tip="Einen weiteren Pfad beginnen">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Neuer Pfad" FontSize="{DynamicResource FP.Font.Small}" />
                 </StackPanel>
             </Button>

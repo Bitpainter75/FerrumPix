@@ -54,6 +54,7 @@ Namespace ViewModels
                     ' nach dem ersten Pinselstrich grau, bis zufaellig ein Verlaufs-Ereignis feuerte,
                     ' und nach dem Aufheben blieben sie bedienbar.
                     RaiseMaskActionStateChanged()
+                    RaiseConvertKindChanged()
                 End If
             End Set
         End Property
@@ -1108,9 +1109,7 @@ Namespace ViewModels
             If _activeSelectionIsMask = value Then Return
             _activeSelectionIsMask = value
             Me.RaisePropertyChanged(NameOf(ActiveSelectionIsMask))
-            Me.RaisePropertyChanged(NameOf(CanConvertKind))
-            Me.RaisePropertyChanged(NameOf(ConvertKindText))
-            Me.RaisePropertyChanged(NameOf(ConvertKindHint))
+            RaiseConvertKindChanged()
             RaiseCurrentTargetChanged()
             If value Then PublishSelectionRedOverlay() Else SetSelectionMaskPreviewImage(Nothing)
         End Sub
@@ -2032,6 +2031,17 @@ Namespace ViewModels
             RebuildLayerRows()
             _hasChanges = True
             SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Der Umwandeln-Knopf (Auswahl in Maske und zurueck) haengt an zwei Werten: OB es
+        ''' eine Auswahl gibt (Freigabe) und WELCHE Art sie hat (Text, Symbol, Tooltip). Beide
+        ''' wechseln an vielen Stellen, beim Werkzeugwechsel, beim Ziehen, Aufheben und Rueckgaengig;
+        ''' vorher meldete jede Stelle nur einen Teil, und der Knopf trug den Stand von vorher.</summary>
+        Friend Sub RaiseConvertKindChanged()
+            Me.RaisePropertyChanged(NameOf(CanConvertKind))
+            Me.RaisePropertyChanged(NameOf(ConvertKindText))
+            Me.RaisePropertyChanged(NameOf(ConvertKindIconSource))
+            Me.RaisePropertyChanged(NameOf(ConvertKindHint))
         End Sub
 
         Private Sub RaiseMaskActionStateChanged()
@@ -3150,6 +3160,7 @@ Namespace ViewModels
             If layer Is Nothing Then
                 _editingLayerMaskId = ""
                 InvalidateSelectionLayerLink()
+                RaiseConvertKindChanged()
                 Return
             End If
             LoadMaskIntoSelection(layer.MaskId, layer.IsMaskLayer)
@@ -3233,6 +3244,8 @@ Namespace ViewModels
                 SetActiveSelectionIsMask(showAsMask)
                 RaiseGradientPropertiesChanged()
                 If showAsMask Then PublishGradientOverlay(mask)
+                ' Ohne Auswahl haengt der Umwandeln-Knopf allein an der bearbeiteten Ebene.
+                RaiseConvertKindChanged()
                 Return
             End If
             Dim phase = Diagnostics.Stopwatch.StartNew()

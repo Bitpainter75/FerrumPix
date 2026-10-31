@@ -68,7 +68,7 @@
                         IsVisible="{Binding IsDialogFilterFileVisible}"
                         Click="OnBrowseFilterFileClick"
                         ToolTip.Tip="Preset-Datei wählen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg"
                                    Width="18" Height="18"/>
                 </Button>
             </Grid>

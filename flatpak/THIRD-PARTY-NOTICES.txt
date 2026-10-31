@@ -243,10 +243,10 @@ libraries are part of this package.
   keeps every variant, and FerrumPix picks among them by focal range and aperture.
   Names are otherwise unchanged. No ExifTool code is included.
 
-  Tabler Icons
-  Copyright (c) 2020-2024 Paweł Kuna
+  Phosphor Icons
+  Copyright (c) 2023 Phosphor Icons
   MIT License
-  https://github.com/tabler/tabler-icons/blob/master/LICENSE
+  https://github.com/phosphor-icons/core/blob/main/LICENSE
 
 
 5. Optional model files
@@ -341,7 +341,7 @@ source reference each of them requires.
 MIT License
 --------------------------------------------------------------------------------
 Used by: Avalonia UI, .NET, ReactiveUI, SkiaSharp, HarfBuzzSharp, Svg.Skia,
-Microsoft.Data.Sqlite with SQLitePCLRaw, QRCoder, ONNX Runtime, Tabler Icons.
+Microsoft.Data.Sqlite with SQLitePCLRaw, QRCoder, ONNX Runtime, Phosphor Icons.
 The copyright line below is the one from QRCoder; each component carries its own,
 named in the section above.
 

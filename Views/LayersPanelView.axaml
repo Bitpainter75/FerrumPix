@@ -84,7 +84,7 @@
                                             BorderBrush="{DynamicResource FP.Border.Normal}"
                                             Background="{DynamicResource FP.Bg.Root}">
                                         <icons:SvgIcon Source="{Binding IconSource}"
-                                                       Width="13" Height="13"
+                                                       Width="15" Height="15"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
                                     <TextBlock Grid.Column="1"
@@ -143,7 +143,7 @@
                                         CommandParameter="{Binding}"
                                         ToolTip.Tip="Gruppe auf- oder zuklappen">
                                     <icons:SvgIcon Source="{Binding GroupToggleIconSource}"
-                                                   Width="12" Height="12"
+                                                   Width="14" Height="14"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Button>
                                 <!-- Schnittmasken sind nicht einfach ein weiteres Merkzeichen: sie
@@ -153,7 +153,7 @@
                                 <icons:SvgIcon Grid.Column="0"
                                                Source="{Binding ClipLinkIconSource}"
                                                Classes="layer-marker"
-                                               Width="14" Height="14"
+                                               Width="15" Height="15"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                IsVisible="{Binding IsClipped}"
                                                ToolTip.Tip="Schnittmaske: wirkt nur innerhalb der Deckung der Ebene direkt darunter" />
@@ -234,15 +234,15 @@
                                                     IsVisible="{Binding HasMaskThumbnail}">
                                                 <Image Source="{Binding MaskThumbnail}" Stretch="Uniform" />
                                             </Border>
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
                                                            Classes="layer-marker"
-                                                           Width="13" Height="13"
+                                                           Width="15" Height="15"
                                                            IsVisible="{Binding !HasMaskThumbnail}" />
                                         </Panel>
                                     </Button>
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect.svg"
                                                    Classes="layer-marker"
-                                                   Width="13" Height="13"
+                                                   Width="15" Height="15"
                                                    IsVisible="{Binding IsClipped}"
                                                    ToolTip.Tip="Auf die Ebene darunter beschränkt" />
                                     <!-- Eigene Anpassungen der Ebene: das Symbol steht nur da, wenn
@@ -257,8 +257,8 @@
                                                   Command="{Binding DataContext.ToggleLayerAdjustmentsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                   CommandParameter="{Binding}"
                                                   ToolTip.Tip="Anpassungen dieser Ebene ein- oder ausschalten">
-                                        <icons:SvgIcon Width="13" Height="13"
-                                                       Source="avares://FerrumPix/Assets/Icons/outline/adjustments-alt.svg" />
+                                        <icons:SvgIcon Width="15" Height="15"
+                                                       Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders.svg" />
                                     </ToggleButton>
                                 </StackPanel>
                                 <!-- Das Schloss steht an JEDER Zeile, nicht nur an gesperrten: als
@@ -283,7 +283,7 @@
                                               CommandParameter="{Binding}"
                                               ToolTip.Tip="Ebene ein-/ausblenden">
                                     <icons:SvgIcon
-                                        Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg"
                                         Width="15" Height="15" />
                                 </ToggleButton>
                             </Grid>
@@ -336,7 +336,7 @@
                                     BorderBrush="{DynamicResource FP.Border.Normal}"
                                     Background="{DynamicResource FP.Bg.Root}">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/adjustments.svg"
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders-horizontal.svg"
                                     Width="18" Height="18"
                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
@@ -350,7 +350,7 @@
                                     BorderBrush="{DynamicResource FP.Border.Normal}"
                                     Background="{DynamicResource FP.Bg.Root}">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/brush.svg"
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-brush.svg"
                                     Width="18" Height="18"
                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
@@ -364,7 +364,7 @@
                                     BorderBrush="{DynamicResource FP.Border.Normal}"
                                     Background="{DynamicResource FP.Bg.Root}">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"
                                     Width="18" Height="18"
                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
@@ -398,38 +398,38 @@
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding AddPaintLayerCommand}"
                             ToolTip.Tip="Neue Malebene: eine leere Ebene zum Bemalen anlegen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pencil-plus.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pencil-simple-line.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationUpCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene nach vorne">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-up.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-up.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding MoveSelectedAnnotationDownCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene nach hinten">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-down.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-down.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DuplicateSelectedAnnotationCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
                             IsEnabled="{Binding CanDuplicateSelectedAnnotation}"
                             ToolTip.Tip="Ebene duplizieren (STRG+D)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copy.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Mehrere: dasselbe Bild, aber der Befehl fuer die ganze Auswahl. -->
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DuplicateSelectedAnnotationsCommand}"
                             IsVisible="{Binding IsMultiLayerSelection}"
                             ToolTip.Tip="Markierte Ebenen duplizieren">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copy.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Zusammenlegen gibt es nur fuer mehrere - im Kontextmenue stand es laengst,
                          in der Fusszeile fehlte es. -->
@@ -437,8 +437,8 @@
                             Command="{Binding MergeSelectedAnnotationsCommand}"
                             IsVisible="{Binding CanMergeSelectedAnnotations}"
                             ToolTip.Tip="Ebenen zusammenlegen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-subtract.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/unite.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Ebenenmaske: EIN Knopf, der zwei Dinge tut, je nachdem was die Ebene schon
                          hat - anlegen oder bearbeiten. Zwei Knöpfe nebeneinander, von denen immer
@@ -447,8 +447,8 @@
                             Click="OnAnnotationMaskFooterClick"
                             IsVisible="{Binding CanUseAnnotationMaskButton}"
                             ToolTip.Tip="{Binding AnnotationMaskButtonHint}">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Gruppieren/Gruppierung aufheben: der sichtbare Weg zu Gruppen (das Kürzel
                          Strg+G kennt niemand, der es nicht gelesen hat). Aktiv, sobald mehrere Ebenen
@@ -457,8 +457,8 @@
                             Command="{Binding GroupSelectedAnnotationsCommand}"
                             IsVisible="{Binding CanGroupSelectedAnnotations}"
                             ToolTip.Tip="Markierte Ebenen gruppieren (STRG+G)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Nur sichtbar, wenn die Auswahl WIRKLICH in einer Gruppe liegt - sonst steht
                          ein Knopf da, der nichts zu tun hat. -->
@@ -466,8 +466,8 @@
                             Command="{Binding UngroupSelectedAnnotationsCommand}"
                             IsVisible="{Binding CanUngroupSelectedAnnotations}"
                             ToolTip.Tip="Gruppierung aufheben (STRG+SHIFT+G)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-x.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-simple-minus.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Sperren steht jetzt an der ZEILE (Schloss neben dem Auge) und nicht mehr
                          hier: dort gehört es hin, und die Reihe hier war zu voll. Für mehrere
@@ -480,8 +480,8 @@
                             Command="{Binding RasterizeSelectedAnnotationCommand}"
                             IsVisible="{Binding CanRasterizeSelectedAnnotation}"
                             ToolTip.Tip="Ebene rastern">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-union.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/subtract.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <!-- Umbenennen gilt fuer die angeklickte ZEILE: eine einzelne Ebene oder eine
                          Gruppe ueber ihre Kopfzeile. Bei mehreren markierten Ebenen waere unklar,
@@ -490,22 +490,22 @@
                             Click="OnRenameSelectedClick"
                             IsVisible="{Binding CanRenameSelectedLayer}"
                             ToolTip.Tip="Ebene umbenennen (F2)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/edit.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pencil-simple.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DeleteSelectedAnnotationCommand}"
                             IsVisible="{Binding IsSingleLayerSelection}"
                             ToolTip.Tip="Ebene löschen (ENTF)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                       Width="18" Height="18" />
                     </Button>
                     <Button Classes="icon-btn" Width="30" Height="30" Padding="0"
                             Command="{Binding DeleteSelectedAnnotationsCommand}"
                             IsVisible="{Binding IsMultiLayerSelection}"
                             ToolTip.Tip="Markierte Ebenen löschen (ENTF)">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                       Width="18" Height="18" />
                     </Button>
                 </WrapPanel>
             </Border>

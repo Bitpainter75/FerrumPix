@@ -35,38 +35,38 @@ Namespace ViewModels
         End Function
 
         Public Shared Function NewImage(c As ICommand) As AppAction
-            Return Build("Neues Bild", "photo-plus", c)
+            Return Build("Neues Bild", "image", c)
         End Function
 
         Public Shared Function Fullscreen(c As ICommand) As AppAction
-            Return Build("Vollbild", "arrows-maximize", c)
+            Return Build("Vollbild", "arrows-out", c)
         End Function
 
         Public Shared Function Adjust(c As ICommand) As AppAction
-            Return Build("Anpassen", "exposure", c)
+            Return Build("Anpassen", "plus-minus", c)
         End Function
 
         Public Shared Function Save(c As ICommand) As AppAction
-            Return Build("Speichern", "device-floppy", c)
+            Return Build("Speichern", "floppy-disk", c)
         End Function
 
         Public Shared Function SaveAs(c As ICommand) As AppAction
-            Return Build("Speichern unter", "file-export", c)
+            Return Build("Speichern unter", "export", c)
         End Function
 
         Public Shared Function PinImage(c As ICommand) As AppAction
-            Return Build("Bild anheften", "pin", c)
+            Return Build("Bild anheften", "push-pin", c)
         End Function
 
         ' Bewertung, Favorit und Etikett stehen NICHT hier: sie sind keine Beschriftungen mit
         ' Symbol, sondern eigene Zeilen aus Sternen, Herz und Farbkreisen. Siehe MenuWidgets.
 
         Public Shared Function OpenInEditor(c As ICommand) As AppAction
-            Return Build("Im Editor öffnen", "photo-edit", c)
+            Return Build("Im Editor öffnen", "image-square", c)
         End Function
 
         Public Shared Function InsertAsLayer(c As ICommand) As AppAction
-            Return Build("Als Ebene einfügen", "photo-plus", c)
+            Return Build("Als Ebene einfügen", "image", c)
         End Function
 
         Public Shared Function ShowImage(c As ICommand) As AppAction
@@ -86,7 +86,7 @@ Namespace ViewModels
         End Function
 
         Public Shared Function Cut(c As ICommand) As AppAction
-            Return Build("Ausschneiden", "cut", c)
+            Return Build("Ausschneiden", "scissors", c)
         End Function
 
         Public Shared Function Paste(c As ICommand) As AppAction
@@ -102,7 +102,7 @@ Namespace ViewModels
         End Function
 
         Public Shared Function CreateCollage(c As ICommand) As AppAction
-            Return Build("Collage erstellen", "layout-grid", c)
+            Return Build("Collage erstellen", "grid-four", c)
         End Function
 
         Public Shared Function Rename(c As ICommand) As AppAction
@@ -114,29 +114,29 @@ Namespace ViewModels
         End Function
 
         Public Shared Function ApplyWatermark(c As ICommand) As AppAction
-            Return Build("Wasserzeichen anwenden", "droplet", c)
+            Return Build("Wasserzeichen anwenden", "drop", c)
         End Function
 
         Public Shared Function ApplyFilter(c As ICommand) As AppAction
-            Return Build("Anpassungen anwenden", "filter", c)
+            Return Build("Anpassungen anwenden", "funnel", c)
         End Function
 
         ''' <summary>Das Untermenue "Anpassungen": was eine Bearbeitung auf die Bilder legt, also
         ''' Anwenden, Kopieren, Einfügen und das Wasserzeichen.</summary>
         Public Shared Function Adjustments(children As IReadOnlyList(Of Object)) As AppAction
-            Return New AppAction(LocalizationService.T("Anpassungen"), "adjustments", Nothing, Nothing, children)
+            Return New AppAction(LocalizationService.T("Anpassungen"), "sliders-horizontal", Nothing, Nothing, children)
         End Function
 
         Public Shared Function CopyAdjustments(c As ICommand) As AppAction
-            Return Build("Anpassungen kopieren", "adjustments-share", c)
+            Return Build("Anpassungen kopieren", "files", c)
         End Function
 
         Public Shared Function PasteAdjustments(c As ICommand) As AppAction
-            Return Build("Anpassungen einfügen", "adjustments-down", c)
+            Return Build("Anpassungen einfügen", "clipboard-text", c)
         End Function
 
         Public Shared Function ConvertTo(c As ICommand) As AppAction
-            Return Build("Konvertieren nach", "transform", c)
+            Return Build("Konvertieren nach", "swap", c)
         End Function
 
         Public Shared Function ExportTo(c As ICommand) As AppAction
@@ -148,26 +148,26 @@ Namespace ViewModels
         End Function
 
         Public Shared Function ReanalyzeAiTags(c As ICommand) As AppAction
-            Return Build("KI-Stichwörter neu analysieren", "photo-scan", c)
+            Return Build("KI-Stichwörter neu analysieren", "scan", c)
         End Function
 
         Public Shared Function RotateLeft(c As ICommand) As AppAction
-            Return Build("Nach links drehen", "rotate-2", c)
+            Return Build("Nach links drehen", "arrow-counter-clockwise", c)
         End Function
 
         Public Shared Function RotateRight(c As ICommand) As AppAction
-            Return Build("Nach rechts drehen", "rotate-clockwise-2", c)
+            Return Build("Nach rechts drehen", "arrow-clockwise", c)
         End Function
 
         ''' <summary>Das Untermenue "Metadaten" mit allem, was an den Angaben ZUR Aufnahme arbeitet:
         ''' Aufnahmeort setzen und Metadaten entfernen. Sie gehoeren zusammen und waeren einzeln im
         ''' Hauptmenue vier weitere Zeilen in einer Liste, die schon lang ist.</summary>
         Public Shared Function Metadata(children As IReadOnlyList(Of Object)) As AppAction
-            Return New AppAction(LocalizationService.T("Metadaten"), "file-info", Nothing, Nothing, children)
+            Return New AppAction(LocalizationService.T("Metadaten"), "info", Nothing, Nothing, children)
         End Function
 
         Public Shared Function CopyPlace(c As ICommand) As AppAction
-            Return Build("Aufnahmeort kopieren", "map-pin-share", c)
+            Return Build("Aufnahmeort kopieren", "copy-simple", c)
         End Function
 
         ''' <summary>Der gemerkte Ort steht MIT im Text ("Aufnahmeort einfügen: München"). Ohne ihn
@@ -191,22 +191,22 @@ Namespace ViewModels
         Public Shared Function SetPlace(c As ICommand) As AppAction
             ' Ohne Auslassungspunkte, wie die uebrigen Eintraege, die einen Dialog oeffnen
             ' ("Größe ändern", "Exportieren nach").
-            Return Build("Aufnahmeort setzen", "map-pin-search", c)
+            Return Build("Aufnahmeort setzen", "map-pin-area", c)
         End Function
 
         ''' <summary>Der Weg ueber die Aufnahmezeit. Die Beschriftung nennt die Aufzeichnung und
         ''' nicht das Dateiformat: wer einen Weg mitgeschnitten hat, weiss, dass das eine GPX-Datei
         ''' ist - wer nicht, dem sagt das Kuerzel ohnehin nichts.</summary>
         Public Shared Function SetPlaceFromTrack(c As ICommand) As AppAction
-            Return Build("Aufnahmeort aus Aufzeichnung", "route", c)
+            Return Build("Aufnahmeort aus Aufzeichnung", "path", c)
         End Function
 
         Public Shared Function RemovePlace(c As ICommand) As AppAction
-            Return Build("Aufnahmeort löschen", "map-pin-x", c)
+            Return Build("Aufnahmeort löschen", "eraser", c)
         End Function
 
         Public Shared Function OpenPlaceInOsm(c As ICommand) As AppAction
-            Return Build("Aufnahmeort in OpenStreetMap öffnen", "map", c)
+            Return Build("Aufnahmeort in OpenStreetMap öffnen", "map-trifold", c)
         End Function
 
         Public Shared Function CopyPath(c As ICommand) As AppAction
@@ -219,7 +219,7 @@ Namespace ViewModels
 
         ''' <summary>Das Untermenue "Öffnen mit", je eingetragenem Programm ein Eintrag.</summary>
         Public Shared Function OpenWith(children As IReadOnlyList(Of Object)) As AppAction
-            Return New AppAction(LocalizationService.T("Öffnen mit"), "external-link", Nothing, Nothing, children)
+            Return New AppAction(LocalizationService.T("Öffnen mit"), "arrow-square-out", Nothing, Nothing, children)
         End Function
 
         ''' <summary>Ein Programm im Untermenue. Der Name stammt vom Nutzer und bleibt, wie er ist;
@@ -229,11 +229,11 @@ Namespace ViewModels
         End Function
 
         Public Shared Function EditWithGmic(c As ICommand) As AppAction
-            Return Build("In G'MIC bearbeiten", "color-filter", c)
+            Return Build("In G'MIC bearbeiten", "paw-print", c)
         End Function
 
         Public Shared Function RemovePhotoBackground(c As ICommand) As AppAction
-            Return Build("Hintergrund des Fotos nach Randfarbe entfernen", "droplet-minus", c)
+            Return Build("Hintergrund des Fotos nach Randfarbe entfernen", "drop-slash", c)
         End Function
 
         Public Shared Function Delete(c As ICommand) As AppAction
@@ -244,13 +244,13 @@ Namespace ViewModels
         ''' aus dem Album (siehe GalleryViewModel.DeleteSelected). Eigener Name, damit niemand
         ''' „Löschen" liest und das Bild in der Bibliothek für verloren hält.</summary>
         Public Shared Function RemoveFromAlbum(c As ICommand) As AppAction
-            Return Build("Aus dem Album nehmen", "photo-minus", c)
+            Return Build("Aus dem Album nehmen", "image-broken", c)
         End Function
 
         ''' <summary>Die einzige Geste im Papierkorb einer Serverquelle. Der Server legt die Datei
         ''' dorthin zurueck, wo sie herkam.</summary>
         Public Shared Function RestoreFromTrash(c As ICommand) As AppAction
-            Return Build("Wiederherstellen", "restore", c)
+            Return Build("Wiederherstellen", "arrow-counter-clockwise", c)
         End Function
 
         ''' <summary>Das Untermenue "Aussortieren": Verwerfen samt Serie und Stapel.</summary>
@@ -259,23 +259,23 @@ Namespace ViewModels
         End Function
 
         Public Shared Function RejectRestOfStack(c As ICommand) As AppAction
-            Return Build("Rest der Serie verwerfen", "stack-pop", c)
+            Return Build("Rest der Serie verwerfen", "stack-minus", c)
         End Function
 
         Public Shared Function OpenSeries(c As ICommand) As AppAction
-            Return Build("Serie öffnen", "stack-2", c)
+            Return Build("Serie öffnen", "stack", c)
         End Function
 
         Public Shared Function CloseSeries(c As ICommand) As AppAction
-            Return Build("Serie schließen", "arrow-back-up", c)
+            Return Build("Serie schließen", "arrow-u-up-left", c)
         End Function
 
         Public Shared Function ExpandStack(c As ICommand) As AppAction
-            Return Build("Stapel aufklappen", "stack-2", c)
+            Return Build("Stapel aufklappen", "stack", c)
         End Function
 
         Public Shared Function CollapseStack(c As ICommand) As AppAction
-            Return Build("Stapel zuklappen", "stack-2", c)
+            Return Build("Stapel zuklappen", "stack", c)
         End Function
 
     End Class

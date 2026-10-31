@@ -270,9 +270,9 @@
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <icons:SvgIcon Grid.Column="1"
-                                                       Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
-                                                       Width="14"
-                                                       Height="14"
+                                                       Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                                                       Width="18"
+                                                       Height="18"
                                                        Margin="10,0,0,0"
                                                        VerticalAlignment="Center"/>
                                     </Grid>
@@ -362,7 +362,7 @@
                                             Height="36"
                                             Click="OnBrowseSaveTargetFolderClick"
                                             ToolTip.Tip="Ordner wählen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg"
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg"
                                                        Width="18"
                                                        Height="18"/>
                                     </Button>

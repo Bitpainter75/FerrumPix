@@ -18,8 +18,13 @@
   picture.
   The bar also switches random order and the filmstrip on and off and sets how long each picture
   stays, and a bar at the top rates, marks as favourite, colour labels and keeps or rejects the
-  picture on screen. While paused the mouse wheel zooms. RAW files no longer leave a black screen
+  picture on screen. Fullscreen without a running slideshow behaves the same way, as a paused
+  slideshow ready to start. RAW files no longer leave a black screen
   between pictures: the next one is developed while the current one is on screen.
+
+- **Mouse wheel your way:** the settings decide what the mouse wheel does, separately for the
+  viewer and for fullscreen and slideshow: change the picture or zoom. Changing the picture is the
+  default. With CTRL the wheel does the other, with the right mouse button held it always zooms.
 
 - **Keyboard shortcuts on F1:** F1 opens the list of keyboard shortcuts from anywhere, also in
   fullscreen. It is the same list as in the settings, now including the slideshow and fullscreen
@@ -30,6 +35,19 @@
   pictures as kept (green) or rejected (red); pressing the same one again takes the mark back.
   The separate menu entry for rejecting is gone, and so is the small cross for clearing stars or
   colour labels, since clicking the same star or colour again already clears it.
+
+- **New symbols:** the whole interface and the symbol gallery in the editor use a new, more even
+  set of symbols. In the editor each symbol comes in five weights, from thin to filled, and inserted
+  symbols draw cleanly with fill and outline. Symbols placed in pictures before keep their place;
+  where the new set has no match they show a question mark and can be replaced.
+  A frame made of symbols can now use any symbol of the gallery, in any of the five weights.
+
+- **Converting a selection creates the layer:** the button that turns a selection into a mask or
+  back now creates the matching layer right away. With a selection or mask layer picked in the
+  layer panel, it converts that layer instead.
+
+- **SVG graphics stay visible on dark tiles:** in the gallery and the filmstrips, SVG files now sit
+  on a light background, so black outlines no longer disappear in the dark theme.
 
 - **Filmstrip on any side:** in the settings the filmstrip can sit below, above, left or right of
   the picture, separately for the viewer, the editor and fullscreen. All filmstrip settings now

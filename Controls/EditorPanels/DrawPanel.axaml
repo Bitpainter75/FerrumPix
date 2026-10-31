@@ -21,7 +21,7 @@
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                           Width="14" Height="14" />
+                                           Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                     </DataTemplate>
@@ -35,8 +35,8 @@
                             Command="{Binding AddPaintLayerCommand}"
                             ToolTip.Tip="Neue Malebene: eine leere Ebene zum Bemalen anlegen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pencil-plus.svg"
-                                           Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pencil-simple-line.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Malebene anlegen" />
                         </StackPanel>
                     </Button>
@@ -157,7 +157,7 @@
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                           Width="14" Height="14" />
+                                           Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                     </DataTemplate>
@@ -168,31 +168,31 @@
                                 Command="{Binding SetToolCommand}" CommandParameter="Eraser"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}"
                                 ToolTip.Tip="Radiergummi: nimmt Bild weg oder malt die Hintergrundfarbe">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg" Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg" Width="18" Height="18" />
                         </Button>
                         <Button Classes="ghost" Padding="8,6"
                                 Command="{Binding SetToolCommand}" CommandParameter="Dodge"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Dodge}"
                                 ToolTip.Tip="Abwedeln: hellt unter dem Pinsel auf">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness-up.svg" Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg" Width="18" Height="18" />
                         </Button>
                         <Button Classes="ghost" Padding="8,6"
                                 Command="{Binding SetToolCommand}" CommandParameter="Burn"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Burn}"
                                 ToolTip.Tip="Nachbelichten: dunkelt unter dem Pinsel ab">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness-down.svg" Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun-dim.svg" Width="18" Height="18" />
                         </Button>
                         <Button Classes="ghost" Padding="8,6"
                                 Command="{Binding SetToolCommand}" CommandParameter="Sponge"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Sponge}"
                                 ToolTip.Tip="Schwamm: nimmt unter dem Pinsel Farbe weg oder verstärkt sie">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/droplet-half.svg" Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/drop-half.svg" Width="18" Height="18" />
                         </Button>
                         <Button Classes="ghost" Padding="8,6"
                                 Command="{Binding SetToolCommand}" CommandParameter="ReplaceColor"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=ReplaceColor}"
                                 ToolTip.Tip="Farbe ersetzen: färbt unter dem Pinsel um und behält Helligkeit und Struktur">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/replace.svg" Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/swap.svg" Width="18" Height="18" />
                         </Button>
                         <!-- ROTE AUGEN: kein Zug, ein Klick ist ein fertiger Schritt im Pinselkreis
                              (EditorViewModel.RemoveRedEyeAt). Nur die Groesse zaehlt. -->
@@ -200,7 +200,7 @@
                                 Command="{Binding SetToolCommand}" CommandParameter="RedEye"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=RedEye}"
                                 ToolTip.Tip="Rote Augen entfernen">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg" Width="16" Height="16" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18" />
                         </Button>
                     </StackPanel>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
@@ -328,7 +328,7 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                               Width="14" Height="14" />
+                                               Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -339,8 +339,8 @@
                                     Command="{Binding DataContext.ResetRetouchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Alle Retusche-Punkte zurücksetzen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>

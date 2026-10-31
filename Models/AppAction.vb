@@ -24,7 +24,7 @@ Namespace Models
                        Optional children As IReadOnlyList(Of Object) = Nothing)
             Me.Label = label
             Me.IconSource = If(String.IsNullOrEmpty(iconName), "",
-                               "avares://FerrumPix/Assets/Icons/outline/" & iconName & ".svg")
+                               "avares://FerrumPix/Assets/Icons/phosphor/regular/" & iconName & ".svg")
             Me.Command = command
             Me.Parameter = parameter
             Me.Children = children

@@ -72,7 +72,7 @@
                                     Click="OnUpdateNoticeClick"
                                     ToolTip.Tip="Veröffentlichte Fassung herunterladen">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="12" Height="12"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"
                                                    VerticalAlignment="Center"
                                                    IconBrush="{DynamicResource FP.Accent}"/>
                                     <TextBlock Text="Aktualisierung verfügbar:" FontSize="{DynamicResource FP.Font.Small}"
@@ -139,7 +139,7 @@
                     </ScrollViewer>
                     <Button Grid.Column="1" Classes="icon-btn" Width="26" Height="26" Padding="0"
                             Command="{Binding DismissFileWarningCommand}" ToolTip.Tip="Schließen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg" Width="14" Height="14"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg" Width="18" Height="18"/>
                     </Button>
                 </Grid>
             </Border>
@@ -174,8 +174,8 @@
                                 IsVisible="{Binding CanCancelBusyOverlay}"
                                 Command="{Binding CancelBusyOverlayCommand}"
                                 ToolTip.Tip="Abbrechen. Der Stapel endet nach dem Bild, an dem er gerade rechnet; dieses Bild wird nicht geschrieben.">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
+                                           Width="18" Height="18" />
                         </Button>
                     </StackPanel>
                 </Border>

@@ -26,8 +26,8 @@
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/shape.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/shapes.svg"
+                                Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                     </DataTemplate>
@@ -44,8 +44,8 @@
                                     CommandParameter="{Binding PendingKind}"
                                     Classes.active="{Binding IsPending}"
                                     Classes.selected-kind="{Binding IsSelectedKind}">
-                                <icons:SvgIcon Source="{Binding IconPath}" Width="17"
-                                               Height="17" />
+                                <icons:SvgIcon Source="{Binding IconPath}" Width="18"
+                                               Height="18" />
                             </Button>
                         </DataTemplate>
                     </ItemsRepeater.ItemTemplate>
@@ -81,11 +81,11 @@
                     <TextBox
                         Text="{Binding ShapeIconSearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         PlaceholderText="Symbol suchen…"
-                        Padding="8,4,28,4"
+                        Padding="8,4,32,4"
                         FontSize="{DynamicResource FP.Font.Small}" />
                     <Button Classes="ghost"
-                            Width="18"
-                            Height="18"
+                            Width="22"
+                            Height="22"
                             Padding="0"
                             Margin="0,0,6,0"
                             HorizontalAlignment="Right"
@@ -93,14 +93,32 @@
                             Command="{Binding ClearShapeIconSearchCommand}"
                             IsVisible="{Binding ShapeIconSearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                             ToolTip.Tip="Suche zurücksetzen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
-                                       Width="12"
-                                       Height="12"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
+                                       Width="18"
+                                       Height="18"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
                                        Opacity="0.75"/>
                     </Button>
                 </Grid>
+                <!-- Die Strichstärke der Symbole: jedes gibt es fünfmal, von dünn bis gefüllt. -->
+                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                    <Button Classes="segmented" Classes.active="{Binding IsShapeIconWeightThin}"
+                            Command="{Binding SetShapeIconWeightCommand}" CommandParameter="thin"
+                            FontSize="{DynamicResource FP.Font.Small}" Padding="6,2">Dünn</Button>
+                    <Button Classes="segmented" Classes.active="{Binding IsShapeIconWeightLight}"
+                            Command="{Binding SetShapeIconWeightCommand}" CommandParameter="light"
+                            FontSize="{DynamicResource FP.Font.Small}" Padding="6,2">Leicht</Button>
+                    <Button Classes="segmented" Classes.active="{Binding IsShapeIconWeightRegular}"
+                            Command="{Binding SetShapeIconWeightCommand}" CommandParameter="regular"
+                            FontSize="{DynamicResource FP.Font.Small}" Padding="6,2">Normal</Button>
+                    <Button Classes="segmented" Classes.active="{Binding IsShapeIconWeightBold}"
+                            Command="{Binding SetShapeIconWeightCommand}" CommandParameter="bold"
+                            FontSize="{DynamicResource FP.Font.Small}" Padding="6,2">Fett</Button>
+                    <Button Classes="segmented" Classes.active="{Binding IsShapeIconWeightFill}"
+                            Command="{Binding SetShapeIconWeightCommand}" CommandParameter="fill"
+                            FontSize="{DynamicResource FP.Font.Small}" Padding="6,2">Gefüllt</Button>
+                </WrapPanel>
                 <!-- Die Liste entsteht erst, wenn dieses Feld aufgeht (siehe EnsureShapeIconsLoaded),
                      und dabei im Hintergrund. Solange sagt eine Zeile, dass gearbeitet wird - ein
                      leerer Kasten sähe aus wie "keine Symbole". -->
@@ -109,7 +127,7 @@
                            Margin="0,4"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
-                <!-- Über viertausend Symbole: ein ItemsControl legt für jedes sofort einen Knopf an.
+                <!-- Über tausend Symbole: ein ItemsControl legt für jedes sofort einen Knopf an.
                      Der ItemsRepeater mit WrapLayout erzeugt nur die tatsächlich sichtbaren. -->
                 <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto"
                               IsVisible="{Binding !IsShapeIconsLoading}">
@@ -125,13 +143,14 @@
                                         CommandParameter="{Binding PendingKind}"
                                         Classes.active="{Binding IsPending}"
                                         Classes.selected-kind="{Binding IsSelectedKind}">
-                                    <icons:SvgIcon Source="{Binding IconPath}" Width="17"
-                                                   Height="17" />
+                                    <icons:SvgIcon Source="{Binding IconPath}" Width="18"
+                                                   Height="18" />
                                 </Button>
                             </DataTemplate>
                         </ItemsRepeater.ItemTemplate>
                     </ItemsRepeater>
                 </ScrollViewer>
+
             </StackPanel>
         </StackPanel>
     </StackPanel>
