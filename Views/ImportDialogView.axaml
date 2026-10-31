@@ -89,7 +89,7 @@
                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
-        <TextBlock Text="Platzhalter: {pictures} Bilder-Ordner, {datetaken:yyyy} Jahr der Aufnahme, {datetaken:yyyy-MM-dd} Tag, {camera} Kamera."
+        <TextBlock Text="Platzhalter: {pictures} Bilder-Ordner, {camera} Kamera, {datetaken:FORMAT} Aufnahmedatum mit yyyy Jahr, MM Monat, MMMM Monatsname, dd Tag, dddd Wochentag. Beispiel: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}."
                    Foreground="{DynamicResource FP.Text.Muted}"
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap"/>

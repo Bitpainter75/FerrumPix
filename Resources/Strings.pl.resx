@@ -10575,4 +10575,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>Pokaż pasek miniatur</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>Kółko myszy</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>Kolejność losowa włączona lub wyłączona</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>Następny lub poprzedni obraz, przy wstrzymanym pokazie slajdów powiększa przy kursorze</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>Krótsza przerwa</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>Dłuższa przerwa</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>Przerwa pokazu slajdów</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>Pasek miniatur</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>Kafelki</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>Położenie paska miniatur na pełnym ekranie</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>Gdzie pasek miniatur pojawia się na pełnym ekranie i w pokazie slajdów, gdy mysz dotrze do tej krawędzi lub przycisk paska sterowania go pokaże.</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>Pasek obrazów w przeglądarce, na pełnym ekranie i w edytorze: czy i gdzie jest oraz jak wyglądają kafelki.</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>Mysz do krawędzi paska miniatur</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>Miejsca docelowe, które Importuj oferuje obok bieżącego folderu. Symbole zastępcze: {pictures} folder Obrazy, {home} folder domowy, {camera} aparat, {datetaken:FORMAT} data wykonania. W formacie yyyy oznacza rok, MM miesiąc jako liczbę, MMMM nazwę miesiąca, dd dzień, a dddd dzień tygodnia; nazwy są w języku Twojego regionu. Przykład: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} tworzy foldery takie jak 2026/10 październik.</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>Symbole zastępcze: {pictures} folder Obrazy, {camera} aparat, {datetaken:FORMAT} data wykonania z yyyy rok, MM miesiąc, MMMM nazwa miesiąca, dd dzień, dddd dzień tygodnia. Przykład: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}.</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>Propozycja dla edytowanych kopii. Te same symbole zastępcze co przy zbiorczej zmianie nazw: {name}, ###, {date:FORMAT} data pliku, {datetaken:FORMAT} data wykonania, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. W formacie: yyyy rok, MM miesiąc, MMMM nazwa miesiąca, dd dzień, dddd dzień tygodnia, HH mm ss godzina, na przykład {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>Format daty: yyyy rok, MM miesiąc jako liczba, MMMM nazwa miesiąca, dd dzień, dddd dzień tygodnia, HH mm ss godzina. Nazwy są w języku Twojego regionu, na przykład {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>Wzorzec jak przy wsadowej zmianie nazw: {name}, ### (licznik), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>Oznacz jako zachowane (ponownie cofa)</value>
+  </data>
 </root>

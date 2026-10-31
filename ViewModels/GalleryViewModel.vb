@@ -2230,6 +2230,7 @@ Namespace ViewModels
             InfoPanel.PersistFavorite = Sub(items, value) ApplyFavoriteTo(items, value)
             InfoPanel.PersistColorLabel = Sub(items, value) ApplyColorLabelTo(items, value)
             InfoPanel.PersistTag = Sub(items, tag, add) ApplyTagTo(items, tag, add)
+            InfoPanel.PersistPickState = Sub(items, value) ApplyPickState(items.ToList(), value)
             CopyPlaceCommand = ReactiveCommand.Create(Sub() CopyPlaceFromSelected())
             OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() OpenPlaceInOsmFromSelected())
             PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
@@ -10133,6 +10134,15 @@ Namespace ViewModels
             If visible.Count = 0 Then Return
             Dim target = If(visible.All(Function(i) i.IsRejected), 0, -1)
             ApplyPickState(WithHiddenPartners(visible), target)
+        End Sub
+
+        ''' <summary>Behalten oder Verwerfen aus dem Menue, mit dem Zielwert, den die Menuezeile schon
+        ''' umgeschaltet hat. Dieselben Regeln wie bei X: nur lokale Bilder, versteckte Partner mit.</summary>
+        Public Sub SetPickStateFor(items As IEnumerable(Of ImageItem), state As Integer)
+            Dim visible = If(items, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsRemoteAsset).ToList()
+            If visible.Count = 0 Then Return
+            ApplyPickState(WithHiddenPartners(visible), state)
         End Sub
 
         ''' <summary>SHIFT+X: in der Serie der gewaehlten Kachel alles verwerfen ausser dieser einen

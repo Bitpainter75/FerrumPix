@@ -265,7 +265,7 @@
                             Classes.active="{Binding ShowFilmstrip}"
                             IsEnabled="{Binding CanToggleFilmstrip}"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-bottombar.svg"
                                        Width="20" Height="20" />
                     </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"

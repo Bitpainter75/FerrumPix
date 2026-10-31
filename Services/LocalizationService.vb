@@ -39,6 +39,8 @@ Namespace Services
                 Dim normalized = NormalizeLanguageMode(value)
                 If _languageMode = normalized Then Return
                 _languageMode = normalized
+                ' Die Sprache ist der Rueckfall der Namenskultur (NameCulture).
+                _nameCulture = Nothing
                 RaiseEvent LanguageChanged(Nothing, EventArgs.Empty)
             End Set
         End Property
@@ -106,6 +108,46 @@ Namespace Services
                 Return If(_regionalCulture Is CultureInfo.InvariantCulture, Nothing, _regionalCulture)
             End Get
         End Property
+
+        Private Shared _nameCulture As CultureInfo
+
+        ''' <summary>Die Kultur, mit der Datumsplatzhalter in Ordner- und Dateinamen aufgeloest werden
+        ''' ({datetaken:...} und {date:...} in den Zielen des Imports, beim Stapelumbenennen und im
+        ''' Namensvorschlag des Editors). Monats- und Tagesnamen kommen so in der Sprache der Region:
+        ''' "10 ottobre" statt "10 October" (Forum, ein italienischer Nutzer). Erst die
+        ''' Regionalkultur (unter Linux LC_TIME), sonst die Sprache der Anwendung.
+        '''
+        ''' IMMER MIT DEM GREGORIANISCHEN KALENDER: Thai zaehlt sonst buddhistisch, Arabisch nach der
+        ''' Hidschra, und yyyy ergaebe 2569 statt 2026. Ordner nach Jahren sollen ueberall dieselbe Zahl
+        ''' tragen. Die Ziffern selbst bleiben ohnehin lateinisch, .NET setzt sie in Formaten nicht um.</summary>
+        Public Shared ReadOnly Property NameCulture As CultureInfo
+            Get
+                If _nameCulture Is Nothing Then _nameCulture = BuildNameCulture()
+                Return _nameCulture
+            End Get
+        End Property
+
+        Private Shared Function BuildNameCulture() As CultureInfo
+            Return NameCultureFor(If(RegionalCulture, EffectiveCulture))
+        End Function
+
+        ''' <summary>Die Namenskultur zu einer Grundkultur: dieselbe Sprache, gregorianischer Kalender.
+        ''' Eigene Funktion, damit der Pruefstand sie unabhaengig von der Region des Rechners misst.</summary>
+        Friend Shared Function NameCultureFor(basis As CultureInfo) As CultureInfo
+            If basis Is Nothing OrElse basis Is CultureInfo.InvariantCulture Then Return CultureInfo.InvariantCulture
+            Dim culture = CType(basis.Clone(), CultureInfo)
+            If TypeOf culture.DateTimeFormat.Calendar IsNot GregorianCalendar Then
+                Dim gregorian = culture.OptionalCalendars.OfType(Of GregorianCalendar)().FirstOrDefault()
+                Try
+                    culture.DateTimeFormat.Calendar = If(gregorian, New GregorianCalendar())
+                Catch ex As ArgumentException
+                    ' Die Kultur laesst keinen gregorianischen Kalender zu: dann lieber neutrale
+                    ' Namen als ein falsches Jahr.
+                    Return CultureInfo.InvariantCulture
+                End Try
+            End If
+            Return culture
+        End Function
 
         Private Shared Function ResolveRegionalCulture() As CultureInfo
             If OperatingSystem.IsLinux() OrElse OperatingSystem.IsFreeBSD() Then

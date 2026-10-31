@@ -6,7 +6,7 @@
     <Grid RowDefinitions="Auto,*"
           RowSpacing="14">
         <Grid ColumnDefinitions="*,110,110"
-              RowDefinitions="Auto,Auto"
+              RowDefinitions="Auto,Auto,Auto"
               ColumnSpacing="12"
               RowSpacing="7">
             <StackPanel Spacing="7">
@@ -35,6 +35,13 @@
                 <Button Classes="ghost" Padding="8,3" Content="{}{aperture}" Tag="{}{aperture}" Click="OnInsertPlaceholder" ToolTip.Tip="Blende (EXIF)"/>
                 <Button Classes="ghost" Padding="8,3" Content="{}{focal}" Tag="{}{focal}" Click="OnInsertPlaceholder" ToolTip.Tip="Brennweite (EXIF)"/>
             </WrapPanel>
+            <!-- Die Chips bringen feste Formate mit; was sich darin aendern laesst, sagt diese Zeile.
+                 Derselbe Text steht unter den Platzhaltern des Exportdialogs. -->
+            <TextBlock Grid.Row="2" Grid.ColumnSpan="3"
+                       Text="Datumsformat: yyyy Jahr, MM Monat als Zahl, MMMM Monatsname, dd Tag, dddd Wochentag, HH mm ss Uhrzeit. Namen kommen in der Sprache der Region, zum Beispiel {datetaken:dd MMMM yyyy}."
+                       Foreground="{DynamicResource FP.Text.Muted}"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       TextWrapping="Wrap"/>
             <StackPanel Grid.Column="1" Spacing="7">
                 <TextBlock Text="Startwert"
                            Foreground="{DynamicResource FP.Text.Secondary}"

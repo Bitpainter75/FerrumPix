@@ -44,6 +44,7 @@ Namespace ViewModels
         Private _rating As Integer
         Private _isFavorite As Boolean
         Private _colorLabel As String = ""
+        Private _pickState As Integer
         Private _newTagText As String = ""
         Private _selectedTab As InfoSidebarTab = InfoSidebarTab.General
         Private _isVisible As Boolean
@@ -69,6 +70,8 @@ Namespace ViewModels
                     If Integer.TryParse(value, number) Then Rating = If(_rating = number, 0, number)
                 End Sub)
             ToggleFavoriteCommand = ReactiveCommand.Create(Sub() IsFavorite = Not IsFavorite)
+            TogglePickedCommand = ReactiveCommand.Create(Sub() TogglePickState(1))
+            ToggleRejectedCommand = ReactiveCommand.Create(Sub() TogglePickState(-1))
             ' Dieselbe Farbe noch einmal nimmt das Etikett weg - wie im Kontextmenue der Galerie.
             SetColorLabelCommand = ReactiveCommand.Create(Of String)(
                 Sub(hex) ColorLabel = If(String.Equals(_colorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
@@ -204,9 +207,10 @@ Namespace ViewModels
         ''' <summary>Bewertung, Herz und Etikett setzen, OHNE sie zurueckzuschreiben. Fuer den
         ''' Besitzer beim Bildwechsel: er hat die Werte gerade erst gelesen, und der Weg ueber die
         ''' Eigenschaften loeste sofort ein Speichern desselben Wertes aus - beim Blaettern also je
-        ''' Bild ein Schreibvorgang in Katalog oder Server.</summary>
-        Public Sub ApplyOwnedState(rating As Integer, favorite As Boolean, colorLabel As String)
-            ApplyRatingState(rating, favorite, colorLabel)
+        ''' Bild ein Schreibvorgang in Katalog oder Server. Ohne Markierung bleibt die bisherige stehen.</summary>
+        Public Sub ApplyOwnedState(rating As Integer, favorite As Boolean, colorLabel As String,
+                                   Optional pickState As Integer? = Nothing)
+            ApplyRatingState(rating, favorite, colorLabel, If(pickState, _pickState))
         End Sub
 
         ''' <summary>Die Stichwoerter anzeigen, ohne sie zu schreiben. Gegenstueck zu
@@ -311,7 +315,7 @@ Namespace ViewModels
             AiTags.Clear()
             ClearAiTaggingStatus()
             SummaryFacts.Clear()
-            ApplyRatingState(0, False, "")
+            ApplyRatingState(0, False, "", 0)
             Return token
         End Function
 
@@ -360,9 +364,11 @@ Namespace ViewModels
             Dim ratings = _items.Select(Function(i) i.Rating).Distinct().ToList()
             Dim favorites = _items.Select(Function(i) i.IsFavorite).Distinct().ToList()
             Dim labels = _items.Select(Function(i) If(i.ColorLabel, "")).Distinct().ToList()
+            Dim picks = _items.Select(Function(i) i.PickState).Distinct().ToList()
             ApplyRatingState(If(ratings.Count = 1, ratings(0), 0),
                                 favorites.Count = 1 AndAlso favorites(0),
-                                If(labels.Count = 1, labels(0), ""))
+                                If(labels.Count = 1, labels(0), ""),
+                                If(picks.Count = 1, picks(0), 0))
         End Sub
 
         ''' <summary>Bewertung, Herz und Etikett aus den angezeigten Elementen NEU einlesen.
@@ -408,7 +414,8 @@ Namespace ViewModels
             ' den Wert bereits und meldet ihn selbst, sobald alle Elemente ihn tragen.
             If _isWritingItems Then Return
             Select Case e.PropertyName
-                Case NameOf(ImageItem.Rating), NameOf(ImageItem.IsFavorite), NameOf(ImageItem.ColorLabel)
+                Case NameOf(ImageItem.Rating), NameOf(ImageItem.IsFavorite), NameOf(ImageItem.ColorLabel),
+                     NameOf(ImageItem.PickState)
                     ReloadRatingStateFromItems()
                 Case NameOf(ImageItem.PlaceCity), NameOf(ImageItem.PlaceCountry)
                     ' Bei einem Serverbild kommen die Aufnahmedaten erst mit dem Detail-Abruf, und
@@ -905,6 +912,7 @@ Namespace ViewModels
             Dim rating = 0
             Dim favorite = False
             Dim label = ""
+            Dim pick = 0
             ' NICHT "tags" als Name: VB unterscheidet keine Gross-/Kleinschreibung, die lokale
             ' Variable verdeckte die Eigenschaft Tags. Tags.Clear() leerte dann die eben gefuellte
             ' LISTE statt der Anzeige, und im Panel stand nie ein Stichwort.
@@ -914,9 +922,10 @@ Namespace ViewModels
                 rating = _item.Rating
                 favorite = _item.IsFavorite
                 label = If(_item.ColorLabel, "")
+                pick = _item.PickState
             End If
 
-            ApplyRatingState(rating, favorite, label)
+            ApplyRatingState(rating, favorite, label, pick)
             Tags.Clear()
             For Each tag In loadedTags
                 Tags.Add(tag)
@@ -1087,13 +1096,15 @@ Namespace ViewModels
                      End Function)
         End Sub
 
-        Private Sub ApplyRatingState(rating As Integer, favorite As Boolean, label As String)
+        Private Sub ApplyRatingState(rating As Integer, favorite As Boolean, label As String, pick As Integer)
             _rating = rating
             _isFavorite = favorite
             _colorLabel = If(label, "")
+            _pickState = pick
             Me.RaisePropertyChanged(NameOf(Rating))
             Me.RaisePropertyChanged(NameOf(IsFavorite))
             RaiseColorLabelChanged()
+            RaisePickStateChanged()
         End Sub
 
         ''' <summary>Ob die Leiste ausgeklappt ist. Das Analysebild entsteht nur dann - es kostet
@@ -1482,6 +1493,11 @@ Namespace ViewModels
         Public Property PersistFavorite As Action(Of IList(Of ImageItem), Boolean)
         Public Property PersistColorLabel As Action(Of IList(Of ImageItem), String)
 
+        ''' <summary>Behalten oder Verwerfen dauerhaft machen. Ohne eigenen Weg des Besitzers schreibt
+        ''' das Panel selbst in den Katalog; die Galerie stellt ihren, weil sie nach einem Verwerfen
+        ''' ihren Filter neu anwenden muss.</summary>
+        Public Property PersistPickState As Action(Of IList(Of ImageItem), Integer)
+
         ''' <summary>Ein einzelnes Stichwort setzen (True) oder entfernen (False).</summary>
         Public Property PersistTag As Action(Of IList(Of ImageItem), String, Boolean)
 
@@ -1522,6 +1538,61 @@ Namespace ViewModels
                 RaiseColorLabelChanged()
             End Set
         End Property
+
+        ''' <summary>Markierung beim Aussortieren der Auswahl: -1 verworfen, 0 keine oder gemischt,
+        ''' 1 behalten.</summary>
+        Public ReadOnly Property IsPicked As Boolean
+            Get
+                Return _pickState > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsRejected As Boolean
+            Get
+                Return _pickState < 0
+            End Get
+        End Property
+
+        ''' <summary>Die Markierung lebt nur im lokalen Katalog; ein Serverbild hat keine.</summary>
+        Public ReadOnly Property CanSetPickState As Boolean
+            Get
+                Return PickTargets().Count > 0
+            End Get
+        End Property
+
+        Private Function PickTargets() As List(Of ImageItem)
+            Return Targets().Where(Function(i) Not i.IsRemoteAsset).ToList()
+        End Function
+
+        ''' <summary>Derselbe Zustand noch einmal nimmt die Markierung zurueck, wie beim Etikett.</summary>
+        Private Sub TogglePickState(state As Integer)
+            Dim affected = PickTargets()
+            If affected.Count = 0 Then Return
+            Dim target = If(_pickState = state, 0, state)
+            _pickState = target
+            If PersistPickState IsNot Nothing Then
+                PersistPickState.Invoke(affected, target)
+            Else
+                ' Wie beim Etikett: der Lauscher bleibt waehrenddessen stumm, sonst laese er die
+                ' halb geschriebene Auswahl als gemischt.
+                _isWritingItems = True
+                Try
+                    For Each entry In affected
+                        entry.PickState = target
+                    Next
+                Finally
+                    _isWritingItems = False
+                End Try
+                LibraryService.Instance.SetPickStateForMany(affected.Select(Function(i) i.FilePath), target, syncToXmp:=True)
+            End If
+            RaisePickStateChanged()
+        End Sub
+
+        Private Sub RaisePickStateChanged()
+            Me.RaisePropertyChanged(NameOf(IsPicked))
+            Me.RaisePropertyChanged(NameOf(IsRejected))
+            Me.RaisePropertyChanged(NameOf(CanSetPickState))
+        End Sub
 
         ' Die Anzeige fragt je Farbe einzeln - eine Meldung fuer alle waere hier kuerzer, aber die
         ' Bindungen heissen nun einmal so, und sie sind dieselben wie im Betrachter.
@@ -1738,6 +1809,8 @@ Namespace ViewModels
         Public ReadOnly Property SetInfoTabCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
+        Public ReadOnly Property TogglePickedCommand As ICommand
+        Public ReadOnly Property ToggleRejectedCommand As ICommand
         Public ReadOnly Property SetColorLabelCommand As ICommand
         Public ReadOnly Property AddTagCommand As ICommand
         Public ReadOnly Property RemoveTagCommand As ICommand

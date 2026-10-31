@@ -10575,4 +10575,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>Filmstrip tonen</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>Muiswiel</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>Willekeurige volgorde aan of uit</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>Volgende of vorige afbeelding, zoomt bij de aanwijzer als de diavoorstelling gepauzeerd is</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>Kortere pauze</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>Langere pauze</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>Pauze van de diavoorstelling</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>Filmstrip</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>Tegels</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>Positie van de filmstrip in volledig scherm</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>Waar de filmstrip in volledig scherm en in de diavoorstelling verschijnt, als de muis naar die rand gaat of de knop in de bedieningsbalk hem toont.</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>De afbeeldingsbalk in viewer, volledig scherm en editor: of en waar hij staat en hoe de tegels eruitzien.</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>Muis naar de rand van de filmstrip</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>Doelen die Importeren naast de huidige map aanbiedt. Plaatshouders: {pictures} map Afbeeldingen, {home} persoonlijke map, {camera} camera, {datetaken:FORMAT} opnamedatum. In het formaat staat yyyy voor het jaar, MM voor de maand als getal, MMMM voor de maandnaam, dd voor de dag en dddd voor de weekdag; namen komen in de taal van je regio. Voorbeeld: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} maakt mappen zoals 2026/10 oktober.</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>Plaatshouders: {pictures} map Afbeeldingen, {camera} camera, {datetaken:FORMAT} opnamedatum met yyyy jaar, MM maand, MMMM maandnaam, dd dag, dddd weekdag. Voorbeeld: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}.</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>Voorstel voor bewerkte kopieën. Plaatshouders zoals bij batchhernoemen: {name}, ###, {date:FORMAT} bestandsdatum, {datetaken:FORMAT} opnamedatum, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. In het formaat: yyyy jaar, MM maand, MMMM maandnaam, dd dag, dddd weekdag, HH mm ss tijd, bijvoorbeeld {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>Datumformaat: yyyy jaar, MM maand als getal, MMMM maandnaam, dd dag, dddd weekdag, HH mm ss tijd. Namen komen in de taal van je regio, bijvoorbeeld {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>Patroon zoals bij Batch hernoemen: {name}, ### (teller), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>Als behouden markeren (nogmaals maakt het ongedaan)</value>
+  </data>
 </root>

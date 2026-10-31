@@ -67,6 +67,7 @@ Namespace ViewModels
         Private _viewerShowFilmstrip As Boolean = True
         Private _viewerFilmstripPosition As String = "Bottom"
         Private _editorFilmstripPosition As String = "Bottom"
+        Private _fullscreenFilmstripPosition As String = "Bottom"
         Private _filmstripItemBadgesVisible As Boolean = False
         Private _galleryTileFrame As Boolean = True
         Private _galleryWallBadgesOnHover As Boolean = True
@@ -253,6 +254,7 @@ Namespace ViewModels
         Private _savedViewerShowFilmstrip As Boolean = True
         Private _savedViewerFilmstripPosition As String = "Bottom"
         Private _savedEditorFilmstripPosition As String = "Bottom"
+        Private _savedFullscreenFilmstripPosition As String = "Bottom"
         Private _savedFilmstripItemBadgesVisible As Boolean = False
         Private _savedGalleryTileFrame As Boolean = True
         Private _savedGalleryWallBadgesOnHover As Boolean = True
@@ -2375,6 +2377,8 @@ Namespace ViewModels
                 value = AppSettingsService.NormalizeViewerSlideshowIntervalSeconds(value)
                 If _viewerSlideshowIntervalSeconds = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerSlideshowIntervalSeconds, value)
+                ' Die Bedienleiste des Vollbilds zeigt die Pause an.
+                _mainVm?.Viewer?.RaiseSlideshowIntervalChanged()
                 SaveLayoutSettings()
             End Set
         End Property
@@ -2386,6 +2390,8 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _viewerSlideshowShuffle = value Then Return
                 Me.RaiseAndSetIfChanged(_viewerSlideshowShuffle, value)
+                ' Der Schalter in der Bedienleiste des Vollbilds zeigt denselben Wert.
+                _mainVm?.Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.IsSlideshowShuffle))
                 SaveLayoutSettings()
             End Set
         End Property
@@ -2495,6 +2501,49 @@ Namespace ViewModels
         Public ReadOnly Property IsEditorFilmstripRight As Boolean
             Get
                 Return _editorFilmstripPosition = "Right"
+            End Get
+        End Property
+
+        ''' <summary>Seite des Filmstreifens im Vollbild und in der Diashow. Eigene Einstellung, weil
+        ''' der Streifen dort ueber dem Bild liegt und erst ueber den Rand oder den Knopf der
+        ''' Bedienleiste erscheint.</summary>
+        Public Property FullscreenFilmstripPosition As String
+            Get
+                Return _fullscreenFilmstripPosition
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeFilmstripPosition(value)
+                If _fullscreenFilmstripPosition = value Then Return
+                Me.RaiseAndSetIfChanged(_fullscreenFilmstripPosition, value)
+                Me.RaisePropertyChanged(NameOf(IsFullscreenFilmstripBottom))
+                Me.RaisePropertyChanged(NameOf(IsFullscreenFilmstripTop))
+                Me.RaisePropertyChanged(NameOf(IsFullscreenFilmstripLeft))
+                Me.RaisePropertyChanged(NameOf(IsFullscreenFilmstripRight))
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFullscreenFilmstripBottom As Boolean
+            Get
+                Return _fullscreenFilmstripPosition = "Bottom"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFullscreenFilmstripTop As Boolean
+            Get
+                Return _fullscreenFilmstripPosition = "Top"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFullscreenFilmstripLeft As Boolean
+            Get
+                Return _fullscreenFilmstripPosition = "Left"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFullscreenFilmstripRight As Boolean
+            Get
+                Return _fullscreenFilmstripPosition = "Right"
             End Get
         End Property
 
@@ -4106,6 +4155,7 @@ Namespace ViewModels
         Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
         Public ReadOnly Property SetViewerFilmstripPositionCommand As ICommand
         Public ReadOnly Property SetEditorFilmstripPositionCommand As ICommand
+        Public ReadOnly Property SetFullscreenFilmstripPositionCommand As ICommand
         Public ReadOnly Property SetViewerDoubleClickTargetCommand As ICommand
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
@@ -4664,6 +4714,7 @@ Namespace ViewModels
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
             _viewerFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.ViewerFilmstripPosition)
             _editorFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.EditorFilmstripPosition)
+            _fullscreenFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.FullscreenFilmstripPosition)
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
             _galleryTileFrame = _appSettings.GalleryTileFrame
             _galleryWallBadgesOnHover = _appSettings.GalleryWallBadgesOnHover
@@ -4832,6 +4883,7 @@ Namespace ViewModels
             SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
             SetViewerFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) ViewerFilmstripPosition = p)
             SetEditorFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) EditorFilmstripPosition = p)
+            SetFullscreenFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) FullscreenFilmstripPosition = p)
             SetViewerDoubleClickTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerDoubleClickTarget = m)
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
@@ -5100,6 +5152,7 @@ Namespace ViewModels
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
             _savedViewerFilmstripPosition = _viewerFilmstripPosition
             _savedEditorFilmstripPosition = _editorFilmstripPosition
+            _savedFullscreenFilmstripPosition = _fullscreenFilmstripPosition
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
             _savedGalleryTileFrame = _galleryTileFrame
             _savedGalleryWallBadgesOnHover = _galleryWallBadgesOnHover
@@ -5289,6 +5342,7 @@ Namespace ViewModels
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
             ViewerFilmstripPosition = _savedViewerFilmstripPosition
             EditorFilmstripPosition = _savedEditorFilmstripPosition
+            FullscreenFilmstripPosition = _savedFullscreenFilmstripPosition
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
             GalleryTileFrame = _savedGalleryTileFrame
             GalleryWallBadgesOnHover = _savedGalleryWallBadgesOnHover
@@ -5436,6 +5490,7 @@ Namespace ViewModels
             ViewerShowFilmstrip = True
             ViewerFilmstripPosition = "Bottom"
             EditorFilmstripPosition = "Bottom"
+            FullscreenFilmstripPosition = "Bottom"
             FilmstripItemBadgesVisible = False
             GalleryTileFrame = True
             GalleryWallBadgesOnHover = True
@@ -5763,6 +5818,7 @@ Namespace ViewModels
                                           s.ViewerShowFilmstrip = _viewerShowFilmstrip
                                           s.ViewerFilmstripPosition = _viewerFilmstripPosition
                                           s.EditorFilmstripPosition = _editorFilmstripPosition
+                                          s.FullscreenFilmstripPosition = _fullscreenFilmstripPosition
                                           s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
                                           s.GalleryTileFrame = _galleryTileFrame
                                           s.GalleryWallBadgesOnHover = _galleryWallBadgesOnHover

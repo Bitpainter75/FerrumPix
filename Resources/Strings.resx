@@ -10554,4 +10554,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>Show the filmstrip</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>Mouse wheel</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>Random order on or off</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>Next or previous picture, zooms at the pointer while the slideshow is paused</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>Shorter interval</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>Longer interval</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>Slideshow interval</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>Filmstrip</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>Tiles</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>Filmstrip position in fullscreen</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>Where the filmstrip appears in fullscreen and in the slideshow, when the mouse moves to that edge or the control bar button shows it.</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>The image strip in the viewer, fullscreen and the editor: whether and where it sits and how its tiles look.</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>Mouse to the filmstrip's edge</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>Destinations that Import offers next to the current folder. Placeholders: {pictures} Pictures folder, {home} home folder, {camera} camera, {datetaken:FORMAT} date taken. In the format, yyyy is the year, MM the month as a number, MMMM the month name, dd the day and dddd the weekday; names come in the language of your region. Example: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} creates folders like 2026/10 October.</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>Placeholders: {pictures} Pictures folder, {camera} camera, {datetaken:FORMAT} date taken with yyyy year, MM month, MMMM month name, dd day, dddd weekday. Example: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}.</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>Suggested name for edited copies. The same placeholders as Batch rename: {name}, ###, {date:FORMAT} file date, {datetaken:FORMAT} date taken, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. In the format: yyyy year, MM month, MMMM month name, dd day, dddd weekday, HH mm ss time, for example {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>Date format: yyyy year, MM month as a number, MMMM month name, dd day, dddd weekday, HH mm ss time. Names come in the language of your region, for example {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>Pattern as in batch rename: {name}, ### (counter), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>Mark as kept (press again to undo)</value>
+  </data>
 </root>

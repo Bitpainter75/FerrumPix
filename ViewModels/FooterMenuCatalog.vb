@@ -258,14 +258,6 @@ Namespace ViewModels
             Return New AppAction(LocalizationService.T("Aussortieren"), "flag", Nothing, Nothing, children)
         End Function
 
-        Public Shared Function Reject(c As ICommand) As AppAction
-            Return Build("Als verworfen markieren", "flag-x", c)
-        End Function
-
-        Public Shared Function Unreject(c As ICommand) As AppAction
-            Return Build("Verwerfen zurücknehmen", "flag", c)
-        End Function
-
         Public Shared Function RejectRestOfStack(c As ICommand) As AppAction
             Return Build("Rest der Serie verwerfen", "stack-pop", c)
         End Function

@@ -416,6 +416,18 @@
                                                        Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsFavorite}"/>
                                     </Grid>
                                 </Button>
+                                <Button Classes="icon-btn pick-btn pick-keep" Width="24" Height="24" VerticalAlignment="Center" Margin="4,0,0,0"
+                                        Classes.active="{Binding IsPicked}" IsVisible="{Binding CanSetPickState}"
+                                        Command="{Binding TogglePickedCommand}"
+                                        ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-check.svg" Width="18" Height="18"/>
+                                </Button>
+                                <Button Classes="icon-btn pick-btn pick-reject" Width="24" Height="24" VerticalAlignment="Center"
+                                        Classes.active="{Binding IsRejected}" IsVisible="{Binding CanSetPickState}"
+                                        Command="{Binding ToggleRejectedCommand}"
+                                        ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg" Width="18" Height="18"/>
+                                </Button>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="5" IsVisible="{Binding ShowColorLabelSection}">
                                 <Button Classes="ghost" Width="22" Height="22" Padding="0" CornerRadius="11"

@@ -194,9 +194,13 @@ Namespace ViewModels
             If imageBatch Then
                 ' Nur die BILDER ablesen, nicht die ganze Markierung: ein mitmarkierter Ordner
                 ' traegt weder Sterne noch Etikett und drueckte die Zeile sonst auf leer.
+                ' Behalten und Verwerfen stehen neben dem Herz, nur fuer lokale Bilder: die Markierung
+                ' lebt im lokalen Katalog.
+                Dim pickCommand = If(Not videoOnly AndAlso images.All(Function(i) Not i.IsRemoteAsset), commands.PickState, Nothing)
                 Dim ratingRow = Controls.MenuWidgets.RatingRow(CommonRating(images),
                                                               CommonFavorite(images),
-                                                              commands.Rating, commands.Favorite)
+                                                              commands.Rating, commands.Favorite,
+                                                              CommonPickState(images), pickCommand)
                 If ratingRow IsNot Nothing Then list.Add(ratingRow)
                 Dim labelRow = Controls.MenuWidgets.ColorLabelRow(CommonColorLabel(images), commands.ColorLabel)
                 If labelRow IsNot Nothing Then list.Add(labelRow)
@@ -204,18 +208,12 @@ Namespace ViewModels
             End If
 
             ' --- Aussortieren (Untermenue) -----------------------------------------------------
-            ' Verwerfen ist eine Markierung im lokalen Katalog und gilt fuer lokale Bilder. Die
-            ' Beschriftung folgt dem Zustand: sind ALLE schon verworfen, nimmt der Eintrag es zurueck.
-            ' Serie und Stapel gibt es nur fuer EIN angeklicktes Bild - bei einer Auswahl waere
+            ' Verwerfen selbst ist kein Eintrag mehr, sondern ein Knopf neben dem Herz. Hier bleiben
+            ' Serie und Stapel, und die nur fuer EIN angeklicktes Bild - bei einer Auswahl waere
             ' offen, welche Serie gemeint ist. Im Untermenue, weil die Serieneintraege nur an einer
             ' Serie erscheinen und das Hauptmenue sonst von Bild zu Bild seine Laenge wechselte.
             If imageBatch AndAlso Not videoOnly AndAlso images.All(Function(i) Not i.IsRemoteAsset) Then
                 Dim cullChildren As New List(Of Object)()
-                If images.All(Function(i) i.IsRejected) Then
-                    AddIfOffered(cullChildren, commands.ToggleReject, FooterMenuCatalog.Unreject(commands.ToggleReject))
-                Else
-                    AddIfOffered(cullChildren, commands.ToggleReject, FooterMenuCatalog.Reject(commands.ToggleReject))
-                End If
                 Dim stack = If(isSingle, first?.Stack, Nothing)
                 If stack IsNot Nothing AndAlso stack.IsBurst Then
                     AddIfOffered(cullChildren, commands.RejectRestOfStack, FooterMenuCatalog.RejectRestOfStack(commands.RejectRestOfStack))
@@ -426,6 +424,16 @@ Namespace ViewModels
             Dim first = If(items(0)?.ColorLabel, "")
             For Each item In items
                 If item Is Nothing OrElse Not String.Equals(If(item.ColorLabel, ""), first, StringComparison.OrdinalIgnoreCase) Then Return ""
+            Next
+            Return first
+        End Function
+
+        ''' <summary>Behalten oder Verwerfen, wenn ALLE betroffenen Bilder es tragen, sonst keines.</summary>
+        Private Shared Function CommonPickState(items As IList(Of ImageItem)) As Integer
+            If items Is Nothing OrElse items.Count = 0 Then Return 0
+            Dim first = items(0).PickState
+            For Each item In items
+                If item Is Nothing OrElse item.PickState <> first Then Return 0
             Next
             Return first
         End Function

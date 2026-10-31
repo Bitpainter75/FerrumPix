@@ -384,7 +384,7 @@
                                     <TextBox Name="TargetNamePatternTextBox"
                                              Text="{Binding DialogTargetNamePattern, Mode=TwoWay}"
                                              PlaceholderText="{}{name} (leer = Originalname behalten)"
-                                             ToolTip.Tip="Muster wie beim Stapel-Umbenennen: {name}, ### (Zähler), {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}"
+                                             ToolTip.Tip="Muster wie beim Stapel-Umbenennen: {name}, ### (Zähler), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}"
                                              MinHeight="36"/>
                                     <WrapPanel ItemSpacing="4" LineSpacing="4">
                                         <Button Classes="ghost" Padding="8,3" Content="###" Tag="###" Click="OnInsertNamePlaceholder" ToolTip.Tip="Laufende Nummer (Stellen = Anzahl #)"/>
@@ -400,6 +400,11 @@
                                         <Button Classes="ghost" Padding="8,3" Content="{}{aperture}" Tag="{}{aperture}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Blende (EXIF)"/>
                                         <Button Classes="ghost" Padding="8,3" Content="{}{focal}" Tag="{}{focal}" Click="OnInsertNamePlaceholder" ToolTip.Tip="Brennweite (EXIF)"/>
                                     </WrapPanel>
+                                    <!-- Dasselbe wie unter den Platzhaltern des Stapel-Umbenennens. -->
+                                    <TextBlock Text="Datumsformat: yyyy Jahr, MM Monat als Zahl, MMMM Monatsname, dd Tag, dddd Wochentag, HH mm ss Uhrzeit. Namen kommen in der Sprache der Region, zum Beispiel {datetaken:dd MMMM yyyy}."
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
 
                                 <!-- Einzeloptionen: welche Katalog-Metadaten die

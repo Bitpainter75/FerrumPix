@@ -114,6 +114,15 @@
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
+                        Tag="FilmstripSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-bottombar.svg" Width="16" Height="16"/>
+                        <TextBlock Text="Filmstreifen"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
                         Tag="EditorSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -1231,7 +1240,7 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                     <TextBlock Text="Zielordner für den Import" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Ziele, die der Import neben dem aktuellen Ordner anbietet. Platzhalter: {pictures} Bilder-Ordner, {home} persönlicher Ordner, {datetaken:yyyy} Jahr der Aufnahme, {datetaken:yyyy-MM-dd} Tag, {camera} Kamera."
+                                    <TextBlock Text="Ziele, die der Import neben dem aktuellen Ordner anbietet. Platzhalter: {pictures} Bilder-Ordner, {home} persönlicher Ordner, {camera} Kamera, {datetaken:FORMAT} Aufnahmedatum. Im Format stehen yyyy für das Jahr, MM für den Monat als Zahl, MMMM für den Monatsnamen, dd für den Tag und dddd für den Wochentag; Namen kommen in der Sprache der Region. Beispiel: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} legt Ordner wie 2026/10 Oktober an."
                                                Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Classes="ghost" Padding="12,7"
@@ -1343,91 +1352,6 @@
                                         Padding="10,6"
                                         Command="{Binding SetViewerFitBehaviorCommand}"
                                         CommandParameter="Always">Immer einpassen</Button>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Filmstreifen im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt die Bildleiste im Viewer an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding ViewerShowFilmstrip}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Position des Filmstreifens" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Wo der Filmstreifen im Viewer steht: unter, über, links oder rechts neben dem Bild." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripBottom}" Padding="10,6"
-                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Bottom">Unten</Button>
-                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripTop}" Padding="10,6"
-                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Top">Oben</Button>
-                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripLeft}" Padding="10,6"
-                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Left">Links</Button>
-                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripRight}" Padding="10,6"
-                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Right">Rechts</Button>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Markierungen im Filmstreifen anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding FilmstripItemBadgesVisible}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Runde Ecken und Rahmen im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Ausgeschaltet stehen die Kacheln des Filmstreifens eckig und ohne Rahmen da. Der Rahmen um das aktuelle Bild bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding FilmstripTileFrame}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Kacheln im Filmstreifen im Seitenverhältnis des Bildes" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Hochformate stehen schmal, Querformate breit, alle in derselben Höhe. Ausgeschaltet sind alle Kacheln gleich breit und das Bild wird zugeschnitten. Gilt für Viewer, Editor und den Streifen der Karte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding FilmstripTilesKeepAspect}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Abstand zwischen den Kacheln im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Gilt für Viewer, Editor und den Streifen der Karte. Bei null stehen die Kacheln dicht an dicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                <icons:RoundSlider Width="150"
-                                                   Minimum="0"
-                                                   Maximum="24"
-                                                   DefaultValue="10"
-                                                   Value="{Binding FilmstripTileGap}"/>
-                                <TextBlock Text="{Binding FilmstripTileGap, StringFormat={}{0} px}"
-                                           Foreground="{DynamicResource FP.Text.Secondary}"
-                                           FontSize="{DynamicResource FP.Font.Body}"
-                                           Width="44"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
 
@@ -1613,6 +1537,160 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- Der Filmstreifen in Viewer, Vollbild und Editor. Die Zeilen standen bis zum
+                     2026-10-31 verteilt in den Abschnitten Viewer und Editor. -->
+                <Border x:Name="FilmstripSection" Classes="section">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Filmstreifen" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Die Bildleiste in Viewer, Vollbild und Editor: ob und wo sie steht und wie ihre Kacheln aussehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Viewer" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Filmstreifen im Viewer anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt die Bildleiste im Viewer an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Position des Filmstreifens" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wo der Filmstreifen im Viewer steht: unter, über, links oder rechts neben dem Bild." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripBottom}" Padding="10,6"
+                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Bottom">Unten</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripTop}" Padding="10,6"
+                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Top">Oben</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripLeft}" Padding="10,6"
+                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Left">Links</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerFilmstripRight}" Padding="10,6"
+                                        Command="{Binding SetViewerFilmstripPositionCommand}" CommandParameter="Right">Rechts</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Vollbild und Diashow" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Position des Filmstreifens im Vollbild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wo der Filmstreifen im Vollbild und in der Diashow erscheint, wenn die Maus an diesen Rand fährt oder der Knopf der Bedienleiste ihn einblendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenFilmstripBottom}" Padding="10,6"
+                                        Command="{Binding SetFullscreenFilmstripPositionCommand}" CommandParameter="Bottom">Unten</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenFilmstripTop}" Padding="10,6"
+                                        Command="{Binding SetFullscreenFilmstripPositionCommand}" CommandParameter="Top">Oben</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenFilmstripLeft}" Padding="10,6"
+                                        Command="{Binding SetFullscreenFilmstripPositionCommand}" CommandParameter="Left">Links</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenFilmstripRight}" Padding="10,6"
+                                        Command="{Binding SetFullscreenFilmstripPositionCommand}" CommandParameter="Right">Rechts</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Kacheln" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Markierungen im Filmstreifen anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripItemBadgesVisible}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Runde Ecken und Rahmen im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ausgeschaltet stehen die Kacheln des Filmstreifens eckig und ohne Rahmen da. Der Rahmen um das aktuelle Bild bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripTileFrame}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kacheln im Filmstreifen im Seitenverhältnis des Bildes" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Hochformate stehen schmal, Querformate breit, alle in derselben Höhe. Ausgeschaltet sind alle Kacheln gleich breit und das Bild wird zugeschnitten. Gilt für Viewer, Editor und den Streifen der Karte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripTilesKeepAspect}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Abstand zwischen den Kacheln im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt für Viewer, Editor und den Streifen der Karte. Bei null stehen die Kacheln dicht an dicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="24"
+                                                   DefaultValue="10"
+                                                   Value="{Binding FilmstripTileGap}"/>
+                                <TextBlock Text="{Binding FilmstripTileGap, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="44"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Editor" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Filmstreifen im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt die Bildleiste im Editor an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorShowFilmstrip}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Position des Filmstreifens" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wo der Filmstreifen im Editor steht: unter, über, links oder rechts neben der Arbeitsfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripBottom}" Padding="10,6"
+                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Bottom">Unten</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripTop}" Padding="10,6"
+                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Top">Oben</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripLeft}" Padding="10,6"
+                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Left">Links</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripRight}" Padding="10,6"
+                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Right">Rechts</Button>
+                            </StackPanel>
+                        </Grid>
 
                     </StackPanel>
                 </Border>
@@ -1974,35 +2052,6 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Filmstreifen im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt die Bildleiste im Editor an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding EditorShowFilmstrip}"
-                                          OnContent=""
-                                          OffContent=""
-                                          VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                <TextBlock Text="Position des Filmstreifens" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Wo der Filmstreifen im Editor steht: unter, über, links oder rechts neben der Arbeitsfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripBottom}" Padding="10,6"
-                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Bottom">Unten</Button>
-                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripTop}" Padding="10,6"
-                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Top">Oben</Button>
-                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripLeft}" Padding="10,6"
-                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Left">Links</Button>
-                                <Button Classes="ghost" Classes.active="{Binding IsEditorFilmstripRight}" Padding="10,6"
-                                        Command="{Binding SetEditorFilmstripPositionCommand}" CommandParameter="Right">Rechts</Button>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fußzeile im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Zeigt unten die Leiste mit Bildangaben und Zoom. Ausgeschaltet bleibt mehr Höhe für die Arbeitsfläche. Der Filmstreifen hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -2088,7 +2137,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Namensvorlage für Speichern unter" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Vorschlag für bearbeitete Kopien. Platzhalter wie beim Stapel-Umbenennen: {name}, ###, {date:yyyyMMdd}, {datetaken:yyyyMMdd_HHmmss}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Vorschlag für bearbeitete Kopien. Platzhalter wie beim Stapel-Umbenennen: {name}, ###, {date:FORMAT} Dateidatum, {datetaken:FORMAT} Aufnahmedatum, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. Im Format: yyyy Jahr, MM Monat, MMMM Monatsname, dd Tag, dddd Wochentag, HH mm ss Uhrzeit, zum Beispiel {datetaken:dd MMMM yyyy}." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <!-- Eine Zeile wie die uebrigen Textfelder: ohne feste Breite und Mittelung
                                  streckte sich das Feld auf die Hoehe des langen Erklaertexts daneben. -->

@@ -10579,4 +10579,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>แสดงแถบฟิล์ม</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>ล้อเมาส์</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>ลำดับแบบสุ่ม เปิดหรือปิด</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>ภาพถัดไปหรือก่อนหน้า เมื่อหยุดสไลด์โชว์ชั่วคราวจะซูมที่ตัวชี้</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>ช่วงเวลาสั้นลง</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>ช่วงเวลานานขึ้น</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>ช่วงเวลาของสไลด์โชว์</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>แถบฟิล์ม</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>ไทล์</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>ตำแหน่งของแถบฟิล์มในโหมดเต็มจอ</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>ตำแหน่งที่แถบฟิล์มปรากฏในโหมดเต็มจอและสไลด์โชว์ เมื่อเลื่อนเมาส์ไปที่ขอบนั้นหรือกดปุ่มในแถบควบคุม</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>แถบภาพในตัวแสดงภาพ เต็มจอ และตัวแก้ไข: แสดงหรือไม่ อยู่ที่ใด และไทล์มีลักษณะอย่างไร</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>เลื่อนเมาส์ไปที่ขอบของแถบฟิล์ม</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>ปลายทางที่การนำเข้าเสนอเพิ่มจากโฟลเดอร์ปัจจุบัน ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {home} โฟลเดอร์ส่วนตัว, {camera} กล้อง, {datetaken:FORMAT} วันที่ถ่าย ในรูปแบบ yyyy คือปี MM คือเดือนเป็นตัวเลข MMMM คือชื่อเดือน dd คือวัน และ dddd คือวันในสัปดาห์ ชื่อจะเป็นภาษาของภูมิภาคของคุณ ตัวอย่าง: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} จะสร้างโฟลเดอร์อย่าง 2026/10 ตุลาคม</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>ตัวแทน: {pictures} โฟลเดอร์รูปภาพ, {camera} กล้อง, {datetaken:FORMAT} วันที่ถ่าย โดย yyyy ปี MM เดือน MMMM ชื่อเดือน dd วัน dddd วันในสัปดาห์ ตัวอย่าง: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>ชื่อที่เสนอสำหรับสำเนาที่แก้ไข ตัวแทนเหมือนการเปลี่ยนชื่อเป็นชุด: {name}, ###, {date:FORMAT} วันที่ของไฟล์, {datetaken:FORMAT} วันที่ถ่าย, {camera}, {iso}, {aperture}, {focal}, {width}, {height} ในรูปแบบ: yyyy ปี MM เดือน MMMM ชื่อเดือน dd วัน dddd วันในสัปดาห์ HH mm ss เวลา เช่น {datetaken:dd MMMM yyyy}</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>รูปแบบวันที่: yyyy ปี MM เดือนเป็นตัวเลข MMMM ชื่อเดือน dd วัน dddd วันในสัปดาห์ HH mm ss เวลา ชื่อจะเป็นภาษาของภูมิภาคของคุณ เช่น {datetaken:dd MMMM yyyy}</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>รูปแบบเดียวกับการเปลี่ยนชื่อเป็นชุด: {name}, ### (ตัวนับ), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>ทำเครื่องหมายว่าเก็บไว้ (กดอีกครั้งเพื่อยกเลิก)</value>
+  </data>
 </root>

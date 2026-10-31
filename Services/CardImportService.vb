@@ -369,7 +369,7 @@ Namespace Services
         Public Shared Function TargetFolderFor(targetRoot As String, pattern As String, capturedAt As DateTime) As String
             If String.IsNullOrWhiteSpace(pattern) Then Return targetRoot
             Dim parts = pattern.Split("/"c).Where(Function(p) p.Length > 0).
-                Select(Function(p) capturedAt.ToString(p, CultureInfo.InvariantCulture)).ToArray()
+                Select(Function(p) capturedAt.ToString(p, LocalizationService.NameCulture)).ToArray()
             Return Path.Combine({targetRoot}.Concat(parts).ToArray())
         End Function
 
@@ -405,9 +405,11 @@ Namespace Services
             Return text
         End Function
 
+        ''' <summary>Monats- und Tagesnamen in der Sprache der Region (LocalizationService.NameCulture),
+        ''' mit dem gregorianischen Kalender; vorher immer englisch.</summary>
         Private Shared Function FormatSafe(value As DateTime, format As String) As String
             Try
-                Return SafeSegment(value.ToString(format, CultureInfo.InvariantCulture))
+                Return SafeSegment(value.ToString(format, LocalizationService.NameCulture))
             Catch
                 Return ""
             End Try

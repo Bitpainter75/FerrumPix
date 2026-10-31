@@ -2813,7 +2813,7 @@ Namespace Views
                 .RestoreFromTrash = New DelegateCommand(Sub()
                                                             Dim ignored = vm.RestoreSelectedFromTrashAsync()
                                                         End Sub),
-                .ToggleReject = New DelegateCommand(Sub() vm.ToggleRejectFor(vm.ContextItems)),
+                .PickState = New DelegateCommand(Sub(p) vm.SetPickStateFor(vm.ContextItems, MenuCommands.PickStateFrom(p))),
                 .RejectRestOfStack = New DelegateCommand(Sub() vm.RejectRestOfStack(vm.ContextItems?.FirstOrDefault())),
                 .ToggleStack = New DelegateCommand(Sub() vm.OpenOrCloseStack(vm.ContextItems?.FirstOrDefault()))}
         End Function

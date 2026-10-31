@@ -601,7 +601,16 @@ Namespace Services
                 End Using
             End Using
             SyncCatalogToFpxmp(filePath)
+            RaiseEvent AttributesChanged(Me, New CatalogAttributeChange({filePath}) With {.IsFavorite = isFavorite})
         End Sub
+
+        ''' <summary>Bewertung, Favorit, Farbetikett oder Auswahlmarke haben sich fuer diese Pfade
+        ''' geaendert; die Meldung traegt den neuen Wert mit (<see cref="CatalogAttributeChange"/>).
+        ''' Wer Bilder als <see cref="Models.ImageItem"/> im Speicher haelt (Galerie, Filmstreifen von
+        ''' Betrachter und Editor, ihre Info-Leisten), uebernimmt ihn. Vorher setzte nur die Galerie
+        ''' ihre eigenen Elemente; was Betrachter oder Editor vergaben, stand im Katalog, aber nicht
+        ''' an den Kacheln, bis sie neu geladen wurden. Kann auf jedem Faden kommen.</summary>
+        Public Event AttributesChanged As EventHandler(Of CatalogAttributeChange)
 
         Public Function GetRating(filePath As String) As Integer
             Using conn = New SqliteConnection(_connectionString)
@@ -673,6 +682,7 @@ Namespace Services
             ' Einstellung SyncCatalogToXmp (siehe SyncCatalogToXmpSidecar). .fpxmp bleibt primär.
             SyncCatalogToFpxmp(filePath)
             If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
+            RaiseEvent AttributesChanged(Me, New CatalogAttributeChange({filePath}) With {.Rating = rating})
         End Sub
 
         Public Function GetColorLabel(filePath As String) As String
@@ -772,6 +782,7 @@ Namespace Services
                     SyncCatalogToXmpSidecar(path)
                 Next
             End If
+            RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.ColorLabel = value})
         End Sub
 
         Friend Shared Function NormalizePickState(value As Integer) As Integer
@@ -832,6 +843,7 @@ Namespace Services
                     SyncCatalogToXmpSidecar(path)
                 Next
             End If
+            RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.PickState = value})
         End Sub
 
         ''' <summary>Setzt die Bewertung für mehrere Dateien in einer einzigen Transaktion/Verbindung
@@ -868,6 +880,7 @@ Namespace Services
                     SyncCatalogToXmpSidecar(path)
                 Next
             End If
+            RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.Rating = rating})
         End Sub
 
         Public Function GetTags(filePath As String) As List(Of String)
@@ -2334,6 +2347,23 @@ Namespace Services
             Return orphans.Count
         End Function
 
+    End Class
+
+    ''' <summary>Was <see cref="LibraryService.AttributesChanged"/> meldet: die Pfade und der neue
+    ''' Wert der EINEN geaenderten Angabe; die anderen bleiben Nothing. Der Wert reist mit, damit
+    ''' wer die Elemente im Speicher nachzieht, nicht je Bild den Katalog fragen muss: bei einer
+    ''' Sammelbewertung ueber tausende Bilder stuende sonst der UI-Faden.</summary>
+    Public NotInheritable Class CatalogAttributeChange
+        Public Sub New(paths As IEnumerable(Of String))
+            Me.Paths = If(paths, Enumerable.Empty(Of String)()).ToList()
+        End Sub
+
+        Public ReadOnly Property Paths As IReadOnlyList(Of String)
+        Public Property Rating As Integer?
+        Public Property IsFavorite As Boolean?
+        ''' <summary>Leer heisst "kein Etikett", Nothing heisst "nicht geaendert".</summary>
+        Public Property ColorLabel As String
+        Public Property PickState As Integer?
     End Class
 
 End Namespace

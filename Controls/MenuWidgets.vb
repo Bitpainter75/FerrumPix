@@ -39,7 +39,8 @@ Namespace Controls
         Private Sub New()
         End Sub
 
-        ''' <summary>Sterne, Bewertung loeschen und Favorit in einer Zeile.
+        ''' <summary>Sterne, Bewertung loeschen, Favorit und, wo angeboten, Behalten und Verwerfen
+        ''' in einer Zeile.
         '''
         ''' Die Zeile fuehrt sich SELBST nach. Ein Klick landet auf der Schaltflaeche und nicht auf
         ''' dem Menueeintrag darum - das Menue bleibt also offen. Waere die Anzeige nur beim Bauen
@@ -48,8 +49,10 @@ Namespace Controls
         ''' Der Zaehler daneben spiegelt dieselbe Regel wie die Kommandos: derselbe Stern noch
         ''' einmal setzt auf keine Bewertung zurueck.</summary>
         Public Shared Function RatingRow(rating As Integer, isFavorite As Boolean,
-                                         setRating As ICommand, toggleFavorite As ICommand) As Control
-            If setRating Is Nothing AndAlso toggleFavorite Is Nothing Then Return Nothing
+                                         setRating As ICommand, toggleFavorite As ICommand,
+                                         Optional pickState As Integer = 0,
+                                         Optional setPickState As ICommand = Nothing) As Control
+            If setRating Is Nothing AndAlso toggleFavorite Is Nothing AndAlso setPickState Is Nothing Then Return Nothing
 
             Dim row = NewRow()
             Dim current = rating
@@ -140,8 +143,57 @@ Namespace Controls
                 row.Children.Add(heart)
             End If
 
+            If setPickState IsNot Nothing Then AddPickButtons(row, pickState, setPickState)
+
             Return AsMenuRow(row)
         End Function
+
+        ''' <summary>Behalten und Verwerfen, wie in der Info-Leiste: gesetzt gruen bzw. rot, ohne
+        ''' Rahmen (Stil pick-btn im Thema). Derselbe Knopf noch einmal nimmt die Markierung zurueck;
+        ''' die Zeile fuehrt sich selbst nach, das Menue bleibt offen.</summary>
+        Private Shared Sub AddPickButtons(row As StackPanel, pickState As Integer, setPickState As ICommand)
+            Dim current = pickState
+            Dim buttons As New List(Of (Button As Button, State As Integer))()
+            Dim showPick As Action =
+                Sub()
+                    For Each entry In buttons
+                        If current = entry.State Then
+                            If Not entry.Button.Classes.Contains("active") Then entry.Button.Classes.Add("active")
+                        Else
+                            entry.Button.Classes.Remove("active")
+                        End If
+                    Next
+                End Sub
+            For Each spec In {(State:=1, Icon:="flag-check", StyleClass:="pick-keep", Tip:="Als behalten markieren (erneut nimmt es zurück)"),
+                              (State:=-1, Icon:="flag-x", StyleClass:="pick-reject", Tip:="Als verworfen markieren (erneut nimmt es zurück)")}
+                Dim wanted = spec.State
+                Dim button As New Button With {
+                    .Width = ButtonSize,
+                    .Height = ButtonSize,
+                    .Padding = New Thickness(0),
+                    .Margin = New Thickness(If(wanted = 1, 4, 0), 0, 0, 0),
+                    .Content = New SvgIcon With {
+                        .Source = "avares://FerrumPix/Assets/Icons/outline/" & spec.Icon & ".svg",
+                        .Width = 16,
+                        .Height = 16
+                    },
+                    .Command = New DelegateCommand(
+                        Sub()
+                            Dim target = If(current = wanted, 0, wanted)
+                            setPickState.Execute(target.ToString(Globalization.CultureInfo.InvariantCulture))
+                            current = target
+                            showPick()
+                        End Sub)
+                }
+                button.Classes.Add("icon-btn")
+                button.Classes.Add("pick-btn")
+                button.Classes.Add(spec.StyleClass)
+                ToolTip.SetTip(button, LocalizationService.T(spec.Tip))
+                buttons.Add((button, wanted))
+                row.Children.Add(button)
+            Next
+            showPick()
+        End Sub
 
         ''' <summary>Die Farbetiketten als Kreise, dahinter das Kreuz zum Entfernen. Das gesetzte
         ''' Etikett traegt einen Haken, und der wandert beim Klick sofort mit - wie bei den Sternen

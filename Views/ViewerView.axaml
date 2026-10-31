@@ -163,7 +163,7 @@
                             Click="OnToggleFilmstripClick"
                             Classes.active="{Binding ShowFilmstrip}"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-bottombar.svg"
                                        Width="20" Height="20"/>
                     </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
@@ -373,6 +373,18 @@
                                                        IsVisible="{Binding CompareLeftIsFavorite}"/>
                                     </Grid>
                                 </Button>
+                                <Button Classes="icon-btn pick-btn pick-keep on-image" Width="30" Height="30" Padding="0"
+                                        Classes.active="{Binding IsCompareLeftPicked}"
+                                        Tag="0:1" Click="OnComparePickClick"
+                                        ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-check.svg" Width="18" Height="18"/>
+                                </Button>
+                                <Button Classes="icon-btn pick-btn pick-reject on-image" Width="30" Height="30" Padding="0"
+                                        Classes.active="{Binding IsCompareLeftRejected}"
+                                        Tag="0:-1" Click="OnComparePickClick"
+                                        ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg" Width="18" Height="18"/>
+                                </Button>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10">
                                 <Button Classes="ghost" Width="24" Height="24" Padding="0" CornerRadius="12" Tag="#F08A1A" Click="OnCompareLeftColorLabelClick" ToolTip.Tip="Orange"><Grid><Ellipse Width="16" Height="16" Fill="#F08A1A"/><TextBlock Text="✓" IsVisible="{Binding IsCompareLeftColorLabelOrange}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid></Button>
@@ -467,6 +479,18 @@
                                                        Width="20" Height="20" Classes="fav-heart active"
                                                        IsVisible="{Binding CompareRightIsFavorite}"/>
                                     </Grid>
+                                </Button>
+                                <Button Classes="icon-btn pick-btn pick-keep on-image" Width="30" Height="30" Padding="0"
+                                        Classes.active="{Binding IsCompareRightPicked}"
+                                        Tag="1:1" Click="OnComparePickClick"
+                                        ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-check.svg" Width="18" Height="18"/>
+                                </Button>
+                                <Button Classes="icon-btn pick-btn pick-reject on-image" Width="30" Height="30" Padding="0"
+                                        Classes.active="{Binding IsCompareRightRejected}"
+                                        Tag="1:-1" Click="OnComparePickClick"
+                                        ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg" Width="18" Height="18"/>
                                 </Button>
                             </StackPanel>
                             <!-- Farbetiketten fuer das rechte Wechselbild, entsprechend dem Infopanel. -->
@@ -841,15 +865,13 @@
                 <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Der Filmstreifen im Vollbild: erscheint, wenn die Maus den oberen oder unteren
-                 Rand beruehrt, und geht, wenn sie ihn wieder verlaesst. Es ist dieselbe Liste wie
-                 im Fenster; FilmstripPlacement haengt sie hierher und danach zurueck. -->
+            <!-- Der Filmstreifen im Vollbild: erscheint an der eingestellten Seite
+                 (FullscreenFilmstripPosition), wenn die Maus diesen Rand beruehrt oder der Knopf der
+                 Bedienleiste ihn einblendet. Es ist dieselbe Liste wie im Fenster;
+                 FilmstripPlacement.MoveIntoOverlay haengt sie hierher und setzt Lage und Groesse. -->
             <Border Name="FullscreenFilmstripSlot"
                     IsVisible="False"
-                    Height="123"
-                    VerticalAlignment="Bottom"
-                    Background="#E60B0E11"
-                    Padding="24,6,24,6"/>
+                    Background="#E60B0E11"/>
 
             <!-- Die Bedienleiste fuer Bilder im Vollbild: erscheint bei Mausbewegung und bleibt
                  stehen, solange die Diashow angehalten ist. Fuer Videos gibt es die eigene Leiste. -->
@@ -861,6 +883,17 @@
                     Background="#CC1A1D24"
                     CornerRadius="8"
                     Padding="8,6">
+                <!-- Die Leiste liegt auf dunklem Grund: weisse Symbole in jedem Thema. Die beiden
+                     Schalter (Zufall, Filmstreifen) zeigen eingeschaltet die Akzentfarbe; dafuer
+                     tragen sie keine eigene Farbe, die den Stil ueberschriebe. -->
+                <Border.Styles>
+                    <Style Selector="Button.bar-toggle icons|SvgIcon">
+                        <Setter Property="IconBrush" Value="White"/>
+                    </Style>
+                    <Style Selector="Button.bar-toggle.active icons|SvgIcon">
+                        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+                    </Style>
+                </Border.Styles>
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <Button Classes="icon-btn" Width="36" Height="36"
                             Command="{Binding PreviousCommand}"
@@ -883,6 +916,40 @@
                             Command="{Binding NextCommand}"
                             ToolTip.Tip="Nächstes Bild">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-right.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Button Classes="icon-btn bar-toggle" Width="36" Height="36"
+                            Command="{Binding ToggleSlideshowShuffleCommand}"
+                            Classes.active="{Binding IsSlideshowShuffle}"
+                            ToolTip.Tip="Zufällige Reihenfolge ein oder aus">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-shuffle.svg" Width="18" Height="18"/>
+                    </Button>
+                    <Button Name="FullscreenFilmstripButton"
+                            Classes="icon-btn bar-toggle" Width="36" Height="36"
+                            Click="OnFullscreenFilmstripToggleClick"
+                            ToolTip.Tip="Filmstreifen ein- oder ausblenden">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-bottombar.svg" Width="18" Height="18"/>
+                    </Button>
+                    <Border Width="1" Margin="6,6" Background="#40FFFFFF"/>
+                    <!-- Die Pause der Diashow in Stufen, dieselbe Einstellung wie in den
+                         Einstellungen; gilt sofort. -->
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding FasterSlideshowCommand}"
+                            ToolTip.Tip="Kürzere Pause">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/minus.svg" Width="16" Height="16" IconBrush="White"/>
+                    </Button>
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" MinWidth="52"
+                                ToolTip.Tip="Pause der Diashow">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/clock.svg" Width="16" Height="16" IconBrush="White"/>
+                        <TextBlock Classes="no-translate"
+                                   Text="{Binding SlideshowIntervalText}"
+                                   Foreground="White"
+                                   FontSize="{DynamicResource FP.Font.Small}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding SlowerSlideshowCommand}"
+                            ToolTip.Tip="Längere Pause">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/plus.svg" Width="16" Height="16" IconBrush="White"/>
                     </Button>
                     <Border Width="1" Margin="6,6" Background="#40FFFFFF"/>
                     <Button Classes="icon-btn" Width="36" Height="36"
@@ -912,6 +979,143 @@
                                FontSize="{DynamicResource FP.Font.Small}"
                                VerticalAlignment="Center"
                                Margin="8,0,6,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Die Bewertungsleiste oben, Gegenstueck zur Bedienleiste unten: erscheint und geht
+                 mit ihr (UpdateFullscreenImageBar). -->
+            <Border Name="FullscreenRatingBar"
+                    IsVisible="False"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="0,24,0,0"
+                    Background="#CC1A1D24"
+                    CornerRadius="8"
+                    Padding="8,6">
+                <Border.Styles>
+                    <!-- Behalten und Verwerfen: weiss, eingeschaltet gruen und rot wie in der
+                         Info-Leiste. Hier noch einmal, weil diese naeheren Stile die des Themas
+                         ueberdecken. -->
+                    <Style Selector="Button.bar-toggle icons|SvgIcon">
+                        <Setter Property="IconBrush" Value="White"/>
+                    </Style>
+                    <Style Selector="Button.bar-toggle.pick-keep.active icons|SvgIcon">
+                        <Setter Property="IconBrush" Value="#22C55E"/>
+                    </Style>
+                    <Style Selector="Button.bar-toggle.pick-reject.active icons|SvgIcon">
+                        <Setter Property="IconBrush" Value="#E74C3C"/>
+                    </Style>
+                    <Style Selector="Button.bar-toggle.pick-btn.active">
+                        <Setter Property="BorderThickness" Value="0"/>
+                    </Style>
+                    <!-- Das gesetzte Farbetikett traegt einen weissen Ring statt eines Zeichens. -->
+                    <Style Selector="Button.label-chip.active Ellipse">
+                        <Setter Property="Stroke" Value="White"/>
+                        <Setter Property="StrokeThickness" Value="2"/>
+                    </Style>
+                </Border.Styles>
+                <!-- Bewertung, Favorit und Farbetikett des gezeigten Bildes, dieselben
+                     Kommandos wie in der Fusszeile und der Info-Leiste. Ein zweiter Klick auf dieselbe
+                     Bewertung oder dasselbe Etikett nimmt es wieder weg. -->
+                <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"
+                            Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
+                            Command="{Binding SetRatingCommand}" CommandParameter="1">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star" Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"
+                            Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=2}"
+                            Command="{Binding SetRatingCommand}" CommandParameter="2">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star" Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"
+                            Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=3}"
+                            Command="{Binding SetRatingCommand}" CommandParameter="3">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star" Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"
+                            Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=4}"
+                            Command="{Binding SetRatingCommand}" CommandParameter="4">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star" Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="star-btn" Background="Transparent" BorderThickness="0" Padding="3,2" VerticalAlignment="Center"
+                            Classes.active="{Binding InfoPanel.Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=5}"
+                            Command="{Binding SetRatingCommand}" CommandParameter="5">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/star.svg" Classes="rating-star" Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="icon-btn image-favorite-btn" Width="30" Height="30" VerticalAlignment="Center"
+                            Command="{Binding ToggleFavoriteCommand}"
+                            ToolTip.Tip="Favorit" Margin="4,0,6,0">
+                        <Grid Width="18" Height="18">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg" Width="18" Height="18"
+                                           Classes="fav-heart" IsVisible="{Binding !InfoPanel.IsFavorite}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/heart.svg" Width="18" Height="18"
+                                           Classes="fav-heart active" IsVisible="{Binding InfoPanel.IsFavorite}"/>
+                        </Grid>
+                    </Button>
+                    <Border Width="1" Margin="4,6" Background="#40FFFFFF"/>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13" Margin="2,0,0,0"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#F08A1A"
+                            Classes.active="{Binding InfoPanel.IsColorLabelOrange}" ToolTip.Tip="Orange">
+                        <Ellipse Width="16" Height="16" Fill="#F08A1A"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#E74C3C"
+                            Classes.active="{Binding InfoPanel.IsColorLabelRed}" ToolTip.Tip="Rot">
+                        <Ellipse Width="16" Height="16" Fill="#E74C3C"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#F03B88"
+                            Classes.active="{Binding InfoPanel.IsColorLabelPink}" ToolTip.Tip="Pink">
+                        <Ellipse Width="16" Height="16" Fill="#F03B88"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#8B5CF6"
+                            Classes.active="{Binding InfoPanel.IsColorLabelPurple}" ToolTip.Tip="Lila">
+                        <Ellipse Width="16" Height="16" Fill="#8B5CF6"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#3B82F6"
+                            Classes.active="{Binding InfoPanel.IsColorLabelBlue}" ToolTip.Tip="Blau">
+                        <Ellipse Width="16" Height="16" Fill="#3B82F6"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#0891B2"
+                            Classes.active="{Binding InfoPanel.IsColorLabelCyan}" ToolTip.Tip="Cyan">
+                        <Ellipse Width="16" Height="16" Fill="#0891B2"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#0F766E"
+                            Classes.active="{Binding InfoPanel.IsColorLabelTeal}" ToolTip.Tip="Türkis">
+                        <Ellipse Width="16" Height="16" Fill="#0F766E"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#22C55E"
+                            Classes.active="{Binding InfoPanel.IsColorLabelGreen}" ToolTip.Tip="Grün">
+                        <Ellipse Width="16" Height="16" Fill="#22C55E"/>
+                    </Button>
+                    <Button Classes="ghost label-chip" Width="26" Height="26" Padding="0" CornerRadius="13"
+                            Command="{Binding SetColorLabelCommand}" CommandParameter="#FACC15"
+                            Classes.active="{Binding InfoPanel.IsColorLabelYellow}" ToolTip.Tip="Gelb">
+                        <Ellipse Width="16" Height="16" Fill="#FACC15"/>
+                    </Button>
+                    <!-- Behalten und Verwerfen, dieselbe Markierung wie in der Galerie; nur fuer
+                         lokale Bilder (CanSetPickState). -->
+                    <Border Width="1" Margin="6,6" Background="#40FFFFFF" IsVisible="{Binding CanSetPickState}"/>
+                    <Button Classes="icon-btn bar-toggle pick-btn pick-keep" Width="32" Height="32"
+                            Command="{Binding TogglePickedCommand}"
+                            Classes.active="{Binding IsCurrentPicked}"
+                            IsVisible="{Binding CanSetPickState}"
+                            ToolTip.Tip="Als behalten markieren (erneut nimmt es zurück)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-check.svg" Width="18" Height="18"/>
+                    </Button>
+                    <Button Classes="icon-btn bar-toggle pick-btn pick-reject" Width="32" Height="32"
+                            Command="{Binding ToggleRejectedCommand}"
+                            Classes.active="{Binding IsCurrentRejected}"
+                            IsVisible="{Binding CanSetPickState}"
+                            ToolTip.Tip="Als verworfen markieren (erneut nimmt es zurück)">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/flag-x.svg" Width="18" Height="18"/>
+                    </Button>
                 </StackPanel>
             </Border>
 

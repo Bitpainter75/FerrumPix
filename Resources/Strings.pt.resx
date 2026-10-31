@@ -10534,4 +10534,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>Mostrar a tira de filme</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>Roda do rato</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>Ordem aleatória ligada ou desligada</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>Imagem seguinte ou anterior, amplia no ponteiro com a apresentação em pausa</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>Pausa mais curta</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>Pausa mais longa</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>Pausa da apresentação</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>Tira de filme</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>Miniaturas</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>Posição da tira de filme em tela cheia</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>Onde a tira de filme aparece em tela cheia e na apresentação, quando o rato vai a essa margem ou o botão da barra de controlo a mostra.</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>A tira de imagens no visualizador, em tela cheia e no editor: se aparece, onde e como ficam as miniaturas.</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>Rato até à margem da tira de filme</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>Destinos oferecidos por Importar além da pasta atual. Marcadores: {pictures} pasta Imagens, {home} pasta pessoal, {camera} câmara, {datetaken:FORMAT} data da captura. No formato, yyyy é o ano, MM o mês em número, MMMM o nome do mês, dd o dia e dddd o dia da semana; os nomes vêm no idioma da sua região. Exemplo: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} cria pastas como 2026/10 outubro.</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>Marcadores: {pictures} pasta Imagens, {camera} câmara, {datetaken:FORMAT} data da captura com yyyy ano, MM mês, MMMM nome do mês, dd dia, dddd dia da semana. Exemplo: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}.</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>Nome sugerido para cópias editadas. Os mesmos marcadores da renomeação em lote: {name}, ###, {date:FORMAT} data do ficheiro, {datetaken:FORMAT} data da captura, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. No formato: yyyy ano, MM mês, MMMM nome do mês, dd dia, dddd dia da semana, HH mm ss hora, por exemplo {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>Formato de data: yyyy ano, MM mês em número, MMMM nome do mês, dd dia, dddd dia da semana, HH mm ss hora. Os nomes vêm no idioma da sua região, por exemplo {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>Padrão como na renomeação em lote: {name}, ### (contador), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>Marcar como mantida (de novo desfaz)</value>
+  </data>
 </root>

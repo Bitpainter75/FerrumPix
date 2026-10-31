@@ -18448,6 +18448,8 @@ Namespace ViewModels
                                                     .Favorite = ToggleFavoriteCommand,
                                                     .Rating = SetRatingCommand,
                                                     .ColorLabel = SetColorLabelCommand,
+                                                    .PickState = New DelegateCommand(
+                                                        Sub(p) RefreshCatalogState(MenuCommands.WritePickState(ContextItems, MenuCommands.PickStateFrom(p)))),
                                                     .CopyPlace = CopyPlaceCommand,
                                                     .OpenPlaceInOsm = OpenPlaceInOsmCommand,
                                                     .PastePlace = PastePlaceCommand,
@@ -19770,8 +19772,22 @@ Namespace ViewModels
             ' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.
             InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(imagePath),
                                       LibraryService.Instance.GetFavorite(imagePath),
-                                      LibraryService.Instance.GetColorLabel(imagePath))
+                                      LibraryService.Instance.GetColorLabel(imagePath),
+                                      LibraryService.Instance.GetPickState(imagePath))
             InfoPanel.ApplyOwnedTags(LibraryService.Instance.GetTags(imagePath))
+            RaiseFooterColorLabelState()
+        End Sub
+
+        ''' <summary>Bewertung, Favorit oder Farbetikett haben sich im Katalog geaendert, etwa im
+        ''' Betrachter oder in der Galerie. Betrifft es das offene Bild, liest die Info-Leiste sie neu
+        ''' (ueber ApplyOwnedState, also ohne sie zurueckzuschreiben).</summary>
+        Friend Sub RefreshCatalogState(changedPaths As IReadOnlyCollection(Of String))
+            If String.IsNullOrEmpty(_currentImagePath) OrElse changedPaths Is Nothing Then Return
+            If Not changedPaths.Any(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison)) Then Return
+            InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(_currentImagePath),
+                                      LibraryService.Instance.GetFavorite(_currentImagePath),
+                                      LibraryService.Instance.GetColorLabel(_currentImagePath),
+                                      LibraryService.Instance.GetPickState(_currentImagePath))
             RaiseFooterColorLabelState()
         End Sub
 

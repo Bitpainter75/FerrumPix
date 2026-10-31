@@ -1445,8 +1445,24 @@ Namespace Views
                 Dim isViewerPanKey = e.KeyModifiers = KeyModifiers.Shift AndAlso
                                      (e.Key = Key.Left OrElse e.Key = Key.Right OrElse e.Key = Key.Up OrElse e.Key = Key.Down)
                 If vm.IsFullscreen AndAlso Not isViewerPanKey Then
+                    ' Die Zoomtasten des Vollbilds hat die Ansicht des Betrachters; sie sieht sie
+                    ' hier nicht selbst, also geht die Taste ausdruecklich an sie.
+                    Dim viewerControl As Control = Nothing
+                    If vm.Viewer IsNot Nothing AndAlso _modeViews.TryGetValue(vm.Viewer, viewerControl) Then
+                        Dim viewerView = TryCast(viewerControl, ViewerView)
+                        If viewerView IsNot Nothing AndAlso viewerView.HandleFullscreenZoomKey(e.Key, e.KeyModifiers) Then
+                            e.Handled = True
+                            Return
+                        End If
+                    End If
                     Select Case e.Key
-                        Case Key.Escape, Key.Back, Key.Space
+                        Case Key.Space
+                            ' Die Leertaste haelt die Diashow an und setzt sie fort, das Vollbild
+                            ' bleibt. Sie beendete es frueher wie ESC, und damit kam das Anhalten
+                            ' beim Betrachter nie an.
+                            vm.Viewer?.ToggleSlideshowCommand.Execute(Nothing)
+                            e.Handled = True
+                        Case Key.Escape, Key.Back
                             vm.ExitFullscreen()
                             e.Handled = True
                         Case Key.Left, Key.PageUp

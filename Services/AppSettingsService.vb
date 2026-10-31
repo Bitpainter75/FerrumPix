@@ -382,6 +382,9 @@ Namespace Services
         Public Property EditorShowFilmstrip As Boolean = True
         ''' <summary>Seite des Filmstreifens im Editor, dieselben Werte wie im Betrachter.</summary>
         Public Property EditorFilmstripPosition As String = "Bottom"
+        ''' <summary>Seite des Filmstreifens im Vollbild und in der Diashow, wo er über den Rand oder
+        ''' den Knopf der Bedienleiste erscheint; dieselben Werte.</summary>
+        Public Property FullscreenFilmstripPosition As String = "Bottom"
         ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
         Public Property EditorGridSize As Integer = 50
         Public Property EditorShowRulers As Boolean = False
@@ -1202,6 +1205,7 @@ Namespace Services
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.ViewerFilmstripPosition = NormalizeFilmstripPosition(settings.ViewerFilmstripPosition)
                 settings.EditorFilmstripPosition = NormalizeFilmstripPosition(settings.EditorFilmstripPosition)
+                settings.FullscreenFilmstripPosition = NormalizeFilmstripPosition(settings.FullscreenFilmstripPosition)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
@@ -1450,6 +1454,7 @@ Namespace Services
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.ViewerFilmstripPosition = NormalizeFilmstripPosition(settings.ViewerFilmstripPosition)
                 settings.EditorFilmstripPosition = NormalizeFilmstripPosition(settings.EditorFilmstripPosition)
+                settings.FullscreenFilmstripPosition = NormalizeFilmstripPosition(settings.FullscreenFilmstripPosition)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.

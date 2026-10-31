@@ -45,10 +45,10 @@ Namespace ViewModels
         ''' auch dort nur in der Papierkorbansicht.</summary>
         Public Property RestoreFromTrash As ICommand
 
-        ''' <summary>Aussortieren: verwerfen oder zuruecknehmen, in einer Serie den Rest verwerfen,
-        ''' einen Stapel auf- oder zuklappen. Nur die Galerie bietet sie an - Serien und Stapel
-        ''' gibt es nur dort.</summary>
-        Public Property ToggleReject As ICommand
+        ''' <summary>Aussortieren: in einer Serie den Rest verwerfen, einen Stapel auf- oder
+        ''' zuklappen. Nur die Galerie bietet sie an - Serien und Stapel gibt es nur dort. Behalten
+        ''' und Verwerfen selbst sind keine Eintraege mehr, sondern Knoepfe neben dem Herz
+        ''' (<see cref="PickState"/>).</summary>
         Public Property RejectRestOfStack As ICommand
         Public Property ToggleStack As ICommand
 
@@ -79,6 +79,34 @@ Namespace ViewModels
         Public Property Favorite As ICommand
         Public Property Rating As ICommand
         Public Property ColorLabel As ICommand
+
+        ''' <summary>Behalten oder Verwerfen setzen: der Parameter ist der ZIELwert (1 behalten,
+        ''' -1 verworfen, 0 keiner). Das Umschalten, derselbe Knopf noch einmal nimmt es zurueck,
+        ''' rechnet die Menuezeile aus, die den gemeinsamen Stand kennt.</summary>
+        Public Property PickState As ICommand
+
+        ''' <summary>Der Zielwert aus dem Parameter von <see cref="PickState"/>.</summary>
+        Public Shared Function PickStateFrom(parameter As Object) As Integer
+            Dim value As Integer
+            If parameter Is Nothing OrElse Not Integer.TryParse(Convert.ToString(parameter, Globalization.CultureInfo.InvariantCulture),
+                                                              Globalization.NumberStyles.Integer, Globalization.CultureInfo.InvariantCulture, value) Then Return 0
+            Return Services.LibraryService.NormalizePickState(value)
+        End Function
+
+        ''' <summary>Behalten oder Verwerfen fuer die gemeinten Bilder schreiben, fuer Betrachter und
+        ''' Editor. Nur LOKALE Bilder: die Markierung lebt im lokalen Katalog. Gibt die Pfade zurueck,
+        ''' damit der Aufrufer sein offenes Bild nachziehen kann.</summary>
+        Public Shared Function WritePickState(items As IEnumerable(Of Models.ImageItem), state As Integer) As List(Of String)
+            Dim locals = If(items, Enumerable.Empty(Of Models.ImageItem)()).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsRemoteAsset AndAlso
+                                  Not String.IsNullOrEmpty(i.FilePath)).ToList()
+            For Each item In locals
+                item.PickState = state
+            Next
+            Dim paths = locals.Select(Function(i) i.FilePath).ToList()
+            If paths.Count > 0 Then Services.LibraryService.Instance.SetPickStateForMany(paths, state, syncToXmp:=True)
+            Return paths
+        End Function
 
         ''' <summary>Aufnahmeort: den eines Bildes merken, den gemerkten auf eine Auswahl anwenden,
         ''' oder einen im Dialog bestimmen. Kopieren gilt fuer EIN Bild, Einfuegen und Setzen fuer

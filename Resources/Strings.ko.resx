@@ -10579,4 +10579,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>필름 스트립 보기</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>마우스 휠</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>무작위 순서 켜기 또는 끄기</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>다음 또는 이전 이미지, 슬라이드 쇼가 일시 정지되면 포인터 위치에서 확대/축소</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>간격 줄이기</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>간격 늘리기</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>슬라이드 쇼 간격</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>필름 스트립</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>타일</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>전체 화면의 필름 스트립 위치</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>전체 화면과 슬라이드 쇼에서 마우스를 그 가장자리로 옮기거나 조작 막대 단추로 보일 때 필름 스트립이 나타나는 곳.</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>뷰어, 전체 화면, 편집기의 이미지 스트립: 표시 여부, 위치, 타일 모양.</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>마우스를 필름 스트립 가장자리로</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>가져오기가 현재 폴더 외에 제공하는 대상. 자리 표시자: {pictures} 사진 폴더, {home} 홈 폴더, {camera} 카메라, {datetaken:FORMAT} 촬영 날짜. 형식에서 yyyy는 연도, MM은 숫자 월, MMMM은 월 이름, dd는 일, dddd는 요일이며, 이름은 지역 언어로 나옵니다. 예: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}은 2026/10 10월 같은 폴더를 만듭니다.</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>자리 표시자: {pictures} 사진 폴더, {camera} 카메라, {datetaken:FORMAT} 촬영 날짜 (yyyy 연도, MM 월, MMMM 월 이름, dd 일, dddd 요일). 예: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}.</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>편집한 사본의 이름 제안. 일괄 이름 바꾸기와 같은 자리 표시자: {name}, ###, {date:FORMAT} 파일 날짜, {datetaken:FORMAT} 촬영 날짜, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. 형식: yyyy 연도, MM 월, MMMM 월 이름, dd 일, dddd 요일, HH mm ss 시간, 예: {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>날짜 형식: yyyy 연도, MM 숫자 월, MMMM 월 이름, dd 일, dddd 요일, HH mm ss 시간. 이름은 지역 언어로 나옵니다. 예: {datetaken:dd MMMM yyyy}.</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>일괄 이름 바꾸기와 같은 서식: {name}, ### (번호), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>유지로 표시 (다시 누르면 취소)</value>
+  </data>
 </root>

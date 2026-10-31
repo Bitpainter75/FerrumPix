@@ -92,16 +92,36 @@ Namespace Controls
             SetOrientation(listBox, vertical)
         End Sub
 
-        ''' <summary>Haengt die Liste waagerecht in einen Rahmen ueber dem Vollbild. Zurueck an ihren
-        ''' eingestellten Platz bringt sie das naechste <see cref="Apply"/>.</summary>
-        Public Sub MoveIntoOverlay(listBox As ListBox, overlay As Border)
+        ''' <summary>Haengt die Liste in einen Rahmen ueber dem Vollbild, an die Seite
+        ''' <paramref name="position"/>, und richtet Rahmen und Liste aus wie <see cref="Apply"/>.
+        ''' Zurueck an ihren eingestellten Platz bringt sie das naechste <see cref="Apply"/>.</summary>
+        Public Sub MoveIntoOverlay(listBox As ListBox, overlay As Border, position As String)
             If listBox Is Nothing OrElse overlay Is Nothing Then Return
             If listBox.Parent IsNot overlay Then
                 Detach(listBox)
                 overlay.Child = listBox
             End If
-            SetOrientation(listBox, False)
+            Dim vertical = IsVertical(position)
+            If vertical Then
+                overlay.HorizontalAlignment = If(position = PositionLeft, HorizontalAlignment.Left, HorizontalAlignment.Right)
+                overlay.VerticalAlignment = VerticalAlignment.Stretch
+                overlay.Width = SideExtent
+                overlay.Height = Double.NaN
+                overlay.Padding = New Thickness(6, 8, 6, 8)
+            Else
+                overlay.HorizontalAlignment = HorizontalAlignment.Stretch
+                overlay.VerticalAlignment = If(position = PositionTop, VerticalAlignment.Top, VerticalAlignment.Bottom)
+                overlay.Width = Double.NaN
+                overlay.Height = TopExtent
+                overlay.Padding = New Thickness(24, 6, 24, 6)
+            End If
+            SetOrientation(listBox, vertical)
         End Sub
+
+        ''' <summary>Wie viel Breite oder Hoehe der Streifen an seiner Seite einnimmt.</summary>
+        Public Function Extent(position As String) As Double
+            Return If(IsVertical(position), SideExtent, TopExtent)
+        End Function
 
         Private Sub Detach(listBox As ListBox)
             Dim frame = TryCast(listBox.Parent, Border)

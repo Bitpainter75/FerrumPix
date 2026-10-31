@@ -285,6 +285,19 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Behalten und Verwerfen auf einer Vergleichsflaeche; der Tag traegt Flaeche und
+        ''' Zustand ("0:1", "1:-1").</summary>
+        Private Sub OnComparePickClick(sender As Object, e As RoutedEventArgs)
+            Dim tag = TryCast(TryCast(sender, Control)?.Tag, String)
+            Dim parts = If(tag, "").Split(":"c)
+            Dim state As Integer
+            If parts.Length = 2 AndAlso Integer.TryParse(parts(1), Globalization.NumberStyles.Integer,
+                                                         Globalization.CultureInfo.InvariantCulture, state) Then
+                GetVm()?.ToggleComparePickState(PaneFrom(sender), state)
+            End If
+            e.Handled = True
+        End Sub
+
         Private Sub OnCompareRightColorLabelClick(sender As Object, e As RoutedEventArgs)
             GetVm()?.SetCompareRightColorLabel(TryCast(TryCast(sender, Control)?.Tag, String))
             e.Handled = True
@@ -350,28 +363,9 @@ Namespace Views
                 NoteFullscreenVideoControlsActivity()
             End If
 
-            ' Im Vollbild zoomen dieselben Tasten wie im Fenster, aber den Zoom des Vollbilds
-            ' (ZoomFullscreen); das haelt eine laufende Diashow an.
-            If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso Not vm.IsVideoFile AndAlso
-               Not vm.IsCompareMode AndAlso e.KeyModifiers = KeyModifiers.None Then
-                Select Case e.Key
-                    Case Key.Add, Key.OemPlus
-                        ZoomFullscreen(FullscreenZoomStep, Nothing)
-                        e.Handled = True
-                        Return
-                    Case Key.Subtract, Key.OemMinus
-                        ZoomFullscreen(1.0 / FullscreenZoomStep, Nothing)
-                        e.Handled = True
-                        Return
-                    Case Key.F
-                        ResetFullscreenZoom()
-                        e.Handled = True
-                        Return
-                    Case Key.Z
-                        ToggleFullscreenActualZoom()
-                        e.Handled = True
-                        Return
-                End Select
+            If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso HandleFullscreenZoomKey(e.Key, e.KeyModifiers) Then
+                e.Handled = True
+                Return
             End If
 
             If PlatformShortcutService.IsMacOS AndAlso
@@ -541,14 +535,16 @@ Namespace Views
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
 
-            ' Im Vollbild zoomt das Rad wie im Fenster nur mit STRG oder gedrueckter rechter Taste,
-            ' verankert am Zeiger; das blanke Rad blaettert weiter (unten). Steht der Filmstreifen im
-            ' Vollbild, zoomt es nicht: der Zeiger ist dann beim Streifen, nicht beim Bild.
+            ' Im Vollbild zoomt das Rad mit STRG oder gedrueckter rechter Taste, verankert am Zeiger,
+            ' und bei angehaltener Diashow auch blank: wer anhaelt, will das Bild ansehen. Sonst
+            ' blaettert das blanke Rad weiter (unten). Ueber dem Filmstreifen im Vollbild zoomt es
+            ' nicht: der Zeiger ist dann beim Streifen, nicht beim Bild.
             If vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso Not vm.IsCompareMode AndAlso
-               _fullscreenFilmstripEdge Is Nothing Then
+               Not IsOverFullscreenFilmstrip(e) Then
                 Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
                 Dim rightButton = viewport IsNot Nothing AndAlso e.GetCurrentPoint(viewport).Properties.IsRightButtonPressed
-                If viewport IsNot Nothing AndAlso (rightButton OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control)) Then
+                If viewport IsNot Nothing AndAlso (rightButton OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse
+                                                   vm.IsSlideshowPaused) Then
                     If rightButton Then _suppressNextImageContextMenu = True
                     ZoomFullscreen(If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor), e.GetPosition(viewport))
                     e.Handled = True
@@ -1272,6 +1268,10 @@ Namespace Views
                 ApplyFullscreenImageMode()
             End If
 
+            ' Die Bildleiste im Vollbild verlangt ein geladenes Bild. Wird das Vollbild geoeffnet,
+            ' waehrend es noch laedt, entscheidet erst dieses Eintreffen, ob sie zu sehen ist.
+            If e.PropertyName = NameOf(ViewerViewModel.CurrentImage) Then UpdateFullscreenImageBar()
+
             ' Der Vergleich teilt sich denselben ZoomLevel - beide Flaechen muessen also bei jeder
             ' Zoomaenderung und bei jedem neu geladenen Vergleichsbild neu bemessen werden.
             If e.PropertyName = NameOf(ViewerViewModel.ZoomLevel) OrElse
@@ -1287,15 +1287,21 @@ Namespace Views
                 _fullscreenZoom = 0
                 _fullscreenPan = New Vector(0, 0)
                 _fullscreenPanning = False
+                _fullscreenFilmstripPinned = False
                 If _fullscreenFilmstripEdge IsNot Nothing Then HideFullscreenFilmstrip()
                 ApplyFullscreenImageMode()
                 ApplyVideoLayout()
+                ' Beim Betreten kurz zeigen, dass es die Leiste gibt; die Ruhezeit nimmt sie wieder.
+                _fullscreenVideoControlsVisible = True
                 ResetFullscreenVideoControlsVisibility()
             End If
 
-            ' Ein anderes Bild im Vollbild steht wieder eingepasst.
-            If e.PropertyName = NameOf(ViewerViewModel.CurrentImagePath) AndAlso _fullscreenZoom > 0 Then
-                ResetFullscreenZoom()
+            ' Ein anderes Bild im Vollbild steht wieder eingepasst. Geprueft wird am Bild, nicht an
+            ' einer Meldung von CurrentImagePath: LoadPathAt setzt erst das Feld und dann die
+            ' Eigenschaft mit demselben Wert, und RaiseAndSetIfChanged meldet dann nichts.
+            If e.PropertyName = NameOf(ViewerViewModel.CurrentImage) AndAlso _fullscreenZoom > 0 Then
+                Dim path = GetVm()?.CurrentImagePath
+                If Not String.Equals(path, _fullscreenZoomPath, StringComparison.Ordinal) Then ResetFullscreenZoom()
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.IsSlideshowPaused) OrElse
@@ -1333,6 +1339,9 @@ Namespace Views
         Private Sub ApplyFilmstripPlacement()
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            ' Steht der Streifen gerade im Vollbild, bleibt er dort; zurueck an seinen Platz bringt
+            ' ihn HideFullscreenFilmstrip, das diesen Aufruf danach selbst macht.
+            If _fullscreenFilmstripEdge IsNot Nothing Then Return
             Dim position = vm.FilmstripPosition
             FilmstripPlacement.Apply(Me.FindControl(Of ListBox)("FilmstripListBox"),
                                      Me.FindControl(Of Grid)("FilmstripBottomSlot"),
@@ -1370,10 +1379,19 @@ Namespace Views
 
         Private Sub ResetFullscreenVideoControlsVisibility()
             StopFullscreenVideoControlTimers()
+            Dim vm = GetVm()
+            ' Bilder im Vollbild: die Leiste behaelt ihren Zustand, nur die Ruhezeit laeuft neu an.
+            ' Hier kommt JEDER Bildwechsel vorbei (IsVideoFile wird je Bild gemeldet); stand hier die
+            ' Leiste stets wieder auf sichtbar und ohne Ruhezeit, ging sie in der Diashow nie weg.
+            If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.IsVideoFile Then
+                If _fullscreenVideoControlsVisible Then _fullscreenVideoControlsHideTimer.Start()
+                UpdateVideoPlaybackBarVisibility()
+                Return
+            End If
+
             _fullscreenVideoControlsVisible = True
             UpdateVideoPlaybackBarVisibility()
 
-            Dim vm = GetVm()
             If vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso vm.IsVideoFile AndAlso vm.IsVideoPlaybackAvailable Then
                 _fullscreenVideoControlsHideTimer.Start()
                 EnsureFullscreenVideoCursorPolling()
@@ -1387,7 +1405,10 @@ Namespace Views
             ' Steht die Maus still auf der Bildleiste, bleibt sie: sonst verschwaende sie unter dem
             ' Zeiger, der gerade einen Knopf treffen will.
             Dim imageBar = Me.FindControl(Of Border)("FullscreenImageBar")
-            If Not vm.IsVideoFile AndAlso imageBar IsNot Nothing AndAlso imageBar.IsVisible AndAlso imageBar.IsPointerOver Then
+            Dim ratingBar = Me.FindControl(Of Border)("FullscreenRatingBar")
+            Dim pointerOnBar = (imageBar IsNot Nothing AndAlso imageBar.IsVisible AndAlso imageBar.IsPointerOver) OrElse
+                               (ratingBar IsNot Nothing AndAlso ratingBar.IsVisible AndAlso ratingBar.IsPointerOver)
+            If Not vm.IsVideoFile AndAlso pointerOnBar Then
                 _fullscreenVideoControlsHideTimer.Start()
                 Return
             End If
@@ -1707,6 +1728,8 @@ Namespace Views
         ' Verlassen des Vollbilds passen wieder ein.
 
         Private _fullscreenZoom As Double
+        ''' <summary>Das Bild, zu dem der Zoom gehoert. Kommt ein anderes, steht es eingepasst.</summary>
+        Private _fullscreenZoomPath As String
         Private _fullscreenPan As Vector
         Private _fullscreenPanning As Boolean
         Private _fullscreenPanStart As Point
@@ -1714,6 +1737,14 @@ Namespace Views
         ''' <summary>Wo der Filmstreifen im Vollbild gerade steht: Nothing (nicht da), "Top" oder
         ''' "Bottom".</summary>
         Private _fullscreenFilmstripEdge As String
+        ''' <summary>Der Filmstreifen im Vollbild ist ueber den Knopf der Bedienleiste eingeschaltet
+        ''' und bleibt stehen, bis er dort wieder ausgeschaltet wird; ueber den Rand geholt geht er
+        ''' dagegen, sobald die Maus seinen Bereich verlaesst.</summary>
+        Private _fullscreenFilmstripPinned As Boolean
+        ''' <summary>Pfeil statt des Zeigers, den das Fenster im Vollbild ausblendet
+        ''' (MainWindow.ApplyFullscreenState): gesetzt an der Vollbildflaeche, solange Bedienleiste
+        ''' oder Filmstreifen zu sehen sind.</summary>
+        Private Shared ReadOnly FullscreenPointerCursor As New Cursor(StandardCursorType.Arrow)
         Private Const FullscreenZoomStep As Double = 1.25
         Private Const FullscreenZoomMax As Double = 8.0
         ''' <summary>So nah am Rand (in Punkten) holt die Maus den Filmstreifen ins Vollbild.</summary>
@@ -1760,6 +1791,7 @@ Namespace Views
             Dim ratio = target / current
             _fullscreenPan = New Vector(a.X - center.X - fromCenter.X * ratio, a.Y - center.Y - fromCenter.Y * ratio)
             _fullscreenZoom = target
+            _fullscreenZoomPath = vm.CurrentImagePath
             ApplyFullscreenImageMode()
         End Sub
 
@@ -1785,6 +1817,29 @@ Namespace Views
             If current <= 0 Then Return
             ZoomFullscreen(1.0 / current, Nothing)
         End Sub
+
+        ''' <summary>Im Vollbild zoomen dieselben Tasten wie im Fenster, aber den Zoom des Vollbilds;
+        ''' das haelt eine laufende Diashow an. Oeffentlich, weil das Fenster die Tasten im Vollbild
+        ''' im Tunnel abfaengt (MainWindow.OnWindowKeyDown) und die Ansicht sie dort nie sieht.
+        ''' True, wenn die Taste hier eine Bedeutung hatte.</summary>
+        Public Function HandleFullscreenZoomKey(key As Key, modifiers As KeyModifiers) As Boolean
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode OrElse vm.IsVideoFile OrElse vm.IsCompareMode Then Return False
+            If modifiers <> KeyModifiers.None Then Return False
+            Select Case key
+                Case Key.Add, Key.OemPlus
+                    ZoomFullscreen(FullscreenZoomStep, Nothing)
+                Case Key.Subtract, Key.OemMinus
+                    ZoomFullscreen(1.0 / FullscreenZoomStep, Nothing)
+                Case Key.F
+                    ResetFullscreenZoom()
+                Case Key.Z
+                    ToggleFullscreenActualZoom()
+                Case Else
+                    Return False
+            End Select
+            Return True
+        End Function
 
         Public Sub OnFullscreenZoomInClick(sender As Object, e As RoutedEventArgs)
             ZoomFullscreen(FullscreenZoomStep, Nothing)
@@ -1841,6 +1896,45 @@ Namespace Views
             Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso vm.CurrentImage IsNot Nothing
             bar.IsVisible = forImage AndAlso (_fullscreenVideoControlsVisible OrElse vm.IsSlideshowPaused)
             bar.Margin = New Thickness(0, 0, 0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionBottom, 24 + FilmstripPlacement.TopExtent, 24))
+            ' Die Bewertungsleiste oben geht mit der Bedienleiste unten und rueckt unter einen oben
+            ' stehenden Filmstreifen.
+            Dim ratingBar = Me.FindControl(Of Border)("FullscreenRatingBar")
+            If ratingBar IsNot Nothing Then
+                ratingBar.IsVisible = bar.IsVisible
+                ratingBar.Margin = New Thickness(0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionTop, 24 + FilmstripPlacement.TopExtent, 24), 0, 0)
+            End If
+            Dim toggle = Me.FindControl(Of Button)("FullscreenFilmstripButton")
+            If toggle IsNot Nothing Then toggle.Classes.Set("active", _fullscreenFilmstripEdge IsNot Nothing)
+            ' Der Zeiger: das Fenster blendet ihn im Vollbild aus. Wo eine Leiste zu bedienen ist,
+            ' muss er zu sehen sein; nach der Ruhezeit geht er mit der Leiste.
+            ' ZURUECK GEHT ES MIT ClearValue, NICHT MIT Nothing: Cursor wird vererbt, und ein lokal
+            ' gesetztes Nothing ueberdeckt den versteckten Zeiger des Fensters, statt ihn wieder
+            ' durchzulassen. Mit Nothing blieb der Zeiger in der Diashow sichtbar.
+            Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
+            If viewport IsNot Nothing Then
+                If bar.IsVisible OrElse _fullscreenFilmstripEdge IsNot Nothing Then
+                    viewport.Cursor = FullscreenPointerCursor
+                Else
+                    viewport.ClearValue(InputElement.CursorProperty)
+                End If
+            End If
+        End Sub
+
+        ''' <summary>Der Knopf der Bedienleiste: blendet den Filmstreifen an seiner Seite fuer das
+        ''' Vollbild ein, bis er wieder gedrueckt wird. Ist der Filmstreifen in den Einstellungen
+        ''' aus, schaltet der Knopf ihn dort ein, sonst bliebe die Liste unsichtbar.</summary>
+        Public Sub OnFullscreenFilmstripToggleClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            If _fullscreenFilmstripEdge IsNot Nothing Then
+                _fullscreenFilmstripPinned = False
+                HideFullscreenFilmstrip()
+                Return
+            End If
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            If Not vm.ShowFilmstrip AndAlso mainVm?.Settings IsNot Nothing Then mainVm.Settings.ViewerShowFilmstrip = True
+            _fullscreenFilmstripPinned = True
+            ShowFullscreenFilmstrip(vm.FullscreenFilmstripPosition)
         End Sub
 
         ''' <summary>Holt den Filmstreifen ins Vollbild, wenn die Maus den oberen oder unteren Rand
@@ -1853,36 +1947,49 @@ Namespace Views
                 If _fullscreenFilmstripEdge IsNot Nothing Then HideFullscreenFilmstrip()
                 Return
             End If
+            ' Ueber den Knopf eingeschaltet bleibt er, bis der Knopf ihn wieder ausschaltet.
+            If _fullscreenFilmstripPinned Then Return
+            Dim vw = viewport.Bounds.Width
             Dim vh = viewport.Bounds.Height
-            If vh <= 0 Then Return
+            If vw <= 0 OrElse vh <= 0 Then Return
             Dim p = e.GetPosition(viewport)
+            ' Der Rand, an dem er steht: die eigene Einstellung fuer Vollbild und Diashow.
+            Dim side = vm.FullscreenFilmstripPosition
+            ' Abstand des Zeigers von diesem Rand.
+            Dim distance As Double
+            Select Case side
+                Case FilmstripPlacement.PositionTop : distance = p.Y
+                Case FilmstripPlacement.PositionLeft : distance = p.X
+                Case FilmstripPlacement.PositionRight : distance = vw - p.X
+                Case Else : distance = vh - p.Y
+            End Select
             If _fullscreenFilmstripEdge Is Nothing Then
-                If p.Y >= vh - FullscreenEdgeTrigger Then
-                    ShowFullscreenFilmstrip(FilmstripPlacement.PositionBottom)
-                ElseIf p.Y <= FullscreenEdgeTrigger Then
-                    ShowFullscreenFilmstrip(FilmstripPlacement.PositionTop)
-                End If
+                If distance <= FullscreenEdgeTrigger Then ShowFullscreenFilmstrip(side)
                 Return
             End If
             ' Etwas Spielraum ueber dem Streifen, damit er beim Hinueberfahren nicht flackert.
-            Dim reach = FilmstripPlacement.TopExtent + 24
-            If _fullscreenFilmstripEdge = FilmstripPlacement.PositionBottom AndAlso p.Y < vh - reach Then
-                HideFullscreenFilmstrip()
-            ElseIf _fullscreenFilmstripEdge = FilmstripPlacement.PositionTop AndAlso p.Y > reach Then
-                HideFullscreenFilmstrip()
-            End If
+            If distance > FilmstripPlacement.Extent(_fullscreenFilmstripEdge) + 24 Then HideFullscreenFilmstrip()
         End Sub
+
+        Private Function IsOverFullscreenFilmstrip(e As PointerEventArgs) As Boolean
+            If _fullscreenFilmstripEdge Is Nothing Then Return False
+            Dim slot = Me.FindControl(Of Border)("FullscreenFilmstripSlot")
+            If slot Is Nothing OrElse Not slot.IsVisible Then Return False
+            Dim p = e.GetPosition(slot)
+            Return p.X >= 0 AndAlso p.Y >= 0 AndAlso p.X <= slot.Bounds.Width AndAlso p.Y <= slot.Bounds.Height
+        End Function
 
         Private Sub ShowFullscreenFilmstrip(edge As String)
             Dim slot = Me.FindControl(Of Border)("FullscreenFilmstripSlot")
             Dim listBox = Me.FindControl(Of ListBox)("FilmstripListBox")
             If slot Is Nothing OrElse listBox Is Nothing Then Return
-            FilmstripPlacement.MoveIntoOverlay(listBox, slot)
-            slot.VerticalAlignment = If(edge = FilmstripPlacement.PositionTop, Avalonia.Layout.VerticalAlignment.Top,
-                                                                             Avalonia.Layout.VerticalAlignment.Bottom)
+            FilmstripPlacement.MoveIntoOverlay(listBox, slot, edge)
             slot.IsVisible = True
             _fullscreenFilmstripEdge = edge
-            _filmstripController.IsVertical = False
+            ' Kachelbreite und Abstand folgen jetzt der Seite des Vollbilds.
+            Dim vm = GetVm()
+            If vm IsNot Nothing Then vm.IsFullscreenFilmstripShown = True
+            _filmstripController.IsVertical = FilmstripPlacement.IsVertical(edge)
             _filmstripController.ScrollToCurrent()
             UpdateFullscreenImageBar()
         End Sub
@@ -1891,6 +1998,8 @@ Namespace Views
             Dim slot = Me.FindControl(Of Border)("FullscreenFilmstripSlot")
             If slot IsNot Nothing Then slot.IsVisible = False
             _fullscreenFilmstripEdge = Nothing
+            Dim vm = GetVm()
+            If vm IsNot Nothing Then vm.IsFullscreenFilmstripShown = False
             ' Zurueck an den eingestellten Platz im Fenster.
             ApplyFilmstripPlacement()
             UpdateFullscreenImageBar()

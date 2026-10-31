@@ -677,6 +677,43 @@ Namespace ViewModels
         ''' laesst (siehe <see cref="CanCancelBusyOverlay"/>).</summary>
         Public ReadOnly Property CancelBusyOverlayCommand As ICommand
 
+        ''' <summary>Der Katalog meldet neue Bewertungen, Favoriten oder Etiketten. Die Elemente in
+        ''' Galerie und Filmstreifen von Betrachter und Editor tragen danach dieselben Werte; die
+        ''' Info-Leiste der Galerie zieht ueber ihre beobachteten Elemente mit, Betrachter und Editor
+        ''' lesen ihr gezeigtes Bild neu.
+        '''
+        ''' Vorher setzte nur die Galerie ihre eigenen Elemente. Was im Betrachter (auch in der
+        ''' Diashow) oder im Editor vergeben wurde, stand im Katalog, aber nicht an Kacheln,
+        ''' Filmstreifen und Info-Leisten der anderen Ansichten (Nutzerbefund 2026-10-31).</summary>
+        Private Sub OnCatalogAttributesChanged(sender As Object, change As CatalogAttributeChange)
+            If change Is Nothing OrElse change.Paths.Count = 0 Then Return
+            Dispatcher.UIThread.Post(Sub() ApplyCatalogAttributesToItems(change))
+        End Sub
+
+        Private Sub ApplyCatalogAttributesToItems(change As CatalogAttributeChange)
+            Try
+                Dim wanted As New HashSet(Of String)(change.Paths, PathIdentity.Comparer)
+                Dim refresh = Sub(items As IEnumerable(Of ImageItem))
+                                  If items Is Nothing Then Return
+                                  For Each item In items
+                                      If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) OrElse
+                                         Not wanted.Contains(item.FilePath) Then Continue For
+                                      If change.Rating.HasValue Then item.Rating = change.Rating.Value
+                                      If change.IsFavorite.HasValue Then item.IsFavorite = change.IsFavorite.Value
+                                      If change.ColorLabel IsNot Nothing Then item.ColorLabel = change.ColorLabel
+                                      If change.PickState.HasValue Then item.PickState = change.PickState.Value
+                                  Next
+                              End Sub
+                refresh(Gallery?.Items)
+                refresh(Viewer?.FilmstripItems)
+                refresh(Editor?.FilmstripItems)
+                Viewer?.RefreshCatalogState(change.Paths)
+                Editor?.RefreshCatalogState(change.Paths)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("MainWindowViewModel.ApplyCatalogAttributesToItems", ex)
+            End Try
+        End Sub
+
         Public Sub New(Optional initialImagePath As String = Nothing, Optional initialFolderPath As String = Nothing)
             Settings = New SettingsViewModel(Me)
             ' Die Rueckfrage nach fehlenden Modellen, fuer Stellen ohne eigenen Weg hierher.
@@ -693,6 +730,8 @@ Namespace ViewModels
             Gallery = New GalleryViewModel(Me)
             Viewer = New ViewerViewModel(Me)
             Editor = New EditorViewModel(Me)
+            ' Bewertung, Favorit und Etikett: wer sie auch setzt, alle Ansichten ziehen nach.
+            AddHandler LibraryService.Instance.AttributesChanged, AddressOf OnCatalogAttributesChanged
 
             ' Gleich zu Anfang klarstellen, wer vorne steht: der Setter von CurrentMode meldet es
             ' danach bei jedem Wechsel, aber ein Start in der Galerie wechselt nichts.
@@ -5569,9 +5608,13 @@ Namespace ViewModels
                                  Replace("{iso}", iso).
                                  Replace("{aperture}", aperture).
                                  Replace("{focal}", focal)
+            ' Dieselbe Kultur wie beim Import (LocalizationService.NameCulture): Monatsnamen in der
+            ' Sprache der Region, Jahre immer gregorianisch. Vorher stand hier die Kultur des
+            ' Prozesses, also unter Linux die SPRACHE statt LC_TIME, und unter Thai ein
+            ' buddhistisches Jahr.
             result = Regex.Replace(result, "\{date:([^}]+)\}", Function(m)
                                                                    Try
-                                                                       Return modified.ToString(m.Groups(1).Value)
+                                                                       Return modified.ToString(m.Groups(1).Value, LocalizationService.NameCulture)
                                                                    Catch
                                                                        Return ""
                                                                    End Try
@@ -5579,7 +5622,7 @@ Namespace ViewModels
             result = Regex.Replace(result, "\{datetaken:([^}]+)\}", Function(m)
                                                                         If Not dateTakenParsed Then Return ""
                                                                         Try
-                                                                            Return dateTaken.ToString(m.Groups(1).Value)
+                                                                            Return dateTaken.ToString(m.Groups(1).Value, LocalizationService.NameCulture)
                                                                         Catch
                                                                             Return ""
                                                                         End Try

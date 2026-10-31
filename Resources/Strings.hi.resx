@@ -10579,4 +10579,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>फ़िल्मपट्टी दिखाएँ</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>माउस व्हील</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>क्रम यादृच्छिक चालू या बंद</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>अगली या पिछली छवि, स्लाइड शो रुका हो तो पॉइंटर पर ज़ूम करता है</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>छोटा अंतराल</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>लंबा अंतराल</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>स्लाइड शो का अंतराल</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>फ़िल्मपट्टी</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>टाइलें</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>पूर्ण स्क्रीन में फ़िल्मपट्टी की स्थिति</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>पूर्ण स्क्रीन और स्लाइड शो में फ़िल्मपट्टी कहाँ दिखती है, जब माउस उस किनारे पर जाए या नियंत्रण पट्टी का बटन उसे दिखाए।</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>दर्शक, पूर्ण स्क्रीन और संपादक में छवि पट्टी: दिखे या नहीं, कहाँ रहे और उसकी टाइलें कैसी दिखें।</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>माउस को फ़िल्मपट्टी के किनारे पर ले जाएँ</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>इंपोर्ट वर्तमान फ़ोल्डर के साथ जो गंतव्य देता है। प्लेसहोल्डर: {pictures} चित्र फ़ोल्डर, {home} होम फ़ोल्डर, {camera} कैमरा, {datetaken:FORMAT} लेने की तारीख। फ़ॉर्मैट में yyyy वर्ष, MM अंक में महीना, MMMM महीने का नाम, dd दिन और dddd सप्ताह का दिन है; नाम आपके क्षेत्र की भाषा में आते हैं। उदाहरण: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} से 2026/10 अक्तूबर जैसे फ़ोल्डर बनते हैं।</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>प्लेसहोल्डर: {pictures} चित्र फ़ोल्डर, {camera} कैमरा, {datetaken:FORMAT} लेने की तारीख, जिसमें yyyy वर्ष, MM महीना, MMMM महीने का नाम, dd दिन, dddd सप्ताह का दिन। उदाहरण: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}।</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>संपादित प्रतियों के लिए सुझाया गया नाम। बैच में नाम बदलने जैसे प्लेसहोल्डर: {name}, ###, {date:FORMAT} फ़ाइल की तारीख, {datetaken:FORMAT} लेने की तारीख, {camera}, {iso}, {aperture}, {focal}, {width}, {height}। फ़ॉर्मैट में: yyyy वर्ष, MM महीना, MMMM महीने का नाम, dd दिन, dddd सप्ताह का दिन, HH mm ss समय, जैसे {datetaken:dd MMMM yyyy}।</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>तारीख का फ़ॉर्मैट: yyyy वर्ष, MM अंक में महीना, MMMM महीने का नाम, dd दिन, dddd सप्ताह का दिन, HH mm ss समय। नाम आपके क्षेत्र की भाषा में आते हैं, जैसे {datetaken:dd MMMM yyyy}।</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>बैच में नाम बदलने जैसा ढाँचा: {name}, ### (गिनती), {date:FORMAT}, {datetaken:FORMAT}, {camera}, {iso}, {aperture}, {focal}, {width}, {height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>रखी गई के रूप में चिह्नित करें (फिर से दबाने पर पूर्ववत)</value>
+  </data>
 </root>

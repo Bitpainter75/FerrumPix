@@ -532,6 +532,65 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Die Stufen der Pause, die die Bedienleiste im Vollbild anbietet. Die Einstellung
+        ''' selbst nimmt jede ganze Zahl von 1 bis 30; steht dort ein Wert zwischen zwei Stufen, geht
+        ''' der erste Schritt auf die naechste Stufe in seiner Richtung.</summary>
+        Private Shared ReadOnly SlideshowIntervalSteps As Integer() = {1, 2, 3, 4, 5, 7, 10, 15, 20, 30}
+
+        Public ReadOnly Property SlideshowIntervalSeconds As Integer
+            Get
+                Return If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerSlideshowIntervalSeconds, 3)
+            End Get
+        End Property
+
+        ''' <summary>Die Pause als Anzeige in der Bedienleiste, etwa "5 s".</summary>
+        Public ReadOnly Property SlideshowIntervalText As String
+            Get
+                Return SlideshowIntervalSeconds.ToString(Globalization.CultureInfo.CurrentCulture) & " s"
+            End Get
+        End Property
+
+        ''' <summary>Setzt die Pause der Diashow, dieselbe Einstellung wie in den Einstellungen. Laeuft
+        ''' die Diashow, gilt sie sofort: die laufende Pause beginnt mit der neuen Laenge von vorn.</summary>
+        Public Sub SetSlideshowIntervalSeconds(seconds As Integer)
+            If _mainVm?.Settings Is Nothing Then Return
+            _mainVm.Settings.ViewerSlideshowIntervalSeconds = seconds
+            Dim applied = _mainVm.Settings.ViewerSlideshowIntervalSeconds
+            _slideshowIntervalMs = Math.Max(1, applied) * 1000.0
+            If _slideshowTimer IsNot Nothing Then
+                _slideshowTimer.Interval = _slideshowIntervalMs
+                RestartSlideshowCountdown()
+            End If
+            RaiseSlideshowIntervalChanged()
+        End Sub
+
+        Friend Sub RaiseSlideshowIntervalChanged()
+            Me.RaisePropertyChanged(NameOf(SlideshowIntervalSeconds))
+            Me.RaisePropertyChanged(NameOf(SlideshowIntervalText))
+        End Sub
+
+        Private Sub StepSlideshowInterval(longer As Boolean)
+            Dim current = SlideshowIntervalSeconds
+            Dim target = If(longer,
+                            SlideshowIntervalSteps.Where(Function(s) s > current).DefaultIfEmpty(SlideshowIntervalSteps.Last()).First(),
+                            SlideshowIntervalSteps.Where(Function(s) s < current).DefaultIfEmpty(SlideshowIntervalSteps.First()).Last())
+            If target <> current Then SetSlideshowIntervalSeconds(target)
+        End Sub
+
+        ''' <summary>Die Zufallsreihenfolge der Diashow, dieselbe Einstellung wie in den
+        ''' Einstellungen (ViewerSlideshowShuffle). Umschalten wirkt ab dem naechsten Bild:
+        ''' AdvanceSlideshow liest sie bei jedem Schritt.</summary>
+        Public Property IsSlideshowShuffle As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.ViewerSlideshowShuffle
+            End Get
+            Set(value As Boolean)
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing OrElse _mainVm.Settings.ViewerSlideshowShuffle = value Then Return
+                _mainVm.Settings.ViewerSlideshowShuffle = value
+                Me.RaisePropertyChanged(NameOf(IsSlideshowShuffle))
+            End Set
+        End Property
+
         Public ReadOnly Property SlideshowButtonText As String
             Get
                 Return If(_isSlideshowPlaying, "Stop", LocalizationService.T("Diashow"))
@@ -672,12 +731,35 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Seite des Filmstreifens im Vollbild und in der Diashow (eigene Einstellung).</summary>
+        Public ReadOnly Property FullscreenFilmstripPosition As String
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return FilmstripPlacement.PositionBottom
+                Return _mainVm.Settings.FullscreenFilmstripPosition
+            End Get
+        End Property
+
         ''' <summary>Links oder rechts laeuft der Streifen senkrecht; die Kacheln stehen dann in der
         ''' festen Breite, damit eine breite Kachel nicht ueber den Streifen hinausragt.</summary>
         Public ReadOnly Property IsFilmstripVertical As Boolean
             Get
-                Return FilmstripPlacement.IsVertical(FilmstripPosition)
+                Return FilmstripPlacement.IsVertical(If(_isFullscreenFilmstripShown, FullscreenFilmstripPosition, FilmstripPosition))
             End Get
+        End Property
+
+        Private _isFullscreenFilmstripShown As Boolean
+        ''' <summary>Der Filmstreifen steht gerade im Vollbild (die Ansicht setzt das). Dann gilt fuer
+        ''' Lage und Kacheln die Seite des Vollbilds, nicht die des Fensters.</summary>
+        Public Property IsFullscreenFilmstripShown As Boolean
+            Get
+                Return _isFullscreenFilmstripShown
+            End Get
+            Set(value As Boolean)
+                If _isFullscreenFilmstripShown = value Then Return
+                Me.RaiseAndSetIfChanged(_isFullscreenFilmstripShown, value)
+                Me.RaisePropertyChanged(NameOf(IsFilmstripVertical))
+                Me.RaisePropertyChanged(NameOf(FilmstripTileMargin))
+            End Set
         End Property
 
         ''' <summary>Aussenrand einer Filmstreifen-Kachel: der halbe eingestellte Abstand links und
@@ -789,6 +871,8 @@ Namespace ViewModels
                                                     .Favorite = ToggleFavoriteCommand,
                                                     .Rating = SetRatingCommand,
                                                     .ColorLabel = SetColorLabelCommand,
+                                                    .PickState = New DelegateCommand(
+                                                        Sub(p) RefreshCatalogState(MenuCommands.WritePickState(ContextItems, MenuCommands.PickStateFrom(p)))),
                                                     .CopyPlace = CopyPlaceCommand,
                                                     .OpenPlaceInOsm = OpenPlaceInOsmCommand,
                                                     .PastePlace = PastePlaceCommand,
@@ -847,6 +931,9 @@ Namespace ViewModels
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property SetColorLabelCommand As ICommand
         Public ReadOnly Property ToggleSlideshowCommand As ICommand
+        Public ReadOnly Property ToggleSlideshowShuffleCommand As ICommand
+        Public ReadOnly Property FasterSlideshowCommand As ICommand
+        Public ReadOnly Property SlowerSlideshowCommand As ICommand
         Public ReadOnly Property PlayPauseVideoCommand As ICommand
         Public ReadOnly Property SeekVideoCommand As ICommand
         Public ReadOnly Property ToggleVideoMuteCommand As ICommand
@@ -860,8 +947,10 @@ Namespace ViewModels
                                                                getCount:=Function() _folderPaths.Count,
                                                                commit:=AddressOf CommitNavigateAsync)
 
-            PreviousCommand = ReactiveCommand.Create(Sub() NavigatePrevious())
-            NextCommand = ReactiveCommand.Create(Sub() NavigateNext())
+            ' In einer gemischten Diashow folgen Weiter und Zurueck deren Reihenfolge; sonst der Reihe
+            ' nach (NavigateNextInSlideshowOrder).
+            PreviousCommand = ReactiveCommand.Create(Sub() NavigatePreviousInSlideshowOrder())
+            NextCommand = ReactiveCommand.Create(Sub() NavigateNextInSlideshowOrder())
             ' Parameterlos: an ein ReactiveCommand.Create(Of T) gebundene Tastenkürzel wären mit
             ' Execute(Nothing) ein stiller No-Op.
             PrintCommand = ReactiveCommand.Create(Sub() PrintCurrent())
@@ -950,6 +1039,11 @@ Namespace ViewModels
                                                                     StartSlideshow()
                                                                 End If
                                                             End Sub)
+            ToggleSlideshowShuffleCommand = ReactiveCommand.Create(Sub() IsSlideshowShuffle = Not IsSlideshowShuffle)
+            TogglePickedCommand = ReactiveCommand.Create(Sub() TogglePickState(1))
+            ToggleRejectedCommand = ReactiveCommand.Create(Sub() TogglePickState(-1))
+            FasterSlideshowCommand = ReactiveCommand.Create(Sub() StepSlideshowInterval(longer:=False))
+            SlowerSlideshowCommand = ReactiveCommand.Create(Sub() StepSlideshowInterval(longer:=True))
             PlayPauseVideoCommand = ReactiveCommand.Create(Sub() ToggleVideoPlayPause())
             SeekVideoCommand = ReactiveCommand.Create(Of Double)(Sub(seconds) SeekVideo(seconds))
             ToggleVideoMuteCommand = ReactiveCommand.Create(Sub() IsVideoMuted = Not IsVideoMuted)
@@ -1334,6 +1428,9 @@ Namespace ViewModels
                 Dim pseudo = _folderPaths(idx)
                 Dim sessionItem = If(idx < _immichSessionItems.Count, _immichSessionItems(idx), Nothing)
                 If sessionItem Is Nothing OrElse Not sessionItem.IsRemoteAsset Then Return
+                ' Ein Serverbild laesst sich nicht behalten oder verwerfen (CanSetPickState).
+                _currentPickState = 0
+                RaisePickState()
                 ' Die Asset-Kennung gilt nur fuer Immich - an ihr haengen die Rueckschreibwege
                 ' (Bewertung, Favorit, Stichwoerter). Bei einer anderen Quelle bleibt sie leer,
                 ' und damit bleiben diese Wege von selbst zu.
@@ -1642,12 +1739,74 @@ Namespace ViewModels
         '''
         ''' Ueber ApplyOwnedState, nicht ueber die Eigenschaften: die Werte kommen gerade aus dem
         ''' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.</summary>
+        ''' <summary>Bewertung, Favorit oder Farbetikett haben sich im Katalog geaendert, etwa in der
+        ''' Galerie oder im Editor. Betrifft es das gezeigte Bild, liest der Betrachter sie neu.</summary>
+        Friend Sub RefreshCatalogState(changedPaths As IReadOnlyCollection(Of String))
+            If _isImmichSession OrElse String.IsNullOrEmpty(_currentImagePath) OrElse changedPaths Is Nothing Then Return
+            If Not changedPaths.Any(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison)) Then Return
+            ApplyCatalogAttributes(_currentImagePath)
+        End Sub
+
         Private Sub ApplyCatalogAttributes(imagePath As String)
+            _currentPickState = LibraryService.Instance.GetPickState(imagePath)
             InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(imagePath),
                                       LibraryService.Instance.GetFavorite(imagePath),
-                                      LibraryService.Instance.GetColorLabel(imagePath))
+                                      LibraryService.Instance.GetColorLabel(imagePath),
+                                      _currentPickState)
+            RaisePickState()
             Me.RaisePropertyChanged(NameOf(RatingText))
             RaiseFooterColorLabelState()
+        End Sub
+
+        ' ── Behalten und Verwerfen ───────────────────────────────────────────────
+        '
+        ' Dieselbe Markierung wie in der Galerie (ImageItem.PickState: 1 behalten, 0 keine, -1
+        ' verworfen), gesetzt aus der Bewertungsleiste des Vollbilds. Nur fuer lokale Bilder, aus
+        ' demselben Grund wie dort: sie lebt im lokalen Katalog und in der Beistelldatei, ein
+        ' Serverbild bekaeme sie unter seinem Pseudo-Pfad, und der Server erfuehre nichts davon.
+
+        Private _currentPickState As Integer
+
+        Public ReadOnly Property IsCurrentPicked As Boolean
+            Get
+                Return _currentPickState > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurrentRejected As Boolean
+            Get
+                Return _currentPickState < 0
+            End Get
+        End Property
+
+        ''' <summary>Laesst sich das gezeigte Bild behalten oder verwerfen? Nur ein lokales Bild,
+        ''' kein Video und nichts aus Immich oder Nextcloud.</summary>
+        Public ReadOnly Property CanSetPickState As Boolean
+            Get
+                Return Not _isImmichSession AndAlso Not String.IsNullOrEmpty(_currentImagePath) AndAlso
+                       Not VideoPreviewService.IsSupportedVideo(_currentImagePath) AndAlso
+                       CurrentNextcloudItem() Is Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property TogglePickedCommand As ICommand
+        Public ReadOnly Property ToggleRejectedCommand As ICommand
+
+        ''' <summary>Setzt die Markierung des gezeigten Bildes; derselbe Zustand noch einmal nimmt sie
+        ''' zurueck. Der Katalog meldet die Aenderung, Galerie und Filmstreifen ziehen darueber nach
+        ''' (MainWindowViewModel.ApplyCatalogAttributesToItems).</summary>
+        Private Sub TogglePickState(state As Integer)
+            If Not CanSetPickState Then Return
+            Dim target = If(_currentPickState = state, 0, state)
+            _currentPickState = target
+            RaisePickState()
+            LibraryService.Instance.SetPickStateForMany({_currentImagePath}, target, syncToXmp:=True)
+        End Sub
+
+        Private Sub RaisePickState()
+            Me.RaisePropertyChanged(NameOf(IsCurrentPicked))
+            Me.RaisePropertyChanged(NameOf(IsCurrentRejected))
+            Me.RaisePropertyChanged(NameOf(CanSetPickState))
         End Sub
 
         ''' <summary>Doppelklick auf eine Vergleichsflaeche: erst den Fokus dorthin, dann das Bild
@@ -1710,6 +1869,34 @@ Namespace ViewModels
         Private _compareRightFavorite As Boolean
         Private _compareLeftColorLabel As String = ""
         Private _compareRightColorLabel As String = ""
+        Private _compareLeftPick As Integer
+        Private _compareRightPick As Integer
+
+        ''' <summary>Behalten und Verwerfen der beiden Vergleichsflaechen, wie neben dem Herz in der
+        ''' Info-Leiste.</summary>
+        Public ReadOnly Property IsCompareLeftPicked As Boolean
+            Get
+                Return _compareLeftPick > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareLeftRejected As Boolean
+            Get
+                Return _compareLeftPick < 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightPicked As Boolean
+            Get
+                Return _compareRightPick > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCompareRightRejected As Boolean
+            Get
+                Return _compareRightPick < 0
+            End Get
+        End Property
 
         Public ReadOnly Property CompareLeftRating As Integer
             Get
@@ -1858,7 +2045,11 @@ Namespace ViewModels
             _compareRightFavorite = Not String.IsNullOrEmpty(_compareRightPath) AndAlso LibraryService.Instance.GetFavorite(_compareRightPath)
             _compareLeftColorLabel = If(String.IsNullOrEmpty(_compareLeftPath), "", LibraryService.Instance.GetColorLabel(_compareLeftPath))
             _compareRightColorLabel = If(String.IsNullOrEmpty(_compareRightPath), "", LibraryService.Instance.GetColorLabel(_compareRightPath))
+            _compareLeftPick = If(String.IsNullOrEmpty(_compareLeftPath), 0, LibraryService.Instance.GetPickState(_compareLeftPath))
+            _compareRightPick = If(String.IsNullOrEmpty(_compareRightPath), 0, LibraryService.Instance.GetPickState(_compareRightPath))
             For Each n In {NameOf(CompareLeftRating), NameOf(CompareRightRating),
+                           NameOf(IsCompareLeftPicked), NameOf(IsCompareLeftRejected),
+                           NameOf(IsCompareRightPicked), NameOf(IsCompareRightRejected),
                            NameOf(CompareLeftIsFavorite), NameOf(CompareRightIsFavorite),
                            NameOf(CompareLeftColorLabel),
                            NameOf(IsCompareLeftColorLabelOrange), NameOf(IsCompareLeftColorLabelRed),
@@ -1890,6 +2081,17 @@ Namespace ViewModels
             LibraryService.Instance.SetRating(path, newValue)
             LoadCompareMarkers()
             ' Die Fusszeile zeigt die fokussierte Flaeche - sie muss mit, wenn genau die gemeint war.
+            If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
+        End Sub
+
+        ''' <summary>Behalten (1) oder Verwerfen (-1) fuer eine Vergleichsflaeche; derselbe Zustand
+        ''' noch einmal nimmt die Markierung zurueck.</summary>
+        Public Sub ToggleComparePickState(pane As Integer, state As Integer)
+            Dim path = PathOfPane(pane)
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            Dim bisher = If(pane = 1, _compareRightPick, _compareLeftPick)
+            LibraryService.Instance.SetPickStateForMany({path}, If(bisher = state, 0, state), syncToXmp:=True)
+            LoadCompareMarkers()
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
         End Sub
 
@@ -2357,9 +2559,14 @@ Namespace ViewModels
             ' Bildwechsel atomar anzeigen: das alte Bitmap darf nicht waehrend des neuen
             ' Decode-/Render-Vorgangs als scheinbar aktuelles Bild stehen bleiben. Der Ladezustand
             ' wird erst sichtbar, wenn CurrentImage Nothing ist (ShowBitmapLoading).
-            CurrentImage = Nothing
-            ImageWidth = 0
-            ImageHeight = 0
+            ' IN DER DIASHOW GILT DAS NICHT: dort stand sonst zwischen zwei RAWs eine schwarze
+            ' Flaeche, solange LibRaw entwickelte. Das alte Bild bleibt stehen, bis das neue da ist;
+            ' ApplyLoadedBitmap tauscht es dann in einem Schritt aus.
+            If Not _slideshowSession Then
+                CurrentImage = Nothing
+                ImageWidth = 0
+                ImageHeight = 0
+            End If
             RunBitmapLoad(path, token, FpxService.IsFpx(path))
         End Sub
 
@@ -2384,9 +2591,23 @@ Namespace ViewModels
             Try
                 ' Bei jedem Laden neu gelesen, damit ein umgelegter Schalter beim naechsten Bild wirkt.
                 Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
-                Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token))
-                bmp = decoded.Bitmap
-                rawDeveloped = decoded.RawDeveloped
+                ' In der Diashow ist das naechste Bild womoeglich schon entwickelt, oder es wird
+                ' gerade entwickelt (StartSlideshowPrefetch): dann dieses Ergebnis, kein zweiter Lauf.
+                Dim prefetched = TakeSlideshowPrefetch(path, reduced)
+                If prefetched IsNot Nothing Then
+                    Dim early = Await prefetched
+                    If early.Bitmap IsNot Nothing AndAlso early.WriteTime = writeTime Then
+                        bmp = early.Bitmap
+                        rawDeveloped = early.RawDeveloped
+                    Else
+                        early.Bitmap?.Dispose()
+                    End If
+                End If
+                If bmp Is Nothing Then
+                    Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token))
+                    bmp = decoded.Bitmap
+                    rawDeveloped = decoded.RawDeveloped
+                End If
             Catch
                 bmp = Nothing
             End Try
@@ -2406,7 +2627,106 @@ Namespace ViewModels
             ' FPX: das schnelle Komposit steht - die volle, nun identische Szenenfassung zieht mit
             ' demselben Token nach.
             If isFpx AndAlso bmp IsNot Nothing Then LoadFpxFullResolutionBitmapAsync(path, token)
-            If RawPreviewService.IsSupportedRaw(path) Then WarmRawCacheAfterDwellAsync(path, token)
+            ' In der Diashow geht niemand in den Editor; das Vorwaermen dafuer stuende dem
+            ' Entwickeln des naechsten Bildes nur im Weg (ein Decode zur Zeit, DecodeGate).
+            If RawPreviewService.IsSupportedRaw(path) AndAlso Not _slideshowSession Then WarmRawCacheAfterDwellAsync(path, token)
+            If _isSlideshowPlaying AndAlso bmp IsNot Nothing Then StartSlideshowPrefetch()
+        End Sub
+
+        ' ── Das naechste Bild der Diashow vorab entwickeln ───────────────────────
+        '
+        ' Zwischen zwei RAWs stand die Flaeche schwarz, solange LibRaw entwickelte. Steht ein Bild der
+        ' Diashow, beginnt deshalb schon der Decode des naechsten - ueber dasselbe Tor (DecodeGate),
+        ' also nie neben einem anderen Decode. Kommt der Wechsel, nimmt RunBitmapLoad das fertige
+        ' oder noch laufende Ergebnis (TakeSlideshowPrefetch). Blaettert man woanders hin oder endet
+        ' die Diashow, wird es verworfen; ein laufender LibRaw-Lauf bricht dann ab
+        ' (RawDecodeService.RunWhileWanted ueber _slideshowPrefetchToken).
+
+        Private _slideshowPrefetchToken As Integer
+        Private _slideshowPrefetchPath As String
+        Private _slideshowPrefetchReduced As Boolean
+        Private _slideshowPrefetchTask As Task(Of (Bitmap As Bitmap, RawDeveloped As Boolean, WriteTime As DateTime))
+
+        ''' <summary>Das Bild, das die Diashow als naechstes zeigt, ohne die Runde weiterzudrehen:
+        ''' der Reihe nach das folgende (der Streifen laeuft ringsum), gemischt der Kopf der Runde.
+        ''' Nothing fuer ein Video, eine fehlende Datei oder wenn es nur ein Bild gibt.</summary>
+        Private Function PeekNextSlideshowPath() As String
+            If _folderPaths.Count < 2 OrElse _currentIndex < 0 OrElse _currentIndex >= _folderPaths.Count Then Return Nothing
+            Dim currentPath = _folderPaths(_currentIndex)
+            Dim nextPath As String = Nothing
+            If IsSlideshowShuffle Then
+                If _slideshowShuffleQueue.Count = 0 Then RefillSlideshowShuffleQueue(currentPath)
+                nextPath = _slideshowShuffleQueue.FirstOrDefault(
+                    Function(p) Not String.Equals(p, currentPath, PathIdentity.Comparison) AndAlso
+                                _folderPaths.Exists(Function(f) String.Equals(f, p, PathIdentity.Comparison)))
+            Else
+                nextPath = _folderPaths((_currentIndex + 1) Mod _folderPaths.Count)
+            End If
+            If String.IsNullOrEmpty(nextPath) OrElse VideoPreviewService.IsSupportedVideo(nextPath) OrElse Not File.Exists(nextPath) Then Return Nothing
+            Return nextPath
+        End Function
+
+        Private Sub StartSlideshowPrefetch()
+            If _isCompareMode OrElse _isImmichSession Then Return
+            Dim nextPath = PeekNextSlideshowPath()
+            If nextPath Is Nothing Then Return
+            Dim reduced = Not AppSettingsService.Load().ViewerRawFullResolution
+            If _slideshowPrefetchTask IsNot Nothing AndAlso reduced = _slideshowPrefetchReduced AndAlso
+               String.Equals(nextPath, _slideshowPrefetchPath, PathIdentity.Comparison) Then Return
+            DiscardSlideshowPrefetch()
+            Dim token = System.Threading.Interlocked.Increment(_slideshowPrefetchToken)
+            _slideshowPrefetchPath = nextPath
+            _slideshowPrefetchReduced = reduced
+            Dim wanted = Function() token = System.Threading.Volatile.Read(_slideshowPrefetchToken)
+            _slideshowPrefetchTask = Task.Run(
+                Function() As (Bitmap As Bitmap, RawDeveloped As Boolean, WriteTime As DateTime)
+                    Try
+                        Dim writeTime = File.GetLastWriteTimeUtc(nextPath)
+                        If Not WillDevelopRawInViewer(nextPath) Then
+                            Dim quick = DecodeViewerBitmapWithState(nextPath, reducedRawDecode:=reduced)
+                            Return (quick.Bitmap, quick.RawDeveloped, writeTime)
+                        End If
+                        Dim developed = DecodeGate.Run(
+                            Function() As (Bitmap As Bitmap, RawDeveloped As Boolean)
+                                If Not wanted() Then Return (Nothing, False)
+                                Return RawDecodeService.RunWhileWanted(
+                                    wanted, Function() DecodeViewerBitmapWithState(nextPath, reducedRawDecode:=reduced))
+                            End Function)
+                        Return (developed.Bitmap, developed.RawDeveloped, writeTime)
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Viewer.SlideshowPrefetch", ex)
+                        Return (Nothing, False, DateTime.MinValue)
+                    End Try
+                End Function)
+        End Sub
+
+        ''' <summary>Gibt den Vorab-Decode fuer <paramref name="path"/> heraus, fertig oder noch
+        ''' laufend, oder Nothing. Ein Vorab-Decode fuer ein anderes Bild wird dabei verworfen. Der
+        ''' Token bleibt beim Herausgeben stehen, sonst braeche der laufende Decode ab.</summary>
+        Private Function TakeSlideshowPrefetch(path As String, reduced As Boolean) As Task(Of (Bitmap As Bitmap, RawDeveloped As Boolean, WriteTime As DateTime))
+            If _slideshowPrefetchTask IsNot Nothing AndAlso reduced = _slideshowPrefetchReduced AndAlso
+               String.Equals(path, _slideshowPrefetchPath, PathIdentity.Comparison) Then
+                Dim taken = _slideshowPrefetchTask
+                _slideshowPrefetchTask = Nothing
+                _slideshowPrefetchPath = Nothing
+                Return taken
+            End If
+            DiscardSlideshowPrefetch()
+            Return Nothing
+        End Function
+
+        ''' <summary>Verwirft den Vorab-Decode: ein laufender LibRaw-Lauf bricht ab, ein fertiges
+        ''' Bild wird freigegeben, sobald es da ist.</summary>
+        Private Sub DiscardSlideshowPrefetch()
+            System.Threading.Interlocked.Increment(_slideshowPrefetchToken)
+            Dim pending = _slideshowPrefetchTask
+            _slideshowPrefetchTask = Nothing
+            _slideshowPrefetchPath = Nothing
+            If pending IsNot Nothing Then
+                pending.ContinueWith(Sub(t)
+                                         If t.Status = TaskStatus.RanToCompletion Then t.Result.Bitmap?.Dispose()
+                                     End Sub, TaskScheduler.Default)
+            End If
         End Sub
 
         ''' <summary>Wie lange eine RAW im Betrachter stehen muss, bevor ihr Decode fuer den Editor
@@ -3520,17 +3840,35 @@ Namespace ViewModels
         ''' Für Mausrad-Navigation im Filmstrip/Viewer - normalisiert per Delta-Magnitude statt
         ''' pro Event einen vollen Schritt auszulösen (siehe FilmstripNavigationDebouncer.QueueWheelDelta).
         Public Sub NavigateByWheel(deltaY As Double)
+            ' In einer gemischten Diashow folgt auch das Rad deren Reihenfolge. Ein Touchpad liefert
+            ' dabei viele kleine Schuebe; mehr als ein Schritt je Viertelsekunde zaehlt nicht.
+            If _slideshowSession AndAlso IsSlideshowShuffle AndAlso Not _isCompareMode Then
+                If deltaY = 0 OrElse WheelDeltaGuard.IsImplausible(deltaY) OrElse
+                   Environment.TickCount64 - _lastShuffleWheelStep < 250 Then Return
+                _lastShuffleWheelStep = Environment.TickCount64
+                If deltaY < 0 Then NavigateNextInSlideshowOrder() Else NavigatePreviousInSlideshowOrder()
+                Return
+            End If
             _navDebouncer.QueueWheelDelta(deltaY)
         End Sub
 
         Private Async Function CommitNavigateAsync(idx As Integer) As Task
+            Await TryCommitNavigateAsync(idx)
+        End Function
+
+        ''' <summary>Wechselt zu <paramref name="idx"/>; False, wenn nicht gewechselt wurde (gesperrt im
+        ''' Vollbild bei ungespeicherten Aenderungen, oder die Rueckfrage zu einer Drehung abgebrochen).
+        ''' Wer daneben eigenen Zustand fuehrt (der Weg einer gemischten Diashow), aendert ihn erst
+        ''' nach einem True.</summary>
+        Private Async Function TryCommitNavigateAsync(idx As Integer) As Task(Of Boolean)
             If _mainVm?.IsFullscreenNavigationLocked Then
                 StatusInfo = LocalizationService.T("Bildwechsel ist bei ungespeicherten Änderungen im Vollbild nicht möglich")
-                Return
+                Return False
             End If
-            If Not Await ConfirmPendingRotationAsync("zu einem anderen Bild wechselst") Then Return
+            If Not Await ConfirmPendingRotationAsync("zu einem anderen Bild wechselst") Then Return False
             LoadPathAt(idx)
             RestartSlideshowCountdown()
+            Return True
         End Function
 
         Private Sub LoadPathAt(idx As Integer)
@@ -4228,6 +4566,8 @@ Namespace ViewModels
             AddHandler _slideshowTimer.Elapsed, AddressOf OnSlideshowTick
             _slideshowTimer.AutoReset = True
             _slideshowTimer.Start()
+            ' Das erste Bild steht schon; das naechste nicht erst beim ersten Wechsel entwickeln.
+            If _currentImage IsNot Nothing Then StartSlideshowPrefetch()
         End Sub
 
         ''' <summary>Haelt die Diashow an, ohne sie zu beenden: das Vollbild bleibt, und das Bild
@@ -4242,6 +4582,8 @@ Namespace ViewModels
         Public Sub StopSlideshow()
             StopSlideshowTimer()
             _slideshowSession = False
+            _slideshowShuffleHistory.Clear()
+            DiscardSlideshowPrefetch()
             Me.RaisePropertyChanged(NameOf(IsSlideshowPaused))
         End Sub
 
@@ -4291,22 +4633,106 @@ Namespace ViewModels
                     NavigateNext()
                     Return
                 End If
-                Dim currentPath = If(_currentIndex >= 0 AndAlso _currentIndex < _folderPaths.Count, _folderPaths(_currentIndex), Nothing)
-                For pass = 1 To 2
-                    If _slideshowShuffleQueue.Count = 0 Then RefillSlideshowShuffleQueue(currentPath)
-                    While _slideshowShuffleQueue.Count > 0
-                        Dim nextPath = _slideshowShuffleQueue.Dequeue()
-                        If String.Equals(nextPath, currentPath, PathIdentity.Comparison) Then Continue While
-                        Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, nextPath, PathIdentity.Comparison))
-                        If idx < 0 Then Continue While
-                        Await CommitNavigateAsync(idx)
-                        Return
-                    End While
-                Next
+                ' Laeuft schon ein gemischter Wechsel (etwa mit offener Rueckfrage zu einer Drehung),
+                ' tut ein zweiter nichts: beide saehen denselben Kopf der Runde, wechselten nach der
+                ' Bestaetigung zweimal dorthin und trugen den Weg doppelt ein.
+                If _slideshowShuffleStepRunning Then Return
+                _slideshowShuffleStepRunning = True
+                Try
+                    Await AdvanceShuffledAsync()
+                Finally
+                    _slideshowShuffleStepRunning = False
+                End Try
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
                 ' und beendet den Prozess.
                 DiagnosticLogService.LogException("ViewerViewModel.AdvanceSlideshow", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Sperre fuer einen laufenden gemischten Wechsel, vorwaerts wie zurueck: beide
+        ''' aendern Runde und Weg und warten unterwegs womoeglich auf eine Rueckfrage.</summary>
+        Private _slideshowShuffleStepRunning As Boolean
+
+        Private Async Function AdvanceShuffledAsync() As Task
+            Dim currentPath = If(_currentIndex >= 0 AndAlso _currentIndex < _folderPaths.Count, _folderPaths(_currentIndex), Nothing)
+            For pass = 1 To 2
+                If _slideshowShuffleQueue.Count = 0 Then RefillSlideshowShuffleQueue(currentPath)
+                While _slideshowShuffleQueue.Count > 0
+                    ' Gelesen, nicht entnommen: das Bild verlaesst die Runde erst mit einem Wechsel,
+                    ' der wirklich stattfand. Bricht die Rueckfrage zu einer Drehung ab oder ist das
+                    ' Blaettern gesperrt, bleibt es vorn und kommt beim naechsten Versuch dran.
+                    Dim nextPath = _slideshowShuffleQueue.Peek()
+                    Dim idx = If(String.Equals(nextPath, currentPath, PathIdentity.Comparison), -1,
+                                 _folderPaths.FindIndex(Function(p) String.Equals(p, nextPath, PathIdentity.Comparison)))
+                    If idx < 0 Then
+                        ' Das aktuelle Bild oder eines, das es nicht mehr gibt: verwerfen.
+                        _slideshowShuffleQueue.Dequeue()
+                        Continue While
+                    End If
+                    If Not Await TryCommitNavigateAsync(idx) Then Return
+                    If _slideshowShuffleQueue.Count > 0 AndAlso
+                       String.Equals(_slideshowShuffleQueue.Peek(), nextPath, PathIdentity.Comparison) Then
+                        _slideshowShuffleQueue.Dequeue()
+                    End If
+                    ' Fuer "Zurueck": der gemischte Weg laesst sich nicht aus den Stellen ablesen.
+                    ' Eingetragen wird ebenfalls erst nach dem Wechsel.
+                    If currentPath IsNot Nothing Then _slideshowShuffleHistory.Push(currentPath)
+                    Return
+                End While
+            Next
+        End Function
+
+        ''' <summary>Die in dieser Diashow gemischt gezeigten Bilder, das zuletzt verlassene oben.
+        ''' "Zurueck" geht diesen Weg zurueck; das Ende der Diashow leert ihn.</summary>
+        Private ReadOnly _slideshowShuffleHistory As New Stack(Of String)()
+        Private _lastShuffleWheelStep As Long
+
+        ''' <summary>Weiter waehrend einer Diashow mit Zufallsreihenfolge: das naechste Bild der
+        ''' gemischten Runde, wie beim automatischen Weiterschalten. Sonst, und ausserhalb einer
+        ''' Diashow, der Reihe nach. Vorher blaetterten Pfeiltasten und Knoepfe auch in einer
+        ''' gemischten Diashow immer der Reihe nach; wer bei langer Pause von Hand weiterschaltet,
+        ''' sah vom Zufall so nie etwas.</summary>
+        Private Sub NavigateNextInSlideshowOrder()
+            If _slideshowSession AndAlso IsSlideshowShuffle AndAlso Not _isCompareMode Then
+                AdvanceSlideshow()
+            Else
+                NavigateNext()
+            End If
+        End Sub
+
+        ''' <summary>Zurueck waehrend einer gemischten Diashow: das zuvor gezeigte Bild dieser Diashow.
+        ''' Ist der Weg leer (am Anfang), oder ausserhalb einer gemischten Diashow, der Reihe nach.</summary>
+        Private Async Sub NavigatePreviousInSlideshowOrder()
+            Try
+                If _slideshowSession AndAlso IsSlideshowShuffle AndAlso Not _isCompareMode Then
+                    ' Dieselbe Sperre wie vorwaerts (AdvanceSlideshow): ein zweiter Schritt, waehrend
+                    ' einer auf eine Rueckfrage wartet, nahme denselben Eintrag ein zweites Mal.
+                    If _slideshowShuffleStepRunning Then Return
+                    _slideshowShuffleStepRunning = True
+                    Try
+                        While _slideshowShuffleHistory.Count > 0
+                            Dim back = _slideshowShuffleHistory.Peek()
+                            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, back, PathIdentity.Comparison))
+                            If idx < 0 Then
+                                ' Das Bild gibt es nicht mehr: aus dem Weg nehmen und das davor versuchen.
+                                _slideshowShuffleHistory.Pop()
+                                Continue While
+                            End If
+                            ' Erst nach dem Wechsel aus dem Weg nehmen: wird die Rueckfrage zu einer
+                            ' Drehung abgebrochen oder ist das Blaettern gesperrt, bleibt der Weg, wie er war.
+                            If Await TryCommitNavigateAsync(idx) Then _slideshowShuffleHistory.Pop()
+                            Return
+                        End While
+                    Finally
+                        _slideshowShuffleStepRunning = False
+                    End Try
+                End If
+                NavigatePrevious()
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("ViewerViewModel.NavigatePreviousInSlideshowOrder", ex)
             End Try
         End Sub
 

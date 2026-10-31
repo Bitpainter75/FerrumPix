@@ -42,8 +42,25 @@ Public Class App
         SQLitePCL.Batteries_V2.Init()
     End Sub
 
+    ''' <summary>Tooltips im Fenster liegen in dessen Overlay statt in einem eigenen Popup-Fenster.
+    '''
+    ''' Passt ein Tooltip unter dem Zeiger nicht mehr auf den Schirm, klappt Avalonia ihn nach oben,
+    ''' behaelt dabei aber den Abstand von 20 Punkten nach UNTEN (ManagedPopupPositioner spiegelt
+    ''' nur Anker und Richtung, nicht den Versatz). Er endet dann 20 Punkte unter der Zeigerspitze
+    ''' und liegt genau unter der Maus. Als eigenes X-Fenster fing er so den naechsten Klick ab:
+    ''' Knoepfe in Fusszeilen und in der Bedienleiste der Diashow, auch Kacheln beim Auswaehlen,
+    ''' reagierten "manchmal" nicht, naemlich immer dann, wenn gerade ihr Tooltip stand.
+    '''
+    ''' Im Overlay ist der Tooltip fuer Treffer unsichtbar (Stil ToolTip im Thema), der Klick geht
+    ''' durch ihn hindurch an das Element darunter. NUR in einem Fenster: Kontextmenues und Flyouts
+    ''' sind eigene Popups ohne Overlay-Ebene, und dort wirft Avalonia, statt auszuweichen.</summary>
+    Private Shared Sub OnToolTipOpening(control As Control, e As Avalonia.Interactivity.CancelRoutedEventArgs)
+        control.SetCurrentValue(ToolTip.ShouldUseOverlayLayerProperty, TypeOf TopLevel.GetTopLevel(control) Is Window)
+    End Sub
+
     Public Overrides Sub Initialize()
         AvaloniaXamlLoader.Load(Me)
+        ToolTip.ToolTipOpeningEvent.AddClassHandler(Of Control)(AddressOf OnToolTipOpening)
 
         ' Microsoft.Data.Sqlite bringt den SQLitePCL-Provider mit, aktiviert ihn aber nicht
         ' automatisch in jeder Veröffentlichungsart. Ohne diese Initialisierung schlugen

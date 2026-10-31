@@ -708,6 +708,22 @@
     <Style Selector="Button.icon-btn.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Behalten und Verwerfen: eingeschaltet zeigt nur das Symbol eine Farbe, ohne Rahmen, und
+         zwar nicht den Akzent, sondern Gruen und Rot wie die gleichnamigen Farbetiketten. -->
+    <Style Selector="Button.icon-btn.pick-btn.active">
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <!-- Auf dem Foto (Bildvergleich) weiss, damit das Symbol auf jedem Bild lesbar bleibt. Steht
+         VOR den Farben darunter, damit gesetzt Gruen und Rot gewinnen. -->
+    <Style Selector="Button.icon-btn.pick-btn.on-image icons|SvgIcon">
+        <Setter Property="IconBrush" Value="White"/>
+    </Style>
+    <Style Selector="Button.icon-btn.pick-keep.active icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#22C55E"/>
+    </Style>
+    <Style Selector="Button.icon-btn.pick-reject.active icons|SvgIcon">
+        <Setter Property="IconBrush" Value="#E74C3C"/>
+    </Style>
     <!-- DERSELBE KNOPF ALS SCHALTER, wie bei ghost: aus sieht er aus wie Button.icon-btn, ein wie
          Button.icon-btn.active. Fluent malt eingeschaltet eine volle Akzentflaeche auf den
          ContentPresenter der Vorlage, deshalb werden die Zustaende dort ueberschrieben. -->
@@ -1576,6 +1592,9 @@
     </Style>
 
     <Style Selector="ToolTip">
+        <!-- Klicks gehen durch den Tooltip hindurch. Er liegt im Overlay des Fensters
+             (App.OnToolTipOpening) und kann beim Hochklappen am Schirmrand unter dem Zeiger landen. -->
+        <Setter Property="IsHitTestVisible" Value="False"/>
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>

@@ -10533,4 +10533,58 @@
   <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
     <value>显示胶片显示窗格</value>
   </data>
+  <data name="Mausrad_8d20503c" xml:space="preserve">
+    <value>鼠标滚轮</value>
+  </data>
+  <data name="Zuf_llige_Reihenfolge_ein_oder_aus_d6e72e57" xml:space="preserve">
+    <value>随机顺序开或关</value>
+  </data>
+  <data name="Weiterbl_ttern_bei_angehaltener_Diashow_am_Mausz_2edec37b" xml:space="preserve">
+    <value>切换到下一张或上一张，幻灯片暂停时在指针处缩放</value>
+  </data>
+  <data name="K_rzere_Pause_91380ef4" xml:space="preserve">
+    <value>缩短间隔</value>
+  </data>
+  <data name="L_ngere_Pause_9a1daa6b" xml:space="preserve">
+    <value>延长间隔</value>
+  </data>
+  <data name="Pause_der_Diashow_c63ae2b1" xml:space="preserve">
+    <value>幻灯片播放间隔</value>
+  </data>
+  <data name="Filmstreifen_e8e5b38f" xml:space="preserve">
+    <value>胶片显示窗格</value>
+  </data>
+  <data name="Kacheln_d06fb212" xml:space="preserve">
+    <value>缩略图</value>
+  </data>
+  <data name="Position_des_Filmstreifens_im_Vollbild_ab03bc37" xml:space="preserve">
+    <value>全屏时胶片显示窗格的位置</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Vollbild_und_in_der_Diash_a18d0cf2" xml:space="preserve">
+    <value>全屏和幻灯片播放时胶片显示窗格出现的位置：鼠标移到该边缘，或由控制栏按钮显示。</value>
+  </data>
+  <data name="Die_Bildleiste_in_Viewer_Vollbild_und_Editor_ob__090d3502" xml:space="preserve">
+    <value>查看器、全屏和编辑器中的胶片显示窗格：是否显示、位于何处以及缩略图的样式。</value>
+  </data>
+  <data name="Maus_an_den_Rand_des_Filmstreifens_171ea8d1" xml:space="preserve">
+    <value>鼠标移到胶片显示窗格所在的边缘</value>
+  </data>
+  <data name="Ziele_die_der_Import_neben_dem_aktuellen_Ordner__fdb31a17" xml:space="preserve">
+    <value>“导入”除当前文件夹外提供的目标。占位符：{pictures} 图片文件夹，{home} 个人文件夹，{camera} 相机，{datetaken:FORMAT} 拍摄日期。格式中 yyyy 为年份，MM 为数字月份，MMMM 为月份名称，dd 为日，dddd 为星期；名称使用你所在地区的语言。示例：{pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} 会创建类似 2026/10 十月 的文件夹。</value>
+  </data>
+  <data name="Platzhalter_pictures_Bilder_Ordner_camera_Kamera_47bc80db" xml:space="preserve">
+    <value>占位符：{pictures} 图片文件夹，{camera} 相机，{datetaken:FORMAT} 拍摄日期，其中 yyyy 年，MM 月，MMMM 月份名称，dd 日，dddd 星期。示例：{pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}。</value>
+  </data>
+  <data name="Vorschlag_f_r_bearbeitete_Kopien_Platzhalter_wie_866ea434" xml:space="preserve">
+    <value>编辑后副本的建议名称。占位符与批量重命名相同：{name}、###、{date:FORMAT} 文件日期、{datetaken:FORMAT} 拍摄日期、{camera}、{iso}、{aperture}、{focal}、{width}、{height}。格式中：yyyy 年，MM 月，MMMM 月份名称，dd 日，dddd 星期，HH mm ss 时间，例如 {datetaken:dd MMMM yyyy}。</value>
+  </data>
+  <data name="Datumsformat_yyyy_Jahr_MM_Monat_als_Zahl_MMMM_Mo_d9f4255c" xml:space="preserve">
+    <value>日期格式：yyyy 年，MM 数字月份，MMMM 月份名称，dd 日，dddd 星期，HH mm ss 时间。名称使用你所在地区的语言，例如 {datetaken:dd MMMM yyyy}。</value>
+  </data>
+  <data name="Muster_wie_beim_Stapel_Umbenennen_name_Z_hler_da_602fc9dd" xml:space="preserve">
+    <value>模式与批量重命名相同：{name}、###（计数器）、{date:FORMAT}、{datetaken:FORMAT}、{camera}、{iso}、{aperture}、{focal}、{width}、{height}</value>
+  </data>
+  <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
+    <value>标记为保留（再按一次撤销）</value>
+  </data>
 </root>
