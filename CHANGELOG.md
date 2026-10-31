@@ -29,6 +29,8 @@
 - **Keep and reject next to the heart:** in the info panel, in every context and footer menu and
   on both sides of the viewer's comparison, two buttons next to the stars and the heart mark the
   pictures as kept (green) or rejected (red); pressing the same one again takes the mark back. The separate menu entry for rejecting is gone.
+  The small cross for clearing stars or colour labels is gone too, since clicking the same star
+  or colour again already clears it.
 
 - **Filmstrip on any side:** in the settings the filmstrip can sit below, above, left or right of
   the picture, separately for the viewer, the editor and fullscreen. All filmstrip settings now

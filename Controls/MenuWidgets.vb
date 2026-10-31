@@ -15,7 +15,7 @@ Namespace Controls
     ''' Zeilen fuer das Kontextmenue, die keine Eintraege sind, sondern kleine Bedienelemente:
     ''' die Bewertungssterne mit Herz und die bunten Kreise der Farbetiketten.
     '''
-    ''' Warum nicht als Untermenue: fuenf Sterne und zehn Farben nebeneinander sind mit einem Blick
+    ''' Warum nicht als Untermenue: fuenf Sterne und neun Farben nebeneinander sind mit einem Blick
     ''' zu erfassen und mit einem Klick gesetzt. Als Untermenue braucht dasselbe zwei Klicks, und
     ''' aus den Farben werden Textzeilen, die man lesen muss statt sie zu sehen.
     '''
@@ -39,7 +39,7 @@ Namespace Controls
         Private Sub New()
         End Sub
 
-        ''' <summary>Sterne, Bewertung loeschen, Favorit und, wo angeboten, Behalten und Verwerfen
+        ''' <summary>Sterne, Favorit und, wo angeboten, Behalten und Verwerfen
         ''' in einer Zeile.
         '''
         ''' Die Zeile fuehrt sich SELBST nach. Ein Klick landet auf der Schaltflaeche und nicht auf
@@ -100,13 +100,6 @@ Namespace Controls
                     row.Children.Add(button)
                 Next
                 showRating()
-
-                row.Children.Add(ClearButton(New DelegateCommand(
-                    Sub()
-                        setRating.Execute("0")
-                        current = 0
-                        showRating()
-                    End Sub), Nothing, "Keine Bewertung"))
             End If
 
             If toggleFavorite IsNot Nothing Then
@@ -195,8 +188,8 @@ Namespace Controls
             showPick()
         End Sub
 
-        ''' <summary>Die Farbetiketten als Kreise, dahinter das Kreuz zum Entfernen. Das gesetzte
-        ''' Etikett traegt einen Haken, und der wandert beim Klick sofort mit - wie bei den Sternen
+        ''' <summary>Die Farbetiketten als Kreise; dieselbe Farbe noch einmal entfernt das Etikett.
+        ''' Das gesetzte Etikett traegt einen Haken, und der wandert beim Klick sofort mit - wie bei den Sternen
         ''' bleibt das Menue dabei offen.</summary>
         Public Shared Function ColorLabelRow(currentLabel As String, setLabel As ICommand) As Control
             If setLabel Is Nothing Then Return Nothing
@@ -255,13 +248,6 @@ Namespace Controls
                 row.Children.Add(button)
             Next
             showLabel()
-
-            row.Children.Add(ClearButton(New DelegateCommand(
-                Sub()
-                    setLabel.Execute("")
-                    current = ""
-                    showLabel()
-                End Sub), Nothing, "Kein Etikett"))
             Return AsMenuRow(row)
         End Function
 
@@ -284,10 +270,12 @@ Namespace Controls
             Return row
         End Function
 
-        ''' <summary>Die Zeile mit den zehn Farbkreisen ist das BREITESTE im ganzen Menue und
+        ''' <summary>Die Zeile mit den neun Farbkreisen ist das BREITESTE im ganzen Menue und
         ''' bestimmt damit dessen Breite - eine Mindestbreite an den Eintraegen aendert daran
         ''' nichts. Wer das Menue schmaler haben will, aendert deshalb hier: Knopfgroesse und
-        ''' Abstand. Zehn mal <see cref="ButtonSize"/> plus neun mal Abstand plus Rand.</summary>
+        ''' Abstand. Neun mal <see cref="ButtonSize"/> plus acht mal Abstand plus Rand. Ein
+        ''' Kreuz zum Zuruecksetzen gibt es in keiner der beiden Zeilen: derselbe Stern, dieselbe Farbe
+        ''' noch einmal nimmt zurueck.</summary>
         Private Const ButtonSize As Integer = 22
         Private Const RowSpacing As Integer = 4
 
@@ -300,33 +288,6 @@ Namespace Controls
                 .Spacing = RowSpacing,
                 .Margin = New Thickness(0, 4, 0, 4)
             }
-        End Function
-
-        ''' <summary>Das Kreuz zum Zuruecksetzen - dieselbe Form wie die Kreise daneben, damit die
-        ''' Zeile eine Reihe bleibt.</summary>
-        Private Shared Function ClearButton(command As ICommand, parameter As String, tip As String) As Button
-            ' Die Glyphenbox des Multiplikationszeichens hat unten mehr Luft als oben.
-            ' Im Info-Panel sitzt dasselbe Kreuz deshalb zwei Punkte höher; ohne den
-            ' Ausgleich wirkt es in den runden Rücksetzknöpfen von Kontext- und
-            ' Footer-Menü sichtbar zu tief.
-            Dim button As New Button With {
-                .Padding = New Thickness(0),
-                .Width = ButtonSize,
-                .Height = ButtonSize,
-                .CornerRadius = New CornerRadius(ButtonSize / 2),
-                .Command = command,
-                .CommandParameter = parameter,
-                .Content = New TextBlock With {
-                    .Text = "×",
-                    .FontSize = 14,
-                    .Margin = New Thickness(0, -2, 0, 0),
-                    .HorizontalAlignment = HorizontalAlignment.Center,
-                    .VerticalAlignment = VerticalAlignment.Center
-                }
-            }
-            button.Classes.Add("ghost")
-            ToolTip.SetTip(button, LocalizationService.T(tip))
-            Return button
         End Function
 
     End Class
