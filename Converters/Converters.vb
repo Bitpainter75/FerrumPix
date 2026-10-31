@@ -154,6 +154,9 @@ Namespace Converters
                                 culture As Globalization.CultureInfo) As Object Implements IMultiValueConverter.Convert
             If values Is Nothing OrElse values.Count < 2 Then Return DefaultWidth
             If Not TypeOf values(1) Is Boolean OrElse Not CBool(values(1)) Then Return DefaultWidth
+            ' Dritter Wert, wahlweise: der Streifen steht senkrecht. Dann bleibt jede Kachel in der
+            ' festen Breite, sonst ragte eine breite ueber den schmalen Streifen hinaus.
+            If values.Count > 2 AndAlso TypeOf values(2) Is Boolean AndAlso CBool(values(2)) Then Return DefaultWidth
             If Not TypeOf values(0) Is Double Then Return DefaultWidth
             Return WidthFor(CDbl(values(0)))
         End Function

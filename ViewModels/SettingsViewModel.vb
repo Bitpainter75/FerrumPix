@@ -65,6 +65,8 @@ Namespace ViewModels
         Private _galleryTimelineMode As String = "All"
         Private _galleryStartupCustomFolder As String = ""
         Private _viewerShowFilmstrip As Boolean = True
+        Private _viewerFilmstripPosition As String = "Bottom"
+        Private _editorFilmstripPosition As String = "Bottom"
         Private _filmstripItemBadgesVisible As Boolean = False
         Private _galleryTileFrame As Boolean = True
         Private _galleryWallBadgesOnHover As Boolean = True
@@ -249,6 +251,8 @@ Namespace ViewModels
         Private _aiTaggingMinimumConfidence As Integer = 70
         Private _writeAiTagsToXmp As Boolean = False
         Private _savedViewerShowFilmstrip As Boolean = True
+        Private _savedViewerFilmstripPosition As String = "Bottom"
+        Private _savedEditorFilmstripPosition As String = "Bottom"
         Private _savedFilmstripItemBadgesVisible As Boolean = False
         Private _savedGalleryTileFrame As Boolean = True
         Private _savedGalleryWallBadgesOnHover As Boolean = True
@@ -2409,6 +2413,91 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Seite des Filmstreifens im Betrachter: "Bottom", "Top", "Left" oder "Right".
+        ''' Betrachter und Editor getrennt, weil der Editor links und rechts schon Werkzeugleiste und
+        ''' Panels traegt.</summary>
+        Public Property ViewerFilmstripPosition As String
+            Get
+                Return _viewerFilmstripPosition
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeFilmstripPosition(value)
+                If _viewerFilmstripPosition = value Then Return
+                Me.RaiseAndSetIfChanged(_viewerFilmstripPosition, value)
+                Me.RaisePropertyChanged(NameOf(IsViewerFilmstripBottom))
+                Me.RaisePropertyChanged(NameOf(IsViewerFilmstripTop))
+                Me.RaisePropertyChanged(NameOf(IsViewerFilmstripLeft))
+                Me.RaisePropertyChanged(NameOf(IsViewerFilmstripRight))
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsViewerFilmstripBottom As Boolean
+            Get
+                Return _viewerFilmstripPosition = "Bottom"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsViewerFilmstripTop As Boolean
+            Get
+                Return _viewerFilmstripPosition = "Top"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsViewerFilmstripLeft As Boolean
+            Get
+                Return _viewerFilmstripPosition = "Left"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsViewerFilmstripRight As Boolean
+            Get
+                Return _viewerFilmstripPosition = "Right"
+            End Get
+        End Property
+
+        Public Property EditorFilmstripPosition As String
+            Get
+                Return _editorFilmstripPosition
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeFilmstripPosition(value)
+                If _editorFilmstripPosition = value Then Return
+                Me.RaiseAndSetIfChanged(_editorFilmstripPosition, value)
+                Me.RaisePropertyChanged(NameOf(IsEditorFilmstripBottom))
+                Me.RaisePropertyChanged(NameOf(IsEditorFilmstripTop))
+                Me.RaisePropertyChanged(NameOf(IsEditorFilmstripLeft))
+                Me.RaisePropertyChanged(NameOf(IsEditorFilmstripRight))
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsEditorFilmstripBottom As Boolean
+            Get
+                Return _editorFilmstripPosition = "Bottom"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorFilmstripTop As Boolean
+            Get
+                Return _editorFilmstripPosition = "Top"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorFilmstripLeft As Boolean
+            Get
+                Return _editorFilmstripPosition = "Left"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorFilmstripRight As Boolean
+            Get
+                Return _editorFilmstripPosition = "Right"
+            End Get
+        End Property
+
         ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
         Public Property EditorGridSize As Integer
             Get
@@ -4015,6 +4104,8 @@ Namespace ViewModels
         Public ReadOnly Property SetGalleryTimelineModeCommand As ICommand
         Public ReadOnly Property SetGalleryStartupFolderModeCommand As ICommand
         Public ReadOnly Property SetViewerFitBehaviorCommand As ICommand
+        Public ReadOnly Property SetViewerFilmstripPositionCommand As ICommand
+        Public ReadOnly Property SetEditorFilmstripPositionCommand As ICommand
         Public ReadOnly Property SetViewerDoubleClickTargetCommand As ICommand
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
@@ -4571,6 +4662,8 @@ Namespace ViewModels
             _galleryTimelineMode = AppSettingsService.NormalizeGalleryTimelineMode(_appSettings.GalleryTimelineMode)
             _galleryStartupCustomFolder = AppSettingsService.NormalizeFolderPath(_appSettings.GalleryStartupCustomFolder)
             _viewerShowFilmstrip = _appSettings.ViewerShowFilmstrip
+            _viewerFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.ViewerFilmstripPosition)
+            _editorFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.EditorFilmstripPosition)
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
             _galleryTileFrame = _appSettings.GalleryTileFrame
             _galleryWallBadgesOnHover = _appSettings.GalleryWallBadgesOnHover
@@ -4737,6 +4830,8 @@ Namespace ViewModels
             SetGalleryStartupFolderModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryStartupFolderMode = m)
             SetGalleryTimelineModeCommand = ReactiveCommand.Create(Of String)(Sub(m) GalleryTimelineMode = m)
             SetViewerFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerFitBehavior = m)
+            SetViewerFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) ViewerFilmstripPosition = p)
+            SetEditorFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) EditorFilmstripPosition = p)
             SetViewerDoubleClickTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerDoubleClickTarget = m)
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
@@ -5003,6 +5098,8 @@ Namespace ViewModels
             _savedGalleryTimelineMode = _galleryTimelineMode
             _savedGalleryStartupCustomFolder = _galleryStartupCustomFolder
             _savedViewerShowFilmstrip = _viewerShowFilmstrip
+            _savedViewerFilmstripPosition = _viewerFilmstripPosition
+            _savedEditorFilmstripPosition = _editorFilmstripPosition
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
             _savedGalleryTileFrame = _galleryTileFrame
             _savedGalleryWallBadgesOnHover = _galleryWallBadgesOnHover
@@ -5190,6 +5287,8 @@ Namespace ViewModels
             GalleryTimelineMode = _savedGalleryTimelineMode
             GalleryStartupCustomFolder = _savedGalleryStartupCustomFolder
             ViewerShowFilmstrip = _savedViewerShowFilmstrip
+            ViewerFilmstripPosition = _savedViewerFilmstripPosition
+            EditorFilmstripPosition = _savedEditorFilmstripPosition
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
             GalleryTileFrame = _savedGalleryTileFrame
             GalleryWallBadgesOnHover = _savedGalleryWallBadgesOnHover
@@ -5335,6 +5434,8 @@ Namespace ViewModels
             GalleryStartupFolderMode = "Pictures"
             GalleryStartupCustomFolder = ""
             ViewerShowFilmstrip = True
+            ViewerFilmstripPosition = "Bottom"
+            EditorFilmstripPosition = "Bottom"
             FilmstripItemBadgesVisible = False
             GalleryTileFrame = True
             GalleryWallBadgesOnHover = True
@@ -5660,6 +5761,8 @@ Namespace ViewModels
         Private Sub SaveLayoutSettings()
             AppSettingsService.Update(Sub(s)
                                           s.ViewerShowFilmstrip = _viewerShowFilmstrip
+                                          s.ViewerFilmstripPosition = _viewerFilmstripPosition
+                                          s.EditorFilmstripPosition = _editorFilmstripPosition
                                           s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
                                           s.GalleryTileFrame = _galleryTileFrame
                                           s.GalleryWallBadgesOnHover = _galleryWallBadgesOnHover

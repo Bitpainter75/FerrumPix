@@ -195,7 +195,9 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Grid.Column="0" Background="{DynamicResource FP.Bg.Root}">
+        <!-- Der Rand dieser Flaeche kommt aus FilmstripPlacement.ContentInset: steht der
+             Filmstreifen oben, links oder rechts, rueckt die Bildflaeche um ihn ein. -->
+        <Grid Name="ViewerImageArea" Grid.Row="1" Grid.Column="0" Background="{DynamicResource FP.Bg.Root}">
             <!-- Links und rechts GLEICH viel: in die freie Spur legen sich die Blätterknöpfe, und
                  die standen bei 88/80 nicht gleich weit vom Bild weg (links 16, rechts 8). Wer
                  diesen Rand ändert, muss ApplyVideoLayout mitziehen - das Videobild liegt als
@@ -545,6 +547,14 @@
             </Button>
         </Grid>
 
+        <!-- Platz des Filmstreifens, wenn er oben, links oder rechts steht. Lage, Groesse und
+             Trennlinie setzt FilmstripPlacement.Apply; leer und unsichtbar, solange er unten steht. -->
+        <Border Name="FilmstripSideSlot"
+                Grid.Row="1" Grid.Column="0"
+                IsVisible="False"
+                Background="{DynamicResource FP.Bg.Dark}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"/>
+
         <!-- Der Datenkontext ist das Panel, nicht der Betrachter: seinen Zustand haelt seit dem
              2026-08-06 das gemeinsame InfoPanelViewModel, dasselbe wie in Galerie und Editor. -->
         <views:InfoSidebarView Grid.Row="1" Grid.Column="1" Width="320"
@@ -566,7 +576,10 @@
                  bereits belegt (im Betrachter zoomt sie, im Editor hebt sie die Auswahl auf). -->
             <!-- Zweite Zeile auf Auto statt fest 28: die Hoehe bringt die Leiste selbst mit, damit
                  die Zeile beim Ausblenden ganz wegfaellt und der Filmstreifen nach unten aufrueckt. -->
-            <Grid RowDefinitions="Auto,Auto">
+            <!-- Der Filmstreifen steht hier nur, solange er UNTEN eingestellt ist. Fuer oben, links
+                 und rechts haengt ihn FilmstripPlacement in den Rahmen FilmstripSideSlot ueber der
+                 Bildflaeche um; es bleibt dieselbe Liste. -->
+            <Grid Name="FilmstripBottomSlot" RowDefinitions="Auto,Auto">
                 <ListBox Name="FilmstripListBox"
                          Classes="filmstrip-list"
                          Height="110"
@@ -602,6 +615,8 @@
                                     <MultiBinding Converter="{StaticResource FilmstripTileWidthConverter}">
                                         <Binding Path="DisplayAspectRatio"/>
                                         <Binding Path="DataContext.FilmstripTilesKeepAspect"
+                                                 RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                        <Binding Path="DataContext.IsFilmstripVertical"
                                                  RelativeSource="{RelativeSource AncestorType=UserControl}"/>
                                     </MultiBinding>
                                 </Border.Width>
@@ -798,10 +813,16 @@
                    Margin="60"/>
         </Panel>
 
+        <!-- Im Vollbild laesst sich ein Bild zoomen und dann mit gedrueckter linker Taste
+             verschieben (FullscreenZoom im Code). Zoomen haelt eine laufende Diashow an. -->
         <Grid Name="FullscreenViewport"
               Grid.RowSpan="3" Grid.ColumnSpan="2"
               Background="Black"
+              ClipToBounds="True"
               SizeChanged="OnFullscreenViewportSizeChanged"
+              PointerPressed="OnFullscreenViewportPointerPressed"
+              PointerMoved="OnFullscreenViewportPointerMoved"
+              PointerReleased="OnFullscreenViewportPointerReleased"
               IsVisible="{Binding IsFullscreenMode}">
             <Border Name="FullscreenImageBackgroundBorder"
                     HorizontalAlignment="Center"
@@ -819,6 +840,80 @@
                 <TextBlock Text="Videowiedergabe nicht verfügbar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Subtitle}" HorizontalAlignment="Center"/>
                 <TextBlock Text="mpv ist auf diesem System nicht installiert" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
             </StackPanel>
+
+            <!-- Der Filmstreifen im Vollbild: erscheint, wenn die Maus den oberen oder unteren
+                 Rand beruehrt, und geht, wenn sie ihn wieder verlaesst. Es ist dieselbe Liste wie
+                 im Fenster; FilmstripPlacement haengt sie hierher und danach zurueck. -->
+            <Border Name="FullscreenFilmstripSlot"
+                    IsVisible="False"
+                    Height="123"
+                    VerticalAlignment="Bottom"
+                    Background="#E60B0E11"
+                    Padding="24,6,24,6"/>
+
+            <!-- Die Bedienleiste fuer Bilder im Vollbild: erscheint bei Mausbewegung und bleibt
+                 stehen, solange die Diashow angehalten ist. Fuer Videos gibt es die eigene Leiste. -->
+            <Border Name="FullscreenImageBar"
+                    IsVisible="False"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,24"
+                    Background="#CC1A1D24"
+                    CornerRadius="8"
+                    Padding="8,6">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding PreviousCommand}"
+                            ToolTip.Tip="Vorheriges Bild">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-left.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding ToggleSlideshowCommand}"
+                            IsVisible="{Binding IsSlideshowPlaying}"
+                            ToolTip.Tip="Diashow anhalten">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-pause.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding ToggleSlideshowCommand}"
+                            IsVisible="{Binding !IsSlideshowPlaying}"
+                            ToolTip.Tip="Diashow fortsetzen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Command="{Binding NextCommand}"
+                            ToolTip.Tip="Nächstes Bild">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-right.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Border Width="1" Margin="6,6" Background="#40FFFFFF"/>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Click="OnFullscreenZoomOutClick"
+                            ToolTip.Tip="Verkleinern">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/zoom-out.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Click="OnFullscreenZoomFitClick"
+                            ToolTip.Tip="Einpassen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/zoom-reset.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Click="OnFullscreenZoomInClick"
+                            ToolTip.Tip="Vergrößern">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/zoom-in.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <Border Width="1" Margin="6,6" Background="#40FFFFFF"/>
+                    <Button Classes="icon-btn" Width="36" Height="36"
+                            Click="OnFullscreenExitClick"
+                            ToolTip.Tip="Vollbild verlassen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-minimize.svg" Width="18" Height="18" IconBrush="White"/>
+                    </Button>
+                    <TextBlock Text="Angehalten"
+                               IsVisible="{Binding IsSlideshowPaused}"
+                               Foreground="White"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,6,0"/>
+                </StackPanel>
+            </Border>
 
         </Grid>
 

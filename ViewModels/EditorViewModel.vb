@@ -4746,12 +4746,30 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Aussenrand einer Filmstreifen-Kachel: der halbe eingestellte Abstand links und
-        ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).</summary>
+        ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).
+        ''' Steht der Streifen seitlich, liegt der Abstand zwischen den Kacheln, also oben und unten.</summary>
         Public ReadOnly Property FilmstripTileMargin As Avalonia.Thickness
             Get
                 Dim gap = If(_mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing,
                              _mainVm.Settings.FilmstripTileGap, 10)
+                If IsFilmstripVertical Then Return New Avalonia.Thickness(5, gap / 2.0, 5, gap / 2.0)
                 Return New Avalonia.Thickness(gap / 2.0, 5, gap / 2.0, 5)
+            End Get
+        End Property
+
+        ''' <summary>Seite des Filmstreifens aus der Einstellung (FilmstripPlacement).</summary>
+        Public ReadOnly Property FilmstripPosition As String
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return FilmstripPlacement.PositionBottom
+                Return _mainVm.Settings.EditorFilmstripPosition
+            End Get
+        End Property
+
+        ''' <summary>Links oder rechts laeuft der Streifen senkrecht; die Kacheln stehen dann in der
+        ''' festen Breite, damit eine breite Kachel nicht ueber den Streifen hinausragt.</summary>
+        Public ReadOnly Property IsFilmstripVertical As Boolean
+            Get
+                Return FilmstripPlacement.IsVertical(FilmstripPosition)
             End Get
         End Property
 
@@ -4792,7 +4810,9 @@ Namespace ViewModels
         ''' gleichnamige Eigenschaft im Betrachter.</summary>
         Public ReadOnly Property IsBottomBarVisible As Boolean
             Get
-                Return ShowFilmstrip OrElse ShowFooter
+                ' Der Streifen zaehlt nur, wenn er unten steht; oben und seitlich hat er seinen
+                ' eigenen Rahmen ueber der Arbeitsflaeche.
+                Return (ShowFilmstrip AndAlso FilmstripPosition = FilmstripPlacement.PositionBottom) OrElse ShowFooter
             End Get
         End Property
 

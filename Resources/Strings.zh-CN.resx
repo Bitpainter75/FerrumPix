@@ -10473,4 +10473,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>以两倍宽度保存缩略图，使最大的图块也保持清晰。需要更多设备空间和内存。较小的缩略图会在查看时重新生成。</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>胶片显示窗格的位置</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>在查看器中显示胶片显示窗格。</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>在编辑器中显示胶片显示窗格。</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>胶片显示窗格在查看器中的位置：图像的下方、上方、左侧或右侧。</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>胶片显示窗格在编辑器中的位置：工作区的下方、上方、左侧或右侧。</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>暂停幻灯片播放</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>继续幻灯片播放</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>退出全屏</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>已暂停</value>
+  </data>
 </root>

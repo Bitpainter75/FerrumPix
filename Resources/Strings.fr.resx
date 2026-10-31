@@ -10475,4 +10475,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>Enregistre les miniatures deux fois plus larges, pour que même les plus grandes vignettes restent nettes. Nécessite plus d'espace sur l'appareil et plus de mémoire. Les miniatures plus petites sont recréées lors de leur affichage.</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>Position du film fixe</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>Affiche la bande d'images dans le visualiseur.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>Affiche la bande d'images dans l'éditeur.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>Où se trouve le film fixe dans le visualiseur : en dessous, au-dessus, à gauche ou à droite de l'image.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>Où se trouve le film fixe dans l'éditeur : en dessous, au-dessus, à gauche ou à droite de la zone de travail.</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>Mettre le diaporama en pause</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>Reprendre le diaporama</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>Quitter le plein écran</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>En pause</value>
+  </data>
 </root>

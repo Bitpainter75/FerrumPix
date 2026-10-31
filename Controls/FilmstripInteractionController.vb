@@ -22,6 +22,14 @@ Namespace Controls
     ''' </summary>
     Public Class FilmstripInteractionController
         Private Const ItemWidth As Double = 148.0
+        ''' <summary>Hoehe einer Kachel samt Aussenrand, wenn der Streifen senkrecht steht (links
+        ''' oder rechts): 100 Kachel und je 5 oben und unten.</summary>
+        Private Const ItemHeight As Double = 110.0
+
+        ''' <summary>Der Streifen steht links oder rechts und laeuft senkrecht. Dann gelten fuer die
+        ''' Schaetzung des sichtbaren Bereichs Hoehe und senkrechter Versatz statt Breite und
+        ''' waagerechtem Versatz.</summary>
+        Public Property IsVertical As Boolean
 
         Private ReadOnly _owner As Control
         Private ReadOnly _tracker As ViewportThumbnailTracker
@@ -110,10 +118,11 @@ Namespace Controls
             Dim items = _getItems()
             If items Is Nothing OrElse items.Count = 0 Then Return
             Dim sv = GetFilmstripScrollViewer()
-            Dim scrollX = If(sv IsNot Nothing, sv.Offset.X, 0.0)
-            Dim viewWidth = If(sv IsNot Nothing, sv.Viewport.Width, 0.0)
-            Dim firstVisible = Math.Max(0, CInt(Math.Floor(scrollX / ItemWidth)) - 1)
-            Dim lastVisible = Math.Min(items.Count - 1, CInt(Math.Ceiling((scrollX + Math.Max(viewWidth, ItemWidth)) / ItemWidth)) + 1)
+            Dim itemExtent = If(IsVertical, ItemHeight, ItemWidth)
+            Dim scrollX = If(sv IsNot Nothing, If(IsVertical, sv.Offset.Y, sv.Offset.X), 0.0)
+            Dim viewWidth = If(sv IsNot Nothing, If(IsVertical, sv.Viewport.Height, sv.Viewport.Width), 0.0)
+            Dim firstVisible = Math.Max(0, CInt(Math.Floor(scrollX / itemExtent)) - 1)
+            Dim lastVisible = Math.Min(items.Count - 1, CInt(Math.Ceiling((scrollX + Math.Max(viewWidth, itemExtent)) / itemExtent)) + 1)
             ' DIE SCHAETZUNG OBEN STIMMT NUR BEI GLEICH BREITEN KACHELN. Stehen sie im
             ' Seitenverhaeltnis des Bildes (Einstellung), passen mehr Hochkant-Kacheln in den
             ' Streifen als geschaetzt, und die hinteren bekaemen kein Vorschaubild. Der wahre Bereich
@@ -127,7 +136,7 @@ Namespace Controls
             End If
             Dim currentIndex = _getCurrentIndex()
             If currentIndex >= 0 AndAlso currentIndex < items.Count Then
-                Dim currentBuffer = Math.Max(8, CInt(Math.Ceiling(Math.Max(viewWidth, ItemWidth * 6) / ItemWidth)))
+                Dim currentBuffer = Math.Max(8, CInt(Math.Ceiling(Math.Max(viewWidth, itemExtent * 6) / itemExtent)))
                 firstVisible = Math.Min(firstVisible, Math.Max(0, currentIndex - currentBuffer))
                 lastVisible = Math.Max(lastVisible, Math.Min(items.Count - 1, currentIndex + currentBuffer))
             End If
@@ -142,14 +151,15 @@ Namespace Controls
             last = -1
             Dim listBox = _owner.FindControl(Of ListBox)(_listBoxName)
             If listBox Is Nothing Then Return False
-            Dim viewWidth = sv.Viewport.Width
+            Dim viewWidth = If(IsVertical, sv.Viewport.Height, sv.Viewport.Width)
             For Each container In listBox.GetRealizedContainers()
                 Dim index = listBox.IndexFromContainer(container)
                 If index < 0 OrElse index >= itemCount Then Continue For
                 Dim origin = Avalonia.VisualExtensions.TranslatePoint(container, New Avalonia.Point(0, 0), sv)
                 If Not origin.HasValue Then Continue For
-                Dim left = origin.Value.X
-                If left + container.Bounds.Width < 0 OrElse left > viewWidth Then Continue For
+                Dim left = If(IsVertical, origin.Value.Y, origin.Value.X)
+                Dim extent = If(IsVertical, container.Bounds.Height, container.Bounds.Width)
+                If left + extent < 0 OrElse left > viewWidth Then Continue For
                 first = Math.Min(first, index)
                 last = Math.Max(last, index)
             Next

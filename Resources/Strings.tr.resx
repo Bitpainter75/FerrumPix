@@ -10519,4 +10519,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>Küçük resimleri iki kat geniş kaydeder, böylece en büyük kutucuklar bile net kalır. Cihazda daha fazla alan ve daha fazla bellek gerektirir. Daha küçük küçük resimler görüntülendiğinde yeniden oluşturulur.</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>Film şeridinin konumu</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>İzleyicide görüntü şeridini gösterir.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>Düzenleyicide görüntü şeridini gösterir.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>Film şeridinin izleyicideki yeri: görüntünün altında, üstünde, solunda veya sağında.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>Film şeridinin düzenleyicideki yeri: çalışma alanının altında, üstünde, solunda veya sağında.</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>Slayt gösterisini duraklat</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>Slayt gösterisine devam et</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>Tam ekrandan çık</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>Duraklatıldı</value>
+  </data>
 </root>

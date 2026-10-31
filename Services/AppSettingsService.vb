@@ -304,6 +304,9 @@ Namespace Services
         ''' belegt ihn beim naechsten Oeffnen wieder vor.</summary>
         Public Property SaveAsFolderChoice As String = "Current"
         Public Property ViewerShowFilmstrip As Boolean = True
+        ''' <summary>Seite des Filmstreifens im Betrachter: "Bottom" (ab Werk), "Top", "Left" oder
+        ''' "Right" (NormalizeFilmstripPosition).</summary>
+        Public Property ViewerFilmstripPosition As String = "Bottom"
         ''' Markierungen im Filmstrip kosten etwas Bildruhe und sind deshalb ab Werk aus.
         Public Property FilmstripItemBadgesVisible As Boolean = False
         ''' Runde Ecken und der ruhende Rahmen um eine Kachel. AB WERK AN, das ist das bisherige
@@ -377,6 +380,8 @@ Namespace Services
         ''' 0 = bündig, das bisherige Verhalten.
         Public Property EditorFitMargin As Integer = 0
         Public Property EditorShowFilmstrip As Boolean = True
+        ''' <summary>Seite des Filmstreifens im Editor, dieselben Werte wie im Betrachter.</summary>
+        Public Property EditorFilmstripPosition As String = "Bottom"
         ''' Kantenlänge einer Rasterzelle im Editor, in Bildpixeln.
         Public Property EditorGridSize As Integer = 50
         Public Property EditorShowRulers As Boolean = False
@@ -1195,6 +1200,8 @@ Namespace Services
                 NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
+                settings.ViewerFilmstripPosition = NormalizeFilmstripPosition(settings.ViewerFilmstripPosition)
+                settings.EditorFilmstripPosition = NormalizeFilmstripPosition(settings.EditorFilmstripPosition)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
@@ -1441,6 +1448,8 @@ Namespace Services
                 NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
+                settings.ViewerFilmstripPosition = NormalizeFilmstripPosition(settings.ViewerFilmstripPosition)
+                settings.EditorFilmstripPosition = NormalizeFilmstripPosition(settings.EditorFilmstripPosition)
                 settings.EditorGridSize = NormalizeEditorGridSize(settings.EditorGridSize)
                 settings.ViewerFitBehavior = NormalizeViewerFitBehavior(settings.ViewerFitBehavior)
                 ' Einmalige Übernahme: vor der Trennung galt der Viewer-Wert für beide Ansichten.
@@ -1678,6 +1687,15 @@ Namespace Services
         ''' brauchbaren Bereich abdecken statt ihn nur zu enthalten.</summary>
         Public Shared Function NormalizeEditorFitMargin(value As Integer) As Integer
             Return Math.Max(0, Math.Min(200, value))
+        End Function
+
+        Public Shared Function NormalizeFilmstripPosition(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "Top" : Return "Top"
+                Case "Left" : Return "Left"
+                Case "Right" : Return "Right"
+                Case Else : Return "Bottom"
+            End Select
         End Function
 
         Public Shared Function NormalizeViewerFitBehavior(value As String) As String

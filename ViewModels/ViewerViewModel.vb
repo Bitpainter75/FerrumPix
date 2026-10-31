@@ -9,6 +9,7 @@ Imports System.Windows.Input
 Imports ReactiveUI
 Imports Avalonia.Media.Imaging
 Imports Avalonia.Threading
+Imports FerrumPix.Controls
 Imports FerrumPix.Models
 Imports FerrumPix.Services
 
@@ -66,6 +67,13 @@ Namespace ViewModels
         Private _isSlideshowPlaying As Boolean = False
         Private _slideshowTimer As Timer
         Private _slideshowIntervalMs As Double = 3000
+        ''' <summary>Zählt jeden Neustart der Pause. Ein Tick des Zeitgebers merkt sich den Stand auf
+        ''' seinem eigenen Faden; kommt er auf dem UI-Faden an, nachdem inzwischen ein Bildwechsel die
+        ''' Pause neu gestartet hat, ist er veraltet und blättert nicht.</summary>
+        Private _slideshowCountdown As Integer
+        ''' <summary>Seit dem Start der Diashow bis zum Verlassen des Vollbilds. Anhalten beendet sie
+        ''' nicht, siehe IsSlideshowPaused.</summary>
+        Private _slideshowSession As Boolean
         ''' <summary>Noch nicht gezeigte Bilder der Diashow in zufälliger Reihenfolge. Gemerkt werden
         ''' Pfade statt Stellen, weil sich die Ordnerliste während der Diashow ändern kann.</summary>
         Private ReadOnly _slideshowShuffleQueue As New Queue(Of String)()
@@ -511,7 +519,17 @@ Namespace ViewModels
             Set(value As Boolean)
                 Me.RaiseAndSetIfChanged(_isSlideshowPlaying, value)
                 Me.RaisePropertyChanged(NameOf(SlideshowButtonText))
+                Me.RaisePropertyChanged(NameOf(IsSlideshowPaused))
             End Set
+        End Property
+
+        ''' <summary>Die Diashow ist angehalten, laeuft aber noch: das Vollbild steht, die
+        ''' Bedienleiste bleibt sichtbar, und die Leertaste oder der Knopf setzen sie fort. Beendet
+        ''' ist sie erst mit dem Verlassen des Vollbilds (StopSlideshow).</summary>
+        Public ReadOnly Property IsSlideshowPaused As Boolean
+            Get
+                Return _slideshowSession AndAlso Not _isSlideshowPlaying
+            End Get
         End Property
 
         Public ReadOnly Property SlideshowButtonText As String
@@ -646,12 +664,30 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Seite des Filmstreifens aus der Einstellung (FilmstripPlacement).</summary>
+        Public ReadOnly Property FilmstripPosition As String
+            Get
+                If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return FilmstripPlacement.PositionBottom
+                Return _mainVm.Settings.ViewerFilmstripPosition
+            End Get
+        End Property
+
+        ''' <summary>Links oder rechts laeuft der Streifen senkrecht; die Kacheln stehen dann in der
+        ''' festen Breite, damit eine breite Kachel nicht ueber den Streifen hinausragt.</summary>
+        Public ReadOnly Property IsFilmstripVertical As Boolean
+            Get
+                Return FilmstripPlacement.IsVertical(FilmstripPosition)
+            End Get
+        End Property
+
         ''' <summary>Aussenrand einer Filmstreifen-Kachel: der halbe eingestellte Abstand links und
-        ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).</summary>
+        ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).
+        ''' Steht der Streifen seitlich, liegt der Abstand zwischen den Kacheln, also oben und unten.</summary>
         Public ReadOnly Property FilmstripTileMargin As Avalonia.Thickness
             Get
                 Dim gap = If(_mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing,
                              _mainVm.Settings.FilmstripTileGap, 10)
+                If IsFilmstripVertical Then Return New Avalonia.Thickness(5, gap / 2.0, 5, gap / 2.0)
                 Return New Avalonia.Thickness(gap / 2.0, 5, gap / 2.0, 5)
             End Get
         End Property
@@ -698,7 +734,9 @@ Namespace ViewModels
         ''' mehr darin ist.</summary>
         Public ReadOnly Property IsBottomBarVisible As Boolean
             Get
-                Return ShowFilmstrip OrElse ShowFooter
+                ' Der Streifen zaehlt nur, wenn er unten steht; oben und seitlich hat er seinen
+                ' eigenen Rahmen ueber der Bildflaeche.
+                Return (ShowFilmstrip AndAlso FilmstripPosition = FilmstripPlacement.PositionBottom) OrElse ShowFooter
             End Get
         End Property
 
@@ -907,7 +945,7 @@ Namespace ViewModels
                 Sub(hex) InfoPanel.ColorLabel = If(String.Equals(InfoPanel.ColorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
             ToggleSlideshowCommand = ReactiveCommand.Create(Sub()
                                                                 If _isSlideshowPlaying Then
-                                                                    StopSlideshow()
+                                                                    PauseSlideshow()
                                                                 Else
                                                                     StartSlideshow()
                                                                 End If
@@ -3492,6 +3530,7 @@ Namespace ViewModels
             End If
             If Not Await ConfirmPendingRotationAsync("zu einem anderen Bild wechselst") Then Return
             LoadPathAt(idx)
+            RestartSlideshowCountdown()
         End Function
 
         Private Sub LoadPathAt(idx As Integer)
@@ -4178,19 +4217,39 @@ Namespace ViewModels
         Private Sub StartSlideshow()
             If _folderPaths.Count < 2 Then Return
             _mainVm.EnterFullscreen()
+            ' Fortsetzen nach dem Anhalten behaelt die gemischte Runde: sonst kaemen nach jeder
+            ' Pause Bilder doppelt, die in dieser Runde schon zu sehen waren.
+            If Not _slideshowSession Then _slideshowShuffleQueue.Clear()
+            _slideshowSession = True
             IsSlideshowPlaying = True
             Dim intervalSeconds = If(_mainVm?.Settings IsNot Nothing, _mainVm.Settings.ViewerSlideshowIntervalSeconds, 3)
             _slideshowIntervalMs = Math.Max(1, intervalSeconds) * 1000.0
-            _slideshowShuffleQueue.Clear()
             _slideshowTimer = New Timer(_slideshowIntervalMs)
             AddHandler _slideshowTimer.Elapsed, AddressOf OnSlideshowTick
             _slideshowTimer.AutoReset = True
             _slideshowTimer.Start()
         End Sub
 
+        ''' <summary>Haelt die Diashow an, ohne sie zu beenden: das Vollbild bleibt, und das Bild
+        ''' laesst sich zoomen und verschieben. Fortgesetzt wird mit der Leertaste oder dem Knopf
+        ''' der Bedienleiste, dann mit der vollen Pause.</summary>
+        Public Sub PauseSlideshow()
+            If Not _isSlideshowPlaying Then Return
+            StopSlideshowTimer()
+        End Sub
+
+        ''' <summary>Beendet die Diashow ganz; das Vollbild verlassen ruft das.</summary>
         Public Sub StopSlideshow()
+            StopSlideshowTimer()
+            _slideshowSession = False
+            Me.RaisePropertyChanged(NameOf(IsSlideshowPaused))
+        End Sub
+
+        Private Sub StopSlideshowTimer()
             IsSlideshowPlaying = False
             _slideshowVideoEndSequence += 1
+            ' Ein Tick, der beim Anhalten schon auf dem Weg zum UI-Faden ist, blättert nicht mehr.
+            System.Threading.Interlocked.Increment(_slideshowCountdown)
             If _slideshowTimer IsNot Nothing Then
                 _slideshowTimer.Stop()
                 RemoveHandler _slideshowTimer.Elapsed, AddressOf OnSlideshowTick
@@ -4199,8 +4258,21 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Jeder Bildwechsel während der Diashow startet die Pause von vorn, auch einer von
+        ''' Hand: sonst kam das nächste Bild nach der RESTZEIT der alten Pause, bei langer Pause und
+        ''' Weiterschalten von Hand also viel zu früh. Alle Wege (Tasten, Rad, Filmstreifen und die
+        ''' Diashow selbst) laufen durch CommitNavigateAsync.</summary>
+        Private Sub RestartSlideshowCountdown()
+            If Not _isSlideshowPlaying OrElse _slideshowTimer Is Nothing Then Return
+            System.Threading.Interlocked.Increment(_slideshowCountdown)
+            _slideshowTimer.Stop()
+            _slideshowTimer.Start()
+        End Sub
+
         Private Sub OnSlideshowTick(sender As Object, e As ElapsedEventArgs)
+            Dim countdown = System.Threading.Volatile.Read(_slideshowCountdown)
             Dispatcher.UIThread.InvokeAsync(Sub()
+                If countdown <> _slideshowCountdown Then Return
                 If _folderPaths.Count = 0 Then Return
                 If IsVideoFile Then
                     If Not IsVideoPlaying Then StartPendingVideoAutoplay()

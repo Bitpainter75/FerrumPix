@@ -11,7 +11,19 @@
   wide, so the largest gallery tiles no longer look soft. It needs more disk space and memory;
   switching it off again replaces them with the smaller ones.
 
+- **Slideshow you can pause:** SPACE or the new button pauses the slideshow without leaving it.
+  In fullscreen a small control bar appears when you move the mouse and stays while paused, with
+  previous, pause, next, zoom and exit. While paused you can zoom in and drag the picture around.
+  Touching the top or bottom edge of the screen brings up the filmstrip to jump to any picture.
+
+- **Filmstrip on any side:** in the settings the filmstrip can sit below, above, left or right of
+  the picture, separately for the viewer and the editor.
+
 ### Fixes
+
+- **Slideshow timing after skipping by hand:** moving to another picture yourself now starts the
+  full slideshow interval again, instead of showing the next picture after whatever was left of
+  the old one.
 
 - **Show the mask only stays on while painting:** brushing on a mask no longer switches back to
   the red overlay over the photo, so you can see exactly what is left to remove. Parts already

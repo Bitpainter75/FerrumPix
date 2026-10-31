@@ -1285,6 +1285,12 @@ Namespace ViewModels
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripTilesAreFlat))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripImageCornerRadius))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstrip))
+            ' Die Seite des Streifens: die Ansichten haengen die Liste daraufhin um
+            ' (FilmstripPlacement), die Kacheln wechseln Breite und Abstand.
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.FilmstripPosition))
+            Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.IsFilmstripVertical))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.FilmstripPosition))
+            Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsFilmstripVertical))
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFilmstripItemBadges))
             Viewer?.RefreshFilmstripItemBadges()
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.ShowFooter))

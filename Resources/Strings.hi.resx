@@ -10519,4 +10519,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>थंबनेल को दोगुनी चौड़ाई में सहेजता है, ताकि सबसे बड़ी टाइलें भी साफ़ दिखें। डिवाइस पर अधिक जगह और अधिक मेमोरी चाहिए। छोटे थंबनेल देखने पर फिर से बनाए जाते हैं।</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>फ़िल्मपट्टी की स्थिति</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>दर्शक में छवि पट्टी दिखाता है।</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>संपादक में छवि पट्टी दिखाता है।</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>दर्शक में फ़िल्मपट्टी कहाँ रहती है: छवि के नीचे, ऊपर, बाएँ या दाएँ।</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>संपादक में फ़िल्मपट्टी कहाँ रहती है: कार्यक्षेत्र के नीचे, ऊपर, बाएँ या दाएँ।</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>स्लाइड शो रोकें</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>स्लाइड शो जारी रखें</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>पूर्ण स्क्रीन से बाहर निकलें</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>रुका हुआ</value>
+  </data>
 </root>

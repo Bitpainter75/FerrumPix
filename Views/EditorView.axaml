@@ -1990,6 +1990,16 @@
             </Grid>
         </Border>
 
+        <!-- Platz des Filmstreifens, wenn er oben, links oder rechts steht. Er liegt in der Spalte
+             der Buehne und wandert mit ihr (UpdateAdjustmentsPanelSide); Lage, Groesse und
+             Trennlinie setzt FilmstripPlacement.Apply. Leer und unsichtbar, solange er unten steht. -->
+        <Border Name="FilmstripSideSlot"
+                Grid.Row="1" Grid.Column="1"
+                IsVisible="False"
+                Background="{DynamicResource FP.Bg.Dark}"
+                BorderBrush="{DynamicResource FP.Border.Subtle}"
+                IsEnabled="{Binding IsInteractionAllowed}"/>
+
         <!-- Der Datenkontext ist das Panel, nicht der Editor: seinen Zustand haelt seit dem
              2026-08-06 das gemeinsame InfoPanelViewModel, dasselbe wie in Galerie und Betrachter. -->
         <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320"
@@ -2052,7 +2062,10 @@
                  bereits belegt (im Editor hebt sie die Auswahl auf, im Betrachter zoomt sie). -->
             <!-- Zweite Zeile auf Auto statt fest 28: die Hoehe bringt die Leiste selbst mit, damit
                  die Zeile beim Ausblenden ganz wegfaellt und der Filmstreifen nach unten aufrueckt. -->
-            <Grid RowDefinitions="Auto,Auto">
+            <!-- Der Filmstreifen steht hier nur, solange er UNTEN eingestellt ist. Fuer oben, links
+                 und rechts haengt ihn FilmstripPlacement in den Rahmen FilmstripSideSlot ueber der
+                 Buehne um; es bleibt dieselbe Liste. -->
+            <Grid Name="FilmstripBottomSlot" RowDefinitions="Auto,Auto">
                 <!-- Bewegen und Loslassen haengen an der LISTE, nicht am einzelnen Vorschaubild:
                      der Zug auf die Leinwand beginnt sonst nicht, wenn der Zeiger das Bild in
                      einem Sprung verlaesst, und ein Loslassen zwischen zwei Bildern taete nichts.
@@ -2108,6 +2121,8 @@
                                     <MultiBinding Converter="{StaticResource FilmstripTileWidthConverter}">
                                         <Binding Path="DisplayAspectRatio"/>
                                         <Binding Path="DataContext.FilmstripTilesKeepAspect"
+                                                 RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                        <Binding Path="DataContext.IsFilmstripVertical"
                                                  RelativeSource="{RelativeSource AncestorType=UserControl}"/>
                                     </MultiBinding>
                                 </Border.Width>

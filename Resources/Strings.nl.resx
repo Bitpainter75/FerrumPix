@@ -10515,4 +10515,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>Slaat miniaturen twee keer zo breed op, zodat ook de grootste tegels scherp blijven. Vraagt meer ruimte op het apparaat en meer geheugen. Kleinere miniaturen worden opnieuw gemaakt wanneer ze worden bekeken.</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>Positie van de filmstrip</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>Toont de afbeeldingsbalk in de viewer.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>Toont de afbeeldingsbalk in de editor.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>Waar de filmstrip in de viewer staat: onder, boven, links of rechts van de afbeelding.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>Waar de filmstrip in de editor staat: onder, boven, links of rechts van het werkvlak.</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>Diavoorstelling pauzeren</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>Diavoorstelling hervatten</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>Volledig scherm verlaten</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>Gepauzeerd</value>
+  </data>
 </root>

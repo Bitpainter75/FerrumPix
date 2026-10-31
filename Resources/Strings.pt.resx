@@ -10474,4 +10474,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>Guarda as miniaturas com o dobro da largura, para que até os maiores mosaicos fiquem nítidos. Precisa de mais espaço no dispositivo e de mais memória. Miniaturas menores são criadas novamente ao serem vistas.</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>Posição da tira de filme</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>Mostra a tira de imagens no visualizador.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>Mostra a tira de imagens no editor.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>Onde fica a tira de filme no visualizador: abaixo, acima, à esquerda ou à direita da imagem.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>Onde fica a tira de filme no editor: abaixo, acima, à esquerda ou à direita da área de trabalho.</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>Pausar apresentação</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>Retomar apresentação</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>Sair da tela cheia</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>Em pausa</value>
+  </data>
 </root>

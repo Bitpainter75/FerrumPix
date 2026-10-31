@@ -10475,4 +10475,31 @@
   <data name="Speichert_Vorschaubilder_doppelt_so_breit_damit__8afb5ea6" xml:space="preserve">
     <value>Salva le miniature larghe il doppio, così anche i riquadri più grandi restano nitidi. Richiede più spazio sul dispositivo e più memoria. Le miniature più piccole vengono ricreate quando vengono visualizzate.</value>
   </data>
+  <data name="Position_des_Filmstreifens_09ce0727" xml:space="preserve">
+    <value>Posizione della filmstrip</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Viewer_an_15adcd9e" xml:space="preserve">
+    <value>Mostra la striscia immagini nel visualizzatore.</value>
+  </data>
+  <data name="Zeigt_die_Bildleiste_im_Editor_an_57a06e14" xml:space="preserve">
+    <value>Mostra la striscia immagini nell editor.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Viewer_steht_unter_ber_li_a45560c0" xml:space="preserve">
+    <value>Dove si trova la filmstrip nel visualizzatore: sotto, sopra, a sinistra o a destra dell immagine.</value>
+  </data>
+  <data name="Wo_der_Filmstreifen_im_Editor_steht_unter_ber_li_2db06dcb" xml:space="preserve">
+    <value>Dove si trova la filmstrip nell editor: sotto, sopra, a sinistra o a destra dell area di lavoro.</value>
+  </data>
+  <data name="Diashow_anhalten_6d07baad" xml:space="preserve">
+    <value>Metti in pausa la presentazione</value>
+  </data>
+  <data name="Diashow_fortsetzen_0cf4da31" xml:space="preserve">
+    <value>Riprendi la presentazione</value>
+  </data>
+  <data name="Vollbild_verlassen_94ec4a69" xml:space="preserve">
+    <value>Esci da schermo intero</value>
+  </data>
+  <data name="Angehalten_0496cba3" xml:space="preserve">
+    <value>In pausa</value>
+  </data>
 </root>

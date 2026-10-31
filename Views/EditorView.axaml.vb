@@ -1658,10 +1658,27 @@ Namespace Views
                 AddHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
             End If
             _filmstripController.Reset()
+            ApplyFilmstripPlacement()
             ' Steht das Werkzeug schon beim Anhaengen auf dem Kompaktwerkzeug (erster Aufruf des
             ' Editors mit Starttool "Anpassen"), kam kein Werkzeugwechsel mehr an, und alle Gruppen
             ' blieben offen (Nutzerbefund). Deshalb hier abgleichen, nicht nur beim Wechsel.
             UpdateCompactGroups()
+        End Sub
+
+        ''' <summary>Stellt den Filmstreifen an die eingestellte Seite und rueckt die Buehne um ihn
+        ''' ein (FilmstripPlacement). Die Spalte des Rahmens setzt UpdateAdjustmentsPanelSide.</summary>
+        Private Sub ApplyFilmstripPlacement()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing Then Return
+            Dim position = vm.FilmstripPosition
+            FilmstripPlacement.Apply(Me.FindControl(Of ListBox)("FilmstripListBox"),
+                                     Me.FindControl(Of Grid)("FilmstripBottomSlot"),
+                                     Me.FindControl(Of Border)("FilmstripSideSlot"),
+                                     position, vm.ShowFilmstrip)
+            _filmstripController.IsVertical = FilmstripPlacement.IsVertical(position)
+            Dim stage = Me.FindControl(Of Border)("EditorStageBorder")
+            If stage IsNot Nothing Then stage.Margin = FilmstripPlacement.ContentInset(position, vm.ShowFilmstrip)
+            _filmstripController.ScrollToCurrent()
         End Sub
 
         ''' STUFE 2: Region-Blits schreiben in DIESELBE WriteableBitmap-Instanz - fuer das Binding
@@ -1954,6 +1971,9 @@ Namespace Views
                     End If
                 Case NameOf(EditorViewModel.CurrentFilmstripIndex)
                     _filmstripController.ScrollToCurrent()
+                Case NameOf(EditorViewModel.FilmstripPosition),
+                     NameOf(EditorViewModel.ShowFilmstrip)
+                    ApplyFilmstripPlacement()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
                     UpdateInfoSidebarLayoutState()
                 Case NameOf(EditorViewModel.IsLayersPanelVisible)
@@ -4596,6 +4616,7 @@ Namespace Views
             End If
 
             SetGridColumn(Me.FindControl(Of Border)("EditorStageBorder"), stageColumn)
+            SetGridColumn(Me.FindControl(Of Border)("FilmstripSideSlot"), stageColumn)
             SetGridColumn(Me.FindControl(Of StackPanel)("StageHeaderButtons"), stageColumn)
             SetGridColumn(Me.FindControl(Of StackPanel)("StageFooterButtons"), stageColumn)
             ' Die Mitte der Buehne liegt jetzt woanders, ohne dass sich eine Groesse aendert.
