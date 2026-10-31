@@ -10521,4 +10521,37 @@
   <data name="Angehalten_0496cba3" xml:space="preserve">
     <value>Paused</value>
   </data>
+  <data name="Tastenk_rzel_anzeigen_a328b7ce" xml:space="preserve">
+    <value>Show keyboard shortcuts</value>
+  </data>
+  <data name="Diashow_starten_anhalten_und_fortsetzen_0dfd912f" xml:space="preserve">
+    <value>Start, pause and resume the slideshow</value>
+  </data>
+  <data name="Vollbild_und_Diashow_851b9f5c" xml:space="preserve">
+    <value>Fullscreen and slideshow</value>
+  </data>
+  <data name="Vergr_ern_h_lt_eine_laufende_Diashow_an_8fe0f491" xml:space="preserve">
+    <value>Zoom in, pauses a running slideshow</value>
+  </data>
+  <data name="Verkleinern_h_lt_eine_laufende_Diashow_an_60f4b6d9" xml:space="preserve">
+    <value>Zoom out, pauses a running slideshow</value>
+  </data>
+  <data name="Linke_Maustaste_halten_und_ziehen_b074db19" xml:space="preserve">
+    <value>Left mouse button (hold and drag)</value>
+  </data>
+  <data name="Vergr_ertes_Bild_verschieben_4f9097b6" xml:space="preserve">
+    <value>Move the zoomed picture</value>
+  </data>
+  <data name="Maus_bewegen_83e69cb9" xml:space="preserve">
+    <value>Move the mouse</value>
+  </data>
+  <data name="Bedienleiste_einblenden_b4908afb" xml:space="preserve">
+    <value>Show the control bar</value>
+  </data>
+  <data name="Maus_an_den_oberen_oder_unteren_Rand_da709f68" xml:space="preserve">
+    <value>Mouse to the top or bottom edge</value>
+  </data>
+  <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
+    <value>Show the filmstrip</value>
+  </data>
 </root>

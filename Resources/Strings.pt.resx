@@ -10501,4 +10501,37 @@
   <data name="Angehalten_0496cba3" xml:space="preserve">
     <value>Em pausa</value>
   </data>
+  <data name="Tastenk_rzel_anzeigen_a328b7ce" xml:space="preserve">
+    <value>Mostrar atalhos de teclado</value>
+  </data>
+  <data name="Diashow_starten_anhalten_und_fortsetzen_0dfd912f" xml:space="preserve">
+    <value>Iniciar, pausar e retomar a apresentação</value>
+  </data>
+  <data name="Vollbild_und_Diashow_851b9f5c" xml:space="preserve">
+    <value>Tela cheia e apresentação</value>
+  </data>
+  <data name="Vergr_ern_h_lt_eine_laufende_Diashow_an_8fe0f491" xml:space="preserve">
+    <value>Ampliar, pausa uma apresentação em curso</value>
+  </data>
+  <data name="Verkleinern_h_lt_eine_laufende_Diashow_an_60f4b6d9" xml:space="preserve">
+    <value>Reduzir, pausa uma apresentação em curso</value>
+  </data>
+  <data name="Linke_Maustaste_halten_und_ziehen_b074db19" xml:space="preserve">
+    <value>Botão esquerdo do rato (manter premido e arrastar)</value>
+  </data>
+  <data name="Vergr_ertes_Bild_verschieben_4f9097b6" xml:space="preserve">
+    <value>Mover a imagem ampliada</value>
+  </data>
+  <data name="Maus_bewegen_83e69cb9" xml:space="preserve">
+    <value>Mover o rato</value>
+  </data>
+  <data name="Bedienleiste_einblenden_b4908afb" xml:space="preserve">
+    <value>Mostrar a barra de controlo</value>
+  </data>
+  <data name="Maus_an_den_oberen_oder_unteren_Rand_da709f68" xml:space="preserve">
+    <value>Rato até à margem superior ou inferior</value>
+  </data>
+  <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
+    <value>Mostrar a tira de filme</value>
+  </data>
 </root>

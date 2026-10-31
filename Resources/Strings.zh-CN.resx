@@ -10500,4 +10500,37 @@
   <data name="Angehalten_0496cba3" xml:space="preserve">
     <value>已暂停</value>
   </data>
+  <data name="Tastenk_rzel_anzeigen_a328b7ce" xml:space="preserve">
+    <value>显示键盘快捷键</value>
+  </data>
+  <data name="Diashow_starten_anhalten_und_fortsetzen_0dfd912f" xml:space="preserve">
+    <value>开始、暂停和继续幻灯片播放</value>
+  </data>
+  <data name="Vollbild_und_Diashow_851b9f5c" xml:space="preserve">
+    <value>全屏和幻灯片播放</value>
+  </data>
+  <data name="Vergr_ern_h_lt_eine_laufende_Diashow_an_8fe0f491" xml:space="preserve">
+    <value>放大，会暂停正在播放的幻灯片</value>
+  </data>
+  <data name="Verkleinern_h_lt_eine_laufende_Diashow_an_60f4b6d9" xml:space="preserve">
+    <value>缩小，会暂停正在播放的幻灯片</value>
+  </data>
+  <data name="Linke_Maustaste_halten_und_ziehen_b074db19" xml:space="preserve">
+    <value>按住鼠标左键并拖动</value>
+  </data>
+  <data name="Vergr_ertes_Bild_verschieben_4f9097b6" xml:space="preserve">
+    <value>移动放大的图像</value>
+  </data>
+  <data name="Maus_bewegen_83e69cb9" xml:space="preserve">
+    <value>移动鼠标</value>
+  </data>
+  <data name="Bedienleiste_einblenden_b4908afb" xml:space="preserve">
+    <value>显示控制栏</value>
+  </data>
+  <data name="Maus_an_den_oberen_oder_unteren_Rand_da709f68" xml:space="preserve">
+    <value>将鼠标移到上边缘或下边缘</value>
+  </data>
+  <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
+    <value>显示胶片显示窗格</value>
+  </data>
 </root>

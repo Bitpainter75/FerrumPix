@@ -52,6 +52,12 @@
                                                 Margin="0,16,0,0"
                                                 IsVisible="{Binding DialogShowsSearch}"/>
 
+                        <!-- F1: dieselbe Liste wie in den Einstellungen, damit beide nie
+                             auseinanderlaufen. -->
+                        <views:ShortcutsView Grid.Row="3"
+                                             Margin="0,16,0,0"
+                                             IsVisible="{Binding DialogShowsShortcuts}"/>
+
                         <views:BatchResizeDialogView x:Name="BatchResizeDialog"
                                                      Grid.Row="3"
                                                      Margin="0,16,0,0"

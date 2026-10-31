@@ -10542,4 +10542,37 @@
   <data name="Angehalten_0496cba3" xml:space="preserve">
     <value>På pause</value>
   </data>
+  <data name="Tastenk_rzel_anzeigen_a328b7ce" xml:space="preserve">
+    <value>Vis hurtigtaster</value>
+  </data>
+  <data name="Diashow_starten_anhalten_und_fortsetzen_0dfd912f" xml:space="preserve">
+    <value>Start, sett på pause og fortsett lysbildeframvisningen</value>
+  </data>
+  <data name="Vollbild_und_Diashow_851b9f5c" xml:space="preserve">
+    <value>Fullskjerm og lysbildeframvisning</value>
+  </data>
+  <data name="Vergr_ern_h_lt_eine_laufende_Diashow_an_8fe0f491" xml:space="preserve">
+    <value>Forstørr, setter en pågående lysbildeframvisning på pause</value>
+  </data>
+  <data name="Verkleinern_h_lt_eine_laufende_Diashow_an_60f4b6d9" xml:space="preserve">
+    <value>Forminsk, setter en pågående lysbildeframvisning på pause</value>
+  </data>
+  <data name="Linke_Maustaste_halten_und_ziehen_b074db19" xml:space="preserve">
+    <value>Venstre museknapp (hold nede og dra)</value>
+  </data>
+  <data name="Vergr_ertes_Bild_verschieben_4f9097b6" xml:space="preserve">
+    <value>Flytt det forstørrede bildet</value>
+  </data>
+  <data name="Maus_bewegen_83e69cb9" xml:space="preserve">
+    <value>Flytt musen</value>
+  </data>
+  <data name="Bedienleiste_einblenden_b4908afb" xml:space="preserve">
+    <value>Vis kontrollinjen</value>
+  </data>
+  <data name="Maus_an_den_oberen_oder_unteren_Rand_da709f68" xml:space="preserve">
+    <value>Musen til øvre eller nedre kant</value>
+  </data>
+  <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
+    <value>Vis filmstripen</value>
+  </data>
 </root>

@@ -1418,6 +1418,14 @@ Namespace Views
                     Return
                 End If
 
+                ' F1 zeigt die Tastenkuerzel, in jedem Modus und auch im Vollbild - aus demselben
+                ' Grund wie F11 darunter hier oben im Tunnel.
+                If e.Key = Key.F1 AndAlso e.KeyModifiers = KeyModifiers.None Then
+                    vm.ShowShortcutsDialog()
+                    e.Handled = True
+                    Return
+                End If
+
                 ' F11 schaltet in jedem Modus um - hier oben im Tunnel, damit es auch im Vollbild greift,
                 ' wo die darunterliegenden Ansichten keine Tasten mehr sehen.
                 If e.Key = Key.F11 OrElse

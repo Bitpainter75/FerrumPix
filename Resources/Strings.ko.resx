@@ -10546,4 +10546,37 @@
   <data name="Angehalten_0496cba3" xml:space="preserve">
     <value>일시 정지됨</value>
   </data>
+  <data name="Tastenk_rzel_anzeigen_a328b7ce" xml:space="preserve">
+    <value>단축키 보기</value>
+  </data>
+  <data name="Diashow_starten_anhalten_und_fortsetzen_0dfd912f" xml:space="preserve">
+    <value>슬라이드 쇼 시작, 일시 정지, 계속</value>
+  </data>
+  <data name="Vollbild_und_Diashow_851b9f5c" xml:space="preserve">
+    <value>전체 화면과 슬라이드 쇼</value>
+  </data>
+  <data name="Vergr_ern_h_lt_eine_laufende_Diashow_an_8fe0f491" xml:space="preserve">
+    <value>확대, 진행 중인 슬라이드 쇼를 일시 정지</value>
+  </data>
+  <data name="Verkleinern_h_lt_eine_laufende_Diashow_an_60f4b6d9" xml:space="preserve">
+    <value>축소, 진행 중인 슬라이드 쇼를 일시 정지</value>
+  </data>
+  <data name="Linke_Maustaste_halten_und_ziehen_b074db19" xml:space="preserve">
+    <value>왼쪽 마우스 단추 (누른 채 끌기)</value>
+  </data>
+  <data name="Vergr_ertes_Bild_verschieben_4f9097b6" xml:space="preserve">
+    <value>확대한 이미지 이동</value>
+  </data>
+  <data name="Maus_bewegen_83e69cb9" xml:space="preserve">
+    <value>마우스 움직이기</value>
+  </data>
+  <data name="Bedienleiste_einblenden_b4908afb" xml:space="preserve">
+    <value>조작 막대 보기</value>
+  </data>
+  <data name="Maus_an_den_oberen_oder_unteren_Rand_da709f68" xml:space="preserve">
+    <value>마우스를 위쪽 또는 아래쪽 가장자리로</value>
+  </data>
+  <data name="Filmstreifen_einblenden_98272870" xml:space="preserve">
+    <value>필름 스트립 보기</value>
+  </data>
 </root>

@@ -27,6 +27,9 @@ Namespace ViewModels
         ''' <summary>Sichern und Wiederherstellen (MainWindowViewModelBackup.vb).</summary>
         Backup
         Restore
+        ''' <summary>Die Liste der Tastenkuerzel hinter F1 (ShortcutsView, dieselbe wie in den
+        ''' Einstellungen).</summary>
+        Shortcuts
     End Enum
 
     ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,

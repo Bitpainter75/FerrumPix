@@ -3004,6 +3004,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsFileConflict))
                 Me.RaisePropertyChanged(NameOf(DialogShowsStandardActions))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchRename))
+                Me.RaisePropertyChanged(NameOf(DialogShowsShortcuts))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSearch))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchResize))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBatchFilter))
@@ -3229,6 +3230,25 @@ Namespace ViewModels
                 Return Not DialogShowsFileConflict
             End Get
         End Property
+
+        Public ReadOnly Property DialogShowsShortcuts As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.Shortcuts
+            End Get
+        End Property
+
+        ''' <summary>F1: die Tastenkuerzel als Dialog, mit derselben Liste wie in den Einstellungen.
+        ''' Ein zweites F1 bei offenem Dialog tut nichts, ein anderer offener Dialog bleibt stehen.</summary>
+        Public Async Sub ShowShortcutsDialog()
+            Try
+                If IsDialogOpen Then Return
+                Await ShowDialogAsync(AppDialogKind.Shortcuts, "Tastenkürzel", "", "", "Schließen", "")
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("MainWindowViewModel.ShowShortcutsDialog", ex)
+            End Try
+        End Sub
 
         Public ReadOnly Property DialogShowsBatchRename As Boolean
             Get
@@ -3988,13 +4008,15 @@ Namespace ViewModels
         Public ReadOnly Property DialogUsesWideLayout As Boolean
             Get
                 Return DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse
-                       DialogShowsBatchResize OrElse DialogShowsSaveAsMetaOptions
+                       DialogShowsBatchResize OrElse DialogShowsSaveAsMetaOptions OrElse DialogShowsShortcuts
             End Get
         End Property
 
         Public ReadOnly Property DialogWidth As Double
             Get
-                If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch Then Return 820
+                ' Die Tastenkuerzel brauchen die Breite fuer ihre zwei Spalten (Taste 230, Wirkung).
+                If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse
+                   DialogShowsShortcuts Then Return 820
                 ' Die Stapel-Dialoge teilen sich mit „Exportieren nach“ umfangreiche Formulare
                 ' und den Speichern-unter-Block. 570 px lässt insbesondere die Quellenwahl,
                 ' Wasserzeichenoptionen und die Zielauswahl unnötig gedrängt wirken.

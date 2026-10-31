@@ -16,6 +16,10 @@
   previous, pause, next, zoom and exit. While paused you can zoom in and drag the picture around.
   Touching the top or bottom edge of the screen brings up the filmstrip to jump to any picture.
 
+- **Keyboard shortcuts on F1:** F1 opens the list of keyboard shortcuts from anywhere, also in
+  fullscreen. It is the same list as in the settings, now including the slideshow and fullscreen
+  keys.
+
 - **Filmstrip on any side:** in the settings the filmstrip can sit below, above, left or right of
   the picture, separately for the viewer and the editor.
 

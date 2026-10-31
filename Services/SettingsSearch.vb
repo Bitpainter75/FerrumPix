@@ -78,7 +78,7 @@ Namespace Services
 
         ''' <summary>Filtert die Kinder einer Spalte; True, wenn darin etwas trifft.</summary>
         Private Function FilterColumn(column As Panel, words As String()) As Boolean
-            Dim children = column.Children.ToList()
+            Dim children = ExpandUserControls(column.Children)
             Dim header = children.FirstOrDefault(Function(c) IsTextOnly(c) AndAlso Not TypeOf c Is TextBlock)
 
             ' Zwischenueberschriften teilen die Spalte in Gruppen; was vor der ersten steht, gehoert
@@ -125,6 +125,23 @@ Namespace Services
 
             If header IsNot Nothing AndAlso Not anyHit Then Hide(header)
             Return anyHit
+        End Function
+
+        ''' <summary>Ein UserControl mit einer Spalte als Inhalt zaehlt, als stuende seine Spalte
+        ''' selbst an dieser Stelle: die Tastenkuerzel liegen in einem eigenen UserControl
+        ''' (ShortcutsView, auch im Dialog hinter F1), und als ein einziges Blatt zeigte ein Treffer
+        ''' die ganze Liste statt der passenden Zeilen.</summary>
+        Private Shared Function ExpandUserControls(items As IEnumerable(Of Control)) As List(Of Control)
+            Dim result As New List(Of Control)()
+            For Each item In items
+                Dim inner = TryCast(TryCast(item, UserControl)?.Content, Panel)
+                If inner IsNot Nothing Then
+                    result.AddRange(inner.Children)
+                Else
+                    result.Add(item)
+                End If
+            Next
+            Return result
         End Function
 
         ''' <summary>Eine Untergruppe: trifft ihr Titel, bleibt sie ganz; sonst wird sie wie eine
