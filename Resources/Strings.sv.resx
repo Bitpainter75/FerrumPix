@@ -10875,4 +10875,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>Med bortvalda dagar kan importen starta när alla fotodata är lästa</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>Tillverkare</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>Senast använd: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} infogar tillverkaren, {model} modellen, {camera} båda utan upprepad tillverkare. Saknas uppgiften står det Utan kamera, för en video Video.</value>
+  </data>
 </root>

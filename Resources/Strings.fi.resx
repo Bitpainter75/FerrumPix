@@ -10875,4 +10875,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>Kun päiviä on poistettu valinnasta, tuonti voi alkaa, kun kaikki kuvaustiedot on luettu</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>Valmistaja</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>Viimeksi käytetty: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} lisää valmistajan, {model} mallin, {camera} molemmat ilman toistuvaa valmistajaa. Jos tieto puuttuu, tilalla on Ei kameraa, videolla Video.</value>
+  </data>
 </root>

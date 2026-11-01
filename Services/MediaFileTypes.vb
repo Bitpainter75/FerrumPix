@@ -30,6 +30,15 @@ Namespace Services
             ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
         }.Concat(RawPreviewService.SupportedExtensions).ToArray()
 
+        ''' <summary>Die Videoformate unter <see cref="Displayable"/>.</summary>
+        Public Shared ReadOnly VideoExtensions As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
+
+        ''' <summary>Ist die Datei ein Video? Nach der Endung, kleingeschrieben verglichen.</summary>
+        Public Shared Function IsVideo(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Return VideoExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant())
+        End Function
+
         ''' <summary>Zeigt die Anwendung diese Datei? Vergleicht kleingeschrieben, weil eine Endung
         ''' auf der Platte in jeder Schreibweise stehen kann.</summary>
         Public Shared Function IsDisplayable(filePath As String) As Boolean

@@ -10875,4 +10875,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>S odznačenými dny lze import spustit, jakmile se načtou všechna data pořízení</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>Výrobce</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>Naposledy použito: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} vloží výrobce, {model} model, {camera} obojí bez opakovaného výrobce. Pokud údaj chybí, objeví se Bez fotoaparátu, u videa Video.</value>
+  </data>
 </root>

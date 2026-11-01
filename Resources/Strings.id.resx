@@ -10879,4 +10879,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>Dengan hari yang tidak dipilih, impor dapat dimulai setelah semua data pemotretan terbaca</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>Produsen</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>Terakhir dipakai: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} menyisipkan produsen, {model} model, {camera} keduanya tanpa produsen ganda. Jika datanya tidak ada, tertulis Tanpa kamera, untuk video Video.</value>
+  </data>
 </root>

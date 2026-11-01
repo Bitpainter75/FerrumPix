@@ -1270,6 +1270,8 @@
                                     <TextBlock Text="Zielordner für den Import" FontSize="{DynamicResource FP.Font.Body}"/>
                                     <TextBlock Text="Ziele, die der Import neben dem aktuellen Ordner anbietet. Platzhalter: {pictures} Bilder-Ordner, {home} persönlicher Ordner, {camera} Kamera, {datetaken:FORMAT} Aufnahmedatum. Im Format stehen yyyy für das Jahr, MM für den Monat als Zahl, MMMM für den Monatsnamen, dd für den Tag und dddd für den Wochentag; Namen kommen in der Sprache der Region. Beispiel: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM} legt Ordner wie 2026/10 Oktober an."
                                                Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{}{make} setzt den Hersteller ein, {model} das Modell, {camera} beides ohne doppelten Hersteller. Fehlt die Angabe, steht dort Ohne Kamera, bei einem Video Video."
+                                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <Button Grid.Column="1" Classes="ghost" Padding="12,7"
                                         VerticalAlignment="Center"

@@ -93,6 +93,10 @@
                    Foreground="{DynamicResource FP.Text.Muted}"
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap"/>
+        <TextBlock Text="{}{make} setzt den Hersteller ein, {model} das Modell, {camera} beides ohne doppelten Hersteller. Fehlt die Angabe, steht dort Ohne Kamera, bei einem Video Video."
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
 
         <!-- AUFTRAG UND DATEINAME: der Auftrag fuellt {job} in Ziel und Dateiname; die Vorlage des
              Dateinamens ist leer, solange die Namen der Quelle bleiben sollen. -->

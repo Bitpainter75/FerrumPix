@@ -41,6 +41,27 @@ Namespace Services
         ''' fest? Ein schnelles Lesen der Quelle setzt zunaechst nur die Aenderungszeit ein, siehe
         ''' <see cref="CardImportService.ResolveCaptureData"/>.</summary>
         Public Property CaptureResolved As Boolean
+        ''' <summary>Hersteller und Modell einzeln aus den EXIF-Daten, fuer {make} und {model}.</summary>
+        Public Property CameraMake As String = ""
+        Public Property CameraModel As String = ""
+
+        ''' <summary>Setzt nachgelesene Aufnahmedaten ein.</summary>
+        Public Sub ApplyCaptureData(data As ImportCaptureData)
+            If data Is Nothing Then Return
+            CapturedAt = data.CapturedAt
+            Camera = data.Camera
+            CameraMake = data.Make
+            CameraModel = data.Model
+            CaptureResolved = True
+        End Sub
+    End Class
+
+    ''' <summary>Was aus den EXIF-Daten einer Datei fuer den Import zaehlt.</summary>
+    Public NotInheritable Class ImportCaptureData
+        Public Property CapturedAt As DateTime
+        Public Property Camera As String = ""
+        Public Property Make As String = ""
+        Public Property Model As String = ""
     End Class
 
     ''' <summary>Ein Aufnahmetag der Quelle; im Dialog an- und abwaehlbar.</summary>
@@ -287,15 +308,14 @@ Namespace Services
                         token.ThrowIfCancellationRequested()
                         If Path.GetFileName(file).StartsWith("."c) OrElse Not MediaFileTypes.IsDisplayable(file) Then Continue For
                         Dim info As New FileInfo(file)
-                        Dim camera = ""
-                        result.Add(New ImportCandidate With {
+                        Dim candidate As New ImportCandidate With {
                             .SourcePath = file,
                             .Size = info.Length,
-                            .CapturedAt = If(readCaptureData, CaptureTimeOf(file, info, camera), info.LastWriteTime),
-                            .Camera = camera,
+                            .CapturedAt = info.LastWriteTime,
                             .ModifiedAt = info.LastWriteTime,
-                            .IsRaw = RawPreviewService.IsSupportedRaw(file),
-                            .CaptureResolved = readCaptureData})
+                            .IsRaw = RawPreviewService.IsSupportedRaw(file)}
+                        If readCaptureData Then candidate.ApplyCaptureData(CaptureDataOf(file, info))
+                        result.Add(candidate)
                     Next
                 Catch ex As OperationCanceledException
                     Throw
@@ -376,16 +396,19 @@ Namespace Services
             Return Path.Combine(If(Path.GetDirectoryName(filePath), ""), Path.GetFileNameWithoutExtension(filePath))
         End Function
 
-        Private Shared Function CaptureTimeOf(file As String, info As FileInfo, ByRef camera As String) As DateTime
-            camera = ""
+        ''' <summary>Aufnahmezeit (ersatzweise Aenderungszeit), Kamera, Hersteller und Modell.</summary>
+        Private Shared Function CaptureDataOf(file As String, info As FileInfo) As ImportCaptureData
+            Dim data As New ImportCaptureData With {.CapturedAt = info.LastWriteTime}
             Try
                 Dim exif = ExifService.ReadExif(file)
-                camera = If(exif?.Camera, "").Trim()
+                data.Camera = If(exif?.Camera, "").Trim()
+                data.Make = If(exif?.CameraMake, "").Trim()
+                data.Model = If(exif?.CameraModel, "").Trim()
                 Dim taken = ExifService.ParseExifDateTime(exif?.DateTaken)
-                If taken.HasValue Then Return taken.Value
+                If taken.HasValue Then data.CapturedAt = taken.Value
             Catch
             End Try
-            Return info.LastWriteTime
+            Return data
         End Function
 
         ''' <summary>Der Zielordner einer Aufnahme nach dem Muster.</summary>
@@ -446,20 +469,14 @@ Namespace Services
         ''' <summary>Liest Aufnahmezeit und Kamera aus den EXIF-Daten, wenn ein schnelles Lesen der
         ''' Quelle sie offen gelassen hat. Eine Datei auf einem MTP-Geraet bekommt sie erst nach dem
         ''' Holen (siehe <see cref="FetchFromMtp"/>).</summary>
-        Public Shared Function ReadCaptureData(candidate As ImportCandidate) As (CapturedAt As DateTime, Camera As String)
-            Dim camera = ""
-            Dim info As New FileInfo(candidate.SourcePath)
-            Dim taken = CaptureTimeOf(candidate.SourcePath, info, camera)
-            Return (taken, camera)
+        Public Shared Function ReadCaptureData(candidate As ImportCandidate) As ImportCaptureData
+            Return CaptureDataOf(candidate.SourcePath, New FileInfo(candidate.SourcePath))
         End Function
 
         ''' <summary>Setzt die EXIF-Daten einer Datei ein, die sie noch nicht hat.</summary>
         Public Shared Sub ResolveCaptureData(candidate As ImportCandidate)
             If candidate Is Nothing OrElse candidate.CaptureResolved OrElse candidate.MtpStorage IsNot Nothing Then Return
-            Dim data = ReadCaptureData(candidate)
-            candidate.CapturedAt = data.CapturedAt
-            candidate.Camera = data.Camera
-            candidate.CaptureResolved = True
+            candidate.ApplyCaptureData(ReadCaptureData(candidate))
         End Sub
 
         Public Shared Function HasPlaceholders(target As String) As Boolean
@@ -493,9 +510,16 @@ Namespace Services
             Else
                 text = System.Text.RegularExpressions.Regex.Replace(text, "[ _-]+\{job\}|\{job\}[ _-]*", "")
             End If
-            Dim camera = SafeSegment(If(candidate?.Camera, ""))
-            If camera.Length = 0 Then camera = LocalizationService.T("Ohne Kamera")
-            text = text.Replace("{camera}", camera)
+            ' {camera} ohne doppelten Hersteller ("Canon Canon EOS R5" wird "Canon EOS R5"), {make}
+            ' und {model} einzeln; was leer bleibt, bekommt denselben Ersatz.
+            Dim missing = ImageInfoService.MissingCameraText(If(candidate?.SourcePath, ""))
+            Dim orMissing = Function(value As String) As String
+                                Dim cleaned = SafeSegment(value)
+                                Return If(cleaned.Length = 0, missing, cleaned)
+                            End Function
+            text = text.Replace("{camera}", orMissing(ImageInfoService.DisplayCameraName(If(candidate?.Camera, "")))).
+                        Replace("{make}", orMissing(ImageInfoService.MakeForPlaceholder(If(candidate?.CameraMake, "")))).
+                        Replace("{model}", orMissing(If(candidate?.CameraModel, "")))
             Dim taken = If(candidate Is Nothing, DateTime.Now, candidate.CapturedAt)
             Dim modified = If(candidate Is Nothing OrElse candidate.ModifiedAt = DateTime.MinValue, taken, candidate.ModifiedAt)
             text = System.Text.RegularExpressions.Regex.Replace(text, "\{datetaken:([^}]+)\}", Function(m) FormatSafe(taken, m.Groups(1).Value))
@@ -715,9 +739,7 @@ Namespace Services
                 End If
                 File.SetLastWriteTime(staged, candidate.ModifiedAt)
                 info.Refresh()
-                Dim camera = ""
-                candidate.CapturedAt = CaptureTimeOf(staged, info, camera)
-                candidate.Camera = camera
+                candidate.ApplyCaptureData(CaptureDataOf(staged, info))
                 Return staged
             Catch
                 Try

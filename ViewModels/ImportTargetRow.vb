@@ -58,7 +58,10 @@ Namespace ViewModels
         Public ReadOnly Property PreviewText As String
             Get
                 If String.IsNullOrWhiteSpace(_template) Then Return ""
-                Dim sample As New ImportCandidate With {.CapturedAt = DateTime.Now, .ModifiedAt = DateTime.Now, .Camera = LocalizationService.T("Kamera"),
+                Dim make = LocalizationService.T("Hersteller")
+                Dim model = LocalizationService.T("Modell")
+                Dim sample As New ImportCandidate With {.CapturedAt = DateTime.Now, .ModifiedAt = DateTime.Now, .Camera = make & " " & model,
+                                                        .CameraMake = make, .CameraModel = model,
                                                         .SourcePath = "IMG_0001.CR3"}
                 If _isFileName Then
                     Return String.Format(LocalizationService.T("Beispiel: {0}"),

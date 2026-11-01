@@ -381,7 +381,7 @@ Namespace ViewModels
             _dialogImportCheckPending = True
             Dim chosen = DialogImportChosen().Select(Function(c) New ImportCandidate With {
                 .SourcePath = c.SourcePath, .Size = c.Size, .CapturedAt = c.CapturedAt, .IsRaw = c.IsRaw,
-                .IsRawPartner = c.IsRawPartner, .Camera = c.Camera, .ModifiedAt = c.ModifiedAt,
+                .IsRawPartner = c.IsRawPartner, .Camera = c.Camera, .CameraMake = c.CameraMake, .CameraModel = c.CameraModel, .ModifiedAt = c.ModifiedAt,
                 .MtpStorage = c.MtpStorage, .MtpPath = c.MtpPath, .CaptureResolved = c.CaptureResolved}).ToList()
             Dim target = _dialogImportTargetFolder
             Dim targets = {_dialogImportTargetFolder, If(_dialogImportUseBackup, _dialogImportBackupFolder, "")}.
@@ -477,7 +477,7 @@ Namespace ViewModels
                         End Sub)
                     If open.Count = 0 Then Return
 
-                    Dim batch As New List(Of (Candidate As ImportCandidate, CapturedAt As DateTime, Camera As String))()
+                    Dim batch As New List(Of (Candidate As ImportCandidate, Data As ImportCaptureData))()
                     Dim clock = Diagnostics.Stopwatch.StartNew()
                     Dim flush = Sub(last As Boolean)
                                     Dim ready = batch.ToList()
@@ -488,8 +488,7 @@ Namespace ViewModels
                     Try
                         For Each candidate In open
                             cancel.Token.ThrowIfCancellationRequested()
-                            Dim data = CardImportService.ReadCaptureData(candidate)
-                            batch.Add((candidate, data.CapturedAt, data.Camera))
+                            batch.Add((candidate, CardImportService.ReadCaptureData(candidate)))
                             If clock.ElapsedMilliseconds >= 400 Then flush(False)
                         Next
                         flush(True)
@@ -503,13 +502,11 @@ Namespace ViewModels
         ''' <summary>Setzt einen Schub nachgelesener EXIF-Daten ein (UI-Faden). Der letzte ordnet die
         ''' Kandidaten neu, denn ihre Reihenfolge bestimmt die Nummern fuer ###.</summary>
         Private Sub ApplyDialogImportCaptureData(cancel As CancellationTokenSource,
-                                                 ready As List(Of (Candidate As ImportCandidate, CapturedAt As DateTime, Camera As String)),
+                                                 ready As List(Of (Candidate As ImportCandidate, Data As ImportCaptureData)),
                                                  last As Boolean)
             If cancel.IsCancellationRequested OrElse Not ReferenceEquals(_dialogImportScanCancel, cancel) Then Return
             For Each item In ready
-                item.Candidate.CapturedAt = item.CapturedAt
-                item.Candidate.Camera = item.Camera
-                item.Candidate.CaptureResolved = True
+                item.Candidate.ApplyCaptureData(item.Data)
             Next
             _dialogImportResolved += ready.Count
             If last Then
@@ -607,6 +604,22 @@ Namespace ViewModels
                 DialogImportTargetChoices.Add(New ImportTargetChoice With {.Pattern = defined.Template.Trim(), .Label = name})
             Next
             _dialogImportSelectedTargetChoice = current
+            ' War das zuletzt benutzte Ziel eine Vorlage mit Platzhaltern, steht sie wieder da: ein
+            ' Muster tippt niemand bei jeder Karte neu. Ein schlichter Ordner dagegen weicht wie
+            ' bisher dem aktuellen Ordner der Galerie. Steht die Vorlage nicht unter den Zielen der
+            ' Einstellungen, bekommt sie einen eigenen Eintrag und bleibt so nach einem Wechsel
+            ' wieder waehlbar.
+            Dim lastTarget = If(settings.ImportTargetFolder, "").Trim()
+            If CardImportService.HasPlaceholders(lastTarget) Then
+                Dim known = DialogImportTargetChoices.FirstOrDefault(Function(c) c.Pattern = lastTarget)
+                If known Is Nothing Then
+                    known = New ImportTargetChoice With {.Pattern = lastTarget,
+                                                         .Label = String.Format(LocalizationService.T("Zuletzt benutzt: {0}"), lastTarget)}
+                    DialogImportTargetChoices.Insert(1, known)
+                End If
+                _dialogImportSelectedTargetChoice = known
+                _dialogImportTargetFolder = lastTarget
+            End If
             Me.RaisePropertyChanged(NameOf(DialogImportSelectedTargetChoice))
             _dialogImportIncludeRawPartners = settings.ImportIncludeRawPartners
             _dialogImportIncludeSubfolders = settings.ImportIncludeSubfolders

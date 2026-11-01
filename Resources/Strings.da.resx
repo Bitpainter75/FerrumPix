@@ -10875,4 +10875,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>Med fravalgte dage kan importen starte, når alle optagelsesdata er læst</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>Producent</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>Senest brugt: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} indsætter producenten, {model} modellen, {camera} begge uden gentaget producent. Mangler oplysningen, står der Uden kamera, for en video Video.</value>
+  </data>
 </root>

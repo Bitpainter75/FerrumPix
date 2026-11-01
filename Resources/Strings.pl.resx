@@ -10875,4 +10875,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>Przy odznaczonych dniach import można rozpocząć po odczytaniu wszystkich danych zdjęć</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>Producent</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>Wideo</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>Ostatnio używane: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} wstawia producenta, {model} model, {camera} oba bez powtórzonego producenta. Gdy brak danych, pojawia się Bez aparatu, dla wideo Wideo.</value>
+  </data>
 </root>

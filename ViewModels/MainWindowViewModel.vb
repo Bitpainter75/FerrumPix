@@ -5558,7 +5558,7 @@ Namespace ViewModels
             Return ExpandTargetNamePattern(pattern, sourcePath, counter, appendSourceExtension:=True)
         End Function
 
-        ''' <summary>Expandiert ein Dateinamen-Muster ({name}, {ext}, {camera}, {iso}, {aperture},
+        ''' <summary>Expandiert ein Dateinamen-Muster ({name}, {ext}, {camera}, {make}, {model}, {iso}, {aperture},
         ''' {focal}, {width}, {height}, {date:...}, {datetaken:...}, #/### als Zähler) für eine
         ''' Quelldatei. Öffentlich, weil neben dem Stapel-Umbenennen auch die Zieldateinamen der
         ''' Stapel-Funktionen (Konvertieren/Größe/Filter/Exportieren) dasselbe Muster sprechen -
@@ -5580,7 +5580,7 @@ Namespace ViewModels
 
             ' NUR fuer echte EXIF-Platzhalter lesen: "{name}_###" braucht keine Aufnahmedaten,
             ' bei RAW kostet ein ExifService.ReadExif je Datei sonst spuerbar Zeit.
-            Static exifPlatzhalter As String() = {"{camera}", "{iso}", "{aperture}", "{focal}",
+            Static exifPlatzhalter As String() = {"{camera}", "{make}", "{model}", "{iso}", "{aperture}", "{focal}",
                                                   "{width}", "{height}", "{datetaken:"}
             Dim brauchtExif = exifPlatzhalter.Any(Function(ph) pattern.IndexOf(ph, StringComparison.OrdinalIgnoreCase) >= 0)
             Dim exif As ExifData = Nothing
@@ -5592,7 +5592,11 @@ Namespace ViewModels
                 Catch
                 End Try
             End If
-            Dim camera = SanitizeForFileName(If(exif?.Camera, ""))
+            ' Wie beim Import: {camera} ohne doppelten Hersteller, {make} ohne Firmenzusatz, {model}
+            ' wie in der Datei.
+            Dim camera = SanitizeForFileName(ImageInfoService.DisplayCameraName(If(exif?.Camera, "")))
+            Dim make = SanitizeForFileName(ImageInfoService.MakeForPlaceholder(If(exif?.CameraMake, "")))
+            Dim model = SanitizeForFileName(If(exif?.CameraModel, ""))
             Dim width = ExtractLeadingNumberText(exif?.ImageWidth)
             Dim height = ExtractLeadingNumberText(exif?.ImageHeight)
             Dim iso = ExtractLeadingNumberText(exif?.ISO)
@@ -5610,6 +5614,8 @@ Namespace ViewModels
                                  Replace("{width}", width).
                                  Replace("{height}", height).
                                  Replace("{camera}", camera).
+                                 Replace("{make}", make).
+                                 Replace("{model}", model).
                                  Replace("{iso}", iso).
                                  Replace("{aperture}", aperture).
                                  Replace("{focal}", focal)

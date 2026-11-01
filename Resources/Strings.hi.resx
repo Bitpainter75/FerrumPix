@@ -10879,4 +10879,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>दिन अचयनित होने पर, सभी कैप्चर डेटा पढ़ लिए जाने के बाद आयात शुरू हो सकता है</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>निर्माता</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>वीडियो</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>पिछली बार इस्तेमाल: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} निर्माता डालता है, {model} मॉडल, {camera} दोनों बिना दोहराए निर्माता के। जानकारी न हो तो बिना कैमरा लिखा जाता है, वीडियो के लिए वीडियो।</value>
+  </data>
 </root>

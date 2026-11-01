@@ -136,6 +136,25 @@ Namespace Services
             Return words(0) & " " & String.Join(" ", rest)
         End Function
 
+        ''' <summary>Der Hersteller fuer Platzhalter: ohne Firmenzusaetze am Ende ("NIKON CORPORATION"
+        ''' wird "NIKON", "OLYMPUS IMAGING CORP." wird "OLYMPUS"). Ein mehrteiliger Name ohne Zusatz
+        ''' bleibt, wie er ist ("OM Digital Solutions").</summary>
+        Public Shared Function MakeForPlaceholder(make As String) As String
+            Dim words = If(make, "").Split(" "c, StringSplitOptions.RemoveEmptyEntries).ToList()
+            Dim suffixes = {"CORPORATION", "CORP.", "CORP", "IMAGING", "COMPANY", "COMPANY,", "CO.,", "CO.", "LTD.", "LTD", "INC.", "INC"}
+            While words.Count > 1 AndAlso suffixes.Contains(words(words.Count - 1).ToUpperInvariant())
+                words.RemoveAt(words.Count - 1)
+            End While
+            Return String.Join(" ", words)
+        End Function
+
+        ''' <summary>Der Ersatz, wenn {camera}, {make} oder {model} leer bleiben: "Video" fuer ein
+        ''' Video, das seine Kamera nicht nennt, sonst "Ohne Kamera". Ein Ordner "Ohne Kamera" fuer
+        ''' Videos sagte nichts darueber, was darin liegt.</summary>
+        Public Shared Function MissingCameraText(filePath As String) As String
+            Return If(MediaFileTypes.IsVideo(filePath), LocalizationService.T("Video"), LocalizationService.T("Ohne Kamera"))
+        End Function
+
         ''' <summary>Das Seitenverhaeltnis gekuerzt, etwa 3:2. Stand vorher zweimal im Quelltext,
         ''' einmal im Betrachter und einmal im Editor.</summary>
         Public Shared Function FormatAspectRatio(width As Integer, height As Integer) As String

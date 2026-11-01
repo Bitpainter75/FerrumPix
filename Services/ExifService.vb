@@ -13,6 +13,7 @@ Imports MetadataExtractor
 Imports MetadataExtractor.Formats.Exif
 Imports MetadataExtractor.Formats.Exif.Makernotes
 Imports MetadataExtractor.Formats.Iptc
+Imports MetadataExtractor.Formats.QuickTime
 
 Namespace Services
 
@@ -101,6 +102,11 @@ Namespace Services
         Public Property DateTaken As String = ""
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
+        ''' <summary>Hersteller und Modell einzeln, wie die Datei sie fuehrt (IFD0 Make und Model,
+        ''' bei Videos aus dem Container). Fuer die Platzhalter {make} und {model}; Camera bleibt die
+        ''' Verbindung beider fuer Katalog, Suche und Filter.</summary>
+        Public Property CameraMake As String = ""
+        Public Property CameraModel As String = ""
         ''' <summary>Der Kameraname fuer die Anzeige, ohne doppelte Marke; siehe
         ''' ImageInfoService.DisplayCameraName. Camera selbst bleibt die Schreibweise der Datei.</summary>
         Public ReadOnly Property DisplayCamera As String
@@ -365,6 +371,8 @@ Namespace Services
                 .DateTaken = source.DateTaken,
                 .DateModifiedExif = source.DateModifiedExif,
                 .Camera = source.Camera,
+                .CameraMake = source.CameraMake,
+                .CameraModel = source.CameraModel,
                 .Lens = source.Lens,
                 .CaptureMode = source.CaptureMode,
                 .FocalLength = source.FocalLength,
@@ -451,6 +459,21 @@ Namespace Services
                 data.CaptureMode = GetCaptureMode(captureDirectories)
                 Dim make = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagMake)
                 Dim model = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagModel)
+                ' Ein Video traegt kein IFD0; Telefone und manche Kameras schreiben Hersteller und
+                ' Modell in die Metadaten des QuickTime-Containers (MOV, MP4), Android das Modell
+                ' unter eigenem Schluessel. Jeder der beiden Werte wird fuer sich ergaenzt: eine Datei,
+                ' die nur das Modell nennt, bekommt den Hersteller trotzdem von dort.
+                If String.IsNullOrWhiteSpace(make) Then
+                    make = GetTagDescAcross(Of QuickTimeMetadataHeaderDirectory)(metaDirectories, QuickTimeMetadataHeaderDirectory.TagMake)
+                End If
+                If String.IsNullOrWhiteSpace(model) Then
+                    model = GetTagDescAcross(Of QuickTimeMetadataHeaderDirectory)(metaDirectories, QuickTimeMetadataHeaderDirectory.TagModel)
+                End If
+                If String.IsNullOrWhiteSpace(model) Then
+                    model = GetTagDescAcross(Of QuickTimeMetadataHeaderDirectory)(metaDirectories, QuickTimeMetadataHeaderDirectory.TagAndroidModel)
+                End If
+                data.CameraMake = make.Trim()
+                data.CameraModel = model.Trim()
                 data.Camera = (make & " " & model).Trim()
                 data.Software = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagSoftware)
                 ' NUR der eingebettete Wert. Der aus der Beistelldatei kommt in ReadExif obendrauf,
@@ -505,7 +528,11 @@ Namespace Services
             ' dort kommen koennen. Sonst haengt es am Zufall: eine Nikon-NEF, die ihre Empfindlichkeit
             ' nur im Herstellerblock fuehrt, hat Kamera und Zeit, und die ISO-Zeile blieb leer,
             ' obwohl LibRaw sie kennt.
+            ' Hersteller und Modell EINZELN, aus demselben Grund wie Breite und Hoehe: eine Datei,
+            ' die nur das Modell nennt, liess {make} sonst leer.
             Dim needsCamera = String.IsNullOrWhiteSpace(data.Camera)
+            Dim needsMake = String.IsNullOrWhiteSpace(data.CameraMake)
+            Dim needsModel = String.IsNullOrWhiteSpace(data.CameraModel)
             Dim needsTaken = String.IsNullOrWhiteSpace(data.DateTaken)
             ' Breite und Hoehe EINZELN: eine Datei, die nur eine der beiden Angaben traegt, darf die
             ' vorhandene nicht verlieren. Ein gemeinsames Kennzeichen hatte genau das getan.
@@ -515,14 +542,18 @@ Namespace Services
             Dim needsAperture = String.IsNullOrWhiteSpace(data.Aperture)
             Dim needsShutter = String.IsNullOrWhiteSpace(data.ShutterSpeed)
             Dim needsFocal = String.IsNullOrWhiteSpace(data.FocalLength)
-            If Not (needsCamera OrElse needsTaken OrElse needsWidth OrElse needsHeight OrElse
+            If Not (needsCamera OrElse needsMake OrElse needsModel OrElse needsTaken OrElse needsWidth OrElse needsHeight OrElse
                     needsIso OrElse needsAperture OrElse needsShutter OrElse needsFocal) Then Return
 
             Try
                 Dim fromFile = RawDecodeService.ReadFileMetadata(imagePath)
                 If fromFile Is Nothing Then Return
 
-                If needsCamera Then data.Camera = (fromFile.Make & " " & fromFile.Model).Trim()
+                If needsMake Then data.CameraMake = If(fromFile.Make, "").Trim()
+                If needsModel Then data.CameraModel = If(fromFile.Model, "").Trim()
+                ' Camera nur, wenn es leer war: der Wert steht in Katalog, Suche und Filtern, und eine
+                ' geaenderte Schreibweise stuende dort neben der alten, bis jede Datei neu gelesen ist.
+                If needsCamera Then data.Camera = (data.CameraMake & " " & data.CameraModel).Trim()
                 If needsTaken AndAlso fromFile.Taken.HasValue Then
                     ' Dasselbe Rohformat wie im EXIF - der Katalog liest die Zeichenkette so.
                     data.DateTaken = fromFile.Taken.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)

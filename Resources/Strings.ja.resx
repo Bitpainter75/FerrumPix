@@ -10875,4 +10875,16 @@
   <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
     <value>選択を外した日がある場合、すべての撮影データを読み込んでから取り込みを開始できます</value>
   </data>
+  <data name="Hersteller_40a47c56" xml:space="preserve">
+    <value>メーカー</value>
+  </data>
+  <data name="Video_bc17c1f0" xml:space="preserve">
+    <value>動画</value>
+  </data>
+  <data name="Zuletzt_benutzt_0_c3cfeddc" xml:space="preserve">
+    <value>前回使用: {0}</value>
+  </data>
+  <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
+    <value>{make} はメーカー、{model} はモデル、{camera} はメーカーを重複させずに両方を挿入します。情報がない場合はカメラなし、動画の場合は動画になります。</value>
+  </data>
 </root>

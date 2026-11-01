@@ -29,6 +29,9 @@
 
 ### Fixes
 
+- Import: a target folder pattern is remembered for the next import. New placeholders {make} and
+  {model} give the camera's make and model on their own, {camera} no longer repeats the make, and
+  videos without camera information go to "Video" instead of "No camera".
 - Distort: the live preview of Grid and Warp now appears from the first drag, also at the
   corners, instead of only after a second handle was moved.
 - Smaller close and clear crosses everywhere, and the frame switch next to the editor's zoom is
