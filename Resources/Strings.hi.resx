@@ -10900,4 +10900,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>बैकअप के लिए दूसरा फ़ोल्डर अभी बाकी है।</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>परिवेश</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>उभार</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>छाया डालें</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>प्रकाश स्रोतों से पहले पूरी तस्वीर को स्टॉप में उजला या गहरा करता है। गहरा करके रोशनी जोड़ने पर दृश्य नए सिरे से रोशन लगता है।</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>स्रोत दृश्य से कितना ऊपर है। ऊँचा चौड़ा, सपाट प्रकाश देता है, नीचा छोटा, चमकीला केंद्र।</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>सतहों की दिशा प्रकाश को कितना आकार देती है: जो प्रकाश की ओर है वह उजला होता है, जो दूर है वह गहरा रहता है।</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>प्रकाश और सतह के बीच की वस्तुएँ छाया डालती हैं। प्रकाश की कोमलता उसे नरम बनाती है।</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>आयात का लक्ष्य अभी बाकी है।</value>
+  </data>
 </root>

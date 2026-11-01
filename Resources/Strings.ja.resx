@@ -10896,4 +10896,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>バックアップ用の 2 つ目のフォルダーがまだありません。</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>環境光</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>立体感</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>影を落とす</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>光源の前に画像全体を段単位で明るくまたは暗くします。暗くして光を加えると、場面が照らし直されたように見えます。</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>光源が場面からどれだけ高い位置にあるか。高いと広く平らな光、低いと小さく明るい中心になります。</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>面の向きが光をどれだけ形作るか。光に向いた面は明るく、背を向けた面は暗いままです。</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>光と面の間にある物が影を落とします。光の柔らかさで影も柔らかくなります。</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>取り込み先がまだありません。</value>
+  </data>
 </root>

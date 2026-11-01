@@ -10896,4 +10896,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>Для резервной копии ещё не указана вторая папка.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Окружение</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Рельеф</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Отбрасывать тени</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Осветляет или затемняет всё изображение перед источниками света, в ступенях. Затемнённая и со светом сцена выглядит заново освещённой.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>Насколько высоко источник над сценой. Высоко даёт широкий плоский конус света, низко маленькое яркое ядро.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>Насколько ориентация поверхностей формирует свет: обращённое к свету светлеет, отвёрнутое остаётся тёмным.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Предметы между светом и поверхностью отбрасывают тень. Мягкость света делает её мягче.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>Ещё не указано, куда импортировать.</value>
+  </data>
 </root>

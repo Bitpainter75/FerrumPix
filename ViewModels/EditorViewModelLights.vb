@@ -263,9 +263,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetLights()
-            If _lightSources.Count = 0 Then Return
+            If _lightSources.Count = 0 AndAlso _lightAmbient = 0 Then Return
             CaptureUndoState("LightRemove")
             _lightSources.Clear()
+            _lightAmbient = 0
             _selectedLightId = ""
             AfterLightChanged(raiseAll:=True)
         End Sub
@@ -337,6 +338,7 @@ Namespace ViewModels
                               NameOf(LightFalloffLabel), NameOf(LightUseTemperature), NameOf(LightUseColor), NameOf(LightTemperature),
                               NameOf(LightColorValue), NameOf(LightBlendModeLabel), NameOf(LightGlow), NameOf(LightRayCount),
                               NameOf(LightRayContrast), NameOf(LightUseDepth), NameOf(LightDepthReach), NameOf(LightX), NameOf(LightY),
+                              NameOf(LightHeight), NameOf(LightShading), NameOf(LightCastShadows), NameOf(LightAmbient),
                               NameOf(IsLightSpot), NameOf(IsLightArea), NameOf(IsLightRays), NameOf(IsLightDirectional),
                               NameOf(LightSwatchBrush), NameOf(LightName)}
                 Me.RaisePropertyChanged(name)
@@ -642,6 +644,56 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Wie hoch die Quelle ueber der Szene steht, in Prozent der kuerzeren Seite.</summary>
+        Public Property LightHeight As Double
+            Get
+                Return If(SelectedLight?.HeightPercent, 25.0)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(200.0, value))
+                SetLightValue(NameOf(LightHeight), Sub(l) l.HeightPercent = v, Function(l) Math.Abs(l.HeightPercent - v) < 0.0001)
+            End Set
+        End Property
+
+        ''' <summary>Wie stark die Ausrichtung der Flaechen das Licht formt (mit Tiefe).</summary>
+        Public Property LightShading As Double
+            Get
+                Return If(SelectedLight?.Shading, 60.0)
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(0.0, Math.Min(100.0, value))
+                SetLightValue(NameOf(LightShading), Sub(l) l.Shading = v, Function(l) Math.Abs(l.Shading - v) < 0.0001)
+            End Set
+        End Property
+
+        ''' <summary>Wirft das Licht Schatten hinter Gegenstaende (mit Tiefe)?</summary>
+        Public Property LightCastShadows As Boolean
+            Get
+                Return If(SelectedLight?.CastShadows, False)
+            End Get
+            Set(value As Boolean)
+                SetLightValue(NameOf(LightCastShadows), Sub(l) l.CastShadows = value, Function(l) l.CastShadows = value)
+            End Set
+        End Property
+
+        Private _lightAmbient As Double
+
+        ''' <summary>Die Umgebung in Blendenstufen: hellt oder dunkelt das ganze Bild vor den
+        ''' Lichtquellen. Gehoert keinem einzelnen Licht, sondern dem Werkzeug.</summary>
+        Public Property LightAmbient As Double
+            Get
+                Return _lightAmbient
+            End Get
+            Set(value As Double)
+                Dim v = Math.Max(-4.0, Math.Min(2.0, value))
+                If Math.Abs(v - _lightAmbient) < 0.0001 Then Return
+                If Not _lightEditActive Then CaptureUndoState(NameOf(LightAmbient))
+                _lightAmbient = v
+                Me.RaisePropertyChanged(NameOf(LightAmbient))
+                AfterLightChanged(raiseAll:=False)
+            End Set
+        End Property
+
         Private _lightDepthRunning As Boolean
 
         ''' <summary>Das Tiefenzeichen fuer das Rezept: nur, wenn die abgelegte Karte zu genau diesem
@@ -680,10 +732,10 @@ Namespace ViewModels
             If String.Equals(key, _lightDepthToken, StringComparison.Ordinal) AndAlso ImageProcessor.HasLightDepthMap(key) Then Return
             _lightDepthRunning = True
             StatusText = LocalizationService.T("Tiefe wird berechnet…")
-            Dim sourcePath = RenderSourcePath
-            Dim workingImage = CloneWorkingFullForRender()
             Dim stale = False
             Try
+                Dim sourcePath = RenderSourcePath
+                Dim workingImage = CloneWorkingFullForRender()
                 Dim map = Await Task.Run(Function()
                                              Using rendered = ImageProcessor.RenderDisplayImage(sourcePath, recipe, workingImage)
                                                  If rendered Is Nothing Then Return Nothing
@@ -711,6 +763,14 @@ Namespace ViewModels
                 _lightDepthToken = key
                 StatusText = ""
                 SchedulePreviewUpdate()
+            Catch ex As Exception
+                ' Ein Fehler in Rendern oder Modell gilt wie eine leere Karte: der Schluessel wird
+                ' gemerkt, damit die naechste Vorschau ihn nicht endlos neu anstoesst, und die
+                ' Statuszeile sagt es, statt bei "Tiefe wird berechnet" stehen zu bleiben. Ein neuer
+                ' Bildstand oder ein erneutes Einschalten der Tiefe versucht es wieder.
+                DiagnosticLogService.LogException("Editor.LightDepth", ex)
+                _lightDepthFailedKey = key
+                StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
             Finally
                 _lightDepthRunning = False
                 If stale AndAlso _lightSources.Any(Function(l) l.UseDepth AndAlso l.Enabled) Then
@@ -767,6 +827,7 @@ Namespace ViewModels
         ''' <summary>Laedt die Lichter aus einem Rezept (Bild oeffnen, Rueckgaengig).</summary>
         Private Sub LoadLightSourcesFrom(adj As ImageAdjustments)
             _lightSources.Clear()
+            _lightAmbient = If(adj?.LightAmbient, 0.0)
             If adj?.LightSources IsNot Nothing Then
                 For Each l In adj.LightSources
                     If l IsNot Nothing Then _lightSources.Add(l.Clone())
@@ -793,6 +854,10 @@ Namespace ViewModels
                 Case "LightEnabled" : Return CombineHistoryLabel("Beleuchtung", "Licht ein oder aus")
                 Case NameOf(LightIntensity) : Return CombineHistoryLabel("Beleuchtung", "Leuchtkraft")
                 Case NameOf(LightRadius) : Return CombineHistoryLabel("Beleuchtung", "Reichweite")
+                Case NameOf(LightAmbient) : Return CombineHistoryLabel("Beleuchtung", "Umgebung")
+                Case NameOf(LightHeight) : Return CombineHistoryLabel("Beleuchtung", "Höhe")
+                Case NameOf(LightShading) : Return CombineHistoryLabel("Beleuchtung", "Relief")
+                Case NameOf(LightCastShadows) : Return CombineHistoryLabel("Beleuchtung", "Schatten werfen")
                 Case NameOf(LightPresetLabel) : Return CombineHistoryLabel("Beleuchtung", "Lichtart")
                 Case NameOf(LightTemperature), NameOf(LightColorValue), NameOf(LightUseTemperature) : Return CombineHistoryLabel("Beleuchtung", "Lichtfarbe")
                 Case Else : Return LocalizationService.T("Beleuchtung")

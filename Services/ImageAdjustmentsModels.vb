@@ -973,6 +973,10 @@ Namespace Services
         ''' <summary>Die Lichtquellen des Werkzeugs Beleuchtung (siehe <see cref="LightSource"/>).
         ''' Strukturell wie die Objekte: sie wandern nicht in Korrekturebenen.</summary>
         Public Property LightSources As New System.Collections.Generic.List(Of LightSource)()
+        ''' <summary>Die Umgebung des Werkzeugs Beleuchtung in Blendenstufen: hellt oder dunkelt das
+        ''' ganze Bild vor den Lichtquellen, wie die Belichtung vor der Tonkurve. Abgedunkelt und
+        ''' mit gesetzten Lichtern entsteht eine neu beleuchtete Szene. Strukturell wie die Lichter.</summary>
+        Public Property LightAmbient As Double = 0
         ''' <summary>Welche Tiefenkarte zu diesem Rezept gehoert, siehe
         ''' ImageProcessor.SetLightDepthMap. Gesetzt vom Editor, nicht gespeichert: ohne passende
         ''' Karte rechnen tiefenbewusste Lichter wie gewoehnliche.</summary>
@@ -1199,7 +1203,7 @@ Namespace Services
             "UpscaleModel",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "RetouchSpots", "Annotations", "AnnotationGroups", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
-            "LightSources", "LightDepthToken",
+            "LightSources", "LightAmbient", "LightDepthToken",
             "SelectionScopeEnabled", "HasActiveSelection", "ActiveSelectionIsMask",
             "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
@@ -1705,6 +1709,7 @@ Namespace Services
                 .MaskedAdjustmentLayers = If(MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
                 .LightSources = If(LightSources, New List(Of LightSource)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
                 .LightDepthToken = LightDepthToken,
+                .LightAmbient = LightAmbient,
                 .SelectionScopeEnabled = SelectionScopeEnabled,
                 .HasActiveSelection = HasActiveSelection,
                 .ActiveSelectionIsMask = ActiveSelectionIsMask,

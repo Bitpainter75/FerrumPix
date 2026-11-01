@@ -10856,4 +10856,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>Per il backup manca ancora la seconda cartella.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Ambiente</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Rilievo</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Proietta ombre</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Schiarisce o scurisce l'intera immagine prima delle sorgenti di luce, in stop. Scurita e con le luci, la scena sembra illuminata di nuovo.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>Quanto in alto sta la sorgente sopra la scena. In alto dà un cono di luce ampio e piatto, in basso un nucleo piccolo e luminoso.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>Quanto l'orientamento delle superfici modella la luce: ciò che è rivolto alla luce si schiarisce, ciò che le volta le spalle resta scuro.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Gli oggetti tra la luce e una superficie proiettano un'ombra. La morbidezza della luce la ammorbidisce.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>Manca ancora la destinazione dell'importazione.</value>
+  </data>
 </root>

@@ -273,6 +273,9 @@ Namespace ViewModels
                 If DialogImportTargetInSource() Then Return LocalizationService.T("Das Ziel liegt in der Quelle. Auf der Quelle wird nichts verändert, bitte ein anderes Ziel wählen.")
                 ' Jede Sperre des Knopfes sagt ihren Grund (IsDialogImportPrimaryEnabled). Ein Ziel
                 ' auf einer zweiten Platte war grau ohne ein Wort dazu (GitHub #117).
+                If String.IsNullOrWhiteSpace(_dialogImportTargetFolder) Then
+                    Return LocalizationService.T("Es fehlt noch das Ziel, in das importiert wird.")
+                End If
                 If Not String.IsNullOrWhiteSpace(_dialogImportTargetFolder) AndAlso
                    Not FileOperationPolicy.IsInAllowedArea(CardImportService.FixedRootOf(_dialogImportTargetFolder)) Then
                     Return LocalizationService.T("Das Ziel liegt außerhalb der Ordner, in die FerrumPix schreiben darf. Erlauben lässt sich das unter Einstellungen, Galerie, Dateioperationen außerhalb des persönlichen Ordners erlauben.")

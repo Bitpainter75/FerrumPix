@@ -2836,10 +2836,30 @@ Namespace Services
             ' Die Umkehr steckt dabei ganz vorn in der Kette: Belichtung, Weißabgleich, Kurven und
             ' Filter sollen auf dem fertigen Positiv arbeiten - auf dem Negativ wären sie
             ' seitenverkehrt (Aufhellen würde abdunkeln).
+            ' Die Lichtquellen des Werkzeugs Beleuchtung (ImageProcessorLights.vb) VOR der Kette: sie
+            ' rechnen auf den Szenenwerten wie die Belichtung der RAW-Stufe, und Belichtung,
+            ' Tonregler, Kurven und Farbe arbeiten danach auf dem beleuchteten Bild. Bei einem
+            ' Filmnegativ danach, denn vor der Umkehr wuerde ein Licht abdunkeln.
+            Dim lightsFirst = HasActiveLightSources(adj) AndAlso Not adj.NegativeEnabled
+            If lightsFirst Then processed = ApplyLightingStage(processed, adj, owned)
+
             processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
                 "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj, toneReference)), owned)
 
+            If HasActiveLightSources(adj) AndAlso Not lightsFirst Then processed = ApplyLightingStage(processed, adj, owned)
+
             Return processed
+        End Function
+
+        ''' <summary>Die Lichtstufe mit der Schulter, die im Quellbild steckt: bei einer RAW, deren
+        ''' Belichtung in der RAW-Stufe liegt, das Knie der Lichterrettung, sonst keine.</summary>
+        Private Shared Function ApplyLightingStage(source As SKBitmap, adj As ImageAdjustments, ByRef owned As Boolean) As SKBitmap
+            Dim lights = adj.LightSources
+            Dim ambient = adj.LightAmbient
+            Dim token = adj.LightDepthToken
+            Dim knee = If(adj.SourceFollowsRawExposure, adj.KneeInSource, 1.0)
+            Return ReplaceBitmapOwned(source, PerformanceTraceService.Measure(
+                "Pixel: Lichtquellen", Function() ApplyLightSources(source, lights, ambient, token, knee)), owned)
         End Function
 
         ''' <summary>Die raeumlichen Detail- und Effektstufen. Ihr Ergebnis ist die Grundlage
@@ -2954,15 +2974,6 @@ Namespace Services
                                                           adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition),
                                            Function(s) ApplyTiltShift(s, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
                                                                       adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition))
-            End If
-
-            ' Die Lichtquellen des Werkzeugs Beleuchtung (ImageProcessorLights.vb), vor der
-            ' Vignette: die dunkelt danach auch beleuchtete Ecken ab.
-            If HasActiveLightSources(adj) Then
-                Dim lights = adj.LightSources
-                Dim token = adj.LightDepthToken
-                processed = RunDetailStage(session, processed, owned, "Pixel: Lichtquellen", Nothing,
-                                           Function(s) ApplyLightSources(s, lights, token))
             End If
 
             If adj.Vignette <> 0 Then
@@ -4444,7 +4455,6 @@ Namespace Services
             tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
             tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
             tone.AddNoise = neutral.AddNoise
-            tone.LightSources = New List(Of LightSource)()
             If String.Equals(If(tone.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
                 tone.FilterPreset = "" : tone.FilterStrength = 0
             End If
@@ -4497,6 +4507,8 @@ Namespace Services
             Dim state = adj.Clone()
             NeutralizeDetailStages(state)
             Dim neutral = New ImageAdjustments()
+            ' Die Lichter laufen nach dem Farbrauschen, vor der Punktkette.
+            state.LightSources = New List(Of LightSource)() : state.LightAmbient = neutral.LightAmbient
             state.Exposure = neutral.Exposure : state.Brightness = neutral.Brightness : state.Contrast = neutral.Contrast
             state.Saturation = neutral.Saturation : state.Vibrance = neutral.Vibrance
             state.Highlights = neutral.Highlights : state.ShadowsLevel = neutral.ShadowsLevel

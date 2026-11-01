@@ -23670,6 +23670,7 @@ Namespace ViewModels
                 .Masks = _imageMasks.Select(Function(m) m.Clone()).ToList(),
                 .MaskedAdjustmentLayers = _maskedAdjustmentLayers.Select(Function(l) l.Clone()).ToList(),
                 .LightSources = _lightSources.Select(Function(l) l.Clone()).ToList(),
+                .LightAmbient = _lightAmbient,
                 .GlobalAdjustmentsHidden = _globalAdjustmentsHidden,
                 .BackgroundHidden = _backgroundHidden,
                 .BaseLayerLockPosition = _baseLayerLockPosition,
@@ -25853,6 +25854,9 @@ Namespace ViewModels
             _retouchSpots.Clear()
             _annotations.Clear()
             _annotationGroups.Clear()
+            ' Die Lichter wie die Objekte: ein Bild ohne Rezept erbte sonst die Lichtquellen und die
+            ' Umgebung des vorigen.
+            LoadLightSourcesFrom(Nothing)
             _pixelEditLayer.Clear()
             _selectedAnnotationIndex = -1
             _extraSelectedAnnotations.Clear()
@@ -30293,6 +30297,7 @@ Namespace ViewModels
                     SetResizeValues(0, 0)
                 Case EditorTool.Light
                     _lightSources.Clear()
+                    _lightAmbient = 0
                     _selectedLightId = ""
                     AfterLightChanged(raiseAll:=True)
                 Case EditorTool.Warp

@@ -10874,4 +10874,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>Für die Sicherung fehlt noch der zweite Ordner.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Umgebung</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Relief</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Schatten werfen</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Hellt oder dunkelt das ganze Bild vor den Lichtquellen, in Blendenstufen. Abgedunkelt und mit Lichtern entsteht eine neu beleuchtete Szene.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>Wie hoch die Quelle über der Szene steht. Hoch gibt einen breiten, flachen Lichtkegel, tief einen kleinen, hellen Kern.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>Wie stark die Ausrichtung der Flächen das Licht formt: was dem Licht zugewandt ist, wird hell, was abgewandt ist, bleibt dunkel.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Gegenstände zwischen Licht und Fläche werfen einen Schatten. Die Weiche des Lichts macht ihn weicher.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>Es fehlt noch das Ziel, in das importiert wird.</value>
+  </data>
 </root>

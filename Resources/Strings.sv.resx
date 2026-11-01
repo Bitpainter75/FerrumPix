@@ -10896,4 +10896,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>Säkerhetskopian saknar fortfarande den andra mappen.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Omgivning</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Relief</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Kasta skuggor</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Gör hela bilden ljusare eller mörkare före ljuskällorna, i steg. Mörklagd och med ljus tillagt ser scenen nybelyst ut.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>Hur högt källan står över scenen. Högt ger en bred, platt ljuskägla, lågt en liten, ljus kärna.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>Hur mycket ytornas riktning formar ljuset: det som vetter mot ljuset blir ljust, det som vetter bort förblir mörkt.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Föremål mellan ljuset och en yta kastar en skugga. Ljusets mjukhet gör den mjukare.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>Målet att importera till saknas fortfarande.</value>
+  </data>
 </root>

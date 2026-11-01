@@ -10875,4 +10875,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>The backup still needs its second folder.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Ambient</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Relief</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Cast shadows</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Brightens or darkens the whole picture before the light sources, in stops. Darkened and with lights added, the scene looks relit.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>How high the source stands above the scene. High gives a wide, flat pool of light, low a small, bright core.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>How strongly the orientation of surfaces shapes the light: what faces the light gets bright, what faces away stays dark.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Objects between the light and a surface cast a shadow. The softness of the light makes it softer.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>The target to import into is still missing.</value>
+  </data>
 </root>

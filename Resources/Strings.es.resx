@@ -10856,4 +10856,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>A la copia de seguridad todavía le falta la segunda carpeta.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Ambiente</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Relieve</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Proyectar sombras</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Aclara u oscurece toda la imagen antes de las fuentes de luz, en pasos. Oscurecida y con luces, la escena parece iluminada de nuevo.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>A qué altura está la fuente sobre la escena. Alta da un cono de luz amplio y plano, baja un núcleo pequeño y brillante.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>Cuánto da forma a la luz la orientación de las superficies: lo que mira a la luz se aclara, lo que la evita queda oscuro.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Los objetos entre la luz y una superficie proyectan una sombra. La suavidad de la luz la suaviza.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>Todavía falta el destino de la importación.</value>
+  </data>
 </root>

@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.75
 
 ### Changes
 
@@ -7,7 +7,11 @@
   each with brightness, reach, softness, color temperature or a free color and an optional halo.
   Light types like candle, bulb, LED, street lamp, floodlight, flashlight, evening sun, neon or
   shadow give a quick start. With the depth model the light can follow the depth of the scene. The
-  lights stay editable at any time and are saved with the picture's edit.
+  lights stay editable at any time and are saved with the picture's edit. Lights now work like light
+  at the time of the shot, before tone and colour, so bright light rolls off softly instead of
+  clipping. A light can stand higher or lower above the scene, an ambient control darkens or
+  brightens the scene around the lights, and with the depth model light follows the shape of
+  surfaces and can cast shadows behind objects.
 
 - **Faster import from large cards:** the capture days and all options appear right away, the
   exact capture data is read in the background afterwards.
@@ -29,12 +33,16 @@
 
 ### Fixes
 
+- Lighting: a picture without an edit no longer shows the lights of the picture opened before it.
 - Import: a target folder pattern is remembered for the next import. New placeholders {make} and
   {model} give the camera's make and model on their own, {camera} no longer repeats the make, and
   videos without camera information go to "Video" instead of "No camera".
+
 - Import: when the import button is disabled, the summary now says why, for example a target
   outside the folders FerrumPix may write to, and where to allow it.
+
 - Distort: the live preview of Grid and Warp now appears from the first drag, also at the
   corners, instead of only after a second handle was moved.
+
 - Smaller close and clear crosses everywhere, and the frame switch next to the editor's zoom is
   gone; the frame is switched in its own group.

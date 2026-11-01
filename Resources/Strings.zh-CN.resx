@@ -10854,4 +10854,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>备份还缺少第二个文件夹。</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>环境</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>立体感</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>投射阴影</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>在光源之前以档为单位提亮或压暗整张图像。压暗后再加光源，场景看起来像重新布光。</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>光源在场景上方的高度。高则光区宽而平，低则中心小而亮。</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>表面朝向对光的塑造程度：朝向光的地方变亮，背向的地方保持暗。</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>光与表面之间的物体会投下阴影。光的柔和度使其更柔和。</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>还缺少导入目标。</value>
+  </data>
 </root>

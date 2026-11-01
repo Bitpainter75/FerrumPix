@@ -32,9 +32,20 @@
                 <ItemsControl ItemsSource="{Binding LightRows}" IsVisible="{Binding HasLights}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,1"
+                            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,1"
                                   AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
-                                <Button Classes="ghost" Classes.active="{Binding IsSelected}"
+                                <!-- Das Auge wie an einer Ebenen- und Maskenzeile: links, an im Akzent.
+                                     Ausgeschaltet bleibt das Licht erhalten und rechnet nur nicht mit. -->
+                                <ToggleButton Grid.Column="0" Classes="ghost layer-eye"
+                                              Width="22" Height="22" Padding="0" Margin="0,0,4,0"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                              Command="{Binding DataContext.ToggleLightEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              CommandParameter="{Binding Id}"
+                                              ToolTip.Tip="Licht ein- oder ausblenden">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18" />
+                                </ToggleButton>
+                                <Button Grid.Column="1" Classes="ghost" Classes.active="{Binding IsSelected}"
                                         HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="6,4"
                                         Command="{Binding DataContext.SelectLightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Id}">
@@ -43,15 +54,6 @@
                                         <icons:SvgIcon Source="{Binding IconSource}" Width="18" Height="18" />
                                         <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                                     </StackPanel>
-                                </Button>
-                                <Button Grid.Column="1" Classes="icon-btn" Width="28" Height="28" Padding="0"
-                                        Command="{Binding DataContext.ToggleLightEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding Id}"
-                                        ToolTip.Tip="Licht ein- oder ausblenden">
-                                    <Panel>
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18" IsVisible="{Binding IsEnabled}" />
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-slash.svg" Width="18" Height="18" IsVisible="{Binding !IsEnabled}" />
-                                    </Panel>
                                 </Button>
                                 <!-- Wie in der Maskenliste: ein kleines, zurueckhaltendes Kreuz. -->
                                 <Button Grid.Column="2" Classes="ghost" Width="22" Height="22" Padding="0" Margin="4,0,4,0"
@@ -88,6 +90,18 @@
             </StackPanel>
         </Border>
 
+        <!-- UMGEBUNG: gehoert dem Werkzeug, nicht einem Licht; deshalb auch ohne markiertes Licht. -->
+        <Border Classes="adjustment-group">
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                <TextBlock Text="Umgebung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                           ToolTip.Tip="Hellt oder dunkelt das ganze Bild vor den Lichtquellen, in Blendenstufen. Abgedunkelt und mit Lichtern entsteht eine neu beleuchtete Szene." />
+                <icons:RoundSlider Grid.Column="1" Minimum="-4" Maximum="2" DefaultValue="0" Value="{Binding LightAmbient}" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightAmbient, Mode=TwoWay}"
+                                         Minimum="-4" Maximum="2" Increment="0.1" FormatString="F1" />
+            </Grid>
+        </Border>
+
         <Border Classes="adjustment-group" IsVisible="{Binding HasSelectedLight}">
             <StackPanel Spacing="2">
                 <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,0,0,4">
@@ -117,6 +131,14 @@
                     <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300" DefaultValue="30" Value="{Binding LightRadius}" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightRadius, Mode=TwoWay}"
                                              Minimum="1" Maximum="300" Increment="1" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Höhe" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie hoch die Quelle über der Szene steht. Hoch gibt einen breiten, flachen Lichtkegel, tief einen kleinen, hellen Kern." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200" DefaultValue="25" Value="{Binding LightHeight}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightHeight, Mode=TwoWay}"
+                                             Minimum="0" Maximum="200" Increment="1" FormatString="F0" />
                 </Grid>
                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsLightDirectional}">
                     <TextBlock Text="Richtung" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -235,6 +257,17 @@
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightDepthReach, Mode=TwoWay}"
                                              Minimum="0" Maximum="100" />
                 </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding LightUseDepth}">
+                    <TextBlock Text="Relief" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie stark die Ausrichtung der Flächen das Licht formt: was dem Licht zugewandt ist, wird hell, was abgewandt ist, bleibt dunkel." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="60" Value="{Binding LightShading}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightShading, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
+                <CheckBox Content="Schatten werfen" IsChecked="{Binding LightCastShadows}" IsVisible="{Binding LightUseDepth}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Gegenstände zwischen Licht und Fläche werfen einen Schatten. Die Weiche des Lichts macht ihn weicher." />
             </StackPanel>
         </Border>
     </StackPanel>

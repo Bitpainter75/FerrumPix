@@ -10896,4 +10896,28 @@
   <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
     <value>Voor de back-up ontbreekt nog de tweede map.</value>
   </data>
+  <data name="Umgebung_7e68b548" xml:space="preserve">
+    <value>Omgeving</value>
+  </data>
+  <data name="Relief_be53bb74" xml:space="preserve">
+    <value>Reliëf</value>
+  </data>
+  <data name="Schatten_werfen_f6bda404" xml:space="preserve">
+    <value>Schaduw werpen</value>
+  </data>
+  <data name="Hellt_oder_dunkelt_das_ganze_Bild_vor_den_Lichtq_7d22db96" xml:space="preserve">
+    <value>Maakt het hele beeld lichter of donkerder vóór de lichtbronnen, in stops. Verdonkerd en met lichten erbij lijkt de scène opnieuw belicht.</value>
+  </data>
+  <data name="Wie_hoch_die_Quelle_ber_der_Szene_steht_Hoch_gib_9949fee6" xml:space="preserve">
+    <value>Hoe hoog de bron boven de scène staat. Hoog geeft een brede, vlakke lichtkegel, laag een kleine, heldere kern.</value>
+  </data>
+  <data name="Wie_stark_die_Ausrichtung_der_Fl_chen_das_Licht__8cb80d82" xml:space="preserve">
+    <value>Hoe sterk de richting van de vlakken het licht vormt: wat naar het licht gekeerd is, wordt licht, wat ervan afgekeerd is, blijft donker.</value>
+  </data>
+  <data name="Gegenst_nde_zwischen_Licht_und_Fl_che_werfen_ein_06531965" xml:space="preserve">
+    <value>Voorwerpen tussen licht en vlak werpen een schaduw. De zachtheid van het licht maakt die zachter.</value>
+  </data>
+  <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
+    <value>Het doel waarnaar geïmporteerd wordt, ontbreekt nog.</value>
+  </data>
 </root>

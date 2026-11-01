@@ -61,6 +61,17 @@ Namespace Services
         ''' <summary>Wie weit das Licht in der Tiefe reicht, 0 bis 100.</summary>
         Public Property DepthReach As Double = 25
 
+        ''' <summary>Wie hoch die Quelle ueber der Szene steht, in Prozent der kuerzeren Bildseite.
+        ''' Eine hohe Quelle gibt einen breiten, flachen Lichtkegel, eine tiefe einen kleinen, hellen
+        ''' Kern; mit Tiefe auch die Richtung, aus der das Licht auf die Flaechen faellt.</summary>
+        Public Property HeightPercent As Double = 25
+        ''' <summary>Wie stark die Ausrichtung der Flaechen das Licht formt, 0 bis 100: was dem Licht
+        ''' zugewandt ist, wird hell, was abgewandt ist, bleibt dunkel. Braucht die Tiefe.</summary>
+        Public Property Shading As Double = 60
+        ''' <summary>Wirft das Licht Schatten hinter Gegenstaende, die zwischen ihm und einer Flaeche
+        ''' stehen? Braucht die Tiefe.</summary>
+        Public Property CastShadows As Boolean = False
+
         Public Function Clone() As LightSource
             Return DirectCast(MemberwiseClone(), LightSource)
         End Function
@@ -70,7 +81,7 @@ Namespace Services
             Return String.Join(",", New Object() {
                 Enabled, Kind, XPercent, YPercent, RadiusPercent, Intensity, AngleDegrees, ConeDegrees,
                 AspectPercent, Softness, Falloff, UseTemperature, TemperatureKelvin, Color, BlendMode, Glow,
-                RayCount, RayContrast, UseDepth, DepthReach, Id
+                RayCount, RayContrast, UseDepth, DepthReach, HeightPercent, Shading, CastShadows, Id
             }.Select(Function(v) Convert.ToString(v, CultureInfo.InvariantCulture)))
         End Function
     End Class
