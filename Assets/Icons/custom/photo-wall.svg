@@ -1,0 +1,20 @@
+<!--
+Eigene Zeichnung fuer die Fotowand: ein Brett aus unterschiedlich grossen Feldern,
+in der Strichstaerke der uebrigen eigenen Symbole.
+-->
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+>
+  <rect x="3.75" y="3.75" width="16.5" height="16.5" rx="2.25" />
+  <path d="M12 3.75v16.5" />
+  <path d="M3.75 9.5h8.25" />
+  <path d="M12 14.5h8.25" />
+</svg>

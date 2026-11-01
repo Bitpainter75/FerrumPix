@@ -2630,6 +2630,8 @@ Namespace Services
 
         Private Shared Function ParseSvgToPath(iconPath As String) As ShapePathData
             Try
+                ' Ein Symbol aus einem alten Bild kann noch in den entfernten Tabler-Ordner zeigen.
+                iconPath = IconAssets.ResolveLegacy(iconPath)
                 Dim svgText As String
                 If iconPath.StartsWith("avares://", StringComparison.OrdinalIgnoreCase) Then
                     Using stream = AssetLoader.Open(New Uri(iconPath))

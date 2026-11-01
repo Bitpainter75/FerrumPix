@@ -496,16 +496,16 @@ Namespace ViewModels
 
         ''' <summary>Das Symbol eines Handgriffs in der Historie: das des Werkzeugs, in dem er sitzt.</summary>
         Private Shared Function CorrectionHistoryIcon(propertyName As String) As String
-            Const outline = "avares://FerrumPix/Assets/Icons/outline/"
+            Const outline = "avares://FerrumPix/Assets/Icons/phosphor/regular/"
             Select Case propertyName
                 Case NameOf(ChannelMixerMonochrome), NameOf(ChannelMixerRed), NameOf(ChannelMixerGreen),
                      NameOf(ChannelMixerBlue), NameOf(ChannelMixerConstant),
                      NameOf(GradientMapShadowColorValue), NameOf(GradientMapHighlightColorValue), NameOf(GradientMapAmount)
-                    Return outline & "color-filter.svg"
+                    Return outline & "intersect-three.svg"
                 Case NameOf(PosterizeLevels), NameOf(ThresholdLevel),
                      NameOf(TiltShiftAmount), NameOf(TiltShiftCenterX), NameOf(TiltShiftCenterY),
                      NameOf(TiltShiftAngle), NameOf(TiltShiftFocus), NameOf(TiltShiftTransition)
-                    Return outline & "sparkles.svg"
+                    Return outline & "sparkle.svg"
             End Select
             Return Nothing
         End Function

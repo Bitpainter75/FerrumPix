@@ -1,0 +1,4551 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="acorn" xml:space="preserve">
+    <value>ลูกโอ๊ก</value>
+  </data>
+  <data name="address_book" xml:space="preserve">
+    <value>ที่อยู่หนังสือ</value>
+  </data>
+  <data name="address_book_tabs" xml:space="preserve">
+    <value>ที่อยู่หนังสือแท็บ</value>
+  </data>
+  <data name="air_traffic_control" xml:space="preserve">
+    <value>อากาศการจราจรควบคุม</value>
+  </data>
+  <data name="airplane" xml:space="preserve">
+    <value>เครื่องบิน</value>
+  </data>
+  <data name="airplane_in_flight" xml:space="preserve">
+    <value>เครื่องบินเข้าเที่ยวบิน</value>
+  </data>
+  <data name="airplane_landing" xml:space="preserve">
+    <value>เครื่องบินลงจอด</value>
+  </data>
+  <data name="airplane_takeoff" xml:space="preserve">
+    <value>เครื่องบินขึ้นบิน</value>
+  </data>
+  <data name="airplane_taxiing" xml:space="preserve">
+    <value>เครื่องบินการขับเคลื่อนบนพื้น</value>
+  </data>
+  <data name="airplane_tilt" xml:space="preserve">
+    <value>เครื่องบินเอียง</value>
+  </data>
+  <data name="airplay" xml:space="preserve">
+    <value>Airplay</value>
+  </data>
+  <data name="alarm" xml:space="preserve">
+    <value>นาฬิกาปลุก</value>
+  </data>
+  <data name="alien" xml:space="preserve">
+    <value>มนุษย์ต่างดาว</value>
+  </data>
+  <data name="align_bottom" xml:space="preserve">
+    <value>จัดแนวด้านล่าง</value>
+  </data>
+  <data name="align_bottom_simple" xml:space="preserve">
+    <value>จัดแนวด้านล่างเรียบง่าย</value>
+  </data>
+  <data name="align_center_horizontal" xml:space="preserve">
+    <value>จัดแนวกึ่งกลางแนวนอน</value>
+  </data>
+  <data name="align_center_horizontal_simple" xml:space="preserve">
+    <value>จัดแนวกึ่งกลางแนวนอนเรียบง่าย</value>
+  </data>
+  <data name="align_center_vertical" xml:space="preserve">
+    <value>จัดแนวกึ่งกลางแนวตั้ง</value>
+  </data>
+  <data name="align_center_vertical_simple" xml:space="preserve">
+    <value>จัดแนวกึ่งกลางแนวตั้งเรียบง่าย</value>
+  </data>
+  <data name="align_left" xml:space="preserve">
+    <value>จัดแนวซ้าย</value>
+  </data>
+  <data name="align_left_simple" xml:space="preserve">
+    <value>จัดแนวซ้ายเรียบง่าย</value>
+  </data>
+  <data name="align_right" xml:space="preserve">
+    <value>จัดแนวขวา</value>
+  </data>
+  <data name="align_right_simple" xml:space="preserve">
+    <value>จัดแนวขวาเรียบง่าย</value>
+  </data>
+  <data name="align_top" xml:space="preserve">
+    <value>จัดแนวด้านบน</value>
+  </data>
+  <data name="align_top_simple" xml:space="preserve">
+    <value>จัดแนวด้านบนเรียบง่าย</value>
+  </data>
+  <data name="amazon_logo" xml:space="preserve">
+    <value>Amazonโลโก้</value>
+  </data>
+  <data name="ambulance" xml:space="preserve">
+    <value>รถพยาบาล</value>
+  </data>
+  <data name="anchor" xml:space="preserve">
+    <value>สมอเรือ</value>
+  </data>
+  <data name="anchor_simple" xml:space="preserve">
+    <value>สมอเรือเรียบง่าย</value>
+  </data>
+  <data name="android_logo" xml:space="preserve">
+    <value>Androidโลโก้</value>
+  </data>
+  <data name="angle" xml:space="preserve">
+    <value>มุม</value>
+  </data>
+  <data name="angular_logo" xml:space="preserve">
+    <value>Angularโลโก้</value>
+  </data>
+  <data name="aperture" xml:space="preserve">
+    <value>รูรับแสง</value>
+  </data>
+  <data name="app_store_logo" xml:space="preserve">
+    <value>แอปร้านค้าโลโก้</value>
+  </data>
+  <data name="app_window" xml:space="preserve">
+    <value>แอปหน้าต่าง</value>
+  </data>
+  <data name="apple_logo" xml:space="preserve">
+    <value>แอปเปิลโลโก้</value>
+  </data>
+  <data name="apple_podcasts_logo" xml:space="preserve">
+    <value>แอปเปิลพอดแคสต์โลโก้</value>
+  </data>
+  <data name="approximate_equals" xml:space="preserve">
+    <value>ประมาณเท่ากับ</value>
+  </data>
+  <data name="archive" xml:space="preserve">
+    <value>คลังเก็บ</value>
+  </data>
+  <data name="armchair" xml:space="preserve">
+    <value>เก้าอี้นวม</value>
+  </data>
+  <data name="arrow_arc_left" xml:space="preserve">
+    <value>ลูกศรส่วนโค้งซ้าย</value>
+  </data>
+  <data name="arrow_arc_right" xml:space="preserve">
+    <value>ลูกศรส่วนโค้งขวา</value>
+  </data>
+  <data name="arrow_bend_double_up_left" xml:space="preserve">
+    <value>ลูกศรโค้งคู่ขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_bend_double_up_right" xml:space="preserve">
+    <value>ลูกศรโค้งคู่ขึ้นขวา</value>
+  </data>
+  <data name="arrow_bend_down_left" xml:space="preserve">
+    <value>ลูกศรโค้งลงซ้าย</value>
+  </data>
+  <data name="arrow_bend_down_right" xml:space="preserve">
+    <value>ลูกศรโค้งลงขวา</value>
+  </data>
+  <data name="arrow_bend_left_down" xml:space="preserve">
+    <value>ลูกศรโค้งซ้ายลง</value>
+  </data>
+  <data name="arrow_bend_left_up" xml:space="preserve">
+    <value>ลูกศรโค้งซ้ายขึ้น</value>
+  </data>
+  <data name="arrow_bend_right_down" xml:space="preserve">
+    <value>ลูกศรโค้งขวาลง</value>
+  </data>
+  <data name="arrow_bend_right_up" xml:space="preserve">
+    <value>ลูกศรโค้งขวาขึ้น</value>
+  </data>
+  <data name="arrow_bend_up_left" xml:space="preserve">
+    <value>ลูกศรโค้งขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_bend_up_right" xml:space="preserve">
+    <value>ลูกศรโค้งขึ้นขวา</value>
+  </data>
+  <data name="arrow_circle_down" xml:space="preserve">
+    <value>ลูกศรวงกลมลง</value>
+  </data>
+  <data name="arrow_circle_down_left" xml:space="preserve">
+    <value>ลูกศรวงกลมลงซ้าย</value>
+  </data>
+  <data name="arrow_circle_down_right" xml:space="preserve">
+    <value>ลูกศรวงกลมลงขวา</value>
+  </data>
+  <data name="arrow_circle_left" xml:space="preserve">
+    <value>ลูกศรวงกลมซ้าย</value>
+  </data>
+  <data name="arrow_circle_right" xml:space="preserve">
+    <value>ลูกศรวงกลมขวา</value>
+  </data>
+  <data name="arrow_circle_up" xml:space="preserve">
+    <value>ลูกศรวงกลมขึ้น</value>
+  </data>
+  <data name="arrow_circle_up_left" xml:space="preserve">
+    <value>ลูกศรวงกลมขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_circle_up_right" xml:space="preserve">
+    <value>ลูกศรวงกลมขึ้นขวา</value>
+  </data>
+  <data name="arrow_clockwise" xml:space="preserve">
+    <value>ลูกศรตามเข็มนาฬิกา</value>
+  </data>
+  <data name="arrow_counter_clockwise" xml:space="preserve">
+    <value>ลูกศรตัวนับตามเข็มนาฬิกา</value>
+  </data>
+  <data name="arrow_down" xml:space="preserve">
+    <value>ลูกศรลง</value>
+  </data>
+  <data name="arrow_down_left" xml:space="preserve">
+    <value>ลูกศรลงซ้าย</value>
+  </data>
+  <data name="arrow_down_right" xml:space="preserve">
+    <value>ลูกศรลงขวา</value>
+  </data>
+  <data name="arrow_elbow_down_left" xml:space="preserve">
+    <value>ลูกศรข้อศอกลงซ้าย</value>
+  </data>
+  <data name="arrow_elbow_down_right" xml:space="preserve">
+    <value>ลูกศรข้อศอกลงขวา</value>
+  </data>
+  <data name="arrow_elbow_left" xml:space="preserve">
+    <value>ลูกศรข้อศอกซ้าย</value>
+  </data>
+  <data name="arrow_elbow_left_down" xml:space="preserve">
+    <value>ลูกศรข้อศอกซ้ายลง</value>
+  </data>
+  <data name="arrow_elbow_left_up" xml:space="preserve">
+    <value>ลูกศรข้อศอกซ้ายขึ้น</value>
+  </data>
+  <data name="arrow_elbow_right" xml:space="preserve">
+    <value>ลูกศรข้อศอกขวา</value>
+  </data>
+  <data name="arrow_elbow_right_down" xml:space="preserve">
+    <value>ลูกศรข้อศอกขวาลง</value>
+  </data>
+  <data name="arrow_elbow_right_up" xml:space="preserve">
+    <value>ลูกศรข้อศอกขวาขึ้น</value>
+  </data>
+  <data name="arrow_elbow_up_left" xml:space="preserve">
+    <value>ลูกศรข้อศอกขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_elbow_up_right" xml:space="preserve">
+    <value>ลูกศรข้อศอกขึ้นขวา</value>
+  </data>
+  <data name="arrow_fat_down" xml:space="preserve">
+    <value>ลูกศรอ้วนลง</value>
+  </data>
+  <data name="arrow_fat_left" xml:space="preserve">
+    <value>ลูกศรอ้วนซ้าย</value>
+  </data>
+  <data name="arrow_fat_line_down" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นลง</value>
+  </data>
+  <data name="arrow_fat_line_left" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นซ้าย</value>
+  </data>
+  <data name="arrow_fat_line_right" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นขวา</value>
+  </data>
+  <data name="arrow_fat_line_up" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นขึ้น</value>
+  </data>
+  <data name="arrow_fat_lines_down" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นลง</value>
+  </data>
+  <data name="arrow_fat_lines_left" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นซ้าย</value>
+  </data>
+  <data name="arrow_fat_lines_right" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นขวา</value>
+  </data>
+  <data name="arrow_fat_lines_up" xml:space="preserve">
+    <value>ลูกศรอ้วนเส้นขึ้น</value>
+  </data>
+  <data name="arrow_fat_right" xml:space="preserve">
+    <value>ลูกศรอ้วนขวา</value>
+  </data>
+  <data name="arrow_fat_up" xml:space="preserve">
+    <value>ลูกศรอ้วนขึ้น</value>
+  </data>
+  <data name="arrow_left" xml:space="preserve">
+    <value>ลูกศรซ้าย</value>
+  </data>
+  <data name="arrow_line_down" xml:space="preserve">
+    <value>ลูกศรเส้นลง</value>
+  </data>
+  <data name="arrow_line_down_left" xml:space="preserve">
+    <value>ลูกศรเส้นลงซ้าย</value>
+  </data>
+  <data name="arrow_line_down_right" xml:space="preserve">
+    <value>ลูกศรเส้นลงขวา</value>
+  </data>
+  <data name="arrow_line_left" xml:space="preserve">
+    <value>ลูกศรเส้นซ้าย</value>
+  </data>
+  <data name="arrow_line_right" xml:space="preserve">
+    <value>ลูกศรเส้นขวา</value>
+  </data>
+  <data name="arrow_line_up" xml:space="preserve">
+    <value>ลูกศรเส้นขึ้น</value>
+  </data>
+  <data name="arrow_line_up_left" xml:space="preserve">
+    <value>ลูกศรเส้นขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_line_up_right" xml:space="preserve">
+    <value>ลูกศรเส้นขึ้นขวา</value>
+  </data>
+  <data name="arrow_right" xml:space="preserve">
+    <value>ลูกศรขวา</value>
+  </data>
+  <data name="arrow_square_down" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสลง</value>
+  </data>
+  <data name="arrow_square_down_left" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสลงซ้าย</value>
+  </data>
+  <data name="arrow_square_down_right" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสลงขวา</value>
+  </data>
+  <data name="arrow_square_in" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสเข้า</value>
+  </data>
+  <data name="arrow_square_left" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสซ้าย</value>
+  </data>
+  <data name="arrow_square_out" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสออก</value>
+  </data>
+  <data name="arrow_square_right" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสขวา</value>
+  </data>
+  <data name="arrow_square_up" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสขึ้น</value>
+  </data>
+  <data name="arrow_square_up_left" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_square_up_right" xml:space="preserve">
+    <value>ลูกศรสี่เหลี่ยมจัตุรัสขึ้นขวา</value>
+  </data>
+  <data name="arrow_u_down_left" xml:space="preserve">
+    <value>ลูกศรuลงซ้าย</value>
+  </data>
+  <data name="arrow_u_down_right" xml:space="preserve">
+    <value>ลูกศรuลงขวา</value>
+  </data>
+  <data name="arrow_u_left_down" xml:space="preserve">
+    <value>ลูกศรuซ้ายลง</value>
+  </data>
+  <data name="arrow_u_left_up" xml:space="preserve">
+    <value>ลูกศรuซ้ายขึ้น</value>
+  </data>
+  <data name="arrow_u_right_down" xml:space="preserve">
+    <value>ลูกศรuขวาลง</value>
+  </data>
+  <data name="arrow_u_right_up" xml:space="preserve">
+    <value>ลูกศรuขวาขึ้น</value>
+  </data>
+  <data name="arrow_u_up_left" xml:space="preserve">
+    <value>ลูกศรuขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_u_up_right" xml:space="preserve">
+    <value>ลูกศรuขึ้นขวา</value>
+  </data>
+  <data name="arrow_up" xml:space="preserve">
+    <value>ลูกศรขึ้น</value>
+  </data>
+  <data name="arrow_up_left" xml:space="preserve">
+    <value>ลูกศรขึ้นซ้าย</value>
+  </data>
+  <data name="arrow_up_right" xml:space="preserve">
+    <value>ลูกศรขึ้นขวา</value>
+  </data>
+  <data name="arrows_clockwise" xml:space="preserve">
+    <value>ลูกศรตามเข็มนาฬิกา</value>
+  </data>
+  <data name="arrows_counter_clockwise" xml:space="preserve">
+    <value>ลูกศรตัวนับตามเข็มนาฬิกา</value>
+  </data>
+  <data name="arrows_down_up" xml:space="preserve">
+    <value>ลูกศรลงขึ้น</value>
+  </data>
+  <data name="arrows_horizontal" xml:space="preserve">
+    <value>ลูกศรแนวนอน</value>
+  </data>
+  <data name="arrows_in" xml:space="preserve">
+    <value>ลูกศรเข้า</value>
+  </data>
+  <data name="arrows_in_cardinal" xml:space="preserve">
+    <value>ลูกศรเข้าพระคาร์ดินัล</value>
+  </data>
+  <data name="arrows_in_line_horizontal" xml:space="preserve">
+    <value>ลูกศรเข้าเส้นแนวนอน</value>
+  </data>
+  <data name="arrows_in_line_vertical" xml:space="preserve">
+    <value>ลูกศรเข้าเส้นแนวตั้ง</value>
+  </data>
+  <data name="arrows_in_simple" xml:space="preserve">
+    <value>ลูกศรเข้าเรียบง่าย</value>
+  </data>
+  <data name="arrows_left_right" xml:space="preserve">
+    <value>ลูกศรซ้ายขวา</value>
+  </data>
+  <data name="arrows_merge" xml:space="preserve">
+    <value>ลูกศรผสาน</value>
+  </data>
+  <data name="arrows_out" xml:space="preserve">
+    <value>ลูกศรออก</value>
+  </data>
+  <data name="arrows_out_cardinal" xml:space="preserve">
+    <value>ลูกศรออกพระคาร์ดินัล</value>
+  </data>
+  <data name="arrows_out_line_horizontal" xml:space="preserve">
+    <value>ลูกศรออกเส้นแนวนอน</value>
+  </data>
+  <data name="arrows_out_line_vertical" xml:space="preserve">
+    <value>ลูกศรออกเส้นแนวตั้ง</value>
+  </data>
+  <data name="arrows_out_simple" xml:space="preserve">
+    <value>ลูกศรออกเรียบง่าย</value>
+  </data>
+  <data name="arrows_split" xml:space="preserve">
+    <value>ลูกศรแยก</value>
+  </data>
+  <data name="arrows_vertical" xml:space="preserve">
+    <value>ลูกศรแนวตั้ง</value>
+  </data>
+  <data name="article" xml:space="preserve">
+    <value>บทความ</value>
+  </data>
+  <data name="article_medium" xml:space="preserve">
+    <value>บทความปานกลาง</value>
+  </data>
+  <data name="article_ny_times" xml:space="preserve">
+    <value>บทความnyคูณ</value>
+  </data>
+  <data name="asclepius" xml:space="preserve">
+    <value>แอสคลีปิอุส</value>
+  </data>
+  <data name="asterisk" xml:space="preserve">
+    <value>ดอกจัน</value>
+  </data>
+  <data name="asterisk_simple" xml:space="preserve">
+    <value>ดอกจันเรียบง่าย</value>
+  </data>
+  <data name="at" xml:space="preserve">
+    <value>แอท</value>
+  </data>
+  <data name="atom" xml:space="preserve">
+    <value>อะตอม</value>
+  </data>
+  <data name="avocado" xml:space="preserve">
+    <value>อะโวคาโด</value>
+  </data>
+  <data name="axe" xml:space="preserve">
+    <value>ขวาน</value>
+  </data>
+  <data name="baby" xml:space="preserve">
+    <value>ทารก</value>
+  </data>
+  <data name="baby_carriage" xml:space="preserve">
+    <value>ทารกรถเข็นเด็ก</value>
+  </data>
+  <data name="backpack" xml:space="preserve">
+    <value>เป้</value>
+  </data>
+  <data name="backspace" xml:space="preserve">
+    <value>แบ็กสเปซ</value>
+  </data>
+  <data name="bag" xml:space="preserve">
+    <value>กระเป๋า</value>
+  </data>
+  <data name="bag_simple" xml:space="preserve">
+    <value>กระเป๋าเรียบง่าย</value>
+  </data>
+  <data name="balloon" xml:space="preserve">
+    <value>ลูกโป่ง</value>
+  </data>
+  <data name="bandaids" xml:space="preserve">
+    <value>พลาสเตอร์</value>
+  </data>
+  <data name="bank" xml:space="preserve">
+    <value>ธนาคาร</value>
+  </data>
+  <data name="barbell" xml:space="preserve">
+    <value>บาร์เบล</value>
+  </data>
+  <data name="barcode" xml:space="preserve">
+    <value>บาร์โค้ด</value>
+  </data>
+  <data name="barn" xml:space="preserve">
+    <value>โรงนา</value>
+  </data>
+  <data name="barricade" xml:space="preserve">
+    <value>แผงกั้น</value>
+  </data>
+  <data name="baseball" xml:space="preserve">
+    <value>เบสบอล</value>
+  </data>
+  <data name="baseball_cap" xml:space="preserve">
+    <value>เบสบอลหมวกแก๊ป</value>
+  </data>
+  <data name="baseball_helmet" xml:space="preserve">
+    <value>เบสบอลหมวกกันน็อก</value>
+  </data>
+  <data name="basket" xml:space="preserve">
+    <value>ตะกร้า</value>
+  </data>
+  <data name="basketball" xml:space="preserve">
+    <value>บาสเกตบอล</value>
+  </data>
+  <data name="bathtub" xml:space="preserve">
+    <value>อ่างอาบน้ำ</value>
+  </data>
+  <data name="battery_charging" xml:space="preserve">
+    <value>แบตเตอรี่กำลังชาร์จ</value>
+  </data>
+  <data name="battery_charging_vertical" xml:space="preserve">
+    <value>แบตเตอรี่กำลังชาร์จแนวตั้ง</value>
+  </data>
+  <data name="battery_empty" xml:space="preserve">
+    <value>แบตเตอรี่ว่างเปล่า</value>
+  </data>
+  <data name="battery_full" xml:space="preserve">
+    <value>แบตเตอรี่เต็ม</value>
+  </data>
+  <data name="battery_high" xml:space="preserve">
+    <value>แบตเตอรี่สูง</value>
+  </data>
+  <data name="battery_low" xml:space="preserve">
+    <value>แบตเตอรี่ต่ำ</value>
+  </data>
+  <data name="battery_medium" xml:space="preserve">
+    <value>แบตเตอรี่ปานกลาง</value>
+  </data>
+  <data name="battery_plus" xml:space="preserve">
+    <value>แบตเตอรี่บวก</value>
+  </data>
+  <data name="battery_plus_vertical" xml:space="preserve">
+    <value>แบตเตอรี่บวกแนวตั้ง</value>
+  </data>
+  <data name="battery_vertical_empty" xml:space="preserve">
+    <value>แบตเตอรี่แนวตั้งว่างเปล่า</value>
+  </data>
+  <data name="battery_vertical_full" xml:space="preserve">
+    <value>แบตเตอรี่แนวตั้งเต็ม</value>
+  </data>
+  <data name="battery_vertical_high" xml:space="preserve">
+    <value>แบตเตอรี่แนวตั้งสูง</value>
+  </data>
+  <data name="battery_vertical_low" xml:space="preserve">
+    <value>แบตเตอรี่แนวตั้งต่ำ</value>
+  </data>
+  <data name="battery_vertical_medium" xml:space="preserve">
+    <value>แบตเตอรี่แนวตั้งปานกลาง</value>
+  </data>
+  <data name="battery_warning" xml:space="preserve">
+    <value>แบตเตอรี่คำเตือน</value>
+  </data>
+  <data name="battery_warning_vertical" xml:space="preserve">
+    <value>แบตเตอรี่คำเตือนแนวตั้ง</value>
+  </data>
+  <data name="beach_ball" xml:space="preserve">
+    <value>ชายหาดลูกบอล</value>
+  </data>
+  <data name="beanie" xml:space="preserve">
+    <value>หมวกไหมพรม</value>
+  </data>
+  <data name="bed" xml:space="preserve">
+    <value>เตียง</value>
+  </data>
+  <data name="beer_bottle" xml:space="preserve">
+    <value>เบียร์ขวด</value>
+  </data>
+  <data name="beer_stein" xml:space="preserve">
+    <value>เบียร์เหยือกเบียร์</value>
+  </data>
+  <data name="behance_logo" xml:space="preserve">
+    <value>Behanceโลโก้</value>
+  </data>
+  <data name="bell" xml:space="preserve">
+    <value>กระดิ่ง</value>
+  </data>
+  <data name="bell_ringing" xml:space="preserve">
+    <value>กระดิ่งกำลังดัง</value>
+  </data>
+  <data name="bell_simple" xml:space="preserve">
+    <value>กระดิ่งเรียบง่าย</value>
+  </data>
+  <data name="bell_simple_ringing" xml:space="preserve">
+    <value>กระดิ่งเรียบง่ายกำลังดัง</value>
+  </data>
+  <data name="bell_simple_slash" xml:space="preserve">
+    <value>กระดิ่งเรียบง่ายเครื่องหมายทับ</value>
+  </data>
+  <data name="bell_simple_z" xml:space="preserve">
+    <value>กระดิ่งเรียบง่ายz</value>
+  </data>
+  <data name="bell_slash" xml:space="preserve">
+    <value>กระดิ่งเครื่องหมายทับ</value>
+  </data>
+  <data name="bell_z" xml:space="preserve">
+    <value>กระดิ่งz</value>
+  </data>
+  <data name="belt" xml:space="preserve">
+    <value>เข็มขัด</value>
+  </data>
+  <data name="bezier_curve" xml:space="preserve">
+    <value>เบซิเยร์เส้นโค้ง</value>
+  </data>
+  <data name="bicycle" xml:space="preserve">
+    <value>จักรยาน</value>
+  </data>
+  <data name="binary" xml:space="preserve">
+    <value>ไบนารี</value>
+  </data>
+  <data name="binoculars" xml:space="preserve">
+    <value>กล้องส่องทางไกล</value>
+  </data>
+  <data name="biohazard" xml:space="preserve">
+    <value>อันตรายทางชีวภาพ</value>
+  </data>
+  <data name="bird" xml:space="preserve">
+    <value>นก</value>
+  </data>
+  <data name="blueprint" xml:space="preserve">
+    <value>พิมพ์เขียว</value>
+  </data>
+  <data name="bluetooth" xml:space="preserve">
+    <value>บลูทูธ</value>
+  </data>
+  <data name="bluetooth_connected" xml:space="preserve">
+    <value>บลูทูธเชื่อมต่อแล้ว</value>
+  </data>
+  <data name="bluetooth_slash" xml:space="preserve">
+    <value>บลูทูธเครื่องหมายทับ</value>
+  </data>
+  <data name="bluetooth_x" xml:space="preserve">
+    <value>บลูทูธx</value>
+  </data>
+  <data name="boat" xml:space="preserve">
+    <value>เรือ</value>
+  </data>
+  <data name="bomb" xml:space="preserve">
+    <value>ระเบิด</value>
+  </data>
+  <data name="bone" xml:space="preserve">
+    <value>กระดูก</value>
+  </data>
+  <data name="book" xml:space="preserve">
+    <value>หนังสือ</value>
+  </data>
+  <data name="book_bookmark" xml:space="preserve">
+    <value>หนังสือบุ๊กมาร์ก</value>
+  </data>
+  <data name="book_open" xml:space="preserve">
+    <value>หนังสือเปิด</value>
+  </data>
+  <data name="book_open_text" xml:space="preserve">
+    <value>หนังสือเปิดข้อความ</value>
+  </data>
+  <data name="book_open_user" xml:space="preserve">
+    <value>หนังสือเปิดผู้ใช้</value>
+  </data>
+  <data name="bookmark" xml:space="preserve">
+    <value>บุ๊กมาร์ก</value>
+  </data>
+  <data name="bookmark_simple" xml:space="preserve">
+    <value>บุ๊กมาร์กเรียบง่าย</value>
+  </data>
+  <data name="bookmarks" xml:space="preserve">
+    <value>บุ๊กมาร์ก</value>
+  </data>
+  <data name="bookmarks_simple" xml:space="preserve">
+    <value>บุ๊กมาร์กเรียบง่าย</value>
+  </data>
+  <data name="books" xml:space="preserve">
+    <value>หนังสือ</value>
+  </data>
+  <data name="boot" xml:space="preserve">
+    <value>รองเท้าบูท</value>
+  </data>
+  <data name="boules" xml:space="preserve">
+    <value>เปตอง</value>
+  </data>
+  <data name="bounding_box" xml:space="preserve">
+    <value>ขอบเขตกล่อง</value>
+  </data>
+  <data name="bowl_food" xml:space="preserve">
+    <value>ชามอาหาร</value>
+  </data>
+  <data name="bowl_steam" xml:space="preserve">
+    <value>ชามไอน้ำ</value>
+  </data>
+  <data name="bowling_ball" xml:space="preserve">
+    <value>โบว์ลิ่งลูกบอล</value>
+  </data>
+  <data name="box_arrow_down" xml:space="preserve">
+    <value>กล่องลูกศรลง</value>
+  </data>
+  <data name="box_arrow_up" xml:space="preserve">
+    <value>กล่องลูกศรขึ้น</value>
+  </data>
+  <data name="boxing_glove" xml:space="preserve">
+    <value>มวยถุงมือ</value>
+  </data>
+  <data name="brackets_angle" xml:space="preserve">
+    <value>วงเล็บมุม</value>
+  </data>
+  <data name="brackets_curly" xml:space="preserve">
+    <value>วงเล็บปีกกา</value>
+  </data>
+  <data name="brackets_round" xml:space="preserve">
+    <value>วงเล็บกลม</value>
+  </data>
+  <data name="brackets_square" xml:space="preserve">
+    <value>วงเล็บสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="brain" xml:space="preserve">
+    <value>สมอง</value>
+  </data>
+  <data name="brandy" xml:space="preserve">
+    <value>บรั่นดี</value>
+  </data>
+  <data name="bread" xml:space="preserve">
+    <value>ขนมปัง</value>
+  </data>
+  <data name="bridge" xml:space="preserve">
+    <value>สะพาน</value>
+  </data>
+  <data name="briefcase" xml:space="preserve">
+    <value>กระเป๋าเอกสาร</value>
+  </data>
+  <data name="briefcase_metal" xml:space="preserve">
+    <value>กระเป๋าเอกสารโลหะ</value>
+  </data>
+  <data name="broadcast" xml:space="preserve">
+    <value>ออกอากาศ</value>
+  </data>
+  <data name="broom" xml:space="preserve">
+    <value>ไม้กวาด</value>
+  </data>
+  <data name="browser" xml:space="preserve">
+    <value>เบราว์เซอร์</value>
+  </data>
+  <data name="browsers" xml:space="preserve">
+    <value>เบราว์เซอร์</value>
+  </data>
+  <data name="bug" xml:space="preserve">
+    <value>แมลง</value>
+  </data>
+  <data name="bug_beetle" xml:space="preserve">
+    <value>แมลงด้วง</value>
+  </data>
+  <data name="bug_droid" xml:space="preserve">
+    <value>แมลงดรอยด์</value>
+  </data>
+  <data name="building" xml:space="preserve">
+    <value>อาคาร</value>
+  </data>
+  <data name="building_apartment" xml:space="preserve">
+    <value>อาคารอพาร์ตเมนต์</value>
+  </data>
+  <data name="building_office" xml:space="preserve">
+    <value>อาคารสำนักงาน</value>
+  </data>
+  <data name="buildings" xml:space="preserve">
+    <value>อาคาร</value>
+  </data>
+  <data name="bulldozer" xml:space="preserve">
+    <value>รถปราบดิน</value>
+  </data>
+  <data name="bus" xml:space="preserve">
+    <value>รถบัส</value>
+  </data>
+  <data name="butterfly" xml:space="preserve">
+    <value>ผีเสื้อ</value>
+  </data>
+  <data name="cable_car" xml:space="preserve">
+    <value>สายเคเบิลรถยนต์</value>
+  </data>
+  <data name="cactus" xml:space="preserve">
+    <value>กระบองเพชร</value>
+  </data>
+  <data name="cake" xml:space="preserve">
+    <value>เค้ก</value>
+  </data>
+  <data name="calculator" xml:space="preserve">
+    <value>เครื่องคิดเลข</value>
+  </data>
+  <data name="calendar" xml:space="preserve">
+    <value>ปฏิทิน</value>
+  </data>
+  <data name="calendar_blank" xml:space="preserve">
+    <value>ปฏิทินว่าง</value>
+  </data>
+  <data name="calendar_check" xml:space="preserve">
+    <value>ปฏิทินเครื่องหมายถูก</value>
+  </data>
+  <data name="calendar_dot" xml:space="preserve">
+    <value>ปฏิทินจุด</value>
+  </data>
+  <data name="calendar_dots" xml:space="preserve">
+    <value>ปฏิทินจุด</value>
+  </data>
+  <data name="calendar_heart" xml:space="preserve">
+    <value>ปฏิทินหัวใจ</value>
+  </data>
+  <data name="calendar_minus" xml:space="preserve">
+    <value>ปฏิทินลบ</value>
+  </data>
+  <data name="calendar_plus" xml:space="preserve">
+    <value>ปฏิทินบวก</value>
+  </data>
+  <data name="calendar_slash" xml:space="preserve">
+    <value>ปฏิทินเครื่องหมายทับ</value>
+  </data>
+  <data name="calendar_star" xml:space="preserve">
+    <value>ปฏิทินดาว</value>
+  </data>
+  <data name="calendar_x" xml:space="preserve">
+    <value>ปฏิทินx</value>
+  </data>
+  <data name="call_bell" xml:space="preserve">
+    <value>โทรกระดิ่ง</value>
+  </data>
+  <data name="camera" xml:space="preserve">
+    <value>กล้อง</value>
+  </data>
+  <data name="camera_plus" xml:space="preserve">
+    <value>กล้องบวก</value>
+  </data>
+  <data name="camera_rotate" xml:space="preserve">
+    <value>กล้องหมุน</value>
+  </data>
+  <data name="camera_slash" xml:space="preserve">
+    <value>กล้องเครื่องหมายทับ</value>
+  </data>
+  <data name="campfire" xml:space="preserve">
+    <value>กองไฟ</value>
+  </data>
+  <data name="car" xml:space="preserve">
+    <value>รถยนต์</value>
+  </data>
+  <data name="car_battery" xml:space="preserve">
+    <value>รถยนต์แบตเตอรี่</value>
+  </data>
+  <data name="car_profile" xml:space="preserve">
+    <value>รถยนต์โปรไฟล์</value>
+  </data>
+  <data name="car_simple" xml:space="preserve">
+    <value>รถยนต์เรียบง่าย</value>
+  </data>
+  <data name="cardholder" xml:space="preserve">
+    <value>ที่ใส่บัตร</value>
+  </data>
+  <data name="cards" xml:space="preserve">
+    <value>การ์ด</value>
+  </data>
+  <data name="cards_three" xml:space="preserve">
+    <value>การ์ดสาม</value>
+  </data>
+  <data name="caret_circle_double_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมคู่ลง</value>
+  </data>
+  <data name="caret_circle_double_left" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมคู่ซ้าย</value>
+  </data>
+  <data name="caret_circle_double_right" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมคู่ขวา</value>
+  </data>
+  <data name="caret_circle_double_up" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมคู่ขึ้น</value>
+  </data>
+  <data name="caret_circle_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมลง</value>
+  </data>
+  <data name="caret_circle_left" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมซ้าย</value>
+  </data>
+  <data name="caret_circle_right" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมขวา</value>
+  </data>
+  <data name="caret_circle_up" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมขึ้น</value>
+  </data>
+  <data name="caret_circle_up_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกวงกลมขึ้นลง</value>
+  </data>
+  <data name="caret_double_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกคู่ลง</value>
+  </data>
+  <data name="caret_double_left" xml:space="preserve">
+    <value>เครื่องหมายแทรกคู่ซ้าย</value>
+  </data>
+  <data name="caret_double_right" xml:space="preserve">
+    <value>เครื่องหมายแทรกคู่ขวา</value>
+  </data>
+  <data name="caret_double_up" xml:space="preserve">
+    <value>เครื่องหมายแทรกคู่ขึ้น</value>
+  </data>
+  <data name="caret_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกลง</value>
+  </data>
+  <data name="caret_left" xml:space="preserve">
+    <value>เครื่องหมายแทรกซ้าย</value>
+  </data>
+  <data name="caret_line_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกเส้นลง</value>
+  </data>
+  <data name="caret_line_left" xml:space="preserve">
+    <value>เครื่องหมายแทรกเส้นซ้าย</value>
+  </data>
+  <data name="caret_line_right" xml:space="preserve">
+    <value>เครื่องหมายแทรกเส้นขวา</value>
+  </data>
+  <data name="caret_line_up" xml:space="preserve">
+    <value>เครื่องหมายแทรกเส้นขึ้น</value>
+  </data>
+  <data name="caret_right" xml:space="preserve">
+    <value>เครื่องหมายแทรกขวา</value>
+  </data>
+  <data name="caret_up" xml:space="preserve">
+    <value>เครื่องหมายแทรกขึ้น</value>
+  </data>
+  <data name="caret_up_down" xml:space="preserve">
+    <value>เครื่องหมายแทรกขึ้นลง</value>
+  </data>
+  <data name="carrot" xml:space="preserve">
+    <value>แครอท</value>
+  </data>
+  <data name="cash_register" xml:space="preserve">
+    <value>เงินสดเครื่องคิดเงิน</value>
+  </data>
+  <data name="cassette_tape" xml:space="preserve">
+    <value>ตลับเทปเทป</value>
+  </data>
+  <data name="castle_turret" xml:space="preserve">
+    <value>ปราสาทป้อม</value>
+  </data>
+  <data name="cat" xml:space="preserve">
+    <value>แมว</value>
+  </data>
+  <data name="cell_signal_full" xml:space="preserve">
+    <value>เซลล์สัญญาณเต็ม</value>
+  </data>
+  <data name="cell_signal_high" xml:space="preserve">
+    <value>เซลล์สัญญาณสูง</value>
+  </data>
+  <data name="cell_signal_low" xml:space="preserve">
+    <value>เซลล์สัญญาณต่ำ</value>
+  </data>
+  <data name="cell_signal_medium" xml:space="preserve">
+    <value>เซลล์สัญญาณปานกลาง</value>
+  </data>
+  <data name="cell_signal_none" xml:space="preserve">
+    <value>เซลล์สัญญาณไม่มี</value>
+  </data>
+  <data name="cell_signal_slash" xml:space="preserve">
+    <value>เซลล์สัญญาณเครื่องหมายทับ</value>
+  </data>
+  <data name="cell_signal_x" xml:space="preserve">
+    <value>เซลล์สัญญาณx</value>
+  </data>
+  <data name="cell_tower" xml:space="preserve">
+    <value>เซลล์หอคอย</value>
+  </data>
+  <data name="certificate" xml:space="preserve">
+    <value>ใบรับรอง</value>
+  </data>
+  <data name="chair" xml:space="preserve">
+    <value>เก้าอี้</value>
+  </data>
+  <data name="chalkboard" xml:space="preserve">
+    <value>กระดานดำ</value>
+  </data>
+  <data name="chalkboard_simple" xml:space="preserve">
+    <value>กระดานดำเรียบง่าย</value>
+  </data>
+  <data name="chalkboard_teacher" xml:space="preserve">
+    <value>กระดานดำครู</value>
+  </data>
+  <data name="champagne" xml:space="preserve">
+    <value>แชมเปญ</value>
+  </data>
+  <data name="charging_station" xml:space="preserve">
+    <value>กำลังชาร์จสถานี</value>
+  </data>
+  <data name="chart_bar" xml:space="preserve">
+    <value>แผนภูมิแถบ</value>
+  </data>
+  <data name="chart_bar_horizontal" xml:space="preserve">
+    <value>แผนภูมิแถบแนวนอน</value>
+  </data>
+  <data name="chart_donut" xml:space="preserve">
+    <value>แผนภูมิโดนัท</value>
+  </data>
+  <data name="chart_line" xml:space="preserve">
+    <value>แผนภูมิเส้น</value>
+  </data>
+  <data name="chart_line_down" xml:space="preserve">
+    <value>แผนภูมิเส้นลง</value>
+  </data>
+  <data name="chart_line_up" xml:space="preserve">
+    <value>แผนภูมิเส้นขึ้น</value>
+  </data>
+  <data name="chart_pie" xml:space="preserve">
+    <value>แผนภูมิพาย</value>
+  </data>
+  <data name="chart_pie_slice" xml:space="preserve">
+    <value>แผนภูมิพายชิ้น</value>
+  </data>
+  <data name="chart_polar" xml:space="preserve">
+    <value>แผนภูมิขั้วโลก</value>
+  </data>
+  <data name="chart_scatter" xml:space="preserve">
+    <value>แผนภูมิกระจาย</value>
+  </data>
+  <data name="chat" xml:space="preserve">
+    <value>แชท</value>
+  </data>
+  <data name="chat_centered" xml:space="preserve">
+    <value>แชทจัดกึ่งกลาง</value>
+  </data>
+  <data name="chat_centered_dots" xml:space="preserve">
+    <value>แชทจัดกึ่งกลางจุด</value>
+  </data>
+  <data name="chat_centered_slash" xml:space="preserve">
+    <value>แชทจัดกึ่งกลางเครื่องหมายทับ</value>
+  </data>
+  <data name="chat_centered_text" xml:space="preserve">
+    <value>แชทจัดกึ่งกลางข้อความ</value>
+  </data>
+  <data name="chat_circle" xml:space="preserve">
+    <value>แชทวงกลม</value>
+  </data>
+  <data name="chat_circle_dots" xml:space="preserve">
+    <value>แชทวงกลมจุด</value>
+  </data>
+  <data name="chat_circle_slash" xml:space="preserve">
+    <value>แชทวงกลมเครื่องหมายทับ</value>
+  </data>
+  <data name="chat_circle_text" xml:space="preserve">
+    <value>แชทวงกลมข้อความ</value>
+  </data>
+  <data name="chat_dots" xml:space="preserve">
+    <value>แชทจุด</value>
+  </data>
+  <data name="chat_slash" xml:space="preserve">
+    <value>แชทเครื่องหมายทับ</value>
+  </data>
+  <data name="chat_teardrop" xml:space="preserve">
+    <value>แชทหยดน้ำตา</value>
+  </data>
+  <data name="chat_teardrop_dots" xml:space="preserve">
+    <value>แชทหยดน้ำตาจุด</value>
+  </data>
+  <data name="chat_teardrop_slash" xml:space="preserve">
+    <value>แชทหยดน้ำตาเครื่องหมายทับ</value>
+  </data>
+  <data name="chat_teardrop_text" xml:space="preserve">
+    <value>แชทหยดน้ำตาข้อความ</value>
+  </data>
+  <data name="chat_text" xml:space="preserve">
+    <value>แชทข้อความ</value>
+  </data>
+  <data name="chats" xml:space="preserve">
+    <value>แชท</value>
+  </data>
+  <data name="chats_circle" xml:space="preserve">
+    <value>แชทวงกลม</value>
+  </data>
+  <data name="chats_teardrop" xml:space="preserve">
+    <value>แชทหยดน้ำตา</value>
+  </data>
+  <data name="check" xml:space="preserve">
+    <value>เครื่องหมายถูก</value>
+  </data>
+  <data name="check_circle" xml:space="preserve">
+    <value>เครื่องหมายถูกวงกลม</value>
+  </data>
+  <data name="check_fat" xml:space="preserve">
+    <value>เครื่องหมายถูกอ้วน</value>
+  </data>
+  <data name="check_square" xml:space="preserve">
+    <value>เครื่องหมายถูกสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="check_square_offset" xml:space="preserve">
+    <value>เครื่องหมายถูกสี่เหลี่ยมจัตุรัสระยะเลื่อน</value>
+  </data>
+  <data name="checkerboard" xml:space="preserve">
+    <value>กระดานหมากรุก</value>
+  </data>
+  <data name="checks" xml:space="preserve">
+    <value>เครื่องหมายถูก</value>
+  </data>
+  <data name="cheers" xml:space="preserve">
+    <value>ไชโย</value>
+  </data>
+  <data name="cheese" xml:space="preserve">
+    <value>ชีส</value>
+  </data>
+  <data name="chef_hat" xml:space="preserve">
+    <value>เชฟหมวก</value>
+  </data>
+  <data name="cherries" xml:space="preserve">
+    <value>เชอร์รี่</value>
+  </data>
+  <data name="church" xml:space="preserve">
+    <value>โบสถ์</value>
+  </data>
+  <data name="cigarette" xml:space="preserve">
+    <value>บุหรี่</value>
+  </data>
+  <data name="cigarette_slash" xml:space="preserve">
+    <value>บุหรี่เครื่องหมายทับ</value>
+  </data>
+  <data name="circle" xml:space="preserve">
+    <value>วงกลม</value>
+  </data>
+  <data name="circle_dashed" xml:space="preserve">
+    <value>วงกลมเส้นประ</value>
+  </data>
+  <data name="circle_half" xml:space="preserve">
+    <value>วงกลมครึ่ง</value>
+  </data>
+  <data name="circle_half_tilt" xml:space="preserve">
+    <value>วงกลมครึ่งเอียง</value>
+  </data>
+  <data name="circle_notch" xml:space="preserve">
+    <value>วงกลมรอยบาก</value>
+  </data>
+  <data name="circles_four" xml:space="preserve">
+    <value>วงกลมสี่</value>
+  </data>
+  <data name="circles_three" xml:space="preserve">
+    <value>วงกลมสาม</value>
+  </data>
+  <data name="circles_three_plus" xml:space="preserve">
+    <value>วงกลมสามบวก</value>
+  </data>
+  <data name="circuitry" xml:space="preserve">
+    <value>วงจร</value>
+  </data>
+  <data name="city" xml:space="preserve">
+    <value>เมือง</value>
+  </data>
+  <data name="clipboard" xml:space="preserve">
+    <value>คลิปบอร์ด</value>
+  </data>
+  <data name="clipboard_text" xml:space="preserve">
+    <value>คลิปบอร์ดข้อความ</value>
+  </data>
+  <data name="clock" xml:space="preserve">
+    <value>นาฬิกา</value>
+  </data>
+  <data name="clock_afternoon" xml:space="preserve">
+    <value>นาฬิกาช่วงบ่าย</value>
+  </data>
+  <data name="clock_clockwise" xml:space="preserve">
+    <value>นาฬิกาตามเข็มนาฬิกา</value>
+  </data>
+  <data name="clock_countdown" xml:space="preserve">
+    <value>นาฬิกานับถอยหลัง</value>
+  </data>
+  <data name="clock_counter_clockwise" xml:space="preserve">
+    <value>นาฬิกาตัวนับตามเข็มนาฬิกา</value>
+  </data>
+  <data name="clock_user" xml:space="preserve">
+    <value>นาฬิกาผู้ใช้</value>
+  </data>
+  <data name="closed_captioning" xml:space="preserve">
+    <value>ปิดคำบรรยาย</value>
+  </data>
+  <data name="cloud" xml:space="preserve">
+    <value>เมฆ</value>
+  </data>
+  <data name="cloud_arrow_down" xml:space="preserve">
+    <value>เมฆลูกศรลง</value>
+  </data>
+  <data name="cloud_arrow_up" xml:space="preserve">
+    <value>เมฆลูกศรขึ้น</value>
+  </data>
+  <data name="cloud_check" xml:space="preserve">
+    <value>เมฆเครื่องหมายถูก</value>
+  </data>
+  <data name="cloud_fog" xml:space="preserve">
+    <value>เมฆหมอก</value>
+  </data>
+  <data name="cloud_lightning" xml:space="preserve">
+    <value>เมฆฟ้าผ่า</value>
+  </data>
+  <data name="cloud_moon" xml:space="preserve">
+    <value>เมฆดวงจันทร์</value>
+  </data>
+  <data name="cloud_rain" xml:space="preserve">
+    <value>เมฆฝน</value>
+  </data>
+  <data name="cloud_slash" xml:space="preserve">
+    <value>เมฆเครื่องหมายทับ</value>
+  </data>
+  <data name="cloud_snow" xml:space="preserve">
+    <value>เมฆหิมะ</value>
+  </data>
+  <data name="cloud_sun" xml:space="preserve">
+    <value>เมฆดวงอาทิตย์</value>
+  </data>
+  <data name="cloud_warning" xml:space="preserve">
+    <value>เมฆคำเตือน</value>
+  </data>
+  <data name="cloud_x" xml:space="preserve">
+    <value>เมฆx</value>
+  </data>
+  <data name="clover" xml:space="preserve">
+    <value>โคลเวอร์</value>
+  </data>
+  <data name="club" xml:space="preserve">
+    <value>ดอกจิก</value>
+  </data>
+  <data name="coat_hanger" xml:space="preserve">
+    <value>เสื้อโค้ทไม้แขวนเสื้อ</value>
+  </data>
+  <data name="coda_logo" xml:space="preserve">
+    <value>Codaโลโก้</value>
+  </data>
+  <data name="code" xml:space="preserve">
+    <value>โค้ด</value>
+  </data>
+  <data name="code_block" xml:space="preserve">
+    <value>โค้ดบล็อก</value>
+  </data>
+  <data name="code_simple" xml:space="preserve">
+    <value>โค้ดเรียบง่าย</value>
+  </data>
+  <data name="codepen_logo" xml:space="preserve">
+    <value>Codepenโลโก้</value>
+  </data>
+  <data name="codesandbox_logo" xml:space="preserve">
+    <value>Codesandboxโลโก้</value>
+  </data>
+  <data name="coffee" xml:space="preserve">
+    <value>กาแฟ</value>
+  </data>
+  <data name="coffee_bean" xml:space="preserve">
+    <value>กาแฟถั่ว</value>
+  </data>
+  <data name="coin" xml:space="preserve">
+    <value>เหรียญ</value>
+  </data>
+  <data name="coin_vertical" xml:space="preserve">
+    <value>เหรียญแนวตั้ง</value>
+  </data>
+  <data name="coins" xml:space="preserve">
+    <value>เหรียญ</value>
+  </data>
+  <data name="columns" xml:space="preserve">
+    <value>คอลัมน์</value>
+  </data>
+  <data name="columns_plus_left" xml:space="preserve">
+    <value>คอลัมน์บวกซ้าย</value>
+  </data>
+  <data name="columns_plus_right" xml:space="preserve">
+    <value>คอลัมน์บวกขวา</value>
+  </data>
+  <data name="command" xml:space="preserve">
+    <value>คำสั่ง</value>
+  </data>
+  <data name="compass" xml:space="preserve">
+    <value>เข็มทิศ</value>
+  </data>
+  <data name="compass_rose" xml:space="preserve">
+    <value>เข็มทิศกุหลาบ</value>
+  </data>
+  <data name="compass_tool" xml:space="preserve">
+    <value>เข็มทิศเครื่องมือ</value>
+  </data>
+  <data name="computer_tower" xml:space="preserve">
+    <value>คอมพิวเตอร์หอคอย</value>
+  </data>
+  <data name="confetti" xml:space="preserve">
+    <value>กระดาษสี</value>
+  </data>
+  <data name="contactless_payment" xml:space="preserve">
+    <value>ไร้สัมผัสการชำระเงิน</value>
+  </data>
+  <data name="control" xml:space="preserve">
+    <value>ควบคุม</value>
+  </data>
+  <data name="cookie" xml:space="preserve">
+    <value>คุกกี้</value>
+  </data>
+  <data name="cooking_pot" xml:space="preserve">
+    <value>ทำอาหารหม้อ</value>
+  </data>
+  <data name="copy" xml:space="preserve">
+    <value>คัดลอก</value>
+  </data>
+  <data name="copy_simple" xml:space="preserve">
+    <value>คัดลอกเรียบง่าย</value>
+  </data>
+  <data name="copyleft" xml:space="preserve">
+    <value>ก๊อปปี้เลฟต์</value>
+  </data>
+  <data name="copyright" xml:space="preserve">
+    <value>ลิขสิทธิ์</value>
+  </data>
+  <data name="corners_in" xml:space="preserve">
+    <value>มุมเข้า</value>
+  </data>
+  <data name="corners_out" xml:space="preserve">
+    <value>มุมออก</value>
+  </data>
+  <data name="couch" xml:space="preserve">
+    <value>โซฟา</value>
+  </data>
+  <data name="court_basketball" xml:space="preserve">
+    <value>ศาลบาสเกตบอล</value>
+  </data>
+  <data name="cow" xml:space="preserve">
+    <value>วัว</value>
+  </data>
+  <data name="cowboy_hat" xml:space="preserve">
+    <value>คาวบอยหมวก</value>
+  </data>
+  <data name="cpu" xml:space="preserve">
+    <value>ซีพียู</value>
+  </data>
+  <data name="crane" xml:space="preserve">
+    <value>ปั้นจั่น</value>
+  </data>
+  <data name="crane_tower" xml:space="preserve">
+    <value>ปั้นจั่นหอคอย</value>
+  </data>
+  <data name="credit_card" xml:space="preserve">
+    <value>เครดิตการ์ด</value>
+  </data>
+  <data name="cricket" xml:space="preserve">
+    <value>คริกเก็ต</value>
+  </data>
+  <data name="crop" xml:space="preserve">
+    <value>ครอบตัด</value>
+  </data>
+  <data name="cross" xml:space="preserve">
+    <value>กากบาท</value>
+  </data>
+  <data name="crosshair" xml:space="preserve">
+    <value>เป้าเล็ง</value>
+  </data>
+  <data name="crosshair_simple" xml:space="preserve">
+    <value>เป้าเล็งเรียบง่าย</value>
+  </data>
+  <data name="crown" xml:space="preserve">
+    <value>มงกุฎ</value>
+  </data>
+  <data name="crown_cross" xml:space="preserve">
+    <value>มงกุฎกากบาท</value>
+  </data>
+  <data name="crown_simple" xml:space="preserve">
+    <value>มงกุฎเรียบง่าย</value>
+  </data>
+  <data name="cube" xml:space="preserve">
+    <value>ลูกบาศก์</value>
+  </data>
+  <data name="cube_focus" xml:space="preserve">
+    <value>ลูกบาศก์โฟกัส</value>
+  </data>
+  <data name="cube_transparent" xml:space="preserve">
+    <value>ลูกบาศก์โปร่งใส</value>
+  </data>
+  <data name="currency_btc" xml:space="preserve">
+    <value>สกุลเงินbtc</value>
+  </data>
+  <data name="currency_circle_dollar" xml:space="preserve">
+    <value>สกุลเงินวงกลมดอลลาร์</value>
+  </data>
+  <data name="currency_cny" xml:space="preserve">
+    <value>สกุลเงินcny</value>
+  </data>
+  <data name="currency_dollar" xml:space="preserve">
+    <value>สกุลเงินดอลลาร์</value>
+  </data>
+  <data name="currency_dollar_simple" xml:space="preserve">
+    <value>สกุลเงินดอลลาร์เรียบง่าย</value>
+  </data>
+  <data name="currency_eth" xml:space="preserve">
+    <value>สกุลเงินeth</value>
+  </data>
+  <data name="currency_eur" xml:space="preserve">
+    <value>สกุลเงินeur</value>
+  </data>
+  <data name="currency_gbp" xml:space="preserve">
+    <value>สกุลเงินgbp</value>
+  </data>
+  <data name="currency_inr" xml:space="preserve">
+    <value>สกุลเงินinr</value>
+  </data>
+  <data name="currency_jpy" xml:space="preserve">
+    <value>สกุลเงินjpy</value>
+  </data>
+  <data name="currency_krw" xml:space="preserve">
+    <value>สกุลเงินkrw</value>
+  </data>
+  <data name="currency_kzt" xml:space="preserve">
+    <value>สกุลเงินkzt</value>
+  </data>
+  <data name="currency_ngn" xml:space="preserve">
+    <value>สกุลเงินngn</value>
+  </data>
+  <data name="currency_rub" xml:space="preserve">
+    <value>สกุลเงินrub</value>
+  </data>
+  <data name="cursor" xml:space="preserve">
+    <value>เคอร์เซอร์</value>
+  </data>
+  <data name="cursor_click" xml:space="preserve">
+    <value>เคอร์เซอร์คลิก</value>
+  </data>
+  <data name="cursor_text" xml:space="preserve">
+    <value>เคอร์เซอร์ข้อความ</value>
+  </data>
+  <data name="cylinder" xml:space="preserve">
+    <value>ทรงกระบอก</value>
+  </data>
+  <data name="database" xml:space="preserve">
+    <value>ฐานข้อมูล</value>
+  </data>
+  <data name="desk" xml:space="preserve">
+    <value>โต๊ะทำงาน</value>
+  </data>
+  <data name="desktop" xml:space="preserve">
+    <value>เดสก์ท็อป</value>
+  </data>
+  <data name="desktop_tower" xml:space="preserve">
+    <value>เดสก์ท็อปหอคอย</value>
+  </data>
+  <data name="detective" xml:space="preserve">
+    <value>นักสืบ</value>
+  </data>
+  <data name="dev_to_logo" xml:space="preserve">
+    <value>Devไปยังโลโก้</value>
+  </data>
+  <data name="device_mobile" xml:space="preserve">
+    <value>อุปกรณ์มือถือ</value>
+  </data>
+  <data name="device_mobile_camera" xml:space="preserve">
+    <value>อุปกรณ์มือถือกล้อง</value>
+  </data>
+  <data name="device_mobile_slash" xml:space="preserve">
+    <value>อุปกรณ์มือถือเครื่องหมายทับ</value>
+  </data>
+  <data name="device_mobile_speaker" xml:space="preserve">
+    <value>อุปกรณ์มือถือลำโพง</value>
+  </data>
+  <data name="device_rotate" xml:space="preserve">
+    <value>อุปกรณ์หมุน</value>
+  </data>
+  <data name="device_tablet" xml:space="preserve">
+    <value>อุปกรณ์แท็บเล็ต</value>
+  </data>
+  <data name="device_tablet_camera" xml:space="preserve">
+    <value>อุปกรณ์แท็บเล็ตกล้อง</value>
+  </data>
+  <data name="device_tablet_speaker" xml:space="preserve">
+    <value>อุปกรณ์แท็บเล็ตลำโพง</value>
+  </data>
+  <data name="devices" xml:space="preserve">
+    <value>อุปกรณ์</value>
+  </data>
+  <data name="diamond" xml:space="preserve">
+    <value>เพชร</value>
+  </data>
+  <data name="diamonds_four" xml:space="preserve">
+    <value>ข้าวหลามตัดสี่</value>
+  </data>
+  <data name="dice_five" xml:space="preserve">
+    <value>ลูกเต๋าห้า</value>
+  </data>
+  <data name="dice_four" xml:space="preserve">
+    <value>ลูกเต๋าสี่</value>
+  </data>
+  <data name="dice_one" xml:space="preserve">
+    <value>ลูกเต๋าหนึ่ง</value>
+  </data>
+  <data name="dice_six" xml:space="preserve">
+    <value>ลูกเต๋าหก</value>
+  </data>
+  <data name="dice_three" xml:space="preserve">
+    <value>ลูกเต๋าสาม</value>
+  </data>
+  <data name="dice_two" xml:space="preserve">
+    <value>ลูกเต๋าสอง</value>
+  </data>
+  <data name="disc" xml:space="preserve">
+    <value>แผ่นดิสก์</value>
+  </data>
+  <data name="disco_ball" xml:space="preserve">
+    <value>ดิสโก้ลูกบอล</value>
+  </data>
+  <data name="discord_logo" xml:space="preserve">
+    <value>Discordโลโก้</value>
+  </data>
+  <data name="divide" xml:space="preserve">
+    <value>หาร</value>
+  </data>
+  <data name="dna" xml:space="preserve">
+    <value>ดีเอ็นเอ</value>
+  </data>
+  <data name="dog" xml:space="preserve">
+    <value>สุนัข</value>
+  </data>
+  <data name="door" xml:space="preserve">
+    <value>ประตู</value>
+  </data>
+  <data name="door_open" xml:space="preserve">
+    <value>ประตูเปิด</value>
+  </data>
+  <data name="dot" xml:space="preserve">
+    <value>จุด</value>
+  </data>
+  <data name="dot_outline" xml:space="preserve">
+    <value>จุดโครงร่าง</value>
+  </data>
+  <data name="dots_nine" xml:space="preserve">
+    <value>จุดเก้า</value>
+  </data>
+  <data name="dots_six" xml:space="preserve">
+    <value>จุดหก</value>
+  </data>
+  <data name="dots_six_vertical" xml:space="preserve">
+    <value>จุดหกแนวตั้ง</value>
+  </data>
+  <data name="dots_three" xml:space="preserve">
+    <value>จุดสาม</value>
+  </data>
+  <data name="dots_three_circle" xml:space="preserve">
+    <value>จุดสามวงกลม</value>
+  </data>
+  <data name="dots_three_circle_vertical" xml:space="preserve">
+    <value>จุดสามวงกลมแนวตั้ง</value>
+  </data>
+  <data name="dots_three_outline" xml:space="preserve">
+    <value>จุดสามโครงร่าง</value>
+  </data>
+  <data name="dots_three_outline_vertical" xml:space="preserve">
+    <value>จุดสามโครงร่างแนวตั้ง</value>
+  </data>
+  <data name="dots_three_vertical" xml:space="preserve">
+    <value>จุดสามแนวตั้ง</value>
+  </data>
+  <data name="download" xml:space="preserve">
+    <value>ดาวน์โหลด</value>
+  </data>
+  <data name="download_simple" xml:space="preserve">
+    <value>ดาวน์โหลดเรียบง่าย</value>
+  </data>
+  <data name="dress" xml:space="preserve">
+    <value>ชุดเดรส</value>
+  </data>
+  <data name="dresser" xml:space="preserve">
+    <value>ตู้ลิ้นชัก</value>
+  </data>
+  <data name="dribbble_logo" xml:space="preserve">
+    <value>Dribbbleโลโก้</value>
+  </data>
+  <data name="drone" xml:space="preserve">
+    <value>โดรน</value>
+  </data>
+  <data name="drop" xml:space="preserve">
+    <value>หยด</value>
+  </data>
+  <data name="drop_half" xml:space="preserve">
+    <value>หยดครึ่ง</value>
+  </data>
+  <data name="drop_half_bottom" xml:space="preserve">
+    <value>หยดครึ่งด้านล่าง</value>
+  </data>
+  <data name="drop_simple" xml:space="preserve">
+    <value>หยดเรียบง่าย</value>
+  </data>
+  <data name="drop_slash" xml:space="preserve">
+    <value>หยดเครื่องหมายทับ</value>
+  </data>
+  <data name="dropbox_logo" xml:space="preserve">
+    <value>Dropboxโลโก้</value>
+  </data>
+  <data name="ear" xml:space="preserve">
+    <value>หู</value>
+  </data>
+  <data name="ear_slash" xml:space="preserve">
+    <value>หูเครื่องหมายทับ</value>
+  </data>
+  <data name="egg" xml:space="preserve">
+    <value>ไข่</value>
+  </data>
+  <data name="egg_crack" xml:space="preserve">
+    <value>ไข่รอยแตก</value>
+  </data>
+  <data name="eject" xml:space="preserve">
+    <value>นำออก</value>
+  </data>
+  <data name="eject_simple" xml:space="preserve">
+    <value>นำออกเรียบง่าย</value>
+  </data>
+  <data name="elevator" xml:space="preserve">
+    <value>ลิฟต์</value>
+  </data>
+  <data name="empty" xml:space="preserve">
+    <value>ว่างเปล่า</value>
+  </data>
+  <data name="engine" xml:space="preserve">
+    <value>เครื่องยนต์</value>
+  </data>
+  <data name="envelope" xml:space="preserve">
+    <value>ซองจดหมาย</value>
+  </data>
+  <data name="envelope_open" xml:space="preserve">
+    <value>ซองจดหมายเปิด</value>
+  </data>
+  <data name="envelope_simple" xml:space="preserve">
+    <value>ซองจดหมายเรียบง่าย</value>
+  </data>
+  <data name="envelope_simple_open" xml:space="preserve">
+    <value>ซองจดหมายเรียบง่ายเปิด</value>
+  </data>
+  <data name="equalizer" xml:space="preserve">
+    <value>อีควอไลเซอร์</value>
+  </data>
+  <data name="equals" xml:space="preserve">
+    <value>เท่ากับ</value>
+  </data>
+  <data name="eraser" xml:space="preserve">
+    <value>ยางลบ</value>
+  </data>
+  <data name="escalator_down" xml:space="preserve">
+    <value>บันไดเลื่อนลง</value>
+  </data>
+  <data name="escalator_up" xml:space="preserve">
+    <value>บันไดเลื่อนขึ้น</value>
+  </data>
+  <data name="exam" xml:space="preserve">
+    <value>การสอบ</value>
+  </data>
+  <data name="exclamation_mark" xml:space="preserve">
+    <value>เครื่องหมายอัศเจรีย์เครื่องหมาย</value>
+  </data>
+  <data name="exclude" xml:space="preserve">
+    <value>ไม่รวม</value>
+  </data>
+  <data name="exclude_square" xml:space="preserve">
+    <value>ไม่รวมสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="export" xml:space="preserve">
+    <value>ส่งออก</value>
+  </data>
+  <data name="eye" xml:space="preserve">
+    <value>ตา</value>
+  </data>
+  <data name="eye_closed" xml:space="preserve">
+    <value>ตาปิด</value>
+  </data>
+  <data name="eye_slash" xml:space="preserve">
+    <value>ตาเครื่องหมายทับ</value>
+  </data>
+  <data name="eyedropper" xml:space="preserve">
+    <value>หลอดหยด</value>
+  </data>
+  <data name="eyedropper_sample" xml:space="preserve">
+    <value>หลอดหยดตัวอย่าง</value>
+  </data>
+  <data name="eyeglasses" xml:space="preserve">
+    <value>แว่นตา</value>
+  </data>
+  <data name="eyes" xml:space="preserve">
+    <value>ดวงตา</value>
+  </data>
+  <data name="face_mask" xml:space="preserve">
+    <value>ใบหน้าหน้ากาก</value>
+  </data>
+  <data name="facebook_logo" xml:space="preserve">
+    <value>Facebookโลโก้</value>
+  </data>
+  <data name="factory" xml:space="preserve">
+    <value>โรงงาน</value>
+  </data>
+  <data name="faders" xml:space="preserve">
+    <value>เฟดเดอร์</value>
+  </data>
+  <data name="faders_horizontal" xml:space="preserve">
+    <value>เฟดเดอร์แนวนอน</value>
+  </data>
+  <data name="fallout_shelter" xml:space="preserve">
+    <value>กัมมันตรังสีที่พักพิง</value>
+  </data>
+  <data name="fan" xml:space="preserve">
+    <value>พัดลม</value>
+  </data>
+  <data name="farm" xml:space="preserve">
+    <value>ฟาร์ม</value>
+  </data>
+  <data name="fast_forward" xml:space="preserve">
+    <value>เร็วไปข้างหน้า</value>
+  </data>
+  <data name="fast_forward_circle" xml:space="preserve">
+    <value>เร็วไปข้างหน้าวงกลม</value>
+  </data>
+  <data name="feather" xml:space="preserve">
+    <value>ขนนก</value>
+  </data>
+  <data name="fediverse_logo" xml:space="preserve">
+    <value>Fediverseโลโก้</value>
+  </data>
+  <data name="figma_logo" xml:space="preserve">
+    <value>Figmaโลโก้</value>
+  </data>
+  <data name="file" xml:space="preserve">
+    <value>ไฟล์</value>
+  </data>
+  <data name="file_archive" xml:space="preserve">
+    <value>ไฟล์คลังเก็บ</value>
+  </data>
+  <data name="file_arrow_down" xml:space="preserve">
+    <value>ไฟล์ลูกศรลง</value>
+  </data>
+  <data name="file_arrow_up" xml:space="preserve">
+    <value>ไฟล์ลูกศรขึ้น</value>
+  </data>
+  <data name="file_audio" xml:space="preserve">
+    <value>ไฟล์เสียง</value>
+  </data>
+  <data name="file_c" xml:space="preserve">
+    <value>ไฟล์c</value>
+  </data>
+  <data name="file_c_sharp" xml:space="preserve">
+    <value>ไฟล์cคม</value>
+  </data>
+  <data name="file_cloud" xml:space="preserve">
+    <value>ไฟล์เมฆ</value>
+  </data>
+  <data name="file_code" xml:space="preserve">
+    <value>ไฟล์โค้ด</value>
+  </data>
+  <data name="file_cpp" xml:space="preserve">
+    <value>ไฟล์cpp</value>
+  </data>
+  <data name="file_css" xml:space="preserve">
+    <value>ไฟล์css</value>
+  </data>
+  <data name="file_csv" xml:space="preserve">
+    <value>ไฟล์csv</value>
+  </data>
+  <data name="file_dashed" xml:space="preserve">
+    <value>ไฟล์เส้นประ</value>
+  </data>
+  <data name="file_doc" xml:space="preserve">
+    <value>ไฟล์เอกสาร</value>
+  </data>
+  <data name="file_html" xml:space="preserve">
+    <value>ไฟล์html</value>
+  </data>
+  <data name="file_image" xml:space="preserve">
+    <value>ไฟล์รูปภาพ</value>
+  </data>
+  <data name="file_ini" xml:space="preserve">
+    <value>ไฟล์ini</value>
+  </data>
+  <data name="file_jpg" xml:space="preserve">
+    <value>ไฟล์jpg</value>
+  </data>
+  <data name="file_js" xml:space="preserve">
+    <value>ไฟล์js</value>
+  </data>
+  <data name="file_jsx" xml:space="preserve">
+    <value>ไฟล์jsx</value>
+  </data>
+  <data name="file_lock" xml:space="preserve">
+    <value>ไฟล์ล็อก</value>
+  </data>
+  <data name="file_magnifying_glass" xml:space="preserve">
+    <value>ไฟล์แว่นขยายแก้ว</value>
+  </data>
+  <data name="file_md" xml:space="preserve">
+    <value>ไฟล์md</value>
+  </data>
+  <data name="file_minus" xml:space="preserve">
+    <value>ไฟล์ลบ</value>
+  </data>
+  <data name="file_pdf" xml:space="preserve">
+    <value>ไฟล์pdf</value>
+  </data>
+  <data name="file_plus" xml:space="preserve">
+    <value>ไฟล์บวก</value>
+  </data>
+  <data name="file_png" xml:space="preserve">
+    <value>ไฟล์png</value>
+  </data>
+  <data name="file_ppt" xml:space="preserve">
+    <value>ไฟล์ppt</value>
+  </data>
+  <data name="file_py" xml:space="preserve">
+    <value>ไฟล์py</value>
+  </data>
+  <data name="file_rs" xml:space="preserve">
+    <value>ไฟล์rs</value>
+  </data>
+  <data name="file_sql" xml:space="preserve">
+    <value>ไฟล์sql</value>
+  </data>
+  <data name="file_svg" xml:space="preserve">
+    <value>ไฟล์svg</value>
+  </data>
+  <data name="file_text" xml:space="preserve">
+    <value>ไฟล์ข้อความ</value>
+  </data>
+  <data name="file_ts" xml:space="preserve">
+    <value>ไฟล์ts</value>
+  </data>
+  <data name="file_tsx" xml:space="preserve">
+    <value>ไฟล์tsx</value>
+  </data>
+  <data name="file_txt" xml:space="preserve">
+    <value>ไฟล์txt</value>
+  </data>
+  <data name="file_video" xml:space="preserve">
+    <value>ไฟล์วิดีโอ</value>
+  </data>
+  <data name="file_vue" xml:space="preserve">
+    <value>ไฟล์vue</value>
+  </data>
+  <data name="file_x" xml:space="preserve">
+    <value>ไฟล์x</value>
+  </data>
+  <data name="file_xls" xml:space="preserve">
+    <value>ไฟล์xls</value>
+  </data>
+  <data name="file_zip" xml:space="preserve">
+    <value>ไฟล์ZIP</value>
+  </data>
+  <data name="files" xml:space="preserve">
+    <value>ไฟล์</value>
+  </data>
+  <data name="film_reel" xml:space="preserve">
+    <value>ฟิล์มม้วน</value>
+  </data>
+  <data name="film_script" xml:space="preserve">
+    <value>ฟิล์มสคริปต์</value>
+  </data>
+  <data name="film_slate" xml:space="preserve">
+    <value>ฟิล์มกระดานชนวน</value>
+  </data>
+  <data name="film_strip" xml:space="preserve">
+    <value>ฟิล์มแถบ</value>
+  </data>
+  <data name="fingerprint" xml:space="preserve">
+    <value>ลายนิ้วมือ</value>
+  </data>
+  <data name="fingerprint_simple" xml:space="preserve">
+    <value>ลายนิ้วมือเรียบง่าย</value>
+  </data>
+  <data name="finn_the_human" xml:space="preserve">
+    <value>Finnมนุษย์</value>
+  </data>
+  <data name="fire" xml:space="preserve">
+    <value>ไฟ</value>
+  </data>
+  <data name="fire_extinguisher" xml:space="preserve">
+    <value>ไฟถังดับเพลิง</value>
+  </data>
+  <data name="fire_simple" xml:space="preserve">
+    <value>ไฟเรียบง่าย</value>
+  </data>
+  <data name="fire_truck" xml:space="preserve">
+    <value>ไฟรถบรรทุก</value>
+  </data>
+  <data name="first_aid" xml:space="preserve">
+    <value>แรกช่วยเหลือ</value>
+  </data>
+  <data name="first_aid_kit" xml:space="preserve">
+    <value>แรกช่วยเหลือชุด</value>
+  </data>
+  <data name="fish" xml:space="preserve">
+    <value>ปลา</value>
+  </data>
+  <data name="fish_simple" xml:space="preserve">
+    <value>ปลาเรียบง่าย</value>
+  </data>
+  <data name="flag" xml:space="preserve">
+    <value>ธง</value>
+  </data>
+  <data name="flag_banner" xml:space="preserve">
+    <value>ธงแบนเนอร์</value>
+  </data>
+  <data name="flag_banner_fold" xml:space="preserve">
+    <value>ธงแบนเนอร์พับ</value>
+  </data>
+  <data name="flag_checkered" xml:space="preserve">
+    <value>ธงลายตาราง</value>
+  </data>
+  <data name="flag_pennant" xml:space="preserve">
+    <value>ธงธงสามเหลี่ยม</value>
+  </data>
+  <data name="flame" xml:space="preserve">
+    <value>เปลวไฟ</value>
+  </data>
+  <data name="flashlight" xml:space="preserve">
+    <value>ไฟฉาย</value>
+  </data>
+  <data name="flask" xml:space="preserve">
+    <value>ขวดทดลอง</value>
+  </data>
+  <data name="flip_horizontal" xml:space="preserve">
+    <value>พลิกแนวนอน</value>
+  </data>
+  <data name="flip_vertical" xml:space="preserve">
+    <value>พลิกแนวตั้ง</value>
+  </data>
+  <data name="floppy_disk" xml:space="preserve">
+    <value>ฟลอปปี้ดิสก์</value>
+  </data>
+  <data name="floppy_disk_back" xml:space="preserve">
+    <value>ฟลอปปี้ดิสก์ย้อนกลับ</value>
+  </data>
+  <data name="flow_arrow" xml:space="preserve">
+    <value>การไหลลูกศร</value>
+  </data>
+  <data name="flower" xml:space="preserve">
+    <value>ดอกไม้</value>
+  </data>
+  <data name="flower_lotus" xml:space="preserve">
+    <value>ดอกไม้ดอกบัว</value>
+  </data>
+  <data name="flower_tulip" xml:space="preserve">
+    <value>ดอกไม้ทิวลิป</value>
+  </data>
+  <data name="flying_saucer" xml:space="preserve">
+    <value>บินจานรอง</value>
+  </data>
+  <data name="folder" xml:space="preserve">
+    <value>โฟลเดอร์</value>
+  </data>
+  <data name="folder_dashed" xml:space="preserve">
+    <value>โฟลเดอร์เส้นประ</value>
+  </data>
+  <data name="folder_lock" xml:space="preserve">
+    <value>โฟลเดอร์ล็อก</value>
+  </data>
+  <data name="folder_minus" xml:space="preserve">
+    <value>โฟลเดอร์ลบ</value>
+  </data>
+  <data name="folder_open" xml:space="preserve">
+    <value>โฟลเดอร์เปิด</value>
+  </data>
+  <data name="folder_plus" xml:space="preserve">
+    <value>โฟลเดอร์บวก</value>
+  </data>
+  <data name="folder_simple" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่าย</value>
+  </data>
+  <data name="folder_simple_dashed" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่ายเส้นประ</value>
+  </data>
+  <data name="folder_simple_lock" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่ายล็อก</value>
+  </data>
+  <data name="folder_simple_minus" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่ายลบ</value>
+  </data>
+  <data name="folder_simple_plus" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่ายบวก</value>
+  </data>
+  <data name="folder_simple_star" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่ายดาว</value>
+  </data>
+  <data name="folder_simple_user" xml:space="preserve">
+    <value>โฟลเดอร์เรียบง่ายผู้ใช้</value>
+  </data>
+  <data name="folder_star" xml:space="preserve">
+    <value>โฟลเดอร์ดาว</value>
+  </data>
+  <data name="folder_user" xml:space="preserve">
+    <value>โฟลเดอร์ผู้ใช้</value>
+  </data>
+  <data name="folders" xml:space="preserve">
+    <value>โฟลเดอร์</value>
+  </data>
+  <data name="football" xml:space="preserve">
+    <value>ฟุตบอล</value>
+  </data>
+  <data name="football_helmet" xml:space="preserve">
+    <value>ฟุตบอลหมวกกันน็อก</value>
+  </data>
+  <data name="footprints" xml:space="preserve">
+    <value>รอยเท้า</value>
+  </data>
+  <data name="fork_knife" xml:space="preserve">
+    <value>ส้อมมีด</value>
+  </data>
+  <data name="four_k" xml:space="preserve">
+    <value>สี่k</value>
+  </data>
+  <data name="frame_corners" xml:space="preserve">
+    <value>กรอบมุม</value>
+  </data>
+  <data name="framer_logo" xml:space="preserve">
+    <value>Framerโลโก้</value>
+  </data>
+  <data name="function" xml:space="preserve">
+    <value>ฟังก์ชัน</value>
+  </data>
+  <data name="funnel" xml:space="preserve">
+    <value>กรวย</value>
+  </data>
+  <data name="funnel_simple" xml:space="preserve">
+    <value>กรวยเรียบง่าย</value>
+  </data>
+  <data name="funnel_simple_x" xml:space="preserve">
+    <value>กรวยเรียบง่ายx</value>
+  </data>
+  <data name="funnel_x" xml:space="preserve">
+    <value>กรวยx</value>
+  </data>
+  <data name="game_controller" xml:space="preserve">
+    <value>เกมคอนโทรลเลอร์</value>
+  </data>
+  <data name="garage" xml:space="preserve">
+    <value>โรงรถ</value>
+  </data>
+  <data name="gas_can" xml:space="preserve">
+    <value>น้ำมันกระป๋อง</value>
+  </data>
+  <data name="gas_pump" xml:space="preserve">
+    <value>น้ำมันปั๊ม</value>
+  </data>
+  <data name="gauge" xml:space="preserve">
+    <value>มาตรวัด</value>
+  </data>
+  <data name="gavel" xml:space="preserve">
+    <value>ค้อนผู้พิพากษา</value>
+  </data>
+  <data name="gear" xml:space="preserve">
+    <value>เฟือง</value>
+  </data>
+  <data name="gear_fine" xml:space="preserve">
+    <value>เฟืองละเอียด</value>
+  </data>
+  <data name="gear_six" xml:space="preserve">
+    <value>เฟืองหก</value>
+  </data>
+  <data name="gender_female" xml:space="preserve">
+    <value>เพศเพศหญิง</value>
+  </data>
+  <data name="gender_intersex" xml:space="preserve">
+    <value>เพศอินเตอร์เซ็กซ์</value>
+  </data>
+  <data name="gender_male" xml:space="preserve">
+    <value>เพศเพศชาย</value>
+  </data>
+  <data name="gender_neuter" xml:space="preserve">
+    <value>เพศเป็นกลาง</value>
+  </data>
+  <data name="gender_nonbinary" xml:space="preserve">
+    <value>เพศนอนไบนารี</value>
+  </data>
+  <data name="gender_transgender" xml:space="preserve">
+    <value>เพศคนข้ามเพศ</value>
+  </data>
+  <data name="ghost" xml:space="preserve">
+    <value>ผี</value>
+  </data>
+  <data name="gif" xml:space="preserve">
+    <value>Gif</value>
+  </data>
+  <data name="gift" xml:space="preserve">
+    <value>ของขวัญ</value>
+  </data>
+  <data name="git_branch" xml:space="preserve">
+    <value>Gitกิ่ง</value>
+  </data>
+  <data name="git_commit" xml:space="preserve">
+    <value>Gitคอมมิต</value>
+  </data>
+  <data name="git_diff" xml:space="preserve">
+    <value>Gitความแตกต่าง</value>
+  </data>
+  <data name="git_fork" xml:space="preserve">
+    <value>Gitส้อม</value>
+  </data>
+  <data name="git_merge" xml:space="preserve">
+    <value>Gitผสาน</value>
+  </data>
+  <data name="git_pull_request" xml:space="preserve">
+    <value>Gitดึงคำขอ</value>
+  </data>
+  <data name="github_logo" xml:space="preserve">
+    <value>Githubโลโก้</value>
+  </data>
+  <data name="gitlab_logo" xml:space="preserve">
+    <value>Gitlabโลโก้</value>
+  </data>
+  <data name="gitlab_logo_simple" xml:space="preserve">
+    <value>Gitlabโลโก้เรียบง่าย</value>
+  </data>
+  <data name="globe" xml:space="preserve">
+    <value>ลูกโลก</value>
+  </data>
+  <data name="globe_hemisphere_east" xml:space="preserve">
+    <value>ลูกโลกซีกโลกทิศตะวันออก</value>
+  </data>
+  <data name="globe_hemisphere_west" xml:space="preserve">
+    <value>ลูกโลกซีกโลกทิศตะวันตก</value>
+  </data>
+  <data name="globe_simple" xml:space="preserve">
+    <value>ลูกโลกเรียบง่าย</value>
+  </data>
+  <data name="globe_simple_x" xml:space="preserve">
+    <value>ลูกโลกเรียบง่ายx</value>
+  </data>
+  <data name="globe_stand" xml:space="preserve">
+    <value>ลูกโลกขาตั้ง</value>
+  </data>
+  <data name="globe_x" xml:space="preserve">
+    <value>ลูกโลกx</value>
+  </data>
+  <data name="goggles" xml:space="preserve">
+    <value>แว่นตานิรภัย</value>
+  </data>
+  <data name="golf" xml:space="preserve">
+    <value>กอล์ฟ</value>
+  </data>
+  <data name="goodreads_logo" xml:space="preserve">
+    <value>Goodreadsโลโก้</value>
+  </data>
+  <data name="google_cardboard_logo" xml:space="preserve">
+    <value>Googleกระดาษแข็งโลโก้</value>
+  </data>
+  <data name="google_chrome_logo" xml:space="preserve">
+    <value>Googlechromeโลโก้</value>
+  </data>
+  <data name="google_drive_logo" xml:space="preserve">
+    <value>Googleไดรฟ์โลโก้</value>
+  </data>
+  <data name="google_logo" xml:space="preserve">
+    <value>Googleโลโก้</value>
+  </data>
+  <data name="google_photos_logo" xml:space="preserve">
+    <value>Googleรูปถ่ายโลโก้</value>
+  </data>
+  <data name="google_play_logo" xml:space="preserve">
+    <value>Googleเล่นโลโก้</value>
+  </data>
+  <data name="google_podcasts_logo" xml:space="preserve">
+    <value>Googleพอดแคสต์โลโก้</value>
+  </data>
+  <data name="gps" xml:space="preserve">
+    <value>จีพีเอส</value>
+  </data>
+  <data name="gps_fix" xml:space="preserve">
+    <value>จีพีเอสซ่อม</value>
+  </data>
+  <data name="gps_slash" xml:space="preserve">
+    <value>จีพีเอสเครื่องหมายทับ</value>
+  </data>
+  <data name="gradient" xml:space="preserve">
+    <value>ไล่ระดับสี</value>
+  </data>
+  <data name="graduation_cap" xml:space="preserve">
+    <value>การสำเร็จการศึกษาหมวกแก๊ป</value>
+  </data>
+  <data name="grains" xml:space="preserve">
+    <value>ธัญพืช</value>
+  </data>
+  <data name="grains_slash" xml:space="preserve">
+    <value>ธัญพืชเครื่องหมายทับ</value>
+  </data>
+  <data name="graph" xml:space="preserve">
+    <value>กราฟ</value>
+  </data>
+  <data name="graphics_card" xml:space="preserve">
+    <value>กราฟิกการ์ด</value>
+  </data>
+  <data name="greater_than" xml:space="preserve">
+    <value>มากกว่ากว่า</value>
+  </data>
+  <data name="greater_than_or_equal" xml:space="preserve">
+    <value>มากกว่ากว่าหรือเท่ากับ</value>
+  </data>
+  <data name="grid_four" xml:space="preserve">
+    <value>ตารางสี่</value>
+  </data>
+  <data name="grid_nine" xml:space="preserve">
+    <value>ตารางเก้า</value>
+  </data>
+  <data name="guitar" xml:space="preserve">
+    <value>กีตาร์</value>
+  </data>
+  <data name="hair_dryer" xml:space="preserve">
+    <value>ผมเครื่องอบผ้า</value>
+  </data>
+  <data name="hamburger" xml:space="preserve">
+    <value>แฮมเบอร์เกอร์</value>
+  </data>
+  <data name="hammer" xml:space="preserve">
+    <value>ค้อน</value>
+  </data>
+  <data name="hand" xml:space="preserve">
+    <value>มือ</value>
+  </data>
+  <data name="hand_arrow_down" xml:space="preserve">
+    <value>มือลูกศรลง</value>
+  </data>
+  <data name="hand_arrow_up" xml:space="preserve">
+    <value>มือลูกศรขึ้น</value>
+  </data>
+  <data name="hand_coins" xml:space="preserve">
+    <value>มือเหรียญ</value>
+  </data>
+  <data name="hand_deposit" xml:space="preserve">
+    <value>มือฝากเงิน</value>
+  </data>
+  <data name="hand_eye" xml:space="preserve">
+    <value>มือตา</value>
+  </data>
+  <data name="hand_fist" xml:space="preserve">
+    <value>มือกำปั้น</value>
+  </data>
+  <data name="hand_grabbing" xml:space="preserve">
+    <value>มือจับ</value>
+  </data>
+  <data name="hand_heart" xml:space="preserve">
+    <value>มือหัวใจ</value>
+  </data>
+  <data name="hand_palm" xml:space="preserve">
+    <value>มือปาล์ม</value>
+  </data>
+  <data name="hand_peace" xml:space="preserve">
+    <value>มือสันติภาพ</value>
+  </data>
+  <data name="hand_pointing" xml:space="preserve">
+    <value>มือชี้</value>
+  </data>
+  <data name="hand_soap" xml:space="preserve">
+    <value>มือสบู่</value>
+  </data>
+  <data name="hand_swipe_left" xml:space="preserve">
+    <value>มือปัดซ้าย</value>
+  </data>
+  <data name="hand_swipe_right" xml:space="preserve">
+    <value>มือปัดขวา</value>
+  </data>
+  <data name="hand_tap" xml:space="preserve">
+    <value>มือแตะ</value>
+  </data>
+  <data name="hand_waving" xml:space="preserve">
+    <value>มือโบก</value>
+  </data>
+  <data name="hand_withdraw" xml:space="preserve">
+    <value>มือถอนเงิน</value>
+  </data>
+  <data name="handbag" xml:space="preserve">
+    <value>กระเป๋าถือ</value>
+  </data>
+  <data name="handbag_simple" xml:space="preserve">
+    <value>กระเป๋าถือเรียบง่าย</value>
+  </data>
+  <data name="hands_clapping" xml:space="preserve">
+    <value>มือปรบมือ</value>
+  </data>
+  <data name="hands_praying" xml:space="preserve">
+    <value>มือสวดมนต์</value>
+  </data>
+  <data name="handshake" xml:space="preserve">
+    <value>จับมือ</value>
+  </data>
+  <data name="hard_drive" xml:space="preserve">
+    <value>ฮาร์ดไดรฟ์</value>
+  </data>
+  <data name="hard_drives" xml:space="preserve">
+    <value>ฮาร์ดไดรฟ์</value>
+  </data>
+  <data name="hard_hat" xml:space="preserve">
+    <value>ฮาร์ดหมวก</value>
+  </data>
+  <data name="hash" xml:space="preserve">
+    <value>แฮช</value>
+  </data>
+  <data name="hash_straight" xml:space="preserve">
+    <value>แฮชตรง</value>
+  </data>
+  <data name="head_circuit" xml:space="preserve">
+    <value>หัววงจร</value>
+  </data>
+  <data name="headlights" xml:space="preserve">
+    <value>ไฟหน้า</value>
+  </data>
+  <data name="headphones" xml:space="preserve">
+    <value>หูฟัง</value>
+  </data>
+  <data name="headset" xml:space="preserve">
+    <value>ชุดหูฟัง</value>
+  </data>
+  <data name="heart" xml:space="preserve">
+    <value>หัวใจ</value>
+  </data>
+  <data name="heart_break" xml:space="preserve">
+    <value>หัวใจพัก</value>
+  </data>
+  <data name="heart_half" xml:space="preserve">
+    <value>หัวใจครึ่ง</value>
+  </data>
+  <data name="heart_straight" xml:space="preserve">
+    <value>หัวใจตรง</value>
+  </data>
+  <data name="heart_straight_break" xml:space="preserve">
+    <value>หัวใจตรงพัก</value>
+  </data>
+  <data name="heartbeat" xml:space="preserve">
+    <value>การเต้นของหัวใจ</value>
+  </data>
+  <data name="hexagon" xml:space="preserve">
+    <value>หกเหลี่ยม</value>
+  </data>
+  <data name="high_definition" xml:space="preserve">
+    <value>สูงความหมาย</value>
+  </data>
+  <data name="high_heel" xml:space="preserve">
+    <value>สูงส้นรองเท้า</value>
+  </data>
+  <data name="highlighter" xml:space="preserve">
+    <value>ปากกาเน้นข้อความ</value>
+  </data>
+  <data name="highlighter_circle" xml:space="preserve">
+    <value>ปากกาเน้นข้อความวงกลม</value>
+  </data>
+  <data name="hockey" xml:space="preserve">
+    <value>ฮอกกี้</value>
+  </data>
+  <data name="hoodie" xml:space="preserve">
+    <value>เสื้อฮู้ด</value>
+  </data>
+  <data name="horse" xml:space="preserve">
+    <value>ม้า</value>
+  </data>
+  <data name="hospital" xml:space="preserve">
+    <value>โรงพยาบาล</value>
+  </data>
+  <data name="hourglass" xml:space="preserve">
+    <value>นาฬิกาทราย</value>
+  </data>
+  <data name="hourglass_high" xml:space="preserve">
+    <value>นาฬิกาทรายสูง</value>
+  </data>
+  <data name="hourglass_low" xml:space="preserve">
+    <value>นาฬิกาทรายต่ำ</value>
+  </data>
+  <data name="hourglass_medium" xml:space="preserve">
+    <value>นาฬิกาทรายปานกลาง</value>
+  </data>
+  <data name="hourglass_simple" xml:space="preserve">
+    <value>นาฬิกาทรายเรียบง่าย</value>
+  </data>
+  <data name="hourglass_simple_high" xml:space="preserve">
+    <value>นาฬิกาทรายเรียบง่ายสูง</value>
+  </data>
+  <data name="hourglass_simple_low" xml:space="preserve">
+    <value>นาฬิกาทรายเรียบง่ายต่ำ</value>
+  </data>
+  <data name="hourglass_simple_medium" xml:space="preserve">
+    <value>นาฬิกาทรายเรียบง่ายปานกลาง</value>
+  </data>
+  <data name="house" xml:space="preserve">
+    <value>บ้าน</value>
+  </data>
+  <data name="house_line" xml:space="preserve">
+    <value>บ้านเส้น</value>
+  </data>
+  <data name="house_simple" xml:space="preserve">
+    <value>บ้านเรียบง่าย</value>
+  </data>
+  <data name="hurricane" xml:space="preserve">
+    <value>เฮอริเคน</value>
+  </data>
+  <data name="ice_cream" xml:space="preserve">
+    <value>น้ำแข็งครีม</value>
+  </data>
+  <data name="identification_badge" xml:space="preserve">
+    <value>บัตรประจำตัวตรา</value>
+  </data>
+  <data name="identification_card" xml:space="preserve">
+    <value>บัตรประจำตัวการ์ด</value>
+  </data>
+  <data name="image" xml:space="preserve">
+    <value>รูปภาพ</value>
+  </data>
+  <data name="image_broken" xml:space="preserve">
+    <value>รูปภาพเสีย</value>
+  </data>
+  <data name="image_square" xml:space="preserve">
+    <value>รูปภาพสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="images" xml:space="preserve">
+    <value>รูปภาพ</value>
+  </data>
+  <data name="images_square" xml:space="preserve">
+    <value>รูปภาพสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="infinity" xml:space="preserve">
+    <value>อนันต์</value>
+  </data>
+  <data name="info" xml:space="preserve">
+    <value>ข้อมูล</value>
+  </data>
+  <data name="instagram_logo" xml:space="preserve">
+    <value>Instagramโลโก้</value>
+  </data>
+  <data name="intersect" xml:space="preserve">
+    <value>ตัดกัน</value>
+  </data>
+  <data name="intersect_square" xml:space="preserve">
+    <value>ตัดกันสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="intersect_three" xml:space="preserve">
+    <value>ตัดกันสาม</value>
+  </data>
+  <data name="intersection" xml:space="preserve">
+    <value>จุดตัด</value>
+  </data>
+  <data name="invoice" xml:space="preserve">
+    <value>ใบแจ้งหนี้</value>
+  </data>
+  <data name="island" xml:space="preserve">
+    <value>เกาะ</value>
+  </data>
+  <data name="jar" xml:space="preserve">
+    <value>ขวดโหล</value>
+  </data>
+  <data name="jar_label" xml:space="preserve">
+    <value>ขวดโหลป้ายกำกับ</value>
+  </data>
+  <data name="jeep" xml:space="preserve">
+    <value>รถจี๊ป</value>
+  </data>
+  <data name="joystick" xml:space="preserve">
+    <value>จอยสติ๊ก</value>
+  </data>
+  <data name="kanban" xml:space="preserve">
+    <value>คัมบัง</value>
+  </data>
+  <data name="key" xml:space="preserve">
+    <value>กุญแจ</value>
+  </data>
+  <data name="key_return" xml:space="preserve">
+    <value>กุญแจย้อนกลับ</value>
+  </data>
+  <data name="keyboard" xml:space="preserve">
+    <value>แป้นพิมพ์</value>
+  </data>
+  <data name="keyhole" xml:space="preserve">
+    <value>รูกุญแจ</value>
+  </data>
+  <data name="knife" xml:space="preserve">
+    <value>มีด</value>
+  </data>
+  <data name="ladder" xml:space="preserve">
+    <value>บันได</value>
+  </data>
+  <data name="ladder_simple" xml:space="preserve">
+    <value>บันไดเรียบง่าย</value>
+  </data>
+  <data name="lamp" xml:space="preserve">
+    <value>โคมไฟ</value>
+  </data>
+  <data name="lamp_pendant" xml:space="preserve">
+    <value>โคมไฟจี้</value>
+  </data>
+  <data name="laptop" xml:space="preserve">
+    <value>แล็ปท็อป</value>
+  </data>
+  <data name="lasso" xml:space="preserve">
+    <value>บ่วงบาศ</value>
+  </data>
+  <data name="lastfm_logo" xml:space="preserve">
+    <value>Lastfmโลโก้</value>
+  </data>
+  <data name="layout" xml:space="preserve">
+    <value>เค้าโครง</value>
+  </data>
+  <data name="leaf" xml:space="preserve">
+    <value>ใบไม้</value>
+  </data>
+  <data name="lectern" xml:space="preserve">
+    <value>แท่นบรรยาย</value>
+  </data>
+  <data name="lego" xml:space="preserve">
+    <value>เลโก้</value>
+  </data>
+  <data name="lego_smiley" xml:space="preserve">
+    <value>เลโก้ยิ้ม</value>
+  </data>
+  <data name="less_than" xml:space="preserve">
+    <value>น้อยกว่ากว่า</value>
+  </data>
+  <data name="less_than_or_equal" xml:space="preserve">
+    <value>น้อยกว่ากว่าหรือเท่ากับ</value>
+  </data>
+  <data name="letter_circle_h" xml:space="preserve">
+    <value>ตัวอักษรวงกลมh</value>
+  </data>
+  <data name="letter_circle_p" xml:space="preserve">
+    <value>ตัวอักษรวงกลมp</value>
+  </data>
+  <data name="letter_circle_v" xml:space="preserve">
+    <value>ตัวอักษรวงกลมv</value>
+  </data>
+  <data name="lifebuoy" xml:space="preserve">
+    <value>ห่วงชูชีพ</value>
+  </data>
+  <data name="lightbulb" xml:space="preserve">
+    <value>หลอดไฟ</value>
+  </data>
+  <data name="lightbulb_filament" xml:space="preserve">
+    <value>หลอดไฟไส้หลอด</value>
+  </data>
+  <data name="lighthouse" xml:space="preserve">
+    <value>ประภาคาร</value>
+  </data>
+  <data name="lightning" xml:space="preserve">
+    <value>ฟ้าผ่า</value>
+  </data>
+  <data name="lightning_a" xml:space="preserve">
+    <value>ฟ้าผ่าa</value>
+  </data>
+  <data name="lightning_slash" xml:space="preserve">
+    <value>ฟ้าผ่าเครื่องหมายทับ</value>
+  </data>
+  <data name="line_segment" xml:space="preserve">
+    <value>เส้นส่วน</value>
+  </data>
+  <data name="line_segments" xml:space="preserve">
+    <value>เส้นส่วน</value>
+  </data>
+  <data name="line_vertical" xml:space="preserve">
+    <value>เส้นแนวตั้ง</value>
+  </data>
+  <data name="link" xml:space="preserve">
+    <value>ลิงก์</value>
+  </data>
+  <data name="link_break" xml:space="preserve">
+    <value>ลิงก์พัก</value>
+  </data>
+  <data name="link_simple" xml:space="preserve">
+    <value>ลิงก์เรียบง่าย</value>
+  </data>
+  <data name="link_simple_break" xml:space="preserve">
+    <value>ลิงก์เรียบง่ายพัก</value>
+  </data>
+  <data name="link_simple_horizontal" xml:space="preserve">
+    <value>ลิงก์เรียบง่ายแนวนอน</value>
+  </data>
+  <data name="link_simple_horizontal_break" xml:space="preserve">
+    <value>ลิงก์เรียบง่ายแนวนอนพัก</value>
+  </data>
+  <data name="linkedin_logo" xml:space="preserve">
+    <value>Linkedinโลโก้</value>
+  </data>
+  <data name="linktree_logo" xml:space="preserve">
+    <value>Linktreeโลโก้</value>
+  </data>
+  <data name="linux_logo" xml:space="preserve">
+    <value>Linuxโลโก้</value>
+  </data>
+  <data name="list" xml:space="preserve">
+    <value>รายการ</value>
+  </data>
+  <data name="list_bullets" xml:space="preserve">
+    <value>รายการสัญลักษณ์แสดงหัวข้อย่อย</value>
+  </data>
+  <data name="list_checks" xml:space="preserve">
+    <value>รายการเครื่องหมายถูก</value>
+  </data>
+  <data name="list_dashes" xml:space="preserve">
+    <value>รายการขีด</value>
+  </data>
+  <data name="list_heart" xml:space="preserve">
+    <value>รายการหัวใจ</value>
+  </data>
+  <data name="list_magnifying_glass" xml:space="preserve">
+    <value>รายการแว่นขยายแก้ว</value>
+  </data>
+  <data name="list_numbers" xml:space="preserve">
+    <value>รายการตัวเลข</value>
+  </data>
+  <data name="list_plus" xml:space="preserve">
+    <value>รายการบวก</value>
+  </data>
+  <data name="list_star" xml:space="preserve">
+    <value>รายการดาว</value>
+  </data>
+  <data name="lock" xml:space="preserve">
+    <value>ล็อก</value>
+  </data>
+  <data name="lock_key" xml:space="preserve">
+    <value>ล็อกกุญแจ</value>
+  </data>
+  <data name="lock_key_open" xml:space="preserve">
+    <value>ล็อกกุญแจเปิด</value>
+  </data>
+  <data name="lock_laminated" xml:space="preserve">
+    <value>ล็อกเคลือบ</value>
+  </data>
+  <data name="lock_laminated_open" xml:space="preserve">
+    <value>ล็อกเคลือบเปิด</value>
+  </data>
+  <data name="lock_open" xml:space="preserve">
+    <value>ล็อกเปิด</value>
+  </data>
+  <data name="lock_simple" xml:space="preserve">
+    <value>ล็อกเรียบง่าย</value>
+  </data>
+  <data name="lock_simple_open" xml:space="preserve">
+    <value>ล็อกเรียบง่ายเปิด</value>
+  </data>
+  <data name="lockers" xml:space="preserve">
+    <value>ตู้ล็อกเกอร์</value>
+  </data>
+  <data name="log" xml:space="preserve">
+    <value>บันทึก</value>
+  </data>
+  <data name="magic_wand" xml:space="preserve">
+    <value>เวทมนตร์ไม้กายสิทธิ์</value>
+  </data>
+  <data name="magnet" xml:space="preserve">
+    <value>แม่เหล็ก</value>
+  </data>
+  <data name="magnet_straight" xml:space="preserve">
+    <value>แม่เหล็กตรง</value>
+  </data>
+  <data name="magnifying_glass" xml:space="preserve">
+    <value>แว่นขยายแก้ว</value>
+  </data>
+  <data name="magnifying_glass_minus" xml:space="preserve">
+    <value>แว่นขยายแก้วลบ</value>
+  </data>
+  <data name="magnifying_glass_plus" xml:space="preserve">
+    <value>แว่นขยายแก้วบวก</value>
+  </data>
+  <data name="mailbox" xml:space="preserve">
+    <value>ตู้จดหมาย</value>
+  </data>
+  <data name="map_pin" xml:space="preserve">
+    <value>แผนที่หมุด</value>
+  </data>
+  <data name="map_pin_area" xml:space="preserve">
+    <value>แผนที่หมุดพื้นที่</value>
+  </data>
+  <data name="map_pin_line" xml:space="preserve">
+    <value>แผนที่หมุดเส้น</value>
+  </data>
+  <data name="map_pin_plus" xml:space="preserve">
+    <value>แผนที่หมุดบวก</value>
+  </data>
+  <data name="map_pin_simple" xml:space="preserve">
+    <value>แผนที่หมุดเรียบง่าย</value>
+  </data>
+  <data name="map_pin_simple_area" xml:space="preserve">
+    <value>แผนที่หมุดเรียบง่ายพื้นที่</value>
+  </data>
+  <data name="map_pin_simple_line" xml:space="preserve">
+    <value>แผนที่หมุดเรียบง่ายเส้น</value>
+  </data>
+  <data name="map_trifold" xml:space="preserve">
+    <value>แผนที่พับสามทบ</value>
+  </data>
+  <data name="markdown_logo" xml:space="preserve">
+    <value>มาร์กดาวน์โลโก้</value>
+  </data>
+  <data name="marker_circle" xml:space="preserve">
+    <value>เครื่องหมายวงกลม</value>
+  </data>
+  <data name="martini" xml:space="preserve">
+    <value>มาร์ตินี่</value>
+  </data>
+  <data name="mask_happy" xml:space="preserve">
+    <value>หน้ากากมีความสุข</value>
+  </data>
+  <data name="mask_sad" xml:space="preserve">
+    <value>หน้ากากเศร้า</value>
+  </data>
+  <data name="mastodon_logo" xml:space="preserve">
+    <value>Mastodonโลโก้</value>
+  </data>
+  <data name="math_operations" xml:space="preserve">
+    <value>คณิตศาสตร์การดำเนินการ</value>
+  </data>
+  <data name="matrix_logo" xml:space="preserve">
+    <value>เมทริกซ์โลโก้</value>
+  </data>
+  <data name="medal" xml:space="preserve">
+    <value>เหรียญรางวัล</value>
+  </data>
+  <data name="medal_military" xml:space="preserve">
+    <value>เหรียญรางวัลทหาร</value>
+  </data>
+  <data name="medium_logo" xml:space="preserve">
+    <value>ปานกลางโลโก้</value>
+  </data>
+  <data name="megaphone" xml:space="preserve">
+    <value>โทรโข่ง</value>
+  </data>
+  <data name="megaphone_simple" xml:space="preserve">
+    <value>โทรโข่งเรียบง่าย</value>
+  </data>
+  <data name="member_of" xml:space="preserve">
+    <value>สมาชิกของ</value>
+  </data>
+  <data name="memory" xml:space="preserve">
+    <value>หน่วยความจำ</value>
+  </data>
+  <data name="messenger_logo" xml:space="preserve">
+    <value>Messengerโลโก้</value>
+  </data>
+  <data name="meta_logo" xml:space="preserve">
+    <value>Metaโลโก้</value>
+  </data>
+  <data name="meteor" xml:space="preserve">
+    <value>ดาวตก</value>
+  </data>
+  <data name="metronome" xml:space="preserve">
+    <value>เครื่องกำหนดจังหวะ</value>
+  </data>
+  <data name="microphone" xml:space="preserve">
+    <value>ไมโครโฟน</value>
+  </data>
+  <data name="microphone_slash" xml:space="preserve">
+    <value>ไมโครโฟนเครื่องหมายทับ</value>
+  </data>
+  <data name="microphone_stage" xml:space="preserve">
+    <value>ไมโครโฟนเวที</value>
+  </data>
+  <data name="microscope" xml:space="preserve">
+    <value>กล้องจุลทรรศน์</value>
+  </data>
+  <data name="microsoft_excel_logo" xml:space="preserve">
+    <value>Microsoftexcelโลโก้</value>
+  </data>
+  <data name="microsoft_outlook_logo" xml:space="preserve">
+    <value>Microsoftoutlookโลโก้</value>
+  </data>
+  <data name="microsoft_powerpoint_logo" xml:space="preserve">
+    <value>Microsoftpowerpointโลโก้</value>
+  </data>
+  <data name="microsoft_teams_logo" xml:space="preserve">
+    <value>Microsoftทีมโลโก้</value>
+  </data>
+  <data name="microsoft_word_logo" xml:space="preserve">
+    <value>Microsoftwordโลโก้</value>
+  </data>
+  <data name="minus" xml:space="preserve">
+    <value>ลบ</value>
+  </data>
+  <data name="minus_circle" xml:space="preserve">
+    <value>ลบวงกลม</value>
+  </data>
+  <data name="minus_square" xml:space="preserve">
+    <value>ลบสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="money" xml:space="preserve">
+    <value>เงิน</value>
+  </data>
+  <data name="money_wavy" xml:space="preserve">
+    <value>เงินหยัก</value>
+  </data>
+  <data name="monitor" xml:space="preserve">
+    <value>จอภาพ</value>
+  </data>
+  <data name="monitor_arrow_up" xml:space="preserve">
+    <value>จอภาพลูกศรขึ้น</value>
+  </data>
+  <data name="monitor_play" xml:space="preserve">
+    <value>จอภาพเล่น</value>
+  </data>
+  <data name="moon" xml:space="preserve">
+    <value>ดวงจันทร์</value>
+  </data>
+  <data name="moon_stars" xml:space="preserve">
+    <value>ดวงจันทร์ดาว</value>
+  </data>
+  <data name="moped" xml:space="preserve">
+    <value>มอเตอร์ไซค์เล็ก</value>
+  </data>
+  <data name="moped_front" xml:space="preserve">
+    <value>มอเตอร์ไซค์เล็กด้านหน้า</value>
+  </data>
+  <data name="mosque" xml:space="preserve">
+    <value>มัสยิด</value>
+  </data>
+  <data name="motorcycle" xml:space="preserve">
+    <value>มอเตอร์ไซค์</value>
+  </data>
+  <data name="mountains" xml:space="preserve">
+    <value>ภูเขา</value>
+  </data>
+  <data name="mouse" xml:space="preserve">
+    <value>เมาส์</value>
+  </data>
+  <data name="mouse_left_click" xml:space="preserve">
+    <value>เมาส์ซ้ายคลิก</value>
+  </data>
+  <data name="mouse_middle_click" xml:space="preserve">
+    <value>เมาส์กลางคลิก</value>
+  </data>
+  <data name="mouse_right_click" xml:space="preserve">
+    <value>เมาส์ขวาคลิก</value>
+  </data>
+  <data name="mouse_scroll" xml:space="preserve">
+    <value>เมาส์ม้วนกระดาษ</value>
+  </data>
+  <data name="mouse_simple" xml:space="preserve">
+    <value>เมาส์เรียบง่าย</value>
+  </data>
+  <data name="music_note" xml:space="preserve">
+    <value>ดนตรีบันทึก</value>
+  </data>
+  <data name="music_note_simple" xml:space="preserve">
+    <value>ดนตรีบันทึกเรียบง่าย</value>
+  </data>
+  <data name="music_notes" xml:space="preserve">
+    <value>ดนตรีบันทึก</value>
+  </data>
+  <data name="music_notes_minus" xml:space="preserve">
+    <value>ดนตรีบันทึกลบ</value>
+  </data>
+  <data name="music_notes_plus" xml:space="preserve">
+    <value>ดนตรีบันทึกบวก</value>
+  </data>
+  <data name="music_notes_simple" xml:space="preserve">
+    <value>ดนตรีบันทึกเรียบง่าย</value>
+  </data>
+  <data name="navigation_arrow" xml:space="preserve">
+    <value>การนำทางลูกศร</value>
+  </data>
+  <data name="needle" xml:space="preserve">
+    <value>เข็ม</value>
+  </data>
+  <data name="network" xml:space="preserve">
+    <value>เครือข่าย</value>
+  </data>
+  <data name="network_slash" xml:space="preserve">
+    <value>เครือข่ายเครื่องหมายทับ</value>
+  </data>
+  <data name="network_x" xml:space="preserve">
+    <value>เครือข่ายx</value>
+  </data>
+  <data name="newspaper" xml:space="preserve">
+    <value>หนังสือพิมพ์</value>
+  </data>
+  <data name="newspaper_clipping" xml:space="preserve">
+    <value>หนังสือพิมพ์ตัดต่อ</value>
+  </data>
+  <data name="not_equals" xml:space="preserve">
+    <value>ไม่เท่ากับ</value>
+  </data>
+  <data name="not_member_of" xml:space="preserve">
+    <value>ไม่สมาชิกของ</value>
+  </data>
+  <data name="not_subset_of" xml:space="preserve">
+    <value>ไม่เซตย่อยของ</value>
+  </data>
+  <data name="not_superset_of" xml:space="preserve">
+    <value>ไม่เซตใหญ่ของ</value>
+  </data>
+  <data name="notches" xml:space="preserve">
+    <value>รอยบาก</value>
+  </data>
+  <data name="note" xml:space="preserve">
+    <value>บันทึก</value>
+  </data>
+  <data name="note_blank" xml:space="preserve">
+    <value>บันทึกว่าง</value>
+  </data>
+  <data name="note_pencil" xml:space="preserve">
+    <value>บันทึกดินสอ</value>
+  </data>
+  <data name="notebook" xml:space="preserve">
+    <value>สมุด</value>
+  </data>
+  <data name="notepad" xml:space="preserve">
+    <value>สมุดบันทึก</value>
+  </data>
+  <data name="notification" xml:space="preserve">
+    <value>การแจ้งเตือน</value>
+  </data>
+  <data name="notion_logo" xml:space="preserve">
+    <value>Notionโลโก้</value>
+  </data>
+  <data name="nuclear_plant" xml:space="preserve">
+    <value>นิวเคลียร์ต้นไม้</value>
+  </data>
+  <data name="number_circle_eight" xml:space="preserve">
+    <value>ตัวเลขวงกลมแปด</value>
+  </data>
+  <data name="number_circle_five" xml:space="preserve">
+    <value>ตัวเลขวงกลมห้า</value>
+  </data>
+  <data name="number_circle_four" xml:space="preserve">
+    <value>ตัวเลขวงกลมสี่</value>
+  </data>
+  <data name="number_circle_nine" xml:space="preserve">
+    <value>ตัวเลขวงกลมเก้า</value>
+  </data>
+  <data name="number_circle_one" xml:space="preserve">
+    <value>ตัวเลขวงกลมหนึ่ง</value>
+  </data>
+  <data name="number_circle_seven" xml:space="preserve">
+    <value>ตัวเลขวงกลมเจ็ด</value>
+  </data>
+  <data name="number_circle_six" xml:space="preserve">
+    <value>ตัวเลขวงกลมหก</value>
+  </data>
+  <data name="number_circle_three" xml:space="preserve">
+    <value>ตัวเลขวงกลมสาม</value>
+  </data>
+  <data name="number_circle_two" xml:space="preserve">
+    <value>ตัวเลขวงกลมสอง</value>
+  </data>
+  <data name="number_circle_zero" xml:space="preserve">
+    <value>ตัวเลขวงกลมศูนย์</value>
+  </data>
+  <data name="number_eight" xml:space="preserve">
+    <value>ตัวเลขแปด</value>
+  </data>
+  <data name="number_five" xml:space="preserve">
+    <value>ตัวเลขห้า</value>
+  </data>
+  <data name="number_four" xml:space="preserve">
+    <value>ตัวเลขสี่</value>
+  </data>
+  <data name="number_nine" xml:space="preserve">
+    <value>ตัวเลขเก้า</value>
+  </data>
+  <data name="number_one" xml:space="preserve">
+    <value>ตัวเลขหนึ่ง</value>
+  </data>
+  <data name="number_seven" xml:space="preserve">
+    <value>ตัวเลขเจ็ด</value>
+  </data>
+  <data name="number_six" xml:space="preserve">
+    <value>ตัวเลขหก</value>
+  </data>
+  <data name="number_square_eight" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสแปด</value>
+  </data>
+  <data name="number_square_five" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสห้า</value>
+  </data>
+  <data name="number_square_four" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสสี่</value>
+  </data>
+  <data name="number_square_nine" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสเก้า</value>
+  </data>
+  <data name="number_square_one" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสหนึ่ง</value>
+  </data>
+  <data name="number_square_seven" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสเจ็ด</value>
+  </data>
+  <data name="number_square_six" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสหก</value>
+  </data>
+  <data name="number_square_three" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสสาม</value>
+  </data>
+  <data name="number_square_two" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสสอง</value>
+  </data>
+  <data name="number_square_zero" xml:space="preserve">
+    <value>ตัวเลขสี่เหลี่ยมจัตุรัสศูนย์</value>
+  </data>
+  <data name="number_three" xml:space="preserve">
+    <value>ตัวเลขสาม</value>
+  </data>
+  <data name="number_two" xml:space="preserve">
+    <value>ตัวเลขสอง</value>
+  </data>
+  <data name="number_zero" xml:space="preserve">
+    <value>ตัวเลขศูนย์</value>
+  </data>
+  <data name="numpad" xml:space="preserve">
+    <value>แป้นตัวเลข</value>
+  </data>
+  <data name="nut" xml:space="preserve">
+    <value>น็อต</value>
+  </data>
+  <data name="ny_times_logo" xml:space="preserve">
+    <value>Nyคูณโลโก้</value>
+  </data>
+  <data name="octagon" xml:space="preserve">
+    <value>แปดเหลี่ยม</value>
+  </data>
+  <data name="office_chair" xml:space="preserve">
+    <value>สำนักงานเก้าอี้</value>
+  </data>
+  <data name="onigiri" xml:space="preserve">
+    <value>ข้าวปั้น</value>
+  </data>
+  <data name="open_ai_logo" xml:space="preserve">
+    <value>เปิดAIโลโก้</value>
+  </data>
+  <data name="option" xml:space="preserve">
+    <value>ตัวเลือก</value>
+  </data>
+  <data name="orange" xml:space="preserve">
+    <value>ส้ม</value>
+  </data>
+  <data name="orange_slice" xml:space="preserve">
+    <value>ส้มชิ้น</value>
+  </data>
+  <data name="oven" xml:space="preserve">
+    <value>เตาอบ</value>
+  </data>
+  <data name="package" xml:space="preserve">
+    <value>พัสดุ</value>
+  </data>
+  <data name="paint_brush" xml:space="preserve">
+    <value>สีแปรง</value>
+  </data>
+  <data name="paint_brush_broad" xml:space="preserve">
+    <value>สีแปรงกว้าง</value>
+  </data>
+  <data name="paint_brush_household" xml:space="preserve">
+    <value>สีแปรงครัวเรือน</value>
+  </data>
+  <data name="paint_bucket" xml:space="preserve">
+    <value>สีถัง</value>
+  </data>
+  <data name="paint_roller" xml:space="preserve">
+    <value>สีลูกกลิ้ง</value>
+  </data>
+  <data name="palette" xml:space="preserve">
+    <value>จานสี</value>
+  </data>
+  <data name="panorama" xml:space="preserve">
+    <value>พาโนรามา</value>
+  </data>
+  <data name="pants" xml:space="preserve">
+    <value>กางเกง</value>
+  </data>
+  <data name="paper_plane" xml:space="preserve">
+    <value>กระดาษเครื่องบิน</value>
+  </data>
+  <data name="paper_plane_right" xml:space="preserve">
+    <value>กระดาษเครื่องบินขวา</value>
+  </data>
+  <data name="paper_plane_tilt" xml:space="preserve">
+    <value>กระดาษเครื่องบินเอียง</value>
+  </data>
+  <data name="paperclip" xml:space="preserve">
+    <value>คลิปหนีบกระดาษ</value>
+  </data>
+  <data name="paperclip_horizontal" xml:space="preserve">
+    <value>คลิปหนีบกระดาษแนวนอน</value>
+  </data>
+  <data name="parachute" xml:space="preserve">
+    <value>ร่มชูชีพ</value>
+  </data>
+  <data name="paragraph" xml:space="preserve">
+    <value>ย่อหน้า</value>
+  </data>
+  <data name="parallelogram" xml:space="preserve">
+    <value>สี่เหลี่ยมด้านขนาน</value>
+  </data>
+  <data name="park" xml:space="preserve">
+    <value>สวนสาธารณะ</value>
+  </data>
+  <data name="password" xml:space="preserve">
+    <value>รหัสผ่าน</value>
+  </data>
+  <data name="path" xml:space="preserve">
+    <value>เส้นทาง</value>
+  </data>
+  <data name="patreon_logo" xml:space="preserve">
+    <value>Patreonโลโก้</value>
+  </data>
+  <data name="pause" xml:space="preserve">
+    <value>หยุดชั่วคราว</value>
+  </data>
+  <data name="pause_circle" xml:space="preserve">
+    <value>หยุดชั่วคราววงกลม</value>
+  </data>
+  <data name="paw_print" xml:space="preserve">
+    <value>อุ้งเท้าพิมพ์</value>
+  </data>
+  <data name="paypal_logo" xml:space="preserve">
+    <value>Paypalโลโก้</value>
+  </data>
+  <data name="peace" xml:space="preserve">
+    <value>สันติภาพ</value>
+  </data>
+  <data name="pen" xml:space="preserve">
+    <value>ปากกา</value>
+  </data>
+  <data name="pen_nib" xml:space="preserve">
+    <value>ปากกาปลายปากกา</value>
+  </data>
+  <data name="pen_nib_straight" xml:space="preserve">
+    <value>ปากกาปลายปากกาตรง</value>
+  </data>
+  <data name="pencil" xml:space="preserve">
+    <value>ดินสอ</value>
+  </data>
+  <data name="pencil_circle" xml:space="preserve">
+    <value>ดินสอวงกลม</value>
+  </data>
+  <data name="pencil_line" xml:space="preserve">
+    <value>ดินสอเส้น</value>
+  </data>
+  <data name="pencil_ruler" xml:space="preserve">
+    <value>ดินสอไม้บรรทัด</value>
+  </data>
+  <data name="pencil_simple" xml:space="preserve">
+    <value>ดินสอเรียบง่าย</value>
+  </data>
+  <data name="pencil_simple_line" xml:space="preserve">
+    <value>ดินสอเรียบง่ายเส้น</value>
+  </data>
+  <data name="pencil_simple_slash" xml:space="preserve">
+    <value>ดินสอเรียบง่ายเครื่องหมายทับ</value>
+  </data>
+  <data name="pencil_slash" xml:space="preserve">
+    <value>ดินสอเครื่องหมายทับ</value>
+  </data>
+  <data name="pentagon" xml:space="preserve">
+    <value>ห้าเหลี่ยม</value>
+  </data>
+  <data name="pentagram" xml:space="preserve">
+    <value>ดาวห้าแฉก</value>
+  </data>
+  <data name="pepper" xml:space="preserve">
+    <value>พริก</value>
+  </data>
+  <data name="percent" xml:space="preserve">
+    <value>เปอร์เซ็นต์</value>
+  </data>
+  <data name="person" xml:space="preserve">
+    <value>บุคคล</value>
+  </data>
+  <data name="person_arms_spread" xml:space="preserve">
+    <value>บุคคลแขนกระจาย</value>
+  </data>
+  <data name="person_simple" xml:space="preserve">
+    <value>บุคคลเรียบง่าย</value>
+  </data>
+  <data name="person_simple_bike" xml:space="preserve">
+    <value>บุคคลเรียบง่ายจักรยาน</value>
+  </data>
+  <data name="person_simple_circle" xml:space="preserve">
+    <value>บุคคลเรียบง่ายวงกลม</value>
+  </data>
+  <data name="person_simple_hike" xml:space="preserve">
+    <value>บุคคลเรียบง่ายเดินป่า</value>
+  </data>
+  <data name="person_simple_run" xml:space="preserve">
+    <value>บุคคลเรียบง่ายวิ่ง</value>
+  </data>
+  <data name="person_simple_ski" xml:space="preserve">
+    <value>บุคคลเรียบง่ายสกี</value>
+  </data>
+  <data name="person_simple_snowboard" xml:space="preserve">
+    <value>บุคคลเรียบง่ายสโนว์บอร์ด</value>
+  </data>
+  <data name="person_simple_swim" xml:space="preserve">
+    <value>บุคคลเรียบง่ายว่ายน้ำ</value>
+  </data>
+  <data name="person_simple_tai_chi" xml:space="preserve">
+    <value>บุคคลเรียบง่ายtaichi</value>
+  </data>
+  <data name="person_simple_throw" xml:space="preserve">
+    <value>บุคคลเรียบง่ายโยน</value>
+  </data>
+  <data name="person_simple_walk" xml:space="preserve">
+    <value>บุคคลเรียบง่ายเดิน</value>
+  </data>
+  <data name="perspective" xml:space="preserve">
+    <value>มุมมองภาพ</value>
+  </data>
+  <data name="phone" xml:space="preserve">
+    <value>โทรศัพท์</value>
+  </data>
+  <data name="phone_call" xml:space="preserve">
+    <value>โทรศัพท์โทร</value>
+  </data>
+  <data name="phone_disconnect" xml:space="preserve">
+    <value>โทรศัพท์ตัดการเชื่อมต่อ</value>
+  </data>
+  <data name="phone_incoming" xml:space="preserve">
+    <value>โทรศัพท์ขาเข้า</value>
+  </data>
+  <data name="phone_list" xml:space="preserve">
+    <value>โทรศัพท์รายการ</value>
+  </data>
+  <data name="phone_outgoing" xml:space="preserve">
+    <value>โทรศัพท์ขาออก</value>
+  </data>
+  <data name="phone_pause" xml:space="preserve">
+    <value>โทรศัพท์หยุดชั่วคราว</value>
+  </data>
+  <data name="phone_plus" xml:space="preserve">
+    <value>โทรศัพท์บวก</value>
+  </data>
+  <data name="phone_slash" xml:space="preserve">
+    <value>โทรศัพท์เครื่องหมายทับ</value>
+  </data>
+  <data name="phone_transfer" xml:space="preserve">
+    <value>โทรศัพท์โอน</value>
+  </data>
+  <data name="phone_x" xml:space="preserve">
+    <value>โทรศัพท์x</value>
+  </data>
+  <data name="phosphor_logo" xml:space="preserve">
+    <value>Phosphorโลโก้</value>
+  </data>
+  <data name="pi" xml:space="preserve">
+    <value>พาย</value>
+  </data>
+  <data name="piano_keys" xml:space="preserve">
+    <value>เปียโนกุญแจ</value>
+  </data>
+  <data name="picnic_table" xml:space="preserve">
+    <value>ปิกนิกตาราง</value>
+  </data>
+  <data name="picture_in_picture" xml:space="preserve">
+    <value>รูปภาพเข้ารูปภาพ</value>
+  </data>
+  <data name="piggy_bank" xml:space="preserve">
+    <value>กระปุกออมสินธนาคาร</value>
+  </data>
+  <data name="pill" xml:space="preserve">
+    <value>ยาเม็ด</value>
+  </data>
+  <data name="ping_pong" xml:space="preserve">
+    <value>ปิงปอง</value>
+  </data>
+  <data name="pint_glass" xml:space="preserve">
+    <value>ไพนต์แก้ว</value>
+  </data>
+  <data name="pinterest_logo" xml:space="preserve">
+    <value>Pinterestโลโก้</value>
+  </data>
+  <data name="pinwheel" xml:space="preserve">
+    <value>กังหันลม</value>
+  </data>
+  <data name="pipe" xml:space="preserve">
+    <value>ท่อ</value>
+  </data>
+  <data name="pipe_wrench" xml:space="preserve">
+    <value>ท่อประแจ</value>
+  </data>
+  <data name="pix_logo" xml:space="preserve">
+    <value>Pixโลโก้</value>
+  </data>
+  <data name="pizza" xml:space="preserve">
+    <value>พิซซ่า</value>
+  </data>
+  <data name="placeholder" xml:space="preserve">
+    <value>ตัวยึดตำแหน่ง</value>
+  </data>
+  <data name="planet" xml:space="preserve">
+    <value>ดาวเคราะห์</value>
+  </data>
+  <data name="plant" xml:space="preserve">
+    <value>ต้นไม้</value>
+  </data>
+  <data name="play" xml:space="preserve">
+    <value>เล่น</value>
+  </data>
+  <data name="play_circle" xml:space="preserve">
+    <value>เล่นวงกลม</value>
+  </data>
+  <data name="play_pause" xml:space="preserve">
+    <value>เล่นหยุดชั่วคราว</value>
+  </data>
+  <data name="playlist" xml:space="preserve">
+    <value>เพลย์ลิสต์</value>
+  </data>
+  <data name="plug" xml:space="preserve">
+    <value>ปลั๊ก</value>
+  </data>
+  <data name="plug_charging" xml:space="preserve">
+    <value>ปลั๊กกำลังชาร์จ</value>
+  </data>
+  <data name="plugs" xml:space="preserve">
+    <value>ปลั๊ก</value>
+  </data>
+  <data name="plugs_connected" xml:space="preserve">
+    <value>ปลั๊กเชื่อมต่อแล้ว</value>
+  </data>
+  <data name="plus" xml:space="preserve">
+    <value>บวก</value>
+  </data>
+  <data name="plus_circle" xml:space="preserve">
+    <value>บวกวงกลม</value>
+  </data>
+  <data name="plus_minus" xml:space="preserve">
+    <value>บวกลบ</value>
+  </data>
+  <data name="plus_square" xml:space="preserve">
+    <value>บวกสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="poker_chip" xml:space="preserve">
+    <value>โป๊กเกอร์ชิป</value>
+  </data>
+  <data name="police_car" xml:space="preserve">
+    <value>ตำรวจรถยนต์</value>
+  </data>
+  <data name="polygon" xml:space="preserve">
+    <value>รูปหลายเหลี่ยม</value>
+  </data>
+  <data name="popcorn" xml:space="preserve">
+    <value>ป๊อปคอร์น</value>
+  </data>
+  <data name="popsicle" xml:space="preserve">
+    <value>ไอติมแท่ง</value>
+  </data>
+  <data name="potted_plant" xml:space="preserve">
+    <value>กระถางต้นไม้</value>
+  </data>
+  <data name="power" xml:space="preserve">
+    <value>พลังงาน</value>
+  </data>
+  <data name="prescription" xml:space="preserve">
+    <value>ใบสั่งยา</value>
+  </data>
+  <data name="presentation" xml:space="preserve">
+    <value>การนำเสนอ</value>
+  </data>
+  <data name="presentation_chart" xml:space="preserve">
+    <value>การนำเสนอแผนภูมิ</value>
+  </data>
+  <data name="printer" xml:space="preserve">
+    <value>เครื่องพิมพ์</value>
+  </data>
+  <data name="prohibit" xml:space="preserve">
+    <value>ห้าม</value>
+  </data>
+  <data name="prohibit_inset" xml:space="preserve">
+    <value>ห้ามแทรก</value>
+  </data>
+  <data name="projector_screen" xml:space="preserve">
+    <value>โปรเจกเตอร์หน้าจอ</value>
+  </data>
+  <data name="projector_screen_chart" xml:space="preserve">
+    <value>โปรเจกเตอร์หน้าจอแผนภูมิ</value>
+  </data>
+  <data name="pulse" xml:space="preserve">
+    <value>ชีพจร</value>
+  </data>
+  <data name="push_pin" xml:space="preserve">
+    <value>ผลักหมุด</value>
+  </data>
+  <data name="push_pin_simple" xml:space="preserve">
+    <value>ผลักหมุดเรียบง่าย</value>
+  </data>
+  <data name="push_pin_simple_slash" xml:space="preserve">
+    <value>ผลักหมุดเรียบง่ายเครื่องหมายทับ</value>
+  </data>
+  <data name="push_pin_slash" xml:space="preserve">
+    <value>ผลักหมุดเครื่องหมายทับ</value>
+  </data>
+  <data name="puzzle_piece" xml:space="preserve">
+    <value>จิ๊กซอว์ชิ้น</value>
+  </data>
+  <data name="qr_code" xml:space="preserve">
+    <value>Qrโค้ด</value>
+  </data>
+  <data name="question" xml:space="preserve">
+    <value>คำถาม</value>
+  </data>
+  <data name="question_mark" xml:space="preserve">
+    <value>คำถามเครื่องหมาย</value>
+  </data>
+  <data name="queue" xml:space="preserve">
+    <value>คิว</value>
+  </data>
+  <data name="quotes" xml:space="preserve">
+    <value>เครื่องหมายคำพูด</value>
+  </data>
+  <data name="rabbit" xml:space="preserve">
+    <value>กระต่าย</value>
+  </data>
+  <data name="racquet" xml:space="preserve">
+    <value>ไม้แร็กเก็ต</value>
+  </data>
+  <data name="radical" xml:space="preserve">
+    <value>ราก</value>
+  </data>
+  <data name="radio" xml:space="preserve">
+    <value>วิทยุ</value>
+  </data>
+  <data name="radio_button" xml:space="preserve">
+    <value>วิทยุปุ่ม</value>
+  </data>
+  <data name="radioactive" xml:space="preserve">
+    <value>กัมมันตรังสี</value>
+  </data>
+  <data name="rainbow" xml:space="preserve">
+    <value>รุ้ง</value>
+  </data>
+  <data name="rainbow_cloud" xml:space="preserve">
+    <value>รุ้งเมฆ</value>
+  </data>
+  <data name="ranking" xml:space="preserve">
+    <value>การจัดอันดับ</value>
+  </data>
+  <data name="read_cv_logo" xml:space="preserve">
+    <value>อ่านแล้วcvโลโก้</value>
+  </data>
+  <data name="receipt" xml:space="preserve">
+    <value>ใบเสร็จ</value>
+  </data>
+  <data name="receipt_x" xml:space="preserve">
+    <value>ใบเสร็จx</value>
+  </data>
+  <data name="record" xml:space="preserve">
+    <value>บันทึก</value>
+  </data>
+  <data name="rectangle" xml:space="preserve">
+    <value>สี่เหลี่ยมผืนผ้า</value>
+  </data>
+  <data name="rectangle_dashed" xml:space="preserve">
+    <value>สี่เหลี่ยมผืนผ้าเส้นประ</value>
+  </data>
+  <data name="recycle" xml:space="preserve">
+    <value>รีไซเคิล</value>
+  </data>
+  <data name="reddit_logo" xml:space="preserve">
+    <value>Redditโลโก้</value>
+  </data>
+  <data name="repeat" xml:space="preserve">
+    <value>ทำซ้ำ</value>
+  </data>
+  <data name="repeat_once" xml:space="preserve">
+    <value>ทำซ้ำครั้งเดียว</value>
+  </data>
+  <data name="replit_logo" xml:space="preserve">
+    <value>Replitโลโก้</value>
+  </data>
+  <data name="resize" xml:space="preserve">
+    <value>ปรับขนาด</value>
+  </data>
+  <data name="rewind" xml:space="preserve">
+    <value>กรอกลับ</value>
+  </data>
+  <data name="rewind_circle" xml:space="preserve">
+    <value>กรอกลับวงกลม</value>
+  </data>
+  <data name="road_horizon" xml:space="preserve">
+    <value>ถนนขอบฟ้า</value>
+  </data>
+  <data name="robot" xml:space="preserve">
+    <value>หุ่นยนต์</value>
+  </data>
+  <data name="rocket" xml:space="preserve">
+    <value>จรวด</value>
+  </data>
+  <data name="rocket_launch" xml:space="preserve">
+    <value>จรวดปล่อย</value>
+  </data>
+  <data name="rows" xml:space="preserve">
+    <value>แถว</value>
+  </data>
+  <data name="rows_plus_bottom" xml:space="preserve">
+    <value>แถวบวกด้านล่าง</value>
+  </data>
+  <data name="rows_plus_top" xml:space="preserve">
+    <value>แถวบวกด้านบน</value>
+  </data>
+  <data name="rss" xml:space="preserve">
+    <value>Rss</value>
+  </data>
+  <data name="rss_simple" xml:space="preserve">
+    <value>Rssเรียบง่าย</value>
+  </data>
+  <data name="rug" xml:space="preserve">
+    <value>พรม</value>
+  </data>
+  <data name="ruler" xml:space="preserve">
+    <value>ไม้บรรทัด</value>
+  </data>
+  <data name="sailboat" xml:space="preserve">
+    <value>เรือใบ</value>
+  </data>
+  <data name="scales" xml:space="preserve">
+    <value>ตาชั่ง</value>
+  </data>
+  <data name="scan" xml:space="preserve">
+    <value>สแกน</value>
+  </data>
+  <data name="scan_smiley" xml:space="preserve">
+    <value>สแกนยิ้ม</value>
+  </data>
+  <data name="scissors" xml:space="preserve">
+    <value>กรรไกร</value>
+  </data>
+  <data name="scooter" xml:space="preserve">
+    <value>สกู๊ตเตอร์</value>
+  </data>
+  <data name="screencast" xml:space="preserve">
+    <value>บันทึกหน้าจอ</value>
+  </data>
+  <data name="screwdriver" xml:space="preserve">
+    <value>ไขควง</value>
+  </data>
+  <data name="scribble" xml:space="preserve">
+    <value>ขีดเขียน</value>
+  </data>
+  <data name="scribble_loop" xml:space="preserve">
+    <value>ขีดเขียนวนซ้ำ</value>
+  </data>
+  <data name="scroll" xml:space="preserve">
+    <value>ม้วนกระดาษ</value>
+  </data>
+  <data name="seal" xml:space="preserve">
+    <value>ตราประทับ</value>
+  </data>
+  <data name="seal_check" xml:space="preserve">
+    <value>ตราประทับเครื่องหมายถูก</value>
+  </data>
+  <data name="seal_percent" xml:space="preserve">
+    <value>ตราประทับเปอร์เซ็นต์</value>
+  </data>
+  <data name="seal_question" xml:space="preserve">
+    <value>ตราประทับคำถาม</value>
+  </data>
+  <data name="seal_warning" xml:space="preserve">
+    <value>ตราประทับคำเตือน</value>
+  </data>
+  <data name="seat" xml:space="preserve">
+    <value>ที่นั่ง</value>
+  </data>
+  <data name="seatbelt" xml:space="preserve">
+    <value>เข็มขัดนิรภัย</value>
+  </data>
+  <data name="security_camera" xml:space="preserve">
+    <value>ความปลอดภัยกล้อง</value>
+  </data>
+  <data name="selection" xml:space="preserve">
+    <value>การเลือก</value>
+  </data>
+  <data name="selection_all" xml:space="preserve">
+    <value>การเลือกทั้งหมด</value>
+  </data>
+  <data name="selection_background" xml:space="preserve">
+    <value>การเลือกพื้นหลัง</value>
+  </data>
+  <data name="selection_foreground" xml:space="preserve">
+    <value>การเลือกพื้นหน้า</value>
+  </data>
+  <data name="selection_inverse" xml:space="preserve">
+    <value>การเลือกผกผัน</value>
+  </data>
+  <data name="selection_plus" xml:space="preserve">
+    <value>การเลือกบวก</value>
+  </data>
+  <data name="selection_slash" xml:space="preserve">
+    <value>การเลือกเครื่องหมายทับ</value>
+  </data>
+  <data name="shapes" xml:space="preserve">
+    <value>รูปร่าง</value>
+  </data>
+  <data name="share" xml:space="preserve">
+    <value>แชร์</value>
+  </data>
+  <data name="share_fat" xml:space="preserve">
+    <value>แชร์อ้วน</value>
+  </data>
+  <data name="share_network" xml:space="preserve">
+    <value>แชร์เครือข่าย</value>
+  </data>
+  <data name="shield" xml:space="preserve">
+    <value>โล่</value>
+  </data>
+  <data name="shield_check" xml:space="preserve">
+    <value>โล่เครื่องหมายถูก</value>
+  </data>
+  <data name="shield_checkered" xml:space="preserve">
+    <value>โล่ลายตาราง</value>
+  </data>
+  <data name="shield_chevron" xml:space="preserve">
+    <value>โล่เครื่องหมายบั้ง</value>
+  </data>
+  <data name="shield_plus" xml:space="preserve">
+    <value>โล่บวก</value>
+  </data>
+  <data name="shield_slash" xml:space="preserve">
+    <value>โล่เครื่องหมายทับ</value>
+  </data>
+  <data name="shield_star" xml:space="preserve">
+    <value>โล่ดาว</value>
+  </data>
+  <data name="shield_warning" xml:space="preserve">
+    <value>โล่คำเตือน</value>
+  </data>
+  <data name="shipping_container" xml:space="preserve">
+    <value>การจัดส่งคอนเทนเนอร์</value>
+  </data>
+  <data name="shirt_folded" xml:space="preserve">
+    <value>เสื้อเชิ้ตพับ</value>
+  </data>
+  <data name="shooting_star" xml:space="preserve">
+    <value>ตกดาว</value>
+  </data>
+  <data name="shopping_bag" xml:space="preserve">
+    <value>ช้อปปิ้งกระเป๋า</value>
+  </data>
+  <data name="shopping_bag_open" xml:space="preserve">
+    <value>ช้อปปิ้งกระเป๋าเปิด</value>
+  </data>
+  <data name="shopping_cart" xml:space="preserve">
+    <value>ช้อปปิ้งรถเข็น</value>
+  </data>
+  <data name="shopping_cart_simple" xml:space="preserve">
+    <value>ช้อปปิ้งรถเข็นเรียบง่าย</value>
+  </data>
+  <data name="shovel" xml:space="preserve">
+    <value>พลั่ว</value>
+  </data>
+  <data name="shower" xml:space="preserve">
+    <value>ฝักบัว</value>
+  </data>
+  <data name="shrimp" xml:space="preserve">
+    <value>กุ้ง</value>
+  </data>
+  <data name="shuffle" xml:space="preserve">
+    <value>สุ่ม</value>
+  </data>
+  <data name="shuffle_angular" xml:space="preserve">
+    <value>สุ่มangular</value>
+  </data>
+  <data name="shuffle_simple" xml:space="preserve">
+    <value>สุ่มเรียบง่าย</value>
+  </data>
+  <data name="sidebar" xml:space="preserve">
+    <value>แถบด้านข้าง</value>
+  </data>
+  <data name="sidebar_simple" xml:space="preserve">
+    <value>แถบด้านข้างเรียบง่าย</value>
+  </data>
+  <data name="sigma" xml:space="preserve">
+    <value>ซิกมา</value>
+  </data>
+  <data name="sign_in" xml:space="preserve">
+    <value>ป้ายเข้า</value>
+  </data>
+  <data name="sign_out" xml:space="preserve">
+    <value>ป้ายออก</value>
+  </data>
+  <data name="signature" xml:space="preserve">
+    <value>ลายเซ็น</value>
+  </data>
+  <data name="signpost" xml:space="preserve">
+    <value>ป้ายบอกทาง</value>
+  </data>
+  <data name="sim_card" xml:space="preserve">
+    <value>ซิมการ์ด</value>
+  </data>
+  <data name="siren" xml:space="preserve">
+    <value>ไซเรน</value>
+  </data>
+  <data name="sketch_logo" xml:space="preserve">
+    <value>ภาพร่างโลโก้</value>
+  </data>
+  <data name="skip_back" xml:space="preserve">
+    <value>ข้ามย้อนกลับ</value>
+  </data>
+  <data name="skip_back_circle" xml:space="preserve">
+    <value>ข้ามย้อนกลับวงกลม</value>
+  </data>
+  <data name="skip_forward" xml:space="preserve">
+    <value>ข้ามไปข้างหน้า</value>
+  </data>
+  <data name="skip_forward_circle" xml:space="preserve">
+    <value>ข้ามไปข้างหน้าวงกลม</value>
+  </data>
+  <data name="skull" xml:space="preserve">
+    <value>กะโหลก</value>
+  </data>
+  <data name="skype_logo" xml:space="preserve">
+    <value>Skypeโลโก้</value>
+  </data>
+  <data name="slack_logo" xml:space="preserve">
+    <value>Slackโลโก้</value>
+  </data>
+  <data name="sliders" xml:space="preserve">
+    <value>แถบเลื่อน</value>
+  </data>
+  <data name="sliders_horizontal" xml:space="preserve">
+    <value>แถบเลื่อนแนวนอน</value>
+  </data>
+  <data name="slideshow" xml:space="preserve">
+    <value>สไลด์โชว์</value>
+  </data>
+  <data name="smiley" xml:space="preserve">
+    <value>ยิ้ม</value>
+  </data>
+  <data name="smiley_angry" xml:space="preserve">
+    <value>ยิ้มโกรธ</value>
+  </data>
+  <data name="smiley_blank" xml:space="preserve">
+    <value>ยิ้มว่าง</value>
+  </data>
+  <data name="smiley_meh" xml:space="preserve">
+    <value>ยิ้มเฉยๆ</value>
+  </data>
+  <data name="smiley_melting" xml:space="preserve">
+    <value>ยิ้มละลาย</value>
+  </data>
+  <data name="smiley_nervous" xml:space="preserve">
+    <value>ยิ้มกังวล</value>
+  </data>
+  <data name="smiley_sad" xml:space="preserve">
+    <value>ยิ้มเศร้า</value>
+  </data>
+  <data name="smiley_sticker" xml:space="preserve">
+    <value>ยิ้มสติกเกอร์</value>
+  </data>
+  <data name="smiley_wink" xml:space="preserve">
+    <value>ยิ้มขยิบตา</value>
+  </data>
+  <data name="smiley_x_eyes" xml:space="preserve">
+    <value>ยิ้มxดวงตา</value>
+  </data>
+  <data name="snapchat_logo" xml:space="preserve">
+    <value>Snapchatโลโก้</value>
+  </data>
+  <data name="sneaker" xml:space="preserve">
+    <value>รองเท้าผ้าใบ</value>
+  </data>
+  <data name="sneaker_move" xml:space="preserve">
+    <value>รองเท้าผ้าใบย้าย</value>
+  </data>
+  <data name="snowflake" xml:space="preserve">
+    <value>เกล็ดหิมะ</value>
+  </data>
+  <data name="soccer_ball" xml:space="preserve">
+    <value>ฟุตบอลลูกบอล</value>
+  </data>
+  <data name="sock" xml:space="preserve">
+    <value>ถุงเท้า</value>
+  </data>
+  <data name="solar_panel" xml:space="preserve">
+    <value>พลังงานแสงอาทิตย์แผง</value>
+  </data>
+  <data name="solar_roof" xml:space="preserve">
+    <value>พลังงานแสงอาทิตย์หลังคา</value>
+  </data>
+  <data name="sort_ascending" xml:space="preserve">
+    <value>เรียงลำดับจากน้อยไปมาก</value>
+  </data>
+  <data name="sort_descending" xml:space="preserve">
+    <value>เรียงลำดับจากมากไปน้อย</value>
+  </data>
+  <data name="soundcloud_logo" xml:space="preserve">
+    <value>Soundcloudโลโก้</value>
+  </data>
+  <data name="spade" xml:space="preserve">
+    <value>โพดำ</value>
+  </data>
+  <data name="sparkle" xml:space="preserve">
+    <value>ประกาย</value>
+  </data>
+  <data name="speaker_hifi" xml:space="preserve">
+    <value>ลำโพงhifi</value>
+  </data>
+  <data name="speaker_high" xml:space="preserve">
+    <value>ลำโพงสูง</value>
+  </data>
+  <data name="speaker_low" xml:space="preserve">
+    <value>ลำโพงต่ำ</value>
+  </data>
+  <data name="speaker_none" xml:space="preserve">
+    <value>ลำโพงไม่มี</value>
+  </data>
+  <data name="speaker_simple_high" xml:space="preserve">
+    <value>ลำโพงเรียบง่ายสูง</value>
+  </data>
+  <data name="speaker_simple_low" xml:space="preserve">
+    <value>ลำโพงเรียบง่ายต่ำ</value>
+  </data>
+  <data name="speaker_simple_none" xml:space="preserve">
+    <value>ลำโพงเรียบง่ายไม่มี</value>
+  </data>
+  <data name="speaker_simple_slash" xml:space="preserve">
+    <value>ลำโพงเรียบง่ายเครื่องหมายทับ</value>
+  </data>
+  <data name="speaker_simple_x" xml:space="preserve">
+    <value>ลำโพงเรียบง่ายx</value>
+  </data>
+  <data name="speaker_slash" xml:space="preserve">
+    <value>ลำโพงเครื่องหมายทับ</value>
+  </data>
+  <data name="speaker_x" xml:space="preserve">
+    <value>ลำโพงx</value>
+  </data>
+  <data name="speedometer" xml:space="preserve">
+    <value>มาตรวัดความเร็ว</value>
+  </data>
+  <data name="sphere" xml:space="preserve">
+    <value>ทรงกลม</value>
+  </data>
+  <data name="spinner" xml:space="preserve">
+    <value>ตัวหมุน</value>
+  </data>
+  <data name="spinner_ball" xml:space="preserve">
+    <value>ตัวหมุนลูกบอล</value>
+  </data>
+  <data name="spinner_gap" xml:space="preserve">
+    <value>ตัวหมุนช่องว่าง</value>
+  </data>
+  <data name="spiral" xml:space="preserve">
+    <value>เกลียว</value>
+  </data>
+  <data name="split_horizontal" xml:space="preserve">
+    <value>แยกแนวนอน</value>
+  </data>
+  <data name="split_vertical" xml:space="preserve">
+    <value>แยกแนวตั้ง</value>
+  </data>
+  <data name="spotify_logo" xml:space="preserve">
+    <value>Spotifyโลโก้</value>
+  </data>
+  <data name="spray_bottle" xml:space="preserve">
+    <value>สเปรย์ขวด</value>
+  </data>
+  <data name="square" xml:space="preserve">
+    <value>สี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="square_half" xml:space="preserve">
+    <value>สี่เหลี่ยมจัตุรัสครึ่ง</value>
+  </data>
+  <data name="square_half_bottom" xml:space="preserve">
+    <value>สี่เหลี่ยมจัตุรัสครึ่งด้านล่าง</value>
+  </data>
+  <data name="square_logo" xml:space="preserve">
+    <value>สี่เหลี่ยมจัตุรัสโลโก้</value>
+  </data>
+  <data name="square_split_horizontal" xml:space="preserve">
+    <value>สี่เหลี่ยมจัตุรัสแยกแนวนอน</value>
+  </data>
+  <data name="square_split_vertical" xml:space="preserve">
+    <value>สี่เหลี่ยมจัตุรัสแยกแนวตั้ง</value>
+  </data>
+  <data name="squares_four" xml:space="preserve">
+    <value>สี่เหลี่ยมสี่</value>
+  </data>
+  <data name="stack" xml:space="preserve">
+    <value>กอง</value>
+  </data>
+  <data name="stack_minus" xml:space="preserve">
+    <value>กองลบ</value>
+  </data>
+  <data name="stack_overflow_logo" xml:space="preserve">
+    <value>กองล้นโลโก้</value>
+  </data>
+  <data name="stack_plus" xml:space="preserve">
+    <value>กองบวก</value>
+  </data>
+  <data name="stack_simple" xml:space="preserve">
+    <value>กองเรียบง่าย</value>
+  </data>
+  <data name="stairs" xml:space="preserve">
+    <value>บันได</value>
+  </data>
+  <data name="stamp" xml:space="preserve">
+    <value>ตราประทับ</value>
+  </data>
+  <data name="standard_definition" xml:space="preserve">
+    <value>มาตรฐานความหมาย</value>
+  </data>
+  <data name="star" xml:space="preserve">
+    <value>ดาว</value>
+  </data>
+  <data name="star_and_crescent" xml:space="preserve">
+    <value>ดาวและพระจันทร์เสี้ยว</value>
+  </data>
+  <data name="star_four" xml:space="preserve">
+    <value>ดาวสี่</value>
+  </data>
+  <data name="star_half" xml:space="preserve">
+    <value>ดาวครึ่ง</value>
+  </data>
+  <data name="star_of_david" xml:space="preserve">
+    <value>ดาวของดาวิด</value>
+  </data>
+  <data name="steam_logo" xml:space="preserve">
+    <value>ไอน้ำโลโก้</value>
+  </data>
+  <data name="steering_wheel" xml:space="preserve">
+    <value>พวงมาลัยล้อ</value>
+  </data>
+  <data name="steps" xml:space="preserve">
+    <value>ขั้นบันได</value>
+  </data>
+  <data name="stethoscope" xml:space="preserve">
+    <value>หูฟังแพทย์</value>
+  </data>
+  <data name="sticker" xml:space="preserve">
+    <value>สติกเกอร์</value>
+  </data>
+  <data name="stool" xml:space="preserve">
+    <value>เก้าอี้สตูล</value>
+  </data>
+  <data name="stop" xml:space="preserve">
+    <value>หยุด</value>
+  </data>
+  <data name="stop_circle" xml:space="preserve">
+    <value>หยุดวงกลม</value>
+  </data>
+  <data name="storefront" xml:space="preserve">
+    <value>หน้าร้าน</value>
+  </data>
+  <data name="strategy" xml:space="preserve">
+    <value>กลยุทธ์</value>
+  </data>
+  <data name="stripe_logo" xml:space="preserve">
+    <value>Stripeโลโก้</value>
+  </data>
+  <data name="student" xml:space="preserve">
+    <value>นักเรียน</value>
+  </data>
+  <data name="subset_of" xml:space="preserve">
+    <value>เซตย่อยของ</value>
+  </data>
+  <data name="subset_proper_of" xml:space="preserve">
+    <value>เซตย่อยเหมาะสมของ</value>
+  </data>
+  <data name="subtitles" xml:space="preserve">
+    <value>คำบรรยาย</value>
+  </data>
+  <data name="subtitles_slash" xml:space="preserve">
+    <value>คำบรรยายเครื่องหมายทับ</value>
+  </data>
+  <data name="subtract" xml:space="preserve">
+    <value>ลบ</value>
+  </data>
+  <data name="subtract_square" xml:space="preserve">
+    <value>ลบสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="subway" xml:space="preserve">
+    <value>รถไฟใต้ดิน</value>
+  </data>
+  <data name="suitcase" xml:space="preserve">
+    <value>กระเป๋าเดินทาง</value>
+  </data>
+  <data name="suitcase_rolling" xml:space="preserve">
+    <value>กระเป๋าเดินทางกลิ้ง</value>
+  </data>
+  <data name="suitcase_simple" xml:space="preserve">
+    <value>กระเป๋าเดินทางเรียบง่าย</value>
+  </data>
+  <data name="sun" xml:space="preserve">
+    <value>ดวงอาทิตย์</value>
+  </data>
+  <data name="sun_dim" xml:space="preserve">
+    <value>ดวงอาทิตย์หรี่</value>
+  </data>
+  <data name="sun_horizon" xml:space="preserve">
+    <value>ดวงอาทิตย์ขอบฟ้า</value>
+  </data>
+  <data name="sunglasses" xml:space="preserve">
+    <value>แว่นกันแดด</value>
+  </data>
+  <data name="superset_of" xml:space="preserve">
+    <value>เซตใหญ่ของ</value>
+  </data>
+  <data name="superset_proper_of" xml:space="preserve">
+    <value>เซตใหญ่เหมาะสมของ</value>
+  </data>
+  <data name="swap" xml:space="preserve">
+    <value>สลับ</value>
+  </data>
+  <data name="swatches" xml:space="preserve">
+    <value>ตัวอย่างสี</value>
+  </data>
+  <data name="swimming_pool" xml:space="preserve">
+    <value>ว่ายน้ำสระว่ายน้ำ</value>
+  </data>
+  <data name="sword" xml:space="preserve">
+    <value>ดาบ</value>
+  </data>
+  <data name="synagogue" xml:space="preserve">
+    <value>โบสถ์ยิว</value>
+  </data>
+  <data name="syringe" xml:space="preserve">
+    <value>เข็มฉีดยา</value>
+  </data>
+  <data name="t_shirt" xml:space="preserve">
+    <value>Tเสื้อเชิ้ต</value>
+  </data>
+  <data name="table" xml:space="preserve">
+    <value>ตาราง</value>
+  </data>
+  <data name="tabs" xml:space="preserve">
+    <value>แท็บ</value>
+  </data>
+  <data name="tag" xml:space="preserve">
+    <value>แท็ก</value>
+  </data>
+  <data name="tag_chevron" xml:space="preserve">
+    <value>แท็กเครื่องหมายบั้ง</value>
+  </data>
+  <data name="tag_simple" xml:space="preserve">
+    <value>แท็กเรียบง่าย</value>
+  </data>
+  <data name="target" xml:space="preserve">
+    <value>เป้าหมาย</value>
+  </data>
+  <data name="taxi" xml:space="preserve">
+    <value>แท็กซี่</value>
+  </data>
+  <data name="tea_bag" xml:space="preserve">
+    <value>ชากระเป๋า</value>
+  </data>
+  <data name="telegram_logo" xml:space="preserve">
+    <value>Telegramโลโก้</value>
+  </data>
+  <data name="television" xml:space="preserve">
+    <value>โทรทัศน์</value>
+  </data>
+  <data name="television_simple" xml:space="preserve">
+    <value>โทรทัศน์เรียบง่าย</value>
+  </data>
+  <data name="tennis_ball" xml:space="preserve">
+    <value>เทนนิสลูกบอล</value>
+  </data>
+  <data name="tent" xml:space="preserve">
+    <value>เต็นท์</value>
+  </data>
+  <data name="terminal" xml:space="preserve">
+    <value>เทอร์มินัล</value>
+  </data>
+  <data name="terminal_window" xml:space="preserve">
+    <value>เทอร์มินัลหน้าต่าง</value>
+  </data>
+  <data name="test_tube" xml:space="preserve">
+    <value>ทดสอบหลอด</value>
+  </data>
+  <data name="text_a_underline" xml:space="preserve">
+    <value>ข้อความaขีดเส้นใต้</value>
+  </data>
+  <data name="text_aa" xml:space="preserve">
+    <value>ข้อความaa</value>
+  </data>
+  <data name="text_align_center" xml:space="preserve">
+    <value>ข้อความจัดแนวกึ่งกลาง</value>
+  </data>
+  <data name="text_align_justify" xml:space="preserve">
+    <value>ข้อความจัดแนวจัดชิดขอบ</value>
+  </data>
+  <data name="text_align_left" xml:space="preserve">
+    <value>ข้อความจัดแนวซ้าย</value>
+  </data>
+  <data name="text_align_right" xml:space="preserve">
+    <value>ข้อความจัดแนวขวา</value>
+  </data>
+  <data name="text_b" xml:space="preserve">
+    <value>ข้อความb</value>
+  </data>
+  <data name="text_columns" xml:space="preserve">
+    <value>ข้อความคอลัมน์</value>
+  </data>
+  <data name="text_h" xml:space="preserve">
+    <value>ข้อความh</value>
+  </data>
+  <data name="text_h_five" xml:space="preserve">
+    <value>ข้อความhห้า</value>
+  </data>
+  <data name="text_h_four" xml:space="preserve">
+    <value>ข้อความhสี่</value>
+  </data>
+  <data name="text_h_one" xml:space="preserve">
+    <value>ข้อความhหนึ่ง</value>
+  </data>
+  <data name="text_h_six" xml:space="preserve">
+    <value>ข้อความhหก</value>
+  </data>
+  <data name="text_h_three" xml:space="preserve">
+    <value>ข้อความhสาม</value>
+  </data>
+  <data name="text_h_two" xml:space="preserve">
+    <value>ข้อความhสอง</value>
+  </data>
+  <data name="text_indent" xml:space="preserve">
+    <value>ข้อความย่อหน้า</value>
+  </data>
+  <data name="text_italic" xml:space="preserve">
+    <value>ข้อความตัวเอียง</value>
+  </data>
+  <data name="text_outdent" xml:space="preserve">
+    <value>ข้อความลดย่อหน้า</value>
+  </data>
+  <data name="text_strikethrough" xml:space="preserve">
+    <value>ข้อความขีดทับ</value>
+  </data>
+  <data name="text_subscript" xml:space="preserve">
+    <value>ข้อความตัวห้อย</value>
+  </data>
+  <data name="text_superscript" xml:space="preserve">
+    <value>ข้อความตัวยก</value>
+  </data>
+  <data name="text_t" xml:space="preserve">
+    <value>ข้อความt</value>
+  </data>
+  <data name="text_t_slash" xml:space="preserve">
+    <value>ข้อความtเครื่องหมายทับ</value>
+  </data>
+  <data name="text_underline" xml:space="preserve">
+    <value>ข้อความขีดเส้นใต้</value>
+  </data>
+  <data name="textbox" xml:space="preserve">
+    <value>กล่องข้อความ</value>
+  </data>
+  <data name="thermometer" xml:space="preserve">
+    <value>เทอร์โมมิเตอร์</value>
+  </data>
+  <data name="thermometer_cold" xml:space="preserve">
+    <value>เทอร์โมมิเตอร์หนาว</value>
+  </data>
+  <data name="thermometer_hot" xml:space="preserve">
+    <value>เทอร์โมมิเตอร์ร้อน</value>
+  </data>
+  <data name="thermometer_simple" xml:space="preserve">
+    <value>เทอร์โมมิเตอร์เรียบง่าย</value>
+  </data>
+  <data name="threads_logo" xml:space="preserve">
+    <value>Threadsโลโก้</value>
+  </data>
+  <data name="three_d" xml:space="preserve">
+    <value>สามd</value>
+  </data>
+  <data name="thumbs_down" xml:space="preserve">
+    <value>นิ้วโป้งลง</value>
+  </data>
+  <data name="thumbs_up" xml:space="preserve">
+    <value>นิ้วโป้งขึ้น</value>
+  </data>
+  <data name="ticket" xml:space="preserve">
+    <value>ตั๋ว</value>
+  </data>
+  <data name="tidal_logo" xml:space="preserve">
+    <value>Tidalโลโก้</value>
+  </data>
+  <data name="tiktok_logo" xml:space="preserve">
+    <value>Tiktokโลโก้</value>
+  </data>
+  <data name="tilde" xml:space="preserve">
+    <value>ทิลเดอ</value>
+  </data>
+  <data name="timer" xml:space="preserve">
+    <value>ตัวจับเวลา</value>
+  </data>
+  <data name="tip_jar" xml:space="preserve">
+    <value>ทิปขวดโหล</value>
+  </data>
+  <data name="tipi" xml:space="preserve">
+    <value>กระโจม</value>
+  </data>
+  <data name="tire" xml:space="preserve">
+    <value>ยางรถ</value>
+  </data>
+  <data name="toggle_left" xml:space="preserve">
+    <value>สลับซ้าย</value>
+  </data>
+  <data name="toggle_right" xml:space="preserve">
+    <value>สลับขวา</value>
+  </data>
+  <data name="toilet" xml:space="preserve">
+    <value>ห้องน้ำ</value>
+  </data>
+  <data name="toilet_paper" xml:space="preserve">
+    <value>ห้องน้ำกระดาษ</value>
+  </data>
+  <data name="toolbox" xml:space="preserve">
+    <value>กล่องเครื่องมือ</value>
+  </data>
+  <data name="tooth" xml:space="preserve">
+    <value>ฟัน</value>
+  </data>
+  <data name="tornado" xml:space="preserve">
+    <value>ทอร์นาโด</value>
+  </data>
+  <data name="tote" xml:space="preserve">
+    <value>กระเป๋าผ้า</value>
+  </data>
+  <data name="tote_simple" xml:space="preserve">
+    <value>กระเป๋าผ้าเรียบง่าย</value>
+  </data>
+  <data name="towel" xml:space="preserve">
+    <value>ผ้าเช็ดตัว</value>
+  </data>
+  <data name="tractor" xml:space="preserve">
+    <value>รถแทรกเตอร์</value>
+  </data>
+  <data name="trademark" xml:space="preserve">
+    <value>เครื่องหมายการค้า</value>
+  </data>
+  <data name="trademark_registered" xml:space="preserve">
+    <value>เครื่องหมายการค้าจดทะเบียน</value>
+  </data>
+  <data name="traffic_cone" xml:space="preserve">
+    <value>การจราจรกรวย</value>
+  </data>
+  <data name="traffic_sign" xml:space="preserve">
+    <value>การจราจรป้าย</value>
+  </data>
+  <data name="traffic_signal" xml:space="preserve">
+    <value>การจราจรสัญญาณ</value>
+  </data>
+  <data name="train" xml:space="preserve">
+    <value>รถไฟ</value>
+  </data>
+  <data name="train_regional" xml:space="preserve">
+    <value>รถไฟภูมิภาค</value>
+  </data>
+  <data name="train_simple" xml:space="preserve">
+    <value>รถไฟเรียบง่าย</value>
+  </data>
+  <data name="tram" xml:space="preserve">
+    <value>รถราง</value>
+  </data>
+  <data name="translate" xml:space="preserve">
+    <value>แปล</value>
+  </data>
+  <data name="trash" xml:space="preserve">
+    <value>ถังขยะ</value>
+  </data>
+  <data name="trash_simple" xml:space="preserve">
+    <value>ถังขยะเรียบง่าย</value>
+  </data>
+  <data name="tray" xml:space="preserve">
+    <value>ถาด</value>
+  </data>
+  <data name="tray_arrow_down" xml:space="preserve">
+    <value>ถาดลูกศรลง</value>
+  </data>
+  <data name="tray_arrow_up" xml:space="preserve">
+    <value>ถาดลูกศรขึ้น</value>
+  </data>
+  <data name="treasure_chest" xml:space="preserve">
+    <value>สมบัติหีบ</value>
+  </data>
+  <data name="tree" xml:space="preserve">
+    <value>ต้นไม้</value>
+  </data>
+  <data name="tree_evergreen" xml:space="preserve">
+    <value>ต้นไม้ไม้ไม่ผลัดใบ</value>
+  </data>
+  <data name="tree_palm" xml:space="preserve">
+    <value>ต้นไม้ปาล์ม</value>
+  </data>
+  <data name="tree_structure" xml:space="preserve">
+    <value>ต้นไม้โครงสร้าง</value>
+  </data>
+  <data name="tree_view" xml:space="preserve">
+    <value>ต้นไม้มุมมอง</value>
+  </data>
+  <data name="trend_down" xml:space="preserve">
+    <value>แนวโน้มลง</value>
+  </data>
+  <data name="trend_up" xml:space="preserve">
+    <value>แนวโน้มขึ้น</value>
+  </data>
+  <data name="triangle" xml:space="preserve">
+    <value>สามเหลี่ยม</value>
+  </data>
+  <data name="triangle_dashed" xml:space="preserve">
+    <value>สามเหลี่ยมเส้นประ</value>
+  </data>
+  <data name="trolley" xml:space="preserve">
+    <value>รถเข็น</value>
+  </data>
+  <data name="trolley_suitcase" xml:space="preserve">
+    <value>รถเข็นกระเป๋าเดินทาง</value>
+  </data>
+  <data name="trophy" xml:space="preserve">
+    <value>ถ้วยรางวัล</value>
+  </data>
+  <data name="truck" xml:space="preserve">
+    <value>รถบรรทุก</value>
+  </data>
+  <data name="truck_trailer" xml:space="preserve">
+    <value>รถบรรทุกรถพ่วง</value>
+  </data>
+  <data name="tumblr_logo" xml:space="preserve">
+    <value>Tumblrโลโก้</value>
+  </data>
+  <data name="twitch_logo" xml:space="preserve">
+    <value>Twitchโลโก้</value>
+  </data>
+  <data name="twitter_logo" xml:space="preserve">
+    <value>Twitterโลโก้</value>
+  </data>
+  <data name="umbrella" xml:space="preserve">
+    <value>ร่ม</value>
+  </data>
+  <data name="umbrella_simple" xml:space="preserve">
+    <value>ร่มเรียบง่าย</value>
+  </data>
+  <data name="union" xml:space="preserve">
+    <value>ยูเนียน</value>
+  </data>
+  <data name="unite" xml:space="preserve">
+    <value>รวม</value>
+  </data>
+  <data name="unite_square" xml:space="preserve">
+    <value>รวมสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="upload" xml:space="preserve">
+    <value>อัปโหลด</value>
+  </data>
+  <data name="upload_simple" xml:space="preserve">
+    <value>อัปโหลดเรียบง่าย</value>
+  </data>
+  <data name="usb" xml:space="preserve">
+    <value>Usb</value>
+  </data>
+  <data name="user" xml:space="preserve">
+    <value>ผู้ใช้</value>
+  </data>
+  <data name="user_check" xml:space="preserve">
+    <value>ผู้ใช้เครื่องหมายถูก</value>
+  </data>
+  <data name="user_circle" xml:space="preserve">
+    <value>ผู้ใช้วงกลม</value>
+  </data>
+  <data name="user_circle_check" xml:space="preserve">
+    <value>ผู้ใช้วงกลมเครื่องหมายถูก</value>
+  </data>
+  <data name="user_circle_dashed" xml:space="preserve">
+    <value>ผู้ใช้วงกลมเส้นประ</value>
+  </data>
+  <data name="user_circle_gear" xml:space="preserve">
+    <value>ผู้ใช้วงกลมเฟือง</value>
+  </data>
+  <data name="user_circle_minus" xml:space="preserve">
+    <value>ผู้ใช้วงกลมลบ</value>
+  </data>
+  <data name="user_circle_plus" xml:space="preserve">
+    <value>ผู้ใช้วงกลมบวก</value>
+  </data>
+  <data name="user_focus" xml:space="preserve">
+    <value>ผู้ใช้โฟกัส</value>
+  </data>
+  <data name="user_gear" xml:space="preserve">
+    <value>ผู้ใช้เฟือง</value>
+  </data>
+  <data name="user_list" xml:space="preserve">
+    <value>ผู้ใช้รายการ</value>
+  </data>
+  <data name="user_minus" xml:space="preserve">
+    <value>ผู้ใช้ลบ</value>
+  </data>
+  <data name="user_plus" xml:space="preserve">
+    <value>ผู้ใช้บวก</value>
+  </data>
+  <data name="user_rectangle" xml:space="preserve">
+    <value>ผู้ใช้สี่เหลี่ยมผืนผ้า</value>
+  </data>
+  <data name="user_sound" xml:space="preserve">
+    <value>ผู้ใช้เสียง</value>
+  </data>
+  <data name="user_square" xml:space="preserve">
+    <value>ผู้ใช้สี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="user_switch" xml:space="preserve">
+    <value>ผู้ใช้สวิตช์</value>
+  </data>
+  <data name="users" xml:space="preserve">
+    <value>ผู้ใช้</value>
+  </data>
+  <data name="users_four" xml:space="preserve">
+    <value>ผู้ใช้สี่</value>
+  </data>
+  <data name="users_three" xml:space="preserve">
+    <value>ผู้ใช้สาม</value>
+  </data>
+  <data name="van" xml:space="preserve">
+    <value>รถตู้</value>
+  </data>
+  <data name="vault" xml:space="preserve">
+    <value>ห้องนิรภัย</value>
+  </data>
+  <data name="vector_three" xml:space="preserve">
+    <value>เวกเตอร์สาม</value>
+  </data>
+  <data name="vector_two" xml:space="preserve">
+    <value>เวกเตอร์สอง</value>
+  </data>
+  <data name="vibrate" xml:space="preserve">
+    <value>สั่น</value>
+  </data>
+  <data name="video" xml:space="preserve">
+    <value>วิดีโอ</value>
+  </data>
+  <data name="video_camera" xml:space="preserve">
+    <value>วิดีโอกล้อง</value>
+  </data>
+  <data name="video_camera_slash" xml:space="preserve">
+    <value>วิดีโอกล้องเครื่องหมายทับ</value>
+  </data>
+  <data name="video_conference" xml:space="preserve">
+    <value>วิดีโอการประชุม</value>
+  </data>
+  <data name="vignette" xml:space="preserve">
+    <value>ขอบมืด</value>
+  </data>
+  <data name="vinyl_record" xml:space="preserve">
+    <value>แผ่นเสียงบันทึก</value>
+  </data>
+  <data name="virtual_reality" xml:space="preserve">
+    <value>เสมือนความจริง</value>
+  </data>
+  <data name="virus" xml:space="preserve">
+    <value>ไวรัส</value>
+  </data>
+  <data name="visor" xml:space="preserve">
+    <value>กระบังหน้า</value>
+  </data>
+  <data name="voicemail" xml:space="preserve">
+    <value>ข้อความเสียง</value>
+  </data>
+  <data name="volleyball" xml:space="preserve">
+    <value>วอลเลย์บอล</value>
+  </data>
+  <data name="wall" xml:space="preserve">
+    <value>กำแพง</value>
+  </data>
+  <data name="wallet" xml:space="preserve">
+    <value>กระเป๋าสตางค์</value>
+  </data>
+  <data name="warehouse" xml:space="preserve">
+    <value>โกดัง</value>
+  </data>
+  <data name="warning" xml:space="preserve">
+    <value>คำเตือน</value>
+  </data>
+  <data name="warning_circle" xml:space="preserve">
+    <value>คำเตือนวงกลม</value>
+  </data>
+  <data name="warning_diamond" xml:space="preserve">
+    <value>คำเตือนเพชร</value>
+  </data>
+  <data name="warning_octagon" xml:space="preserve">
+    <value>คำเตือนแปดเหลี่ยม</value>
+  </data>
+  <data name="washing_machine" xml:space="preserve">
+    <value>ซักผ้าเครื่องจักร</value>
+  </data>
+  <data name="watch" xml:space="preserve">
+    <value>นาฬิกา</value>
+  </data>
+  <data name="wave_sawtooth" xml:space="preserve">
+    <value>คลื่นฟันเลื่อย</value>
+  </data>
+  <data name="wave_sine" xml:space="preserve">
+    <value>คลื่นไซน์</value>
+  </data>
+  <data name="wave_square" xml:space="preserve">
+    <value>คลื่นสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="wave_triangle" xml:space="preserve">
+    <value>คลื่นสามเหลี่ยม</value>
+  </data>
+  <data name="waveform" xml:space="preserve">
+    <value>รูปคลื่น</value>
+  </data>
+  <data name="waveform_slash" xml:space="preserve">
+    <value>รูปคลื่นเครื่องหมายทับ</value>
+  </data>
+  <data name="waves" xml:space="preserve">
+    <value>คลื่น</value>
+  </data>
+  <data name="webcam" xml:space="preserve">
+    <value>เว็บแคม</value>
+  </data>
+  <data name="webcam_slash" xml:space="preserve">
+    <value>เว็บแคมเครื่องหมายทับ</value>
+  </data>
+  <data name="webhooks_logo" xml:space="preserve">
+    <value>เว็บฮุกโลโก้</value>
+  </data>
+  <data name="wechat_logo" xml:space="preserve">
+    <value>Wechatโลโก้</value>
+  </data>
+  <data name="whatsapp_logo" xml:space="preserve">
+    <value>Whatsappโลโก้</value>
+  </data>
+  <data name="wheelchair" xml:space="preserve">
+    <value>รถเข็นคนพิการ</value>
+  </data>
+  <data name="wheelchair_motion" xml:space="preserve">
+    <value>รถเข็นคนพิการการเคลื่อนไหว</value>
+  </data>
+  <data name="wifi_high" xml:space="preserve">
+    <value>ไวไฟสูง</value>
+  </data>
+  <data name="wifi_low" xml:space="preserve">
+    <value>ไวไฟต่ำ</value>
+  </data>
+  <data name="wifi_medium" xml:space="preserve">
+    <value>ไวไฟปานกลาง</value>
+  </data>
+  <data name="wifi_none" xml:space="preserve">
+    <value>ไวไฟไม่มี</value>
+  </data>
+  <data name="wifi_slash" xml:space="preserve">
+    <value>ไวไฟเครื่องหมายทับ</value>
+  </data>
+  <data name="wifi_x" xml:space="preserve">
+    <value>ไวไฟx</value>
+  </data>
+  <data name="wind" xml:space="preserve">
+    <value>ลม</value>
+  </data>
+  <data name="windmill" xml:space="preserve">
+    <value>กังหันลม</value>
+  </data>
+  <data name="windows_logo" xml:space="preserve">
+    <value>Windowsโลโก้</value>
+  </data>
+  <data name="wine" xml:space="preserve">
+    <value>ไวน์</value>
+  </data>
+  <data name="wrench" xml:space="preserve">
+    <value>ประแจ</value>
+  </data>
+  <data name="x" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="x_circle" xml:space="preserve">
+    <value>Xวงกลม</value>
+  </data>
+  <data name="x_logo" xml:space="preserve">
+    <value>Xโลโก้</value>
+  </data>
+  <data name="x_square" xml:space="preserve">
+    <value>Xสี่เหลี่ยมจัตุรัส</value>
+  </data>
+  <data name="yarn" xml:space="preserve">
+    <value>ไหมพรม</value>
+  </data>
+  <data name="yin_yang" xml:space="preserve">
+    <value>หยินหยาง</value>
+  </data>
+  <data name="youtube_logo" xml:space="preserve">
+    <value>Youtubeโลโก้</value>
+  </data>
+</root>

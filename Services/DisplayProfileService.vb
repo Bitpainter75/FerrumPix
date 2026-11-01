@@ -26,10 +26,12 @@ Namespace Services
     ''' wandert es hinüber, wird nachgezogen.</para>
     '''
     ''' <para>WIE: Skia liest das Profil (<c>SKColorSpace.CreateIcc</c>) und liefert Matrix nach XYZ
-    ''' D50 und Tonkurve als Parameterformel; eine Tabellenkurve nähert Skia dabei selbst an. Der
-    ''' Filter dekodiert sRGB, rechnet mit der Matrix in den Farbraum des Bildschirms, klemmt auf 0
-    ''' bis 1 und kodiert mit der umgekehrten Tonkurve des Bildschirms. Ein Profil ohne Matrix und
-    ''' Tonkurve (reine Tabellenprofile) wird mit Grund abgelehnt.</para></summary>
+    ''' D50 und EINE Tonkurve als Parameterformel. Kann es das nicht, weil jeder Kanal seine eigene
+    ''' Kurve hat (jedes gemessene Profil), liest <see cref="IccMatrixProfile"/> den Matrixteil, und
+    ''' der Filter kodiert je Kanal über eine Tabelle. Beide Filter dekodieren sRGB, rechnen mit der
+    ''' Matrix in den Farbraum des Bildschirms, klemmen auf 0 bis 1 und kodieren mit der umgekehrten
+    ''' Tonkurve des Bildschirms. Ein Profil ohne Matrix und Tonkurve (reine Tabellenprofile) wird
+    ''' mit Grund abgelehnt.</para></summary>
     Public NotInheritable Class DisplayProfileService
 
         Private Sub New()
@@ -163,7 +165,19 @@ Namespace Services
 
             Dim loaded As LoadedProfile
             Try
-                loaded = FromColorSpace(SKColorSpace.CreateIcc(File.ReadAllBytes(path)))
+                Dim bytes = File.ReadAllBytes(path)
+                ' Skia lehnt ab, sobald die drei Tonkurven nicht EINE gemeinsame Formel sind - so
+                ' sieht jedes gemessene Bildschirmprofil aus. Dann liest der eigene Leser den
+                ' Matrixteil. Ablehnen heißt bei SkiaSharp zweierlei: Nothing, wenn Skia das Profil
+                ' zerlegt, aber nicht darstellen kann, und eine Ausnahme, wenn es schon das
+                ' Zerlegen nicht schafft.
+                Dim colorSpace As SKColorSpace = Nothing
+                Try
+                    colorSpace = SKColorSpace.CreateIcc(bytes)
+                Catch ex As ArgumentException
+                    colorSpace = Nothing
+                End Try
+                loaded = If(colorSpace IsNot Nothing, FromColorSpace(colorSpace), FromIccBytes(bytes))
             Catch ex As Exception
                 DiagnosticLogService.LogException("DisplayProfile.Load", ex)
                 loaded = New LoadedProfile With {.ErrorText = LocalizationService.T("Die Datei ist kein lesbares ICC-Profil.")}
@@ -214,6 +228,112 @@ Namespace Services
             Dim description = String.Format(Globalization.CultureInfo.InvariantCulture,
                 "gamma {0:0.00}, red {1:0.000}/{2:0.000}/{3:0.000}", displayFn.G, toDisplay(0, 0), toDisplay(0, 1), toDisplay(0, 2))
             Return New LoadedProfile With {.Filter = effect.ToColorFilter(u), .Description = description}
+        End Function
+
+        ''' <summary>Breite der Tabelle, über die der Filter kodiert. Gelesen wird sie über die
+        ''' Wurzel des linearen Werts, damit die steilen Tiefen genug Stützstellen bekommen.</summary>
+        Private Const EncodeTableSize As Integer = 256
+
+        ''' <summary>Filter aus dem selbst gelesenen Matrixteil eines Profils, je Kanal mit eigener
+        ''' Tonkurve. Die Umkehrung jeder Kurve liegt als Bildtabelle im Kind-Shader des Filters:
+        ''' SkSL erlaubt keinen berechneten Index in ein Uniform-Array.</summary>
+        Friend Shared Function FromIccBytes(data As Byte()) As LoadedProfile
+            Dim profile As IccMatrixProfile = Nothing
+            Select Case IccMatrixProfile.TryParse(data, profile)
+                Case IccMatrixProfile.ParseResult.NotAnIccProfile
+                    Return New LoadedProfile With {.ErrorText = LocalizationService.T("Die Datei ist kein lesbares ICC-Profil.")}
+                Case IccMatrixProfile.ParseResult.NoMatrixWithCurves
+                    Return New LoadedProfile With {.ErrorText = LocalizationService.T("Das Profil hat keine Matrix mit Tonkurve und lässt sich nicht verwenden.")}
+            End Select
+
+            Dim m = profile.ToXyzD50
+            Dim displayXyz = New SKColorSpaceXyz(CSng(m(0, 0)), CSng(m(0, 1)), CSng(m(0, 2)),
+                                                 CSng(m(1, 0)), CSng(m(1, 1)), CSng(m(1, 2)),
+                                                 CSng(m(2, 0)), CSng(m(2, 1)), CSng(m(2, 2)))
+            Dim toDisplay = SKColorSpaceXyz.Concat(displayXyz.Invert(), SKColorSpaceXyz.Srgb)
+            If Not IsFinite(toDisplay.Values) Then
+                Return New LoadedProfile With {.ErrorText = LocalizationService.T("Das Profil hat keine Matrix mit Tonkurve und lässt sich nicht verwenden.")}
+            End If
+
+            Dim effect = GetTableEffect()
+            If effect Is Nothing Then Return New LoadedProfile With {.ErrorText = "SkSL"}
+
+            ' Stelle i der Tabelle gehört zum linearen Wert (i/255)², je Kanal der Gerätewert dazu.
+            Dim info = New SKImageInfo(EncodeTableSize, 1, SKColorType.RgbaF32, SKAlphaType.Unpremul)
+            Dim pixels(EncodeTableSize * 4 - 1) As Single
+            For i = 0 To EncodeTableSize - 1
+                Dim u = i / CDbl(EncodeTableSize - 1)
+                Dim linear = u * u
+                For channel = 0 To 2
+                    pixels(i * 4 + channel) = CSng(profile.Curves(channel).Invert(linear))
+                Next
+                pixels(i * 4 + 3) = 1.0F
+            Next
+            Dim table As SKImage
+            Dim handle = Runtime.InteropServices.GCHandle.Alloc(pixels, Runtime.InteropServices.GCHandleType.Pinned)
+            Try
+                Using pixmap = New SKPixmap(info, handle.AddrOfPinnedObject(), info.RowBytes)
+                    table = SKImage.FromPixelCopy(pixmap)
+                End Using
+            Finally
+                handle.Free()
+            End Try
+            If table Is Nothing Then Return New LoadedProfile With {.ErrorText = "SkSL"}
+
+            Dim u0 = New SKRuntimeEffectUniforms(effect)
+            For row As Integer = 0 To 2
+                u0("m" & row.ToString(Globalization.CultureInfo.InvariantCulture)) =
+                    New Single() {toDisplay(0, row), toDisplay(1, row), toDisplay(2, row)}
+            Next
+            Dim s = SKColorSpaceTransferFn.Srgb
+            u0("s0") = New Single() {s.G, s.A, s.B, s.C}
+            u0("s1") = New Single() {s.D, s.E, s.F}
+            u0("size") = CSng(EncodeTableSize - 1)
+            Dim children = New SKRuntimeEffectChildren(effect)
+            children("encode") = table.ToRawShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, New SKSamplingOptions(SKFilterMode.Nearest))
+
+            Dim description = String.Format(Globalization.CultureInfo.InvariantCulture,
+                "table curves, red {0:0.000}/{1:0.000}/{2:0.000}", toDisplay(0, 0), toDisplay(0, 1), toDisplay(0, 2))
+            Return New LoadedProfile With {.Filter = effect.ToColorFilter(u0, children), .Description = description}
+        End Function
+
+        Private Shared _tableEffect As SKRuntimeEffect
+
+        ''' <summary>Wie <see cref="GetEffect"/>, nur kodiert jeder Kanal über seine eigene
+        ''' Tabelle: Stelle i hält den Gerätewert zum linearen Wert (i/size)², gelesen über die
+        ''' Wurzel und zwischen zwei Stellen linear gemischt.</summary>
+        Private Shared Function GetTableEffect() As SKRuntimeEffect
+            SyncLock _effectLock
+                If _tableEffect IsNot Nothing Then Return _tableEffect
+                Const Source As String =
+                    "uniform float3 m0; uniform float3 m1; uniform float3 m2;" & vbLf &
+                    "uniform float4 s0; uniform float3 s1;" & vbLf &
+                    "uniform float size;" & vbLf &
+                    "uniform shader encode;" & vbLf &
+                    "float tf(float x, float4 p, float3 q) {" & vbLf &
+                    "  float v = max(x, 0.0);" & vbLf &
+                    "  return v < q.x ? p.w * v + q.z : pow(p.y * v + p.z, p.x) + q.y;" & vbLf &
+                    "}" & vbLf &
+                    "float3 at(float i) { return float3(encode.eval(float2(i + 0.5, 0.5)).rgb); }" & vbLf &
+                    "half4 main(half4 c) {" & vbLf &
+                    "  float a = c.a;" & vbLf &
+                    "  if (a <= 0.0) return c;" & vbLf &
+                    "  float3 v = float3(c.rgb) / a;" & vbLf &
+                    "  v = float3(tf(v.r, s0, s1), tf(v.g, s0, s1), tf(v.b, s0, s1));" & vbLf &
+                    "  v = clamp(float3(dot(m0, v), dot(m1, v), dot(m2, v)), 0.0, 1.0);" & vbLf &
+                    "  float3 u = sqrt(v) * size;" & vbLf &
+                    "  float3 i = floor(u);" & vbLf &
+                    "  float3 j = min(i + 1.0, size);" & vbLf &
+                    "  float3 lo = float3(at(i.r).r, at(i.g).g, at(i.b).b);" & vbLf &
+                    "  float3 hi = float3(at(j.r).r, at(j.g).g, at(j.b).b);" & vbLf &
+                    "  v = mix(lo, hi, u - i);" & vbLf &
+                    "  return half4(half3(v * a), c.a);" & vbLf &
+                    "}"
+                Dim errors As String = Nothing
+                _tableEffect = SKRuntimeEffect.CreateColorFilter(Source, errors)
+                If _tableEffect Is Nothing Then DiagnosticLogService.LogAlways("DisplayProfile", "SkSL: " & errors)
+                Return _tableEffect
+            End SyncLock
         End Function
 
         Private Shared Function IsFinite(values As Single()) As Boolean

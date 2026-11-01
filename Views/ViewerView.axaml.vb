@@ -558,18 +558,23 @@ Namespace Views
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
 
-            ' Im Vollbild zoomt das Rad mit STRG oder gedrueckter rechter Taste, verankert am Zeiger,
-            ' und bei angehaltener Diashow auch blank: wer anhaelt, will das Bild ansehen. Sonst
-            ' blaettert das blanke Rad weiter (unten). Ueber dem Filmstreifen im Vollbild zoomt es
-            ' nicht: der Zeiger ist dann beim Streifen, nicht beim Bild.
+            ' Im Vollbild entscheidet die Einstellung, was das blanke Rad tut (FullscreenWheelAction,
+            ' ab Werk Blaettern); STRG tut das andere, die rechte Taste zoomt immer, verankert am
+            ' Zeiger. Ueber dem Filmstreifen im Vollbild zoomt es nicht: der Zeiger ist dann beim
+            ' Streifen, nicht beim Bild.
+            ' Ein waagrechtes Wischen im Trackpad-Modus geht wie bisher unten zum Blaettern.
+            Dim trackpadSwipe = IsTrackpadMode() AndAlso Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y)
             If vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso Not vm.IsCompareMode AndAlso
-               Not IsOverFullscreenFilmstrip(e) Then
+               Not IsOverFullscreenFilmstrip(e) AndAlso Not trackpadSwipe Then
                 Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
-                Dim rightButton = viewport IsNot Nothing AndAlso e.GetCurrentPoint(viewport).Properties.IsRightButtonPressed
-                If viewport IsNot Nothing AndAlso (rightButton OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control) OrElse
-                                                   vm.IsSlideshowPaused) Then
-                    If rightButton Then _suppressNextImageContextMenu = True
-                    ZoomFullscreen(If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor), e.GetPosition(viewport))
+                If viewport IsNot Nothing Then
+                    Dim rightButton = e.GetCurrentPoint(viewport).Properties.IsRightButtonPressed
+                    If rightButton OrElse WheelZooms(fullscreen:=True, e) Then
+                        If rightButton Then _suppressNextImageContextMenu = True
+                        ZoomFullscreen(If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor), e.GetPosition(viewport))
+                    Else
+                        vm.NavigateByWheel(e.Delta.Y)
+                    End If
                     e.Handled = True
                     Return
                 End If
@@ -589,7 +594,7 @@ Namespace Views
             ' Einzelbildflaeche zu und das Rad wuerde die Vergleichsflaeche nur scrollen.
             If vm.IsCompareMode Then
                 If IsTrackpadMode() OrElse e.GetCurrentPoint(Me).Properties.IsRightButtonPressed OrElse
-                   e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+                   WheelZooms(fullscreen:=False, e) Then
                     _suppressNextImageContextMenu = True
                     Dim underMouse = ComparePaneUnder(e)
                     If underMouse IsNot Nothing Then
@@ -599,7 +604,7 @@ Namespace Views
                         vm.ZoomLevel = Math.Max(0.05, vm.ZoomLevel) * If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor)
                     End If
                 Else
-                    ' Wie in der Einzelansicht blaettert das blanke Rad weiter - im Vergleich trifft
+                    ' Wie in der Einzelansicht blaettert das Rad weiter - im Vergleich trifft
                     ' das die RECHTE Flaeche (die Weiche sitzt in LoadPathAt), die linke bleibt als
                     ' Bezug stehen.
                     vm.NavigateByWheel(e.Delta.Y)
@@ -624,7 +629,7 @@ Namespace Views
             ElseIf rightButtonZoom Then
                 _suppressNextImageContextMenu = True
                 ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor))
-            ElseIf e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+            ElseIf WheelZooms(fullscreen:=False, e) Then
                 If scrollViewer IsNot Nothing Then
                     ZoomImageAtViewportPoint(e.GetPosition(scrollViewer), If(e.Delta.Y > 0, WheelZoomFactor, 1.0 / WheelZoomFactor))
                 ElseIf e.Delta.Y < 0 Then
@@ -900,6 +905,17 @@ Namespace Views
         Private Function IsViewerCropDragEnabled() As Boolean
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             Return mainVm IsNot Nothing AndAlso mainVm.Settings IsNot Nothing AndAlso mainVm.Settings.ViewerCropDrag
+        End Function
+
+        ''' <summary>Zoomt das Rad (statt zu blaettern)? Die Einstellung legt fest, was das BLANKE Rad
+        ''' tut, getrennt fuer Viewer und Vollbild; STRG dazu kehrt es um. Ohne Einstellungen
+        ''' (Pruefstand) gilt der Werkswert Blaettern.</summary>
+        Private Function WheelZooms(fullscreen As Boolean, e As PointerWheelEventArgs) As Boolean
+            Dim settings = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)?.Settings
+            Dim action = If(settings Is Nothing, AppSettings.WheelActionNavigate,
+                            If(fullscreen, settings.FullscreenWheelAction, settings.ViewerWheelAction))
+            Dim zoomByDefault = String.Equals(action, AppSettings.WheelActionZoom, StringComparison.Ordinal)
+            Return zoomByDefault Xor e.KeyModifiers.HasFlag(KeyModifiers.Control)
         End Function
 
         Private Function IsTrackpadMode() As Boolean
@@ -1334,6 +1350,12 @@ Namespace Views
                 ' Laeuft die Diashow weiter, steht das Bild wieder eingepasst.
                 Dim playing = GetVm()?.IsSlideshowPlaying
                 If playing.GetValueOrDefault() AndAlso _fullscreenZoom > 0 Then ResetFullscreenZoom()
+                ' Anhalten zeigt die Leiste kurz, damit "Angehalten" zu sehen ist; die Ruhezeit nimmt
+                ' sie wieder, wie bei laufender Diashow.
+                If e.PropertyName = NameOf(ViewerViewModel.IsSlideshowPaused) AndAlso
+                   GetVm()?.IsSlideshowPaused = True AndAlso GetVm()?.IsFullscreenMode = True Then
+                    NoteFullscreenVideoControlsActivity()
+                End If
                 UpdateFullscreenImageBar()
             End If
 
@@ -1964,14 +1986,14 @@ Namespace Views
         End Sub
 
         ''' <summary>Die Bedienleiste fuer Bilder im Vollbild: sichtbar nach einer Mausbewegung bis
-        ''' zum Leerlauf, und immer, solange die Diashow angehalten ist. Steht der Filmstreifen
-        ''' unten, rueckt sie ueber ihn.</summary>
+        ''' zum Leerlauf, auch bei angehaltener Diashow; Leisten und Zeiger gehen dann nach derselben
+        ''' Ruhezeit. Steht der Filmstreifen unten, rueckt sie ueber ihn.</summary>
         Private Sub UpdateFullscreenImageBar()
             Dim vm = GetVm()
             Dim bar = Me.FindControl(Of Border)("FullscreenImageBar")
             If bar Is Nothing Then Return
             Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso vm.CurrentImage IsNot Nothing
-            bar.IsVisible = forImage AndAlso (_fullscreenVideoControlsVisible OrElse vm.IsSlideshowPaused)
+            bar.IsVisible = forImage AndAlso _fullscreenVideoControlsVisible
             bar.Margin = New Thickness(0, 0, 0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionBottom, 24 + FilmstripPlacement.TopExtent, 24))
             ' Die Bewertungsleiste oben geht mit der Bedienleiste unten und rueckt unter einen oben
             ' stehenden Filmstreifen.

@@ -18,8 +18,8 @@
                     <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/grain.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/dots-nine.svg"
+                                Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                         <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
@@ -31,7 +31,7 @@
                                 Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="rauschen"
                                 ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
-                            <icons:SvgIcon Width="14" Height="14" />
+                            <icons:SvgIcon Width="16" Height="16" />
                         </Button>
                         <Button Grid.Column="2"
                                 Classes="icon-btn group-reset"
@@ -39,8 +39,8 @@
                                 Command="{Binding DataContext.ResetRauschenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 ToolTip.Tip="Rauschreduzierung zurücksetzen">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                Width="16" Height="16" />
                         </Button>
                     </Grid>
                 </DataTemplate>
@@ -101,8 +101,8 @@
                         ToolTip.ShowOnDisabled="True"
                         ToolTip.Tip="Misst das Rauschen im Bild und stellt die Stärke so ein, dass etwa so viel Korn bleibt wie bei einer sauberen Aufnahme mit niedrigem ISO. Entrauscht wird erst mit einem der Knöpfe darunter.">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magic-wand.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Stärke aus dem Bild messen" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -135,8 +135,8 @@
                         Command="{Binding DenoiseWithModelCommand}"
                         ToolTip.Tip="{Binding DenoiseWithModelHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Entrauschen: gründlich" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -145,8 +145,8 @@
                         Command="{Binding DenoiseFastCommand}"
                         ToolTip.Tip="{Binding DenoiseFastHint}" ToolTip.ShowOnDisabled="True">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sparkles.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Entrauschen: zügig" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>

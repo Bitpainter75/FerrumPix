@@ -21,12 +21,14 @@ Namespace Controls
         Public Shared ReadOnly IconBrushProperty As StyledProperty(Of IBrush) =
             AvaloniaProperty.Register(Of SvgIcon, IBrush)(NameOf(IconBrush), New SolidColorBrush(Color.Parse("#D6DCE1")))
 
-        ' Nebenläufig, weil PreloadOutlineIconsAsync im Hintergrund einträgt, während Render auf dem
+        ' Nebenläufig, weil PreloadIconsAsync im Hintergrund einträgt, während Render auf dem
         ' UI-Faden liest. Doppelt geparste Icons sind dabei unkritisch - die Daten sind unveränderlich.
         Private Shared ReadOnly Cache As New ConcurrentDictionary(Of String, SvgIconData)()
         Private Shared _preloadStarted As Integer = 0
         Private Const IconAssetPrefix As String = "/Assets/Icons/"
-        Private Const OutlineAssetBase As String = "avares://FerrumPix/Assets/Icons/outline/"
+        ''' <summary>Uralte Dateinamen aus der Zeit vor den Symbolsätzen, auf den Namen des damaligen
+        ''' Tabler-Symbols gelegt. <see cref="ResolveIconSource"/> reicht das Ergebnis an
+        ''' <see cref="Services.IconAssets.ResolveLegacy"/> weiter, das daraus das heutige Symbol macht.</summary>
         Private Shared ReadOnly LegacyOutlineFileMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase) From {
             {"01_Home.svg", "home.svg"},
             {"02_Zurueck.svg", "arrow-left.svg"},
@@ -160,7 +162,7 @@ Namespace Controls
 
         Public Shared Function ResolveIconSource(source As String) As String
             If String.IsNullOrWhiteSpace(source) Then Return source
-            If source.IndexOf("/Assets/Icons/outline/", StringComparison.OrdinalIgnoreCase) >= 0 Then Return source
+            If source.IndexOf("/Assets/Icons/outline/", StringComparison.OrdinalIgnoreCase) >= 0 Then Return Services.IconAssets.ResolveLegacy(source)
 
             Dim iconIndex = source.IndexOf(IconAssetPrefix, StringComparison.OrdinalIgnoreCase)
             If iconIndex < 0 Then Return source
@@ -170,10 +172,10 @@ Namespace Controls
             Dim mappedFile As String = Nothing
             If Not LegacyOutlineFileMap.TryGetValue(fileName, mappedFile) Then Return source
 
-            Return OutlineAssetBase & mappedFile
+            Return Services.IconAssets.ResolveLegacy(Services.IconAssets.Root & "outline/" & mappedFile)
         End Function
 
-        ''' <summary>Liest und zerlegt alle Kontur-Icons einmalig im Hintergrund und baut ihre
+        ''' <summary>Liest und zerlegt alle Symbole der Oberfläche (Phosphor, normale Stärke) einmalig im Hintergrund und baut ihre
         ''' Geometrien anschließend häppchenweise auf dem UI-Faden. Ohne das wird jedes Symbol erst
         ''' geparst, wenn es zum ersten Mal gezeichnet wird - beim Aufklappen von "Formen und Symbole"
         ''' ruckelt dadurch das Scrollen, weil dort mehrere tausend Icons liegen.
@@ -188,14 +190,14 @@ Namespace Controls
         ''' gezeichnet wird, entsteht wie immer beim ersten Zeichnen (GetIcon).</summary>
         Public Shared Property PreloadEnabled As Boolean = True
 
-        Public Shared Function PreloadOutlineIconsAsync() As Task
+        Public Shared Function PreloadIconsAsync() As Task
             If Not PreloadEnabled Then Return Task.CompletedTask
             If Interlocked.Exchange(_preloadStarted, 1) <> 0 Then Return Task.CompletedTask
 
             Return Task.Run(Sub()
                                 Dim parsed As New List(Of KeyValuePair(Of String, SvgIconSource))()
                                 Try
-                                    For Each uri In AssetLoader.GetAssets(New Uri(OutlineAssetBase), Nothing)
+                                    For Each uri In AssetLoader.GetAssets(New Uri(Services.IconAssets.Regular), Nothing)
                                         Dim source = uri.ToString()
                                         If Not source.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
                                         If Cache.ContainsKey(source) Then Continue For

@@ -10,8 +10,8 @@
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/aspect-ratio.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
+                            Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <Button Grid.Column="1"
@@ -22,8 +22,8 @@
                             Command="{Binding DataContext.ResetResizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ToolTip.Tip="Größe zurücksetzen">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                            Width="16" Height="16" />
                     </Button>
                 </Grid>
             </DataTemplate>
@@ -155,8 +155,8 @@
                 <StackPanel Orientation="Horizontal" Spacing="6"
                             HorizontalAlignment="Center">
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/resize.svg"
-                        Width="16" Height="16" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/resize.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="Bildgröße anwenden" />
                 </StackPanel>
             </Button>
@@ -179,8 +179,8 @@
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/arrow-up-right.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-up-right.svg"
+                                Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                     </DataTemplate>
@@ -221,8 +221,8 @@
                         <StackPanel Orientation="Horizontal" Spacing="6"
                                     HorizontalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/arrow-up-right.svg"
-                                Width="16" Height="16" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-up-right.svg"
+                                Width="18" Height="18" />
                             <TextBlock Text="Hochskalieren" />
                         </StackPanel>
                     </Button>
@@ -238,8 +238,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/layout.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/layout.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -250,8 +250,8 @@
                                     Command="{Binding DataContext.ResetCanvasCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Leinwand zurücksetzen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="13" Height="13" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>
@@ -393,8 +393,8 @@
                         <StackPanel Orientation="Horizontal" Spacing="6"
                                     HorizontalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/frame.svg"
-                                Width="16" Height="16" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
+                                Width="18" Height="18" />
                             <TextBlock Text="Leinwandgröße anwenden" />
                         </StackPanel>
                     </Button>
@@ -414,8 +414,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/color-swatch.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/swatches.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -424,8 +424,8 @@
                                     Command="{Binding DataContext.ClearDocumentBackgroundCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Wieder durchsichtig">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>
@@ -440,8 +440,8 @@
                                 Command="{Binding SetDocumentBackgroundCommand}" CommandParameter="Transparent"
                                 Classes.active="{Binding IsDocumentBackgroundTransparent}">
                             <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/border-none.svg"
-                                               Width="14" Height="14" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/checkerboard.svg"
+                                               Width="18" Height="18" />
                                 <TextBlock Text="Transparent" FontSize="{DynamicResource FP.Font.Small}"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -450,8 +450,8 @@
                                 Command="{Binding SetDocumentBackgroundCommand}" CommandParameter="Black"
                                 Classes.active="{Binding IsDocumentBackgroundBlack}">
                             <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/moon.svg"
-                                               Width="14" Height="14" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/moon.svg"
+                                               Width="18" Height="18" />
                                 <TextBlock Text="Schwarz" FontSize="{DynamicResource FP.Font.Small}"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -460,8 +460,8 @@
                                 Command="{Binding SetDocumentBackgroundCommand}" CommandParameter="White"
                                 Classes.active="{Binding IsDocumentBackgroundWhite}">
                             <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/sun.svg"
-                                               Width="14" Height="14" />
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg"
+                                               Width="18" Height="18" />
                                 <TextBlock Text="Weiß" FontSize="{DynamicResource FP.Font.Small}"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>

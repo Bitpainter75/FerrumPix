@@ -23,8 +23,8 @@
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/chart-histogram.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/chart-bar.svg"
+                            Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <!-- Die Clipping-Warnung steht HIER und nicht beim Licht: das Analysepanel
@@ -41,8 +41,8 @@
                             Command="{Binding DataContext.ToggleClippingWarningCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ToolTip.Tip="Ausgefressene Lichter rot und zugelaufene Tiefen blau markieren">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/alert-triangle.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/warning.svg"
+                            Width="18" Height="18" />
                     </Button>
                 </Grid>
             </DataTemplate>

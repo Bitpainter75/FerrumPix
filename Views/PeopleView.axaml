@@ -54,8 +54,8 @@
                 <Button Classes="ghost" Padding="10,7" VerticalAlignment="Center"
                         Click="OnBackClick"
                         ToolTip.Tip="Zurück zur Galerie">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
-                                   Width="16" Height="16"/>
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-left.svg"
+                                   Width="18" Height="18"/>
                 </Button>
                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                     <TextBlock Text="Personen verwalten" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
@@ -162,8 +162,8 @@
                             <Button Classes="ghost" Padding="10,7" VerticalAlignment="Center"
                                     Click="OnClosePersonClick"
                                     ToolTip.Tip="Zurück zur Übersicht">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-left.svg"
-                                               Width="16" Height="16"/>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-left.svg"
+                                               Width="18" Height="18"/>
                             </Button>
                             <Border Grid.Column="1" Width="72" Height="72" CornerRadius="36"
                                     ClipToBounds="True"
@@ -238,8 +238,8 @@
                                                 Click="OnDetachPersonFaceClick"
                                                 Tag="{Binding FaceId}"
                                                 ToolTip.Tip="Nicht diese Person">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/user-x.svg"
-                                                           Width="16" Height="16"
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/user-minus.svg"
+                                                           Width="18" Height="18"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <!-- Das Auge erscheint ERST BEIM ZEIGEN. Ein Ausschnitt von
@@ -253,8 +253,8 @@
                                                 Margin="3,3,0,0"
                                                 Click="OnPreviewFaceClick"
                                                 ToolTip.Tip="Das ganze Bild ansehen">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                                           Width="16" Height="16"
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg"
+                                                           Width="18" Height="18"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                     </Panel>

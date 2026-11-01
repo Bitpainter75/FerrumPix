@@ -76,8 +76,8 @@ Namespace ViewModels
             Get
                 If Group Is Nothing Then Return ""
                 Return If(Group.IsCollapsed,
-                          "avares://FerrumPix/Assets/Icons/outline/caret-right.svg",
-                          "avares://FerrumPix/Assets/Icons/outline/caret-down.svg")
+                          "avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg",
+                          "avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg")
             End Get
         End Property
 
@@ -169,8 +169,8 @@ Namespace ViewModels
         Public ReadOnly Property LockIconSource As String
             Get
                 Return If(IsLocked,
-                          "avares://FerrumPix/Assets/Icons/outline/lock.svg",
-                          "avares://FerrumPix/Assets/Icons/outline/lock-open.svg")
+                          "avares://FerrumPix/Assets/Icons/phosphor/regular/lock.svg",
+                          "avares://FerrumPix/Assets/Icons/phosphor/regular/lock-open.svg")
             End Get
         End Property
 
@@ -216,20 +216,20 @@ Namespace ViewModels
         Public ReadOnly Property ClipLinkIconSource As String
             Get
                 If Not IsClipped Then Return ""
-                Return "avares://FerrumPix/Assets/Icons/outline/corner-left-down.svg"
+                Return "avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-elbow-left-down.svg"
             End Get
         End Property
 
         Public ReadOnly Property IconSource As String
             Get
-                If Group IsNot Nothing Then Return "avares://FerrumPix/Assets/Icons/outline/folder.svg"
+                If Group IsNot Nothing Then Return "avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
                 ' Art-abhängiges Symbol: MASKEN-Ebene = Masken-Symbol (rotes Overlay im Bild), AUSWAHL-Ebene
                 ' = Laufameisen-Rechteck (Ameisen im Bild). So sind die beiden im Panel unterscheidbar - und
                 ' von der globalen Bildanpassungen-Zeile (Regler-Symbol) und Objekt-Ebenen.
                 If AdjustmentLayer IsNot Nothing Then
                     Return If(AdjustmentLayer.IsMaskLayer,
-                              "avares://FerrumPix/Assets/Icons/outline/mask.svg",
-                              "avares://FerrumPix/Assets/Icons/outline/marquee.svg")
+                              "avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg",
+                              "avares://FerrumPix/Assets/Icons/phosphor/regular/selection.svg")
                 End If
                 Return If(Annotation Is Nothing, "", Annotation.IconSource)
             End Get

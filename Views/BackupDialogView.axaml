@@ -25,7 +25,7 @@
                     Width="38" Height="36"
                     Click="OnBrowseClick"
                     ToolTip.Tip="Datei wählen">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
 
@@ -86,8 +86,8 @@
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"/>
                                 </StackPanel>
-                                <icons:SvgIcon Grid.Column="1" Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg"
-                                               Width="16" Height="16" VerticalAlignment="Center"/>
+                                <icons:SvgIcon Grid.Column="1" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-right.svg"
+                                               Width="18" Height="18" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="2" Text="{Binding Target, Mode=TwoWay}" Classes="no-translate"/>
                             </Grid>
                         </DataTemplate>

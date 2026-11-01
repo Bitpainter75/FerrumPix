@@ -579,6 +579,10 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFullscreenViewer))
                 Me.RaisePropertyChanged(NameOf(IsFullscreenNavigationLocked))
                 If value Then
+                    ' Das Vollbild IST eine angehaltene Diashow: Bedienleiste, "Angehalten", Zoomen
+                    ' mit dem Rad, Fortsetzen mit LEERTASTE. Startet die Diashow selbst, setzt sie
+                    ' danach nur den Takt in Gang.
+                    Viewer?.EnterPausedSlideshowSession()
                     ' Ins Vollbild: die Vollbildflaeche erst zeigen, wenn das Betriebssystem das
                     ' Fenster wirklich aufgezogen hat. Sonst ist das Bild kurz auf die normale
                     ' Fenstergroesse beschnitten zu sehen.
@@ -684,7 +688,7 @@ Namespace ViewModels
         '''
         ''' Vorher setzte nur die Galerie ihre eigenen Elemente. Was im Betrachter (auch in der
         ''' Diashow) oder im Editor vergeben wurde, stand im Katalog, aber nicht an Kacheln,
-        ''' Filmstreifen und Info-Leisten der anderen Ansichten (Nutzerbefund 2026-10-31).</summary>
+        ''' Filmstreifen und Info-Leisten der anderen Ansichten.</summary>
         Private Sub OnCatalogAttributesChanged(sender As Object, change As CatalogAttributeChange)
             If change Is Nothing OrElse change.Paths.Count = 0 Then Return
             Dispatcher.UIThread.Post(Sub() ApplyCatalogAttributesToItems(change))
@@ -3127,7 +3131,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.ModelDownload AndAlso
                        _dialogKind <> AppDialogKind.Import AndAlso
                        _dialogKind <> AppDialogKind.Backup AndAlso
-                       _dialogKind <> AppDialogKind.Restore
+                       _dialogKind <> AppDialogKind.Restore AndAlso
+                       _dialogKind <> AppDialogKind.Shortcuts
             End Get
         End Property
 

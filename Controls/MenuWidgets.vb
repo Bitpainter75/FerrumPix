@@ -90,9 +90,9 @@ Namespace Controls
                     button.Classes.Add("compact")
 
                     Dim icon As New SvgIcon With {
-                        .Source = "avares://FerrumPix/Assets/Icons/outline/star.svg",
-                        .Width = 16,
-                        .Height = 16
+                        .Source = "avares://FerrumPix/Assets/Icons/phosphor/regular/star.svg",
+                        .Width = 18,
+                        .Height = 18
                     }
                     icon.Classes.Add("rating-star")
                     button.Content = icon
@@ -105,7 +105,7 @@ Namespace Controls
             If toggleFavorite IsNot Nothing Then
                 Dim isSet = isFavorite
                 Dim icon As New SvgIcon With {
-                    .Source = "avares://FerrumPix/Assets/Icons/outline/heart.svg",
+                    .Source = "avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg",
                     .Width = 18,
                     .Height = 18
                 }
@@ -157,8 +157,8 @@ Namespace Controls
                         End If
                     Next
                 End Sub
-            For Each spec In {(State:=1, Icon:="flag-check", StyleClass:="pick-keep", Tip:="Als behalten markieren (erneut nimmt es zurück)"),
-                              (State:=-1, Icon:="flag-x", StyleClass:="pick-reject", Tip:="Als verworfen markieren (erneut nimmt es zurück)")}
+            For Each spec In {(State:=1, Icon:="thumbs-up", StyleClass:="pick-keep", Tip:="Als behalten markieren (erneut nimmt es zurück)"),
+                              (State:=-1, Icon:="thumbs-down", StyleClass:="pick-reject", Tip:="Als verworfen markieren (erneut nimmt es zurück)")}
                 Dim wanted = spec.State
                 Dim button As New Button With {
                     .Width = ButtonSize,
@@ -166,9 +166,9 @@ Namespace Controls
                     .Padding = New Thickness(0),
                     .Margin = New Thickness(If(wanted = 1, 4, 0), 0, 0, 0),
                     .Content = New SvgIcon With {
-                        .Source = "avares://FerrumPix/Assets/Icons/outline/" & spec.Icon & ".svg",
-                        .Width = 16,
-                        .Height = 16
+                        .Source = "avares://FerrumPix/Assets/Icons/phosphor/regular/" & spec.Icon & ".svg",
+                        .Width = 18,
+                        .Height = 18
                     },
                     .Command = New DelegateCommand(
                         Sub()
@@ -189,14 +189,14 @@ Namespace Controls
         End Sub
 
         ''' <summary>Die Farbetiketten als Kreise; dieselbe Farbe noch einmal entfernt das Etikett.
-        ''' Das gesetzte Etikett traegt einen Haken, und der wandert beim Klick sofort mit - wie bei den Sternen
+        ''' Das gesetzte Etikett traegt einen weissen Ring, und der wandert beim Klick sofort mit - wie bei den Sternen
         ''' bleibt das Menue dabei offen.</summary>
         Public Shared Function ColorLabelRow(currentLabel As String, setLabel As ICommand) As Control
             If setLabel Is Nothing Then Return Nothing
 
             Dim row = NewRow()
             Dim current = If(currentLabel, "")
-            Dim marks As New Dictionary(Of String, TextBlock)(StringComparer.OrdinalIgnoreCase)
+            Dim marks As New Dictionary(Of String, Ellipse)(StringComparer.OrdinalIgnoreCase)
 
             Dim showLabel As Action =
                 Sub()
@@ -207,17 +207,17 @@ Namespace Controls
 
             For Each entry In LabelColors
                 Dim hex = entry.Hex
-                ' Der Haken liegt UEBER dem Kreis, deshalb ein Raster statt einer Ellipse allein.
-                Dim mark As New TextBlock With {
-                    .Text = "✓",
-                    .FontSize = 11,
-                    .FontWeight = FontWeight.Bold,
-                    .HorizontalAlignment = HorizontalAlignment.Center,
-                    .VerticalAlignment = VerticalAlignment.Center,
-                    .Foreground = If(String.Equals(hex, "#FACC15", StringComparison.OrdinalIgnoreCase),
-                                     Brushes.Black, Brushes.White),
+                ' Das gesetzte Etikett traegt einen Ring in der Akzentfarbe, AUSSEN um den Kreis mit
+                ' etwas Luft: ein weisser Ring verschwand im hellen Erscheinungsbild, und ein Ring auf
+                ' dem Kreis verschwaende beim Etikett in Akzentfarbe. Kreis und Ring liegen deshalb
+                ' in einem Raster uebereinander.
+                Dim mark As New Ellipse With {
+                    .Width = ButtonSize,
+                    .Height = ButtonSize,
+                    .StrokeThickness = 2,
                     .IsVisible = False
                 }
+                mark.Bind(Shape.StrokeProperty, mark.GetResourceObservable("FP.Accent"))
                 marks(hex) = mark
 
                 Dim stack As New Panel()

@@ -7,8 +7,8 @@
             <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/mask.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                 </StackPanel>
             </DataTemplate>
@@ -24,25 +24,25 @@
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Verschieben"
                         Classes.active="{Binding IsMaskMoveMode}"
                         ToolTip.Tip="Verschieben: Objekte und Ebenen greifen, ohne zu malen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cursor.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Brush"
                         Classes.active="{Binding IsMaskBrushMode}"
                         ToolTip.Tip="Pinsel: Maske frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-brush.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Linear"
                         Classes.active="{Binding IsMaskLinearMode}"
                         ToolTip.Tip="Linearer Verlauf: im Bild ziehen, die Maske läuft vom Startpunkt zum Endpunkt aus. SHIFT rastet die Richtung">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-linear.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/gradient.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Radial"
                         Classes.active="{Binding IsMaskRadialMode}"
                         ToolTip.Tip="Radialer Verlauf: von der Mitte nach aussen ziehen. Mit „Umkehren“ wirkt die Maske aussen statt innen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/gradient-radial.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/custom/gradient-radial.svg" Width="18" Height="18" />
                 </Button>
                 <!-- Ohne Modelldatei GRAU statt weg, mit dem Weg zur Datei im Hinweis. Ein
                      verschwundener Knopf verschweigt, dass es die Funktion gibt.
@@ -53,7 +53,7 @@
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Tiefe"
                         Classes.active="{Binding IsMaskDepthMode}"
                         ToolTip.Tip="{Binding DepthMaskHint}" ToolTip.ShowOnDisabled="True">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/stack-3.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stack-simple.svg" Width="18" Height="18" />
                 </Button>
                 <!-- Objektauswahl: der Bestand wird beim Programmstart einmal erhoben - siehe
                      AiModelService.CheckInventory. -->
@@ -62,7 +62,7 @@
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Objekt"
                         Classes.active="{Binding IsMaskObjectMode}"
                         ToolTip.Tip="{Binding SubjectMaskHint}" ToolTip.ShowOnDisabled="True">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cursor-click.svg" Width="18" Height="18" />
                 </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -70,13 +70,13 @@
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Farbe"
                         Classes.active="{Binding IsMaskColorRangeMode}"
                         ToolTip.Tip="Farbbereich: Farbe im Bild anklicken; ähnliche Farben werden überall im Bild maskiert">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetMaskModeCommand}" CommandParameter="Luminanz"
                         Classes.active="{Binding IsMaskLuminanceRangeMode}"
                         ToolTip.Tip="Luminanzbereich: Schatten, Mitteltöne oder Lichter nach Helligkeit maskieren">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg" Width="18" Height="18" />
                 </Button>
             </StackPanel>
 
@@ -96,25 +96,25 @@
                             Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
                             Classes.active="{Binding IsSelectionCombineNew}"
                             ToolTip.Tip="Neue Maske beginnen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/square.svg" Width="18" Height="18" />
                     </Button>
                     <Button Classes="ghost" Padding="8,6"
                             Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
                             Classes.active="{Binding IsSelectionCombineAdd}"
                             ToolTip.Tip="Zur Maske hinzufügen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-square.svg" Width="18" Height="18" />
                     </Button>
                     <Button Classes="ghost" Padding="8,6"
                             Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
                             Classes.active="{Binding IsSelectionCombineSubtract}"
                             ToolTip.Tip="Von der Maske abziehen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/minus-square.svg" Width="18" Height="18" />
                     </Button>
                     <Button Classes="ghost" Padding="8,6"
                             Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Intersect"
                             Classes.active="{Binding IsSelectionCombineIntersect}"
                             ToolTip.Tip="Nur die Überschneidung behalten">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layers-intersect.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect.svg" Width="18" Height="18" />
                     </Button>
                 </StackPanel>
             </StackPanel>
@@ -128,8 +128,8 @@
                         Command="{Binding InvertCurrentMaskCommand}"
                         ToolTip.Tip="Tauscht gedeckte und freie Seite">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-half-2.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection-inverse.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Maske umkehren" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -139,8 +139,8 @@
                         Command="{Binding DiscardCurrentMaskCommand}"
                         ToolTip.Tip="Nimmt die Maske weg. Was sie begrenzt hat, wirkt danach überall">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection-slash.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Maske verwerfen" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -152,8 +152,8 @@
                         Command="{Binding CopyMaskCommand}"
                         ToolTip.Tip="Legt eine Abschrift dieser Maske ab">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copy.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Maske kopieren" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -163,8 +163,8 @@
                         Command="{Binding PasteMaskCommand}"
                         ToolTip.Tip="Setzt die abgelegte Maske auf das markierte Objekt, sonst auf die markierte Ebene. Eine vorhandene wird ersetzt">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/clipboard.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clipboard.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Maske einfügen" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -175,8 +175,8 @@
                     Command="{Binding LoadMaskAsSelectionCommand}"
                     ToolTip.Tip="Übernimmt die Form der Maske als Auswahl - zum Füllen, Kopieren oder für eine weitere Ebene. Die Maske selbst bleibt">
                 <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/select-all.svg"
-                                   Width="14" Height="14" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Als Auswahl laden" FontSize="{DynamicResource FP.Font.Small}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
@@ -205,7 +205,7 @@
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
                         ToolTip.Tip="Aus der Farbbereichsmaske eine Maskenebene erstellen">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-circle.svg" Width="18" Height="18" />
                         <TextBlock Text="Neue Maskenebene" />
                     </StackPanel>
                 </Button>
@@ -235,7 +235,7 @@
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
                         ToolTip.Tip="Aus der Luminanzbereichsmaske eine Maskenebene erstellen">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg" Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-circle.svg" Width="18" Height="18" />
                         <TextBlock Text="Neue Maskenebene" />
                     </StackPanel>
                 </Button>
@@ -248,17 +248,19 @@
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}" />
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding CanConvertKind}"
-                        Command="{Binding ConvertKindCommand}"
-                        ToolTip.Tip="{Binding ConvertKindHint}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
-                                       Width="16" Height="16" />
-                        <TextBlock Classes="no-translate" Text="{Binding ConvertKindText}" />
-                    </StackPanel>
-                </Button>
             </StackPanel>
+            <!-- Umwandeln in jedem Zweig, wie im Auswahl-Werkzeug: es stand nur beim Verschieben
+                 und erschien je nach Unterwerkzeug mal und mal nicht. -->
+            <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                    IsEnabled="{Binding CanConvertKind}"
+                    Command="{Binding ConvertKindCommand}"
+                    ToolTip.Tip="{Binding ConvertKindHint}">
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                    <icons:SvgIcon Source="{Binding ConvertKindIconSource}"
+                                   Width="18" Height="18" />
+                    <TextBlock Classes="no-translate" Text="{Binding ConvertKindText}" />
+                </StackPanel>
+            </Button>
 
             <!-- Tiefen-Zweig. Es gibt hier keinen Klick: das Modell liest das ganze Bild, und die
                  Regler schneiden aus der Tiefenkarte einen Bereich heraus. -->
@@ -304,8 +306,8 @@
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
                         ToolTip.Tip="Aus der Tiefenmaske eine Maskenebene erstellen">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-circle.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Neue Maskenebene" />
                     </StackPanel>
                 </Button>
@@ -379,8 +381,8 @@
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
                         ToolTip.Tip="Aus der Objektmaske eine Maskenebene erstellen">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-circle.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Neue Maskenebene" />
                     </StackPanel>
                 </Button>
@@ -439,8 +441,8 @@
                         Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
                         ToolTip.Tip="Aus der gemalten Maske eine Maskenebene erstellen">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-circle.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Neue Maskenebene" />
                     </StackPanel>
                 </Button>
@@ -553,14 +555,14 @@
                                      beitraegt, musste ihn entfernen und neu anlegen. -->
                                 <ToggleButton Grid.Column="0"
                                               Classes="ghost layer-eye"
-                                              Width="20" Height="20" Padding="0"
+                                              Width="22" Height="22" Padding="0"
                                               Margin="0,0,4,0"
                                               IsChecked="{Binding IsComponentVisible, Mode=OneWay}"
                                               Command="{Binding DataContext.ToggleMaskComponentVisibleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                               CommandParameter="{Binding Index}"
                                               ToolTip.Tip="Diesen Bestandteil ein- oder ausschalten">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg"
-                                                   Width="12" Height="12" />
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg"
+                                                   Width="18" Height="18" />
                                 </ToggleButton>
                                 <!-- Das Zeichen ist zugleich der Umschalter: hinzufuegen, abziehen,
                                      schneiden, und wieder von vorn. Der ERSTE Bestandteil hat
@@ -568,14 +570,14 @@
                                      ohne Gegenueber. -->
                                 <Button Grid.Column="1"
                                         Classes="ghost"
-                                        Width="20" Height="20" Padding="0"
+                                        Width="22" Height="22" Padding="0"
                                         Margin="0,0,2,0"
                                         IsVisible="{Binding HasMode}"
                                         Command="{Binding DataContext.CycleMaskComponentModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Index}"
                                         ToolTip.Tip="{Binding ModeHint}">
                                     <icons:SvgIcon Source="{Binding ModeIconSource}"
-                                                   Width="14" Height="14"
+                                                   Width="18" Height="18"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Button>
                                 <Button Grid.Column="2" Classes="ghost"
@@ -586,7 +588,7 @@
                                         CommandParameter="{Binding Index}"
                                         ToolTip.Tip="Diesen Bestandteil bedienen">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <icons:SvgIcon Source="{Binding IconSource}" Width="14" Height="14" />
+                                        <icons:SvgIcon Source="{Binding IconSource}" Width="18" Height="18" />
                                         <TextBlock Text="{Binding KindLabel}"
                                                    FontSize="{DynamicResource FP.Font.Small}"
                                                    VerticalAlignment="Center" />
@@ -597,25 +599,25 @@
                                      einen abgezogenen nach oben holt, aendert damit das Bild. -->
                                 <Button Grid.Column="3"
                                         Classes="ghost"
-                                        Width="18" Height="18" Padding="0"
+                                        Width="22" Height="22" Padding="0"
                                         IsEnabled="{Binding CanMoveUp}"
                                         Command="{Binding DataContext.MoveMaskComponentUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Index}"
                                         ToolTip.Tip="Diesen Bestandteil nach oben">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-up.svg"
-                                                   Width="12" Height="12"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-up.svg"
+                                                   Width="18" Height="18"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    Opacity="0.75" />
                                 </Button>
                                 <Button Grid.Column="4"
                                         Classes="ghost"
-                                        Width="18" Height="18" Padding="0"
+                                        Width="22" Height="22" Padding="0"
                                         IsEnabled="{Binding CanMoveDown}"
                                         Command="{Binding DataContext.MoveMaskComponentDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Index}"
                                         ToolTip.Tip="Diesen Bestandteil nach unten">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
-                                                   Width="12" Height="12"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                                                   Width="18" Height="18"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    Opacity="0.75" />
                                 </Button>
@@ -624,14 +626,14 @@
                                      Muelleimer wog schwerer als die Zeile selbst. -->
                                 <Button Grid.Column="5"
                                         Classes="ghost"
-                                        Width="18"
-                                        Height="18"
+                                        Width="22"
+                                        Height="22"
                                         Padding="0"
                                         Margin="4,0,4,0"
                                         Command="{Binding DataContext.RemoveMaskComponentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding Index}"
                                         ToolTip.Tip="Diesen Bestandteil entfernen">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
                                                    Width="12" Height="12"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    Opacity="0.75" />
@@ -701,8 +703,8 @@
                     Command="{Binding RemoveObjectCommand}"
                     ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Objekt entfernen" FontSize="{DynamicResource FP.Font.Small}" />
                 </StackPanel>
             </Button>

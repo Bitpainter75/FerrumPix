@@ -1,0 +1,4551 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="acorn" xml:space="preserve">
+    <value>Meşe palamudu</value>
+  </data>
+  <data name="address_book" xml:space="preserve">
+    <value>Adres kitap</value>
+  </data>
+  <data name="address_book_tabs" xml:space="preserve">
+    <value>Adres kitap sekmeler</value>
+  </data>
+  <data name="air_traffic_control" xml:space="preserve">
+    <value>Hava trafik kontrol</value>
+  </data>
+  <data name="airplane" xml:space="preserve">
+    <value>Uçak</value>
+  </data>
+  <data name="airplane_in_flight" xml:space="preserve">
+    <value>Uçak içeri uçuş</value>
+  </data>
+  <data name="airplane_landing" xml:space="preserve">
+    <value>Uçak iniş</value>
+  </data>
+  <data name="airplane_takeoff" xml:space="preserve">
+    <value>Uçak kalkış</value>
+  </data>
+  <data name="airplane_taxiing" xml:space="preserve">
+    <value>Uçak taksi</value>
+  </data>
+  <data name="airplane_tilt" xml:space="preserve">
+    <value>Uçak eğim</value>
+  </data>
+  <data name="airplay" xml:space="preserve">
+    <value>Airplay</value>
+  </data>
+  <data name="alarm" xml:space="preserve">
+    <value>Alarm</value>
+  </data>
+  <data name="alien" xml:space="preserve">
+    <value>Uzaylı</value>
+  </data>
+  <data name="align_bottom" xml:space="preserve">
+    <value>Hizala alt</value>
+  </data>
+  <data name="align_bottom_simple" xml:space="preserve">
+    <value>Hizala alt basit</value>
+  </data>
+  <data name="align_center_horizontal" xml:space="preserve">
+    <value>Hizala orta yatay</value>
+  </data>
+  <data name="align_center_horizontal_simple" xml:space="preserve">
+    <value>Hizala orta yatay basit</value>
+  </data>
+  <data name="align_center_vertical" xml:space="preserve">
+    <value>Hizala orta dikey</value>
+  </data>
+  <data name="align_center_vertical_simple" xml:space="preserve">
+    <value>Hizala orta dikey basit</value>
+  </data>
+  <data name="align_left" xml:space="preserve">
+    <value>Hizala sol</value>
+  </data>
+  <data name="align_left_simple" xml:space="preserve">
+    <value>Hizala sol basit</value>
+  </data>
+  <data name="align_right" xml:space="preserve">
+    <value>Hizala sağ</value>
+  </data>
+  <data name="align_right_simple" xml:space="preserve">
+    <value>Hizala sağ basit</value>
+  </data>
+  <data name="align_top" xml:space="preserve">
+    <value>Hizala üst</value>
+  </data>
+  <data name="align_top_simple" xml:space="preserve">
+    <value>Hizala üst basit</value>
+  </data>
+  <data name="amazon_logo" xml:space="preserve">
+    <value>Amazon logo</value>
+  </data>
+  <data name="ambulance" xml:space="preserve">
+    <value>Ambulans</value>
+  </data>
+  <data name="anchor" xml:space="preserve">
+    <value>Çapa</value>
+  </data>
+  <data name="anchor_simple" xml:space="preserve">
+    <value>Çapa basit</value>
+  </data>
+  <data name="android_logo" xml:space="preserve">
+    <value>Android logo</value>
+  </data>
+  <data name="angle" xml:space="preserve">
+    <value>Açı</value>
+  </data>
+  <data name="angular_logo" xml:space="preserve">
+    <value>Angular logo</value>
+  </data>
+  <data name="aperture" xml:space="preserve">
+    <value>Diyafram</value>
+  </data>
+  <data name="app_store_logo" xml:space="preserve">
+    <value>Uygulama mağaza logo</value>
+  </data>
+  <data name="app_window" xml:space="preserve">
+    <value>Uygulama pencere</value>
+  </data>
+  <data name="apple_logo" xml:space="preserve">
+    <value>Elma logo</value>
+  </data>
+  <data name="apple_podcasts_logo" xml:space="preserve">
+    <value>Elma podcastler logo</value>
+  </data>
+  <data name="approximate_equals" xml:space="preserve">
+    <value>Yaklaşık eşittir</value>
+  </data>
+  <data name="archive" xml:space="preserve">
+    <value>Arşiv</value>
+  </data>
+  <data name="armchair" xml:space="preserve">
+    <value>Koltuk</value>
+  </data>
+  <data name="arrow_arc_left" xml:space="preserve">
+    <value>Ok yay sol</value>
+  </data>
+  <data name="arrow_arc_right" xml:space="preserve">
+    <value>Ok yay sağ</value>
+  </data>
+  <data name="arrow_bend_double_up_left" xml:space="preserve">
+    <value>Ok kıvrım çift yukarı sol</value>
+  </data>
+  <data name="arrow_bend_double_up_right" xml:space="preserve">
+    <value>Ok kıvrım çift yukarı sağ</value>
+  </data>
+  <data name="arrow_bend_down_left" xml:space="preserve">
+    <value>Ok kıvrım aşağı sol</value>
+  </data>
+  <data name="arrow_bend_down_right" xml:space="preserve">
+    <value>Ok kıvrım aşağı sağ</value>
+  </data>
+  <data name="arrow_bend_left_down" xml:space="preserve">
+    <value>Ok kıvrım sol aşağı</value>
+  </data>
+  <data name="arrow_bend_left_up" xml:space="preserve">
+    <value>Ok kıvrım sol yukarı</value>
+  </data>
+  <data name="arrow_bend_right_down" xml:space="preserve">
+    <value>Ok kıvrım sağ aşağı</value>
+  </data>
+  <data name="arrow_bend_right_up" xml:space="preserve">
+    <value>Ok kıvrım sağ yukarı</value>
+  </data>
+  <data name="arrow_bend_up_left" xml:space="preserve">
+    <value>Ok kıvrım yukarı sol</value>
+  </data>
+  <data name="arrow_bend_up_right" xml:space="preserve">
+    <value>Ok kıvrım yukarı sağ</value>
+  </data>
+  <data name="arrow_circle_down" xml:space="preserve">
+    <value>Ok daire aşağı</value>
+  </data>
+  <data name="arrow_circle_down_left" xml:space="preserve">
+    <value>Ok daire aşağı sol</value>
+  </data>
+  <data name="arrow_circle_down_right" xml:space="preserve">
+    <value>Ok daire aşağı sağ</value>
+  </data>
+  <data name="arrow_circle_left" xml:space="preserve">
+    <value>Ok daire sol</value>
+  </data>
+  <data name="arrow_circle_right" xml:space="preserve">
+    <value>Ok daire sağ</value>
+  </data>
+  <data name="arrow_circle_up" xml:space="preserve">
+    <value>Ok daire yukarı</value>
+  </data>
+  <data name="arrow_circle_up_left" xml:space="preserve">
+    <value>Ok daire yukarı sol</value>
+  </data>
+  <data name="arrow_circle_up_right" xml:space="preserve">
+    <value>Ok daire yukarı sağ</value>
+  </data>
+  <data name="arrow_clockwise" xml:space="preserve">
+    <value>Ok saat yönünde</value>
+  </data>
+  <data name="arrow_counter_clockwise" xml:space="preserve">
+    <value>Ok sayaç saat yönünde</value>
+  </data>
+  <data name="arrow_down" xml:space="preserve">
+    <value>Ok aşağı</value>
+  </data>
+  <data name="arrow_down_left" xml:space="preserve">
+    <value>Ok aşağı sol</value>
+  </data>
+  <data name="arrow_down_right" xml:space="preserve">
+    <value>Ok aşağı sağ</value>
+  </data>
+  <data name="arrow_elbow_down_left" xml:space="preserve">
+    <value>Ok dirsek aşağı sol</value>
+  </data>
+  <data name="arrow_elbow_down_right" xml:space="preserve">
+    <value>Ok dirsek aşağı sağ</value>
+  </data>
+  <data name="arrow_elbow_left" xml:space="preserve">
+    <value>Ok dirsek sol</value>
+  </data>
+  <data name="arrow_elbow_left_down" xml:space="preserve">
+    <value>Ok dirsek sol aşağı</value>
+  </data>
+  <data name="arrow_elbow_left_up" xml:space="preserve">
+    <value>Ok dirsek sol yukarı</value>
+  </data>
+  <data name="arrow_elbow_right" xml:space="preserve">
+    <value>Ok dirsek sağ</value>
+  </data>
+  <data name="arrow_elbow_right_down" xml:space="preserve">
+    <value>Ok dirsek sağ aşağı</value>
+  </data>
+  <data name="arrow_elbow_right_up" xml:space="preserve">
+    <value>Ok dirsek sağ yukarı</value>
+  </data>
+  <data name="arrow_elbow_up_left" xml:space="preserve">
+    <value>Ok dirsek yukarı sol</value>
+  </data>
+  <data name="arrow_elbow_up_right" xml:space="preserve">
+    <value>Ok dirsek yukarı sağ</value>
+  </data>
+  <data name="arrow_fat_down" xml:space="preserve">
+    <value>Ok kalın aşağı</value>
+  </data>
+  <data name="arrow_fat_left" xml:space="preserve">
+    <value>Ok kalın sol</value>
+  </data>
+  <data name="arrow_fat_line_down" xml:space="preserve">
+    <value>Ok kalın çizgi aşağı</value>
+  </data>
+  <data name="arrow_fat_line_left" xml:space="preserve">
+    <value>Ok kalın çizgi sol</value>
+  </data>
+  <data name="arrow_fat_line_right" xml:space="preserve">
+    <value>Ok kalın çizgi sağ</value>
+  </data>
+  <data name="arrow_fat_line_up" xml:space="preserve">
+    <value>Ok kalın çizgi yukarı</value>
+  </data>
+  <data name="arrow_fat_lines_down" xml:space="preserve">
+    <value>Ok kalın çizgiler aşağı</value>
+  </data>
+  <data name="arrow_fat_lines_left" xml:space="preserve">
+    <value>Ok kalın çizgiler sol</value>
+  </data>
+  <data name="arrow_fat_lines_right" xml:space="preserve">
+    <value>Ok kalın çizgiler sağ</value>
+  </data>
+  <data name="arrow_fat_lines_up" xml:space="preserve">
+    <value>Ok kalın çizgiler yukarı</value>
+  </data>
+  <data name="arrow_fat_right" xml:space="preserve">
+    <value>Ok kalın sağ</value>
+  </data>
+  <data name="arrow_fat_up" xml:space="preserve">
+    <value>Ok kalın yukarı</value>
+  </data>
+  <data name="arrow_left" xml:space="preserve">
+    <value>Ok sol</value>
+  </data>
+  <data name="arrow_line_down" xml:space="preserve">
+    <value>Ok çizgi aşağı</value>
+  </data>
+  <data name="arrow_line_down_left" xml:space="preserve">
+    <value>Ok çizgi aşağı sol</value>
+  </data>
+  <data name="arrow_line_down_right" xml:space="preserve">
+    <value>Ok çizgi aşağı sağ</value>
+  </data>
+  <data name="arrow_line_left" xml:space="preserve">
+    <value>Ok çizgi sol</value>
+  </data>
+  <data name="arrow_line_right" xml:space="preserve">
+    <value>Ok çizgi sağ</value>
+  </data>
+  <data name="arrow_line_up" xml:space="preserve">
+    <value>Ok çizgi yukarı</value>
+  </data>
+  <data name="arrow_line_up_left" xml:space="preserve">
+    <value>Ok çizgi yukarı sol</value>
+  </data>
+  <data name="arrow_line_up_right" xml:space="preserve">
+    <value>Ok çizgi yukarı sağ</value>
+  </data>
+  <data name="arrow_right" xml:space="preserve">
+    <value>Ok sağ</value>
+  </data>
+  <data name="arrow_square_down" xml:space="preserve">
+    <value>Ok kare aşağı</value>
+  </data>
+  <data name="arrow_square_down_left" xml:space="preserve">
+    <value>Ok kare aşağı sol</value>
+  </data>
+  <data name="arrow_square_down_right" xml:space="preserve">
+    <value>Ok kare aşağı sağ</value>
+  </data>
+  <data name="arrow_square_in" xml:space="preserve">
+    <value>Ok kare içeri</value>
+  </data>
+  <data name="arrow_square_left" xml:space="preserve">
+    <value>Ok kare sol</value>
+  </data>
+  <data name="arrow_square_out" xml:space="preserve">
+    <value>Ok kare dışarı</value>
+  </data>
+  <data name="arrow_square_right" xml:space="preserve">
+    <value>Ok kare sağ</value>
+  </data>
+  <data name="arrow_square_up" xml:space="preserve">
+    <value>Ok kare yukarı</value>
+  </data>
+  <data name="arrow_square_up_left" xml:space="preserve">
+    <value>Ok kare yukarı sol</value>
+  </data>
+  <data name="arrow_square_up_right" xml:space="preserve">
+    <value>Ok kare yukarı sağ</value>
+  </data>
+  <data name="arrow_u_down_left" xml:space="preserve">
+    <value>Ok u aşağı sol</value>
+  </data>
+  <data name="arrow_u_down_right" xml:space="preserve">
+    <value>Ok u aşağı sağ</value>
+  </data>
+  <data name="arrow_u_left_down" xml:space="preserve">
+    <value>Ok u sol aşağı</value>
+  </data>
+  <data name="arrow_u_left_up" xml:space="preserve">
+    <value>Ok u sol yukarı</value>
+  </data>
+  <data name="arrow_u_right_down" xml:space="preserve">
+    <value>Ok u sağ aşağı</value>
+  </data>
+  <data name="arrow_u_right_up" xml:space="preserve">
+    <value>Ok u sağ yukarı</value>
+  </data>
+  <data name="arrow_u_up_left" xml:space="preserve">
+    <value>Ok u yukarı sol</value>
+  </data>
+  <data name="arrow_u_up_right" xml:space="preserve">
+    <value>Ok u yukarı sağ</value>
+  </data>
+  <data name="arrow_up" xml:space="preserve">
+    <value>Ok yukarı</value>
+  </data>
+  <data name="arrow_up_left" xml:space="preserve">
+    <value>Ok yukarı sol</value>
+  </data>
+  <data name="arrow_up_right" xml:space="preserve">
+    <value>Ok yukarı sağ</value>
+  </data>
+  <data name="arrows_clockwise" xml:space="preserve">
+    <value>Oklar saat yönünde</value>
+  </data>
+  <data name="arrows_counter_clockwise" xml:space="preserve">
+    <value>Oklar sayaç saat yönünde</value>
+  </data>
+  <data name="arrows_down_up" xml:space="preserve">
+    <value>Oklar aşağı yukarı</value>
+  </data>
+  <data name="arrows_horizontal" xml:space="preserve">
+    <value>Oklar yatay</value>
+  </data>
+  <data name="arrows_in" xml:space="preserve">
+    <value>Oklar içeri</value>
+  </data>
+  <data name="arrows_in_cardinal" xml:space="preserve">
+    <value>Oklar içeri kardinal</value>
+  </data>
+  <data name="arrows_in_line_horizontal" xml:space="preserve">
+    <value>Oklar içeri çizgi yatay</value>
+  </data>
+  <data name="arrows_in_line_vertical" xml:space="preserve">
+    <value>Oklar içeri çizgi dikey</value>
+  </data>
+  <data name="arrows_in_simple" xml:space="preserve">
+    <value>Oklar içeri basit</value>
+  </data>
+  <data name="arrows_left_right" xml:space="preserve">
+    <value>Oklar sol sağ</value>
+  </data>
+  <data name="arrows_merge" xml:space="preserve">
+    <value>Oklar birleştir</value>
+  </data>
+  <data name="arrows_out" xml:space="preserve">
+    <value>Oklar dışarı</value>
+  </data>
+  <data name="arrows_out_cardinal" xml:space="preserve">
+    <value>Oklar dışarı kardinal</value>
+  </data>
+  <data name="arrows_out_line_horizontal" xml:space="preserve">
+    <value>Oklar dışarı çizgi yatay</value>
+  </data>
+  <data name="arrows_out_line_vertical" xml:space="preserve">
+    <value>Oklar dışarı çizgi dikey</value>
+  </data>
+  <data name="arrows_out_simple" xml:space="preserve">
+    <value>Oklar dışarı basit</value>
+  </data>
+  <data name="arrows_split" xml:space="preserve">
+    <value>Oklar böl</value>
+  </data>
+  <data name="arrows_vertical" xml:space="preserve">
+    <value>Oklar dikey</value>
+  </data>
+  <data name="article" xml:space="preserve">
+    <value>Makale</value>
+  </data>
+  <data name="article_medium" xml:space="preserve">
+    <value>Makale orta</value>
+  </data>
+  <data name="article_ny_times" xml:space="preserve">
+    <value>Makale ny çarpı</value>
+  </data>
+  <data name="asclepius" xml:space="preserve">
+    <value>Asklepios</value>
+  </data>
+  <data name="asterisk" xml:space="preserve">
+    <value>Yıldız işareti</value>
+  </data>
+  <data name="asterisk_simple" xml:space="preserve">
+    <value>Yıldız işareti basit</value>
+  </data>
+  <data name="at" xml:space="preserve">
+    <value>Et</value>
+  </data>
+  <data name="atom" xml:space="preserve">
+    <value>Atom</value>
+  </data>
+  <data name="avocado" xml:space="preserve">
+    <value>Avokado</value>
+  </data>
+  <data name="axe" xml:space="preserve">
+    <value>Balta</value>
+  </data>
+  <data name="baby" xml:space="preserve">
+    <value>Bebek</value>
+  </data>
+  <data name="baby_carriage" xml:space="preserve">
+    <value>Bebek bebek arabası</value>
+  </data>
+  <data name="backpack" xml:space="preserve">
+    <value>Sırt çantası</value>
+  </data>
+  <data name="backspace" xml:space="preserve">
+    <value>Geri al</value>
+  </data>
+  <data name="bag" xml:space="preserve">
+    <value>Çanta</value>
+  </data>
+  <data name="bag_simple" xml:space="preserve">
+    <value>Çanta basit</value>
+  </data>
+  <data name="balloon" xml:space="preserve">
+    <value>Balon</value>
+  </data>
+  <data name="bandaids" xml:space="preserve">
+    <value>Yara bantları</value>
+  </data>
+  <data name="bank" xml:space="preserve">
+    <value>Banka</value>
+  </data>
+  <data name="barbell" xml:space="preserve">
+    <value>Halter</value>
+  </data>
+  <data name="barcode" xml:space="preserve">
+    <value>Barkod</value>
+  </data>
+  <data name="barn" xml:space="preserve">
+    <value>Ahır</value>
+  </data>
+  <data name="barricade" xml:space="preserve">
+    <value>Barikat</value>
+  </data>
+  <data name="baseball" xml:space="preserve">
+    <value>Beyzbol</value>
+  </data>
+  <data name="baseball_cap" xml:space="preserve">
+    <value>Beyzbol şapka</value>
+  </data>
+  <data name="baseball_helmet" xml:space="preserve">
+    <value>Beyzbol kask</value>
+  </data>
+  <data name="basket" xml:space="preserve">
+    <value>Sepet</value>
+  </data>
+  <data name="basketball" xml:space="preserve">
+    <value>Basketbol</value>
+  </data>
+  <data name="bathtub" xml:space="preserve">
+    <value>Küvet</value>
+  </data>
+  <data name="battery_charging" xml:space="preserve">
+    <value>Pil şarj</value>
+  </data>
+  <data name="battery_charging_vertical" xml:space="preserve">
+    <value>Pil şarj dikey</value>
+  </data>
+  <data name="battery_empty" xml:space="preserve">
+    <value>Pil boş</value>
+  </data>
+  <data name="battery_full" xml:space="preserve">
+    <value>Pil dolu</value>
+  </data>
+  <data name="battery_high" xml:space="preserve">
+    <value>Pil yüksek</value>
+  </data>
+  <data name="battery_low" xml:space="preserve">
+    <value>Pil düşük</value>
+  </data>
+  <data name="battery_medium" xml:space="preserve">
+    <value>Pil orta</value>
+  </data>
+  <data name="battery_plus" xml:space="preserve">
+    <value>Pil artı</value>
+  </data>
+  <data name="battery_plus_vertical" xml:space="preserve">
+    <value>Pil artı dikey</value>
+  </data>
+  <data name="battery_vertical_empty" xml:space="preserve">
+    <value>Pil dikey boş</value>
+  </data>
+  <data name="battery_vertical_full" xml:space="preserve">
+    <value>Pil dikey dolu</value>
+  </data>
+  <data name="battery_vertical_high" xml:space="preserve">
+    <value>Pil dikey yüksek</value>
+  </data>
+  <data name="battery_vertical_low" xml:space="preserve">
+    <value>Pil dikey düşük</value>
+  </data>
+  <data name="battery_vertical_medium" xml:space="preserve">
+    <value>Pil dikey orta</value>
+  </data>
+  <data name="battery_warning" xml:space="preserve">
+    <value>Pil uyarı</value>
+  </data>
+  <data name="battery_warning_vertical" xml:space="preserve">
+    <value>Pil uyarı dikey</value>
+  </data>
+  <data name="beach_ball" xml:space="preserve">
+    <value>Plaj top</value>
+  </data>
+  <data name="beanie" xml:space="preserve">
+    <value>Bere</value>
+  </data>
+  <data name="bed" xml:space="preserve">
+    <value>Yatak</value>
+  </data>
+  <data name="beer_bottle" xml:space="preserve">
+    <value>Bira şişe</value>
+  </data>
+  <data name="beer_stein" xml:space="preserve">
+    <value>Bira bira bardağı</value>
+  </data>
+  <data name="behance_logo" xml:space="preserve">
+    <value>Behance logo</value>
+  </data>
+  <data name="bell" xml:space="preserve">
+    <value>Zil</value>
+  </data>
+  <data name="bell_ringing" xml:space="preserve">
+    <value>Zil çalan</value>
+  </data>
+  <data name="bell_simple" xml:space="preserve">
+    <value>Zil basit</value>
+  </data>
+  <data name="bell_simple_ringing" xml:space="preserve">
+    <value>Zil basit çalan</value>
+  </data>
+  <data name="bell_simple_slash" xml:space="preserve">
+    <value>Zil basit eğik çizgi</value>
+  </data>
+  <data name="bell_simple_z" xml:space="preserve">
+    <value>Zil basit z</value>
+  </data>
+  <data name="bell_slash" xml:space="preserve">
+    <value>Zil eğik çizgi</value>
+  </data>
+  <data name="bell_z" xml:space="preserve">
+    <value>Zil z</value>
+  </data>
+  <data name="belt" xml:space="preserve">
+    <value>Kemer</value>
+  </data>
+  <data name="bezier_curve" xml:space="preserve">
+    <value>Bezier eğri</value>
+  </data>
+  <data name="bicycle" xml:space="preserve">
+    <value>Bisiklet</value>
+  </data>
+  <data name="binary" xml:space="preserve">
+    <value>Ikili</value>
+  </data>
+  <data name="binoculars" xml:space="preserve">
+    <value>Dürbün</value>
+  </data>
+  <data name="biohazard" xml:space="preserve">
+    <value>Biyolojik tehlike</value>
+  </data>
+  <data name="bird" xml:space="preserve">
+    <value>Kuş</value>
+  </data>
+  <data name="blueprint" xml:space="preserve">
+    <value>Plan</value>
+  </data>
+  <data name="bluetooth" xml:space="preserve">
+    <value>Bluetooth</value>
+  </data>
+  <data name="bluetooth_connected" xml:space="preserve">
+    <value>Bluetooth bağlı</value>
+  </data>
+  <data name="bluetooth_slash" xml:space="preserve">
+    <value>Bluetooth eğik çizgi</value>
+  </data>
+  <data name="bluetooth_x" xml:space="preserve">
+    <value>Bluetooth x</value>
+  </data>
+  <data name="boat" xml:space="preserve">
+    <value>Tekne</value>
+  </data>
+  <data name="bomb" xml:space="preserve">
+    <value>Bomba</value>
+  </data>
+  <data name="bone" xml:space="preserve">
+    <value>Kemik</value>
+  </data>
+  <data name="book" xml:space="preserve">
+    <value>Kitap</value>
+  </data>
+  <data name="book_bookmark" xml:space="preserve">
+    <value>Kitap yer imi</value>
+  </data>
+  <data name="book_open" xml:space="preserve">
+    <value>Kitap açık</value>
+  </data>
+  <data name="book_open_text" xml:space="preserve">
+    <value>Kitap açık metin</value>
+  </data>
+  <data name="book_open_user" xml:space="preserve">
+    <value>Kitap açık kullanıcı</value>
+  </data>
+  <data name="bookmark" xml:space="preserve">
+    <value>Yer imi</value>
+  </data>
+  <data name="bookmark_simple" xml:space="preserve">
+    <value>Yer imi basit</value>
+  </data>
+  <data name="bookmarks" xml:space="preserve">
+    <value>Yer imleri</value>
+  </data>
+  <data name="bookmarks_simple" xml:space="preserve">
+    <value>Yer imleri basit</value>
+  </data>
+  <data name="books" xml:space="preserve">
+    <value>Kitaplar</value>
+  </data>
+  <data name="boot" xml:space="preserve">
+    <value>Bot</value>
+  </data>
+  <data name="boules" xml:space="preserve">
+    <value>Bocce</value>
+  </data>
+  <data name="bounding_box" xml:space="preserve">
+    <value>Sınırlayıcı kutu</value>
+  </data>
+  <data name="bowl_food" xml:space="preserve">
+    <value>Kase yemek</value>
+  </data>
+  <data name="bowl_steam" xml:space="preserve">
+    <value>Kase buhar</value>
+  </data>
+  <data name="bowling_ball" xml:space="preserve">
+    <value>Bovling top</value>
+  </data>
+  <data name="box_arrow_down" xml:space="preserve">
+    <value>Kutu ok aşağı</value>
+  </data>
+  <data name="box_arrow_up" xml:space="preserve">
+    <value>Kutu ok yukarı</value>
+  </data>
+  <data name="boxing_glove" xml:space="preserve">
+    <value>Boks eldiven</value>
+  </data>
+  <data name="brackets_angle" xml:space="preserve">
+    <value>Parantez açı</value>
+  </data>
+  <data name="brackets_curly" xml:space="preserve">
+    <value>Parantez süslü</value>
+  </data>
+  <data name="brackets_round" xml:space="preserve">
+    <value>Parantez yuvarlak</value>
+  </data>
+  <data name="brackets_square" xml:space="preserve">
+    <value>Parantez kare</value>
+  </data>
+  <data name="brain" xml:space="preserve">
+    <value>Beyin</value>
+  </data>
+  <data name="brandy" xml:space="preserve">
+    <value>Konyak</value>
+  </data>
+  <data name="bread" xml:space="preserve">
+    <value>Ekmek</value>
+  </data>
+  <data name="bridge" xml:space="preserve">
+    <value>Köprü</value>
+  </data>
+  <data name="briefcase" xml:space="preserve">
+    <value>Evrak çantası</value>
+  </data>
+  <data name="briefcase_metal" xml:space="preserve">
+    <value>Evrak çantası metal</value>
+  </data>
+  <data name="broadcast" xml:space="preserve">
+    <value>Yayın</value>
+  </data>
+  <data name="broom" xml:space="preserve">
+    <value>Süpürge</value>
+  </data>
+  <data name="browser" xml:space="preserve">
+    <value>Tarayıcı</value>
+  </data>
+  <data name="browsers" xml:space="preserve">
+    <value>Tarayıcılar</value>
+  </data>
+  <data name="bug" xml:space="preserve">
+    <value>Böcek</value>
+  </data>
+  <data name="bug_beetle" xml:space="preserve">
+    <value>Böcek böcek</value>
+  </data>
+  <data name="bug_droid" xml:space="preserve">
+    <value>Böcek droid</value>
+  </data>
+  <data name="building" xml:space="preserve">
+    <value>Bina</value>
+  </data>
+  <data name="building_apartment" xml:space="preserve">
+    <value>Bina daire</value>
+  </data>
+  <data name="building_office" xml:space="preserve">
+    <value>Bina ofis</value>
+  </data>
+  <data name="buildings" xml:space="preserve">
+    <value>Binalar</value>
+  </data>
+  <data name="bulldozer" xml:space="preserve">
+    <value>Buldozer</value>
+  </data>
+  <data name="bus" xml:space="preserve">
+    <value>Otobüs</value>
+  </data>
+  <data name="butterfly" xml:space="preserve">
+    <value>Kelebek</value>
+  </data>
+  <data name="cable_car" xml:space="preserve">
+    <value>Kablo araba</value>
+  </data>
+  <data name="cactus" xml:space="preserve">
+    <value>Kaktüs</value>
+  </data>
+  <data name="cake" xml:space="preserve">
+    <value>Pasta</value>
+  </data>
+  <data name="calculator" xml:space="preserve">
+    <value>Hesap makinesi</value>
+  </data>
+  <data name="calendar" xml:space="preserve">
+    <value>Takvim</value>
+  </data>
+  <data name="calendar_blank" xml:space="preserve">
+    <value>Takvim boş</value>
+  </data>
+  <data name="calendar_check" xml:space="preserve">
+    <value>Takvim onay</value>
+  </data>
+  <data name="calendar_dot" xml:space="preserve">
+    <value>Takvim nokta</value>
+  </data>
+  <data name="calendar_dots" xml:space="preserve">
+    <value>Takvim noktalar</value>
+  </data>
+  <data name="calendar_heart" xml:space="preserve">
+    <value>Takvim kalp</value>
+  </data>
+  <data name="calendar_minus" xml:space="preserve">
+    <value>Takvim eksi</value>
+  </data>
+  <data name="calendar_plus" xml:space="preserve">
+    <value>Takvim artı</value>
+  </data>
+  <data name="calendar_slash" xml:space="preserve">
+    <value>Takvim eğik çizgi</value>
+  </data>
+  <data name="calendar_star" xml:space="preserve">
+    <value>Takvim yıldız</value>
+  </data>
+  <data name="calendar_x" xml:space="preserve">
+    <value>Takvim x</value>
+  </data>
+  <data name="call_bell" xml:space="preserve">
+    <value>Arama zil</value>
+  </data>
+  <data name="camera" xml:space="preserve">
+    <value>Kamera</value>
+  </data>
+  <data name="camera_plus" xml:space="preserve">
+    <value>Kamera artı</value>
+  </data>
+  <data name="camera_rotate" xml:space="preserve">
+    <value>Kamera döndür</value>
+  </data>
+  <data name="camera_slash" xml:space="preserve">
+    <value>Kamera eğik çizgi</value>
+  </data>
+  <data name="campfire" xml:space="preserve">
+    <value>Kamp ateşi</value>
+  </data>
+  <data name="car" xml:space="preserve">
+    <value>Araba</value>
+  </data>
+  <data name="car_battery" xml:space="preserve">
+    <value>Araba pil</value>
+  </data>
+  <data name="car_profile" xml:space="preserve">
+    <value>Araba profil</value>
+  </data>
+  <data name="car_simple" xml:space="preserve">
+    <value>Araba basit</value>
+  </data>
+  <data name="cardholder" xml:space="preserve">
+    <value>Kartlık</value>
+  </data>
+  <data name="cards" xml:space="preserve">
+    <value>Kartlar</value>
+  </data>
+  <data name="cards_three" xml:space="preserve">
+    <value>Kartlar üç</value>
+  </data>
+  <data name="caret_circle_double_down" xml:space="preserve">
+    <value>Şapka daire çift aşağı</value>
+  </data>
+  <data name="caret_circle_double_left" xml:space="preserve">
+    <value>Şapka daire çift sol</value>
+  </data>
+  <data name="caret_circle_double_right" xml:space="preserve">
+    <value>Şapka daire çift sağ</value>
+  </data>
+  <data name="caret_circle_double_up" xml:space="preserve">
+    <value>Şapka daire çift yukarı</value>
+  </data>
+  <data name="caret_circle_down" xml:space="preserve">
+    <value>Şapka daire aşağı</value>
+  </data>
+  <data name="caret_circle_left" xml:space="preserve">
+    <value>Şapka daire sol</value>
+  </data>
+  <data name="caret_circle_right" xml:space="preserve">
+    <value>Şapka daire sağ</value>
+  </data>
+  <data name="caret_circle_up" xml:space="preserve">
+    <value>Şapka daire yukarı</value>
+  </data>
+  <data name="caret_circle_up_down" xml:space="preserve">
+    <value>Şapka daire yukarı aşağı</value>
+  </data>
+  <data name="caret_double_down" xml:space="preserve">
+    <value>Şapka çift aşağı</value>
+  </data>
+  <data name="caret_double_left" xml:space="preserve">
+    <value>Şapka çift sol</value>
+  </data>
+  <data name="caret_double_right" xml:space="preserve">
+    <value>Şapka çift sağ</value>
+  </data>
+  <data name="caret_double_up" xml:space="preserve">
+    <value>Şapka çift yukarı</value>
+  </data>
+  <data name="caret_down" xml:space="preserve">
+    <value>Şapka aşağı</value>
+  </data>
+  <data name="caret_left" xml:space="preserve">
+    <value>Şapka sol</value>
+  </data>
+  <data name="caret_line_down" xml:space="preserve">
+    <value>Şapka çizgi aşağı</value>
+  </data>
+  <data name="caret_line_left" xml:space="preserve">
+    <value>Şapka çizgi sol</value>
+  </data>
+  <data name="caret_line_right" xml:space="preserve">
+    <value>Şapka çizgi sağ</value>
+  </data>
+  <data name="caret_line_up" xml:space="preserve">
+    <value>Şapka çizgi yukarı</value>
+  </data>
+  <data name="caret_right" xml:space="preserve">
+    <value>Şapka sağ</value>
+  </data>
+  <data name="caret_up" xml:space="preserve">
+    <value>Şapka yukarı</value>
+  </data>
+  <data name="caret_up_down" xml:space="preserve">
+    <value>Şapka yukarı aşağı</value>
+  </data>
+  <data name="carrot" xml:space="preserve">
+    <value>Havuç</value>
+  </data>
+  <data name="cash_register" xml:space="preserve">
+    <value>Nakit yazar kasa</value>
+  </data>
+  <data name="cassette_tape" xml:space="preserve">
+    <value>Kaset bant</value>
+  </data>
+  <data name="castle_turret" xml:space="preserve">
+    <value>Kale kule</value>
+  </data>
+  <data name="cat" xml:space="preserve">
+    <value>Kedi</value>
+  </data>
+  <data name="cell_signal_full" xml:space="preserve">
+    <value>Hücre sinyal dolu</value>
+  </data>
+  <data name="cell_signal_high" xml:space="preserve">
+    <value>Hücre sinyal yüksek</value>
+  </data>
+  <data name="cell_signal_low" xml:space="preserve">
+    <value>Hücre sinyal düşük</value>
+  </data>
+  <data name="cell_signal_medium" xml:space="preserve">
+    <value>Hücre sinyal orta</value>
+  </data>
+  <data name="cell_signal_none" xml:space="preserve">
+    <value>Hücre sinyal hiçbiri</value>
+  </data>
+  <data name="cell_signal_slash" xml:space="preserve">
+    <value>Hücre sinyal eğik çizgi</value>
+  </data>
+  <data name="cell_signal_x" xml:space="preserve">
+    <value>Hücre sinyal x</value>
+  </data>
+  <data name="cell_tower" xml:space="preserve">
+    <value>Hücre kule</value>
+  </data>
+  <data name="certificate" xml:space="preserve">
+    <value>Sertifika</value>
+  </data>
+  <data name="chair" xml:space="preserve">
+    <value>Sandalye</value>
+  </data>
+  <data name="chalkboard" xml:space="preserve">
+    <value>Kara tahta</value>
+  </data>
+  <data name="chalkboard_simple" xml:space="preserve">
+    <value>Kara tahta basit</value>
+  </data>
+  <data name="chalkboard_teacher" xml:space="preserve">
+    <value>Kara tahta öğretmen</value>
+  </data>
+  <data name="champagne" xml:space="preserve">
+    <value>Şampanya</value>
+  </data>
+  <data name="charging_station" xml:space="preserve">
+    <value>Şarj istasyon</value>
+  </data>
+  <data name="chart_bar" xml:space="preserve">
+    <value>Grafik çubuk</value>
+  </data>
+  <data name="chart_bar_horizontal" xml:space="preserve">
+    <value>Grafik çubuk yatay</value>
+  </data>
+  <data name="chart_donut" xml:space="preserve">
+    <value>Grafik donut</value>
+  </data>
+  <data name="chart_line" xml:space="preserve">
+    <value>Grafik çizgi</value>
+  </data>
+  <data name="chart_line_down" xml:space="preserve">
+    <value>Grafik çizgi aşağı</value>
+  </data>
+  <data name="chart_line_up" xml:space="preserve">
+    <value>Grafik çizgi yukarı</value>
+  </data>
+  <data name="chart_pie" xml:space="preserve">
+    <value>Grafik turta</value>
+  </data>
+  <data name="chart_pie_slice" xml:space="preserve">
+    <value>Grafik turta dilim</value>
+  </data>
+  <data name="chart_polar" xml:space="preserve">
+    <value>Grafik kutup</value>
+  </data>
+  <data name="chart_scatter" xml:space="preserve">
+    <value>Grafik dağılım</value>
+  </data>
+  <data name="chat" xml:space="preserve">
+    <value>Sohbet</value>
+  </data>
+  <data name="chat_centered" xml:space="preserve">
+    <value>Sohbet ortalanmış</value>
+  </data>
+  <data name="chat_centered_dots" xml:space="preserve">
+    <value>Sohbet ortalanmış noktalar</value>
+  </data>
+  <data name="chat_centered_slash" xml:space="preserve">
+    <value>Sohbet ortalanmış eğik çizgi</value>
+  </data>
+  <data name="chat_centered_text" xml:space="preserve">
+    <value>Sohbet ortalanmış metin</value>
+  </data>
+  <data name="chat_circle" xml:space="preserve">
+    <value>Sohbet daire</value>
+  </data>
+  <data name="chat_circle_dots" xml:space="preserve">
+    <value>Sohbet daire noktalar</value>
+  </data>
+  <data name="chat_circle_slash" xml:space="preserve">
+    <value>Sohbet daire eğik çizgi</value>
+  </data>
+  <data name="chat_circle_text" xml:space="preserve">
+    <value>Sohbet daire metin</value>
+  </data>
+  <data name="chat_dots" xml:space="preserve">
+    <value>Sohbet noktalar</value>
+  </data>
+  <data name="chat_slash" xml:space="preserve">
+    <value>Sohbet eğik çizgi</value>
+  </data>
+  <data name="chat_teardrop" xml:space="preserve">
+    <value>Sohbet gözyaşı</value>
+  </data>
+  <data name="chat_teardrop_dots" xml:space="preserve">
+    <value>Sohbet gözyaşı noktalar</value>
+  </data>
+  <data name="chat_teardrop_slash" xml:space="preserve">
+    <value>Sohbet gözyaşı eğik çizgi</value>
+  </data>
+  <data name="chat_teardrop_text" xml:space="preserve">
+    <value>Sohbet gözyaşı metin</value>
+  </data>
+  <data name="chat_text" xml:space="preserve">
+    <value>Sohbet metin</value>
+  </data>
+  <data name="chats" xml:space="preserve">
+    <value>Sohbetler</value>
+  </data>
+  <data name="chats_circle" xml:space="preserve">
+    <value>Sohbetler daire</value>
+  </data>
+  <data name="chats_teardrop" xml:space="preserve">
+    <value>Sohbetler gözyaşı</value>
+  </data>
+  <data name="check" xml:space="preserve">
+    <value>Onay</value>
+  </data>
+  <data name="check_circle" xml:space="preserve">
+    <value>Onay daire</value>
+  </data>
+  <data name="check_fat" xml:space="preserve">
+    <value>Onay kalın</value>
+  </data>
+  <data name="check_square" xml:space="preserve">
+    <value>Onay kare</value>
+  </data>
+  <data name="check_square_offset" xml:space="preserve">
+    <value>Onay kare kaydırma</value>
+  </data>
+  <data name="checkerboard" xml:space="preserve">
+    <value>Dama tahtası</value>
+  </data>
+  <data name="checks" xml:space="preserve">
+    <value>Onaylar</value>
+  </data>
+  <data name="cheers" xml:space="preserve">
+    <value>Şerefe</value>
+  </data>
+  <data name="cheese" xml:space="preserve">
+    <value>Peynir</value>
+  </data>
+  <data name="chef_hat" xml:space="preserve">
+    <value>Aşçı şapka</value>
+  </data>
+  <data name="cherries" xml:space="preserve">
+    <value>Kirazlar</value>
+  </data>
+  <data name="church" xml:space="preserve">
+    <value>Kilise</value>
+  </data>
+  <data name="cigarette" xml:space="preserve">
+    <value>Sigara</value>
+  </data>
+  <data name="cigarette_slash" xml:space="preserve">
+    <value>Sigara eğik çizgi</value>
+  </data>
+  <data name="circle" xml:space="preserve">
+    <value>Daire</value>
+  </data>
+  <data name="circle_dashed" xml:space="preserve">
+    <value>Daire kesik çizgili</value>
+  </data>
+  <data name="circle_half" xml:space="preserve">
+    <value>Daire yarım</value>
+  </data>
+  <data name="circle_half_tilt" xml:space="preserve">
+    <value>Daire yarım eğim</value>
+  </data>
+  <data name="circle_notch" xml:space="preserve">
+    <value>Daire çentik</value>
+  </data>
+  <data name="circles_four" xml:space="preserve">
+    <value>Daireler dört</value>
+  </data>
+  <data name="circles_three" xml:space="preserve">
+    <value>Daireler üç</value>
+  </data>
+  <data name="circles_three_plus" xml:space="preserve">
+    <value>Daireler üç artı</value>
+  </data>
+  <data name="circuitry" xml:space="preserve">
+    <value>Devreler</value>
+  </data>
+  <data name="city" xml:space="preserve">
+    <value>Şehir</value>
+  </data>
+  <data name="clipboard" xml:space="preserve">
+    <value>Pano</value>
+  </data>
+  <data name="clipboard_text" xml:space="preserve">
+    <value>Pano metin</value>
+  </data>
+  <data name="clock" xml:space="preserve">
+    <value>Saat</value>
+  </data>
+  <data name="clock_afternoon" xml:space="preserve">
+    <value>Saat öğleden sonra</value>
+  </data>
+  <data name="clock_clockwise" xml:space="preserve">
+    <value>Saat saat yönünde</value>
+  </data>
+  <data name="clock_countdown" xml:space="preserve">
+    <value>Saat geri sayım</value>
+  </data>
+  <data name="clock_counter_clockwise" xml:space="preserve">
+    <value>Saat sayaç saat yönünde</value>
+  </data>
+  <data name="clock_user" xml:space="preserve">
+    <value>Saat kullanıcı</value>
+  </data>
+  <data name="closed_captioning" xml:space="preserve">
+    <value>Kapalı altyazı</value>
+  </data>
+  <data name="cloud" xml:space="preserve">
+    <value>Bulut</value>
+  </data>
+  <data name="cloud_arrow_down" xml:space="preserve">
+    <value>Bulut ok aşağı</value>
+  </data>
+  <data name="cloud_arrow_up" xml:space="preserve">
+    <value>Bulut ok yukarı</value>
+  </data>
+  <data name="cloud_check" xml:space="preserve">
+    <value>Bulut onay</value>
+  </data>
+  <data name="cloud_fog" xml:space="preserve">
+    <value>Bulut sis</value>
+  </data>
+  <data name="cloud_lightning" xml:space="preserve">
+    <value>Bulut şimşek</value>
+  </data>
+  <data name="cloud_moon" xml:space="preserve">
+    <value>Bulut ay</value>
+  </data>
+  <data name="cloud_rain" xml:space="preserve">
+    <value>Bulut yağmur</value>
+  </data>
+  <data name="cloud_slash" xml:space="preserve">
+    <value>Bulut eğik çizgi</value>
+  </data>
+  <data name="cloud_snow" xml:space="preserve">
+    <value>Bulut kar</value>
+  </data>
+  <data name="cloud_sun" xml:space="preserve">
+    <value>Bulut güneş</value>
+  </data>
+  <data name="cloud_warning" xml:space="preserve">
+    <value>Bulut uyarı</value>
+  </data>
+  <data name="cloud_x" xml:space="preserve">
+    <value>Bulut x</value>
+  </data>
+  <data name="clover" xml:space="preserve">
+    <value>Yonca</value>
+  </data>
+  <data name="club" xml:space="preserve">
+    <value>Sinek</value>
+  </data>
+  <data name="coat_hanger" xml:space="preserve">
+    <value>Palto askı</value>
+  </data>
+  <data name="coda_logo" xml:space="preserve">
+    <value>Coda logo</value>
+  </data>
+  <data name="code" xml:space="preserve">
+    <value>Kod</value>
+  </data>
+  <data name="code_block" xml:space="preserve">
+    <value>Kod blok</value>
+  </data>
+  <data name="code_simple" xml:space="preserve">
+    <value>Kod basit</value>
+  </data>
+  <data name="codepen_logo" xml:space="preserve">
+    <value>Codepen logo</value>
+  </data>
+  <data name="codesandbox_logo" xml:space="preserve">
+    <value>Codesandbox logo</value>
+  </data>
+  <data name="coffee" xml:space="preserve">
+    <value>Kahve</value>
+  </data>
+  <data name="coffee_bean" xml:space="preserve">
+    <value>Kahve fasulye</value>
+  </data>
+  <data name="coin" xml:space="preserve">
+    <value>Madeni para</value>
+  </data>
+  <data name="coin_vertical" xml:space="preserve">
+    <value>Madeni para dikey</value>
+  </data>
+  <data name="coins" xml:space="preserve">
+    <value>Madeni paralar</value>
+  </data>
+  <data name="columns" xml:space="preserve">
+    <value>Sütunlar</value>
+  </data>
+  <data name="columns_plus_left" xml:space="preserve">
+    <value>Sütunlar artı sol</value>
+  </data>
+  <data name="columns_plus_right" xml:space="preserve">
+    <value>Sütunlar artı sağ</value>
+  </data>
+  <data name="command" xml:space="preserve">
+    <value>Komut</value>
+  </data>
+  <data name="compass" xml:space="preserve">
+    <value>Pusula</value>
+  </data>
+  <data name="compass_rose" xml:space="preserve">
+    <value>Pusula gül</value>
+  </data>
+  <data name="compass_tool" xml:space="preserve">
+    <value>Pusula araç</value>
+  </data>
+  <data name="computer_tower" xml:space="preserve">
+    <value>Bilgisayar kule</value>
+  </data>
+  <data name="confetti" xml:space="preserve">
+    <value>Konfeti</value>
+  </data>
+  <data name="contactless_payment" xml:space="preserve">
+    <value>Temassız ödeme</value>
+  </data>
+  <data name="control" xml:space="preserve">
+    <value>Kontrol</value>
+  </data>
+  <data name="cookie" xml:space="preserve">
+    <value>Kurabiye</value>
+  </data>
+  <data name="cooking_pot" xml:space="preserve">
+    <value>Yemek pişirme tencere</value>
+  </data>
+  <data name="copy" xml:space="preserve">
+    <value>Kopyala</value>
+  </data>
+  <data name="copy_simple" xml:space="preserve">
+    <value>Kopyala basit</value>
+  </data>
+  <data name="copyleft" xml:space="preserve">
+    <value>Copyleft</value>
+  </data>
+  <data name="copyright" xml:space="preserve">
+    <value>Telif hakkı</value>
+  </data>
+  <data name="corners_in" xml:space="preserve">
+    <value>Köşeler içeri</value>
+  </data>
+  <data name="corners_out" xml:space="preserve">
+    <value>Köşeler dışarı</value>
+  </data>
+  <data name="couch" xml:space="preserve">
+    <value>Kanepe</value>
+  </data>
+  <data name="court_basketball" xml:space="preserve">
+    <value>Mahkeme basketbol</value>
+  </data>
+  <data name="cow" xml:space="preserve">
+    <value>Inek</value>
+  </data>
+  <data name="cowboy_hat" xml:space="preserve">
+    <value>Kovboy şapka</value>
+  </data>
+  <data name="cpu" xml:space="preserve">
+    <value>Işlemci</value>
+  </data>
+  <data name="crane" xml:space="preserve">
+    <value>Vinç</value>
+  </data>
+  <data name="crane_tower" xml:space="preserve">
+    <value>Vinç kule</value>
+  </data>
+  <data name="credit_card" xml:space="preserve">
+    <value>Kredi kart</value>
+  </data>
+  <data name="cricket" xml:space="preserve">
+    <value>Kriket</value>
+  </data>
+  <data name="crop" xml:space="preserve">
+    <value>Kırp</value>
+  </data>
+  <data name="cross" xml:space="preserve">
+    <value>Çarpı</value>
+  </data>
+  <data name="crosshair" xml:space="preserve">
+    <value>Nişangah</value>
+  </data>
+  <data name="crosshair_simple" xml:space="preserve">
+    <value>Nişangah basit</value>
+  </data>
+  <data name="crown" xml:space="preserve">
+    <value>Taç</value>
+  </data>
+  <data name="crown_cross" xml:space="preserve">
+    <value>Taç çarpı</value>
+  </data>
+  <data name="crown_simple" xml:space="preserve">
+    <value>Taç basit</value>
+  </data>
+  <data name="cube" xml:space="preserve">
+    <value>Küp</value>
+  </data>
+  <data name="cube_focus" xml:space="preserve">
+    <value>Küp odak</value>
+  </data>
+  <data name="cube_transparent" xml:space="preserve">
+    <value>Küp şeffaf</value>
+  </data>
+  <data name="currency_btc" xml:space="preserve">
+    <value>Para birimi btc</value>
+  </data>
+  <data name="currency_circle_dollar" xml:space="preserve">
+    <value>Para birimi daire dolar</value>
+  </data>
+  <data name="currency_cny" xml:space="preserve">
+    <value>Para birimi cny</value>
+  </data>
+  <data name="currency_dollar" xml:space="preserve">
+    <value>Para birimi dolar</value>
+  </data>
+  <data name="currency_dollar_simple" xml:space="preserve">
+    <value>Para birimi dolar basit</value>
+  </data>
+  <data name="currency_eth" xml:space="preserve">
+    <value>Para birimi eth</value>
+  </data>
+  <data name="currency_eur" xml:space="preserve">
+    <value>Para birimi eur</value>
+  </data>
+  <data name="currency_gbp" xml:space="preserve">
+    <value>Para birimi gbp</value>
+  </data>
+  <data name="currency_inr" xml:space="preserve">
+    <value>Para birimi inr</value>
+  </data>
+  <data name="currency_jpy" xml:space="preserve">
+    <value>Para birimi jpy</value>
+  </data>
+  <data name="currency_krw" xml:space="preserve">
+    <value>Para birimi krw</value>
+  </data>
+  <data name="currency_kzt" xml:space="preserve">
+    <value>Para birimi kzt</value>
+  </data>
+  <data name="currency_ngn" xml:space="preserve">
+    <value>Para birimi ngn</value>
+  </data>
+  <data name="currency_rub" xml:space="preserve">
+    <value>Para birimi rub</value>
+  </data>
+  <data name="cursor" xml:space="preserve">
+    <value>Imleç</value>
+  </data>
+  <data name="cursor_click" xml:space="preserve">
+    <value>Imleç tıklama</value>
+  </data>
+  <data name="cursor_text" xml:space="preserve">
+    <value>Imleç metin</value>
+  </data>
+  <data name="cylinder" xml:space="preserve">
+    <value>Silindir</value>
+  </data>
+  <data name="database" xml:space="preserve">
+    <value>Veritabanı</value>
+  </data>
+  <data name="desk" xml:space="preserve">
+    <value>Masa</value>
+  </data>
+  <data name="desktop" xml:space="preserve">
+    <value>Masaüstü</value>
+  </data>
+  <data name="desktop_tower" xml:space="preserve">
+    <value>Masaüstü kule</value>
+  </data>
+  <data name="detective" xml:space="preserve">
+    <value>Dedektif</value>
+  </data>
+  <data name="dev_to_logo" xml:space="preserve">
+    <value>Dev logo</value>
+  </data>
+  <data name="device_mobile" xml:space="preserve">
+    <value>Cihaz cep telefonu</value>
+  </data>
+  <data name="device_mobile_camera" xml:space="preserve">
+    <value>Cihaz cep telefonu kamera</value>
+  </data>
+  <data name="device_mobile_slash" xml:space="preserve">
+    <value>Cihaz cep telefonu eğik çizgi</value>
+  </data>
+  <data name="device_mobile_speaker" xml:space="preserve">
+    <value>Cihaz cep telefonu hoparlör</value>
+  </data>
+  <data name="device_rotate" xml:space="preserve">
+    <value>Cihaz döndür</value>
+  </data>
+  <data name="device_tablet" xml:space="preserve">
+    <value>Cihaz tablet</value>
+  </data>
+  <data name="device_tablet_camera" xml:space="preserve">
+    <value>Cihaz tablet kamera</value>
+  </data>
+  <data name="device_tablet_speaker" xml:space="preserve">
+    <value>Cihaz tablet hoparlör</value>
+  </data>
+  <data name="devices" xml:space="preserve">
+    <value>Cihazlar</value>
+  </data>
+  <data name="diamond" xml:space="preserve">
+    <value>Elmas</value>
+  </data>
+  <data name="diamonds_four" xml:space="preserve">
+    <value>Karo dört</value>
+  </data>
+  <data name="dice_five" xml:space="preserve">
+    <value>Zar beş</value>
+  </data>
+  <data name="dice_four" xml:space="preserve">
+    <value>Zar dört</value>
+  </data>
+  <data name="dice_one" xml:space="preserve">
+    <value>Zar bir</value>
+  </data>
+  <data name="dice_six" xml:space="preserve">
+    <value>Zar altı</value>
+  </data>
+  <data name="dice_three" xml:space="preserve">
+    <value>Zar üç</value>
+  </data>
+  <data name="dice_two" xml:space="preserve">
+    <value>Zar iki</value>
+  </data>
+  <data name="disc" xml:space="preserve">
+    <value>Disk</value>
+  </data>
+  <data name="disco_ball" xml:space="preserve">
+    <value>Disko top</value>
+  </data>
+  <data name="discord_logo" xml:space="preserve">
+    <value>Discord logo</value>
+  </data>
+  <data name="divide" xml:space="preserve">
+    <value>Bölme</value>
+  </data>
+  <data name="dna" xml:space="preserve">
+    <value>Dna</value>
+  </data>
+  <data name="dog" xml:space="preserve">
+    <value>Köpek</value>
+  </data>
+  <data name="door" xml:space="preserve">
+    <value>Kapı</value>
+  </data>
+  <data name="door_open" xml:space="preserve">
+    <value>Kapı açık</value>
+  </data>
+  <data name="dot" xml:space="preserve">
+    <value>Nokta</value>
+  </data>
+  <data name="dot_outline" xml:space="preserve">
+    <value>Nokta anahat</value>
+  </data>
+  <data name="dots_nine" xml:space="preserve">
+    <value>Noktalar dokuz</value>
+  </data>
+  <data name="dots_six" xml:space="preserve">
+    <value>Noktalar altı</value>
+  </data>
+  <data name="dots_six_vertical" xml:space="preserve">
+    <value>Noktalar altı dikey</value>
+  </data>
+  <data name="dots_three" xml:space="preserve">
+    <value>Noktalar üç</value>
+  </data>
+  <data name="dots_three_circle" xml:space="preserve">
+    <value>Noktalar üç daire</value>
+  </data>
+  <data name="dots_three_circle_vertical" xml:space="preserve">
+    <value>Noktalar üç daire dikey</value>
+  </data>
+  <data name="dots_three_outline" xml:space="preserve">
+    <value>Noktalar üç anahat</value>
+  </data>
+  <data name="dots_three_outline_vertical" xml:space="preserve">
+    <value>Noktalar üç anahat dikey</value>
+  </data>
+  <data name="dots_three_vertical" xml:space="preserve">
+    <value>Noktalar üç dikey</value>
+  </data>
+  <data name="download" xml:space="preserve">
+    <value>Indir</value>
+  </data>
+  <data name="download_simple" xml:space="preserve">
+    <value>Indir basit</value>
+  </data>
+  <data name="dress" xml:space="preserve">
+    <value>Elbise</value>
+  </data>
+  <data name="dresser" xml:space="preserve">
+    <value>Şifonyer</value>
+  </data>
+  <data name="dribbble_logo" xml:space="preserve">
+    <value>Dribbble logo</value>
+  </data>
+  <data name="drone" xml:space="preserve">
+    <value>Drone</value>
+  </data>
+  <data name="drop" xml:space="preserve">
+    <value>Damla</value>
+  </data>
+  <data name="drop_half" xml:space="preserve">
+    <value>Damla yarım</value>
+  </data>
+  <data name="drop_half_bottom" xml:space="preserve">
+    <value>Damla yarım alt</value>
+  </data>
+  <data name="drop_simple" xml:space="preserve">
+    <value>Damla basit</value>
+  </data>
+  <data name="drop_slash" xml:space="preserve">
+    <value>Damla eğik çizgi</value>
+  </data>
+  <data name="dropbox_logo" xml:space="preserve">
+    <value>Dropbox logo</value>
+  </data>
+  <data name="ear" xml:space="preserve">
+    <value>Kulak</value>
+  </data>
+  <data name="ear_slash" xml:space="preserve">
+    <value>Kulak eğik çizgi</value>
+  </data>
+  <data name="egg" xml:space="preserve">
+    <value>Yumurta</value>
+  </data>
+  <data name="egg_crack" xml:space="preserve">
+    <value>Yumurta çatlak</value>
+  </data>
+  <data name="eject" xml:space="preserve">
+    <value>Çıkar</value>
+  </data>
+  <data name="eject_simple" xml:space="preserve">
+    <value>Çıkar basit</value>
+  </data>
+  <data name="elevator" xml:space="preserve">
+    <value>Asansör</value>
+  </data>
+  <data name="empty" xml:space="preserve">
+    <value>Boş</value>
+  </data>
+  <data name="engine" xml:space="preserve">
+    <value>Motor</value>
+  </data>
+  <data name="envelope" xml:space="preserve">
+    <value>Zarf</value>
+  </data>
+  <data name="envelope_open" xml:space="preserve">
+    <value>Zarf açık</value>
+  </data>
+  <data name="envelope_simple" xml:space="preserve">
+    <value>Zarf basit</value>
+  </data>
+  <data name="envelope_simple_open" xml:space="preserve">
+    <value>Zarf basit açık</value>
+  </data>
+  <data name="equalizer" xml:space="preserve">
+    <value>Ekolayzer</value>
+  </data>
+  <data name="equals" xml:space="preserve">
+    <value>Eşittir</value>
+  </data>
+  <data name="eraser" xml:space="preserve">
+    <value>Silgi</value>
+  </data>
+  <data name="escalator_down" xml:space="preserve">
+    <value>Yürüyen merdiven aşağı</value>
+  </data>
+  <data name="escalator_up" xml:space="preserve">
+    <value>Yürüyen merdiven yukarı</value>
+  </data>
+  <data name="exam" xml:space="preserve">
+    <value>Sınav</value>
+  </data>
+  <data name="exclamation_mark" xml:space="preserve">
+    <value>Ünlem işaret</value>
+  </data>
+  <data name="exclude" xml:space="preserve">
+    <value>Hariç tut</value>
+  </data>
+  <data name="exclude_square" xml:space="preserve">
+    <value>Hariç tut kare</value>
+  </data>
+  <data name="export" xml:space="preserve">
+    <value>Dışa aktar</value>
+  </data>
+  <data name="eye" xml:space="preserve">
+    <value>Göz</value>
+  </data>
+  <data name="eye_closed" xml:space="preserve">
+    <value>Göz kapalı</value>
+  </data>
+  <data name="eye_slash" xml:space="preserve">
+    <value>Göz eğik çizgi</value>
+  </data>
+  <data name="eyedropper" xml:space="preserve">
+    <value>Damlalık</value>
+  </data>
+  <data name="eyedropper_sample" xml:space="preserve">
+    <value>Damlalık örnek</value>
+  </data>
+  <data name="eyeglasses" xml:space="preserve">
+    <value>Gözlük</value>
+  </data>
+  <data name="eyes" xml:space="preserve">
+    <value>Gözler</value>
+  </data>
+  <data name="face_mask" xml:space="preserve">
+    <value>Yüz maske</value>
+  </data>
+  <data name="facebook_logo" xml:space="preserve">
+    <value>Facebook logo</value>
+  </data>
+  <data name="factory" xml:space="preserve">
+    <value>Fabrika</value>
+  </data>
+  <data name="faders" xml:space="preserve">
+    <value>Sürgüler</value>
+  </data>
+  <data name="faders_horizontal" xml:space="preserve">
+    <value>Sürgüler yatay</value>
+  </data>
+  <data name="fallout_shelter" xml:space="preserve">
+    <value>Radyasyon sığınak</value>
+  </data>
+  <data name="fan" xml:space="preserve">
+    <value>Vantilatör</value>
+  </data>
+  <data name="farm" xml:space="preserve">
+    <value>Çiftlik</value>
+  </data>
+  <data name="fast_forward" xml:space="preserve">
+    <value>Hızlı ileri</value>
+  </data>
+  <data name="fast_forward_circle" xml:space="preserve">
+    <value>Hızlı ileri daire</value>
+  </data>
+  <data name="feather" xml:space="preserve">
+    <value>Tüy</value>
+  </data>
+  <data name="fediverse_logo" xml:space="preserve">
+    <value>Fediverse logo</value>
+  </data>
+  <data name="figma_logo" xml:space="preserve">
+    <value>Figma logo</value>
+  </data>
+  <data name="file" xml:space="preserve">
+    <value>Dosya</value>
+  </data>
+  <data name="file_archive" xml:space="preserve">
+    <value>Dosya arşiv</value>
+  </data>
+  <data name="file_arrow_down" xml:space="preserve">
+    <value>Dosya ok aşağı</value>
+  </data>
+  <data name="file_arrow_up" xml:space="preserve">
+    <value>Dosya ok yukarı</value>
+  </data>
+  <data name="file_audio" xml:space="preserve">
+    <value>Dosya ses</value>
+  </data>
+  <data name="file_c" xml:space="preserve">
+    <value>Dosya c</value>
+  </data>
+  <data name="file_c_sharp" xml:space="preserve">
+    <value>Dosya c keskin</value>
+  </data>
+  <data name="file_cloud" xml:space="preserve">
+    <value>Dosya bulut</value>
+  </data>
+  <data name="file_code" xml:space="preserve">
+    <value>Dosya kod</value>
+  </data>
+  <data name="file_cpp" xml:space="preserve">
+    <value>Dosya cpp</value>
+  </data>
+  <data name="file_css" xml:space="preserve">
+    <value>Dosya css</value>
+  </data>
+  <data name="file_csv" xml:space="preserve">
+    <value>Dosya csv</value>
+  </data>
+  <data name="file_dashed" xml:space="preserve">
+    <value>Dosya kesik çizgili</value>
+  </data>
+  <data name="file_doc" xml:space="preserve">
+    <value>Dosya belge</value>
+  </data>
+  <data name="file_html" xml:space="preserve">
+    <value>Dosya html</value>
+  </data>
+  <data name="file_image" xml:space="preserve">
+    <value>Dosya resim</value>
+  </data>
+  <data name="file_ini" xml:space="preserve">
+    <value>Dosya ini</value>
+  </data>
+  <data name="file_jpg" xml:space="preserve">
+    <value>Dosya jpg</value>
+  </data>
+  <data name="file_js" xml:space="preserve">
+    <value>Dosya js</value>
+  </data>
+  <data name="file_jsx" xml:space="preserve">
+    <value>Dosya jsx</value>
+  </data>
+  <data name="file_lock" xml:space="preserve">
+    <value>Dosya kilit</value>
+  </data>
+  <data name="file_magnifying_glass" xml:space="preserve">
+    <value>Dosya büyüteç bardak</value>
+  </data>
+  <data name="file_md" xml:space="preserve">
+    <value>Dosya md</value>
+  </data>
+  <data name="file_minus" xml:space="preserve">
+    <value>Dosya eksi</value>
+  </data>
+  <data name="file_pdf" xml:space="preserve">
+    <value>Dosya pdf</value>
+  </data>
+  <data name="file_plus" xml:space="preserve">
+    <value>Dosya artı</value>
+  </data>
+  <data name="file_png" xml:space="preserve">
+    <value>Dosya png</value>
+  </data>
+  <data name="file_ppt" xml:space="preserve">
+    <value>Dosya ppt</value>
+  </data>
+  <data name="file_py" xml:space="preserve">
+    <value>Dosya py</value>
+  </data>
+  <data name="file_rs" xml:space="preserve">
+    <value>Dosya rs</value>
+  </data>
+  <data name="file_sql" xml:space="preserve">
+    <value>Dosya sql</value>
+  </data>
+  <data name="file_svg" xml:space="preserve">
+    <value>Dosya svg</value>
+  </data>
+  <data name="file_text" xml:space="preserve">
+    <value>Dosya metin</value>
+  </data>
+  <data name="file_ts" xml:space="preserve">
+    <value>Dosya ts</value>
+  </data>
+  <data name="file_tsx" xml:space="preserve">
+    <value>Dosya tsx</value>
+  </data>
+  <data name="file_txt" xml:space="preserve">
+    <value>Dosya txt</value>
+  </data>
+  <data name="file_video" xml:space="preserve">
+    <value>Dosya video</value>
+  </data>
+  <data name="file_vue" xml:space="preserve">
+    <value>Dosya vue</value>
+  </data>
+  <data name="file_x" xml:space="preserve">
+    <value>Dosya x</value>
+  </data>
+  <data name="file_xls" xml:space="preserve">
+    <value>Dosya xls</value>
+  </data>
+  <data name="file_zip" xml:space="preserve">
+    <value>Dosya zip</value>
+  </data>
+  <data name="files" xml:space="preserve">
+    <value>Dosyalar</value>
+  </data>
+  <data name="film_reel" xml:space="preserve">
+    <value>Film makara</value>
+  </data>
+  <data name="film_script" xml:space="preserve">
+    <value>Film betik</value>
+  </data>
+  <data name="film_slate" xml:space="preserve">
+    <value>Film kara tahta</value>
+  </data>
+  <data name="film_strip" xml:space="preserve">
+    <value>Film şerit</value>
+  </data>
+  <data name="fingerprint" xml:space="preserve">
+    <value>Parmak izi</value>
+  </data>
+  <data name="fingerprint_simple" xml:space="preserve">
+    <value>Parmak izi basit</value>
+  </data>
+  <data name="finn_the_human" xml:space="preserve">
+    <value>Finn insan</value>
+  </data>
+  <data name="fire" xml:space="preserve">
+    <value>Ateş</value>
+  </data>
+  <data name="fire_extinguisher" xml:space="preserve">
+    <value>Ateş yangın söndürücü</value>
+  </data>
+  <data name="fire_simple" xml:space="preserve">
+    <value>Ateş basit</value>
+  </data>
+  <data name="fire_truck" xml:space="preserve">
+    <value>Ateş kamyon</value>
+  </data>
+  <data name="first_aid" xml:space="preserve">
+    <value>Ilk yardım</value>
+  </data>
+  <data name="first_aid_kit" xml:space="preserve">
+    <value>Ilk yardım set</value>
+  </data>
+  <data name="fish" xml:space="preserve">
+    <value>Balık</value>
+  </data>
+  <data name="fish_simple" xml:space="preserve">
+    <value>Balık basit</value>
+  </data>
+  <data name="flag" xml:space="preserve">
+    <value>Bayrak</value>
+  </data>
+  <data name="flag_banner" xml:space="preserve">
+    <value>Bayrak afiş</value>
+  </data>
+  <data name="flag_banner_fold" xml:space="preserve">
+    <value>Bayrak afiş katla</value>
+  </data>
+  <data name="flag_checkered" xml:space="preserve">
+    <value>Bayrak damalı</value>
+  </data>
+  <data name="flag_pennant" xml:space="preserve">
+    <value>Bayrak flama</value>
+  </data>
+  <data name="flame" xml:space="preserve">
+    <value>Alev</value>
+  </data>
+  <data name="flashlight" xml:space="preserve">
+    <value>El feneri</value>
+  </data>
+  <data name="flask" xml:space="preserve">
+    <value>Şişe</value>
+  </data>
+  <data name="flip_horizontal" xml:space="preserve">
+    <value>Çevir yatay</value>
+  </data>
+  <data name="flip_vertical" xml:space="preserve">
+    <value>Çevir dikey</value>
+  </data>
+  <data name="floppy_disk" xml:space="preserve">
+    <value>Disket disk</value>
+  </data>
+  <data name="floppy_disk_back" xml:space="preserve">
+    <value>Disket disk geri</value>
+  </data>
+  <data name="flow_arrow" xml:space="preserve">
+    <value>Akış ok</value>
+  </data>
+  <data name="flower" xml:space="preserve">
+    <value>Çiçek</value>
+  </data>
+  <data name="flower_lotus" xml:space="preserve">
+    <value>Çiçek nilüfer</value>
+  </data>
+  <data name="flower_tulip" xml:space="preserve">
+    <value>Çiçek lale</value>
+  </data>
+  <data name="flying_saucer" xml:space="preserve">
+    <value>Uçan tabak</value>
+  </data>
+  <data name="folder" xml:space="preserve">
+    <value>Klasör</value>
+  </data>
+  <data name="folder_dashed" xml:space="preserve">
+    <value>Klasör kesik çizgili</value>
+  </data>
+  <data name="folder_lock" xml:space="preserve">
+    <value>Klasör kilit</value>
+  </data>
+  <data name="folder_minus" xml:space="preserve">
+    <value>Klasör eksi</value>
+  </data>
+  <data name="folder_open" xml:space="preserve">
+    <value>Klasör açık</value>
+  </data>
+  <data name="folder_plus" xml:space="preserve">
+    <value>Klasör artı</value>
+  </data>
+  <data name="folder_simple" xml:space="preserve">
+    <value>Klasör basit</value>
+  </data>
+  <data name="folder_simple_dashed" xml:space="preserve">
+    <value>Klasör basit kesik çizgili</value>
+  </data>
+  <data name="folder_simple_lock" xml:space="preserve">
+    <value>Klasör basit kilit</value>
+  </data>
+  <data name="folder_simple_minus" xml:space="preserve">
+    <value>Klasör basit eksi</value>
+  </data>
+  <data name="folder_simple_plus" xml:space="preserve">
+    <value>Klasör basit artı</value>
+  </data>
+  <data name="folder_simple_star" xml:space="preserve">
+    <value>Klasör basit yıldız</value>
+  </data>
+  <data name="folder_simple_user" xml:space="preserve">
+    <value>Klasör basit kullanıcı</value>
+  </data>
+  <data name="folder_star" xml:space="preserve">
+    <value>Klasör yıldız</value>
+  </data>
+  <data name="folder_user" xml:space="preserve">
+    <value>Klasör kullanıcı</value>
+  </data>
+  <data name="folders" xml:space="preserve">
+    <value>Klasörler</value>
+  </data>
+  <data name="football" xml:space="preserve">
+    <value>Futbol</value>
+  </data>
+  <data name="football_helmet" xml:space="preserve">
+    <value>Futbol kask</value>
+  </data>
+  <data name="footprints" xml:space="preserve">
+    <value>Ayak izleri</value>
+  </data>
+  <data name="fork_knife" xml:space="preserve">
+    <value>Çatal bıçak</value>
+  </data>
+  <data name="four_k" xml:space="preserve">
+    <value>Dört k</value>
+  </data>
+  <data name="frame_corners" xml:space="preserve">
+    <value>Çerçeve köşeler</value>
+  </data>
+  <data name="framer_logo" xml:space="preserve">
+    <value>Framer logo</value>
+  </data>
+  <data name="function" xml:space="preserve">
+    <value>Fonksiyon</value>
+  </data>
+  <data name="funnel" xml:space="preserve">
+    <value>Huni</value>
+  </data>
+  <data name="funnel_simple" xml:space="preserve">
+    <value>Huni basit</value>
+  </data>
+  <data name="funnel_simple_x" xml:space="preserve">
+    <value>Huni basit x</value>
+  </data>
+  <data name="funnel_x" xml:space="preserve">
+    <value>Huni x</value>
+  </data>
+  <data name="game_controller" xml:space="preserve">
+    <value>Oyun kumanda</value>
+  </data>
+  <data name="garage" xml:space="preserve">
+    <value>Garaj</value>
+  </data>
+  <data name="gas_can" xml:space="preserve">
+    <value>Benzin kutu</value>
+  </data>
+  <data name="gas_pump" xml:space="preserve">
+    <value>Benzin pompa</value>
+  </data>
+  <data name="gauge" xml:space="preserve">
+    <value>Gösterge</value>
+  </data>
+  <data name="gavel" xml:space="preserve">
+    <value>Tokmak</value>
+  </data>
+  <data name="gear" xml:space="preserve">
+    <value>Dişli</value>
+  </data>
+  <data name="gear_fine" xml:space="preserve">
+    <value>Dişli ince</value>
+  </data>
+  <data name="gear_six" xml:space="preserve">
+    <value>Dişli altı</value>
+  </data>
+  <data name="gender_female" xml:space="preserve">
+    <value>Cinsiyet kadın</value>
+  </data>
+  <data name="gender_intersex" xml:space="preserve">
+    <value>Cinsiyet interseks</value>
+  </data>
+  <data name="gender_male" xml:space="preserve">
+    <value>Cinsiyet erkek</value>
+  </data>
+  <data name="gender_neuter" xml:space="preserve">
+    <value>Cinsiyet nötr</value>
+  </data>
+  <data name="gender_nonbinary" xml:space="preserve">
+    <value>Cinsiyet non-binary</value>
+  </data>
+  <data name="gender_transgender" xml:space="preserve">
+    <value>Cinsiyet trans</value>
+  </data>
+  <data name="ghost" xml:space="preserve">
+    <value>Hayalet</value>
+  </data>
+  <data name="gif" xml:space="preserve">
+    <value>Gif</value>
+  </data>
+  <data name="gift" xml:space="preserve">
+    <value>Hediye</value>
+  </data>
+  <data name="git_branch" xml:space="preserve">
+    <value>Git dal</value>
+  </data>
+  <data name="git_commit" xml:space="preserve">
+    <value>Git commit</value>
+  </data>
+  <data name="git_diff" xml:space="preserve">
+    <value>Git fark</value>
+  </data>
+  <data name="git_fork" xml:space="preserve">
+    <value>Git çatal</value>
+  </data>
+  <data name="git_merge" xml:space="preserve">
+    <value>Git birleştir</value>
+  </data>
+  <data name="git_pull_request" xml:space="preserve">
+    <value>Git çek istek</value>
+  </data>
+  <data name="github_logo" xml:space="preserve">
+    <value>Github logo</value>
+  </data>
+  <data name="gitlab_logo" xml:space="preserve">
+    <value>Gitlab logo</value>
+  </data>
+  <data name="gitlab_logo_simple" xml:space="preserve">
+    <value>Gitlab logo basit</value>
+  </data>
+  <data name="globe" xml:space="preserve">
+    <value>Küre</value>
+  </data>
+  <data name="globe_hemisphere_east" xml:space="preserve">
+    <value>Küre yarım küre doğu</value>
+  </data>
+  <data name="globe_hemisphere_west" xml:space="preserve">
+    <value>Küre yarım küre batı</value>
+  </data>
+  <data name="globe_simple" xml:space="preserve">
+    <value>Küre basit</value>
+  </data>
+  <data name="globe_simple_x" xml:space="preserve">
+    <value>Küre basit x</value>
+  </data>
+  <data name="globe_stand" xml:space="preserve">
+    <value>Küre stand</value>
+  </data>
+  <data name="globe_x" xml:space="preserve">
+    <value>Küre x</value>
+  </data>
+  <data name="goggles" xml:space="preserve">
+    <value>Koruyucu gözlük</value>
+  </data>
+  <data name="golf" xml:space="preserve">
+    <value>Golf</value>
+  </data>
+  <data name="goodreads_logo" xml:space="preserve">
+    <value>Goodreads logo</value>
+  </data>
+  <data name="google_cardboard_logo" xml:space="preserve">
+    <value>Google karton logo</value>
+  </data>
+  <data name="google_chrome_logo" xml:space="preserve">
+    <value>Google chrome logo</value>
+  </data>
+  <data name="google_drive_logo" xml:space="preserve">
+    <value>Google sürücü logo</value>
+  </data>
+  <data name="google_logo" xml:space="preserve">
+    <value>Google logo</value>
+  </data>
+  <data name="google_photos_logo" xml:space="preserve">
+    <value>Google fotoğraflar logo</value>
+  </data>
+  <data name="google_play_logo" xml:space="preserve">
+    <value>Google oynat logo</value>
+  </data>
+  <data name="google_podcasts_logo" xml:space="preserve">
+    <value>Google podcastler logo</value>
+  </data>
+  <data name="gps" xml:space="preserve">
+    <value>Gps</value>
+  </data>
+  <data name="gps_fix" xml:space="preserve">
+    <value>Gps onar</value>
+  </data>
+  <data name="gps_slash" xml:space="preserve">
+    <value>Gps eğik çizgi</value>
+  </data>
+  <data name="gradient" xml:space="preserve">
+    <value>Degrade</value>
+  </data>
+  <data name="graduation_cap" xml:space="preserve">
+    <value>Mezuniyet şapka</value>
+  </data>
+  <data name="grains" xml:space="preserve">
+    <value>Tahıllar</value>
+  </data>
+  <data name="grains_slash" xml:space="preserve">
+    <value>Tahıllar eğik çizgi</value>
+  </data>
+  <data name="graph" xml:space="preserve">
+    <value>Grafik</value>
+  </data>
+  <data name="graphics_card" xml:space="preserve">
+    <value>Grafik kart</value>
+  </data>
+  <data name="greater_than" xml:space="preserve">
+    <value>Büyüktür</value>
+  </data>
+  <data name="greater_than_or_equal" xml:space="preserve">
+    <value>Büyüktür veya eşit</value>
+  </data>
+  <data name="grid_four" xml:space="preserve">
+    <value>Izgara dört</value>
+  </data>
+  <data name="grid_nine" xml:space="preserve">
+    <value>Izgara dokuz</value>
+  </data>
+  <data name="guitar" xml:space="preserve">
+    <value>Gitar</value>
+  </data>
+  <data name="hair_dryer" xml:space="preserve">
+    <value>Saç kurutucu</value>
+  </data>
+  <data name="hamburger" xml:space="preserve">
+    <value>Hamburger</value>
+  </data>
+  <data name="hammer" xml:space="preserve">
+    <value>Çekiç</value>
+  </data>
+  <data name="hand" xml:space="preserve">
+    <value>El</value>
+  </data>
+  <data name="hand_arrow_down" xml:space="preserve">
+    <value>El ok aşağı</value>
+  </data>
+  <data name="hand_arrow_up" xml:space="preserve">
+    <value>El ok yukarı</value>
+  </data>
+  <data name="hand_coins" xml:space="preserve">
+    <value>El madeni paralar</value>
+  </data>
+  <data name="hand_deposit" xml:space="preserve">
+    <value>El para yatırma</value>
+  </data>
+  <data name="hand_eye" xml:space="preserve">
+    <value>El göz</value>
+  </data>
+  <data name="hand_fist" xml:space="preserve">
+    <value>El yumruk</value>
+  </data>
+  <data name="hand_grabbing" xml:space="preserve">
+    <value>El tutma</value>
+  </data>
+  <data name="hand_heart" xml:space="preserve">
+    <value>El kalp</value>
+  </data>
+  <data name="hand_palm" xml:space="preserve">
+    <value>El palmiye</value>
+  </data>
+  <data name="hand_peace" xml:space="preserve">
+    <value>El barış</value>
+  </data>
+  <data name="hand_pointing" xml:space="preserve">
+    <value>El işaret eden</value>
+  </data>
+  <data name="hand_soap" xml:space="preserve">
+    <value>El sabun</value>
+  </data>
+  <data name="hand_swipe_left" xml:space="preserve">
+    <value>El kaydır sol</value>
+  </data>
+  <data name="hand_swipe_right" xml:space="preserve">
+    <value>El kaydır sağ</value>
+  </data>
+  <data name="hand_tap" xml:space="preserve">
+    <value>El dokun</value>
+  </data>
+  <data name="hand_waving" xml:space="preserve">
+    <value>El el sallayan</value>
+  </data>
+  <data name="hand_withdraw" xml:space="preserve">
+    <value>El para çekme</value>
+  </data>
+  <data name="handbag" xml:space="preserve">
+    <value>El çantası</value>
+  </data>
+  <data name="handbag_simple" xml:space="preserve">
+    <value>El çantası basit</value>
+  </data>
+  <data name="hands_clapping" xml:space="preserve">
+    <value>Eller alkış</value>
+  </data>
+  <data name="hands_praying" xml:space="preserve">
+    <value>Eller dua eden</value>
+  </data>
+  <data name="handshake" xml:space="preserve">
+    <value>Tokalaşma</value>
+  </data>
+  <data name="hard_drive" xml:space="preserve">
+    <value>Sabit sürücü</value>
+  </data>
+  <data name="hard_drives" xml:space="preserve">
+    <value>Sabit sürücüler</value>
+  </data>
+  <data name="hard_hat" xml:space="preserve">
+    <value>Sabit şapka</value>
+  </data>
+  <data name="hash" xml:space="preserve">
+    <value>Kare</value>
+  </data>
+  <data name="hash_straight" xml:space="preserve">
+    <value>Kare düz</value>
+  </data>
+  <data name="head_circuit" xml:space="preserve">
+    <value>Baş devre</value>
+  </data>
+  <data name="headlights" xml:space="preserve">
+    <value>Farlar</value>
+  </data>
+  <data name="headphones" xml:space="preserve">
+    <value>Kulaklık</value>
+  </data>
+  <data name="headset" xml:space="preserve">
+    <value>Kulaklık seti</value>
+  </data>
+  <data name="heart" xml:space="preserve">
+    <value>Kalp</value>
+  </data>
+  <data name="heart_break" xml:space="preserve">
+    <value>Kalp mola</value>
+  </data>
+  <data name="heart_half" xml:space="preserve">
+    <value>Kalp yarım</value>
+  </data>
+  <data name="heart_straight" xml:space="preserve">
+    <value>Kalp düz</value>
+  </data>
+  <data name="heart_straight_break" xml:space="preserve">
+    <value>Kalp düz mola</value>
+  </data>
+  <data name="heartbeat" xml:space="preserve">
+    <value>Kalp atışı</value>
+  </data>
+  <data name="hexagon" xml:space="preserve">
+    <value>Altıgen</value>
+  </data>
+  <data name="high_definition" xml:space="preserve">
+    <value>Yüksek tanım</value>
+  </data>
+  <data name="high_heel" xml:space="preserve">
+    <value>Yüksek topuk</value>
+  </data>
+  <data name="highlighter" xml:space="preserve">
+    <value>Fosforlu kalem</value>
+  </data>
+  <data name="highlighter_circle" xml:space="preserve">
+    <value>Fosforlu kalem daire</value>
+  </data>
+  <data name="hockey" xml:space="preserve">
+    <value>Hokey</value>
+  </data>
+  <data name="hoodie" xml:space="preserve">
+    <value>Kapüşonlu</value>
+  </data>
+  <data name="horse" xml:space="preserve">
+    <value>At</value>
+  </data>
+  <data name="hospital" xml:space="preserve">
+    <value>Hastane</value>
+  </data>
+  <data name="hourglass" xml:space="preserve">
+    <value>Kum saati</value>
+  </data>
+  <data name="hourglass_high" xml:space="preserve">
+    <value>Kum saati yüksek</value>
+  </data>
+  <data name="hourglass_low" xml:space="preserve">
+    <value>Kum saati düşük</value>
+  </data>
+  <data name="hourglass_medium" xml:space="preserve">
+    <value>Kum saati orta</value>
+  </data>
+  <data name="hourglass_simple" xml:space="preserve">
+    <value>Kum saati basit</value>
+  </data>
+  <data name="hourglass_simple_high" xml:space="preserve">
+    <value>Kum saati basit yüksek</value>
+  </data>
+  <data name="hourglass_simple_low" xml:space="preserve">
+    <value>Kum saati basit düşük</value>
+  </data>
+  <data name="hourglass_simple_medium" xml:space="preserve">
+    <value>Kum saati basit orta</value>
+  </data>
+  <data name="house" xml:space="preserve">
+    <value>Ev</value>
+  </data>
+  <data name="house_line" xml:space="preserve">
+    <value>Ev çizgi</value>
+  </data>
+  <data name="house_simple" xml:space="preserve">
+    <value>Ev basit</value>
+  </data>
+  <data name="hurricane" xml:space="preserve">
+    <value>Kasırga</value>
+  </data>
+  <data name="ice_cream" xml:space="preserve">
+    <value>Buz krem</value>
+  </data>
+  <data name="identification_badge" xml:space="preserve">
+    <value>Kimlik rozet</value>
+  </data>
+  <data name="identification_card" xml:space="preserve">
+    <value>Kimlik kart</value>
+  </data>
+  <data name="image" xml:space="preserve">
+    <value>Resim</value>
+  </data>
+  <data name="image_broken" xml:space="preserve">
+    <value>Resim kırık</value>
+  </data>
+  <data name="image_square" xml:space="preserve">
+    <value>Resim kare</value>
+  </data>
+  <data name="images" xml:space="preserve">
+    <value>Resimler</value>
+  </data>
+  <data name="images_square" xml:space="preserve">
+    <value>Resimler kare</value>
+  </data>
+  <data name="infinity" xml:space="preserve">
+    <value>Sonsuzluk</value>
+  </data>
+  <data name="info" xml:space="preserve">
+    <value>Bilgi</value>
+  </data>
+  <data name="instagram_logo" xml:space="preserve">
+    <value>Instagram logo</value>
+  </data>
+  <data name="intersect" xml:space="preserve">
+    <value>Kesiştir</value>
+  </data>
+  <data name="intersect_square" xml:space="preserve">
+    <value>Kesiştir kare</value>
+  </data>
+  <data name="intersect_three" xml:space="preserve">
+    <value>Kesiştir üç</value>
+  </data>
+  <data name="intersection" xml:space="preserve">
+    <value>Kesişim</value>
+  </data>
+  <data name="invoice" xml:space="preserve">
+    <value>Fatura</value>
+  </data>
+  <data name="island" xml:space="preserve">
+    <value>Ada</value>
+  </data>
+  <data name="jar" xml:space="preserve">
+    <value>Kavanoz</value>
+  </data>
+  <data name="jar_label" xml:space="preserve">
+    <value>Kavanoz etiket</value>
+  </data>
+  <data name="jeep" xml:space="preserve">
+    <value>Cip</value>
+  </data>
+  <data name="joystick" xml:space="preserve">
+    <value>Oyun kolu</value>
+  </data>
+  <data name="kanban" xml:space="preserve">
+    <value>Kanban</value>
+  </data>
+  <data name="key" xml:space="preserve">
+    <value>Anahtar</value>
+  </data>
+  <data name="key_return" xml:space="preserve">
+    <value>Anahtar dönüş</value>
+  </data>
+  <data name="keyboard" xml:space="preserve">
+    <value>Klavye</value>
+  </data>
+  <data name="keyhole" xml:space="preserve">
+    <value>Anahtar deliği</value>
+  </data>
+  <data name="knife" xml:space="preserve">
+    <value>Bıçak</value>
+  </data>
+  <data name="ladder" xml:space="preserve">
+    <value>Merdiven</value>
+  </data>
+  <data name="ladder_simple" xml:space="preserve">
+    <value>Merdiven basit</value>
+  </data>
+  <data name="lamp" xml:space="preserve">
+    <value>Lamba</value>
+  </data>
+  <data name="lamp_pendant" xml:space="preserve">
+    <value>Lamba kolye</value>
+  </data>
+  <data name="laptop" xml:space="preserve">
+    <value>Dizüstü</value>
+  </data>
+  <data name="lasso" xml:space="preserve">
+    <value>Kement</value>
+  </data>
+  <data name="lastfm_logo" xml:space="preserve">
+    <value>Lastfm logo</value>
+  </data>
+  <data name="layout" xml:space="preserve">
+    <value>Düzen</value>
+  </data>
+  <data name="leaf" xml:space="preserve">
+    <value>Yaprak</value>
+  </data>
+  <data name="lectern" xml:space="preserve">
+    <value>Kürsü</value>
+  </data>
+  <data name="lego" xml:space="preserve">
+    <value>Lego</value>
+  </data>
+  <data name="lego_smiley" xml:space="preserve">
+    <value>Lego gülen yüz</value>
+  </data>
+  <data name="less_than" xml:space="preserve">
+    <value>Küçüktür</value>
+  </data>
+  <data name="less_than_or_equal" xml:space="preserve">
+    <value>Küçüktür veya eşit</value>
+  </data>
+  <data name="letter_circle_h" xml:space="preserve">
+    <value>Harf daire h</value>
+  </data>
+  <data name="letter_circle_p" xml:space="preserve">
+    <value>Harf daire p</value>
+  </data>
+  <data name="letter_circle_v" xml:space="preserve">
+    <value>Harf daire v</value>
+  </data>
+  <data name="lifebuoy" xml:space="preserve">
+    <value>Can simidi</value>
+  </data>
+  <data name="lightbulb" xml:space="preserve">
+    <value>Ampul</value>
+  </data>
+  <data name="lightbulb_filament" xml:space="preserve">
+    <value>Ampul filaman</value>
+  </data>
+  <data name="lighthouse" xml:space="preserve">
+    <value>Deniz feneri</value>
+  </data>
+  <data name="lightning" xml:space="preserve">
+    <value>Şimşek</value>
+  </data>
+  <data name="lightning_a" xml:space="preserve">
+    <value>Şimşek a</value>
+  </data>
+  <data name="lightning_slash" xml:space="preserve">
+    <value>Şimşek eğik çizgi</value>
+  </data>
+  <data name="line_segment" xml:space="preserve">
+    <value>Çizgi bölüm</value>
+  </data>
+  <data name="line_segments" xml:space="preserve">
+    <value>Çizgi bölümler</value>
+  </data>
+  <data name="line_vertical" xml:space="preserve">
+    <value>Çizgi dikey</value>
+  </data>
+  <data name="link" xml:space="preserve">
+    <value>Bağlantı</value>
+  </data>
+  <data name="link_break" xml:space="preserve">
+    <value>Bağlantı mola</value>
+  </data>
+  <data name="link_simple" xml:space="preserve">
+    <value>Bağlantı basit</value>
+  </data>
+  <data name="link_simple_break" xml:space="preserve">
+    <value>Bağlantı basit mola</value>
+  </data>
+  <data name="link_simple_horizontal" xml:space="preserve">
+    <value>Bağlantı basit yatay</value>
+  </data>
+  <data name="link_simple_horizontal_break" xml:space="preserve">
+    <value>Bağlantı basit yatay mola</value>
+  </data>
+  <data name="linkedin_logo" xml:space="preserve">
+    <value>Linkedin logo</value>
+  </data>
+  <data name="linktree_logo" xml:space="preserve">
+    <value>Linktree logo</value>
+  </data>
+  <data name="linux_logo" xml:space="preserve">
+    <value>Linux logo</value>
+  </data>
+  <data name="list" xml:space="preserve">
+    <value>Liste</value>
+  </data>
+  <data name="list_bullets" xml:space="preserve">
+    <value>Liste madde işaretleri</value>
+  </data>
+  <data name="list_checks" xml:space="preserve">
+    <value>Liste onaylar</value>
+  </data>
+  <data name="list_dashes" xml:space="preserve">
+    <value>Liste tireler</value>
+  </data>
+  <data name="list_heart" xml:space="preserve">
+    <value>Liste kalp</value>
+  </data>
+  <data name="list_magnifying_glass" xml:space="preserve">
+    <value>Liste büyüteç bardak</value>
+  </data>
+  <data name="list_numbers" xml:space="preserve">
+    <value>Liste sayılar</value>
+  </data>
+  <data name="list_plus" xml:space="preserve">
+    <value>Liste artı</value>
+  </data>
+  <data name="list_star" xml:space="preserve">
+    <value>Liste yıldız</value>
+  </data>
+  <data name="lock" xml:space="preserve">
+    <value>Kilit</value>
+  </data>
+  <data name="lock_key" xml:space="preserve">
+    <value>Kilit anahtar</value>
+  </data>
+  <data name="lock_key_open" xml:space="preserve">
+    <value>Kilit anahtar açık</value>
+  </data>
+  <data name="lock_laminated" xml:space="preserve">
+    <value>Kilit lamine</value>
+  </data>
+  <data name="lock_laminated_open" xml:space="preserve">
+    <value>Kilit lamine açık</value>
+  </data>
+  <data name="lock_open" xml:space="preserve">
+    <value>Kilit açık</value>
+  </data>
+  <data name="lock_simple" xml:space="preserve">
+    <value>Kilit basit</value>
+  </data>
+  <data name="lock_simple_open" xml:space="preserve">
+    <value>Kilit basit açık</value>
+  </data>
+  <data name="lockers" xml:space="preserve">
+    <value>Dolaplar</value>
+  </data>
+  <data name="log" xml:space="preserve">
+    <value>Günlük</value>
+  </data>
+  <data name="magic_wand" xml:space="preserve">
+    <value>Sihir değnek</value>
+  </data>
+  <data name="magnet" xml:space="preserve">
+    <value>Mıknatıs</value>
+  </data>
+  <data name="magnet_straight" xml:space="preserve">
+    <value>Mıknatıs düz</value>
+  </data>
+  <data name="magnifying_glass" xml:space="preserve">
+    <value>Büyüteç bardak</value>
+  </data>
+  <data name="magnifying_glass_minus" xml:space="preserve">
+    <value>Büyüteç bardak eksi</value>
+  </data>
+  <data name="magnifying_glass_plus" xml:space="preserve">
+    <value>Büyüteç bardak artı</value>
+  </data>
+  <data name="mailbox" xml:space="preserve">
+    <value>Posta kutusu</value>
+  </data>
+  <data name="map_pin" xml:space="preserve">
+    <value>Harita raptiye</value>
+  </data>
+  <data name="map_pin_area" xml:space="preserve">
+    <value>Harita raptiye alan</value>
+  </data>
+  <data name="map_pin_line" xml:space="preserve">
+    <value>Harita raptiye çizgi</value>
+  </data>
+  <data name="map_pin_plus" xml:space="preserve">
+    <value>Harita raptiye artı</value>
+  </data>
+  <data name="map_pin_simple" xml:space="preserve">
+    <value>Harita raptiye basit</value>
+  </data>
+  <data name="map_pin_simple_area" xml:space="preserve">
+    <value>Harita raptiye basit alan</value>
+  </data>
+  <data name="map_pin_simple_line" xml:space="preserve">
+    <value>Harita raptiye basit çizgi</value>
+  </data>
+  <data name="map_trifold" xml:space="preserve">
+    <value>Harita üç katlı</value>
+  </data>
+  <data name="markdown_logo" xml:space="preserve">
+    <value>Markdown logo</value>
+  </data>
+  <data name="marker_circle" xml:space="preserve">
+    <value>Işaretçi daire</value>
+  </data>
+  <data name="martini" xml:space="preserve">
+    <value>Martini</value>
+  </data>
+  <data name="mask_happy" xml:space="preserve">
+    <value>Maske mutlu</value>
+  </data>
+  <data name="mask_sad" xml:space="preserve">
+    <value>Maske üzgün</value>
+  </data>
+  <data name="mastodon_logo" xml:space="preserve">
+    <value>Mastodon logo</value>
+  </data>
+  <data name="math_operations" xml:space="preserve">
+    <value>Matematik işlemler</value>
+  </data>
+  <data name="matrix_logo" xml:space="preserve">
+    <value>Matris logo</value>
+  </data>
+  <data name="medal" xml:space="preserve">
+    <value>Madalya</value>
+  </data>
+  <data name="medal_military" xml:space="preserve">
+    <value>Madalya askeri</value>
+  </data>
+  <data name="medium_logo" xml:space="preserve">
+    <value>Orta logo</value>
+  </data>
+  <data name="megaphone" xml:space="preserve">
+    <value>Megafon</value>
+  </data>
+  <data name="megaphone_simple" xml:space="preserve">
+    <value>Megafon basit</value>
+  </data>
+  <data name="member_of" xml:space="preserve">
+    <value>Üye</value>
+  </data>
+  <data name="memory" xml:space="preserve">
+    <value>Bellek</value>
+  </data>
+  <data name="messenger_logo" xml:space="preserve">
+    <value>Messenger logo</value>
+  </data>
+  <data name="meta_logo" xml:space="preserve">
+    <value>Meta logo</value>
+  </data>
+  <data name="meteor" xml:space="preserve">
+    <value>Meteor</value>
+  </data>
+  <data name="metronome" xml:space="preserve">
+    <value>Metronom</value>
+  </data>
+  <data name="microphone" xml:space="preserve">
+    <value>Mikrofon</value>
+  </data>
+  <data name="microphone_slash" xml:space="preserve">
+    <value>Mikrofon eğik çizgi</value>
+  </data>
+  <data name="microphone_stage" xml:space="preserve">
+    <value>Mikrofon sahne</value>
+  </data>
+  <data name="microscope" xml:space="preserve">
+    <value>Mikroskop</value>
+  </data>
+  <data name="microsoft_excel_logo" xml:space="preserve">
+    <value>Microsoft excel logo</value>
+  </data>
+  <data name="microsoft_outlook_logo" xml:space="preserve">
+    <value>Microsoft outlook logo</value>
+  </data>
+  <data name="microsoft_powerpoint_logo" xml:space="preserve">
+    <value>Microsoft powerpoint logo</value>
+  </data>
+  <data name="microsoft_teams_logo" xml:space="preserve">
+    <value>Microsoft takımlar logo</value>
+  </data>
+  <data name="microsoft_word_logo" xml:space="preserve">
+    <value>Microsoft word logo</value>
+  </data>
+  <data name="minus" xml:space="preserve">
+    <value>Eksi</value>
+  </data>
+  <data name="minus_circle" xml:space="preserve">
+    <value>Eksi daire</value>
+  </data>
+  <data name="minus_square" xml:space="preserve">
+    <value>Eksi kare</value>
+  </data>
+  <data name="money" xml:space="preserve">
+    <value>Para</value>
+  </data>
+  <data name="money_wavy" xml:space="preserve">
+    <value>Para dalgalı</value>
+  </data>
+  <data name="monitor" xml:space="preserve">
+    <value>Monitör</value>
+  </data>
+  <data name="monitor_arrow_up" xml:space="preserve">
+    <value>Monitör ok yukarı</value>
+  </data>
+  <data name="monitor_play" xml:space="preserve">
+    <value>Monitör oynat</value>
+  </data>
+  <data name="moon" xml:space="preserve">
+    <value>Ay</value>
+  </data>
+  <data name="moon_stars" xml:space="preserve">
+    <value>Ay yıldızlar</value>
+  </data>
+  <data name="moped" xml:space="preserve">
+    <value>Moped</value>
+  </data>
+  <data name="moped_front" xml:space="preserve">
+    <value>Moped ön</value>
+  </data>
+  <data name="mosque" xml:space="preserve">
+    <value>Cami</value>
+  </data>
+  <data name="motorcycle" xml:space="preserve">
+    <value>Motosiklet</value>
+  </data>
+  <data name="mountains" xml:space="preserve">
+    <value>Dağlar</value>
+  </data>
+  <data name="mouse" xml:space="preserve">
+    <value>Fare</value>
+  </data>
+  <data name="mouse_left_click" xml:space="preserve">
+    <value>Fare sol tıklama</value>
+  </data>
+  <data name="mouse_middle_click" xml:space="preserve">
+    <value>Fare orta tıklama</value>
+  </data>
+  <data name="mouse_right_click" xml:space="preserve">
+    <value>Fare sağ tıklama</value>
+  </data>
+  <data name="mouse_scroll" xml:space="preserve">
+    <value>Fare parşömen</value>
+  </data>
+  <data name="mouse_simple" xml:space="preserve">
+    <value>Fare basit</value>
+  </data>
+  <data name="music_note" xml:space="preserve">
+    <value>Müzik not</value>
+  </data>
+  <data name="music_note_simple" xml:space="preserve">
+    <value>Müzik not basit</value>
+  </data>
+  <data name="music_notes" xml:space="preserve">
+    <value>Müzik notlar</value>
+  </data>
+  <data name="music_notes_minus" xml:space="preserve">
+    <value>Müzik notlar eksi</value>
+  </data>
+  <data name="music_notes_plus" xml:space="preserve">
+    <value>Müzik notlar artı</value>
+  </data>
+  <data name="music_notes_simple" xml:space="preserve">
+    <value>Müzik notlar basit</value>
+  </data>
+  <data name="navigation_arrow" xml:space="preserve">
+    <value>Navigasyon ok</value>
+  </data>
+  <data name="needle" xml:space="preserve">
+    <value>Iğne</value>
+  </data>
+  <data name="network" xml:space="preserve">
+    <value>Ağ</value>
+  </data>
+  <data name="network_slash" xml:space="preserve">
+    <value>Ağ eğik çizgi</value>
+  </data>
+  <data name="network_x" xml:space="preserve">
+    <value>Ağ x</value>
+  </data>
+  <data name="newspaper" xml:space="preserve">
+    <value>Gazete</value>
+  </data>
+  <data name="newspaper_clipping" xml:space="preserve">
+    <value>Gazete kırpma</value>
+  </data>
+  <data name="not_equals" xml:space="preserve">
+    <value>Değil eşittir</value>
+  </data>
+  <data name="not_member_of" xml:space="preserve">
+    <value>Değil üye</value>
+  </data>
+  <data name="not_subset_of" xml:space="preserve">
+    <value>Değil alt küme</value>
+  </data>
+  <data name="not_superset_of" xml:space="preserve">
+    <value>Değil üst küme</value>
+  </data>
+  <data name="notches" xml:space="preserve">
+    <value>Çentikler</value>
+  </data>
+  <data name="note" xml:space="preserve">
+    <value>Not</value>
+  </data>
+  <data name="note_blank" xml:space="preserve">
+    <value>Not boş</value>
+  </data>
+  <data name="note_pencil" xml:space="preserve">
+    <value>Not kalem</value>
+  </data>
+  <data name="notebook" xml:space="preserve">
+    <value>Defter</value>
+  </data>
+  <data name="notepad" xml:space="preserve">
+    <value>Not defteri</value>
+  </data>
+  <data name="notification" xml:space="preserve">
+    <value>Bildirim</value>
+  </data>
+  <data name="notion_logo" xml:space="preserve">
+    <value>Notion logo</value>
+  </data>
+  <data name="nuclear_plant" xml:space="preserve">
+    <value>Nükleer bitki</value>
+  </data>
+  <data name="number_circle_eight" xml:space="preserve">
+    <value>Sayı daire sekiz</value>
+  </data>
+  <data name="number_circle_five" xml:space="preserve">
+    <value>Sayı daire beş</value>
+  </data>
+  <data name="number_circle_four" xml:space="preserve">
+    <value>Sayı daire dört</value>
+  </data>
+  <data name="number_circle_nine" xml:space="preserve">
+    <value>Sayı daire dokuz</value>
+  </data>
+  <data name="number_circle_one" xml:space="preserve">
+    <value>Sayı daire bir</value>
+  </data>
+  <data name="number_circle_seven" xml:space="preserve">
+    <value>Sayı daire yedi</value>
+  </data>
+  <data name="number_circle_six" xml:space="preserve">
+    <value>Sayı daire altı</value>
+  </data>
+  <data name="number_circle_three" xml:space="preserve">
+    <value>Sayı daire üç</value>
+  </data>
+  <data name="number_circle_two" xml:space="preserve">
+    <value>Sayı daire iki</value>
+  </data>
+  <data name="number_circle_zero" xml:space="preserve">
+    <value>Sayı daire sıfır</value>
+  </data>
+  <data name="number_eight" xml:space="preserve">
+    <value>Sayı sekiz</value>
+  </data>
+  <data name="number_five" xml:space="preserve">
+    <value>Sayı beş</value>
+  </data>
+  <data name="number_four" xml:space="preserve">
+    <value>Sayı dört</value>
+  </data>
+  <data name="number_nine" xml:space="preserve">
+    <value>Sayı dokuz</value>
+  </data>
+  <data name="number_one" xml:space="preserve">
+    <value>Sayı bir</value>
+  </data>
+  <data name="number_seven" xml:space="preserve">
+    <value>Sayı yedi</value>
+  </data>
+  <data name="number_six" xml:space="preserve">
+    <value>Sayı altı</value>
+  </data>
+  <data name="number_square_eight" xml:space="preserve">
+    <value>Sayı kare sekiz</value>
+  </data>
+  <data name="number_square_five" xml:space="preserve">
+    <value>Sayı kare beş</value>
+  </data>
+  <data name="number_square_four" xml:space="preserve">
+    <value>Sayı kare dört</value>
+  </data>
+  <data name="number_square_nine" xml:space="preserve">
+    <value>Sayı kare dokuz</value>
+  </data>
+  <data name="number_square_one" xml:space="preserve">
+    <value>Sayı kare bir</value>
+  </data>
+  <data name="number_square_seven" xml:space="preserve">
+    <value>Sayı kare yedi</value>
+  </data>
+  <data name="number_square_six" xml:space="preserve">
+    <value>Sayı kare altı</value>
+  </data>
+  <data name="number_square_three" xml:space="preserve">
+    <value>Sayı kare üç</value>
+  </data>
+  <data name="number_square_two" xml:space="preserve">
+    <value>Sayı kare iki</value>
+  </data>
+  <data name="number_square_zero" xml:space="preserve">
+    <value>Sayı kare sıfır</value>
+  </data>
+  <data name="number_three" xml:space="preserve">
+    <value>Sayı üç</value>
+  </data>
+  <data name="number_two" xml:space="preserve">
+    <value>Sayı iki</value>
+  </data>
+  <data name="number_zero" xml:space="preserve">
+    <value>Sayı sıfır</value>
+  </data>
+  <data name="numpad" xml:space="preserve">
+    <value>Sayı tuş takımı</value>
+  </data>
+  <data name="nut" xml:space="preserve">
+    <value>Somun</value>
+  </data>
+  <data name="ny_times_logo" xml:space="preserve">
+    <value>Ny çarpı logo</value>
+  </data>
+  <data name="octagon" xml:space="preserve">
+    <value>Sekizgen</value>
+  </data>
+  <data name="office_chair" xml:space="preserve">
+    <value>Ofis sandalye</value>
+  </data>
+  <data name="onigiri" xml:space="preserve">
+    <value>Onigiri</value>
+  </data>
+  <data name="open_ai_logo" xml:space="preserve">
+    <value>Açık yapay zeka logo</value>
+  </data>
+  <data name="option" xml:space="preserve">
+    <value>Seçenek</value>
+  </data>
+  <data name="orange" xml:space="preserve">
+    <value>Portakal</value>
+  </data>
+  <data name="orange_slice" xml:space="preserve">
+    <value>Portakal dilim</value>
+  </data>
+  <data name="oven" xml:space="preserve">
+    <value>Fırın</value>
+  </data>
+  <data name="package" xml:space="preserve">
+    <value>Paket</value>
+  </data>
+  <data name="paint_brush" xml:space="preserve">
+    <value>Boya fırça</value>
+  </data>
+  <data name="paint_brush_broad" xml:space="preserve">
+    <value>Boya fırça geniş</value>
+  </data>
+  <data name="paint_brush_household" xml:space="preserve">
+    <value>Boya fırça ev</value>
+  </data>
+  <data name="paint_bucket" xml:space="preserve">
+    <value>Boya kova</value>
+  </data>
+  <data name="paint_roller" xml:space="preserve">
+    <value>Boya silindir</value>
+  </data>
+  <data name="palette" xml:space="preserve">
+    <value>Palet</value>
+  </data>
+  <data name="panorama" xml:space="preserve">
+    <value>Panorama</value>
+  </data>
+  <data name="pants" xml:space="preserve">
+    <value>Pantolon</value>
+  </data>
+  <data name="paper_plane" xml:space="preserve">
+    <value>Kâğıt uçak</value>
+  </data>
+  <data name="paper_plane_right" xml:space="preserve">
+    <value>Kâğıt uçak sağ</value>
+  </data>
+  <data name="paper_plane_tilt" xml:space="preserve">
+    <value>Kâğıt uçak eğim</value>
+  </data>
+  <data name="paperclip" xml:space="preserve">
+    <value>Ataç</value>
+  </data>
+  <data name="paperclip_horizontal" xml:space="preserve">
+    <value>Ataç yatay</value>
+  </data>
+  <data name="parachute" xml:space="preserve">
+    <value>Paraşüt</value>
+  </data>
+  <data name="paragraph" xml:space="preserve">
+    <value>Paragraf</value>
+  </data>
+  <data name="parallelogram" xml:space="preserve">
+    <value>Paralelkenar</value>
+  </data>
+  <data name="park" xml:space="preserve">
+    <value>Park</value>
+  </data>
+  <data name="password" xml:space="preserve">
+    <value>Şifre</value>
+  </data>
+  <data name="path" xml:space="preserve">
+    <value>Yol</value>
+  </data>
+  <data name="patreon_logo" xml:space="preserve">
+    <value>Patreon logo</value>
+  </data>
+  <data name="pause" xml:space="preserve">
+    <value>Duraklat</value>
+  </data>
+  <data name="pause_circle" xml:space="preserve">
+    <value>Duraklat daire</value>
+  </data>
+  <data name="paw_print" xml:space="preserve">
+    <value>Pati yazdır</value>
+  </data>
+  <data name="paypal_logo" xml:space="preserve">
+    <value>Paypal logo</value>
+  </data>
+  <data name="peace" xml:space="preserve">
+    <value>Barış</value>
+  </data>
+  <data name="pen" xml:space="preserve">
+    <value>Kalem</value>
+  </data>
+  <data name="pen_nib" xml:space="preserve">
+    <value>Kalem uç</value>
+  </data>
+  <data name="pen_nib_straight" xml:space="preserve">
+    <value>Kalem uç düz</value>
+  </data>
+  <data name="pencil" xml:space="preserve">
+    <value>Kalem</value>
+  </data>
+  <data name="pencil_circle" xml:space="preserve">
+    <value>Kalem daire</value>
+  </data>
+  <data name="pencil_line" xml:space="preserve">
+    <value>Kalem çizgi</value>
+  </data>
+  <data name="pencil_ruler" xml:space="preserve">
+    <value>Kalem cetvel</value>
+  </data>
+  <data name="pencil_simple" xml:space="preserve">
+    <value>Kalem basit</value>
+  </data>
+  <data name="pencil_simple_line" xml:space="preserve">
+    <value>Kalem basit çizgi</value>
+  </data>
+  <data name="pencil_simple_slash" xml:space="preserve">
+    <value>Kalem basit eğik çizgi</value>
+  </data>
+  <data name="pencil_slash" xml:space="preserve">
+    <value>Kalem eğik çizgi</value>
+  </data>
+  <data name="pentagon" xml:space="preserve">
+    <value>Beşgen</value>
+  </data>
+  <data name="pentagram" xml:space="preserve">
+    <value>Pentagram</value>
+  </data>
+  <data name="pepper" xml:space="preserve">
+    <value>Biber</value>
+  </data>
+  <data name="percent" xml:space="preserve">
+    <value>Yüzde</value>
+  </data>
+  <data name="person" xml:space="preserve">
+    <value>Kişi</value>
+  </data>
+  <data name="person_arms_spread" xml:space="preserve">
+    <value>Kişi kollar yayılım</value>
+  </data>
+  <data name="person_simple" xml:space="preserve">
+    <value>Kişi basit</value>
+  </data>
+  <data name="person_simple_bike" xml:space="preserve">
+    <value>Kişi basit bisiklet</value>
+  </data>
+  <data name="person_simple_circle" xml:space="preserve">
+    <value>Kişi basit daire</value>
+  </data>
+  <data name="person_simple_hike" xml:space="preserve">
+    <value>Kişi basit yürüyüş</value>
+  </data>
+  <data name="person_simple_run" xml:space="preserve">
+    <value>Kişi basit koşu</value>
+  </data>
+  <data name="person_simple_ski" xml:space="preserve">
+    <value>Kişi basit kayak</value>
+  </data>
+  <data name="person_simple_snowboard" xml:space="preserve">
+    <value>Kişi basit snowboard</value>
+  </data>
+  <data name="person_simple_swim" xml:space="preserve">
+    <value>Kişi basit yüzme</value>
+  </data>
+  <data name="person_simple_tai_chi" xml:space="preserve">
+    <value>Kişi basit tai chi</value>
+  </data>
+  <data name="person_simple_throw" xml:space="preserve">
+    <value>Kişi basit at</value>
+  </data>
+  <data name="person_simple_walk" xml:space="preserve">
+    <value>Kişi basit yürüme</value>
+  </data>
+  <data name="perspective" xml:space="preserve">
+    <value>Perspektif</value>
+  </data>
+  <data name="phone" xml:space="preserve">
+    <value>Telefon</value>
+  </data>
+  <data name="phone_call" xml:space="preserve">
+    <value>Telefon arama</value>
+  </data>
+  <data name="phone_disconnect" xml:space="preserve">
+    <value>Telefon bağlantıyı kes</value>
+  </data>
+  <data name="phone_incoming" xml:space="preserve">
+    <value>Telefon gelen</value>
+  </data>
+  <data name="phone_list" xml:space="preserve">
+    <value>Telefon liste</value>
+  </data>
+  <data name="phone_outgoing" xml:space="preserve">
+    <value>Telefon giden</value>
+  </data>
+  <data name="phone_pause" xml:space="preserve">
+    <value>Telefon duraklat</value>
+  </data>
+  <data name="phone_plus" xml:space="preserve">
+    <value>Telefon artı</value>
+  </data>
+  <data name="phone_slash" xml:space="preserve">
+    <value>Telefon eğik çizgi</value>
+  </data>
+  <data name="phone_transfer" xml:space="preserve">
+    <value>Telefon aktarım</value>
+  </data>
+  <data name="phone_x" xml:space="preserve">
+    <value>Telefon x</value>
+  </data>
+  <data name="phosphor_logo" xml:space="preserve">
+    <value>Phosphor logo</value>
+  </data>
+  <data name="pi" xml:space="preserve">
+    <value>Pi</value>
+  </data>
+  <data name="piano_keys" xml:space="preserve">
+    <value>Piyano anahtarlar</value>
+  </data>
+  <data name="picnic_table" xml:space="preserve">
+    <value>Piknik tablo</value>
+  </data>
+  <data name="picture_in_picture" xml:space="preserve">
+    <value>Resim içeri resim</value>
+  </data>
+  <data name="piggy_bank" xml:space="preserve">
+    <value>Kumbara banka</value>
+  </data>
+  <data name="pill" xml:space="preserve">
+    <value>Hap</value>
+  </data>
+  <data name="ping_pong" xml:space="preserve">
+    <value>Ping pong</value>
+  </data>
+  <data name="pint_glass" xml:space="preserve">
+    <value>Bira bardağı bardak</value>
+  </data>
+  <data name="pinterest_logo" xml:space="preserve">
+    <value>Pinterest logo</value>
+  </data>
+  <data name="pinwheel" xml:space="preserve">
+    <value>Fırıldak</value>
+  </data>
+  <data name="pipe" xml:space="preserve">
+    <value>Boru</value>
+  </data>
+  <data name="pipe_wrench" xml:space="preserve">
+    <value>Boru anahtar</value>
+  </data>
+  <data name="pix_logo" xml:space="preserve">
+    <value>Pix logo</value>
+  </data>
+  <data name="pizza" xml:space="preserve">
+    <value>Pizza</value>
+  </data>
+  <data name="placeholder" xml:space="preserve">
+    <value>Yer tutucu</value>
+  </data>
+  <data name="planet" xml:space="preserve">
+    <value>Gezegen</value>
+  </data>
+  <data name="plant" xml:space="preserve">
+    <value>Bitki</value>
+  </data>
+  <data name="play" xml:space="preserve">
+    <value>Oynat</value>
+  </data>
+  <data name="play_circle" xml:space="preserve">
+    <value>Oynat daire</value>
+  </data>
+  <data name="play_pause" xml:space="preserve">
+    <value>Oynat duraklat</value>
+  </data>
+  <data name="playlist" xml:space="preserve">
+    <value>Çalma listesi</value>
+  </data>
+  <data name="plug" xml:space="preserve">
+    <value>Fiş</value>
+  </data>
+  <data name="plug_charging" xml:space="preserve">
+    <value>Fiş şarj</value>
+  </data>
+  <data name="plugs" xml:space="preserve">
+    <value>Fişler</value>
+  </data>
+  <data name="plugs_connected" xml:space="preserve">
+    <value>Fişler bağlı</value>
+  </data>
+  <data name="plus" xml:space="preserve">
+    <value>Artı</value>
+  </data>
+  <data name="plus_circle" xml:space="preserve">
+    <value>Artı daire</value>
+  </data>
+  <data name="plus_minus" xml:space="preserve">
+    <value>Artı eksi</value>
+  </data>
+  <data name="plus_square" xml:space="preserve">
+    <value>Artı kare</value>
+  </data>
+  <data name="poker_chip" xml:space="preserve">
+    <value>Poker çip</value>
+  </data>
+  <data name="police_car" xml:space="preserve">
+    <value>Polis araba</value>
+  </data>
+  <data name="polygon" xml:space="preserve">
+    <value>Çokgen</value>
+  </data>
+  <data name="popcorn" xml:space="preserve">
+    <value>Patlamış mısır</value>
+  </data>
+  <data name="popsicle" xml:space="preserve">
+    <value>Meyveli buz</value>
+  </data>
+  <data name="potted_plant" xml:space="preserve">
+    <value>Saksı bitki</value>
+  </data>
+  <data name="power" xml:space="preserve">
+    <value>Güç</value>
+  </data>
+  <data name="prescription" xml:space="preserve">
+    <value>Reçete</value>
+  </data>
+  <data name="presentation" xml:space="preserve">
+    <value>Sunum</value>
+  </data>
+  <data name="presentation_chart" xml:space="preserve">
+    <value>Sunum grafik</value>
+  </data>
+  <data name="printer" xml:space="preserve">
+    <value>Yazıcı</value>
+  </data>
+  <data name="prohibit" xml:space="preserve">
+    <value>Yasak</value>
+  </data>
+  <data name="prohibit_inset" xml:space="preserve">
+    <value>Yasak iç</value>
+  </data>
+  <data name="projector_screen" xml:space="preserve">
+    <value>Projektör ekran</value>
+  </data>
+  <data name="projector_screen_chart" xml:space="preserve">
+    <value>Projektör ekran grafik</value>
+  </data>
+  <data name="pulse" xml:space="preserve">
+    <value>Nabız</value>
+  </data>
+  <data name="push_pin" xml:space="preserve">
+    <value>It raptiye</value>
+  </data>
+  <data name="push_pin_simple" xml:space="preserve">
+    <value>It raptiye basit</value>
+  </data>
+  <data name="push_pin_simple_slash" xml:space="preserve">
+    <value>It raptiye basit eğik çizgi</value>
+  </data>
+  <data name="push_pin_slash" xml:space="preserve">
+    <value>It raptiye eğik çizgi</value>
+  </data>
+  <data name="puzzle_piece" xml:space="preserve">
+    <value>Bulmaca parça</value>
+  </data>
+  <data name="qr_code" xml:space="preserve">
+    <value>Qr kod</value>
+  </data>
+  <data name="question" xml:space="preserve">
+    <value>Soru</value>
+  </data>
+  <data name="question_mark" xml:space="preserve">
+    <value>Soru işaret</value>
+  </data>
+  <data name="queue" xml:space="preserve">
+    <value>Kuyruk</value>
+  </data>
+  <data name="quotes" xml:space="preserve">
+    <value>Tırnak</value>
+  </data>
+  <data name="rabbit" xml:space="preserve">
+    <value>Tavşan</value>
+  </data>
+  <data name="racquet" xml:space="preserve">
+    <value>Raket</value>
+  </data>
+  <data name="radical" xml:space="preserve">
+    <value>Kök</value>
+  </data>
+  <data name="radio" xml:space="preserve">
+    <value>Radyo</value>
+  </data>
+  <data name="radio_button" xml:space="preserve">
+    <value>Radyo düğme</value>
+  </data>
+  <data name="radioactive" xml:space="preserve">
+    <value>Radyoaktif</value>
+  </data>
+  <data name="rainbow" xml:space="preserve">
+    <value>Gökkuşağı</value>
+  </data>
+  <data name="rainbow_cloud" xml:space="preserve">
+    <value>Gökkuşağı bulut</value>
+  </data>
+  <data name="ranking" xml:space="preserve">
+    <value>Sıralama</value>
+  </data>
+  <data name="read_cv_logo" xml:space="preserve">
+    <value>Okundu cv logo</value>
+  </data>
+  <data name="receipt" xml:space="preserve">
+    <value>Fiş</value>
+  </data>
+  <data name="receipt_x" xml:space="preserve">
+    <value>Fiş x</value>
+  </data>
+  <data name="record" xml:space="preserve">
+    <value>Kaydet</value>
+  </data>
+  <data name="rectangle" xml:space="preserve">
+    <value>Dikdörtgen</value>
+  </data>
+  <data name="rectangle_dashed" xml:space="preserve">
+    <value>Dikdörtgen kesik çizgili</value>
+  </data>
+  <data name="recycle" xml:space="preserve">
+    <value>Geri dönüşüm</value>
+  </data>
+  <data name="reddit_logo" xml:space="preserve">
+    <value>Reddit logo</value>
+  </data>
+  <data name="repeat" xml:space="preserve">
+    <value>Tekrarla</value>
+  </data>
+  <data name="repeat_once" xml:space="preserve">
+    <value>Tekrarla bir kez</value>
+  </data>
+  <data name="replit_logo" xml:space="preserve">
+    <value>Replit logo</value>
+  </data>
+  <data name="resize" xml:space="preserve">
+    <value>Yeniden boyutlandır</value>
+  </data>
+  <data name="rewind" xml:space="preserve">
+    <value>Geri sar</value>
+  </data>
+  <data name="rewind_circle" xml:space="preserve">
+    <value>Geri sar daire</value>
+  </data>
+  <data name="road_horizon" xml:space="preserve">
+    <value>Yol ufuk</value>
+  </data>
+  <data name="robot" xml:space="preserve">
+    <value>Robot</value>
+  </data>
+  <data name="rocket" xml:space="preserve">
+    <value>Roket</value>
+  </data>
+  <data name="rocket_launch" xml:space="preserve">
+    <value>Roket fırlatma</value>
+  </data>
+  <data name="rows" xml:space="preserve">
+    <value>Satırlar</value>
+  </data>
+  <data name="rows_plus_bottom" xml:space="preserve">
+    <value>Satırlar artı alt</value>
+  </data>
+  <data name="rows_plus_top" xml:space="preserve">
+    <value>Satırlar artı üst</value>
+  </data>
+  <data name="rss" xml:space="preserve">
+    <value>Rss</value>
+  </data>
+  <data name="rss_simple" xml:space="preserve">
+    <value>Rss basit</value>
+  </data>
+  <data name="rug" xml:space="preserve">
+    <value>Kilim</value>
+  </data>
+  <data name="ruler" xml:space="preserve">
+    <value>Cetvel</value>
+  </data>
+  <data name="sailboat" xml:space="preserve">
+    <value>Yelkenli</value>
+  </data>
+  <data name="scales" xml:space="preserve">
+    <value>Terazi</value>
+  </data>
+  <data name="scan" xml:space="preserve">
+    <value>Tara</value>
+  </data>
+  <data name="scan_smiley" xml:space="preserve">
+    <value>Tara gülen yüz</value>
+  </data>
+  <data name="scissors" xml:space="preserve">
+    <value>Makas</value>
+  </data>
+  <data name="scooter" xml:space="preserve">
+    <value>Scooter</value>
+  </data>
+  <data name="screencast" xml:space="preserve">
+    <value>Ekran kaydı</value>
+  </data>
+  <data name="screwdriver" xml:space="preserve">
+    <value>Tornavida</value>
+  </data>
+  <data name="scribble" xml:space="preserve">
+    <value>Karalama</value>
+  </data>
+  <data name="scribble_loop" xml:space="preserve">
+    <value>Karalama döngü</value>
+  </data>
+  <data name="scroll" xml:space="preserve">
+    <value>Parşömen</value>
+  </data>
+  <data name="seal" xml:space="preserve">
+    <value>Mühür</value>
+  </data>
+  <data name="seal_check" xml:space="preserve">
+    <value>Mühür onay</value>
+  </data>
+  <data name="seal_percent" xml:space="preserve">
+    <value>Mühür yüzde</value>
+  </data>
+  <data name="seal_question" xml:space="preserve">
+    <value>Mühür soru</value>
+  </data>
+  <data name="seal_warning" xml:space="preserve">
+    <value>Mühür uyarı</value>
+  </data>
+  <data name="seat" xml:space="preserve">
+    <value>Koltuk</value>
+  </data>
+  <data name="seatbelt" xml:space="preserve">
+    <value>Emniyet kemeri</value>
+  </data>
+  <data name="security_camera" xml:space="preserve">
+    <value>Güvenlik kamera</value>
+  </data>
+  <data name="selection" xml:space="preserve">
+    <value>Seçim</value>
+  </data>
+  <data name="selection_all" xml:space="preserve">
+    <value>Seçim tümü</value>
+  </data>
+  <data name="selection_background" xml:space="preserve">
+    <value>Seçim arka plan</value>
+  </data>
+  <data name="selection_foreground" xml:space="preserve">
+    <value>Seçim ön plan</value>
+  </data>
+  <data name="selection_inverse" xml:space="preserve">
+    <value>Seçim ters</value>
+  </data>
+  <data name="selection_plus" xml:space="preserve">
+    <value>Seçim artı</value>
+  </data>
+  <data name="selection_slash" xml:space="preserve">
+    <value>Seçim eğik çizgi</value>
+  </data>
+  <data name="shapes" xml:space="preserve">
+    <value>Şekiller</value>
+  </data>
+  <data name="share" xml:space="preserve">
+    <value>Paylaş</value>
+  </data>
+  <data name="share_fat" xml:space="preserve">
+    <value>Paylaş kalın</value>
+  </data>
+  <data name="share_network" xml:space="preserve">
+    <value>Paylaş ağ</value>
+  </data>
+  <data name="shield" xml:space="preserve">
+    <value>Kalkan</value>
+  </data>
+  <data name="shield_check" xml:space="preserve">
+    <value>Kalkan onay</value>
+  </data>
+  <data name="shield_checkered" xml:space="preserve">
+    <value>Kalkan damalı</value>
+  </data>
+  <data name="shield_chevron" xml:space="preserve">
+    <value>Kalkan köşeli ok</value>
+  </data>
+  <data name="shield_plus" xml:space="preserve">
+    <value>Kalkan artı</value>
+  </data>
+  <data name="shield_slash" xml:space="preserve">
+    <value>Kalkan eğik çizgi</value>
+  </data>
+  <data name="shield_star" xml:space="preserve">
+    <value>Kalkan yıldız</value>
+  </data>
+  <data name="shield_warning" xml:space="preserve">
+    <value>Kalkan uyarı</value>
+  </data>
+  <data name="shipping_container" xml:space="preserve">
+    <value>Kargo konteyner</value>
+  </data>
+  <data name="shirt_folded" xml:space="preserve">
+    <value>Gömlek katlanmış</value>
+  </data>
+  <data name="shooting_star" xml:space="preserve">
+    <value>Kayan yıldız</value>
+  </data>
+  <data name="shopping_bag" xml:space="preserve">
+    <value>Alışveriş çanta</value>
+  </data>
+  <data name="shopping_bag_open" xml:space="preserve">
+    <value>Alışveriş çanta açık</value>
+  </data>
+  <data name="shopping_cart" xml:space="preserve">
+    <value>Alışveriş sepet</value>
+  </data>
+  <data name="shopping_cart_simple" xml:space="preserve">
+    <value>Alışveriş sepet basit</value>
+  </data>
+  <data name="shovel" xml:space="preserve">
+    <value>Kürek</value>
+  </data>
+  <data name="shower" xml:space="preserve">
+    <value>Duş</value>
+  </data>
+  <data name="shrimp" xml:space="preserve">
+    <value>Karides</value>
+  </data>
+  <data name="shuffle" xml:space="preserve">
+    <value>Karıştır</value>
+  </data>
+  <data name="shuffle_angular" xml:space="preserve">
+    <value>Karıştır angular</value>
+  </data>
+  <data name="shuffle_simple" xml:space="preserve">
+    <value>Karıştır basit</value>
+  </data>
+  <data name="sidebar" xml:space="preserve">
+    <value>Kenar çubuğu</value>
+  </data>
+  <data name="sidebar_simple" xml:space="preserve">
+    <value>Kenar çubuğu basit</value>
+  </data>
+  <data name="sigma" xml:space="preserve">
+    <value>Sigma</value>
+  </data>
+  <data name="sign_in" xml:space="preserve">
+    <value>Tabela içeri</value>
+  </data>
+  <data name="sign_out" xml:space="preserve">
+    <value>Tabela dışarı</value>
+  </data>
+  <data name="signature" xml:space="preserve">
+    <value>Imza</value>
+  </data>
+  <data name="signpost" xml:space="preserve">
+    <value>Yön tabelası</value>
+  </data>
+  <data name="sim_card" xml:space="preserve">
+    <value>Sim kart</value>
+  </data>
+  <data name="siren" xml:space="preserve">
+    <value>Siren</value>
+  </data>
+  <data name="sketch_logo" xml:space="preserve">
+    <value>Eskiz logo</value>
+  </data>
+  <data name="skip_back" xml:space="preserve">
+    <value>Atla geri</value>
+  </data>
+  <data name="skip_back_circle" xml:space="preserve">
+    <value>Atla geri daire</value>
+  </data>
+  <data name="skip_forward" xml:space="preserve">
+    <value>Atla ileri</value>
+  </data>
+  <data name="skip_forward_circle" xml:space="preserve">
+    <value>Atla ileri daire</value>
+  </data>
+  <data name="skull" xml:space="preserve">
+    <value>Kafatası</value>
+  </data>
+  <data name="skype_logo" xml:space="preserve">
+    <value>Skype logo</value>
+  </data>
+  <data name="slack_logo" xml:space="preserve">
+    <value>Slack logo</value>
+  </data>
+  <data name="sliders" xml:space="preserve">
+    <value>Kaydırıcılar</value>
+  </data>
+  <data name="sliders_horizontal" xml:space="preserve">
+    <value>Kaydırıcılar yatay</value>
+  </data>
+  <data name="slideshow" xml:space="preserve">
+    <value>Slayt gösterisi</value>
+  </data>
+  <data name="smiley" xml:space="preserve">
+    <value>Gülen yüz</value>
+  </data>
+  <data name="smiley_angry" xml:space="preserve">
+    <value>Gülen yüz kızgın</value>
+  </data>
+  <data name="smiley_blank" xml:space="preserve">
+    <value>Gülen yüz boş</value>
+  </data>
+  <data name="smiley_meh" xml:space="preserve">
+    <value>Gülen yüz idare eder</value>
+  </data>
+  <data name="smiley_melting" xml:space="preserve">
+    <value>Gülen yüz eriyen</value>
+  </data>
+  <data name="smiley_nervous" xml:space="preserve">
+    <value>Gülen yüz gergin</value>
+  </data>
+  <data name="smiley_sad" xml:space="preserve">
+    <value>Gülen yüz üzgün</value>
+  </data>
+  <data name="smiley_sticker" xml:space="preserve">
+    <value>Gülen yüz çıkartma</value>
+  </data>
+  <data name="smiley_wink" xml:space="preserve">
+    <value>Gülen yüz göz kırpma</value>
+  </data>
+  <data name="smiley_x_eyes" xml:space="preserve">
+    <value>Gülen yüz x gözler</value>
+  </data>
+  <data name="snapchat_logo" xml:space="preserve">
+    <value>Snapchat logo</value>
+  </data>
+  <data name="sneaker" xml:space="preserve">
+    <value>Spor ayakkabı</value>
+  </data>
+  <data name="sneaker_move" xml:space="preserve">
+    <value>Spor ayakkabı taşı</value>
+  </data>
+  <data name="snowflake" xml:space="preserve">
+    <value>Kar tanesi</value>
+  </data>
+  <data name="soccer_ball" xml:space="preserve">
+    <value>Futbol top</value>
+  </data>
+  <data name="sock" xml:space="preserve">
+    <value>Çorap</value>
+  </data>
+  <data name="solar_panel" xml:space="preserve">
+    <value>Güneş panel</value>
+  </data>
+  <data name="solar_roof" xml:space="preserve">
+    <value>Güneş çatı</value>
+  </data>
+  <data name="sort_ascending" xml:space="preserve">
+    <value>Sırala artan</value>
+  </data>
+  <data name="sort_descending" xml:space="preserve">
+    <value>Sırala azalan</value>
+  </data>
+  <data name="soundcloud_logo" xml:space="preserve">
+    <value>Soundcloud logo</value>
+  </data>
+  <data name="spade" xml:space="preserve">
+    <value>Maça</value>
+  </data>
+  <data name="sparkle" xml:space="preserve">
+    <value>Parıltı</value>
+  </data>
+  <data name="speaker_hifi" xml:space="preserve">
+    <value>Hoparlör hifi</value>
+  </data>
+  <data name="speaker_high" xml:space="preserve">
+    <value>Hoparlör yüksek</value>
+  </data>
+  <data name="speaker_low" xml:space="preserve">
+    <value>Hoparlör düşük</value>
+  </data>
+  <data name="speaker_none" xml:space="preserve">
+    <value>Hoparlör hiçbiri</value>
+  </data>
+  <data name="speaker_simple_high" xml:space="preserve">
+    <value>Hoparlör basit yüksek</value>
+  </data>
+  <data name="speaker_simple_low" xml:space="preserve">
+    <value>Hoparlör basit düşük</value>
+  </data>
+  <data name="speaker_simple_none" xml:space="preserve">
+    <value>Hoparlör basit hiçbiri</value>
+  </data>
+  <data name="speaker_simple_slash" xml:space="preserve">
+    <value>Hoparlör basit eğik çizgi</value>
+  </data>
+  <data name="speaker_simple_x" xml:space="preserve">
+    <value>Hoparlör basit x</value>
+  </data>
+  <data name="speaker_slash" xml:space="preserve">
+    <value>Hoparlör eğik çizgi</value>
+  </data>
+  <data name="speaker_x" xml:space="preserve">
+    <value>Hoparlör x</value>
+  </data>
+  <data name="speedometer" xml:space="preserve">
+    <value>Hız göstergesi</value>
+  </data>
+  <data name="sphere" xml:space="preserve">
+    <value>Küre</value>
+  </data>
+  <data name="spinner" xml:space="preserve">
+    <value>Yükleniyor</value>
+  </data>
+  <data name="spinner_ball" xml:space="preserve">
+    <value>Yükleniyor top</value>
+  </data>
+  <data name="spinner_gap" xml:space="preserve">
+    <value>Yükleniyor boşluk</value>
+  </data>
+  <data name="spiral" xml:space="preserve">
+    <value>Sarmal</value>
+  </data>
+  <data name="split_horizontal" xml:space="preserve">
+    <value>Böl yatay</value>
+  </data>
+  <data name="split_vertical" xml:space="preserve">
+    <value>Böl dikey</value>
+  </data>
+  <data name="spotify_logo" xml:space="preserve">
+    <value>Spotify logo</value>
+  </data>
+  <data name="spray_bottle" xml:space="preserve">
+    <value>Sprey şişe</value>
+  </data>
+  <data name="square" xml:space="preserve">
+    <value>Kare</value>
+  </data>
+  <data name="square_half" xml:space="preserve">
+    <value>Kare yarım</value>
+  </data>
+  <data name="square_half_bottom" xml:space="preserve">
+    <value>Kare yarım alt</value>
+  </data>
+  <data name="square_logo" xml:space="preserve">
+    <value>Kare logo</value>
+  </data>
+  <data name="square_split_horizontal" xml:space="preserve">
+    <value>Kare böl yatay</value>
+  </data>
+  <data name="square_split_vertical" xml:space="preserve">
+    <value>Kare böl dikey</value>
+  </data>
+  <data name="squares_four" xml:space="preserve">
+    <value>Kareler dört</value>
+  </data>
+  <data name="stack" xml:space="preserve">
+    <value>Yığın</value>
+  </data>
+  <data name="stack_minus" xml:space="preserve">
+    <value>Yığın eksi</value>
+  </data>
+  <data name="stack_overflow_logo" xml:space="preserve">
+    <value>Yığın taşma logo</value>
+  </data>
+  <data name="stack_plus" xml:space="preserve">
+    <value>Yığın artı</value>
+  </data>
+  <data name="stack_simple" xml:space="preserve">
+    <value>Yığın basit</value>
+  </data>
+  <data name="stairs" xml:space="preserve">
+    <value>Merdiven</value>
+  </data>
+  <data name="stamp" xml:space="preserve">
+    <value>Damga</value>
+  </data>
+  <data name="standard_definition" xml:space="preserve">
+    <value>Standart tanım</value>
+  </data>
+  <data name="star" xml:space="preserve">
+    <value>Yıldız</value>
+  </data>
+  <data name="star_and_crescent" xml:space="preserve">
+    <value>Yıldız ve hilal</value>
+  </data>
+  <data name="star_four" xml:space="preserve">
+    <value>Yıldız dört</value>
+  </data>
+  <data name="star_half" xml:space="preserve">
+    <value>Yıldız yarım</value>
+  </data>
+  <data name="star_of_david" xml:space="preserve">
+    <value>Yıldız davut</value>
+  </data>
+  <data name="steam_logo" xml:space="preserve">
+    <value>Buhar logo</value>
+  </data>
+  <data name="steering_wheel" xml:space="preserve">
+    <value>Direksiyon tekerlek</value>
+  </data>
+  <data name="steps" xml:space="preserve">
+    <value>Basamaklar</value>
+  </data>
+  <data name="stethoscope" xml:space="preserve">
+    <value>Stetoskop</value>
+  </data>
+  <data name="sticker" xml:space="preserve">
+    <value>Çıkartma</value>
+  </data>
+  <data name="stool" xml:space="preserve">
+    <value>Tabure</value>
+  </data>
+  <data name="stop" xml:space="preserve">
+    <value>Dur</value>
+  </data>
+  <data name="stop_circle" xml:space="preserve">
+    <value>Dur daire</value>
+  </data>
+  <data name="storefront" xml:space="preserve">
+    <value>Vitrin</value>
+  </data>
+  <data name="strategy" xml:space="preserve">
+    <value>Strateji</value>
+  </data>
+  <data name="stripe_logo" xml:space="preserve">
+    <value>Stripe logo</value>
+  </data>
+  <data name="student" xml:space="preserve">
+    <value>Öğrenci</value>
+  </data>
+  <data name="subset_of" xml:space="preserve">
+    <value>Alt küme</value>
+  </data>
+  <data name="subset_proper_of" xml:space="preserve">
+    <value>Alt küme uygun</value>
+  </data>
+  <data name="subtitles" xml:space="preserve">
+    <value>Altyazılar</value>
+  </data>
+  <data name="subtitles_slash" xml:space="preserve">
+    <value>Altyazılar eğik çizgi</value>
+  </data>
+  <data name="subtract" xml:space="preserve">
+    <value>Çıkar</value>
+  </data>
+  <data name="subtract_square" xml:space="preserve">
+    <value>Çıkar kare</value>
+  </data>
+  <data name="subway" xml:space="preserve">
+    <value>Metro</value>
+  </data>
+  <data name="suitcase" xml:space="preserve">
+    <value>Bavul</value>
+  </data>
+  <data name="suitcase_rolling" xml:space="preserve">
+    <value>Bavul yuvarlanan</value>
+  </data>
+  <data name="suitcase_simple" xml:space="preserve">
+    <value>Bavul basit</value>
+  </data>
+  <data name="sun" xml:space="preserve">
+    <value>Güneş</value>
+  </data>
+  <data name="sun_dim" xml:space="preserve">
+    <value>Güneş loş</value>
+  </data>
+  <data name="sun_horizon" xml:space="preserve">
+    <value>Güneş ufuk</value>
+  </data>
+  <data name="sunglasses" xml:space="preserve">
+    <value>Güneş gözlüğü</value>
+  </data>
+  <data name="superset_of" xml:space="preserve">
+    <value>Üst küme</value>
+  </data>
+  <data name="superset_proper_of" xml:space="preserve">
+    <value>Üst küme uygun</value>
+  </data>
+  <data name="swap" xml:space="preserve">
+    <value>Değiştir</value>
+  </data>
+  <data name="swatches" xml:space="preserve">
+    <value>Renk örnekleri</value>
+  </data>
+  <data name="swimming_pool" xml:space="preserve">
+    <value>Yüzme havuz</value>
+  </data>
+  <data name="sword" xml:space="preserve">
+    <value>Kılıç</value>
+  </data>
+  <data name="synagogue" xml:space="preserve">
+    <value>Sinagog</value>
+  </data>
+  <data name="syringe" xml:space="preserve">
+    <value>Şırınga</value>
+  </data>
+  <data name="t_shirt" xml:space="preserve">
+    <value>T gömlek</value>
+  </data>
+  <data name="table" xml:space="preserve">
+    <value>Tablo</value>
+  </data>
+  <data name="tabs" xml:space="preserve">
+    <value>Sekmeler</value>
+  </data>
+  <data name="tag" xml:space="preserve">
+    <value>Etiket</value>
+  </data>
+  <data name="tag_chevron" xml:space="preserve">
+    <value>Etiket köşeli ok</value>
+  </data>
+  <data name="tag_simple" xml:space="preserve">
+    <value>Etiket basit</value>
+  </data>
+  <data name="target" xml:space="preserve">
+    <value>Hedef</value>
+  </data>
+  <data name="taxi" xml:space="preserve">
+    <value>Taksi</value>
+  </data>
+  <data name="tea_bag" xml:space="preserve">
+    <value>Çay çanta</value>
+  </data>
+  <data name="telegram_logo" xml:space="preserve">
+    <value>Telegram logo</value>
+  </data>
+  <data name="television" xml:space="preserve">
+    <value>Televizyon</value>
+  </data>
+  <data name="television_simple" xml:space="preserve">
+    <value>Televizyon basit</value>
+  </data>
+  <data name="tennis_ball" xml:space="preserve">
+    <value>Tenis top</value>
+  </data>
+  <data name="tent" xml:space="preserve">
+    <value>Çadır</value>
+  </data>
+  <data name="terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="terminal_window" xml:space="preserve">
+    <value>Terminal pencere</value>
+  </data>
+  <data name="test_tube" xml:space="preserve">
+    <value>Test tüp</value>
+  </data>
+  <data name="text_a_underline" xml:space="preserve">
+    <value>Metin a altı çizili</value>
+  </data>
+  <data name="text_aa" xml:space="preserve">
+    <value>Metin aa</value>
+  </data>
+  <data name="text_align_center" xml:space="preserve">
+    <value>Metin hizala orta</value>
+  </data>
+  <data name="text_align_justify" xml:space="preserve">
+    <value>Metin hizala iki yana yasla</value>
+  </data>
+  <data name="text_align_left" xml:space="preserve">
+    <value>Metin hizala sol</value>
+  </data>
+  <data name="text_align_right" xml:space="preserve">
+    <value>Metin hizala sağ</value>
+  </data>
+  <data name="text_b" xml:space="preserve">
+    <value>Metin b</value>
+  </data>
+  <data name="text_columns" xml:space="preserve">
+    <value>Metin sütunlar</value>
+  </data>
+  <data name="text_h" xml:space="preserve">
+    <value>Metin h</value>
+  </data>
+  <data name="text_h_five" xml:space="preserve">
+    <value>Metin h beş</value>
+  </data>
+  <data name="text_h_four" xml:space="preserve">
+    <value>Metin h dört</value>
+  </data>
+  <data name="text_h_one" xml:space="preserve">
+    <value>Metin h bir</value>
+  </data>
+  <data name="text_h_six" xml:space="preserve">
+    <value>Metin h altı</value>
+  </data>
+  <data name="text_h_three" xml:space="preserve">
+    <value>Metin h üç</value>
+  </data>
+  <data name="text_h_two" xml:space="preserve">
+    <value>Metin h iki</value>
+  </data>
+  <data name="text_indent" xml:space="preserve">
+    <value>Metin girinti</value>
+  </data>
+  <data name="text_italic" xml:space="preserve">
+    <value>Metin italik</value>
+  </data>
+  <data name="text_outdent" xml:space="preserve">
+    <value>Metin girintiyi azalt</value>
+  </data>
+  <data name="text_strikethrough" xml:space="preserve">
+    <value>Metin üstü çizili</value>
+  </data>
+  <data name="text_subscript" xml:space="preserve">
+    <value>Metin alt simge</value>
+  </data>
+  <data name="text_superscript" xml:space="preserve">
+    <value>Metin üst simge</value>
+  </data>
+  <data name="text_t" xml:space="preserve">
+    <value>Metin t</value>
+  </data>
+  <data name="text_t_slash" xml:space="preserve">
+    <value>Metin t eğik çizgi</value>
+  </data>
+  <data name="text_underline" xml:space="preserve">
+    <value>Metin altı çizili</value>
+  </data>
+  <data name="textbox" xml:space="preserve">
+    <value>Metin kutusu</value>
+  </data>
+  <data name="thermometer" xml:space="preserve">
+    <value>Termometre</value>
+  </data>
+  <data name="thermometer_cold" xml:space="preserve">
+    <value>Termometre soğuk</value>
+  </data>
+  <data name="thermometer_hot" xml:space="preserve">
+    <value>Termometre sıcak</value>
+  </data>
+  <data name="thermometer_simple" xml:space="preserve">
+    <value>Termometre basit</value>
+  </data>
+  <data name="threads_logo" xml:space="preserve">
+    <value>Threads logo</value>
+  </data>
+  <data name="three_d" xml:space="preserve">
+    <value>Üç d</value>
+  </data>
+  <data name="thumbs_down" xml:space="preserve">
+    <value>Başparmaklar aşağı</value>
+  </data>
+  <data name="thumbs_up" xml:space="preserve">
+    <value>Başparmaklar yukarı</value>
+  </data>
+  <data name="ticket" xml:space="preserve">
+    <value>Bilet</value>
+  </data>
+  <data name="tidal_logo" xml:space="preserve">
+    <value>Tidal logo</value>
+  </data>
+  <data name="tiktok_logo" xml:space="preserve">
+    <value>Tiktok logo</value>
+  </data>
+  <data name="tilde" xml:space="preserve">
+    <value>Tilde</value>
+  </data>
+  <data name="timer" xml:space="preserve">
+    <value>Zamanlayıcı</value>
+  </data>
+  <data name="tip_jar" xml:space="preserve">
+    <value>Bahşiş kavanoz</value>
+  </data>
+  <data name="tipi" xml:space="preserve">
+    <value>Tipi</value>
+  </data>
+  <data name="tire" xml:space="preserve">
+    <value>Lastik</value>
+  </data>
+  <data name="toggle_left" xml:space="preserve">
+    <value>Geçiş sol</value>
+  </data>
+  <data name="toggle_right" xml:space="preserve">
+    <value>Geçiş sağ</value>
+  </data>
+  <data name="toilet" xml:space="preserve">
+    <value>Tuvalet</value>
+  </data>
+  <data name="toilet_paper" xml:space="preserve">
+    <value>Tuvalet kâğıt</value>
+  </data>
+  <data name="toolbox" xml:space="preserve">
+    <value>Alet kutusu</value>
+  </data>
+  <data name="tooth" xml:space="preserve">
+    <value>Diş</value>
+  </data>
+  <data name="tornado" xml:space="preserve">
+    <value>Hortum</value>
+  </data>
+  <data name="tote" xml:space="preserve">
+    <value>Bez çanta</value>
+  </data>
+  <data name="tote_simple" xml:space="preserve">
+    <value>Bez çanta basit</value>
+  </data>
+  <data name="towel" xml:space="preserve">
+    <value>Havlu</value>
+  </data>
+  <data name="tractor" xml:space="preserve">
+    <value>Traktör</value>
+  </data>
+  <data name="trademark" xml:space="preserve">
+    <value>Ticari marka</value>
+  </data>
+  <data name="trademark_registered" xml:space="preserve">
+    <value>Ticari marka tescilli</value>
+  </data>
+  <data name="traffic_cone" xml:space="preserve">
+    <value>Trafik koni</value>
+  </data>
+  <data name="traffic_sign" xml:space="preserve">
+    <value>Trafik tabela</value>
+  </data>
+  <data name="traffic_signal" xml:space="preserve">
+    <value>Trafik sinyal</value>
+  </data>
+  <data name="train" xml:space="preserve">
+    <value>Tren</value>
+  </data>
+  <data name="train_regional" xml:space="preserve">
+    <value>Tren bölgesel</value>
+  </data>
+  <data name="train_simple" xml:space="preserve">
+    <value>Tren basit</value>
+  </data>
+  <data name="tram" xml:space="preserve">
+    <value>Tramvay</value>
+  </data>
+  <data name="translate" xml:space="preserve">
+    <value>Çevir</value>
+  </data>
+  <data name="trash" xml:space="preserve">
+    <value>Çöp</value>
+  </data>
+  <data name="trash_simple" xml:space="preserve">
+    <value>Çöp basit</value>
+  </data>
+  <data name="tray" xml:space="preserve">
+    <value>Tepsi</value>
+  </data>
+  <data name="tray_arrow_down" xml:space="preserve">
+    <value>Tepsi ok aşağı</value>
+  </data>
+  <data name="tray_arrow_up" xml:space="preserve">
+    <value>Tepsi ok yukarı</value>
+  </data>
+  <data name="treasure_chest" xml:space="preserve">
+    <value>Hazine sandık</value>
+  </data>
+  <data name="tree" xml:space="preserve">
+    <value>Ağaç</value>
+  </data>
+  <data name="tree_evergreen" xml:space="preserve">
+    <value>Ağaç her dem yeşil</value>
+  </data>
+  <data name="tree_palm" xml:space="preserve">
+    <value>Ağaç palmiye</value>
+  </data>
+  <data name="tree_structure" xml:space="preserve">
+    <value>Ağaç yapı</value>
+  </data>
+  <data name="tree_view" xml:space="preserve">
+    <value>Ağaç görünüm</value>
+  </data>
+  <data name="trend_down" xml:space="preserve">
+    <value>Trend aşağı</value>
+  </data>
+  <data name="trend_up" xml:space="preserve">
+    <value>Trend yukarı</value>
+  </data>
+  <data name="triangle" xml:space="preserve">
+    <value>Üçgen</value>
+  </data>
+  <data name="triangle_dashed" xml:space="preserve">
+    <value>Üçgen kesik çizgili</value>
+  </data>
+  <data name="trolley" xml:space="preserve">
+    <value>El arabası</value>
+  </data>
+  <data name="trolley_suitcase" xml:space="preserve">
+    <value>El arabası bavul</value>
+  </data>
+  <data name="trophy" xml:space="preserve">
+    <value>Kupa</value>
+  </data>
+  <data name="truck" xml:space="preserve">
+    <value>Kamyon</value>
+  </data>
+  <data name="truck_trailer" xml:space="preserve">
+    <value>Kamyon römork</value>
+  </data>
+  <data name="tumblr_logo" xml:space="preserve">
+    <value>Tumblr logo</value>
+  </data>
+  <data name="twitch_logo" xml:space="preserve">
+    <value>Twitch logo</value>
+  </data>
+  <data name="twitter_logo" xml:space="preserve">
+    <value>Twitter logo</value>
+  </data>
+  <data name="umbrella" xml:space="preserve">
+    <value>Şemsiye</value>
+  </data>
+  <data name="umbrella_simple" xml:space="preserve">
+    <value>Şemsiye basit</value>
+  </data>
+  <data name="union" xml:space="preserve">
+    <value>Birleşim</value>
+  </data>
+  <data name="unite" xml:space="preserve">
+    <value>Birleştir</value>
+  </data>
+  <data name="unite_square" xml:space="preserve">
+    <value>Birleştir kare</value>
+  </data>
+  <data name="upload" xml:space="preserve">
+    <value>Yükle</value>
+  </data>
+  <data name="upload_simple" xml:space="preserve">
+    <value>Yükle basit</value>
+  </data>
+  <data name="usb" xml:space="preserve">
+    <value>Usb</value>
+  </data>
+  <data name="user" xml:space="preserve">
+    <value>Kullanıcı</value>
+  </data>
+  <data name="user_check" xml:space="preserve">
+    <value>Kullanıcı onay</value>
+  </data>
+  <data name="user_circle" xml:space="preserve">
+    <value>Kullanıcı daire</value>
+  </data>
+  <data name="user_circle_check" xml:space="preserve">
+    <value>Kullanıcı daire onay</value>
+  </data>
+  <data name="user_circle_dashed" xml:space="preserve">
+    <value>Kullanıcı daire kesik çizgili</value>
+  </data>
+  <data name="user_circle_gear" xml:space="preserve">
+    <value>Kullanıcı daire dişli</value>
+  </data>
+  <data name="user_circle_minus" xml:space="preserve">
+    <value>Kullanıcı daire eksi</value>
+  </data>
+  <data name="user_circle_plus" xml:space="preserve">
+    <value>Kullanıcı daire artı</value>
+  </data>
+  <data name="user_focus" xml:space="preserve">
+    <value>Kullanıcı odak</value>
+  </data>
+  <data name="user_gear" xml:space="preserve">
+    <value>Kullanıcı dişli</value>
+  </data>
+  <data name="user_list" xml:space="preserve">
+    <value>Kullanıcı liste</value>
+  </data>
+  <data name="user_minus" xml:space="preserve">
+    <value>Kullanıcı eksi</value>
+  </data>
+  <data name="user_plus" xml:space="preserve">
+    <value>Kullanıcı artı</value>
+  </data>
+  <data name="user_rectangle" xml:space="preserve">
+    <value>Kullanıcı dikdörtgen</value>
+  </data>
+  <data name="user_sound" xml:space="preserve">
+    <value>Kullanıcı ses</value>
+  </data>
+  <data name="user_square" xml:space="preserve">
+    <value>Kullanıcı kare</value>
+  </data>
+  <data name="user_switch" xml:space="preserve">
+    <value>Kullanıcı anahtar</value>
+  </data>
+  <data name="users" xml:space="preserve">
+    <value>Kullanıcılar</value>
+  </data>
+  <data name="users_four" xml:space="preserve">
+    <value>Kullanıcılar dört</value>
+  </data>
+  <data name="users_three" xml:space="preserve">
+    <value>Kullanıcılar üç</value>
+  </data>
+  <data name="van" xml:space="preserve">
+    <value>Minibüs</value>
+  </data>
+  <data name="vault" xml:space="preserve">
+    <value>Kasa</value>
+  </data>
+  <data name="vector_three" xml:space="preserve">
+    <value>Vektör üç</value>
+  </data>
+  <data name="vector_two" xml:space="preserve">
+    <value>Vektör iki</value>
+  </data>
+  <data name="vibrate" xml:space="preserve">
+    <value>Titreşim</value>
+  </data>
+  <data name="video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="video_camera" xml:space="preserve">
+    <value>Video kamera</value>
+  </data>
+  <data name="video_camera_slash" xml:space="preserve">
+    <value>Video kamera eğik çizgi</value>
+  </data>
+  <data name="video_conference" xml:space="preserve">
+    <value>Video konferans</value>
+  </data>
+  <data name="vignette" xml:space="preserve">
+    <value>Vinyet</value>
+  </data>
+  <data name="vinyl_record" xml:space="preserve">
+    <value>Plak kaydet</value>
+  </data>
+  <data name="virtual_reality" xml:space="preserve">
+    <value>Sanal gerçeklik</value>
+  </data>
+  <data name="virus" xml:space="preserve">
+    <value>Virüs</value>
+  </data>
+  <data name="visor" xml:space="preserve">
+    <value>Siperlik</value>
+  </data>
+  <data name="voicemail" xml:space="preserve">
+    <value>Sesli mesaj</value>
+  </data>
+  <data name="volleyball" xml:space="preserve">
+    <value>Voleybol</value>
+  </data>
+  <data name="wall" xml:space="preserve">
+    <value>Duvar</value>
+  </data>
+  <data name="wallet" xml:space="preserve">
+    <value>Cüzdan</value>
+  </data>
+  <data name="warehouse" xml:space="preserve">
+    <value>Depo</value>
+  </data>
+  <data name="warning" xml:space="preserve">
+    <value>Uyarı</value>
+  </data>
+  <data name="warning_circle" xml:space="preserve">
+    <value>Uyarı daire</value>
+  </data>
+  <data name="warning_diamond" xml:space="preserve">
+    <value>Uyarı elmas</value>
+  </data>
+  <data name="warning_octagon" xml:space="preserve">
+    <value>Uyarı sekizgen</value>
+  </data>
+  <data name="washing_machine" xml:space="preserve">
+    <value>Çamaşır makine</value>
+  </data>
+  <data name="watch" xml:space="preserve">
+    <value>Kol saati</value>
+  </data>
+  <data name="wave_sawtooth" xml:space="preserve">
+    <value>Dalga testere dişi</value>
+  </data>
+  <data name="wave_sine" xml:space="preserve">
+    <value>Dalga sinüs</value>
+  </data>
+  <data name="wave_square" xml:space="preserve">
+    <value>Dalga kare</value>
+  </data>
+  <data name="wave_triangle" xml:space="preserve">
+    <value>Dalga üçgen</value>
+  </data>
+  <data name="waveform" xml:space="preserve">
+    <value>Dalga formu</value>
+  </data>
+  <data name="waveform_slash" xml:space="preserve">
+    <value>Dalga formu eğik çizgi</value>
+  </data>
+  <data name="waves" xml:space="preserve">
+    <value>Dalgalar</value>
+  </data>
+  <data name="webcam" xml:space="preserve">
+    <value>Web kamerası</value>
+  </data>
+  <data name="webcam_slash" xml:space="preserve">
+    <value>Web kamerası eğik çizgi</value>
+  </data>
+  <data name="webhooks_logo" xml:space="preserve">
+    <value>Webhook'lar logo</value>
+  </data>
+  <data name="wechat_logo" xml:space="preserve">
+    <value>Wechat logo</value>
+  </data>
+  <data name="whatsapp_logo" xml:space="preserve">
+    <value>Whatsapp logo</value>
+  </data>
+  <data name="wheelchair" xml:space="preserve">
+    <value>Tekerlekli sandalye</value>
+  </data>
+  <data name="wheelchair_motion" xml:space="preserve">
+    <value>Tekerlekli sandalye hareket</value>
+  </data>
+  <data name="wifi_high" xml:space="preserve">
+    <value>Wifi yüksek</value>
+  </data>
+  <data name="wifi_low" xml:space="preserve">
+    <value>Wifi düşük</value>
+  </data>
+  <data name="wifi_medium" xml:space="preserve">
+    <value>Wifi orta</value>
+  </data>
+  <data name="wifi_none" xml:space="preserve">
+    <value>Wifi hiçbiri</value>
+  </data>
+  <data name="wifi_slash" xml:space="preserve">
+    <value>Wifi eğik çizgi</value>
+  </data>
+  <data name="wifi_x" xml:space="preserve">
+    <value>Wifi x</value>
+  </data>
+  <data name="wind" xml:space="preserve">
+    <value>Rüzgar</value>
+  </data>
+  <data name="windmill" xml:space="preserve">
+    <value>Yel değirmeni</value>
+  </data>
+  <data name="windows_logo" xml:space="preserve">
+    <value>Windows logo</value>
+  </data>
+  <data name="wine" xml:space="preserve">
+    <value>Şarap</value>
+  </data>
+  <data name="wrench" xml:space="preserve">
+    <value>Anahtar</value>
+  </data>
+  <data name="x" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="x_circle" xml:space="preserve">
+    <value>X daire</value>
+  </data>
+  <data name="x_logo" xml:space="preserve">
+    <value>X logo</value>
+  </data>
+  <data name="x_square" xml:space="preserve">
+    <value>X kare</value>
+  </data>
+  <data name="yarn" xml:space="preserve">
+    <value>Iplik</value>
+  </data>
+  <data name="yin_yang" xml:space="preserve">
+    <value>Yin yang</value>
+  </data>
+  <data name="youtube_logo" xml:space="preserve">
+    <value>Youtube logo</value>
+  </data>
+</root>

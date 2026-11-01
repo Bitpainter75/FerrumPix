@@ -9,8 +9,8 @@
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect-three.svg"
+                            Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
@@ -22,7 +22,7 @@
                             Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="hsl"
                             ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
-                        <icons:SvgIcon Width="14" Height="14" />
+                        <icons:SvgIcon Width="16" Height="16" />
                     </Button>
                     <Button Grid.Column="2"
                             Classes="icon-btn group-reset"
@@ -32,8 +32,8 @@
                             Command="{Binding DataContext.ResetHslCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ToolTip.Tip="Farbmischer zurücksetzen">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                            Width="16" Height="16" />
                     </Button>
                 </Grid>
             </DataTemplate>
@@ -48,13 +48,13 @@
                         Width="28" Height="28" CornerRadius="6"
                         Command="{Binding SelectHslTabCommand}" CommandParameter="mixer"
                         ToolTip.Tip="Farbmischer: acht Farbbänder">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg" Width="18" Height="18" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/poker-chip.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="icon-btn group-action" Classes.active="{Binding IsPointColorTab}"
                         Width="28" Height="28" CornerRadius="6"
                         Command="{Binding SelectHslTabCommand}" CommandParameter="point"
                         ToolTip.Tip="Punktfarbe: eine Farbe im Bild aufnehmen und verschieben">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/target.svg" Width="18" Height="18" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/target.svg" Width="18" Height="18" />
                 </Button>
             </StackPanel>
             <StackPanel Spacing="8" IsVisible="{Binding IsMixerTab}">
@@ -166,7 +166,7 @@
                     <Button Classes="icon-btn group-action" Width="28" Height="28" CornerRadius="6" VerticalAlignment="Top"
                             Command="{Binding PickPointColorCommand}"
                             ToolTip.Tip="Pipette: auf die Farbe im Bild klicken, die verschoben werden soll">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg" Width="18" Height="18" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg" Width="18" Height="18" />
                     </Button>
                     <ItemsControl Grid.Column="1" Margin="5,0,0,0" ItemsSource="{Binding PointColorChips}">
                         <ItemsControl.ItemsPanel>
@@ -202,7 +202,7 @@
                     <!-- Vorher und nachher: die aufgenommene Farbe und was das Feld daraus macht. -->
                     <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,0,0,4">
                         <Border Width="40" Height="16" CornerRadius="4" Background="{Binding SelectedPointColorSourceBrush}" />
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrow-right.svg" Width="12" Height="12" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-right.svg" Width="18" Height="18" />
                         <Border Width="40" Height="16" CornerRadius="4" Background="{Binding SelectedPointColorResultBrush}" />
                     </StackPanel>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">

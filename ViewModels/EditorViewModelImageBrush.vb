@@ -211,10 +211,10 @@ Namespace ViewModels
 
         Private Function ToneModeIcon() As String
             Select Case _toneMode
-                Case "Dodge" : Return "brightness-up.svg"
-                Case "Burn" : Return "brightness-down.svg"
-                Case "Sponge" : Return "droplet-half.svg"
-                Case "ReplaceColor" : Return "replace.svg"
+                Case "Dodge" : Return "sun.svg"
+                Case "Burn" : Return "sun-dim.svg"
+                Case "Sponge" : Return "drop-half.svg"
+                Case "ReplaceColor" : Return "swap.svg"
                 Case "RedEye" : Return "eye.svg"
                 Case Else : Return "eraser.svg"
             End Select

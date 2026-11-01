@@ -9,7 +9,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <icons:SvgIcon
                         Source="{Binding DataContext.CurrentToolIconSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                        Width="14" Height="14" />
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                 </StackPanel>
             </DataTemplate>
@@ -23,8 +23,8 @@
                     Command="{Binding InsertArmedAnnotationCommand}"
                     ToolTip.Tip="Ein neues Textobjekt in die Bildmitte setzen, ohne ins Bild zu klicken">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/typography.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-aa.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Text einfügen" />
                 </StackPanel>
             </Button>
@@ -33,8 +33,8 @@
                     Command="{Binding InsertArmedAnnotationCommand}"
                     ToolTip.Tip="Einen neuen QR-Code in die Bildmitte setzen, ohne ins Bild zu klicken">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/qrcode.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/qr-code.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="QR-Code einfügen" />
                 </StackPanel>
             </Button>
@@ -43,8 +43,8 @@
                     Command="{Binding InsertArmedAnnotationCommand}"
                     ToolTip.Tip="Die gewählte Form in die Bildmitte setzen, ohne ins Bild zu klicken">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/shape.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/shapes.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Form einfügen" />
                 </StackPanel>
             </Button>
@@ -53,8 +53,8 @@
                     Command="{Binding InsertArmedAnnotationCommand}"
                     ToolTip.Tip="Das gewählte Symbol in die Bildmitte setzen, ohne ins Bild zu klicken">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/icons.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/shapes.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Symbol einfügen" />
                 </StackPanel>
             </Button>
@@ -65,16 +65,16 @@
                 <Button Grid.Column="0" Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         Click="OnWatermarkChooseImageClick">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Bild einfügen" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Button>
                 <Button Grid.Column="2" Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
                         Click="OnWatermarkInsertTextClick">
                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/typography.svg"
-                                       Width="16" Height="16" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-aa.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Text einfügen" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Button>
@@ -103,15 +103,15 @@
                 <StackPanel Grid.Column="1" Margin="6,0,0,0" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkSavePresetClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/device-floppy.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/floppy-disk.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="ghost" Padding="8,4" Click="OnWatermarkDeletePresetClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -126,8 +126,8 @@
                 IsVisible="{Binding ShowImageSourceControls}"
                 Click="OnInsertImageClick">
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo-plus.svg"
-                               Width="16" Height="16" />
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"
+                               Width="18" Height="18" />
                 <TextBlock Text="Bild einfügen" />
             </StackPanel>
         </Button>
@@ -202,25 +202,25 @@
                         Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Left"
                         Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Left}"
                         ToolTip.Tip="Linksbündig">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-left.svg" Width="15" Height="15" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/align-left.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
                         Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Center"
                         Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Center}"
                         ToolTip.Tip="Zentriert">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-center.svg" Width="15" Height="15" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-align-center.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
                         Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Right"
                         Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Right}"
                         ToolTip.Tip="Rechtsbündig">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-right.svg" Width="15" Height="15" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/align-right.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,4" Margin="0,0,5,4"
                         Command="{Binding SetAnnotationTextAlignmentCommand}" CommandParameter="Justify"
                         Classes.active="{Binding AnnotationTextAlignment, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Justify}"
                         ToolTip.Tip="Blocksatz">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/align-justified.svg" Width="15" Height="15" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/text-align-justify.svg" Width="18" Height="18" />
                 </Button>
             </WrapPanel>
         </Grid>
@@ -258,8 +258,8 @@
                         CommandParameter="None"
                         Classes.active="{Binding IsTextPathNone}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ban.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/prohibit.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Kein" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -268,8 +268,8 @@
                         CommandParameter="Arc"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Arc}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rainbow.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/rainbow.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Bogen" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -278,8 +278,8 @@
                         CommandParameter="Circle"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Circle}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-dashed.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/circle-dashed.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Kreis" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -288,8 +288,8 @@
                         CommandParameter="Wave"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Wave}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wave-sine.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/wave-sine.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Welle" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>
@@ -302,8 +302,8 @@
                         ToolTip.Tip="Grundlinie selbst setzen - Punkt für Punkt auf dem Bild, Eingabe schließt ab"
                         Classes.active="{Binding AnnotationTextPathKind, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Free}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Freier Pfad" FontSize="{DynamicResource FP.Font.Small}" />
                     </StackPanel>
                 </Button>

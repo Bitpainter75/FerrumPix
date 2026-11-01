@@ -30,7 +30,7 @@
 
         <Grid ColumnDefinitions="Auto,*">
             <icons:SvgIcon Grid.Column="0"
-                           Source="avares://FerrumPix/Assets/Icons/outline/map-pin-search.svg"
+                           Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-pin-area.svg"
                            Width="18" Height="18"
                            VerticalAlignment="Center"
                            Margin="2,0,10,0"/>
@@ -64,8 +64,8 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin.svg"
-                                       Width="14" Height="14"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-pin.svg"
+                                       Width="18" Height="18"
                                        VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding DisplayText}"
                                    VerticalAlignment="Center"/>
@@ -91,8 +91,8 @@
                 CornerRadius="6"
                 Padding="10,8">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map-pin-check.svg"
-                               Width="16" Height="16"
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-pin-simple.svg"
+                               Width="18" Height="18"
                                VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding DialogPlacePreview}"
                            Classes="no-translate"

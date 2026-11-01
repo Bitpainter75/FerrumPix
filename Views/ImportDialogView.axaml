@@ -22,7 +22,7 @@
                     Width="38" Height="32"
                     Click="OnRefreshSourcesClick"
                     ToolTip.Tip="Datenträger neu suchen">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/refresh.svg" Width="18" Height="18"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrows-clockwise.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -34,7 +34,7 @@
                     Width="38" Height="36"
                     Click="OnBrowseSourceClick"
                     ToolTip.Tip="Ordner wählen">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
         <CheckBox IsChecked="{Binding DialogImportIncludeSubfolders, Mode=TwoWay}">
@@ -86,7 +86,7 @@
                     Width="38" Height="36"
                     Click="OnBrowseTargetClick"
                     ToolTip.Tip="Ordner wählen">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
         <TextBlock Text="Platzhalter: {pictures} Bilder-Ordner, {camera} Kamera, {datetaken:FORMAT} Aufnahmedatum mit yyyy Jahr, MM Monat, MMMM Monatsname, dd Tag, dddd Wochentag. Beispiel: {pictures}/{datetaken:yyyy}/{datetaken:MM MMMM}."
@@ -107,7 +107,7 @@
                     Width="38" Height="36"
                     Click="OnBrowseBackupClick"
                     ToolTip.Tip="Ordner wählen">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/folder-open.svg" Width="18" Height="18"/>
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg" Width="18" Height="18"/>
             </Button>
         </Grid>
 

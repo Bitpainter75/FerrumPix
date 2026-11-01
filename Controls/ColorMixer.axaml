@@ -67,8 +67,8 @@
                 <Button Name="EyedropperButton" Classes="icon-btn group-action" Width="30" Height="30" Padding="0"
                         Click="OnEyedropperClick"
                         ToolTip.Tip="Farbe aus dem Bild aufnehmen (Pipette)">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg"
-                                   Width="16" Height="16"
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg"
+                                   Width="18" Height="18"
                                    IconBrush="{DynamicResource FP.Text.Primary}" />
                 </Button>
             </StackPanel>

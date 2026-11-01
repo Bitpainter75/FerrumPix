@@ -10,8 +10,8 @@
                     <StackPanel Orientation="Horizontal" Spacing="8"
                                 VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/color-filter.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect-three.svg"
+                            Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
                     <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
@@ -23,7 +23,7 @@
                             Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             CommandParameter="color"
                             ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
-                        <icons:SvgIcon Width="14" Height="14" />
+                        <icons:SvgIcon Width="16" Height="16" />
                     </Button>
                     <Button Grid.Column="2"
                             Classes="icon-btn group-reset"
@@ -33,8 +33,8 @@
                             Command="{Binding DataContext.ResetColorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                             ToolTip.Tip="Farbe zurücksetzen">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                            Width="14" Height="14" />
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                            Width="16" Height="16" />
                     </Button>
                 </Grid>
             </DataTemplate>
@@ -58,8 +58,8 @@
                         Command="{Binding PickWhiteBalanceCommand}"
                         ToolTip.Tip="Pipette: auf eine Stelle klicken, die neutral grau sein soll.">
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg"
+                        Width="18" Height="18" />
                 </Button>
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding WhiteBalanceOptions}"

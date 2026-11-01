@@ -1984,10 +1984,10 @@
          Themen kaum zu erkennen. Die Regler selbst zeigen den Vergleich weiter in ihrer Farbe;
          das Auge hebt sich nur durch die Form und die hellere Textfarbe vom offenen ab. -->
     <Style Selector="Button.icon-btn.group-compare icons|SvgIcon">
-        <Setter Property="Source" Value="avares://FerrumPix/Assets/Icons/outline/eye.svg"/>
+        <Setter Property="Source" Value="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg"/>
     </Style>
     <Style Selector="Button.icon-btn.group-compare.comparing icons|SvgIcon">
-        <Setter Property="Source" Value="avares://FerrumPix/Assets/Icons/outline/eye-closed.svg"/>
+        <Setter Property="Source" Value="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-closed.svg"/>
         <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Primary}"/>
     </Style>
     <Style Selector="Border.divider">
@@ -2067,7 +2067,7 @@
         <Setter Property="BorderBrush" Value="Transparent"/>
     </Style>
     <Style Selector="Border.selection-badge-dot">
-        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="CornerRadius" Value="11"/>
         <Setter Property="Background" Value="#CC10161B"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -2075,6 +2075,20 @@
     <Style Selector="Button.selection-badge-hit:pointerover Border.selection-badge-dot">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <!-- Nicht ausgewaehlt ist der Punkt unsichtbar; er erscheint, sobald die Maus ueber der Kachel
+         steht, damit man sieht, wo man klickt. -->
+    <Style Selector="Border.selection-badge-dot:not(.active)">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="Border.thumb-card:pointerover Border.selection-badge-dot">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.selection-badge.compact:not(.active)">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="Border.thumb-card:pointerover Button.selection-badge.compact">
+        <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="Border.selection-badge-dot.active">
         <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
@@ -2087,9 +2101,9 @@
         <Setter Property="IconBrush" Value="{DynamicResource FP.OnAccent}"/>
     </Style>
     <Style Selector="Button.selection-badge.compact">
-        <Setter Property="Width" Value="14"/>
-        <Setter Property="Height" Value="14"/>
-        <Setter Property="CornerRadius" Value="7"/>
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Height" Value="22"/>
+        <Setter Property="CornerRadius" Value="11"/>
     </Style>
     <Style Selector="Button.selection-badge:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource FP.Bg.Hover}"/>
@@ -2175,6 +2189,16 @@
     <Style Selector="Button.star-btn.active icons|SvgIcon.rating-star">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <!-- SVG-Grafiken bekommen in Kacheln und Filmstreifen eine helle Unterlage wie ein Blatt
+         Papier. Ihre Vorschau ist durchsichtig gerastert, und was in der Datei als currentColor
+         steht (fast jeder Symbolsatz), zeichnet die SVG-Bibliothek schwarz; auf einer dunklen
+         Kachel verschwand die Grafik. Die Unterlage wirkt auch bei fest schwarzen und bei
+         farbigen Grafiken und haengt nicht am Thema. -->
+    <Style Selector="Border.vector-paper">
+        <Setter Property="Background" Value="#F2F2F0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
 
     <!-- Ausgewählte Thumbnail-Karte: oranger Rahmen -->

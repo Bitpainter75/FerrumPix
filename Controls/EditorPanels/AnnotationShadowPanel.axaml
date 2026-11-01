@@ -13,8 +13,8 @@
                               ToolTip.Tip="{Binding $parent[Expander].DataContext.GroupActiveToolTip}"
                               IsChecked="{Binding $parent[Expander].DataContext.AnnotationShadowEnabled}" />
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/shadow.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/circle-half.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DataTemplate>

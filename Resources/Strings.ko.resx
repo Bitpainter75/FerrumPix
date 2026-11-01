@@ -3819,8 +3819,8 @@
   <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
     <value>QRCoder 1.6</value>
   </data>
-  <data name="Tabler_Icons_414587a7" xml:space="preserve">
-    <value>Tabler Icons</value>
+  <data name="Phosphor_Icons_db78df19" xml:space="preserve">
+    <value>Phosphor Icons</value>
   </data>
   <data name="LibRaw_e88f46b3" xml:space="preserve">
     <value>LibRaw</value>
@@ -10632,6 +10632,36 @@
   </data>
   <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
     <value>유지로 표시 (다시 누르면 취소)</value>
+  </data>
+  <data name="D_nn_c3b84673" xml:space="preserve">
+    <value>가늘게</value>
+  </data>
+  <data name="Leicht_42ea0bb0" xml:space="preserve">
+    <value>얇게</value>
+  </data>
+  <data name="Gef_llt_0b23a7e4" xml:space="preserve">
+    <value>채움</value>
+  </data>
+  <data name="Mausrad_im_Viewer_90c32243" xml:space="preserve">
+    <value>뷰어에서 마우스 휠</value>
+  </data>
+  <data name="Mausrad_im_Vollbild_und_in_der_Diashow_979d875f" xml:space="preserve">
+    <value>전체 화면과 슬라이드쇼에서 마우스 휠</value>
+  </data>
+  <data name="Bildwechsel_e184441d" xml:space="preserve">
+    <value>사진 전환</value>
+  </data>
+  <data name="Was_das_Mausrad_im_Viewer_tut_Mit_STRG_tut_es_je_72e76877" xml:space="preserve">
+    <value>뷰어에서 마우스 휠이 하는 동작입니다. CTRL과 함께면 다른 동작을, 오른쪽 버튼을 누른 채면 항상 확대/축소합니다.</value>
+  </data>
+  <data name="Was_das_Mausrad_im_Vollbild_und_in_der_Diashow_t_23cc7c78" xml:space="preserve">
+    <value>전체 화면과 슬라이드쇼에서 마우스 휠이 하는 동작입니다. CTRL과 함께면 다른 동작을, 오른쪽 버튼을 누른 채면 항상 확대/축소합니다.</value>
+  </data>
+  <data name="Rechtsklick_Mausrad_4d730519" xml:space="preserve">
+    <value>오른쪽 클릭+마우스 휠</value>
+  </data>
+  <data name="Weiterbl_ttern_oder_am_Mauszeiger_zoomen_wie_in__b40c03ec" xml:space="preserve">
+    <value>설정에 따라 사진을 넘기거나 포인터 위치에서 확대/축소합니다. CTRL과 함께면 다른 동작</value>
   </data>
   <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
     <value>기존 창에서 열기</value>

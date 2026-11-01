@@ -1,0 +1,4551 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="acorn" xml:space="preserve">
+    <value>बलूत</value>
+  </data>
+  <data name="address_book" xml:space="preserve">
+    <value>पता किताब</value>
+  </data>
+  <data name="address_book_tabs" xml:space="preserve">
+    <value>पता किताब टैब</value>
+  </data>
+  <data name="air_traffic_control" xml:space="preserve">
+    <value>हवा यातायात नियंत्रण</value>
+  </data>
+  <data name="airplane" xml:space="preserve">
+    <value>हवाई जहाज़</value>
+  </data>
+  <data name="airplane_in_flight" xml:space="preserve">
+    <value>हवाई जहाज़ अंदर उड़ान</value>
+  </data>
+  <data name="airplane_landing" xml:space="preserve">
+    <value>हवाई जहाज़ लैंडिंग</value>
+  </data>
+  <data name="airplane_takeoff" xml:space="preserve">
+    <value>हवाई जहाज़ उड़ान भरना</value>
+  </data>
+  <data name="airplane_taxiing" xml:space="preserve">
+    <value>हवाई जहाज़ टैक्सीइंग</value>
+  </data>
+  <data name="airplane_tilt" xml:space="preserve">
+    <value>हवाई जहाज़ झुकाव</value>
+  </data>
+  <data name="airplay" xml:space="preserve">
+    <value>Airplay</value>
+  </data>
+  <data name="alarm" xml:space="preserve">
+    <value>अलार्म</value>
+  </data>
+  <data name="alien" xml:space="preserve">
+    <value>एलियन</value>
+  </data>
+  <data name="align_bottom" xml:space="preserve">
+    <value>संरेखित नीचे</value>
+  </data>
+  <data name="align_bottom_simple" xml:space="preserve">
+    <value>संरेखित नीचे सरल</value>
+  </data>
+  <data name="align_center_horizontal" xml:space="preserve">
+    <value>संरेखित केंद्र क्षैतिज</value>
+  </data>
+  <data name="align_center_horizontal_simple" xml:space="preserve">
+    <value>संरेखित केंद्र क्षैतिज सरल</value>
+  </data>
+  <data name="align_center_vertical" xml:space="preserve">
+    <value>संरेखित केंद्र ऊर्ध्वाधर</value>
+  </data>
+  <data name="align_center_vertical_simple" xml:space="preserve">
+    <value>संरेखित केंद्र ऊर्ध्वाधर सरल</value>
+  </data>
+  <data name="align_left" xml:space="preserve">
+    <value>संरेखित बाएँ</value>
+  </data>
+  <data name="align_left_simple" xml:space="preserve">
+    <value>संरेखित बाएँ सरल</value>
+  </data>
+  <data name="align_right" xml:space="preserve">
+    <value>संरेखित दाएँ</value>
+  </data>
+  <data name="align_right_simple" xml:space="preserve">
+    <value>संरेखित दाएँ सरल</value>
+  </data>
+  <data name="align_top" xml:space="preserve">
+    <value>संरेखित ऊपर</value>
+  </data>
+  <data name="align_top_simple" xml:space="preserve">
+    <value>संरेखित ऊपर सरल</value>
+  </data>
+  <data name="amazon_logo" xml:space="preserve">
+    <value>Amazon लोगो</value>
+  </data>
+  <data name="ambulance" xml:space="preserve">
+    <value>एम्बुलेंस</value>
+  </data>
+  <data name="anchor" xml:space="preserve">
+    <value>लंगर</value>
+  </data>
+  <data name="anchor_simple" xml:space="preserve">
+    <value>लंगर सरल</value>
+  </data>
+  <data name="android_logo" xml:space="preserve">
+    <value>Android लोगो</value>
+  </data>
+  <data name="angle" xml:space="preserve">
+    <value>कोण</value>
+  </data>
+  <data name="angular_logo" xml:space="preserve">
+    <value>Angular लोगो</value>
+  </data>
+  <data name="aperture" xml:space="preserve">
+    <value>अपर्चर</value>
+  </data>
+  <data name="app_store_logo" xml:space="preserve">
+    <value>ऐप दुकान लोगो</value>
+  </data>
+  <data name="app_window" xml:space="preserve">
+    <value>ऐप खिड़की</value>
+  </data>
+  <data name="apple_logo" xml:space="preserve">
+    <value>सेब लोगो</value>
+  </data>
+  <data name="apple_podcasts_logo" xml:space="preserve">
+    <value>सेब पॉडकास्ट लोगो</value>
+  </data>
+  <data name="approximate_equals" xml:space="preserve">
+    <value>लगभग बराबर</value>
+  </data>
+  <data name="archive" xml:space="preserve">
+    <value>संग्रह</value>
+  </data>
+  <data name="armchair" xml:space="preserve">
+    <value>आरामकुर्सी</value>
+  </data>
+  <data name="arrow_arc_left" xml:space="preserve">
+    <value>तीर चाप बाएँ</value>
+  </data>
+  <data name="arrow_arc_right" xml:space="preserve">
+    <value>तीर चाप दाएँ</value>
+  </data>
+  <data name="arrow_bend_double_up_left" xml:space="preserve">
+    <value>तीर मोड़ दोहरा ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_bend_double_up_right" xml:space="preserve">
+    <value>तीर मोड़ दोहरा ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_bend_down_left" xml:space="preserve">
+    <value>तीर मोड़ नीचे बाएँ</value>
+  </data>
+  <data name="arrow_bend_down_right" xml:space="preserve">
+    <value>तीर मोड़ नीचे दाएँ</value>
+  </data>
+  <data name="arrow_bend_left_down" xml:space="preserve">
+    <value>तीर मोड़ बाएँ नीचे</value>
+  </data>
+  <data name="arrow_bend_left_up" xml:space="preserve">
+    <value>तीर मोड़ बाएँ ऊपर</value>
+  </data>
+  <data name="arrow_bend_right_down" xml:space="preserve">
+    <value>तीर मोड़ दाएँ नीचे</value>
+  </data>
+  <data name="arrow_bend_right_up" xml:space="preserve">
+    <value>तीर मोड़ दाएँ ऊपर</value>
+  </data>
+  <data name="arrow_bend_up_left" xml:space="preserve">
+    <value>तीर मोड़ ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_bend_up_right" xml:space="preserve">
+    <value>तीर मोड़ ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_circle_down" xml:space="preserve">
+    <value>तीर वृत्त नीचे</value>
+  </data>
+  <data name="arrow_circle_down_left" xml:space="preserve">
+    <value>तीर वृत्त नीचे बाएँ</value>
+  </data>
+  <data name="arrow_circle_down_right" xml:space="preserve">
+    <value>तीर वृत्त नीचे दाएँ</value>
+  </data>
+  <data name="arrow_circle_left" xml:space="preserve">
+    <value>तीर वृत्त बाएँ</value>
+  </data>
+  <data name="arrow_circle_right" xml:space="preserve">
+    <value>तीर वृत्त दाएँ</value>
+  </data>
+  <data name="arrow_circle_up" xml:space="preserve">
+    <value>तीर वृत्त ऊपर</value>
+  </data>
+  <data name="arrow_circle_up_left" xml:space="preserve">
+    <value>तीर वृत्त ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_circle_up_right" xml:space="preserve">
+    <value>तीर वृत्त ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_clockwise" xml:space="preserve">
+    <value>तीर दक्षिणावर्त</value>
+  </data>
+  <data name="arrow_counter_clockwise" xml:space="preserve">
+    <value>तीर काउंटर दक्षिणावर्त</value>
+  </data>
+  <data name="arrow_down" xml:space="preserve">
+    <value>तीर नीचे</value>
+  </data>
+  <data name="arrow_down_left" xml:space="preserve">
+    <value>तीर नीचे बाएँ</value>
+  </data>
+  <data name="arrow_down_right" xml:space="preserve">
+    <value>तीर नीचे दाएँ</value>
+  </data>
+  <data name="arrow_elbow_down_left" xml:space="preserve">
+    <value>तीर कोहनी नीचे बाएँ</value>
+  </data>
+  <data name="arrow_elbow_down_right" xml:space="preserve">
+    <value>तीर कोहनी नीचे दाएँ</value>
+  </data>
+  <data name="arrow_elbow_left" xml:space="preserve">
+    <value>तीर कोहनी बाएँ</value>
+  </data>
+  <data name="arrow_elbow_left_down" xml:space="preserve">
+    <value>तीर कोहनी बाएँ नीचे</value>
+  </data>
+  <data name="arrow_elbow_left_up" xml:space="preserve">
+    <value>तीर कोहनी बाएँ ऊपर</value>
+  </data>
+  <data name="arrow_elbow_right" xml:space="preserve">
+    <value>तीर कोहनी दाएँ</value>
+  </data>
+  <data name="arrow_elbow_right_down" xml:space="preserve">
+    <value>तीर कोहनी दाएँ नीचे</value>
+  </data>
+  <data name="arrow_elbow_right_up" xml:space="preserve">
+    <value>तीर कोहनी दाएँ ऊपर</value>
+  </data>
+  <data name="arrow_elbow_up_left" xml:space="preserve">
+    <value>तीर कोहनी ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_elbow_up_right" xml:space="preserve">
+    <value>तीर कोहनी ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_fat_down" xml:space="preserve">
+    <value>तीर मोटा नीचे</value>
+  </data>
+  <data name="arrow_fat_left" xml:space="preserve">
+    <value>तीर मोटा बाएँ</value>
+  </data>
+  <data name="arrow_fat_line_down" xml:space="preserve">
+    <value>तीर मोटा रेखा नीचे</value>
+  </data>
+  <data name="arrow_fat_line_left" xml:space="preserve">
+    <value>तीर मोटा रेखा बाएँ</value>
+  </data>
+  <data name="arrow_fat_line_right" xml:space="preserve">
+    <value>तीर मोटा रेखा दाएँ</value>
+  </data>
+  <data name="arrow_fat_line_up" xml:space="preserve">
+    <value>तीर मोटा रेखा ऊपर</value>
+  </data>
+  <data name="arrow_fat_lines_down" xml:space="preserve">
+    <value>तीर मोटा रेखाएँ नीचे</value>
+  </data>
+  <data name="arrow_fat_lines_left" xml:space="preserve">
+    <value>तीर मोटा रेखाएँ बाएँ</value>
+  </data>
+  <data name="arrow_fat_lines_right" xml:space="preserve">
+    <value>तीर मोटा रेखाएँ दाएँ</value>
+  </data>
+  <data name="arrow_fat_lines_up" xml:space="preserve">
+    <value>तीर मोटा रेखाएँ ऊपर</value>
+  </data>
+  <data name="arrow_fat_right" xml:space="preserve">
+    <value>तीर मोटा दाएँ</value>
+  </data>
+  <data name="arrow_fat_up" xml:space="preserve">
+    <value>तीर मोटा ऊपर</value>
+  </data>
+  <data name="arrow_left" xml:space="preserve">
+    <value>तीर बाएँ</value>
+  </data>
+  <data name="arrow_line_down" xml:space="preserve">
+    <value>तीर रेखा नीचे</value>
+  </data>
+  <data name="arrow_line_down_left" xml:space="preserve">
+    <value>तीर रेखा नीचे बाएँ</value>
+  </data>
+  <data name="arrow_line_down_right" xml:space="preserve">
+    <value>तीर रेखा नीचे दाएँ</value>
+  </data>
+  <data name="arrow_line_left" xml:space="preserve">
+    <value>तीर रेखा बाएँ</value>
+  </data>
+  <data name="arrow_line_right" xml:space="preserve">
+    <value>तीर रेखा दाएँ</value>
+  </data>
+  <data name="arrow_line_up" xml:space="preserve">
+    <value>तीर रेखा ऊपर</value>
+  </data>
+  <data name="arrow_line_up_left" xml:space="preserve">
+    <value>तीर रेखा ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_line_up_right" xml:space="preserve">
+    <value>तीर रेखा ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_right" xml:space="preserve">
+    <value>तीर दाएँ</value>
+  </data>
+  <data name="arrow_square_down" xml:space="preserve">
+    <value>तीर वर्ग नीचे</value>
+  </data>
+  <data name="arrow_square_down_left" xml:space="preserve">
+    <value>तीर वर्ग नीचे बाएँ</value>
+  </data>
+  <data name="arrow_square_down_right" xml:space="preserve">
+    <value>तीर वर्ग नीचे दाएँ</value>
+  </data>
+  <data name="arrow_square_in" xml:space="preserve">
+    <value>तीर वर्ग अंदर</value>
+  </data>
+  <data name="arrow_square_left" xml:space="preserve">
+    <value>तीर वर्ग बाएँ</value>
+  </data>
+  <data name="arrow_square_out" xml:space="preserve">
+    <value>तीर वर्ग बाहर</value>
+  </data>
+  <data name="arrow_square_right" xml:space="preserve">
+    <value>तीर वर्ग दाएँ</value>
+  </data>
+  <data name="arrow_square_up" xml:space="preserve">
+    <value>तीर वर्ग ऊपर</value>
+  </data>
+  <data name="arrow_square_up_left" xml:space="preserve">
+    <value>तीर वर्ग ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_square_up_right" xml:space="preserve">
+    <value>तीर वर्ग ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_u_down_left" xml:space="preserve">
+    <value>तीर u नीचे बाएँ</value>
+  </data>
+  <data name="arrow_u_down_right" xml:space="preserve">
+    <value>तीर u नीचे दाएँ</value>
+  </data>
+  <data name="arrow_u_left_down" xml:space="preserve">
+    <value>तीर u बाएँ नीचे</value>
+  </data>
+  <data name="arrow_u_left_up" xml:space="preserve">
+    <value>तीर u बाएँ ऊपर</value>
+  </data>
+  <data name="arrow_u_right_down" xml:space="preserve">
+    <value>तीर u दाएँ नीचे</value>
+  </data>
+  <data name="arrow_u_right_up" xml:space="preserve">
+    <value>तीर u दाएँ ऊपर</value>
+  </data>
+  <data name="arrow_u_up_left" xml:space="preserve">
+    <value>तीर u ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_u_up_right" xml:space="preserve">
+    <value>तीर u ऊपर दाएँ</value>
+  </data>
+  <data name="arrow_up" xml:space="preserve">
+    <value>तीर ऊपर</value>
+  </data>
+  <data name="arrow_up_left" xml:space="preserve">
+    <value>तीर ऊपर बाएँ</value>
+  </data>
+  <data name="arrow_up_right" xml:space="preserve">
+    <value>तीर ऊपर दाएँ</value>
+  </data>
+  <data name="arrows_clockwise" xml:space="preserve">
+    <value>तीर दक्षिणावर्त</value>
+  </data>
+  <data name="arrows_counter_clockwise" xml:space="preserve">
+    <value>तीर काउंटर दक्षिणावर्त</value>
+  </data>
+  <data name="arrows_down_up" xml:space="preserve">
+    <value>तीर नीचे ऊपर</value>
+  </data>
+  <data name="arrows_horizontal" xml:space="preserve">
+    <value>तीर क्षैतिज</value>
+  </data>
+  <data name="arrows_in" xml:space="preserve">
+    <value>तीर अंदर</value>
+  </data>
+  <data name="arrows_in_cardinal" xml:space="preserve">
+    <value>तीर अंदर कार्डिनल</value>
+  </data>
+  <data name="arrows_in_line_horizontal" xml:space="preserve">
+    <value>तीर अंदर रेखा क्षैतिज</value>
+  </data>
+  <data name="arrows_in_line_vertical" xml:space="preserve">
+    <value>तीर अंदर रेखा ऊर्ध्वाधर</value>
+  </data>
+  <data name="arrows_in_simple" xml:space="preserve">
+    <value>तीर अंदर सरल</value>
+  </data>
+  <data name="arrows_left_right" xml:space="preserve">
+    <value>तीर बाएँ दाएँ</value>
+  </data>
+  <data name="arrows_merge" xml:space="preserve">
+    <value>तीर विलय</value>
+  </data>
+  <data name="arrows_out" xml:space="preserve">
+    <value>तीर बाहर</value>
+  </data>
+  <data name="arrows_out_cardinal" xml:space="preserve">
+    <value>तीर बाहर कार्डिनल</value>
+  </data>
+  <data name="arrows_out_line_horizontal" xml:space="preserve">
+    <value>तीर बाहर रेखा क्षैतिज</value>
+  </data>
+  <data name="arrows_out_line_vertical" xml:space="preserve">
+    <value>तीर बाहर रेखा ऊर्ध्वाधर</value>
+  </data>
+  <data name="arrows_out_simple" xml:space="preserve">
+    <value>तीर बाहर सरल</value>
+  </data>
+  <data name="arrows_split" xml:space="preserve">
+    <value>तीर विभाजित</value>
+  </data>
+  <data name="arrows_vertical" xml:space="preserve">
+    <value>तीर ऊर्ध्वाधर</value>
+  </data>
+  <data name="article" xml:space="preserve">
+    <value>लेख</value>
+  </data>
+  <data name="article_medium" xml:space="preserve">
+    <value>लेख मध्यम</value>
+  </data>
+  <data name="article_ny_times" xml:space="preserve">
+    <value>लेख ny गुणा</value>
+  </data>
+  <data name="asclepius" xml:space="preserve">
+    <value>एस्क्लेपियस</value>
+  </data>
+  <data name="asterisk" xml:space="preserve">
+    <value>तारांकन</value>
+  </data>
+  <data name="asterisk_simple" xml:space="preserve">
+    <value>तारांकन सरल</value>
+  </data>
+  <data name="at" xml:space="preserve">
+    <value>एट</value>
+  </data>
+  <data name="atom" xml:space="preserve">
+    <value>परमाणु</value>
+  </data>
+  <data name="avocado" xml:space="preserve">
+    <value>एवोकाडो</value>
+  </data>
+  <data name="axe" xml:space="preserve">
+    <value>कुल्हाड़ी</value>
+  </data>
+  <data name="baby" xml:space="preserve">
+    <value>शिशु</value>
+  </data>
+  <data name="baby_carriage" xml:space="preserve">
+    <value>शिशु बग्घी</value>
+  </data>
+  <data name="backpack" xml:space="preserve">
+    <value>बस्ता</value>
+  </data>
+  <data name="backspace" xml:space="preserve">
+    <value>बैकस्पेस</value>
+  </data>
+  <data name="bag" xml:space="preserve">
+    <value>बैग</value>
+  </data>
+  <data name="bag_simple" xml:space="preserve">
+    <value>बैग सरल</value>
+  </data>
+  <data name="balloon" xml:space="preserve">
+    <value>गुब्बारा</value>
+  </data>
+  <data name="bandaids" xml:space="preserve">
+    <value>पट्टियाँ</value>
+  </data>
+  <data name="bank" xml:space="preserve">
+    <value>बैंक</value>
+  </data>
+  <data name="barbell" xml:space="preserve">
+    <value>बारबेल</value>
+  </data>
+  <data name="barcode" xml:space="preserve">
+    <value>बारकोड</value>
+  </data>
+  <data name="barn" xml:space="preserve">
+    <value>खलिहान</value>
+  </data>
+  <data name="barricade" xml:space="preserve">
+    <value>बैरिकेड</value>
+  </data>
+  <data name="baseball" xml:space="preserve">
+    <value>बेसबॉल</value>
+  </data>
+  <data name="baseball_cap" xml:space="preserve">
+    <value>बेसबॉल टोपी</value>
+  </data>
+  <data name="baseball_helmet" xml:space="preserve">
+    <value>बेसबॉल हेलमेट</value>
+  </data>
+  <data name="basket" xml:space="preserve">
+    <value>टोकरी</value>
+  </data>
+  <data name="basketball" xml:space="preserve">
+    <value>बास्केटबॉल</value>
+  </data>
+  <data name="bathtub" xml:space="preserve">
+    <value>बाथटब</value>
+  </data>
+  <data name="battery_charging" xml:space="preserve">
+    <value>बैटरी चार्जिंग</value>
+  </data>
+  <data name="battery_charging_vertical" xml:space="preserve">
+    <value>बैटरी चार्जिंग ऊर्ध्वाधर</value>
+  </data>
+  <data name="battery_empty" xml:space="preserve">
+    <value>बैटरी खाली</value>
+  </data>
+  <data name="battery_full" xml:space="preserve">
+    <value>बैटरी पूर्ण</value>
+  </data>
+  <data name="battery_high" xml:space="preserve">
+    <value>बैटरी ऊँचा</value>
+  </data>
+  <data name="battery_low" xml:space="preserve">
+    <value>बैटरी नीचा</value>
+  </data>
+  <data name="battery_medium" xml:space="preserve">
+    <value>बैटरी मध्यम</value>
+  </data>
+  <data name="battery_plus" xml:space="preserve">
+    <value>बैटरी जोड़</value>
+  </data>
+  <data name="battery_plus_vertical" xml:space="preserve">
+    <value>बैटरी जोड़ ऊर्ध्वाधर</value>
+  </data>
+  <data name="battery_vertical_empty" xml:space="preserve">
+    <value>बैटरी ऊर्ध्वाधर खाली</value>
+  </data>
+  <data name="battery_vertical_full" xml:space="preserve">
+    <value>बैटरी ऊर्ध्वाधर पूर्ण</value>
+  </data>
+  <data name="battery_vertical_high" xml:space="preserve">
+    <value>बैटरी ऊर्ध्वाधर ऊँचा</value>
+  </data>
+  <data name="battery_vertical_low" xml:space="preserve">
+    <value>बैटरी ऊर्ध्वाधर नीचा</value>
+  </data>
+  <data name="battery_vertical_medium" xml:space="preserve">
+    <value>बैटरी ऊर्ध्वाधर मध्यम</value>
+  </data>
+  <data name="battery_warning" xml:space="preserve">
+    <value>बैटरी चेतावनी</value>
+  </data>
+  <data name="battery_warning_vertical" xml:space="preserve">
+    <value>बैटरी चेतावनी ऊर्ध्वाधर</value>
+  </data>
+  <data name="beach_ball" xml:space="preserve">
+    <value>समुद्र तट गेंद</value>
+  </data>
+  <data name="beanie" xml:space="preserve">
+    <value>टोपी</value>
+  </data>
+  <data name="bed" xml:space="preserve">
+    <value>बिस्तर</value>
+  </data>
+  <data name="beer_bottle" xml:space="preserve">
+    <value>बीयर बोतल</value>
+  </data>
+  <data name="beer_stein" xml:space="preserve">
+    <value>बीयर बीयर मग</value>
+  </data>
+  <data name="behance_logo" xml:space="preserve">
+    <value>Behance लोगो</value>
+  </data>
+  <data name="bell" xml:space="preserve">
+    <value>घंटी</value>
+  </data>
+  <data name="bell_ringing" xml:space="preserve">
+    <value>घंटी बजता</value>
+  </data>
+  <data name="bell_simple" xml:space="preserve">
+    <value>घंटी सरल</value>
+  </data>
+  <data name="bell_simple_ringing" xml:space="preserve">
+    <value>घंटी सरल बजता</value>
+  </data>
+  <data name="bell_simple_slash" xml:space="preserve">
+    <value>घंटी सरल स्लैश</value>
+  </data>
+  <data name="bell_simple_z" xml:space="preserve">
+    <value>घंटी सरल z</value>
+  </data>
+  <data name="bell_slash" xml:space="preserve">
+    <value>घंटी स्लैश</value>
+  </data>
+  <data name="bell_z" xml:space="preserve">
+    <value>घंटी z</value>
+  </data>
+  <data name="belt" xml:space="preserve">
+    <value>बेल्ट</value>
+  </data>
+  <data name="bezier_curve" xml:space="preserve">
+    <value>बेज़ियर वक्र</value>
+  </data>
+  <data name="bicycle" xml:space="preserve">
+    <value>साइकिल</value>
+  </data>
+  <data name="binary" xml:space="preserve">
+    <value>बाइनरी</value>
+  </data>
+  <data name="binoculars" xml:space="preserve">
+    <value>दूरबीन</value>
+  </data>
+  <data name="biohazard" xml:space="preserve">
+    <value>जैव खतरा</value>
+  </data>
+  <data name="bird" xml:space="preserve">
+    <value>पक्षी</value>
+  </data>
+  <data name="blueprint" xml:space="preserve">
+    <value>खाका</value>
+  </data>
+  <data name="bluetooth" xml:space="preserve">
+    <value>ब्लूटूथ</value>
+  </data>
+  <data name="bluetooth_connected" xml:space="preserve">
+    <value>ब्लूटूथ जुड़ा</value>
+  </data>
+  <data name="bluetooth_slash" xml:space="preserve">
+    <value>ब्लूटूथ स्लैश</value>
+  </data>
+  <data name="bluetooth_x" xml:space="preserve">
+    <value>ब्लूटूथ x</value>
+  </data>
+  <data name="boat" xml:space="preserve">
+    <value>नाव</value>
+  </data>
+  <data name="bomb" xml:space="preserve">
+    <value>बम</value>
+  </data>
+  <data name="bone" xml:space="preserve">
+    <value>हड्डी</value>
+  </data>
+  <data name="book" xml:space="preserve">
+    <value>किताब</value>
+  </data>
+  <data name="book_bookmark" xml:space="preserve">
+    <value>किताब बुकमार्क</value>
+  </data>
+  <data name="book_open" xml:space="preserve">
+    <value>किताब खुला</value>
+  </data>
+  <data name="book_open_text" xml:space="preserve">
+    <value>किताब खुला पाठ</value>
+  </data>
+  <data name="book_open_user" xml:space="preserve">
+    <value>किताब खुला उपयोगकर्ता</value>
+  </data>
+  <data name="bookmark" xml:space="preserve">
+    <value>बुकमार्क</value>
+  </data>
+  <data name="bookmark_simple" xml:space="preserve">
+    <value>बुकमार्क सरल</value>
+  </data>
+  <data name="bookmarks" xml:space="preserve">
+    <value>बुकमार्क</value>
+  </data>
+  <data name="bookmarks_simple" xml:space="preserve">
+    <value>बुकमार्क सरल</value>
+  </data>
+  <data name="books" xml:space="preserve">
+    <value>किताबें</value>
+  </data>
+  <data name="boot" xml:space="preserve">
+    <value>जूता</value>
+  </data>
+  <data name="boules" xml:space="preserve">
+    <value>बूल्स</value>
+  </data>
+  <data name="bounding_box" xml:space="preserve">
+    <value>सीमा डिब्बा</value>
+  </data>
+  <data name="bowl_food" xml:space="preserve">
+    <value>कटोरा भोजन</value>
+  </data>
+  <data name="bowl_steam" xml:space="preserve">
+    <value>कटोरा भाप</value>
+  </data>
+  <data name="bowling_ball" xml:space="preserve">
+    <value>बॉलिंग गेंद</value>
+  </data>
+  <data name="box_arrow_down" xml:space="preserve">
+    <value>डिब्बा तीर नीचे</value>
+  </data>
+  <data name="box_arrow_up" xml:space="preserve">
+    <value>डिब्बा तीर ऊपर</value>
+  </data>
+  <data name="boxing_glove" xml:space="preserve">
+    <value>मुक्केबाज़ी दस्ताना</value>
+  </data>
+  <data name="brackets_angle" xml:space="preserve">
+    <value>कोष्ठक कोण</value>
+  </data>
+  <data name="brackets_curly" xml:space="preserve">
+    <value>कोष्ठक घुंघराले</value>
+  </data>
+  <data name="brackets_round" xml:space="preserve">
+    <value>कोष्ठक गोल</value>
+  </data>
+  <data name="brackets_square" xml:space="preserve">
+    <value>कोष्ठक वर्ग</value>
+  </data>
+  <data name="brain" xml:space="preserve">
+    <value>मस्तिष्क</value>
+  </data>
+  <data name="brandy" xml:space="preserve">
+    <value>ब्रांडी</value>
+  </data>
+  <data name="bread" xml:space="preserve">
+    <value>रोटी</value>
+  </data>
+  <data name="bridge" xml:space="preserve">
+    <value>पुल</value>
+  </data>
+  <data name="briefcase" xml:space="preserve">
+    <value>ब्रीफ़केस</value>
+  </data>
+  <data name="briefcase_metal" xml:space="preserve">
+    <value>ब्रीफ़केस धातु</value>
+  </data>
+  <data name="broadcast" xml:space="preserve">
+    <value>प्रसारण</value>
+  </data>
+  <data name="broom" xml:space="preserve">
+    <value>झाड़ू</value>
+  </data>
+  <data name="browser" xml:space="preserve">
+    <value>ब्राउज़र</value>
+  </data>
+  <data name="browsers" xml:space="preserve">
+    <value>ब्राउज़र</value>
+  </data>
+  <data name="bug" xml:space="preserve">
+    <value>कीड़ा</value>
+  </data>
+  <data name="bug_beetle" xml:space="preserve">
+    <value>कीड़ा भृंग</value>
+  </data>
+  <data name="bug_droid" xml:space="preserve">
+    <value>कीड़ा ड्रॉइड</value>
+  </data>
+  <data name="building" xml:space="preserve">
+    <value>इमारत</value>
+  </data>
+  <data name="building_apartment" xml:space="preserve">
+    <value>इमारत अपार्टमेंट</value>
+  </data>
+  <data name="building_office" xml:space="preserve">
+    <value>इमारत कार्यालय</value>
+  </data>
+  <data name="buildings" xml:space="preserve">
+    <value>इमारतें</value>
+  </data>
+  <data name="bulldozer" xml:space="preserve">
+    <value>बुलडोज़र</value>
+  </data>
+  <data name="bus" xml:space="preserve">
+    <value>बस</value>
+  </data>
+  <data name="butterfly" xml:space="preserve">
+    <value>तितली</value>
+  </data>
+  <data name="cable_car" xml:space="preserve">
+    <value>केबल कार</value>
+  </data>
+  <data name="cactus" xml:space="preserve">
+    <value>कैक्टस</value>
+  </data>
+  <data name="cake" xml:space="preserve">
+    <value>केक</value>
+  </data>
+  <data name="calculator" xml:space="preserve">
+    <value>कैलकुलेटर</value>
+  </data>
+  <data name="calendar" xml:space="preserve">
+    <value>कैलेंडर</value>
+  </data>
+  <data name="calendar_blank" xml:space="preserve">
+    <value>कैलेंडर खाली</value>
+  </data>
+  <data name="calendar_check" xml:space="preserve">
+    <value>कैलेंडर सही</value>
+  </data>
+  <data name="calendar_dot" xml:space="preserve">
+    <value>कैलेंडर बिंदु</value>
+  </data>
+  <data name="calendar_dots" xml:space="preserve">
+    <value>कैलेंडर बिंदु</value>
+  </data>
+  <data name="calendar_heart" xml:space="preserve">
+    <value>कैलेंडर दिल</value>
+  </data>
+  <data name="calendar_minus" xml:space="preserve">
+    <value>कैलेंडर घटा</value>
+  </data>
+  <data name="calendar_plus" xml:space="preserve">
+    <value>कैलेंडर जोड़</value>
+  </data>
+  <data name="calendar_slash" xml:space="preserve">
+    <value>कैलेंडर स्लैश</value>
+  </data>
+  <data name="calendar_star" xml:space="preserve">
+    <value>कैलेंडर तारा</value>
+  </data>
+  <data name="calendar_x" xml:space="preserve">
+    <value>कैलेंडर x</value>
+  </data>
+  <data name="call_bell" xml:space="preserve">
+    <value>कॉल घंटी</value>
+  </data>
+  <data name="camera" xml:space="preserve">
+    <value>कैमरा</value>
+  </data>
+  <data name="camera_plus" xml:space="preserve">
+    <value>कैमरा जोड़</value>
+  </data>
+  <data name="camera_rotate" xml:space="preserve">
+    <value>कैमरा घुमाएँ</value>
+  </data>
+  <data name="camera_slash" xml:space="preserve">
+    <value>कैमरा स्लैश</value>
+  </data>
+  <data name="campfire" xml:space="preserve">
+    <value>अलाव</value>
+  </data>
+  <data name="car" xml:space="preserve">
+    <value>कार</value>
+  </data>
+  <data name="car_battery" xml:space="preserve">
+    <value>कार बैटरी</value>
+  </data>
+  <data name="car_profile" xml:space="preserve">
+    <value>कार प्रोफ़ाइल</value>
+  </data>
+  <data name="car_simple" xml:space="preserve">
+    <value>कार सरल</value>
+  </data>
+  <data name="cardholder" xml:space="preserve">
+    <value>कार्डधारक</value>
+  </data>
+  <data name="cards" xml:space="preserve">
+    <value>कार्ड</value>
+  </data>
+  <data name="cards_three" xml:space="preserve">
+    <value>कार्ड तीन</value>
+  </data>
+  <data name="caret_circle_double_down" xml:space="preserve">
+    <value>कैरेट वृत्त दोहरा नीचे</value>
+  </data>
+  <data name="caret_circle_double_left" xml:space="preserve">
+    <value>कैरेट वृत्त दोहरा बाएँ</value>
+  </data>
+  <data name="caret_circle_double_right" xml:space="preserve">
+    <value>कैरेट वृत्त दोहरा दाएँ</value>
+  </data>
+  <data name="caret_circle_double_up" xml:space="preserve">
+    <value>कैरेट वृत्त दोहरा ऊपर</value>
+  </data>
+  <data name="caret_circle_down" xml:space="preserve">
+    <value>कैरेट वृत्त नीचे</value>
+  </data>
+  <data name="caret_circle_left" xml:space="preserve">
+    <value>कैरेट वृत्त बाएँ</value>
+  </data>
+  <data name="caret_circle_right" xml:space="preserve">
+    <value>कैरेट वृत्त दाएँ</value>
+  </data>
+  <data name="caret_circle_up" xml:space="preserve">
+    <value>कैरेट वृत्त ऊपर</value>
+  </data>
+  <data name="caret_circle_up_down" xml:space="preserve">
+    <value>कैरेट वृत्त ऊपर नीचे</value>
+  </data>
+  <data name="caret_double_down" xml:space="preserve">
+    <value>कैरेट दोहरा नीचे</value>
+  </data>
+  <data name="caret_double_left" xml:space="preserve">
+    <value>कैरेट दोहरा बाएँ</value>
+  </data>
+  <data name="caret_double_right" xml:space="preserve">
+    <value>कैरेट दोहरा दाएँ</value>
+  </data>
+  <data name="caret_double_up" xml:space="preserve">
+    <value>कैरेट दोहरा ऊपर</value>
+  </data>
+  <data name="caret_down" xml:space="preserve">
+    <value>कैरेट नीचे</value>
+  </data>
+  <data name="caret_left" xml:space="preserve">
+    <value>कैरेट बाएँ</value>
+  </data>
+  <data name="caret_line_down" xml:space="preserve">
+    <value>कैरेट रेखा नीचे</value>
+  </data>
+  <data name="caret_line_left" xml:space="preserve">
+    <value>कैरेट रेखा बाएँ</value>
+  </data>
+  <data name="caret_line_right" xml:space="preserve">
+    <value>कैरेट रेखा दाएँ</value>
+  </data>
+  <data name="caret_line_up" xml:space="preserve">
+    <value>कैरेट रेखा ऊपर</value>
+  </data>
+  <data name="caret_right" xml:space="preserve">
+    <value>कैरेट दाएँ</value>
+  </data>
+  <data name="caret_up" xml:space="preserve">
+    <value>कैरेट ऊपर</value>
+  </data>
+  <data name="caret_up_down" xml:space="preserve">
+    <value>कैरेट ऊपर नीचे</value>
+  </data>
+  <data name="carrot" xml:space="preserve">
+    <value>गाजर</value>
+  </data>
+  <data name="cash_register" xml:space="preserve">
+    <value>नकद रजिस्टर</value>
+  </data>
+  <data name="cassette_tape" xml:space="preserve">
+    <value>कैसेट टेप</value>
+  </data>
+  <data name="castle_turret" xml:space="preserve">
+    <value>किला बुर्ज</value>
+  </data>
+  <data name="cat" xml:space="preserve">
+    <value>बिल्ली</value>
+  </data>
+  <data name="cell_signal_full" xml:space="preserve">
+    <value>सेल सिग्नल पूर्ण</value>
+  </data>
+  <data name="cell_signal_high" xml:space="preserve">
+    <value>सेल सिग्नल ऊँचा</value>
+  </data>
+  <data name="cell_signal_low" xml:space="preserve">
+    <value>सेल सिग्नल नीचा</value>
+  </data>
+  <data name="cell_signal_medium" xml:space="preserve">
+    <value>सेल सिग्नल मध्यम</value>
+  </data>
+  <data name="cell_signal_none" xml:space="preserve">
+    <value>सेल सिग्नल कोई नहीं</value>
+  </data>
+  <data name="cell_signal_slash" xml:space="preserve">
+    <value>सेल सिग्नल स्लैश</value>
+  </data>
+  <data name="cell_signal_x" xml:space="preserve">
+    <value>सेल सिग्नल x</value>
+  </data>
+  <data name="cell_tower" xml:space="preserve">
+    <value>सेल मीनार</value>
+  </data>
+  <data name="certificate" xml:space="preserve">
+    <value>प्रमाणपत्र</value>
+  </data>
+  <data name="chair" xml:space="preserve">
+    <value>कुर्सी</value>
+  </data>
+  <data name="chalkboard" xml:space="preserve">
+    <value>चॉकबोर्ड</value>
+  </data>
+  <data name="chalkboard_simple" xml:space="preserve">
+    <value>चॉकबोर्ड सरल</value>
+  </data>
+  <data name="chalkboard_teacher" xml:space="preserve">
+    <value>चॉकबोर्ड शिक्षक</value>
+  </data>
+  <data name="champagne" xml:space="preserve">
+    <value>शैम्पेन</value>
+  </data>
+  <data name="charging_station" xml:space="preserve">
+    <value>चार्जिंग स्टेशन</value>
+  </data>
+  <data name="chart_bar" xml:space="preserve">
+    <value>चार्ट बार</value>
+  </data>
+  <data name="chart_bar_horizontal" xml:space="preserve">
+    <value>चार्ट बार क्षैतिज</value>
+  </data>
+  <data name="chart_donut" xml:space="preserve">
+    <value>चार्ट डोनट</value>
+  </data>
+  <data name="chart_line" xml:space="preserve">
+    <value>चार्ट रेखा</value>
+  </data>
+  <data name="chart_line_down" xml:space="preserve">
+    <value>चार्ट रेखा नीचे</value>
+  </data>
+  <data name="chart_line_up" xml:space="preserve">
+    <value>चार्ट रेखा ऊपर</value>
+  </data>
+  <data name="chart_pie" xml:space="preserve">
+    <value>चार्ट पाई</value>
+  </data>
+  <data name="chart_pie_slice" xml:space="preserve">
+    <value>चार्ट पाई टुकड़ा</value>
+  </data>
+  <data name="chart_polar" xml:space="preserve">
+    <value>चार्ट ध्रुवीय</value>
+  </data>
+  <data name="chart_scatter" xml:space="preserve">
+    <value>चार्ट बिखराव</value>
+  </data>
+  <data name="chat" xml:space="preserve">
+    <value>चैट</value>
+  </data>
+  <data name="chat_centered" xml:space="preserve">
+    <value>चैट केंद्रित</value>
+  </data>
+  <data name="chat_centered_dots" xml:space="preserve">
+    <value>चैट केंद्रित बिंदु</value>
+  </data>
+  <data name="chat_centered_slash" xml:space="preserve">
+    <value>चैट केंद्रित स्लैश</value>
+  </data>
+  <data name="chat_centered_text" xml:space="preserve">
+    <value>चैट केंद्रित पाठ</value>
+  </data>
+  <data name="chat_circle" xml:space="preserve">
+    <value>चैट वृत्त</value>
+  </data>
+  <data name="chat_circle_dots" xml:space="preserve">
+    <value>चैट वृत्त बिंदु</value>
+  </data>
+  <data name="chat_circle_slash" xml:space="preserve">
+    <value>चैट वृत्त स्लैश</value>
+  </data>
+  <data name="chat_circle_text" xml:space="preserve">
+    <value>चैट वृत्त पाठ</value>
+  </data>
+  <data name="chat_dots" xml:space="preserve">
+    <value>चैट बिंदु</value>
+  </data>
+  <data name="chat_slash" xml:space="preserve">
+    <value>चैट स्लैश</value>
+  </data>
+  <data name="chat_teardrop" xml:space="preserve">
+    <value>चैट आँसू</value>
+  </data>
+  <data name="chat_teardrop_dots" xml:space="preserve">
+    <value>चैट आँसू बिंदु</value>
+  </data>
+  <data name="chat_teardrop_slash" xml:space="preserve">
+    <value>चैट आँसू स्लैश</value>
+  </data>
+  <data name="chat_teardrop_text" xml:space="preserve">
+    <value>चैट आँसू पाठ</value>
+  </data>
+  <data name="chat_text" xml:space="preserve">
+    <value>चैट पाठ</value>
+  </data>
+  <data name="chats" xml:space="preserve">
+    <value>चैट</value>
+  </data>
+  <data name="chats_circle" xml:space="preserve">
+    <value>चैट वृत्त</value>
+  </data>
+  <data name="chats_teardrop" xml:space="preserve">
+    <value>चैट आँसू</value>
+  </data>
+  <data name="check" xml:space="preserve">
+    <value>सही</value>
+  </data>
+  <data name="check_circle" xml:space="preserve">
+    <value>सही वृत्त</value>
+  </data>
+  <data name="check_fat" xml:space="preserve">
+    <value>सही मोटा</value>
+  </data>
+  <data name="check_square" xml:space="preserve">
+    <value>सही वर्ग</value>
+  </data>
+  <data name="check_square_offset" xml:space="preserve">
+    <value>सही वर्ग ऑफ़सेट</value>
+  </data>
+  <data name="checkerboard" xml:space="preserve">
+    <value>शतरंज बोर्ड</value>
+  </data>
+  <data name="checks" xml:space="preserve">
+    <value>सही</value>
+  </data>
+  <data name="cheers" xml:space="preserve">
+    <value>चीयर्स</value>
+  </data>
+  <data name="cheese" xml:space="preserve">
+    <value>पनीर</value>
+  </data>
+  <data name="chef_hat" xml:space="preserve">
+    <value>रसोइया हैट</value>
+  </data>
+  <data name="cherries" xml:space="preserve">
+    <value>चेरी</value>
+  </data>
+  <data name="church" xml:space="preserve">
+    <value>चर्च</value>
+  </data>
+  <data name="cigarette" xml:space="preserve">
+    <value>सिगरेट</value>
+  </data>
+  <data name="cigarette_slash" xml:space="preserve">
+    <value>सिगरेट स्लैश</value>
+  </data>
+  <data name="circle" xml:space="preserve">
+    <value>वृत्त</value>
+  </data>
+  <data name="circle_dashed" xml:space="preserve">
+    <value>वृत्त डैश वाली</value>
+  </data>
+  <data name="circle_half" xml:space="preserve">
+    <value>वृत्त आधा</value>
+  </data>
+  <data name="circle_half_tilt" xml:space="preserve">
+    <value>वृत्त आधा झुकाव</value>
+  </data>
+  <data name="circle_notch" xml:space="preserve">
+    <value>वृत्त खांचा</value>
+  </data>
+  <data name="circles_four" xml:space="preserve">
+    <value>वृत्त चार</value>
+  </data>
+  <data name="circles_three" xml:space="preserve">
+    <value>वृत्त तीन</value>
+  </data>
+  <data name="circles_three_plus" xml:space="preserve">
+    <value>वृत्त तीन जोड़</value>
+  </data>
+  <data name="circuitry" xml:space="preserve">
+    <value>सर्किटरी</value>
+  </data>
+  <data name="city" xml:space="preserve">
+    <value>शहर</value>
+  </data>
+  <data name="clipboard" xml:space="preserve">
+    <value>क्लिपबोर्ड</value>
+  </data>
+  <data name="clipboard_text" xml:space="preserve">
+    <value>क्लिपबोर्ड पाठ</value>
+  </data>
+  <data name="clock" xml:space="preserve">
+    <value>घड़ी</value>
+  </data>
+  <data name="clock_afternoon" xml:space="preserve">
+    <value>घड़ी दोपहर</value>
+  </data>
+  <data name="clock_clockwise" xml:space="preserve">
+    <value>घड़ी दक्षिणावर्त</value>
+  </data>
+  <data name="clock_countdown" xml:space="preserve">
+    <value>घड़ी उलटी गिनती</value>
+  </data>
+  <data name="clock_counter_clockwise" xml:space="preserve">
+    <value>घड़ी काउंटर दक्षिणावर्त</value>
+  </data>
+  <data name="clock_user" xml:space="preserve">
+    <value>घड़ी उपयोगकर्ता</value>
+  </data>
+  <data name="closed_captioning" xml:space="preserve">
+    <value>बंद कैप्शन</value>
+  </data>
+  <data name="cloud" xml:space="preserve">
+    <value>बादल</value>
+  </data>
+  <data name="cloud_arrow_down" xml:space="preserve">
+    <value>बादल तीर नीचे</value>
+  </data>
+  <data name="cloud_arrow_up" xml:space="preserve">
+    <value>बादल तीर ऊपर</value>
+  </data>
+  <data name="cloud_check" xml:space="preserve">
+    <value>बादल सही</value>
+  </data>
+  <data name="cloud_fog" xml:space="preserve">
+    <value>बादल कोहरा</value>
+  </data>
+  <data name="cloud_lightning" xml:space="preserve">
+    <value>बादल बिजली</value>
+  </data>
+  <data name="cloud_moon" xml:space="preserve">
+    <value>बादल चाँद</value>
+  </data>
+  <data name="cloud_rain" xml:space="preserve">
+    <value>बादल बारिश</value>
+  </data>
+  <data name="cloud_slash" xml:space="preserve">
+    <value>बादल स्लैश</value>
+  </data>
+  <data name="cloud_snow" xml:space="preserve">
+    <value>बादल बर्फ़</value>
+  </data>
+  <data name="cloud_sun" xml:space="preserve">
+    <value>बादल सूरज</value>
+  </data>
+  <data name="cloud_warning" xml:space="preserve">
+    <value>बादल चेतावनी</value>
+  </data>
+  <data name="cloud_x" xml:space="preserve">
+    <value>बादल x</value>
+  </data>
+  <data name="clover" xml:space="preserve">
+    <value>तिपतिया</value>
+  </data>
+  <data name="club" xml:space="preserve">
+    <value>चिड़ी</value>
+  </data>
+  <data name="coat_hanger" xml:space="preserve">
+    <value>कोट हैंगर</value>
+  </data>
+  <data name="coda_logo" xml:space="preserve">
+    <value>Coda लोगो</value>
+  </data>
+  <data name="code" xml:space="preserve">
+    <value>कोड</value>
+  </data>
+  <data name="code_block" xml:space="preserve">
+    <value>कोड ब्लॉक</value>
+  </data>
+  <data name="code_simple" xml:space="preserve">
+    <value>कोड सरल</value>
+  </data>
+  <data name="codepen_logo" xml:space="preserve">
+    <value>Codepen लोगो</value>
+  </data>
+  <data name="codesandbox_logo" xml:space="preserve">
+    <value>Codesandbox लोगो</value>
+  </data>
+  <data name="coffee" xml:space="preserve">
+    <value>कॉफ़ी</value>
+  </data>
+  <data name="coffee_bean" xml:space="preserve">
+    <value>कॉफ़ी सेम</value>
+  </data>
+  <data name="coin" xml:space="preserve">
+    <value>सिक्का</value>
+  </data>
+  <data name="coin_vertical" xml:space="preserve">
+    <value>सिक्का ऊर्ध्वाधर</value>
+  </data>
+  <data name="coins" xml:space="preserve">
+    <value>सिक्के</value>
+  </data>
+  <data name="columns" xml:space="preserve">
+    <value>स्तंभ</value>
+  </data>
+  <data name="columns_plus_left" xml:space="preserve">
+    <value>स्तंभ जोड़ बाएँ</value>
+  </data>
+  <data name="columns_plus_right" xml:space="preserve">
+    <value>स्तंभ जोड़ दाएँ</value>
+  </data>
+  <data name="command" xml:space="preserve">
+    <value>कमांड</value>
+  </data>
+  <data name="compass" xml:space="preserve">
+    <value>कम्पास</value>
+  </data>
+  <data name="compass_rose" xml:space="preserve">
+    <value>कम्पास गुलाब</value>
+  </data>
+  <data name="compass_tool" xml:space="preserve">
+    <value>कम्पास औज़ार</value>
+  </data>
+  <data name="computer_tower" xml:space="preserve">
+    <value>कंप्यूटर मीनार</value>
+  </data>
+  <data name="confetti" xml:space="preserve">
+    <value>कॉन्फ़ेटी</value>
+  </data>
+  <data name="contactless_payment" xml:space="preserve">
+    <value>संपर्करहित भुगतान</value>
+  </data>
+  <data name="control" xml:space="preserve">
+    <value>नियंत्रण</value>
+  </data>
+  <data name="cookie" xml:space="preserve">
+    <value>कुकी</value>
+  </data>
+  <data name="cooking_pot" xml:space="preserve">
+    <value>खाना पकाना बर्तन</value>
+  </data>
+  <data name="copy" xml:space="preserve">
+    <value>कॉपी</value>
+  </data>
+  <data name="copy_simple" xml:space="preserve">
+    <value>कॉपी सरल</value>
+  </data>
+  <data name="copyleft" xml:space="preserve">
+    <value>कॉपीलेफ्ट</value>
+  </data>
+  <data name="copyright" xml:space="preserve">
+    <value>कॉपीराइट</value>
+  </data>
+  <data name="corners_in" xml:space="preserve">
+    <value>कोने अंदर</value>
+  </data>
+  <data name="corners_out" xml:space="preserve">
+    <value>कोने बाहर</value>
+  </data>
+  <data name="couch" xml:space="preserve">
+    <value>सोफ़ा</value>
+  </data>
+  <data name="court_basketball" xml:space="preserve">
+    <value>अदालत बास्केटबॉल</value>
+  </data>
+  <data name="cow" xml:space="preserve">
+    <value>गाय</value>
+  </data>
+  <data name="cowboy_hat" xml:space="preserve">
+    <value>काउबॉय हैट</value>
+  </data>
+  <data name="cpu" xml:space="preserve">
+    <value>सीपीयू</value>
+  </data>
+  <data name="crane" xml:space="preserve">
+    <value>क्रेन</value>
+  </data>
+  <data name="crane_tower" xml:space="preserve">
+    <value>क्रेन मीनार</value>
+  </data>
+  <data name="credit_card" xml:space="preserve">
+    <value>क्रेडिट कार्ड</value>
+  </data>
+  <data name="cricket" xml:space="preserve">
+    <value>क्रिकेट</value>
+  </data>
+  <data name="crop" xml:space="preserve">
+    <value>काटें</value>
+  </data>
+  <data name="cross" xml:space="preserve">
+    <value>क्रॉस</value>
+  </data>
+  <data name="crosshair" xml:space="preserve">
+    <value>क्रॉसहेयर</value>
+  </data>
+  <data name="crosshair_simple" xml:space="preserve">
+    <value>क्रॉसहेयर सरल</value>
+  </data>
+  <data name="crown" xml:space="preserve">
+    <value>मुकुट</value>
+  </data>
+  <data name="crown_cross" xml:space="preserve">
+    <value>मुकुट क्रॉस</value>
+  </data>
+  <data name="crown_simple" xml:space="preserve">
+    <value>मुकुट सरल</value>
+  </data>
+  <data name="cube" xml:space="preserve">
+    <value>घन</value>
+  </data>
+  <data name="cube_focus" xml:space="preserve">
+    <value>घन फ़ोकस</value>
+  </data>
+  <data name="cube_transparent" xml:space="preserve">
+    <value>घन पारदर्शी</value>
+  </data>
+  <data name="currency_btc" xml:space="preserve">
+    <value>मुद्रा btc</value>
+  </data>
+  <data name="currency_circle_dollar" xml:space="preserve">
+    <value>मुद्रा वृत्त डॉलर</value>
+  </data>
+  <data name="currency_cny" xml:space="preserve">
+    <value>मुद्रा cny</value>
+  </data>
+  <data name="currency_dollar" xml:space="preserve">
+    <value>मुद्रा डॉलर</value>
+  </data>
+  <data name="currency_dollar_simple" xml:space="preserve">
+    <value>मुद्रा डॉलर सरल</value>
+  </data>
+  <data name="currency_eth" xml:space="preserve">
+    <value>मुद्रा eth</value>
+  </data>
+  <data name="currency_eur" xml:space="preserve">
+    <value>मुद्रा eur</value>
+  </data>
+  <data name="currency_gbp" xml:space="preserve">
+    <value>मुद्रा gbp</value>
+  </data>
+  <data name="currency_inr" xml:space="preserve">
+    <value>मुद्रा inr</value>
+  </data>
+  <data name="currency_jpy" xml:space="preserve">
+    <value>मुद्रा jpy</value>
+  </data>
+  <data name="currency_krw" xml:space="preserve">
+    <value>मुद्रा krw</value>
+  </data>
+  <data name="currency_kzt" xml:space="preserve">
+    <value>मुद्रा kzt</value>
+  </data>
+  <data name="currency_ngn" xml:space="preserve">
+    <value>मुद्रा ngn</value>
+  </data>
+  <data name="currency_rub" xml:space="preserve">
+    <value>मुद्रा rub</value>
+  </data>
+  <data name="cursor" xml:space="preserve">
+    <value>कर्सर</value>
+  </data>
+  <data name="cursor_click" xml:space="preserve">
+    <value>कर्सर क्लिक</value>
+  </data>
+  <data name="cursor_text" xml:space="preserve">
+    <value>कर्सर पाठ</value>
+  </data>
+  <data name="cylinder" xml:space="preserve">
+    <value>बेलन</value>
+  </data>
+  <data name="database" xml:space="preserve">
+    <value>डेटाबेस</value>
+  </data>
+  <data name="desk" xml:space="preserve">
+    <value>मेज़</value>
+  </data>
+  <data name="desktop" xml:space="preserve">
+    <value>डेस्कटॉप</value>
+  </data>
+  <data name="desktop_tower" xml:space="preserve">
+    <value>डेस्कटॉप मीनार</value>
+  </data>
+  <data name="detective" xml:space="preserve">
+    <value>जासूस</value>
+  </data>
+  <data name="dev_to_logo" xml:space="preserve">
+    <value>Dev को लोगो</value>
+  </data>
+  <data name="device_mobile" xml:space="preserve">
+    <value>डिवाइस मोबाइल</value>
+  </data>
+  <data name="device_mobile_camera" xml:space="preserve">
+    <value>डिवाइस मोबाइल कैमरा</value>
+  </data>
+  <data name="device_mobile_slash" xml:space="preserve">
+    <value>डिवाइस मोबाइल स्लैश</value>
+  </data>
+  <data name="device_mobile_speaker" xml:space="preserve">
+    <value>डिवाइस मोबाइल स्पीकर</value>
+  </data>
+  <data name="device_rotate" xml:space="preserve">
+    <value>डिवाइस घुमाएँ</value>
+  </data>
+  <data name="device_tablet" xml:space="preserve">
+    <value>डिवाइस टैबलेट</value>
+  </data>
+  <data name="device_tablet_camera" xml:space="preserve">
+    <value>डिवाइस टैबलेट कैमरा</value>
+  </data>
+  <data name="device_tablet_speaker" xml:space="preserve">
+    <value>डिवाइस टैबलेट स्पीकर</value>
+  </data>
+  <data name="devices" xml:space="preserve">
+    <value>डिवाइस</value>
+  </data>
+  <data name="diamond" xml:space="preserve">
+    <value>हीरा</value>
+  </data>
+  <data name="diamonds_four" xml:space="preserve">
+    <value>हीरे चार</value>
+  </data>
+  <data name="dice_five" xml:space="preserve">
+    <value>पासा पाँच</value>
+  </data>
+  <data name="dice_four" xml:space="preserve">
+    <value>पासा चार</value>
+  </data>
+  <data name="dice_one" xml:space="preserve">
+    <value>पासा एक</value>
+  </data>
+  <data name="dice_six" xml:space="preserve">
+    <value>पासा छह</value>
+  </data>
+  <data name="dice_three" xml:space="preserve">
+    <value>पासा तीन</value>
+  </data>
+  <data name="dice_two" xml:space="preserve">
+    <value>पासा दो</value>
+  </data>
+  <data name="disc" xml:space="preserve">
+    <value>डिस्क</value>
+  </data>
+  <data name="disco_ball" xml:space="preserve">
+    <value>डिस्को गेंद</value>
+  </data>
+  <data name="discord_logo" xml:space="preserve">
+    <value>Discord लोगो</value>
+  </data>
+  <data name="divide" xml:space="preserve">
+    <value>भाग</value>
+  </data>
+  <data name="dna" xml:space="preserve">
+    <value>डीएनए</value>
+  </data>
+  <data name="dog" xml:space="preserve">
+    <value>कुत्ता</value>
+  </data>
+  <data name="door" xml:space="preserve">
+    <value>दरवाज़ा</value>
+  </data>
+  <data name="door_open" xml:space="preserve">
+    <value>दरवाज़ा खुला</value>
+  </data>
+  <data name="dot" xml:space="preserve">
+    <value>बिंदु</value>
+  </data>
+  <data name="dot_outline" xml:space="preserve">
+    <value>बिंदु रूपरेखा</value>
+  </data>
+  <data name="dots_nine" xml:space="preserve">
+    <value>बिंदु नौ</value>
+  </data>
+  <data name="dots_six" xml:space="preserve">
+    <value>बिंदु छह</value>
+  </data>
+  <data name="dots_six_vertical" xml:space="preserve">
+    <value>बिंदु छह ऊर्ध्वाधर</value>
+  </data>
+  <data name="dots_three" xml:space="preserve">
+    <value>बिंदु तीन</value>
+  </data>
+  <data name="dots_three_circle" xml:space="preserve">
+    <value>बिंदु तीन वृत्त</value>
+  </data>
+  <data name="dots_three_circle_vertical" xml:space="preserve">
+    <value>बिंदु तीन वृत्त ऊर्ध्वाधर</value>
+  </data>
+  <data name="dots_three_outline" xml:space="preserve">
+    <value>बिंदु तीन रूपरेखा</value>
+  </data>
+  <data name="dots_three_outline_vertical" xml:space="preserve">
+    <value>बिंदु तीन रूपरेखा ऊर्ध्वाधर</value>
+  </data>
+  <data name="dots_three_vertical" xml:space="preserve">
+    <value>बिंदु तीन ऊर्ध्वाधर</value>
+  </data>
+  <data name="download" xml:space="preserve">
+    <value>डाउनलोड</value>
+  </data>
+  <data name="download_simple" xml:space="preserve">
+    <value>डाउनलोड सरल</value>
+  </data>
+  <data name="dress" xml:space="preserve">
+    <value>पोशाक</value>
+  </data>
+  <data name="dresser" xml:space="preserve">
+    <value>ड्रेसर</value>
+  </data>
+  <data name="dribbble_logo" xml:space="preserve">
+    <value>Dribbble लोगो</value>
+  </data>
+  <data name="drone" xml:space="preserve">
+    <value>ड्रोन</value>
+  </data>
+  <data name="drop" xml:space="preserve">
+    <value>बूंद</value>
+  </data>
+  <data name="drop_half" xml:space="preserve">
+    <value>बूंद आधा</value>
+  </data>
+  <data name="drop_half_bottom" xml:space="preserve">
+    <value>बूंद आधा नीचे</value>
+  </data>
+  <data name="drop_simple" xml:space="preserve">
+    <value>बूंद सरल</value>
+  </data>
+  <data name="drop_slash" xml:space="preserve">
+    <value>बूंद स्लैश</value>
+  </data>
+  <data name="dropbox_logo" xml:space="preserve">
+    <value>Dropbox लोगो</value>
+  </data>
+  <data name="ear" xml:space="preserve">
+    <value>कान</value>
+  </data>
+  <data name="ear_slash" xml:space="preserve">
+    <value>कान स्लैश</value>
+  </data>
+  <data name="egg" xml:space="preserve">
+    <value>अंडा</value>
+  </data>
+  <data name="egg_crack" xml:space="preserve">
+    <value>अंडा दरार</value>
+  </data>
+  <data name="eject" xml:space="preserve">
+    <value>बाहर निकालें</value>
+  </data>
+  <data name="eject_simple" xml:space="preserve">
+    <value>बाहर निकालें सरल</value>
+  </data>
+  <data name="elevator" xml:space="preserve">
+    <value>लिफ़्ट</value>
+  </data>
+  <data name="empty" xml:space="preserve">
+    <value>खाली</value>
+  </data>
+  <data name="engine" xml:space="preserve">
+    <value>इंजन</value>
+  </data>
+  <data name="envelope" xml:space="preserve">
+    <value>लिफ़ाफ़ा</value>
+  </data>
+  <data name="envelope_open" xml:space="preserve">
+    <value>लिफ़ाफ़ा खुला</value>
+  </data>
+  <data name="envelope_simple" xml:space="preserve">
+    <value>लिफ़ाफ़ा सरल</value>
+  </data>
+  <data name="envelope_simple_open" xml:space="preserve">
+    <value>लिफ़ाफ़ा सरल खुला</value>
+  </data>
+  <data name="equalizer" xml:space="preserve">
+    <value>इक्वलाइज़र</value>
+  </data>
+  <data name="equals" xml:space="preserve">
+    <value>बराबर</value>
+  </data>
+  <data name="eraser" xml:space="preserve">
+    <value>रबड़</value>
+  </data>
+  <data name="escalator_down" xml:space="preserve">
+    <value>एस्केलेटर नीचे</value>
+  </data>
+  <data name="escalator_up" xml:space="preserve">
+    <value>एस्केलेटर ऊपर</value>
+  </data>
+  <data name="exam" xml:space="preserve">
+    <value>परीक्षा</value>
+  </data>
+  <data name="exclamation_mark" xml:space="preserve">
+    <value>विस्मयादिबोधक चिह्न</value>
+  </data>
+  <data name="exclude" xml:space="preserve">
+    <value>बहिष्कृत</value>
+  </data>
+  <data name="exclude_square" xml:space="preserve">
+    <value>बहिष्कृत वर्ग</value>
+  </data>
+  <data name="export" xml:space="preserve">
+    <value>निर्यात</value>
+  </data>
+  <data name="eye" xml:space="preserve">
+    <value>आँख</value>
+  </data>
+  <data name="eye_closed" xml:space="preserve">
+    <value>आँख बंद</value>
+  </data>
+  <data name="eye_slash" xml:space="preserve">
+    <value>आँख स्लैश</value>
+  </data>
+  <data name="eyedropper" xml:space="preserve">
+    <value>आई ड्रॉपर</value>
+  </data>
+  <data name="eyedropper_sample" xml:space="preserve">
+    <value>आई ड्रॉपर नमूना</value>
+  </data>
+  <data name="eyeglasses" xml:space="preserve">
+    <value>चश्मा</value>
+  </data>
+  <data name="eyes" xml:space="preserve">
+    <value>आँखें</value>
+  </data>
+  <data name="face_mask" xml:space="preserve">
+    <value>चेहरा मास्क</value>
+  </data>
+  <data name="facebook_logo" xml:space="preserve">
+    <value>Facebook लोगो</value>
+  </data>
+  <data name="factory" xml:space="preserve">
+    <value>कारखाना</value>
+  </data>
+  <data name="faders" xml:space="preserve">
+    <value>फेडर</value>
+  </data>
+  <data name="faders_horizontal" xml:space="preserve">
+    <value>फेडर क्षैतिज</value>
+  </data>
+  <data name="fallout_shelter" xml:space="preserve">
+    <value>विकिरण आश्रय</value>
+  </data>
+  <data name="fan" xml:space="preserve">
+    <value>पंखा</value>
+  </data>
+  <data name="farm" xml:space="preserve">
+    <value>खेत</value>
+  </data>
+  <data name="fast_forward" xml:space="preserve">
+    <value>तेज़ आगे</value>
+  </data>
+  <data name="fast_forward_circle" xml:space="preserve">
+    <value>तेज़ आगे वृत्त</value>
+  </data>
+  <data name="feather" xml:space="preserve">
+    <value>पंख</value>
+  </data>
+  <data name="fediverse_logo" xml:space="preserve">
+    <value>Fediverse लोगो</value>
+  </data>
+  <data name="figma_logo" xml:space="preserve">
+    <value>Figma लोगो</value>
+  </data>
+  <data name="file" xml:space="preserve">
+    <value>फ़ाइल</value>
+  </data>
+  <data name="file_archive" xml:space="preserve">
+    <value>फ़ाइल संग्रह</value>
+  </data>
+  <data name="file_arrow_down" xml:space="preserve">
+    <value>फ़ाइल तीर नीचे</value>
+  </data>
+  <data name="file_arrow_up" xml:space="preserve">
+    <value>फ़ाइल तीर ऊपर</value>
+  </data>
+  <data name="file_audio" xml:space="preserve">
+    <value>फ़ाइल ऑडियो</value>
+  </data>
+  <data name="file_c" xml:space="preserve">
+    <value>फ़ाइल c</value>
+  </data>
+  <data name="file_c_sharp" xml:space="preserve">
+    <value>फ़ाइल c तेज़</value>
+  </data>
+  <data name="file_cloud" xml:space="preserve">
+    <value>फ़ाइल बादल</value>
+  </data>
+  <data name="file_code" xml:space="preserve">
+    <value>फ़ाइल कोड</value>
+  </data>
+  <data name="file_cpp" xml:space="preserve">
+    <value>फ़ाइल cpp</value>
+  </data>
+  <data name="file_css" xml:space="preserve">
+    <value>फ़ाइल css</value>
+  </data>
+  <data name="file_csv" xml:space="preserve">
+    <value>फ़ाइल csv</value>
+  </data>
+  <data name="file_dashed" xml:space="preserve">
+    <value>फ़ाइल डैश वाली</value>
+  </data>
+  <data name="file_doc" xml:space="preserve">
+    <value>फ़ाइल दस्तावेज़</value>
+  </data>
+  <data name="file_html" xml:space="preserve">
+    <value>फ़ाइल html</value>
+  </data>
+  <data name="file_image" xml:space="preserve">
+    <value>फ़ाइल छवि</value>
+  </data>
+  <data name="file_ini" xml:space="preserve">
+    <value>फ़ाइल ini</value>
+  </data>
+  <data name="file_jpg" xml:space="preserve">
+    <value>फ़ाइल jpg</value>
+  </data>
+  <data name="file_js" xml:space="preserve">
+    <value>फ़ाइल js</value>
+  </data>
+  <data name="file_jsx" xml:space="preserve">
+    <value>फ़ाइल jsx</value>
+  </data>
+  <data name="file_lock" xml:space="preserve">
+    <value>फ़ाइल ताला</value>
+  </data>
+  <data name="file_magnifying_glass" xml:space="preserve">
+    <value>फ़ाइल आवर्धक गिलास</value>
+  </data>
+  <data name="file_md" xml:space="preserve">
+    <value>फ़ाइल md</value>
+  </data>
+  <data name="file_minus" xml:space="preserve">
+    <value>फ़ाइल घटा</value>
+  </data>
+  <data name="file_pdf" xml:space="preserve">
+    <value>फ़ाइल pdf</value>
+  </data>
+  <data name="file_plus" xml:space="preserve">
+    <value>फ़ाइल जोड़</value>
+  </data>
+  <data name="file_png" xml:space="preserve">
+    <value>फ़ाइल png</value>
+  </data>
+  <data name="file_ppt" xml:space="preserve">
+    <value>फ़ाइल ppt</value>
+  </data>
+  <data name="file_py" xml:space="preserve">
+    <value>फ़ाइल py</value>
+  </data>
+  <data name="file_rs" xml:space="preserve">
+    <value>फ़ाइल rs</value>
+  </data>
+  <data name="file_sql" xml:space="preserve">
+    <value>फ़ाइल sql</value>
+  </data>
+  <data name="file_svg" xml:space="preserve">
+    <value>फ़ाइल svg</value>
+  </data>
+  <data name="file_text" xml:space="preserve">
+    <value>फ़ाइल पाठ</value>
+  </data>
+  <data name="file_ts" xml:space="preserve">
+    <value>फ़ाइल ts</value>
+  </data>
+  <data name="file_tsx" xml:space="preserve">
+    <value>फ़ाइल tsx</value>
+  </data>
+  <data name="file_txt" xml:space="preserve">
+    <value>फ़ाइल txt</value>
+  </data>
+  <data name="file_video" xml:space="preserve">
+    <value>फ़ाइल वीडियो</value>
+  </data>
+  <data name="file_vue" xml:space="preserve">
+    <value>फ़ाइल vue</value>
+  </data>
+  <data name="file_x" xml:space="preserve">
+    <value>फ़ाइल x</value>
+  </data>
+  <data name="file_xls" xml:space="preserve">
+    <value>फ़ाइल xls</value>
+  </data>
+  <data name="file_zip" xml:space="preserve">
+    <value>फ़ाइल ज़िप</value>
+  </data>
+  <data name="files" xml:space="preserve">
+    <value>फ़ाइलें</value>
+  </data>
+  <data name="film_reel" xml:space="preserve">
+    <value>फ़िल्म रील</value>
+  </data>
+  <data name="film_script" xml:space="preserve">
+    <value>फ़िल्म स्क्रिप्ट</value>
+  </data>
+  <data name="film_slate" xml:space="preserve">
+    <value>फ़िल्म स्लेट</value>
+  </data>
+  <data name="film_strip" xml:space="preserve">
+    <value>फ़िल्म पट्टी</value>
+  </data>
+  <data name="fingerprint" xml:space="preserve">
+    <value>फ़िंगरप्रिंट</value>
+  </data>
+  <data name="fingerprint_simple" xml:space="preserve">
+    <value>फ़िंगरप्रिंट सरल</value>
+  </data>
+  <data name="finn_the_human" xml:space="preserve">
+    <value>Finn मानव</value>
+  </data>
+  <data name="fire" xml:space="preserve">
+    <value>आग</value>
+  </data>
+  <data name="fire_extinguisher" xml:space="preserve">
+    <value>आग अग्निशामक</value>
+  </data>
+  <data name="fire_simple" xml:space="preserve">
+    <value>आग सरल</value>
+  </data>
+  <data name="fire_truck" xml:space="preserve">
+    <value>आग ट्रक</value>
+  </data>
+  <data name="first_aid" xml:space="preserve">
+    <value>पहला सहायता</value>
+  </data>
+  <data name="first_aid_kit" xml:space="preserve">
+    <value>पहला सहायता किट</value>
+  </data>
+  <data name="fish" xml:space="preserve">
+    <value>मछली</value>
+  </data>
+  <data name="fish_simple" xml:space="preserve">
+    <value>मछली सरल</value>
+  </data>
+  <data name="flag" xml:space="preserve">
+    <value>झंडा</value>
+  </data>
+  <data name="flag_banner" xml:space="preserve">
+    <value>झंडा बैनर</value>
+  </data>
+  <data name="flag_banner_fold" xml:space="preserve">
+    <value>झंडा बैनर मोड़ना</value>
+  </data>
+  <data name="flag_checkered" xml:space="preserve">
+    <value>झंडा चेकदार</value>
+  </data>
+  <data name="flag_pennant" xml:space="preserve">
+    <value>झंडा पताका</value>
+  </data>
+  <data name="flame" xml:space="preserve">
+    <value>लौ</value>
+  </data>
+  <data name="flashlight" xml:space="preserve">
+    <value>टॉर्च</value>
+  </data>
+  <data name="flask" xml:space="preserve">
+    <value>फ्लास्क</value>
+  </data>
+  <data name="flip_horizontal" xml:space="preserve">
+    <value>पलटें क्षैतिज</value>
+  </data>
+  <data name="flip_vertical" xml:space="preserve">
+    <value>पलटें ऊर्ध्वाधर</value>
+  </data>
+  <data name="floppy_disk" xml:space="preserve">
+    <value>फ़्लॉपी डिस्क</value>
+  </data>
+  <data name="floppy_disk_back" xml:space="preserve">
+    <value>फ़्लॉपी डिस्क पीछे</value>
+  </data>
+  <data name="flow_arrow" xml:space="preserve">
+    <value>प्रवाह तीर</value>
+  </data>
+  <data name="flower" xml:space="preserve">
+    <value>फूल</value>
+  </data>
+  <data name="flower_lotus" xml:space="preserve">
+    <value>फूल कमल</value>
+  </data>
+  <data name="flower_tulip" xml:space="preserve">
+    <value>फूल ट्यूलिप</value>
+  </data>
+  <data name="flying_saucer" xml:space="preserve">
+    <value>उड़ता तश्तरी</value>
+  </data>
+  <data name="folder" xml:space="preserve">
+    <value>फ़ोल्डर</value>
+  </data>
+  <data name="folder_dashed" xml:space="preserve">
+    <value>फ़ोल्डर डैश वाली</value>
+  </data>
+  <data name="folder_lock" xml:space="preserve">
+    <value>फ़ोल्डर ताला</value>
+  </data>
+  <data name="folder_minus" xml:space="preserve">
+    <value>फ़ोल्डर घटा</value>
+  </data>
+  <data name="folder_open" xml:space="preserve">
+    <value>फ़ोल्डर खुला</value>
+  </data>
+  <data name="folder_plus" xml:space="preserve">
+    <value>फ़ोल्डर जोड़</value>
+  </data>
+  <data name="folder_simple" xml:space="preserve">
+    <value>फ़ोल्डर सरल</value>
+  </data>
+  <data name="folder_simple_dashed" xml:space="preserve">
+    <value>फ़ोल्डर सरल डैश वाली</value>
+  </data>
+  <data name="folder_simple_lock" xml:space="preserve">
+    <value>फ़ोल्डर सरल ताला</value>
+  </data>
+  <data name="folder_simple_minus" xml:space="preserve">
+    <value>फ़ोल्डर सरल घटा</value>
+  </data>
+  <data name="folder_simple_plus" xml:space="preserve">
+    <value>फ़ोल्डर सरल जोड़</value>
+  </data>
+  <data name="folder_simple_star" xml:space="preserve">
+    <value>फ़ोल्डर सरल तारा</value>
+  </data>
+  <data name="folder_simple_user" xml:space="preserve">
+    <value>फ़ोल्डर सरल उपयोगकर्ता</value>
+  </data>
+  <data name="folder_star" xml:space="preserve">
+    <value>फ़ोल्डर तारा</value>
+  </data>
+  <data name="folder_user" xml:space="preserve">
+    <value>फ़ोल्डर उपयोगकर्ता</value>
+  </data>
+  <data name="folders" xml:space="preserve">
+    <value>फ़ोल्डर</value>
+  </data>
+  <data name="football" xml:space="preserve">
+    <value>फ़ुटबॉल</value>
+  </data>
+  <data name="football_helmet" xml:space="preserve">
+    <value>फ़ुटबॉल हेलमेट</value>
+  </data>
+  <data name="footprints" xml:space="preserve">
+    <value>पदचिह्न</value>
+  </data>
+  <data name="fork_knife" xml:space="preserve">
+    <value>कांटा चाकू</value>
+  </data>
+  <data name="four_k" xml:space="preserve">
+    <value>चार k</value>
+  </data>
+  <data name="frame_corners" xml:space="preserve">
+    <value>फ़्रेम कोने</value>
+  </data>
+  <data name="framer_logo" xml:space="preserve">
+    <value>Framer लोगो</value>
+  </data>
+  <data name="function" xml:space="preserve">
+    <value>फ़ंक्शन</value>
+  </data>
+  <data name="funnel" xml:space="preserve">
+    <value>कीप</value>
+  </data>
+  <data name="funnel_simple" xml:space="preserve">
+    <value>कीप सरल</value>
+  </data>
+  <data name="funnel_simple_x" xml:space="preserve">
+    <value>कीप सरल x</value>
+  </data>
+  <data name="funnel_x" xml:space="preserve">
+    <value>कीप x</value>
+  </data>
+  <data name="game_controller" xml:space="preserve">
+    <value>खेल नियंत्रक</value>
+  </data>
+  <data name="garage" xml:space="preserve">
+    <value>गैरेज</value>
+  </data>
+  <data name="gas_can" xml:space="preserve">
+    <value>गैस डिब्बा</value>
+  </data>
+  <data name="gas_pump" xml:space="preserve">
+    <value>गैस पंप</value>
+  </data>
+  <data name="gauge" xml:space="preserve">
+    <value>गेज</value>
+  </data>
+  <data name="gavel" xml:space="preserve">
+    <value>हथौड़ा</value>
+  </data>
+  <data name="gear" xml:space="preserve">
+    <value>गियर</value>
+  </data>
+  <data name="gear_fine" xml:space="preserve">
+    <value>गियर बारीक</value>
+  </data>
+  <data name="gear_six" xml:space="preserve">
+    <value>गियर छह</value>
+  </data>
+  <data name="gender_female" xml:space="preserve">
+    <value>लिंग महिला</value>
+  </data>
+  <data name="gender_intersex" xml:space="preserve">
+    <value>लिंग इंटरसेक्स</value>
+  </data>
+  <data name="gender_male" xml:space="preserve">
+    <value>लिंग पुरुष</value>
+  </data>
+  <data name="gender_neuter" xml:space="preserve">
+    <value>लिंग नपुंसक</value>
+  </data>
+  <data name="gender_nonbinary" xml:space="preserve">
+    <value>लिंग नॉन-बाइनरी</value>
+  </data>
+  <data name="gender_transgender" xml:space="preserve">
+    <value>लिंग ट्रांसजेंडर</value>
+  </data>
+  <data name="ghost" xml:space="preserve">
+    <value>भूत</value>
+  </data>
+  <data name="gif" xml:space="preserve">
+    <value>Gif</value>
+  </data>
+  <data name="gift" xml:space="preserve">
+    <value>उपहार</value>
+  </data>
+  <data name="git_branch" xml:space="preserve">
+    <value>Git शाखा</value>
+  </data>
+  <data name="git_commit" xml:space="preserve">
+    <value>Git कमिट</value>
+  </data>
+  <data name="git_diff" xml:space="preserve">
+    <value>Git अंतर</value>
+  </data>
+  <data name="git_fork" xml:space="preserve">
+    <value>Git कांटा</value>
+  </data>
+  <data name="git_merge" xml:space="preserve">
+    <value>Git विलय</value>
+  </data>
+  <data name="git_pull_request" xml:space="preserve">
+    <value>Git खींचें अनुरोध</value>
+  </data>
+  <data name="github_logo" xml:space="preserve">
+    <value>Github लोगो</value>
+  </data>
+  <data name="gitlab_logo" xml:space="preserve">
+    <value>Gitlab लोगो</value>
+  </data>
+  <data name="gitlab_logo_simple" xml:space="preserve">
+    <value>Gitlab लोगो सरल</value>
+  </data>
+  <data name="globe" xml:space="preserve">
+    <value>ग्लोब</value>
+  </data>
+  <data name="globe_hemisphere_east" xml:space="preserve">
+    <value>ग्लोब गोलार्ध पूर्व</value>
+  </data>
+  <data name="globe_hemisphere_west" xml:space="preserve">
+    <value>ग्लोब गोलार्ध पश्चिम</value>
+  </data>
+  <data name="globe_simple" xml:space="preserve">
+    <value>ग्लोब सरल</value>
+  </data>
+  <data name="globe_simple_x" xml:space="preserve">
+    <value>ग्लोब सरल x</value>
+  </data>
+  <data name="globe_stand" xml:space="preserve">
+    <value>ग्लोब स्टैंड</value>
+  </data>
+  <data name="globe_x" xml:space="preserve">
+    <value>ग्लोब x</value>
+  </data>
+  <data name="goggles" xml:space="preserve">
+    <value>चश्मा</value>
+  </data>
+  <data name="golf" xml:space="preserve">
+    <value>गोल्फ़</value>
+  </data>
+  <data name="goodreads_logo" xml:space="preserve">
+    <value>Goodreads लोगो</value>
+  </data>
+  <data name="google_cardboard_logo" xml:space="preserve">
+    <value>Google गत्ता लोगो</value>
+  </data>
+  <data name="google_chrome_logo" xml:space="preserve">
+    <value>Google chrome लोगो</value>
+  </data>
+  <data name="google_drive_logo" xml:space="preserve">
+    <value>Google ड्राइव लोगो</value>
+  </data>
+  <data name="google_logo" xml:space="preserve">
+    <value>Google लोगो</value>
+  </data>
+  <data name="google_photos_logo" xml:space="preserve">
+    <value>Google फ़ोटो लोगो</value>
+  </data>
+  <data name="google_play_logo" xml:space="preserve">
+    <value>Google चलाएँ लोगो</value>
+  </data>
+  <data name="google_podcasts_logo" xml:space="preserve">
+    <value>Google पॉडकास्ट लोगो</value>
+  </data>
+  <data name="gps" xml:space="preserve">
+    <value>जीपीएस</value>
+  </data>
+  <data name="gps_fix" xml:space="preserve">
+    <value>जीपीएस ठीक करें</value>
+  </data>
+  <data name="gps_slash" xml:space="preserve">
+    <value>जीपीएस स्लैश</value>
+  </data>
+  <data name="gradient" xml:space="preserve">
+    <value>ग्रेडिएंट</value>
+  </data>
+  <data name="graduation_cap" xml:space="preserve">
+    <value>स्नातक टोपी</value>
+  </data>
+  <data name="grains" xml:space="preserve">
+    <value>अनाज</value>
+  </data>
+  <data name="grains_slash" xml:space="preserve">
+    <value>अनाज स्लैश</value>
+  </data>
+  <data name="graph" xml:space="preserve">
+    <value>ग्राफ़</value>
+  </data>
+  <data name="graphics_card" xml:space="preserve">
+    <value>ग्राफ़िक्स कार्ड</value>
+  </data>
+  <data name="greater_than" xml:space="preserve">
+    <value>बड़ा से</value>
+  </data>
+  <data name="greater_than_or_equal" xml:space="preserve">
+    <value>बड़ा से या बराबर</value>
+  </data>
+  <data name="grid_four" xml:space="preserve">
+    <value>ग्रिड चार</value>
+  </data>
+  <data name="grid_nine" xml:space="preserve">
+    <value>ग्रिड नौ</value>
+  </data>
+  <data name="guitar" xml:space="preserve">
+    <value>गिटार</value>
+  </data>
+  <data name="hair_dryer" xml:space="preserve">
+    <value>बाल ड्रायर</value>
+  </data>
+  <data name="hamburger" xml:space="preserve">
+    <value>हैमबर्गर</value>
+  </data>
+  <data name="hammer" xml:space="preserve">
+    <value>हथौड़ा</value>
+  </data>
+  <data name="hand" xml:space="preserve">
+    <value>हाथ</value>
+  </data>
+  <data name="hand_arrow_down" xml:space="preserve">
+    <value>हाथ तीर नीचे</value>
+  </data>
+  <data name="hand_arrow_up" xml:space="preserve">
+    <value>हाथ तीर ऊपर</value>
+  </data>
+  <data name="hand_coins" xml:space="preserve">
+    <value>हाथ सिक्के</value>
+  </data>
+  <data name="hand_deposit" xml:space="preserve">
+    <value>हाथ जमा</value>
+  </data>
+  <data name="hand_eye" xml:space="preserve">
+    <value>हाथ आँख</value>
+  </data>
+  <data name="hand_fist" xml:space="preserve">
+    <value>हाथ मुट्ठी</value>
+  </data>
+  <data name="hand_grabbing" xml:space="preserve">
+    <value>हाथ पकड़ना</value>
+  </data>
+  <data name="hand_heart" xml:space="preserve">
+    <value>हाथ दिल</value>
+  </data>
+  <data name="hand_palm" xml:space="preserve">
+    <value>हाथ ताड़</value>
+  </data>
+  <data name="hand_peace" xml:space="preserve">
+    <value>हाथ शांति</value>
+  </data>
+  <data name="hand_pointing" xml:space="preserve">
+    <value>हाथ इशारा करता</value>
+  </data>
+  <data name="hand_soap" xml:space="preserve">
+    <value>हाथ साबुन</value>
+  </data>
+  <data name="hand_swipe_left" xml:space="preserve">
+    <value>हाथ स्वाइप बाएँ</value>
+  </data>
+  <data name="hand_swipe_right" xml:space="preserve">
+    <value>हाथ स्वाइप दाएँ</value>
+  </data>
+  <data name="hand_tap" xml:space="preserve">
+    <value>हाथ टैप</value>
+  </data>
+  <data name="hand_waving" xml:space="preserve">
+    <value>हाथ लहराता</value>
+  </data>
+  <data name="hand_withdraw" xml:space="preserve">
+    <value>हाथ निकासी</value>
+  </data>
+  <data name="handbag" xml:space="preserve">
+    <value>हैंडबैग</value>
+  </data>
+  <data name="handbag_simple" xml:space="preserve">
+    <value>हैंडबैग सरल</value>
+  </data>
+  <data name="hands_clapping" xml:space="preserve">
+    <value>हाथ ताली</value>
+  </data>
+  <data name="hands_praying" xml:space="preserve">
+    <value>हाथ प्रार्थना</value>
+  </data>
+  <data name="handshake" xml:space="preserve">
+    <value>हाथ मिलाना</value>
+  </data>
+  <data name="hard_drive" xml:space="preserve">
+    <value>हार्ड ड्राइव</value>
+  </data>
+  <data name="hard_drives" xml:space="preserve">
+    <value>हार्ड ड्राइव</value>
+  </data>
+  <data name="hard_hat" xml:space="preserve">
+    <value>हार्ड हैट</value>
+  </data>
+  <data name="hash" xml:space="preserve">
+    <value>हैश</value>
+  </data>
+  <data name="hash_straight" xml:space="preserve">
+    <value>हैश सीधा</value>
+  </data>
+  <data name="head_circuit" xml:space="preserve">
+    <value>सिर परिपथ</value>
+  </data>
+  <data name="headlights" xml:space="preserve">
+    <value>हेडलाइट</value>
+  </data>
+  <data name="headphones" xml:space="preserve">
+    <value>हेडफ़ोन</value>
+  </data>
+  <data name="headset" xml:space="preserve">
+    <value>हेडसेट</value>
+  </data>
+  <data name="heart" xml:space="preserve">
+    <value>दिल</value>
+  </data>
+  <data name="heart_break" xml:space="preserve">
+    <value>दिल विराम</value>
+  </data>
+  <data name="heart_half" xml:space="preserve">
+    <value>दिल आधा</value>
+  </data>
+  <data name="heart_straight" xml:space="preserve">
+    <value>दिल सीधा</value>
+  </data>
+  <data name="heart_straight_break" xml:space="preserve">
+    <value>दिल सीधा विराम</value>
+  </data>
+  <data name="heartbeat" xml:space="preserve">
+    <value>धड़कन</value>
+  </data>
+  <data name="hexagon" xml:space="preserve">
+    <value>षट्भुज</value>
+  </data>
+  <data name="high_definition" xml:space="preserve">
+    <value>ऊँचा परिभाषा</value>
+  </data>
+  <data name="high_heel" xml:space="preserve">
+    <value>ऊँचा एड़ी</value>
+  </data>
+  <data name="highlighter" xml:space="preserve">
+    <value>हाइलाइटर</value>
+  </data>
+  <data name="highlighter_circle" xml:space="preserve">
+    <value>हाइलाइटर वृत्त</value>
+  </data>
+  <data name="hockey" xml:space="preserve">
+    <value>हॉकी</value>
+  </data>
+  <data name="hoodie" xml:space="preserve">
+    <value>हुडी</value>
+  </data>
+  <data name="horse" xml:space="preserve">
+    <value>घोड़ा</value>
+  </data>
+  <data name="hospital" xml:space="preserve">
+    <value>अस्पताल</value>
+  </data>
+  <data name="hourglass" xml:space="preserve">
+    <value>रेतघड़ी</value>
+  </data>
+  <data name="hourglass_high" xml:space="preserve">
+    <value>रेतघड़ी ऊँचा</value>
+  </data>
+  <data name="hourglass_low" xml:space="preserve">
+    <value>रेतघड़ी नीचा</value>
+  </data>
+  <data name="hourglass_medium" xml:space="preserve">
+    <value>रेतघड़ी मध्यम</value>
+  </data>
+  <data name="hourglass_simple" xml:space="preserve">
+    <value>रेतघड़ी सरल</value>
+  </data>
+  <data name="hourglass_simple_high" xml:space="preserve">
+    <value>रेतघड़ी सरल ऊँचा</value>
+  </data>
+  <data name="hourglass_simple_low" xml:space="preserve">
+    <value>रेतघड़ी सरल नीचा</value>
+  </data>
+  <data name="hourglass_simple_medium" xml:space="preserve">
+    <value>रेतघड़ी सरल मध्यम</value>
+  </data>
+  <data name="house" xml:space="preserve">
+    <value>घर</value>
+  </data>
+  <data name="house_line" xml:space="preserve">
+    <value>घर रेखा</value>
+  </data>
+  <data name="house_simple" xml:space="preserve">
+    <value>घर सरल</value>
+  </data>
+  <data name="hurricane" xml:space="preserve">
+    <value>तूफ़ान</value>
+  </data>
+  <data name="ice_cream" xml:space="preserve">
+    <value>बर्फ़ क्रीम</value>
+  </data>
+  <data name="identification_badge" xml:space="preserve">
+    <value>पहचान बैज</value>
+  </data>
+  <data name="identification_card" xml:space="preserve">
+    <value>पहचान कार्ड</value>
+  </data>
+  <data name="image" xml:space="preserve">
+    <value>छवि</value>
+  </data>
+  <data name="image_broken" xml:space="preserve">
+    <value>छवि टूटा</value>
+  </data>
+  <data name="image_square" xml:space="preserve">
+    <value>छवि वर्ग</value>
+  </data>
+  <data name="images" xml:space="preserve">
+    <value>छवियाँ</value>
+  </data>
+  <data name="images_square" xml:space="preserve">
+    <value>छवियाँ वर्ग</value>
+  </data>
+  <data name="infinity" xml:space="preserve">
+    <value>अनंत</value>
+  </data>
+  <data name="info" xml:space="preserve">
+    <value>जानकारी</value>
+  </data>
+  <data name="instagram_logo" xml:space="preserve">
+    <value>Instagram लोगो</value>
+  </data>
+  <data name="intersect" xml:space="preserve">
+    <value>प्रतिच्छेद</value>
+  </data>
+  <data name="intersect_square" xml:space="preserve">
+    <value>प्रतिच्छेद वर्ग</value>
+  </data>
+  <data name="intersect_three" xml:space="preserve">
+    <value>प्रतिच्छेद तीन</value>
+  </data>
+  <data name="intersection" xml:space="preserve">
+    <value>प्रतिच्छेदन</value>
+  </data>
+  <data name="invoice" xml:space="preserve">
+    <value>चालान</value>
+  </data>
+  <data name="island" xml:space="preserve">
+    <value>द्वीप</value>
+  </data>
+  <data name="jar" xml:space="preserve">
+    <value>जार</value>
+  </data>
+  <data name="jar_label" xml:space="preserve">
+    <value>जार लेबल</value>
+  </data>
+  <data name="jeep" xml:space="preserve">
+    <value>जीप</value>
+  </data>
+  <data name="joystick" xml:space="preserve">
+    <value>जॉयस्टिक</value>
+  </data>
+  <data name="kanban" xml:space="preserve">
+    <value>कानबान</value>
+  </data>
+  <data name="key" xml:space="preserve">
+    <value>चाबी</value>
+  </data>
+  <data name="key_return" xml:space="preserve">
+    <value>चाबी वापसी</value>
+  </data>
+  <data name="keyboard" xml:space="preserve">
+    <value>कीबोर्ड</value>
+  </data>
+  <data name="keyhole" xml:space="preserve">
+    <value>चाबी का छेद</value>
+  </data>
+  <data name="knife" xml:space="preserve">
+    <value>चाकू</value>
+  </data>
+  <data name="ladder" xml:space="preserve">
+    <value>सीढ़ी</value>
+  </data>
+  <data name="ladder_simple" xml:space="preserve">
+    <value>सीढ़ी सरल</value>
+  </data>
+  <data name="lamp" xml:space="preserve">
+    <value>लैंप</value>
+  </data>
+  <data name="lamp_pendant" xml:space="preserve">
+    <value>लैंप लटकन</value>
+  </data>
+  <data name="laptop" xml:space="preserve">
+    <value>लैपटॉप</value>
+  </data>
+  <data name="lasso" xml:space="preserve">
+    <value>लस्सो</value>
+  </data>
+  <data name="lastfm_logo" xml:space="preserve">
+    <value>Lastfm लोगो</value>
+  </data>
+  <data name="layout" xml:space="preserve">
+    <value>लेआउट</value>
+  </data>
+  <data name="leaf" xml:space="preserve">
+    <value>पत्ता</value>
+  </data>
+  <data name="lectern" xml:space="preserve">
+    <value>व्याख्यान मंच</value>
+  </data>
+  <data name="lego" xml:space="preserve">
+    <value>लेगो</value>
+  </data>
+  <data name="lego_smiley" xml:space="preserve">
+    <value>लेगो स्माइली</value>
+  </data>
+  <data name="less_than" xml:space="preserve">
+    <value>कम से</value>
+  </data>
+  <data name="less_than_or_equal" xml:space="preserve">
+    <value>कम से या बराबर</value>
+  </data>
+  <data name="letter_circle_h" xml:space="preserve">
+    <value>अक्षर वृत्त h</value>
+  </data>
+  <data name="letter_circle_p" xml:space="preserve">
+    <value>अक्षर वृत्त p</value>
+  </data>
+  <data name="letter_circle_v" xml:space="preserve">
+    <value>अक्षर वृत्त v</value>
+  </data>
+  <data name="lifebuoy" xml:space="preserve">
+    <value>लाइफ़बॉय</value>
+  </data>
+  <data name="lightbulb" xml:space="preserve">
+    <value>बल्ब</value>
+  </data>
+  <data name="lightbulb_filament" xml:space="preserve">
+    <value>बल्ब फिलामेंट</value>
+  </data>
+  <data name="lighthouse" xml:space="preserve">
+    <value>प्रकाशस्तंभ</value>
+  </data>
+  <data name="lightning" xml:space="preserve">
+    <value>बिजली</value>
+  </data>
+  <data name="lightning_a" xml:space="preserve">
+    <value>बिजली a</value>
+  </data>
+  <data name="lightning_slash" xml:space="preserve">
+    <value>बिजली स्लैश</value>
+  </data>
+  <data name="line_segment" xml:space="preserve">
+    <value>रेखा खंड</value>
+  </data>
+  <data name="line_segments" xml:space="preserve">
+    <value>रेखा खंड</value>
+  </data>
+  <data name="line_vertical" xml:space="preserve">
+    <value>रेखा ऊर्ध्वाधर</value>
+  </data>
+  <data name="link" xml:space="preserve">
+    <value>लिंक</value>
+  </data>
+  <data name="link_break" xml:space="preserve">
+    <value>लिंक विराम</value>
+  </data>
+  <data name="link_simple" xml:space="preserve">
+    <value>लिंक सरल</value>
+  </data>
+  <data name="link_simple_break" xml:space="preserve">
+    <value>लिंक सरल विराम</value>
+  </data>
+  <data name="link_simple_horizontal" xml:space="preserve">
+    <value>लिंक सरल क्षैतिज</value>
+  </data>
+  <data name="link_simple_horizontal_break" xml:space="preserve">
+    <value>लिंक सरल क्षैतिज विराम</value>
+  </data>
+  <data name="linkedin_logo" xml:space="preserve">
+    <value>Linkedin लोगो</value>
+  </data>
+  <data name="linktree_logo" xml:space="preserve">
+    <value>Linktree लोगो</value>
+  </data>
+  <data name="linux_logo" xml:space="preserve">
+    <value>Linux लोगो</value>
+  </data>
+  <data name="list" xml:space="preserve">
+    <value>सूची</value>
+  </data>
+  <data name="list_bullets" xml:space="preserve">
+    <value>सूची बुलेट</value>
+  </data>
+  <data name="list_checks" xml:space="preserve">
+    <value>सूची सही</value>
+  </data>
+  <data name="list_dashes" xml:space="preserve">
+    <value>सूची डैश</value>
+  </data>
+  <data name="list_heart" xml:space="preserve">
+    <value>सूची दिल</value>
+  </data>
+  <data name="list_magnifying_glass" xml:space="preserve">
+    <value>सूची आवर्धक गिलास</value>
+  </data>
+  <data name="list_numbers" xml:space="preserve">
+    <value>सूची संख्याएँ</value>
+  </data>
+  <data name="list_plus" xml:space="preserve">
+    <value>सूची जोड़</value>
+  </data>
+  <data name="list_star" xml:space="preserve">
+    <value>सूची तारा</value>
+  </data>
+  <data name="lock" xml:space="preserve">
+    <value>ताला</value>
+  </data>
+  <data name="lock_key" xml:space="preserve">
+    <value>ताला चाबी</value>
+  </data>
+  <data name="lock_key_open" xml:space="preserve">
+    <value>ताला चाबी खुला</value>
+  </data>
+  <data name="lock_laminated" xml:space="preserve">
+    <value>ताला लैमिनेटेड</value>
+  </data>
+  <data name="lock_laminated_open" xml:space="preserve">
+    <value>ताला लैमिनेटेड खुला</value>
+  </data>
+  <data name="lock_open" xml:space="preserve">
+    <value>ताला खुला</value>
+  </data>
+  <data name="lock_simple" xml:space="preserve">
+    <value>ताला सरल</value>
+  </data>
+  <data name="lock_simple_open" xml:space="preserve">
+    <value>ताला सरल खुला</value>
+  </data>
+  <data name="lockers" xml:space="preserve">
+    <value>लॉकर</value>
+  </data>
+  <data name="log" xml:space="preserve">
+    <value>लॉग</value>
+  </data>
+  <data name="magic_wand" xml:space="preserve">
+    <value>जादू छड़ी</value>
+  </data>
+  <data name="magnet" xml:space="preserve">
+    <value>चुंबक</value>
+  </data>
+  <data name="magnet_straight" xml:space="preserve">
+    <value>चुंबक सीधा</value>
+  </data>
+  <data name="magnifying_glass" xml:space="preserve">
+    <value>आवर्धक गिलास</value>
+  </data>
+  <data name="magnifying_glass_minus" xml:space="preserve">
+    <value>आवर्धक गिलास घटा</value>
+  </data>
+  <data name="magnifying_glass_plus" xml:space="preserve">
+    <value>आवर्धक गिलास जोड़</value>
+  </data>
+  <data name="mailbox" xml:space="preserve">
+    <value>मेलबॉक्स</value>
+  </data>
+  <data name="map_pin" xml:space="preserve">
+    <value>नक्शा पिन</value>
+  </data>
+  <data name="map_pin_area" xml:space="preserve">
+    <value>नक्शा पिन क्षेत्र</value>
+  </data>
+  <data name="map_pin_line" xml:space="preserve">
+    <value>नक्शा पिन रेखा</value>
+  </data>
+  <data name="map_pin_plus" xml:space="preserve">
+    <value>नक्शा पिन जोड़</value>
+  </data>
+  <data name="map_pin_simple" xml:space="preserve">
+    <value>नक्शा पिन सरल</value>
+  </data>
+  <data name="map_pin_simple_area" xml:space="preserve">
+    <value>नक्शा पिन सरल क्षेत्र</value>
+  </data>
+  <data name="map_pin_simple_line" xml:space="preserve">
+    <value>नक्शा पिन सरल रेखा</value>
+  </data>
+  <data name="map_trifold" xml:space="preserve">
+    <value>नक्शा तीन तह</value>
+  </data>
+  <data name="markdown_logo" xml:space="preserve">
+    <value>मार्कडाउन लोगो</value>
+  </data>
+  <data name="marker_circle" xml:space="preserve">
+    <value>मार्कर वृत्त</value>
+  </data>
+  <data name="martini" xml:space="preserve">
+    <value>मार्टिनी</value>
+  </data>
+  <data name="mask_happy" xml:space="preserve">
+    <value>मास्क खुश</value>
+  </data>
+  <data name="mask_sad" xml:space="preserve">
+    <value>मास्क उदास</value>
+  </data>
+  <data name="mastodon_logo" xml:space="preserve">
+    <value>Mastodon लोगो</value>
+  </data>
+  <data name="math_operations" xml:space="preserve">
+    <value>गणित संक्रियाएँ</value>
+  </data>
+  <data name="matrix_logo" xml:space="preserve">
+    <value>मैट्रिक्स लोगो</value>
+  </data>
+  <data name="medal" xml:space="preserve">
+    <value>पदक</value>
+  </data>
+  <data name="medal_military" xml:space="preserve">
+    <value>पदक सैन्य</value>
+  </data>
+  <data name="medium_logo" xml:space="preserve">
+    <value>मध्यम लोगो</value>
+  </data>
+  <data name="megaphone" xml:space="preserve">
+    <value>मेगाफ़ोन</value>
+  </data>
+  <data name="megaphone_simple" xml:space="preserve">
+    <value>मेगाफ़ोन सरल</value>
+  </data>
+  <data name="member_of" xml:space="preserve">
+    <value>सदस्य का</value>
+  </data>
+  <data name="memory" xml:space="preserve">
+    <value>मेमोरी</value>
+  </data>
+  <data name="messenger_logo" xml:space="preserve">
+    <value>Messenger लोगो</value>
+  </data>
+  <data name="meta_logo" xml:space="preserve">
+    <value>Meta लोगो</value>
+  </data>
+  <data name="meteor" xml:space="preserve">
+    <value>उल्का</value>
+  </data>
+  <data name="metronome" xml:space="preserve">
+    <value>मेट्रोनोम</value>
+  </data>
+  <data name="microphone" xml:space="preserve">
+    <value>माइक्रोफ़ोन</value>
+  </data>
+  <data name="microphone_slash" xml:space="preserve">
+    <value>माइक्रोफ़ोन स्लैश</value>
+  </data>
+  <data name="microphone_stage" xml:space="preserve">
+    <value>माइक्रोफ़ोन मंच</value>
+  </data>
+  <data name="microscope" xml:space="preserve">
+    <value>सूक्ष्मदर्शी</value>
+  </data>
+  <data name="microsoft_excel_logo" xml:space="preserve">
+    <value>Microsoft excel लोगो</value>
+  </data>
+  <data name="microsoft_outlook_logo" xml:space="preserve">
+    <value>Microsoft outlook लोगो</value>
+  </data>
+  <data name="microsoft_powerpoint_logo" xml:space="preserve">
+    <value>Microsoft powerpoint लोगो</value>
+  </data>
+  <data name="microsoft_teams_logo" xml:space="preserve">
+    <value>Microsoft टीमें लोगो</value>
+  </data>
+  <data name="microsoft_word_logo" xml:space="preserve">
+    <value>Microsoft word लोगो</value>
+  </data>
+  <data name="minus" xml:space="preserve">
+    <value>घटा</value>
+  </data>
+  <data name="minus_circle" xml:space="preserve">
+    <value>घटा वृत्त</value>
+  </data>
+  <data name="minus_square" xml:space="preserve">
+    <value>घटा वर्ग</value>
+  </data>
+  <data name="money" xml:space="preserve">
+    <value>पैसा</value>
+  </data>
+  <data name="money_wavy" xml:space="preserve">
+    <value>पैसा लहरदार</value>
+  </data>
+  <data name="monitor" xml:space="preserve">
+    <value>मॉनिटर</value>
+  </data>
+  <data name="monitor_arrow_up" xml:space="preserve">
+    <value>मॉनिटर तीर ऊपर</value>
+  </data>
+  <data name="monitor_play" xml:space="preserve">
+    <value>मॉनिटर चलाएँ</value>
+  </data>
+  <data name="moon" xml:space="preserve">
+    <value>चाँद</value>
+  </data>
+  <data name="moon_stars" xml:space="preserve">
+    <value>चाँद तारे</value>
+  </data>
+  <data name="moped" xml:space="preserve">
+    <value>मोपेड</value>
+  </data>
+  <data name="moped_front" xml:space="preserve">
+    <value>मोपेड सामने</value>
+  </data>
+  <data name="mosque" xml:space="preserve">
+    <value>मस्जिद</value>
+  </data>
+  <data name="motorcycle" xml:space="preserve">
+    <value>मोटरसाइकिल</value>
+  </data>
+  <data name="mountains" xml:space="preserve">
+    <value>पहाड़</value>
+  </data>
+  <data name="mouse" xml:space="preserve">
+    <value>माउस</value>
+  </data>
+  <data name="mouse_left_click" xml:space="preserve">
+    <value>माउस बाएँ क्लिक</value>
+  </data>
+  <data name="mouse_middle_click" xml:space="preserve">
+    <value>माउस मध्य क्लिक</value>
+  </data>
+  <data name="mouse_right_click" xml:space="preserve">
+    <value>माउस दाएँ क्लिक</value>
+  </data>
+  <data name="mouse_scroll" xml:space="preserve">
+    <value>माउस स्क्रॉल</value>
+  </data>
+  <data name="mouse_simple" xml:space="preserve">
+    <value>माउस सरल</value>
+  </data>
+  <data name="music_note" xml:space="preserve">
+    <value>संगीत नोट</value>
+  </data>
+  <data name="music_note_simple" xml:space="preserve">
+    <value>संगीत नोट सरल</value>
+  </data>
+  <data name="music_notes" xml:space="preserve">
+    <value>संगीत नोट्स</value>
+  </data>
+  <data name="music_notes_minus" xml:space="preserve">
+    <value>संगीत नोट्स घटा</value>
+  </data>
+  <data name="music_notes_plus" xml:space="preserve">
+    <value>संगीत नोट्स जोड़</value>
+  </data>
+  <data name="music_notes_simple" xml:space="preserve">
+    <value>संगीत नोट्स सरल</value>
+  </data>
+  <data name="navigation_arrow" xml:space="preserve">
+    <value>नेविगेशन तीर</value>
+  </data>
+  <data name="needle" xml:space="preserve">
+    <value>सुई</value>
+  </data>
+  <data name="network" xml:space="preserve">
+    <value>नेटवर्क</value>
+  </data>
+  <data name="network_slash" xml:space="preserve">
+    <value>नेटवर्क स्लैश</value>
+  </data>
+  <data name="network_x" xml:space="preserve">
+    <value>नेटवर्क x</value>
+  </data>
+  <data name="newspaper" xml:space="preserve">
+    <value>अख़बार</value>
+  </data>
+  <data name="newspaper_clipping" xml:space="preserve">
+    <value>अख़बार कतरन</value>
+  </data>
+  <data name="not_equals" xml:space="preserve">
+    <value>नहीं बराबर</value>
+  </data>
+  <data name="not_member_of" xml:space="preserve">
+    <value>नहीं सदस्य का</value>
+  </data>
+  <data name="not_subset_of" xml:space="preserve">
+    <value>नहीं उपसमुच्चय का</value>
+  </data>
+  <data name="not_superset_of" xml:space="preserve">
+    <value>नहीं अधिसमुच्चय का</value>
+  </data>
+  <data name="notches" xml:space="preserve">
+    <value>खांचे</value>
+  </data>
+  <data name="note" xml:space="preserve">
+    <value>नोट</value>
+  </data>
+  <data name="note_blank" xml:space="preserve">
+    <value>नोट खाली</value>
+  </data>
+  <data name="note_pencil" xml:space="preserve">
+    <value>नोट पेंसिल</value>
+  </data>
+  <data name="notebook" xml:space="preserve">
+    <value>नोटबुक</value>
+  </data>
+  <data name="notepad" xml:space="preserve">
+    <value>नोटपैड</value>
+  </data>
+  <data name="notification" xml:space="preserve">
+    <value>सूचना</value>
+  </data>
+  <data name="notion_logo" xml:space="preserve">
+    <value>Notion लोगो</value>
+  </data>
+  <data name="nuclear_plant" xml:space="preserve">
+    <value>परमाणु पौधा</value>
+  </data>
+  <data name="number_circle_eight" xml:space="preserve">
+    <value>संख्या वृत्त आठ</value>
+  </data>
+  <data name="number_circle_five" xml:space="preserve">
+    <value>संख्या वृत्त पाँच</value>
+  </data>
+  <data name="number_circle_four" xml:space="preserve">
+    <value>संख्या वृत्त चार</value>
+  </data>
+  <data name="number_circle_nine" xml:space="preserve">
+    <value>संख्या वृत्त नौ</value>
+  </data>
+  <data name="number_circle_one" xml:space="preserve">
+    <value>संख्या वृत्त एक</value>
+  </data>
+  <data name="number_circle_seven" xml:space="preserve">
+    <value>संख्या वृत्त सात</value>
+  </data>
+  <data name="number_circle_six" xml:space="preserve">
+    <value>संख्या वृत्त छह</value>
+  </data>
+  <data name="number_circle_three" xml:space="preserve">
+    <value>संख्या वृत्त तीन</value>
+  </data>
+  <data name="number_circle_two" xml:space="preserve">
+    <value>संख्या वृत्त दो</value>
+  </data>
+  <data name="number_circle_zero" xml:space="preserve">
+    <value>संख्या वृत्त शून्य</value>
+  </data>
+  <data name="number_eight" xml:space="preserve">
+    <value>संख्या आठ</value>
+  </data>
+  <data name="number_five" xml:space="preserve">
+    <value>संख्या पाँच</value>
+  </data>
+  <data name="number_four" xml:space="preserve">
+    <value>संख्या चार</value>
+  </data>
+  <data name="number_nine" xml:space="preserve">
+    <value>संख्या नौ</value>
+  </data>
+  <data name="number_one" xml:space="preserve">
+    <value>संख्या एक</value>
+  </data>
+  <data name="number_seven" xml:space="preserve">
+    <value>संख्या सात</value>
+  </data>
+  <data name="number_six" xml:space="preserve">
+    <value>संख्या छह</value>
+  </data>
+  <data name="number_square_eight" xml:space="preserve">
+    <value>संख्या वर्ग आठ</value>
+  </data>
+  <data name="number_square_five" xml:space="preserve">
+    <value>संख्या वर्ग पाँच</value>
+  </data>
+  <data name="number_square_four" xml:space="preserve">
+    <value>संख्या वर्ग चार</value>
+  </data>
+  <data name="number_square_nine" xml:space="preserve">
+    <value>संख्या वर्ग नौ</value>
+  </data>
+  <data name="number_square_one" xml:space="preserve">
+    <value>संख्या वर्ग एक</value>
+  </data>
+  <data name="number_square_seven" xml:space="preserve">
+    <value>संख्या वर्ग सात</value>
+  </data>
+  <data name="number_square_six" xml:space="preserve">
+    <value>संख्या वर्ग छह</value>
+  </data>
+  <data name="number_square_three" xml:space="preserve">
+    <value>संख्या वर्ग तीन</value>
+  </data>
+  <data name="number_square_two" xml:space="preserve">
+    <value>संख्या वर्ग दो</value>
+  </data>
+  <data name="number_square_zero" xml:space="preserve">
+    <value>संख्या वर्ग शून्य</value>
+  </data>
+  <data name="number_three" xml:space="preserve">
+    <value>संख्या तीन</value>
+  </data>
+  <data name="number_two" xml:space="preserve">
+    <value>संख्या दो</value>
+  </data>
+  <data name="number_zero" xml:space="preserve">
+    <value>संख्या शून्य</value>
+  </data>
+  <data name="numpad" xml:space="preserve">
+    <value>नमपैड</value>
+  </data>
+  <data name="nut" xml:space="preserve">
+    <value>नट</value>
+  </data>
+  <data name="ny_times_logo" xml:space="preserve">
+    <value>Ny गुणा लोगो</value>
+  </data>
+  <data name="octagon" xml:space="preserve">
+    <value>अष्टभुज</value>
+  </data>
+  <data name="office_chair" xml:space="preserve">
+    <value>कार्यालय कुर्सी</value>
+  </data>
+  <data name="onigiri" xml:space="preserve">
+    <value>ओनिगिरी</value>
+  </data>
+  <data name="open_ai_logo" xml:space="preserve">
+    <value>खुला एआई लोगो</value>
+  </data>
+  <data name="option" xml:space="preserve">
+    <value>विकल्प</value>
+  </data>
+  <data name="orange" xml:space="preserve">
+    <value>संतरा</value>
+  </data>
+  <data name="orange_slice" xml:space="preserve">
+    <value>संतरा टुकड़ा</value>
+  </data>
+  <data name="oven" xml:space="preserve">
+    <value>ओवन</value>
+  </data>
+  <data name="package" xml:space="preserve">
+    <value>पैकेज</value>
+  </data>
+  <data name="paint_brush" xml:space="preserve">
+    <value>रंग ब्रश</value>
+  </data>
+  <data name="paint_brush_broad" xml:space="preserve">
+    <value>रंग ब्रश चौड़ा</value>
+  </data>
+  <data name="paint_brush_household" xml:space="preserve">
+    <value>रंग ब्रश घरेलू</value>
+  </data>
+  <data name="paint_bucket" xml:space="preserve">
+    <value>रंग बाल्टी</value>
+  </data>
+  <data name="paint_roller" xml:space="preserve">
+    <value>रंग रोलर</value>
+  </data>
+  <data name="palette" xml:space="preserve">
+    <value>पैलेट</value>
+  </data>
+  <data name="panorama" xml:space="preserve">
+    <value>पैनोरमा</value>
+  </data>
+  <data name="pants" xml:space="preserve">
+    <value>पैंट</value>
+  </data>
+  <data name="paper_plane" xml:space="preserve">
+    <value>कागज़ विमान</value>
+  </data>
+  <data name="paper_plane_right" xml:space="preserve">
+    <value>कागज़ विमान दाएँ</value>
+  </data>
+  <data name="paper_plane_tilt" xml:space="preserve">
+    <value>कागज़ विमान झुकाव</value>
+  </data>
+  <data name="paperclip" xml:space="preserve">
+    <value>पेपरक्लिप</value>
+  </data>
+  <data name="paperclip_horizontal" xml:space="preserve">
+    <value>पेपरक्लिप क्षैतिज</value>
+  </data>
+  <data name="parachute" xml:space="preserve">
+    <value>पैराशूट</value>
+  </data>
+  <data name="paragraph" xml:space="preserve">
+    <value>अनुच्छेद</value>
+  </data>
+  <data name="parallelogram" xml:space="preserve">
+    <value>समांतर चतुर्भुज</value>
+  </data>
+  <data name="park" xml:space="preserve">
+    <value>पार्क</value>
+  </data>
+  <data name="password" xml:space="preserve">
+    <value>पासवर्ड</value>
+  </data>
+  <data name="path" xml:space="preserve">
+    <value>पथ</value>
+  </data>
+  <data name="patreon_logo" xml:space="preserve">
+    <value>Patreon लोगो</value>
+  </data>
+  <data name="pause" xml:space="preserve">
+    <value>रोकें</value>
+  </data>
+  <data name="pause_circle" xml:space="preserve">
+    <value>रोकें वृत्त</value>
+  </data>
+  <data name="paw_print" xml:space="preserve">
+    <value>पंजा प्रिंट</value>
+  </data>
+  <data name="paypal_logo" xml:space="preserve">
+    <value>Paypal लोगो</value>
+  </data>
+  <data name="peace" xml:space="preserve">
+    <value>शांति</value>
+  </data>
+  <data name="pen" xml:space="preserve">
+    <value>कलम</value>
+  </data>
+  <data name="pen_nib" xml:space="preserve">
+    <value>कलम निब</value>
+  </data>
+  <data name="pen_nib_straight" xml:space="preserve">
+    <value>कलम निब सीधा</value>
+  </data>
+  <data name="pencil" xml:space="preserve">
+    <value>पेंसिल</value>
+  </data>
+  <data name="pencil_circle" xml:space="preserve">
+    <value>पेंसिल वृत्त</value>
+  </data>
+  <data name="pencil_line" xml:space="preserve">
+    <value>पेंसिल रेखा</value>
+  </data>
+  <data name="pencil_ruler" xml:space="preserve">
+    <value>पेंसिल पैमाना</value>
+  </data>
+  <data name="pencil_simple" xml:space="preserve">
+    <value>पेंसिल सरल</value>
+  </data>
+  <data name="pencil_simple_line" xml:space="preserve">
+    <value>पेंसिल सरल रेखा</value>
+  </data>
+  <data name="pencil_simple_slash" xml:space="preserve">
+    <value>पेंसिल सरल स्लैश</value>
+  </data>
+  <data name="pencil_slash" xml:space="preserve">
+    <value>पेंसिल स्लैश</value>
+  </data>
+  <data name="pentagon" xml:space="preserve">
+    <value>पंचभुज</value>
+  </data>
+  <data name="pentagram" xml:space="preserve">
+    <value>पंचकोणीय तारा</value>
+  </data>
+  <data name="pepper" xml:space="preserve">
+    <value>मिर्च</value>
+  </data>
+  <data name="percent" xml:space="preserve">
+    <value>प्रतिशत</value>
+  </data>
+  <data name="person" xml:space="preserve">
+    <value>व्यक्ति</value>
+  </data>
+  <data name="person_arms_spread" xml:space="preserve">
+    <value>व्यक्ति बाहें फैलाव</value>
+  </data>
+  <data name="person_simple" xml:space="preserve">
+    <value>व्यक्ति सरल</value>
+  </data>
+  <data name="person_simple_bike" xml:space="preserve">
+    <value>व्यक्ति सरल साइकिल</value>
+  </data>
+  <data name="person_simple_circle" xml:space="preserve">
+    <value>व्यक्ति सरल वृत्त</value>
+  </data>
+  <data name="person_simple_hike" xml:space="preserve">
+    <value>व्यक्ति सरल लंबी पैदल यात्रा</value>
+  </data>
+  <data name="person_simple_run" xml:space="preserve">
+    <value>व्यक्ति सरल दौड़</value>
+  </data>
+  <data name="person_simple_ski" xml:space="preserve">
+    <value>व्यक्ति सरल स्की</value>
+  </data>
+  <data name="person_simple_snowboard" xml:space="preserve">
+    <value>व्यक्ति सरल स्नोबोर्ड</value>
+  </data>
+  <data name="person_simple_swim" xml:space="preserve">
+    <value>व्यक्ति सरल तैराकी</value>
+  </data>
+  <data name="person_simple_tai_chi" xml:space="preserve">
+    <value>व्यक्ति सरल tai chi</value>
+  </data>
+  <data name="person_simple_throw" xml:space="preserve">
+    <value>व्यक्ति सरल फेंकना</value>
+  </data>
+  <data name="person_simple_walk" xml:space="preserve">
+    <value>व्यक्ति सरल चलना</value>
+  </data>
+  <data name="perspective" xml:space="preserve">
+    <value>परिप्रेक्ष्य</value>
+  </data>
+  <data name="phone" xml:space="preserve">
+    <value>फ़ोन</value>
+  </data>
+  <data name="phone_call" xml:space="preserve">
+    <value>फ़ोन कॉल</value>
+  </data>
+  <data name="phone_disconnect" xml:space="preserve">
+    <value>फ़ोन डिस्कनेक्ट</value>
+  </data>
+  <data name="phone_incoming" xml:space="preserve">
+    <value>फ़ोन आने वाली</value>
+  </data>
+  <data name="phone_list" xml:space="preserve">
+    <value>फ़ोन सूची</value>
+  </data>
+  <data name="phone_outgoing" xml:space="preserve">
+    <value>फ़ोन जाने वाली</value>
+  </data>
+  <data name="phone_pause" xml:space="preserve">
+    <value>फ़ोन रोकें</value>
+  </data>
+  <data name="phone_plus" xml:space="preserve">
+    <value>फ़ोन जोड़</value>
+  </data>
+  <data name="phone_slash" xml:space="preserve">
+    <value>फ़ोन स्लैश</value>
+  </data>
+  <data name="phone_transfer" xml:space="preserve">
+    <value>फ़ोन स्थानांतरण</value>
+  </data>
+  <data name="phone_x" xml:space="preserve">
+    <value>फ़ोन x</value>
+  </data>
+  <data name="phosphor_logo" xml:space="preserve">
+    <value>Phosphor लोगो</value>
+  </data>
+  <data name="pi" xml:space="preserve">
+    <value>पाई</value>
+  </data>
+  <data name="piano_keys" xml:space="preserve">
+    <value>पियानो चाबियाँ</value>
+  </data>
+  <data name="picnic_table" xml:space="preserve">
+    <value>पिकनिक तालिका</value>
+  </data>
+  <data name="picture_in_picture" xml:space="preserve">
+    <value>चित्र अंदर चित्र</value>
+  </data>
+  <data name="piggy_bank" xml:space="preserve">
+    <value>गुल्लक बैंक</value>
+  </data>
+  <data name="pill" xml:space="preserve">
+    <value>गोली</value>
+  </data>
+  <data name="ping_pong" xml:space="preserve">
+    <value>पिंग पोंग</value>
+  </data>
+  <data name="pint_glass" xml:space="preserve">
+    <value>पिंट गिलास</value>
+  </data>
+  <data name="pinterest_logo" xml:space="preserve">
+    <value>Pinterest लोगो</value>
+  </data>
+  <data name="pinwheel" xml:space="preserve">
+    <value>फिरकी</value>
+  </data>
+  <data name="pipe" xml:space="preserve">
+    <value>पाइप</value>
+  </data>
+  <data name="pipe_wrench" xml:space="preserve">
+    <value>पाइप रिंच</value>
+  </data>
+  <data name="pix_logo" xml:space="preserve">
+    <value>Pix लोगो</value>
+  </data>
+  <data name="pizza" xml:space="preserve">
+    <value>पिज़्ज़ा</value>
+  </data>
+  <data name="placeholder" xml:space="preserve">
+    <value>प्लेसहोल्डर</value>
+  </data>
+  <data name="planet" xml:space="preserve">
+    <value>ग्रह</value>
+  </data>
+  <data name="plant" xml:space="preserve">
+    <value>पौधा</value>
+  </data>
+  <data name="play" xml:space="preserve">
+    <value>चलाएँ</value>
+  </data>
+  <data name="play_circle" xml:space="preserve">
+    <value>चलाएँ वृत्त</value>
+  </data>
+  <data name="play_pause" xml:space="preserve">
+    <value>चलाएँ रोकें</value>
+  </data>
+  <data name="playlist" xml:space="preserve">
+    <value>प्लेलिस्ट</value>
+  </data>
+  <data name="plug" xml:space="preserve">
+    <value>प्लग</value>
+  </data>
+  <data name="plug_charging" xml:space="preserve">
+    <value>प्लग चार्जिंग</value>
+  </data>
+  <data name="plugs" xml:space="preserve">
+    <value>प्लग</value>
+  </data>
+  <data name="plugs_connected" xml:space="preserve">
+    <value>प्लग जुड़ा</value>
+  </data>
+  <data name="plus" xml:space="preserve">
+    <value>जोड़</value>
+  </data>
+  <data name="plus_circle" xml:space="preserve">
+    <value>जोड़ वृत्त</value>
+  </data>
+  <data name="plus_minus" xml:space="preserve">
+    <value>जोड़ घटा</value>
+  </data>
+  <data name="plus_square" xml:space="preserve">
+    <value>जोड़ वर्ग</value>
+  </data>
+  <data name="poker_chip" xml:space="preserve">
+    <value>पोकर चिप</value>
+  </data>
+  <data name="police_car" xml:space="preserve">
+    <value>पुलिस कार</value>
+  </data>
+  <data name="polygon" xml:space="preserve">
+    <value>बहुभुज</value>
+  </data>
+  <data name="popcorn" xml:space="preserve">
+    <value>पॉपकॉर्न</value>
+  </data>
+  <data name="popsicle" xml:space="preserve">
+    <value>आइसक्रीम</value>
+  </data>
+  <data name="potted_plant" xml:space="preserve">
+    <value>गमले में पौधा</value>
+  </data>
+  <data name="power" xml:space="preserve">
+    <value>पावर</value>
+  </data>
+  <data name="prescription" xml:space="preserve">
+    <value>पर्चा</value>
+  </data>
+  <data name="presentation" xml:space="preserve">
+    <value>प्रस्तुति</value>
+  </data>
+  <data name="presentation_chart" xml:space="preserve">
+    <value>प्रस्तुति चार्ट</value>
+  </data>
+  <data name="printer" xml:space="preserve">
+    <value>प्रिंटर</value>
+  </data>
+  <data name="prohibit" xml:space="preserve">
+    <value>निषेध</value>
+  </data>
+  <data name="prohibit_inset" xml:space="preserve">
+    <value>निषेध इनसेट</value>
+  </data>
+  <data name="projector_screen" xml:space="preserve">
+    <value>प्रोजेक्टर स्क्रीन</value>
+  </data>
+  <data name="projector_screen_chart" xml:space="preserve">
+    <value>प्रोजेक्टर स्क्रीन चार्ट</value>
+  </data>
+  <data name="pulse" xml:space="preserve">
+    <value>नाड़ी</value>
+  </data>
+  <data name="push_pin" xml:space="preserve">
+    <value>धक्का पिन</value>
+  </data>
+  <data name="push_pin_simple" xml:space="preserve">
+    <value>धक्का पिन सरल</value>
+  </data>
+  <data name="push_pin_simple_slash" xml:space="preserve">
+    <value>धक्का पिन सरल स्लैश</value>
+  </data>
+  <data name="push_pin_slash" xml:space="preserve">
+    <value>धक्का पिन स्लैश</value>
+  </data>
+  <data name="puzzle_piece" xml:space="preserve">
+    <value>पहेली टुकड़ा</value>
+  </data>
+  <data name="qr_code" xml:space="preserve">
+    <value>Qr कोड</value>
+  </data>
+  <data name="question" xml:space="preserve">
+    <value>प्रश्न</value>
+  </data>
+  <data name="question_mark" xml:space="preserve">
+    <value>प्रश्न चिह्न</value>
+  </data>
+  <data name="queue" xml:space="preserve">
+    <value>कतार</value>
+  </data>
+  <data name="quotes" xml:space="preserve">
+    <value>उद्धरण</value>
+  </data>
+  <data name="rabbit" xml:space="preserve">
+    <value>खरगोश</value>
+  </data>
+  <data name="racquet" xml:space="preserve">
+    <value>रैकेट</value>
+  </data>
+  <data name="radical" xml:space="preserve">
+    <value>मूल</value>
+  </data>
+  <data name="radio" xml:space="preserve">
+    <value>रेडियो</value>
+  </data>
+  <data name="radio_button" xml:space="preserve">
+    <value>रेडियो बटन</value>
+  </data>
+  <data name="radioactive" xml:space="preserve">
+    <value>रेडियोधर्मी</value>
+  </data>
+  <data name="rainbow" xml:space="preserve">
+    <value>इंद्रधनुष</value>
+  </data>
+  <data name="rainbow_cloud" xml:space="preserve">
+    <value>इंद्रधनुष बादल</value>
+  </data>
+  <data name="ranking" xml:space="preserve">
+    <value>रैंकिंग</value>
+  </data>
+  <data name="read_cv_logo" xml:space="preserve">
+    <value>पढ़ा cv लोगो</value>
+  </data>
+  <data name="receipt" xml:space="preserve">
+    <value>रसीद</value>
+  </data>
+  <data name="receipt_x" xml:space="preserve">
+    <value>रसीद x</value>
+  </data>
+  <data name="record" xml:space="preserve">
+    <value>रिकॉर्ड</value>
+  </data>
+  <data name="rectangle" xml:space="preserve">
+    <value>आयत</value>
+  </data>
+  <data name="rectangle_dashed" xml:space="preserve">
+    <value>आयत डैश वाली</value>
+  </data>
+  <data name="recycle" xml:space="preserve">
+    <value>पुनर्चक्रण</value>
+  </data>
+  <data name="reddit_logo" xml:space="preserve">
+    <value>Reddit लोगो</value>
+  </data>
+  <data name="repeat" xml:space="preserve">
+    <value>दोहराएँ</value>
+  </data>
+  <data name="repeat_once" xml:space="preserve">
+    <value>दोहराएँ एक बार</value>
+  </data>
+  <data name="replit_logo" xml:space="preserve">
+    <value>Replit लोगो</value>
+  </data>
+  <data name="resize" xml:space="preserve">
+    <value>आकार बदलें</value>
+  </data>
+  <data name="rewind" xml:space="preserve">
+    <value>रिवाइंड</value>
+  </data>
+  <data name="rewind_circle" xml:space="preserve">
+    <value>रिवाइंड वृत्त</value>
+  </data>
+  <data name="road_horizon" xml:space="preserve">
+    <value>सड़क क्षितिज</value>
+  </data>
+  <data name="robot" xml:space="preserve">
+    <value>रोबोट</value>
+  </data>
+  <data name="rocket" xml:space="preserve">
+    <value>रॉकेट</value>
+  </data>
+  <data name="rocket_launch" xml:space="preserve">
+    <value>रॉकेट लॉन्च</value>
+  </data>
+  <data name="rows" xml:space="preserve">
+    <value>पंक्तियाँ</value>
+  </data>
+  <data name="rows_plus_bottom" xml:space="preserve">
+    <value>पंक्तियाँ जोड़ नीचे</value>
+  </data>
+  <data name="rows_plus_top" xml:space="preserve">
+    <value>पंक्तियाँ जोड़ ऊपर</value>
+  </data>
+  <data name="rss" xml:space="preserve">
+    <value>Rss</value>
+  </data>
+  <data name="rss_simple" xml:space="preserve">
+    <value>Rss सरल</value>
+  </data>
+  <data name="rug" xml:space="preserve">
+    <value>गलीचा</value>
+  </data>
+  <data name="ruler" xml:space="preserve">
+    <value>पैमाना</value>
+  </data>
+  <data name="sailboat" xml:space="preserve">
+    <value>पाल नाव</value>
+  </data>
+  <data name="scales" xml:space="preserve">
+    <value>तराजू</value>
+  </data>
+  <data name="scan" xml:space="preserve">
+    <value>स्कैन</value>
+  </data>
+  <data name="scan_smiley" xml:space="preserve">
+    <value>स्कैन स्माइली</value>
+  </data>
+  <data name="scissors" xml:space="preserve">
+    <value>कैंची</value>
+  </data>
+  <data name="scooter" xml:space="preserve">
+    <value>स्कूटर</value>
+  </data>
+  <data name="screencast" xml:space="preserve">
+    <value>स्क्रीनकास्ट</value>
+  </data>
+  <data name="screwdriver" xml:space="preserve">
+    <value>पेचकस</value>
+  </data>
+  <data name="scribble" xml:space="preserve">
+    <value>घसीट</value>
+  </data>
+  <data name="scribble_loop" xml:space="preserve">
+    <value>घसीट लूप</value>
+  </data>
+  <data name="scroll" xml:space="preserve">
+    <value>स्क्रॉल</value>
+  </data>
+  <data name="seal" xml:space="preserve">
+    <value>मुहर</value>
+  </data>
+  <data name="seal_check" xml:space="preserve">
+    <value>मुहर सही</value>
+  </data>
+  <data name="seal_percent" xml:space="preserve">
+    <value>मुहर प्रतिशत</value>
+  </data>
+  <data name="seal_question" xml:space="preserve">
+    <value>मुहर प्रश्न</value>
+  </data>
+  <data name="seal_warning" xml:space="preserve">
+    <value>मुहर चेतावनी</value>
+  </data>
+  <data name="seat" xml:space="preserve">
+    <value>सीट</value>
+  </data>
+  <data name="seatbelt" xml:space="preserve">
+    <value>सीट बेल्ट</value>
+  </data>
+  <data name="security_camera" xml:space="preserve">
+    <value>सुरक्षा कैमरा</value>
+  </data>
+  <data name="selection" xml:space="preserve">
+    <value>चयन</value>
+  </data>
+  <data name="selection_all" xml:space="preserve">
+    <value>चयन सभी</value>
+  </data>
+  <data name="selection_background" xml:space="preserve">
+    <value>चयन पृष्ठभूमि</value>
+  </data>
+  <data name="selection_foreground" xml:space="preserve">
+    <value>चयन अग्रभूमि</value>
+  </data>
+  <data name="selection_inverse" xml:space="preserve">
+    <value>चयन उलटा</value>
+  </data>
+  <data name="selection_plus" xml:space="preserve">
+    <value>चयन जोड़</value>
+  </data>
+  <data name="selection_slash" xml:space="preserve">
+    <value>चयन स्लैश</value>
+  </data>
+  <data name="shapes" xml:space="preserve">
+    <value>आकार</value>
+  </data>
+  <data name="share" xml:space="preserve">
+    <value>साझा करें</value>
+  </data>
+  <data name="share_fat" xml:space="preserve">
+    <value>साझा करें मोटा</value>
+  </data>
+  <data name="share_network" xml:space="preserve">
+    <value>साझा करें नेटवर्क</value>
+  </data>
+  <data name="shield" xml:space="preserve">
+    <value>ढाल</value>
+  </data>
+  <data name="shield_check" xml:space="preserve">
+    <value>ढाल सही</value>
+  </data>
+  <data name="shield_checkered" xml:space="preserve">
+    <value>ढाल चेकदार</value>
+  </data>
+  <data name="shield_chevron" xml:space="preserve">
+    <value>ढाल शेवरॉन</value>
+  </data>
+  <data name="shield_plus" xml:space="preserve">
+    <value>ढाल जोड़</value>
+  </data>
+  <data name="shield_slash" xml:space="preserve">
+    <value>ढाल स्लैश</value>
+  </data>
+  <data name="shield_star" xml:space="preserve">
+    <value>ढाल तारा</value>
+  </data>
+  <data name="shield_warning" xml:space="preserve">
+    <value>ढाल चेतावनी</value>
+  </data>
+  <data name="shipping_container" xml:space="preserve">
+    <value>शिपिंग कंटेनर</value>
+  </data>
+  <data name="shirt_folded" xml:space="preserve">
+    <value>कमीज़ मुड़ा</value>
+  </data>
+  <data name="shooting_star" xml:space="preserve">
+    <value>टूटता तारा</value>
+  </data>
+  <data name="shopping_bag" xml:space="preserve">
+    <value>खरीदारी बैग</value>
+  </data>
+  <data name="shopping_bag_open" xml:space="preserve">
+    <value>खरीदारी बैग खुला</value>
+  </data>
+  <data name="shopping_cart" xml:space="preserve">
+    <value>खरीदारी गाड़ी</value>
+  </data>
+  <data name="shopping_cart_simple" xml:space="preserve">
+    <value>खरीदारी गाड़ी सरल</value>
+  </data>
+  <data name="shovel" xml:space="preserve">
+    <value>फावड़ा</value>
+  </data>
+  <data name="shower" xml:space="preserve">
+    <value>शॉवर</value>
+  </data>
+  <data name="shrimp" xml:space="preserve">
+    <value>झींगा</value>
+  </data>
+  <data name="shuffle" xml:space="preserve">
+    <value>फेरबदल</value>
+  </data>
+  <data name="shuffle_angular" xml:space="preserve">
+    <value>फेरबदल angular</value>
+  </data>
+  <data name="shuffle_simple" xml:space="preserve">
+    <value>फेरबदल सरल</value>
+  </data>
+  <data name="sidebar" xml:space="preserve">
+    <value>साइडबार</value>
+  </data>
+  <data name="sidebar_simple" xml:space="preserve">
+    <value>साइडबार सरल</value>
+  </data>
+  <data name="sigma" xml:space="preserve">
+    <value>सिग्मा</value>
+  </data>
+  <data name="sign_in" xml:space="preserve">
+    <value>संकेत अंदर</value>
+  </data>
+  <data name="sign_out" xml:space="preserve">
+    <value>संकेत बाहर</value>
+  </data>
+  <data name="signature" xml:space="preserve">
+    <value>हस्ताक्षर</value>
+  </data>
+  <data name="signpost" xml:space="preserve">
+    <value>दिशासूचक</value>
+  </data>
+  <data name="sim_card" xml:space="preserve">
+    <value>सिम कार्ड</value>
+  </data>
+  <data name="siren" xml:space="preserve">
+    <value>सायरन</value>
+  </data>
+  <data name="sketch_logo" xml:space="preserve">
+    <value>स्केच लोगो</value>
+  </data>
+  <data name="skip_back" xml:space="preserve">
+    <value>छोड़ें पीछे</value>
+  </data>
+  <data name="skip_back_circle" xml:space="preserve">
+    <value>छोड़ें पीछे वृत्त</value>
+  </data>
+  <data name="skip_forward" xml:space="preserve">
+    <value>छोड़ें आगे</value>
+  </data>
+  <data name="skip_forward_circle" xml:space="preserve">
+    <value>छोड़ें आगे वृत्त</value>
+  </data>
+  <data name="skull" xml:space="preserve">
+    <value>खोपड़ी</value>
+  </data>
+  <data name="skype_logo" xml:space="preserve">
+    <value>Skype लोगो</value>
+  </data>
+  <data name="slack_logo" xml:space="preserve">
+    <value>Slack लोगो</value>
+  </data>
+  <data name="sliders" xml:space="preserve">
+    <value>स्लाइडर</value>
+  </data>
+  <data name="sliders_horizontal" xml:space="preserve">
+    <value>स्लाइडर क्षैतिज</value>
+  </data>
+  <data name="slideshow" xml:space="preserve">
+    <value>स्लाइड शो</value>
+  </data>
+  <data name="smiley" xml:space="preserve">
+    <value>स्माइली</value>
+  </data>
+  <data name="smiley_angry" xml:space="preserve">
+    <value>स्माइली गुस्सा</value>
+  </data>
+  <data name="smiley_blank" xml:space="preserve">
+    <value>स्माइली खाली</value>
+  </data>
+  <data name="smiley_meh" xml:space="preserve">
+    <value>स्माइली ठीक-ठाक</value>
+  </data>
+  <data name="smiley_melting" xml:space="preserve">
+    <value>स्माइली पिघलता</value>
+  </data>
+  <data name="smiley_nervous" xml:space="preserve">
+    <value>स्माइली घबराया</value>
+  </data>
+  <data name="smiley_sad" xml:space="preserve">
+    <value>स्माइली उदास</value>
+  </data>
+  <data name="smiley_sticker" xml:space="preserve">
+    <value>स्माइली स्टिकर</value>
+  </data>
+  <data name="smiley_wink" xml:space="preserve">
+    <value>स्माइली आँख मारना</value>
+  </data>
+  <data name="smiley_x_eyes" xml:space="preserve">
+    <value>स्माइली x आँखें</value>
+  </data>
+  <data name="snapchat_logo" xml:space="preserve">
+    <value>Snapchat लोगो</value>
+  </data>
+  <data name="sneaker" xml:space="preserve">
+    <value>स्नीकर</value>
+  </data>
+  <data name="sneaker_move" xml:space="preserve">
+    <value>स्नीकर ले जाएँ</value>
+  </data>
+  <data name="snowflake" xml:space="preserve">
+    <value>हिमकण</value>
+  </data>
+  <data name="soccer_ball" xml:space="preserve">
+    <value>फ़ुटबॉल गेंद</value>
+  </data>
+  <data name="sock" xml:space="preserve">
+    <value>मोज़ा</value>
+  </data>
+  <data name="solar_panel" xml:space="preserve">
+    <value>सौर पैनल</value>
+  </data>
+  <data name="solar_roof" xml:space="preserve">
+    <value>सौर छत</value>
+  </data>
+  <data name="sort_ascending" xml:space="preserve">
+    <value>क्रमबद्ध आरोही</value>
+  </data>
+  <data name="sort_descending" xml:space="preserve">
+    <value>क्रमबद्ध अवरोही</value>
+  </data>
+  <data name="soundcloud_logo" xml:space="preserve">
+    <value>Soundcloud लोगो</value>
+  </data>
+  <data name="spade" xml:space="preserve">
+    <value>हुकुम</value>
+  </data>
+  <data name="sparkle" xml:space="preserve">
+    <value>चमक</value>
+  </data>
+  <data name="speaker_hifi" xml:space="preserve">
+    <value>स्पीकर hifi</value>
+  </data>
+  <data name="speaker_high" xml:space="preserve">
+    <value>स्पीकर ऊँचा</value>
+  </data>
+  <data name="speaker_low" xml:space="preserve">
+    <value>स्पीकर नीचा</value>
+  </data>
+  <data name="speaker_none" xml:space="preserve">
+    <value>स्पीकर कोई नहीं</value>
+  </data>
+  <data name="speaker_simple_high" xml:space="preserve">
+    <value>स्पीकर सरल ऊँचा</value>
+  </data>
+  <data name="speaker_simple_low" xml:space="preserve">
+    <value>स्पीकर सरल नीचा</value>
+  </data>
+  <data name="speaker_simple_none" xml:space="preserve">
+    <value>स्पीकर सरल कोई नहीं</value>
+  </data>
+  <data name="speaker_simple_slash" xml:space="preserve">
+    <value>स्पीकर सरल स्लैश</value>
+  </data>
+  <data name="speaker_simple_x" xml:space="preserve">
+    <value>स्पीकर सरल x</value>
+  </data>
+  <data name="speaker_slash" xml:space="preserve">
+    <value>स्पीकर स्लैश</value>
+  </data>
+  <data name="speaker_x" xml:space="preserve">
+    <value>स्पीकर x</value>
+  </data>
+  <data name="speedometer" xml:space="preserve">
+    <value>स्पीडोमीटर</value>
+  </data>
+  <data name="sphere" xml:space="preserve">
+    <value>गोला</value>
+  </data>
+  <data name="spinner" xml:space="preserve">
+    <value>स्पिनर</value>
+  </data>
+  <data name="spinner_ball" xml:space="preserve">
+    <value>स्पिनर गेंद</value>
+  </data>
+  <data name="spinner_gap" xml:space="preserve">
+    <value>स्पिनर अंतराल</value>
+  </data>
+  <data name="spiral" xml:space="preserve">
+    <value>सर्पिल</value>
+  </data>
+  <data name="split_horizontal" xml:space="preserve">
+    <value>विभाजित क्षैतिज</value>
+  </data>
+  <data name="split_vertical" xml:space="preserve">
+    <value>विभाजित ऊर्ध्वाधर</value>
+  </data>
+  <data name="spotify_logo" xml:space="preserve">
+    <value>Spotify लोगो</value>
+  </data>
+  <data name="spray_bottle" xml:space="preserve">
+    <value>स्प्रे बोतल</value>
+  </data>
+  <data name="square" xml:space="preserve">
+    <value>वर्ग</value>
+  </data>
+  <data name="square_half" xml:space="preserve">
+    <value>वर्ग आधा</value>
+  </data>
+  <data name="square_half_bottom" xml:space="preserve">
+    <value>वर्ग आधा नीचे</value>
+  </data>
+  <data name="square_logo" xml:space="preserve">
+    <value>वर्ग लोगो</value>
+  </data>
+  <data name="square_split_horizontal" xml:space="preserve">
+    <value>वर्ग विभाजित क्षैतिज</value>
+  </data>
+  <data name="square_split_vertical" xml:space="preserve">
+    <value>वर्ग विभाजित ऊर्ध्वाधर</value>
+  </data>
+  <data name="squares_four" xml:space="preserve">
+    <value>वर्ग चार</value>
+  </data>
+  <data name="stack" xml:space="preserve">
+    <value>ढेर</value>
+  </data>
+  <data name="stack_minus" xml:space="preserve">
+    <value>ढेर घटा</value>
+  </data>
+  <data name="stack_overflow_logo" xml:space="preserve">
+    <value>ढेर ओवरफ़्लो लोगो</value>
+  </data>
+  <data name="stack_plus" xml:space="preserve">
+    <value>ढेर जोड़</value>
+  </data>
+  <data name="stack_simple" xml:space="preserve">
+    <value>ढेर सरल</value>
+  </data>
+  <data name="stairs" xml:space="preserve">
+    <value>सीढ़ियाँ</value>
+  </data>
+  <data name="stamp" xml:space="preserve">
+    <value>मुहर</value>
+  </data>
+  <data name="standard_definition" xml:space="preserve">
+    <value>मानक परिभाषा</value>
+  </data>
+  <data name="star" xml:space="preserve">
+    <value>तारा</value>
+  </data>
+  <data name="star_and_crescent" xml:space="preserve">
+    <value>तारा और अर्धचंद्र</value>
+  </data>
+  <data name="star_four" xml:space="preserve">
+    <value>तारा चार</value>
+  </data>
+  <data name="star_half" xml:space="preserve">
+    <value>तारा आधा</value>
+  </data>
+  <data name="star_of_david" xml:space="preserve">
+    <value>तारा का डेविड</value>
+  </data>
+  <data name="steam_logo" xml:space="preserve">
+    <value>भाप लोगो</value>
+  </data>
+  <data name="steering_wheel" xml:space="preserve">
+    <value>स्टीयरिंग पहिया</value>
+  </data>
+  <data name="steps" xml:space="preserve">
+    <value>सीढ़ियाँ</value>
+  </data>
+  <data name="stethoscope" xml:space="preserve">
+    <value>स्टेथोस्कोप</value>
+  </data>
+  <data name="sticker" xml:space="preserve">
+    <value>स्टिकर</value>
+  </data>
+  <data name="stool" xml:space="preserve">
+    <value>स्टूल</value>
+  </data>
+  <data name="stop" xml:space="preserve">
+    <value>रोकें</value>
+  </data>
+  <data name="stop_circle" xml:space="preserve">
+    <value>रोकें वृत्त</value>
+  </data>
+  <data name="storefront" xml:space="preserve">
+    <value>दुकान का अग्रभाग</value>
+  </data>
+  <data name="strategy" xml:space="preserve">
+    <value>रणनीति</value>
+  </data>
+  <data name="stripe_logo" xml:space="preserve">
+    <value>Stripe लोगो</value>
+  </data>
+  <data name="student" xml:space="preserve">
+    <value>छात्र</value>
+  </data>
+  <data name="subset_of" xml:space="preserve">
+    <value>उपसमुच्चय का</value>
+  </data>
+  <data name="subset_proper_of" xml:space="preserve">
+    <value>उपसमुच्चय उचित का</value>
+  </data>
+  <data name="subtitles" xml:space="preserve">
+    <value>उपशीर्षक</value>
+  </data>
+  <data name="subtitles_slash" xml:space="preserve">
+    <value>उपशीर्षक स्लैश</value>
+  </data>
+  <data name="subtract" xml:space="preserve">
+    <value>घटाएँ</value>
+  </data>
+  <data name="subtract_square" xml:space="preserve">
+    <value>घटाएँ वर्ग</value>
+  </data>
+  <data name="subway" xml:space="preserve">
+    <value>मेट्रो</value>
+  </data>
+  <data name="suitcase" xml:space="preserve">
+    <value>सूटकेस</value>
+  </data>
+  <data name="suitcase_rolling" xml:space="preserve">
+    <value>सूटकेस लुढ़कता</value>
+  </data>
+  <data name="suitcase_simple" xml:space="preserve">
+    <value>सूटकेस सरल</value>
+  </data>
+  <data name="sun" xml:space="preserve">
+    <value>सूरज</value>
+  </data>
+  <data name="sun_dim" xml:space="preserve">
+    <value>सूरज मंद</value>
+  </data>
+  <data name="sun_horizon" xml:space="preserve">
+    <value>सूरज क्षितिज</value>
+  </data>
+  <data name="sunglasses" xml:space="preserve">
+    <value>धूप का चश्मा</value>
+  </data>
+  <data name="superset_of" xml:space="preserve">
+    <value>अधिसमुच्चय का</value>
+  </data>
+  <data name="superset_proper_of" xml:space="preserve">
+    <value>अधिसमुच्चय उचित का</value>
+  </data>
+  <data name="swap" xml:space="preserve">
+    <value>अदला-बदली</value>
+  </data>
+  <data name="swatches" xml:space="preserve">
+    <value>स्वैच</value>
+  </data>
+  <data name="swimming_pool" xml:space="preserve">
+    <value>तैराकी स्विमिंग पूल</value>
+  </data>
+  <data name="sword" xml:space="preserve">
+    <value>तलवार</value>
+  </data>
+  <data name="synagogue" xml:space="preserve">
+    <value>आराधनालय</value>
+  </data>
+  <data name="syringe" xml:space="preserve">
+    <value>सिरिंज</value>
+  </data>
+  <data name="t_shirt" xml:space="preserve">
+    <value>T कमीज़</value>
+  </data>
+  <data name="table" xml:space="preserve">
+    <value>तालिका</value>
+  </data>
+  <data name="tabs" xml:space="preserve">
+    <value>टैब</value>
+  </data>
+  <data name="tag" xml:space="preserve">
+    <value>टैग</value>
+  </data>
+  <data name="tag_chevron" xml:space="preserve">
+    <value>टैग शेवरॉन</value>
+  </data>
+  <data name="tag_simple" xml:space="preserve">
+    <value>टैग सरल</value>
+  </data>
+  <data name="target" xml:space="preserve">
+    <value>लक्ष्य</value>
+  </data>
+  <data name="taxi" xml:space="preserve">
+    <value>टैक्सी</value>
+  </data>
+  <data name="tea_bag" xml:space="preserve">
+    <value>चाय बैग</value>
+  </data>
+  <data name="telegram_logo" xml:space="preserve">
+    <value>Telegram लोगो</value>
+  </data>
+  <data name="television" xml:space="preserve">
+    <value>टेलीविज़न</value>
+  </data>
+  <data name="television_simple" xml:space="preserve">
+    <value>टेलीविज़न सरल</value>
+  </data>
+  <data name="tennis_ball" xml:space="preserve">
+    <value>टेनिस गेंद</value>
+  </data>
+  <data name="tent" xml:space="preserve">
+    <value>तंबू</value>
+  </data>
+  <data name="terminal" xml:space="preserve">
+    <value>टर्मिनल</value>
+  </data>
+  <data name="terminal_window" xml:space="preserve">
+    <value>टर्मिनल खिड़की</value>
+  </data>
+  <data name="test_tube" xml:space="preserve">
+    <value>परीक्षण ट्यूब</value>
+  </data>
+  <data name="text_a_underline" xml:space="preserve">
+    <value>पाठ a रेखांकन</value>
+  </data>
+  <data name="text_aa" xml:space="preserve">
+    <value>पाठ aa</value>
+  </data>
+  <data name="text_align_center" xml:space="preserve">
+    <value>पाठ संरेखित केंद्र</value>
+  </data>
+  <data name="text_align_justify" xml:space="preserve">
+    <value>पाठ संरेखित औचित्य</value>
+  </data>
+  <data name="text_align_left" xml:space="preserve">
+    <value>पाठ संरेखित बाएँ</value>
+  </data>
+  <data name="text_align_right" xml:space="preserve">
+    <value>पाठ संरेखित दाएँ</value>
+  </data>
+  <data name="text_b" xml:space="preserve">
+    <value>पाठ b</value>
+  </data>
+  <data name="text_columns" xml:space="preserve">
+    <value>पाठ स्तंभ</value>
+  </data>
+  <data name="text_h" xml:space="preserve">
+    <value>पाठ h</value>
+  </data>
+  <data name="text_h_five" xml:space="preserve">
+    <value>पाठ h पाँच</value>
+  </data>
+  <data name="text_h_four" xml:space="preserve">
+    <value>पाठ h चार</value>
+  </data>
+  <data name="text_h_one" xml:space="preserve">
+    <value>पाठ h एक</value>
+  </data>
+  <data name="text_h_six" xml:space="preserve">
+    <value>पाठ h छह</value>
+  </data>
+  <data name="text_h_three" xml:space="preserve">
+    <value>पाठ h तीन</value>
+  </data>
+  <data name="text_h_two" xml:space="preserve">
+    <value>पाठ h दो</value>
+  </data>
+  <data name="text_indent" xml:space="preserve">
+    <value>पाठ इंडेंट</value>
+  </data>
+  <data name="text_italic" xml:space="preserve">
+    <value>पाठ तिरछा</value>
+  </data>
+  <data name="text_outdent" xml:space="preserve">
+    <value>पाठ आउटडेंट</value>
+  </data>
+  <data name="text_strikethrough" xml:space="preserve">
+    <value>पाठ काटा हुआ</value>
+  </data>
+  <data name="text_subscript" xml:space="preserve">
+    <value>पाठ सबस्क्रिप्ट</value>
+  </data>
+  <data name="text_superscript" xml:space="preserve">
+    <value>पाठ सुपरस्क्रिप्ट</value>
+  </data>
+  <data name="text_t" xml:space="preserve">
+    <value>पाठ t</value>
+  </data>
+  <data name="text_t_slash" xml:space="preserve">
+    <value>पाठ t स्लैश</value>
+  </data>
+  <data name="text_underline" xml:space="preserve">
+    <value>पाठ रेखांकन</value>
+  </data>
+  <data name="textbox" xml:space="preserve">
+    <value>टेक्स्ट बॉक्स</value>
+  </data>
+  <data name="thermometer" xml:space="preserve">
+    <value>थर्मामीटर</value>
+  </data>
+  <data name="thermometer_cold" xml:space="preserve">
+    <value>थर्मामीटर ठंडा</value>
+  </data>
+  <data name="thermometer_hot" xml:space="preserve">
+    <value>थर्मामीटर गर्म</value>
+  </data>
+  <data name="thermometer_simple" xml:space="preserve">
+    <value>थर्मामीटर सरल</value>
+  </data>
+  <data name="threads_logo" xml:space="preserve">
+    <value>Threads लोगो</value>
+  </data>
+  <data name="three_d" xml:space="preserve">
+    <value>तीन d</value>
+  </data>
+  <data name="thumbs_down" xml:space="preserve">
+    <value>अंगूठे नीचे</value>
+  </data>
+  <data name="thumbs_up" xml:space="preserve">
+    <value>अंगूठे ऊपर</value>
+  </data>
+  <data name="ticket" xml:space="preserve">
+    <value>टिकट</value>
+  </data>
+  <data name="tidal_logo" xml:space="preserve">
+    <value>Tidal लोगो</value>
+  </data>
+  <data name="tiktok_logo" xml:space="preserve">
+    <value>Tiktok लोगो</value>
+  </data>
+  <data name="tilde" xml:space="preserve">
+    <value>टिल्ड</value>
+  </data>
+  <data name="timer" xml:space="preserve">
+    <value>टाइमर</value>
+  </data>
+  <data name="tip_jar" xml:space="preserve">
+    <value>टिप जार</value>
+  </data>
+  <data name="tipi" xml:space="preserve">
+    <value>टीपी</value>
+  </data>
+  <data name="tire" xml:space="preserve">
+    <value>टायर</value>
+  </data>
+  <data name="toggle_left" xml:space="preserve">
+    <value>टॉगल बाएँ</value>
+  </data>
+  <data name="toggle_right" xml:space="preserve">
+    <value>टॉगल दाएँ</value>
+  </data>
+  <data name="toilet" xml:space="preserve">
+    <value>शौचालय</value>
+  </data>
+  <data name="toilet_paper" xml:space="preserve">
+    <value>शौचालय कागज़</value>
+  </data>
+  <data name="toolbox" xml:space="preserve">
+    <value>टूलबॉक्स</value>
+  </data>
+  <data name="tooth" xml:space="preserve">
+    <value>दांत</value>
+  </data>
+  <data name="tornado" xml:space="preserve">
+    <value>बवंडर</value>
+  </data>
+  <data name="tote" xml:space="preserve">
+    <value>झोला</value>
+  </data>
+  <data name="tote_simple" xml:space="preserve">
+    <value>झोला सरल</value>
+  </data>
+  <data name="towel" xml:space="preserve">
+    <value>तौलिया</value>
+  </data>
+  <data name="tractor" xml:space="preserve">
+    <value>ट्रैक्टर</value>
+  </data>
+  <data name="trademark" xml:space="preserve">
+    <value>ट्रेडमार्क</value>
+  </data>
+  <data name="trademark_registered" xml:space="preserve">
+    <value>ट्रेडमार्क पंजीकृत</value>
+  </data>
+  <data name="traffic_cone" xml:space="preserve">
+    <value>यातायात शंकु</value>
+  </data>
+  <data name="traffic_sign" xml:space="preserve">
+    <value>यातायात संकेत</value>
+  </data>
+  <data name="traffic_signal" xml:space="preserve">
+    <value>यातायात सिग्नल</value>
+  </data>
+  <data name="train" xml:space="preserve">
+    <value>रेलगाड़ी</value>
+  </data>
+  <data name="train_regional" xml:space="preserve">
+    <value>रेलगाड़ी क्षेत्रीय</value>
+  </data>
+  <data name="train_simple" xml:space="preserve">
+    <value>रेलगाड़ी सरल</value>
+  </data>
+  <data name="tram" xml:space="preserve">
+    <value>ट्राम</value>
+  </data>
+  <data name="translate" xml:space="preserve">
+    <value>अनुवाद</value>
+  </data>
+  <data name="trash" xml:space="preserve">
+    <value>कचरा</value>
+  </data>
+  <data name="trash_simple" xml:space="preserve">
+    <value>कचरा सरल</value>
+  </data>
+  <data name="tray" xml:space="preserve">
+    <value>ट्रे</value>
+  </data>
+  <data name="tray_arrow_down" xml:space="preserve">
+    <value>ट्रे तीर नीचे</value>
+  </data>
+  <data name="tray_arrow_up" xml:space="preserve">
+    <value>ट्रे तीर ऊपर</value>
+  </data>
+  <data name="treasure_chest" xml:space="preserve">
+    <value>ख़ज़ाना संदूक</value>
+  </data>
+  <data name="tree" xml:space="preserve">
+    <value>पेड़</value>
+  </data>
+  <data name="tree_evergreen" xml:space="preserve">
+    <value>पेड़ सदाबहार</value>
+  </data>
+  <data name="tree_palm" xml:space="preserve">
+    <value>पेड़ ताड़</value>
+  </data>
+  <data name="tree_structure" xml:space="preserve">
+    <value>पेड़ संरचना</value>
+  </data>
+  <data name="tree_view" xml:space="preserve">
+    <value>पेड़ दृश्य</value>
+  </data>
+  <data name="trend_down" xml:space="preserve">
+    <value>रुझान नीचे</value>
+  </data>
+  <data name="trend_up" xml:space="preserve">
+    <value>रुझान ऊपर</value>
+  </data>
+  <data name="triangle" xml:space="preserve">
+    <value>त्रिभुज</value>
+  </data>
+  <data name="triangle_dashed" xml:space="preserve">
+    <value>त्रिभुज डैश वाली</value>
+  </data>
+  <data name="trolley" xml:space="preserve">
+    <value>ट्रॉली</value>
+  </data>
+  <data name="trolley_suitcase" xml:space="preserve">
+    <value>ट्रॉली सूटकेस</value>
+  </data>
+  <data name="trophy" xml:space="preserve">
+    <value>ट्रॉफ़ी</value>
+  </data>
+  <data name="truck" xml:space="preserve">
+    <value>ट्रक</value>
+  </data>
+  <data name="truck_trailer" xml:space="preserve">
+    <value>ट्रक ट्रेलर</value>
+  </data>
+  <data name="tumblr_logo" xml:space="preserve">
+    <value>Tumblr लोगो</value>
+  </data>
+  <data name="twitch_logo" xml:space="preserve">
+    <value>Twitch लोगो</value>
+  </data>
+  <data name="twitter_logo" xml:space="preserve">
+    <value>Twitter लोगो</value>
+  </data>
+  <data name="umbrella" xml:space="preserve">
+    <value>छाता</value>
+  </data>
+  <data name="umbrella_simple" xml:space="preserve">
+    <value>छाता सरल</value>
+  </data>
+  <data name="union" xml:space="preserve">
+    <value>संघ</value>
+  </data>
+  <data name="unite" xml:space="preserve">
+    <value>एकजुट</value>
+  </data>
+  <data name="unite_square" xml:space="preserve">
+    <value>एकजुट वर्ग</value>
+  </data>
+  <data name="upload" xml:space="preserve">
+    <value>अपलोड</value>
+  </data>
+  <data name="upload_simple" xml:space="preserve">
+    <value>अपलोड सरल</value>
+  </data>
+  <data name="usb" xml:space="preserve">
+    <value>Usb</value>
+  </data>
+  <data name="user" xml:space="preserve">
+    <value>उपयोगकर्ता</value>
+  </data>
+  <data name="user_check" xml:space="preserve">
+    <value>उपयोगकर्ता सही</value>
+  </data>
+  <data name="user_circle" xml:space="preserve">
+    <value>उपयोगकर्ता वृत्त</value>
+  </data>
+  <data name="user_circle_check" xml:space="preserve">
+    <value>उपयोगकर्ता वृत्त सही</value>
+  </data>
+  <data name="user_circle_dashed" xml:space="preserve">
+    <value>उपयोगकर्ता वृत्त डैश वाली</value>
+  </data>
+  <data name="user_circle_gear" xml:space="preserve">
+    <value>उपयोगकर्ता वृत्त गियर</value>
+  </data>
+  <data name="user_circle_minus" xml:space="preserve">
+    <value>उपयोगकर्ता वृत्त घटा</value>
+  </data>
+  <data name="user_circle_plus" xml:space="preserve">
+    <value>उपयोगकर्ता वृत्त जोड़</value>
+  </data>
+  <data name="user_focus" xml:space="preserve">
+    <value>उपयोगकर्ता फ़ोकस</value>
+  </data>
+  <data name="user_gear" xml:space="preserve">
+    <value>उपयोगकर्ता गियर</value>
+  </data>
+  <data name="user_list" xml:space="preserve">
+    <value>उपयोगकर्ता सूची</value>
+  </data>
+  <data name="user_minus" xml:space="preserve">
+    <value>उपयोगकर्ता घटा</value>
+  </data>
+  <data name="user_plus" xml:space="preserve">
+    <value>उपयोगकर्ता जोड़</value>
+  </data>
+  <data name="user_rectangle" xml:space="preserve">
+    <value>उपयोगकर्ता आयत</value>
+  </data>
+  <data name="user_sound" xml:space="preserve">
+    <value>उपयोगकर्ता ध्वनि</value>
+  </data>
+  <data name="user_square" xml:space="preserve">
+    <value>उपयोगकर्ता वर्ग</value>
+  </data>
+  <data name="user_switch" xml:space="preserve">
+    <value>उपयोगकर्ता स्विच</value>
+  </data>
+  <data name="users" xml:space="preserve">
+    <value>उपयोगकर्ता</value>
+  </data>
+  <data name="users_four" xml:space="preserve">
+    <value>उपयोगकर्ता चार</value>
+  </data>
+  <data name="users_three" xml:space="preserve">
+    <value>उपयोगकर्ता तीन</value>
+  </data>
+  <data name="van" xml:space="preserve">
+    <value>वैन</value>
+  </data>
+  <data name="vault" xml:space="preserve">
+    <value>तिजोरी</value>
+  </data>
+  <data name="vector_three" xml:space="preserve">
+    <value>वेक्टर तीन</value>
+  </data>
+  <data name="vector_two" xml:space="preserve">
+    <value>वेक्टर दो</value>
+  </data>
+  <data name="vibrate" xml:space="preserve">
+    <value>कंपन</value>
+  </data>
+  <data name="video" xml:space="preserve">
+    <value>वीडियो</value>
+  </data>
+  <data name="video_camera" xml:space="preserve">
+    <value>वीडियो कैमरा</value>
+  </data>
+  <data name="video_camera_slash" xml:space="preserve">
+    <value>वीडियो कैमरा स्लैश</value>
+  </data>
+  <data name="video_conference" xml:space="preserve">
+    <value>वीडियो सम्मेलन</value>
+  </data>
+  <data name="vignette" xml:space="preserve">
+    <value>विनेट</value>
+  </data>
+  <data name="vinyl_record" xml:space="preserve">
+    <value>विनाइल रिकॉर्ड</value>
+  </data>
+  <data name="virtual_reality" xml:space="preserve">
+    <value>आभासी वास्तविकता</value>
+  </data>
+  <data name="virus" xml:space="preserve">
+    <value>वायरस</value>
+  </data>
+  <data name="visor" xml:space="preserve">
+    <value>छज्जा</value>
+  </data>
+  <data name="voicemail" xml:space="preserve">
+    <value>वॉइसमेल</value>
+  </data>
+  <data name="volleyball" xml:space="preserve">
+    <value>वॉलीबॉल</value>
+  </data>
+  <data name="wall" xml:space="preserve">
+    <value>दीवार</value>
+  </data>
+  <data name="wallet" xml:space="preserve">
+    <value>बटुआ</value>
+  </data>
+  <data name="warehouse" xml:space="preserve">
+    <value>गोदाम</value>
+  </data>
+  <data name="warning" xml:space="preserve">
+    <value>चेतावनी</value>
+  </data>
+  <data name="warning_circle" xml:space="preserve">
+    <value>चेतावनी वृत्त</value>
+  </data>
+  <data name="warning_diamond" xml:space="preserve">
+    <value>चेतावनी हीरा</value>
+  </data>
+  <data name="warning_octagon" xml:space="preserve">
+    <value>चेतावनी अष्टभुज</value>
+  </data>
+  <data name="washing_machine" xml:space="preserve">
+    <value>धुलाई मशीन</value>
+  </data>
+  <data name="watch" xml:space="preserve">
+    <value>घड़ी</value>
+  </data>
+  <data name="wave_sawtooth" xml:space="preserve">
+    <value>लहर आरी दांत</value>
+  </data>
+  <data name="wave_sine" xml:space="preserve">
+    <value>लहर ज्या</value>
+  </data>
+  <data name="wave_square" xml:space="preserve">
+    <value>लहर वर्ग</value>
+  </data>
+  <data name="wave_triangle" xml:space="preserve">
+    <value>लहर त्रिभुज</value>
+  </data>
+  <data name="waveform" xml:space="preserve">
+    <value>तरंग रूप</value>
+  </data>
+  <data name="waveform_slash" xml:space="preserve">
+    <value>तरंग रूप स्लैश</value>
+  </data>
+  <data name="waves" xml:space="preserve">
+    <value>लहरें</value>
+  </data>
+  <data name="webcam" xml:space="preserve">
+    <value>वेबकैम</value>
+  </data>
+  <data name="webcam_slash" xml:space="preserve">
+    <value>वेबकैम स्लैश</value>
+  </data>
+  <data name="webhooks_logo" xml:space="preserve">
+    <value>वेबहुक लोगो</value>
+  </data>
+  <data name="wechat_logo" xml:space="preserve">
+    <value>Wechat लोगो</value>
+  </data>
+  <data name="whatsapp_logo" xml:space="preserve">
+    <value>Whatsapp लोगो</value>
+  </data>
+  <data name="wheelchair" xml:space="preserve">
+    <value>व्हीलचेयर</value>
+  </data>
+  <data name="wheelchair_motion" xml:space="preserve">
+    <value>व्हीलचेयर गति</value>
+  </data>
+  <data name="wifi_high" xml:space="preserve">
+    <value>वाई-फ़ाई ऊँचा</value>
+  </data>
+  <data name="wifi_low" xml:space="preserve">
+    <value>वाई-फ़ाई नीचा</value>
+  </data>
+  <data name="wifi_medium" xml:space="preserve">
+    <value>वाई-फ़ाई मध्यम</value>
+  </data>
+  <data name="wifi_none" xml:space="preserve">
+    <value>वाई-फ़ाई कोई नहीं</value>
+  </data>
+  <data name="wifi_slash" xml:space="preserve">
+    <value>वाई-फ़ाई स्लैश</value>
+  </data>
+  <data name="wifi_x" xml:space="preserve">
+    <value>वाई-फ़ाई x</value>
+  </data>
+  <data name="wind" xml:space="preserve">
+    <value>हवा</value>
+  </data>
+  <data name="windmill" xml:space="preserve">
+    <value>पवनचक्की</value>
+  </data>
+  <data name="windows_logo" xml:space="preserve">
+    <value>Windows लोगो</value>
+  </data>
+  <data name="wine" xml:space="preserve">
+    <value>शराब</value>
+  </data>
+  <data name="wrench" xml:space="preserve">
+    <value>रिंच</value>
+  </data>
+  <data name="x" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="x_circle" xml:space="preserve">
+    <value>X वृत्त</value>
+  </data>
+  <data name="x_logo" xml:space="preserve">
+    <value>X लोगो</value>
+  </data>
+  <data name="x_square" xml:space="preserve">
+    <value>X वर्ग</value>
+  </data>
+  <data name="yarn" xml:space="preserve">
+    <value>धागा</value>
+  </data>
+  <data name="yin_yang" xml:space="preserve">
+    <value>यिन यांग</value>
+  </data>
+  <data name="youtube_logo" xml:space="preserve">
+    <value>Youtube लोगो</value>
+  </data>
+</root>

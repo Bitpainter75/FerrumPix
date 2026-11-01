@@ -17,8 +17,8 @@
                                  dem ganzen Werkzeug, und die beiden Drehpfeile darunter sind
                                  die einzelnen Knoepfe - beide waeren hier eine Dopplung. -->
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-rectangle.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrows-counter-clockwise.svg"
+                                Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                         <Button Grid.Column="1"
@@ -29,8 +29,8 @@
                                 Command="{Binding DataContext.ResetTransformCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 ToolTip.Tip="Drehen zurücksetzen">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                Width="14" Height="14" />
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                Width="16" Height="16" />
                         </Button>
                     </Grid>
                 </DataTemplate>
@@ -43,7 +43,7 @@
                             Command="{Binding RotateLeftCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-2.svg"
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-counter-clockwise.svg"
                                 Width="20" Height="20" />
                             <TextBlock Text="Links" />
                         </StackPanel>
@@ -54,7 +54,7 @@
                             Command="{Binding RotateRightCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise-2.svg"
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
                                 Width="20" Height="20" />
                             <TextBlock Text="Rechts" />
                         </StackPanel>
@@ -94,8 +94,8 @@
                         ToolTip.Tip="Sucht die geraden Kanten im Bild - Horizont, Hauskante, Fensterreihe - und dreht es so, dass sie waagerecht und senkrecht stehen">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
-                            Width="14" Height="14"
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magic-wand.svg"
+                            Width="18" Height="18"
                             VerticalAlignment="Center" />
                         <!-- Umbruch statt Abschneiden: die Beschriftung ist in anderen Sprachen
                              deutlich länger, und das Panel ist schmal. -->
@@ -118,8 +118,8 @@
                               ToolTip.Tip="Danach auf dem Bild eine Linie entlang einer Kante ziehen, die waagerecht oder senkrecht stehen soll">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/outline/line.svg"
-                            Width="14" Height="14"
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/line-segment.svg"
+                            Width="18" Height="18"
                             VerticalAlignment="Center" />
                         <TextBlock Text="Linie ziehen"
                                    FontSize="{DynamicResource FP.Font.Small}"
@@ -150,7 +150,7 @@
                             Command="{Binding FlipHorizontalCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/flip-horizontal.svg"
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flip-horizontal.svg"
                                 Width="20" Height="20" />
                             <TextBlock Text="Horizontal" />
                         </StackPanel>
@@ -161,7 +161,7 @@
                             Command="{Binding FlipVerticalCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/flip-vertical.svg"
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flip-vertical.svg"
                                 Width="20" Height="20" />
                             <TextBlock Text="Vertikal" />
                         </StackPanel>

@@ -36,8 +36,8 @@
                         Height="34"
                         Margin="0,0,0,12">
                     <Grid ColumnDefinitions="Auto,*,Auto">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
-                                       Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                                       Width="18" Height="18" VerticalAlignment="Center" Opacity="0.65"/>
                         <TextBox x:Name="SettingsSearchBox" Grid.Column="1"
                                  Classes="search-input"
                                  BorderThickness="0"
@@ -49,15 +49,15 @@
                                  TextChanged="OnSettingsSearchChanged"/>
                         <Button Grid.Column="2"
                                 Classes="ghost"
-                                Width="18"
-                                Height="18"
+                                Width="22"
+                                Height="22"
                                 Padding="0"
                                 Margin="4,0,0,0"
                                 VerticalAlignment="Center"
                                 Click="OnSettingsSearchClearClick"
                                 IsVisible="{Binding #SettingsSearchBox.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                 ToolTip.Tip="Suche zurücksetzen">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
                                            Width="12" Height="12"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                            Opacity="0.75"/>
@@ -72,7 +72,7 @@
                         Tag="GeneralSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/gear.svg" Width="18" Height="18"/>
                         <TextBlock Text="Allgemein"/>
                     </StackPanel>
                 </Button>
@@ -81,7 +81,7 @@
                         Tag="AppearanceSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/palette.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/palette.svg" Width="18" Height="18"/>
                         <TextBlock Text="Darstellung"/>
                     </StackPanel>
                 </Button>
@@ -90,7 +90,7 @@
                         Tag="GallerySection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg" Width="18" Height="18"/>
                         <TextBlock Text="Galerie"/>
                     </StackPanel>
                 </Button>
@@ -99,7 +99,7 @@
                         Tag="ViewerSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/player-play.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play.svg" Width="18" Height="18"/>
                         <TextBlock Text="Viewer"/>
                     </StackPanel>
                 </Button>
@@ -108,7 +108,7 @@
                         Tag="InfoPanelSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/info-circle.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/info.svg" Width="18" Height="18"/>
                         <TextBlock Text="Info-Leiste"/>
                     </StackPanel>
                 </Button>
@@ -117,7 +117,7 @@
                         Tag="FilmstripSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/layout-bottombar.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/film-strip.svg" Width="18" Height="18"/>
                         <TextBlock Text="Filmstreifen"/>
                     </StackPanel>
                 </Button>
@@ -126,7 +126,7 @@
                         Tag="EditorSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/exposure.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg" Width="18" Height="18"/>
                         <TextBlock Text="Editor"/>
                     </StackPanel>
                 </Button>
@@ -135,7 +135,7 @@
                         Tag="RawSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/aperture.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/aperture.svg" Width="18" Height="18"/>
                         <TextBlock Text="RAW-Entwicklung"/>
                     </StackPanel>
                 </Button>
@@ -144,7 +144,7 @@
                         Tag="ImmichSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cloud.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cloud.svg" Width="18" Height="18"/>
                         <TextBlock Text="Immich"/>
                     </StackPanel>
                 </Button>
@@ -153,7 +153,7 @@
                         Tag="NextcloudSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/cloud.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cloud.svg" Width="18" Height="18"/>
                         <TextBlock Text="Nextcloud"/>
                     </StackPanel>
                 </Button>
@@ -162,7 +162,7 @@
                         Tag="ExternalProgramsSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"/>
                         <TextBlock Text="Externe Programme"/>
                     </StackPanel>
                 </Button>
@@ -172,7 +172,7 @@
                         Tag="ModelsSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brain.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/brain.svg" Width="18" Height="18"/>
                         <TextBlock Text="Modelle"/>
                     </StackPanel>
                 </Button>
@@ -181,7 +181,7 @@
                         Tag="MapSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/map.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-trifold.svg" Width="18" Height="18"/>
                         <TextBlock Text="Kartenansicht"/>
                     </StackPanel>
                 </Button>
@@ -196,7 +196,7 @@
                         Tag="PeopleSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/users.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/users.svg" Width="18" Height="18"/>
                         <TextBlock Text="Personen"/>
                     </StackPanel>
                 </Button>
@@ -205,7 +205,7 @@
                         Tag="CatalogSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/database.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/database.svg" Width="18" Height="18"/>
                         <TextBlock Text="Katalog"/>
                     </StackPanel>
                 </Button>
@@ -214,7 +214,7 @@
                         Tag="PerformanceSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/settings-bolt.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/gear-six.svg" Width="18" Height="18"/>
                         <TextBlock Text="Leistung"/>
                     </StackPanel>
                 </Button>
@@ -223,7 +223,7 @@
                         Tag="ShortcutsSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/keyboard.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/keyboard.svg" Width="18" Height="18"/>
                         <TextBlock Text="Tastenkürzel"/>
                     </StackPanel>
                 </Button>
@@ -232,7 +232,7 @@
                         Tag="TechnologySection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/license.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/certificate.svg" Width="18" Height="18"/>
                         <TextBlock Text="Technologie"/>
                     </StackPanel>
                 </Button>
@@ -280,7 +280,7 @@
                                         Click="OnReleasePageClick"
                                         ToolTip.Tip="Veröffentlichte Fassung herunterladen">
                                     <StackPanel Orientation="Horizontal" Spacing="7">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="14" Height="14"
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"
                                                        IconBrush="{DynamicResource FP.Accent}"/>
                                         <TextBlock Text="Aktualisierung verfügbar:" Foreground="{DynamicResource FP.Accent}"/>
                                         <TextBlock Text="{Binding AvailableVersion}" Foreground="{DynamicResource FP.Accent}"/>
@@ -296,7 +296,7 @@
                             </StackPanel>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnHomepageClick">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="14" Height="14"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"/>
                                     <TextBlock Text="Öffnen"/>
                                 </StackPanel>
                             </Button>
@@ -309,7 +309,7 @@
                             </StackPanel>
                             <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnGitHubClick">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/external-link.svg" Width="14" Height="14"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"/>
                                     <TextBlock Text="Öffnen"/>
                                 </StackPanel>
                             </Button>
@@ -519,6 +519,34 @@
                                           OnContent=""
                                           OffContent=""
                                           VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Was das blanke Mausrad tut, getrennt fuer Viewer und Vollbild. STRG tut
+                             jeweils das andere, die rechte Taste zoomt immer. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Mausrad im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Was das Mausrad im Viewer tut. Mit STRG tut es jeweils das andere, mit gedrückter rechter Maustaste zoomt es immer." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerWheelNavigate}" Padding="10,6"
+                                        Command="{Binding SetViewerWheelActionCommand}" CommandParameter="Navigate">Bildwechsel</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerWheelZoom}" Padding="10,6"
+                                        Command="{Binding SetViewerWheelActionCommand}" CommandParameter="Zoom">Zoomen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Mausrad im Vollbild und in der Diashow" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Was das Mausrad im Vollbild und in der Diashow tut. Mit STRG tut es jeweils das andere, mit gedrückter rechter Maustaste zoomt es immer." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenWheelNavigate}" Padding="10,6"
+                                        Command="{Binding SetFullscreenWheelActionCommand}" CommandParameter="Navigate">Bildwechsel</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenWheelZoom}" Padding="10,6"
+                                        Command="{Binding SetFullscreenWheelActionCommand}" CommandParameter="Zoom">Zoomen</Button>
+                            </StackPanel>
                         </Grid>
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -1273,8 +1301,8 @@
                                                         VerticalAlignment="Center"
                                                         Command="{Binding RemoveCommand}"
                                                         ToolTip.Tip="Entfernen">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                                                   Width="14" Height="14"
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                   Width="18" Height="18"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Button>
                                             </Grid>
@@ -2037,9 +2065,9 @@
                                                         Command="{Binding DataContext.ToggleCompactGroupVisibilityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding Key}">
                                                     <Panel>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye.svg" Width="16" Height="16"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18"
                                                                        IsVisible="{Binding IsShown}"/>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eye-closed.svg" Width="16" Height="16"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-closed.svg" Width="18" Height="18"
                                                                        IsVisible="{Binding !IsShown}"/>
                                                     </Panel>
                                                 </Button>
@@ -2791,8 +2819,8 @@
                                                     VerticalAlignment="Center"
                                                     Command="{Binding RemoveCommand}"
                                                     ToolTip.Tip="Entfernen">
-                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/trash.svg"
-                                                               Width="14" Height="14"
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                               Width="18" Height="18"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </Grid>
@@ -3075,8 +3103,8 @@
                                         Height="34"
                                         Margin="0,0,8,0">
                                     <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/search.svg"
-                                                       Width="16" Height="16" VerticalAlignment="Center" Opacity="0.65"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                                                       Width="18" Height="18" VerticalAlignment="Center" Opacity="0.65"/>
                                         <TextBox Grid.Column="1"
                                                  Classes="search-input"
                                                  BorderThickness="0"
@@ -3087,12 +3115,12 @@
                                                  PlaceholderText="Ordner suchen"
                                                  VerticalContentAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="ghost"
-                                                Width="18" Height="18" Padding="0" Margin="4,0,0,0"
+                                                Width="22" Height="22" Padding="0" Margin="4,0,0,0"
                                                 VerticalAlignment="Center"
                                                 Command="{Binding ClearFolderFilterCommand}"
                                                 IsVisible="{Binding HasFolderFilter}"
                                                 ToolTip.Tip="Suche zurücksetzen">
-                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/x.svg"
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
                                                            Width="12" Height="12"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                                            Opacity="0.75"/>
@@ -3251,12 +3279,12 @@
                                                         Command="{Binding Actions.ToggleFolderRowCommand}"
                                                         CommandParameter="{Binding}">
                                                     <Panel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-right.svg"
-                                                                       Width="14" Height="14"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg"
+                                                                       Width="18" Height="18"
                                                                        IsVisible="{Binding !IsExpanded}"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/chevron-down.svg"
-                                                                       Width="14" Height="14"
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                                                                       Width="18" Height="18"
                                                                        IsVisible="{Binding IsExpanded}"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Panel>
@@ -3792,7 +3820,7 @@
                                         <TextBlock Text="Diese Anwendung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/Bitpainter75/FerrumPix" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.gnu.org/licenses/gpl-3.0.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="GPL-3.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3804,7 +3832,7 @@
                                         <TextBlock Text="Laufzeitumgebung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/runtime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/runtime/blob/main/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3816,7 +3844,7 @@
                                         <TextBlock Text="Oberfläche und Fensterverwaltung" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/AvaloniaUI/Avalonia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3828,7 +3856,7 @@
                                         <TextBlock Text="Datenbindung der Ansichtsmodelle" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/reactiveui/ReactiveUI" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/reactiveui/ReactiveUI/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3840,7 +3868,7 @@
                                         <TextBlock Text="Führt gelernte Modelle aus, Telemetrie abgeschaltet" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3855,7 +3883,7 @@
                                         <TextBlock Text="Rechnet gelernte Modelle auf der Grafikkarte" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/microsoft/onnxruntime/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3867,7 +3895,7 @@
                                         <TextBlock Text="Bildbearbeitung und Zeichnen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mono/SkiaSharp" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mono/SkiaSharp/blob/main/LICENSE.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3879,7 +3907,7 @@
                                         <TextBlock Text="Zeichenmaschine unter SkiaSharp" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/google/skia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/google/skia/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3891,7 +3919,7 @@
                                         <TextBlock Text="SVG-Symbole darstellen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/wieslawsoltes/Svg.Skia" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/wieslawsoltes/Svg.Skia/blob/master/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3903,7 +3931,7 @@
                                         <TextBlock Text="Datenbank für Bewertungen, Stichwörter und Zwischenspeicher" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/efcore" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dotnet/efcore/blob/main/LICENSE.txt" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3915,7 +3943,7 @@
                                         <TextBlock Text="Native Unterlage der Datenbank" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ericsink/SQLitePCL.raw" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3927,7 +3955,7 @@
                                         <TextBlock Text="Die Datenbank selbst" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.sqlite.org/" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.sqlite.org/copyright.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Public Domain" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3939,7 +3967,7 @@
                                         <TextBlock Text="EXIF- und IPTC-Daten lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/metadata-extractor-dotnet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3951,7 +3979,7 @@
                                         <TextBlock Text="XMP-Daten lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/drewnoakes/xmp-core-dotnet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/adobe/XMP-Toolkit-SDK/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3963,7 +3991,7 @@
                                         <TextBlock Text="TIFF-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/BitMiracle/libtiff.net" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://bitmiracle.github.io/libtiff.net/help/articles/license.html" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3975,7 +4003,7 @@
                                         <TextBlock Text="QR-Codes erzeugen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/codebude/QRCoder" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/codebude/QRCoder/blob/master/LICENSE.txt" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -3983,13 +4011,13 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Tabler Icons" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Phosphor Icons" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="Symbolsatz der Oberfläche" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/phosphor-icons/core" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
-                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/tabler/tabler-icons/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/phosphor-icons/core/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
@@ -3999,7 +4027,7 @@
                                         <TextBlock Text="Lokales Modell für automatische Bild-Stichwörter" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/xinyu1205/recognize-anything" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/xinyu1205/recognize-anything/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4011,7 +4039,7 @@
                                         <TextBlock Text="Kalibrierdaten für Objektive" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/lensfun/lensfun" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by-sa/3.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="CC-BY-SA-3.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4023,7 +4051,7 @@
                                         <TextBlock Text="Objektivkennungen für Nikon, Sony, Pentax und Canon" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/exiftool/exiftool" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://dev.perl.org/licenses/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="GPL-1.0+" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4035,7 +4063,7 @@
                                         <TextBlock Text="RAW-Dateien entwickeln" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/LibRaw/LibRaw" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.libraw.org/about" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="LGPL-2.1" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4047,7 +4075,7 @@
                                         <TextBlock Text="Videowiedergabe und Video-Vorschaubilder" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mpv-player/mpv" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/mpv-player/mpv/blob/master/Copyright" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="LGPL-2.1+" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4059,7 +4087,7 @@
                                         <TextBlock Text="HEIC/HEIF/AVIF, nur vom System" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/strukturag/libheif/blob/master/COPYING" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="LGPL-3.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4071,7 +4099,7 @@
                                         <TextBlock Text="JPEG XL, nur vom System" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/libjxl/libjxl" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/libjxl/libjxl/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4083,7 +4111,7 @@
                                         <TextBlock Text="RAW in DNG umwandeln, nur vom System" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dnglab/dnglab" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/dnglab/dnglab/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="LGPL-2.1" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4110,7 +4138,7 @@
                                         <TextBlock Text="Objektauswahl per Klick" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ChaoningZhang/MobileSAM" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/ChaoningZhang/MobileSAM/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4122,7 +4150,7 @@
                                         <TextBlock Text="Tiefenkarte für Maske und Unschärfe" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/isl-org/MiDaS" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/isl-org/MiDaS/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4134,7 +4162,7 @@
                                         <TextBlock Text="Objekte entfernen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/advimman/lama" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/advimman/lama/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4146,7 +4174,7 @@
                                         <TextBlock Text="Entrauschen, gründlich" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/cszn/SCUNet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/cszn/SCUNet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4158,7 +4186,7 @@
                                         <TextBlock Text="Entrauschen, zügig" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/megvii-research/NAFNet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/megvii-research/NAFNet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4170,7 +4198,7 @@
                                         <TextBlock Text="Hochskalieren: gründlich, zügig und für Zeichnungen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/xinntao/Real-ESRGAN" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/xinntao/Real-ESRGAN/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4182,7 +4210,7 @@
                                         <TextBlock Text="Gesichter finden" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4194,7 +4222,7 @@
                                         <TextBlock Text="Gesichter vergleichen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/onnx/models" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brand-github.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
                                     <!-- NICHT Apache-2.0, obwohl es im Model Zoo so dasteht. Die
                                          Apache-2.0 gilt dem Repo, die Gewichte stammen aber von
@@ -4213,7 +4241,7 @@
                                         <TextBlock Text="Ortsnamen zu Koordinaten (Tabelle, keine Abfrage im Netz)" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.geonames.org/" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/world.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/globe.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by/4.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="CC-BY-4.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4229,7 +4257,7 @@
                                         <TextBlock Text="Kartenkacheln der Kartenansicht, erst nach dem Einschalten" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://www.openstreetmap.org/copyright" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/world.svg" Width="13" Height="13"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/globe.svg" Width="18" Height="18"/>
                                     </Button>
                                     <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://opendatacommons.org/licenses/odbl/1-0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
                                         <TextBlock Text="ODbL-1.0" FontSize="{DynamicResource FP.Font.Small}"/>
@@ -4260,7 +4288,7 @@
             <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
                 <Button Classes="ghost" Padding="12,8" Command="{Binding ResetCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/history.svg" Width="16" Height="16"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clock-counter-clockwise.svg" Width="18" Height="18"/>
                         <TextBlock Text="Auf Standardeinstellungen zurücksetzen"/>
                     </StackPanel>
                 </Button>

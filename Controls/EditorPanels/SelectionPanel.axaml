@@ -7,8 +7,8 @@
             <DataTemplate>
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <icons:SvgIcon
-                        Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg"
-                        Width="14" Height="14" />
+                        Source="avares://FerrumPix/Assets/Icons/phosphor/regular/rectangle.svg"
+                        Width="18" Height="18" />
                     <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                 </StackPanel>
             </DataTemplate>
@@ -22,7 +22,7 @@
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Move"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Move}"
                         ToolTip.Tip="Verschieben">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/pointer.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cursor.svg" Width="18" Height="18" />
                 </Button>
                 <!-- Derselbe Pinsel wie im Maskenwerkzeug, an derselben Stelle der Reihe: was ein
                      Zug bedeutet, soll nicht davon abhaengen, mit welchem Werkzeug man arbeitet.
@@ -31,31 +31,31 @@
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Brush"
                         Classes.active="{Binding IsBrushSelectionMode}"
                         ToolTip.Tip="Pinsel: Auswahl frei ins Bild malen - Hinzufügen und Abziehen über den Modus darunter">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brush.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/paint-brush.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Rectangle"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Rectangle}"
                         ToolTip.Tip="Rechteck aufziehen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/rectangle.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/rectangle.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Ellipse"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Ellipse}"
                         ToolTip.Tip="Kreis/Ellipse aufziehen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/circle.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Lasso"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Lasso}"
                         ToolTip.Tip="Freihand-Auswahl (Lasso)">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/lasso.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/lasso.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="MagicWand"
                         Classes.active="{Binding SelectionMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=MagicWand}"
                         ToolTip.Tip="Zauberstab: zusammenhängende Farbfläche wählen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/wand.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magic-wand.svg" Width="18" Height="18" />
                 </Button>
                 <!-- Dasselbe Werkzeug wie im Maskenpanel, nur wird hier eine AUSWAHL daraus. Grau,
                      solange die Modelldatei fehlt - der Hinweis sagt dann, woran es liegt. -->
@@ -64,7 +64,7 @@
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="Subject"
                         Classes.active="{Binding IsSubjectSelectionMode}"
                         ToolTip.Tip="{Binding SubjectMaskHint}" ToolTip.ShowOnDisabled="True">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/click.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/cursor-click.svg" Width="18" Height="18" />
                 </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -72,13 +72,13 @@
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="ColorRange"
                         Classes.active="{Binding IsColorRangeSelectionMode}"
                         ToolTip.Tip="Farbbereich: Farbe anklicken und ähnliche Farben im ganzen Bild auswählen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/color-picker.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionModeCommand}" CommandParameter="LuminanceRange"
                         Classes.active="{Binding IsLuminanceRangeSelectionMode}"
                         ToolTip.Tip="Luminanzbereich: Schatten, Mitteltöne oder Lichter auswählen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/brightness.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg" Width="18" Height="18" />
                 </Button>
             </StackPanel>
 
@@ -182,25 +182,25 @@
                         Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="New"
                         Classes.active="{Binding IsSelectionCombineNew}"
                         ToolTip.Tip="Neue Auswahl erstellen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/square.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Add"
                         Classes.active="{Binding IsSelectionCombineAdd}"
                         ToolTip.Tip="Zur bestehenden Auswahl hinzufügen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-plus.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-square.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Subtract"
                         Classes.active="{Binding IsSelectionCombineSubtract}"
                         ToolTip.Tip="Von der bestehenden Auswahl abziehen">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/square-minus.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/minus-square.svg" Width="18" Height="18" />
                 </Button>
                 <Button Classes="ghost" Padding="8,6"
                         Command="{Binding SetSelectionCombineModeCommand}" CommandParameter="Intersect"
                         Classes.active="{Binding IsSelectionCombineIntersect}"
                         ToolTip.Tip="Schnittmenge mit bestehender Auswahl bilden">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/squares.svg" Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/intersect.svg" Width="18" Height="18" />
                 </Button>
             </StackPanel>
 
@@ -216,8 +216,8 @@
                         Command="{Binding InvertSelectionCommand}"
                         ToolTip.Tip="Tauscht gewählte und freie Seite">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/circle-half-2.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection-inverse.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Auswahl umkehren" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -227,8 +227,8 @@
                         Command="{Binding ClearSelectionCommand}"
                         ToolTip.Tip="Hebt die Auswahl auf (STRG+D oder ESC)">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/deselect.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection-slash.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Auswahl verwerfen" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -245,8 +245,8 @@
                         Command="{Binding CopySelectionShapeCommand}"
                         ToolTip.Tip="Legt eine Abschrift dieser Auswahl ab">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/copy.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copy.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Auswahl kopieren" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -256,8 +256,8 @@
                         Command="{Binding PasteSelectionShapeCommand}"
                         ToolTip.Tip="Setzt die abgelegte Auswahl wieder ein. Eine vorhandene wird ersetzt">
                     <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/clipboard.svg"
-                                       Width="14" Height="14" />
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clipboard.svg"
+                                       Width="18" Height="18" />
                         <TextBlock Text="Auswahl einfügen" FontSize="{DynamicResource FP.Font.Small}"
                                    HorizontalAlignment="Center" />
                     </StackPanel>
@@ -389,8 +389,8 @@
                     Command="{Binding CreateAdjustmentLayerFromSelectionCommand}"
                     ToolTip.Tip="Aus der Auswahl direkt eine Auswahlebene erstellen (ohne erst eine Anpassung ändern zu müssen)">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/adjustments-plus.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-circle.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Neue Auswahlebene" />
                 </StackPanel>
             </Button>
@@ -402,22 +402,23 @@
                     Command="{Binding CopySelectionCommand}"
                     ToolTip.Tip="Auswahlinhalt als neues, frei verschiebbares Bild-Objekt kopieren">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/photo.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Als Bild kopieren" />
                 </StackPanel>
             </Button>
 
             <!-- Fuellen und Kontur stehen als eigene Gruppen darunter (SelectionFillPanel,
                  SelectionStrokePanel), gebaut wie Schatten und Gluehen. -->
+            <!-- Umwandeln in jedem Zweig, nicht nur beim Verschieben: der Knopf erschien sonst
+                 "mal und mal nicht", je nach gewaehltem Unterwerkzeug. -->
             <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                IsVisible="{Binding IsMoveSelectionMode}"
                             IsEnabled="{Binding CanConvertKind}"
                             Command="{Binding ConvertKindCommand}"
                             ToolTip.Tip="{Binding ConvertKindHint}">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/arrows-exchange.svg"
-                                           Width="16" Height="16" />
+                            <icons:SvgIcon Source="{Binding ConvertKindIconSource}"
+                                           Width="18" Height="18" />
                             <TextBlock Classes="no-translate" Text="{Binding ConvertKindText}" />
                         </StackPanel>
             </Button>
@@ -430,8 +431,8 @@
                     Command="{Binding RemoveObjectCommand}"
                     ToolTip.Tip="{Binding RemoveObjectHint}" ToolTip.ShowOnDisabled="True">
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/eraser.svg"
-                                   Width="16" Height="16" />
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg"
+                                   Width="18" Height="18" />
                     <TextBlock Text="Objekt entfernen" FontSize="{DynamicResource FP.Font.Small}" />
                 </StackPanel>
             </Button>

@@ -100,10 +100,43 @@
     <color type="primary" scheme_preference="light">#ffc58f</color>
     <color type="primary" scheme_preference="dark">#6e3a10</color>
   </branding>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
 
   <content_rating type="oars-1.1"/>
 
   <releases>
+
+    <release version="0.9.74-1" date="2026-10-31">
+      <description>
+        <p>This update makes the slideshow much more useful for browsing and sorting photos, adds direct imports from phones and cameras, and introduces new Keep and Reject buttons. There are also improvements to the interface, thumbnails and everyday editing:</p>
+        <p xml:lang="de">Mit diesem Update kannst du Fotos direkt während der Diashow durchsehen und sortieren. Außerdem lassen sich Bilder jetzt von angeschlossenen Smartphones und Kameras importieren, und mit den neuen Schaltflächen zum Behalten und Verwerfen wird das Aussortieren einfacher. Dazu kommen einige Verbesserungen an der Oberfläche, den Vorschaubildern und der Bildbearbeitung:</p>
+        <ul>
+          <li>You can now pause the slideshow with the spacebar or a button without leaving it. In fullscreen mode, moving the mouse brings up controls for navigating between photos, pausing, shuffling, showing the filmstrip, adjusting playback speed and zooming. A toolbar at the top also lets you rate photos, assign colour labels or mark them as kept or rejected. While paused, you can zoom in and move around the photo. RAW photos also switch more smoothly, without the black screen that sometimes appeared between images.</li>
+          <li xml:lang="de">Die Diashow lässt sich jetzt mit der Leertaste oder einer Schaltfläche pausieren, ohne sie verlassen zu müssen. Im Vollbildmodus erscheinen bei Mausbewegung Bedienelemente zum Blättern, Pausieren, für die zufällige Wiedergabe, den Filmstreifen, die Geschwindigkeit und den Zoom. Über eine zusätzliche Leiste am oberen Bildschirmrand kannst du Fotos direkt bewerten, mit Farbetiketten versehen oder als behalten beziehungsweise verworfen markieren. Während die Diashow pausiert ist, kannst du außerdem in Fotos hineinzoomen und den Bildausschnitt verschieben. Auch der Wechsel zwischen RAW-Fotos läuft jetzt flüssiger, ohne den schwarzen Bildschirm, der zwischendurch auftreten konnte.</li>
+
+          <li>FerrumPix now uses a more consistent set of icons throughout the interface and in the editor's symbol gallery. Symbols in the editor are available in five different styles, from thin outlines to filled shapes. Symbols you've already added to photos stay in place, although any that don't have a matching replacement will show a question mark. Symbol frames can now use any symbol from the gallery.</li>
+          <li xml:lang="de">FerrumPix verwendet jetzt einen einheitlicheren Symbolsatz in der gesamten Oberfläche und in der Symbolgalerie des Editors. Dort stehen die Symbole in fünf verschiedenen Varianten zur Verfügung, von feinen Linien bis hin zu vollständig ausgefüllten Formen. Bereits eingefügte Symbole bleiben an ihrer bisherigen Position. Falls es für ein Symbol keinen passenden Ersatz gibt, wird stattdessen ein Fragezeichen angezeigt. Auch Rahmen aus Symbolen können jetzt alle Symbole der Galerie verwenden.</li>
+
+          <li>Phones and cameras connected via USB now appear directly as sources in the import dialog. If a phone has multiple storage locations, each one is listed separately. As before, FerrumPix checks every copied file against the original to make sure the transfer was successful.</li>
+          <li xml:lang="de">Über USB angeschlossene Smartphones und Kameras werden jetzt direkt als Quellen im Importdialog angezeigt. Hat ein Smartphone mehrere Speicherbereiche, erscheinen diese einzeln zur Auswahl. Wie bisher überprüft FerrumPix jede kopierte Datei anhand des Originals, damit beim Übertragen nichts verloren geht.</li>
+
+          <li>You can now mark photos as Keep or Reject using two new buttons next to the ratings and favourites. They're available in the info panel, context menus, bottom menus and on both sides of the viewer's comparison mode. Kept photos are marked green, rejected ones red. Clicking the same button again removes the mark.</li>
+          <li xml:lang="de">Mit zwei neuen Schaltflächen kannst du Fotos jetzt als behalten oder verworfen markieren. Du findest sie neben den Sternbewertungen und dem Favoritenherz, in der Infoleiste, den Kontextmenüs, den Menüs am unteren Rand und auf beiden Seiten des Bildvergleichs. Behaltene Fotos werden grün, verworfene rot gekennzeichnet. Mit einem erneuten Klick auf dieselbe Schaltfläche entfernst du die Markierung wieder.</li>
+
+          <li>The filmstrip can now be placed above, below, to the left or to the right of the photo, with separate settings for the viewer, editor and fullscreen mode. Pressing F1 opens the keyboard shortcut overview from anywhere in FerrumPix. A new option creates higher-resolution thumbnails for larger gallery tiles, and you can choose whether the mouse wheel changes photos or zooms in the viewer and fullscreen mode. Converting a selection into a mask, or a mask back into a selection, now also creates the corresponding layer automatically.</li>
+          <li xml:lang="de">Den Filmstreifen kannst du jetzt oberhalb, unterhalb, links oder rechts vom Foto platzieren. Die Position lässt sich für den Bildbetrachter, den Editor und den Vollbildmodus getrennt festlegen. Mit F1 öffnest du außerdem von überall aus eine Übersicht der Tastenkürzel. Eine neue Einstellung sorgt für höher aufgelöste Vorschaubilder, damit auch große Galeriekacheln scharf aussehen. Für das Mausrad kannst du im Bildbetrachter und im Vollbildmodus festlegen, ob es zwischen Fotos wechseln oder zoomen soll. Wenn du eine Auswahl in eine Maske umwandelst oder umgekehrt, wird jetzt automatisch die passende Ebene angelegt.</li>
+
+          <li>Monitor profiles created with calibration tools such as DisplayCAL are now recognized correctly instead of being rejected as unreadable. Ratings, favourites and colour labels update immediately across the interface, and clicks are no longer ignored when a tooltip is visible. Date patterns used for importing, batch renaming and filenames now display month names in your chosen language. Several smaller issues have also been fixed, including slideshow timing after manually skipping photos and slowdowns with large saved searches.</li>
+          <li xml:lang="de">Bildschirmprofile, die mit Kalibrierungsgeräten und Programmen wie DisplayCAL erstellt wurden, werden jetzt richtig erkannt und nicht mehr als unlesbar abgelehnt. Bewertungen, Favoriten und Farbetiketten werden überall in FerrumPix sofort aktualisiert. Auch Klicks werden nicht mehr verschluckt, wenn gerade ein Tooltip angezeigt wird. Datumsplatzhalter beim Importieren, bei der Stapelumbenennung und in Dateinamen verwenden jetzt Monatsnamen in der eingestellten Sprache. Dazu kommen einige kleinere Fehlerbehebungen, unter anderem bei der Wiedergabezeit der Diashow nach manuellem Blättern und bei der Geschwindigkeit großer gespeicherter Suchen.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.73-1" date="2026-10-30">
       <description>
         <p>This update makes it easier to organize and protect your photo collection. You can now find similar photos, import directly from memory cards, save keywords inside your image files and back up your catalogue. Dehaze, Shadows, Highlights and tone curves have also been improved for more natural results:</p>

@@ -249,6 +249,14 @@ Namespace Services
                 If schrittweite <= 0.5F Then schrittweite = 1.0F
 
                 Dim kind = NormalizeFrameSymbolKind(symbol)
+                ' Ein Symbol aus der Sammlung kommt ueber denselben Pfad-Zwischenspeicher wie das
+                ' Symbol-Objekt: dieselbe Datei wird nur einmal gelesen.
+                Dim iconPath = FrameSymbolIconPath(symbol)
+                Dim iconShape = If(iconPath Is Nothing, Nothing, GetShapePath(iconPath))
+                If iconShape IsNot Nothing AndAlso
+                   (iconShape.Path.IsEmpty OrElse iconShape.Bounds.Width <= 0 OrElse iconShape.Bounds.Height <= 0) Then
+                    iconShape = Nothing
+                End If
                 ' Deckend: SrcIn nimmt das Alpha der Ebene mal das des Verlaufs, und in dem steckt
                 ' die Deckkraft schon.
                 Dim fillPaintColor = If(gradientShader Is Nothing, color, SKColors.White)
@@ -278,8 +286,17 @@ Namespace Services
                                         End If
                                         Dim halb = size / 2.0F
                                         Dim ziel = New SKRect(-halb, -halb, halb, halb)
-                                        DrawAnnotationShape(canvas, kind, vorlage, ziel, ziel.Left, ziel.Top,
-                                                            ziel.Width, size, fuellung, kontur, konturbreite, 1.0F)
+                                        If iconShape IsNot Nothing Then
+                                            ' Seitenverhaeltnis des Symbols behalten, im Quadrat mittig.
+                                            Dim b = iconShape.Bounds
+                                            Dim faktor = size / Math.Max(b.Width, b.Height)
+                                            Dim w = b.Width * faktor, h = b.Height * faktor
+                                            DrawSvgAnnotation(canvas, iconPath, New SKRect(-w / 2.0F, -h / 2.0F, w / 2.0F, h / 2.0F),
+                                                              fuellung, kontur, konturbreite)
+                                        Else
+                                            DrawAnnotationShape(canvas, kind, vorlage, ziel, ziel.Left, ziel.Top,
+                                                                ziel.Width, size, fuellung, kontur, konturbreite, 1.0F)
+                                        End If
                                         canvas.Restore()
                                     Next
                                 End If
@@ -321,6 +338,24 @@ Namespace Services
                                      "Ellipse", "Square", "Triangle", "Polygon"}
             End Get
         End Property
+
+        ''' <summary>Kennzeichen eines Rahmensymbols aus der Symbolsammlung. Der Wert dahinter ist der
+        ''' Pfad der Datei, wie ihn auch das Symbol-Objekt fuehrt.</summary>
+        Public Const FrameSymbolIconPrefix As String = "Svg:"
+
+        ''' <summary>Der Dateipfad eines Sammlungssymbols, oder Nothing fuer eine der festen Formen.
+        ''' Nur die mitgelieferten Symbole: der Wert steht im Rezept, und ein Rezept aus fremder
+        ''' Hand soll den Renderer keine beliebige Datei lesen lassen.</summary>
+        Public Shared Function FrameSymbolIconPath(symbol As String) As String
+            If symbol Is Nothing OrElse Not symbol.StartsWith(FrameSymbolIconPrefix, StringComparison.Ordinal) Then Return Nothing
+            Dim path = IconAssets.ResolveLegacy(symbol.Substring(FrameSymbolIconPrefix.Length).Trim())
+            If Not path.StartsWith(IconAssets.Root, StringComparison.Ordinal) OrElse
+               Not path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) OrElse
+               path.Contains("..", StringComparison.Ordinal) Then
+                Return Nothing
+            End If
+            Return path
+        End Function
 
         Private Shared Function NormalizeFrameSymbolKind(symbol As String) As String
             Dim wert = If(symbol, "").Trim().ToLowerInvariant()

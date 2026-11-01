@@ -153,6 +153,8 @@ Namespace ViewModels
         Private _tabletMode As Boolean = False
         Private _penPressureSize As Boolean = True
         Private _trackpadMode As Boolean = False
+        Private _viewerWheelAction As String = AppSettings.WheelActionNavigate
+        Private _fullscreenWheelAction As String = AppSettings.WheelActionNavigate
         Private _viewerCropDrag As Boolean = False
         Private _isThumbnailCacheRefreshing As Boolean = False
         Private _isThumbnailCacheRefreshQueued As Boolean = False
@@ -4827,6 +4829,8 @@ Namespace ViewModels
             _tabletMode = _appSettings.TabletMode
             _penPressureSize = _appSettings.PenPressureSize
             _trackpadMode = _appSettings.TrackpadMode
+            _viewerWheelAction = NormalizeWheelAction(_appSettings.ViewerWheelAction)
+            _fullscreenWheelAction = NormalizeWheelAction(_appSettings.FullscreenWheelAction)
             _viewerCropDrag = _appSettings.ViewerCropDrag
             _immichEnabled = _appSettings.ImmichEnabled
             _immichServerUrl = _appSettings.ImmichServerUrl
@@ -4921,6 +4925,8 @@ Namespace ViewModels
             SetViewerFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) ViewerFilmstripPosition = p)
             SetEditorFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) EditorFilmstripPosition = p)
             SetFullscreenFilmstripPositionCommand = ReactiveCommand.Create(Of String)(Sub(p) FullscreenFilmstripPosition = p)
+            SetViewerWheelActionCommand = ReactiveCommand.Create(Of String)(Sub(p) ViewerWheelAction = p)
+            SetFullscreenWheelActionCommand = ReactiveCommand.Create(Of String)(Sub(p) FullscreenWheelAction = p)
             SetViewerDoubleClickTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerDoubleClickTarget = m)
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
@@ -5781,6 +5787,68 @@ Namespace ViewModels
                 AppSettingsService.Update(Sub(s) s.TrackpadMode = value)
             End Set
         End Property
+
+        Private Shared Function NormalizeWheelAction(value As String) As String
+            Return If(String.Equals(value, AppSettings.WheelActionZoom, StringComparison.OrdinalIgnoreCase),
+                      AppSettings.WheelActionZoom, AppSettings.WheelActionNavigate)
+        End Function
+
+        ''' <summary>Was das blanke Mausrad im Viewer tut, siehe <see cref="AppSettings.ViewerWheelAction"/>.</summary>
+        Public Property ViewerWheelAction As String
+            Get
+                Return _viewerWheelAction
+            End Get
+            Set(value As String)
+                Dim target = NormalizeWheelAction(value)
+                If _viewerWheelAction = target Then Return
+                Me.RaiseAndSetIfChanged(_viewerWheelAction, target)
+                Me.RaisePropertyChanged(NameOf(IsViewerWheelNavigate))
+                Me.RaisePropertyChanged(NameOf(IsViewerWheelZoom))
+                AppSettingsService.Update(Sub(s) s.ViewerWheelAction = target)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsViewerWheelNavigate As Boolean
+            Get
+                Return _viewerWheelAction = AppSettings.WheelActionNavigate
+            End Get
+        End Property
+
+        Public ReadOnly Property IsViewerWheelZoom As Boolean
+            Get
+                Return _viewerWheelAction = AppSettings.WheelActionZoom
+            End Get
+        End Property
+
+        ''' <summary>Dasselbe fuer Vollbild und Diashow.</summary>
+        Public Property FullscreenWheelAction As String
+            Get
+                Return _fullscreenWheelAction
+            End Get
+            Set(value As String)
+                Dim target = NormalizeWheelAction(value)
+                If _fullscreenWheelAction = target Then Return
+                Me.RaiseAndSetIfChanged(_fullscreenWheelAction, target)
+                Me.RaisePropertyChanged(NameOf(IsFullscreenWheelNavigate))
+                Me.RaisePropertyChanged(NameOf(IsFullscreenWheelZoom))
+                AppSettingsService.Update(Sub(s) s.FullscreenWheelAction = target)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFullscreenWheelNavigate As Boolean
+            Get
+                Return _fullscreenWheelAction = AppSettings.WheelActionNavigate
+            End Get
+        End Property
+
+        Public ReadOnly Property IsFullscreenWheelZoom As Boolean
+            Get
+                Return _fullscreenWheelAction = AppSettings.WheelActionZoom
+            End Get
+        End Property
+
+        Public ReadOnly Property SetViewerWheelActionCommand As ICommand
+        Public ReadOnly Property SetFullscreenWheelActionCommand As ICommand
 
         ''' <summary>Zuschnittrahmen per Zug im Viewer, siehe <see cref="AppSettings.ViewerCropDrag"/>.</summary>
         Public Property ViewerCropDrag As Boolean

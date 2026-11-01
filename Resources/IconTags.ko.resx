@@ -1,0 +1,4551 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="acorn" xml:space="preserve">
+    <value>도토리</value>
+  </data>
+  <data name="address_book" xml:space="preserve">
+    <value>주소 책</value>
+  </data>
+  <data name="address_book_tabs" xml:space="preserve">
+    <value>주소 책 탭</value>
+  </data>
+  <data name="air_traffic_control" xml:space="preserve">
+    <value>공기 교통 제어</value>
+  </data>
+  <data name="airplane" xml:space="preserve">
+    <value>비행기</value>
+  </data>
+  <data name="airplane_in_flight" xml:space="preserve">
+    <value>비행기 안으로 비행</value>
+  </data>
+  <data name="airplane_landing" xml:space="preserve">
+    <value>비행기 착륙</value>
+  </data>
+  <data name="airplane_takeoff" xml:space="preserve">
+    <value>비행기 이륙</value>
+  </data>
+  <data name="airplane_taxiing" xml:space="preserve">
+    <value>비행기 지상 활주</value>
+  </data>
+  <data name="airplane_tilt" xml:space="preserve">
+    <value>비행기 기울기</value>
+  </data>
+  <data name="airplay" xml:space="preserve">
+    <value>Airplay</value>
+  </data>
+  <data name="alarm" xml:space="preserve">
+    <value>알람</value>
+  </data>
+  <data name="alien" xml:space="preserve">
+    <value>외계인</value>
+  </data>
+  <data name="align_bottom" xml:space="preserve">
+    <value>정렬 아래</value>
+  </data>
+  <data name="align_bottom_simple" xml:space="preserve">
+    <value>정렬 아래 단순</value>
+  </data>
+  <data name="align_center_horizontal" xml:space="preserve">
+    <value>정렬 가운데 가로</value>
+  </data>
+  <data name="align_center_horizontal_simple" xml:space="preserve">
+    <value>정렬 가운데 가로 단순</value>
+  </data>
+  <data name="align_center_vertical" xml:space="preserve">
+    <value>정렬 가운데 세로</value>
+  </data>
+  <data name="align_center_vertical_simple" xml:space="preserve">
+    <value>정렬 가운데 세로 단순</value>
+  </data>
+  <data name="align_left" xml:space="preserve">
+    <value>정렬 왼쪽</value>
+  </data>
+  <data name="align_left_simple" xml:space="preserve">
+    <value>정렬 왼쪽 단순</value>
+  </data>
+  <data name="align_right" xml:space="preserve">
+    <value>정렬 오른쪽</value>
+  </data>
+  <data name="align_right_simple" xml:space="preserve">
+    <value>정렬 오른쪽 단순</value>
+  </data>
+  <data name="align_top" xml:space="preserve">
+    <value>정렬 위</value>
+  </data>
+  <data name="align_top_simple" xml:space="preserve">
+    <value>정렬 위 단순</value>
+  </data>
+  <data name="amazon_logo" xml:space="preserve">
+    <value>Amazon 로고</value>
+  </data>
+  <data name="ambulance" xml:space="preserve">
+    <value>구급차</value>
+  </data>
+  <data name="anchor" xml:space="preserve">
+    <value>닻</value>
+  </data>
+  <data name="anchor_simple" xml:space="preserve">
+    <value>닻 단순</value>
+  </data>
+  <data name="android_logo" xml:space="preserve">
+    <value>Android 로고</value>
+  </data>
+  <data name="angle" xml:space="preserve">
+    <value>각도</value>
+  </data>
+  <data name="angular_logo" xml:space="preserve">
+    <value>Angular 로고</value>
+  </data>
+  <data name="aperture" xml:space="preserve">
+    <value>조리개</value>
+  </data>
+  <data name="app_store_logo" xml:space="preserve">
+    <value>앱 상점 로고</value>
+  </data>
+  <data name="app_window" xml:space="preserve">
+    <value>앱 창문</value>
+  </data>
+  <data name="apple_logo" xml:space="preserve">
+    <value>사과 로고</value>
+  </data>
+  <data name="apple_podcasts_logo" xml:space="preserve">
+    <value>사과 팟캐스트 로고</value>
+  </data>
+  <data name="approximate_equals" xml:space="preserve">
+    <value>근사 같음</value>
+  </data>
+  <data name="archive" xml:space="preserve">
+    <value>보관함</value>
+  </data>
+  <data name="armchair" xml:space="preserve">
+    <value>안락의자</value>
+  </data>
+  <data name="arrow_arc_left" xml:space="preserve">
+    <value>화살표 호 왼쪽</value>
+  </data>
+  <data name="arrow_arc_right" xml:space="preserve">
+    <value>화살표 호 오른쪽</value>
+  </data>
+  <data name="arrow_bend_double_up_left" xml:space="preserve">
+    <value>화살표 굽음 이중 위 왼쪽</value>
+  </data>
+  <data name="arrow_bend_double_up_right" xml:space="preserve">
+    <value>화살표 굽음 이중 위 오른쪽</value>
+  </data>
+  <data name="arrow_bend_down_left" xml:space="preserve">
+    <value>화살표 굽음 아래 왼쪽</value>
+  </data>
+  <data name="arrow_bend_down_right" xml:space="preserve">
+    <value>화살표 굽음 아래 오른쪽</value>
+  </data>
+  <data name="arrow_bend_left_down" xml:space="preserve">
+    <value>화살표 굽음 왼쪽 아래</value>
+  </data>
+  <data name="arrow_bend_left_up" xml:space="preserve">
+    <value>화살표 굽음 왼쪽 위</value>
+  </data>
+  <data name="arrow_bend_right_down" xml:space="preserve">
+    <value>화살표 굽음 오른쪽 아래</value>
+  </data>
+  <data name="arrow_bend_right_up" xml:space="preserve">
+    <value>화살표 굽음 오른쪽 위</value>
+  </data>
+  <data name="arrow_bend_up_left" xml:space="preserve">
+    <value>화살표 굽음 위 왼쪽</value>
+  </data>
+  <data name="arrow_bend_up_right" xml:space="preserve">
+    <value>화살표 굽음 위 오른쪽</value>
+  </data>
+  <data name="arrow_circle_down" xml:space="preserve">
+    <value>화살표 원 아래</value>
+  </data>
+  <data name="arrow_circle_down_left" xml:space="preserve">
+    <value>화살표 원 아래 왼쪽</value>
+  </data>
+  <data name="arrow_circle_down_right" xml:space="preserve">
+    <value>화살표 원 아래 오른쪽</value>
+  </data>
+  <data name="arrow_circle_left" xml:space="preserve">
+    <value>화살표 원 왼쪽</value>
+  </data>
+  <data name="arrow_circle_right" xml:space="preserve">
+    <value>화살표 원 오른쪽</value>
+  </data>
+  <data name="arrow_circle_up" xml:space="preserve">
+    <value>화살표 원 위</value>
+  </data>
+  <data name="arrow_circle_up_left" xml:space="preserve">
+    <value>화살표 원 위 왼쪽</value>
+  </data>
+  <data name="arrow_circle_up_right" xml:space="preserve">
+    <value>화살표 원 위 오른쪽</value>
+  </data>
+  <data name="arrow_clockwise" xml:space="preserve">
+    <value>화살표 시계 방향</value>
+  </data>
+  <data name="arrow_counter_clockwise" xml:space="preserve">
+    <value>화살표 카운터 시계 방향</value>
+  </data>
+  <data name="arrow_down" xml:space="preserve">
+    <value>화살표 아래</value>
+  </data>
+  <data name="arrow_down_left" xml:space="preserve">
+    <value>화살표 아래 왼쪽</value>
+  </data>
+  <data name="arrow_down_right" xml:space="preserve">
+    <value>화살표 아래 오른쪽</value>
+  </data>
+  <data name="arrow_elbow_down_left" xml:space="preserve">
+    <value>화살표 팔꿈치 아래 왼쪽</value>
+  </data>
+  <data name="arrow_elbow_down_right" xml:space="preserve">
+    <value>화살표 팔꿈치 아래 오른쪽</value>
+  </data>
+  <data name="arrow_elbow_left" xml:space="preserve">
+    <value>화살표 팔꿈치 왼쪽</value>
+  </data>
+  <data name="arrow_elbow_left_down" xml:space="preserve">
+    <value>화살표 팔꿈치 왼쪽 아래</value>
+  </data>
+  <data name="arrow_elbow_left_up" xml:space="preserve">
+    <value>화살표 팔꿈치 왼쪽 위</value>
+  </data>
+  <data name="arrow_elbow_right" xml:space="preserve">
+    <value>화살표 팔꿈치 오른쪽</value>
+  </data>
+  <data name="arrow_elbow_right_down" xml:space="preserve">
+    <value>화살표 팔꿈치 오른쪽 아래</value>
+  </data>
+  <data name="arrow_elbow_right_up" xml:space="preserve">
+    <value>화살표 팔꿈치 오른쪽 위</value>
+  </data>
+  <data name="arrow_elbow_up_left" xml:space="preserve">
+    <value>화살표 팔꿈치 위 왼쪽</value>
+  </data>
+  <data name="arrow_elbow_up_right" xml:space="preserve">
+    <value>화살표 팔꿈치 위 오른쪽</value>
+  </data>
+  <data name="arrow_fat_down" xml:space="preserve">
+    <value>화살표 굵은 아래</value>
+  </data>
+  <data name="arrow_fat_left" xml:space="preserve">
+    <value>화살표 굵은 왼쪽</value>
+  </data>
+  <data name="arrow_fat_line_down" xml:space="preserve">
+    <value>화살표 굵은 선 아래</value>
+  </data>
+  <data name="arrow_fat_line_left" xml:space="preserve">
+    <value>화살표 굵은 선 왼쪽</value>
+  </data>
+  <data name="arrow_fat_line_right" xml:space="preserve">
+    <value>화살표 굵은 선 오른쪽</value>
+  </data>
+  <data name="arrow_fat_line_up" xml:space="preserve">
+    <value>화살표 굵은 선 위</value>
+  </data>
+  <data name="arrow_fat_lines_down" xml:space="preserve">
+    <value>화살표 굵은 선 아래</value>
+  </data>
+  <data name="arrow_fat_lines_left" xml:space="preserve">
+    <value>화살표 굵은 선 왼쪽</value>
+  </data>
+  <data name="arrow_fat_lines_right" xml:space="preserve">
+    <value>화살표 굵은 선 오른쪽</value>
+  </data>
+  <data name="arrow_fat_lines_up" xml:space="preserve">
+    <value>화살표 굵은 선 위</value>
+  </data>
+  <data name="arrow_fat_right" xml:space="preserve">
+    <value>화살표 굵은 오른쪽</value>
+  </data>
+  <data name="arrow_fat_up" xml:space="preserve">
+    <value>화살표 굵은 위</value>
+  </data>
+  <data name="arrow_left" xml:space="preserve">
+    <value>화살표 왼쪽</value>
+  </data>
+  <data name="arrow_line_down" xml:space="preserve">
+    <value>화살표 선 아래</value>
+  </data>
+  <data name="arrow_line_down_left" xml:space="preserve">
+    <value>화살표 선 아래 왼쪽</value>
+  </data>
+  <data name="arrow_line_down_right" xml:space="preserve">
+    <value>화살표 선 아래 오른쪽</value>
+  </data>
+  <data name="arrow_line_left" xml:space="preserve">
+    <value>화살표 선 왼쪽</value>
+  </data>
+  <data name="arrow_line_right" xml:space="preserve">
+    <value>화살표 선 오른쪽</value>
+  </data>
+  <data name="arrow_line_up" xml:space="preserve">
+    <value>화살표 선 위</value>
+  </data>
+  <data name="arrow_line_up_left" xml:space="preserve">
+    <value>화살표 선 위 왼쪽</value>
+  </data>
+  <data name="arrow_line_up_right" xml:space="preserve">
+    <value>화살표 선 위 오른쪽</value>
+  </data>
+  <data name="arrow_right" xml:space="preserve">
+    <value>화살표 오른쪽</value>
+  </data>
+  <data name="arrow_square_down" xml:space="preserve">
+    <value>화살표 정사각형 아래</value>
+  </data>
+  <data name="arrow_square_down_left" xml:space="preserve">
+    <value>화살표 정사각형 아래 왼쪽</value>
+  </data>
+  <data name="arrow_square_down_right" xml:space="preserve">
+    <value>화살표 정사각형 아래 오른쪽</value>
+  </data>
+  <data name="arrow_square_in" xml:space="preserve">
+    <value>화살표 정사각형 안으로</value>
+  </data>
+  <data name="arrow_square_left" xml:space="preserve">
+    <value>화살표 정사각형 왼쪽</value>
+  </data>
+  <data name="arrow_square_out" xml:space="preserve">
+    <value>화살표 정사각형 밖으로</value>
+  </data>
+  <data name="arrow_square_right" xml:space="preserve">
+    <value>화살표 정사각형 오른쪽</value>
+  </data>
+  <data name="arrow_square_up" xml:space="preserve">
+    <value>화살표 정사각형 위</value>
+  </data>
+  <data name="arrow_square_up_left" xml:space="preserve">
+    <value>화살표 정사각형 위 왼쪽</value>
+  </data>
+  <data name="arrow_square_up_right" xml:space="preserve">
+    <value>화살표 정사각형 위 오른쪽</value>
+  </data>
+  <data name="arrow_u_down_left" xml:space="preserve">
+    <value>화살표 u 아래 왼쪽</value>
+  </data>
+  <data name="arrow_u_down_right" xml:space="preserve">
+    <value>화살표 u 아래 오른쪽</value>
+  </data>
+  <data name="arrow_u_left_down" xml:space="preserve">
+    <value>화살표 u 왼쪽 아래</value>
+  </data>
+  <data name="arrow_u_left_up" xml:space="preserve">
+    <value>화살표 u 왼쪽 위</value>
+  </data>
+  <data name="arrow_u_right_down" xml:space="preserve">
+    <value>화살표 u 오른쪽 아래</value>
+  </data>
+  <data name="arrow_u_right_up" xml:space="preserve">
+    <value>화살표 u 오른쪽 위</value>
+  </data>
+  <data name="arrow_u_up_left" xml:space="preserve">
+    <value>화살표 u 위 왼쪽</value>
+  </data>
+  <data name="arrow_u_up_right" xml:space="preserve">
+    <value>화살표 u 위 오른쪽</value>
+  </data>
+  <data name="arrow_up" xml:space="preserve">
+    <value>화살표 위</value>
+  </data>
+  <data name="arrow_up_left" xml:space="preserve">
+    <value>화살표 위 왼쪽</value>
+  </data>
+  <data name="arrow_up_right" xml:space="preserve">
+    <value>화살표 위 오른쪽</value>
+  </data>
+  <data name="arrows_clockwise" xml:space="preserve">
+    <value>화살표 시계 방향</value>
+  </data>
+  <data name="arrows_counter_clockwise" xml:space="preserve">
+    <value>화살표 카운터 시계 방향</value>
+  </data>
+  <data name="arrows_down_up" xml:space="preserve">
+    <value>화살표 아래 위</value>
+  </data>
+  <data name="arrows_horizontal" xml:space="preserve">
+    <value>화살표 가로</value>
+  </data>
+  <data name="arrows_in" xml:space="preserve">
+    <value>화살표 안으로</value>
+  </data>
+  <data name="arrows_in_cardinal" xml:space="preserve">
+    <value>화살표 안으로 추기경</value>
+  </data>
+  <data name="arrows_in_line_horizontal" xml:space="preserve">
+    <value>화살표 안으로 선 가로</value>
+  </data>
+  <data name="arrows_in_line_vertical" xml:space="preserve">
+    <value>화살표 안으로 선 세로</value>
+  </data>
+  <data name="arrows_in_simple" xml:space="preserve">
+    <value>화살표 안으로 단순</value>
+  </data>
+  <data name="arrows_left_right" xml:space="preserve">
+    <value>화살표 왼쪽 오른쪽</value>
+  </data>
+  <data name="arrows_merge" xml:space="preserve">
+    <value>화살표 병합</value>
+  </data>
+  <data name="arrows_out" xml:space="preserve">
+    <value>화살표 밖으로</value>
+  </data>
+  <data name="arrows_out_cardinal" xml:space="preserve">
+    <value>화살표 밖으로 추기경</value>
+  </data>
+  <data name="arrows_out_line_horizontal" xml:space="preserve">
+    <value>화살표 밖으로 선 가로</value>
+  </data>
+  <data name="arrows_out_line_vertical" xml:space="preserve">
+    <value>화살표 밖으로 선 세로</value>
+  </data>
+  <data name="arrows_out_simple" xml:space="preserve">
+    <value>화살표 밖으로 단순</value>
+  </data>
+  <data name="arrows_split" xml:space="preserve">
+    <value>화살표 분할</value>
+  </data>
+  <data name="arrows_vertical" xml:space="preserve">
+    <value>화살표 세로</value>
+  </data>
+  <data name="article" xml:space="preserve">
+    <value>기사</value>
+  </data>
+  <data name="article_medium" xml:space="preserve">
+    <value>기사 중간</value>
+  </data>
+  <data name="article_ny_times" xml:space="preserve">
+    <value>기사 ny 곱하기</value>
+  </data>
+  <data name="asclepius" xml:space="preserve">
+    <value>아스클레피오스</value>
+  </data>
+  <data name="asterisk" xml:space="preserve">
+    <value>별표</value>
+  </data>
+  <data name="asterisk_simple" xml:space="preserve">
+    <value>별표 단순</value>
+  </data>
+  <data name="at" xml:space="preserve">
+    <value>앳</value>
+  </data>
+  <data name="atom" xml:space="preserve">
+    <value>원자</value>
+  </data>
+  <data name="avocado" xml:space="preserve">
+    <value>아보카도</value>
+  </data>
+  <data name="axe" xml:space="preserve">
+    <value>도끼</value>
+  </data>
+  <data name="baby" xml:space="preserve">
+    <value>아기</value>
+  </data>
+  <data name="baby_carriage" xml:space="preserve">
+    <value>아기 유모차</value>
+  </data>
+  <data name="backpack" xml:space="preserve">
+    <value>배낭</value>
+  </data>
+  <data name="backspace" xml:space="preserve">
+    <value>백스페이스</value>
+  </data>
+  <data name="bag" xml:space="preserve">
+    <value>가방</value>
+  </data>
+  <data name="bag_simple" xml:space="preserve">
+    <value>가방 단순</value>
+  </data>
+  <data name="balloon" xml:space="preserve">
+    <value>풍선</value>
+  </data>
+  <data name="bandaids" xml:space="preserve">
+    <value>반창고</value>
+  </data>
+  <data name="bank" xml:space="preserve">
+    <value>은행</value>
+  </data>
+  <data name="barbell" xml:space="preserve">
+    <value>역기</value>
+  </data>
+  <data name="barcode" xml:space="preserve">
+    <value>바코드</value>
+  </data>
+  <data name="barn" xml:space="preserve">
+    <value>헛간</value>
+  </data>
+  <data name="barricade" xml:space="preserve">
+    <value>바리케이드</value>
+  </data>
+  <data name="baseball" xml:space="preserve">
+    <value>야구</value>
+  </data>
+  <data name="baseball_cap" xml:space="preserve">
+    <value>야구 모자</value>
+  </data>
+  <data name="baseball_helmet" xml:space="preserve">
+    <value>야구 헬멧</value>
+  </data>
+  <data name="basket" xml:space="preserve">
+    <value>바구니</value>
+  </data>
+  <data name="basketball" xml:space="preserve">
+    <value>농구</value>
+  </data>
+  <data name="bathtub" xml:space="preserve">
+    <value>욕조</value>
+  </data>
+  <data name="battery_charging" xml:space="preserve">
+    <value>배터리 충전</value>
+  </data>
+  <data name="battery_charging_vertical" xml:space="preserve">
+    <value>배터리 충전 세로</value>
+  </data>
+  <data name="battery_empty" xml:space="preserve">
+    <value>배터리 비어 있음</value>
+  </data>
+  <data name="battery_full" xml:space="preserve">
+    <value>배터리 가득</value>
+  </data>
+  <data name="battery_high" xml:space="preserve">
+    <value>배터리 높음</value>
+  </data>
+  <data name="battery_low" xml:space="preserve">
+    <value>배터리 낮음</value>
+  </data>
+  <data name="battery_medium" xml:space="preserve">
+    <value>배터리 중간</value>
+  </data>
+  <data name="battery_plus" xml:space="preserve">
+    <value>배터리 더하기</value>
+  </data>
+  <data name="battery_plus_vertical" xml:space="preserve">
+    <value>배터리 더하기 세로</value>
+  </data>
+  <data name="battery_vertical_empty" xml:space="preserve">
+    <value>배터리 세로 비어 있음</value>
+  </data>
+  <data name="battery_vertical_full" xml:space="preserve">
+    <value>배터리 세로 가득</value>
+  </data>
+  <data name="battery_vertical_high" xml:space="preserve">
+    <value>배터리 세로 높음</value>
+  </data>
+  <data name="battery_vertical_low" xml:space="preserve">
+    <value>배터리 세로 낮음</value>
+  </data>
+  <data name="battery_vertical_medium" xml:space="preserve">
+    <value>배터리 세로 중간</value>
+  </data>
+  <data name="battery_warning" xml:space="preserve">
+    <value>배터리 경고</value>
+  </data>
+  <data name="battery_warning_vertical" xml:space="preserve">
+    <value>배터리 경고 세로</value>
+  </data>
+  <data name="beach_ball" xml:space="preserve">
+    <value>해변 공</value>
+  </data>
+  <data name="beanie" xml:space="preserve">
+    <value>비니</value>
+  </data>
+  <data name="bed" xml:space="preserve">
+    <value>침대</value>
+  </data>
+  <data name="beer_bottle" xml:space="preserve">
+    <value>맥주 병</value>
+  </data>
+  <data name="beer_stein" xml:space="preserve">
+    <value>맥주 맥주잔</value>
+  </data>
+  <data name="behance_logo" xml:space="preserve">
+    <value>Behance 로고</value>
+  </data>
+  <data name="bell" xml:space="preserve">
+    <value>종</value>
+  </data>
+  <data name="bell_ringing" xml:space="preserve">
+    <value>종 울리는</value>
+  </data>
+  <data name="bell_simple" xml:space="preserve">
+    <value>종 단순</value>
+  </data>
+  <data name="bell_simple_ringing" xml:space="preserve">
+    <value>종 단순 울리는</value>
+  </data>
+  <data name="bell_simple_slash" xml:space="preserve">
+    <value>종 단순 슬래시</value>
+  </data>
+  <data name="bell_simple_z" xml:space="preserve">
+    <value>종 단순 z</value>
+  </data>
+  <data name="bell_slash" xml:space="preserve">
+    <value>종 슬래시</value>
+  </data>
+  <data name="bell_z" xml:space="preserve">
+    <value>종 z</value>
+  </data>
+  <data name="belt" xml:space="preserve">
+    <value>벨트</value>
+  </data>
+  <data name="bezier_curve" xml:space="preserve">
+    <value>베지어 곡선</value>
+  </data>
+  <data name="bicycle" xml:space="preserve">
+    <value>자전거</value>
+  </data>
+  <data name="binary" xml:space="preserve">
+    <value>이진</value>
+  </data>
+  <data name="binoculars" xml:space="preserve">
+    <value>쌍안경</value>
+  </data>
+  <data name="biohazard" xml:space="preserve">
+    <value>생물학적 위험</value>
+  </data>
+  <data name="bird" xml:space="preserve">
+    <value>새</value>
+  </data>
+  <data name="blueprint" xml:space="preserve">
+    <value>설계도</value>
+  </data>
+  <data name="bluetooth" xml:space="preserve">
+    <value>블루투스</value>
+  </data>
+  <data name="bluetooth_connected" xml:space="preserve">
+    <value>블루투스 연결됨</value>
+  </data>
+  <data name="bluetooth_slash" xml:space="preserve">
+    <value>블루투스 슬래시</value>
+  </data>
+  <data name="bluetooth_x" xml:space="preserve">
+    <value>블루투스 x</value>
+  </data>
+  <data name="boat" xml:space="preserve">
+    <value>보트</value>
+  </data>
+  <data name="bomb" xml:space="preserve">
+    <value>폭탄</value>
+  </data>
+  <data name="bone" xml:space="preserve">
+    <value>뼈</value>
+  </data>
+  <data name="book" xml:space="preserve">
+    <value>책</value>
+  </data>
+  <data name="book_bookmark" xml:space="preserve">
+    <value>책 북마크</value>
+  </data>
+  <data name="book_open" xml:space="preserve">
+    <value>책 열기</value>
+  </data>
+  <data name="book_open_text" xml:space="preserve">
+    <value>책 열기 텍스트</value>
+  </data>
+  <data name="book_open_user" xml:space="preserve">
+    <value>책 열기 사용자</value>
+  </data>
+  <data name="bookmark" xml:space="preserve">
+    <value>북마크</value>
+  </data>
+  <data name="bookmark_simple" xml:space="preserve">
+    <value>북마크 단순</value>
+  </data>
+  <data name="bookmarks" xml:space="preserve">
+    <value>북마크</value>
+  </data>
+  <data name="bookmarks_simple" xml:space="preserve">
+    <value>북마크 단순</value>
+  </data>
+  <data name="books" xml:space="preserve">
+    <value>책</value>
+  </data>
+  <data name="boot" xml:space="preserve">
+    <value>부츠</value>
+  </data>
+  <data name="boules" xml:space="preserve">
+    <value>페탕크</value>
+  </data>
+  <data name="bounding_box" xml:space="preserve">
+    <value>경계 상자</value>
+  </data>
+  <data name="bowl_food" xml:space="preserve">
+    <value>그릇 음식</value>
+  </data>
+  <data name="bowl_steam" xml:space="preserve">
+    <value>그릇 증기</value>
+  </data>
+  <data name="bowling_ball" xml:space="preserve">
+    <value>볼링 공</value>
+  </data>
+  <data name="box_arrow_down" xml:space="preserve">
+    <value>상자 화살표 아래</value>
+  </data>
+  <data name="box_arrow_up" xml:space="preserve">
+    <value>상자 화살표 위</value>
+  </data>
+  <data name="boxing_glove" xml:space="preserve">
+    <value>권투 장갑</value>
+  </data>
+  <data name="brackets_angle" xml:space="preserve">
+    <value>괄호 각도</value>
+  </data>
+  <data name="brackets_curly" xml:space="preserve">
+    <value>괄호 중괄호</value>
+  </data>
+  <data name="brackets_round" xml:space="preserve">
+    <value>괄호 둥근</value>
+  </data>
+  <data name="brackets_square" xml:space="preserve">
+    <value>괄호 정사각형</value>
+  </data>
+  <data name="brain" xml:space="preserve">
+    <value>뇌</value>
+  </data>
+  <data name="brandy" xml:space="preserve">
+    <value>브랜디</value>
+  </data>
+  <data name="bread" xml:space="preserve">
+    <value>빵</value>
+  </data>
+  <data name="bridge" xml:space="preserve">
+    <value>다리</value>
+  </data>
+  <data name="briefcase" xml:space="preserve">
+    <value>서류가방</value>
+  </data>
+  <data name="briefcase_metal" xml:space="preserve">
+    <value>서류가방 금속</value>
+  </data>
+  <data name="broadcast" xml:space="preserve">
+    <value>방송</value>
+  </data>
+  <data name="broom" xml:space="preserve">
+    <value>빗자루</value>
+  </data>
+  <data name="browser" xml:space="preserve">
+    <value>브라우저</value>
+  </data>
+  <data name="browsers" xml:space="preserve">
+    <value>브라우저</value>
+  </data>
+  <data name="bug" xml:space="preserve">
+    <value>버그</value>
+  </data>
+  <data name="bug_beetle" xml:space="preserve">
+    <value>버그 딱정벌레</value>
+  </data>
+  <data name="bug_droid" xml:space="preserve">
+    <value>버그 드로이드</value>
+  </data>
+  <data name="building" xml:space="preserve">
+    <value>건물</value>
+  </data>
+  <data name="building_apartment" xml:space="preserve">
+    <value>건물 아파트</value>
+  </data>
+  <data name="building_office" xml:space="preserve">
+    <value>건물 사무실</value>
+  </data>
+  <data name="buildings" xml:space="preserve">
+    <value>건물</value>
+  </data>
+  <data name="bulldozer" xml:space="preserve">
+    <value>불도저</value>
+  </data>
+  <data name="bus" xml:space="preserve">
+    <value>버스</value>
+  </data>
+  <data name="butterfly" xml:space="preserve">
+    <value>나비</value>
+  </data>
+  <data name="cable_car" xml:space="preserve">
+    <value>케이블 자동차</value>
+  </data>
+  <data name="cactus" xml:space="preserve">
+    <value>선인장</value>
+  </data>
+  <data name="cake" xml:space="preserve">
+    <value>케이크</value>
+  </data>
+  <data name="calculator" xml:space="preserve">
+    <value>계산기</value>
+  </data>
+  <data name="calendar" xml:space="preserve">
+    <value>달력</value>
+  </data>
+  <data name="calendar_blank" xml:space="preserve">
+    <value>달력 빈</value>
+  </data>
+  <data name="calendar_check" xml:space="preserve">
+    <value>달력 확인</value>
+  </data>
+  <data name="calendar_dot" xml:space="preserve">
+    <value>달력 점</value>
+  </data>
+  <data name="calendar_dots" xml:space="preserve">
+    <value>달력 점</value>
+  </data>
+  <data name="calendar_heart" xml:space="preserve">
+    <value>달력 하트</value>
+  </data>
+  <data name="calendar_minus" xml:space="preserve">
+    <value>달력 빼기</value>
+  </data>
+  <data name="calendar_plus" xml:space="preserve">
+    <value>달력 더하기</value>
+  </data>
+  <data name="calendar_slash" xml:space="preserve">
+    <value>달력 슬래시</value>
+  </data>
+  <data name="calendar_star" xml:space="preserve">
+    <value>달력 별</value>
+  </data>
+  <data name="calendar_x" xml:space="preserve">
+    <value>달력 x</value>
+  </data>
+  <data name="call_bell" xml:space="preserve">
+    <value>통화 종</value>
+  </data>
+  <data name="camera" xml:space="preserve">
+    <value>카메라</value>
+  </data>
+  <data name="camera_plus" xml:space="preserve">
+    <value>카메라 더하기</value>
+  </data>
+  <data name="camera_rotate" xml:space="preserve">
+    <value>카메라 회전</value>
+  </data>
+  <data name="camera_slash" xml:space="preserve">
+    <value>카메라 슬래시</value>
+  </data>
+  <data name="campfire" xml:space="preserve">
+    <value>모닥불</value>
+  </data>
+  <data name="car" xml:space="preserve">
+    <value>자동차</value>
+  </data>
+  <data name="car_battery" xml:space="preserve">
+    <value>자동차 배터리</value>
+  </data>
+  <data name="car_profile" xml:space="preserve">
+    <value>자동차 프로필</value>
+  </data>
+  <data name="car_simple" xml:space="preserve">
+    <value>자동차 단순</value>
+  </data>
+  <data name="cardholder" xml:space="preserve">
+    <value>카드지갑</value>
+  </data>
+  <data name="cards" xml:space="preserve">
+    <value>카드</value>
+  </data>
+  <data name="cards_three" xml:space="preserve">
+    <value>카드 셋</value>
+  </data>
+  <data name="caret_circle_double_down" xml:space="preserve">
+    <value>캐럿 원 이중 아래</value>
+  </data>
+  <data name="caret_circle_double_left" xml:space="preserve">
+    <value>캐럿 원 이중 왼쪽</value>
+  </data>
+  <data name="caret_circle_double_right" xml:space="preserve">
+    <value>캐럿 원 이중 오른쪽</value>
+  </data>
+  <data name="caret_circle_double_up" xml:space="preserve">
+    <value>캐럿 원 이중 위</value>
+  </data>
+  <data name="caret_circle_down" xml:space="preserve">
+    <value>캐럿 원 아래</value>
+  </data>
+  <data name="caret_circle_left" xml:space="preserve">
+    <value>캐럿 원 왼쪽</value>
+  </data>
+  <data name="caret_circle_right" xml:space="preserve">
+    <value>캐럿 원 오른쪽</value>
+  </data>
+  <data name="caret_circle_up" xml:space="preserve">
+    <value>캐럿 원 위</value>
+  </data>
+  <data name="caret_circle_up_down" xml:space="preserve">
+    <value>캐럿 원 위 아래</value>
+  </data>
+  <data name="caret_double_down" xml:space="preserve">
+    <value>캐럿 이중 아래</value>
+  </data>
+  <data name="caret_double_left" xml:space="preserve">
+    <value>캐럿 이중 왼쪽</value>
+  </data>
+  <data name="caret_double_right" xml:space="preserve">
+    <value>캐럿 이중 오른쪽</value>
+  </data>
+  <data name="caret_double_up" xml:space="preserve">
+    <value>캐럿 이중 위</value>
+  </data>
+  <data name="caret_down" xml:space="preserve">
+    <value>캐럿 아래</value>
+  </data>
+  <data name="caret_left" xml:space="preserve">
+    <value>캐럿 왼쪽</value>
+  </data>
+  <data name="caret_line_down" xml:space="preserve">
+    <value>캐럿 선 아래</value>
+  </data>
+  <data name="caret_line_left" xml:space="preserve">
+    <value>캐럿 선 왼쪽</value>
+  </data>
+  <data name="caret_line_right" xml:space="preserve">
+    <value>캐럿 선 오른쪽</value>
+  </data>
+  <data name="caret_line_up" xml:space="preserve">
+    <value>캐럿 선 위</value>
+  </data>
+  <data name="caret_right" xml:space="preserve">
+    <value>캐럿 오른쪽</value>
+  </data>
+  <data name="caret_up" xml:space="preserve">
+    <value>캐럿 위</value>
+  </data>
+  <data name="caret_up_down" xml:space="preserve">
+    <value>캐럿 위 아래</value>
+  </data>
+  <data name="carrot" xml:space="preserve">
+    <value>당근</value>
+  </data>
+  <data name="cash_register" xml:space="preserve">
+    <value>현금 계산대</value>
+  </data>
+  <data name="cassette_tape" xml:space="preserve">
+    <value>카세트 테이프</value>
+  </data>
+  <data name="castle_turret" xml:space="preserve">
+    <value>성 포탑</value>
+  </data>
+  <data name="cat" xml:space="preserve">
+    <value>고양이</value>
+  </data>
+  <data name="cell_signal_full" xml:space="preserve">
+    <value>셀 신호 가득</value>
+  </data>
+  <data name="cell_signal_high" xml:space="preserve">
+    <value>셀 신호 높음</value>
+  </data>
+  <data name="cell_signal_low" xml:space="preserve">
+    <value>셀 신호 낮음</value>
+  </data>
+  <data name="cell_signal_medium" xml:space="preserve">
+    <value>셀 신호 중간</value>
+  </data>
+  <data name="cell_signal_none" xml:space="preserve">
+    <value>셀 신호 없음</value>
+  </data>
+  <data name="cell_signal_slash" xml:space="preserve">
+    <value>셀 신호 슬래시</value>
+  </data>
+  <data name="cell_signal_x" xml:space="preserve">
+    <value>셀 신호 x</value>
+  </data>
+  <data name="cell_tower" xml:space="preserve">
+    <value>셀 탑</value>
+  </data>
+  <data name="certificate" xml:space="preserve">
+    <value>인증서</value>
+  </data>
+  <data name="chair" xml:space="preserve">
+    <value>의자</value>
+  </data>
+  <data name="chalkboard" xml:space="preserve">
+    <value>칠판</value>
+  </data>
+  <data name="chalkboard_simple" xml:space="preserve">
+    <value>칠판 단순</value>
+  </data>
+  <data name="chalkboard_teacher" xml:space="preserve">
+    <value>칠판 선생님</value>
+  </data>
+  <data name="champagne" xml:space="preserve">
+    <value>샴페인</value>
+  </data>
+  <data name="charging_station" xml:space="preserve">
+    <value>충전 역</value>
+  </data>
+  <data name="chart_bar" xml:space="preserve">
+    <value>차트 막대</value>
+  </data>
+  <data name="chart_bar_horizontal" xml:space="preserve">
+    <value>차트 막대 가로</value>
+  </data>
+  <data name="chart_donut" xml:space="preserve">
+    <value>차트 도넛</value>
+  </data>
+  <data name="chart_line" xml:space="preserve">
+    <value>차트 선</value>
+  </data>
+  <data name="chart_line_down" xml:space="preserve">
+    <value>차트 선 아래</value>
+  </data>
+  <data name="chart_line_up" xml:space="preserve">
+    <value>차트 선 위</value>
+  </data>
+  <data name="chart_pie" xml:space="preserve">
+    <value>차트 파이</value>
+  </data>
+  <data name="chart_pie_slice" xml:space="preserve">
+    <value>차트 파이 조각</value>
+  </data>
+  <data name="chart_polar" xml:space="preserve">
+    <value>차트 북극</value>
+  </data>
+  <data name="chart_scatter" xml:space="preserve">
+    <value>차트 분산</value>
+  </data>
+  <data name="chat" xml:space="preserve">
+    <value>채팅</value>
+  </data>
+  <data name="chat_centered" xml:space="preserve">
+    <value>채팅 가운데 정렬</value>
+  </data>
+  <data name="chat_centered_dots" xml:space="preserve">
+    <value>채팅 가운데 정렬 점</value>
+  </data>
+  <data name="chat_centered_slash" xml:space="preserve">
+    <value>채팅 가운데 정렬 슬래시</value>
+  </data>
+  <data name="chat_centered_text" xml:space="preserve">
+    <value>채팅 가운데 정렬 텍스트</value>
+  </data>
+  <data name="chat_circle" xml:space="preserve">
+    <value>채팅 원</value>
+  </data>
+  <data name="chat_circle_dots" xml:space="preserve">
+    <value>채팅 원 점</value>
+  </data>
+  <data name="chat_circle_slash" xml:space="preserve">
+    <value>채팅 원 슬래시</value>
+  </data>
+  <data name="chat_circle_text" xml:space="preserve">
+    <value>채팅 원 텍스트</value>
+  </data>
+  <data name="chat_dots" xml:space="preserve">
+    <value>채팅 점</value>
+  </data>
+  <data name="chat_slash" xml:space="preserve">
+    <value>채팅 슬래시</value>
+  </data>
+  <data name="chat_teardrop" xml:space="preserve">
+    <value>채팅 눈물</value>
+  </data>
+  <data name="chat_teardrop_dots" xml:space="preserve">
+    <value>채팅 눈물 점</value>
+  </data>
+  <data name="chat_teardrop_slash" xml:space="preserve">
+    <value>채팅 눈물 슬래시</value>
+  </data>
+  <data name="chat_teardrop_text" xml:space="preserve">
+    <value>채팅 눈물 텍스트</value>
+  </data>
+  <data name="chat_text" xml:space="preserve">
+    <value>채팅 텍스트</value>
+  </data>
+  <data name="chats" xml:space="preserve">
+    <value>채팅</value>
+  </data>
+  <data name="chats_circle" xml:space="preserve">
+    <value>채팅 원</value>
+  </data>
+  <data name="chats_teardrop" xml:space="preserve">
+    <value>채팅 눈물</value>
+  </data>
+  <data name="check" xml:space="preserve">
+    <value>확인</value>
+  </data>
+  <data name="check_circle" xml:space="preserve">
+    <value>확인 원</value>
+  </data>
+  <data name="check_fat" xml:space="preserve">
+    <value>확인 굵은</value>
+  </data>
+  <data name="check_square" xml:space="preserve">
+    <value>확인 정사각형</value>
+  </data>
+  <data name="check_square_offset" xml:space="preserve">
+    <value>확인 정사각형 오프셋</value>
+  </data>
+  <data name="checkerboard" xml:space="preserve">
+    <value>체커보드</value>
+  </data>
+  <data name="checks" xml:space="preserve">
+    <value>확인</value>
+  </data>
+  <data name="cheers" xml:space="preserve">
+    <value>건배</value>
+  </data>
+  <data name="cheese" xml:space="preserve">
+    <value>치즈</value>
+  </data>
+  <data name="chef_hat" xml:space="preserve">
+    <value>요리사 모자</value>
+  </data>
+  <data name="cherries" xml:space="preserve">
+    <value>체리</value>
+  </data>
+  <data name="church" xml:space="preserve">
+    <value>교회</value>
+  </data>
+  <data name="cigarette" xml:space="preserve">
+    <value>담배</value>
+  </data>
+  <data name="cigarette_slash" xml:space="preserve">
+    <value>담배 슬래시</value>
+  </data>
+  <data name="circle" xml:space="preserve">
+    <value>원</value>
+  </data>
+  <data name="circle_dashed" xml:space="preserve">
+    <value>원 점선</value>
+  </data>
+  <data name="circle_half" xml:space="preserve">
+    <value>원 절반</value>
+  </data>
+  <data name="circle_half_tilt" xml:space="preserve">
+    <value>원 절반 기울기</value>
+  </data>
+  <data name="circle_notch" xml:space="preserve">
+    <value>원 노치</value>
+  </data>
+  <data name="circles_four" xml:space="preserve">
+    <value>원 넷</value>
+  </data>
+  <data name="circles_three" xml:space="preserve">
+    <value>원 셋</value>
+  </data>
+  <data name="circles_three_plus" xml:space="preserve">
+    <value>원 셋 더하기</value>
+  </data>
+  <data name="circuitry" xml:space="preserve">
+    <value>회로</value>
+  </data>
+  <data name="city" xml:space="preserve">
+    <value>도시</value>
+  </data>
+  <data name="clipboard" xml:space="preserve">
+    <value>클립보드</value>
+  </data>
+  <data name="clipboard_text" xml:space="preserve">
+    <value>클립보드 텍스트</value>
+  </data>
+  <data name="clock" xml:space="preserve">
+    <value>시계</value>
+  </data>
+  <data name="clock_afternoon" xml:space="preserve">
+    <value>시계 오후</value>
+  </data>
+  <data name="clock_clockwise" xml:space="preserve">
+    <value>시계 시계 방향</value>
+  </data>
+  <data name="clock_countdown" xml:space="preserve">
+    <value>시계 카운트다운</value>
+  </data>
+  <data name="clock_counter_clockwise" xml:space="preserve">
+    <value>시계 카운터 시계 방향</value>
+  </data>
+  <data name="clock_user" xml:space="preserve">
+    <value>시계 사용자</value>
+  </data>
+  <data name="closed_captioning" xml:space="preserve">
+    <value>닫힘 자막</value>
+  </data>
+  <data name="cloud" xml:space="preserve">
+    <value>구름</value>
+  </data>
+  <data name="cloud_arrow_down" xml:space="preserve">
+    <value>구름 화살표 아래</value>
+  </data>
+  <data name="cloud_arrow_up" xml:space="preserve">
+    <value>구름 화살표 위</value>
+  </data>
+  <data name="cloud_check" xml:space="preserve">
+    <value>구름 확인</value>
+  </data>
+  <data name="cloud_fog" xml:space="preserve">
+    <value>구름 안개</value>
+  </data>
+  <data name="cloud_lightning" xml:space="preserve">
+    <value>구름 번개</value>
+  </data>
+  <data name="cloud_moon" xml:space="preserve">
+    <value>구름 달</value>
+  </data>
+  <data name="cloud_rain" xml:space="preserve">
+    <value>구름 비</value>
+  </data>
+  <data name="cloud_slash" xml:space="preserve">
+    <value>구름 슬래시</value>
+  </data>
+  <data name="cloud_snow" xml:space="preserve">
+    <value>구름 눈</value>
+  </data>
+  <data name="cloud_sun" xml:space="preserve">
+    <value>구름 해</value>
+  </data>
+  <data name="cloud_warning" xml:space="preserve">
+    <value>구름 경고</value>
+  </data>
+  <data name="cloud_x" xml:space="preserve">
+    <value>구름 x</value>
+  </data>
+  <data name="clover" xml:space="preserve">
+    <value>클로버</value>
+  </data>
+  <data name="club" xml:space="preserve">
+    <value>클로버</value>
+  </data>
+  <data name="coat_hanger" xml:space="preserve">
+    <value>코트 옷걸이</value>
+  </data>
+  <data name="coda_logo" xml:space="preserve">
+    <value>Coda 로고</value>
+  </data>
+  <data name="code" xml:space="preserve">
+    <value>코드</value>
+  </data>
+  <data name="code_block" xml:space="preserve">
+    <value>코드 블록</value>
+  </data>
+  <data name="code_simple" xml:space="preserve">
+    <value>코드 단순</value>
+  </data>
+  <data name="codepen_logo" xml:space="preserve">
+    <value>Codepen 로고</value>
+  </data>
+  <data name="codesandbox_logo" xml:space="preserve">
+    <value>Codesandbox 로고</value>
+  </data>
+  <data name="coffee" xml:space="preserve">
+    <value>커피</value>
+  </data>
+  <data name="coffee_bean" xml:space="preserve">
+    <value>커피 콩</value>
+  </data>
+  <data name="coin" xml:space="preserve">
+    <value>동전</value>
+  </data>
+  <data name="coin_vertical" xml:space="preserve">
+    <value>동전 세로</value>
+  </data>
+  <data name="coins" xml:space="preserve">
+    <value>동전</value>
+  </data>
+  <data name="columns" xml:space="preserve">
+    <value>열</value>
+  </data>
+  <data name="columns_plus_left" xml:space="preserve">
+    <value>열 더하기 왼쪽</value>
+  </data>
+  <data name="columns_plus_right" xml:space="preserve">
+    <value>열 더하기 오른쪽</value>
+  </data>
+  <data name="command" xml:space="preserve">
+    <value>명령</value>
+  </data>
+  <data name="compass" xml:space="preserve">
+    <value>나침반</value>
+  </data>
+  <data name="compass_rose" xml:space="preserve">
+    <value>나침반 장미</value>
+  </data>
+  <data name="compass_tool" xml:space="preserve">
+    <value>나침반 도구</value>
+  </data>
+  <data name="computer_tower" xml:space="preserve">
+    <value>컴퓨터 탑</value>
+  </data>
+  <data name="confetti" xml:space="preserve">
+    <value>색종이 조각</value>
+  </data>
+  <data name="contactless_payment" xml:space="preserve">
+    <value>비접촉 결제</value>
+  </data>
+  <data name="control" xml:space="preserve">
+    <value>제어</value>
+  </data>
+  <data name="cookie" xml:space="preserve">
+    <value>쿠키</value>
+  </data>
+  <data name="cooking_pot" xml:space="preserve">
+    <value>요리 냄비</value>
+  </data>
+  <data name="copy" xml:space="preserve">
+    <value>복사</value>
+  </data>
+  <data name="copy_simple" xml:space="preserve">
+    <value>복사 단순</value>
+  </data>
+  <data name="copyleft" xml:space="preserve">
+    <value>카피레프트</value>
+  </data>
+  <data name="copyright" xml:space="preserve">
+    <value>저작권</value>
+  </data>
+  <data name="corners_in" xml:space="preserve">
+    <value>모서리 안으로</value>
+  </data>
+  <data name="corners_out" xml:space="preserve">
+    <value>모서리 밖으로</value>
+  </data>
+  <data name="couch" xml:space="preserve">
+    <value>소파</value>
+  </data>
+  <data name="court_basketball" xml:space="preserve">
+    <value>법원 농구</value>
+  </data>
+  <data name="cow" xml:space="preserve">
+    <value>소</value>
+  </data>
+  <data name="cowboy_hat" xml:space="preserve">
+    <value>카우보이 모자</value>
+  </data>
+  <data name="cpu" xml:space="preserve">
+    <value>Cpu</value>
+  </data>
+  <data name="crane" xml:space="preserve">
+    <value>크레인</value>
+  </data>
+  <data name="crane_tower" xml:space="preserve">
+    <value>크레인 탑</value>
+  </data>
+  <data name="credit_card" xml:space="preserve">
+    <value>신용 카드</value>
+  </data>
+  <data name="cricket" xml:space="preserve">
+    <value>크리켓</value>
+  </data>
+  <data name="crop" xml:space="preserve">
+    <value>자르기</value>
+  </data>
+  <data name="cross" xml:space="preserve">
+    <value>십자</value>
+  </data>
+  <data name="crosshair" xml:space="preserve">
+    <value>조준선</value>
+  </data>
+  <data name="crosshair_simple" xml:space="preserve">
+    <value>조준선 단순</value>
+  </data>
+  <data name="crown" xml:space="preserve">
+    <value>왕관</value>
+  </data>
+  <data name="crown_cross" xml:space="preserve">
+    <value>왕관 십자</value>
+  </data>
+  <data name="crown_simple" xml:space="preserve">
+    <value>왕관 단순</value>
+  </data>
+  <data name="cube" xml:space="preserve">
+    <value>정육면체</value>
+  </data>
+  <data name="cube_focus" xml:space="preserve">
+    <value>정육면체 초점</value>
+  </data>
+  <data name="cube_transparent" xml:space="preserve">
+    <value>정육면체 투명</value>
+  </data>
+  <data name="currency_btc" xml:space="preserve">
+    <value>통화 btc</value>
+  </data>
+  <data name="currency_circle_dollar" xml:space="preserve">
+    <value>통화 원 달러</value>
+  </data>
+  <data name="currency_cny" xml:space="preserve">
+    <value>통화 cny</value>
+  </data>
+  <data name="currency_dollar" xml:space="preserve">
+    <value>통화 달러</value>
+  </data>
+  <data name="currency_dollar_simple" xml:space="preserve">
+    <value>통화 달러 단순</value>
+  </data>
+  <data name="currency_eth" xml:space="preserve">
+    <value>통화 eth</value>
+  </data>
+  <data name="currency_eur" xml:space="preserve">
+    <value>통화 eur</value>
+  </data>
+  <data name="currency_gbp" xml:space="preserve">
+    <value>통화 gbp</value>
+  </data>
+  <data name="currency_inr" xml:space="preserve">
+    <value>통화 inr</value>
+  </data>
+  <data name="currency_jpy" xml:space="preserve">
+    <value>통화 jpy</value>
+  </data>
+  <data name="currency_krw" xml:space="preserve">
+    <value>통화 krw</value>
+  </data>
+  <data name="currency_kzt" xml:space="preserve">
+    <value>통화 kzt</value>
+  </data>
+  <data name="currency_ngn" xml:space="preserve">
+    <value>통화 ngn</value>
+  </data>
+  <data name="currency_rub" xml:space="preserve">
+    <value>통화 rub</value>
+  </data>
+  <data name="cursor" xml:space="preserve">
+    <value>커서</value>
+  </data>
+  <data name="cursor_click" xml:space="preserve">
+    <value>커서 클릭</value>
+  </data>
+  <data name="cursor_text" xml:space="preserve">
+    <value>커서 텍스트</value>
+  </data>
+  <data name="cylinder" xml:space="preserve">
+    <value>원기둥</value>
+  </data>
+  <data name="database" xml:space="preserve">
+    <value>데이터베이스</value>
+  </data>
+  <data name="desk" xml:space="preserve">
+    <value>책상</value>
+  </data>
+  <data name="desktop" xml:space="preserve">
+    <value>데스크톱</value>
+  </data>
+  <data name="desktop_tower" xml:space="preserve">
+    <value>데스크톱 탑</value>
+  </data>
+  <data name="detective" xml:space="preserve">
+    <value>탐정</value>
+  </data>
+  <data name="dev_to_logo" xml:space="preserve">
+    <value>Dev 으로 로고</value>
+  </data>
+  <data name="device_mobile" xml:space="preserve">
+    <value>기기 휴대폰</value>
+  </data>
+  <data name="device_mobile_camera" xml:space="preserve">
+    <value>기기 휴대폰 카메라</value>
+  </data>
+  <data name="device_mobile_slash" xml:space="preserve">
+    <value>기기 휴대폰 슬래시</value>
+  </data>
+  <data name="device_mobile_speaker" xml:space="preserve">
+    <value>기기 휴대폰 스피커</value>
+  </data>
+  <data name="device_rotate" xml:space="preserve">
+    <value>기기 회전</value>
+  </data>
+  <data name="device_tablet" xml:space="preserve">
+    <value>기기 태블릿</value>
+  </data>
+  <data name="device_tablet_camera" xml:space="preserve">
+    <value>기기 태블릿 카메라</value>
+  </data>
+  <data name="device_tablet_speaker" xml:space="preserve">
+    <value>기기 태블릿 스피커</value>
+  </data>
+  <data name="devices" xml:space="preserve">
+    <value>기기</value>
+  </data>
+  <data name="diamond" xml:space="preserve">
+    <value>다이아몬드</value>
+  </data>
+  <data name="diamonds_four" xml:space="preserve">
+    <value>다이아몬드 넷</value>
+  </data>
+  <data name="dice_five" xml:space="preserve">
+    <value>주사위 다섯</value>
+  </data>
+  <data name="dice_four" xml:space="preserve">
+    <value>주사위 넷</value>
+  </data>
+  <data name="dice_one" xml:space="preserve">
+    <value>주사위 하나</value>
+  </data>
+  <data name="dice_six" xml:space="preserve">
+    <value>주사위 여섯</value>
+  </data>
+  <data name="dice_three" xml:space="preserve">
+    <value>주사위 셋</value>
+  </data>
+  <data name="dice_two" xml:space="preserve">
+    <value>주사위 둘</value>
+  </data>
+  <data name="disc" xml:space="preserve">
+    <value>디스크</value>
+  </data>
+  <data name="disco_ball" xml:space="preserve">
+    <value>디스코 공</value>
+  </data>
+  <data name="discord_logo" xml:space="preserve">
+    <value>Discord 로고</value>
+  </data>
+  <data name="divide" xml:space="preserve">
+    <value>나누기</value>
+  </data>
+  <data name="dna" xml:space="preserve">
+    <value>Dna</value>
+  </data>
+  <data name="dog" xml:space="preserve">
+    <value>개</value>
+  </data>
+  <data name="door" xml:space="preserve">
+    <value>문</value>
+  </data>
+  <data name="door_open" xml:space="preserve">
+    <value>문 열기</value>
+  </data>
+  <data name="dot" xml:space="preserve">
+    <value>점</value>
+  </data>
+  <data name="dot_outline" xml:space="preserve">
+    <value>점 윤곽선</value>
+  </data>
+  <data name="dots_nine" xml:space="preserve">
+    <value>점 아홉</value>
+  </data>
+  <data name="dots_six" xml:space="preserve">
+    <value>점 여섯</value>
+  </data>
+  <data name="dots_six_vertical" xml:space="preserve">
+    <value>점 여섯 세로</value>
+  </data>
+  <data name="dots_three" xml:space="preserve">
+    <value>점 셋</value>
+  </data>
+  <data name="dots_three_circle" xml:space="preserve">
+    <value>점 셋 원</value>
+  </data>
+  <data name="dots_three_circle_vertical" xml:space="preserve">
+    <value>점 셋 원 세로</value>
+  </data>
+  <data name="dots_three_outline" xml:space="preserve">
+    <value>점 셋 윤곽선</value>
+  </data>
+  <data name="dots_three_outline_vertical" xml:space="preserve">
+    <value>점 셋 윤곽선 세로</value>
+  </data>
+  <data name="dots_three_vertical" xml:space="preserve">
+    <value>점 셋 세로</value>
+  </data>
+  <data name="download" xml:space="preserve">
+    <value>다운로드</value>
+  </data>
+  <data name="download_simple" xml:space="preserve">
+    <value>다운로드 단순</value>
+  </data>
+  <data name="dress" xml:space="preserve">
+    <value>드레스</value>
+  </data>
+  <data name="dresser" xml:space="preserve">
+    <value>서랍장</value>
+  </data>
+  <data name="dribbble_logo" xml:space="preserve">
+    <value>Dribbble 로고</value>
+  </data>
+  <data name="drone" xml:space="preserve">
+    <value>드론</value>
+  </data>
+  <data name="drop" xml:space="preserve">
+    <value>물방울</value>
+  </data>
+  <data name="drop_half" xml:space="preserve">
+    <value>물방울 절반</value>
+  </data>
+  <data name="drop_half_bottom" xml:space="preserve">
+    <value>물방울 절반 아래</value>
+  </data>
+  <data name="drop_simple" xml:space="preserve">
+    <value>물방울 단순</value>
+  </data>
+  <data name="drop_slash" xml:space="preserve">
+    <value>물방울 슬래시</value>
+  </data>
+  <data name="dropbox_logo" xml:space="preserve">
+    <value>Dropbox 로고</value>
+  </data>
+  <data name="ear" xml:space="preserve">
+    <value>귀</value>
+  </data>
+  <data name="ear_slash" xml:space="preserve">
+    <value>귀 슬래시</value>
+  </data>
+  <data name="egg" xml:space="preserve">
+    <value>달걀</value>
+  </data>
+  <data name="egg_crack" xml:space="preserve">
+    <value>달걀 균열</value>
+  </data>
+  <data name="eject" xml:space="preserve">
+    <value>꺼내기</value>
+  </data>
+  <data name="eject_simple" xml:space="preserve">
+    <value>꺼내기 단순</value>
+  </data>
+  <data name="elevator" xml:space="preserve">
+    <value>엘리베이터</value>
+  </data>
+  <data name="empty" xml:space="preserve">
+    <value>비어 있음</value>
+  </data>
+  <data name="engine" xml:space="preserve">
+    <value>엔진</value>
+  </data>
+  <data name="envelope" xml:space="preserve">
+    <value>봉투</value>
+  </data>
+  <data name="envelope_open" xml:space="preserve">
+    <value>봉투 열기</value>
+  </data>
+  <data name="envelope_simple" xml:space="preserve">
+    <value>봉투 단순</value>
+  </data>
+  <data name="envelope_simple_open" xml:space="preserve">
+    <value>봉투 단순 열기</value>
+  </data>
+  <data name="equalizer" xml:space="preserve">
+    <value>이퀄라이저</value>
+  </data>
+  <data name="equals" xml:space="preserve">
+    <value>같음</value>
+  </data>
+  <data name="eraser" xml:space="preserve">
+    <value>지우개</value>
+  </data>
+  <data name="escalator_down" xml:space="preserve">
+    <value>에스컬레이터 아래</value>
+  </data>
+  <data name="escalator_up" xml:space="preserve">
+    <value>에스컬레이터 위</value>
+  </data>
+  <data name="exam" xml:space="preserve">
+    <value>시험</value>
+  </data>
+  <data name="exclamation_mark" xml:space="preserve">
+    <value>느낌표 표시</value>
+  </data>
+  <data name="exclude" xml:space="preserve">
+    <value>제외</value>
+  </data>
+  <data name="exclude_square" xml:space="preserve">
+    <value>제외 정사각형</value>
+  </data>
+  <data name="export" xml:space="preserve">
+    <value>내보내기</value>
+  </data>
+  <data name="eye" xml:space="preserve">
+    <value>눈</value>
+  </data>
+  <data name="eye_closed" xml:space="preserve">
+    <value>눈 닫힘</value>
+  </data>
+  <data name="eye_slash" xml:space="preserve">
+    <value>눈 슬래시</value>
+  </data>
+  <data name="eyedropper" xml:space="preserve">
+    <value>스포이트</value>
+  </data>
+  <data name="eyedropper_sample" xml:space="preserve">
+    <value>스포이트 샘플</value>
+  </data>
+  <data name="eyeglasses" xml:space="preserve">
+    <value>안경</value>
+  </data>
+  <data name="eyes" xml:space="preserve">
+    <value>눈</value>
+  </data>
+  <data name="face_mask" xml:space="preserve">
+    <value>얼굴 마스크</value>
+  </data>
+  <data name="facebook_logo" xml:space="preserve">
+    <value>Facebook 로고</value>
+  </data>
+  <data name="factory" xml:space="preserve">
+    <value>공장</value>
+  </data>
+  <data name="faders" xml:space="preserve">
+    <value>페이더</value>
+  </data>
+  <data name="faders_horizontal" xml:space="preserve">
+    <value>페이더 가로</value>
+  </data>
+  <data name="fallout_shelter" xml:space="preserve">
+    <value>방사능 대피소</value>
+  </data>
+  <data name="fan" xml:space="preserve">
+    <value>선풍기</value>
+  </data>
+  <data name="farm" xml:space="preserve">
+    <value>농장</value>
+  </data>
+  <data name="fast_forward" xml:space="preserve">
+    <value>빠름 앞으로</value>
+  </data>
+  <data name="fast_forward_circle" xml:space="preserve">
+    <value>빠름 앞으로 원</value>
+  </data>
+  <data name="feather" xml:space="preserve">
+    <value>깃털</value>
+  </data>
+  <data name="fediverse_logo" xml:space="preserve">
+    <value>Fediverse 로고</value>
+  </data>
+  <data name="figma_logo" xml:space="preserve">
+    <value>Figma 로고</value>
+  </data>
+  <data name="file" xml:space="preserve">
+    <value>파일</value>
+  </data>
+  <data name="file_archive" xml:space="preserve">
+    <value>파일 보관함</value>
+  </data>
+  <data name="file_arrow_down" xml:space="preserve">
+    <value>파일 화살표 아래</value>
+  </data>
+  <data name="file_arrow_up" xml:space="preserve">
+    <value>파일 화살표 위</value>
+  </data>
+  <data name="file_audio" xml:space="preserve">
+    <value>파일 오디오</value>
+  </data>
+  <data name="file_c" xml:space="preserve">
+    <value>파일 c</value>
+  </data>
+  <data name="file_c_sharp" xml:space="preserve">
+    <value>파일 c 날카로운</value>
+  </data>
+  <data name="file_cloud" xml:space="preserve">
+    <value>파일 구름</value>
+  </data>
+  <data name="file_code" xml:space="preserve">
+    <value>파일 코드</value>
+  </data>
+  <data name="file_cpp" xml:space="preserve">
+    <value>파일 cpp</value>
+  </data>
+  <data name="file_css" xml:space="preserve">
+    <value>파일 css</value>
+  </data>
+  <data name="file_csv" xml:space="preserve">
+    <value>파일 csv</value>
+  </data>
+  <data name="file_dashed" xml:space="preserve">
+    <value>파일 점선</value>
+  </data>
+  <data name="file_doc" xml:space="preserve">
+    <value>파일 문서</value>
+  </data>
+  <data name="file_html" xml:space="preserve">
+    <value>파일 html</value>
+  </data>
+  <data name="file_image" xml:space="preserve">
+    <value>파일 이미지</value>
+  </data>
+  <data name="file_ini" xml:space="preserve">
+    <value>파일 ini</value>
+  </data>
+  <data name="file_jpg" xml:space="preserve">
+    <value>파일 jpg</value>
+  </data>
+  <data name="file_js" xml:space="preserve">
+    <value>파일 js</value>
+  </data>
+  <data name="file_jsx" xml:space="preserve">
+    <value>파일 jsx</value>
+  </data>
+  <data name="file_lock" xml:space="preserve">
+    <value>파일 자물쇠</value>
+  </data>
+  <data name="file_magnifying_glass" xml:space="preserve">
+    <value>파일 돋보기 유리잔</value>
+  </data>
+  <data name="file_md" xml:space="preserve">
+    <value>파일 md</value>
+  </data>
+  <data name="file_minus" xml:space="preserve">
+    <value>파일 빼기</value>
+  </data>
+  <data name="file_pdf" xml:space="preserve">
+    <value>파일 pdf</value>
+  </data>
+  <data name="file_plus" xml:space="preserve">
+    <value>파일 더하기</value>
+  </data>
+  <data name="file_png" xml:space="preserve">
+    <value>파일 png</value>
+  </data>
+  <data name="file_ppt" xml:space="preserve">
+    <value>파일 ppt</value>
+  </data>
+  <data name="file_py" xml:space="preserve">
+    <value>파일 py</value>
+  </data>
+  <data name="file_rs" xml:space="preserve">
+    <value>파일 rs</value>
+  </data>
+  <data name="file_sql" xml:space="preserve">
+    <value>파일 sql</value>
+  </data>
+  <data name="file_svg" xml:space="preserve">
+    <value>파일 svg</value>
+  </data>
+  <data name="file_text" xml:space="preserve">
+    <value>파일 텍스트</value>
+  </data>
+  <data name="file_ts" xml:space="preserve">
+    <value>파일 ts</value>
+  </data>
+  <data name="file_tsx" xml:space="preserve">
+    <value>파일 tsx</value>
+  </data>
+  <data name="file_txt" xml:space="preserve">
+    <value>파일 txt</value>
+  </data>
+  <data name="file_video" xml:space="preserve">
+    <value>파일 비디오</value>
+  </data>
+  <data name="file_vue" xml:space="preserve">
+    <value>파일 vue</value>
+  </data>
+  <data name="file_x" xml:space="preserve">
+    <value>파일 x</value>
+  </data>
+  <data name="file_xls" xml:space="preserve">
+    <value>파일 xls</value>
+  </data>
+  <data name="file_zip" xml:space="preserve">
+    <value>파일 zip</value>
+  </data>
+  <data name="files" xml:space="preserve">
+    <value>파일</value>
+  </data>
+  <data name="film_reel" xml:space="preserve">
+    <value>필름 릴</value>
+  </data>
+  <data name="film_script" xml:space="preserve">
+    <value>필름 스크립트</value>
+  </data>
+  <data name="film_slate" xml:space="preserve">
+    <value>필름 석판</value>
+  </data>
+  <data name="film_strip" xml:space="preserve">
+    <value>필름 띠</value>
+  </data>
+  <data name="fingerprint" xml:space="preserve">
+    <value>지문</value>
+  </data>
+  <data name="fingerprint_simple" xml:space="preserve">
+    <value>지문 단순</value>
+  </data>
+  <data name="finn_the_human" xml:space="preserve">
+    <value>Finn 사람</value>
+  </data>
+  <data name="fire" xml:space="preserve">
+    <value>불</value>
+  </data>
+  <data name="fire_extinguisher" xml:space="preserve">
+    <value>불 소화기</value>
+  </data>
+  <data name="fire_simple" xml:space="preserve">
+    <value>불 단순</value>
+  </data>
+  <data name="fire_truck" xml:space="preserve">
+    <value>불 트럭</value>
+  </data>
+  <data name="first_aid" xml:space="preserve">
+    <value>첫번째 구급</value>
+  </data>
+  <data name="first_aid_kit" xml:space="preserve">
+    <value>첫번째 구급 키트</value>
+  </data>
+  <data name="fish" xml:space="preserve">
+    <value>물고기</value>
+  </data>
+  <data name="fish_simple" xml:space="preserve">
+    <value>물고기 단순</value>
+  </data>
+  <data name="flag" xml:space="preserve">
+    <value>깃발</value>
+  </data>
+  <data name="flag_banner" xml:space="preserve">
+    <value>깃발 배너</value>
+  </data>
+  <data name="flag_banner_fold" xml:space="preserve">
+    <value>깃발 배너 접기</value>
+  </data>
+  <data name="flag_checkered" xml:space="preserve">
+    <value>깃발 체크무늬</value>
+  </data>
+  <data name="flag_pennant" xml:space="preserve">
+    <value>깃발 페넌트</value>
+  </data>
+  <data name="flame" xml:space="preserve">
+    <value>불꽃</value>
+  </data>
+  <data name="flashlight" xml:space="preserve">
+    <value>손전등</value>
+  </data>
+  <data name="flask" xml:space="preserve">
+    <value>플라스크</value>
+  </data>
+  <data name="flip_horizontal" xml:space="preserve">
+    <value>뒤집기 가로</value>
+  </data>
+  <data name="flip_vertical" xml:space="preserve">
+    <value>뒤집기 세로</value>
+  </data>
+  <data name="floppy_disk" xml:space="preserve">
+    <value>플로피 디스크</value>
+  </data>
+  <data name="floppy_disk_back" xml:space="preserve">
+    <value>플로피 디스크 뒤로</value>
+  </data>
+  <data name="flow_arrow" xml:space="preserve">
+    <value>흐름 화살표</value>
+  </data>
+  <data name="flower" xml:space="preserve">
+    <value>꽃</value>
+  </data>
+  <data name="flower_lotus" xml:space="preserve">
+    <value>꽃 연꽃</value>
+  </data>
+  <data name="flower_tulip" xml:space="preserve">
+    <value>꽃 튤립</value>
+  </data>
+  <data name="flying_saucer" xml:space="preserve">
+    <value>비행 접시</value>
+  </data>
+  <data name="folder" xml:space="preserve">
+    <value>폴더</value>
+  </data>
+  <data name="folder_dashed" xml:space="preserve">
+    <value>폴더 점선</value>
+  </data>
+  <data name="folder_lock" xml:space="preserve">
+    <value>폴더 자물쇠</value>
+  </data>
+  <data name="folder_minus" xml:space="preserve">
+    <value>폴더 빼기</value>
+  </data>
+  <data name="folder_open" xml:space="preserve">
+    <value>폴더 열기</value>
+  </data>
+  <data name="folder_plus" xml:space="preserve">
+    <value>폴더 더하기</value>
+  </data>
+  <data name="folder_simple" xml:space="preserve">
+    <value>폴더 단순</value>
+  </data>
+  <data name="folder_simple_dashed" xml:space="preserve">
+    <value>폴더 단순 점선</value>
+  </data>
+  <data name="folder_simple_lock" xml:space="preserve">
+    <value>폴더 단순 자물쇠</value>
+  </data>
+  <data name="folder_simple_minus" xml:space="preserve">
+    <value>폴더 단순 빼기</value>
+  </data>
+  <data name="folder_simple_plus" xml:space="preserve">
+    <value>폴더 단순 더하기</value>
+  </data>
+  <data name="folder_simple_star" xml:space="preserve">
+    <value>폴더 단순 별</value>
+  </data>
+  <data name="folder_simple_user" xml:space="preserve">
+    <value>폴더 단순 사용자</value>
+  </data>
+  <data name="folder_star" xml:space="preserve">
+    <value>폴더 별</value>
+  </data>
+  <data name="folder_user" xml:space="preserve">
+    <value>폴더 사용자</value>
+  </data>
+  <data name="folders" xml:space="preserve">
+    <value>폴더</value>
+  </data>
+  <data name="football" xml:space="preserve">
+    <value>축구</value>
+  </data>
+  <data name="football_helmet" xml:space="preserve">
+    <value>축구 헬멧</value>
+  </data>
+  <data name="footprints" xml:space="preserve">
+    <value>발자국</value>
+  </data>
+  <data name="fork_knife" xml:space="preserve">
+    <value>포크 칼</value>
+  </data>
+  <data name="four_k" xml:space="preserve">
+    <value>넷 k</value>
+  </data>
+  <data name="frame_corners" xml:space="preserve">
+    <value>프레임 모서리</value>
+  </data>
+  <data name="framer_logo" xml:space="preserve">
+    <value>Framer 로고</value>
+  </data>
+  <data name="function" xml:space="preserve">
+    <value>함수</value>
+  </data>
+  <data name="funnel" xml:space="preserve">
+    <value>깔때기</value>
+  </data>
+  <data name="funnel_simple" xml:space="preserve">
+    <value>깔때기 단순</value>
+  </data>
+  <data name="funnel_simple_x" xml:space="preserve">
+    <value>깔때기 단순 x</value>
+  </data>
+  <data name="funnel_x" xml:space="preserve">
+    <value>깔때기 x</value>
+  </data>
+  <data name="game_controller" xml:space="preserve">
+    <value>게임 컨트롤러</value>
+  </data>
+  <data name="garage" xml:space="preserve">
+    <value>차고</value>
+  </data>
+  <data name="gas_can" xml:space="preserve">
+    <value>주유 캔</value>
+  </data>
+  <data name="gas_pump" xml:space="preserve">
+    <value>주유 펌프</value>
+  </data>
+  <data name="gauge" xml:space="preserve">
+    <value>게이지</value>
+  </data>
+  <data name="gavel" xml:space="preserve">
+    <value>의사봉</value>
+  </data>
+  <data name="gear" xml:space="preserve">
+    <value>톱니바퀴</value>
+  </data>
+  <data name="gear_fine" xml:space="preserve">
+    <value>톱니바퀴 가는</value>
+  </data>
+  <data name="gear_six" xml:space="preserve">
+    <value>톱니바퀴 여섯</value>
+  </data>
+  <data name="gender_female" xml:space="preserve">
+    <value>성별 여성</value>
+  </data>
+  <data name="gender_intersex" xml:space="preserve">
+    <value>성별 인터섹스</value>
+  </data>
+  <data name="gender_male" xml:space="preserve">
+    <value>성별 남성</value>
+  </data>
+  <data name="gender_neuter" xml:space="preserve">
+    <value>성별 중성</value>
+  </data>
+  <data name="gender_nonbinary" xml:space="preserve">
+    <value>성별 논바이너리</value>
+  </data>
+  <data name="gender_transgender" xml:space="preserve">
+    <value>성별 트랜스젠더</value>
+  </data>
+  <data name="ghost" xml:space="preserve">
+    <value>유령</value>
+  </data>
+  <data name="gif" xml:space="preserve">
+    <value>Gif</value>
+  </data>
+  <data name="gift" xml:space="preserve">
+    <value>선물</value>
+  </data>
+  <data name="git_branch" xml:space="preserve">
+    <value>Git 분기</value>
+  </data>
+  <data name="git_commit" xml:space="preserve">
+    <value>Git 커밋</value>
+  </data>
+  <data name="git_diff" xml:space="preserve">
+    <value>Git 차이</value>
+  </data>
+  <data name="git_fork" xml:space="preserve">
+    <value>Git 포크</value>
+  </data>
+  <data name="git_merge" xml:space="preserve">
+    <value>Git 병합</value>
+  </data>
+  <data name="git_pull_request" xml:space="preserve">
+    <value>Git 당기기 요청</value>
+  </data>
+  <data name="github_logo" xml:space="preserve">
+    <value>Github 로고</value>
+  </data>
+  <data name="gitlab_logo" xml:space="preserve">
+    <value>Gitlab 로고</value>
+  </data>
+  <data name="gitlab_logo_simple" xml:space="preserve">
+    <value>Gitlab 로고 단순</value>
+  </data>
+  <data name="globe" xml:space="preserve">
+    <value>지구본</value>
+  </data>
+  <data name="globe_hemisphere_east" xml:space="preserve">
+    <value>지구본 반구 동쪽</value>
+  </data>
+  <data name="globe_hemisphere_west" xml:space="preserve">
+    <value>지구본 반구 서쪽</value>
+  </data>
+  <data name="globe_simple" xml:space="preserve">
+    <value>지구본 단순</value>
+  </data>
+  <data name="globe_simple_x" xml:space="preserve">
+    <value>지구본 단순 x</value>
+  </data>
+  <data name="globe_stand" xml:space="preserve">
+    <value>지구본 거치대</value>
+  </data>
+  <data name="globe_x" xml:space="preserve">
+    <value>지구본 x</value>
+  </data>
+  <data name="goggles" xml:space="preserve">
+    <value>고글</value>
+  </data>
+  <data name="golf" xml:space="preserve">
+    <value>골프</value>
+  </data>
+  <data name="goodreads_logo" xml:space="preserve">
+    <value>Goodreads 로고</value>
+  </data>
+  <data name="google_cardboard_logo" xml:space="preserve">
+    <value>Google 골판지 로고</value>
+  </data>
+  <data name="google_chrome_logo" xml:space="preserve">
+    <value>Google chrome 로고</value>
+  </data>
+  <data name="google_drive_logo" xml:space="preserve">
+    <value>Google 드라이브 로고</value>
+  </data>
+  <data name="google_logo" xml:space="preserve">
+    <value>Google 로고</value>
+  </data>
+  <data name="google_photos_logo" xml:space="preserve">
+    <value>Google 사진 로고</value>
+  </data>
+  <data name="google_play_logo" xml:space="preserve">
+    <value>Google 재생 로고</value>
+  </data>
+  <data name="google_podcasts_logo" xml:space="preserve">
+    <value>Google 팟캐스트 로고</value>
+  </data>
+  <data name="gps" xml:space="preserve">
+    <value>Gps</value>
+  </data>
+  <data name="gps_fix" xml:space="preserve">
+    <value>Gps 수리</value>
+  </data>
+  <data name="gps_slash" xml:space="preserve">
+    <value>Gps 슬래시</value>
+  </data>
+  <data name="gradient" xml:space="preserve">
+    <value>그라데이션</value>
+  </data>
+  <data name="graduation_cap" xml:space="preserve">
+    <value>졸업 모자</value>
+  </data>
+  <data name="grains" xml:space="preserve">
+    <value>곡물</value>
+  </data>
+  <data name="grains_slash" xml:space="preserve">
+    <value>곡물 슬래시</value>
+  </data>
+  <data name="graph" xml:space="preserve">
+    <value>그래프</value>
+  </data>
+  <data name="graphics_card" xml:space="preserve">
+    <value>그래픽 카드</value>
+  </data>
+  <data name="greater_than" xml:space="preserve">
+    <value>보다 큼 보다</value>
+  </data>
+  <data name="greater_than_or_equal" xml:space="preserve">
+    <value>보다 큼 보다 또는 같음</value>
+  </data>
+  <data name="grid_four" xml:space="preserve">
+    <value>격자 넷</value>
+  </data>
+  <data name="grid_nine" xml:space="preserve">
+    <value>격자 아홉</value>
+  </data>
+  <data name="guitar" xml:space="preserve">
+    <value>기타</value>
+  </data>
+  <data name="hair_dryer" xml:space="preserve">
+    <value>머리카락 건조기</value>
+  </data>
+  <data name="hamburger" xml:space="preserve">
+    <value>햄버거</value>
+  </data>
+  <data name="hammer" xml:space="preserve">
+    <value>망치</value>
+  </data>
+  <data name="hand" xml:space="preserve">
+    <value>손</value>
+  </data>
+  <data name="hand_arrow_down" xml:space="preserve">
+    <value>손 화살표 아래</value>
+  </data>
+  <data name="hand_arrow_up" xml:space="preserve">
+    <value>손 화살표 위</value>
+  </data>
+  <data name="hand_coins" xml:space="preserve">
+    <value>손 동전</value>
+  </data>
+  <data name="hand_deposit" xml:space="preserve">
+    <value>손 입금</value>
+  </data>
+  <data name="hand_eye" xml:space="preserve">
+    <value>손 눈</value>
+  </data>
+  <data name="hand_fist" xml:space="preserve">
+    <value>손 주먹</value>
+  </data>
+  <data name="hand_grabbing" xml:space="preserve">
+    <value>손 잡기</value>
+  </data>
+  <data name="hand_heart" xml:space="preserve">
+    <value>손 하트</value>
+  </data>
+  <data name="hand_palm" xml:space="preserve">
+    <value>손 야자수</value>
+  </data>
+  <data name="hand_peace" xml:space="preserve">
+    <value>손 평화</value>
+  </data>
+  <data name="hand_pointing" xml:space="preserve">
+    <value>손 가리키는</value>
+  </data>
+  <data name="hand_soap" xml:space="preserve">
+    <value>손 비누</value>
+  </data>
+  <data name="hand_swipe_left" xml:space="preserve">
+    <value>손 스와이프 왼쪽</value>
+  </data>
+  <data name="hand_swipe_right" xml:space="preserve">
+    <value>손 스와이프 오른쪽</value>
+  </data>
+  <data name="hand_tap" xml:space="preserve">
+    <value>손 탭</value>
+  </data>
+  <data name="hand_waving" xml:space="preserve">
+    <value>손 흔드는</value>
+  </data>
+  <data name="hand_withdraw" xml:space="preserve">
+    <value>손 출금</value>
+  </data>
+  <data name="handbag" xml:space="preserve">
+    <value>핸드백</value>
+  </data>
+  <data name="handbag_simple" xml:space="preserve">
+    <value>핸드백 단순</value>
+  </data>
+  <data name="hands_clapping" xml:space="preserve">
+    <value>손 박수</value>
+  </data>
+  <data name="hands_praying" xml:space="preserve">
+    <value>손 기도하는</value>
+  </data>
+  <data name="handshake" xml:space="preserve">
+    <value>악수</value>
+  </data>
+  <data name="hard_drive" xml:space="preserve">
+    <value>하드 드라이브</value>
+  </data>
+  <data name="hard_drives" xml:space="preserve">
+    <value>하드 드라이브</value>
+  </data>
+  <data name="hard_hat" xml:space="preserve">
+    <value>하드 모자</value>
+  </data>
+  <data name="hash" xml:space="preserve">
+    <value>해시</value>
+  </data>
+  <data name="hash_straight" xml:space="preserve">
+    <value>해시 직선</value>
+  </data>
+  <data name="head_circuit" xml:space="preserve">
+    <value>머리 회로</value>
+  </data>
+  <data name="headlights" xml:space="preserve">
+    <value>전조등</value>
+  </data>
+  <data name="headphones" xml:space="preserve">
+    <value>헤드폰</value>
+  </data>
+  <data name="headset" xml:space="preserve">
+    <value>헤드셋</value>
+  </data>
+  <data name="heart" xml:space="preserve">
+    <value>하트</value>
+  </data>
+  <data name="heart_break" xml:space="preserve">
+    <value>하트 휴식</value>
+  </data>
+  <data name="heart_half" xml:space="preserve">
+    <value>하트 절반</value>
+  </data>
+  <data name="heart_straight" xml:space="preserve">
+    <value>하트 직선</value>
+  </data>
+  <data name="heart_straight_break" xml:space="preserve">
+    <value>하트 직선 휴식</value>
+  </data>
+  <data name="heartbeat" xml:space="preserve">
+    <value>심장박동</value>
+  </data>
+  <data name="hexagon" xml:space="preserve">
+    <value>육각형</value>
+  </data>
+  <data name="high_definition" xml:space="preserve">
+    <value>높음 정의</value>
+  </data>
+  <data name="high_heel" xml:space="preserve">
+    <value>높음 힐</value>
+  </data>
+  <data name="highlighter" xml:space="preserve">
+    <value>형광펜</value>
+  </data>
+  <data name="highlighter_circle" xml:space="preserve">
+    <value>형광펜 원</value>
+  </data>
+  <data name="hockey" xml:space="preserve">
+    <value>하키</value>
+  </data>
+  <data name="hoodie" xml:space="preserve">
+    <value>후드티</value>
+  </data>
+  <data name="horse" xml:space="preserve">
+    <value>말</value>
+  </data>
+  <data name="hospital" xml:space="preserve">
+    <value>병원</value>
+  </data>
+  <data name="hourglass" xml:space="preserve">
+    <value>모래시계</value>
+  </data>
+  <data name="hourglass_high" xml:space="preserve">
+    <value>모래시계 높음</value>
+  </data>
+  <data name="hourglass_low" xml:space="preserve">
+    <value>모래시계 낮음</value>
+  </data>
+  <data name="hourglass_medium" xml:space="preserve">
+    <value>모래시계 중간</value>
+  </data>
+  <data name="hourglass_simple" xml:space="preserve">
+    <value>모래시계 단순</value>
+  </data>
+  <data name="hourglass_simple_high" xml:space="preserve">
+    <value>모래시계 단순 높음</value>
+  </data>
+  <data name="hourglass_simple_low" xml:space="preserve">
+    <value>모래시계 단순 낮음</value>
+  </data>
+  <data name="hourglass_simple_medium" xml:space="preserve">
+    <value>모래시계 단순 중간</value>
+  </data>
+  <data name="house" xml:space="preserve">
+    <value>집</value>
+  </data>
+  <data name="house_line" xml:space="preserve">
+    <value>집 선</value>
+  </data>
+  <data name="house_simple" xml:space="preserve">
+    <value>집 단순</value>
+  </data>
+  <data name="hurricane" xml:space="preserve">
+    <value>허리케인</value>
+  </data>
+  <data name="ice_cream" xml:space="preserve">
+    <value>얼음 크림</value>
+  </data>
+  <data name="identification_badge" xml:space="preserve">
+    <value>신분증 배지</value>
+  </data>
+  <data name="identification_card" xml:space="preserve">
+    <value>신분증 카드</value>
+  </data>
+  <data name="image" xml:space="preserve">
+    <value>이미지</value>
+  </data>
+  <data name="image_broken" xml:space="preserve">
+    <value>이미지 깨진</value>
+  </data>
+  <data name="image_square" xml:space="preserve">
+    <value>이미지 정사각형</value>
+  </data>
+  <data name="images" xml:space="preserve">
+    <value>이미지</value>
+  </data>
+  <data name="images_square" xml:space="preserve">
+    <value>이미지 정사각형</value>
+  </data>
+  <data name="infinity" xml:space="preserve">
+    <value>무한대</value>
+  </data>
+  <data name="info" xml:space="preserve">
+    <value>정보</value>
+  </data>
+  <data name="instagram_logo" xml:space="preserve">
+    <value>Instagram 로고</value>
+  </data>
+  <data name="intersect" xml:space="preserve">
+    <value>교차</value>
+  </data>
+  <data name="intersect_square" xml:space="preserve">
+    <value>교차 정사각형</value>
+  </data>
+  <data name="intersect_three" xml:space="preserve">
+    <value>교차 셋</value>
+  </data>
+  <data name="intersection" xml:space="preserve">
+    <value>교집합</value>
+  </data>
+  <data name="invoice" xml:space="preserve">
+    <value>송장</value>
+  </data>
+  <data name="island" xml:space="preserve">
+    <value>섬</value>
+  </data>
+  <data name="jar" xml:space="preserve">
+    <value>병</value>
+  </data>
+  <data name="jar_label" xml:space="preserve">
+    <value>병 라벨</value>
+  </data>
+  <data name="jeep" xml:space="preserve">
+    <value>지프</value>
+  </data>
+  <data name="joystick" xml:space="preserve">
+    <value>조이스틱</value>
+  </data>
+  <data name="kanban" xml:space="preserve">
+    <value>칸반</value>
+  </data>
+  <data name="key" xml:space="preserve">
+    <value>열쇠</value>
+  </data>
+  <data name="key_return" xml:space="preserve">
+    <value>열쇠 반환</value>
+  </data>
+  <data name="keyboard" xml:space="preserve">
+    <value>키보드</value>
+  </data>
+  <data name="keyhole" xml:space="preserve">
+    <value>열쇠 구멍</value>
+  </data>
+  <data name="knife" xml:space="preserve">
+    <value>칼</value>
+  </data>
+  <data name="ladder" xml:space="preserve">
+    <value>사다리</value>
+  </data>
+  <data name="ladder_simple" xml:space="preserve">
+    <value>사다리 단순</value>
+  </data>
+  <data name="lamp" xml:space="preserve">
+    <value>램프</value>
+  </data>
+  <data name="lamp_pendant" xml:space="preserve">
+    <value>램프 펜던트</value>
+  </data>
+  <data name="laptop" xml:space="preserve">
+    <value>노트북</value>
+  </data>
+  <data name="lasso" xml:space="preserve">
+    <value>올가미</value>
+  </data>
+  <data name="lastfm_logo" xml:space="preserve">
+    <value>Lastfm 로고</value>
+  </data>
+  <data name="layout" xml:space="preserve">
+    <value>레이아웃</value>
+  </data>
+  <data name="leaf" xml:space="preserve">
+    <value>잎</value>
+  </data>
+  <data name="lectern" xml:space="preserve">
+    <value>강연대</value>
+  </data>
+  <data name="lego" xml:space="preserve">
+    <value>레고</value>
+  </data>
+  <data name="lego_smiley" xml:space="preserve">
+    <value>레고 스마일</value>
+  </data>
+  <data name="less_than" xml:space="preserve">
+    <value>보다 작음 보다</value>
+  </data>
+  <data name="less_than_or_equal" xml:space="preserve">
+    <value>보다 작음 보다 또는 같음</value>
+  </data>
+  <data name="letter_circle_h" xml:space="preserve">
+    <value>글자 원 h</value>
+  </data>
+  <data name="letter_circle_p" xml:space="preserve">
+    <value>글자 원 p</value>
+  </data>
+  <data name="letter_circle_v" xml:space="preserve">
+    <value>글자 원 v</value>
+  </data>
+  <data name="lifebuoy" xml:space="preserve">
+    <value>구명부표</value>
+  </data>
+  <data name="lightbulb" xml:space="preserve">
+    <value>전구</value>
+  </data>
+  <data name="lightbulb_filament" xml:space="preserve">
+    <value>전구 필라멘트</value>
+  </data>
+  <data name="lighthouse" xml:space="preserve">
+    <value>등대</value>
+  </data>
+  <data name="lightning" xml:space="preserve">
+    <value>번개</value>
+  </data>
+  <data name="lightning_a" xml:space="preserve">
+    <value>번개 a</value>
+  </data>
+  <data name="lightning_slash" xml:space="preserve">
+    <value>번개 슬래시</value>
+  </data>
+  <data name="line_segment" xml:space="preserve">
+    <value>선 세그먼트</value>
+  </data>
+  <data name="line_segments" xml:space="preserve">
+    <value>선 세그먼트</value>
+  </data>
+  <data name="line_vertical" xml:space="preserve">
+    <value>선 세로</value>
+  </data>
+  <data name="link" xml:space="preserve">
+    <value>링크</value>
+  </data>
+  <data name="link_break" xml:space="preserve">
+    <value>링크 휴식</value>
+  </data>
+  <data name="link_simple" xml:space="preserve">
+    <value>링크 단순</value>
+  </data>
+  <data name="link_simple_break" xml:space="preserve">
+    <value>링크 단순 휴식</value>
+  </data>
+  <data name="link_simple_horizontal" xml:space="preserve">
+    <value>링크 단순 가로</value>
+  </data>
+  <data name="link_simple_horizontal_break" xml:space="preserve">
+    <value>링크 단순 가로 휴식</value>
+  </data>
+  <data name="linkedin_logo" xml:space="preserve">
+    <value>Linkedin 로고</value>
+  </data>
+  <data name="linktree_logo" xml:space="preserve">
+    <value>Linktree 로고</value>
+  </data>
+  <data name="linux_logo" xml:space="preserve">
+    <value>Linux 로고</value>
+  </data>
+  <data name="list" xml:space="preserve">
+    <value>목록</value>
+  </data>
+  <data name="list_bullets" xml:space="preserve">
+    <value>목록 글머리 기호</value>
+  </data>
+  <data name="list_checks" xml:space="preserve">
+    <value>목록 확인</value>
+  </data>
+  <data name="list_dashes" xml:space="preserve">
+    <value>목록 대시</value>
+  </data>
+  <data name="list_heart" xml:space="preserve">
+    <value>목록 하트</value>
+  </data>
+  <data name="list_magnifying_glass" xml:space="preserve">
+    <value>목록 돋보기 유리잔</value>
+  </data>
+  <data name="list_numbers" xml:space="preserve">
+    <value>목록 숫자</value>
+  </data>
+  <data name="list_plus" xml:space="preserve">
+    <value>목록 더하기</value>
+  </data>
+  <data name="list_star" xml:space="preserve">
+    <value>목록 별</value>
+  </data>
+  <data name="lock" xml:space="preserve">
+    <value>자물쇠</value>
+  </data>
+  <data name="lock_key" xml:space="preserve">
+    <value>자물쇠 열쇠</value>
+  </data>
+  <data name="lock_key_open" xml:space="preserve">
+    <value>자물쇠 열쇠 열기</value>
+  </data>
+  <data name="lock_laminated" xml:space="preserve">
+    <value>자물쇠 코팅</value>
+  </data>
+  <data name="lock_laminated_open" xml:space="preserve">
+    <value>자물쇠 코팅 열기</value>
+  </data>
+  <data name="lock_open" xml:space="preserve">
+    <value>자물쇠 열기</value>
+  </data>
+  <data name="lock_simple" xml:space="preserve">
+    <value>자물쇠 단순</value>
+  </data>
+  <data name="lock_simple_open" xml:space="preserve">
+    <value>자물쇠 단순 열기</value>
+  </data>
+  <data name="lockers" xml:space="preserve">
+    <value>사물함</value>
+  </data>
+  <data name="log" xml:space="preserve">
+    <value>로그</value>
+  </data>
+  <data name="magic_wand" xml:space="preserve">
+    <value>마법 지팡이</value>
+  </data>
+  <data name="magnet" xml:space="preserve">
+    <value>자석</value>
+  </data>
+  <data name="magnet_straight" xml:space="preserve">
+    <value>자석 직선</value>
+  </data>
+  <data name="magnifying_glass" xml:space="preserve">
+    <value>돋보기 유리잔</value>
+  </data>
+  <data name="magnifying_glass_minus" xml:space="preserve">
+    <value>돋보기 유리잔 빼기</value>
+  </data>
+  <data name="magnifying_glass_plus" xml:space="preserve">
+    <value>돋보기 유리잔 더하기</value>
+  </data>
+  <data name="mailbox" xml:space="preserve">
+    <value>우편함</value>
+  </data>
+  <data name="map_pin" xml:space="preserve">
+    <value>지도 핀</value>
+  </data>
+  <data name="map_pin_area" xml:space="preserve">
+    <value>지도 핀 영역</value>
+  </data>
+  <data name="map_pin_line" xml:space="preserve">
+    <value>지도 핀 선</value>
+  </data>
+  <data name="map_pin_plus" xml:space="preserve">
+    <value>지도 핀 더하기</value>
+  </data>
+  <data name="map_pin_simple" xml:space="preserve">
+    <value>지도 핀 단순</value>
+  </data>
+  <data name="map_pin_simple_area" xml:space="preserve">
+    <value>지도 핀 단순 영역</value>
+  </data>
+  <data name="map_pin_simple_line" xml:space="preserve">
+    <value>지도 핀 단순 선</value>
+  </data>
+  <data name="map_trifold" xml:space="preserve">
+    <value>지도 3단</value>
+  </data>
+  <data name="markdown_logo" xml:space="preserve">
+    <value>마크다운 로고</value>
+  </data>
+  <data name="marker_circle" xml:space="preserve">
+    <value>마커 원</value>
+  </data>
+  <data name="martini" xml:space="preserve">
+    <value>마티니</value>
+  </data>
+  <data name="mask_happy" xml:space="preserve">
+    <value>마스크 행복</value>
+  </data>
+  <data name="mask_sad" xml:space="preserve">
+    <value>마스크 슬픔</value>
+  </data>
+  <data name="mastodon_logo" xml:space="preserve">
+    <value>Mastodon 로고</value>
+  </data>
+  <data name="math_operations" xml:space="preserve">
+    <value>수학 연산</value>
+  </data>
+  <data name="matrix_logo" xml:space="preserve">
+    <value>행렬 로고</value>
+  </data>
+  <data name="medal" xml:space="preserve">
+    <value>메달</value>
+  </data>
+  <data name="medal_military" xml:space="preserve">
+    <value>메달 군사</value>
+  </data>
+  <data name="medium_logo" xml:space="preserve">
+    <value>중간 로고</value>
+  </data>
+  <data name="megaphone" xml:space="preserve">
+    <value>확성기</value>
+  </data>
+  <data name="megaphone_simple" xml:space="preserve">
+    <value>확성기 단순</value>
+  </data>
+  <data name="member_of" xml:space="preserve">
+    <value>회원 의</value>
+  </data>
+  <data name="memory" xml:space="preserve">
+    <value>메모리</value>
+  </data>
+  <data name="messenger_logo" xml:space="preserve">
+    <value>Messenger 로고</value>
+  </data>
+  <data name="meta_logo" xml:space="preserve">
+    <value>Meta 로고</value>
+  </data>
+  <data name="meteor" xml:space="preserve">
+    <value>유성</value>
+  </data>
+  <data name="metronome" xml:space="preserve">
+    <value>메트로놈</value>
+  </data>
+  <data name="microphone" xml:space="preserve">
+    <value>마이크</value>
+  </data>
+  <data name="microphone_slash" xml:space="preserve">
+    <value>마이크 슬래시</value>
+  </data>
+  <data name="microphone_stage" xml:space="preserve">
+    <value>마이크 무대</value>
+  </data>
+  <data name="microscope" xml:space="preserve">
+    <value>현미경</value>
+  </data>
+  <data name="microsoft_excel_logo" xml:space="preserve">
+    <value>Microsoft excel 로고</value>
+  </data>
+  <data name="microsoft_outlook_logo" xml:space="preserve">
+    <value>Microsoft outlook 로고</value>
+  </data>
+  <data name="microsoft_powerpoint_logo" xml:space="preserve">
+    <value>Microsoft powerpoint 로고</value>
+  </data>
+  <data name="microsoft_teams_logo" xml:space="preserve">
+    <value>Microsoft 팀 로고</value>
+  </data>
+  <data name="microsoft_word_logo" xml:space="preserve">
+    <value>Microsoft word 로고</value>
+  </data>
+  <data name="minus" xml:space="preserve">
+    <value>빼기</value>
+  </data>
+  <data name="minus_circle" xml:space="preserve">
+    <value>빼기 원</value>
+  </data>
+  <data name="minus_square" xml:space="preserve">
+    <value>빼기 정사각형</value>
+  </data>
+  <data name="money" xml:space="preserve">
+    <value>돈</value>
+  </data>
+  <data name="money_wavy" xml:space="preserve">
+    <value>돈 물결</value>
+  </data>
+  <data name="monitor" xml:space="preserve">
+    <value>모니터</value>
+  </data>
+  <data name="monitor_arrow_up" xml:space="preserve">
+    <value>모니터 화살표 위</value>
+  </data>
+  <data name="monitor_play" xml:space="preserve">
+    <value>모니터 재생</value>
+  </data>
+  <data name="moon" xml:space="preserve">
+    <value>달</value>
+  </data>
+  <data name="moon_stars" xml:space="preserve">
+    <value>달 별</value>
+  </data>
+  <data name="moped" xml:space="preserve">
+    <value>모페드</value>
+  </data>
+  <data name="moped_front" xml:space="preserve">
+    <value>모페드 앞</value>
+  </data>
+  <data name="mosque" xml:space="preserve">
+    <value>모스크</value>
+  </data>
+  <data name="motorcycle" xml:space="preserve">
+    <value>오토바이</value>
+  </data>
+  <data name="mountains" xml:space="preserve">
+    <value>산</value>
+  </data>
+  <data name="mouse" xml:space="preserve">
+    <value>마우스</value>
+  </data>
+  <data name="mouse_left_click" xml:space="preserve">
+    <value>마우스 왼쪽 클릭</value>
+  </data>
+  <data name="mouse_middle_click" xml:space="preserve">
+    <value>마우스 가운데 클릭</value>
+  </data>
+  <data name="mouse_right_click" xml:space="preserve">
+    <value>마우스 오른쪽 클릭</value>
+  </data>
+  <data name="mouse_scroll" xml:space="preserve">
+    <value>마우스 두루마리</value>
+  </data>
+  <data name="mouse_simple" xml:space="preserve">
+    <value>마우스 단순</value>
+  </data>
+  <data name="music_note" xml:space="preserve">
+    <value>음악 메모</value>
+  </data>
+  <data name="music_note_simple" xml:space="preserve">
+    <value>음악 메모 단순</value>
+  </data>
+  <data name="music_notes" xml:space="preserve">
+    <value>음악 메모</value>
+  </data>
+  <data name="music_notes_minus" xml:space="preserve">
+    <value>음악 메모 빼기</value>
+  </data>
+  <data name="music_notes_plus" xml:space="preserve">
+    <value>음악 메모 더하기</value>
+  </data>
+  <data name="music_notes_simple" xml:space="preserve">
+    <value>음악 메모 단순</value>
+  </data>
+  <data name="navigation_arrow" xml:space="preserve">
+    <value>내비게이션 화살표</value>
+  </data>
+  <data name="needle" xml:space="preserve">
+    <value>바늘</value>
+  </data>
+  <data name="network" xml:space="preserve">
+    <value>네트워크</value>
+  </data>
+  <data name="network_slash" xml:space="preserve">
+    <value>네트워크 슬래시</value>
+  </data>
+  <data name="network_x" xml:space="preserve">
+    <value>네트워크 x</value>
+  </data>
+  <data name="newspaper" xml:space="preserve">
+    <value>신문</value>
+  </data>
+  <data name="newspaper_clipping" xml:space="preserve">
+    <value>신문 오려내기</value>
+  </data>
+  <data name="not_equals" xml:space="preserve">
+    <value>아님 같음</value>
+  </data>
+  <data name="not_member_of" xml:space="preserve">
+    <value>아님 회원 의</value>
+  </data>
+  <data name="not_subset_of" xml:space="preserve">
+    <value>아님 부분집합 의</value>
+  </data>
+  <data name="not_superset_of" xml:space="preserve">
+    <value>아님 상위집합 의</value>
+  </data>
+  <data name="notches" xml:space="preserve">
+    <value>노치</value>
+  </data>
+  <data name="note" xml:space="preserve">
+    <value>메모</value>
+  </data>
+  <data name="note_blank" xml:space="preserve">
+    <value>메모 빈</value>
+  </data>
+  <data name="note_pencil" xml:space="preserve">
+    <value>메모 연필</value>
+  </data>
+  <data name="notebook" xml:space="preserve">
+    <value>공책</value>
+  </data>
+  <data name="notepad" xml:space="preserve">
+    <value>메모장</value>
+  </data>
+  <data name="notification" xml:space="preserve">
+    <value>알림</value>
+  </data>
+  <data name="notion_logo" xml:space="preserve">
+    <value>Notion 로고</value>
+  </data>
+  <data name="nuclear_plant" xml:space="preserve">
+    <value>핵 식물</value>
+  </data>
+  <data name="number_circle_eight" xml:space="preserve">
+    <value>숫자 원 여덟</value>
+  </data>
+  <data name="number_circle_five" xml:space="preserve">
+    <value>숫자 원 다섯</value>
+  </data>
+  <data name="number_circle_four" xml:space="preserve">
+    <value>숫자 원 넷</value>
+  </data>
+  <data name="number_circle_nine" xml:space="preserve">
+    <value>숫자 원 아홉</value>
+  </data>
+  <data name="number_circle_one" xml:space="preserve">
+    <value>숫자 원 하나</value>
+  </data>
+  <data name="number_circle_seven" xml:space="preserve">
+    <value>숫자 원 일곱</value>
+  </data>
+  <data name="number_circle_six" xml:space="preserve">
+    <value>숫자 원 여섯</value>
+  </data>
+  <data name="number_circle_three" xml:space="preserve">
+    <value>숫자 원 셋</value>
+  </data>
+  <data name="number_circle_two" xml:space="preserve">
+    <value>숫자 원 둘</value>
+  </data>
+  <data name="number_circle_zero" xml:space="preserve">
+    <value>숫자 원 영</value>
+  </data>
+  <data name="number_eight" xml:space="preserve">
+    <value>숫자 여덟</value>
+  </data>
+  <data name="number_five" xml:space="preserve">
+    <value>숫자 다섯</value>
+  </data>
+  <data name="number_four" xml:space="preserve">
+    <value>숫자 넷</value>
+  </data>
+  <data name="number_nine" xml:space="preserve">
+    <value>숫자 아홉</value>
+  </data>
+  <data name="number_one" xml:space="preserve">
+    <value>숫자 하나</value>
+  </data>
+  <data name="number_seven" xml:space="preserve">
+    <value>숫자 일곱</value>
+  </data>
+  <data name="number_six" xml:space="preserve">
+    <value>숫자 여섯</value>
+  </data>
+  <data name="number_square_eight" xml:space="preserve">
+    <value>숫자 정사각형 여덟</value>
+  </data>
+  <data name="number_square_five" xml:space="preserve">
+    <value>숫자 정사각형 다섯</value>
+  </data>
+  <data name="number_square_four" xml:space="preserve">
+    <value>숫자 정사각형 넷</value>
+  </data>
+  <data name="number_square_nine" xml:space="preserve">
+    <value>숫자 정사각형 아홉</value>
+  </data>
+  <data name="number_square_one" xml:space="preserve">
+    <value>숫자 정사각형 하나</value>
+  </data>
+  <data name="number_square_seven" xml:space="preserve">
+    <value>숫자 정사각형 일곱</value>
+  </data>
+  <data name="number_square_six" xml:space="preserve">
+    <value>숫자 정사각형 여섯</value>
+  </data>
+  <data name="number_square_three" xml:space="preserve">
+    <value>숫자 정사각형 셋</value>
+  </data>
+  <data name="number_square_two" xml:space="preserve">
+    <value>숫자 정사각형 둘</value>
+  </data>
+  <data name="number_square_zero" xml:space="preserve">
+    <value>숫자 정사각형 영</value>
+  </data>
+  <data name="number_three" xml:space="preserve">
+    <value>숫자 셋</value>
+  </data>
+  <data name="number_two" xml:space="preserve">
+    <value>숫자 둘</value>
+  </data>
+  <data name="number_zero" xml:space="preserve">
+    <value>숫자 영</value>
+  </data>
+  <data name="numpad" xml:space="preserve">
+    <value>숫자 패드</value>
+  </data>
+  <data name="nut" xml:space="preserve">
+    <value>너트</value>
+  </data>
+  <data name="ny_times_logo" xml:space="preserve">
+    <value>Ny 곱하기 로고</value>
+  </data>
+  <data name="octagon" xml:space="preserve">
+    <value>팔각형</value>
+  </data>
+  <data name="office_chair" xml:space="preserve">
+    <value>사무실 의자</value>
+  </data>
+  <data name="onigiri" xml:space="preserve">
+    <value>주먹밥</value>
+  </data>
+  <data name="open_ai_logo" xml:space="preserve">
+    <value>열기 ai 로고</value>
+  </data>
+  <data name="option" xml:space="preserve">
+    <value>옵션</value>
+  </data>
+  <data name="orange" xml:space="preserve">
+    <value>오렌지</value>
+  </data>
+  <data name="orange_slice" xml:space="preserve">
+    <value>오렌지 조각</value>
+  </data>
+  <data name="oven" xml:space="preserve">
+    <value>오븐</value>
+  </data>
+  <data name="package" xml:space="preserve">
+    <value>패키지</value>
+  </data>
+  <data name="paint_brush" xml:space="preserve">
+    <value>페인트 붓</value>
+  </data>
+  <data name="paint_brush_broad" xml:space="preserve">
+    <value>페인트 붓 넓은</value>
+  </data>
+  <data name="paint_brush_household" xml:space="preserve">
+    <value>페인트 붓 가정</value>
+  </data>
+  <data name="paint_bucket" xml:space="preserve">
+    <value>페인트 양동이</value>
+  </data>
+  <data name="paint_roller" xml:space="preserve">
+    <value>페인트 롤러</value>
+  </data>
+  <data name="palette" xml:space="preserve">
+    <value>팔레트</value>
+  </data>
+  <data name="panorama" xml:space="preserve">
+    <value>파노라마</value>
+  </data>
+  <data name="pants" xml:space="preserve">
+    <value>바지</value>
+  </data>
+  <data name="paper_plane" xml:space="preserve">
+    <value>종이 비행기</value>
+  </data>
+  <data name="paper_plane_right" xml:space="preserve">
+    <value>종이 비행기 오른쪽</value>
+  </data>
+  <data name="paper_plane_tilt" xml:space="preserve">
+    <value>종이 비행기 기울기</value>
+  </data>
+  <data name="paperclip" xml:space="preserve">
+    <value>클립</value>
+  </data>
+  <data name="paperclip_horizontal" xml:space="preserve">
+    <value>클립 가로</value>
+  </data>
+  <data name="parachute" xml:space="preserve">
+    <value>낙하산</value>
+  </data>
+  <data name="paragraph" xml:space="preserve">
+    <value>단락</value>
+  </data>
+  <data name="parallelogram" xml:space="preserve">
+    <value>평행사변형</value>
+  </data>
+  <data name="park" xml:space="preserve">
+    <value>공원</value>
+  </data>
+  <data name="password" xml:space="preserve">
+    <value>비밀번호</value>
+  </data>
+  <data name="path" xml:space="preserve">
+    <value>경로</value>
+  </data>
+  <data name="patreon_logo" xml:space="preserve">
+    <value>Patreon 로고</value>
+  </data>
+  <data name="pause" xml:space="preserve">
+    <value>일시정지</value>
+  </data>
+  <data name="pause_circle" xml:space="preserve">
+    <value>일시정지 원</value>
+  </data>
+  <data name="paw_print" xml:space="preserve">
+    <value>발 인쇄</value>
+  </data>
+  <data name="paypal_logo" xml:space="preserve">
+    <value>Paypal 로고</value>
+  </data>
+  <data name="peace" xml:space="preserve">
+    <value>평화</value>
+  </data>
+  <data name="pen" xml:space="preserve">
+    <value>펜</value>
+  </data>
+  <data name="pen_nib" xml:space="preserve">
+    <value>펜 펜촉</value>
+  </data>
+  <data name="pen_nib_straight" xml:space="preserve">
+    <value>펜 펜촉 직선</value>
+  </data>
+  <data name="pencil" xml:space="preserve">
+    <value>연필</value>
+  </data>
+  <data name="pencil_circle" xml:space="preserve">
+    <value>연필 원</value>
+  </data>
+  <data name="pencil_line" xml:space="preserve">
+    <value>연필 선</value>
+  </data>
+  <data name="pencil_ruler" xml:space="preserve">
+    <value>연필 자</value>
+  </data>
+  <data name="pencil_simple" xml:space="preserve">
+    <value>연필 단순</value>
+  </data>
+  <data name="pencil_simple_line" xml:space="preserve">
+    <value>연필 단순 선</value>
+  </data>
+  <data name="pencil_simple_slash" xml:space="preserve">
+    <value>연필 단순 슬래시</value>
+  </data>
+  <data name="pencil_slash" xml:space="preserve">
+    <value>연필 슬래시</value>
+  </data>
+  <data name="pentagon" xml:space="preserve">
+    <value>오각형</value>
+  </data>
+  <data name="pentagram" xml:space="preserve">
+    <value>오각별</value>
+  </data>
+  <data name="pepper" xml:space="preserve">
+    <value>고추</value>
+  </data>
+  <data name="percent" xml:space="preserve">
+    <value>퍼센트</value>
+  </data>
+  <data name="person" xml:space="preserve">
+    <value>사람</value>
+  </data>
+  <data name="person_arms_spread" xml:space="preserve">
+    <value>사람 팔 펼치기</value>
+  </data>
+  <data name="person_simple" xml:space="preserve">
+    <value>사람 단순</value>
+  </data>
+  <data name="person_simple_bike" xml:space="preserve">
+    <value>사람 단순 자전거</value>
+  </data>
+  <data name="person_simple_circle" xml:space="preserve">
+    <value>사람 단순 원</value>
+  </data>
+  <data name="person_simple_hike" xml:space="preserve">
+    <value>사람 단순 하이킹</value>
+  </data>
+  <data name="person_simple_run" xml:space="preserve">
+    <value>사람 단순 달리기</value>
+  </data>
+  <data name="person_simple_ski" xml:space="preserve">
+    <value>사람 단순 스키</value>
+  </data>
+  <data name="person_simple_snowboard" xml:space="preserve">
+    <value>사람 단순 스노보드</value>
+  </data>
+  <data name="person_simple_swim" xml:space="preserve">
+    <value>사람 단순 수영</value>
+  </data>
+  <data name="person_simple_tai_chi" xml:space="preserve">
+    <value>사람 단순 tai chi</value>
+  </data>
+  <data name="person_simple_throw" xml:space="preserve">
+    <value>사람 단순 던지기</value>
+  </data>
+  <data name="person_simple_walk" xml:space="preserve">
+    <value>사람 단순 걷기</value>
+  </data>
+  <data name="perspective" xml:space="preserve">
+    <value>원근</value>
+  </data>
+  <data name="phone" xml:space="preserve">
+    <value>전화</value>
+  </data>
+  <data name="phone_call" xml:space="preserve">
+    <value>전화 통화</value>
+  </data>
+  <data name="phone_disconnect" xml:space="preserve">
+    <value>전화 연결 해제</value>
+  </data>
+  <data name="phone_incoming" xml:space="preserve">
+    <value>전화 수신</value>
+  </data>
+  <data name="phone_list" xml:space="preserve">
+    <value>전화 목록</value>
+  </data>
+  <data name="phone_outgoing" xml:space="preserve">
+    <value>전화 발신</value>
+  </data>
+  <data name="phone_pause" xml:space="preserve">
+    <value>전화 일시정지</value>
+  </data>
+  <data name="phone_plus" xml:space="preserve">
+    <value>전화 더하기</value>
+  </data>
+  <data name="phone_slash" xml:space="preserve">
+    <value>전화 슬래시</value>
+  </data>
+  <data name="phone_transfer" xml:space="preserve">
+    <value>전화 전송</value>
+  </data>
+  <data name="phone_x" xml:space="preserve">
+    <value>전화 x</value>
+  </data>
+  <data name="phosphor_logo" xml:space="preserve">
+    <value>Phosphor 로고</value>
+  </data>
+  <data name="pi" xml:space="preserve">
+    <value>파이</value>
+  </data>
+  <data name="piano_keys" xml:space="preserve">
+    <value>피아노 열쇠</value>
+  </data>
+  <data name="picnic_table" xml:space="preserve">
+    <value>소풍 표</value>
+  </data>
+  <data name="picture_in_picture" xml:space="preserve">
+    <value>그림 안으로 그림</value>
+  </data>
+  <data name="piggy_bank" xml:space="preserve">
+    <value>돼지 저금통 은행</value>
+  </data>
+  <data name="pill" xml:space="preserve">
+    <value>알약</value>
+  </data>
+  <data name="ping_pong" xml:space="preserve">
+    <value>핑 퐁</value>
+  </data>
+  <data name="pint_glass" xml:space="preserve">
+    <value>파인트 유리잔</value>
+  </data>
+  <data name="pinterest_logo" xml:space="preserve">
+    <value>Pinterest 로고</value>
+  </data>
+  <data name="pinwheel" xml:space="preserve">
+    <value>바람개비</value>
+  </data>
+  <data name="pipe" xml:space="preserve">
+    <value>파이프</value>
+  </data>
+  <data name="pipe_wrench" xml:space="preserve">
+    <value>파이프 렌치</value>
+  </data>
+  <data name="pix_logo" xml:space="preserve">
+    <value>Pix 로고</value>
+  </data>
+  <data name="pizza" xml:space="preserve">
+    <value>피자</value>
+  </data>
+  <data name="placeholder" xml:space="preserve">
+    <value>자리표시자</value>
+  </data>
+  <data name="planet" xml:space="preserve">
+    <value>행성</value>
+  </data>
+  <data name="plant" xml:space="preserve">
+    <value>식물</value>
+  </data>
+  <data name="play" xml:space="preserve">
+    <value>재생</value>
+  </data>
+  <data name="play_circle" xml:space="preserve">
+    <value>재생 원</value>
+  </data>
+  <data name="play_pause" xml:space="preserve">
+    <value>재생 일시정지</value>
+  </data>
+  <data name="playlist" xml:space="preserve">
+    <value>재생목록</value>
+  </data>
+  <data name="plug" xml:space="preserve">
+    <value>플러그</value>
+  </data>
+  <data name="plug_charging" xml:space="preserve">
+    <value>플러그 충전</value>
+  </data>
+  <data name="plugs" xml:space="preserve">
+    <value>플러그</value>
+  </data>
+  <data name="plugs_connected" xml:space="preserve">
+    <value>플러그 연결됨</value>
+  </data>
+  <data name="plus" xml:space="preserve">
+    <value>더하기</value>
+  </data>
+  <data name="plus_circle" xml:space="preserve">
+    <value>더하기 원</value>
+  </data>
+  <data name="plus_minus" xml:space="preserve">
+    <value>더하기 빼기</value>
+  </data>
+  <data name="plus_square" xml:space="preserve">
+    <value>더하기 정사각형</value>
+  </data>
+  <data name="poker_chip" xml:space="preserve">
+    <value>포커 칩</value>
+  </data>
+  <data name="police_car" xml:space="preserve">
+    <value>경찰 자동차</value>
+  </data>
+  <data name="polygon" xml:space="preserve">
+    <value>다각형</value>
+  </data>
+  <data name="popcorn" xml:space="preserve">
+    <value>팝콘</value>
+  </data>
+  <data name="popsicle" xml:space="preserve">
+    <value>아이스바</value>
+  </data>
+  <data name="potted_plant" xml:space="preserve">
+    <value>화분 식물</value>
+  </data>
+  <data name="power" xml:space="preserve">
+    <value>전원</value>
+  </data>
+  <data name="prescription" xml:space="preserve">
+    <value>처방전</value>
+  </data>
+  <data name="presentation" xml:space="preserve">
+    <value>프레젠테이션</value>
+  </data>
+  <data name="presentation_chart" xml:space="preserve">
+    <value>프레젠테이션 차트</value>
+  </data>
+  <data name="printer" xml:space="preserve">
+    <value>프린터</value>
+  </data>
+  <data name="prohibit" xml:space="preserve">
+    <value>금지</value>
+  </data>
+  <data name="prohibit_inset" xml:space="preserve">
+    <value>금지 삽입</value>
+  </data>
+  <data name="projector_screen" xml:space="preserve">
+    <value>프로젝터 화면</value>
+  </data>
+  <data name="projector_screen_chart" xml:space="preserve">
+    <value>프로젝터 화면 차트</value>
+  </data>
+  <data name="pulse" xml:space="preserve">
+    <value>맥박</value>
+  </data>
+  <data name="push_pin" xml:space="preserve">
+    <value>밀기 핀</value>
+  </data>
+  <data name="push_pin_simple" xml:space="preserve">
+    <value>밀기 핀 단순</value>
+  </data>
+  <data name="push_pin_simple_slash" xml:space="preserve">
+    <value>밀기 핀 단순 슬래시</value>
+  </data>
+  <data name="push_pin_slash" xml:space="preserve">
+    <value>밀기 핀 슬래시</value>
+  </data>
+  <data name="puzzle_piece" xml:space="preserve">
+    <value>퍼즐 조각</value>
+  </data>
+  <data name="qr_code" xml:space="preserve">
+    <value>Qr 코드</value>
+  </data>
+  <data name="question" xml:space="preserve">
+    <value>질문</value>
+  </data>
+  <data name="question_mark" xml:space="preserve">
+    <value>질문 표시</value>
+  </data>
+  <data name="queue" xml:space="preserve">
+    <value>대기열</value>
+  </data>
+  <data name="quotes" xml:space="preserve">
+    <value>따옴표</value>
+  </data>
+  <data name="rabbit" xml:space="preserve">
+    <value>토끼</value>
+  </data>
+  <data name="racquet" xml:space="preserve">
+    <value>라켓</value>
+  </data>
+  <data name="radical" xml:space="preserve">
+    <value>근호</value>
+  </data>
+  <data name="radio" xml:space="preserve">
+    <value>라디오</value>
+  </data>
+  <data name="radio_button" xml:space="preserve">
+    <value>라디오 버튼</value>
+  </data>
+  <data name="radioactive" xml:space="preserve">
+    <value>방사성</value>
+  </data>
+  <data name="rainbow" xml:space="preserve">
+    <value>무지개</value>
+  </data>
+  <data name="rainbow_cloud" xml:space="preserve">
+    <value>무지개 구름</value>
+  </data>
+  <data name="ranking" xml:space="preserve">
+    <value>순위</value>
+  </data>
+  <data name="read_cv_logo" xml:space="preserve">
+    <value>읽음 cv 로고</value>
+  </data>
+  <data name="receipt" xml:space="preserve">
+    <value>영수증</value>
+  </data>
+  <data name="receipt_x" xml:space="preserve">
+    <value>영수증 x</value>
+  </data>
+  <data name="record" xml:space="preserve">
+    <value>녹화</value>
+  </data>
+  <data name="rectangle" xml:space="preserve">
+    <value>직사각형</value>
+  </data>
+  <data name="rectangle_dashed" xml:space="preserve">
+    <value>직사각형 점선</value>
+  </data>
+  <data name="recycle" xml:space="preserve">
+    <value>재활용</value>
+  </data>
+  <data name="reddit_logo" xml:space="preserve">
+    <value>Reddit 로고</value>
+  </data>
+  <data name="repeat" xml:space="preserve">
+    <value>반복</value>
+  </data>
+  <data name="repeat_once" xml:space="preserve">
+    <value>반복 한 번</value>
+  </data>
+  <data name="replit_logo" xml:space="preserve">
+    <value>Replit 로고</value>
+  </data>
+  <data name="resize" xml:space="preserve">
+    <value>크기 조정</value>
+  </data>
+  <data name="rewind" xml:space="preserve">
+    <value>되감기</value>
+  </data>
+  <data name="rewind_circle" xml:space="preserve">
+    <value>되감기 원</value>
+  </data>
+  <data name="road_horizon" xml:space="preserve">
+    <value>도로 수평선</value>
+  </data>
+  <data name="robot" xml:space="preserve">
+    <value>로봇</value>
+  </data>
+  <data name="rocket" xml:space="preserve">
+    <value>로켓</value>
+  </data>
+  <data name="rocket_launch" xml:space="preserve">
+    <value>로켓 발사</value>
+  </data>
+  <data name="rows" xml:space="preserve">
+    <value>행</value>
+  </data>
+  <data name="rows_plus_bottom" xml:space="preserve">
+    <value>행 더하기 아래</value>
+  </data>
+  <data name="rows_plus_top" xml:space="preserve">
+    <value>행 더하기 위</value>
+  </data>
+  <data name="rss" xml:space="preserve">
+    <value>Rss</value>
+  </data>
+  <data name="rss_simple" xml:space="preserve">
+    <value>Rss 단순</value>
+  </data>
+  <data name="rug" xml:space="preserve">
+    <value>러그</value>
+  </data>
+  <data name="ruler" xml:space="preserve">
+    <value>자</value>
+  </data>
+  <data name="sailboat" xml:space="preserve">
+    <value>돛단배</value>
+  </data>
+  <data name="scales" xml:space="preserve">
+    <value>저울</value>
+  </data>
+  <data name="scan" xml:space="preserve">
+    <value>스캔</value>
+  </data>
+  <data name="scan_smiley" xml:space="preserve">
+    <value>스캔 스마일</value>
+  </data>
+  <data name="scissors" xml:space="preserve">
+    <value>가위</value>
+  </data>
+  <data name="scooter" xml:space="preserve">
+    <value>스쿠터</value>
+  </data>
+  <data name="screencast" xml:space="preserve">
+    <value>화면 녹화</value>
+  </data>
+  <data name="screwdriver" xml:space="preserve">
+    <value>드라이버</value>
+  </data>
+  <data name="scribble" xml:space="preserve">
+    <value>낙서</value>
+  </data>
+  <data name="scribble_loop" xml:space="preserve">
+    <value>낙서 반복</value>
+  </data>
+  <data name="scroll" xml:space="preserve">
+    <value>두루마리</value>
+  </data>
+  <data name="seal" xml:space="preserve">
+    <value>인장</value>
+  </data>
+  <data name="seal_check" xml:space="preserve">
+    <value>인장 확인</value>
+  </data>
+  <data name="seal_percent" xml:space="preserve">
+    <value>인장 퍼센트</value>
+  </data>
+  <data name="seal_question" xml:space="preserve">
+    <value>인장 질문</value>
+  </data>
+  <data name="seal_warning" xml:space="preserve">
+    <value>인장 경고</value>
+  </data>
+  <data name="seat" xml:space="preserve">
+    <value>좌석</value>
+  </data>
+  <data name="seatbelt" xml:space="preserve">
+    <value>안전벨트</value>
+  </data>
+  <data name="security_camera" xml:space="preserve">
+    <value>보안 카메라</value>
+  </data>
+  <data name="selection" xml:space="preserve">
+    <value>선택</value>
+  </data>
+  <data name="selection_all" xml:space="preserve">
+    <value>선택 모두</value>
+  </data>
+  <data name="selection_background" xml:space="preserve">
+    <value>선택 배경</value>
+  </data>
+  <data name="selection_foreground" xml:space="preserve">
+    <value>선택 전경</value>
+  </data>
+  <data name="selection_inverse" xml:space="preserve">
+    <value>선택 반전</value>
+  </data>
+  <data name="selection_plus" xml:space="preserve">
+    <value>선택 더하기</value>
+  </data>
+  <data name="selection_slash" xml:space="preserve">
+    <value>선택 슬래시</value>
+  </data>
+  <data name="shapes" xml:space="preserve">
+    <value>도형</value>
+  </data>
+  <data name="share" xml:space="preserve">
+    <value>공유</value>
+  </data>
+  <data name="share_fat" xml:space="preserve">
+    <value>공유 굵은</value>
+  </data>
+  <data name="share_network" xml:space="preserve">
+    <value>공유 네트워크</value>
+  </data>
+  <data name="shield" xml:space="preserve">
+    <value>방패</value>
+  </data>
+  <data name="shield_check" xml:space="preserve">
+    <value>방패 확인</value>
+  </data>
+  <data name="shield_checkered" xml:space="preserve">
+    <value>방패 체크무늬</value>
+  </data>
+  <data name="shield_chevron" xml:space="preserve">
+    <value>방패 꺾쇠</value>
+  </data>
+  <data name="shield_plus" xml:space="preserve">
+    <value>방패 더하기</value>
+  </data>
+  <data name="shield_slash" xml:space="preserve">
+    <value>방패 슬래시</value>
+  </data>
+  <data name="shield_star" xml:space="preserve">
+    <value>방패 별</value>
+  </data>
+  <data name="shield_warning" xml:space="preserve">
+    <value>방패 경고</value>
+  </data>
+  <data name="shipping_container" xml:space="preserve">
+    <value>배송 컨테이너</value>
+  </data>
+  <data name="shirt_folded" xml:space="preserve">
+    <value>셔츠 접힌</value>
+  </data>
+  <data name="shooting_star" xml:space="preserve">
+    <value>별똥 별</value>
+  </data>
+  <data name="shopping_bag" xml:space="preserve">
+    <value>쇼핑 가방</value>
+  </data>
+  <data name="shopping_bag_open" xml:space="preserve">
+    <value>쇼핑 가방 열기</value>
+  </data>
+  <data name="shopping_cart" xml:space="preserve">
+    <value>쇼핑 카트</value>
+  </data>
+  <data name="shopping_cart_simple" xml:space="preserve">
+    <value>쇼핑 카트 단순</value>
+  </data>
+  <data name="shovel" xml:space="preserve">
+    <value>삽</value>
+  </data>
+  <data name="shower" xml:space="preserve">
+    <value>샤워</value>
+  </data>
+  <data name="shrimp" xml:space="preserve">
+    <value>새우</value>
+  </data>
+  <data name="shuffle" xml:space="preserve">
+    <value>셔플</value>
+  </data>
+  <data name="shuffle_angular" xml:space="preserve">
+    <value>셔플 angular</value>
+  </data>
+  <data name="shuffle_simple" xml:space="preserve">
+    <value>셔플 단순</value>
+  </data>
+  <data name="sidebar" xml:space="preserve">
+    <value>사이드바</value>
+  </data>
+  <data name="sidebar_simple" xml:space="preserve">
+    <value>사이드바 단순</value>
+  </data>
+  <data name="sigma" xml:space="preserve">
+    <value>시그마</value>
+  </data>
+  <data name="sign_in" xml:space="preserve">
+    <value>표지판 안으로</value>
+  </data>
+  <data name="sign_out" xml:space="preserve">
+    <value>표지판 밖으로</value>
+  </data>
+  <data name="signature" xml:space="preserve">
+    <value>서명</value>
+  </data>
+  <data name="signpost" xml:space="preserve">
+    <value>이정표</value>
+  </data>
+  <data name="sim_card" xml:space="preserve">
+    <value>Sim 카드</value>
+  </data>
+  <data name="siren" xml:space="preserve">
+    <value>사이렌</value>
+  </data>
+  <data name="sketch_logo" xml:space="preserve">
+    <value>스케치 로고</value>
+  </data>
+  <data name="skip_back" xml:space="preserve">
+    <value>건너뛰기 뒤로</value>
+  </data>
+  <data name="skip_back_circle" xml:space="preserve">
+    <value>건너뛰기 뒤로 원</value>
+  </data>
+  <data name="skip_forward" xml:space="preserve">
+    <value>건너뛰기 앞으로</value>
+  </data>
+  <data name="skip_forward_circle" xml:space="preserve">
+    <value>건너뛰기 앞으로 원</value>
+  </data>
+  <data name="skull" xml:space="preserve">
+    <value>해골</value>
+  </data>
+  <data name="skype_logo" xml:space="preserve">
+    <value>Skype 로고</value>
+  </data>
+  <data name="slack_logo" xml:space="preserve">
+    <value>Slack 로고</value>
+  </data>
+  <data name="sliders" xml:space="preserve">
+    <value>슬라이더</value>
+  </data>
+  <data name="sliders_horizontal" xml:space="preserve">
+    <value>슬라이더 가로</value>
+  </data>
+  <data name="slideshow" xml:space="preserve">
+    <value>슬라이드쇼</value>
+  </data>
+  <data name="smiley" xml:space="preserve">
+    <value>스마일</value>
+  </data>
+  <data name="smiley_angry" xml:space="preserve">
+    <value>스마일 화남</value>
+  </data>
+  <data name="smiley_blank" xml:space="preserve">
+    <value>스마일 빈</value>
+  </data>
+  <data name="smiley_meh" xml:space="preserve">
+    <value>스마일 그저 그럼</value>
+  </data>
+  <data name="smiley_melting" xml:space="preserve">
+    <value>스마일 녹는</value>
+  </data>
+  <data name="smiley_nervous" xml:space="preserve">
+    <value>스마일 긴장</value>
+  </data>
+  <data name="smiley_sad" xml:space="preserve">
+    <value>스마일 슬픔</value>
+  </data>
+  <data name="smiley_sticker" xml:space="preserve">
+    <value>스마일 스티커</value>
+  </data>
+  <data name="smiley_wink" xml:space="preserve">
+    <value>스마일 윙크</value>
+  </data>
+  <data name="smiley_x_eyes" xml:space="preserve">
+    <value>스마일 x 눈</value>
+  </data>
+  <data name="snapchat_logo" xml:space="preserve">
+    <value>Snapchat 로고</value>
+  </data>
+  <data name="sneaker" xml:space="preserve">
+    <value>운동화</value>
+  </data>
+  <data name="sneaker_move" xml:space="preserve">
+    <value>운동화 이동</value>
+  </data>
+  <data name="snowflake" xml:space="preserve">
+    <value>눈송이</value>
+  </data>
+  <data name="soccer_ball" xml:space="preserve">
+    <value>축구 공</value>
+  </data>
+  <data name="sock" xml:space="preserve">
+    <value>양말</value>
+  </data>
+  <data name="solar_panel" xml:space="preserve">
+    <value>태양 패널</value>
+  </data>
+  <data name="solar_roof" xml:space="preserve">
+    <value>태양 지붕</value>
+  </data>
+  <data name="sort_ascending" xml:space="preserve">
+    <value>정렬 오름차순</value>
+  </data>
+  <data name="sort_descending" xml:space="preserve">
+    <value>정렬 내림차순</value>
+  </data>
+  <data name="soundcloud_logo" xml:space="preserve">
+    <value>Soundcloud 로고</value>
+  </data>
+  <data name="spade" xml:space="preserve">
+    <value>스페이드</value>
+  </data>
+  <data name="sparkle" xml:space="preserve">
+    <value>반짝임</value>
+  </data>
+  <data name="speaker_hifi" xml:space="preserve">
+    <value>스피커 hifi</value>
+  </data>
+  <data name="speaker_high" xml:space="preserve">
+    <value>스피커 높음</value>
+  </data>
+  <data name="speaker_low" xml:space="preserve">
+    <value>스피커 낮음</value>
+  </data>
+  <data name="speaker_none" xml:space="preserve">
+    <value>스피커 없음</value>
+  </data>
+  <data name="speaker_simple_high" xml:space="preserve">
+    <value>스피커 단순 높음</value>
+  </data>
+  <data name="speaker_simple_low" xml:space="preserve">
+    <value>스피커 단순 낮음</value>
+  </data>
+  <data name="speaker_simple_none" xml:space="preserve">
+    <value>스피커 단순 없음</value>
+  </data>
+  <data name="speaker_simple_slash" xml:space="preserve">
+    <value>스피커 단순 슬래시</value>
+  </data>
+  <data name="speaker_simple_x" xml:space="preserve">
+    <value>스피커 단순 x</value>
+  </data>
+  <data name="speaker_slash" xml:space="preserve">
+    <value>스피커 슬래시</value>
+  </data>
+  <data name="speaker_x" xml:space="preserve">
+    <value>스피커 x</value>
+  </data>
+  <data name="speedometer" xml:space="preserve">
+    <value>속도계</value>
+  </data>
+  <data name="sphere" xml:space="preserve">
+    <value>구</value>
+  </data>
+  <data name="spinner" xml:space="preserve">
+    <value>스피너</value>
+  </data>
+  <data name="spinner_ball" xml:space="preserve">
+    <value>스피너 공</value>
+  </data>
+  <data name="spinner_gap" xml:space="preserve">
+    <value>스피너 간격</value>
+  </data>
+  <data name="spiral" xml:space="preserve">
+    <value>나선</value>
+  </data>
+  <data name="split_horizontal" xml:space="preserve">
+    <value>분할 가로</value>
+  </data>
+  <data name="split_vertical" xml:space="preserve">
+    <value>분할 세로</value>
+  </data>
+  <data name="spotify_logo" xml:space="preserve">
+    <value>Spotify 로고</value>
+  </data>
+  <data name="spray_bottle" xml:space="preserve">
+    <value>스프레이 병</value>
+  </data>
+  <data name="square" xml:space="preserve">
+    <value>정사각형</value>
+  </data>
+  <data name="square_half" xml:space="preserve">
+    <value>정사각형 절반</value>
+  </data>
+  <data name="square_half_bottom" xml:space="preserve">
+    <value>정사각형 절반 아래</value>
+  </data>
+  <data name="square_logo" xml:space="preserve">
+    <value>정사각형 로고</value>
+  </data>
+  <data name="square_split_horizontal" xml:space="preserve">
+    <value>정사각형 분할 가로</value>
+  </data>
+  <data name="square_split_vertical" xml:space="preserve">
+    <value>정사각형 분할 세로</value>
+  </data>
+  <data name="squares_four" xml:space="preserve">
+    <value>정사각형 넷</value>
+  </data>
+  <data name="stack" xml:space="preserve">
+    <value>스택</value>
+  </data>
+  <data name="stack_minus" xml:space="preserve">
+    <value>스택 빼기</value>
+  </data>
+  <data name="stack_overflow_logo" xml:space="preserve">
+    <value>스택 오버플로 로고</value>
+  </data>
+  <data name="stack_plus" xml:space="preserve">
+    <value>스택 더하기</value>
+  </data>
+  <data name="stack_simple" xml:space="preserve">
+    <value>스택 단순</value>
+  </data>
+  <data name="stairs" xml:space="preserve">
+    <value>계단</value>
+  </data>
+  <data name="stamp" xml:space="preserve">
+    <value>도장</value>
+  </data>
+  <data name="standard_definition" xml:space="preserve">
+    <value>표준 정의</value>
+  </data>
+  <data name="star" xml:space="preserve">
+    <value>별</value>
+  </data>
+  <data name="star_and_crescent" xml:space="preserve">
+    <value>별 및 초승달</value>
+  </data>
+  <data name="star_four" xml:space="preserve">
+    <value>별 넷</value>
+  </data>
+  <data name="star_half" xml:space="preserve">
+    <value>별 절반</value>
+  </data>
+  <data name="star_of_david" xml:space="preserve">
+    <value>별 의 다윗</value>
+  </data>
+  <data name="steam_logo" xml:space="preserve">
+    <value>증기 로고</value>
+  </data>
+  <data name="steering_wheel" xml:space="preserve">
+    <value>핸들 바퀴</value>
+  </data>
+  <data name="steps" xml:space="preserve">
+    <value>계단</value>
+  </data>
+  <data name="stethoscope" xml:space="preserve">
+    <value>청진기</value>
+  </data>
+  <data name="sticker" xml:space="preserve">
+    <value>스티커</value>
+  </data>
+  <data name="stool" xml:space="preserve">
+    <value>스툴</value>
+  </data>
+  <data name="stop" xml:space="preserve">
+    <value>정지</value>
+  </data>
+  <data name="stop_circle" xml:space="preserve">
+    <value>정지 원</value>
+  </data>
+  <data name="storefront" xml:space="preserve">
+    <value>매장</value>
+  </data>
+  <data name="strategy" xml:space="preserve">
+    <value>전략</value>
+  </data>
+  <data name="stripe_logo" xml:space="preserve">
+    <value>Stripe 로고</value>
+  </data>
+  <data name="student" xml:space="preserve">
+    <value>학생</value>
+  </data>
+  <data name="subset_of" xml:space="preserve">
+    <value>부분집합 의</value>
+  </data>
+  <data name="subset_proper_of" xml:space="preserve">
+    <value>부분집합 올바른 의</value>
+  </data>
+  <data name="subtitles" xml:space="preserve">
+    <value>자막</value>
+  </data>
+  <data name="subtitles_slash" xml:space="preserve">
+    <value>자막 슬래시</value>
+  </data>
+  <data name="subtract" xml:space="preserve">
+    <value>빼기</value>
+  </data>
+  <data name="subtract_square" xml:space="preserve">
+    <value>빼기 정사각형</value>
+  </data>
+  <data name="subway" xml:space="preserve">
+    <value>지하철</value>
+  </data>
+  <data name="suitcase" xml:space="preserve">
+    <value>여행가방</value>
+  </data>
+  <data name="suitcase_rolling" xml:space="preserve">
+    <value>여행가방 구르는</value>
+  </data>
+  <data name="suitcase_simple" xml:space="preserve">
+    <value>여행가방 단순</value>
+  </data>
+  <data name="sun" xml:space="preserve">
+    <value>해</value>
+  </data>
+  <data name="sun_dim" xml:space="preserve">
+    <value>해 어둡게</value>
+  </data>
+  <data name="sun_horizon" xml:space="preserve">
+    <value>해 수평선</value>
+  </data>
+  <data name="sunglasses" xml:space="preserve">
+    <value>선글라스</value>
+  </data>
+  <data name="superset_of" xml:space="preserve">
+    <value>상위집합 의</value>
+  </data>
+  <data name="superset_proper_of" xml:space="preserve">
+    <value>상위집합 올바른 의</value>
+  </data>
+  <data name="swap" xml:space="preserve">
+    <value>교환</value>
+  </data>
+  <data name="swatches" xml:space="preserve">
+    <value>견본</value>
+  </data>
+  <data name="swimming_pool" xml:space="preserve">
+    <value>수영 수영장</value>
+  </data>
+  <data name="sword" xml:space="preserve">
+    <value>검</value>
+  </data>
+  <data name="synagogue" xml:space="preserve">
+    <value>회당</value>
+  </data>
+  <data name="syringe" xml:space="preserve">
+    <value>주사기</value>
+  </data>
+  <data name="t_shirt" xml:space="preserve">
+    <value>T 셔츠</value>
+  </data>
+  <data name="table" xml:space="preserve">
+    <value>표</value>
+  </data>
+  <data name="tabs" xml:space="preserve">
+    <value>탭</value>
+  </data>
+  <data name="tag" xml:space="preserve">
+    <value>태그</value>
+  </data>
+  <data name="tag_chevron" xml:space="preserve">
+    <value>태그 꺾쇠</value>
+  </data>
+  <data name="tag_simple" xml:space="preserve">
+    <value>태그 단순</value>
+  </data>
+  <data name="target" xml:space="preserve">
+    <value>과녁</value>
+  </data>
+  <data name="taxi" xml:space="preserve">
+    <value>택시</value>
+  </data>
+  <data name="tea_bag" xml:space="preserve">
+    <value>차 가방</value>
+  </data>
+  <data name="telegram_logo" xml:space="preserve">
+    <value>Telegram 로고</value>
+  </data>
+  <data name="television" xml:space="preserve">
+    <value>텔레비전</value>
+  </data>
+  <data name="television_simple" xml:space="preserve">
+    <value>텔레비전 단순</value>
+  </data>
+  <data name="tennis_ball" xml:space="preserve">
+    <value>테니스 공</value>
+  </data>
+  <data name="tent" xml:space="preserve">
+    <value>텐트</value>
+  </data>
+  <data name="terminal" xml:space="preserve">
+    <value>터미널</value>
+  </data>
+  <data name="terminal_window" xml:space="preserve">
+    <value>터미널 창문</value>
+  </data>
+  <data name="test_tube" xml:space="preserve">
+    <value>테스트 시험관</value>
+  </data>
+  <data name="text_a_underline" xml:space="preserve">
+    <value>텍스트 a 밑줄</value>
+  </data>
+  <data name="text_aa" xml:space="preserve">
+    <value>텍스트 aa</value>
+  </data>
+  <data name="text_align_center" xml:space="preserve">
+    <value>텍스트 정렬 가운데</value>
+  </data>
+  <data name="text_align_justify" xml:space="preserve">
+    <value>텍스트 정렬 양쪽 정렬</value>
+  </data>
+  <data name="text_align_left" xml:space="preserve">
+    <value>텍스트 정렬 왼쪽</value>
+  </data>
+  <data name="text_align_right" xml:space="preserve">
+    <value>텍스트 정렬 오른쪽</value>
+  </data>
+  <data name="text_b" xml:space="preserve">
+    <value>텍스트 b</value>
+  </data>
+  <data name="text_columns" xml:space="preserve">
+    <value>텍스트 열</value>
+  </data>
+  <data name="text_h" xml:space="preserve">
+    <value>텍스트 h</value>
+  </data>
+  <data name="text_h_five" xml:space="preserve">
+    <value>텍스트 h 다섯</value>
+  </data>
+  <data name="text_h_four" xml:space="preserve">
+    <value>텍스트 h 넷</value>
+  </data>
+  <data name="text_h_one" xml:space="preserve">
+    <value>텍스트 h 하나</value>
+  </data>
+  <data name="text_h_six" xml:space="preserve">
+    <value>텍스트 h 여섯</value>
+  </data>
+  <data name="text_h_three" xml:space="preserve">
+    <value>텍스트 h 셋</value>
+  </data>
+  <data name="text_h_two" xml:space="preserve">
+    <value>텍스트 h 둘</value>
+  </data>
+  <data name="text_indent" xml:space="preserve">
+    <value>텍스트 들여쓰기</value>
+  </data>
+  <data name="text_italic" xml:space="preserve">
+    <value>텍스트 기울임꼴</value>
+  </data>
+  <data name="text_outdent" xml:space="preserve">
+    <value>텍스트 내어쓰기</value>
+  </data>
+  <data name="text_strikethrough" xml:space="preserve">
+    <value>텍스트 취소선</value>
+  </data>
+  <data name="text_subscript" xml:space="preserve">
+    <value>텍스트 아래 첨자</value>
+  </data>
+  <data name="text_superscript" xml:space="preserve">
+    <value>텍스트 위 첨자</value>
+  </data>
+  <data name="text_t" xml:space="preserve">
+    <value>텍스트 t</value>
+  </data>
+  <data name="text_t_slash" xml:space="preserve">
+    <value>텍스트 t 슬래시</value>
+  </data>
+  <data name="text_underline" xml:space="preserve">
+    <value>텍스트 밑줄</value>
+  </data>
+  <data name="textbox" xml:space="preserve">
+    <value>텍스트 상자</value>
+  </data>
+  <data name="thermometer" xml:space="preserve">
+    <value>온도계</value>
+  </data>
+  <data name="thermometer_cold" xml:space="preserve">
+    <value>온도계 추움</value>
+  </data>
+  <data name="thermometer_hot" xml:space="preserve">
+    <value>온도계 뜨거움</value>
+  </data>
+  <data name="thermometer_simple" xml:space="preserve">
+    <value>온도계 단순</value>
+  </data>
+  <data name="threads_logo" xml:space="preserve">
+    <value>Threads 로고</value>
+  </data>
+  <data name="three_d" xml:space="preserve">
+    <value>셋 d</value>
+  </data>
+  <data name="thumbs_down" xml:space="preserve">
+    <value>엄지 아래</value>
+  </data>
+  <data name="thumbs_up" xml:space="preserve">
+    <value>엄지 위</value>
+  </data>
+  <data name="ticket" xml:space="preserve">
+    <value>티켓</value>
+  </data>
+  <data name="tidal_logo" xml:space="preserve">
+    <value>Tidal 로고</value>
+  </data>
+  <data name="tiktok_logo" xml:space="preserve">
+    <value>Tiktok 로고</value>
+  </data>
+  <data name="tilde" xml:space="preserve">
+    <value>물결표</value>
+  </data>
+  <data name="timer" xml:space="preserve">
+    <value>타이머</value>
+  </data>
+  <data name="tip_jar" xml:space="preserve">
+    <value>팁 병</value>
+  </data>
+  <data name="tipi" xml:space="preserve">
+    <value>티피</value>
+  </data>
+  <data name="tire" xml:space="preserve">
+    <value>타이어</value>
+  </data>
+  <data name="toggle_left" xml:space="preserve">
+    <value>토글 왼쪽</value>
+  </data>
+  <data name="toggle_right" xml:space="preserve">
+    <value>토글 오른쪽</value>
+  </data>
+  <data name="toilet" xml:space="preserve">
+    <value>화장실</value>
+  </data>
+  <data name="toilet_paper" xml:space="preserve">
+    <value>화장실 종이</value>
+  </data>
+  <data name="toolbox" xml:space="preserve">
+    <value>공구함</value>
+  </data>
+  <data name="tooth" xml:space="preserve">
+    <value>치아</value>
+  </data>
+  <data name="tornado" xml:space="preserve">
+    <value>토네이도</value>
+  </data>
+  <data name="tote" xml:space="preserve">
+    <value>토트백</value>
+  </data>
+  <data name="tote_simple" xml:space="preserve">
+    <value>토트백 단순</value>
+  </data>
+  <data name="towel" xml:space="preserve">
+    <value>수건</value>
+  </data>
+  <data name="tractor" xml:space="preserve">
+    <value>트랙터</value>
+  </data>
+  <data name="trademark" xml:space="preserve">
+    <value>상표</value>
+  </data>
+  <data name="trademark_registered" xml:space="preserve">
+    <value>상표 등록 상표</value>
+  </data>
+  <data name="traffic_cone" xml:space="preserve">
+    <value>교통 원뿔</value>
+  </data>
+  <data name="traffic_sign" xml:space="preserve">
+    <value>교통 표지판</value>
+  </data>
+  <data name="traffic_signal" xml:space="preserve">
+    <value>교통 신호</value>
+  </data>
+  <data name="train" xml:space="preserve">
+    <value>기차</value>
+  </data>
+  <data name="train_regional" xml:space="preserve">
+    <value>기차 지역</value>
+  </data>
+  <data name="train_simple" xml:space="preserve">
+    <value>기차 단순</value>
+  </data>
+  <data name="tram" xml:space="preserve">
+    <value>전차</value>
+  </data>
+  <data name="translate" xml:space="preserve">
+    <value>번역</value>
+  </data>
+  <data name="trash" xml:space="preserve">
+    <value>휴지통</value>
+  </data>
+  <data name="trash_simple" xml:space="preserve">
+    <value>휴지통 단순</value>
+  </data>
+  <data name="tray" xml:space="preserve">
+    <value>트레이</value>
+  </data>
+  <data name="tray_arrow_down" xml:space="preserve">
+    <value>트레이 화살표 아래</value>
+  </data>
+  <data name="tray_arrow_up" xml:space="preserve">
+    <value>트레이 화살표 위</value>
+  </data>
+  <data name="treasure_chest" xml:space="preserve">
+    <value>보물 상자</value>
+  </data>
+  <data name="tree" xml:space="preserve">
+    <value>나무</value>
+  </data>
+  <data name="tree_evergreen" xml:space="preserve">
+    <value>나무 상록수</value>
+  </data>
+  <data name="tree_palm" xml:space="preserve">
+    <value>나무 야자수</value>
+  </data>
+  <data name="tree_structure" xml:space="preserve">
+    <value>나무 구조</value>
+  </data>
+  <data name="tree_view" xml:space="preserve">
+    <value>나무 보기</value>
+  </data>
+  <data name="trend_down" xml:space="preserve">
+    <value>추세 아래</value>
+  </data>
+  <data name="trend_up" xml:space="preserve">
+    <value>추세 위</value>
+  </data>
+  <data name="triangle" xml:space="preserve">
+    <value>삼각형</value>
+  </data>
+  <data name="triangle_dashed" xml:space="preserve">
+    <value>삼각형 점선</value>
+  </data>
+  <data name="trolley" xml:space="preserve">
+    <value>카트</value>
+  </data>
+  <data name="trolley_suitcase" xml:space="preserve">
+    <value>카트 여행가방</value>
+  </data>
+  <data name="trophy" xml:space="preserve">
+    <value>트로피</value>
+  </data>
+  <data name="truck" xml:space="preserve">
+    <value>트럭</value>
+  </data>
+  <data name="truck_trailer" xml:space="preserve">
+    <value>트럭 트레일러</value>
+  </data>
+  <data name="tumblr_logo" xml:space="preserve">
+    <value>Tumblr 로고</value>
+  </data>
+  <data name="twitch_logo" xml:space="preserve">
+    <value>Twitch 로고</value>
+  </data>
+  <data name="twitter_logo" xml:space="preserve">
+    <value>Twitter 로고</value>
+  </data>
+  <data name="umbrella" xml:space="preserve">
+    <value>우산</value>
+  </data>
+  <data name="umbrella_simple" xml:space="preserve">
+    <value>우산 단순</value>
+  </data>
+  <data name="union" xml:space="preserve">
+    <value>합집합</value>
+  </data>
+  <data name="unite" xml:space="preserve">
+    <value>합치기</value>
+  </data>
+  <data name="unite_square" xml:space="preserve">
+    <value>합치기 정사각형</value>
+  </data>
+  <data name="upload" xml:space="preserve">
+    <value>업로드</value>
+  </data>
+  <data name="upload_simple" xml:space="preserve">
+    <value>업로드 단순</value>
+  </data>
+  <data name="usb" xml:space="preserve">
+    <value>Usb</value>
+  </data>
+  <data name="user" xml:space="preserve">
+    <value>사용자</value>
+  </data>
+  <data name="user_check" xml:space="preserve">
+    <value>사용자 확인</value>
+  </data>
+  <data name="user_circle" xml:space="preserve">
+    <value>사용자 원</value>
+  </data>
+  <data name="user_circle_check" xml:space="preserve">
+    <value>사용자 원 확인</value>
+  </data>
+  <data name="user_circle_dashed" xml:space="preserve">
+    <value>사용자 원 점선</value>
+  </data>
+  <data name="user_circle_gear" xml:space="preserve">
+    <value>사용자 원 톱니바퀴</value>
+  </data>
+  <data name="user_circle_minus" xml:space="preserve">
+    <value>사용자 원 빼기</value>
+  </data>
+  <data name="user_circle_plus" xml:space="preserve">
+    <value>사용자 원 더하기</value>
+  </data>
+  <data name="user_focus" xml:space="preserve">
+    <value>사용자 초점</value>
+  </data>
+  <data name="user_gear" xml:space="preserve">
+    <value>사용자 톱니바퀴</value>
+  </data>
+  <data name="user_list" xml:space="preserve">
+    <value>사용자 목록</value>
+  </data>
+  <data name="user_minus" xml:space="preserve">
+    <value>사용자 빼기</value>
+  </data>
+  <data name="user_plus" xml:space="preserve">
+    <value>사용자 더하기</value>
+  </data>
+  <data name="user_rectangle" xml:space="preserve">
+    <value>사용자 직사각형</value>
+  </data>
+  <data name="user_sound" xml:space="preserve">
+    <value>사용자 소리</value>
+  </data>
+  <data name="user_square" xml:space="preserve">
+    <value>사용자 정사각형</value>
+  </data>
+  <data name="user_switch" xml:space="preserve">
+    <value>사용자 스위치</value>
+  </data>
+  <data name="users" xml:space="preserve">
+    <value>사용자</value>
+  </data>
+  <data name="users_four" xml:space="preserve">
+    <value>사용자 넷</value>
+  </data>
+  <data name="users_three" xml:space="preserve">
+    <value>사용자 셋</value>
+  </data>
+  <data name="van" xml:space="preserve">
+    <value>밴</value>
+  </data>
+  <data name="vault" xml:space="preserve">
+    <value>금고</value>
+  </data>
+  <data name="vector_three" xml:space="preserve">
+    <value>벡터 셋</value>
+  </data>
+  <data name="vector_two" xml:space="preserve">
+    <value>벡터 둘</value>
+  </data>
+  <data name="vibrate" xml:space="preserve">
+    <value>진동</value>
+  </data>
+  <data name="video" xml:space="preserve">
+    <value>비디오</value>
+  </data>
+  <data name="video_camera" xml:space="preserve">
+    <value>비디오 카메라</value>
+  </data>
+  <data name="video_camera_slash" xml:space="preserve">
+    <value>비디오 카메라 슬래시</value>
+  </data>
+  <data name="video_conference" xml:space="preserve">
+    <value>비디오 회의</value>
+  </data>
+  <data name="vignette" xml:space="preserve">
+    <value>비네팅</value>
+  </data>
+  <data name="vinyl_record" xml:space="preserve">
+    <value>레코드판 녹화</value>
+  </data>
+  <data name="virtual_reality" xml:space="preserve">
+    <value>가상 현실</value>
+  </data>
+  <data name="virus" xml:space="preserve">
+    <value>바이러스</value>
+  </data>
+  <data name="visor" xml:space="preserve">
+    <value>챙</value>
+  </data>
+  <data name="voicemail" xml:space="preserve">
+    <value>음성사서함</value>
+  </data>
+  <data name="volleyball" xml:space="preserve">
+    <value>배구</value>
+  </data>
+  <data name="wall" xml:space="preserve">
+    <value>벽</value>
+  </data>
+  <data name="wallet" xml:space="preserve">
+    <value>지갑</value>
+  </data>
+  <data name="warehouse" xml:space="preserve">
+    <value>창고</value>
+  </data>
+  <data name="warning" xml:space="preserve">
+    <value>경고</value>
+  </data>
+  <data name="warning_circle" xml:space="preserve">
+    <value>경고 원</value>
+  </data>
+  <data name="warning_diamond" xml:space="preserve">
+    <value>경고 다이아몬드</value>
+  </data>
+  <data name="warning_octagon" xml:space="preserve">
+    <value>경고 팔각형</value>
+  </data>
+  <data name="washing_machine" xml:space="preserve">
+    <value>세탁 기계</value>
+  </data>
+  <data name="watch" xml:space="preserve">
+    <value>손목시계</value>
+  </data>
+  <data name="wave_sawtooth" xml:space="preserve">
+    <value>파도 톱니</value>
+  </data>
+  <data name="wave_sine" xml:space="preserve">
+    <value>파도 사인</value>
+  </data>
+  <data name="wave_square" xml:space="preserve">
+    <value>파도 정사각형</value>
+  </data>
+  <data name="wave_triangle" xml:space="preserve">
+    <value>파도 삼각형</value>
+  </data>
+  <data name="waveform" xml:space="preserve">
+    <value>파형</value>
+  </data>
+  <data name="waveform_slash" xml:space="preserve">
+    <value>파형 슬래시</value>
+  </data>
+  <data name="waves" xml:space="preserve">
+    <value>파도</value>
+  </data>
+  <data name="webcam" xml:space="preserve">
+    <value>웹캠</value>
+  </data>
+  <data name="webcam_slash" xml:space="preserve">
+    <value>웹캠 슬래시</value>
+  </data>
+  <data name="webhooks_logo" xml:space="preserve">
+    <value>웹훅 로고</value>
+  </data>
+  <data name="wechat_logo" xml:space="preserve">
+    <value>Wechat 로고</value>
+  </data>
+  <data name="whatsapp_logo" xml:space="preserve">
+    <value>Whatsapp 로고</value>
+  </data>
+  <data name="wheelchair" xml:space="preserve">
+    <value>휠체어</value>
+  </data>
+  <data name="wheelchair_motion" xml:space="preserve">
+    <value>휠체어 동작</value>
+  </data>
+  <data name="wifi_high" xml:space="preserve">
+    <value>와이파이 높음</value>
+  </data>
+  <data name="wifi_low" xml:space="preserve">
+    <value>와이파이 낮음</value>
+  </data>
+  <data name="wifi_medium" xml:space="preserve">
+    <value>와이파이 중간</value>
+  </data>
+  <data name="wifi_none" xml:space="preserve">
+    <value>와이파이 없음</value>
+  </data>
+  <data name="wifi_slash" xml:space="preserve">
+    <value>와이파이 슬래시</value>
+  </data>
+  <data name="wifi_x" xml:space="preserve">
+    <value>와이파이 x</value>
+  </data>
+  <data name="wind" xml:space="preserve">
+    <value>바람</value>
+  </data>
+  <data name="windmill" xml:space="preserve">
+    <value>풍차</value>
+  </data>
+  <data name="windows_logo" xml:space="preserve">
+    <value>Windows 로고</value>
+  </data>
+  <data name="wine" xml:space="preserve">
+    <value>와인</value>
+  </data>
+  <data name="wrench" xml:space="preserve">
+    <value>렌치</value>
+  </data>
+  <data name="x" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="x_circle" xml:space="preserve">
+    <value>X 원</value>
+  </data>
+  <data name="x_logo" xml:space="preserve">
+    <value>X 로고</value>
+  </data>
+  <data name="x_square" xml:space="preserve">
+    <value>X 정사각형</value>
+  </data>
+  <data name="yarn" xml:space="preserve">
+    <value>실</value>
+  </data>
+  <data name="yin_yang" xml:space="preserve">
+    <value>음 양</value>
+  </data>
+  <data name="youtube_logo" xml:space="preserve">
+    <value>Youtube 로고</value>
+  </data>
+</root>

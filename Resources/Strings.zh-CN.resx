@@ -3819,8 +3819,8 @@
   <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
     <value>QRCoder 1.6</value>
   </data>
-  <data name="Tabler_Icons_414587a7" xml:space="preserve">
-    <value>Tabler Icons</value>
+  <data name="Phosphor_Icons_db78df19" xml:space="preserve">
+    <value>Phosphor Icons</value>
   </data>
   <data name="LibRaw_e88f46b3" xml:space="preserve">
     <value>LibRaw</value>
@@ -10586,6 +10586,36 @@
   </data>
   <data name="Als_behalten_markieren_erneut_nimmt_es_zur_ck_ab69b87e" xml:space="preserve">
     <value>标记为保留（再按一次撤销）</value>
+  </data>
+  <data name="D_nn_c3b84673" xml:space="preserve">
+    <value>极细</value>
+  </data>
+  <data name="Leicht_42ea0bb0" xml:space="preserve">
+    <value>细</value>
+  </data>
+  <data name="Gef_llt_0b23a7e4" xml:space="preserve">
+    <value>填充</value>
+  </data>
+  <data name="Mausrad_im_Viewer_90c32243" xml:space="preserve">
+    <value>查看器中的鼠标滚轮</value>
+  </data>
+  <data name="Mausrad_im_Vollbild_und_in_der_Diashow_979d875f" xml:space="preserve">
+    <value>全屏和幻灯片中的鼠标滚轮</value>
+  </data>
+  <data name="Bildwechsel_e184441d" xml:space="preserve">
+    <value>切换图片</value>
+  </data>
+  <data name="Was_das_Mausrad_im_Viewer_tut_Mit_STRG_tut_es_je_72e76877" xml:space="preserve">
+    <value>鼠标滚轮在查看器中的作用。按住 CTRL 时执行另一种操作，按住鼠标右键时始终缩放。</value>
+  </data>
+  <data name="Was_das_Mausrad_im_Vollbild_und_in_der_Diashow_t_23cc7c78" xml:space="preserve">
+    <value>鼠标滚轮在全屏和幻灯片中的作用。按住 CTRL 时执行另一种操作，按住鼠标右键时始终缩放。</value>
+  </data>
+  <data name="Rechtsklick_Mausrad_4d730519" xml:space="preserve">
+    <value>右键+鼠标滚轮</value>
+  </data>
+  <data name="Weiterbl_ttern_oder_am_Mauszeiger_zoomen_wie_in__b40c03ec" xml:space="preserve">
+    <value>按设置切换图片或在指针处缩放。按住 CTRL 执行另一种操作</value>
   </data>
   <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
     <value>在现有窗口中打开</value>

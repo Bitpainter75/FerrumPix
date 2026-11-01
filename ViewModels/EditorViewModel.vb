@@ -1656,15 +1656,25 @@ Namespace ViewModels
 
         ''' <summary>Wo die Symbole liegen. Eine Stelle fuer beide Listen, die feste und die
         ''' gesammelte.</summary>
-        Private Const ShapeIconFolder As String = "avares://FerrumPix/Assets/Icons/outline/"
+        Private Const ShapeIconFolder As String = "avares://FerrumPix/Assets/Icons/phosphor/"
 
-        Private ReadOnly _allShapeIcons As New List(Of ShapeIconEntry)()
+        ''' <summary>Der Grund aller Symbole. Die festen Formen nehmen Phosphor (<c>phosphor/regular</c>),
+        ''' wo es ein passendes gibt, sonst eine eigene Zeichnung (<c>custom</c>).</summary>
+        Private Const IconRoot As String = "avares://FerrumPix/Assets/Icons/"
         ''' <summary>Ob die Symbolliste schon angefordert wurde. Einmal reicht - auch wenn das
         ''' Werkzeug danach noch oft gewechselt wird.</summary>
         Private _shapeIconsRequested As Boolean
         Private _shapeIconsLoading As Boolean
         Private ReadOnly _fixedShapeItems As New ObservableCollection(Of ShapeIconEntry)()
         Private ReadOnly _filteredShapeIcons As New BulkObservableCollection(Of ShapeIconEntry)()
+
+        ''' <summary>Die Symbolgalerie: Phosphor (MIT, Lizenz in <c>Assets/Icons/phosphor/LICENSE</c>), jedes
+        ''' Symbol in fünf Strichstärken, je Stärke ein Ordner, die Datei mit der Stärke als Anhang
+        ''' („acorn-thin“, außer bei „regular“). Die zweifarbige Stärke fehlt: der Zeichner legt alle
+        ''' Pfade zu EINER Fläche zusammen, sie sähe aus wie die gefüllte.</summary>
+        Private Shared ReadOnly ShapeIconWeights As String() = {"thin", "light", "regular", "bold", "fill"}
+        Private ReadOnly _shapeIconsByWeight As New Dictionary(Of String, List(Of ShapeIconEntry))(StringComparer.Ordinal)
+        Private _shapeIconWeight As String = "regular"
         Private ReadOnly _watermarkPresets As New List(Of WatermarkPresetSettings)()
         Public ReadOnly Property SavedXmpPresets As ObservableCollection(Of XmpPresetSettings) = New ObservableCollection(Of XmpPresetSettings)()
         Public ReadOnly Property SavedLutPresets As ObservableCollection(Of LutPresetSettings) = New ObservableCollection(Of LutPresetSettings)()
@@ -1697,6 +1707,67 @@ Namespace ViewModels
         Public ReadOnly Property FilteredShapeIcons As BulkObservableCollection(Of ShapeIconEntry)
             Get
                 Return _filteredShapeIcons
+            End Get
+        End Property
+
+        Private _setShapeIconWeightCommand As ICommand
+        ''' <summary>Umschalter der Galerie, Parameter ist die Stärke („thin“ … „fill“).</summary>
+        Public ReadOnly Property SetShapeIconWeightCommand As ICommand
+            Get
+                If _setShapeIconWeightCommand Is Nothing Then
+                    _setShapeIconWeightCommand = New DelegateCommand(Sub(p) ShapeIconWeight = TryCast(p, String))
+                End If
+                Return _setShapeIconWeightCommand
+            End Get
+        End Property
+
+        ''' <summary>Die Strichstärke, in der die Galerie ihre Symbole zeigt.</summary>
+        Public Property ShapeIconWeight As String
+            Get
+                Return _shapeIconWeight
+            End Get
+            Set(value As String)
+                If Not ShapeIconWeights.Contains(value) OrElse _shapeIconWeight = value Then Return
+                Me.RaiseAndSetIfChanged(_shapeIconWeight, value)
+                For Each name In {NameOf(IsShapeIconWeightThin), NameOf(IsShapeIconWeightLight), NameOf(IsShapeIconWeightRegular),
+                                  NameOf(IsShapeIconWeightBold), NameOf(IsShapeIconWeightFill)}
+                    Me.RaisePropertyChanged(name)
+                Next
+                RefreshFilteredShapeIcons()
+                ' Die Formen oben folgen derselben Stärke, eine schon gewählte gleich mit.
+                LoadFixedShapeItems()
+                UpdateShapeIconStates()
+                ApplyShapeIconWeightToPendingShape(_pendingInsertKind)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsShapeIconWeightThin As Boolean
+            Get
+                Return _shapeIconWeight = "thin"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsShapeIconWeightLight As Boolean
+            Get
+                Return _shapeIconWeight = "light"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsShapeIconWeightRegular As Boolean
+            Get
+                Return _shapeIconWeight = "regular"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsShapeIconWeightBold As Boolean
+            Get
+                Return _shapeIconWeight = "bold"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsShapeIconWeightFill As Boolean
+            Get
+                Return _shapeIconWeight = "fill"
             End Get
         End Property
 
@@ -1936,15 +2007,20 @@ Namespace ViewModels
             ' darunter liest ihn nur, aber angelegt wird er beim ersten Zugriff, und der soll nicht
             ' zufaellig auf dem Hintergrundfaden neben einem Icon der Oberflaeche liegen.
             Try
-                Avalonia.Platform.AssetLoader.Exists(New Uri(ShapeIconFolder & "x.svg"), Nothing)
+                Avalonia.Platform.AssetLoader.Exists(New Uri(ShapeIconFolder & "regular/x.svg"), Nothing)
             Catch
             End Try
 
             Task.Run(Sub()
-                         Dim loaded = BuildShapeIcons()
+                         Dim keywords = LoadShapeIconKeywords()
+                         Dim loaded = ShapeIconWeights.ToDictionary(
+                             Function(w) w,
+                             Function(w) BuildShapeIcons(ShapeIconFolder & w & "/", If(w = "regular", "", "-" & w), keywords))
                          Dispatcher.UIThread.Post(Sub()
-                                                      _allShapeIcons.Clear()
-                                                      _allShapeIcons.AddRange(loaded)
+                                                      _shapeIconsByWeight.Clear()
+                                                      For Each pair In loaded
+                                                          _shapeIconsByWeight(pair.Key) = pair.Value
+                                                      Next
                                                       _shapeIconsLoading = False
                                                       Me.RaisePropertyChanged(NameOf(IsShapeIconsLoading))
                                                       RefreshFilteredShapeIcons()
@@ -1954,19 +2030,46 @@ Namespace ViewModels
 
         ''' <summary>Sammelt die Symbole ein. Keine Beruehrung mit der Oberflaeche - laeuft im
         ''' Hintergrund.</summary>
-        Private Shared Function BuildShapeIcons() As List(Of ShapeIconEntry)
+        ''' <param name="nameSuffix">Ein Anhang am Dateinamen, der nicht zum Namen gehört (die gefüllte
+        ''' Fassung heißt „acorn-fill“).</param>
+        ''' <summary>Die englischen Suchwoerter je Symbol, eine Zeile „name TAB wort wort …". Fehlt
+        ''' die Datei, sucht die Galerie nur nach Namen.</summary>
+        Private Shared Function LoadShapeIconKeywords() As Dictionary(Of String, String)
+            Dim result As New Dictionary(Of String, String)(StringComparer.Ordinal)
+            Try
+                Using stream = Avalonia.Platform.AssetLoader.Open(New Uri(ShapeIconFolder & "tags.tsv"))
+                    Using reader As New IO.StreamReader(stream)
+                        Dim line = reader.ReadLine()
+                        While line IsNot Nothing
+                            Dim tab = line.IndexOf(ControlChars.Tab)
+                            If tab > 0 Then result(line.Substring(0, tab)) = line.Substring(tab + 1)
+                            line = reader.ReadLine()
+                        End While
+                    End Using
+                End Using
+            Catch
+            End Try
+            Return result
+        End Function
+
+        Private Shared Function BuildShapeIcons(folder As String, nameSuffix As String,
+                                                keywords As Dictionary(Of String, String)) As List(Of ShapeIconEntry)
             Dim result As New List(Of ShapeIconEntry)()
             Try
-                Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri(ShapeIconFolder), Nothing)
+                Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri(folder), Nothing)
                 For Each uri In assets
                     Dim path = uri.ToString()
                     If Not path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
-                    Dim sourceName = FormatIconDisplayName(path)
+                    Dim baseName = IO.Path.GetFileNameWithoutExtension(If(nameSuffix.Length > 0, path.Replace(nameSuffix & ".svg", ".svg"), path))
+                    Dim sourceName = FormatIconDisplayName(baseName & ".svg")
+                    Dim tags As String = Nothing
+                    keywords.TryGetValue(baseName, tags)
                     result.Add(New ShapeIconEntry With {
                         .IconPath = path,
                         .SourceName = sourceName,
                         .DisplayName = LocalizationService.Tag(sourceName),
-                        .PendingKind = "Svg:" & path
+                        .PendingKind = "Svg:" & path,
+                        .Keywords = If(tags, "")
                     })
                 Next
                 result.Sort(Function(a, b) String.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -1977,27 +2080,30 @@ Namespace ViewModels
 
         Private Sub LoadFixedShapeItems()
             _fixedShapeItems.Clear()
-            Const base As String = ShapeIconFolder
+            ' Die Knoepfe tragen die gewaehlte Strichstaerke wie die Symbolliste darunter
+            ' (ShapeIconWeight); die eigenen Zeichnungen gibt es nur in einer.
+            Dim base = IconRoot & "phosphor/" & _shapeIconWeight & "/"
+            Dim suffix = If(_shapeIconWeight = "regular", "", "-" & _shapeIconWeight)
             ' Der PFAD gehoert hier NICHT hin: jede Form dieser Liste wird
             ' AUFGEZOGEN, der Pfad wird Punkt fuer Punkt gesetzt. Er ist ein eigenes Werkzeug und
             ' keine Form - und stand hier zuletzt nur als zweiter Weg in dasselbe Werkzeug.
-            AddFixedShape("Rectangle", "Rechteck", base & "rectangle.svg")
-            AddFixedShape("RoundedRectangle", "Abgerundetes Rechteck", base & "square-rounded.svg")
-            AddFixedShape("Ellipse", "Kreis/Ellipse", base & "circle.svg")
-            AddFixedShape("Triangle", "Dreieck", base & "triangle.svg")
-            AddFixedShape("Trapezoid", "Trapez", base & "trapezoid.svg")
-            AddFixedShape("Diamond", "Raute", base & "square-rotated.svg")
-            AddFixedShape("Polygon", "Polygon", base & "hexagon.svg")
-            AddFixedShape("Star", "Stern", base & "star.svg")
-            AddFixedShape("DoubleStar", "Doppelstern", base & "eight-point-star.svg")
-            AddFixedShape("Line", "Linie", base & "line-shape.svg")
-            AddFixedShape("Arrow", "Pfeil", base & "arrow-right.svg")
-            AddFixedShape("SpeechBubble", "Sprechblase", base & "speech-bubble-shape.svg")
-            AddFixedShape("EllipseSpeechBubble", "Ellipsen-Sprechblase", base & "ellipse-speech-bubble-shape.svg")
-            AddFixedShape("Droplet", "Tropfen", base & "droplet-shape.svg")
-            AddFixedShape("Cloud", "Wolke", base & "cloud.svg")
-            AddFixedShape("Heart", "Herz", base & "heart.svg")
-            AddFixedShape("Spiral", "Spirale", base & "spiral.svg")
+            AddFixedShape("Rectangle", "Rechteck", base & "rectangle" & suffix & ".svg")
+            AddFixedShape("RoundedRectangle", "Abgerundetes Rechteck", base & "square" & suffix & ".svg")
+            AddFixedShape("Ellipse", "Kreis/Ellipse", base & "circle" & suffix & ".svg")
+            AddFixedShape("Triangle", "Dreieck", base & "triangle" & suffix & ".svg")
+            AddFixedShape("Trapezoid", "Trapez", IconRoot & "custom/trapezoid.svg")
+            AddFixedShape("Diamond", "Raute", base & "diamond" & suffix & ".svg")
+            AddFixedShape("Polygon", "Polygon", base & "hexagon" & suffix & ".svg")
+            AddFixedShape("Star", "Stern", base & "star" & suffix & ".svg")
+            AddFixedShape("DoubleStar", "Doppelstern", IconRoot & "custom/eight-point-star.svg")
+            AddFixedShape("Line", "Linie", base & "line-segment" & suffix & ".svg")
+            AddFixedShape("Arrow", "Pfeil", base & "arrow-right" & suffix & ".svg")
+            AddFixedShape("SpeechBubble", "Sprechblase", base & "chat" & suffix & ".svg")
+            AddFixedShape("EllipseSpeechBubble", "Ellipsen-Sprechblase", base & "chat-circle" & suffix & ".svg")
+            AddFixedShape("Droplet", "Tropfen", base & "drop" & suffix & ".svg")
+            AddFixedShape("Cloud", "Wolke", base & "cloud" & suffix & ".svg")
+            AddFixedShape("Heart", "Herz", base & "heart" & suffix & ".svg")
+            AddFixedShape("Spiral", "Spirale", base & "spiral" & suffix & ".svg")
         End Sub
 
         Private Sub AddFixedShape(kind As String, displayName As String, iconPath As String)
@@ -2734,12 +2840,14 @@ Namespace ViewModels
 
         Private Sub RefreshFilteredShapeIcons()
             Dim query = _shapeIconSearchText.Trim()
+            Dim icons As List(Of ShapeIconEntry) = Nothing
+            If Not _shapeIconsByWeight.TryGetValue(_shapeIconWeight, icons) Then icons = New List(Of ShapeIconEntry)()
             Dim matches = If(String.IsNullOrEmpty(query),
-                              _allShapeIcons,
-                              _allShapeIcons.Where(Function(e) e.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
-                                                                e.SourceName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
-                                                                e.IconPath.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList())
-            ' Ein einzelnes Reset statt viertausend Add-Ereignisse.
+                              icons,
+                              icons.Where(Function(e) e.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
+                                                      e.SourceName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
+                                                      e.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList())
+            ' Ein einzelnes Reset statt tausend Add-Ereignisse.
             _filteredShapeIcons.ReplaceAll(matches)
         End Sub
 
@@ -4612,6 +4720,42 @@ Namespace ViewModels
             If normalizedKind = "Text" OrElse (normalizedKind = "Watermark" AndAlso Not IsWatermarkImageSource) Then
                 UpdatePendingTextAnnotationSize()
             End If
+            ApplyShapeIconWeightToPendingShape(rawKind)
+        End Sub
+
+        ''' <summary>Die Strichstaerke der Galerie gilt auch fuer eine Form aus der Liste darueber:
+        ''' „Gefuellt" setzt sie als Flaeche ohne Kontur, die vier anderen ohne Fuellung mit einer
+        ''' Kontur, deren Breite im selben Verhaeltnis zur Form steht wie beim Symbol im Knopf
+        ''' (Phosphor zeichnet auf 256 Einheiten mit 4, 12, 16 und 24). Linie, Pfeil und Spirale
+        ''' haben keine Flaeche und bekommen nur die Breite, „Gefuellt" wie „Fett". Danach ist es eine
+        ''' gewoehnliche Form, Fuellung und Kontur bleiben frei einstellbar.</summary>
+        Private Sub ApplyShapeIconWeightToPendingShape(rawKind As String)
+            If HasSelectedAnnotation OrElse String.IsNullOrEmpty(rawKind) Then Return
+            If Not _fixedShapeItems.Any(Function(i) String.Equals(i.PendingKind, rawKind, StringComparison.OrdinalIgnoreCase)) Then Return
+            Dim ratio As Double
+            Select Case _shapeIconWeight
+                Case "thin" : ratio = 4.0 / 256.0
+                Case "light" : ratio = 12.0 / 256.0
+                Case "bold", "fill" : ratio = 24.0 / 256.0
+                Case Else : ratio = 16.0 / 256.0
+            End Select
+            Dim side = Math.Max(1, Math.Min(AnnotationWidthPixels, AnnotationHeightPixels))
+            Dim width = Math.Max(1.0, Math.Round(side * ratio))
+            Dim isLineKind = String.Equals(rawKind, "Line", StringComparison.OrdinalIgnoreCase) OrElse
+                             String.Equals(rawKind, "Arrow", StringComparison.OrdinalIgnoreCase) OrElse
+                             String.Equals(rawKind, "Spiral", StringComparison.OrdinalIgnoreCase)
+            Dim ink = AutomaticInkColorForDocumentBackground()
+            If isLineKind Then
+                AnnotationStrokeWidth = width
+            ElseIf _shapeIconWeight = "fill" Then
+                AnnotationFillColor = ink
+                _annotationFillColorIsAutomaticDefault = True
+                AnnotationStrokeWidth = 0
+            Else
+                AnnotationFillColor = "#00FFFFFF"
+                _annotationFillColorIsAutomaticDefault = False
+                AnnotationStrokeWidth = width
+            End If
         End Sub
 
         Private Sub UpdateShapeIconStates()
@@ -4625,7 +4769,7 @@ Namespace ViewModels
                 item.IsPending = String.Equals(NormalizeAnnotationKind(item.PendingKind), NormalizeAnnotationKind(_pendingInsertKind), StringComparison.OrdinalIgnoreCase)
                 item.IsSelectedKind = Not String.IsNullOrEmpty(selectedKind) AndAlso String.Equals(NormalizeAnnotationKind(item.PendingKind), selectedKind, StringComparison.OrdinalIgnoreCase)
             Next
-            For Each item In _allShapeIcons
+            For Each item In _shapeIconsByWeight.Values.SelectMany(Function(list) list)
                 item.IsPending = String.Equals(item.PendingKind, _pendingInsertKind, StringComparison.OrdinalIgnoreCase)
                 item.IsSelectedKind = Not String.IsNullOrEmpty(selectedImagePath) AndAlso String.Equals(item.IconPath, selectedImagePath, StringComparison.OrdinalIgnoreCase)
             Next
@@ -5827,26 +5971,26 @@ Namespace ViewModels
         ''' dasselbe zeigt wie sein Eintrag in der Werkzeugleiste.</summary>
         Public ReadOnly Property CurrentToolIconSource As String
             Get
-                Const base As String = "avares://FerrumPix/Assets/Icons/outline/"
+                Const base As String = "avares://FerrumPix/Assets/Icons/phosphor/regular/"
                 If HasMultiAnnotationSelection Then
                     ' Gruppe = Ordner, freie Mehrfachauswahl = Stapel.
-                    Return base & If(SelectedAnnotationsGroup() IsNot Nothing, "folder.svg", "stack-2.svg")
+                    Return base & If(SelectedAnnotationsGroup() IsNot Nothing, "folder.svg", "stack.svg")
                 End If
                 Select Case _currentTool
-                    Case EditorTool.Move : Return base & "pointer.svg"
+                    Case EditorTool.Move : Return base & "cursor.svg"
                     Case EditorTool.Selection : Return base & "rectangle.svg"
-                    Case EditorTool.Mask : Return base & "mask.svg"
-                    Case EditorTool.Retouch : Return base & If(_isCloneMode, "rubber-stamp.svg", If(_isRepairMode, "bandage.svg", "blur.svg"))
-                    Case EditorTool.Draw : Return base & If(_toneMode <> "", ToneModeIcon(), If(_isEraserMode, "eraser.svg", "brush.svg"))
-                    Case EditorTool.Geometry, EditorTool.Insert : Return base & "shape.svg"
+                    Case EditorTool.Mask : Return base & "mask-happy.svg"
+                    Case EditorTool.Retouch : Return If(_isRepairMode AndAlso Not _isCloneMode, IconRoot & "custom/repair-brush.svg", base & If(_isCloneMode, "stamp.svg", "drop-half-bottom.svg"))
+                    Case EditorTool.Draw : Return base & If(_toneMode <> "", ToneModeIcon(), If(_isEraserMode, "eraser.svg", "paint-brush.svg"))
+                    Case EditorTool.Geometry, EditorTool.Insert : Return base & "shapes.svg"
                     Case EditorTool.Text
                         Select Case NormalizeAnnotationKind(If(String.IsNullOrEmpty(_pendingInsertKind), SelectedAnnotationKind, _pendingInsertKind))
-                            Case "Image" : Return base & "photo.svg"
-                            Case "QR" : Return base & "qrcode.svg"
+                            Case "Image" : Return base & "image.svg"
+                            Case "QR" : Return base & "qr-code.svg"
                             Case "Watermark" : Return base & "copyright.svg"
-                            Case Else : Return base & "text-size.svg"
+                            Case Else : Return base & "text-t.svg"
                         End Select
-                    Case Else : Return base & "square-rounded-plus.svg"
+                    Case Else : Return base & "plus-square.svg"
                 End Select
             End Get
         End Property
@@ -8348,30 +8492,89 @@ Namespace ViewModels
                 For Each kind In ImageProcessor.FrameSymbolKinds
                     liste.Add(ImageAnnotation.GermanKindLabel(kind))
                 Next
+                liste.Add(FrameSymbolCollectionLabel)
                 Return liste
             End Get
         End Property
+
+        ''' <summary>Der letzte Eintrag der Liste: ein Symbol aus derselben Sammlung wie im
+        ''' Symbolfeld des Einfuegen-Werkzeugs.</summary>
+        Private Const FrameSymbolCollectionLabel As String = "Weitere Symbole"
 
         Public Property FrameSymbolLabel As String
             Get
                 Dim aktuell = If(FindFrameAnnotation()?.FrameSymbol, "")
                 If String.IsNullOrWhiteSpace(aktuell) Then Return "Kein"
+                If ImageProcessor.FrameSymbolIconPath(aktuell) IsNot Nothing Then Return FrameSymbolCollectionLabel
                 Return ImageAnnotation.GermanKindLabel(aktuell)
             End Get
             Set(value As String)
                 Dim target = ""
-                For Each kind In ImageProcessor.FrameSymbolKinds
-                    If String.Equals(ImageAnnotation.GermanKindLabel(kind), value, StringComparison.Ordinal) Then
-                        target = kind
-                        Exit For
-                    End If
-                Next
+                If String.Equals(value, FrameSymbolCollectionLabel, StringComparison.Ordinal) Then
+                    ' Ein schon gewaehltes Sammlungssymbol bleibt; sonst steht der Stern der
+                    ' gewaehlten Strichstaerke da, bis eines aus der Liste angeklickt wird.
+                    Dim aktuell = If(FindFrameAnnotation()?.FrameSymbol, "")
+                    target = If(ImageProcessor.FrameSymbolIconPath(aktuell) IsNot Nothing, aktuell,
+                                ImageProcessor.FrameSymbolIconPrefix & ShapeIconFolder & _shapeIconWeight & "/star" &
+                                If(_shapeIconWeight = "regular", "", "-" & _shapeIconWeight) & ".svg")
+                Else
+                    For Each kind In ImageProcessor.FrameSymbolKinds
+                        If String.Equals(ImageAnnotation.GermanKindLabel(kind), value, StringComparison.Ordinal) Then
+                            target = kind
+                            Exit For
+                        End If
+                    Next
+                End If
                 SetFrameValue(NameOf(FrameSymbolLabel),
                               Function(f) String.Equals(f.FrameSymbol, target, StringComparison.Ordinal),
                               Sub(f) f.FrameSymbol = target)
-                Me.RaisePropertyChanged(NameOf(ShowFrameSymbolControls))
+                RaiseFrameSymbolChanged()
             End Set
         End Property
+
+        ''' <summary>Die Symbolliste unter der Auswahl. Sie ist DIESELBE wie im Einfuegen-Werkzeug
+        ''' (<see cref="FilteredShapeIcons"/> samt Suche und Strichstaerke): die Sammlung wird einmal
+        ''' eingelesen, und beide Felder zeigen sie.</summary>
+        Public ReadOnly Property ShowFrameSymbolGallery As Boolean
+            Get
+                Return ImageProcessor.FrameSymbolIconPath(FindFrameAnnotation()?.FrameSymbol) IsNot Nothing
+            End Get
+        End Property
+
+        ''' <summary>Das gewaehlte Sammlungssymbol, fuer die Anzeige neben der Auswahl.</summary>
+        Public ReadOnly Property FrameSymbolIconSource As String
+            Get
+                Return ImageProcessor.FrameSymbolIconPath(FindFrameAnnotation()?.FrameSymbol)
+            End Get
+        End Property
+
+        Private _setFrameSymbolIconCommand As ICommand
+        Public ReadOnly Property SetFrameSymbolIconCommand As ICommand
+            Get
+                If _setFrameSymbolIconCommand Is Nothing Then
+                    _setFrameSymbolIconCommand = New DelegateCommand(Sub(p) SetFrameSymbolIcon(TryCast(p, String)))
+                End If
+                Return _setFrameSymbolIconCommand
+            End Get
+        End Property
+
+        Public Sub SetFrameSymbolIcon(iconPath As String)
+            Dim target = ImageProcessor.FrameSymbolIconPrefix & If(iconPath, "")
+            If ImageProcessor.FrameSymbolIconPath(target) Is Nothing Then Return
+            SetFrameValue(NameOf(FrameSymbolLabel),
+                          Function(f) String.Equals(f.FrameSymbol, target, StringComparison.Ordinal),
+                          Sub(f) f.FrameSymbol = target)
+            RaiseFrameSymbolChanged()
+        End Sub
+
+        Private Sub RaiseFrameSymbolChanged()
+            ' Die Sammlung wird erst gelesen, wenn eines der beiden Felder sie zeigt.
+            If ShowFrameSymbolGallery Then EnsureShapeIconsLoaded()
+            Me.RaisePropertyChanged(NameOf(FrameSymbolLabel))
+            Me.RaisePropertyChanged(NameOf(ShowFrameSymbolControls))
+            Me.RaisePropertyChanged(NameOf(ShowFrameSymbolGallery))
+            Me.RaisePropertyChanged(NameOf(FrameSymbolIconSource))
+        End Sub
 
         ''' <summary>Abstand und Mitdrehen ergeben nur mit einem Symbol einen Sinn.</summary>
         Public ReadOnly Property ShowFrameSymbolControls As Boolean
@@ -10855,9 +11058,21 @@ Namespace ViewModels
         ''' <summary>Laesst sich die aktuelle Auswahl in die jeweils andere Art umwandeln?</summary>
         Public ReadOnly Property CanConvertKind As Boolean
             Get
-                Return _hasActiveSelection
+                Return _hasActiveSelection OrElse ConvertTargetLayer() IsNot Nothing
             End Get
         End Property
+
+        ''' <summary>Die Ebene, die beim Umwandeln mitwechselt: die Ebene, zu der die aktive Auswahl
+        ''' geworden ist, sonst die im Ebenenpanel markierte Auswahl- oder Maskenebene, deren Maske
+        ''' gerade offen ist. Eine Verlaufsmaske laedt keine Auswahl, sie zaehlt trotzdem.</summary>
+        Private Function ConvertTargetLayer() As MaskedAdjustmentLayer
+            If Not String.IsNullOrEmpty(_selectionPromotedLayerId) Then
+                Dim promoted = _maskedAdjustmentLayers.FirstOrDefault(
+                    Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
+                If promoted IsNot Nothing Then Return promoted
+            End If
+            Return LayerForEditedMask()
+        End Function
 
         ''' <summary>Beschriftung des Umschaltknopfes. EIN Knopf, der immer in die jeweils ANDERE
         ''' Art wechselt - dann steht in beiden Werkzeugen dasselbe, und man muss nicht ueberlegen,
@@ -10878,6 +11093,14 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Symbol zeigt das ZIEL der Umwandlung, wie die Beschriftung: die Maske, wenn
+        ''' eine Auswahl vorliegt, die Auswahl, wenn eine Maske vorliegt.</summary>
+        Public ReadOnly Property ConvertKindIconSource As String
+            Get
+                Return IconRoot & "phosphor/regular/" & If(_activeSelectionIsMask, "selection.svg", "mask-happy.svg")
+            End Get
+        End Property
+
         Public ReadOnly Property ConvertKindHint As String
             Get
                 Return If(_activeSelectionIsMask,
@@ -10892,31 +11115,60 @@ Namespace ViewModels
         ''' BEDEUTUNG: eine Auswahl begrenzt, eine Maske stuft ab. Wer eine Auswahl gezogen hat und
         ''' merkt, dass er eigentlich eine weiche Maske braucht, soll nicht von vorn anfangen muessen.
         '''
-        ''' Eine bereits zur Ebene gewordene Auswahl wird MITgewandelt: sonst stuende die Ebene
-        ''' danach als das eine da und die aktive Auswahl als das andere.</summary>
-        Public Sub ConvertSelectionKind(zuMaske As Boolean)
-            If Not _hasActiveSelection Then Return
-            If _activeSelectionIsMask = zuMaske Then Return
+        ''' Eine bereits zur Ebene gewordene Auswahl wird MITgewandelt, ebenso die im Ebenenpanel
+        ''' markierte Auswahl- oder Maskenebene: sonst stuende die Ebene danach als das eine da und
+        ''' die aktive Auswahl als das andere.</summary>
+        Public Sub ConvertSelectionKind(toMask As Boolean)
+            Dim layer = ConvertTargetLayer()
+            If Not _hasActiveSelection AndAlso layer Is Nothing Then Return
+            If _activeSelectionIsMask = toMask Then Return
             PushUndo(LocalizationService.T("Auswahl umgewandelt"))
-            SetActiveSelectionIsMask(zuMaske)
+            ' Eine frisch aufgezogene Rechteckauswahl hat noch KEIN Raster, nur ihren Rahmen. Das rote
+            ' Overlay der Maske entsteht aber aus dem Raster: ohne diesen Schritt verschwanden beim
+            ' Umwandeln die Laufameisen, und an ihrer Stelle erschien nichts (Nutzerbefund).
+            If toMask AndAlso _hasActiveSelection AndAlso _selectionMask Is Nothing Then
+                Dim rectPx = SelectionRectPixels()
+                Dim raster = BuildCurrentSelectionMask()
+                If raster Is Nothing OrElse rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then
+                    raster?.Dispose()
+                    Return
+                End If
+                SetSelectionMaskData(raster, rectPx)
+            End If
+            SetActiveSelectionIsMask(toMask)
             ' Die Darstellung haengt an der Art, und SetActiveSelectionIsMask baut sie nur bei einem
             ' Wechsel neu - der liegt hier vor, also passt das.
-            If Not String.IsNullOrEmpty(_selectionPromotedLayerId) Then
-                Dim layer = _maskedAdjustmentLayers.FirstOrDefault(
-                    Function(l) l IsNot Nothing AndAlso l.Id = _selectionPromotedLayerId)
-                If layer IsNot Nothing Then
-                    layer.IsMaskLayer = zuMaske
-                    layer.Name = If(zuMaske, GeneratedLayerNames.MaskLayer,
-                                             GeneratedLayerNames.SelectionLayer) &
-                                 layer.Name.Substring(Math.Max(0, layer.Name.LastIndexOf(" "c)))
-                    RebuildLayerRows()
-                    SchedulePreviewUpdate()
+            If layer IsNot Nothing Then
+                layer.IsMaskLayer = toMask
+                layer.Name = If(toMask, GeneratedLayerNames.MaskLayer,
+                                         GeneratedLayerNames.SelectionLayer) &
+                             layer.Name.Substring(Math.Max(0, layer.Name.LastIndexOf(" "c)))
+                ' Eine Verlaufsmaske liegt nicht in der Auswahl, ihr Rot kommt aus dem Verlauf.
+                If Not _hasActiveSelection AndAlso toMask Then
+                    Dim gradient = EditedLayerMask()
+                    If gradient IsNot Nothing Then PublishGradientOverlay(gradient)
                 End If
+                RebuildLayerRows()
+                _hasChanges = True
+                SchedulePreviewUpdate()
             End If
-            Me.RaisePropertyChanged(NameOf(CanConvertKind))
-            StatusText = If(zuMaske, LocalizationService.T("In eine Maske umgewandelt"),
+            RaiseConvertKindChanged()
+            StatusText = If(toMask, LocalizationService.T("In eine Maske umgewandelt"),
                                      LocalizationService.T("In eine Auswahl umgewandelt"))
         End Sub
+
+        ''' <summary>Der Umwandeln-Knopf. Nach dem Umwandeln steht die Form gleich als Ebene der
+        ''' neuen Art da, ueber denselben Weg wie die Knoepfe fuer eine neue Auswahl- oder
+        ''' Maskenebene. Gehoerte sie schon zu einer Ebene, hat ConvertSelectionKind diese
+        ''' mitgewandelt, und es entsteht keine zweite. Ein Rueckgaengig nimmt beides zusammen
+        ''' zurueck.</summary>
+        Private Async Function ConvertKindAndCreateLayerAsync() As Task
+            Dim toMask = Not _activeSelectionIsMask
+            Dim hadLayer = ConvertTargetLayer() IsNot Nothing
+            ConvertSelectionKind(toMask)
+            If hadLayer OrElse Not _hasActiveSelection OrElse _activeSelectionIsMask <> toMask Then Return
+            Await CreateAdjustmentLayerFromSelectionAsync(captureUndo:=False)
+        End Function
 
         Public ReadOnly Property IsMaskObjectMode As Boolean
             Get
@@ -17871,7 +18123,7 @@ Namespace ViewModels
             SetLiquifyBrushCommand = ReactiveCommand.Create(Of String)(Sub(b) LiquifyBrush = b)
             ClearDocumentBackgroundCommand = ReactiveCommand.Create(Sub() CanvasBackgroundColor = "#00000000")
             SetWarpModeCommand = ReactiveCommand.Create(Of String)(Sub(m) WarpMode = m)
-            ConvertKindCommand = ReactiveCommand.Create(Sub() ConvertSelectionKind(Not ActiveSelectionIsMask))
+            ConvertKindCommand = ReactiveCommand.CreateFromTask(Function() ConvertKindAndCreateLayerAsync())
             SetSubjectGrainCommand = ReactiveCommand.Create(Of String)(
                 Sub(wert)
                     Dim n As Integer
@@ -23805,7 +24057,7 @@ Namespace ViewModels
             Try
                 HistorySteps.Clear()
                 HistorySteps.Add(New HistoryStep(0, LocalizationService.T("Original"),
-                                                 "avares://FerrumPix/Assets/Icons/outline/photo.svg"))
+                                                 "avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"))
 
                 Dim undoEntries = _undoStack.ToArray()
                 For i = undoEntries.Length - 1 To 0 Step -1
@@ -23853,7 +24105,7 @@ Namespace ViewModels
 
         Private Shared Function StepIcon(entry As UndoEntry) As String
             If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.IconSource) Then
-                Return "avares://FerrumPix/Assets/Icons/outline/exposure.svg"
+                Return "avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"
             End If
             Return entry.IconSource
         End Function
@@ -24331,31 +24583,31 @@ Namespace ViewModels
         ''' Werkzeug in der Leiste des Editors traegt. Die Zeile der Historie sieht damit aus wie die
         ''' Zeile einer Ebene - Symbol, dann Name.</summary>
         Private Function HistoryIconForTool(tool As EditorTool) As String
-            Const outline = "avares://FerrumPix/Assets/Icons/outline/"
+            Const outline = "avares://FerrumPix/Assets/Icons/phosphor/regular/"
             Select Case tool
-                Case EditorTool.Transform : Return outline & "frame.svg"
-                Case EditorTool.Resize : Return outline & "aspect-ratio.svg"
+                Case EditorTool.Transform : Return outline & "crop.svg"
+                Case EditorTool.Resize : Return outline & "frame-corners.svg"
                 ' Ein aus dem Winkel gekipptes Rechteck. Der Drehpfeil sass hier nur so lange
                 ' richtig, wie Drehen und Verzerren ein Werkzeug waren - seit das Drehen bei
                 ' "Transformieren" steht, zeigte er auf die falsche Haelfte.
                 Case EditorTool.Warp : Return outline & "perspective.svg"
-                Case EditorTool.Adjust : Return outline & "exposure.svg"
-                Case EditorTool.Color : Return outline & "color-filter.svg"
-                Case EditorTool.Details : Return outline & "adjustments.svg"
-                Case EditorTool.Effects, EditorTool.Frame : Return outline & "sparkles.svg"
+                Case EditorTool.Adjust : Return outline & "plus-minus.svg"
+                Case EditorTool.Color : Return outline & "intersect-three.svg"
+                Case EditorTool.Details : Return outline & "sliders-horizontal.svg"
+                Case EditorTool.Effects, EditorTool.Frame : Return outline & "sparkle.svg"
                 Case EditorTool.Filters : Return outline & "palette.svg"
-                Case EditorTool.AllAdjustments : Return outline & "adjustments-alt.svg"
-                Case EditorTool.Move : Return outline & "pointer.svg"
-                Case EditorTool.Selection : Return outline & "marquee.svg"
-                Case EditorTool.Mask : Return outline & "mask.svg"
-                Case EditorTool.Text : Return outline & "text-size.svg"
-                Case EditorTool.Path : Return outline & "vector.svg"
-                Case EditorTool.Geometry, EditorTool.Insert : Return outline & "shape.svg"
+                Case EditorTool.AllAdjustments : Return outline & "sliders.svg"
+                Case EditorTool.Move : Return outline & "cursor.svg"
+                Case EditorTool.Selection : Return outline & "selection.svg"
+                Case EditorTool.Mask : Return outline & "mask-happy.svg"
+                Case EditorTool.Text : Return outline & "text-t.svg"
+                Case EditorTool.Path : Return outline & "vector-two.svg"
+                Case EditorTool.Geometry, EditorTool.Insert : Return outline & "shapes.svg"
                 Case EditorTool.Draw
-                    Return outline & If(_isEraserMode, "eraser.svg", "brush.svg")
+                    Return outline & If(_isEraserMode, "eraser.svg", "paint-brush.svg")
                 Case EditorTool.Retouch
-                    Return outline & If(_isRepairMode, "bandage.svg", "brush.svg")
-                Case Else : Return outline & "photo.svg"
+                    Return If(_isRepairMode, IconRoot & "custom/repair-brush.svg", outline & "paint-brush.svg")
+                Case Else : Return outline & "image.svg"
             End Select
         End Function
 
@@ -24363,7 +24615,7 @@ Namespace ViewModels
         ''' Einteilung wie <see cref="GetHistoryLabelForProperty"/>: der Regler nennt die Gruppe, die
         ''' Gruppe traegt das Symbol ihres Werkzeugs.</summary>
         Private Function HistoryIconForProperty(propertyName As String) As String
-            Const outline = "avares://FerrumPix/Assets/Icons/outline/"
+            Const outline = "avares://FerrumPix/Assets/Icons/phosphor/regular/"
             ' Ein Handgriff an einem OBJEKT traegt dessen eigenes Symbol - dasselbe, unter dem die
             ' Ebene im Ebenenpanel steht. Die Zeile in der Historie sieht damit aus wie die Zeile
             ' der Ebene, an der man gearbeitet hat.
@@ -24382,7 +24634,7 @@ Namespace ViewModels
                 Case NameOf(ResizeWidth), NameOf(ResizeHeight), NameOf(LockResizeAspect), NameOf(ResizeInterpolationLabel),
                      NameOf(CanvasWidth), NameOf(CanvasHeight), NameOf(LockCanvasAspect), NameOf(CanvasBackgroundColor),
                      NameOf(CanvasAnchor)
-                    Return outline & "aspect-ratio.svg"
+                    Return outline & "frame-corners.svg"
                 ' Farbgradierung und Kalibrierung sind Farbwerkzeuge und tragen dessen Symbol.
                 Case NameOf(ColorGradeShadowHue), NameOf(ColorGradeShadowSaturation), NameOf(ColorGradeShadowLuminance),
                      NameOf(ColorGradeMidtoneHue), NameOf(ColorGradeMidtoneSaturation), NameOf(ColorGradeMidtoneLuminance),
@@ -24393,17 +24645,17 @@ Namespace ViewModels
                      NameOf(CalibrationGreenHue), NameOf(CalibrationGreenSaturation),
                      NameOf(CalibrationBlueHue), NameOf(CalibrationBlueSaturation),
                      NameOf(CalibrationShadowTint)
-                    Return outline & "color-filter.svg"
+                    Return outline & "intersect-three.svg"
                 Case NameOf([Structure]), NameOf(Haze), NameOf(Glow),
                      NameOf(ColorNoiseReduction),
                      NameOf(FarbrauschGrob), NameOf(ColorNoiseCoarseScale)
-                    Return outline & "adjustments.svg"
+                    Return outline & "sliders-horizontal.svg"
                 Case NameOf(LutPath), NameOf(LutStrength)
                     Return outline & "palette.svg"
                 Case NameOf(LensAssignment)
                     Return outline & "aperture.svg"
                 Case NameOf(StraightenDegrees), NameOf(StraightenExpandCanvas), NameOf(StraightenAutoCrop)
-                    Return outline & "rotate-2.svg"
+                    Return outline & "arrow-counter-clockwise.svg"
                 Case NameOf(PerspectiveVertical), NameOf(PerspectiveHorizontal), NameOf(PerspectiveAspect), NameOf(PerspectiveScale)
                     Return outline & "perspective.svg"
                 Case "Tonwertkurve"
@@ -24419,19 +24671,19 @@ Namespace ViewModels
                      NameOf(PurpleHue), NameOf(PurpleSaturation), NameOf(PurpleLuminance),
                      NameOf(MagentaHue), NameOf(MagentaSaturation), NameOf(MagentaLuminance),
                      NameOf(WhiteBalance), NameOf(Temperature), NameOf(Tint), NameOf(KelvinTemperature)
-                    Return outline & "color-filter.svg"
+                    Return outline & "intersect-three.svg"
                 Case NameOf(Sharpness), NameOf(SharpenRadius), NameOf(SharpenDetail), NameOf(SharpenMasking), NameOf(SharpenMethodLabel), NameOf(NoiseReduction),
                      NameOf(NoiseReductionDetail), NameOf(NoiseReductionMethodLabel), NameOf(Blur), NameOf(Clarity)
-                    Return outline & "adjustments.svg"
+                    Return outline & "sliders-horizontal.svg"
                 Case NameOf(Vignette), NameOf(VignetteTransition), NameOf(VignetteRoundness), NameOf(VignetteFeather),
                      NameOf(VignetteCenterX), NameOf(VignetteCenterY), NameOf(VignetteStyleLabel),
                      NameOf(Grain), NameOf(GrainSize), NameOf(GrainFrequency), NameOf(GrainColor),
                      NameOf(AddNoise), NameOf(ColorNoiseAdd), NameOf(DustScratches)
-                    Return outline & "sparkles.svg"
+                    Return outline & "sparkle.svg"
                 Case NameOf(FilterPreset), NameOf(FilterStrength)
                     Return outline & "palette.svg"
                 Case Else
-                    Return outline & "exposure.svg"
+                    Return outline & "plus-minus.svg"
             End Select
         End Function
 
@@ -25087,6 +25339,9 @@ Namespace ViewModels
             End If
             _selectionScopeEnabled = adj.SelectionScopeEnabled
             _hasActiveSelection = adj.HasActiveSelection
+            ' Freigabe, Text und Symbol des Umwandeln-Knopfs: nach Rueckgaengig gilt der
+            ' wiederhergestellte Stand, auch wenn sich nur das "ob" geaendert hat.
+            RaiseConvertKindChanged()
             _globalAdjustmentsHidden = adj.GlobalAdjustmentsHidden
             Me.RaisePropertyChanged(NameOf(IsGlobalAdjustmentsVisible))
             _backgroundHidden = adj.BackgroundHidden
@@ -30412,6 +30667,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BorderColor))
             Me.RaisePropertyChanged(NameOf(BorderColorValue))
             Me.RaisePropertyChanged(NameOf(BorderColorBrush))
+            RaiseFrameSymbolChanged()
             RaiseFrameGroupActiveChanged()
             ' Nach Rueckgaengig und Zuruecksetzen tragen die Puffer sonst den alten Rahmen, und der
             ' naechste Handgriff schriebe ihn zurueck.
@@ -30737,7 +30993,7 @@ Namespace ViewModels
         Private Sub RaiseToolContextProperties()
             ' Geht das Symbolfeld auf, wird die Liste jetzt gebraucht - und erst jetzt. Hier steht
             ' es richtig, weil genau diese Stelle die Sichtbarkeit der Werkzeugfelder neu bewertet.
-            If ShowSymbolControls Then EnsureShapeIconsLoaded()
+            If ShowSymbolControls OrElse (CurrentTool = EditorTool.Effects AndAlso ShowFrameSymbolGallery) Then EnsureShapeIconsLoaded()
             ' Beide haengen am Werkzeug (im Zeichnen-Werkzeug bleiben sie weg) und muessen deshalb
             ' bei jedem Wechsel neu bewertet werden. Schatten und Glühen hingen sonst an einem
             ' alten Stand und standen in jedem Werkzeug, auch ohne eine Ebene im Bild.
@@ -30765,6 +31021,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RetouchHintText))
             Me.RaisePropertyChanged(NameOf(ShowSelectionAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowMaskAdjustments))
+            ' Beim Werkzeugwechsel kann eine Auswahl entstanden, aufgehoben oder umgewandelt worden sein.
+            RaiseConvertKindChanged()
             Me.RaisePropertyChanged(NameOf(ShowPathAdjustments))
             Me.RaisePropertyChanged(NameOf(IsPathPenActive))
             Me.RaisePropertyChanged(NameOf(CanEditPathNodes))
@@ -32224,6 +32482,9 @@ Namespace ViewModels
         Public Property DisplayName As String
         Public Property SourceName As String
         Public Property PendingKind As String
+        ''' <summary>Englische Suchwoerter des Symbols aus Phosphors Katalog (Assets/Icons/phosphor/
+        ''' tags.tsv): „dog" findet so auch „paw print". Leer fuer die festen Formen.</summary>
+        Public Property Keywords As String = ""
 
         Private _isPending As Boolean
         ''' Scharf gestellt (Akzentrahmen) - Panel-Icon wurde angeklickt, Objekt wird beim nächsten

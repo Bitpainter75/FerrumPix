@@ -11,8 +11,8 @@
                 <Expander.HeaderTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/perspective.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>
                     </DataTemplate>
@@ -50,8 +50,8 @@
                             Classes.active="{Binding IsWarpPerspective}"
                             ToolTip.Tip="Die vier Ecken im Bild ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/perspective.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Perspektive" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -60,8 +60,8 @@
                             Classes.active="{Binding IsWarpGrid}"
                             ToolTip.Tip="Das Stützpunktraster im Bild ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/grid-dots.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/dots-nine.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Gitter" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -70,8 +70,8 @@
                             Classes.active="{Binding IsWarpLines}"
                             ToolTip.Tip="Linien auf Kanten legen und ziehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/vector-two.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Linien" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -80,8 +80,8 @@
                             Classes.active="{Binding IsWarpEnvelope}"
                             ToolTip.Tip="Die vier Ränder biegen, das Innere folgt">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier-arc.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Verformen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -90,8 +90,8 @@
                             Classes.active="{Binding IsWarpLiquify}"
                             ToolTip.Tip="Mit einem Pinsel schieben, aufblähen, zusammenziehen oder verdrehen">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/outline/ripple.svg"
-                                           Width="14" Height="14" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/approximate-equals.svg"
+                                           Width="18" Height="18" />
                             <TextBlock Text="Verflüssigen" FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Button>
@@ -134,8 +134,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/perspective.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/perspective.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -144,8 +144,8 @@
                                     Command="{Binding DataContext.ResetPerspectiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Verzerren zurücksetzen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>
@@ -210,8 +210,8 @@
                             ToolTip.Tip="Sucht stürzende Linien im Bild und stellt sie gerade. Die leer gewordenen Ecken deckt der Regler Größe zu">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/outline/wand.svg"
-                                Width="14" Height="14"
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magic-wand.svg"
+                                Width="18" Height="18"
                                 VerticalAlignment="Center" />
                             <TextBlock Text="Perspektive automatisch korrigieren"
                                        FontSize="{DynamicResource FP.Font.Small}"
@@ -264,8 +264,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/grid-dots.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/dots-nine.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -274,8 +274,8 @@
                                     Command="{Binding DataContext.ResetWarpGridCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Gitter zurücksetzen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>
@@ -329,8 +329,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/vector-bezier-arc.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/bezier-curve.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -339,8 +339,8 @@
                                     Command="{Binding DataContext.ResetEnvelopeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Verformung zurücksetzen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>
@@ -381,8 +381,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/vector.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/vector-two.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -391,8 +391,8 @@
                                     Command="{Binding DataContext.ResetLinesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Alle Linien entfernen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>
@@ -440,8 +440,8 @@
                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/ripple.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/approximate-equals.svg"
+                                    Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>
                             <Button Grid.Column="1"
@@ -450,8 +450,8 @@
                                     Command="{Binding DataContext.ResetLiquifyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     ToolTip.Tip="Verflüssigen zurücksetzen">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/outline/rotate-clockwise.svg"
-                                    Width="14" Height="14" />
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                    Width="16" Height="16" />
                             </Button>
                         </Grid>
                     </DataTemplate>

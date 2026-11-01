@@ -838,6 +838,13 @@ Namespace Services
         Public Property BrushSmoothing As Integer = 100
         ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
         Public Property TrackpadMode As Boolean = False
+        ''' Was das blanke Mausrad im Viewer tut: "Navigate" blaettert, "Zoom" zoomt am Zeiger. STRG
+        ''' dazu tut jeweils das andere, die rechte Taste zoomt immer. Ab Werk Blaettern.
+        Public Property ViewerWheelAction As String = WheelActionNavigate
+        ''' Dasselbe fuer Vollbild und Diashow, getrennt einstellbar.
+        Public Property FullscreenWheelAction As String = WheelActionNavigate
+        Public Const WheelActionNavigate As String = "Navigate"
+        Public Const WheelActionZoom As String = "Zoom"
         ''' Zieht ein Zug mit der linken Taste im Viewer einen Zuschnittrahmen auf und oeffnet das Bild
         ''' damit im Editor? Ab Werk aus: dann verschiebt der Zug ein vergroessertes Bild.
         Public Property ViewerCropDrag As Boolean = False
