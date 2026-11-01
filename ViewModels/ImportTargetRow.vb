@@ -7,20 +7,24 @@ Namespace ViewModels
 
     ''' <summary>Eine Zeile der Liste "Zielordner für den Import" in den Einstellungen: Name und
     ''' Vorlage mit Platzhaltern. Jede Aenderung geht sofort in die Einstellungen, wie bei den
-    ''' externen Programmen; die Textfelder melden erst beim Verlassen.</summary>
+    ''' externen Programmen; die Textfelder melden erst beim Verlassen. Dieselbe Zeile traegt die
+    ''' Liste "Dateinamen für den Import"; dann zeigt das Beispiel einen Dateinamen.</summary>
     Public Class ImportTargetRow
         Inherits ReactiveObject
 
         Private ReadOnly _id As String
         Private ReadOnly _save As Action
+        Private ReadOnly _isFileName As Boolean
         Private _name As String
         Private _template As String
 
-        Public Sub New(target As ImportTargetSettings, save As Action, remove As Action(Of ImportTargetRow))
+        Public Sub New(target As ImportTargetSettings, save As Action, remove As Action(Of ImportTargetRow),
+                       Optional isFileName As Boolean = False)
             _id = If(String.IsNullOrWhiteSpace(target?.Id), Guid.NewGuid().ToString("N"), target.Id)
             _name = If(target?.Name, "")
             _template = If(target?.Template, "")
             _save = save
+            _isFileName = isFileName
             RemoveCommand = ReactiveCommand.Create(Sub() remove?.Invoke(Me))
         End Sub
 
@@ -49,11 +53,17 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Wie die Vorlage fuer eine Aufnahme von heute aufgeloest wuerde.</summary>
+        ''' <summary>Wie die Vorlage fuer eine Aufnahme von heute aufgeloest wuerde; ein Dateiname
+        ''' fuer die erste Datei eines Laufs mit dem Auftrag "Auftrag".</summary>
         Public ReadOnly Property PreviewText As String
             Get
                 If String.IsNullOrWhiteSpace(_template) Then Return ""
-                Dim sample As New ImportCandidate With {.CapturedAt = DateTime.Now, .ModifiedAt = DateTime.Now, .Camera = LocalizationService.T("Kamera")}
+                Dim sample As New ImportCandidate With {.CapturedAt = DateTime.Now, .ModifiedAt = DateTime.Now, .Camera = LocalizationService.T("Kamera"),
+                                                        .SourcePath = "IMG_0001.CR3"}
+                If _isFileName Then
+                    Return String.Format(LocalizationService.T("Beispiel: {0}"),
+                                         CardImportService.TargetFileNameFor(_template, sample, LocalizationService.T("Auftrag"), 1))
+                End If
                 Return String.Format(LocalizationService.T("Beispiel: {0}"), CardImportService.ExpandTargetTemplate(_template, sample))
             End Get
         End Property

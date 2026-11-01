@@ -10705,4 +10705,220 @@
   <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
     <value>동영상 프레임을 캡처할 수 없습니다 ({0}).</value>
   </data>
+  <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
+    <value>조명</value>
+  </data>
+  <data name="Beleuchtung_Lichter_und_Schatten_frei_auf_dem_Bi_51063d3e" xml:space="preserve">
+    <value>조명: 사진 위 어디에나 빛과 그림자</value>
+  </data>
+  <data name="Lichtquellen_55b6b97f" xml:space="preserve">
+    <value>광원</value>
+  </data>
+  <data name="Lichtart_79ec9044" xml:space="preserve">
+    <value>조명 종류</value>
+  </data>
+  <data name="Licht_ein_oder_ausblenden_2505336a" xml:space="preserve">
+    <value>조명 표시 또는 숨기기</value>
+  </data>
+  <data name="Ein_Licht_der_gew_hlten_Art_in_die_Bildmitte_set_5a0a347e" xml:space="preserve">
+    <value>선택한 종류의 조명을 사진 가운데에 배치</value>
+  </data>
+  <data name="Licht_duplizieren_ae68914f" xml:space="preserve">
+    <value>조명 복제</value>
+  </data>
+  <data name="Licht_entfernen_02130645" xml:space="preserve">
+    <value>조명 제거</value>
+  </data>
+  <data name="Form_80446347" xml:space="preserve">
+    <value>모양</value>
+  </data>
+  <data name="Leuchtkraft_785d11c7" xml:space="preserve">
+    <value>밝기</value>
+  </data>
+  <data name="In_Blendenstufen_Negativ_dunkelt_ab_ein_Schatten_c7fdd0c2" xml:space="preserve">
+    <value>스톱 단위. 음수는 어둡게 하는 그림자입니다.</value>
+  </data>
+  <data name="Reichweite_eee6255e" xml:space="preserve">
+    <value>범위</value>
+  </data>
+  <data name="Richtung_6f7cc304" xml:space="preserve">
+    <value>방향</value>
+  </data>
+  <data name="ffnungswinkel_des_Lichtkegels_in_Grad_8b63cfbe" xml:space="preserve">
+    <value>빛 원뿔의 열림 각도(도)</value>
+  </data>
+  <data name="Abfall_6744c564" xml:space="preserve">
+    <value>감쇠</value>
+  </data>
+  <data name="Beleuchten_wirkt_wie_Licht_bei_der_Aufnahme_Leuc_048df676" xml:space="preserve">
+    <value>비추기는 촬영 당시의 빛처럼 작동하고, 발광은 검은색 위에도 보이는 광채를 더합니다.</value>
+  </data>
+  <data name="Lichthof_0e653a81" xml:space="preserve">
+    <value>광륜</value>
+  </data>
+  <data name="Ein_Schein_um_die_Lichtquelle_selbst_30b44b6f" xml:space="preserve">
+    <value>광원 자체 주변의 빛무리</value>
+  </data>
+  <data name="Strahlenkontrast_e438ea1a" xml:space="preserve">
+    <value>광선 대비</value>
+  </data>
+  <data name="Lichtfarbe_45e008f9" xml:space="preserve">
+    <value>빛 색상</value>
+  </data>
+  <data name="An_die_Farbe_folgt_der_Farbtemperatur_in_Kelvin__449eecb4" xml:space="preserve">
+    <value>켜짐: 색이 켈빈 색온도를 따릅니다. 꺼짐: 자유롭게 고른 색.</value>
+  </data>
+  <data name="Kelvin_f16cffaa" xml:space="preserve">
+    <value>켈빈</value>
+  </data>
+  <data name="Tiefe_beachten_924c8dd8" xml:space="preserve">
+    <value>깊이 반영</value>
+  </data>
+  <data name="Das_Licht_trifft_vor_allem_was_ungef_hr_so_weit__dd954d50" xml:space="preserve">
+    <value>빛은 주로 광원과 비슷한 거리에 있는 대상을 비춥니다. 깊이 모델이 필요합니다.</value>
+  </data>
+  <data name="Tiefenbereich_c08f0413" xml:space="preserve">
+    <value>깊이 범위</value>
+  </data>
+  <data name="Wie_weit_das_Licht_nach_vorn_und_hinten_reicht_c865d8e9" xml:space="preserve">
+    <value>빛이 앞뒤로 얼마나 멀리 닿는지</value>
+  </data>
+  <data name="Punktlicht_5de19147" xml:space="preserve">
+    <value>점광원</value>
+  </data>
+  <data name="Spot_c5c5ba59" xml:space="preserve">
+    <value>스폿</value>
+  </data>
+  <data name="Fl_che_86efe620" xml:space="preserve">
+    <value>면광원</value>
+  </data>
+  <data name="Streiflicht_c7444c67" xml:space="preserve">
+    <value>사광</value>
+  </data>
+  <data name="Strahlen_9a1b1fb7" xml:space="preserve">
+    <value>광선</value>
+  </data>
+  <data name="Nat_rlich_3460c969" xml:space="preserve">
+    <value>자연스럽게</value>
+  </data>
+  <data name="Hart_d6a00a13" xml:space="preserve">
+    <value>강하게</value>
+  </data>
+  <data name="Beleuchten_d895032e" xml:space="preserve">
+    <value>비추기</value>
+  </data>
+  <data name="Leuchten_779c09d6" xml:space="preserve">
+    <value>발광</value>
+  </data>
+  <data name="Kerze_f5b47390" xml:space="preserve">
+    <value>촛불</value>
+  </data>
+  <data name="Lagerfeuer_21459a25" xml:space="preserve">
+    <value>모닥불</value>
+  </data>
+  <data name="Gl_hbirne_6d943fd4" xml:space="preserve">
+    <value>백열전구</value>
+  </data>
+  <data name="Halogen_50671100" xml:space="preserve">
+    <value>할로겐</value>
+  </data>
+  <data name="LED_warmwei_f83c6242" xml:space="preserve">
+    <value>LED 웜화이트</value>
+  </data>
+  <data name="LED_kaltwei_4ce93b96" xml:space="preserve">
+    <value>LED 쿨화이트</value>
+  </data>
+  <data name="Leuchtstoffr_hre_9501917a" xml:space="preserve">
+    <value>형광등</value>
+  </data>
+  <data name="Softbox_82239748" xml:space="preserve">
+    <value>소프트박스</value>
+  </data>
+  <data name="Stra_enlaterne_ae4d27e9" xml:space="preserve">
+    <value>가로등</value>
+  </data>
+  <data name="Flutlicht_19e963de" xml:space="preserve">
+    <value>투광등</value>
+  </data>
+  <data name="Taschenlampe_1951c1cf" xml:space="preserve">
+    <value>손전등</value>
+  </data>
+  <data name="Abendsonne_e8e63f11" xml:space="preserve">
+    <value>저녁 햇살</value>
+  </data>
+  <data name="Sonnenstrahlen_94f96f21" xml:space="preserve">
+    <value>햇살</value>
+  </data>
+  <data name="Mondlicht_920c9e23" xml:space="preserve">
+    <value>달빛</value>
+  </data>
+  <data name="Neon_Pink_ff2c0cb6" xml:space="preserve">
+    <value>네온 핑크</value>
+  </data>
+  <data name="Neon_Blau_ed37e248" xml:space="preserve">
+    <value>네온 블루</value>
+  </data>
+  <data name="Farbiges_Licht_3c9e9d0b" xml:space="preserve">
+    <value>컬러 조명</value>
+  </data>
+  <data name="Schlagschatten_64e6ddcb" xml:space="preserve">
+    <value>드리운 그림자</value>
+  </data>
+  <data name="Licht_hinzugef_gt_d4d57774" xml:space="preserve">
+    <value>조명 추가됨</value>
+  </data>
+  <data name="Licht_entfernt_63ddce81" xml:space="preserve">
+    <value>조명 제거됨</value>
+  </data>
+  <data name="Licht_ausgerichtet_39fc21b7" xml:space="preserve">
+    <value>조명 방향 조정</value>
+  </data>
+  <data name="Licht_ein_oder_aus_14a0fe08" xml:space="preserve">
+    <value>조명 켜기 또는 끄기</value>
+  </data>
+  <data name="Farbtemperatur_2eb22d3c" xml:space="preserve">
+    <value>색온도</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_setzt_ein_neues_Licht_dieser__1592aba9" xml:space="preserve">
+    <value>사진을 클릭하면 이 종류의 조명이 추가됩니다. 조명이 선택되어 있으면 그 옆의 첫 클릭은 선택만 해제합니다. 조명의 점으로 위치, 방향, 길이와 폭을 바꿉니다. 밝기를 음수로 하면 그림자가 됩니다.</value>
+  </data>
+  <data name="Lichtquelle_hinzuf_gen_7ab2e8f8" xml:space="preserve">
+    <value>광원 추가</value>
+  </data>
+  <data name="Auftrag_4ec1a905" xml:space="preserve">
+    <value>작업</value>
+  </data>
+  <data name="Zum_Beispiel_Fotoreise_Ort_oder_Kunde_74176582" xml:space="preserve">
+    <value>예: 사진 여행, 장소 또는 고객</value>
+  </data>
+  <data name="Leer_lassen_f_r_den_Namen_der_Quelle_18d9d1e2" xml:space="preserve">
+    <value>비워 두면 원본 이름 유지</value>
+  </data>
+  <data name="Zum_Beispiel_0_91608e37" xml:space="preserve">
+    <value>예: {0}</value>
+  </data>
+  <data name="Aufnahmedaten_werden_gelesen_0_von_1_799959dc" xml:space="preserve">
+    <value>촬영 데이터 읽는 중: {0} / {1}</value>
+  </data>
+  <data name="job_setzt_den_Auftrag_ein_in_Ziel_und_Dateiname__aa14f8e3" xml:space="preserve">
+    <value>{job}은 대상과 파일 이름에 작업을 넣습니다. 파일 이름에는 원본 이름용 {name}과 카운터용 ###도 있으며 확장자는 유지됩니다. 예: {datetaken:yyyy-MM-dd}_{job}_###.</value>
+  </data>
+  <data name="Dateinamen_f_r_den_Import_0166d955" xml:space="preserve">
+    <value>가져오기용 파일 이름</value>
+  </data>
+  <data name="Muster_f_r_Dateinamen_die_der_Import_neben_dem_N_fdd29eef" xml:space="preserve">
+    <value>가져오기에서 원본 이름과 함께 제공하는 파일 이름 패턴입니다. 가져오기 대화상자에서 선택합니다.</value>
+  </data>
+  <data name="Muster_hinzuf_gen_13cd0bc6" xml:space="preserve">
+    <value>패턴 추가</value>
+  </data>
+  <data name="Name_der_Quelle_cc325d23" xml:space="preserve">
+    <value>원본 이름</value>
+  </data>
+  <data name="Ziel_wird_gepr_ft_23bc2c51" xml:space="preserve">
+    <value>대상 확인 중…</value>
+  </data>
+  <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
+    <value>선택 해제한 날이 있으면 모든 촬영 데이터를 읽은 뒤 가져오기를 시작할 수 있습니다</value>
+  </data>
 </root>

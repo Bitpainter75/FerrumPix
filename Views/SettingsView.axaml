@@ -1317,6 +1317,56 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
+
+                        <!-- DATEINAMEN ZUM EINLESEN: wie die Zielordner; der Dialog bietet sie neben
+                             dem Namen der Quelle zur Auswahl an (MainWindowViewModelImport). -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Dateinamen für den Import" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Muster für Dateinamen, die der Import neben dem Namen der Quelle anbietet. Gewählt wird im Import-Dialog."
+                                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{}{job} setzt den Auftrag ein, in Ziel und Dateiname. Für den Dateinamen gibt es dazu {name} für den Namen der Quelle und ### als Zähler; die Endung bleibt. Beispiel: {datetaken:yyyy-MM-dd}_{job}_###."
+                                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding AddImportNameCommand}">Muster hinzufügen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding ImportNameRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" Margin="0,0,0,6"
+                                                    AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <Grid ColumnDefinitions="170,*,Auto" ColumnSpacing="6">
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Name"/>
+                                                <TextBox Grid.Column="1"
+                                                         Classes="no-translate"
+                                                         Text="{Binding Template, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Dateiname"/>
+                                                <Button Grid.Column="2" Classes="ghost"
+                                                        Width="30" Height="30" Padding="0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip.Tip="Entfernen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                   Width="18" Height="18"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{Binding PreviewText}"
+                                                       Classes="no-translate"
+                                                       Margin="176,0,0,0"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

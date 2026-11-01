@@ -1345,6 +1345,44 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s) s.ImportTargets = targets)
         End Sub
 
+        ' --- Dateinamen fuer den Import ---------------------------------------------------------
+
+        Private _importNameRows As ObservableCollection(Of ImportTargetRow)
+
+        ''' <summary>Die Muster fuer Dateinamen, die der Einlesen-Dialog neben dem Namen der Quelle
+        ''' anbietet (CardImportService.TargetFileNameFor). Wie die Zielordner liest der Dialog sie
+        ''' bei jedem Oeffnen neu.</summary>
+        Public ReadOnly Property ImportNameRows As ObservableCollection(Of ImportTargetRow)
+            Get
+                If _importNameRows Is Nothing Then
+                    _importNameRows = New ObservableCollection(Of ImportTargetRow)()
+                    For Each template In If(AppSettingsService.Load().ImportNameTemplates, New List(Of ImportTargetSettings)())
+                        If template Is Nothing Then Continue For
+                        _importNameRows.Add(New ImportTargetRow(template, AddressOf SaveImportNames, AddressOf RemoveImportNameRow, isFileName:=True))
+                    Next
+                End If
+                Return _importNameRows
+            End Get
+        End Property
+
+        Public ReadOnly Property AddImportNameCommand As ICommand = ReactiveCommand.Create(
+            Sub()
+                ImportNameRows.Add(New ImportTargetRow(
+                    New ImportTargetSettings With {.Template = "{datetaken:yyyy-MM-dd}_{name}"},
+                    AddressOf SaveImportNames, AddressOf RemoveImportNameRow, isFileName:=True))
+                SaveImportNames()
+            End Sub)
+
+        Private Sub RemoveImportNameRow(row As ImportTargetRow)
+            If row Is Nothing OrElse Not ImportNameRows.Remove(row) Then Return
+            SaveImportNames()
+        End Sub
+
+        Private Sub SaveImportNames()
+            Dim templates = ImportNameRows.Select(Function(r) r.ToSettings()).ToList()
+            AppSettingsService.Update(Sub(s) s.ImportNameTemplates = templates)
+        End Sub
+
         ''' <summary>Wo gmic_qt liegt. Leer heisst: im Suchpfad suchen.</summary>
         Public Property GmicQtPath As String
             Get

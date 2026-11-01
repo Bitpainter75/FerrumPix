@@ -497,6 +497,17 @@
                             <TextBlock Text="Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Beleuchtung: Lichter und Schatten frei auf dem Bild"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Light"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Light}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Beleuchtung" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                        </StackPanel>
+                    </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="{Binding ToolGroupRowAdjust}" Spacing="2">
@@ -873,6 +884,10 @@
                              Objekt-Overlay, damit sie deren Anfasspunkte nicht verdecken. -->
                         <icons:PixelGridOverlay x:Name="GridOverlay" IsVisible="False" IsHitTestVisible="False" />
                         <Canvas x:Name="GuideLayer" IsHitTestVisible="False" ClipToBounds="True" />
+                        <!-- Die Griffe der Lichtquellen (Werkzeug Beleuchtung). Lage und Bildrechteck
+                             setzt UpdateLightOverlay; Klicks behandelt das Steuerelement selbst. -->
+                        <icons:LightSourceOverlay x:Name="LightOverlay"
+                                                  IsVisible="{Binding ShowLightControls}" />
                         <Border x:Name="SliderDivider"
                                 Width="2"
                                 Background="{DynamicResource FP.Accent}"
@@ -1385,6 +1400,9 @@
                                  rahmt jede selbst (siehe DetailsPanel). -->
                             <panels:WarpPanel Margin="0,7,0,0"
                                               IsVisible="{Binding ShowWarpAdjustments}" />
+
+                            <panels:LightSourcesPanel Margin="0,7,0,0"
+                                                      IsVisible="{Binding ShowLightControls}" />
 
                             <!-- DrawPanel bringt seine eigenen adjustment-group-Rahmen mit (Farbe, Pinsel,
                                  Werkzeug getrennt), daher hier kein umschließender Rahmen. -->

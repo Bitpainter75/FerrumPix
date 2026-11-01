@@ -10705,4 +10705,220 @@
   <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
     <value>Tidak dapat menangkap bingkai video ({0}).</value>
   </data>
+  <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
+    <value>Pencahayaan</value>
+  </data>
+  <data name="Beleuchtung_Lichter_und_Schatten_frei_auf_dem_Bi_51063d3e" xml:space="preserve">
+    <value>Pencahayaan: cahaya dan bayangan bebas di gambar</value>
+  </data>
+  <data name="Lichtquellen_55b6b97f" xml:space="preserve">
+    <value>Sumber cahaya</value>
+  </data>
+  <data name="Lichtart_79ec9044" xml:space="preserve">
+    <value>Jenis cahaya</value>
+  </data>
+  <data name="Licht_ein_oder_ausblenden_2505336a" xml:space="preserve">
+    <value>Tampilkan atau sembunyikan cahaya</value>
+  </data>
+  <data name="Ein_Licht_der_gew_hlten_Art_in_die_Bildmitte_set_5a0a347e" xml:space="preserve">
+    <value>Tempatkan cahaya jenis terpilih di tengah gambar</value>
+  </data>
+  <data name="Licht_duplizieren_ae68914f" xml:space="preserve">
+    <value>Duplikat cahaya</value>
+  </data>
+  <data name="Licht_entfernen_02130645" xml:space="preserve">
+    <value>Hapus cahaya</value>
+  </data>
+  <data name="Form_80446347" xml:space="preserve">
+    <value>Bentuk</value>
+  </data>
+  <data name="Leuchtkraft_785d11c7" xml:space="preserve">
+    <value>Kekuatan</value>
+  </data>
+  <data name="In_Blendenstufen_Negativ_dunkelt_ab_ein_Schatten_c7fdd0c2" xml:space="preserve">
+    <value>Dalam stop. Negatif menggelapkan, bayangan.</value>
+  </data>
+  <data name="Reichweite_eee6255e" xml:space="preserve">
+    <value>Jangkauan</value>
+  </data>
+  <data name="Richtung_6f7cc304" xml:space="preserve">
+    <value>Arah</value>
+  </data>
+  <data name="ffnungswinkel_des_Lichtkegels_in_Grad_8b63cfbe" xml:space="preserve">
+    <value>Sudut bukaan kerucut cahaya dalam derajat</value>
+  </data>
+  <data name="Abfall_6744c564" xml:space="preserve">
+    <value>Peluruhan</value>
+  </data>
+  <data name="Beleuchten_wirkt_wie_Licht_bei_der_Aufnahme_Leuc_048df676" xml:space="preserve">
+    <value>Terangi bekerja seperti cahaya saat pemotretan, Pendar menambah kilau yang terlihat, bahkan di atas hitam.</value>
+  </data>
+  <data name="Lichthof_0e653a81" xml:space="preserve">
+    <value>Lingkaran cahaya</value>
+  </data>
+  <data name="Ein_Schein_um_die_Lichtquelle_selbst_30b44b6f" xml:space="preserve">
+    <value>Pendar di sekitar sumber cahaya itu sendiri</value>
+  </data>
+  <data name="Strahlenkontrast_e438ea1a" xml:space="preserve">
+    <value>Kontras sinar</value>
+  </data>
+  <data name="Lichtfarbe_45e008f9" xml:space="preserve">
+    <value>Warna cahaya</value>
+  </data>
+  <data name="An_die_Farbe_folgt_der_Farbtemperatur_in_Kelvin__449eecb4" xml:space="preserve">
+    <value>Aktif: warna mengikuti suhu warna dalam kelvin. Nonaktif: warna yang dipilih bebas.</value>
+  </data>
+  <data name="Kelvin_f16cffaa" xml:space="preserve">
+    <value>Kelvin</value>
+  </data>
+  <data name="Tiefe_beachten_924c8dd8" xml:space="preserve">
+    <value>Perhatikan kedalaman</value>
+  </data>
+  <data name="Das_Licht_trifft_vor_allem_was_ungef_hr_so_weit__dd954d50" xml:space="preserve">
+    <value>Cahaya terutama mengenai apa yang jaraknya kira-kira sama dengan sumber cahaya. Memerlukan model kedalaman.</value>
+  </data>
+  <data name="Tiefenbereich_c08f0413" xml:space="preserve">
+    <value>Rentang kedalaman</value>
+  </data>
+  <data name="Wie_weit_das_Licht_nach_vorn_und_hinten_reicht_c865d8e9" xml:space="preserve">
+    <value>Seberapa jauh cahaya menjangkau ke depan dan belakang</value>
+  </data>
+  <data name="Punktlicht_5de19147" xml:space="preserve">
+    <value>Cahaya titik</value>
+  </data>
+  <data name="Spot_c5c5ba59" xml:space="preserve">
+    <value>Sorot</value>
+  </data>
+  <data name="Fl_che_86efe620" xml:space="preserve">
+    <value>Area</value>
+  </data>
+  <data name="Streiflicht_c7444c67" xml:space="preserve">
+    <value>Cahaya samping</value>
+  </data>
+  <data name="Strahlen_9a1b1fb7" xml:space="preserve">
+    <value>Sinar</value>
+  </data>
+  <data name="Nat_rlich_3460c969" xml:space="preserve">
+    <value>Alami</value>
+  </data>
+  <data name="Hart_d6a00a13" xml:space="preserve">
+    <value>Keras</value>
+  </data>
+  <data name="Beleuchten_d895032e" xml:space="preserve">
+    <value>Terangi</value>
+  </data>
+  <data name="Leuchten_779c09d6" xml:space="preserve">
+    <value>Pendar</value>
+  </data>
+  <data name="Kerze_f5b47390" xml:space="preserve">
+    <value>Lilin</value>
+  </data>
+  <data name="Lagerfeuer_21459a25" xml:space="preserve">
+    <value>Api unggun</value>
+  </data>
+  <data name="Gl_hbirne_6d943fd4" xml:space="preserve">
+    <value>Bohlam</value>
+  </data>
+  <data name="Halogen_50671100" xml:space="preserve">
+    <value>Halogen</value>
+  </data>
+  <data name="LED_warmwei_f83c6242" xml:space="preserve">
+    <value>LED putih hangat</value>
+  </data>
+  <data name="LED_kaltwei_4ce93b96" xml:space="preserve">
+    <value>LED putih dingin</value>
+  </data>
+  <data name="Leuchtstoffr_hre_9501917a" xml:space="preserve">
+    <value>Lampu neon</value>
+  </data>
+  <data name="Softbox_82239748" xml:space="preserve">
+    <value>Softbox</value>
+  </data>
+  <data name="Stra_enlaterne_ae4d27e9" xml:space="preserve">
+    <value>Lampu jalan</value>
+  </data>
+  <data name="Flutlicht_19e963de" xml:space="preserve">
+    <value>Lampu sorot</value>
+  </data>
+  <data name="Taschenlampe_1951c1cf" xml:space="preserve">
+    <value>Senter</value>
+  </data>
+  <data name="Abendsonne_e8e63f11" xml:space="preserve">
+    <value>Matahari sore</value>
+  </data>
+  <data name="Sonnenstrahlen_94f96f21" xml:space="preserve">
+    <value>Sinar matahari</value>
+  </data>
+  <data name="Mondlicht_920c9e23" xml:space="preserve">
+    <value>Cahaya bulan</value>
+  </data>
+  <data name="Neon_Pink_ff2c0cb6" xml:space="preserve">
+    <value>Neon merah muda</value>
+  </data>
+  <data name="Neon_Blau_ed37e248" xml:space="preserve">
+    <value>Neon biru</value>
+  </data>
+  <data name="Farbiges_Licht_3c9e9d0b" xml:space="preserve">
+    <value>Cahaya berwarna</value>
+  </data>
+  <data name="Schlagschatten_64e6ddcb" xml:space="preserve">
+    <value>Bayangan jatuh</value>
+  </data>
+  <data name="Licht_hinzugef_gt_d4d57774" xml:space="preserve">
+    <value>Cahaya ditambahkan</value>
+  </data>
+  <data name="Licht_entfernt_63ddce81" xml:space="preserve">
+    <value>Cahaya dihapus</value>
+  </data>
+  <data name="Licht_ausgerichtet_39fc21b7" xml:space="preserve">
+    <value>Cahaya diarahkan</value>
+  </data>
+  <data name="Licht_ein_oder_aus_14a0fe08" xml:space="preserve">
+    <value>Cahaya nyala atau mati</value>
+  </data>
+  <data name="Farbtemperatur_2eb22d3c" xml:space="preserve">
+    <value>Suhu warna</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_setzt_ein_neues_Licht_dieser__1592aba9" xml:space="preserve">
+    <value>Klik di gambar menempatkan cahaya baru jenis ini. Jika ada cahaya terpilih, klik pertama di sebelahnya hanya membatalkan pilihan. Titik pada cahaya memindahkan, mengarahkan, dan mengubah panjang serta lebarnya. Dengan kekuatan negatif, cahaya menjadi bayangan.</value>
+  </data>
+  <data name="Lichtquelle_hinzuf_gen_7ab2e8f8" xml:space="preserve">
+    <value>Tambah sumber cahaya</value>
+  </data>
+  <data name="Auftrag_4ec1a905" xml:space="preserve">
+    <value>Pekerjaan</value>
+  </data>
+  <data name="Zum_Beispiel_Fotoreise_Ort_oder_Kunde_74176582" xml:space="preserve">
+    <value>Misalnya perjalanan foto, tempat atau klien</value>
+  </data>
+  <data name="Leer_lassen_f_r_den_Namen_der_Quelle_18d9d1e2" xml:space="preserve">
+    <value>Biarkan kosong untuk nama sumber</value>
+  </data>
+  <data name="Zum_Beispiel_0_91608e37" xml:space="preserve">
+    <value>Misalnya: {0}</value>
+  </data>
+  <data name="Aufnahmedaten_werden_gelesen_0_von_1_799959dc" xml:space="preserve">
+    <value>Membaca data pemotretan: {0} dari {1}</value>
+  </data>
+  <data name="job_setzt_den_Auftrag_ein_in_Ziel_und_Dateiname__aa14f8e3" xml:space="preserve">
+    <value>{job} menyisipkan pekerjaan ke tujuan dan nama file. Untuk nama file juga ada {name} untuk nama sumber dan ### sebagai penghitung; ekstensi tetap. Contoh: {datetaken:yyyy-MM-dd}_{job}_###.</value>
+  </data>
+  <data name="Dateinamen_f_r_den_Import_0166d955" xml:space="preserve">
+    <value>Nama file untuk impor</value>
+  </data>
+  <data name="Muster_f_r_Dateinamen_die_der_Import_neben_dem_N_fdd29eef" xml:space="preserve">
+    <value>Pola nama file yang ditawarkan impor selain nama sumber. Dipilih di dialog impor.</value>
+  </data>
+  <data name="Muster_hinzuf_gen_13cd0bc6" xml:space="preserve">
+    <value>Tambah pola</value>
+  </data>
+  <data name="Name_der_Quelle_cc325d23" xml:space="preserve">
+    <value>Nama sumber</value>
+  </data>
+  <data name="Ziel_wird_gepr_ft_23bc2c51" xml:space="preserve">
+    <value>Memeriksa tujuan…</value>
+  </data>
+  <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
+    <value>Dengan hari yang tidak dipilih, impor dapat dimulai setelah semua data pemotretan terbaca</value>
+  </data>
 </root>

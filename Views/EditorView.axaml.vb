@@ -1985,6 +1985,8 @@ Namespace Views
                     UpdateAdjustmentsPanelSide()
                 Case NameOf(EditorViewModel.EditorGridSize)
                     UpdateGridOverlay()
+                Case NameOf(EditorViewModel.LightOverlayVersion), NameOf(EditorViewModel.ShowLightControls)
+                    UpdateLightOverlay()
                 Case NameOf(EditorViewModel.AnnotationText),
                      NameOf(EditorViewModel.AnnotationFillColor),
                      NameOf(EditorViewModel.AnnotationStrokeColor),
@@ -2236,6 +2238,22 @@ Namespace Views
             UpdateRulers()
             UpdateGuideLines()
             UpdateGridOverlay()
+            UpdateLightOverlay()
+        End Sub
+
+        ''' <summary>Legt die Griffe der Lichtquellen ueber die ganze Buehne und sagt ihnen, wo das
+        ''' Bild steht. Ihre Werte sind Prozent dieses Bildes.</summary>
+        Private Sub UpdateLightOverlay()
+            Dim overlay = Me.FindControl(Of LightSourceOverlay)("LightOverlay")
+            Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If overlay Is Nothing OrElse canvas Is Nothing OrElse vm Is Nothing Then Return
+            Avalonia.Controls.Canvas.SetLeft(overlay, 0)
+            Avalonia.Controls.Canvas.SetTop(overlay, 0)
+            overlay.Width = canvas.Bounds.Width
+            overlay.Height = canvas.Bounds.Height
+            overlay.ImageRect = GetDisplayedImageRect(canvas, vm)
+            overlay.InvalidateVisual()
         End Sub
 
         ''' <summary>STUFE 3 (Zoom-Detail): meldet dem ViewModel den sichtbaren Bildausschnitt und ob
@@ -8758,6 +8776,10 @@ Namespace Views
                         If isInputControlFocused Then
                             ' Der Schreibcursor steht in einem Eingabefeld: dort löscht Entf Zeichen
                             ' und sonst nichts. Nicht als behandelt melden, sonst kommt es nie an.
+                        ElseIf vm.CurrentTool = EditorTool.Light AndAlso vm.HasSelectedLight Then
+                            ' In der Beleuchtung loescht Entf das markierte Licht, nicht eine Ebene.
+                            vm.RemoveLightCommand.Execute(Nothing)
+                            e.Handled = True
                         Else
                             HandleDeleteShortcut(vm)
                             e.Handled = True

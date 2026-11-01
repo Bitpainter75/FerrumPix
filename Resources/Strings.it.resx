@@ -10661,4 +10661,220 @@
   <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
     <value>Impossibile catturare il fotogramma ({0}).</value>
   </data>
+  <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
+    <value>Illuminazione</value>
+  </data>
+  <data name="Beleuchtung_Lichter_und_Schatten_frei_auf_dem_Bi_51063d3e" xml:space="preserve">
+    <value>Illuminazione: luci e ombre libere sull'immagine</value>
+  </data>
+  <data name="Lichtquellen_55b6b97f" xml:space="preserve">
+    <value>Sorgenti luminose</value>
+  </data>
+  <data name="Lichtart_79ec9044" xml:space="preserve">
+    <value>Tipo di luce</value>
+  </data>
+  <data name="Licht_ein_oder_ausblenden_2505336a" xml:space="preserve">
+    <value>Mostra o nascondi luce</value>
+  </data>
+  <data name="Ein_Licht_der_gew_hlten_Art_in_die_Bildmitte_set_5a0a347e" xml:space="preserve">
+    <value>Aggiungi una luce del tipo scelto al centro dell'immagine</value>
+  </data>
+  <data name="Licht_duplizieren_ae68914f" xml:space="preserve">
+    <value>Duplica luce</value>
+  </data>
+  <data name="Licht_entfernen_02130645" xml:space="preserve">
+    <value>Rimuovi luce</value>
+  </data>
+  <data name="Form_80446347" xml:space="preserve">
+    <value>Forma</value>
+  </data>
+  <data name="Leuchtkraft_785d11c7" xml:space="preserve">
+    <value>Intensità</value>
+  </data>
+  <data name="In_Blendenstufen_Negativ_dunkelt_ab_ein_Schatten_c7fdd0c2" xml:space="preserve">
+    <value>In stop. Negativo scurisce, un'ombra.</value>
+  </data>
+  <data name="Reichweite_eee6255e" xml:space="preserve">
+    <value>Portata</value>
+  </data>
+  <data name="Richtung_6f7cc304" xml:space="preserve">
+    <value>Direzione</value>
+  </data>
+  <data name="ffnungswinkel_des_Lichtkegels_in_Grad_8b63cfbe" xml:space="preserve">
+    <value>Angolo di apertura del cono di luce in gradi</value>
+  </data>
+  <data name="Abfall_6744c564" xml:space="preserve">
+    <value>Attenuazione</value>
+  </data>
+  <data name="Beleuchten_wirkt_wie_Licht_bei_der_Aufnahme_Leuc_048df676" xml:space="preserve">
+    <value>Illumina agisce come la luce al momento dello scatto, Bagliore aggiunge uno splendore visibile, anche sul nero.</value>
+  </data>
+  <data name="Lichthof_0e653a81" xml:space="preserve">
+    <value>Alone</value>
+  </data>
+  <data name="Ein_Schein_um_die_Lichtquelle_selbst_30b44b6f" xml:space="preserve">
+    <value>Un bagliore attorno alla sorgente stessa</value>
+  </data>
+  <data name="Strahlenkontrast_e438ea1a" xml:space="preserve">
+    <value>Contrasto dei raggi</value>
+  </data>
+  <data name="Lichtfarbe_45e008f9" xml:space="preserve">
+    <value>Colore della luce</value>
+  </data>
+  <data name="An_die_Farbe_folgt_der_Farbtemperatur_in_Kelvin__449eecb4" xml:space="preserve">
+    <value>Attivo: il colore segue la temperatura colore in kelvin. Disattivo: un colore scelto liberamente.</value>
+  </data>
+  <data name="Kelvin_f16cffaa" xml:space="preserve">
+    <value>Kelvin</value>
+  </data>
+  <data name="Tiefe_beachten_924c8dd8" xml:space="preserve">
+    <value>Considera la profondità</value>
+  </data>
+  <data name="Das_Licht_trifft_vor_allem_was_ungef_hr_so_weit__dd954d50" xml:space="preserve">
+    <value>La luce colpisce soprattutto ciò che è circa alla stessa distanza della sorgente. Richiede il modello di profondità.</value>
+  </data>
+  <data name="Tiefenbereich_c08f0413" xml:space="preserve">
+    <value>Intervallo di profondità</value>
+  </data>
+  <data name="Wie_weit_das_Licht_nach_vorn_und_hinten_reicht_c865d8e9" xml:space="preserve">
+    <value>Fin dove arriva la luce in avanti e indietro</value>
+  </data>
+  <data name="Punktlicht_5de19147" xml:space="preserve">
+    <value>Luce puntiforme</value>
+  </data>
+  <data name="Spot_c5c5ba59" xml:space="preserve">
+    <value>Faretto</value>
+  </data>
+  <data name="Fl_che_86efe620" xml:space="preserve">
+    <value>Area</value>
+  </data>
+  <data name="Streiflicht_c7444c67" xml:space="preserve">
+    <value>Luce radente</value>
+  </data>
+  <data name="Strahlen_9a1b1fb7" xml:space="preserve">
+    <value>Raggi</value>
+  </data>
+  <data name="Nat_rlich_3460c969" xml:space="preserve">
+    <value>Naturale</value>
+  </data>
+  <data name="Hart_d6a00a13" xml:space="preserve">
+    <value>Duro</value>
+  </data>
+  <data name="Beleuchten_d895032e" xml:space="preserve">
+    <value>Illumina</value>
+  </data>
+  <data name="Leuchten_779c09d6" xml:space="preserve">
+    <value>Bagliore</value>
+  </data>
+  <data name="Kerze_f5b47390" xml:space="preserve">
+    <value>Candela</value>
+  </data>
+  <data name="Lagerfeuer_21459a25" xml:space="preserve">
+    <value>Falò</value>
+  </data>
+  <data name="Gl_hbirne_6d943fd4" xml:space="preserve">
+    <value>Lampadina</value>
+  </data>
+  <data name="Halogen_50671100" xml:space="preserve">
+    <value>Alogena</value>
+  </data>
+  <data name="LED_warmwei_f83c6242" xml:space="preserve">
+    <value>LED bianco caldo</value>
+  </data>
+  <data name="LED_kaltwei_4ce93b96" xml:space="preserve">
+    <value>LED bianco freddo</value>
+  </data>
+  <data name="Leuchtstoffr_hre_9501917a" xml:space="preserve">
+    <value>Tubo fluorescente</value>
+  </data>
+  <data name="Softbox_82239748" xml:space="preserve">
+    <value>Softbox</value>
+  </data>
+  <data name="Stra_enlaterne_ae4d27e9" xml:space="preserve">
+    <value>Lampione</value>
+  </data>
+  <data name="Flutlicht_19e963de" xml:space="preserve">
+    <value>Riflettore</value>
+  </data>
+  <data name="Taschenlampe_1951c1cf" xml:space="preserve">
+    <value>Torcia</value>
+  </data>
+  <data name="Abendsonne_e8e63f11" xml:space="preserve">
+    <value>Sole serale</value>
+  </data>
+  <data name="Sonnenstrahlen_94f96f21" xml:space="preserve">
+    <value>Raggi di sole</value>
+  </data>
+  <data name="Mondlicht_920c9e23" xml:space="preserve">
+    <value>Chiaro di luna</value>
+  </data>
+  <data name="Neon_Pink_ff2c0cb6" xml:space="preserve">
+    <value>Neon rosa</value>
+  </data>
+  <data name="Neon_Blau_ed37e248" xml:space="preserve">
+    <value>Neon blu</value>
+  </data>
+  <data name="Farbiges_Licht_3c9e9d0b" xml:space="preserve">
+    <value>Luce colorata</value>
+  </data>
+  <data name="Schlagschatten_64e6ddcb" xml:space="preserve">
+    <value>Ombra proiettata</value>
+  </data>
+  <data name="Licht_hinzugef_gt_d4d57774" xml:space="preserve">
+    <value>Luce aggiunta</value>
+  </data>
+  <data name="Licht_entfernt_63ddce81" xml:space="preserve">
+    <value>Luce rimossa</value>
+  </data>
+  <data name="Licht_ausgerichtet_39fc21b7" xml:space="preserve">
+    <value>Luce orientata</value>
+  </data>
+  <data name="Licht_ein_oder_aus_14a0fe08" xml:space="preserve">
+    <value>Luce accesa o spenta</value>
+  </data>
+  <data name="Farbtemperatur_2eb22d3c" xml:space="preserve">
+    <value>Temperatura colore</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_setzt_ein_neues_Licht_dieser__1592aba9" xml:space="preserve">
+    <value>Un clic nell'immagine aggiunge una nuova luce di questo tipo. Se una luce è selezionata, il primo clic accanto toglie solo la selezione. I punti sulla luce la spostano, la orientano e ne cambiano lunghezza e larghezza. Con intensità negativa diventa un'ombra.</value>
+  </data>
+  <data name="Lichtquelle_hinzuf_gen_7ab2e8f8" xml:space="preserve">
+    <value>Aggiungi sorgente luminosa</value>
+  </data>
+  <data name="Auftrag_4ec1a905" xml:space="preserve">
+    <value>Lavoro</value>
+  </data>
+  <data name="Zum_Beispiel_Fotoreise_Ort_oder_Kunde_74176582" xml:space="preserve">
+    <value>Ad esempio viaggio fotografico, luogo o cliente</value>
+  </data>
+  <data name="Leer_lassen_f_r_den_Namen_der_Quelle_18d9d1e2" xml:space="preserve">
+    <value>Lasciare vuoto per il nome di origine</value>
+  </data>
+  <data name="Zum_Beispiel_0_91608e37" xml:space="preserve">
+    <value>Ad esempio: {0}</value>
+  </data>
+  <data name="Aufnahmedaten_werden_gelesen_0_von_1_799959dc" xml:space="preserve">
+    <value>Lettura dei dati di scatto: {0} di {1}</value>
+  </data>
+  <data name="job_setzt_den_Auftrag_ein_in_Ziel_und_Dateiname__aa14f8e3" xml:space="preserve">
+    <value>{job} inserisce il lavoro nella destinazione e nel nome file. Per il nome file ci sono anche {name} per il nome di origine e ### come contatore; l'estensione resta. Esempio: {datetaken:yyyy-MM-dd}_{job}_###.</value>
+  </data>
+  <data name="Dateinamen_f_r_den_Import_0166d955" xml:space="preserve">
+    <value>Nomi file per l'importazione</value>
+  </data>
+  <data name="Muster_f_r_Dateinamen_die_der_Import_neben_dem_N_fdd29eef" xml:space="preserve">
+    <value>Modelli di nome file che l'importazione offre accanto al nome di origine. Si scelgono nella finestra di importazione.</value>
+  </data>
+  <data name="Muster_hinzuf_gen_13cd0bc6" xml:space="preserve">
+    <value>Aggiungi modello</value>
+  </data>
+  <data name="Name_der_Quelle_cc325d23" xml:space="preserve">
+    <value>Nome di origine</value>
+  </data>
+  <data name="Ziel_wird_gepr_ft_23bc2c51" xml:space="preserve">
+    <value>Verifica della destinazione…</value>
+  </data>
+  <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
+    <value>Con giorni deselezionati, l'importazione può iniziare quando tutti i dati di scatto sono stati letti</value>
+  </data>
 </root>

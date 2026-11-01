@@ -10701,4 +10701,220 @@
   <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
     <value>Snímek videa se nepodařilo zachytit ({0}).</value>
   </data>
+  <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
+    <value>Osvětlení</value>
+  </data>
+  <data name="Beleuchtung_Lichter_und_Schatten_frei_auf_dem_Bi_51063d3e" xml:space="preserve">
+    <value>Osvětlení: světla a stíny volně na obrázku</value>
+  </data>
+  <data name="Lichtquellen_55b6b97f" xml:space="preserve">
+    <value>Zdroje světla</value>
+  </data>
+  <data name="Lichtart_79ec9044" xml:space="preserve">
+    <value>Druh světla</value>
+  </data>
+  <data name="Licht_ein_oder_ausblenden_2505336a" xml:space="preserve">
+    <value>Zobrazit nebo skrýt světlo</value>
+  </data>
+  <data name="Ein_Licht_der_gew_hlten_Art_in_die_Bildmitte_set_5a0a347e" xml:space="preserve">
+    <value>Umístit světlo zvoleného druhu doprostřed obrázku</value>
+  </data>
+  <data name="Licht_duplizieren_ae68914f" xml:space="preserve">
+    <value>Duplikovat světlo</value>
+  </data>
+  <data name="Licht_entfernen_02130645" xml:space="preserve">
+    <value>Odstranit světlo</value>
+  </data>
+  <data name="Form_80446347" xml:space="preserve">
+    <value>Tvar</value>
+  </data>
+  <data name="Leuchtkraft_785d11c7" xml:space="preserve">
+    <value>Svítivost</value>
+  </data>
+  <data name="In_Blendenstufen_Negativ_dunkelt_ab_ein_Schatten_c7fdd0c2" xml:space="preserve">
+    <value>Ve clonových číslech. Záporná hodnota ztmavuje, stín.</value>
+  </data>
+  <data name="Reichweite_eee6255e" xml:space="preserve">
+    <value>Dosah</value>
+  </data>
+  <data name="Richtung_6f7cc304" xml:space="preserve">
+    <value>Směr</value>
+  </data>
+  <data name="ffnungswinkel_des_Lichtkegels_in_Grad_8b63cfbe" xml:space="preserve">
+    <value>Úhel otevření světelného kužele ve stupních</value>
+  </data>
+  <data name="Abfall_6744c564" xml:space="preserve">
+    <value>Útlum</value>
+  </data>
+  <data name="Beleuchten_wirkt_wie_Licht_bei_der_Aufnahme_Leuc_048df676" xml:space="preserve">
+    <value>Osvítit působí jako světlo při snímání, Zářit přidává viditelnou záři, i na černou.</value>
+  </data>
+  <data name="Lichthof_0e653a81" xml:space="preserve">
+    <value>Halo</value>
+  </data>
+  <data name="Ein_Schein_um_die_Lichtquelle_selbst_30b44b6f" xml:space="preserve">
+    <value>Záře kolem samotného zdroje světla</value>
+  </data>
+  <data name="Strahlenkontrast_e438ea1a" xml:space="preserve">
+    <value>Kontrast paprsků</value>
+  </data>
+  <data name="Lichtfarbe_45e008f9" xml:space="preserve">
+    <value>Barva světla</value>
+  </data>
+  <data name="An_die_Farbe_folgt_der_Farbtemperatur_in_Kelvin__449eecb4" xml:space="preserve">
+    <value>Zapnuto: barva se řídí teplotou chromatičnosti v kelvinech. Vypnuto: volně zvolená barva.</value>
+  </data>
+  <data name="Kelvin_f16cffaa" xml:space="preserve">
+    <value>Kelvin</value>
+  </data>
+  <data name="Tiefe_beachten_924c8dd8" xml:space="preserve">
+    <value>Respektovat hloubku</value>
+  </data>
+  <data name="Das_Licht_trifft_vor_allem_was_ungef_hr_so_weit__dd954d50" xml:space="preserve">
+    <value>Světlo dopadá hlavně na to, co je zhruba stejně daleko jako samotný zdroj. Vyžaduje model hloubky.</value>
+  </data>
+  <data name="Tiefenbereich_c08f0413" xml:space="preserve">
+    <value>Rozsah hloubky</value>
+  </data>
+  <data name="Wie_weit_das_Licht_nach_vorn_und_hinten_reicht_c865d8e9" xml:space="preserve">
+    <value>Jak daleko světlo sahá dopředu a dozadu</value>
+  </data>
+  <data name="Punktlicht_5de19147" xml:space="preserve">
+    <value>Bodové světlo</value>
+  </data>
+  <data name="Spot_c5c5ba59" xml:space="preserve">
+    <value>Bodovka</value>
+  </data>
+  <data name="Fl_che_86efe620" xml:space="preserve">
+    <value>Plocha</value>
+  </data>
+  <data name="Streiflicht_c7444c67" xml:space="preserve">
+    <value>Boční světlo</value>
+  </data>
+  <data name="Strahlen_9a1b1fb7" xml:space="preserve">
+    <value>Paprsky</value>
+  </data>
+  <data name="Nat_rlich_3460c969" xml:space="preserve">
+    <value>Přirozený</value>
+  </data>
+  <data name="Hart_d6a00a13" xml:space="preserve">
+    <value>Tvrdý</value>
+  </data>
+  <data name="Beleuchten_d895032e" xml:space="preserve">
+    <value>Osvítit</value>
+  </data>
+  <data name="Leuchten_779c09d6" xml:space="preserve">
+    <value>Zářit</value>
+  </data>
+  <data name="Kerze_f5b47390" xml:space="preserve">
+    <value>Svíčka</value>
+  </data>
+  <data name="Lagerfeuer_21459a25" xml:space="preserve">
+    <value>Táborák</value>
+  </data>
+  <data name="Gl_hbirne_6d943fd4" xml:space="preserve">
+    <value>Žárovka</value>
+  </data>
+  <data name="Halogen_50671100" xml:space="preserve">
+    <value>Halogen</value>
+  </data>
+  <data name="LED_warmwei_f83c6242" xml:space="preserve">
+    <value>LED teplá bílá</value>
+  </data>
+  <data name="LED_kaltwei_4ce93b96" xml:space="preserve">
+    <value>LED studená bílá</value>
+  </data>
+  <data name="Leuchtstoffr_hre_9501917a" xml:space="preserve">
+    <value>Zářivka</value>
+  </data>
+  <data name="Softbox_82239748" xml:space="preserve">
+    <value>Softbox</value>
+  </data>
+  <data name="Stra_enlaterne_ae4d27e9" xml:space="preserve">
+    <value>Pouliční lampa</value>
+  </data>
+  <data name="Flutlicht_19e963de" xml:space="preserve">
+    <value>Reflektor</value>
+  </data>
+  <data name="Taschenlampe_1951c1cf" xml:space="preserve">
+    <value>Baterka</value>
+  </data>
+  <data name="Abendsonne_e8e63f11" xml:space="preserve">
+    <value>Večerní slunce</value>
+  </data>
+  <data name="Sonnenstrahlen_94f96f21" xml:space="preserve">
+    <value>Sluneční paprsky</value>
+  </data>
+  <data name="Mondlicht_920c9e23" xml:space="preserve">
+    <value>Měsíční svit</value>
+  </data>
+  <data name="Neon_Pink_ff2c0cb6" xml:space="preserve">
+    <value>Neonově růžová</value>
+  </data>
+  <data name="Neon_Blau_ed37e248" xml:space="preserve">
+    <value>Neonově modrá</value>
+  </data>
+  <data name="Farbiges_Licht_3c9e9d0b" xml:space="preserve">
+    <value>Barevné světlo</value>
+  </data>
+  <data name="Schlagschatten_64e6ddcb" xml:space="preserve">
+    <value>Vržený stín</value>
+  </data>
+  <data name="Licht_hinzugef_gt_d4d57774" xml:space="preserve">
+    <value>Světlo přidáno</value>
+  </data>
+  <data name="Licht_entfernt_63ddce81" xml:space="preserve">
+    <value>Světlo odstraněno</value>
+  </data>
+  <data name="Licht_ausgerichtet_39fc21b7" xml:space="preserve">
+    <value>Světlo nasměrováno</value>
+  </data>
+  <data name="Licht_ein_oder_aus_14a0fe08" xml:space="preserve">
+    <value>Světlo zapnuto nebo vypnuto</value>
+  </data>
+  <data name="Farbtemperatur_2eb22d3c" xml:space="preserve">
+    <value>Teplota chromatičnosti</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_setzt_ein_neues_Licht_dieser__1592aba9" xml:space="preserve">
+    <value>Kliknutím do obrázku přidáte nové světlo tohoto druhu. Je-li světlo vybráno, první kliknutí vedle něj jen zruší výběr. Body na světle ho posouvají, natáčejí a mění jeho délku a šířku. Se zápornou svítivostí se z něj stane stín.</value>
+  </data>
+  <data name="Lichtquelle_hinzuf_gen_7ab2e8f8" xml:space="preserve">
+    <value>Přidat zdroj světla</value>
+  </data>
+  <data name="Auftrag_4ec1a905" xml:space="preserve">
+    <value>Zakázka</value>
+  </data>
+  <data name="Zum_Beispiel_Fotoreise_Ort_oder_Kunde_74176582" xml:space="preserve">
+    <value>Například fotovýlet, místo nebo zákazník</value>
+  </data>
+  <data name="Leer_lassen_f_r_den_Namen_der_Quelle_18d9d1e2" xml:space="preserve">
+    <value>Ponechte prázdné pro název zdroje</value>
+  </data>
+  <data name="Zum_Beispiel_0_91608e37" xml:space="preserve">
+    <value>Například: {0}</value>
+  </data>
+  <data name="Aufnahmedaten_werden_gelesen_0_von_1_799959dc" xml:space="preserve">
+    <value>Načítají se data pořízení: {0} z {1}</value>
+  </data>
+  <data name="job_setzt_den_Auftrag_ein_in_Ziel_und_Dateiname__aa14f8e3" xml:space="preserve">
+    <value>{job} vloží zakázku do cíle i názvu souboru. Pro název souboru je navíc {name} pro název zdroje a ### jako počítadlo; přípona zůstane. Příklad: {datetaken:yyyy-MM-dd}_{job}_###.</value>
+  </data>
+  <data name="Dateinamen_f_r_den_Import_0166d955" xml:space="preserve">
+    <value>Názvy souborů pro import</value>
+  </data>
+  <data name="Muster_f_r_Dateinamen_die_der_Import_neben_dem_N_fdd29eef" xml:space="preserve">
+    <value>Vzory názvů souborů, které import nabízí vedle názvu zdroje. Vybírají se v dialogu importu.</value>
+  </data>
+  <data name="Muster_hinzuf_gen_13cd0bc6" xml:space="preserve">
+    <value>Přidat vzor</value>
+  </data>
+  <data name="Name_der_Quelle_cc325d23" xml:space="preserve">
+    <value>Název zdroje</value>
+  </data>
+  <data name="Ziel_wird_gepr_ft_23bc2c51" xml:space="preserve">
+    <value>Kontroluje se cíl…</value>
+  </data>
+  <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
+    <value>S odznačenými dny lze import spustit, jakmile se načtou všechna data pořízení</value>
+  </data>
 </root>

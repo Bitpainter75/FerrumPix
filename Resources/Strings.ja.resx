@@ -10701,4 +10701,220 @@
   <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
     <value>フレームをキャプチャできませんでした ({0})。</value>
   </data>
+  <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
+    <value>ライティング</value>
+  </data>
+  <data name="Beleuchtung_Lichter_und_Schatten_frei_auf_dem_Bi_51063d3e" xml:space="preserve">
+    <value>ライティング: 写真の好きな位置に光と影</value>
+  </data>
+  <data name="Lichtquellen_55b6b97f" xml:space="preserve">
+    <value>光源</value>
+  </data>
+  <data name="Lichtart_79ec9044" xml:space="preserve">
+    <value>光の種類</value>
+  </data>
+  <data name="Licht_ein_oder_ausblenden_2505336a" xml:space="preserve">
+    <value>光の表示切替</value>
+  </data>
+  <data name="Ein_Licht_der_gew_hlten_Art_in_die_Bildmitte_set_5a0a347e" xml:space="preserve">
+    <value>選んだ種類の光を写真の中央に置く</value>
+  </data>
+  <data name="Licht_duplizieren_ae68914f" xml:space="preserve">
+    <value>光を複製</value>
+  </data>
+  <data name="Licht_entfernen_02130645" xml:space="preserve">
+    <value>光を削除</value>
+  </data>
+  <data name="Form_80446347" xml:space="preserve">
+    <value>形状</value>
+  </data>
+  <data name="Leuchtkraft_785d11c7" xml:space="preserve">
+    <value>明るさ</value>
+  </data>
+  <data name="In_Blendenstufen_Negativ_dunkelt_ab_ein_Schatten_c7fdd0c2" xml:space="preserve">
+    <value>段数で指定。マイナスで暗くなり、影になります。</value>
+  </data>
+  <data name="Reichweite_eee6255e" xml:space="preserve">
+    <value>到達距離</value>
+  </data>
+  <data name="Richtung_6f7cc304" xml:space="preserve">
+    <value>方向</value>
+  </data>
+  <data name="ffnungswinkel_des_Lichtkegels_in_Grad_8b63cfbe" xml:space="preserve">
+    <value>光の円錐の開き角度（度）</value>
+  </data>
+  <data name="Abfall_6744c564" xml:space="preserve">
+    <value>減衰</value>
+  </data>
+  <data name="Beleuchten_wirkt_wie_Licht_bei_der_Aufnahme_Leuc_048df676" xml:space="preserve">
+    <value>照らすは撮影時の光のように働き、発光は黒の上にも見える輝きを加えます。</value>
+  </data>
+  <data name="Lichthof_0e653a81" xml:space="preserve">
+    <value>光輪</value>
+  </data>
+  <data name="Ein_Schein_um_die_Lichtquelle_selbst_30b44b6f" xml:space="preserve">
+    <value>光源そのものの周りの輝き</value>
+  </data>
+  <data name="Strahlenkontrast_e438ea1a" xml:space="preserve">
+    <value>光線のコントラスト</value>
+  </data>
+  <data name="Lichtfarbe_45e008f9" xml:space="preserve">
+    <value>光の色</value>
+  </data>
+  <data name="An_die_Farbe_folgt_der_Farbtemperatur_in_Kelvin__449eecb4" xml:space="preserve">
+    <value>オン: 色はケルビンの色温度に従います。オフ: 自由に選んだ色。</value>
+  </data>
+  <data name="Kelvin_f16cffaa" xml:space="preserve">
+    <value>ケルビン</value>
+  </data>
+  <data name="Tiefe_beachten_924c8dd8" xml:space="preserve">
+    <value>奥行きを考慮</value>
+  </data>
+  <data name="Das_Licht_trifft_vor_allem_was_ungef_hr_so_weit__dd954d50" xml:space="preserve">
+    <value>光は主に光源とほぼ同じ距離にあるものに当たります。深度モデルが必要です。</value>
+  </data>
+  <data name="Tiefenbereich_c08f0413" xml:space="preserve">
+    <value>奥行きの範囲</value>
+  </data>
+  <data name="Wie_weit_das_Licht_nach_vorn_und_hinten_reicht_c865d8e9" xml:space="preserve">
+    <value>光が手前と奥にどこまで届くか</value>
+  </data>
+  <data name="Punktlicht_5de19147" xml:space="preserve">
+    <value>点光源</value>
+  </data>
+  <data name="Spot_c5c5ba59" xml:space="preserve">
+    <value>スポット</value>
+  </data>
+  <data name="Fl_che_86efe620" xml:space="preserve">
+    <value>面光源</value>
+  </data>
+  <data name="Streiflicht_c7444c67" xml:space="preserve">
+    <value>斜光</value>
+  </data>
+  <data name="Strahlen_9a1b1fb7" xml:space="preserve">
+    <value>光線</value>
+  </data>
+  <data name="Nat_rlich_3460c969" xml:space="preserve">
+    <value>自然</value>
+  </data>
+  <data name="Hart_d6a00a13" xml:space="preserve">
+    <value>ハード</value>
+  </data>
+  <data name="Beleuchten_d895032e" xml:space="preserve">
+    <value>照らす</value>
+  </data>
+  <data name="Leuchten_779c09d6" xml:space="preserve">
+    <value>発光</value>
+  </data>
+  <data name="Kerze_f5b47390" xml:space="preserve">
+    <value>ろうそく</value>
+  </data>
+  <data name="Lagerfeuer_21459a25" xml:space="preserve">
+    <value>キャンプファイヤー</value>
+  </data>
+  <data name="Gl_hbirne_6d943fd4" xml:space="preserve">
+    <value>電球</value>
+  </data>
+  <data name="Halogen_50671100" xml:space="preserve">
+    <value>ハロゲン</value>
+  </data>
+  <data name="LED_warmwei_f83c6242" xml:space="preserve">
+    <value>LED 電球色</value>
+  </data>
+  <data name="LED_kaltwei_4ce93b96" xml:space="preserve">
+    <value>LED 昼白色</value>
+  </data>
+  <data name="Leuchtstoffr_hre_9501917a" xml:space="preserve">
+    <value>蛍光灯</value>
+  </data>
+  <data name="Softbox_82239748" xml:space="preserve">
+    <value>ソフトボックス</value>
+  </data>
+  <data name="Stra_enlaterne_ae4d27e9" xml:space="preserve">
+    <value>街灯</value>
+  </data>
+  <data name="Flutlicht_19e963de" xml:space="preserve">
+    <value>投光照明</value>
+  </data>
+  <data name="Taschenlampe_1951c1cf" xml:space="preserve">
+    <value>懐中電灯</value>
+  </data>
+  <data name="Abendsonne_e8e63f11" xml:space="preserve">
+    <value>夕日</value>
+  </data>
+  <data name="Sonnenstrahlen_94f96f21" xml:space="preserve">
+    <value>日差し</value>
+  </data>
+  <data name="Mondlicht_920c9e23" xml:space="preserve">
+    <value>月明かり</value>
+  </data>
+  <data name="Neon_Pink_ff2c0cb6" xml:space="preserve">
+    <value>ネオンピンク</value>
+  </data>
+  <data name="Neon_Blau_ed37e248" xml:space="preserve">
+    <value>ネオンブルー</value>
+  </data>
+  <data name="Farbiges_Licht_3c9e9d0b" xml:space="preserve">
+    <value>カラーライト</value>
+  </data>
+  <data name="Schlagschatten_64e6ddcb" xml:space="preserve">
+    <value>投影</value>
+  </data>
+  <data name="Licht_hinzugef_gt_d4d57774" xml:space="preserve">
+    <value>光を追加</value>
+  </data>
+  <data name="Licht_entfernt_63ddce81" xml:space="preserve">
+    <value>光を削除</value>
+  </data>
+  <data name="Licht_ausgerichtet_39fc21b7" xml:space="preserve">
+    <value>光を調整</value>
+  </data>
+  <data name="Licht_ein_oder_aus_14a0fe08" xml:space="preserve">
+    <value>光のオンとオフ</value>
+  </data>
+  <data name="Farbtemperatur_2eb22d3c" xml:space="preserve">
+    <value>色温度</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_setzt_ein_neues_Licht_dieser__1592aba9" xml:space="preserve">
+    <value>写真をクリックすると、この種類の光が追加されます。光を選択中は、その外側の最初のクリックで選択が解除されるだけです。光のハンドルで移動、向き、長さと幅を調整できます。明るさをマイナスにすると影になります。</value>
+  </data>
+  <data name="Lichtquelle_hinzuf_gen_7ab2e8f8" xml:space="preserve">
+    <value>光源を追加</value>
+  </data>
+  <data name="Auftrag_4ec1a905" xml:space="preserve">
+    <value>ジョブ</value>
+  </data>
+  <data name="Zum_Beispiel_Fotoreise_Ort_oder_Kunde_74176582" xml:space="preserve">
+    <value>例: 撮影旅行、場所、顧客</value>
+  </data>
+  <data name="Leer_lassen_f_r_den_Namen_der_Quelle_18d9d1e2" xml:space="preserve">
+    <value>空欄で元のファイル名のまま</value>
+  </data>
+  <data name="Zum_Beispiel_0_91608e37" xml:space="preserve">
+    <value>例: {0}</value>
+  </data>
+  <data name="Aufnahmedaten_werden_gelesen_0_von_1_799959dc" xml:space="preserve">
+    <value>撮影データを読み込み中: {0} / {1}</value>
+  </data>
+  <data name="job_setzt_den_Auftrag_ein_in_Ziel_und_Dateiname__aa14f8e3" xml:space="preserve">
+    <value>{job} は保存先とファイル名にジョブを挿入します。ファイル名には元の名前の {name} とカウンターの ### も使えます。拡張子はそのままです。例: {datetaken:yyyy-MM-dd}_{job}_###。</value>
+  </data>
+  <data name="Dateinamen_f_r_den_Import_0166d955" xml:space="preserve">
+    <value>取り込み用のファイル名</value>
+  </data>
+  <data name="Muster_f_r_Dateinamen_die_der_Import_neben_dem_N_fdd29eef" xml:space="preserve">
+    <value>取り込み時に元の名前と並べて提示するファイル名のパターンです。取り込みダイアログで選びます。</value>
+  </data>
+  <data name="Muster_hinzuf_gen_13cd0bc6" xml:space="preserve">
+    <value>パターンを追加</value>
+  </data>
+  <data name="Name_der_Quelle_cc325d23" xml:space="preserve">
+    <value>元のファイル名</value>
+  </data>
+  <data name="Ziel_wird_gepr_ft_23bc2c51" xml:space="preserve">
+    <value>保存先を確認中…</value>
+  </data>
+  <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
+    <value>選択を外した日がある場合、すべての撮影データを読み込んでから取り込みを開始できます</value>
+  </data>
 </root>

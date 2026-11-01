@@ -970,6 +970,14 @@ Namespace Services
         ''' <summary>Masken werden einmal gespeichert und können von mehreren lokalen Korrekturen benutzt werden.</summary>
         Public Property Masks As New System.Collections.Generic.List(Of ImageMask)()
         Public Property MaskedAdjustmentLayers As New System.Collections.Generic.List(Of MaskedAdjustmentLayer)()
+        ''' <summary>Die Lichtquellen des Werkzeugs Beleuchtung (siehe <see cref="LightSource"/>).
+        ''' Strukturell wie die Objekte: sie wandern nicht in Korrekturebenen.</summary>
+        Public Property LightSources As New System.Collections.Generic.List(Of LightSource)()
+        ''' <summary>Welche Tiefenkarte zu diesem Rezept gehoert, siehe
+        ''' ImageProcessor.SetLightDepthMap. Gesetzt vom Editor, nicht gespeichert: ohne passende
+        ''' Karte rechnen tiefenbewusste Lichter wie gewoehnliche.</summary>
+        <JsonIgnore>
+        Public Property LightDepthToken As String = ""
         ''' <summary>Versionszähler des ARBEITSBILDS: geht in den Base-Cache-Key
         ''' ein und verwirft Pipeline-Caches nach jedem eingebackenen Commit. Kein Bestandteil des
         ''' Rezepts im inhaltlichen Sinn (reiner Cache-Stempel), schadet aber serialisiert nicht.</summary>
@@ -1191,6 +1199,7 @@ Namespace Services
             "UpscaleModel",
             "CanvasWidth", "CanvasHeight", "LockCanvasAspect", "CanvasAnchor", "CanvasBackgroundColor",
             "RetouchSpots", "Annotations", "AnnotationGroups", "RasterPaintStrokes", "Masks", "MaskedAdjustmentLayers",
+            "LightSources", "LightDepthToken",
             "SelectionScopeEnabled", "HasActiveSelection", "ActiveSelectionIsMask",
             "SelectionXPercent", "SelectionYPercent", "SelectionWidthPercent",
             "SelectionHeightPercent", "SelectionShapeMode", "SelectionShapePointsX", "SelectionShapePointsY",
@@ -1694,6 +1703,8 @@ Namespace Services
                 .RasterPaintStrokes = RasterPaintStrokes.Select(Function(s) s.Clone()).ToList(),
                 .Masks = If(Masks, New List(Of ImageMask)()).Where(Function(m) m IsNot Nothing).Select(Function(m) m.Clone()).ToList(),
                 .MaskedAdjustmentLayers = If(MaskedAdjustmentLayers, New List(Of MaskedAdjustmentLayer)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
+                .LightSources = If(LightSources, New List(Of LightSource)()).Where(Function(l) l IsNot Nothing).Select(Function(l) l.Clone()).ToList(),
+                .LightDepthToken = LightDepthToken,
                 .SelectionScopeEnabled = SelectionScopeEnabled,
                 .HasActiveSelection = HasActiveSelection,
                 .ActiveSelectionIsMask = ActiveSelectionIsMask,
