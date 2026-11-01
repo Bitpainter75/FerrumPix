@@ -491,6 +491,16 @@ Namespace Services
         Public Property ImportIncludeSubfolders As Boolean = True
         Public Property ImportUseBackup As Boolean = False
         Public Property ImportBackupFolder As String = ""
+        ''' Der zuletzt eingegebene Auftrag fuer den Platzhalter {job}; der naechste Import schlaegt
+        ''' ihn wieder vor, denn ein Auftrag erstreckt sich oft ueber mehrere Karten.
+        Public Property ImportJobName As String = ""
+        ''' Die Vorlage fuer den Dateinamen im Ziel; leer behaelt der Import den Namen der Quelle.
+        Public Property ImportNameTemplate As String = ""
+        ''' Die Muster fuer Dateinamen, die der Import neben dem Namen der Quelle zur Wahl anbietet,
+        ''' wie die Zielordner (Name und Vorlage, CardImportService.TargetFileNameFor).
+        Public Property ImportNameTemplates As New List(Of ImportTargetSettings) From {
+            New ImportTargetSettings With {.Name = "", .Template = "{datetaken:yyyy-MM-dd}_{job}_###"}
+        }
         ''' Entwickelte RAW-Vorschau statt eingebettetem JPG (Standard AUS). Wirkt NUR, wenn eine .fpxmp
         ''' existiert - unbearbeitete RAWs bleiben beim schnellen eingebetteten JPG. Getrennt für
         ''' Galerie-Thumbnails und Viewer, weil der Viewer teurer entwickelt.

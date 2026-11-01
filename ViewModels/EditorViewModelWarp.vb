@@ -866,8 +866,23 @@ Namespace ViewModels
         ''' <summary>Die Vorschau zum aktuellen Raster neu zeichnen - gedrosselt, siehe
         ''' <see cref="QueueWarpPreview"/>.</summary>
         Private Sub RefreshGridPreview()
-            QueueWarpPreview(Sub() RefreshWarpPreview(_warpColumns, _warpRows, WarpGridValues, "Gitter"))
+            QueueWarpPreview(Sub()
+                                 If EnsureWarpPreviewBase("Gitter") Then PrepareGridPreview()
+                                 RefreshWarpPreview(_warpColumns, _warpRows, WarpGridValues, "Gitter")
+                             End Sub)
         End Sub
+
+        ''' <summary>Fehlt die Grundlage der Vorschau mitten in einem Zug? Angelegt wird sie beim
+        ''' Anfassen. Kam sie dort nicht zustande (das Anzeigebild wurde gerade ersetzt) oder hat
+        ''' eine Aenderung sie verworfen (SchedulePreviewUpdate raeumt jede Werkzeug-Vorschau ab),
+        ''' stieg RefreshWarpPreview bei jeder Bewegung still aus: der erste Zug an einer Ecke
+        ''' blieb ohne Vorschau, sie erschien erst, wenn der naechste Griff sie neu anlegte.
+        ''' True heisst: der Aufrufer legt sie jetzt an.</summary>
+        Private Function EnsureWarpPreviewBase(holder As String) As Boolean
+            If _gridPreviewBase IsNot Nothing AndAlso _gridPreviewSourceX IsNot Nothing Then Return False
+            DiagnosticLogService.LogAlways("Editor.WarpPreview", $"Grundlage fehlte im Zug ({holder}), wird neu angelegt")
+            Return True
+        End Function
 
         ''' <summary>Der gemeinsame Weg fuer Gitter und Verformen: aus den Knoten in ANZEIGE-Prozent
         ''' wird die Kopie in Anzeigegroesse verzerrt und als Vorschau ueber das Bild gelegt.
@@ -2028,6 +2043,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub RefreshEnvelopePreview()
+            If EnsureWarpPreviewBase("Verformen") Then PrepareEnvelopePreview()
             RefreshWarpPreview(EnvelopeSteps, EnvelopeSteps,
                                EnvelopeDisplayNodes(EnvelopeSteps), "Verformen")
         End Sub

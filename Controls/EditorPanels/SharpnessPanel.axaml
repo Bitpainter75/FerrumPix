@@ -11,7 +11,7 @@
                         <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <icons:SvgIcon
-                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders-horizontal.svg"
+                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/crosshair.svg"
                                     Width="18" Height="18" />
                                 <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                             </StackPanel>

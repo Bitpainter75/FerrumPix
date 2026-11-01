@@ -14,7 +14,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="8"
                                     VerticalAlignment="Center">
                             <icons:SvgIcon
-                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
+                                Source="avares://FerrumPix/Assets/Icons/phosphor/regular/vignette.svg"
                                 Width="18" Height="18" />
                             <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                         </StackPanel>

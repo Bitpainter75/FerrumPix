@@ -94,10 +94,46 @@
                    FontSize="{DynamicResource FP.Font.Small}"
                    TextWrapping="Wrap"/>
 
+        <!-- AUFTRAG UND DATEINAME: der Auftrag fuellt {job} in Ziel und Dateiname; die Vorlage des
+             Dateinamens ist leer, solange die Namen der Quelle bleiben sollen. -->
+        <TextBlock Text="Auftrag"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <TextBox Text="{Binding DialogImportJobName, Mode=TwoWay}"
+                 Classes="no-translate"
+                 PlaceholderText="Zum Beispiel Fotoreise, Ort oder Kunde"
+                 MinHeight="36"/>
+        <TextBlock Text="Dateiname"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <ComboBox ItemsSource="{Binding DialogImportNameChoices}"
+                  SelectedItem="{Binding DialogImportSelectedNameChoice, Mode=TwoWay}"
+                  HorizontalAlignment="Stretch"
+                  Classes="no-translate"/>
+        <TextBox Text="{Binding DialogImportNameTemplate, Mode=TwoWay}"
+                 Classes="no-translate"
+                 PlaceholderText="Leer lassen für den Namen der Quelle"
+                 MinHeight="36"/>
+        <TextBlock Text="{Binding DialogImportNameExample}"
+                   IsVisible="{Binding HasDialogImportNameExample}"
+                   Classes="no-translate"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+        <TextBlock Text="{}{job} setzt den Auftrag ein, in Ziel und Dateiname. Für den Dateinamen gibt es dazu {name} für den Namen der Quelle und ### als Zähler; die Endung bleibt. Beispiel: {datetaken:yyyy-MM-dd}_{job}_###."
+                   Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}"
+                   TextWrapping="Wrap"/>
+
         <!-- SICHERUNG: ein zweites Ziel, das genauso geprüft beschrieben wird. -->
         <CheckBox IsChecked="{Binding DialogImportUseBackup, Mode=TwoWay}">
             <TextBlock Text="Zusätzlich in einen zweiten Ordner sichern"/>
         </CheckBox>
+        <ComboBox ItemsSource="{Binding DialogImportTargetChoices}"
+                  SelectedItem="{Binding DialogImportSelectedBackupChoice, Mode=TwoWay}"
+                  IsVisible="{Binding DialogImportUseBackup}"
+                  HorizontalAlignment="Stretch"
+                  Classes="no-translate"/>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding DialogImportUseBackup}">
             <TextBox Text="{Binding DialogImportBackupFolder, Mode=TwoWay}"
                      Classes="no-translate"

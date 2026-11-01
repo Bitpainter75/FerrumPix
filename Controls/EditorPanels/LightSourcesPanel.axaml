@@ -1,0 +1,241 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.LightSourcesPanel">
+    <!-- Werkzeug Beleuchtung: Lichter und Schatten frei auf dem Bild (EditorViewModelLights.vb).
+         Gesetzt und ausgerichtet wird auf der Buehne (LightSourceOverlay), hier stehen Liste,
+         Lichtart und die Regler des markierten Lichts. -->
+    <StackPanel Spacing="10">
+        <Border Classes="adjustment-group">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg" Width="18" Height="18" />
+                    <TextBlock Text="Lichtquellen" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center">
+                    <TextBlock Text="Lichtart" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="6,0,0,0"
+                              ItemsSource="{Binding LightPresetOptions}"
+                              SelectedItem="{Binding LightPresetLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+                <TextBlock Text="Ein Klick ins Bild setzt ein neues Licht dieser Art. Ist ein Licht markiert, hebt der erste Klick daneben nur die Markierung auf. Die Punkte am Licht verschieben es, richten es aus und ändern seine Länge und Breite. Mit negativer Leuchtkraft wird es zum Schatten."
+                           TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"
+                           FontSize="{DynamicResource FP.Font.Small}" />
+                <ItemsControl ItemsSource="{Binding LightRows}" IsVisible="{Binding HasLights}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,1"
+                                  AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                <Button Classes="ghost" Classes.active="{Binding IsSelected}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="6,4"
+                                        Command="{Binding DataContext.SelectLightCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Id}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="12" Height="12" Fill="{Binding SwatchBrush}" Stroke="{DynamicResource FP.Border.Strong}" StrokeThickness="1" VerticalAlignment="Center" />
+                                        <icons:SvgIcon Source="{Binding IconSource}" Width="18" Height="18" />
+                                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="1" Classes="icon-btn" Width="28" Height="28" Padding="0"
+                                        Command="{Binding DataContext.ToggleLightEnabledCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Id}"
+                                        ToolTip.Tip="Licht ein- oder ausblenden">
+                                    <Panel>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18" IsVisible="{Binding IsEnabled}" />
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-slash.svg" Width="18" Height="18" IsVisible="{Binding !IsEnabled}" />
+                                    </Panel>
+                                </Button>
+                                <!-- Wie in der Maskenliste: ein kleines, zurueckhaltendes Kreuz. -->
+                                <Button Grid.Column="2" Classes="ghost" Width="22" Height="22" Padding="0" Margin="4,0,4,0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding DataContext.RemoveLightByIdCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding Id}"
+                                        ToolTip.Tip="Licht entfernen">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
+                                                   Width="12" Height="12"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Opacity="0.75" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <!-- Wie "Text einfuegen": volle Breite, Symbol des Werkzeugs. Setzt ein Licht der
+                         gewaehlten Art in die Bildmitte, ohne ins Bild zu klicken. -->
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                            Command="{Binding AddLightCommand}"
+                            ToolTip.Tip="Ein Licht der gewählten Art in die Bildmitte setzen">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Lichtquelle hinzufügen" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="1" Classes="icon-btn" Width="32" Height="32" Padding="0" Command="{Binding DuplicateLightCommand}"
+                            IsEnabled="{Binding HasSelectedLight}" ToolTip.Tip="Licht duplizieren">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/copy.svg" Width="18" Height="18" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="adjustment-group" IsVisible="{Binding HasSelectedLight}">
+            <StackPanel Spacing="2">
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock Text="Form" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="6,0,0,0"
+                              ItemsSource="{Binding LightKindOptions}" SelectedItem="{Binding LightKindLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Leuchtkraft" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="In Blendenstufen. Negativ dunkelt ab, ein Schatten." />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-4" Maximum="4" DefaultValue="1" Value="{Binding LightIntensity}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightIntensity, Mode=TwoWay}"
+                                             Minimum="-4" Maximum="4" Increment="0.1" FormatString="F1" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Reichweite" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="300" DefaultValue="30" Value="{Binding LightRadius}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightRadius, Mode=TwoWay}"
+                                             Minimum="1" Maximum="300" Increment="1" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsLightDirectional}">
+                    <TextBlock Text="Richtung" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="-180" Maximum="180" DefaultValue="90" Value="{Binding LightAngle}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightAngle, Mode=TwoWay}"
+                                             Minimum="-180" Maximum="180" Increment="1" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsLightSpot}">
+                    <TextBlock Text="Kegel" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Öffnungswinkel des Lichtkegels in Grad" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="2" Maximum="170" DefaultValue="50" Value="{Binding LightCone}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightCone, Mode=TwoWay}"
+                                             Minimum="2" Maximum="170" Increment="1" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsLightArea}">
+                    <TextBlock Text="Seitenverhältnis" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="10" Maximum="1000" DefaultValue="100" Value="{Binding LightAspect}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightAspect, Mode=TwoWay}"
+                                             Minimum="10" Maximum="1000" Increment="5" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Weiche Kante" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50" Value="{Binding LightSoftness}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightSoftness, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,4,0,4">
+                    <TextBlock Text="Abfall" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="6,0,0,0"
+                              ItemsSource="{Binding LightFalloffOptions}" SelectedItem="{Binding LightFalloffLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock Text="Wirkung" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Beleuchten wirkt wie Licht bei der Aufnahme, Leuchten legt einen sichtbaren Schein auf, auch auf Schwarz." />
+                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="6,0,0,0"
+                              ItemsSource="{Binding LightBlendModeOptions}" SelectedItem="{Binding LightBlendModeLabel}"
+                              FontSize="{DynamicResource FP.Font.Small}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    <TextBlock Text="Lichthof" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Ein Schein um die Lichtquelle selbst" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0" Value="{Binding LightGlow}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightGlow, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsLightRays}">
+                    <TextBlock Text="Strahlen" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="3" Maximum="60" DefaultValue="14" Value="{Binding LightRayCount}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightRayCount, Mode=TwoWay}"
+                                             Minimum="3" Maximum="60" Increment="1" FormatString="F0" />
+                </Grid>
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsLightRays}">
+                    <TextBlock Text="Strahlenkontrast" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="60" Value="{Binding LightRayContrast}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightRayContrast, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="adjustment-group" IsVisible="{Binding HasSelectedLight}">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Ellipse Width="14" Height="14" Fill="{Binding LightSwatchBrush}" Stroke="{DynamicResource FP.Border.Strong}" StrokeThickness="1" />
+                        <TextBlock Text="Lichtfarbe" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <icons:ColorPickerButton Grid.Column="1" SelectedColor="{Binding LightColorValue, Mode=TwoWay}"
+                                             IsVisible="{Binding LightUseColor}" />
+                </Grid>
+                <CheckBox Content="Farbtemperatur" IsChecked="{Binding LightUseTemperature}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="An: die Farbe folgt der Farbtemperatur in Kelvin. Aus: eine frei gewählte Farbe." />
+                <Grid ColumnDefinitions="92,*,52" VerticalAlignment="Center" IsVisible="{Binding LightUseTemperature}">
+                    <TextBlock Text="Kelvin" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1000" Maximum="12000" DefaultValue="3200" Value="{Binding LightTemperature}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightTemperature, Mode=TwoWay}"
+                                             Minimum="1000" Maximum="12000" Increment="100" FormatString="F0" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Classes="adjustment-group" IsVisible="{Binding HasSelectedLight}">
+            <StackPanel Spacing="4">
+                <CheckBox Content="Tiefe beachten" IsChecked="{Binding LightUseDepth}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Das Licht trifft vor allem, was ungefähr so weit entfernt ist wie die Lichtquelle selbst. Braucht das Tiefenmodell." />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding LightUseDepth}">
+                    <TextBlock Text="Tiefenbereich" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                               ToolTip.Tip="Wie weit das Licht nach vorn und hinten reicht" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="25" Value="{Binding LightDepthReach}" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value" Value="{Binding LightDepthReach, Mode=TwoWay}"
+                                             Minimum="0" Maximum="100" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -37,6 +37,10 @@ Namespace Services
         Public Property MtpStorage As MtpStorage
         ''' <summary>Der Pfad auf dem Speicher ("/DCIM/Camera/IMG_0001.jpg").</summary>
         Public Property MtpPath As String = ""
+        ''' <summary>Stehen <see cref="CapturedAt"/> und <see cref="Camera"/> schon aus den EXIF-Daten
+        ''' fest? Ein schnelles Lesen der Quelle setzt zunaechst nur die Aenderungszeit ein, siehe
+        ''' <see cref="CardImportService.ResolveCaptureData"/>.</summary>
+        Public Property CaptureResolved As Boolean
     End Class
 
     ''' <summary>Ein Aufnahmetag der Quelle; im Dialog an- und abwaehlbar.</summary>
@@ -59,6 +63,15 @@ Namespace Services
                 OnSelectionChanged?.Invoke()
             End Set
         End Property
+
+        ''' <summary>Neue Zahlen, wenn die EXIF-Daten Dateien auf einen anderen Tag verschieben. Der
+        ''' Haken bleibt, wie er ist.</summary>
+        Public Sub UpdateTotals(newCount As Integer, newBytes As Long)
+            If Count = newCount AndAlso Bytes = newBytes Then Return
+            Count = newCount
+            Bytes = newBytes
+            Me.RaisePropertyChanged(NameOf(Label))
+        End Sub
 
         Public ReadOnly Property Label As String
             Get
@@ -111,6 +124,11 @@ Namespace Services
     ''' Die Aenderungszeit der Kopie ist die der Quelle, damit Sortierung und Katalog die Aufnahme
     ''' so sehen wie auf der Karte. Die Aufnahmezeit fuer die Unterordner kommt aus den EXIF-Daten,
     ''' ersatzweise aus der Aenderungszeit.
+    '''
+    ''' Das Lesen der Quelle geht in zwei Stufen, damit Tage und Optionen auch bei einer grossen
+    ''' Karte sofort dastehen: zuerst nur die Ordnerliste (Name, Groesse, Aenderungszeit, die eine
+    ''' Kamera beim Fotografieren setzt), dann die EXIF-Daten Datei fuer Datei. Der Lauf liest sie fuer
+    ''' jede Datei nach, die noch keine hat, bevor er ihren Zielordner bestimmt.
     ''' </summary>
     Public NotInheritable Class CardImportService
 
@@ -245,8 +263,11 @@ Namespace Services
 
         ''' <summary>Alle Medien unter <paramref name="root"/>, ohne versteckte Ordner; mit
         ''' <paramref name="includeSubfolders"/> auch in allen Unterordnern (ab Werk, eine Karte legt ihre
-        ''' Bilder in DCIM/100XXXXX ab). Liest je Datei nur die Aufnahmedaten.</summary>
-        Public Shared Function Scan(root As String, token As CancellationToken, Optional includeSubfolders As Boolean = True) As List(Of ImportCandidate)
+        ''' Bilder in DCIM/100XXXXX ab). Liest je Datei nur die Aufnahmedaten, und mit
+        ''' <paramref name="readCaptureData"/> = False nicht einmal die: dann steht die Aenderungszeit
+        ''' als Aufnahmezeit, und <see cref="ResolveCaptureData"/> liest die EXIF-Daten nach.</summary>
+        Public Shared Function Scan(root As String, token As CancellationToken, Optional includeSubfolders As Boolean = True,
+                                    Optional readCaptureData As Boolean = True) As List(Of ImportCandidate)
             If MtpSession.IsAddress(root) Then Return ScanMtp(root, token, includeSubfolders)
             Dim result As New List(Of ImportCandidate)()
             If String.IsNullOrWhiteSpace(root) OrElse Not Directory.Exists(root) Then Return result
@@ -270,10 +291,11 @@ Namespace Services
                         result.Add(New ImportCandidate With {
                             .SourcePath = file,
                             .Size = info.Length,
-                            .CapturedAt = CaptureTimeOf(file, info, camera),
+                            .CapturedAt = If(readCaptureData, CaptureTimeOf(file, info, camera), info.LastWriteTime),
                             .Camera = camera,
                             .ModifiedAt = info.LastWriteTime,
-                            .IsRaw = RawPreviewService.IsSupportedRaw(file)})
+                            .IsRaw = RawPreviewService.IsSupportedRaw(file),
+                            .CaptureResolved = readCaptureData})
                     Next
                 Catch ex As OperationCanceledException
                     Throw
@@ -323,7 +345,8 @@ Namespace Services
                             .ModifiedAt = entry.ModifiedAt,
                             .IsRaw = RawPreviewService.IsSupportedRaw(entry.Name),
                             .MtpStorage = storage,
-                            .MtpPath = entryPath})
+                            .MtpPath = entryPath,
+                            .CaptureResolved = True})
                     Next
                 End While
             End Using
@@ -376,10 +399,68 @@ Namespace Services
         ''' <summary>Der Zielordner einer Aufnahme. Traegt das Ziel Platzhalter, legt die Vorlage den
         ''' ganzen Weg fest und das Muster der Unterordner gilt nicht; ein schlichter Ordner bekommt
         ''' die Unterordner nach dem Muster.</summary>
-        Public Shared Function TargetFolderFor(target As String, pattern As String, candidate As ImportCandidate) As String
-            If HasPlaceholders(target) Then Return ExpandTargetTemplate(target, candidate)
+        Public Shared Function TargetFolderFor(target As String, pattern As String, candidate As ImportCandidate,
+                                               Optional job As String = "") As String
+            If HasPlaceholders(target) Then Return ExpandTargetTemplate(target, candidate, job)
             Return TargetFolderFor(target, pattern, candidate.CapturedAt)
         End Function
+
+        ''' <summary>Der Name, unter dem eine Aufnahme im Ziel erscheint. Eine leere Vorlage behaelt
+        ''' den Namen der Quelle. Sonst dieselben Platzhalter wie fuer den Ordner, dazu {name} (Name
+        ''' der Quelle ohne Endung) und ### als Zaehler mit so vielen Stellen, wie Rauten dastehen,
+        ''' wie beim Stapel-Umbenennen. Die Endung der Quelle bleibt immer, sonst erkennte kein
+        ''' Programm die Datei mehr. Ergibt die Vorlage nichts, gilt ebenfalls der Name der Quelle.</summary>
+        ''' <param name="number">Die laufende Nummer fuer ###, siehe <see cref="NumbersByStem"/>.</param>
+        Public Shared Function TargetFileNameFor(nameTemplate As String, candidate As ImportCandidate,
+                                                 Optional job As String = "", Optional number As Integer = 1) As String
+            Dim original = Path.GetFileName(If(candidate?.SourcePath, ""))
+            If MtpSession.IsAddress(If(candidate?.SourcePath, "")) Then original = Path.GetFileName(If(candidate.MtpPath, original))
+            Dim template = If(nameTemplate, "").Trim()
+            If template.Length = 0 Then Return original
+            Dim text = System.Text.RegularExpressions.Regex.Replace(template, "#+",
+                Function(m) number.ToString(New String("0"c, m.Length), CultureInfo.InvariantCulture))
+            text = text.Replace("{name}", Path.GetFileNameWithoutExtension(original))
+            text = SafeSegment(ExpandCommon(text, candidate, job))
+            If text.Length = 0 Then Return original
+            Return text & Path.GetExtension(original)
+        End Function
+
+        ''' <summary>Die laufenden Nummern fuer ### in der Reihenfolge der Aufnahmen. Eine RAW und ihr
+        ''' JPEG mit demselben Namen im selben Ordner bekommen dieselbe Nummer und bleiben so auch
+        ''' im Ziel ein Paar.</summary>
+        Public Shared Function NumbersByStem(candidates As IEnumerable(Of ImportCandidate)) As Dictionary(Of String, Integer)
+            Dim numbers As New Dictionary(Of String, Integer)(PathIdentity.Comparer)
+            For Each candidate In candidates
+                Dim stem = StemOf(candidate.SourcePath)
+                If Not numbers.ContainsKey(stem) Then numbers(stem) = numbers.Count + 1
+            Next
+            Return numbers
+        End Function
+
+        Private Shared Function NumberOf(numbers As Dictionary(Of String, Integer), candidate As ImportCandidate) As Integer
+            Dim number As Integer
+            If numbers IsNot Nothing AndAlso numbers.TryGetValue(StemOf(candidate.SourcePath), number) Then Return number
+            Return 1
+        End Function
+
+        ''' <summary>Liest Aufnahmezeit und Kamera aus den EXIF-Daten, wenn ein schnelles Lesen der
+        ''' Quelle sie offen gelassen hat. Eine Datei auf einem MTP-Geraet bekommt sie erst nach dem
+        ''' Holen (siehe <see cref="FetchFromMtp"/>).</summary>
+        Public Shared Function ReadCaptureData(candidate As ImportCandidate) As (CapturedAt As DateTime, Camera As String)
+            Dim camera = ""
+            Dim info As New FileInfo(candidate.SourcePath)
+            Dim taken = CaptureTimeOf(candidate.SourcePath, info, camera)
+            Return (taken, camera)
+        End Function
+
+        ''' <summary>Setzt die EXIF-Daten einer Datei ein, die sie noch nicht hat.</summary>
+        Public Shared Sub ResolveCaptureData(candidate As ImportCandidate)
+            If candidate Is Nothing OrElse candidate.CaptureResolved OrElse candidate.MtpStorage IsNot Nothing Then Return
+            Dim data = ReadCaptureData(candidate)
+            candidate.CapturedAt = data.CapturedAt
+            candidate.Camera = data.Camera
+            candidate.CaptureResolved = True
+        End Sub
 
         Public Shared Function HasPlaceholders(target As String) As Boolean
             Return If(target, "").Contains("{"c)
@@ -388,13 +469,30 @@ Namespace Services
         ''' <summary>Loest eine Vorlage fuer eine Aufnahme auf. Dieselben Namen wie beim
         ''' Stapel-Umbenennen, damit es nur einen Dialekt gibt: {datetaken:FORMAT} (Aufnahmezeit,
         ''' ersatzweise Aenderungszeit), {date:FORMAT} (Aenderungszeit), {camera}; dazu fuer Ordner
-        ''' {pictures} (Bilder-Ordner des Benutzers) und {home}. Ein Wert, der selbst einen
-        ''' Schraegstrich traegt (eine Kamera "A/B"), wird dabei entschaerft, damit er keine
-        ''' Ordnerebene erfindet. Ein unbekannter Platzhalter bleibt stehen, damit er auffaellt.</summary>
-        Public Shared Function ExpandTargetTemplate(template As String, candidate As ImportCandidate) As String
+        ''' {pictures} (Bilder-Ordner des Benutzers) und {home}, sowie {job}, der Auftrag aus dem
+        ''' Dialog. Ein Wert, der selbst einen Schraegstrich traegt (eine Kamera "A/B"), wird dabei
+        ''' entschaerft, damit er keine Ordnerebene erfindet. Ein unbekannter Platzhalter bleibt
+        ''' stehen, damit er auffaellt.</summary>
+        Public Shared Function ExpandTargetTemplate(template As String, candidate As ImportCandidate,
+                                                    Optional job As String = "") As String
             Dim text = If(template, "").Trim()
             text = text.Replace("{pictures}", Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)).
                         Replace("{home}", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+            text = ExpandCommon(text, candidate, job)
+            ' Ein leerer Auftrag kann eine Ordnerebene leer lassen ("2026//"); sie faellt weg.
+            Return System.Text.RegularExpressions.Regex.Replace(text, "(?<=.)/{2,}", "/")
+        End Function
+
+        ''' <summary>Die Platzhalter, die Ordner und Dateiname gemeinsam haben. Ein leerer Auftrag
+        ''' nimmt das Trennzeichen davor (oder, am Anfang, danach) mit, damit aus
+        ''' "{datetaken:yyyy-MM-dd}_{job}" kein Name mit haengendem Unterstrich wird.</summary>
+        Private Shared Function ExpandCommon(text As String, candidate As ImportCandidate, job As String) As String
+            Dim jobText = SafeSegment(If(job, ""))
+            If jobText.Length > 0 Then
+                text = text.Replace("{job}", jobText)
+            Else
+                text = System.Text.RegularExpressions.Regex.Replace(text, "[ _-]+\{job\}|\{job\}[ _-]*", "")
+            End If
             Dim camera = SafeSegment(If(candidate?.Camera, ""))
             If camera.Length = 0 Then camera = LocalizationService.T("Ohne Kamera")
             text = text.Replace("{camera}", camera)
@@ -436,12 +534,16 @@ Namespace Services
 
         ''' <summary>Wie viele der Dateien schon im Ziel zu liegen scheinen (gleicher Name, gleiche
         ''' Groesse). Nur fuer den Hinweis im Dialog; das Einlesen prueft es genau.</summary>
-        Public Shared Function CountProbablyPresent(candidates As IEnumerable(Of ImportCandidate), targetRoot As String, pattern As String) As Integer
+        Public Shared Function CountProbablyPresent(candidates As IEnumerable(Of ImportCandidate), targetRoot As String, pattern As String,
+                                                    Optional job As String = "", Optional nameTemplate As String = "") As Integer
             If String.IsNullOrWhiteSpace(targetRoot) Then Return 0
+            Dim list = candidates.ToList()
+            Dim numbers = NumbersByStem(list)
             Dim count = 0
-            For Each candidate In candidates
+            For Each candidate In list
                 Try
-                    Dim target = Path.Combine(TargetFolderFor(targetRoot, pattern, candidate), Path.GetFileName(candidate.SourcePath))
+                    Dim target = Path.Combine(TargetFolderFor(targetRoot, pattern, candidate, job),
+                                              TargetFileNameFor(nameTemplate, candidate, job, NumberOf(numbers, candidate)))
                     Dim info As New FileInfo(target)
                     If info.Exists AndAlso info.Length = candidate.Size Then count += 1
                 Catch
@@ -499,8 +601,12 @@ Namespace Services
         Public Shared Function Run(candidates As IList(Of ImportCandidate), targetRoot As String, pattern As String,
                                    backupRoot As String, token As CancellationToken,
                                    progress As Action(Of Integer, Integer),
-                                   Optional sourceRoot As String = "") As ImportResult
+                                   Optional sourceRoot As String = "",
+                                   Optional job As String = "", Optional nameTemplate As String = "") As ImportResult
             Dim result As New ImportResult()
+            ' Die Nummern fuer ### aus der ganzen Auswahl, vor dem ersten Kopieren: sonst haengt die
+            ' Nummer einer Datei davon ab, welche vor ihr fehlschlug.
+            Dim numbers = NumbersByStem(candidates)
             Dim roots = {targetRoot, backupRoot}.Where(Function(r) Not String.IsNullOrWhiteSpace(r)).ToList()
             Dim cleaned As New HashSet(Of String)(PathIdentity.Comparer)
             Dim mtp As MtpSession = Nothing
@@ -514,6 +620,9 @@ Namespace Services
                     Dim ok = True
                     Dim present = False
                     Dim fileName = Path.GetFileName(candidate.SourcePath)
+                    ' Hat das schnelle Lesen der Quelle die EXIF-Daten offen gelassen, kommen sie
+                    ' jetzt: Ordner und Name haengen an der Aufnahmezeit.
+                    ResolveCaptureData(candidate)
                     ' Vom Geraet hinter kmtpd erst in eine Zwischendatei; sie ist dann die Quelle der
                     ' gewohnten geprueften Kopie.
                     Dim fetched = ""
@@ -533,7 +642,7 @@ Namespace Services
                     Try
                         For rootIndex = 0 To roots.Count - 1
                             If Not ok AndAlso candidate.MtpStorage IsNot Nothing Then Exit For
-                            Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate)
+                            Dim folder = TargetFolderFor(roots(rootIndex), pattern, candidate, job)
                             If IsWithin(folder, sourceRoot) Then
                                 DiagnosticLogService.LogAlways("Import.TargetInSource", folder)
                                 ok = False
@@ -542,7 +651,9 @@ Namespace Services
                             Try
                                 Directory.CreateDirectory(folder)
                                 If cleaned.Add(folder) Then RemoveStaleParts(folder)
-                                Dim outcome = CopyVerified(If(fetched.Length > 0, fetched, candidate.SourcePath), fileName, folder, token)
+                                Dim outcome = CopyVerified(If(fetched.Length > 0, fetched, candidate.SourcePath),
+                                                           TargetFileNameFor(nameTemplate, candidate, job, NumberOf(numbers, candidate)),
+                                                           folder, token)
                                 ' Vorhanden zaehlt nur am Hauptziel; die Sicherung darf es schon haben.
                                 If rootIndex = 0 AndAlso outcome.Present Then present = True
                                 If rootIndex = 0 AndAlso String.IsNullOrEmpty(result.FirstTargetFolder) Then result.FirstTargetFolder = folder

@@ -2956,6 +2956,15 @@ Namespace Services
                                                                       adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition))
             End If
 
+            ' Die Lichtquellen des Werkzeugs Beleuchtung (ImageProcessorLights.vb), vor der
+            ' Vignette: die dunkelt danach auch beleuchtete Ecken ab.
+            If HasActiveLightSources(adj) Then
+                Dim lights = adj.LightSources
+                Dim token = adj.LightDepthToken
+                processed = RunDetailStage(session, processed, owned, "Pixel: Lichtquellen", Nothing,
+                                           Function(s) ApplyLightSources(s, lights, token))
+            End If
+
             If adj.Vignette <> 0 Then
                 ' Gemessen gegen eine verbreitete RAW-Entwicklung wirkte das Abdunkeln (unser +, dort -)
                 ' 1,70-fach, das Aufhellen 1,18-fach zu stark; daher die Faktoren.
@@ -4435,6 +4444,7 @@ Namespace Services
             tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
             tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
             tone.AddNoise = neutral.AddNoise
+            tone.LightSources = New List(Of LightSource)()
             If String.Equals(If(tone.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
                 tone.FilterPreset = "" : tone.FilterStrength = 0
             End If
@@ -4657,6 +4667,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle,
                 adj.TiltShiftAmount, adj.TiltShiftCenterX, adj.TiltShiftCenterY, adj.TiltShiftAngle,
                 adj.TiltShiftFocus, adj.TiltShiftTransition,
+                LightSourcesKey(adj),
                 adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,

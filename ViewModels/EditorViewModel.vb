@@ -5637,6 +5637,7 @@ Namespace ViewModels
                 Return _currentTool <> EditorTool.Transform AndAlso
                        _currentTool <> EditorTool.Resize AndAlso
                        _currentTool <> EditorTool.Warp AndAlso
+                       _currentTool <> EditorTool.Light AndAlso
                        _currentTool <> EditorTool.Move AndAlso
                        _currentTool <> EditorTool.Selection AndAlso
                        _currentTool <> EditorTool.Mask AndAlso
@@ -5878,6 +5879,7 @@ Namespace ViewModels
                     Case EditorTool.Transform : Return LocalizationService.T("Transformieren")
                     Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
                     Case EditorTool.Warp : Return LocalizationService.T("Verzerren")
+                    Case EditorTool.Light : Return LocalizationService.T("Beleuchtung")
                     Case EditorTool.Adjust : Return LocalizationService.T("Anpassen")
                     Case EditorTool.Color : Return LocalizationService.T("Farbe")
                     Case EditorTool.Details : Return LocalizationService.T("Details")
@@ -5978,6 +5980,7 @@ Namespace ViewModels
                 End If
                 Select Case _currentTool
                     Case EditorTool.Move : Return base & "cursor.svg"
+                    Case EditorTool.Light : Return base & "flashlight.svg"
                     Case EditorTool.Selection : Return base & "rectangle.svg"
                     Case EditorTool.Mask : Return base & "mask-happy.svg"
                     Case EditorTool.Retouch : Return If(_isRepairMode AndAlso Not _isCloneMode, IconRoot & "custom/repair-brush.svg", base & If(_isCloneMode, "stamp.svg", "drop-half-bottom.svg"))
@@ -23666,6 +23669,7 @@ Namespace ViewModels
                 .BakedOperationsApplied = _bakedOperationsApplied,
                 .Masks = _imageMasks.Select(Function(m) m.Clone()).ToList(),
                 .MaskedAdjustmentLayers = _maskedAdjustmentLayers.Select(Function(l) l.Clone()).ToList(),
+                .LightSources = _lightSources.Select(Function(l) l.Clone()).ToList(),
                 .GlobalAdjustmentsHidden = _globalAdjustmentsHidden,
                 .BackgroundHidden = _backgroundHidden,
                 .BaseLayerLockPosition = _baseLayerLockPosition,
@@ -23701,6 +23705,9 @@ Namespace ViewModels
 
             ' Kanalmixer, Verlaufsumsetzung, Tontrennung und Schwellenwert (EditorViewModelCorrections.vb).
             WriteCorrectionsInto(adj)
+
+            ' Erst jetzt steht die Geometrie fest, an der die Tiefenkarte der Lichter haengt.
+            adj.LightDepthToken = LightDepthTokenFor(adj)
 
             Return adj
         End Function
@@ -24182,6 +24189,8 @@ Namespace ViewModels
             ' Die weiteren Korrekturen benennt ihre Teildatei (EditorViewModelCorrections.vb).
             Dim correctionLabel = CorrectionHistoryLabel(propertyName)
             If correctionLabel IsNot Nothing Then Return correctionLabel
+            Dim lightLabel = LightHistoryLabel(propertyName)
+            If lightLabel IsNot Nothing Then Return lightLabel
 
             Select Case propertyName
                 Case NameOf(PresetAmount) : Return LocalizationService.T("Preset-Stärke")
@@ -24591,6 +24600,7 @@ Namespace ViewModels
                 ' richtig, wie Drehen und Verzerren ein Werkzeug waren - seit das Drehen bei
                 ' "Transformieren" steht, zeigte er auf die falsche Haelfte.
                 Case EditorTool.Warp : Return outline & "perspective.svg"
+                Case EditorTool.Light : Return outline & "flashlight.svg"
                 Case EditorTool.Adjust : Return outline & "plus-minus.svg"
                 Case EditorTool.Color : Return outline & "intersect-three.svg"
                 Case EditorTool.Details : Return outline & "sliders-horizontal.svg"
@@ -25292,6 +25302,7 @@ Namespace ViewModels
                     If grp IsNot Nothing Then _annotationGroups.Add(grp.Clone())
                 Next
             End If
+            LoadLightSourcesFrom(adj)
             ' HIER WIRD DER GANZE MASKENBESTAND ERSETZT (Klone aus dem Rezept). Ein Rezept, das VOR
             ' einer Maskenaenderung entstanden ist und danach angewendet wird, macht genau diese
             ' Aenderung wieder rueckgaengig - die Spur haelt deshalb fest, was hereinkommt.
@@ -30280,6 +30291,10 @@ Namespace ViewModels
                     _appliedResizeHeight = 0
                     _hasChanges = True
                     SetResizeValues(0, 0)
+                Case EditorTool.Light
+                    _lightSources.Clear()
+                    _selectedLightId = ""
+                    AfterLightChanged(raiseAll:=True)
                 Case EditorTool.Warp
                     ' Das Verzerren-Werkzeug besitzt Perspektive und Raster-/Linien-/Envelope-
                     ' Verzerrungen. Drehung, Ausrichten und Spiegeln gehoeren dagegen zum
@@ -31052,6 +31067,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowShapeControls))
             Me.RaisePropertyChanged(NameOf(ShowSymbolControls))
             Me.RaisePropertyChanged(NameOf(ShowWarpAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowLightControls))
             Me.RaisePropertyChanged(NameOf(SelectedPaintMode))
             Me.RaisePropertyChanged(NameOf(IsGeometryToolSelected))
         End Sub
@@ -32418,6 +32434,9 @@ Namespace ViewModels
         ''' andere Form zieht man auf, der Pfad wird Punkt fuer Punkt gesetzt und bleibt danach an
         ''' seinen Punkten aenderbar.</summary>
         Path
+        ''' <summary>BELEUCHTUNG: frei platzierbare Lichtquellen und Schatten, im Rezept und damit
+        ''' jederzeit aenderbar (EditorViewModelLights.vb).</summary>
+        Light
         ''' <summary>ANPASSUNGEN, das Werkzeug des Kompaktmodus (AppSettings.EditorCompactAdjustments):
         ''' alle Gruppen von Anpassen, Farbe, Details, Effekte und Filter untereinander, und immer nur
         ''' eine davon offen. Ohne den Modus steht es nirgends in der Leiste. Am Ende der Liste, damit

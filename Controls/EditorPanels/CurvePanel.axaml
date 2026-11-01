@@ -9,7 +9,7 @@
                 <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <icons:SvgIcon
-                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/circle-dashed.svg"
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/chart-scatter.svg"
                             Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>

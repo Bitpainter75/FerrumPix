@@ -425,7 +425,10 @@ Namespace ViewModels
                 WriteObjectLiquify()
                 SchedulePreviewUpdate()
             Else
-                QueueWarpPreview(Sub() RefreshWarpPreview(LiquifySteps, LiquifySteps, LiquifyDisplayValues(), "Liquify"))
+                QueueWarpPreview(Sub()
+                                     If EnsureWarpPreviewBase("Liquify") Then PrepareWarpPreview(LiquifySteps, LiquifySteps, AddressOf GridPointToDisplay)
+                                     RefreshWarpPreview(LiquifySteps, LiquifySteps, LiquifyDisplayValues(), "Liquify")
+                                 End Sub)
             End If
         End Sub
 

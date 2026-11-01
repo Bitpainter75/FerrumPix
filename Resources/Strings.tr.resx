@@ -10663,4 +10663,220 @@
   <data name="Weiterbl_ttern_oder_am_Mauszeiger_zoomen_wie_in__b40c03ec" xml:space="preserve">
     <value>Ayarlarda seçildiği gibi resim değiştir veya imleçte yakınlaştır. CTRL ile diğeri</value>
   </data>
+  <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
+    <value>Aydınlatma</value>
+  </data>
+  <data name="Beleuchtung_Lichter_und_Schatten_frei_auf_dem_Bi_51063d3e" xml:space="preserve">
+    <value>Aydınlatma: resim üzerinde serbest ışık ve gölgeler</value>
+  </data>
+  <data name="Lichtquellen_55b6b97f" xml:space="preserve">
+    <value>Işık kaynakları</value>
+  </data>
+  <data name="Lichtart_79ec9044" xml:space="preserve">
+    <value>Işık türü</value>
+  </data>
+  <data name="Licht_ein_oder_ausblenden_2505336a" xml:space="preserve">
+    <value>Işığı göster veya gizle</value>
+  </data>
+  <data name="Ein_Licht_der_gew_hlten_Art_in_die_Bildmitte_set_5a0a347e" xml:space="preserve">
+    <value>Seçilen türde bir ışığı resmin ortasına yerleştir</value>
+  </data>
+  <data name="Licht_duplizieren_ae68914f" xml:space="preserve">
+    <value>Işığı çoğalt</value>
+  </data>
+  <data name="Licht_entfernen_02130645" xml:space="preserve">
+    <value>Işığı kaldır</value>
+  </data>
+  <data name="Form_80446347" xml:space="preserve">
+    <value>Şekil</value>
+  </data>
+  <data name="Leuchtkraft_785d11c7" xml:space="preserve">
+    <value>Parlaklık</value>
+  </data>
+  <data name="In_Blendenstufen_Negativ_dunkelt_ab_ein_Schatten_c7fdd0c2" xml:space="preserve">
+    <value>Durak cinsinden. Negatif karartır, bir gölge.</value>
+  </data>
+  <data name="Reichweite_eee6255e" xml:space="preserve">
+    <value>Menzil</value>
+  </data>
+  <data name="Richtung_6f7cc304" xml:space="preserve">
+    <value>Yön</value>
+  </data>
+  <data name="ffnungswinkel_des_Lichtkegels_in_Grad_8b63cfbe" xml:space="preserve">
+    <value>Işık konisinin açılma açısı, derece</value>
+  </data>
+  <data name="Abfall_6744c564" xml:space="preserve">
+    <value>Azalma</value>
+  </data>
+  <data name="Beleuchten_wirkt_wie_Licht_bei_der_Aufnahme_Leuc_048df676" xml:space="preserve">
+    <value>Aydınlat, çekim anındaki ışık gibi çalışır; Parıltı, siyah üzerinde bile görünür bir ışıltı ekler.</value>
+  </data>
+  <data name="Lichthof_0e653a81" xml:space="preserve">
+    <value>Hale</value>
+  </data>
+  <data name="Ein_Schein_um_die_Lichtquelle_selbst_30b44b6f" xml:space="preserve">
+    <value>Işık kaynağının etrafında bir parıltı</value>
+  </data>
+  <data name="Strahlenkontrast_e438ea1a" xml:space="preserve">
+    <value>Işın kontrastı</value>
+  </data>
+  <data name="Lichtfarbe_45e008f9" xml:space="preserve">
+    <value>Işık rengi</value>
+  </data>
+  <data name="An_die_Farbe_folgt_der_Farbtemperatur_in_Kelvin__449eecb4" xml:space="preserve">
+    <value>Açık: renk kelvin cinsinden renk sıcaklığını izler. Kapalı: serbestçe seçilen bir renk.</value>
+  </data>
+  <data name="Kelvin_f16cffaa" xml:space="preserve">
+    <value>Kelvin</value>
+  </data>
+  <data name="Tiefe_beachten_924c8dd8" xml:space="preserve">
+    <value>Derinliği dikkate al</value>
+  </data>
+  <data name="Das_Licht_trifft_vor_allem_was_ungef_hr_so_weit__dd954d50" xml:space="preserve">
+    <value>Işık daha çok kaynağın kendisi kadar uzaktaki nesnelere düşer. Derinlik modeli gerekir.</value>
+  </data>
+  <data name="Tiefenbereich_c08f0413" xml:space="preserve">
+    <value>Derinlik aralığı</value>
+  </data>
+  <data name="Wie_weit_das_Licht_nach_vorn_und_hinten_reicht_c865d8e9" xml:space="preserve">
+    <value>Işığın öne ve arkaya ne kadar ulaştığı</value>
+  </data>
+  <data name="Punktlicht_5de19147" xml:space="preserve">
+    <value>Nokta ışık</value>
+  </data>
+  <data name="Spot_c5c5ba59" xml:space="preserve">
+    <value>Spot</value>
+  </data>
+  <data name="Fl_che_86efe620" xml:space="preserve">
+    <value>Alan</value>
+  </data>
+  <data name="Streiflicht_c7444c67" xml:space="preserve">
+    <value>Yan ışık</value>
+  </data>
+  <data name="Strahlen_9a1b1fb7" xml:space="preserve">
+    <value>Işınlar</value>
+  </data>
+  <data name="Nat_rlich_3460c969" xml:space="preserve">
+    <value>Doğal</value>
+  </data>
+  <data name="Hart_d6a00a13" xml:space="preserve">
+    <value>Sert</value>
+  </data>
+  <data name="Beleuchten_d895032e" xml:space="preserve">
+    <value>Aydınlat</value>
+  </data>
+  <data name="Leuchten_779c09d6" xml:space="preserve">
+    <value>Parıltı</value>
+  </data>
+  <data name="Kerze_f5b47390" xml:space="preserve">
+    <value>Mum</value>
+  </data>
+  <data name="Lagerfeuer_21459a25" xml:space="preserve">
+    <value>Kamp ateşi</value>
+  </data>
+  <data name="Gl_hbirne_6d943fd4" xml:space="preserve">
+    <value>Ampul</value>
+  </data>
+  <data name="Halogen_50671100" xml:space="preserve">
+    <value>Halojen</value>
+  </data>
+  <data name="LED_warmwei_f83c6242" xml:space="preserve">
+    <value>LED sıcak beyaz</value>
+  </data>
+  <data name="LED_kaltwei_4ce93b96" xml:space="preserve">
+    <value>LED soğuk beyaz</value>
+  </data>
+  <data name="Leuchtstoffr_hre_9501917a" xml:space="preserve">
+    <value>Floresan tüp</value>
+  </data>
+  <data name="Softbox_82239748" xml:space="preserve">
+    <value>Softbox</value>
+  </data>
+  <data name="Stra_enlaterne_ae4d27e9" xml:space="preserve">
+    <value>Sokak lambası</value>
+  </data>
+  <data name="Flutlicht_19e963de" xml:space="preserve">
+    <value>Projektör</value>
+  </data>
+  <data name="Taschenlampe_1951c1cf" xml:space="preserve">
+    <value>El feneri</value>
+  </data>
+  <data name="Abendsonne_e8e63f11" xml:space="preserve">
+    <value>Akşam güneşi</value>
+  </data>
+  <data name="Sonnenstrahlen_94f96f21" xml:space="preserve">
+    <value>Güneş ışınları</value>
+  </data>
+  <data name="Mondlicht_920c9e23" xml:space="preserve">
+    <value>Ay ışığı</value>
+  </data>
+  <data name="Neon_Pink_ff2c0cb6" xml:space="preserve">
+    <value>Neon pembe</value>
+  </data>
+  <data name="Neon_Blau_ed37e248" xml:space="preserve">
+    <value>Neon mavi</value>
+  </data>
+  <data name="Farbiges_Licht_3c9e9d0b" xml:space="preserve">
+    <value>Renkli ışık</value>
+  </data>
+  <data name="Schlagschatten_64e6ddcb" xml:space="preserve">
+    <value>Düşen gölge</value>
+  </data>
+  <data name="Licht_hinzugef_gt_d4d57774" xml:space="preserve">
+    <value>Işık eklendi</value>
+  </data>
+  <data name="Licht_entfernt_63ddce81" xml:space="preserve">
+    <value>Işık kaldırıldı</value>
+  </data>
+  <data name="Licht_ausgerichtet_39fc21b7" xml:space="preserve">
+    <value>Işık yönlendirildi</value>
+  </data>
+  <data name="Licht_ein_oder_aus_14a0fe08" xml:space="preserve">
+    <value>Işık açık veya kapalı</value>
+  </data>
+  <data name="Farbtemperatur_2eb22d3c" xml:space="preserve">
+    <value>Renk sıcaklığı</value>
+  </data>
+  <data name="Ein_Klick_ins_Bild_setzt_ein_neues_Licht_dieser__1592aba9" xml:space="preserve">
+    <value>Resme tıklamak bu türde yeni bir ışık yerleştirir. Bir ışık seçiliyken yanına ilk tıklama yalnızca seçimi kaldırır. Işığın üzerindeki noktalar onu taşır, yönlendirir ve uzunluğunu ve genişliğini değiştirir. Negatif parlaklıkta gölgeye dönüşür.</value>
+  </data>
+  <data name="Lichtquelle_hinzuf_gen_7ab2e8f8" xml:space="preserve">
+    <value>Işık kaynağı ekle</value>
+  </data>
+  <data name="Auftrag_4ec1a905" xml:space="preserve">
+    <value>İş</value>
+  </data>
+  <data name="Zum_Beispiel_Fotoreise_Ort_oder_Kunde_74176582" xml:space="preserve">
+    <value>Örneğin fotoğraf gezisi, yer veya müşteri</value>
+  </data>
+  <data name="Leer_lassen_f_r_den_Namen_der_Quelle_18d9d1e2" xml:space="preserve">
+    <value>Kaynak adını korumak için boş bırakın</value>
+  </data>
+  <data name="Zum_Beispiel_0_91608e37" xml:space="preserve">
+    <value>Örneğin: {0}</value>
+  </data>
+  <data name="Aufnahmedaten_werden_gelesen_0_von_1_799959dc" xml:space="preserve">
+    <value>Çekim verileri okunuyor: {0} / {1}</value>
+  </data>
+  <data name="job_setzt_den_Auftrag_ein_in_Ziel_und_Dateiname__aa14f8e3" xml:space="preserve">
+    <value>{job} işi hedefe ve dosya adına ekler. Dosya adı için ayrıca kaynak adı için {name} ve sayaç olarak ### vardır; uzantı korunur. Örnek: {datetaken:yyyy-MM-dd}_{job}_###.</value>
+  </data>
+  <data name="Dateinamen_f_r_den_Import_0166d955" xml:space="preserve">
+    <value>İçe aktarma için dosya adları</value>
+  </data>
+  <data name="Muster_f_r_Dateinamen_die_der_Import_neben_dem_N_fdd29eef" xml:space="preserve">
+    <value>İçe aktarmanın kaynak adının yanında sunduğu dosya adı kalıpları. İçe aktarma penceresinde seçilir.</value>
+  </data>
+  <data name="Muster_hinzuf_gen_13cd0bc6" xml:space="preserve">
+    <value>Kalıp ekle</value>
+  </data>
+  <data name="Name_der_Quelle_cc325d23" xml:space="preserve">
+    <value>Kaynak adı</value>
+  </data>
+  <data name="Ziel_wird_gepr_ft_23bc2c51" xml:space="preserve">
+    <value>Hedef denetleniyor…</value>
+  </data>
+  <data name="Mit_abgew_hlten_Tagen_geht_es_los_sobald_alle_Au_3a61d058" xml:space="preserve">
+    <value>Seçimi kaldırılmış günler varken, tüm çekim verileri okunduğunda içe aktarma başlayabilir</value>
+  </data>
 </root>
