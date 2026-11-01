@@ -271,7 +271,7 @@
                                                 Command="{Binding StopCommand}"
                                                 ToolTip.Tip="Lauf anhalten, das Gefundene bleibt gespeichert">
                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                                           Width="18" Height="18"
+                                                           Width="12" Height="12"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                                            Opacity="0.75"/>
                                         </Button>
@@ -315,7 +315,7 @@
                                     IsVisible="{Binding SearchText, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                     ToolTip.Tip="Suche zurücksetzen">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                               Width="18" Height="18"
+                                               Width="12" Height="12"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Opacity="0.75"/>
                             </Button>
@@ -3160,7 +3160,7 @@
                                     Command="{Binding CloseMapSelectionCommand}"
                                     ToolTip.Tip="Schließen">
                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                               Width="18" Height="18"/>
+                                               Width="12" Height="12"/>
                             </Button>
                         </Grid>
                     </Border>

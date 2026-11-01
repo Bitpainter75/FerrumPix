@@ -139,7 +139,7 @@
                     </ScrollViewer>
                     <Button Grid.Column="1" Classes="icon-btn" Width="26" Height="26" Padding="0"
                             Command="{Binding DismissFileWarningCommand}" ToolTip.Tip="Schließen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg" Width="18" Height="18"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg" Width="12" Height="12"/>
                     </Button>
                 </Grid>
             </Border>
@@ -175,7 +175,7 @@
                                 Command="{Binding CancelBusyOverlayCommand}"
                                 ToolTip.Tip="Abbrechen. Der Stapel endet nach dem Bild, an dem er gerade rechnet; dieses Bild wird nicht geschrieben.">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                           Width="18" Height="18" />
+                                           Width="12" Height="12" />
                         </Button>
                     </StackPanel>
                 </Border>

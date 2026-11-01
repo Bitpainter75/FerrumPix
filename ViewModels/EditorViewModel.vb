@@ -1734,9 +1734,10 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(name)
                 Next
                 RefreshFilteredShapeIcons()
-                ' Die Formen oben folgen derselben Stärke.
+                ' Die Formen oben folgen derselben Stärke, eine schon gewählte gleich mit.
                 LoadFixedShapeItems()
                 UpdateShapeIconStates()
+                ApplyShapeIconWeightToPendingShape(_pendingInsertKind)
             End Set
         End Property
 
@@ -2011,9 +2012,10 @@ Namespace ViewModels
             End Try
 
             Task.Run(Sub()
+                         Dim keywords = LoadShapeIconKeywords()
                          Dim loaded = ShapeIconWeights.ToDictionary(
                              Function(w) w,
-                             Function(w) BuildShapeIcons(ShapeIconFolder & w & "/", If(w = "regular", "", "-" & w)))
+                             Function(w) BuildShapeIcons(ShapeIconFolder & w & "/", If(w = "regular", "", "-" & w), keywords))
                          Dispatcher.UIThread.Post(Sub()
                                                       _shapeIconsByWeight.Clear()
                                                       For Each pair In loaded
@@ -2030,19 +2032,44 @@ Namespace ViewModels
         ''' Hintergrund.</summary>
         ''' <param name="nameSuffix">Ein Anhang am Dateinamen, der nicht zum Namen gehört (die gefüllte
         ''' Fassung heißt „acorn-fill“).</param>
-        Private Shared Function BuildShapeIcons(folder As String, nameSuffix As String) As List(Of ShapeIconEntry)
+        ''' <summary>Die englischen Suchwoerter je Symbol, eine Zeile „name TAB wort wort …". Fehlt
+        ''' die Datei, sucht die Galerie nur nach Namen.</summary>
+        Private Shared Function LoadShapeIconKeywords() As Dictionary(Of String, String)
+            Dim result As New Dictionary(Of String, String)(StringComparer.Ordinal)
+            Try
+                Using stream = Avalonia.Platform.AssetLoader.Open(New Uri(ShapeIconFolder & "tags.tsv"))
+                    Using reader As New IO.StreamReader(stream)
+                        Dim line = reader.ReadLine()
+                        While line IsNot Nothing
+                            Dim tab = line.IndexOf(ControlChars.Tab)
+                            If tab > 0 Then result(line.Substring(0, tab)) = line.Substring(tab + 1)
+                            line = reader.ReadLine()
+                        End While
+                    End Using
+                End Using
+            Catch
+            End Try
+            Return result
+        End Function
+
+        Private Shared Function BuildShapeIcons(folder As String, nameSuffix As String,
+                                                keywords As Dictionary(Of String, String)) As List(Of ShapeIconEntry)
             Dim result As New List(Of ShapeIconEntry)()
             Try
                 Dim assets = Avalonia.Platform.AssetLoader.GetAssets(New Uri(folder), Nothing)
                 For Each uri In assets
                     Dim path = uri.ToString()
                     If Not path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
-                    Dim sourceName = FormatIconDisplayName(If(nameSuffix.Length > 0, path.Replace(nameSuffix & ".svg", ".svg"), path))
+                    Dim baseName = IO.Path.GetFileNameWithoutExtension(If(nameSuffix.Length > 0, path.Replace(nameSuffix & ".svg", ".svg"), path))
+                    Dim sourceName = FormatIconDisplayName(baseName & ".svg")
+                    Dim tags As String = Nothing
+                    keywords.TryGetValue(baseName, tags)
                     result.Add(New ShapeIconEntry With {
                         .IconPath = path,
                         .SourceName = sourceName,
                         .DisplayName = LocalizationService.Tag(sourceName),
-                        .PendingKind = "Svg:" & path
+                        .PendingKind = "Svg:" & path,
+                        .Keywords = If(tags, "")
                     })
                 Next
                 result.Sort(Function(a, b) String.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase))
@@ -2818,7 +2845,8 @@ Namespace ViewModels
             Dim matches = If(String.IsNullOrEmpty(query),
                               icons,
                               icons.Where(Function(e) e.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
-                                                      e.SourceName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList())
+                                                      e.SourceName.Contains(query, StringComparison.OrdinalIgnoreCase) OrElse
+                                                      e.Keywords.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList())
             ' Ein einzelnes Reset statt tausend Add-Ereignisse.
             _filteredShapeIcons.ReplaceAll(matches)
         End Sub
@@ -4691,6 +4719,42 @@ Namespace ViewModels
             End If
             If normalizedKind = "Text" OrElse (normalizedKind = "Watermark" AndAlso Not IsWatermarkImageSource) Then
                 UpdatePendingTextAnnotationSize()
+            End If
+            ApplyShapeIconWeightToPendingShape(rawKind)
+        End Sub
+
+        ''' <summary>Die Strichstaerke der Galerie gilt auch fuer eine Form aus der Liste darueber:
+        ''' „Gefuellt" setzt sie als Flaeche ohne Kontur, die vier anderen ohne Fuellung mit einer
+        ''' Kontur, deren Breite im selben Verhaeltnis zur Form steht wie beim Symbol im Knopf
+        ''' (Phosphor zeichnet auf 256 Einheiten mit 4, 12, 16 und 24). Linie, Pfeil und Spirale
+        ''' haben keine Flaeche und bekommen nur die Breite, „Gefuellt" wie „Fett". Danach ist es eine
+        ''' gewoehnliche Form, Fuellung und Kontur bleiben frei einstellbar.</summary>
+        Private Sub ApplyShapeIconWeightToPendingShape(rawKind As String)
+            If HasSelectedAnnotation OrElse String.IsNullOrEmpty(rawKind) Then Return
+            If Not _fixedShapeItems.Any(Function(i) String.Equals(i.PendingKind, rawKind, StringComparison.OrdinalIgnoreCase)) Then Return
+            Dim ratio As Double
+            Select Case _shapeIconWeight
+                Case "thin" : ratio = 4.0 / 256.0
+                Case "light" : ratio = 12.0 / 256.0
+                Case "bold", "fill" : ratio = 24.0 / 256.0
+                Case Else : ratio = 16.0 / 256.0
+            End Select
+            Dim side = Math.Max(1, Math.Min(AnnotationWidthPixels, AnnotationHeightPixels))
+            Dim width = Math.Max(1.0, Math.Round(side * ratio))
+            Dim isLineKind = String.Equals(rawKind, "Line", StringComparison.OrdinalIgnoreCase) OrElse
+                             String.Equals(rawKind, "Arrow", StringComparison.OrdinalIgnoreCase) OrElse
+                             String.Equals(rawKind, "Spiral", StringComparison.OrdinalIgnoreCase)
+            Dim ink = AutomaticInkColorForDocumentBackground()
+            If isLineKind Then
+                AnnotationStrokeWidth = width
+            ElseIf _shapeIconWeight = "fill" Then
+                AnnotationFillColor = ink
+                _annotationFillColorIsAutomaticDefault = True
+                AnnotationStrokeWidth = 0
+            Else
+                AnnotationFillColor = "#00FFFFFF"
+                _annotationFillColorIsAutomaticDefault = False
+                AnnotationStrokeWidth = width
             End If
         End Sub
 
@@ -32418,6 +32482,9 @@ Namespace ViewModels
         Public Property DisplayName As String
         Public Property SourceName As String
         Public Property PendingKind As String
+        ''' <summary>Englische Suchwoerter des Symbols aus Phosphors Katalog (Assets/Icons/phosphor/
+        ''' tags.tsv): „dog" findet so auch „paw print". Leer fuer die festen Formen.</summary>
+        Public Property Keywords As String = ""
 
         Private _isPending As Boolean
         ''' Scharf gestellt (Akzentrahmen) - Panel-Icon wurde angeklickt, Objekt wird beim nächsten

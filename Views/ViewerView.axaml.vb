@@ -1325,6 +1325,12 @@ Namespace Views
                 ' Laeuft die Diashow weiter, steht das Bild wieder eingepasst.
                 Dim playing = GetVm()?.IsSlideshowPlaying
                 If playing.GetValueOrDefault() AndAlso _fullscreenZoom > 0 Then ResetFullscreenZoom()
+                ' Anhalten zeigt die Leiste kurz, damit "Angehalten" zu sehen ist; die Ruhezeit nimmt
+                ' sie wieder, wie bei laufender Diashow.
+                If e.PropertyName = NameOf(ViewerViewModel.IsSlideshowPaused) AndAlso
+                   GetVm()?.IsSlideshowPaused = True AndAlso GetVm()?.IsFullscreenMode = True Then
+                    NoteFullscreenVideoControlsActivity()
+                End If
                 UpdateFullscreenImageBar()
             End If
 
@@ -1903,14 +1909,14 @@ Namespace Views
         End Sub
 
         ''' <summary>Die Bedienleiste fuer Bilder im Vollbild: sichtbar nach einer Mausbewegung bis
-        ''' zum Leerlauf, und immer, solange die Diashow angehalten ist. Steht der Filmstreifen
-        ''' unten, rueckt sie ueber ihn.</summary>
+        ''' zum Leerlauf, auch bei angehaltener Diashow; Leisten und Zeiger gehen dann nach derselben
+        ''' Ruhezeit. Steht der Filmstreifen unten, rueckt sie ueber ihn.</summary>
         Private Sub UpdateFullscreenImageBar()
             Dim vm = GetVm()
             Dim bar = Me.FindControl(Of Border)("FullscreenImageBar")
             If bar Is Nothing Then Return
             Dim forImage = vm IsNot Nothing AndAlso vm.IsFullscreenMode AndAlso Not vm.IsVideoFile AndAlso vm.CurrentImage IsNot Nothing
-            bar.IsVisible = forImage AndAlso (_fullscreenVideoControlsVisible OrElse vm.IsSlideshowPaused)
+            bar.IsVisible = forImage AndAlso _fullscreenVideoControlsVisible
             bar.Margin = New Thickness(0, 0, 0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionBottom, 24 + FilmstripPlacement.TopExtent, 24))
             ' Die Bewertungsleiste oben geht mit der Bedienleiste unten und rueckt unter einen oben
             ' stehenden Filmstreifen.

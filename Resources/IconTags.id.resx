@@ -1,0 +1,4551 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="acorn" xml:space="preserve">
+    <value>Biji ek</value>
+  </data>
+  <data name="address_book" xml:space="preserve">
+    <value>Alamat buku</value>
+  </data>
+  <data name="address_book_tabs" xml:space="preserve">
+    <value>Alamat buku tab</value>
+  </data>
+  <data name="air_traffic_control" xml:space="preserve">
+    <value>Udara lalu lintas kontrol</value>
+  </data>
+  <data name="airplane" xml:space="preserve">
+    <value>Pesawat</value>
+  </data>
+  <data name="airplane_in_flight" xml:space="preserve">
+    <value>Pesawat masuk penerbangan</value>
+  </data>
+  <data name="airplane_landing" xml:space="preserve">
+    <value>Pesawat pendaratan</value>
+  </data>
+  <data name="airplane_takeoff" xml:space="preserve">
+    <value>Pesawat lepas landas</value>
+  </data>
+  <data name="airplane_taxiing" xml:space="preserve">
+    <value>Pesawat taxi</value>
+  </data>
+  <data name="airplane_tilt" xml:space="preserve">
+    <value>Pesawat miring</value>
+  </data>
+  <data name="airplay" xml:space="preserve">
+    <value>Airplay</value>
+  </data>
+  <data name="alarm" xml:space="preserve">
+    <value>Alarm</value>
+  </data>
+  <data name="alien" xml:space="preserve">
+    <value>Alien</value>
+  </data>
+  <data name="align_bottom" xml:space="preserve">
+    <value>Ratakan bawah</value>
+  </data>
+  <data name="align_bottom_simple" xml:space="preserve">
+    <value>Ratakan bawah sederhana</value>
+  </data>
+  <data name="align_center_horizontal" xml:space="preserve">
+    <value>Ratakan tengah horizontal</value>
+  </data>
+  <data name="align_center_horizontal_simple" xml:space="preserve">
+    <value>Ratakan tengah horizontal sederhana</value>
+  </data>
+  <data name="align_center_vertical" xml:space="preserve">
+    <value>Ratakan tengah vertikal</value>
+  </data>
+  <data name="align_center_vertical_simple" xml:space="preserve">
+    <value>Ratakan tengah vertikal sederhana</value>
+  </data>
+  <data name="align_left" xml:space="preserve">
+    <value>Ratakan kiri</value>
+  </data>
+  <data name="align_left_simple" xml:space="preserve">
+    <value>Ratakan kiri sederhana</value>
+  </data>
+  <data name="align_right" xml:space="preserve">
+    <value>Ratakan kanan</value>
+  </data>
+  <data name="align_right_simple" xml:space="preserve">
+    <value>Ratakan kanan sederhana</value>
+  </data>
+  <data name="align_top" xml:space="preserve">
+    <value>Ratakan atas</value>
+  </data>
+  <data name="align_top_simple" xml:space="preserve">
+    <value>Ratakan atas sederhana</value>
+  </data>
+  <data name="amazon_logo" xml:space="preserve">
+    <value>Amazon logo</value>
+  </data>
+  <data name="ambulance" xml:space="preserve">
+    <value>Ambulans</value>
+  </data>
+  <data name="anchor" xml:space="preserve">
+    <value>Jangkar</value>
+  </data>
+  <data name="anchor_simple" xml:space="preserve">
+    <value>Jangkar sederhana</value>
+  </data>
+  <data name="android_logo" xml:space="preserve">
+    <value>Android logo</value>
+  </data>
+  <data name="angle" xml:space="preserve">
+    <value>Sudut</value>
+  </data>
+  <data name="angular_logo" xml:space="preserve">
+    <value>Angular logo</value>
+  </data>
+  <data name="aperture" xml:space="preserve">
+    <value>Bukaan</value>
+  </data>
+  <data name="app_store_logo" xml:space="preserve">
+    <value>Aplikasi toko logo</value>
+  </data>
+  <data name="app_window" xml:space="preserve">
+    <value>Aplikasi jendela</value>
+  </data>
+  <data name="apple_logo" xml:space="preserve">
+    <value>Apel logo</value>
+  </data>
+  <data name="apple_podcasts_logo" xml:space="preserve">
+    <value>Apel podcast logo</value>
+  </data>
+  <data name="approximate_equals" xml:space="preserve">
+    <value>Perkiraan sama dengan</value>
+  </data>
+  <data name="archive" xml:space="preserve">
+    <value>Arsip</value>
+  </data>
+  <data name="armchair" xml:space="preserve">
+    <value>Kursi berlengan</value>
+  </data>
+  <data name="arrow_arc_left" xml:space="preserve">
+    <value>Panah busur kiri</value>
+  </data>
+  <data name="arrow_arc_right" xml:space="preserve">
+    <value>Panah busur kanan</value>
+  </data>
+  <data name="arrow_bend_double_up_left" xml:space="preserve">
+    <value>Panah tikungan ganda atas kiri</value>
+  </data>
+  <data name="arrow_bend_double_up_right" xml:space="preserve">
+    <value>Panah tikungan ganda atas kanan</value>
+  </data>
+  <data name="arrow_bend_down_left" xml:space="preserve">
+    <value>Panah tikungan bawah kiri</value>
+  </data>
+  <data name="arrow_bend_down_right" xml:space="preserve">
+    <value>Panah tikungan bawah kanan</value>
+  </data>
+  <data name="arrow_bend_left_down" xml:space="preserve">
+    <value>Panah tikungan kiri bawah</value>
+  </data>
+  <data name="arrow_bend_left_up" xml:space="preserve">
+    <value>Panah tikungan kiri atas</value>
+  </data>
+  <data name="arrow_bend_right_down" xml:space="preserve">
+    <value>Panah tikungan kanan bawah</value>
+  </data>
+  <data name="arrow_bend_right_up" xml:space="preserve">
+    <value>Panah tikungan kanan atas</value>
+  </data>
+  <data name="arrow_bend_up_left" xml:space="preserve">
+    <value>Panah tikungan atas kiri</value>
+  </data>
+  <data name="arrow_bend_up_right" xml:space="preserve">
+    <value>Panah tikungan atas kanan</value>
+  </data>
+  <data name="arrow_circle_down" xml:space="preserve">
+    <value>Panah lingkaran bawah</value>
+  </data>
+  <data name="arrow_circle_down_left" xml:space="preserve">
+    <value>Panah lingkaran bawah kiri</value>
+  </data>
+  <data name="arrow_circle_down_right" xml:space="preserve">
+    <value>Panah lingkaran bawah kanan</value>
+  </data>
+  <data name="arrow_circle_left" xml:space="preserve">
+    <value>Panah lingkaran kiri</value>
+  </data>
+  <data name="arrow_circle_right" xml:space="preserve">
+    <value>Panah lingkaran kanan</value>
+  </data>
+  <data name="arrow_circle_up" xml:space="preserve">
+    <value>Panah lingkaran atas</value>
+  </data>
+  <data name="arrow_circle_up_left" xml:space="preserve">
+    <value>Panah lingkaran atas kiri</value>
+  </data>
+  <data name="arrow_circle_up_right" xml:space="preserve">
+    <value>Panah lingkaran atas kanan</value>
+  </data>
+  <data name="arrow_clockwise" xml:space="preserve">
+    <value>Panah searah jarum jam</value>
+  </data>
+  <data name="arrow_counter_clockwise" xml:space="preserve">
+    <value>Panah penghitung searah jarum jam</value>
+  </data>
+  <data name="arrow_down" xml:space="preserve">
+    <value>Panah bawah</value>
+  </data>
+  <data name="arrow_down_left" xml:space="preserve">
+    <value>Panah bawah kiri</value>
+  </data>
+  <data name="arrow_down_right" xml:space="preserve">
+    <value>Panah bawah kanan</value>
+  </data>
+  <data name="arrow_elbow_down_left" xml:space="preserve">
+    <value>Panah siku bawah kiri</value>
+  </data>
+  <data name="arrow_elbow_down_right" xml:space="preserve">
+    <value>Panah siku bawah kanan</value>
+  </data>
+  <data name="arrow_elbow_left" xml:space="preserve">
+    <value>Panah siku kiri</value>
+  </data>
+  <data name="arrow_elbow_left_down" xml:space="preserve">
+    <value>Panah siku kiri bawah</value>
+  </data>
+  <data name="arrow_elbow_left_up" xml:space="preserve">
+    <value>Panah siku kiri atas</value>
+  </data>
+  <data name="arrow_elbow_right" xml:space="preserve">
+    <value>Panah siku kanan</value>
+  </data>
+  <data name="arrow_elbow_right_down" xml:space="preserve">
+    <value>Panah siku kanan bawah</value>
+  </data>
+  <data name="arrow_elbow_right_up" xml:space="preserve">
+    <value>Panah siku kanan atas</value>
+  </data>
+  <data name="arrow_elbow_up_left" xml:space="preserve">
+    <value>Panah siku atas kiri</value>
+  </data>
+  <data name="arrow_elbow_up_right" xml:space="preserve">
+    <value>Panah siku atas kanan</value>
+  </data>
+  <data name="arrow_fat_down" xml:space="preserve">
+    <value>Panah tebal bawah</value>
+  </data>
+  <data name="arrow_fat_left" xml:space="preserve">
+    <value>Panah tebal kiri</value>
+  </data>
+  <data name="arrow_fat_line_down" xml:space="preserve">
+    <value>Panah tebal garis bawah</value>
+  </data>
+  <data name="arrow_fat_line_left" xml:space="preserve">
+    <value>Panah tebal garis kiri</value>
+  </data>
+  <data name="arrow_fat_line_right" xml:space="preserve">
+    <value>Panah tebal garis kanan</value>
+  </data>
+  <data name="arrow_fat_line_up" xml:space="preserve">
+    <value>Panah tebal garis atas</value>
+  </data>
+  <data name="arrow_fat_lines_down" xml:space="preserve">
+    <value>Panah tebal garis bawah</value>
+  </data>
+  <data name="arrow_fat_lines_left" xml:space="preserve">
+    <value>Panah tebal garis kiri</value>
+  </data>
+  <data name="arrow_fat_lines_right" xml:space="preserve">
+    <value>Panah tebal garis kanan</value>
+  </data>
+  <data name="arrow_fat_lines_up" xml:space="preserve">
+    <value>Panah tebal garis atas</value>
+  </data>
+  <data name="arrow_fat_right" xml:space="preserve">
+    <value>Panah tebal kanan</value>
+  </data>
+  <data name="arrow_fat_up" xml:space="preserve">
+    <value>Panah tebal atas</value>
+  </data>
+  <data name="arrow_left" xml:space="preserve">
+    <value>Panah kiri</value>
+  </data>
+  <data name="arrow_line_down" xml:space="preserve">
+    <value>Panah garis bawah</value>
+  </data>
+  <data name="arrow_line_down_left" xml:space="preserve">
+    <value>Panah garis bawah kiri</value>
+  </data>
+  <data name="arrow_line_down_right" xml:space="preserve">
+    <value>Panah garis bawah kanan</value>
+  </data>
+  <data name="arrow_line_left" xml:space="preserve">
+    <value>Panah garis kiri</value>
+  </data>
+  <data name="arrow_line_right" xml:space="preserve">
+    <value>Panah garis kanan</value>
+  </data>
+  <data name="arrow_line_up" xml:space="preserve">
+    <value>Panah garis atas</value>
+  </data>
+  <data name="arrow_line_up_left" xml:space="preserve">
+    <value>Panah garis atas kiri</value>
+  </data>
+  <data name="arrow_line_up_right" xml:space="preserve">
+    <value>Panah garis atas kanan</value>
+  </data>
+  <data name="arrow_right" xml:space="preserve">
+    <value>Panah kanan</value>
+  </data>
+  <data name="arrow_square_down" xml:space="preserve">
+    <value>Panah persegi bawah</value>
+  </data>
+  <data name="arrow_square_down_left" xml:space="preserve">
+    <value>Panah persegi bawah kiri</value>
+  </data>
+  <data name="arrow_square_down_right" xml:space="preserve">
+    <value>Panah persegi bawah kanan</value>
+  </data>
+  <data name="arrow_square_in" xml:space="preserve">
+    <value>Panah persegi masuk</value>
+  </data>
+  <data name="arrow_square_left" xml:space="preserve">
+    <value>Panah persegi kiri</value>
+  </data>
+  <data name="arrow_square_out" xml:space="preserve">
+    <value>Panah persegi keluar</value>
+  </data>
+  <data name="arrow_square_right" xml:space="preserve">
+    <value>Panah persegi kanan</value>
+  </data>
+  <data name="arrow_square_up" xml:space="preserve">
+    <value>Panah persegi atas</value>
+  </data>
+  <data name="arrow_square_up_left" xml:space="preserve">
+    <value>Panah persegi atas kiri</value>
+  </data>
+  <data name="arrow_square_up_right" xml:space="preserve">
+    <value>Panah persegi atas kanan</value>
+  </data>
+  <data name="arrow_u_down_left" xml:space="preserve">
+    <value>Panah u bawah kiri</value>
+  </data>
+  <data name="arrow_u_down_right" xml:space="preserve">
+    <value>Panah u bawah kanan</value>
+  </data>
+  <data name="arrow_u_left_down" xml:space="preserve">
+    <value>Panah u kiri bawah</value>
+  </data>
+  <data name="arrow_u_left_up" xml:space="preserve">
+    <value>Panah u kiri atas</value>
+  </data>
+  <data name="arrow_u_right_down" xml:space="preserve">
+    <value>Panah u kanan bawah</value>
+  </data>
+  <data name="arrow_u_right_up" xml:space="preserve">
+    <value>Panah u kanan atas</value>
+  </data>
+  <data name="arrow_u_up_left" xml:space="preserve">
+    <value>Panah u atas kiri</value>
+  </data>
+  <data name="arrow_u_up_right" xml:space="preserve">
+    <value>Panah u atas kanan</value>
+  </data>
+  <data name="arrow_up" xml:space="preserve">
+    <value>Panah atas</value>
+  </data>
+  <data name="arrow_up_left" xml:space="preserve">
+    <value>Panah atas kiri</value>
+  </data>
+  <data name="arrow_up_right" xml:space="preserve">
+    <value>Panah atas kanan</value>
+  </data>
+  <data name="arrows_clockwise" xml:space="preserve">
+    <value>Panah searah jarum jam</value>
+  </data>
+  <data name="arrows_counter_clockwise" xml:space="preserve">
+    <value>Panah penghitung searah jarum jam</value>
+  </data>
+  <data name="arrows_down_up" xml:space="preserve">
+    <value>Panah bawah atas</value>
+  </data>
+  <data name="arrows_horizontal" xml:space="preserve">
+    <value>Panah horizontal</value>
+  </data>
+  <data name="arrows_in" xml:space="preserve">
+    <value>Panah masuk</value>
+  </data>
+  <data name="arrows_in_cardinal" xml:space="preserve">
+    <value>Panah masuk kardinal</value>
+  </data>
+  <data name="arrows_in_line_horizontal" xml:space="preserve">
+    <value>Panah masuk garis horizontal</value>
+  </data>
+  <data name="arrows_in_line_vertical" xml:space="preserve">
+    <value>Panah masuk garis vertikal</value>
+  </data>
+  <data name="arrows_in_simple" xml:space="preserve">
+    <value>Panah masuk sederhana</value>
+  </data>
+  <data name="arrows_left_right" xml:space="preserve">
+    <value>Panah kiri kanan</value>
+  </data>
+  <data name="arrows_merge" xml:space="preserve">
+    <value>Panah gabung</value>
+  </data>
+  <data name="arrows_out" xml:space="preserve">
+    <value>Panah keluar</value>
+  </data>
+  <data name="arrows_out_cardinal" xml:space="preserve">
+    <value>Panah keluar kardinal</value>
+  </data>
+  <data name="arrows_out_line_horizontal" xml:space="preserve">
+    <value>Panah keluar garis horizontal</value>
+  </data>
+  <data name="arrows_out_line_vertical" xml:space="preserve">
+    <value>Panah keluar garis vertikal</value>
+  </data>
+  <data name="arrows_out_simple" xml:space="preserve">
+    <value>Panah keluar sederhana</value>
+  </data>
+  <data name="arrows_split" xml:space="preserve">
+    <value>Panah pisah</value>
+  </data>
+  <data name="arrows_vertical" xml:space="preserve">
+    <value>Panah vertikal</value>
+  </data>
+  <data name="article" xml:space="preserve">
+    <value>Artikel</value>
+  </data>
+  <data name="article_medium" xml:space="preserve">
+    <value>Artikel sedang</value>
+  </data>
+  <data name="article_ny_times" xml:space="preserve">
+    <value>Artikel ny kali</value>
+  </data>
+  <data name="asclepius" xml:space="preserve">
+    <value>Asklepios</value>
+  </data>
+  <data name="asterisk" xml:space="preserve">
+    <value>Tanda bintang</value>
+  </data>
+  <data name="asterisk_simple" xml:space="preserve">
+    <value>Tanda bintang sederhana</value>
+  </data>
+  <data name="at" xml:space="preserve">
+    <value>At</value>
+  </data>
+  <data name="atom" xml:space="preserve">
+    <value>Atom</value>
+  </data>
+  <data name="avocado" xml:space="preserve">
+    <value>Alpukat</value>
+  </data>
+  <data name="axe" xml:space="preserve">
+    <value>Kapak</value>
+  </data>
+  <data name="baby" xml:space="preserve">
+    <value>Bayi</value>
+  </data>
+  <data name="baby_carriage" xml:space="preserve">
+    <value>Bayi kereta bayi</value>
+  </data>
+  <data name="backpack" xml:space="preserve">
+    <value>Ransel</value>
+  </data>
+  <data name="backspace" xml:space="preserve">
+    <value>Backspace</value>
+  </data>
+  <data name="bag" xml:space="preserve">
+    <value>Tas</value>
+  </data>
+  <data name="bag_simple" xml:space="preserve">
+    <value>Tas sederhana</value>
+  </data>
+  <data name="balloon" xml:space="preserve">
+    <value>Balon</value>
+  </data>
+  <data name="bandaids" xml:space="preserve">
+    <value>Plester</value>
+  </data>
+  <data name="bank" xml:space="preserve">
+    <value>Bank</value>
+  </data>
+  <data name="barbell" xml:space="preserve">
+    <value>Barbel</value>
+  </data>
+  <data name="barcode" xml:space="preserve">
+    <value>Kode batang</value>
+  </data>
+  <data name="barn" xml:space="preserve">
+    <value>Lumbung</value>
+  </data>
+  <data name="barricade" xml:space="preserve">
+    <value>Barikade</value>
+  </data>
+  <data name="baseball" xml:space="preserve">
+    <value>Bisbol</value>
+  </data>
+  <data name="baseball_cap" xml:space="preserve">
+    <value>Bisbol topi</value>
+  </data>
+  <data name="baseball_helmet" xml:space="preserve">
+    <value>Bisbol helm</value>
+  </data>
+  <data name="basket" xml:space="preserve">
+    <value>Keranjang</value>
+  </data>
+  <data name="basketball" xml:space="preserve">
+    <value>Basket</value>
+  </data>
+  <data name="bathtub" xml:space="preserve">
+    <value>Bak mandi</value>
+  </data>
+  <data name="battery_charging" xml:space="preserve">
+    <value>Baterai mengisi daya</value>
+  </data>
+  <data name="battery_charging_vertical" xml:space="preserve">
+    <value>Baterai mengisi daya vertikal</value>
+  </data>
+  <data name="battery_empty" xml:space="preserve">
+    <value>Baterai kosong</value>
+  </data>
+  <data name="battery_full" xml:space="preserve">
+    <value>Baterai penuh</value>
+  </data>
+  <data name="battery_high" xml:space="preserve">
+    <value>Baterai tinggi</value>
+  </data>
+  <data name="battery_low" xml:space="preserve">
+    <value>Baterai rendah</value>
+  </data>
+  <data name="battery_medium" xml:space="preserve">
+    <value>Baterai sedang</value>
+  </data>
+  <data name="battery_plus" xml:space="preserve">
+    <value>Baterai plus</value>
+  </data>
+  <data name="battery_plus_vertical" xml:space="preserve">
+    <value>Baterai plus vertikal</value>
+  </data>
+  <data name="battery_vertical_empty" xml:space="preserve">
+    <value>Baterai vertikal kosong</value>
+  </data>
+  <data name="battery_vertical_full" xml:space="preserve">
+    <value>Baterai vertikal penuh</value>
+  </data>
+  <data name="battery_vertical_high" xml:space="preserve">
+    <value>Baterai vertikal tinggi</value>
+  </data>
+  <data name="battery_vertical_low" xml:space="preserve">
+    <value>Baterai vertikal rendah</value>
+  </data>
+  <data name="battery_vertical_medium" xml:space="preserve">
+    <value>Baterai vertikal sedang</value>
+  </data>
+  <data name="battery_warning" xml:space="preserve">
+    <value>Baterai peringatan</value>
+  </data>
+  <data name="battery_warning_vertical" xml:space="preserve">
+    <value>Baterai peringatan vertikal</value>
+  </data>
+  <data name="beach_ball" xml:space="preserve">
+    <value>Pantai bola</value>
+  </data>
+  <data name="beanie" xml:space="preserve">
+    <value>Kupluk</value>
+  </data>
+  <data name="bed" xml:space="preserve">
+    <value>Tempat tidur</value>
+  </data>
+  <data name="beer_bottle" xml:space="preserve">
+    <value>Bir botol</value>
+  </data>
+  <data name="beer_stein" xml:space="preserve">
+    <value>Bir gelas bir</value>
+  </data>
+  <data name="behance_logo" xml:space="preserve">
+    <value>Behance logo</value>
+  </data>
+  <data name="bell" xml:space="preserve">
+    <value>Lonceng</value>
+  </data>
+  <data name="bell_ringing" xml:space="preserve">
+    <value>Lonceng berdering</value>
+  </data>
+  <data name="bell_simple" xml:space="preserve">
+    <value>Lonceng sederhana</value>
+  </data>
+  <data name="bell_simple_ringing" xml:space="preserve">
+    <value>Lonceng sederhana berdering</value>
+  </data>
+  <data name="bell_simple_slash" xml:space="preserve">
+    <value>Lonceng sederhana garis miring</value>
+  </data>
+  <data name="bell_simple_z" xml:space="preserve">
+    <value>Lonceng sederhana z</value>
+  </data>
+  <data name="bell_slash" xml:space="preserve">
+    <value>Lonceng garis miring</value>
+  </data>
+  <data name="bell_z" xml:space="preserve">
+    <value>Lonceng z</value>
+  </data>
+  <data name="belt" xml:space="preserve">
+    <value>Sabuk</value>
+  </data>
+  <data name="bezier_curve" xml:space="preserve">
+    <value>Bezier kurva</value>
+  </data>
+  <data name="bicycle" xml:space="preserve">
+    <value>Sepeda</value>
+  </data>
+  <data name="binary" xml:space="preserve">
+    <value>Biner</value>
+  </data>
+  <data name="binoculars" xml:space="preserve">
+    <value>Teropong</value>
+  </data>
+  <data name="biohazard" xml:space="preserve">
+    <value>Bahaya biologis</value>
+  </data>
+  <data name="bird" xml:space="preserve">
+    <value>Burung</value>
+  </data>
+  <data name="blueprint" xml:space="preserve">
+    <value>Cetak biru</value>
+  </data>
+  <data name="bluetooth" xml:space="preserve">
+    <value>Bluetooth</value>
+  </data>
+  <data name="bluetooth_connected" xml:space="preserve">
+    <value>Bluetooth terhubung</value>
+  </data>
+  <data name="bluetooth_slash" xml:space="preserve">
+    <value>Bluetooth garis miring</value>
+  </data>
+  <data name="bluetooth_x" xml:space="preserve">
+    <value>Bluetooth x</value>
+  </data>
+  <data name="boat" xml:space="preserve">
+    <value>Perahu</value>
+  </data>
+  <data name="bomb" xml:space="preserve">
+    <value>Bom</value>
+  </data>
+  <data name="bone" xml:space="preserve">
+    <value>Tulang</value>
+  </data>
+  <data name="book" xml:space="preserve">
+    <value>Buku</value>
+  </data>
+  <data name="book_bookmark" xml:space="preserve">
+    <value>Buku penanda</value>
+  </data>
+  <data name="book_open" xml:space="preserve">
+    <value>Buku terbuka</value>
+  </data>
+  <data name="book_open_text" xml:space="preserve">
+    <value>Buku terbuka teks</value>
+  </data>
+  <data name="book_open_user" xml:space="preserve">
+    <value>Buku terbuka pengguna</value>
+  </data>
+  <data name="bookmark" xml:space="preserve">
+    <value>Penanda</value>
+  </data>
+  <data name="bookmark_simple" xml:space="preserve">
+    <value>Penanda sederhana</value>
+  </data>
+  <data name="bookmarks" xml:space="preserve">
+    <value>Penanda</value>
+  </data>
+  <data name="bookmarks_simple" xml:space="preserve">
+    <value>Penanda sederhana</value>
+  </data>
+  <data name="books" xml:space="preserve">
+    <value>Buku</value>
+  </data>
+  <data name="boot" xml:space="preserve">
+    <value>Sepatu bot</value>
+  </data>
+  <data name="boules" xml:space="preserve">
+    <value>Petanque</value>
+  </data>
+  <data name="bounding_box" xml:space="preserve">
+    <value>Pembatas kotak</value>
+  </data>
+  <data name="bowl_food" xml:space="preserve">
+    <value>Mangkuk makanan</value>
+  </data>
+  <data name="bowl_steam" xml:space="preserve">
+    <value>Mangkuk uap</value>
+  </data>
+  <data name="bowling_ball" xml:space="preserve">
+    <value>Boling bola</value>
+  </data>
+  <data name="box_arrow_down" xml:space="preserve">
+    <value>Kotak panah bawah</value>
+  </data>
+  <data name="box_arrow_up" xml:space="preserve">
+    <value>Kotak panah atas</value>
+  </data>
+  <data name="boxing_glove" xml:space="preserve">
+    <value>Tinju sarung tangan</value>
+  </data>
+  <data name="brackets_angle" xml:space="preserve">
+    <value>Kurung sudut</value>
+  </data>
+  <data name="brackets_curly" xml:space="preserve">
+    <value>Kurung kurawal</value>
+  </data>
+  <data name="brackets_round" xml:space="preserve">
+    <value>Kurung bulat</value>
+  </data>
+  <data name="brackets_square" xml:space="preserve">
+    <value>Kurung persegi</value>
+  </data>
+  <data name="brain" xml:space="preserve">
+    <value>Otak</value>
+  </data>
+  <data name="brandy" xml:space="preserve">
+    <value>Brendi</value>
+  </data>
+  <data name="bread" xml:space="preserve">
+    <value>Roti</value>
+  </data>
+  <data name="bridge" xml:space="preserve">
+    <value>Jembatan</value>
+  </data>
+  <data name="briefcase" xml:space="preserve">
+    <value>Tas kerja</value>
+  </data>
+  <data name="briefcase_metal" xml:space="preserve">
+    <value>Tas kerja logam</value>
+  </data>
+  <data name="broadcast" xml:space="preserve">
+    <value>Siaran</value>
+  </data>
+  <data name="broom" xml:space="preserve">
+    <value>Sapu</value>
+  </data>
+  <data name="browser" xml:space="preserve">
+    <value>Peramban</value>
+  </data>
+  <data name="browsers" xml:space="preserve">
+    <value>Peramban</value>
+  </data>
+  <data name="bug" xml:space="preserve">
+    <value>Serangga</value>
+  </data>
+  <data name="bug_beetle" xml:space="preserve">
+    <value>Serangga kumbang</value>
+  </data>
+  <data name="bug_droid" xml:space="preserve">
+    <value>Serangga droid</value>
+  </data>
+  <data name="building" xml:space="preserve">
+    <value>Gedung</value>
+  </data>
+  <data name="building_apartment" xml:space="preserve">
+    <value>Gedung apartemen</value>
+  </data>
+  <data name="building_office" xml:space="preserve">
+    <value>Gedung kantor</value>
+  </data>
+  <data name="buildings" xml:space="preserve">
+    <value>Gedung</value>
+  </data>
+  <data name="bulldozer" xml:space="preserve">
+    <value>Buldoser</value>
+  </data>
+  <data name="bus" xml:space="preserve">
+    <value>Bus</value>
+  </data>
+  <data name="butterfly" xml:space="preserve">
+    <value>Kupu-kupu</value>
+  </data>
+  <data name="cable_car" xml:space="preserve">
+    <value>Kabel mobil</value>
+  </data>
+  <data name="cactus" xml:space="preserve">
+    <value>Kaktus</value>
+  </data>
+  <data name="cake" xml:space="preserve">
+    <value>Kue</value>
+  </data>
+  <data name="calculator" xml:space="preserve">
+    <value>Kalkulator</value>
+  </data>
+  <data name="calendar" xml:space="preserve">
+    <value>Kalender</value>
+  </data>
+  <data name="calendar_blank" xml:space="preserve">
+    <value>Kalender kosong</value>
+  </data>
+  <data name="calendar_check" xml:space="preserve">
+    <value>Kalender centang</value>
+  </data>
+  <data name="calendar_dot" xml:space="preserve">
+    <value>Kalender titik</value>
+  </data>
+  <data name="calendar_dots" xml:space="preserve">
+    <value>Kalender titik</value>
+  </data>
+  <data name="calendar_heart" xml:space="preserve">
+    <value>Kalender hati</value>
+  </data>
+  <data name="calendar_minus" xml:space="preserve">
+    <value>Kalender minus</value>
+  </data>
+  <data name="calendar_plus" xml:space="preserve">
+    <value>Kalender plus</value>
+  </data>
+  <data name="calendar_slash" xml:space="preserve">
+    <value>Kalender garis miring</value>
+  </data>
+  <data name="calendar_star" xml:space="preserve">
+    <value>Kalender bintang</value>
+  </data>
+  <data name="calendar_x" xml:space="preserve">
+    <value>Kalender x</value>
+  </data>
+  <data name="call_bell" xml:space="preserve">
+    <value>Panggilan lonceng</value>
+  </data>
+  <data name="camera" xml:space="preserve">
+    <value>Kamera</value>
+  </data>
+  <data name="camera_plus" xml:space="preserve">
+    <value>Kamera plus</value>
+  </data>
+  <data name="camera_rotate" xml:space="preserve">
+    <value>Kamera putar</value>
+  </data>
+  <data name="camera_slash" xml:space="preserve">
+    <value>Kamera garis miring</value>
+  </data>
+  <data name="campfire" xml:space="preserve">
+    <value>Api unggun</value>
+  </data>
+  <data name="car" xml:space="preserve">
+    <value>Mobil</value>
+  </data>
+  <data name="car_battery" xml:space="preserve">
+    <value>Mobil baterai</value>
+  </data>
+  <data name="car_profile" xml:space="preserve">
+    <value>Mobil profil</value>
+  </data>
+  <data name="car_simple" xml:space="preserve">
+    <value>Mobil sederhana</value>
+  </data>
+  <data name="cardholder" xml:space="preserve">
+    <value>Dompet kartu</value>
+  </data>
+  <data name="cards" xml:space="preserve">
+    <value>Kartu</value>
+  </data>
+  <data name="cards_three" xml:space="preserve">
+    <value>Kartu tiga</value>
+  </data>
+  <data name="caret_circle_double_down" xml:space="preserve">
+    <value>Tanda sisipan lingkaran ganda bawah</value>
+  </data>
+  <data name="caret_circle_double_left" xml:space="preserve">
+    <value>Tanda sisipan lingkaran ganda kiri</value>
+  </data>
+  <data name="caret_circle_double_right" xml:space="preserve">
+    <value>Tanda sisipan lingkaran ganda kanan</value>
+  </data>
+  <data name="caret_circle_double_up" xml:space="preserve">
+    <value>Tanda sisipan lingkaran ganda atas</value>
+  </data>
+  <data name="caret_circle_down" xml:space="preserve">
+    <value>Tanda sisipan lingkaran bawah</value>
+  </data>
+  <data name="caret_circle_left" xml:space="preserve">
+    <value>Tanda sisipan lingkaran kiri</value>
+  </data>
+  <data name="caret_circle_right" xml:space="preserve">
+    <value>Tanda sisipan lingkaran kanan</value>
+  </data>
+  <data name="caret_circle_up" xml:space="preserve">
+    <value>Tanda sisipan lingkaran atas</value>
+  </data>
+  <data name="caret_circle_up_down" xml:space="preserve">
+    <value>Tanda sisipan lingkaran atas bawah</value>
+  </data>
+  <data name="caret_double_down" xml:space="preserve">
+    <value>Tanda sisipan ganda bawah</value>
+  </data>
+  <data name="caret_double_left" xml:space="preserve">
+    <value>Tanda sisipan ganda kiri</value>
+  </data>
+  <data name="caret_double_right" xml:space="preserve">
+    <value>Tanda sisipan ganda kanan</value>
+  </data>
+  <data name="caret_double_up" xml:space="preserve">
+    <value>Tanda sisipan ganda atas</value>
+  </data>
+  <data name="caret_down" xml:space="preserve">
+    <value>Tanda sisipan bawah</value>
+  </data>
+  <data name="caret_left" xml:space="preserve">
+    <value>Tanda sisipan kiri</value>
+  </data>
+  <data name="caret_line_down" xml:space="preserve">
+    <value>Tanda sisipan garis bawah</value>
+  </data>
+  <data name="caret_line_left" xml:space="preserve">
+    <value>Tanda sisipan garis kiri</value>
+  </data>
+  <data name="caret_line_right" xml:space="preserve">
+    <value>Tanda sisipan garis kanan</value>
+  </data>
+  <data name="caret_line_up" xml:space="preserve">
+    <value>Tanda sisipan garis atas</value>
+  </data>
+  <data name="caret_right" xml:space="preserve">
+    <value>Tanda sisipan kanan</value>
+  </data>
+  <data name="caret_up" xml:space="preserve">
+    <value>Tanda sisipan atas</value>
+  </data>
+  <data name="caret_up_down" xml:space="preserve">
+    <value>Tanda sisipan atas bawah</value>
+  </data>
+  <data name="carrot" xml:space="preserve">
+    <value>Wortel</value>
+  </data>
+  <data name="cash_register" xml:space="preserve">
+    <value>Uang tunai kasir</value>
+  </data>
+  <data name="cassette_tape" xml:space="preserve">
+    <value>Kaset selotip</value>
+  </data>
+  <data name="castle_turret" xml:space="preserve">
+    <value>Kastil menara</value>
+  </data>
+  <data name="cat" xml:space="preserve">
+    <value>Kucing</value>
+  </data>
+  <data name="cell_signal_full" xml:space="preserve">
+    <value>Sel sinyal penuh</value>
+  </data>
+  <data name="cell_signal_high" xml:space="preserve">
+    <value>Sel sinyal tinggi</value>
+  </data>
+  <data name="cell_signal_low" xml:space="preserve">
+    <value>Sel sinyal rendah</value>
+  </data>
+  <data name="cell_signal_medium" xml:space="preserve">
+    <value>Sel sinyal sedang</value>
+  </data>
+  <data name="cell_signal_none" xml:space="preserve">
+    <value>Sel sinyal tidak ada</value>
+  </data>
+  <data name="cell_signal_slash" xml:space="preserve">
+    <value>Sel sinyal garis miring</value>
+  </data>
+  <data name="cell_signal_x" xml:space="preserve">
+    <value>Sel sinyal x</value>
+  </data>
+  <data name="cell_tower" xml:space="preserve">
+    <value>Sel menara</value>
+  </data>
+  <data name="certificate" xml:space="preserve">
+    <value>Sertifikat</value>
+  </data>
+  <data name="chair" xml:space="preserve">
+    <value>Kursi</value>
+  </data>
+  <data name="chalkboard" xml:space="preserve">
+    <value>Papan tulis</value>
+  </data>
+  <data name="chalkboard_simple" xml:space="preserve">
+    <value>Papan tulis sederhana</value>
+  </data>
+  <data name="chalkboard_teacher" xml:space="preserve">
+    <value>Papan tulis guru</value>
+  </data>
+  <data name="champagne" xml:space="preserve">
+    <value>Sampanye</value>
+  </data>
+  <data name="charging_station" xml:space="preserve">
+    <value>Mengisi daya stasiun</value>
+  </data>
+  <data name="chart_bar" xml:space="preserve">
+    <value>Bagan batang</value>
+  </data>
+  <data name="chart_bar_horizontal" xml:space="preserve">
+    <value>Bagan batang horizontal</value>
+  </data>
+  <data name="chart_donut" xml:space="preserve">
+    <value>Bagan donat</value>
+  </data>
+  <data name="chart_line" xml:space="preserve">
+    <value>Bagan garis</value>
+  </data>
+  <data name="chart_line_down" xml:space="preserve">
+    <value>Bagan garis bawah</value>
+  </data>
+  <data name="chart_line_up" xml:space="preserve">
+    <value>Bagan garis atas</value>
+  </data>
+  <data name="chart_pie" xml:space="preserve">
+    <value>Bagan pai</value>
+  </data>
+  <data name="chart_pie_slice" xml:space="preserve">
+    <value>Bagan pai irisan</value>
+  </data>
+  <data name="chart_polar" xml:space="preserve">
+    <value>Bagan kutub</value>
+  </data>
+  <data name="chart_scatter" xml:space="preserve">
+    <value>Bagan sebaran</value>
+  </data>
+  <data name="chat" xml:space="preserve">
+    <value>Obrolan</value>
+  </data>
+  <data name="chat_centered" xml:space="preserve">
+    <value>Obrolan di tengah</value>
+  </data>
+  <data name="chat_centered_dots" xml:space="preserve">
+    <value>Obrolan di tengah titik</value>
+  </data>
+  <data name="chat_centered_slash" xml:space="preserve">
+    <value>Obrolan di tengah garis miring</value>
+  </data>
+  <data name="chat_centered_text" xml:space="preserve">
+    <value>Obrolan di tengah teks</value>
+  </data>
+  <data name="chat_circle" xml:space="preserve">
+    <value>Obrolan lingkaran</value>
+  </data>
+  <data name="chat_circle_dots" xml:space="preserve">
+    <value>Obrolan lingkaran titik</value>
+  </data>
+  <data name="chat_circle_slash" xml:space="preserve">
+    <value>Obrolan lingkaran garis miring</value>
+  </data>
+  <data name="chat_circle_text" xml:space="preserve">
+    <value>Obrolan lingkaran teks</value>
+  </data>
+  <data name="chat_dots" xml:space="preserve">
+    <value>Obrolan titik</value>
+  </data>
+  <data name="chat_slash" xml:space="preserve">
+    <value>Obrolan garis miring</value>
+  </data>
+  <data name="chat_teardrop" xml:space="preserve">
+    <value>Obrolan air mata</value>
+  </data>
+  <data name="chat_teardrop_dots" xml:space="preserve">
+    <value>Obrolan air mata titik</value>
+  </data>
+  <data name="chat_teardrop_slash" xml:space="preserve">
+    <value>Obrolan air mata garis miring</value>
+  </data>
+  <data name="chat_teardrop_text" xml:space="preserve">
+    <value>Obrolan air mata teks</value>
+  </data>
+  <data name="chat_text" xml:space="preserve">
+    <value>Obrolan teks</value>
+  </data>
+  <data name="chats" xml:space="preserve">
+    <value>Obrolan</value>
+  </data>
+  <data name="chats_circle" xml:space="preserve">
+    <value>Obrolan lingkaran</value>
+  </data>
+  <data name="chats_teardrop" xml:space="preserve">
+    <value>Obrolan air mata</value>
+  </data>
+  <data name="check" xml:space="preserve">
+    <value>Centang</value>
+  </data>
+  <data name="check_circle" xml:space="preserve">
+    <value>Centang lingkaran</value>
+  </data>
+  <data name="check_fat" xml:space="preserve">
+    <value>Centang tebal</value>
+  </data>
+  <data name="check_square" xml:space="preserve">
+    <value>Centang persegi</value>
+  </data>
+  <data name="check_square_offset" xml:space="preserve">
+    <value>Centang persegi offset</value>
+  </data>
+  <data name="checkerboard" xml:space="preserve">
+    <value>Papan catur</value>
+  </data>
+  <data name="checks" xml:space="preserve">
+    <value>Centang</value>
+  </data>
+  <data name="cheers" xml:space="preserve">
+    <value>Bersulang</value>
+  </data>
+  <data name="cheese" xml:space="preserve">
+    <value>Keju</value>
+  </data>
+  <data name="chef_hat" xml:space="preserve">
+    <value>Koki topi</value>
+  </data>
+  <data name="cherries" xml:space="preserve">
+    <value>Ceri</value>
+  </data>
+  <data name="church" xml:space="preserve">
+    <value>Gereja</value>
+  </data>
+  <data name="cigarette" xml:space="preserve">
+    <value>Rokok</value>
+  </data>
+  <data name="cigarette_slash" xml:space="preserve">
+    <value>Rokok garis miring</value>
+  </data>
+  <data name="circle" xml:space="preserve">
+    <value>Lingkaran</value>
+  </data>
+  <data name="circle_dashed" xml:space="preserve">
+    <value>Lingkaran putus-putus</value>
+  </data>
+  <data name="circle_half" xml:space="preserve">
+    <value>Lingkaran setengah</value>
+  </data>
+  <data name="circle_half_tilt" xml:space="preserve">
+    <value>Lingkaran setengah miring</value>
+  </data>
+  <data name="circle_notch" xml:space="preserve">
+    <value>Lingkaran takik</value>
+  </data>
+  <data name="circles_four" xml:space="preserve">
+    <value>Lingkaran empat</value>
+  </data>
+  <data name="circles_three" xml:space="preserve">
+    <value>Lingkaran tiga</value>
+  </data>
+  <data name="circles_three_plus" xml:space="preserve">
+    <value>Lingkaran tiga plus</value>
+  </data>
+  <data name="circuitry" xml:space="preserve">
+    <value>Sirkuit</value>
+  </data>
+  <data name="city" xml:space="preserve">
+    <value>Kota</value>
+  </data>
+  <data name="clipboard" xml:space="preserve">
+    <value>Papan klip</value>
+  </data>
+  <data name="clipboard_text" xml:space="preserve">
+    <value>Papan klip teks</value>
+  </data>
+  <data name="clock" xml:space="preserve">
+    <value>Jam</value>
+  </data>
+  <data name="clock_afternoon" xml:space="preserve">
+    <value>Jam sore</value>
+  </data>
+  <data name="clock_clockwise" xml:space="preserve">
+    <value>Jam searah jarum jam</value>
+  </data>
+  <data name="clock_countdown" xml:space="preserve">
+    <value>Jam hitung mundur</value>
+  </data>
+  <data name="clock_counter_clockwise" xml:space="preserve">
+    <value>Jam penghitung searah jarum jam</value>
+  </data>
+  <data name="clock_user" xml:space="preserve">
+    <value>Jam pengguna</value>
+  </data>
+  <data name="closed_captioning" xml:space="preserve">
+    <value>Tertutup teks</value>
+  </data>
+  <data name="cloud" xml:space="preserve">
+    <value>Awan</value>
+  </data>
+  <data name="cloud_arrow_down" xml:space="preserve">
+    <value>Awan panah bawah</value>
+  </data>
+  <data name="cloud_arrow_up" xml:space="preserve">
+    <value>Awan panah atas</value>
+  </data>
+  <data name="cloud_check" xml:space="preserve">
+    <value>Awan centang</value>
+  </data>
+  <data name="cloud_fog" xml:space="preserve">
+    <value>Awan kabut</value>
+  </data>
+  <data name="cloud_lightning" xml:space="preserve">
+    <value>Awan petir</value>
+  </data>
+  <data name="cloud_moon" xml:space="preserve">
+    <value>Awan bulan</value>
+  </data>
+  <data name="cloud_rain" xml:space="preserve">
+    <value>Awan hujan</value>
+  </data>
+  <data name="cloud_slash" xml:space="preserve">
+    <value>Awan garis miring</value>
+  </data>
+  <data name="cloud_snow" xml:space="preserve">
+    <value>Awan salju</value>
+  </data>
+  <data name="cloud_sun" xml:space="preserve">
+    <value>Awan matahari</value>
+  </data>
+  <data name="cloud_warning" xml:space="preserve">
+    <value>Awan peringatan</value>
+  </data>
+  <data name="cloud_x" xml:space="preserve">
+    <value>Awan x</value>
+  </data>
+  <data name="clover" xml:space="preserve">
+    <value>Semanggi</value>
+  </data>
+  <data name="club" xml:space="preserve">
+    <value>Keriting</value>
+  </data>
+  <data name="coat_hanger" xml:space="preserve">
+    <value>Mantel gantungan</value>
+  </data>
+  <data name="coda_logo" xml:space="preserve">
+    <value>Coda logo</value>
+  </data>
+  <data name="code" xml:space="preserve">
+    <value>Kode</value>
+  </data>
+  <data name="code_block" xml:space="preserve">
+    <value>Kode blok</value>
+  </data>
+  <data name="code_simple" xml:space="preserve">
+    <value>Kode sederhana</value>
+  </data>
+  <data name="codepen_logo" xml:space="preserve">
+    <value>Codepen logo</value>
+  </data>
+  <data name="codesandbox_logo" xml:space="preserve">
+    <value>Codesandbox logo</value>
+  </data>
+  <data name="coffee" xml:space="preserve">
+    <value>Kopi</value>
+  </data>
+  <data name="coffee_bean" xml:space="preserve">
+    <value>Kopi kacang</value>
+  </data>
+  <data name="coin" xml:space="preserve">
+    <value>Koin</value>
+  </data>
+  <data name="coin_vertical" xml:space="preserve">
+    <value>Koin vertikal</value>
+  </data>
+  <data name="coins" xml:space="preserve">
+    <value>Koin</value>
+  </data>
+  <data name="columns" xml:space="preserve">
+    <value>Kolom</value>
+  </data>
+  <data name="columns_plus_left" xml:space="preserve">
+    <value>Kolom plus kiri</value>
+  </data>
+  <data name="columns_plus_right" xml:space="preserve">
+    <value>Kolom plus kanan</value>
+  </data>
+  <data name="command" xml:space="preserve">
+    <value>Perintah</value>
+  </data>
+  <data name="compass" xml:space="preserve">
+    <value>Kompas</value>
+  </data>
+  <data name="compass_rose" xml:space="preserve">
+    <value>Kompas mawar</value>
+  </data>
+  <data name="compass_tool" xml:space="preserve">
+    <value>Kompas alat</value>
+  </data>
+  <data name="computer_tower" xml:space="preserve">
+    <value>Komputer menara</value>
+  </data>
+  <data name="confetti" xml:space="preserve">
+    <value>Konfeti</value>
+  </data>
+  <data name="contactless_payment" xml:space="preserve">
+    <value>Nirsentuh pembayaran</value>
+  </data>
+  <data name="control" xml:space="preserve">
+    <value>Kontrol</value>
+  </data>
+  <data name="cookie" xml:space="preserve">
+    <value>Kue kering</value>
+  </data>
+  <data name="cooking_pot" xml:space="preserve">
+    <value>Memasak panci</value>
+  </data>
+  <data name="copy" xml:space="preserve">
+    <value>Salin</value>
+  </data>
+  <data name="copy_simple" xml:space="preserve">
+    <value>Salin sederhana</value>
+  </data>
+  <data name="copyleft" xml:space="preserve">
+    <value>Copyleft</value>
+  </data>
+  <data name="copyright" xml:space="preserve">
+    <value>Hak cipta</value>
+  </data>
+  <data name="corners_in" xml:space="preserve">
+    <value>Sudut masuk</value>
+  </data>
+  <data name="corners_out" xml:space="preserve">
+    <value>Sudut keluar</value>
+  </data>
+  <data name="couch" xml:space="preserve">
+    <value>Sofa</value>
+  </data>
+  <data name="court_basketball" xml:space="preserve">
+    <value>Pengadilan basket</value>
+  </data>
+  <data name="cow" xml:space="preserve">
+    <value>Sapi</value>
+  </data>
+  <data name="cowboy_hat" xml:space="preserve">
+    <value>Koboi topi</value>
+  </data>
+  <data name="cpu" xml:space="preserve">
+    <value>Cpu</value>
+  </data>
+  <data name="crane" xml:space="preserve">
+    <value>Derek</value>
+  </data>
+  <data name="crane_tower" xml:space="preserve">
+    <value>Derek menara</value>
+  </data>
+  <data name="credit_card" xml:space="preserve">
+    <value>Kredit kartu</value>
+  </data>
+  <data name="cricket" xml:space="preserve">
+    <value>Kriket</value>
+  </data>
+  <data name="crop" xml:space="preserve">
+    <value>Pangkas</value>
+  </data>
+  <data name="cross" xml:space="preserve">
+    <value>Silang</value>
+  </data>
+  <data name="crosshair" xml:space="preserve">
+    <value>Bidikan</value>
+  </data>
+  <data name="crosshair_simple" xml:space="preserve">
+    <value>Bidikan sederhana</value>
+  </data>
+  <data name="crown" xml:space="preserve">
+    <value>Mahkota</value>
+  </data>
+  <data name="crown_cross" xml:space="preserve">
+    <value>Mahkota silang</value>
+  </data>
+  <data name="crown_simple" xml:space="preserve">
+    <value>Mahkota sederhana</value>
+  </data>
+  <data name="cube" xml:space="preserve">
+    <value>Kubus</value>
+  </data>
+  <data name="cube_focus" xml:space="preserve">
+    <value>Kubus fokus</value>
+  </data>
+  <data name="cube_transparent" xml:space="preserve">
+    <value>Kubus transparan</value>
+  </data>
+  <data name="currency_btc" xml:space="preserve">
+    <value>Mata uang btc</value>
+  </data>
+  <data name="currency_circle_dollar" xml:space="preserve">
+    <value>Mata uang lingkaran dolar</value>
+  </data>
+  <data name="currency_cny" xml:space="preserve">
+    <value>Mata uang cny</value>
+  </data>
+  <data name="currency_dollar" xml:space="preserve">
+    <value>Mata uang dolar</value>
+  </data>
+  <data name="currency_dollar_simple" xml:space="preserve">
+    <value>Mata uang dolar sederhana</value>
+  </data>
+  <data name="currency_eth" xml:space="preserve">
+    <value>Mata uang eth</value>
+  </data>
+  <data name="currency_eur" xml:space="preserve">
+    <value>Mata uang eur</value>
+  </data>
+  <data name="currency_gbp" xml:space="preserve">
+    <value>Mata uang gbp</value>
+  </data>
+  <data name="currency_inr" xml:space="preserve">
+    <value>Mata uang inr</value>
+  </data>
+  <data name="currency_jpy" xml:space="preserve">
+    <value>Mata uang jpy</value>
+  </data>
+  <data name="currency_krw" xml:space="preserve">
+    <value>Mata uang krw</value>
+  </data>
+  <data name="currency_kzt" xml:space="preserve">
+    <value>Mata uang kzt</value>
+  </data>
+  <data name="currency_ngn" xml:space="preserve">
+    <value>Mata uang ngn</value>
+  </data>
+  <data name="currency_rub" xml:space="preserve">
+    <value>Mata uang rub</value>
+  </data>
+  <data name="cursor" xml:space="preserve">
+    <value>Kursor</value>
+  </data>
+  <data name="cursor_click" xml:space="preserve">
+    <value>Kursor klik</value>
+  </data>
+  <data name="cursor_text" xml:space="preserve">
+    <value>Kursor teks</value>
+  </data>
+  <data name="cylinder" xml:space="preserve">
+    <value>Silinder</value>
+  </data>
+  <data name="database" xml:space="preserve">
+    <value>Basis data</value>
+  </data>
+  <data name="desk" xml:space="preserve">
+    <value>Meja</value>
+  </data>
+  <data name="desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="desktop_tower" xml:space="preserve">
+    <value>Desktop menara</value>
+  </data>
+  <data name="detective" xml:space="preserve">
+    <value>Detektif</value>
+  </data>
+  <data name="dev_to_logo" xml:space="preserve">
+    <value>Dev ke logo</value>
+  </data>
+  <data name="device_mobile" xml:space="preserve">
+    <value>Perangkat ponsel</value>
+  </data>
+  <data name="device_mobile_camera" xml:space="preserve">
+    <value>Perangkat ponsel kamera</value>
+  </data>
+  <data name="device_mobile_slash" xml:space="preserve">
+    <value>Perangkat ponsel garis miring</value>
+  </data>
+  <data name="device_mobile_speaker" xml:space="preserve">
+    <value>Perangkat ponsel speaker</value>
+  </data>
+  <data name="device_rotate" xml:space="preserve">
+    <value>Perangkat putar</value>
+  </data>
+  <data name="device_tablet" xml:space="preserve">
+    <value>Perangkat tablet</value>
+  </data>
+  <data name="device_tablet_camera" xml:space="preserve">
+    <value>Perangkat tablet kamera</value>
+  </data>
+  <data name="device_tablet_speaker" xml:space="preserve">
+    <value>Perangkat tablet speaker</value>
+  </data>
+  <data name="devices" xml:space="preserve">
+    <value>Perangkat</value>
+  </data>
+  <data name="diamond" xml:space="preserve">
+    <value>Berlian</value>
+  </data>
+  <data name="diamonds_four" xml:space="preserve">
+    <value>Wajik empat</value>
+  </data>
+  <data name="dice_five" xml:space="preserve">
+    <value>Dadu lima</value>
+  </data>
+  <data name="dice_four" xml:space="preserve">
+    <value>Dadu empat</value>
+  </data>
+  <data name="dice_one" xml:space="preserve">
+    <value>Dadu satu</value>
+  </data>
+  <data name="dice_six" xml:space="preserve">
+    <value>Dadu enam</value>
+  </data>
+  <data name="dice_three" xml:space="preserve">
+    <value>Dadu tiga</value>
+  </data>
+  <data name="dice_two" xml:space="preserve">
+    <value>Dadu dua</value>
+  </data>
+  <data name="disc" xml:space="preserve">
+    <value>Cakram</value>
+  </data>
+  <data name="disco_ball" xml:space="preserve">
+    <value>Disko bola</value>
+  </data>
+  <data name="discord_logo" xml:space="preserve">
+    <value>Discord logo</value>
+  </data>
+  <data name="divide" xml:space="preserve">
+    <value>Bagi</value>
+  </data>
+  <data name="dna" xml:space="preserve">
+    <value>Dna</value>
+  </data>
+  <data name="dog" xml:space="preserve">
+    <value>Anjing</value>
+  </data>
+  <data name="door" xml:space="preserve">
+    <value>Pintu</value>
+  </data>
+  <data name="door_open" xml:space="preserve">
+    <value>Pintu terbuka</value>
+  </data>
+  <data name="dot" xml:space="preserve">
+    <value>Titik</value>
+  </data>
+  <data name="dot_outline" xml:space="preserve">
+    <value>Titik garis luar</value>
+  </data>
+  <data name="dots_nine" xml:space="preserve">
+    <value>Titik sembilan</value>
+  </data>
+  <data name="dots_six" xml:space="preserve">
+    <value>Titik enam</value>
+  </data>
+  <data name="dots_six_vertical" xml:space="preserve">
+    <value>Titik enam vertikal</value>
+  </data>
+  <data name="dots_three" xml:space="preserve">
+    <value>Titik tiga</value>
+  </data>
+  <data name="dots_three_circle" xml:space="preserve">
+    <value>Titik tiga lingkaran</value>
+  </data>
+  <data name="dots_three_circle_vertical" xml:space="preserve">
+    <value>Titik tiga lingkaran vertikal</value>
+  </data>
+  <data name="dots_three_outline" xml:space="preserve">
+    <value>Titik tiga garis luar</value>
+  </data>
+  <data name="dots_three_outline_vertical" xml:space="preserve">
+    <value>Titik tiga garis luar vertikal</value>
+  </data>
+  <data name="dots_three_vertical" xml:space="preserve">
+    <value>Titik tiga vertikal</value>
+  </data>
+  <data name="download" xml:space="preserve">
+    <value>Unduh</value>
+  </data>
+  <data name="download_simple" xml:space="preserve">
+    <value>Unduh sederhana</value>
+  </data>
+  <data name="dress" xml:space="preserve">
+    <value>Gaun</value>
+  </data>
+  <data name="dresser" xml:space="preserve">
+    <value>Lemari laci</value>
+  </data>
+  <data name="dribbble_logo" xml:space="preserve">
+    <value>Dribbble logo</value>
+  </data>
+  <data name="drone" xml:space="preserve">
+    <value>Drone</value>
+  </data>
+  <data name="drop" xml:space="preserve">
+    <value>Tetes</value>
+  </data>
+  <data name="drop_half" xml:space="preserve">
+    <value>Tetes setengah</value>
+  </data>
+  <data name="drop_half_bottom" xml:space="preserve">
+    <value>Tetes setengah bawah</value>
+  </data>
+  <data name="drop_simple" xml:space="preserve">
+    <value>Tetes sederhana</value>
+  </data>
+  <data name="drop_slash" xml:space="preserve">
+    <value>Tetes garis miring</value>
+  </data>
+  <data name="dropbox_logo" xml:space="preserve">
+    <value>Dropbox logo</value>
+  </data>
+  <data name="ear" xml:space="preserve">
+    <value>Telinga</value>
+  </data>
+  <data name="ear_slash" xml:space="preserve">
+    <value>Telinga garis miring</value>
+  </data>
+  <data name="egg" xml:space="preserve">
+    <value>Telur</value>
+  </data>
+  <data name="egg_crack" xml:space="preserve">
+    <value>Telur retak</value>
+  </data>
+  <data name="eject" xml:space="preserve">
+    <value>Keluarkan</value>
+  </data>
+  <data name="eject_simple" xml:space="preserve">
+    <value>Keluarkan sederhana</value>
+  </data>
+  <data name="elevator" xml:space="preserve">
+    <value>Lift</value>
+  </data>
+  <data name="empty" xml:space="preserve">
+    <value>Kosong</value>
+  </data>
+  <data name="engine" xml:space="preserve">
+    <value>Mesin</value>
+  </data>
+  <data name="envelope" xml:space="preserve">
+    <value>Amplop</value>
+  </data>
+  <data name="envelope_open" xml:space="preserve">
+    <value>Amplop terbuka</value>
+  </data>
+  <data name="envelope_simple" xml:space="preserve">
+    <value>Amplop sederhana</value>
+  </data>
+  <data name="envelope_simple_open" xml:space="preserve">
+    <value>Amplop sederhana terbuka</value>
+  </data>
+  <data name="equalizer" xml:space="preserve">
+    <value>Equalizer</value>
+  </data>
+  <data name="equals" xml:space="preserve">
+    <value>Sama dengan</value>
+  </data>
+  <data name="eraser" xml:space="preserve">
+    <value>Penghapus</value>
+  </data>
+  <data name="escalator_down" xml:space="preserve">
+    <value>Eskalator bawah</value>
+  </data>
+  <data name="escalator_up" xml:space="preserve">
+    <value>Eskalator atas</value>
+  </data>
+  <data name="exam" xml:space="preserve">
+    <value>Ujian</value>
+  </data>
+  <data name="exclamation_mark" xml:space="preserve">
+    <value>Tanda seru tanda</value>
+  </data>
+  <data name="exclude" xml:space="preserve">
+    <value>Kecualikan</value>
+  </data>
+  <data name="exclude_square" xml:space="preserve">
+    <value>Kecualikan persegi</value>
+  </data>
+  <data name="export" xml:space="preserve">
+    <value>Ekspor</value>
+  </data>
+  <data name="eye" xml:space="preserve">
+    <value>Mata</value>
+  </data>
+  <data name="eye_closed" xml:space="preserve">
+    <value>Mata tertutup</value>
+  </data>
+  <data name="eye_slash" xml:space="preserve">
+    <value>Mata garis miring</value>
+  </data>
+  <data name="eyedropper" xml:space="preserve">
+    <value>Pipet</value>
+  </data>
+  <data name="eyedropper_sample" xml:space="preserve">
+    <value>Pipet sampel</value>
+  </data>
+  <data name="eyeglasses" xml:space="preserve">
+    <value>Kacamata</value>
+  </data>
+  <data name="eyes" xml:space="preserve">
+    <value>Mata</value>
+  </data>
+  <data name="face_mask" xml:space="preserve">
+    <value>Wajah masker</value>
+  </data>
+  <data name="facebook_logo" xml:space="preserve">
+    <value>Facebook logo</value>
+  </data>
+  <data name="factory" xml:space="preserve">
+    <value>Pabrik</value>
+  </data>
+  <data name="faders" xml:space="preserve">
+    <value>Fader</value>
+  </data>
+  <data name="faders_horizontal" xml:space="preserve">
+    <value>Fader horizontal</value>
+  </data>
+  <data name="fallout_shelter" xml:space="preserve">
+    <value>Radiasi tempat berlindung</value>
+  </data>
+  <data name="fan" xml:space="preserve">
+    <value>Kipas</value>
+  </data>
+  <data name="farm" xml:space="preserve">
+    <value>Pertanian</value>
+  </data>
+  <data name="fast_forward" xml:space="preserve">
+    <value>Cepat maju</value>
+  </data>
+  <data name="fast_forward_circle" xml:space="preserve">
+    <value>Cepat maju lingkaran</value>
+  </data>
+  <data name="feather" xml:space="preserve">
+    <value>Bulu</value>
+  </data>
+  <data name="fediverse_logo" xml:space="preserve">
+    <value>Fediverse logo</value>
+  </data>
+  <data name="figma_logo" xml:space="preserve">
+    <value>Figma logo</value>
+  </data>
+  <data name="file" xml:space="preserve">
+    <value>Berkas</value>
+  </data>
+  <data name="file_archive" xml:space="preserve">
+    <value>Berkas arsip</value>
+  </data>
+  <data name="file_arrow_down" xml:space="preserve">
+    <value>Berkas panah bawah</value>
+  </data>
+  <data name="file_arrow_up" xml:space="preserve">
+    <value>Berkas panah atas</value>
+  </data>
+  <data name="file_audio" xml:space="preserve">
+    <value>Berkas audio</value>
+  </data>
+  <data name="file_c" xml:space="preserve">
+    <value>Berkas c</value>
+  </data>
+  <data name="file_c_sharp" xml:space="preserve">
+    <value>Berkas c tajam</value>
+  </data>
+  <data name="file_cloud" xml:space="preserve">
+    <value>Berkas awan</value>
+  </data>
+  <data name="file_code" xml:space="preserve">
+    <value>Berkas kode</value>
+  </data>
+  <data name="file_cpp" xml:space="preserve">
+    <value>Berkas cpp</value>
+  </data>
+  <data name="file_css" xml:space="preserve">
+    <value>Berkas css</value>
+  </data>
+  <data name="file_csv" xml:space="preserve">
+    <value>Berkas csv</value>
+  </data>
+  <data name="file_dashed" xml:space="preserve">
+    <value>Berkas putus-putus</value>
+  </data>
+  <data name="file_doc" xml:space="preserve">
+    <value>Berkas dokumen</value>
+  </data>
+  <data name="file_html" xml:space="preserve">
+    <value>Berkas html</value>
+  </data>
+  <data name="file_image" xml:space="preserve">
+    <value>Berkas gambar</value>
+  </data>
+  <data name="file_ini" xml:space="preserve">
+    <value>Berkas ini</value>
+  </data>
+  <data name="file_jpg" xml:space="preserve">
+    <value>Berkas jpg</value>
+  </data>
+  <data name="file_js" xml:space="preserve">
+    <value>Berkas js</value>
+  </data>
+  <data name="file_jsx" xml:space="preserve">
+    <value>Berkas jsx</value>
+  </data>
+  <data name="file_lock" xml:space="preserve">
+    <value>Berkas kunci</value>
+  </data>
+  <data name="file_magnifying_glass" xml:space="preserve">
+    <value>Berkas kaca pembesar gelas</value>
+  </data>
+  <data name="file_md" xml:space="preserve">
+    <value>Berkas md</value>
+  </data>
+  <data name="file_minus" xml:space="preserve">
+    <value>Berkas minus</value>
+  </data>
+  <data name="file_pdf" xml:space="preserve">
+    <value>Berkas pdf</value>
+  </data>
+  <data name="file_plus" xml:space="preserve">
+    <value>Berkas plus</value>
+  </data>
+  <data name="file_png" xml:space="preserve">
+    <value>Berkas png</value>
+  </data>
+  <data name="file_ppt" xml:space="preserve">
+    <value>Berkas ppt</value>
+  </data>
+  <data name="file_py" xml:space="preserve">
+    <value>Berkas py</value>
+  </data>
+  <data name="file_rs" xml:space="preserve">
+    <value>Berkas rs</value>
+  </data>
+  <data name="file_sql" xml:space="preserve">
+    <value>Berkas sql</value>
+  </data>
+  <data name="file_svg" xml:space="preserve">
+    <value>Berkas svg</value>
+  </data>
+  <data name="file_text" xml:space="preserve">
+    <value>Berkas teks</value>
+  </data>
+  <data name="file_ts" xml:space="preserve">
+    <value>Berkas ts</value>
+  </data>
+  <data name="file_tsx" xml:space="preserve">
+    <value>Berkas tsx</value>
+  </data>
+  <data name="file_txt" xml:space="preserve">
+    <value>Berkas txt</value>
+  </data>
+  <data name="file_video" xml:space="preserve">
+    <value>Berkas video</value>
+  </data>
+  <data name="file_vue" xml:space="preserve">
+    <value>Berkas vue</value>
+  </data>
+  <data name="file_x" xml:space="preserve">
+    <value>Berkas x</value>
+  </data>
+  <data name="file_xls" xml:space="preserve">
+    <value>Berkas xls</value>
+  </data>
+  <data name="file_zip" xml:space="preserve">
+    <value>Berkas zip</value>
+  </data>
+  <data name="files" xml:space="preserve">
+    <value>Berkas</value>
+  </data>
+  <data name="film_reel" xml:space="preserve">
+    <value>Film gulungan</value>
+  </data>
+  <data name="film_script" xml:space="preserve">
+    <value>Film skrip</value>
+  </data>
+  <data name="film_slate" xml:space="preserve">
+    <value>Film batu tulis</value>
+  </data>
+  <data name="film_strip" xml:space="preserve">
+    <value>Film strip</value>
+  </data>
+  <data name="fingerprint" xml:space="preserve">
+    <value>Sidik jari</value>
+  </data>
+  <data name="fingerprint_simple" xml:space="preserve">
+    <value>Sidik jari sederhana</value>
+  </data>
+  <data name="finn_the_human" xml:space="preserve">
+    <value>Finn manusia</value>
+  </data>
+  <data name="fire" xml:space="preserve">
+    <value>Api</value>
+  </data>
+  <data name="fire_extinguisher" xml:space="preserve">
+    <value>Api pemadam</value>
+  </data>
+  <data name="fire_simple" xml:space="preserve">
+    <value>Api sederhana</value>
+  </data>
+  <data name="fire_truck" xml:space="preserve">
+    <value>Api truk</value>
+  </data>
+  <data name="first_aid" xml:space="preserve">
+    <value>Pertama bantuan</value>
+  </data>
+  <data name="first_aid_kit" xml:space="preserve">
+    <value>Pertama bantuan perlengkapan</value>
+  </data>
+  <data name="fish" xml:space="preserve">
+    <value>Ikan</value>
+  </data>
+  <data name="fish_simple" xml:space="preserve">
+    <value>Ikan sederhana</value>
+  </data>
+  <data name="flag" xml:space="preserve">
+    <value>Bendera</value>
+  </data>
+  <data name="flag_banner" xml:space="preserve">
+    <value>Bendera spanduk</value>
+  </data>
+  <data name="flag_banner_fold" xml:space="preserve">
+    <value>Bendera spanduk lipat</value>
+  </data>
+  <data name="flag_checkered" xml:space="preserve">
+    <value>Bendera kotak-kotak</value>
+  </data>
+  <data name="flag_pennant" xml:space="preserve">
+    <value>Bendera panji</value>
+  </data>
+  <data name="flame" xml:space="preserve">
+    <value>Nyala api</value>
+  </data>
+  <data name="flashlight" xml:space="preserve">
+    <value>Senter</value>
+  </data>
+  <data name="flask" xml:space="preserve">
+    <value>Labu</value>
+  </data>
+  <data name="flip_horizontal" xml:space="preserve">
+    <value>Balik horizontal</value>
+  </data>
+  <data name="flip_vertical" xml:space="preserve">
+    <value>Balik vertikal</value>
+  </data>
+  <data name="floppy_disk" xml:space="preserve">
+    <value>Disket disk</value>
+  </data>
+  <data name="floppy_disk_back" xml:space="preserve">
+    <value>Disket disk kembali</value>
+  </data>
+  <data name="flow_arrow" xml:space="preserve">
+    <value>Aliran panah</value>
+  </data>
+  <data name="flower" xml:space="preserve">
+    <value>Bunga</value>
+  </data>
+  <data name="flower_lotus" xml:space="preserve">
+    <value>Bunga teratai</value>
+  </data>
+  <data name="flower_tulip" xml:space="preserve">
+    <value>Bunga tulip</value>
+  </data>
+  <data name="flying_saucer" xml:space="preserve">
+    <value>Terbang piring</value>
+  </data>
+  <data name="folder" xml:space="preserve">
+    <value>Folder</value>
+  </data>
+  <data name="folder_dashed" xml:space="preserve">
+    <value>Folder putus-putus</value>
+  </data>
+  <data name="folder_lock" xml:space="preserve">
+    <value>Folder kunci</value>
+  </data>
+  <data name="folder_minus" xml:space="preserve">
+    <value>Folder minus</value>
+  </data>
+  <data name="folder_open" xml:space="preserve">
+    <value>Folder terbuka</value>
+  </data>
+  <data name="folder_plus" xml:space="preserve">
+    <value>Folder plus</value>
+  </data>
+  <data name="folder_simple" xml:space="preserve">
+    <value>Folder sederhana</value>
+  </data>
+  <data name="folder_simple_dashed" xml:space="preserve">
+    <value>Folder sederhana putus-putus</value>
+  </data>
+  <data name="folder_simple_lock" xml:space="preserve">
+    <value>Folder sederhana kunci</value>
+  </data>
+  <data name="folder_simple_minus" xml:space="preserve">
+    <value>Folder sederhana minus</value>
+  </data>
+  <data name="folder_simple_plus" xml:space="preserve">
+    <value>Folder sederhana plus</value>
+  </data>
+  <data name="folder_simple_star" xml:space="preserve">
+    <value>Folder sederhana bintang</value>
+  </data>
+  <data name="folder_simple_user" xml:space="preserve">
+    <value>Folder sederhana pengguna</value>
+  </data>
+  <data name="folder_star" xml:space="preserve">
+    <value>Folder bintang</value>
+  </data>
+  <data name="folder_user" xml:space="preserve">
+    <value>Folder pengguna</value>
+  </data>
+  <data name="folders" xml:space="preserve">
+    <value>Folder</value>
+  </data>
+  <data name="football" xml:space="preserve">
+    <value>Sepak bola</value>
+  </data>
+  <data name="football_helmet" xml:space="preserve">
+    <value>Sepak bola helm</value>
+  </data>
+  <data name="footprints" xml:space="preserve">
+    <value>Jejak kaki</value>
+  </data>
+  <data name="fork_knife" xml:space="preserve">
+    <value>Garpu pisau</value>
+  </data>
+  <data name="four_k" xml:space="preserve">
+    <value>Empat k</value>
+  </data>
+  <data name="frame_corners" xml:space="preserve">
+    <value>Bingkai sudut</value>
+  </data>
+  <data name="framer_logo" xml:space="preserve">
+    <value>Framer logo</value>
+  </data>
+  <data name="function" xml:space="preserve">
+    <value>Fungsi</value>
+  </data>
+  <data name="funnel" xml:space="preserve">
+    <value>Corong</value>
+  </data>
+  <data name="funnel_simple" xml:space="preserve">
+    <value>Corong sederhana</value>
+  </data>
+  <data name="funnel_simple_x" xml:space="preserve">
+    <value>Corong sederhana x</value>
+  </data>
+  <data name="funnel_x" xml:space="preserve">
+    <value>Corong x</value>
+  </data>
+  <data name="game_controller" xml:space="preserve">
+    <value>Permainan pengontrol</value>
+  </data>
+  <data name="garage" xml:space="preserve">
+    <value>Garasi</value>
+  </data>
+  <data name="gas_can" xml:space="preserve">
+    <value>Bensin kaleng</value>
+  </data>
+  <data name="gas_pump" xml:space="preserve">
+    <value>Bensin pompa</value>
+  </data>
+  <data name="gauge" xml:space="preserve">
+    <value>Pengukur</value>
+  </data>
+  <data name="gavel" xml:space="preserve">
+    <value>Palu hakim</value>
+  </data>
+  <data name="gear" xml:space="preserve">
+    <value>Roda gigi</value>
+  </data>
+  <data name="gear_fine" xml:space="preserve">
+    <value>Roda gigi halus</value>
+  </data>
+  <data name="gear_six" xml:space="preserve">
+    <value>Roda gigi enam</value>
+  </data>
+  <data name="gender_female" xml:space="preserve">
+    <value>Gender perempuan</value>
+  </data>
+  <data name="gender_intersex" xml:space="preserve">
+    <value>Gender interseks</value>
+  </data>
+  <data name="gender_male" xml:space="preserve">
+    <value>Gender laki-laki</value>
+  </data>
+  <data name="gender_neuter" xml:space="preserve">
+    <value>Gender netral</value>
+  </data>
+  <data name="gender_nonbinary" xml:space="preserve">
+    <value>Gender nonbiner</value>
+  </data>
+  <data name="gender_transgender" xml:space="preserve">
+    <value>Gender transgender</value>
+  </data>
+  <data name="ghost" xml:space="preserve">
+    <value>Hantu</value>
+  </data>
+  <data name="gif" xml:space="preserve">
+    <value>Gif</value>
+  </data>
+  <data name="gift" xml:space="preserve">
+    <value>Hadiah</value>
+  </data>
+  <data name="git_branch" xml:space="preserve">
+    <value>Git cabang</value>
+  </data>
+  <data name="git_commit" xml:space="preserve">
+    <value>Git komit</value>
+  </data>
+  <data name="git_diff" xml:space="preserve">
+    <value>Git perbedaan</value>
+  </data>
+  <data name="git_fork" xml:space="preserve">
+    <value>Git garpu</value>
+  </data>
+  <data name="git_merge" xml:space="preserve">
+    <value>Git gabung</value>
+  </data>
+  <data name="git_pull_request" xml:space="preserve">
+    <value>Git tarik permintaan</value>
+  </data>
+  <data name="github_logo" xml:space="preserve">
+    <value>Github logo</value>
+  </data>
+  <data name="gitlab_logo" xml:space="preserve">
+    <value>Gitlab logo</value>
+  </data>
+  <data name="gitlab_logo_simple" xml:space="preserve">
+    <value>Gitlab logo sederhana</value>
+  </data>
+  <data name="globe" xml:space="preserve">
+    <value>Bola dunia</value>
+  </data>
+  <data name="globe_hemisphere_east" xml:space="preserve">
+    <value>Bola dunia belahan bumi timur</value>
+  </data>
+  <data name="globe_hemisphere_west" xml:space="preserve">
+    <value>Bola dunia belahan bumi barat</value>
+  </data>
+  <data name="globe_simple" xml:space="preserve">
+    <value>Bola dunia sederhana</value>
+  </data>
+  <data name="globe_simple_x" xml:space="preserve">
+    <value>Bola dunia sederhana x</value>
+  </data>
+  <data name="globe_stand" xml:space="preserve">
+    <value>Bola dunia penyangga</value>
+  </data>
+  <data name="globe_x" xml:space="preserve">
+    <value>Bola dunia x</value>
+  </data>
+  <data name="goggles" xml:space="preserve">
+    <value>Kacamata pelindung</value>
+  </data>
+  <data name="golf" xml:space="preserve">
+    <value>Golf</value>
+  </data>
+  <data name="goodreads_logo" xml:space="preserve">
+    <value>Goodreads logo</value>
+  </data>
+  <data name="google_cardboard_logo" xml:space="preserve">
+    <value>Google kardus logo</value>
+  </data>
+  <data name="google_chrome_logo" xml:space="preserve">
+    <value>Google chrome logo</value>
+  </data>
+  <data name="google_drive_logo" xml:space="preserve">
+    <value>Google drive logo</value>
+  </data>
+  <data name="google_logo" xml:space="preserve">
+    <value>Google logo</value>
+  </data>
+  <data name="google_photos_logo" xml:space="preserve">
+    <value>Google foto logo</value>
+  </data>
+  <data name="google_play_logo" xml:space="preserve">
+    <value>Google putar logo</value>
+  </data>
+  <data name="google_podcasts_logo" xml:space="preserve">
+    <value>Google podcast logo</value>
+  </data>
+  <data name="gps" xml:space="preserve">
+    <value>Gps</value>
+  </data>
+  <data name="gps_fix" xml:space="preserve">
+    <value>Gps perbaiki</value>
+  </data>
+  <data name="gps_slash" xml:space="preserve">
+    <value>Gps garis miring</value>
+  </data>
+  <data name="gradient" xml:space="preserve">
+    <value>Gradien</value>
+  </data>
+  <data name="graduation_cap" xml:space="preserve">
+    <value>Wisuda topi</value>
+  </data>
+  <data name="grains" xml:space="preserve">
+    <value>Biji-bijian</value>
+  </data>
+  <data name="grains_slash" xml:space="preserve">
+    <value>Biji-bijian garis miring</value>
+  </data>
+  <data name="graph" xml:space="preserve">
+    <value>Grafik</value>
+  </data>
+  <data name="graphics_card" xml:space="preserve">
+    <value>Grafis kartu</value>
+  </data>
+  <data name="greater_than" xml:space="preserve">
+    <value>Lebih besar daripada</value>
+  </data>
+  <data name="greater_than_or_equal" xml:space="preserve">
+    <value>Lebih besar daripada atau sama</value>
+  </data>
+  <data name="grid_four" xml:space="preserve">
+    <value>Kisi empat</value>
+  </data>
+  <data name="grid_nine" xml:space="preserve">
+    <value>Kisi sembilan</value>
+  </data>
+  <data name="guitar" xml:space="preserve">
+    <value>Gitar</value>
+  </data>
+  <data name="hair_dryer" xml:space="preserve">
+    <value>Rambut pengering</value>
+  </data>
+  <data name="hamburger" xml:space="preserve">
+    <value>Hamburger</value>
+  </data>
+  <data name="hammer" xml:space="preserve">
+    <value>Palu</value>
+  </data>
+  <data name="hand" xml:space="preserve">
+    <value>Tangan</value>
+  </data>
+  <data name="hand_arrow_down" xml:space="preserve">
+    <value>Tangan panah bawah</value>
+  </data>
+  <data name="hand_arrow_up" xml:space="preserve">
+    <value>Tangan panah atas</value>
+  </data>
+  <data name="hand_coins" xml:space="preserve">
+    <value>Tangan koin</value>
+  </data>
+  <data name="hand_deposit" xml:space="preserve">
+    <value>Tangan setoran</value>
+  </data>
+  <data name="hand_eye" xml:space="preserve">
+    <value>Tangan mata</value>
+  </data>
+  <data name="hand_fist" xml:space="preserve">
+    <value>Tangan kepalan</value>
+  </data>
+  <data name="hand_grabbing" xml:space="preserve">
+    <value>Tangan menggenggam</value>
+  </data>
+  <data name="hand_heart" xml:space="preserve">
+    <value>Tangan hati</value>
+  </data>
+  <data name="hand_palm" xml:space="preserve">
+    <value>Tangan palem</value>
+  </data>
+  <data name="hand_peace" xml:space="preserve">
+    <value>Tangan damai</value>
+  </data>
+  <data name="hand_pointing" xml:space="preserve">
+    <value>Tangan menunjuk</value>
+  </data>
+  <data name="hand_soap" xml:space="preserve">
+    <value>Tangan sabun</value>
+  </data>
+  <data name="hand_swipe_left" xml:space="preserve">
+    <value>Tangan geser kiri</value>
+  </data>
+  <data name="hand_swipe_right" xml:space="preserve">
+    <value>Tangan geser kanan</value>
+  </data>
+  <data name="hand_tap" xml:space="preserve">
+    <value>Tangan ketuk</value>
+  </data>
+  <data name="hand_waving" xml:space="preserve">
+    <value>Tangan melambai</value>
+  </data>
+  <data name="hand_withdraw" xml:space="preserve">
+    <value>Tangan tarik tunai</value>
+  </data>
+  <data name="handbag" xml:space="preserve">
+    <value>Tas tangan</value>
+  </data>
+  <data name="handbag_simple" xml:space="preserve">
+    <value>Tas tangan sederhana</value>
+  </data>
+  <data name="hands_clapping" xml:space="preserve">
+    <value>Tangan tepuk tangan</value>
+  </data>
+  <data name="hands_praying" xml:space="preserve">
+    <value>Tangan berdoa</value>
+  </data>
+  <data name="handshake" xml:space="preserve">
+    <value>Jabat tangan</value>
+  </data>
+  <data name="hard_drive" xml:space="preserve">
+    <value>Keras drive</value>
+  </data>
+  <data name="hard_drives" xml:space="preserve">
+    <value>Keras drive</value>
+  </data>
+  <data name="hard_hat" xml:space="preserve">
+    <value>Keras topi</value>
+  </data>
+  <data name="hash" xml:space="preserve">
+    <value>Tanda pagar</value>
+  </data>
+  <data name="hash_straight" xml:space="preserve">
+    <value>Tanda pagar lurus</value>
+  </data>
+  <data name="head_circuit" xml:space="preserve">
+    <value>Kepala sirkuit</value>
+  </data>
+  <data name="headlights" xml:space="preserve">
+    <value>Lampu depan</value>
+  </data>
+  <data name="headphones" xml:space="preserve">
+    <value>Headphone</value>
+  </data>
+  <data name="headset" xml:space="preserve">
+    <value>Headset</value>
+  </data>
+  <data name="heart" xml:space="preserve">
+    <value>Hati</value>
+  </data>
+  <data name="heart_break" xml:space="preserve">
+    <value>Hati jeda</value>
+  </data>
+  <data name="heart_half" xml:space="preserve">
+    <value>Hati setengah</value>
+  </data>
+  <data name="heart_straight" xml:space="preserve">
+    <value>Hati lurus</value>
+  </data>
+  <data name="heart_straight_break" xml:space="preserve">
+    <value>Hati lurus jeda</value>
+  </data>
+  <data name="heartbeat" xml:space="preserve">
+    <value>Detak jantung</value>
+  </data>
+  <data name="hexagon" xml:space="preserve">
+    <value>Segi enam</value>
+  </data>
+  <data name="high_definition" xml:space="preserve">
+    <value>Tinggi definisi</value>
+  </data>
+  <data name="high_heel" xml:space="preserve">
+    <value>Tinggi hak</value>
+  </data>
+  <data name="highlighter" xml:space="preserve">
+    <value>Stabilo</value>
+  </data>
+  <data name="highlighter_circle" xml:space="preserve">
+    <value>Stabilo lingkaran</value>
+  </data>
+  <data name="hockey" xml:space="preserve">
+    <value>Hoki</value>
+  </data>
+  <data name="hoodie" xml:space="preserve">
+    <value>Jaket berkerudung</value>
+  </data>
+  <data name="horse" xml:space="preserve">
+    <value>Kuda</value>
+  </data>
+  <data name="hospital" xml:space="preserve">
+    <value>Rumah sakit</value>
+  </data>
+  <data name="hourglass" xml:space="preserve">
+    <value>Jam pasir</value>
+  </data>
+  <data name="hourglass_high" xml:space="preserve">
+    <value>Jam pasir tinggi</value>
+  </data>
+  <data name="hourglass_low" xml:space="preserve">
+    <value>Jam pasir rendah</value>
+  </data>
+  <data name="hourglass_medium" xml:space="preserve">
+    <value>Jam pasir sedang</value>
+  </data>
+  <data name="hourglass_simple" xml:space="preserve">
+    <value>Jam pasir sederhana</value>
+  </data>
+  <data name="hourglass_simple_high" xml:space="preserve">
+    <value>Jam pasir sederhana tinggi</value>
+  </data>
+  <data name="hourglass_simple_low" xml:space="preserve">
+    <value>Jam pasir sederhana rendah</value>
+  </data>
+  <data name="hourglass_simple_medium" xml:space="preserve">
+    <value>Jam pasir sederhana sedang</value>
+  </data>
+  <data name="house" xml:space="preserve">
+    <value>Rumah</value>
+  </data>
+  <data name="house_line" xml:space="preserve">
+    <value>Rumah garis</value>
+  </data>
+  <data name="house_simple" xml:space="preserve">
+    <value>Rumah sederhana</value>
+  </data>
+  <data name="hurricane" xml:space="preserve">
+    <value>Badai</value>
+  </data>
+  <data name="ice_cream" xml:space="preserve">
+    <value>Es krim</value>
+  </data>
+  <data name="identification_badge" xml:space="preserve">
+    <value>Identitas lencana</value>
+  </data>
+  <data name="identification_card" xml:space="preserve">
+    <value>Identitas kartu</value>
+  </data>
+  <data name="image" xml:space="preserve">
+    <value>Gambar</value>
+  </data>
+  <data name="image_broken" xml:space="preserve">
+    <value>Gambar rusak</value>
+  </data>
+  <data name="image_square" xml:space="preserve">
+    <value>Gambar persegi</value>
+  </data>
+  <data name="images" xml:space="preserve">
+    <value>Gambar</value>
+  </data>
+  <data name="images_square" xml:space="preserve">
+    <value>Gambar persegi</value>
+  </data>
+  <data name="infinity" xml:space="preserve">
+    <value>Tak terhingga</value>
+  </data>
+  <data name="info" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="instagram_logo" xml:space="preserve">
+    <value>Instagram logo</value>
+  </data>
+  <data name="intersect" xml:space="preserve">
+    <value>Berpotongan</value>
+  </data>
+  <data name="intersect_square" xml:space="preserve">
+    <value>Berpotongan persegi</value>
+  </data>
+  <data name="intersect_three" xml:space="preserve">
+    <value>Berpotongan tiga</value>
+  </data>
+  <data name="intersection" xml:space="preserve">
+    <value>Irisan</value>
+  </data>
+  <data name="invoice" xml:space="preserve">
+    <value>Faktur</value>
+  </data>
+  <data name="island" xml:space="preserve">
+    <value>Pulau</value>
+  </data>
+  <data name="jar" xml:space="preserve">
+    <value>Toples</value>
+  </data>
+  <data name="jar_label" xml:space="preserve">
+    <value>Toples label</value>
+  </data>
+  <data name="jeep" xml:space="preserve">
+    <value>Jip</value>
+  </data>
+  <data name="joystick" xml:space="preserve">
+    <value>Joystick</value>
+  </data>
+  <data name="kanban" xml:space="preserve">
+    <value>Kanban</value>
+  </data>
+  <data name="key" xml:space="preserve">
+    <value>Kunci</value>
+  </data>
+  <data name="key_return" xml:space="preserve">
+    <value>Kunci kembali</value>
+  </data>
+  <data name="keyboard" xml:space="preserve">
+    <value>Papan ketik</value>
+  </data>
+  <data name="keyhole" xml:space="preserve">
+    <value>Lubang kunci</value>
+  </data>
+  <data name="knife" xml:space="preserve">
+    <value>Pisau</value>
+  </data>
+  <data name="ladder" xml:space="preserve">
+    <value>Tangga</value>
+  </data>
+  <data name="ladder_simple" xml:space="preserve">
+    <value>Tangga sederhana</value>
+  </data>
+  <data name="lamp" xml:space="preserve">
+    <value>Lampu</value>
+  </data>
+  <data name="lamp_pendant" xml:space="preserve">
+    <value>Lampu liontin</value>
+  </data>
+  <data name="laptop" xml:space="preserve">
+    <value>Laptop</value>
+  </data>
+  <data name="lasso" xml:space="preserve">
+    <value>Laso</value>
+  </data>
+  <data name="lastfm_logo" xml:space="preserve">
+    <value>Lastfm logo</value>
+  </data>
+  <data name="layout" xml:space="preserve">
+    <value>Tata letak</value>
+  </data>
+  <data name="leaf" xml:space="preserve">
+    <value>Daun</value>
+  </data>
+  <data name="lectern" xml:space="preserve">
+    <value>Podium</value>
+  </data>
+  <data name="lego" xml:space="preserve">
+    <value>Lego</value>
+  </data>
+  <data name="lego_smiley" xml:space="preserve">
+    <value>Lego senyum</value>
+  </data>
+  <data name="less_than" xml:space="preserve">
+    <value>Lebih kecil daripada</value>
+  </data>
+  <data name="less_than_or_equal" xml:space="preserve">
+    <value>Lebih kecil daripada atau sama</value>
+  </data>
+  <data name="letter_circle_h" xml:space="preserve">
+    <value>Huruf lingkaran h</value>
+  </data>
+  <data name="letter_circle_p" xml:space="preserve">
+    <value>Huruf lingkaran p</value>
+  </data>
+  <data name="letter_circle_v" xml:space="preserve">
+    <value>Huruf lingkaran v</value>
+  </data>
+  <data name="lifebuoy" xml:space="preserve">
+    <value>Pelampung</value>
+  </data>
+  <data name="lightbulb" xml:space="preserve">
+    <value>Bohlam</value>
+  </data>
+  <data name="lightbulb_filament" xml:space="preserve">
+    <value>Bohlam filamen</value>
+  </data>
+  <data name="lighthouse" xml:space="preserve">
+    <value>Mercusuar</value>
+  </data>
+  <data name="lightning" xml:space="preserve">
+    <value>Petir</value>
+  </data>
+  <data name="lightning_a" xml:space="preserve">
+    <value>Petir a</value>
+  </data>
+  <data name="lightning_slash" xml:space="preserve">
+    <value>Petir garis miring</value>
+  </data>
+  <data name="line_segment" xml:space="preserve">
+    <value>Garis segmen</value>
+  </data>
+  <data name="line_segments" xml:space="preserve">
+    <value>Garis segmen</value>
+  </data>
+  <data name="line_vertical" xml:space="preserve">
+    <value>Garis vertikal</value>
+  </data>
+  <data name="link" xml:space="preserve">
+    <value>Tautan</value>
+  </data>
+  <data name="link_break" xml:space="preserve">
+    <value>Tautan jeda</value>
+  </data>
+  <data name="link_simple" xml:space="preserve">
+    <value>Tautan sederhana</value>
+  </data>
+  <data name="link_simple_break" xml:space="preserve">
+    <value>Tautan sederhana jeda</value>
+  </data>
+  <data name="link_simple_horizontal" xml:space="preserve">
+    <value>Tautan sederhana horizontal</value>
+  </data>
+  <data name="link_simple_horizontal_break" xml:space="preserve">
+    <value>Tautan sederhana horizontal jeda</value>
+  </data>
+  <data name="linkedin_logo" xml:space="preserve">
+    <value>Linkedin logo</value>
+  </data>
+  <data name="linktree_logo" xml:space="preserve">
+    <value>Linktree logo</value>
+  </data>
+  <data name="linux_logo" xml:space="preserve">
+    <value>Linux logo</value>
+  </data>
+  <data name="list" xml:space="preserve">
+    <value>Daftar</value>
+  </data>
+  <data name="list_bullets" xml:space="preserve">
+    <value>Daftar poin</value>
+  </data>
+  <data name="list_checks" xml:space="preserve">
+    <value>Daftar centang</value>
+  </data>
+  <data name="list_dashes" xml:space="preserve">
+    <value>Daftar tanda pisah</value>
+  </data>
+  <data name="list_heart" xml:space="preserve">
+    <value>Daftar hati</value>
+  </data>
+  <data name="list_magnifying_glass" xml:space="preserve">
+    <value>Daftar kaca pembesar gelas</value>
+  </data>
+  <data name="list_numbers" xml:space="preserve">
+    <value>Daftar angka</value>
+  </data>
+  <data name="list_plus" xml:space="preserve">
+    <value>Daftar plus</value>
+  </data>
+  <data name="list_star" xml:space="preserve">
+    <value>Daftar bintang</value>
+  </data>
+  <data name="lock" xml:space="preserve">
+    <value>Kunci</value>
+  </data>
+  <data name="lock_key" xml:space="preserve">
+    <value>Kunci kunci</value>
+  </data>
+  <data name="lock_key_open" xml:space="preserve">
+    <value>Kunci kunci terbuka</value>
+  </data>
+  <data name="lock_laminated" xml:space="preserve">
+    <value>Kunci laminasi</value>
+  </data>
+  <data name="lock_laminated_open" xml:space="preserve">
+    <value>Kunci laminasi terbuka</value>
+  </data>
+  <data name="lock_open" xml:space="preserve">
+    <value>Kunci terbuka</value>
+  </data>
+  <data name="lock_simple" xml:space="preserve">
+    <value>Kunci sederhana</value>
+  </data>
+  <data name="lock_simple_open" xml:space="preserve">
+    <value>Kunci sederhana terbuka</value>
+  </data>
+  <data name="lockers" xml:space="preserve">
+    <value>Loker</value>
+  </data>
+  <data name="log" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="magic_wand" xml:space="preserve">
+    <value>Sihir tongkat</value>
+  </data>
+  <data name="magnet" xml:space="preserve">
+    <value>Magnet</value>
+  </data>
+  <data name="magnet_straight" xml:space="preserve">
+    <value>Magnet lurus</value>
+  </data>
+  <data name="magnifying_glass" xml:space="preserve">
+    <value>Kaca pembesar gelas</value>
+  </data>
+  <data name="magnifying_glass_minus" xml:space="preserve">
+    <value>Kaca pembesar gelas minus</value>
+  </data>
+  <data name="magnifying_glass_plus" xml:space="preserve">
+    <value>Kaca pembesar gelas plus</value>
+  </data>
+  <data name="mailbox" xml:space="preserve">
+    <value>Kotak surat</value>
+  </data>
+  <data name="map_pin" xml:space="preserve">
+    <value>Peta pin</value>
+  </data>
+  <data name="map_pin_area" xml:space="preserve">
+    <value>Peta pin area</value>
+  </data>
+  <data name="map_pin_line" xml:space="preserve">
+    <value>Peta pin garis</value>
+  </data>
+  <data name="map_pin_plus" xml:space="preserve">
+    <value>Peta pin plus</value>
+  </data>
+  <data name="map_pin_simple" xml:space="preserve">
+    <value>Peta pin sederhana</value>
+  </data>
+  <data name="map_pin_simple_area" xml:space="preserve">
+    <value>Peta pin sederhana area</value>
+  </data>
+  <data name="map_pin_simple_line" xml:space="preserve">
+    <value>Peta pin sederhana garis</value>
+  </data>
+  <data name="map_trifold" xml:space="preserve">
+    <value>Peta lipat tiga</value>
+  </data>
+  <data name="markdown_logo" xml:space="preserve">
+    <value>Markdown logo</value>
+  </data>
+  <data name="marker_circle" xml:space="preserve">
+    <value>Penanda lingkaran</value>
+  </data>
+  <data name="martini" xml:space="preserve">
+    <value>Martini</value>
+  </data>
+  <data name="mask_happy" xml:space="preserve">
+    <value>Masker senang</value>
+  </data>
+  <data name="mask_sad" xml:space="preserve">
+    <value>Masker sedih</value>
+  </data>
+  <data name="mastodon_logo" xml:space="preserve">
+    <value>Mastodon logo</value>
+  </data>
+  <data name="math_operations" xml:space="preserve">
+    <value>Matematika operasi</value>
+  </data>
+  <data name="matrix_logo" xml:space="preserve">
+    <value>Matriks logo</value>
+  </data>
+  <data name="medal" xml:space="preserve">
+    <value>Medali</value>
+  </data>
+  <data name="medal_military" xml:space="preserve">
+    <value>Medali militer</value>
+  </data>
+  <data name="medium_logo" xml:space="preserve">
+    <value>Sedang logo</value>
+  </data>
+  <data name="megaphone" xml:space="preserve">
+    <value>Megafon</value>
+  </data>
+  <data name="megaphone_simple" xml:space="preserve">
+    <value>Megafon sederhana</value>
+  </data>
+  <data name="member_of" xml:space="preserve">
+    <value>Anggota dari</value>
+  </data>
+  <data name="memory" xml:space="preserve">
+    <value>Memori</value>
+  </data>
+  <data name="messenger_logo" xml:space="preserve">
+    <value>Messenger logo</value>
+  </data>
+  <data name="meta_logo" xml:space="preserve">
+    <value>Meta logo</value>
+  </data>
+  <data name="meteor" xml:space="preserve">
+    <value>Meteor</value>
+  </data>
+  <data name="metronome" xml:space="preserve">
+    <value>Metronom</value>
+  </data>
+  <data name="microphone" xml:space="preserve">
+    <value>Mikrofon</value>
+  </data>
+  <data name="microphone_slash" xml:space="preserve">
+    <value>Mikrofon garis miring</value>
+  </data>
+  <data name="microphone_stage" xml:space="preserve">
+    <value>Mikrofon panggung</value>
+  </data>
+  <data name="microscope" xml:space="preserve">
+    <value>Mikroskop</value>
+  </data>
+  <data name="microsoft_excel_logo" xml:space="preserve">
+    <value>Microsoft excel logo</value>
+  </data>
+  <data name="microsoft_outlook_logo" xml:space="preserve">
+    <value>Microsoft outlook logo</value>
+  </data>
+  <data name="microsoft_powerpoint_logo" xml:space="preserve">
+    <value>Microsoft powerpoint logo</value>
+  </data>
+  <data name="microsoft_teams_logo" xml:space="preserve">
+    <value>Microsoft tim logo</value>
+  </data>
+  <data name="microsoft_word_logo" xml:space="preserve">
+    <value>Microsoft word logo</value>
+  </data>
+  <data name="minus" xml:space="preserve">
+    <value>Minus</value>
+  </data>
+  <data name="minus_circle" xml:space="preserve">
+    <value>Minus lingkaran</value>
+  </data>
+  <data name="minus_square" xml:space="preserve">
+    <value>Minus persegi</value>
+  </data>
+  <data name="money" xml:space="preserve">
+    <value>Uang</value>
+  </data>
+  <data name="money_wavy" xml:space="preserve">
+    <value>Uang bergelombang</value>
+  </data>
+  <data name="monitor" xml:space="preserve">
+    <value>Monitor</value>
+  </data>
+  <data name="monitor_arrow_up" xml:space="preserve">
+    <value>Monitor panah atas</value>
+  </data>
+  <data name="monitor_play" xml:space="preserve">
+    <value>Monitor putar</value>
+  </data>
+  <data name="moon" xml:space="preserve">
+    <value>Bulan</value>
+  </data>
+  <data name="moon_stars" xml:space="preserve">
+    <value>Bulan bintang</value>
+  </data>
+  <data name="moped" xml:space="preserve">
+    <value>Moped</value>
+  </data>
+  <data name="moped_front" xml:space="preserve">
+    <value>Moped depan</value>
+  </data>
+  <data name="mosque" xml:space="preserve">
+    <value>Masjid</value>
+  </data>
+  <data name="motorcycle" xml:space="preserve">
+    <value>Sepeda motor</value>
+  </data>
+  <data name="mountains" xml:space="preserve">
+    <value>Pegunungan</value>
+  </data>
+  <data name="mouse" xml:space="preserve">
+    <value>Mouse</value>
+  </data>
+  <data name="mouse_left_click" xml:space="preserve">
+    <value>Mouse kiri klik</value>
+  </data>
+  <data name="mouse_middle_click" xml:space="preserve">
+    <value>Mouse tengah klik</value>
+  </data>
+  <data name="mouse_right_click" xml:space="preserve">
+    <value>Mouse kanan klik</value>
+  </data>
+  <data name="mouse_scroll" xml:space="preserve">
+    <value>Mouse gulungan</value>
+  </data>
+  <data name="mouse_simple" xml:space="preserve">
+    <value>Mouse sederhana</value>
+  </data>
+  <data name="music_note" xml:space="preserve">
+    <value>Musik catatan</value>
+  </data>
+  <data name="music_note_simple" xml:space="preserve">
+    <value>Musik catatan sederhana</value>
+  </data>
+  <data name="music_notes" xml:space="preserve">
+    <value>Musik catatan</value>
+  </data>
+  <data name="music_notes_minus" xml:space="preserve">
+    <value>Musik catatan minus</value>
+  </data>
+  <data name="music_notes_plus" xml:space="preserve">
+    <value>Musik catatan plus</value>
+  </data>
+  <data name="music_notes_simple" xml:space="preserve">
+    <value>Musik catatan sederhana</value>
+  </data>
+  <data name="navigation_arrow" xml:space="preserve">
+    <value>Navigasi panah</value>
+  </data>
+  <data name="needle" xml:space="preserve">
+    <value>Jarum</value>
+  </data>
+  <data name="network" xml:space="preserve">
+    <value>Jaringan</value>
+  </data>
+  <data name="network_slash" xml:space="preserve">
+    <value>Jaringan garis miring</value>
+  </data>
+  <data name="network_x" xml:space="preserve">
+    <value>Jaringan x</value>
+  </data>
+  <data name="newspaper" xml:space="preserve">
+    <value>Koran</value>
+  </data>
+  <data name="newspaper_clipping" xml:space="preserve">
+    <value>Koran kliping</value>
+  </data>
+  <data name="not_equals" xml:space="preserve">
+    <value>Tidak sama dengan</value>
+  </data>
+  <data name="not_member_of" xml:space="preserve">
+    <value>Tidak anggota dari</value>
+  </data>
+  <data name="not_subset_of" xml:space="preserve">
+    <value>Tidak himpunan bagian dari</value>
+  </data>
+  <data name="not_superset_of" xml:space="preserve">
+    <value>Tidak superset dari</value>
+  </data>
+  <data name="notches" xml:space="preserve">
+    <value>Takik</value>
+  </data>
+  <data name="note" xml:space="preserve">
+    <value>Catatan</value>
+  </data>
+  <data name="note_blank" xml:space="preserve">
+    <value>Catatan kosong</value>
+  </data>
+  <data name="note_pencil" xml:space="preserve">
+    <value>Catatan pensil</value>
+  </data>
+  <data name="notebook" xml:space="preserve">
+    <value>Buku catatan</value>
+  </data>
+  <data name="notepad" xml:space="preserve">
+    <value>Buku catatan</value>
+  </data>
+  <data name="notification" xml:space="preserve">
+    <value>Notifikasi</value>
+  </data>
+  <data name="notion_logo" xml:space="preserve">
+    <value>Notion logo</value>
+  </data>
+  <data name="nuclear_plant" xml:space="preserve">
+    <value>Nuklir tanaman</value>
+  </data>
+  <data name="number_circle_eight" xml:space="preserve">
+    <value>Angka lingkaran delapan</value>
+  </data>
+  <data name="number_circle_five" xml:space="preserve">
+    <value>Angka lingkaran lima</value>
+  </data>
+  <data name="number_circle_four" xml:space="preserve">
+    <value>Angka lingkaran empat</value>
+  </data>
+  <data name="number_circle_nine" xml:space="preserve">
+    <value>Angka lingkaran sembilan</value>
+  </data>
+  <data name="number_circle_one" xml:space="preserve">
+    <value>Angka lingkaran satu</value>
+  </data>
+  <data name="number_circle_seven" xml:space="preserve">
+    <value>Angka lingkaran tujuh</value>
+  </data>
+  <data name="number_circle_six" xml:space="preserve">
+    <value>Angka lingkaran enam</value>
+  </data>
+  <data name="number_circle_three" xml:space="preserve">
+    <value>Angka lingkaran tiga</value>
+  </data>
+  <data name="number_circle_two" xml:space="preserve">
+    <value>Angka lingkaran dua</value>
+  </data>
+  <data name="number_circle_zero" xml:space="preserve">
+    <value>Angka lingkaran nol</value>
+  </data>
+  <data name="number_eight" xml:space="preserve">
+    <value>Angka delapan</value>
+  </data>
+  <data name="number_five" xml:space="preserve">
+    <value>Angka lima</value>
+  </data>
+  <data name="number_four" xml:space="preserve">
+    <value>Angka empat</value>
+  </data>
+  <data name="number_nine" xml:space="preserve">
+    <value>Angka sembilan</value>
+  </data>
+  <data name="number_one" xml:space="preserve">
+    <value>Angka satu</value>
+  </data>
+  <data name="number_seven" xml:space="preserve">
+    <value>Angka tujuh</value>
+  </data>
+  <data name="number_six" xml:space="preserve">
+    <value>Angka enam</value>
+  </data>
+  <data name="number_square_eight" xml:space="preserve">
+    <value>Angka persegi delapan</value>
+  </data>
+  <data name="number_square_five" xml:space="preserve">
+    <value>Angka persegi lima</value>
+  </data>
+  <data name="number_square_four" xml:space="preserve">
+    <value>Angka persegi empat</value>
+  </data>
+  <data name="number_square_nine" xml:space="preserve">
+    <value>Angka persegi sembilan</value>
+  </data>
+  <data name="number_square_one" xml:space="preserve">
+    <value>Angka persegi satu</value>
+  </data>
+  <data name="number_square_seven" xml:space="preserve">
+    <value>Angka persegi tujuh</value>
+  </data>
+  <data name="number_square_six" xml:space="preserve">
+    <value>Angka persegi enam</value>
+  </data>
+  <data name="number_square_three" xml:space="preserve">
+    <value>Angka persegi tiga</value>
+  </data>
+  <data name="number_square_two" xml:space="preserve">
+    <value>Angka persegi dua</value>
+  </data>
+  <data name="number_square_zero" xml:space="preserve">
+    <value>Angka persegi nol</value>
+  </data>
+  <data name="number_three" xml:space="preserve">
+    <value>Angka tiga</value>
+  </data>
+  <data name="number_two" xml:space="preserve">
+    <value>Angka dua</value>
+  </data>
+  <data name="number_zero" xml:space="preserve">
+    <value>Angka nol</value>
+  </data>
+  <data name="numpad" xml:space="preserve">
+    <value>Papan angka</value>
+  </data>
+  <data name="nut" xml:space="preserve">
+    <value>Mur</value>
+  </data>
+  <data name="ny_times_logo" xml:space="preserve">
+    <value>Ny kali logo</value>
+  </data>
+  <data name="octagon" xml:space="preserve">
+    <value>Segi delapan</value>
+  </data>
+  <data name="office_chair" xml:space="preserve">
+    <value>Kantor kursi</value>
+  </data>
+  <data name="onigiri" xml:space="preserve">
+    <value>Onigiri</value>
+  </data>
+  <data name="open_ai_logo" xml:space="preserve">
+    <value>Terbuka ai logo</value>
+  </data>
+  <data name="option" xml:space="preserve">
+    <value>Opsi</value>
+  </data>
+  <data name="orange" xml:space="preserve">
+    <value>Jeruk</value>
+  </data>
+  <data name="orange_slice" xml:space="preserve">
+    <value>Jeruk irisan</value>
+  </data>
+  <data name="oven" xml:space="preserve">
+    <value>Oven</value>
+  </data>
+  <data name="package" xml:space="preserve">
+    <value>Paket</value>
+  </data>
+  <data name="paint_brush" xml:space="preserve">
+    <value>Cat kuas</value>
+  </data>
+  <data name="paint_brush_broad" xml:space="preserve">
+    <value>Cat kuas lebar</value>
+  </data>
+  <data name="paint_brush_household" xml:space="preserve">
+    <value>Cat kuas rumah tangga</value>
+  </data>
+  <data name="paint_bucket" xml:space="preserve">
+    <value>Cat ember</value>
+  </data>
+  <data name="paint_roller" xml:space="preserve">
+    <value>Cat rol</value>
+  </data>
+  <data name="palette" xml:space="preserve">
+    <value>Palet</value>
+  </data>
+  <data name="panorama" xml:space="preserve">
+    <value>Panorama</value>
+  </data>
+  <data name="pants" xml:space="preserve">
+    <value>Celana</value>
+  </data>
+  <data name="paper_plane" xml:space="preserve">
+    <value>Kertas pesawat</value>
+  </data>
+  <data name="paper_plane_right" xml:space="preserve">
+    <value>Kertas pesawat kanan</value>
+  </data>
+  <data name="paper_plane_tilt" xml:space="preserve">
+    <value>Kertas pesawat miring</value>
+  </data>
+  <data name="paperclip" xml:space="preserve">
+    <value>Klip kertas</value>
+  </data>
+  <data name="paperclip_horizontal" xml:space="preserve">
+    <value>Klip kertas horizontal</value>
+  </data>
+  <data name="parachute" xml:space="preserve">
+    <value>Parasut</value>
+  </data>
+  <data name="paragraph" xml:space="preserve">
+    <value>Paragraf</value>
+  </data>
+  <data name="parallelogram" xml:space="preserve">
+    <value>Jajar genjang</value>
+  </data>
+  <data name="park" xml:space="preserve">
+    <value>Taman</value>
+  </data>
+  <data name="password" xml:space="preserve">
+    <value>Kata sandi</value>
+  </data>
+  <data name="path" xml:space="preserve">
+    <value>Jalur</value>
+  </data>
+  <data name="patreon_logo" xml:space="preserve">
+    <value>Patreon logo</value>
+  </data>
+  <data name="pause" xml:space="preserve">
+    <value>Jeda</value>
+  </data>
+  <data name="pause_circle" xml:space="preserve">
+    <value>Jeda lingkaran</value>
+  </data>
+  <data name="paw_print" xml:space="preserve">
+    <value>Cakar cetak</value>
+  </data>
+  <data name="paypal_logo" xml:space="preserve">
+    <value>Paypal logo</value>
+  </data>
+  <data name="peace" xml:space="preserve">
+    <value>Damai</value>
+  </data>
+  <data name="pen" xml:space="preserve">
+    <value>Pena</value>
+  </data>
+  <data name="pen_nib" xml:space="preserve">
+    <value>Pena mata pena</value>
+  </data>
+  <data name="pen_nib_straight" xml:space="preserve">
+    <value>Pena mata pena lurus</value>
+  </data>
+  <data name="pencil" xml:space="preserve">
+    <value>Pensil</value>
+  </data>
+  <data name="pencil_circle" xml:space="preserve">
+    <value>Pensil lingkaran</value>
+  </data>
+  <data name="pencil_line" xml:space="preserve">
+    <value>Pensil garis</value>
+  </data>
+  <data name="pencil_ruler" xml:space="preserve">
+    <value>Pensil penggaris</value>
+  </data>
+  <data name="pencil_simple" xml:space="preserve">
+    <value>Pensil sederhana</value>
+  </data>
+  <data name="pencil_simple_line" xml:space="preserve">
+    <value>Pensil sederhana garis</value>
+  </data>
+  <data name="pencil_simple_slash" xml:space="preserve">
+    <value>Pensil sederhana garis miring</value>
+  </data>
+  <data name="pencil_slash" xml:space="preserve">
+    <value>Pensil garis miring</value>
+  </data>
+  <data name="pentagon" xml:space="preserve">
+    <value>Segi lima</value>
+  </data>
+  <data name="pentagram" xml:space="preserve">
+    <value>Pentagram</value>
+  </data>
+  <data name="pepper" xml:space="preserve">
+    <value>Cabai</value>
+  </data>
+  <data name="percent" xml:space="preserve">
+    <value>Persen</value>
+  </data>
+  <data name="person" xml:space="preserve">
+    <value>Orang</value>
+  </data>
+  <data name="person_arms_spread" xml:space="preserve">
+    <value>Orang lengan sebar</value>
+  </data>
+  <data name="person_simple" xml:space="preserve">
+    <value>Orang sederhana</value>
+  </data>
+  <data name="person_simple_bike" xml:space="preserve">
+    <value>Orang sederhana sepeda</value>
+  </data>
+  <data name="person_simple_circle" xml:space="preserve">
+    <value>Orang sederhana lingkaran</value>
+  </data>
+  <data name="person_simple_hike" xml:space="preserve">
+    <value>Orang sederhana mendaki</value>
+  </data>
+  <data name="person_simple_run" xml:space="preserve">
+    <value>Orang sederhana lari</value>
+  </data>
+  <data name="person_simple_ski" xml:space="preserve">
+    <value>Orang sederhana ski</value>
+  </data>
+  <data name="person_simple_snowboard" xml:space="preserve">
+    <value>Orang sederhana papan seluncur salju</value>
+  </data>
+  <data name="person_simple_swim" xml:space="preserve">
+    <value>Orang sederhana renang</value>
+  </data>
+  <data name="person_simple_tai_chi" xml:space="preserve">
+    <value>Orang sederhana tai chi</value>
+  </data>
+  <data name="person_simple_throw" xml:space="preserve">
+    <value>Orang sederhana lempar</value>
+  </data>
+  <data name="person_simple_walk" xml:space="preserve">
+    <value>Orang sederhana berjalan</value>
+  </data>
+  <data name="perspective" xml:space="preserve">
+    <value>Perspektif</value>
+  </data>
+  <data name="phone" xml:space="preserve">
+    <value>Telepon</value>
+  </data>
+  <data name="phone_call" xml:space="preserve">
+    <value>Telepon panggilan</value>
+  </data>
+  <data name="phone_disconnect" xml:space="preserve">
+    <value>Telepon putuskan</value>
+  </data>
+  <data name="phone_incoming" xml:space="preserve">
+    <value>Telepon masuk</value>
+  </data>
+  <data name="phone_list" xml:space="preserve">
+    <value>Telepon daftar</value>
+  </data>
+  <data name="phone_outgoing" xml:space="preserve">
+    <value>Telepon keluar</value>
+  </data>
+  <data name="phone_pause" xml:space="preserve">
+    <value>Telepon jeda</value>
+  </data>
+  <data name="phone_plus" xml:space="preserve">
+    <value>Telepon plus</value>
+  </data>
+  <data name="phone_slash" xml:space="preserve">
+    <value>Telepon garis miring</value>
+  </data>
+  <data name="phone_transfer" xml:space="preserve">
+    <value>Telepon transfer</value>
+  </data>
+  <data name="phone_x" xml:space="preserve">
+    <value>Telepon x</value>
+  </data>
+  <data name="phosphor_logo" xml:space="preserve">
+    <value>Phosphor logo</value>
+  </data>
+  <data name="pi" xml:space="preserve">
+    <value>Pi</value>
+  </data>
+  <data name="piano_keys" xml:space="preserve">
+    <value>Piano kunci</value>
+  </data>
+  <data name="picnic_table" xml:space="preserve">
+    <value>Piknik tabel</value>
+  </data>
+  <data name="picture_in_picture" xml:space="preserve">
+    <value>Gambar masuk gambar</value>
+  </data>
+  <data name="piggy_bank" xml:space="preserve">
+    <value>Celengan bank</value>
+  </data>
+  <data name="pill" xml:space="preserve">
+    <value>Pil</value>
+  </data>
+  <data name="ping_pong" xml:space="preserve">
+    <value>Ping pong</value>
+  </data>
+  <data name="pint_glass" xml:space="preserve">
+    <value>Gelas bir gelas</value>
+  </data>
+  <data name="pinterest_logo" xml:space="preserve">
+    <value>Pinterest logo</value>
+  </data>
+  <data name="pinwheel" xml:space="preserve">
+    <value>Kincir</value>
+  </data>
+  <data name="pipe" xml:space="preserve">
+    <value>Pipa</value>
+  </data>
+  <data name="pipe_wrench" xml:space="preserve">
+    <value>Pipa kunci pas</value>
+  </data>
+  <data name="pix_logo" xml:space="preserve">
+    <value>Pix logo</value>
+  </data>
+  <data name="pizza" xml:space="preserve">
+    <value>Pizza</value>
+  </data>
+  <data name="placeholder" xml:space="preserve">
+    <value>Tempat penampung</value>
+  </data>
+  <data name="planet" xml:space="preserve">
+    <value>Planet</value>
+  </data>
+  <data name="plant" xml:space="preserve">
+    <value>Tanaman</value>
+  </data>
+  <data name="play" xml:space="preserve">
+    <value>Putar</value>
+  </data>
+  <data name="play_circle" xml:space="preserve">
+    <value>Putar lingkaran</value>
+  </data>
+  <data name="play_pause" xml:space="preserve">
+    <value>Putar jeda</value>
+  </data>
+  <data name="playlist" xml:space="preserve">
+    <value>Daftar putar</value>
+  </data>
+  <data name="plug" xml:space="preserve">
+    <value>Steker</value>
+  </data>
+  <data name="plug_charging" xml:space="preserve">
+    <value>Steker mengisi daya</value>
+  </data>
+  <data name="plugs" xml:space="preserve">
+    <value>Steker</value>
+  </data>
+  <data name="plugs_connected" xml:space="preserve">
+    <value>Steker terhubung</value>
+  </data>
+  <data name="plus" xml:space="preserve">
+    <value>Plus</value>
+  </data>
+  <data name="plus_circle" xml:space="preserve">
+    <value>Plus lingkaran</value>
+  </data>
+  <data name="plus_minus" xml:space="preserve">
+    <value>Plus minus</value>
+  </data>
+  <data name="plus_square" xml:space="preserve">
+    <value>Plus persegi</value>
+  </data>
+  <data name="poker_chip" xml:space="preserve">
+    <value>Poker cip</value>
+  </data>
+  <data name="police_car" xml:space="preserve">
+    <value>Polisi mobil</value>
+  </data>
+  <data name="polygon" xml:space="preserve">
+    <value>Poligon</value>
+  </data>
+  <data name="popcorn" xml:space="preserve">
+    <value>Popcorn</value>
+  </data>
+  <data name="popsicle" xml:space="preserve">
+    <value>Es loli</value>
+  </data>
+  <data name="potted_plant" xml:space="preserve">
+    <value>Pot tanaman</value>
+  </data>
+  <data name="power" xml:space="preserve">
+    <value>Daya</value>
+  </data>
+  <data name="prescription" xml:space="preserve">
+    <value>Resep</value>
+  </data>
+  <data name="presentation" xml:space="preserve">
+    <value>Presentasi</value>
+  </data>
+  <data name="presentation_chart" xml:space="preserve">
+    <value>Presentasi bagan</value>
+  </data>
+  <data name="printer" xml:space="preserve">
+    <value>Printer</value>
+  </data>
+  <data name="prohibit" xml:space="preserve">
+    <value>Dilarang</value>
+  </data>
+  <data name="prohibit_inset" xml:space="preserve">
+    <value>Dilarang sisipan</value>
+  </data>
+  <data name="projector_screen" xml:space="preserve">
+    <value>Proyektor layar</value>
+  </data>
+  <data name="projector_screen_chart" xml:space="preserve">
+    <value>Proyektor layar bagan</value>
+  </data>
+  <data name="pulse" xml:space="preserve">
+    <value>Denyut</value>
+  </data>
+  <data name="push_pin" xml:space="preserve">
+    <value>Dorong pin</value>
+  </data>
+  <data name="push_pin_simple" xml:space="preserve">
+    <value>Dorong pin sederhana</value>
+  </data>
+  <data name="push_pin_simple_slash" xml:space="preserve">
+    <value>Dorong pin sederhana garis miring</value>
+  </data>
+  <data name="push_pin_slash" xml:space="preserve">
+    <value>Dorong pin garis miring</value>
+  </data>
+  <data name="puzzle_piece" xml:space="preserve">
+    <value>Teka-teki potongan</value>
+  </data>
+  <data name="qr_code" xml:space="preserve">
+    <value>Qr kode</value>
+  </data>
+  <data name="question" xml:space="preserve">
+    <value>Pertanyaan</value>
+  </data>
+  <data name="question_mark" xml:space="preserve">
+    <value>Pertanyaan tanda</value>
+  </data>
+  <data name="queue" xml:space="preserve">
+    <value>Antrean</value>
+  </data>
+  <data name="quotes" xml:space="preserve">
+    <value>Kutipan</value>
+  </data>
+  <data name="rabbit" xml:space="preserve">
+    <value>Kelinci</value>
+  </data>
+  <data name="racquet" xml:space="preserve">
+    <value>Raket</value>
+  </data>
+  <data name="radical" xml:space="preserve">
+    <value>Akar</value>
+  </data>
+  <data name="radio" xml:space="preserve">
+    <value>Radio</value>
+  </data>
+  <data name="radio_button" xml:space="preserve">
+    <value>Radio tombol</value>
+  </data>
+  <data name="radioactive" xml:space="preserve">
+    <value>Radioaktif</value>
+  </data>
+  <data name="rainbow" xml:space="preserve">
+    <value>Pelangi</value>
+  </data>
+  <data name="rainbow_cloud" xml:space="preserve">
+    <value>Pelangi awan</value>
+  </data>
+  <data name="ranking" xml:space="preserve">
+    <value>Peringkat</value>
+  </data>
+  <data name="read_cv_logo" xml:space="preserve">
+    <value>Dibaca cv logo</value>
+  </data>
+  <data name="receipt" xml:space="preserve">
+    <value>Kuitansi</value>
+  </data>
+  <data name="receipt_x" xml:space="preserve">
+    <value>Kuitansi x</value>
+  </data>
+  <data name="record" xml:space="preserve">
+    <value>Rekam</value>
+  </data>
+  <data name="rectangle" xml:space="preserve">
+    <value>Persegi panjang</value>
+  </data>
+  <data name="rectangle_dashed" xml:space="preserve">
+    <value>Persegi panjang putus-putus</value>
+  </data>
+  <data name="recycle" xml:space="preserve">
+    <value>Daur ulang</value>
+  </data>
+  <data name="reddit_logo" xml:space="preserve">
+    <value>Reddit logo</value>
+  </data>
+  <data name="repeat" xml:space="preserve">
+    <value>Ulangi</value>
+  </data>
+  <data name="repeat_once" xml:space="preserve">
+    <value>Ulangi sekali</value>
+  </data>
+  <data name="replit_logo" xml:space="preserve">
+    <value>Replit logo</value>
+  </data>
+  <data name="resize" xml:space="preserve">
+    <value>Ubah ukuran</value>
+  </data>
+  <data name="rewind" xml:space="preserve">
+    <value>Putar balik</value>
+  </data>
+  <data name="rewind_circle" xml:space="preserve">
+    <value>Putar balik lingkaran</value>
+  </data>
+  <data name="road_horizon" xml:space="preserve">
+    <value>Jalan cakrawala</value>
+  </data>
+  <data name="robot" xml:space="preserve">
+    <value>Robot</value>
+  </data>
+  <data name="rocket" xml:space="preserve">
+    <value>Roket</value>
+  </data>
+  <data name="rocket_launch" xml:space="preserve">
+    <value>Roket peluncuran</value>
+  </data>
+  <data name="rows" xml:space="preserve">
+    <value>Baris</value>
+  </data>
+  <data name="rows_plus_bottom" xml:space="preserve">
+    <value>Baris plus bawah</value>
+  </data>
+  <data name="rows_plus_top" xml:space="preserve">
+    <value>Baris plus atas</value>
+  </data>
+  <data name="rss" xml:space="preserve">
+    <value>Rss</value>
+  </data>
+  <data name="rss_simple" xml:space="preserve">
+    <value>Rss sederhana</value>
+  </data>
+  <data name="rug" xml:space="preserve">
+    <value>Permadani</value>
+  </data>
+  <data name="ruler" xml:space="preserve">
+    <value>Penggaris</value>
+  </data>
+  <data name="sailboat" xml:space="preserve">
+    <value>Perahu layar</value>
+  </data>
+  <data name="scales" xml:space="preserve">
+    <value>Timbangan</value>
+  </data>
+  <data name="scan" xml:space="preserve">
+    <value>Pindai</value>
+  </data>
+  <data name="scan_smiley" xml:space="preserve">
+    <value>Pindai senyum</value>
+  </data>
+  <data name="scissors" xml:space="preserve">
+    <value>Gunting</value>
+  </data>
+  <data name="scooter" xml:space="preserve">
+    <value>Skuter</value>
+  </data>
+  <data name="screencast" xml:space="preserve">
+    <value>Rekaman layar</value>
+  </data>
+  <data name="screwdriver" xml:space="preserve">
+    <value>Obeng</value>
+  </data>
+  <data name="scribble" xml:space="preserve">
+    <value>Coretan</value>
+  </data>
+  <data name="scribble_loop" xml:space="preserve">
+    <value>Coretan putaran</value>
+  </data>
+  <data name="scroll" xml:space="preserve">
+    <value>Gulungan</value>
+  </data>
+  <data name="seal" xml:space="preserve">
+    <value>Segel</value>
+  </data>
+  <data name="seal_check" xml:space="preserve">
+    <value>Segel centang</value>
+  </data>
+  <data name="seal_percent" xml:space="preserve">
+    <value>Segel persen</value>
+  </data>
+  <data name="seal_question" xml:space="preserve">
+    <value>Segel pertanyaan</value>
+  </data>
+  <data name="seal_warning" xml:space="preserve">
+    <value>Segel peringatan</value>
+  </data>
+  <data name="seat" xml:space="preserve">
+    <value>Kursi</value>
+  </data>
+  <data name="seatbelt" xml:space="preserve">
+    <value>Sabuk pengaman</value>
+  </data>
+  <data name="security_camera" xml:space="preserve">
+    <value>Keamanan kamera</value>
+  </data>
+  <data name="selection" xml:space="preserve">
+    <value>Pilihan</value>
+  </data>
+  <data name="selection_all" xml:space="preserve">
+    <value>Pilihan semua</value>
+  </data>
+  <data name="selection_background" xml:space="preserve">
+    <value>Pilihan latar belakang</value>
+  </data>
+  <data name="selection_foreground" xml:space="preserve">
+    <value>Pilihan latar depan</value>
+  </data>
+  <data name="selection_inverse" xml:space="preserve">
+    <value>Pilihan terbalik</value>
+  </data>
+  <data name="selection_plus" xml:space="preserve">
+    <value>Pilihan plus</value>
+  </data>
+  <data name="selection_slash" xml:space="preserve">
+    <value>Pilihan garis miring</value>
+  </data>
+  <data name="shapes" xml:space="preserve">
+    <value>Bentuk</value>
+  </data>
+  <data name="share" xml:space="preserve">
+    <value>Bagikan</value>
+  </data>
+  <data name="share_fat" xml:space="preserve">
+    <value>Bagikan tebal</value>
+  </data>
+  <data name="share_network" xml:space="preserve">
+    <value>Bagikan jaringan</value>
+  </data>
+  <data name="shield" xml:space="preserve">
+    <value>Perisai</value>
+  </data>
+  <data name="shield_check" xml:space="preserve">
+    <value>Perisai centang</value>
+  </data>
+  <data name="shield_checkered" xml:space="preserve">
+    <value>Perisai kotak-kotak</value>
+  </data>
+  <data name="shield_chevron" xml:space="preserve">
+    <value>Perisai chevron</value>
+  </data>
+  <data name="shield_plus" xml:space="preserve">
+    <value>Perisai plus</value>
+  </data>
+  <data name="shield_slash" xml:space="preserve">
+    <value>Perisai garis miring</value>
+  </data>
+  <data name="shield_star" xml:space="preserve">
+    <value>Perisai bintang</value>
+  </data>
+  <data name="shield_warning" xml:space="preserve">
+    <value>Perisai peringatan</value>
+  </data>
+  <data name="shipping_container" xml:space="preserve">
+    <value>Pengiriman kontainer</value>
+  </data>
+  <data name="shirt_folded" xml:space="preserve">
+    <value>Kemeja terlipat</value>
+  </data>
+  <data name="shooting_star" xml:space="preserve">
+    <value>Jatuh bintang</value>
+  </data>
+  <data name="shopping_bag" xml:space="preserve">
+    <value>Belanja tas</value>
+  </data>
+  <data name="shopping_bag_open" xml:space="preserve">
+    <value>Belanja tas terbuka</value>
+  </data>
+  <data name="shopping_cart" xml:space="preserve">
+    <value>Belanja keranjang</value>
+  </data>
+  <data name="shopping_cart_simple" xml:space="preserve">
+    <value>Belanja keranjang sederhana</value>
+  </data>
+  <data name="shovel" xml:space="preserve">
+    <value>Sekop</value>
+  </data>
+  <data name="shower" xml:space="preserve">
+    <value>Pancuran</value>
+  </data>
+  <data name="shrimp" xml:space="preserve">
+    <value>Udang</value>
+  </data>
+  <data name="shuffle" xml:space="preserve">
+    <value>Acak</value>
+  </data>
+  <data name="shuffle_angular" xml:space="preserve">
+    <value>Acak angular</value>
+  </data>
+  <data name="shuffle_simple" xml:space="preserve">
+    <value>Acak sederhana</value>
+  </data>
+  <data name="sidebar" xml:space="preserve">
+    <value>Bilah samping</value>
+  </data>
+  <data name="sidebar_simple" xml:space="preserve">
+    <value>Bilah samping sederhana</value>
+  </data>
+  <data name="sigma" xml:space="preserve">
+    <value>Sigma</value>
+  </data>
+  <data name="sign_in" xml:space="preserve">
+    <value>Tanda masuk</value>
+  </data>
+  <data name="sign_out" xml:space="preserve">
+    <value>Tanda keluar</value>
+  </data>
+  <data name="signature" xml:space="preserve">
+    <value>Tanda tangan</value>
+  </data>
+  <data name="signpost" xml:space="preserve">
+    <value>Penunjuk jalan</value>
+  </data>
+  <data name="sim_card" xml:space="preserve">
+    <value>Sim kartu</value>
+  </data>
+  <data name="siren" xml:space="preserve">
+    <value>Sirene</value>
+  </data>
+  <data name="sketch_logo" xml:space="preserve">
+    <value>Sketsa logo</value>
+  </data>
+  <data name="skip_back" xml:space="preserve">
+    <value>Lewati kembali</value>
+  </data>
+  <data name="skip_back_circle" xml:space="preserve">
+    <value>Lewati kembali lingkaran</value>
+  </data>
+  <data name="skip_forward" xml:space="preserve">
+    <value>Lewati maju</value>
+  </data>
+  <data name="skip_forward_circle" xml:space="preserve">
+    <value>Lewati maju lingkaran</value>
+  </data>
+  <data name="skull" xml:space="preserve">
+    <value>Tengkorak</value>
+  </data>
+  <data name="skype_logo" xml:space="preserve">
+    <value>Skype logo</value>
+  </data>
+  <data name="slack_logo" xml:space="preserve">
+    <value>Slack logo</value>
+  </data>
+  <data name="sliders" xml:space="preserve">
+    <value>Penggeser</value>
+  </data>
+  <data name="sliders_horizontal" xml:space="preserve">
+    <value>Penggeser horizontal</value>
+  </data>
+  <data name="slideshow" xml:space="preserve">
+    <value>Tayangan slide</value>
+  </data>
+  <data name="smiley" xml:space="preserve">
+    <value>Senyum</value>
+  </data>
+  <data name="smiley_angry" xml:space="preserve">
+    <value>Senyum marah</value>
+  </data>
+  <data name="smiley_blank" xml:space="preserve">
+    <value>Senyum kosong</value>
+  </data>
+  <data name="smiley_meh" xml:space="preserve">
+    <value>Senyum biasa saja</value>
+  </data>
+  <data name="smiley_melting" xml:space="preserve">
+    <value>Senyum meleleh</value>
+  </data>
+  <data name="smiley_nervous" xml:space="preserve">
+    <value>Senyum gugup</value>
+  </data>
+  <data name="smiley_sad" xml:space="preserve">
+    <value>Senyum sedih</value>
+  </data>
+  <data name="smiley_sticker" xml:space="preserve">
+    <value>Senyum stiker</value>
+  </data>
+  <data name="smiley_wink" xml:space="preserve">
+    <value>Senyum kedipan</value>
+  </data>
+  <data name="smiley_x_eyes" xml:space="preserve">
+    <value>Senyum x mata</value>
+  </data>
+  <data name="snapchat_logo" xml:space="preserve">
+    <value>Snapchat logo</value>
+  </data>
+  <data name="sneaker" xml:space="preserve">
+    <value>Sepatu kets</value>
+  </data>
+  <data name="sneaker_move" xml:space="preserve">
+    <value>Sepatu kets pindah</value>
+  </data>
+  <data name="snowflake" xml:space="preserve">
+    <value>Kepingan salju</value>
+  </data>
+  <data name="soccer_ball" xml:space="preserve">
+    <value>Sepak bola bola</value>
+  </data>
+  <data name="sock" xml:space="preserve">
+    <value>Kaus kaki</value>
+  </data>
+  <data name="solar_panel" xml:space="preserve">
+    <value>Surya panel</value>
+  </data>
+  <data name="solar_roof" xml:space="preserve">
+    <value>Surya atap</value>
+  </data>
+  <data name="sort_ascending" xml:space="preserve">
+    <value>Urutkan naik</value>
+  </data>
+  <data name="sort_descending" xml:space="preserve">
+    <value>Urutkan turun</value>
+  </data>
+  <data name="soundcloud_logo" xml:space="preserve">
+    <value>Soundcloud logo</value>
+  </data>
+  <data name="spade" xml:space="preserve">
+    <value>Sekop</value>
+  </data>
+  <data name="sparkle" xml:space="preserve">
+    <value>Kilau</value>
+  </data>
+  <data name="speaker_hifi" xml:space="preserve">
+    <value>Speaker hifi</value>
+  </data>
+  <data name="speaker_high" xml:space="preserve">
+    <value>Speaker tinggi</value>
+  </data>
+  <data name="speaker_low" xml:space="preserve">
+    <value>Speaker rendah</value>
+  </data>
+  <data name="speaker_none" xml:space="preserve">
+    <value>Speaker tidak ada</value>
+  </data>
+  <data name="speaker_simple_high" xml:space="preserve">
+    <value>Speaker sederhana tinggi</value>
+  </data>
+  <data name="speaker_simple_low" xml:space="preserve">
+    <value>Speaker sederhana rendah</value>
+  </data>
+  <data name="speaker_simple_none" xml:space="preserve">
+    <value>Speaker sederhana tidak ada</value>
+  </data>
+  <data name="speaker_simple_slash" xml:space="preserve">
+    <value>Speaker sederhana garis miring</value>
+  </data>
+  <data name="speaker_simple_x" xml:space="preserve">
+    <value>Speaker sederhana x</value>
+  </data>
+  <data name="speaker_slash" xml:space="preserve">
+    <value>Speaker garis miring</value>
+  </data>
+  <data name="speaker_x" xml:space="preserve">
+    <value>Speaker x</value>
+  </data>
+  <data name="speedometer" xml:space="preserve">
+    <value>Spidometer</value>
+  </data>
+  <data name="sphere" xml:space="preserve">
+    <value>Bola</value>
+  </data>
+  <data name="spinner" xml:space="preserve">
+    <value>Pemutar</value>
+  </data>
+  <data name="spinner_ball" xml:space="preserve">
+    <value>Pemutar bola</value>
+  </data>
+  <data name="spinner_gap" xml:space="preserve">
+    <value>Pemutar celah</value>
+  </data>
+  <data name="spiral" xml:space="preserve">
+    <value>Spiral</value>
+  </data>
+  <data name="split_horizontal" xml:space="preserve">
+    <value>Pisah horizontal</value>
+  </data>
+  <data name="split_vertical" xml:space="preserve">
+    <value>Pisah vertikal</value>
+  </data>
+  <data name="spotify_logo" xml:space="preserve">
+    <value>Spotify logo</value>
+  </data>
+  <data name="spray_bottle" xml:space="preserve">
+    <value>Semprot botol</value>
+  </data>
+  <data name="square" xml:space="preserve">
+    <value>Persegi</value>
+  </data>
+  <data name="square_half" xml:space="preserve">
+    <value>Persegi setengah</value>
+  </data>
+  <data name="square_half_bottom" xml:space="preserve">
+    <value>Persegi setengah bawah</value>
+  </data>
+  <data name="square_logo" xml:space="preserve">
+    <value>Persegi logo</value>
+  </data>
+  <data name="square_split_horizontal" xml:space="preserve">
+    <value>Persegi pisah horizontal</value>
+  </data>
+  <data name="square_split_vertical" xml:space="preserve">
+    <value>Persegi pisah vertikal</value>
+  </data>
+  <data name="squares_four" xml:space="preserve">
+    <value>Persegi empat</value>
+  </data>
+  <data name="stack" xml:space="preserve">
+    <value>Tumpukan</value>
+  </data>
+  <data name="stack_minus" xml:space="preserve">
+    <value>Tumpukan minus</value>
+  </data>
+  <data name="stack_overflow_logo" xml:space="preserve">
+    <value>Tumpukan luapan logo</value>
+  </data>
+  <data name="stack_plus" xml:space="preserve">
+    <value>Tumpukan plus</value>
+  </data>
+  <data name="stack_simple" xml:space="preserve">
+    <value>Tumpukan sederhana</value>
+  </data>
+  <data name="stairs" xml:space="preserve">
+    <value>Tangga</value>
+  </data>
+  <data name="stamp" xml:space="preserve">
+    <value>Stempel</value>
+  </data>
+  <data name="standard_definition" xml:space="preserve">
+    <value>Standar definisi</value>
+  </data>
+  <data name="star" xml:space="preserve">
+    <value>Bintang</value>
+  </data>
+  <data name="star_and_crescent" xml:space="preserve">
+    <value>Bintang dan bulan sabit</value>
+  </data>
+  <data name="star_four" xml:space="preserve">
+    <value>Bintang empat</value>
+  </data>
+  <data name="star_half" xml:space="preserve">
+    <value>Bintang setengah</value>
+  </data>
+  <data name="star_of_david" xml:space="preserve">
+    <value>Bintang dari daud</value>
+  </data>
+  <data name="steam_logo" xml:space="preserve">
+    <value>Uap logo</value>
+  </data>
+  <data name="steering_wheel" xml:space="preserve">
+    <value>Kemudi roda</value>
+  </data>
+  <data name="steps" xml:space="preserve">
+    <value>Tangga</value>
+  </data>
+  <data name="stethoscope" xml:space="preserve">
+    <value>Stetoskop</value>
+  </data>
+  <data name="sticker" xml:space="preserve">
+    <value>Stiker</value>
+  </data>
+  <data name="stool" xml:space="preserve">
+    <value>Bangku</value>
+  </data>
+  <data name="stop" xml:space="preserve">
+    <value>Berhenti</value>
+  </data>
+  <data name="stop_circle" xml:space="preserve">
+    <value>Berhenti lingkaran</value>
+  </data>
+  <data name="storefront" xml:space="preserve">
+    <value>Etalase</value>
+  </data>
+  <data name="strategy" xml:space="preserve">
+    <value>Strategi</value>
+  </data>
+  <data name="stripe_logo" xml:space="preserve">
+    <value>Stripe logo</value>
+  </data>
+  <data name="student" xml:space="preserve">
+    <value>Siswa</value>
+  </data>
+  <data name="subset_of" xml:space="preserve">
+    <value>Himpunan bagian dari</value>
+  </data>
+  <data name="subset_proper_of" xml:space="preserve">
+    <value>Himpunan bagian tepat dari</value>
+  </data>
+  <data name="subtitles" xml:space="preserve">
+    <value>Subtitel</value>
+  </data>
+  <data name="subtitles_slash" xml:space="preserve">
+    <value>Subtitel garis miring</value>
+  </data>
+  <data name="subtract" xml:space="preserve">
+    <value>Kurangi</value>
+  </data>
+  <data name="subtract_square" xml:space="preserve">
+    <value>Kurangi persegi</value>
+  </data>
+  <data name="subway" xml:space="preserve">
+    <value>Kereta bawah tanah</value>
+  </data>
+  <data name="suitcase" xml:space="preserve">
+    <value>Koper</value>
+  </data>
+  <data name="suitcase_rolling" xml:space="preserve">
+    <value>Koper bergulir</value>
+  </data>
+  <data name="suitcase_simple" xml:space="preserve">
+    <value>Koper sederhana</value>
+  </data>
+  <data name="sun" xml:space="preserve">
+    <value>Matahari</value>
+  </data>
+  <data name="sun_dim" xml:space="preserve">
+    <value>Matahari redup</value>
+  </data>
+  <data name="sun_horizon" xml:space="preserve">
+    <value>Matahari cakrawala</value>
+  </data>
+  <data name="sunglasses" xml:space="preserve">
+    <value>Kacamata hitam</value>
+  </data>
+  <data name="superset_of" xml:space="preserve">
+    <value>Superset dari</value>
+  </data>
+  <data name="superset_proper_of" xml:space="preserve">
+    <value>Superset tepat dari</value>
+  </data>
+  <data name="swap" xml:space="preserve">
+    <value>Tukar</value>
+  </data>
+  <data name="swatches" xml:space="preserve">
+    <value>Contoh warna</value>
+  </data>
+  <data name="swimming_pool" xml:space="preserve">
+    <value>Berenang kolam renang</value>
+  </data>
+  <data name="sword" xml:space="preserve">
+    <value>Pedang</value>
+  </data>
+  <data name="synagogue" xml:space="preserve">
+    <value>Sinagoge</value>
+  </data>
+  <data name="syringe" xml:space="preserve">
+    <value>Jarum suntik</value>
+  </data>
+  <data name="t_shirt" xml:space="preserve">
+    <value>T kemeja</value>
+  </data>
+  <data name="table" xml:space="preserve">
+    <value>Tabel</value>
+  </data>
+  <data name="tabs" xml:space="preserve">
+    <value>Tab</value>
+  </data>
+  <data name="tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="tag_chevron" xml:space="preserve">
+    <value>Tag chevron</value>
+  </data>
+  <data name="tag_simple" xml:space="preserve">
+    <value>Tag sederhana</value>
+  </data>
+  <data name="target" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="taxi" xml:space="preserve">
+    <value>Taksi</value>
+  </data>
+  <data name="tea_bag" xml:space="preserve">
+    <value>Teh tas</value>
+  </data>
+  <data name="telegram_logo" xml:space="preserve">
+    <value>Telegram logo</value>
+  </data>
+  <data name="television" xml:space="preserve">
+    <value>Televisi</value>
+  </data>
+  <data name="television_simple" xml:space="preserve">
+    <value>Televisi sederhana</value>
+  </data>
+  <data name="tennis_ball" xml:space="preserve">
+    <value>Tenis bola</value>
+  </data>
+  <data name="tent" xml:space="preserve">
+    <value>Tenda</value>
+  </data>
+  <data name="terminal" xml:space="preserve">
+    <value>Terminal</value>
+  </data>
+  <data name="terminal_window" xml:space="preserve">
+    <value>Terminal jendela</value>
+  </data>
+  <data name="test_tube" xml:space="preserve">
+    <value>Uji tabung</value>
+  </data>
+  <data name="text_a_underline" xml:space="preserve">
+    <value>Teks a garis bawah</value>
+  </data>
+  <data name="text_aa" xml:space="preserve">
+    <value>Teks aa</value>
+  </data>
+  <data name="text_align_center" xml:space="preserve">
+    <value>Teks ratakan tengah</value>
+  </data>
+  <data name="text_align_justify" xml:space="preserve">
+    <value>Teks ratakan rata kanan-kiri</value>
+  </data>
+  <data name="text_align_left" xml:space="preserve">
+    <value>Teks ratakan kiri</value>
+  </data>
+  <data name="text_align_right" xml:space="preserve">
+    <value>Teks ratakan kanan</value>
+  </data>
+  <data name="text_b" xml:space="preserve">
+    <value>Teks b</value>
+  </data>
+  <data name="text_columns" xml:space="preserve">
+    <value>Teks kolom</value>
+  </data>
+  <data name="text_h" xml:space="preserve">
+    <value>Teks h</value>
+  </data>
+  <data name="text_h_five" xml:space="preserve">
+    <value>Teks h lima</value>
+  </data>
+  <data name="text_h_four" xml:space="preserve">
+    <value>Teks h empat</value>
+  </data>
+  <data name="text_h_one" xml:space="preserve">
+    <value>Teks h satu</value>
+  </data>
+  <data name="text_h_six" xml:space="preserve">
+    <value>Teks h enam</value>
+  </data>
+  <data name="text_h_three" xml:space="preserve">
+    <value>Teks h tiga</value>
+  </data>
+  <data name="text_h_two" xml:space="preserve">
+    <value>Teks h dua</value>
+  </data>
+  <data name="text_indent" xml:space="preserve">
+    <value>Teks indentasi</value>
+  </data>
+  <data name="text_italic" xml:space="preserve">
+    <value>Teks miring</value>
+  </data>
+  <data name="text_outdent" xml:space="preserve">
+    <value>Teks kurangi indentasi</value>
+  </data>
+  <data name="text_strikethrough" xml:space="preserve">
+    <value>Teks coret</value>
+  </data>
+  <data name="text_subscript" xml:space="preserve">
+    <value>Teks subskrip</value>
+  </data>
+  <data name="text_superscript" xml:space="preserve">
+    <value>Teks superskrip</value>
+  </data>
+  <data name="text_t" xml:space="preserve">
+    <value>Teks t</value>
+  </data>
+  <data name="text_t_slash" xml:space="preserve">
+    <value>Teks t garis miring</value>
+  </data>
+  <data name="text_underline" xml:space="preserve">
+    <value>Teks garis bawah</value>
+  </data>
+  <data name="textbox" xml:space="preserve">
+    <value>Kotak teks</value>
+  </data>
+  <data name="thermometer" xml:space="preserve">
+    <value>Termometer</value>
+  </data>
+  <data name="thermometer_cold" xml:space="preserve">
+    <value>Termometer dingin</value>
+  </data>
+  <data name="thermometer_hot" xml:space="preserve">
+    <value>Termometer panas</value>
+  </data>
+  <data name="thermometer_simple" xml:space="preserve">
+    <value>Termometer sederhana</value>
+  </data>
+  <data name="threads_logo" xml:space="preserve">
+    <value>Threads logo</value>
+  </data>
+  <data name="three_d" xml:space="preserve">
+    <value>Tiga d</value>
+  </data>
+  <data name="thumbs_down" xml:space="preserve">
+    <value>Jempol bawah</value>
+  </data>
+  <data name="thumbs_up" xml:space="preserve">
+    <value>Jempol atas</value>
+  </data>
+  <data name="ticket" xml:space="preserve">
+    <value>Tiket</value>
+  </data>
+  <data name="tidal_logo" xml:space="preserve">
+    <value>Tidal logo</value>
+  </data>
+  <data name="tiktok_logo" xml:space="preserve">
+    <value>Tiktok logo</value>
+  </data>
+  <data name="tilde" xml:space="preserve">
+    <value>Tilde</value>
+  </data>
+  <data name="timer" xml:space="preserve">
+    <value>Pengatur waktu</value>
+  </data>
+  <data name="tip_jar" xml:space="preserve">
+    <value>Tip toples</value>
+  </data>
+  <data name="tipi" xml:space="preserve">
+    <value>Tipi</value>
+  </data>
+  <data name="tire" xml:space="preserve">
+    <value>Ban</value>
+  </data>
+  <data name="toggle_left" xml:space="preserve">
+    <value>Sakelar kiri</value>
+  </data>
+  <data name="toggle_right" xml:space="preserve">
+    <value>Sakelar kanan</value>
+  </data>
+  <data name="toilet" xml:space="preserve">
+    <value>Toilet</value>
+  </data>
+  <data name="toilet_paper" xml:space="preserve">
+    <value>Toilet kertas</value>
+  </data>
+  <data name="toolbox" xml:space="preserve">
+    <value>Kotak perkakas</value>
+  </data>
+  <data name="tooth" xml:space="preserve">
+    <value>Gigi</value>
+  </data>
+  <data name="tornado" xml:space="preserve">
+    <value>Tornado</value>
+  </data>
+  <data name="tote" xml:space="preserve">
+    <value>Tas jinjing</value>
+  </data>
+  <data name="tote_simple" xml:space="preserve">
+    <value>Tas jinjing sederhana</value>
+  </data>
+  <data name="towel" xml:space="preserve">
+    <value>Handuk</value>
+  </data>
+  <data name="tractor" xml:space="preserve">
+    <value>Traktor</value>
+  </data>
+  <data name="trademark" xml:space="preserve">
+    <value>Merek dagang</value>
+  </data>
+  <data name="trademark_registered" xml:space="preserve">
+    <value>Merek dagang terdaftar</value>
+  </data>
+  <data name="traffic_cone" xml:space="preserve">
+    <value>Lalu lintas kerucut</value>
+  </data>
+  <data name="traffic_sign" xml:space="preserve">
+    <value>Lalu lintas tanda</value>
+  </data>
+  <data name="traffic_signal" xml:space="preserve">
+    <value>Lalu lintas sinyal</value>
+  </data>
+  <data name="train" xml:space="preserve">
+    <value>Kereta</value>
+  </data>
+  <data name="train_regional" xml:space="preserve">
+    <value>Kereta regional</value>
+  </data>
+  <data name="train_simple" xml:space="preserve">
+    <value>Kereta sederhana</value>
+  </data>
+  <data name="tram" xml:space="preserve">
+    <value>Trem</value>
+  </data>
+  <data name="translate" xml:space="preserve">
+    <value>Terjemahkan</value>
+  </data>
+  <data name="trash" xml:space="preserve">
+    <value>Sampah</value>
+  </data>
+  <data name="trash_simple" xml:space="preserve">
+    <value>Sampah sederhana</value>
+  </data>
+  <data name="tray" xml:space="preserve">
+    <value>Baki</value>
+  </data>
+  <data name="tray_arrow_down" xml:space="preserve">
+    <value>Baki panah bawah</value>
+  </data>
+  <data name="tray_arrow_up" xml:space="preserve">
+    <value>Baki panah atas</value>
+  </data>
+  <data name="treasure_chest" xml:space="preserve">
+    <value>Harta peti</value>
+  </data>
+  <data name="tree" xml:space="preserve">
+    <value>Pohon</value>
+  </data>
+  <data name="tree_evergreen" xml:space="preserve">
+    <value>Pohon cemara</value>
+  </data>
+  <data name="tree_palm" xml:space="preserve">
+    <value>Pohon palem</value>
+  </data>
+  <data name="tree_structure" xml:space="preserve">
+    <value>Pohon struktur</value>
+  </data>
+  <data name="tree_view" xml:space="preserve">
+    <value>Pohon tampilan</value>
+  </data>
+  <data name="trend_down" xml:space="preserve">
+    <value>Tren bawah</value>
+  </data>
+  <data name="trend_up" xml:space="preserve">
+    <value>Tren atas</value>
+  </data>
+  <data name="triangle" xml:space="preserve">
+    <value>Segitiga</value>
+  </data>
+  <data name="triangle_dashed" xml:space="preserve">
+    <value>Segitiga putus-putus</value>
+  </data>
+  <data name="trolley" xml:space="preserve">
+    <value>Troli</value>
+  </data>
+  <data name="trolley_suitcase" xml:space="preserve">
+    <value>Troli koper</value>
+  </data>
+  <data name="trophy" xml:space="preserve">
+    <value>Piala</value>
+  </data>
+  <data name="truck" xml:space="preserve">
+    <value>Truk</value>
+  </data>
+  <data name="truck_trailer" xml:space="preserve">
+    <value>Truk trailer</value>
+  </data>
+  <data name="tumblr_logo" xml:space="preserve">
+    <value>Tumblr logo</value>
+  </data>
+  <data name="twitch_logo" xml:space="preserve">
+    <value>Twitch logo</value>
+  </data>
+  <data name="twitter_logo" xml:space="preserve">
+    <value>Twitter logo</value>
+  </data>
+  <data name="umbrella" xml:space="preserve">
+    <value>Payung</value>
+  </data>
+  <data name="umbrella_simple" xml:space="preserve">
+    <value>Payung sederhana</value>
+  </data>
+  <data name="union" xml:space="preserve">
+    <value>Gabungan</value>
+  </data>
+  <data name="unite" xml:space="preserve">
+    <value>Satukan</value>
+  </data>
+  <data name="unite_square" xml:space="preserve">
+    <value>Satukan persegi</value>
+  </data>
+  <data name="upload" xml:space="preserve">
+    <value>Unggah</value>
+  </data>
+  <data name="upload_simple" xml:space="preserve">
+    <value>Unggah sederhana</value>
+  </data>
+  <data name="usb" xml:space="preserve">
+    <value>Usb</value>
+  </data>
+  <data name="user" xml:space="preserve">
+    <value>Pengguna</value>
+  </data>
+  <data name="user_check" xml:space="preserve">
+    <value>Pengguna centang</value>
+  </data>
+  <data name="user_circle" xml:space="preserve">
+    <value>Pengguna lingkaran</value>
+  </data>
+  <data name="user_circle_check" xml:space="preserve">
+    <value>Pengguna lingkaran centang</value>
+  </data>
+  <data name="user_circle_dashed" xml:space="preserve">
+    <value>Pengguna lingkaran putus-putus</value>
+  </data>
+  <data name="user_circle_gear" xml:space="preserve">
+    <value>Pengguna lingkaran roda gigi</value>
+  </data>
+  <data name="user_circle_minus" xml:space="preserve">
+    <value>Pengguna lingkaran minus</value>
+  </data>
+  <data name="user_circle_plus" xml:space="preserve">
+    <value>Pengguna lingkaran plus</value>
+  </data>
+  <data name="user_focus" xml:space="preserve">
+    <value>Pengguna fokus</value>
+  </data>
+  <data name="user_gear" xml:space="preserve">
+    <value>Pengguna roda gigi</value>
+  </data>
+  <data name="user_list" xml:space="preserve">
+    <value>Pengguna daftar</value>
+  </data>
+  <data name="user_minus" xml:space="preserve">
+    <value>Pengguna minus</value>
+  </data>
+  <data name="user_plus" xml:space="preserve">
+    <value>Pengguna plus</value>
+  </data>
+  <data name="user_rectangle" xml:space="preserve">
+    <value>Pengguna persegi panjang</value>
+  </data>
+  <data name="user_sound" xml:space="preserve">
+    <value>Pengguna suara</value>
+  </data>
+  <data name="user_square" xml:space="preserve">
+    <value>Pengguna persegi</value>
+  </data>
+  <data name="user_switch" xml:space="preserve">
+    <value>Pengguna sakelar</value>
+  </data>
+  <data name="users" xml:space="preserve">
+    <value>Pengguna</value>
+  </data>
+  <data name="users_four" xml:space="preserve">
+    <value>Pengguna empat</value>
+  </data>
+  <data name="users_three" xml:space="preserve">
+    <value>Pengguna tiga</value>
+  </data>
+  <data name="van" xml:space="preserve">
+    <value>Van</value>
+  </data>
+  <data name="vault" xml:space="preserve">
+    <value>Brankas</value>
+  </data>
+  <data name="vector_three" xml:space="preserve">
+    <value>Vektor tiga</value>
+  </data>
+  <data name="vector_two" xml:space="preserve">
+    <value>Vektor dua</value>
+  </data>
+  <data name="vibrate" xml:space="preserve">
+    <value>Getar</value>
+  </data>
+  <data name="video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="video_camera" xml:space="preserve">
+    <value>Video kamera</value>
+  </data>
+  <data name="video_camera_slash" xml:space="preserve">
+    <value>Video kamera garis miring</value>
+  </data>
+  <data name="video_conference" xml:space="preserve">
+    <value>Video konferensi</value>
+  </data>
+  <data name="vignette" xml:space="preserve">
+    <value>Vinyet</value>
+  </data>
+  <data name="vinyl_record" xml:space="preserve">
+    <value>Piringan hitam rekam</value>
+  </data>
+  <data name="virtual_reality" xml:space="preserve">
+    <value>Virtual realitas</value>
+  </data>
+  <data name="virus" xml:space="preserve">
+    <value>Virus</value>
+  </data>
+  <data name="visor" xml:space="preserve">
+    <value>Pelindung</value>
+  </data>
+  <data name="voicemail" xml:space="preserve">
+    <value>Pesan suara</value>
+  </data>
+  <data name="volleyball" xml:space="preserve">
+    <value>Bola voli</value>
+  </data>
+  <data name="wall" xml:space="preserve">
+    <value>Dinding</value>
+  </data>
+  <data name="wallet" xml:space="preserve">
+    <value>Dompet</value>
+  </data>
+  <data name="warehouse" xml:space="preserve">
+    <value>Gudang</value>
+  </data>
+  <data name="warning" xml:space="preserve">
+    <value>Peringatan</value>
+  </data>
+  <data name="warning_circle" xml:space="preserve">
+    <value>Peringatan lingkaran</value>
+  </data>
+  <data name="warning_diamond" xml:space="preserve">
+    <value>Peringatan berlian</value>
+  </data>
+  <data name="warning_octagon" xml:space="preserve">
+    <value>Peringatan segi delapan</value>
+  </data>
+  <data name="washing_machine" xml:space="preserve">
+    <value>Cuci mesin</value>
+  </data>
+  <data name="watch" xml:space="preserve">
+    <value>Jam tangan</value>
+  </data>
+  <data name="wave_sawtooth" xml:space="preserve">
+    <value>Gelombang gigi gergaji</value>
+  </data>
+  <data name="wave_sine" xml:space="preserve">
+    <value>Gelombang sinus</value>
+  </data>
+  <data name="wave_square" xml:space="preserve">
+    <value>Gelombang persegi</value>
+  </data>
+  <data name="wave_triangle" xml:space="preserve">
+    <value>Gelombang segitiga</value>
+  </data>
+  <data name="waveform" xml:space="preserve">
+    <value>Bentuk gelombang</value>
+  </data>
+  <data name="waveform_slash" xml:space="preserve">
+    <value>Bentuk gelombang garis miring</value>
+  </data>
+  <data name="waves" xml:space="preserve">
+    <value>Ombak</value>
+  </data>
+  <data name="webcam" xml:space="preserve">
+    <value>Webcam</value>
+  </data>
+  <data name="webcam_slash" xml:space="preserve">
+    <value>Webcam garis miring</value>
+  </data>
+  <data name="webhooks_logo" xml:space="preserve">
+    <value>Webhook logo</value>
+  </data>
+  <data name="wechat_logo" xml:space="preserve">
+    <value>Wechat logo</value>
+  </data>
+  <data name="whatsapp_logo" xml:space="preserve">
+    <value>Whatsapp logo</value>
+  </data>
+  <data name="wheelchair" xml:space="preserve">
+    <value>Kursi roda</value>
+  </data>
+  <data name="wheelchair_motion" xml:space="preserve">
+    <value>Kursi roda gerakan</value>
+  </data>
+  <data name="wifi_high" xml:space="preserve">
+    <value>Wifi tinggi</value>
+  </data>
+  <data name="wifi_low" xml:space="preserve">
+    <value>Wifi rendah</value>
+  </data>
+  <data name="wifi_medium" xml:space="preserve">
+    <value>Wifi sedang</value>
+  </data>
+  <data name="wifi_none" xml:space="preserve">
+    <value>Wifi tidak ada</value>
+  </data>
+  <data name="wifi_slash" xml:space="preserve">
+    <value>Wifi garis miring</value>
+  </data>
+  <data name="wifi_x" xml:space="preserve">
+    <value>Wifi x</value>
+  </data>
+  <data name="wind" xml:space="preserve">
+    <value>Angin</value>
+  </data>
+  <data name="windmill" xml:space="preserve">
+    <value>Kincir angin</value>
+  </data>
+  <data name="windows_logo" xml:space="preserve">
+    <value>Windows logo</value>
+  </data>
+  <data name="wine" xml:space="preserve">
+    <value>Anggur</value>
+  </data>
+  <data name="wrench" xml:space="preserve">
+    <value>Kunci pas</value>
+  </data>
+  <data name="x" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="x_circle" xml:space="preserve">
+    <value>X lingkaran</value>
+  </data>
+  <data name="x_logo" xml:space="preserve">
+    <value>X logo</value>
+  </data>
+  <data name="x_square" xml:space="preserve">
+    <value>X persegi</value>
+  </data>
+  <data name="yarn" xml:space="preserve">
+    <value>Benang</value>
+  </data>
+  <data name="yin_yang" xml:space="preserve">
+    <value>Yin yang</value>
+  </data>
+  <data name="youtube_logo" xml:space="preserve">
+    <value>Youtube logo</value>
+  </data>
+</root>

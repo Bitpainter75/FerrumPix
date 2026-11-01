@@ -1314,7 +1314,7 @@
                                         Command="{Binding CancelBusyCommand}"
                                         ToolTip.Tip="Abbrechen (ESC). Entrauschen und Hochskalieren steigen an der nächsten Kachel aus, das Entfernen nach seinem Durchlauf - das Bild bleibt dabei unverändert.">
                                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
-                                                   Width="18" Height="18" />
+                                                   Width="12" Height="12" />
                                 </Button>
                             </StackPanel>
                         </Border>
@@ -2334,14 +2334,6 @@
                     VerticalAlignment="Bottom" HorizontalAlignment="Center"
                     IsVisible="{Binding ShowFooter}"
                     IsEnabled="{Binding IsInteractionAllowed}">
-            <ToggleButton Classes="ghost" Width="28" Height="26" Padding="4,2"
-                          IsVisible="{Binding IsGlobalAdjustmentsSelected}"
-                          IsChecked="{Binding FrameGroupActive, Mode=TwoWay}"
-                          Classes.active="{Binding FrameGroupActive}"
-                          ToolTip.Tip="{Binding GroupActiveToolTip}">
-                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/frame-corners.svg"
-                               Width="18" Height="18" />
-            </ToggleButton>
             <Button Classes="ghost" Height="20" Padding="4,0,4,2" VerticalContentAlignment="Center"
                     Focusable="False"
                     Click="OnZoomOutClick" ToolTip.Tip="Verkleinern">
