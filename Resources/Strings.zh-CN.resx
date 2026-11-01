@@ -10845,4 +10845,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} 插入制造商，{model} 插入型号，{camera} 插入两者且不重复制造商。缺少信息时显示无相机，视频显示视频。</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>目标位于 FerrumPix 可写入的文件夹之外。可在设置, 图库, 允许在个人文件夹之外进行文件操作中允许。</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>第二个文件夹位于 FerrumPix 可写入的文件夹之外。可在设置, 图库, 允许在个人文件夹之外进行文件操作中允许。</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>备份还缺少第二个文件夹。</value>
+  </data>
 </root>

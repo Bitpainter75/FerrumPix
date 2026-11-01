@@ -10866,4 +10866,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} inserts the make, {model} the model, {camera} both without a repeated make. If the information is missing, it says No camera, for a video Video.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>The target lies outside the folders FerrumPix may write to. You can allow this under Settings, Gallery, Allow file operations outside the home folder.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>The second folder lies outside the folders FerrumPix may write to. You can allow this under Settings, Gallery, Allow file operations outside the home folder.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>The backup still needs its second folder.</value>
+  </data>
 </root>

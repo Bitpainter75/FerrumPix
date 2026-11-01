@@ -51,7 +51,7 @@
     "CANONEOS760D": 0.355,
     "CANONEOS77D": -0.113,
     "CANONEOS7D": 0.556,
-    "CANONEOS7DMARKII": 0.53,
+    "CANONEOS7DMARKII": 0.538,
     "CANONEOS800D": 0.18,
     "CANONEOS80D": 0.009,
     "CANONEOS850D": 0.757,
@@ -398,7 +398,7 @@
     "OLYMPUSOM1MARKII": -0.087,
     "OLYMPUSOM3": -0.119,
     "OLYMPUSOM5": -0.084,
-    "OLYMPUSOM5MARKII": -0.078,
+    "OLYMPUSOM5MARKII": -0.079,
     "OLYMPUSPENF": -0.372,
     "OLYMPUSSH2": 0.492,
     "OLYMPUSSP350": 0.6,
@@ -416,7 +416,7 @@
     "ONEPLUSONEA0001": 0.512,
     "PANASONICDCFZ80": 0.837,
     "PANASONICDCG100D": 0.003,
-    "PANASONICDCG9": -0.421,
+    "PANASONICDCG9": -0.416,
     "PANASONICDCG95D": -0.019,
     "PANASONICDCG97": -0.033,
     "PANASONICDCG9M2": 0.243,
@@ -656,6 +656,15 @@
       "blueHue": 3,
       "blueSaturation": -2,
       "shadowTint": 0
+    },
+    "CANONEOS7DMARKII": {
+      "redHue": -16,
+      "redSaturation": 6,
+      "greenHue": 9,
+      "greenSaturation": 8,
+      "blueHue": 6,
+      "blueSaturation": -19,
+      "shadowTint": 3
     },
     "CANONEOSM6": {
       "redHue": -16,

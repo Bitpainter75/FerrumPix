@@ -10891,4 +10891,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make}는 제조사, {model}은 모델, {camera}는 제조사를 반복하지 않고 둘 다 넣습니다. 정보가 없으면 카메라 없음, 동영상이면 동영상이 들어갑니다.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>대상가 FerrumPix가 쓸 수 있는 폴더 밖에 있습니다. 설정, 갤러리, 개인 폴더 밖에서도 파일 작업 허용에서 허용할 수 있습니다.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>두 번째 폴더가 FerrumPix가 쓸 수 있는 폴더 밖에 있습니다. 설정, 갤러리, 개인 폴더 밖에서도 파일 작업 허용에서 허용할 수 있습니다.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>백업용 두 번째 폴더가 아직 없습니다.</value>
+  </data>
 </root>

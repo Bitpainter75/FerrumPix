@@ -10887,4 +10887,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} вставляет производителя, {model} модель, {camera} оба без повтора производителя. Если данных нет, будет Без камеры, для видео Видео.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>Назначение находится вне папок, в которые FerrumPix может записывать. Разрешить это можно в Настройки, Галерея, Разрешить операции с файлами вне личной папки.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>Вторая папка находится вне папок, в которые FerrumPix может записывать. Разрешить это можно в Настройки, Галерея, Разрешить операции с файлами вне личной папки.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>Для резервной копии ещё не указана вторая папка.</value>
+  </data>
 </root>

@@ -10887,4 +10887,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} はメーカー、{model} はモデル、{camera} はメーカーを重複させずに両方を挿入します。情報がない場合はカメラなし、動画の場合は動画になります。</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>保存先は FerrumPix が書き込めるフォルダーの外にあります。設定, ギャラリー, 個人用フォルダー以外でのファイル操作を許可 で許可できます。</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>2 つ目のフォルダーは FerrumPix が書き込めるフォルダーの外にあります。設定, ギャラリー, 個人用フォルダー以外でのファイル操作を許可 で許可できます。</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>バックアップ用の 2 つ目のフォルダーがまだありません。</value>
+  </data>
 </root>

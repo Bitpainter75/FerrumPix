@@ -10891,4 +10891,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} menyisipkan produsen, {model} model, {camera} keduanya tanpa produsen ganda. Jika datanya tidak ada, tertulis Tanpa kamera, untuk video Video.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>Tujuan berada di luar folder yang boleh ditulisi FerrumPix. Ini dapat diizinkan di Pengaturan, Galeri, Izinkan operasi file di luar folder pribadi.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>Folder kedua berada di luar folder yang boleh ditulisi FerrumPix. Ini dapat diizinkan di Pengaturan, Galeri, Izinkan operasi file di luar folder pribadi.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>Cadangan masih memerlukan folder kedua.</value>
+  </data>
 </root>

@@ -10887,4 +10887,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} vloží výrobce, {model} model, {camera} obojí bez opakovaného výrobce. Pokud údaj chybí, objeví se Bez fotoaparátu, u videa Video.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>Cíl leží mimo složky, do kterých FerrumPix smí zapisovat. Povolit to lze v Nastavení, Galerie, Povolit operace se soubory mimo osobní složku.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>Druhá složka leží mimo složky, do kterých FerrumPix smí zapisovat. Povolit to lze v Nastavení, Galerie, Povolit operace se soubory mimo osobní složku.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>Pro zálohu ještě chybí druhá složka.</value>
+  </data>
 </root>

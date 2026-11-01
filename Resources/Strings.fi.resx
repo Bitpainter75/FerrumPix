@@ -10887,4 +10887,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} lisää valmistajan, {model} mallin, {camera} molemmat ilman toistuvaa valmistajaa. Jos tieto puuttuu, tilalla on Ei kameraa, videolla Video.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>Kohde on niiden kansioiden ulkopuolella, joihin FerrumPix saa kirjoittaa. Sen voi sallia kohdassa Asetukset, Galleria, Salli tiedostotoiminnot henkilökohtaisen kansion ulkopuolella.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>Toinen kansio on niiden kansioiden ulkopuolella, joihin FerrumPix saa kirjoittaa. Sen voi sallia kohdassa Asetukset, Galleria, Salli tiedostotoiminnot henkilökohtaisen kansion ulkopuolella.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>Varmuuskopiolta puuttuu vielä toinen kansio.</value>
+  </data>
 </root>

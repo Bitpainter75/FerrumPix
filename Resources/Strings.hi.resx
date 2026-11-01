@@ -10891,4 +10891,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} निर्माता डालता है, {model} मॉडल, {camera} दोनों बिना दोहराए निर्माता के। जानकारी न हो तो बिना कैमरा लिखा जाता है, वीडियो के लिए वीडियो।</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>लक्ष्य उन फ़ोल्डरों के बाहर है जिनमें FerrumPix लिख सकता है। इसे सेटिंग्स, गैलरी, व्यक्तिगत फ़ोल्डर के बाहर फ़ाइल संचालन की अनुमति दें में अनुमति दी जा सकती है।</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>दूसरा फ़ोल्डर उन फ़ोल्डरों के बाहर है जिनमें FerrumPix लिख सकता है। इसे सेटिंग्स, गैलरी, व्यक्तिगत फ़ोल्डर के बाहर फ़ाइल संचालन की अनुमति दें में अनुमति दी जा सकती है।</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>बैकअप के लिए दूसरा फ़ोल्डर अभी बाकी है।</value>
+  </data>
 </root>

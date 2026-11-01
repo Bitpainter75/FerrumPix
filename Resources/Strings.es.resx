@@ -10847,4 +10847,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} inserta el fabricante, {model} el modelo, {camera} ambos sin repetir el fabricante. Si falta el dato, aparece Sin cámara, en un vídeo Vídeo.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>El destino está fuera de las carpetas en las que FerrumPix puede escribir. Se puede permitir en Ajustes, Galeria, Permitir operaciones de archivo fuera de la carpeta personal.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>La segunda carpeta está fuera de las carpetas en las que FerrumPix puede escribir. Se puede permitir en Ajustes, Galeria, Permitir operaciones de archivo fuera de la carpeta personal.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>A la copia de seguridad todavía le falta la segunda carpeta.</value>
+  </data>
 </root>

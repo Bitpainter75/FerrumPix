@@ -10887,4 +10887,13 @@
   <data name="make_setzt_den_Hersteller_ein_model_das_Modell_c_c72d8b4c" xml:space="preserve">
     <value>{make} infogar tillverkaren, {model} modellen, {camera} båda utan upprepad tillverkare. Saknas uppgiften står det Utan kamera, för en video Video.</value>
   </data>
+  <data name="Das_Ziel_liegt_au_erhalb_der_Ordner_in_die_Ferru_dac96c74" xml:space="preserve">
+    <value>Målet ligger utanför de mappar som FerrumPix får skriva till. Det kan tillåtas under Inställningar, Galleri, Tillåt filåtgärder utanför den personliga mappen.</value>
+  </data>
+  <data name="Der_zweite_Ordner_liegt_au_erhalb_der_Ordner_in__79627e93" xml:space="preserve">
+    <value>Den andra mappen ligger utanför de mappar som FerrumPix får skriva till. Det kan tillåtas under Inställningar, Galleri, Tillåt filåtgärder utanför den personliga mappen.</value>
+  </data>
+  <data name="F_r_die_Sicherung_fehlt_noch_der_zweite_Ordner_4f639344" xml:space="preserve">
+    <value>Säkerhetskopian saknar fortfarande den andra mappen.</value>
+  </data>
 </root>
