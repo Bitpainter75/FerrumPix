@@ -518,9 +518,21 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Der Ordner für die temporären Druck-PDFs.</summary>
+        ''' <summary>Der Ordner für die temporären Druck-PDFs.
+        '''
+        ''' <para>IM FLATPAK nicht unter /tmp: das /tmp der Sandbox ist ein eigenes, das der Host
+        ''' nicht sieht. xdg-open reicht das PDF dort an das OpenURI-Portal weiter, das zu dem Pfad
+        ''' keinen Dateityp ermitteln kann - es öffnet sich still gar nichts, und xdg-open meldet
+        ''' trotzdem Erfolg. XDG_CACHE_HOME zeigt im Flatpak auf ~/.var/app/&lt;id&gt;/cache, das
+        ''' auf dem Host liegt; von dort öffnet das Portal den Betrachter wie erwartet. Erkannt
+        ''' an FLATPAK_ID wie beim Update-Check.</para></summary>
         Private Shared ReadOnly Property TempPrintDirectory As String
             Get
+                Dim cacheHome = Environment.GetEnvironmentVariable("XDG_CACHE_HOME")
+                If Not String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID")) AndAlso
+                   Not String.IsNullOrEmpty(cacheHome) Then
+                    Return Path.Combine(cacheHome, "FerrumPix", "Print")
+                End If
                 Return Path.Combine(Path.GetTempPath(), "FerrumPix", "Print")
             End Get
         End Property
