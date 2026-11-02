@@ -32,7 +32,7 @@ Namespace ViewModels
         ''' Bis zum 2026-09-10 war das die feste Breite. Seitdem laesst sich der Rand ziehen; die
         ''' Zahl bleibt die Untergrenze, damit Beschriftung, Regler und Zahlenfeld nebeneinander
         ''' passen.</summary>
-        Public Const AdjustmentsPanelMinWidth As Double = 330.0
+        Public Const AdjustmentsPanelMinWidth As Double = 350.0
 
         ''' <summary>Breite eines neuen Anpassungspanels. Die Mindestbreite bleibt darunter, damit
         ''' bestehende, bewusst schmal gezogene Einstellungen unveraendert weiter funktionieren.</summary>

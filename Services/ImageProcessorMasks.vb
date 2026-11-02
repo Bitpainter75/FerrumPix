@@ -1418,13 +1418,18 @@ Namespace Services
             If target Is Nothing OrElse stroke Is Nothing Then Return False
             Dim effective = NormalizeMaskStrokeMode(mode, subtract)
             If target.IsGradient Then
-                ' SCHNEIDEN laesst sich an einem GERECHNETEN Verlauf nicht ausdruecken: seine
-                ' Pinselkorrektur sind zwei begrenzte Raster ueber der Verlaufsdeckung, und "nur
-                ' behalten, was der Strich deckt" hiesse, alles AUSSERHALB des Strichs abzuziehen -
-                ' ein Raster ueber das ganze Bild, genau der Aufwand, den der begrenzte Weg
-                ' vermeidet. Der Strich bleibt deshalb wirkungslos, statt still zu einem
-                ' Hinzufuegen zu werden und die Flaeche wachsen zu lassen.
-                If String.Equals(effective, "Intersect", StringComparison.Ordinal) Then Return False
+                ' Ein Schnittpinsel wird nicht in die beiden Korrekturraster des Verlaufs gelegt:
+                ' diese können nur lokal hinzufuegen oder wegnehmen. Als eigener Bestandteil nach
+                ' dem Verlauf bedeutet er dagegen exakt Minimum(Verlauf, Strich), ohne den Verlauf
+                ' zu backen. Weitere Schnittstriche treffen danach diesen Raster-Bestandteil und
+                ' verkleinern ihn ebenfalls mit Minimum.
+                If String.Equals(effective, "Intersect", StringComparison.Ordinal) Then
+                    Dim intersection = stroke.PrimaryAsComponent()
+                    If intersection Is Nothing OrElse Not intersection.HasPixelData Then Return False
+                    intersection.Mode = "Intersect"
+                    target.AddComponent(intersection)
+                    Return True
+                End If
                 Return MergeGradientBrushCorrection(target, stroke, String.Equals(effective, "Subtract", StringComparison.Ordinal))
             End If
             Return MergePaintedMaskStroke(target, stroke, String.Equals(effective, "Subtract", StringComparison.Ordinal), effective)

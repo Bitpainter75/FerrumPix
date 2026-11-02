@@ -1291,7 +1291,12 @@ Namespace ViewModels
                         ' Pinselkorrektur; WELCHES Ziel gemeint ist, entscheidet die Engine.
                         Dim stroke = BuildSourceMaskFromStamp(stamp, rectPx, gradient.Name)
                         If stroke IsNot Nothing Then
-                            ImageProcessor.ApplyMaskBrushStroke(gradient, stroke, _selectionCombineMode = "Subtract")
+                            If ImageProcessor.ApplyMaskBrushStroke(gradient, stroke, _selectionCombineMode = "Subtract", _selectionCombineMode) Then
+                                ' Ein Schnittpinsel am Verlauf wird als eigener Raster-Bestandteil
+                                ' angehängt. Die Liste muss sofort nachziehen, sonst erscheint er
+                                ' erst nach einem späteren Wechsel im Ebenenpanel.
+                                RaiseMaskComponentsChanged()
+                            End If
                         End If
                     Else
                         ' WOHIN der Strich geht, haengt am WERKZEUG: im Maskenwerkzeug entsteht eine
