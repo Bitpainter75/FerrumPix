@@ -81,10 +81,21 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Der Schlüssel eines Bildschirms in den Einstellungen.</summary>
+        ''' <summary>Der Schlüssel eines Bildschirms in den Einstellungen.
+        '''
+        ''' Avalonia liefert unter manchen Windows-Treibern einen Screen ohne <c>DisplayName</c>.
+        ''' Die Geometrie bleibt dann als Ersatz eindeutig, solange die Bildschirmanordnung steht.
+        ''' Ein leerer Name darf den Bildschirm nicht aus der Profilliste verschwinden lassen:
+        ''' sonst gibt es keinen Weg, ihm überhaupt ein ICC-Profil zuzuordnen.</summary>
         Public Shared Function ScreenKey(screen As Screen) As String
             If screen Is Nothing Then Return ""
-            Return If(screen.DisplayName, "").Trim()
+            Dim displayName = If(screen.DisplayName, "").Trim()
+            If displayName.Length > 0 Then Return displayName
+
+            Dim bounds = screen.Bounds
+            Return String.Format(Globalization.CultureInfo.InvariantCulture,
+                                 "screen-{0}x{1}@{2},{3}",
+                                 bounds.Width, bounds.Height, bounds.X, bounds.Y)
         End Function
 
         ''' <summary>Die erkannten Bildschirme, der Hauptbildschirm zuerst. Leer, solange kein
@@ -93,7 +104,7 @@ Namespace Services
             Dim screens = _window?.Screens
             If screens Is Nothing Then Return Array.Empty(Of Screen)()
             Return screens.All.
-                Where(Function(s) ScreenKey(s).Length > 0).
+                Where(Function(s) s IsNot Nothing).
                 OrderByDescending(Function(s) s.IsPrimary).
                 ThenBy(Function(s) s.Bounds.X).
                 ToList()

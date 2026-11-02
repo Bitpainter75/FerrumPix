@@ -115,62 +115,32 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Fasst aehnliche Bilder zu Gruppen zusammen. Zwei Bilder gehoeren zusammen, wenn
-        ''' ihre Abdruecke hoechstens <paramref name="level"/> Bits auseinanderliegen, und das gilt
-        ''' weiter: ist A wie B und B wie C, stehen alle drei in einer Gruppe. Zurueck kommen nur
-        ''' Gruppen mit mindestens zwei Bildern, in der Reihenfolge ihres ersten Mitglieds.</summary>
+        ''' <summary>Fasst aehnliche Bilder zu Gruppen zusammen. Jedes neue Bild muss zu JEDEM
+        ''' Mitglied einer Gruppe hoechstens <paramref name="level"/> Bits Abstand haben. Damit
+        ''' kann eine Gruppe nicht ueber eine Kette wachsen: Sind A und B sowie B und C aehnlich,
+        ''' A und C aber nicht, bleibt C ausserhalb der Gruppe A/B. Zurueck kommen nur Gruppen mit
+        ''' mindestens zwei Bildern, in der Reihenfolge ihres ersten Mitglieds.</summary>
         Public Shared Function Cluster(Of T)(items As IList(Of T), hashOf As Func(Of T, ULong),
                                               level As SimilarityLevel) As List(Of List(Of T))
             Dim count = If(items Is Nothing, 0, items.Count)
             Dim result As New List(Of List(Of T))()
             If count < 2 Then Return result
             Dim maxDistance = CInt(level)
-            Dim parent(count - 1) As Integer
-            Dim hashes(count - 1) As ULong
             For i = 0 To count - 1
-                parent(i) = i
-                hashes(i) = hashOf(items(i))
-            Next
-
-            Dim find = Function(x As Integer) As Integer
-                           Dim root = x
-                           While parent(root) <> root
-                               root = parent(root)
-                           End While
-                           While parent(x) <> root
-                               Dim nextIndex = parent(x)
-                               parent(x) = root
-                               x = nextIndex
-                           End While
-                           Return root
-                       End Function
-
-            For i = 0 To count - 2
-                For j = i + 1 To count - 1
-                    If BitOperations.PopCount(hashes(i) Xor hashes(j)) <= maxDistance Then
-                        Dim a = find(i)
-                        Dim b = find(j)
-                        If a <> b Then parent(Math.Max(a, b)) = Math.Min(a, b)
-                    End If
-                Next
-            Next
-
-            Dim byRoot As New Dictionary(Of Integer, List(Of T))()
-            Dim order As New List(Of Integer)()
-            For i = 0 To count - 1
-                Dim root = find(i)
-                Dim group As List(Of T) = Nothing
-                If Not byRoot.TryGetValue(root, group) Then
+                Dim item = items(i)
+                Dim itemHash = hashOf(item)
+                ' Die Eingabereihenfolge ist die Aufnahmezeit. Gibt es mehrere passende Gruppen,
+                ' gewinnt deshalb die aelteste: die Einteilung bleibt bei jedem Lauf gleich.
+                Dim group = result.FirstOrDefault(
+                    Function(candidate) candidate.All(
+                        Function(member) BitOperations.PopCount(itemHash Xor hashOf(member)) <= maxDistance))
+                If group Is Nothing Then
                     group = New List(Of T)()
-                    byRoot(root) = group
-                    order.Add(root)
+                    result.Add(group)
                 End If
-                group.Add(items(i))
+                group.Add(item)
             Next
-            For Each root In order
-                If byRoot(root).Count >= 2 Then result.Add(byRoot(root))
-            Next
-            Return result
+            Return result.Where(Function(group) group.Count >= 2).ToList()
         End Function
 
         ''' <summary>Ein kleines Bild der Datei, siehe Klassenbeschreibung.</summary>

@@ -1382,6 +1382,12 @@ Namespace Models
         ' Ergebnis landete danach aber trotzdem im Feld - die Kachel blieb ungedreht stehen, und das
         ' Bitmap des zweiten, inzwischen gestarteten Workers ging verloren.
         Private _thumbnailGeneration As Integer = 0
+        ' Ein kurz nicht lesbarer Cache-Eintrag oder eine gleichzeitig geschriebene Datei darf nicht
+        ' eine Kachel dauerhaft leer lassen. Mehr als drei Versuche waeren bei einer wirklich
+        ' defekten Datei nur eine Endlosschleife; ClearThumbnail (Größenwechsel, Ordnerwechsel,
+        ' explizites Neuladen) setzt den Zaehler wieder zurück.
+        Private Const MaxLocalThumbnailLoadAttempts As Integer = 3
+        Private _localThumbnailLoadFailures As Integer = 0
         Private _inViewportQueue As Boolean = False
         Private _inBackgroundQueue As Boolean = False
         Private _isThumbnailLoading As Boolean = False
@@ -2282,10 +2288,50 @@ Namespace Models
                 previous = _thumbnail
                 _thumbnail = bmp
                 _thumbState = 2
-                If bmp IsNot Nothing Then TouchResident(Me)
+                If bmp IsNot Nothing Then
+                    _localThumbnailLoadFailures = 0
+                    TouchResident(Me)
+                End If
             End SyncLock
             Return True
         End Function
+
+        ''' <summary>Ein lokales Bild lieferte voruebergehend keine Kachel. Anders als ein
+        ''' Serverbild bleibt es nicht sofort als „fertig, aber leer" stehen: der Cache kann gerade
+        ''' geschrieben werden oder das Laufwerk einen einzelnen Leseversuch abweisen. Die kurze,
+        ''' begrenzte Wiederholung läuft mit Hintergrundvorrang; sichtbare Kacheln stufen sich über
+        ''' den normalen Viewportweg selbst wieder hoch.</summary>
+        Private Sub RetryLocalThumbnailAfterFailure(generation As Integer)
+            Dim attempt As Integer
+            Dim token As CancellationToken
+            SyncLock _thumbnailQueueLock
+                If _thumbnailGeneration <> generation Then Return
+                _localThumbnailLoadFailures += 1
+                attempt = _localThumbnailLoadFailures
+                If attempt >= MaxLocalThumbnailLoadAttempts Then
+                    ' Absichtlich fertig: eine kaputte oder nicht unterstützte Datei darf nicht
+                    ' unendlich Arbeit nachschieben. Ein explizites Neu-/Größenladen beginnt neu.
+                    _thumbState = 2
+                    Return
+                End If
+                _thumbState = 0
+                token = _thumbnailCancellationToken
+            End SyncLock
+
+            Dim delayMilliseconds = 150 * attempt
+            Dim ignored = Task.Run(
+                Async Function()
+                    Try
+                        Await Task.Delay(delayMilliseconds, token).ConfigureAwait(False)
+                    Catch ex As OperationCanceledException
+                        Return
+                    End Try
+                    SyncLock _thumbnailQueueLock
+                        If _thumbnailGeneration <> generation OrElse token.IsCancellationRequested OrElse _thumbState <> 0 Then Return
+                    End SyncLock
+                    QueueThumbnail(BackgroundThumbnailPriority)
+                End Function)
+        End Sub
 
         ''' <summary>Reiht eine Kachel, die gerade einen Platzhalter bekommen hat, fuer ihr scharfes
         ''' Bild in die Hintergrund-Schlange ein. Der Platzhalter bleibt so lange stehen. Gilt nur
@@ -2387,12 +2433,21 @@ Namespace Models
                     End If
                 Catch ex As OperationCanceledException
                     Throw
-                Catch
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Thumbnail.LocalLoad", ex)
                 End Try
 
                 If token.IsCancellationRequested Then
                     bmp?.Dispose()
                     SetThumbStateAfterLoad(0, generation)
+                    Return
+                End If
+
+                ' Vorher lief CommitThumbnail auch mit Nothing: der Zustand wurde 2 und die
+                ' Galerie fragte diese leere Kachel nie wieder an, bis ein Größenwechsel zufällig
+                ' alles neu aufbaute. Lokale Fehler bekommen stattdessen zwei kurze Nachversuche.
+                If bmp Is Nothing Then
+                    RetryLocalThumbnailAfterFailure(generation)
                     Return
                 End If
 
@@ -2682,6 +2737,7 @@ Namespace Models
                 _isPinnedVisible = False
                 _needsSharpThumbnail = False
                 _thumbState = 0
+                _localThumbnailLoadFailures = 0
                 ' Meldet einen etwa noch laufenden Ladevorgang ab: dessen Commit prallt danach ab
                 ' und disposed sein Bitmap selbst. _isThumbnailLoading = False allein reicht nicht -
                 ' es beendet den Worker nicht, es macht das Element nur wieder anforderbar.
