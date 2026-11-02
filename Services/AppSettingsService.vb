@@ -415,6 +415,7 @@ Namespace Services
         ''' die Farbigkeit ist weg.</summary>
         Public Property AccentStrength As Integer = 100
 
+        Public Property OpenInExistingWindow As Boolean = True
         Public Property StartupImageMode As String = "Viewer"
         ''' Womit ein Bild aus der Galerie geoeffnet wird: "Viewer" oder "Editor".
         Public Property GalleryOpenTarget As String = "Viewer"
@@ -716,6 +717,8 @@ Namespace Services
         Public Property MainWindowMaximized As Boolean = False
         Public Property SavedSearches As New List(Of SavedSearchSettings)()
         Public Property VideoHardwareAcceleration As Boolean = False
+        Public Property VideoCaptureFolder As String = ""
+        Public Property VideoVolume As Double = 100
 
         ''' <summary>Die gelernten Modelle auf der Grafikkarte rechnen lassen. AB WERK AUS.
         '''
@@ -1045,7 +1048,7 @@ Namespace Services
         End Sub
 
         Private Shared ReadOnly SettingsDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
+            Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
 
         Private Shared ReadOnly SettingsPath As String =
             Path.Combine(SettingsDirectory, "settings.json")

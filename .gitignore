@@ -12,3 +12,8 @@
 
 *.DotSettings.user
 AGENTS.md
+/local-data/
+/local-runtime/
+/artifacts/
+**/bin/
+**/obj/

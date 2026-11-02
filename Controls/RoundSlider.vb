@@ -82,6 +82,10 @@ Namespace Controls
             AvaloniaProperty.RegisterDirect(Of RoundSlider, Boolean)(NameOf(IsComparing), Function(o As RoundSlider) o.IsComparing)
 
         Private _isDragging As Boolean
+        Public Property ResetOnDoubleClick As Boolean = True
+        Public Event InteractionStarted()
+        Public Event ValueEdited(value As Double)
+        Public Event InteractionCompleted(value As Double)
         Private _dragStartX As Double
         Private _dragStartValue As Double
 
@@ -346,16 +350,18 @@ Namespace Controls
                 Return
             End If
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
-            If e.ClickCount >= 2 Then
+            If ResetOnDoubleClick AndAlso e.ClickCount >= 2 Then
                 Value = ClampValue(DefaultValue)
                 e.Handled = True
                 Return
             End If
             _isDragging = True
+            RaiseEvent InteractionStarted()
             _dragStartX = e.GetPosition(Me).X
             _dragStartValue = Value
             e.Pointer.Capture(Me)
             SetValueFromPoint(e.GetPosition(Me).X)
+            RaiseEvent ValueEdited(Value)
             e.Handled = True
         End Sub
 
@@ -379,6 +385,7 @@ Namespace Controls
             Else
                 SetValueFromPoint(e.GetPosition(Me).X)
             End If
+            RaiseEvent ValueEdited(Value)
             e.Handled = True
         End Sub
 
@@ -399,16 +406,21 @@ Namespace Controls
         ''' freigegeben, wenn er noch bei diesem Regler liegt: nach einem verlorenen Fang gehoert er
         ''' schon jemand anderem, und ihn dort wegzunehmen wuerde dessen Zug abbrechen.</summary>
         Private Sub EndDrag(pointer As IPointer)
+            Dim wasDragging = _isDragging
             _isDragging = False
             _dragStartX = 0
             _dragStartValue = 0
             If pointer IsNot Nothing AndAlso pointer.Captured Is Me Then pointer.Capture(Nothing)
+            If wasDragging Then RaiseEvent InteractionCompleted(Value)
         End Sub
 
         Protected Overrides Sub OnPointerWheelChanged(e As PointerWheelEventArgs)
             MyBase.OnPointerWheelChanged(e)
+            RaiseEvent InteractionStarted()
             Dim increment = If(WheelIncrement > 0, WheelIncrement, 1.0)
             Value = ClampValue(Value + e.Delta.Y * increment)
+            RaiseEvent ValueEdited(Value)
+            RaiseEvent InteractionCompleted(Value)
             e.Handled = True
         End Sub
 

@@ -137,6 +137,7 @@ Namespace Services
             EndFile = 7
             FileLoaded = 8
             Idle = 11
+            ClientMessage = 16
             Seek = 20
             PlaybackRestart = 21
             PropertyChange = 22
@@ -173,6 +174,12 @@ Namespace Services
             Public PlaylistEntryId As Long
             Public PlaylistInsertId As Long
             Public PlaylistInsertNumEntries As Integer
+        End Structure
+
+        <StructLayout(LayoutKind.Sequential)>
+        Friend Structure MpvEventClientMessage
+            Public NumArgs As Integer
+            Public Args As IntPtr
         End Structure
 
         <DllImport("libmpv", EntryPoint:="mpv_create", CallingConvention:=CallingConvention.Cdecl)>

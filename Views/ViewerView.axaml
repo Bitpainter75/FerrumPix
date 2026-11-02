@@ -1162,10 +1162,10 @@
                     CornerRadius="8"
                     Padding="12,8"
                     Margin="12">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" RowDefinitions="Auto,Auto" VerticalAlignment="Center">
                     <Button Grid.Column="0" Classes="icon-btn" Width="32" Height="32"
                             Command="{Binding PlayPauseVideoCommand}"
-                            ToolTip.Tip="Play/Pause">
+                            ToolTip.Tip="Wiedergabe/Pause (Space)">
                         <Panel>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/play.svg" Width="18" Height="18" IsVisible="{Binding !IsVideoPlaying}"/>
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pause.svg" Width="18" Height="18" IsVisible="{Binding IsVideoPlaying}"/>
@@ -1176,6 +1176,11 @@
                                        Value="{Binding VideoPositionSeconds, Mode=OneWay}"/>
                     <TextBlock Grid.Column="2" Text="{Binding VideoTimeText}" Foreground="White" FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <Button Grid.Column="3" Classes="icon-btn" Width="32" Height="32"
+                            Click="OnCaptureVideoClick" ToolTip.Tip="Aktuelles Videobild als PNG speichern">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/camera.svg" Width="16" Height="16" IconBrush="White"/>
+                    </Button>
+                    <Button Grid.Column="4" Name="VideoMuteButton" Classes="icon-btn" Width="32" Height="32"
+                            PointerEntered="OnVolumePointerEntered" PointerExited="OnVolumePointerExited"
                             Command="{Binding ToggleVideoMuteCommand}"
                             ToolTip.Tip="Stumm">
                         <Panel Width="18" Height="18">
@@ -1184,9 +1189,25 @@
                                            Width="10" Height="10"
                                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                            IconBrush="White"
-                                           IsVisible="{Binding IsVideoMuted}"/>
+                                           IsVisible="{Binding IsVideoSilent}"/>
                         </Panel>
                     </Button>
+                    <Popup Name="VideoVolumePopup" PlacementTarget="{Binding #VideoMuteButton}" Placement="Top" VerticalOffset="-6"
+                           IsLightDismissEnabled="True">
+                        <Border Background="#EE1A1D24" CornerRadius="8" Padding="12"
+                                PointerEntered="OnVolumePointerEntered" PointerExited="OnVolumePointerExited">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:RoundSlider Name="VideoVolumeSlider" Width="110"
+                                       Minimum="0" Maximum="100" DefaultValue="100" WheelIncrement="5"
+                                       Value="{Binding VideoVolume, Mode=TwoWay}" ToolTip.Tip="Lautstärke"/>
+                    <TextBlock Text="{Binding VideoVolumeText}" Width="36" Foreground="White"
+                               FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Center" TextAlignment="Right"/>
+                          </StackPanel>
+                        </Border>
+                    </Popup>
+                    <TextBlock Name="VideoCaptureSavedText" Grid.Row="1" Grid.ColumnSpan="5" Margin="0,4,0,0"
+                               IsVisible="False" Foreground="White" TextTrimming="CharacterEllipsis"
+                               FontSize="{DynamicResource FP.Font.Small}" Classes="no-translate"/>
                 </Grid>
             </Border>
         </Grid>

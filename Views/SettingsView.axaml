@@ -361,6 +361,12 @@
                             <TextBlock Text="Grundlegende Einstellungen für Startverhalten und Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <StackPanel Spacing="2">
+                            <CheckBox Content="Im vorhandenen Fenster öffnen"
+                                      IsChecked="{Binding OpenInExistingWindow, Mode=TwoWay}"/>
+                            <TextBlock Text="Dateien im bereits geöffneten Fenster öffnen."
+                                       Foreground="{DynamicResource FP.Text.Secondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Start mit Bilddatei" FontSize="{DynamicResource FP.Font.Body}"/>
@@ -1371,6 +1377,16 @@
                         <StackPanel Spacing="2">
                             <TextBlock Text="Viewer" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
                             <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Speicherordner für Videoaufnahmen" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <TextBlock Text="Das Kamerasymbol speichert ein PNG. Bei gleichem Namen wird eine Nummer angehängt."
+                                       Foreground="{DynamicResource FP.Text.Secondary}" TextWrapping="Wrap"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Text="{Binding VideoCaptureFolderDisplay, Mode=OneWay}" IsReadOnly="True" Classes="no-translate"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0" Content="Ordner auswählen…" Click="OnBrowseVideoCaptureFolderClick"/>
+                            </Grid>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">

@@ -81,7 +81,7 @@ Namespace Services
         ''' gegenseitig - sie arbeiten ja auf verschiedenen Katalogen.</summary>
         Private Shared ReadOnly Property LockPath As String
             Get
-                Dim dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
+                Dim dir = Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
                 Return Path.Combine(dir, "background-run.lock")
             End Get
         End Property

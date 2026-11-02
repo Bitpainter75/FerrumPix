@@ -166,6 +166,23 @@ Namespace Views
 
         End Sub
 
+        Private Async Sub OnBrowseVideoCaptureFolderClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            Dim owner = TopLevel.GetTopLevel(Me)
+            If vm Is Nothing OrElse owner Is Nothing Then Return
+            Try
+                Dim folders = Await owner.StorageProvider.OpenFolderPickerAsync(New FolderPickerOpenOptions With {
+                    .Title = LocalizationService.T("Speicherordner für Videoaufnahmen"),
+                    .AllowMultiple = False,
+                    .SuggestedStartLocation = Await FolderPickerStart.ForPathAsync(owner, vm.VideoCaptureFolderDisplay)
+                })
+                Dim folder = folders?.FirstOrDefault()
+                If folder IsNot Nothing Then vm.VideoCaptureFolder = folder.Path.LocalPath
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.VideoCaptureFolder", ex)
+            End Try
+        End Sub
+
         Private Async Sub OnBrowseGalleryStartupFolderClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, SettingsViewModel)
             If vm Is Nothing Then Return

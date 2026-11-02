@@ -73,7 +73,7 @@ Namespace Services
         Private Const MetaExtension As String = ".json"
 
         Public Shared ReadOnly DefaultCacheRoot As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "MapTileCache")
+            Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "MapTileCache")
 
         Private Shared ReadOnly _instance As New Lazy(Of MapTileService)(
             Function() New MapTileService(DefaultCacheRoot, Nothing, DefaultCacheLimitBytes))

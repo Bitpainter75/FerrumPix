@@ -112,7 +112,7 @@ Namespace Services
         Public Const PreviewSize As String = "preview"
 
         Private Shared ReadOnly CacheRoot As String =
-            IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ImmichCache")
+            IO.Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "ImmichCache")
 
         ''' Ordner, in den Originale für Viewer/Editor heruntergeladen werden.
         Private Shared ReadOnly ImmichTempDir As String =

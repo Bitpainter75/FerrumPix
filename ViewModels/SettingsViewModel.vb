@@ -127,6 +127,7 @@ Namespace ViewModels
         Private _versteckteAnpassungsgruppen As String = ""
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _galleryInfoSidebarExpanded As Boolean = False
+        Private _openInExistingWindow As Boolean = True
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
         Private _languageMode As String = "System"
@@ -142,6 +143,7 @@ Namespace ViewModels
         Private _cleanupResultMessage As String = ""
         Private _thumbnailCacheResultMessage As String = ""
         Private _videoHardwareAcceleration As Boolean = False
+        Private _videoCaptureFolder As String = ""
         Private _faceRecognitionEnabled As Boolean = False
         Private _photoMapEnabled As Boolean = False
         Private _faceMinimumSizePercent As Double = 0
@@ -282,6 +284,7 @@ Namespace ViewModels
         Private _savedEditorLayersPanelExpanded As Boolean = False
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedGalleryInfoSidebarExpanded As Boolean = False
+        Private _savedOpenInExistingWindow As Boolean = True
         Private _savedStartupImageMode As String = "Viewer"
         Private _savedGalleryOpenTarget As String = "Viewer"
         Private _galleryOpenTarget As String = "Viewer"
@@ -292,6 +295,7 @@ Namespace ViewModels
         ''' <summary>Die Faktoren beim Oeffnen des Dialogs - fuer Abbrechen.</summary>
         Private _savedScaleFactors As New List(Of ScreenScaleSetting)()
         Private _savedVideoHardwareAcceleration As Boolean = False
+        Private _savedVideoCaptureFolder As String = ""
         ' Ohne Merker fuer das Abbrechen: diese Schalter werden beim Umlegen sofort geschrieben und
         ' vom Abbrechen bewusst nicht mehr zurueckgedreht (siehe RestoreSnapshot).
         Private _gpuAccelerationEnabled As Boolean = False
@@ -1476,6 +1480,18 @@ Namespace ViewModels
                 If _editorFitMargin = value Then Return
                 Me.RaiseAndSetIfChanged(_editorFitMargin, value)
                 SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public Property OpenInExistingWindow As Boolean
+            Get
+                Return _openInExistingWindow
+            End Get
+            Set(value As Boolean)
+                If _openInExistingWindow = value Then Return
+                Me.RaiseAndSetIfChanged(_openInExistingWindow, value)
+                SaveStartupSettings()
+                AppSettingsService.Flush()
             End Set
         End Property
 
@@ -3188,6 +3204,25 @@ Namespace ViewModels
 
         ''' Steuert, ob libmpv bei der Videowiedergabe Hardware-Decoder (VDPAU/VAAPI/DXVA2) oder
         ''' erzwungenes Software-Decoding verwendet - siehe ViewerViewModel.EnsureMediaPlayer.
+        Public Property VideoCaptureFolder As String
+            Get
+                Return _videoCaptureFolder
+            End Get
+            Set(value As String)
+                value = If(value, "").Trim()
+                If _videoCaptureFolder = value Then Return
+                Me.RaiseAndSetIfChanged(_videoCaptureFolder, value)
+                Me.RaisePropertyChanged(NameOf(VideoCaptureFolderDisplay))
+                AppSettingsService.Update(Sub(settings) settings.VideoCaptureFolder = value)
+            End Set
+        End Property
+
+        Public ReadOnly Property VideoCaptureFolderDisplay As String
+            Get
+                Return VideoCaptureService.ResolveFolder(_videoCaptureFolder)
+            End Get
+        End Property
+
         Public Property VideoHardwareAcceleration As Boolean
             Get
                 Return _videoHardwareAcceleration
@@ -4702,6 +4737,7 @@ Namespace ViewModels
             _windowButtonsSide = AppSettingsService.NormalizeWindowButtonsSide(_appSettings.WindowButtonsSide)
             _accentColor = _appSettings.AccentColor
             _accentStrength = AppSettingsService.NormalizeAccentStrength(_appSettings.AccentStrength)
+            _openInExistingWindow = _appSettings.OpenInExistingWindow
             _startupImageMode = _appSettings.StartupImageMode
             _galleryOpenTarget = _appSettings.GalleryOpenTarget
             _startupNoImageMode = _appSettings.StartupNoImageMode
@@ -4811,6 +4847,7 @@ Namespace ViewModels
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
+            _videoCaptureFolder = If(_appSettings.VideoCaptureFolder, "")
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
             _gpuImageProcessing = _appSettings.GpuImageProcessing
             _modelThreadCount = AppSettingsService.NormalizeModelThreadCount(_appSettings.ModelThreadCount)
@@ -5222,12 +5259,14 @@ Namespace ViewModels
             _savedEditorLayersPanelExpanded = _editorLayersPanelExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedGalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
+            _savedOpenInExistingWindow = _openInExistingWindow
             _savedStartupImageMode = _startupImageMode
             _savedGalleryOpenTarget = _galleryOpenTarget
             _savedStartupNoImageMode = _startupNoImageMode
             _savedLanguageMode = _languageMode
             _savedDateFormatMode = _dateFormatMode
             _savedVideoHardwareAcceleration = _videoHardwareAcceleration
+            _savedVideoCaptureFolder = _videoCaptureFolder
             _savedTransparencyBackgroundMode = _transparencyBackgroundMode
             _savedTransparencyBackgroundColor = _transparencyBackgroundColor
             _savedFontSizeOffset = _fontSizeOffset
@@ -5411,12 +5450,14 @@ Namespace ViewModels
             EditorLayersPanelExpanded = _savedEditorLayersPanelExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             GalleryInfoSidebarExpanded = _savedGalleryInfoSidebarExpanded
+            OpenInExistingWindow = _savedOpenInExistingWindow
             StartupImageMode = _savedStartupImageMode
             GalleryOpenTarget = _savedGalleryOpenTarget
             StartupNoImageMode = _savedStartupNoImageMode
             LanguageMode = _savedLanguageMode
             DateFormatMode = _savedDateFormatMode
             VideoHardwareAcceleration = _savedVideoHardwareAcceleration
+            VideoCaptureFolder = _savedVideoCaptureFolder
             ' SOFORT GESPEICHERTE SCHALTER STEHEN HIER NICHT. Grafikbeschleunigung, Personenerkennung
             ' und Fotokarte werden beim Umlegen geschrieben, weil die Dienste dahinter die
             ' Einstellung selbst lesen und nicht auf das Uebernehmen warten. Sie hier
@@ -5489,6 +5530,7 @@ Namespace ViewModels
             EditorToolGroupOrder = "Adjust,Transform,Tools"
             DefaultSaveFormat = "JPG"
             EditorSaveAsNamePattern = "{name}_fx"
+            OpenInExistingWindow = True
             StartupImageMode = "Viewer"
             GalleryOpenTarget = "Viewer"
             StartupNoImageMode = "Gallery"
@@ -5569,6 +5611,7 @@ Namespace ViewModels
             LanguageMode = "System"
             DateFormatMode = "System"
             VideoHardwareAcceleration = False
+            VideoCaptureFolder = ""
             GpuAccelerationEnabled = False
             SelectedGpuDevice = GpuDeviceOptions.FirstOrDefault()
             GpuImageProcessing = False
@@ -5885,6 +5928,7 @@ Namespace ViewModels
 
         Private Sub SaveStartupSettings()
             AppSettingsService.Update(Sub(s)
+                                          s.OpenInExistingWindow = _openInExistingWindow
                                           s.StartupImageMode = _startupImageMode
                                           s.GalleryOpenTarget = _galleryOpenTarget
                                           s.StartupNoImageMode = _startupNoImageMode

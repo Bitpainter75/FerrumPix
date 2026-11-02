@@ -94,13 +94,13 @@ Namespace Services
 
         Private Shared ReadOnly Property DataDirectory As String
             Get
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
+                Return Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix")
             End Get
         End Property
 
         Private Shared ReadOnly Property ConfigDirectory As String
             Get
-                Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
+                Return Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
             End Get
         End Property
 

@@ -10663,6 +10663,48 @@
   <data name="Weiterbl_ttern_oder_am_Mauszeiger_zoomen_wie_in__b40c03ec" xml:space="preserve">
     <value>सेटिंग्स के अनुसार चित्र बदलें या पॉइंटर पर ज़ूम करें। CTRL के साथ दूसरा</value>
   </data>
+  <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
+    <value>मौजूदा विंडो में खोलें</value>
+  </data>
+  <data name="Dateien_im_bereits_ge_ffneten_Fenster_ffnen_6bedc1a7" xml:space="preserve">
+    <value>फ़ाइलों को पहले से खुली विंडो में खोलें।</value>
+  </data>
+  <data name="Speicherordner_f_r_Videoaufnahmen_3b7b4c33" xml:space="preserve">
+    <value>वीडियो कैप्चर फ़ोल्डर</value>
+  </data>
+  <data name="Das_Kamerasymbol_speichert_ein_PNG_Bei_gleichem__73f9479d" xml:space="preserve">
+    <value>कैमरा बटन PNG सहेजता है। एक जैसे नामों के अंत में संख्या जोड़ी जाती है।</value>
+  </data>
+  <data name="Ordner_ausw_hlen_f6edc68e" xml:space="preserve">
+    <value>फ़ोल्डर चुनें…</value>
+  </data>
+  <data name="Wiedergabe_Pause_Space_e68c9a36" xml:space="preserve">
+    <value>चलाएँ/रोकें (Space)</value>
+  </data>
+  <data name="Aktuelles_Videobild_als_PNG_speichern_83e75b0c" xml:space="preserve">
+    <value>मौजूदा वीडियो फ़्रेम को PNG के रूप में सहेजें</value>
+  </data>
+  <data name="Lautst_rke_096f4c46" xml:space="preserve">
+    <value>वॉल्यूम</value>
+  </data>
+  <data name="Bildschirmaufnahme_gespeichert_0_90385570" xml:space="preserve">
+    <value>स्क्रीनशॉट सहेजा गया: {0}</value>
+  </data>
+  <data name="Bildschirmaufnahme_c99e1fb3" xml:space="preserve">
+    <value>स्क्रीनशॉट</value>
+  </data>
+  <data name="Der_Speicherordner_f_r_Aufnahmen_muss_ein_absolu_ba6175fa" xml:space="preserve">
+    <value>कैप्चर फ़ोल्डर का पथ पूर्ण होना चाहिए।</value>
+  </data>
+  <data name="Zu_viele_Aufnahmen_mit_demselben_Namen_Die_Aufna_7677f6f2" xml:space="preserve">
+    <value>एक ही नाम के बहुत अधिक कैप्चर हैं। कैप्चर सहेजा नहीं जा सका।</value>
+  </data>
+  <data name="Das_Video_wurde_gewechselt_oder_ist_noch_nicht_b_38abde53" xml:space="preserve">
+    <value>वीडियो बदल गया है या अभी तैयार नहीं है।</value>
+  </data>
+  <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
+    <value>वीडियो फ़्रेम कैप्चर नहीं किया जा सका ({0})।</value>
+  </data>
   <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
     <value>प्रकाश व्यवस्था</value>
   </data>

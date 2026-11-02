@@ -51,7 +51,7 @@ Namespace Services
 
         ''' <summary>Ablage der Fingerabdruecke; im Pruefstand auf einen eigenen Ort umgelenkt.</summary>
         Friend Shared Property CacheFilePath As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "similarity.tsv")
+            Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FerrumPix", "similarity.tsv")
 
         Private Sub New()
         End Sub

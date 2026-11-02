@@ -19,9 +19,26 @@ Module Program
     ''' <summary>Die Konsole haben WIR geoeffnet, sie gehoert keinem Aufrufer. Entscheidet allein
     ''' darueber, ob am Ende auf eine Taste gewartet wird.</summary>
     Private _ownsConsole As Boolean
+    Friend Property InstanceService As SingleInstanceService
 
     <STAThread>
     Function Main(args As String()) As Integer
+        StartupTimingService.Mark("Main")
+        Dim profile = AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+        Using instance As New SingleInstanceService(profile)
+            If SingleInstanceService.IsEnabled(profile) Then
+                If instance.ForwardOrListen(ForwardedArguments(args)) Then Return 0
+                InstanceService = instance
+            End If
+            Try
+                Return RunApplication(args)
+            Finally
+                InstanceService = Nothing
+            End Try
+        End Using
+    End Function
+
+    Private Function RunApplication(args As String()) As Integer
         ' DER PROTOKOLLSCHALTER ZUERST, noch vor allem anderen. Er ist fuer den Fall gebaut, in dem
         ' die Anwendung ueberhaupt nicht hochkommt: das Protokoll liegt ab Werk aus und laesst sich
         ' nur IN der Anwendung einschalten - wer sie nicht starten kann, kaeme also nie an eines.
@@ -37,15 +54,18 @@ Module Program
         ' EINE BEREITGELEGTE WIEDERHERSTELLUNG VOR ALLEM ANDEREN, was Katalog oder Einstellungen
         ' oeffnet: schon die Zeile darunter liest die Einstellungen. Siehe CatalogBackupService.
         CatalogBackupService.ApplyPendingRestore()
+        StartupTimingService.Mark("Restore checked")
 
         ' Der Riegel gegen die Telemetrie der Modelllaufzeit. Er wirkt nur, solange noch keine
         ' ORT-Umgebung entstanden ist, deshalb steht er hier und nicht dort, wo die Laufzeit zum
         ' ersten Mal gebraucht wird. Begruendung und Messung stehen bei
         ' AiModelService.SuppressRuntimeTelemetry.
         AiModelService.SuppressRuntimeTelemetry()
+        StartupTimingService.Mark("AI telemetry configured")
         AppSettingsService.ApplyApplicationScaleEnvironment()
         ' Vor Avalonia: die Grafikbibliothek liest die Wahl der Karte nur beim Laden.
         GpuImageService.ApplyRenderOffloadEnvironment()
+        StartupTimingService.Mark("Settings and GPU environment")
 
         ' DIE BEIDEN SICHERHEITSNETZE GEHOEREN HIERHER, nicht in die Anwendungsklasse. Dort werden
         ' sie erst angemeldet, wenn Avalonia schon steht - ein Absturz beim Aufbau des Toolkits
@@ -194,7 +214,12 @@ Module Program
     ''' also genau in dem Moment, in dem jemand einen Fehler an einer bestimmten Datei sucht.</summary>
     Friend Function ForwardedArguments(args As String()) As String()
         If args Is Nothing Then Return Array.Empty(Of String)()
-        Return args.Where(Function(a) Not String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase)).ToArray()
+        Dim forwarded = args.Where(Function(a) Not String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase)).ToArray()
+        If forwarded.Length > 0 AndAlso (IO.File.Exists(forwarded(0)) OrElse IO.Directory.Exists(forwarded(0))) Then
+            ' The receiving process may have a different current directory.
+            forwarded(0) = IO.Path.GetFullPath(forwarded(0))
+        End If
+        Return forwarded
     End Function
 
     ''' <summary>Was auf diesem Rechner laeuft - eine Zeile, die in einen Fehlerbericht passt.

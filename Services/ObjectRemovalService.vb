@@ -676,7 +676,7 @@ Namespace Services
             Try
                 If Not AppSettingsService.Load().EnableDiagnosticLogging Then Return
                 Dim folder = IO.Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    AppDataPaths.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "FerrumPix", "logs")
                 IO.Directory.CreateDirectory(folder)
 

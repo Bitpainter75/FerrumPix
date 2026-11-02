@@ -22,6 +22,10 @@ Namespace Views
 
         Private _subscribedVm As ViewerViewModel
         Private _isAttached As Boolean = False
+        Private _isCapturingVideo As Boolean
+        Private ReadOnly _captureSavedTimer As New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(4)}
+        Private ReadOnly _volumeHideTimer As New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(250)}
+        Private _isAdjustingVolume As Boolean
         Private _isPanningImage As Boolean
         Private _panStartPoint As Point
         Private _panStartOffset As Vector
@@ -49,6 +53,31 @@ Namespace Views
         End Property
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            AddHandler Me.PropertyChanged,
+                Sub(sender, e)
+                    If e.Property Is IsVisibleProperty AndAlso Not IsVisible Then CloseVolumePopup()
+                End Sub
+            AddHandler _captureSavedTimer.Tick, Sub() SetCaptureSavedFeedback(Nothing)
+            AddHandler _volumeHideTimer.Tick,
+                Sub()
+                    If _isAdjustingVolume Then Return
+                    _volumeHideTimer.Stop()
+                    Dim popup = Me.FindControl(Of Popup)("VideoVolumePopup")
+                    If Not Me.FindControl(Of Button)("VideoMuteButton").IsPointerOver AndAlso Not popup.Child.IsPointerOver Then popup.IsOpen = False
+                End Sub
+            Dim volumeSlider = Me.FindControl(Of RoundSlider)("VideoVolumeSlider")
+            AddHandler volumeSlider.InteractionStarted, Sub() _isAdjustingVolume = True
+            AddHandler volumeSlider.InteractionCompleted,
+                Sub(value)
+                    _isAdjustingVolume = False
+                    _volumeHideTimer.Start()
+                End Sub
+            Dim seekSlider = Me.FindControl(Of RoundSlider)("VideoSeekSlider")
+            seekSlider.ResetOnDoubleClick = False
+            AddHandler seekSlider.InteractionStarted, Sub() GetVm()?.BeginVideoScrub()
+            AddHandler seekSlider.ValueEdited, Sub(value) GetVm()?.UpdateVideoScrub(value)
+            AddHandler seekSlider.InteractionCompleted, Sub(value) GetVm()?.EndVideoScrub(value)
+
             _fullscreenVideoControlsHideTimer = New DispatcherTimer With {
                 .Interval = TimeSpan.FromMilliseconds(FullscreenVideoControlsIdleMs)
             }
@@ -71,17 +100,6 @@ Namespace Views
                                    _filmstripController.QueueThumbnailRefresh()
                                    Dispatcher.UIThread.Post(Sub() _filmstripController.RefreshThumbnails(), DispatcherPriority.Background)
 
-                                   ' RoundSlider markt PointerReleased in seiner eigenen Klassen-Behandlung bereits
-                                   ' als "Handled" (siehe Controls/RoundSlider.vb) - ein normal per XAML angehängter
-                                   ' Instanz-Handler würde dadurch riskieren, nie aufgerufen zu werden. handledEventsToo:=True
-                                   ' erzwingt den Aufruf unabhängig davon.
-                                   Dim seekSlider = Me.FindControl(Of Control)("VideoSeekSlider")
-                                   If seekSlider IsNot Nothing Then
-                                       seekSlider.AddHandler(InputElement.PointerPressedEvent, AddressOf OnVideoSeekSliderPointerPressed,
-                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
-                                       seekSlider.AddHandler(InputElement.PointerReleasedEvent, AddressOf OnVideoSeekSliderPointerReleased,
-                                                              Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo:=True)
-                                   End If
                                    UpdateVideoPlaybackBarVisibility()
                                End Sub
             AddHandler Unloaded, Sub(s, e) StopFullscreenVideoControlTimers()
@@ -361,6 +379,11 @@ Namespace Views
 
             If e.Key <> Key.Escape Then
                 NoteFullscreenVideoControlsActivity()
+            End If
+
+            If vm.TryHandleVideoKey(e.Key, e.KeyModifiers) Then
+                e.Handled = True
+                Return
             End If
 
             If mainVm IsNot Nothing AndAlso mainVm.IsFullscreen AndAlso HandleFullscreenZoomKey(e.Key, e.KeyModifiers) Then
@@ -1156,6 +1179,8 @@ Namespace Views
 
         Protected Overrides Sub OnDetachedFromVisualTree(e As VisualTreeAttachmentEventArgs)
             MyBase.OnDetachedFromVisualTree(e)
+            SetCaptureSavedFeedback(Nothing)
+            CloseVolumePopup()
             _isAttached = False
             UnsubscribeViewModel()
         End Sub
@@ -1334,8 +1359,7 @@ Namespace Views
                 UpdateFullscreenImageBar()
             End If
 
-            ' ShowVideoSurface kippt beim Videoende (Fläche verschwindet) und beim erneuten Abspielen
-            ' (Fläche kommt zurück) - im zweiten Fall muss der Player an das neu erzeugte native Fenster.
+            ' Keep the host attached at EOF so the retained last frame remains capturable.
             If e.PropertyName = NameOf(ViewerViewModel.IsVideoFile) OrElse
                e.PropertyName = NameOf(ViewerViewModel.ShowVideoSurface) Then
                 UpdateActiveVideoView()
@@ -1421,6 +1445,7 @@ Namespace Views
         End Sub
 
         Private Sub OnFullscreenVideoControlsIdle(sender As Object, e As EventArgs)
+            If Me.FindControl(Of Popup)("VideoVolumePopup").IsOpen Then Return
             _fullscreenVideoControlsHideTimer.Stop()
             Dim vm = GetVm()
             If vm Is Nothing OrElse Not vm.IsFullscreenMode Then Return
@@ -1525,6 +1550,7 @@ Namespace Views
 
         Private Sub UpdateActiveVideoView()
             Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsVideoFile Then CloseVolumePopup()
             Dim videoView = Me.FindControl(Of MpvVideoView)("TheVideoView")
             Dim videoSurface = Me.FindControl(Of MpvVideoSurface)("TheVideoSurface")
 
@@ -1602,20 +1628,71 @@ Namespace Views
             If vm.PlayPauseVideoCommand.CanExecute(Nothing) Then vm.PlayPauseVideoCommand.Execute(Nothing)
         End Sub
 
-        Public Sub OnVideoSeekSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
-            CommitVideoSeek(sender)
+        Private Sub CloseVolumePopup()
+            _volumeHideTimer.Stop()
+            _isAdjustingVolume = False
+            Me.FindControl(Of Popup)("VideoVolumePopup").IsOpen = False
         End Sub
 
-        Public Sub OnVideoSeekSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
-            If Not e.GetCurrentPoint(TryCast(sender, Control)).Properties.IsLeftButtonPressed Then Return
-            Dispatcher.UIThread.Post(Sub() CommitVideoSeek(sender), DispatcherPriority.Input)
+        Private Sub OnVolumePointerEntered(sender As Object, e As PointerEventArgs)
+            _volumeHideTimer.Stop()
+            Dim popup = Me.FindControl(Of Popup)("VideoVolumePopup")
+            LocalizationService.ApplyTo(popup.Child)
+            popup.IsOpen = True
         End Sub
 
-        Private Sub CommitVideoSeek(sender As Object)
-            Dim slider = TryCast(sender, RoundSlider)
+        Private Sub OnVolumePointerExited(sender As Object, e As PointerEventArgs)
+            _volumeHideTimer.Start()
+        End Sub
+
+        Private Sub SetCaptureSavedFeedback(savedPath As String)
+            _captureSavedTimer.Stop()
+            Dim notice = Me.FindControl(Of TextBlock)("VideoCaptureSavedText")
+            notice.Text = If(savedPath Is Nothing, "", String.Format(LocalizationService.T("Bildschirmaufnahme gespeichert: {0}"), savedPath))
+            ToolTip.SetTip(notice, notice.Text)
+            notice.IsVisible = savedPath IsNot Nothing
+            If savedPath IsNot Nothing Then _captureSavedTimer.Start()
+        End Sub
+
+        Private Async Sub OnCaptureVideoClick(sender As Object, e As RoutedEventArgs)
+            If _isCapturingVideo Then Return
             Dim vm = GetVm()
-            If slider Is Nothing OrElse vm Is Nothing OrElse vm.SeekVideoCommand Is Nothing Then Return
-            If vm.SeekVideoCommand.CanExecute(slider.Value) Then vm.SeekVideoCommand.Execute(slider.Value)
+            Dim owner = TopLevel.GetTopLevel(Me)
+            Dim player = vm?.VideoMediaPlayer
+            If vm Is Nothing OrElse Not vm.IsVideoFile OrElse player Is Nothing OrElse owner Is Nothing Then Return
+            _isCapturingVideo = True
+            SetCaptureSavedFeedback(Nothing)
+            Dim button = TryCast(sender, Button)
+            If button IsNot Nothing Then button.IsEnabled = False
+            Dim temporaryPath = IO.Path.Combine(IO.Path.GetTempPath(), $"FerrumPix-frame-{Guid.NewGuid():N}.png")
+            Dim videoPath = vm.CurrentImagePath
+            Dim position = vm.VideoPositionSeconds
+            Dim folder = AppSettingsService.Load().VideoCaptureFolder
+            Dim errorMessage As String = Nothing
+            Try
+                Await player.CaptureFrameAsync(temporaryPath, videoPath)
+                Dim savedPath = Await Task.Run(Function() VideoCaptureService.SaveCapturedFrame(temporaryPath, folder, videoPath, position))
+                SetCaptureSavedFeedback(savedPath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("VideoPlayback.CaptureFrame", ex)
+                errorMessage = ex.Message
+            Finally
+                Try
+                    IO.File.Delete(temporaryPath)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.CaptureCleanup", ex)
+                End Try
+                _isCapturingVideo = False
+                If button IsNot Nothing Then button.IsEnabled = True
+            End Try
+            If errorMessage IsNot Nothing Then
+                Try
+                    Dim mainVm = TryCast(owner.DataContext, MainWindowViewModel)
+                    If mainVm IsNot Nothing Then Await mainVm.ShowMessageAsync(LocalizationService.T("Bildschirmaufnahme"), errorMessage)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("VideoPlayback.CaptureErrorDialog", ex)
+                End Try
+            End If
         End Sub
 
         Private Sub UpdateInfoSidebarLayoutState()

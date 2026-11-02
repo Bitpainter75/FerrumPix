@@ -81,7 +81,7 @@ Namespace Services
         End Sub
 
         Private Shared ReadOnly FavoritesDirectory As String =
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
+            Path.Combine(AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FerrumPix")
 
         Private Shared ReadOnly FavoritesPath As String =
             Path.Combine(FavoritesDirectory, "favorites.json")

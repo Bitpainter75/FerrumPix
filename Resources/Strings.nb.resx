@@ -10659,6 +10659,48 @@
   <data name="Weiterbl_ttern_oder_am_Mauszeiger_zoomen_wie_in__b40c03ec" xml:space="preserve">
     <value>Bla eller zoom ved pekeren, som valgt i innstillingene. Med CTRL det andre</value>
   </data>
+  <data name="Im_vorhandenen_Fenster_ffnen_43a84153" xml:space="preserve">
+    <value>Åpne i det eksisterende vinduet</value>
+  </data>
+  <data name="Dateien_im_bereits_ge_ffneten_Fenster_ffnen_6bedc1a7" xml:space="preserve">
+    <value>Åpne filer i vinduet som allerede er åpent.</value>
+  </data>
+  <data name="Speicherordner_f_r_Videoaufnahmen_3b7b4c33" xml:space="preserve">
+    <value>Mappe for videobilder</value>
+  </data>
+  <data name="Das_Kamerasymbol_speichert_ein_PNG_Bei_gleichem__73f9479d" xml:space="preserve">
+    <value>Kameraknappen lagrer en PNG. Like navn får et nummer som suffiks.</value>
+  </data>
+  <data name="Ordner_ausw_hlen_f6edc68e" xml:space="preserve">
+    <value>Velg mappe…</value>
+  </data>
+  <data name="Wiedergabe_Pause_Space_e68c9a36" xml:space="preserve">
+    <value>Spill av/pause (Space)</value>
+  </data>
+  <data name="Aktuelles_Videobild_als_PNG_speichern_83e75b0c" xml:space="preserve">
+    <value>Lagre gjeldende videobilde som PNG</value>
+  </data>
+  <data name="Lautst_rke_096f4c46" xml:space="preserve">
+    <value>Volum</value>
+  </data>
+  <data name="Bildschirmaufnahme_gespeichert_0_90385570" xml:space="preserve">
+    <value>Skjermbilde lagret: {0}</value>
+  </data>
+  <data name="Bildschirmaufnahme_c99e1fb3" xml:space="preserve">
+    <value>Skjermbilde</value>
+  </data>
+  <data name="Der_Speicherordner_f_r_Aufnahmen_muss_ein_absolu_ba6175fa" xml:space="preserve">
+    <value>Mappen for videobilder må være en absolutt bane.</value>
+  </data>
+  <data name="Zu_viele_Aufnahmen_mit_demselben_Namen_Die_Aufna_7677f6f2" xml:space="preserve">
+    <value>For mange bilder har samme navn. Bildet kunne ikke lagres.</value>
+  </data>
+  <data name="Das_Video_wurde_gewechselt_oder_ist_noch_nicht_b_38abde53" xml:space="preserve">
+    <value>Videoen er endret eller er ikke klar ennå.</value>
+  </data>
+  <data name="Das_Videobild_konnte_nicht_aufgenommen_werden_0_fa915900" xml:space="preserve">
+    <value>Kunne ikke ta videobildet ({0}).</value>
+  </data>
   <data name="Beleuchtung_2fa3d22c" xml:space="preserve">
     <value>Belysning</value>
   </data>

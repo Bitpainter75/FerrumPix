@@ -58,7 +58,7 @@ Namespace Services
         Public Shared ReadOnly Property ModelFolder As String
             Get
                 Return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    AppDataPaths.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "FerrumPix", "Modelle")
             End Get
         End Property
