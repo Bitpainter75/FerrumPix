@@ -368,10 +368,20 @@ Namespace Views
             ' Den Stand der Info-Leiste aus den Einstellungen holen: er kann in den Einstellungen
             ' umgestellt worden sein, waehrend die Galerie unsichtbar war.
             GetVm()?.RefreshInfoSidebarState()
-            ' Nachladen, was im Sichtfenster steht. Waehrend die Galerie verborgen war, kam kein
-            ' Rollereignis - ein Ordnerwechsel von aussen (etwa ueber den Betrachter) haette sonst
-            ' Kacheln ohne Bild stehen lassen.
-            QueueViewportThumbnailRefresh()
+            ' BackToGallery setzt die Auswahl noch im Betrachter und loest dort auch den ersten
+            ' Scroll-Wunsch aus. Solange die Galerie verborgen ist, hat ihr ScrollViewer aber oft
+            ' noch Höhe 0 und verwirft ihn. Erst nach dem Einblenden zum ausgewaehlten Bild rollen;
+            ' danach gehoert genau dessen Sichtfenster in die Thumbnail-Warteschlange.
+            Dim restoreSelection = Sub()
+                                       If Not IsVisible Then Return
+                                       ScrollToSelectedItem()
+                                       QueueViewportThumbnailRefresh()
+                                   End Sub
+            ' Loaded reicht normalerweise. Der zweite Durchgang faengt die Faelle auf, in denen
+            ' virtuelle Kacheln oder eine noch laufende Thumbnail-Meldung erst denselben Layoutzug
+            ' vergroessern.
+            Dispatcher.UIThread.Post(restoreSelection, DispatcherPriority.Loaded)
+            Dispatcher.UIThread.Post(restoreSelection, DispatcherPriority.Background)
         End Sub
 
         Private Sub OnGalleryAttachedToVisualTree(sender As Object, e As VisualTreeAttachmentEventArgs)
