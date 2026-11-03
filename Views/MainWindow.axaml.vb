@@ -29,6 +29,25 @@ Namespace Views
 
         ''' <summary>Wer den Tastaturfokus hatte, bevor ein Overlay-Dialog ihn an sich gezogen hat.</summary>
         Private _focusBeforeDialog As Control = Nothing
+        Private _dialogOverlay As DialogOverlayView
+        Private _printDialogOverlay As PrintDialogOverlayView
+
+        ''' <summary>Fensterweite Dialoge entstehen erst bei ihrem ersten Gebrauch und bleiben
+        ''' danach erhalten. So zahlen Start und reine Bildverwaltung weder Standard-, Druck- noch
+        ''' Tastaturhilfe-Dialog im XAML-Baum.</summary>
+        Private Sub EnsureDialogOverlays(vm As MainWindowViewModel)
+            If vm Is Nothing Then Return
+            If vm.IsDialogOpen AndAlso _dialogOverlay Is Nothing Then
+                _dialogOverlay = New DialogOverlayView With {.DataContext = vm}
+                Me.FindControl(Of ContentControl)("DialogOverlayHost").Content = _dialogOverlay
+                LocalizationService.ApplyTo(_dialogOverlay)
+            End If
+            If vm.IsPrintDialogOpen AndAlso _printDialogOverlay Is Nothing Then
+                _printDialogOverlay = New PrintDialogOverlayView With {.DataContext = vm}
+                Me.FindControl(Of ContentControl)("PrintDialogOverlayHost").Content = _printDialogOverlay
+                LocalizationService.ApplyTo(_printDialogOverlay)
+            End If
+        End Sub
 
         ''' <summary>Die gebauten Ansichten, eine je ViewModel. Sie bleiben im Baum und werden nur
         ''' noch ein- und ausgeblendet - siehe <see cref="ShowCurrentContent"/>.
@@ -402,6 +421,7 @@ Namespace Views
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm IsNot Nothing Then
                 AddHandler vm.PropertyChanged, AddressOf OnVmPropertyChanged
+                EnsureDialogOverlays(vm)
                 ShowCurrentContent()
                 ApplyFullscreenState()
                 ' Der erste SizeChanged kann vor dem DataContext liegen - dann bliebe die Breite
@@ -421,12 +441,15 @@ Namespace Views
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsDialogOpen) Then
                 Dim vm = TryCast(sender, MainWindowViewModel)
                 If vm IsNot Nothing AndAlso vm.IsDialogOpen Then
+                    EnsureDialogOverlays(vm)
                     _focusBeforeDialog = TryCast(TopLevel.GetTopLevel(Me)?.FocusManager?.GetFocusedElement(), Control)
                     FocusDialog()
                 Else
                     RestoreFocusAfterDialog()
                 End If
                 ApplyLocalization()
+            ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsPrintDialogOpen) Then
+                EnsureDialogOverlays(TryCast(sender, MainWindowViewModel))
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.CurrentContent) OrElse
                    e.PropertyName = NameOf(MainWindowViewModel.CurrentMode) Then
                 ' OHNE Uebersetzungsdurchlauf: den braucht nur eine FRISCH gebaute Ansicht, und den
@@ -725,7 +748,7 @@ Namespace Views
             If vm Is Nothing OrElse Not vm.IsDialogOpen Then Return
 
             Dim applyFocus = Sub()
-                Dim overlay = Me.FindControl(Of DialogOverlayView)("DialogOverlay")
+                Dim overlay = _dialogOverlay
                 Dim input = overlay?.FindControl(Of TextBox)("DialogInputBox")
                 ' "BatchResizeWidthTextBox" liegt in der eigenen NameScope von BatchResizeDialogView -
                 ' FindControl auf dem Overlay findet es nicht, deshalb über die UserControl selbst fokussieren.
@@ -758,7 +781,7 @@ Namespace Views
         ''' Avalonia die Tab-Suche dann in die Gallery dahinter eskalieren lässt. Deshalb wird der Fokus
         ''' hier manuell auf die fokussierbaren Nachfahren des DialogOverlay begrenzt.
         Private Sub CycleDialogFocus(backwards As Boolean)
-            Dim overlay = Me.FindControl(Of DialogOverlayView)("DialogOverlay")
+            Dim overlay = _dialogOverlay
             If overlay Is Nothing Then Return
 
             Dim focusables = overlay.GetVisualDescendants().

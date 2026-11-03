@@ -1641,6 +1641,20 @@ Namespace Views
             End Select
         End Sub
 
+        Private _newDocumentDialogOverlay As NewDocumentDialogOverlayView
+
+        ''' <summary>Der Dialog fuer ein neues Bild ist nur beim Anlegen eines Dokuments noetig.
+        ''' Er wird beim ersten Oeffnen gebaut und danach erhalten, damit seine Bindungen und
+        ''' Flyouts nicht bei jedem Aufruf erneut entstehen.</summary>
+        Private Sub EnsureNewDocumentDialogOverlay()
+            If _newDocumentDialogOverlay IsNot Nothing Then Return
+            Dim current = TryCast(DataContext, EditorViewModel)
+            If current Is Nothing OrElse Not current.IsNewDocumentDialogOpen Then Return
+            _newDocumentDialogOverlay = New NewDocumentDialogOverlayView With {.DataContext = current}
+            Me.FindControl(Of ContentControl)("NewDocumentDialogHost").Content = _newDocumentDialogOverlay
+            LocalizationService.ApplyTo(_newDocumentDialogOverlay)
+        End Sub
+
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
             If _currentVm IsNot Nothing Then
                 RemoveHandler _currentVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
@@ -1657,6 +1671,7 @@ Namespace Views
                 AddHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
                 AddHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
             End If
+            EnsureNewDocumentDialogOverlay()
             _filmstripController.Reset()
             ApplyFilmstripPlacement()
             ' Steht das Werkzeug schon beim Anhaengen auf dem Kompaktwerkzeug (erster Aufruf des
@@ -1821,6 +1836,7 @@ Namespace Views
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            If e.PropertyName = NameOf(EditorViewModel.IsNewDocumentDialogOpen) Then EnsureNewDocumentDialogOverlay()
             Select Case e.PropertyName
                 Case NameOf(EditorViewModel.CurrentImagePath)
                     ' Ein ANDERES Bild faengt bei der Einstellung an, nicht beim Zoom des vorigen.

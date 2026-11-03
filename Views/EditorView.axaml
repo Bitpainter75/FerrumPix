@@ -2056,8 +2056,9 @@
             </StackPanel>
         </Border>
 
-        <!-- Liegt über dem Platzhalter: beim Start ohne Bilddatei erscheinen beide, der Dialog vorn. -->
-        <views:NewDocumentDialogOverlayView Grid.Row="0" Grid.RowSpan="3" Grid.ColumnSpan="5" ZIndex="200" />
+        <!-- Entsteht erst beim ersten "Neues Bild": beim Start ohne Bilddatei erscheinen Host und
+             Platzhalter sofort, der Dialog wird beim Öffnen davor gesetzt und danach behalten. -->
+        <ContentControl x:Name="NewDocumentDialogHost" Grid.Row="0" Grid.RowSpan="3" Grid.ColumnSpan="5" ZIndex="200" />
 
         <!-- Auch der Fuss mit Filmstreifen und Menue: waehrend eines Modelllaufs zum naechsten Bild
              zu blaettern hiesse, dass der Commit auf ein Bild trifft, das gar nicht mehr offen ist.

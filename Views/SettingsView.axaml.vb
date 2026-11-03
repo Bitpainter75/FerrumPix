@@ -34,7 +34,19 @@ Namespace Views
 
         ''' <summary>Jedes weitere Betreten, auch das erste nach dem Vorabbau.</summary>
         Public Sub OnModeEntered() Implements IModeView.OnModeEntered
-            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.Focus())
+            ResetSettingsScrollPosition()
+            Avalonia.Threading.Dispatcher.UIThread.Post(Sub()
+                                                            ResetSettingsScrollPosition()
+                                                            Me.Focus()
+                                                        End Sub,
+                                                        Avalonia.Threading.DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Die Ansicht bleibt beim Moduswechsel im Baum. Ohne ausdrueckliches Zuruecksetzen
+        ''' oeffnet sie sich daher an der Stelle der letzten Sitzung statt bei „Allgemein“.</summary>
+        Private Sub ResetSettingsScrollPosition()
+            Dim scroll = Me.FindControl(Of ScrollViewer)("SettingsScrollViewer")
+            If scroll IsNot Nothing Then scroll.Offset = New Avalonia.Vector(scroll.Offset.X, 0)
         End Sub
 
         ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
@@ -110,6 +122,7 @@ Namespace Views
             If change.Property Is IsVisibleProperty AndAlso IsVisible Then
                 Dim box = Me.FindControl(Of TextBox)("SettingsSearchBox")
                 If box IsNot Nothing AndAlso Not String.IsNullOrEmpty(box.Text) Then box.Text = ""
+                ResetSettingsScrollPosition()
             End If
         End Sub
 

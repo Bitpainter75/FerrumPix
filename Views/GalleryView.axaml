@@ -3397,11 +3397,14 @@
             </Grid>
         </Border>
 
-        <views:CollageDialogOverlayView Grid.Row="0"
-                                        Grid.RowSpan="3"
-                                        Grid.Column="0"
-                                        Grid.ColumnSpan="4"
-                                        ZIndex="180"/>
+        <!-- Entsteht erst beim ersten "Collage erstellen": der Dialog wird selten gebraucht,
+             soll aber nach seinem ersten Auftreten als dieselbe Instanz bestehen bleiben. -->
+        <ContentControl x:Name="CollageDialogHost"
+                        Grid.Row="0"
+                        Grid.RowSpan="3"
+                        Grid.Column="0"
+                        Grid.ColumnSpan="4"
+                        ZIndex="180"/>
 
         <!-- Eigene Rueckmeldung waehrend anwendungsinterner Zuege. X11/Avalonia zeigt bei
              solchen Drag-Quellen trotz akzeptiertem Move-Effekt oft den Verbotszeiger; dieser

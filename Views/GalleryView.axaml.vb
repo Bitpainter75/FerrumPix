@@ -101,6 +101,18 @@ Namespace Views
         Private _cachedMetricsFontOffset As Integer = Integer.MinValue
         Private _cachedMetricsColumns As Integer
         Private _cachedMetricsSlotHeight As Double
+        Private _collageDialogOverlay As CollageDialogOverlayView
+
+        ''' <summary>Die Collage ist ein seltenes Werkzeug. Ihr großer Overlay-Baum wird deshalb
+        ''' erst beim ersten Öffnen gebaut und anschließend wie alle Modusansichten behalten.</summary>
+        Private Sub EnsureCollageDialogOverlay()
+            If _collageDialogOverlay IsNot Nothing Then Return
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsCollageDialogOpen Then Return
+            _collageDialogOverlay = New CollageDialogOverlayView With {.DataContext = vm}
+            Me.FindControl(Of ContentControl)("CollageDialogHost").Content = _collageDialogOverlay
+            LocalizationService.ApplyTo(_collageDialogOverlay)
+        End Sub
 
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
@@ -616,6 +628,7 @@ Namespace Views
         Private Sub OnViewDataContextChanged(sender As Object, e As EventArgs)
             Dim vm = GetVm()
             RebindViewModel()
+            EnsureCollageDialogOverlay()
             QueueViewportThumbnailRefresh()
 
             If _initialSelectionDone Then Return
@@ -669,6 +682,7 @@ Namespace Views
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            If e.PropertyName = NameOf(GalleryViewModel.IsCollageDialogOpen) Then EnsureCollageDialogOverlay()
             ' Der Streifen unter der Karte folgt der Auswahl wie der Filmstreifen dem aktuellen
             ' Bild. Ein neues Haeufchen beginnt mit neuem Sichtfenster.
             If e.PropertyName = NameOf(GalleryViewModel.HasMapSelection) Then

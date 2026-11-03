@@ -181,13 +181,13 @@
                 </Border>
             </Border>
 
-            <views:DialogOverlayView x:Name="DialogOverlay" ZIndex="500"/>
+            <ContentControl x:Name="DialogOverlayHost" ZIndex="500"/>
 
             <!-- Der Druckdialog liegt hier und nicht in einer der Modus-Views, weil er aus
                  Galerie, Betrachter und Editor gleichermaßen geöffnet wird. UNTER dem
                  Standard-Dialog-Overlay (500), damit Meldungen wie "Drucken fehlgeschlagen"
                  immer davor liegen statt dahinter zu verschwinden. -->
-            <views:PrintDialogOverlayView x:Name="PrintDialogOverlay" ZIndex="499"/>
+            <ContentControl x:Name="PrintDialogOverlayHost" ZIndex="499"/>
 
             <!-- Die Knoepfe liegen NICHT in der Leiste, sondern darueber im Fenstergitter - der
                  obere Rand haelt sie in ihrer Mitte. Bei einer Leiste von 32 und Knoepfen von 24
