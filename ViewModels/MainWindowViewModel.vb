@@ -1341,6 +1341,8 @@ Namespace ViewModels
             ' Ganzes kommen oder gehen lassen.
             Viewer?.RaisePropertyChanged(NameOf(ViewerViewModel.IsBottomBarVisible))
             Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.ShowFooter))
+            ' Der Knopf der linken Leiste sitzt in der Fusszeile (siehe IsFolderSidebarVisible).
+            Gallery?.RaisePropertyChanged(NameOf(GalleryViewModel.IsFolderSidebarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFooter))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.IsBottomBarVisible))
             Editor?.RaisePropertyChanged(NameOf(EditorViewModel.ShowFilmstrip))

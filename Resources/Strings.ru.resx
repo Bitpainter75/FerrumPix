@@ -10950,4 +10950,7 @@
   <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
     <value>Фокус-пикинг вкл./выкл.</value>
   </data>
+  <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
+    <value>Развернуть или свернуть боковую панель</value>
+  </data>
 </root>

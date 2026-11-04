@@ -705,6 +705,14 @@ Namespace Services
         ''' In der Galerie ist die Info-Leiste ab Werk ZU: dort stehen links schon Ordnerbaum und
         ''' Filter, und wer die Galerie oeffnet, sucht ein Bild und liest keine Metadaten.
         Public Property GalleryInfoSidebarExpanded As Boolean = False
+        ''' Die linke Leiste der Galerie (Quellen, Ordnerbaum, Suchlisten) eingeklappt: die Kacheln
+        ''' bekommen die ganze Breite. Umgeschaltet ueber den Knopf in der Fusszeile, wie die
+        ''' Werkzeugleiste im Editor.
+        Public Property GalleryFolderSidebarCollapsed As Boolean = False
+        ''' Die gezogenen Breiten der beiden Leisten der Galerie, in Punkten. Begrenzt wird beim
+        ''' Lesen (GalleryViewModel), eine Hand-Aenderung der Datei kann also nichts sprengen.
+        Public Property GalleryFolderSidebarWidth As Double = 288
+        Public Property GalleryInfoSidebarWidth As Double = 320
         ''' Ganzzahliger Versatz auf alle Text-Schriftgrößen (siehe FontScaleService). 0 = Auslieferung.
         Public Property FontSizeOffset As Integer = 0
         ''' <summary>Die alte Fassung: EIN Faktor fuer EINEN Bildschirm. Bleibt stehen, weil eine

@@ -335,6 +335,62 @@ Namespace ViewModels
             RefreshInfoSidebarState()
         End Sub
 
+        Public Const FolderSidebarMinWidth As Double = 220
+        Public Const FolderSidebarMaxWidth As Double = 520
+        Public Const InfoSidebarMinWidth As Double = 260
+        Public Const InfoSidebarMaxWidth As Double = 560
+
+        Private _isFolderSidebarCollapsed As Boolean = AppSettingsService.Load().GalleryFolderSidebarCollapsed
+
+        ''' <summary>Die linke Leiste eingeklappt? Gemerkt in den Einstellungen; die Ansicht setzt
+        ''' daraufhin die Spalte auf null (GalleryView.ApplySidebarColumns).</summary>
+        Public ReadOnly Property IsFolderSidebarCollapsed As Boolean
+            Get
+                Return _isFolderSidebarCollapsed
+            End Get
+        End Property
+
+        ''' <summary>Ob die linke Leiste steht. Ohne Fusszeile auch eingeklappt: ihr Knopf sitzt
+        ''' dort, und eine Leiste, die sich nicht mehr aufklappen laesst, waere eine Falle.</summary>
+        Public ReadOnly Property IsFolderSidebarVisible As Boolean
+            Get
+                Return Not _isFolderSidebarCollapsed OrElse Not ShowFooter
+            End Get
+        End Property
+
+        Public Sub ToggleFolderSidebar()
+            _isFolderSidebarCollapsed = Not _isFolderSidebarCollapsed
+            Dim collapsed = _isFolderSidebarCollapsed
+            AppSettingsService.Update(Sub(s) s.GalleryFolderSidebarCollapsed = collapsed)
+            Me.RaisePropertyChanged(NameOf(IsFolderSidebarCollapsed))
+            Me.RaisePropertyChanged(NameOf(IsFolderSidebarVisible))
+        End Sub
+
+        ''' <summary>Die gemerkte Breite der linken Leiste, begrenzt auf den erlaubten Bereich.</summary>
+        Public Shared Function StoredFolderSidebarWidth() As Double
+            Return ClampWidth(AppSettingsService.Load().GalleryFolderSidebarWidth, 288, FolderSidebarMinWidth, FolderSidebarMaxWidth)
+        End Function
+
+        Public Shared Function StoredInfoSidebarWidth() As Double
+            Return ClampWidth(AppSettingsService.Load().GalleryInfoSidebarWidth, 320, InfoSidebarMinWidth, InfoSidebarMaxWidth)
+        End Function
+
+        ''' <summary>Nach dem Ziehen am Griff: die neue Breite merken.</summary>
+        Public Shared Sub StoreFolderSidebarWidth(width As Double)
+            Dim w = ClampWidth(width, 288, FolderSidebarMinWidth, FolderSidebarMaxWidth)
+            AppSettingsService.Update(Sub(s) s.GalleryFolderSidebarWidth = w)
+        End Sub
+
+        Public Shared Sub StoreInfoSidebarWidth(width As Double)
+            Dim w = ClampWidth(width, 320, InfoSidebarMinWidth, InfoSidebarMaxWidth)
+            AppSettingsService.Update(Sub(s) s.GalleryInfoSidebarWidth = w)
+        End Sub
+
+        Private Shared Function ClampWidth(value As Double, fallback As Double, min As Double, max As Double) As Double
+            If Double.IsNaN(value) OrElse Double.IsInfinity(value) OrElse value <= 0 Then Return fallback
+            Return Math.Round(Math.Max(min, Math.Min(max, value)))
+        End Function
+
         ''' <summary>Nach einer Aenderung in den Einstellungen den Stand nachziehen.</summary>
         Public Sub RefreshInfoSidebarState()
             Me.RaisePropertyChanged(NameOf(IsInfoSidebarVisible))
@@ -1823,6 +1879,7 @@ Namespace ViewModels
         Public ReadOnly Property ToggleFavoriteCommand As ICommand
         Public ReadOnly Property ToggleSelectedFavoriteCommand As ICommand
         Public ReadOnly Property ToggleInfoSidebarCommand As ICommand
+        Public ReadOnly Property ToggleFolderSidebarCommand As ICommand
         Public ReadOnly Property ToggleTagFilterCommand As ICommand
         Public ReadOnly Property ClearTagFilterCommand As ICommand
         Public ReadOnly Property ClearPersonFilterCommand As ICommand
@@ -2213,6 +2270,7 @@ Namespace ViewModels
             ToggleFavoriteCommand = ReactiveCommand.Create(Of ImageItem)(Sub(item) DoToggleFavorite(item))
             ToggleSelectedFavoriteCommand = ReactiveCommand.Create(Sub() ToggleSelectedFavorite())
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub() ToggleInfoSidebar())
+            ToggleFolderSidebarCommand = ReactiveCommand.Create(Sub() ToggleFolderSidebar())
             ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
             ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())

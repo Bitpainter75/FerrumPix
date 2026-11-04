@@ -10954,4 +10954,7 @@
   <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
     <value>피킹 켜기/끄기</value>
   </data>
+  <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
+    <value>사이드바 접기 또는 펼치기</value>
+  </data>
 </root>

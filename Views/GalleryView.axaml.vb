@@ -125,6 +125,11 @@ Namespace Views
             ' oder OnKeyDown daraus "Auswahl aufheben" macht.
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnCustomInternalDragKeyDown, RoutingStrategies.Tunnel)
             AddHandler PointerCaptureLost, AddressOf OnCustomInternalPointerCaptureLost
+            Dim folderSplitter = Me.FindControl(Of GridSplitter)("FolderSidebarSplitter")
+            If folderSplitter IsNot Nothing Then AddHandler folderSplitter.DragCompleted, AddressOf OnFolderSidebarSplitterDragCompleted
+            Dim infoSplitter = Me.FindControl(Of GridSplitter)("InfoSidebarSplitter")
+            If infoSplitter IsNot Nothing Then AddHandler infoSplitter.DragCompleted, AddressOf OnInfoSidebarSplitterDragCompleted
+            ApplySidebarColumns()
             Dim tree = Me.FindControl(Of TreeView)("FolderTreeView")
             If tree IsNot Nothing Then
                 tree.AddHandler(InputElement.PointerPressedEvent, AddressOf OnFolderTreePointerPressedTunnel, RoutingStrategies.Tunnel)
@@ -542,6 +547,7 @@ Namespace Views
             _observedVm = GetVm()
             If _observedVm Is Nothing Then Return
             AddHandler _observedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            ApplySidebarColumns()
             AddHandler _observedVm.RequestScrollToItem, AddressOf OnRequestScrollToItem
             If _observedVm.Items IsNot Nothing Then AddHandler _observedVm.Items.CollectionChanged, AddressOf OnGalleryItemsCollectionChanged
             If _observedVm.DisplayItems IsNot Nothing Then AddHandler _observedVm.DisplayItems.CollectionChanged, AddressOf OnDisplayItemsCollectionChanged
@@ -681,7 +687,70 @@ Namespace Views
             End Sub, DispatcherPriority.Loaded)
         End Sub
 
+        ' Spalten des Wurzelrasters: 0 linke Leiste, 1 ihr Griff, 2 Kacheln, 3 Griff der
+        ' Info-Leiste, 4 Info-Leiste.
+        Private Const FolderSidebarColumn As Integer = 0
+        Private Const FolderSplitterColumn As Integer = 1
+        Private Const InfoSplitterColumn As Integer = 3
+        Private Const InfoSidebarColumn As Integer = 4
+        Private Const SplitterWidth As Double = 6
+
+        ''' <summary>Die beiden Leisten auf ihre gemerkten Breiten setzen, eingeklappt samt Griff auf
+        ''' null. Laeuft beim Aufbau und bei jedem Umschalten; das Ziehen am Griff aendert die
+        ''' Spalte selbst und wird erst an seinem Ende gemerkt.</summary>
+        Private Sub ApplySidebarColumns()
+            Dim root = Me.FindControl(Of Grid)("GalleryRootGrid")
+            If root Is Nothing OrElse root.ColumnDefinitions.Count < 5 Then Return
+            Dim vm = GetVm()
+            Dim folderVisible = vm Is Nothing OrElse vm.IsFolderSidebarVisible
+            Dim infoVisible = vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible
+            Dim folderPanel = Me.FindControl(Of Border)("FolderSidebarBorder")
+            If folderPanel IsNot Nothing Then folderPanel.IsVisible = folderVisible
+            Dim infoPanel = Me.FindControl(Of Control)("GalleryInfoSidebar")
+            If infoPanel IsNot Nothing Then infoPanel.IsVisible = infoVisible
+            Dim folder = root.ColumnDefinitions(FolderSidebarColumn)
+            If folderVisible Then
+                folder.MinWidth = GalleryViewModel.FolderSidebarMinWidth
+                folder.MaxWidth = GalleryViewModel.FolderSidebarMaxWidth
+                folder.Width = New GridLength(GalleryViewModel.StoredFolderSidebarWidth())
+            Else
+                folder.MinWidth = 0
+                folder.Width = New GridLength(0)
+            End If
+            root.ColumnDefinitions(FolderSplitterColumn).Width = New GridLength(If(folderVisible, SplitterWidth, 0))
+            Dim info = root.ColumnDefinitions(InfoSidebarColumn)
+            If infoVisible Then
+                info.MinWidth = GalleryViewModel.InfoSidebarMinWidth
+                info.MaxWidth = GalleryViewModel.InfoSidebarMaxWidth
+                info.Width = New GridLength(GalleryViewModel.StoredInfoSidebarWidth())
+            Else
+                info.MinWidth = 0
+                info.Width = New GridLength(0)
+            End If
+            root.ColumnDefinitions(InfoSplitterColumn).Width = New GridLength(If(infoVisible, SplitterWidth, 0))
+            Dim folderSplitter = Me.FindControl(Of GridSplitter)("FolderSidebarSplitter")
+            If folderSplitter IsNot Nothing Then folderSplitter.IsVisible = folderVisible
+            Dim infoSplitter = Me.FindControl(Of GridSplitter)("InfoSidebarSplitter")
+            If infoSplitter IsNot Nothing Then infoSplitter.IsVisible = infoVisible
+        End Sub
+
+        Private Sub OnFolderSidebarSplitterDragCompleted(sender As Object, e As Avalonia.Input.VectorEventArgs)
+            Dim root = Me.FindControl(Of Grid)("GalleryRootGrid")
+            If root Is Nothing OrElse root.ColumnDefinitions.Count < 5 Then Return
+            GalleryViewModel.StoreFolderSidebarWidth(root.ColumnDefinitions(FolderSidebarColumn).ActualWidth)
+        End Sub
+
+        Private Sub OnInfoSidebarSplitterDragCompleted(sender As Object, e As Avalonia.Input.VectorEventArgs)
+            Dim root = Me.FindControl(Of Grid)("GalleryRootGrid")
+            If root Is Nothing OrElse root.ColumnDefinitions.Count < 5 Then Return
+            GalleryViewModel.StoreInfoSidebarWidth(root.ColumnDefinitions(InfoSidebarColumn).ActualWidth)
+        End Sub
+
         Private Sub OnViewModelPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
+            If e.PropertyName = NameOf(GalleryViewModel.IsFolderSidebarVisible) OrElse
+               e.PropertyName = NameOf(GalleryViewModel.IsInfoSidebarVisible) Then
+                ApplySidebarColumns()
+            End If
             If e.PropertyName = NameOf(GalleryViewModel.IsCollageDialogOpen) Then EnsureCollageDialogOverlay()
             ' Der Streifen unter der Karte folgt der Auswahl wie der Filmstreifen dem aktuellen
             ' Bild. Ein neues Haeufchen beginnt mit neuem Sichtfenster.

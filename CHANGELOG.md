@@ -10,6 +10,10 @@
   where a picture is in focus without zooming in. Switch it with K; it stays on for the next
   pictures.
 
+- **More room in the gallery:** the left sidebar with sources and folder tree can be collapsed
+  with the button in the footer, like the tool bar in the editor. Both gallery sidebars can be
+  dragged wider or narrower and keep their width.
+
 - **Eyedropper in the color mixer:** click a color in the picture and the mixer jumps to the band
   that moves it. It also works for black and white, where it picks by the color under the gray.
 
@@ -28,6 +32,9 @@
   more of the gradient back in or take more away.
 
 ### Fixes
+
+- Editor: a raw file opens faster. It is no longer developed a second time when its saved edit
+  turns off the sensor edge crop, and the window no longer stalls while it develops.
 
 - Export: the option to keep the watermark size now shows up whenever resizing is on, so a
   watermark no longer shrinks to a few pixels on a smaller export. The exported watermark also

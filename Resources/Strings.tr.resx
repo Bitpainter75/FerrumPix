@@ -10954,4 +10954,7 @@
   <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
     <value>Odak vurgulama açık/kapalı</value>
   </data>
+  <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
+    <value>Kenar çubuğunu daralt ya da genişlet</value>
+  </data>
 </root>

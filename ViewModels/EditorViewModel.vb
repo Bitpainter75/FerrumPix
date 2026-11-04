@@ -1331,6 +1331,9 @@ Namespace ViewModels
         ''' den auch jeder Render-Start hochzählt - sonst würde ein währenddessen anlaufender Render
         ''' einen völlig gültigen Decode verwerfen lassen.
         Private _previewSourceSwapId As Long = 0
+        ''' Die Marke des Quellwechsels, dessen Decode gerade im Hintergrund laeuft, sonst 0. Nur
+        ''' auf dem Anzeigefaden gelesen und geschrieben (PreparePreviewSourceAsync, UpdatePreviewAsync).
+        Private _asyncSourceSwapToken As Long = 0
         Private _lastRetouchLivePreviewUtc As DateTime = DateTime.MinValue
         Private Const RetouchLivePreviewMinIntervalMs As Double = 70.0
         Private _retouchStrokeActive As Boolean = False
@@ -19465,6 +19468,7 @@ Namespace ViewModels
             ' (der Personen-Reiter, siehe LoadPeople).
             ClearSelection(captureUndo:=False)   ' pixelbasierte Auswahlmaske gilt nur fürs alte Bild
             ResetAdjustmentsInternal(resetEditorUi:=True)
+            TakeDecodeFieldsFrom(fpxAdjustments)
             ' Wie beim Oeffnen: das Objektiv DIESES Bildes. Ohne den Aufruf nannte die Gruppe beim
             ' Blaettern das Objektiv des vorigen, solange das Rezept die Objektivfelder nicht
             ' aenderte.
@@ -19897,6 +19901,7 @@ Namespace ViewModels
             ' Direkt danach, weil das Ruecksetzen den Hintergrund auf durchsichtig stellt: nur ein
             ' gerade angelegtes Dokument bringt seine im Dialog gewaehlte Farbe mit.
             ApplyPendingNewDocumentBackground(incomingNewDocBackground)
+            TakeDecodeFieldsFrom(fpxAdjustments)
             ' Nach dem Zuruecksetzen: die Rezeptfelder sind dann auf "wie vorgegeben", und die
             ' Statuszeile zeigt das Objektiv DIESES Bildes statt des vorigen.
             RefreshLensCorrection()
@@ -21486,10 +21491,16 @@ Namespace ViewModels
             Dim knee = WantedRawHighlightKnee()
             Dim previewMax = PreviewMaxDimension
             ' Decode UND Vorbereitung im Hintergrund: beides geht ueber das ganze Bild (PrepareSource).
-            Dim prepared = Await Task.Run(Function()
+            _asyncSourceSwapToken = token
+            Dim prepared As PreparedSource
+            Try
+                prepared = Await Task.Run(Function()
                                               Dim decoded = DecodeForPreviewSource(imagePath, overridePath, wahl, recoverHighlights, exposureEv, knee)
                                               Return PrepareSource(decoded, previewMax)
                                           End Function)
+            Finally
+                If _asyncSourceSwapToken = token Then _asyncSourceSwapToken = 0
+            End Try
             CompletePreparedSourceSwap(prepared, token, scheduleInitialRender)
         End Function
 
@@ -22487,6 +22498,14 @@ Namespace ViewModels
             _fullRenderPending = False
 
             Dim previewSource = GetPreviewSourceForRender()
+            If previewSource Is Nothing AndAlso _asyncSourceSwapToken <> 0 AndAlso Not IsSourceSwapStale(_asyncSourceSwapToken) Then
+                ' Die Quelle entsteht gerade im Hintergrund (PreparePreviewSourceAsync). Hier NICHT
+                ' selbst dekodieren: das war ein zweiter voller Decode derselben Datei, auf dem
+                ' Anzeigefaden und vor dem Decode-Tor wartend, bis der erste fertig war - die
+                ' Oberflaeche stand so lange. Gerendert wird nach dem Einsetzen der Quelle
+                ' (AdoptPreparedWorkingImage oder, beim atomaren Oeffnen, der Aufrufer selbst).
+                Return
+            End If
             If previewSource Is Nothing Then
                 ' Kein zweiter Render nötig - dieser Aufruf rendert gleich selbst.
                 PreparePreviewSource(RenderSourcePath, scheduleInitialRender:=False)
@@ -25117,6 +25136,48 @@ Namespace ViewModels
         ''' Reglerziels beim Ebenenwechsel rechnete sonst die Szene neu, zweimal je Wechsel und bei
         ''' einem grossen Dokument ueber eine Sekunde lang - obwohl sich am Bild nichts aendert.
         ''' Wer ihn setzt, muss sicher sein, dass kein Pixel anders wird; im Zweifel rendern.</param>
+        ''' <summary>Die Felder der Objektivkorrektur und des Sensorrands, in denen das Rezept vom
+        ''' Stand im Editor abweicht, jeweils als "Name alt>neu". Leer heisst: der Decode bleibt
+        ''' gueltig. Die Namen stehen im Protokoll, damit ein Neuaufbau beim Oeffnen seinen Grund
+        ''' nennt.</summary>
+        Private Function LensFieldDifferences(adj As ImageAdjustments) As List(Of String)
+            Dim result As New List(Of String)
+            Dim note = Sub(name As String, before As Object, after As Object)
+                           result.Add($"{name} {If(before, "-")}>{If(after, "-")}")
+                       End Sub
+            If Not Nullable.Equals(_lensDistortion, adj.LensDistortion) Then note("LensDistortion", _lensDistortion, adj.LensDistortion)
+            If Not Nullable.Equals(_lensTca, adj.LensTca) Then note("LensTca", _lensTca, adj.LensTca)
+            If Not Nullable.Equals(_lensVignetting, adj.LensVignetting) Then note("LensVignetting", _lensVignetting, adj.LensVignetting)
+            If _lensDistortionAmount <> adj.LensDistortionAmount Then note("LensDistortionAmount", _lensDistortionAmount, adj.LensDistortionAmount)
+            If _lensTcaAmount <> adj.LensTcaAmount Then note("LensTcaAmount", _lensTcaAmount, adj.LensTcaAmount)
+            If _lensTcaRed <> adj.LensTcaRed Then note("LensTcaRed", _lensTcaRed, adj.LensTcaRed)
+            If _lensTcaBlue <> adj.LensTcaBlue Then note("LensTcaBlue", _lensTcaBlue, adj.LensTcaBlue)
+            If _lensVignettingAmount <> adj.LensVignettingAmount Then note("LensVignettingAmount", _lensVignettingAmount, adj.LensVignettingAmount)
+            If _rawSensorEdgeCrop <> adj.RawSensorEdgeCrop Then note("RawSensorEdgeCrop", _rawSensorEdgeCrop, adj.RawSensorEdgeCrop)
+            If Not String.Equals(_lensModel, If(adj.LensModel, ""), StringComparison.Ordinal) Then note("LensModel", _lensModel, adj.LensModel)
+            Return result
+        End Function
+
+        ''' <summary>Die Felder aus dem Rezept, die im Decode wirken (Objektivkorrektur und
+        ''' Sensorrand), VOR dem ersten Decode setzen. Sonst entwickelte der Editor mit den
+        ''' Startwerten, ApplyAdjustments fand danach im Rezept einen anderen Wert und baute das
+        ''' Arbeitsbild ein zweites Mal - bei jedem Oeffnen einer RAW, deren Rezept den Sensorrand
+        ''' abschaltet (etwa jedes Rezept aus der Zeit vor dem Feld). Ohne Rezept bleibt alles beim
+        ''' Zuruecksetzen.</summary>
+        Private Sub TakeDecodeFieldsFrom(adj As ImageAdjustments)
+            If adj Is Nothing Then Return
+            _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
+            _lensDistortion = adj.LensDistortion
+            _lensTca = adj.LensTca
+            _lensVignetting = adj.LensVignetting
+            _lensDistortionAmount = adj.LensDistortionAmount
+            _lensTcaAmount = adj.LensTcaAmount
+            _lensTcaRed = adj.LensTcaRed
+            _lensTcaBlue = adj.LensTcaBlue
+            _lensVignettingAmount = adj.LensVignettingAmount
+            _lensModel = If(adj.LensModel, "")
+        End Sub
+
         Private Sub ApplyAdjustments(adj As ImageAdjustments,
                                      Optional resetTransientSelectionBinding As Boolean = False,
                                      Optional scheduleRender As Boolean = True)
@@ -25127,15 +25188,12 @@ Namespace ViewModels
             ' wieder auf "wie in den Einstellungen", und wer danach speicherte, hatte sie auch aus
             ' der Datei verloren (Nutzerbefund 0.9.49-4). Die Lichterrettung ist immer an und kein
             ' Teil dieser Frage mehr.
-            Dim lensChanged = Not Nullable.Equals(_lensDistortion, adj.LensDistortion) OrElse
-                              Not Nullable.Equals(_lensTca, adj.LensTca) OrElse
-                              Not Nullable.Equals(_lensVignetting, adj.LensVignetting) OrElse
-                              _lensDistortionAmount <> adj.LensDistortionAmount OrElse
-                              _lensTcaAmount <> adj.LensTcaAmount OrElse
-                              _lensTcaRed <> adj.LensTcaRed OrElse _lensTcaBlue <> adj.LensTcaBlue OrElse
-                              _lensVignettingAmount <> adj.LensVignettingAmount OrElse
-                              _rawSensorEdgeCrop <> adj.RawSensorEdgeCrop OrElse
-                              Not String.Equals(_lensModel, If(adj.LensModel, ""), StringComparison.Ordinal)
+            Dim lensDifferences = LensFieldDifferences(adj)
+            Dim lensChanged = lensDifferences.Count > 0
+            If lensChanged Then
+                DiagnosticLogService.LogAlways("Editor.LensRebuild",
+                    $"Rezept aendert {String.Join(", ", lensDifferences)}; source={RenderSourcePath}")
+            End If
             ' Die Objektliste wird hier geleert und Objekt fuer Objekt neu gefuellt. Ohne diese
             ' Klammer baut das Ebenenpanel bei JEDEM einzelnen Objekt komplett neu auf - bei 32
             ' Objekten also 33 Mal statt einmal.

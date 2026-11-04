@@ -135,15 +135,17 @@
         </Grid.ContextMenu>
 
         <Grid.ColumnDefinitions>
+            <!-- Die Breiten der beiden Leisten setzt GalleryView.ApplySidebarColumns aus den
+                 Einstellungen: gezogene Breiten werden gemerkt, eingeklappt geht die Spalte samt
+                 Griff auf null, und die Kacheln bekommen den Platz zurueck. -->
             <ColumnDefinition Width="288" MinWidth="220" MaxWidth="520"/>
             <ColumnDefinition Width="6"/>
             <ColumnDefinition Width="*"/>
-            <!-- Auto statt fester Breite: eingeklappt belegt die Info-Leiste dann gar nichts,
-                 und die Kacheln bekommen den Platz zurueck. -->
-            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition Width="320"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Classes="toolbar" Height="52" Padding="16,0">
+        <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="3" Classes="toolbar" Height="52" Padding="16,0">
             <Grid ColumnDefinitions="Auto,Auto,*" VerticalAlignment="Center">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                     <Button Classes="icon-btn" Width="34" Height="34"
@@ -1295,7 +1297,8 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Classes="sidebar">
+        <!-- Sichtbarkeit setzt GalleryView.ApplySidebarColumns, zusammen mit der Breite der Spalte. -->
+        <Border x:Name="FolderSidebarBorder" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Classes="sidebar">
             <Grid RowDefinitions="Auto,*,Auto">
                 <!-- Navigations-Tabs: Ordner / Immich / Favoriten. Der Immich-Tab existiert nur,
                      wenn Immich hinterlegt ist (HasImmich); faellt die Konfiguration weg, springt die
@@ -1891,7 +1894,8 @@
             </Grid>
         </Border>
 
-        <GridSplitter Grid.Row="0"
+        <GridSplitter x:Name="FolderSidebarSplitter"
+                      Grid.Row="0"
                       Grid.RowSpan="3"
                       Grid.Column="1"
                       Width="6"
@@ -1903,15 +1907,27 @@
                       ShowsPreview="False"
                       Cursor="SizeWestEast"/>
 
+        <!-- Der Griff der Info-Leiste, nur in der Zeile der Kacheln: Werkzeug- und Fusszeile
+             laufen ueber die Leiste hinweg. -->
+        <GridSplitter x:Name="InfoSidebarSplitter"
+                      Grid.Row="1"
+                      Grid.Column="3"
+                      Width="6"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"
+                      Background="Transparent"
+                      ResizeDirection="Columns"
+                      ResizeBehavior="PreviousAndNext"
+                      ShowsPreview="False"
+                      Cursor="SizeWestEast"/>
+
         <!-- Dieselbe Info-Leiste wie in Betrachter und Editor. Ihren Zustand traegt hier ein
              eigenes ViewModel, das dem markierten Bild folgt. -->
-        <!-- IsVisible MUSS hier stehen, nicht nur innen: die Info-Leiste blendet intern nur ihren
-             Rahmen aus, das Steuerelement selbst blieb 320 Punkte breit und hielt die Spalte
-             besetzt. Erst so gibt der eingeklappte Zustand den Platz an die Kacheln zurueck. -->
-        <!-- Sichtbarkeit ueber den Vorfahren, nicht ueber den eigenen Datenkontext: der Zustand
-             gehoert der Galerie und wird beim Start aus den Einstellungen gelesen. -->
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320"
-                               IsVisible="{Binding DataContext.IsInfoSidebarVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
+        <!-- Die Sichtbarkeit MUSS am Steuerelement selbst stehen, nicht nur innen: die Info-Leiste
+             blendet intern nur ihren Rahmen aus, und das Steuerelement hielte die Spalte sonst
+             besetzt. Gesetzt wird sie wie bei der linken Leiste in GalleryView.ApplySidebarColumns,
+             aus dem Zustand der Galerie (nicht dem eigenen Datenkontext). -->
+        <views:InfoSidebarView x:Name="GalleryInfoSidebar" Grid.Row="1" Grid.Column="4"
                                DataContext="{Binding InfoPanel}"/>
 
         <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource FP.Bg.Root}" ClipToBounds="True">
@@ -3216,7 +3232,7 @@
         <!-- Höhe wie die Fußzeilen von Editor und Betrachter: dort ergibt sich 40 aus 6 Rand,
              28 Knopfhöhe, 6 Rand. Eine Fußzeile, die je nach Ansicht anders hoch ist, springt beim
              Umschalten. -->
-        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Classes="statusbar window-drag" Height="40" Padding="20,6"
+        <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="3" Classes="statusbar window-drag" Height="40" Padding="20,6"
                 IsVisible="{Binding ShowFooter}">
             <!-- EINE SPALTE, drei Ausrichtungen. Mit "*,Auto,*" sass die Mitte NICHT in der Mitte:
                  eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
@@ -3237,6 +3253,21 @@
                             ToolTip.Tip="Menü">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/list.svg"
                                        Width="18" Height="18"/>
+                    </Button>
+                    <!-- Wie die Werkzeugleiste im Editor: der Knopf sitzt in der Fusszeile, damit er
+                         bei eingeklappter Leiste an derselben Stelle bleibt. Derselbe Abstand zum
+                         Menueknopf wie dort (Reihenabstand 16, Knopf 5 herangerueckt), hier ohne
+                         Reihenabstand also 11. -->
+                    <Button Classes="icon-btn" Width="28" Height="28"
+                            Margin="11,0,0,0"
+                            Command="{Binding ToggleFolderSidebarCommand}"
+                            ToolTip.Tip="Seitenleiste ein- oder ausklappen">
+                        <Panel>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sidebar-simple.svg"
+                                           Width="18" Height="18" IsVisible="{Binding IsFolderSidebarVisible}" />
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sidebar.svg"
+                                           Width="18" Height="18" IsVisible="{Binding IsFolderSidebarCollapsed}" />
+                        </Panel>
                     </Button>
                     <!-- Der haeufigste Weg aus der Galerie hinaus, deshalb neben dem Menue und mit
                          Akzentrahmen. Nur da, solange Bilder ausgewaehlt sind: ohne Auswahl gaebe es
@@ -3413,14 +3444,14 @@
                         Grid.Row="0"
                         Grid.RowSpan="3"
                         Grid.Column="0"
-                        Grid.ColumnSpan="4"
+                        Grid.ColumnSpan="5"
                         ZIndex="180"/>
 
         <!-- Eigene Rueckmeldung waehrend anwendungsinterner Zuege. X11/Avalonia zeigt bei
              solchen Drag-Quellen trotz akzeptiertem Move-Effekt oft den Verbotszeiger; dieser
              Hinweis folgt deshalb dem Zeiger, waehrend Baumzeile oder Ordnerkachel aufleuchten. -->
         <Canvas x:Name="InternalDropFeedbackCanvas"
-                Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="4"
+                Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="5"
                 IsVisible="False"
                 IsHitTestVisible="False"
                 ZIndex="190">
@@ -3447,7 +3478,7 @@
         <!-- Schnellvorschau-Overlay (Mausrad-Klick). ColumnSpan 4: die Info-Leiste in Spalte 3
              gehoert mit abgedeckt. -->
         <Panel x:Name="PreviewOverlay"
-               Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="4"
+               Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="5"
                IsVisible="False"
                Background="#D9000000"
                ZIndex="200">

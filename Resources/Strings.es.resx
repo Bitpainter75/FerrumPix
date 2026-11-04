@@ -10910,4 +10910,7 @@
   <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
     <value>Realce de enfoque sí/no</value>
   </data>
+  <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
+    <value>Contraer o expandir la barra lateral</value>
+  </data>
 </root>

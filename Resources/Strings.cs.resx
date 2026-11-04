@@ -10950,4 +10950,7 @@
   <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
     <value>Zvýraznění ostrosti zap./vyp.</value>
   </data>
+  <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
+    <value>Rozbalit nebo sbalit postranní panel</value>
+  </data>
 </root>

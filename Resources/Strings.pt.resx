@@ -10909,4 +10909,7 @@
   <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
     <value>Focus peaking ligado/desligado</value>
   </data>
+  <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
+    <value>Recolher ou expandir a barra lateral</value>
+  </data>
 </root>
