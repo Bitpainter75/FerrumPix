@@ -10923,4 +10923,10 @@
   <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
     <value>Skærm uden navn</value>
   </data>
+  <data name="BEHALTEN_UND_VERWORFEN_38138837" xml:space="preserve">
+    <value>BEHOLDT OG AFVIST</value>
+  </data>
+  <data name="Nur_behaltene_04fefa47" xml:space="preserve">
+    <value>Kun beholdte</value>
+  </data>
 </root>

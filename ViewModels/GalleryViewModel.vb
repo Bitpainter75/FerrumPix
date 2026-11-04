@@ -1049,6 +1049,7 @@ Namespace ViewModels
             SaveFileBrowserSettings()
             For Each name In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
                               NameOf(IsFilterRejectedShow), NameOf(IsFilterRejectedHide), NameOf(IsFilterRejectedOnly),
+                              NameOf(IsFilterKeptOnly),
                               NameOf(IsFilterEditedAll), NameOf(IsFilterEditedOnly), NameOf(IsFilterEditedHide),
                               NameOf(IsFilterRatingAll), NameOf(IsFilterRatingUnrated),
                               NameOf(IsFilterRating1Plus), NameOf(IsFilterRating2Plus),
@@ -9940,6 +9941,11 @@ Namespace ViewModels
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse Not i.IsRejected)
             ElseIf _filterRejected = "Only" Then
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsRejected)
+            ElseIf _filterRejected = "Kept" Then
+                ' Die Gegenrichtung zum Aussortieren: nur, was ausdruecklich behalten wurde. Damit
+                ' lassen sich die Gewinner einer Karte gesammelt auswaehlen und kopieren, ohne
+                ' jedes andere Bild vorher zu verwerfen.
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsPicked)
             End If
 
             ' Bearbeitet: hier wird der Vermerk sofort bestimmt, wo die Kachel ihn noch nicht hat
@@ -10044,6 +10050,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterRejectedShow))
                 Me.RaisePropertyChanged(NameOf(IsFilterRejectedHide))
                 Me.RaisePropertyChanged(NameOf(IsFilterRejectedOnly))
+                Me.RaisePropertyChanged(NameOf(IsFilterKeptOnly))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
                 FilterAndSort()
@@ -10066,6 +10073,15 @@ Namespace ViewModels
         Public ReadOnly Property IsFilterRejectedOnly As Boolean
             Get
                 Return _filterRejected = "Only"
+            End Get
+        End Property
+
+        ''' <summary>Nur behaltene Bilder. Ein vierter Wert DESSELBEN Filters und kein eigener:
+        ''' behalten und verworfen schliessen sich aus, zwei getrennte Filter ergaeben zusammen
+        ''' eine leere Galerie.</summary>
+        Public ReadOnly Property IsFilterKeptOnly As Boolean
+            Get
+                Return _filterRejected = "Kept"
             End Get
         End Property
 
@@ -10178,7 +10194,7 @@ Namespace ViewModels
 
         Friend Shared Function NormalizeRejectedFilter(value As String) As String
             Select Case value
-                Case "Hide", "Only" : Return value
+                Case "Hide", "Only", "Kept" : Return value
                 Case Else : Return "Show"
             End Select
         End Function

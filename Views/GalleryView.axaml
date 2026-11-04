@@ -848,8 +848,9 @@
                                             <Separator Margin="4,6"/>
                                         </StackPanel>
 
-                                        <!-- VERWORFENE: alle (verworfene gedimmt, wie immer), ausblenden oder nur sie -->
-                                        <TextBlock Text="VERWORFENE" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                        <!-- BEHALTEN UND VERWORFEN: alle (verworfene gedimmt, wie immer), verworfene
+                                             ausblenden, nur verworfene oder nur behaltene -->
+                                        <TextBlock Text="BEHALTEN UND VERWORFEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
                                                    Margin="10,4,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
@@ -876,6 +877,15 @@
                                             <Grid ColumnDefinitions="*,20">
                                                 <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedOnly}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterRejectedCommand}" CommandParameter="Kept">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Nur behaltene" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterKeptOnly}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
                                         </Button>

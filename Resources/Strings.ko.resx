@@ -10927,4 +10927,10 @@
   <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
     <value>이름 없는 디스플레이</value>
   </data>
+  <data name="BEHALTEN_UND_VERWORFEN_38138837" xml:space="preserve">
+    <value>유지 및 거부</value>
+  </data>
+  <data name="Nur_behaltene_04fefa47" xml:space="preserve">
+    <value>유지한 항목만</value>
+  </data>
 </root>

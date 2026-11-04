@@ -10923,4 +10923,10 @@
   <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
     <value>Obrazovka bez názvu</value>
   </data>
+  <data name="BEHALTEN_UND_VERWORFEN_38138837" xml:space="preserve">
+    <value>PONECHANÉ A ODMÍTNUTÉ</value>
+  </data>
+  <data name="Nur_behaltene_04fefa47" xml:space="preserve">
+    <value>Jen ponechané</value>
+  </data>
 </root>

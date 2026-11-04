@@ -287,7 +287,8 @@ Namespace Services
         ''' <summary>Serien und RAW+JPEG-Paare in der Galerie als Stapel zeigen. Ab Werk aus: es
         ''' aendert, was das Raster zeigt, und soll bewusst eingeschaltet werden.</summary>
         Public Property GalleryStacks As Boolean = False
-        ''' <summary>Verworfene Bilder: "Show" (gedimmt zeigen), "Hide" (ausblenden), "Only" (nur sie).</summary>
+        ''' <summary>Behalten und verworfen: "Show" (alle, verworfene gedimmt), "Hide" (verworfene
+        ''' ausblenden), "Only" (nur verworfene), "Kept" (nur behaltene).</summary>
         Public Property GalleryFilterRejected As String = "Show"
         ''' <summary>Bearbeitete Bilder: "All", "Only" (nur bearbeitete), "Hide" (nur unbearbeitete).</summary>
         Public Property GalleryFilterEdited As String = "All"

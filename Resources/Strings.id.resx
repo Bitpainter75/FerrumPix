@@ -10927,4 +10927,10 @@
   <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
     <value>Layar tanpa nama</value>
   </data>
+  <data name="BEHALTEN_UND_VERWORFEN_38138837" xml:space="preserve">
+    <value>DIPERTAHANKAN DAN DITOLAK</value>
+  </data>
+  <data name="Nur_behaltene_04fefa47" xml:space="preserve">
+    <value>Hanya yang dipertahankan</value>
+  </data>
 </root>

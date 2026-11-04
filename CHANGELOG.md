@@ -6,6 +6,10 @@
   others in it. Two different pictures no longer end up together only because a third one
   resembles both.
 
+- **Show only kept pictures:** the gallery filter for kept and rejected pictures can now show
+  only the ones you marked as kept, so the keepers from a card can be selected and copied in one
+  go. With stacks turned on, the JPEG next to a raw file goes along.
+
 - **Intersect on gradient masks:** the brush in intersect mode now works on linear and radial
   gradient masks and keeps only the part of the gradient you paint over. Afterwards you can paint
   more of the gradient back in or take more away.
