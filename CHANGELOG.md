@@ -10,11 +10,20 @@
   only the ones you marked as kept, so the keepers from a card can be selected and copied in one
   go. With stacks turned on, the JPEG next to a raw file goes along.
 
+- **More watermark settings when exporting:** besides size and position, the margin from the
+  corner and the opacity can now be set for each export without changing the saved watermark.
+
 - **Intersect on gradient masks:** the brush in intersect mode now works on linear and radial
   gradient masks and keeps only the part of the gradient you paint over. Afterwards you can paint
   more of the gradient back in or take more away.
 
 ### Fixes
+
+- Export: the option to keep the watermark size now shows up whenever resizing is on, so a
+  watermark no longer shrinks to a few pixels on a smaller export. The exported watermark also
+  keeps its blend mode, outline and shadow from the saved watermark.
+
+- The anchor points for watermarks, objects, canvas and collage are easier to see.
 
 - Gallery: after leaving the viewer, the gallery shows the picture you last looked at again
   instead of an old scroll position.

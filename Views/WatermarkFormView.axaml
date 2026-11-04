@@ -6,7 +6,8 @@
          „DialogLabelColumn", damit die Eingabefelder auf derselben Linie beginnen wie in den
          Nachbarformularen.
 
-         EINSTELLBAR ist hier nur die Breite; die Höhe läuft als Nur-Lese-Feld daneben mit. Ein
+         Dazu Randabstand und Deckkraft, beide immer sichtbar, alles nur für diesen Lauf.
+         Von der Größe EINSTELLBAR ist nur die Breite; die Höhe läuft als Nur-Lese-Feld daneben mit. Ein
          eigener Seitenverhältnis-Schalter fehlt bewusst: der steckt in der Wasserzeichen-Vorlage
          selbst, und dieselbe Sache an zwei Stellen einstellbar zu machen hiesse, zwei Wahrheiten
          zu pflegen. Die Größenzeile erscheint deshalb auch nur dort, wo sie eindeutig ist: bei
@@ -37,8 +38,8 @@
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
             <Border Grid.Column="1"
+                    Classes="anchor-frame"
                     HorizontalAlignment="Left"
-                    BorderBrush="{DynamicResource FP.Border.Normal}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="8">
@@ -133,6 +134,59 @@
                      MinHeight="36"
                      ToolTip.Tip="Errechnet aus der Breite und dem Seitenverhältnis der Vorlage"/>
             <TextBlock Grid.Column="4" Text="px"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </Grid>
+
+        <!-- Randabstand von der Ankerecke, waagrecht und senkrecht. Anders als die Größe immer
+             sichtbar: er ist für Bild- wie Textwasserzeichen eindeutig. -->
+        <Grid ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Randabstand"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Column="1"
+                     Classes="combo-like"
+                     Text="{Binding DialogWatermarkOffsetXText, Mode=TwoWay}"
+                     MinHeight="36"
+                     ToolTip.Tip="Waagrechter Abstand von der Ankerecke in Bildpunkten"/>
+            <TextBlock Grid.Column="2" Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Column="3"
+                     Classes="combo-like"
+                     Text="{Binding DialogWatermarkOffsetYText, Mode=TwoWay}"
+                     MinHeight="36"
+                     ToolTip.Tip="Senkrechter Abstand von der Ankerecke in Bildpunkten"/>
+            <TextBlock Grid.Column="4" Text="px"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </Grid>
+
+        <!-- Deckkraft für diesen Lauf; die Vorlage bringt ihren Wert mit. Feld wie die Größe,
+             mit derselben Breite, damit beide Zeilen bündig stehen. -->
+        <Grid ColumnSpacing="14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Deckkraft"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBox Grid.Column="1"
+                     Classes="combo-like"
+                     Text="{Binding DialogWatermarkOpacityText, Mode=TwoWay}"
+                     MinHeight="36"
+                     ToolTip.Tip="Deckkraft des Wasserzeichens in Prozent, 0 bis 100"/>
+            <TextBlock Grid.Column="2" Text="%"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
         </Grid>

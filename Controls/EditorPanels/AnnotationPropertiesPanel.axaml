@@ -404,8 +404,8 @@
             <TextBlock Text="Anker" Foreground="{DynamicResource FP.Text.Secondary}"
                        VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
             <Border Grid.Column="1"
+                    Classes="anchor-frame"
                     HorizontalAlignment="Left"
-                    BorderBrush="{DynamicResource FP.Border.Normal}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="8"

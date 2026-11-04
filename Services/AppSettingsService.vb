@@ -100,6 +100,15 @@ Namespace Services
         ' Lage von Schatten und Gluehen wie am Objekt (ImageAnnotation.ShadowPlacement).
         Public Property ShadowPlacement As String = ""
         Public Property GlowPlacement As String = ""
+
+        ''' <summary>Eine vollstaendige Kopie. Die Vorlage traegt nur Zahlen, Texte und Schalter,
+        ''' eine flache Kopie ist also eine echte. Gebraucht fuer die Lauf-Kopie der Dialoge: eine
+        ''' Kopie Feld fuer Feld von Hand verlor jedes Feld, das spaeter dazukam (Mischmodus, Kontur,
+        ''' Verlauf, Schatten, Schein, Schriftschnitt), und der Export sah anders aus als die
+        ''' Vorlage im Editor.</summary>
+        Public Function Clone() As WatermarkPresetSettings
+            Return DirectCast(MemberwiseClone(), WatermarkPresetSettings)
+        End Function
     End Class
 
     ''' <summary>Eine gespeicherte Regler-Zusammenstellung („Vorlage") aus dem Anpassen-Werkzeug.

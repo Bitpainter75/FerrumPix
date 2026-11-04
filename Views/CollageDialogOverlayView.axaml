@@ -119,7 +119,7 @@
                                    IsVisible="{Binding IsCollageHeroMode}"/>
                         <Border Grid.Row="3" Grid.Column="1"
                                 IsVisible="{Binding IsCollageHeroMode}"
-                                BorderBrush="{DynamicResource FP.Border.Normal}" BorderThickness="1" CornerRadius="6"
+                                Classes="anchor-frame" BorderThickness="1" CornerRadius="6"
                                 Padding="12,10" HorizontalAlignment="Left">
                             <Grid Width="72" Height="72" ColumnDefinitions="*,*,*" RowDefinitions="*,*,*">
                                 <Button Grid.Row="0" Grid.Column="0" Classes="anchor-dot" Click="OnHeroPositionClick" Tag="TopLeft" ToolTip.Tip="Oben links">

@@ -10933,4 +10933,13 @@
   <data name="Nur_behaltene_04fefa47" xml:space="preserve">
     <value>유지한 항목만</value>
   </data>
+  <data name="Waagrechter_Abstand_von_der_Ankerecke_in_Bildpun_66631d91" xml:space="preserve">
+    <value>앵커 모서리로부터의 가로 거리(픽셀)</value>
+  </data>
+  <data name="Senkrechter_Abstand_von_der_Ankerecke_in_Bildpun_def2c8f1" xml:space="preserve">
+    <value>앵커 모서리로부터의 세로 거리(픽셀)</value>
+  </data>
+  <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
+    <value>워터마크 불투명도(퍼센트, 0~100)</value>
+  </data>
 </root>

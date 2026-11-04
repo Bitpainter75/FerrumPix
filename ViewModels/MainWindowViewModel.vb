@@ -3031,6 +3031,11 @@ Namespace ViewModels
             Set(value As AppDialogKind)
                 Me.RaiseAndSetIfChanged(_dialogKind, value)
                 Me.RaisePropertyChanged(NameOf(DialogShowsInput))
+                ' Haengt an der Dialogart UND am Haken fuers Verkleinern. ShowExportToAsync setzt den
+                ' Haken aus den Einstellungen, BEVOR die Art feststeht - ohne diese Meldung blieb
+                ' „Wasserzeichen nicht mitskalieren" unsichtbar, sobald man mit eingeschaltetem
+                ' Verkleinern in den Dialog kam, und das Wasserzeichen schrumpfte unbemerkt mit.
+                Me.RaisePropertyChanged(NameOf(IsDialogWatermarkKeepSizeVisible))
                 Me.RaisePropertyChanged(NameOf(DialogShowsSaveAsOptions))
                 ' Haengt an der Dialogart UND am Zaehler - beim Wechsel der Art also mitmelden.
                 Me.RaisePropertyChanged(NameOf(IsDialogConvertPendingBakedVisible))
@@ -4549,6 +4554,84 @@ Namespace ViewModels
         ''' Faellen ist es genau das Verhaeltnis, das der Nutzer in der Vorlage gesehen hat -
         ''' die Bilddatei dafuer zu oeffnen waere teurer und koennte gar nicht mehr da sein.
         Private _dialogWatermarkAspect As Double = 480.0 / 180.0
+        ''' Deckkraft (0 bis 100) und Randabstand von der Ankerecke in Bildpunkten. Anders als die
+        ''' Breite gelten beide fuer Bild- UND Textwasserzeichen eindeutig und sind deshalb immer
+        ''' einstellbar. Wie die Breite nur fuer diesen Lauf; die Vorlage bleibt unveraendert.
+        Private _dialogWatermarkOpacity As Double = 100
+        Private _dialogWatermarkOpacityText As String = "100"
+        Private _dialogWatermarkOffsetXPixels As Integer = 24
+        Private _dialogWatermarkOffsetYPixels As Integer = 24
+        Private _dialogWatermarkOffsetXText As String = "24"
+        Private _dialogWatermarkOffsetYText As String = "24"
+
+        ''' <summary>Deckkraft in Prozent, als Text wie die Breite. Ein leeres Feld laesst den
+        ''' zuletzt gueltigen Wert stehen.</summary>
+        Public Property DialogWatermarkOpacityText As String
+            Get
+                Return _dialogWatermarkOpacityText
+            End Get
+            Set(value As String)
+                Dim normalized = NormalizeWatermarkNumberText(value, allowNegative:=False, maxDigits:=3)
+                Dim parsed As Integer
+                If Integer.TryParse(normalized, Globalization.NumberStyles.Integer,
+                                    Globalization.CultureInfo.InvariantCulture, parsed) AndAlso parsed > 100 Then
+                    normalized = "100"
+                End If
+                Me.RaiseAndSetIfChanged(_dialogWatermarkOpacityText, normalized)
+                If Integer.TryParse(normalized, Globalization.NumberStyles.Integer,
+                                    Globalization.CultureInfo.InvariantCulture, parsed) Then
+                    _dialogWatermarkOpacity = Math.Max(0, Math.Min(100, parsed))
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Waagrechter Randabstand von der Ankerecke in Bildpunkten. Darf negativ sein: die
+        ''' Vorlage aus dem Editor kann das Wasserzeichen ueber den Rand hinaus schieben.</summary>
+        Public Property DialogWatermarkOffsetXText As String
+            Get
+                Return _dialogWatermarkOffsetXText
+            End Get
+            Set(value As String)
+                Dim normalized = NormalizeWatermarkNumberText(value, allowNegative:=True, maxDigits:=6)
+                Me.RaiseAndSetIfChanged(_dialogWatermarkOffsetXText, normalized)
+                Dim parsed As Integer
+                If Integer.TryParse(normalized, Globalization.NumberStyles.AllowLeadingSign,
+                                    Globalization.CultureInfo.InvariantCulture, parsed) Then
+                    _dialogWatermarkOffsetXPixels = parsed
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Senkrechter Randabstand, wie <see cref="DialogWatermarkOffsetXText"/>.</summary>
+        Public Property DialogWatermarkOffsetYText As String
+            Get
+                Return _dialogWatermarkOffsetYText
+            End Get
+            Set(value As String)
+                Dim normalized = NormalizeWatermarkNumberText(value, allowNegative:=True, maxDigits:=6)
+                Me.RaiseAndSetIfChanged(_dialogWatermarkOffsetYText, normalized)
+                Dim parsed As Integer
+                If Integer.TryParse(normalized, Globalization.NumberStyles.AllowLeadingSign,
+                                    Globalization.CultureInfo.InvariantCulture, parsed) Then
+                    _dialogWatermarkOffsetYPixels = parsed
+                End If
+            End Set
+        End Property
+
+        ''' Ziffern und, wo erlaubt, ein fuehrendes Minus. Anders als bei der Breite bleibt eine
+        ''' einzelne Null stehen: ein Randabstand von 0 ist ein gueltiger Wert, keine leere Eingabe.
+        Private Shared Function NormalizeWatermarkNumberText(value As String, allowNegative As Boolean,
+                                                             maxDigits As Integer) As String
+            Dim text = If(value, "").Trim()
+            Dim negative = allowNegative AndAlso text.StartsWith("-", StringComparison.Ordinal)
+            Dim digits = New String(text.Where(AddressOf Char.IsDigit).ToArray())
+            If digits.Length > maxDigits Then digits = digits.Substring(0, maxDigits)
+            If digits.Length > 1 Then digits = digits.TrimStart("0"c)
+            If digits.Length = 0 AndAlso text.Contains("0"c) Then digits = "0"
+            If negative AndAlso digits.Length > 0 AndAlso digits <> "0" Then Return "-" & digits
+            If negative AndAlso digits.Length = 0 Then Return "-"
+            Return digits
+        End Function
 
         Public Property DialogWatermarkAnchor As String
             Get
@@ -4636,8 +4719,16 @@ Namespace ViewModels
             _dialogWatermarkAspect = If(_dialogWatermarkHeightPixels > 0,
                                         _dialogWatermarkWidthPixels / CDbl(_dialogWatermarkHeightPixels), 1.0)
             _dialogWatermarkWidthText = _dialogWatermarkWidthPixels.ToString(Globalization.CultureInfo.InvariantCulture)
+            _dialogWatermarkOpacity = Math.Max(0.0, Math.Min(100.0, preset.Opacity))
+            _dialogWatermarkOpacityText = CInt(Math.Round(_dialogWatermarkOpacity)).ToString(Globalization.CultureInfo.InvariantCulture)
+            _dialogWatermarkOffsetXPixels = CInt(Math.Max(-100000.0, Math.Min(100000.0, Math.Round(preset.OffsetXPixels))))
+            _dialogWatermarkOffsetYPixels = CInt(Math.Max(-100000.0, Math.Min(100000.0, Math.Round(preset.OffsetYPixels))))
+            _dialogWatermarkOffsetXText = _dialogWatermarkOffsetXPixels.ToString(Globalization.CultureInfo.InvariantCulture)
+            _dialogWatermarkOffsetYText = _dialogWatermarkOffsetYPixels.ToString(Globalization.CultureInfo.InvariantCulture)
             For Each name In {NameOf(DialogWatermarkAnchor), NameOf(DialogWatermarkWidthText),
-                              NameOf(DialogWatermarkHeightText), NameOf(IsDialogWatermarkWidthVisible)}
+                              NameOf(DialogWatermarkHeightText), NameOf(IsDialogWatermarkWidthVisible),
+                              NameOf(DialogWatermarkOpacityText), NameOf(DialogWatermarkOffsetXText),
+                              NameOf(DialogWatermarkOffsetYText)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub
@@ -5314,23 +5405,17 @@ Namespace ViewModels
         ''' eines einzelnen Stapellaufs.</summary>
         Private Function BuildWatermarkPresetForRun(vorlage As WatermarkPresetSettings) As WatermarkPresetSettings
             If vorlage Is Nothing Then Return Nothing
-            Return New WatermarkPresetSettings With {
-                .Id = vorlage.Id,
-                .Name = vorlage.Name,
-                .Text = vorlage.Text,
-                .ImagePath = vorlage.ImagePath,
-                .OffsetXPixels = vorlage.OffsetXPixels,
-                .OffsetYPixels = vorlage.OffsetYPixels,
-                .WidthPixels = _dialogWatermarkWidthPixels,
-                .HeightPixels = _dialogWatermarkHeightPixels,
-                .Anchor = _dialogWatermarkAnchor,
-                .LockAspect = vorlage.LockAspect,
-                .RotationDegrees = vorlage.RotationDegrees,
-                .Opacity = vorlage.Opacity,
-                .FontFamily = vorlage.FontFamily,
-                .FontSizePixels = vorlage.FontSizePixels,
-                .FillColor = vorlage.FillColor
-            }
+            ' Die GANZE Vorlage, nur Lage, Groesse und Deckkraft kommen aus dem Dialog. Eine Kopie
+            ' Feld fuer Feld liess Mischmodus, Kontur, Verlauf, Schatten, Schein und Schriftschnitt
+            ' fallen; das Wasserzeichen im Export sah dann anders aus als die Vorlage.
+            Dim run = vorlage.Clone()
+            run.WidthPixels = _dialogWatermarkWidthPixels
+            run.HeightPixels = _dialogWatermarkHeightPixels
+            run.Anchor = _dialogWatermarkAnchor
+            run.Opacity = _dialogWatermarkOpacity
+            run.OffsetXPixels = _dialogWatermarkOffsetXPixels
+            run.OffsetYPixels = _dialogWatermarkOffsetYPixels
+            Return run
         End Function
 
         Private Sub PersistDialogTargetNamePattern()

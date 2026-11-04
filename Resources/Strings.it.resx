@@ -10889,4 +10889,13 @@
   <data name="Nur_behaltene_04fefa47" xml:space="preserve">
     <value>Solo tenute</value>
   </data>
+  <data name="Waagrechter_Abstand_von_der_Ankerecke_in_Bildpun_66631d91" xml:space="preserve">
+    <value>Distanza orizzontale dall'angolo di ancoraggio in pixel</value>
+  </data>
+  <data name="Senkrechter_Abstand_von_der_Ankerecke_in_Bildpun_def2c8f1" xml:space="preserve">
+    <value>Distanza verticale dall'angolo di ancoraggio in pixel</value>
+  </data>
+  <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
+    <value>Opacità della filigrana in percentuale, da 0 a 100</value>
+  </data>
 </root>

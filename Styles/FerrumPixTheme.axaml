@@ -785,11 +785,18 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <!-- Die freien Punkte des Ankers in der Farbe gedämpften TEXTES, nicht eines Rahmens: mit
+         FP.Border.Strong lagen sie im dunklen Thema kaum über dem Hintergrund und waren bei
+         schwächerer Sicht nicht zu finden. Der Rahmen darum nutzt dieselbe Farbe
+         (Klasse anchor-frame). -->
+    <Style Selector="Border.anchor-frame">
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Muted}"/>
+    </Style>
     <Style Selector="Border.anchor-dot-idle">
-        <Setter Property="Width" Value="10"/>
-        <Setter Property="Height" Value="10"/>
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
         <Setter Property="CornerRadius" Value="2"/>
-        <Setter Property="Background" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Text.Muted}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>

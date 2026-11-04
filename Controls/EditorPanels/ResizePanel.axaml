@@ -284,7 +284,7 @@
                     <Grid ColumnDefinitions="92,*" VerticalAlignment="Top">
                         <TextBlock Text="Position" Foreground="{DynamicResource FP.Text.Secondary}"
                                    FontSize="{DynamicResource FP.Font.Small}" VerticalAlignment="Top" Margin="0,10,0,0" />
-                        <Border Grid.Column="1" BorderBrush="{DynamicResource FP.Border.Normal}"
+                        <Border Grid.Column="1" Classes="anchor-frame"
                                 BorderThickness="1" CornerRadius="6" Padding="12,10"
                                 HorizontalAlignment="Left">
                             <Grid Width="72" Height="72">

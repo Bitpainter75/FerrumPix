@@ -10929,4 +10929,13 @@
   <data name="Nur_behaltene_04fefa47" xml:space="preserve">
     <value>残すもののみ</value>
   </data>
+  <data name="Waagrechter_Abstand_von_der_Ankerecke_in_Bildpun_66631d91" xml:space="preserve">
+    <value>アンカーの角からの横方向の距離（ピクセル）</value>
+  </data>
+  <data name="Senkrechter_Abstand_von_der_Ankerecke_in_Bildpun_def2c8f1" xml:space="preserve">
+    <value>アンカーの角からの縦方向の距離（ピクセル）</value>
+  </data>
+  <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
+    <value>透かしの不透明度（パーセント、0〜100）</value>
+  </data>
 </root>

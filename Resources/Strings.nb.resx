@@ -10929,4 +10929,13 @@
   <data name="Nur_behaltene_04fefa47" xml:space="preserve">
     <value>Bare beholdte</value>
   </data>
+  <data name="Waagrechter_Abstand_von_der_Ankerecke_in_Bildpun_66631d91" xml:space="preserve">
+    <value>Vannrett avstand fra ankerhjørnet i piksler</value>
+  </data>
+  <data name="Senkrechter_Abstand_von_der_Ankerecke_in_Bildpun_def2c8f1" xml:space="preserve">
+    <value>Loddrett avstand fra ankerhjørnet i piksler</value>
+  </data>
+  <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
+    <value>Vannmerkets dekkevne i prosent, 0 til 100</value>
+  </data>
 </root>
