@@ -2744,12 +2744,25 @@ Namespace ViewModels
         ''' Fortschrittsrueckruf ab (RawDecodeService.RunWhileWanted). Wer gleich in den Editor
         ''' wechselt, behaelt denselben Token, wartet auf denselben Lauf und bekommt dessen Daten.</summary>
         Private Async Sub WarmRawCacheAfterDwellAsync(path As String, token As Integer)
+            Dim name = IO.Path.GetFileName(path)
             Try
+                ' Jeder Ausgang meldet sich (Viewer.RawWarm): stumm liess sich nicht erkennen, ob
+                ' das Vorwaermen ueberholt wurde, nie lief oder zwar lief, aber nichts ablegte.
+                DiagnosticLogService.LogAlways("Viewer.RawWarm", $"geplant file={name}; token={token}")
                 Await Task.Delay(RawWarmDwellMs)
-                If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then Return
-                If Not RawDecodeService.IsAvailable Then Return
-                Await Task.Run(Function() RawDecodeService.WarmRawCache(
+                Dim current = System.Threading.Volatile.Read(_bitmapLoadToken)
+                If token <> current Then
+                    DiagnosticLogService.LogAlways("Viewer.RawWarm", $"ueberholt vor dem Start file={name}; token={token}; jetzt={current}")
+                    Return
+                End If
+                If Not RawDecodeService.IsAvailable Then
+                    DiagnosticLogService.LogAlways("Viewer.RawWarm", $"LibRaw fehlt file={name}")
+                    Return
+                End If
+                Dim filled = Await Task.Run(Function() RawDecodeService.WarmRawCache(
                     path, Function() token = System.Threading.Volatile.Read(_bitmapLoadToken)))
+                DiagnosticLogService.LogAlways("Viewer.RawWarm",
+                    $"{If(filled, "abgelegt", "nichts abgelegt")} file={name}; token={token}; jetzt={System.Threading.Volatile.Read(_bitmapLoadToken)}")
             Catch ex As Exception
                 DiagnosticLogService.LogException("Viewer.WarmRawCache", ex)
             End Try

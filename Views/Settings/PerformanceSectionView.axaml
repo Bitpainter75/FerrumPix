@@ -1,0 +1,209 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.PerformanceSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Leistung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wie schnell FerrumPix arbeitet: Größe und Qualität der Zwischenspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Vorschaubilder zwischenspeichern" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Speichert Vorschaubilder auf dem Gerät, damit Ordner beim nächsten Öffnen schneller geladen werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ThumbnailCacheEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Vorschaubild-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Bestimmt die JPEG-Qualität neu erzeugter zwischengespeicherter Vorschaubilder." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="45"
+                                                   Maximum="95"
+                                                   DefaultValue="82"
+                                                   Value="{Binding ThumbnailQuality}"/>
+                                <TextBlock Text="{Binding ThumbnailQuality, StringFormat={}{0}%}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Vorschaubilder in hoher Auflösung" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Speichert Vorschaubilder doppelt so breit, damit auch die größten Kacheln scharf bleiben. Braucht mehr Platz auf dem Gerät und mehr Arbeitsspeicher. Kleinere Vorschaubilder werden beim Ansehen neu erzeugt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ThumbnailHighResolution}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Vorschaubild-Speichercache" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wie viele Vorschaubilder maximal gleichzeitig im Arbeitsspeicher gehalten werden. Höhere Werte verringern erneutes Laden beim Scrollen, benötigen aber mehr Arbeitsspeicher." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1000"
+                                                   Maximum="10000"
+                                                   DefaultValue="1000"
+                                                   Value="{Binding ThumbnailMemoryCacheCapacity}"/>
+                                <!-- Fuenf Stellen brauchen Platz: bei 34 Punkten stand die
+                                     Zehntausend abgeschnitten da. -->
+                                <TextBlock Text="{Binding ThumbnailMemoryCacheCapacity}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="46"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Beide Grafikkarten-Schalter stehen hier bei der Leistung, untereinander:
+                             zwei getrennte Wege (Skia fuer die Bildbearbeitung, die Laufzeit der
+                             Modelle fuer die gelernten Modelle) mit getrennter Probe. Der Statustext
+                             unter jedem Schalter sagt, ob die Probe bestanden ist und WELCHE Karte
+                             gefunden wurde; ein Schalter ohne diese Angabe waere einer ins Ungewisse. -->
+                        <!-- Die Auswahl der Karte steht VOR beiden Schaltern, weil sie fuer beide gilt
+                             (die Bildbearbeitung unter Linux ab dem naechsten Start, siehe
+                             GpuImageService.ApplyRenderOffloadEnvironment). Sie erscheint NUR, wenn
+                             wirklich mehr als eine Karte im Rechner steckt. Bei einer einzigen waere
+                             sie eine Frage ohne Antwortmoeglichkeit. -->
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasMultipleGpuDevices}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Verwendete Grafikkarte" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt für die Modelle und unter Linux auch für die Bildbearbeitung. Die Bildbearbeitung wechselt erst nach einem Neustart, und das Fenster wird dann ebenfalls auf dieser Karte gezeichnet."
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding GpuDeviceOptions}"
+                                      SelectedItem="{Binding SelectedGpuDevice, Mode=TwoWay}"
+                                      IsEnabled="{Binding GpuAccelerationAvailable}"
+                                      MinWidth="260"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Grafikkarte für die Bildbearbeitung nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Rechnet Farbe und Tonwerte auf der Grafikkarte statt auf dem Prozessor, in der Vorschau, beim Exportieren und im Stapel. Das Ergebnis weicht höchstens um eine Tonstufe ab. Bisher übernimmt die Karte nur einen Teil der Regler, der Rest rechnet weiter auf dem Prozessor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding CheckGpuImageProcessingCommand}"
+                                            ToolTip.Tip="Rechnet ein Prüfbild auf der Grafikkarte und auf dem Prozessor und vergleicht beide.">Prüfen</Button>
+                                    <ToggleSwitch IsChecked="{Binding GpuImageProcessing}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding GpuImageProcessingStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Grafikkarte für gelernte Modelle nutzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Lässt Entrauschen, Hochskalieren, Objektauswahl und Tiefenkarte auf der Grafikkarte rechnen statt auf dem Prozessor. Das Ergebnis bleibt dasselbe, nur die Wartezeit wird kürzer. Die übrigen Modelle bleiben beim Prozessor, weil sie dort gemessen schneller sind." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Button Classes="ghost" Padding="12,7"
+                                            Command="{Binding CheckGpuAccelerationCommand}"
+                                            IsEnabled="{Binding GpuAccelerationAvailable}"
+                                            ToolTip.Tip="Lädt ein Modell versuchsweise auf die Grafikkarte und schließt es sofort wieder. Nur so zeigt sich, ob der Treiber die Karte wirklich hergibt.">Prüfen</Button>
+                                    <ToggleSwitch IsChecked="{Binding GpuAccelerationEnabled}"
+                                                  IsEnabled="{Binding GpuAccelerationAvailable}"
+                                                  OnContent=""
+                                                  OffContent=""
+                                                  VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="{Binding GpuAccelerationStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+                        </StackPanel>
+
+                        <!-- Der dritte Weg auf die Grafikhardware, deshalb hier bei den beiden
+                             anderen und nicht beim Betrachter: das Dekodieren der Videos durch libmpv. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Hardwarebeschleunigung für Videowiedergabe" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Nutzt die Grafikhardware zur Videodekodierung. Bei Bildfehlern in der Videowiedergabe deaktivieren (Software-Decoding). Wirkt beim nächsten Öffnen eines Videos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding VideoHardwareAcceleration}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Die Faeden der Modelle auf dem Prozessor. Die Obergrenze ist die Zahl
+                             der logischen Kerne dieses Rechners, die Vorgabe die Haelfte. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Prozessorkerne für Modelle" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wie viele Kerne des Prozessors die Modelle nutzen, etwa beim Entrauschen. Ab Werk die Hälfte, damit die Bedienung flüssig bleibt, während ein Modell rechnet. Mehr Kerne rechnen schneller, solange das Modell nicht auf der Grafikkarte läuft." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1"
+                                                   Maximum="{Binding ModelThreadsMaximum}"
+                                                   DefaultValue="{Binding ModelThreadsDefault}"
+                                                   Value="{Binding ModelThreads}"/>
+                                <TextBlock Text="{Binding ModelThreadsText}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="46"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fehlerdiagnose-Protokoll" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EnableDiagnosticLogging}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                    </StackPanel>
+</UserControl>

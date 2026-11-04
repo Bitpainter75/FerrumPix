@@ -1,0 +1,159 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.NextcloudSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Nextcloud" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Bindet eine Nextcloud ein. Zeitachse und Alben erscheinen im Navigationsbereich der Galerie. Die Memories-App wird nicht vorausgesetzt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nextcloud aktivieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt den Nextcloud-Zweig mit deiner Zeitachse und deinen Alben im Galeriebaum an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NextcloudEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Server-URL" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Adresse deiner Nextcloud, z. B. https://wolke.example.de" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="320"
+                                     PlaceholderText="https://wolke.example.de"
+                                     Text="{Binding NextcloudServerUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Benutzername" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Der Anmeldename deines Nextcloud-Kontos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="320"
+                                     Text="{Binding NextcloudUserName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="App-Passwort" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="In Nextcloud unter Einstellungen, Sicherheit, App-Passwort erstellen. Das Kontopasswort funktioniert bei Zwei-Faktor-Anmeldung nicht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="320"
+                                     PasswordChar="•"
+                                     Text="{Binding NextcloudAppPassword, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <!-- Dieselbe Breite und derselbe Abstand wie bei jeder Beschreibung auf
+                                 dieser Seite. Ohne den Rand stiess die Meldung an den Knopf: sie ist
+                                 die laengste der Oberflaeche und wird in anderen Sprachen und bei
+                                 groesserer Schrift noch laenger. -->
+                            <TextBlock Text="{Binding NextcloudConnectionMessage}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       HorizontalAlignment="Left"
+                                       MaxWidth="660"
+                                       Margin="0,0,40,0"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                    IsEnabled="{Binding !NextcloudIsTesting}"
+                                    Command="{Binding TestNextcloudConnectionCommand}">Verbindung testen</Button>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Löschen in Nextcloud erlauben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Erlaubt es, Bilder vom Server zu löschen. Sie landen im Papierkorb von Nextcloud und lassen sich dort wiederherstellen. Aus: Löschen bleibt bei Serverbildern wirkungslos." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NextcloudAllowDelete}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudAllowDelete}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Endgültig löschen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gelöschte Bilder gehen am Papierkorb von Nextcloud vorbei und sind sofort weg. Aus: sie liegen im Papierkorb und lassen sich dort wiederherstellen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NextcloudDeletePermanently}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Originale auf dem Server ersetzen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Speichern schreibt die Bearbeitung an die Stelle des Originals. Die Datei bleibt dieselbe, sie behält Alben und Freigaben. Aus: neben dem Original entsteht nur eine Begleitdatei mit der Bearbeitung. RAW und PSD bleiben in jedem Fall unangetastet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NextcloudReplaceOriginal}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Zielordner für Uploads" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Dorthin kommen hochgeladene Bilder. Ein vorhandener Name wird nicht überschrieben, sondern nummeriert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="320"
+                                     Text="{Binding NextcloudUploadFolder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     PlaceholderText="/Photos"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Trenner wie über "Immich-Cache leeren": darunter geht es nicht mehr um
+                             die Verbindung, sondern ums Aufräumen. -->
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nextcloud-Cache leeren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht die lokal zwischengespeicherten Nextcloud-Vorschaubilder. Sie werden bei Bedarf neu geladen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding NextcloudCacheMessage}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanNextcloudCatalogCommand}">Katalogdaten entfernen</Button>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ClearNextcloudCacheCommand}">Cache leeren</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <!-- Derselbe Durchlauf wie bei Immich, mit denselben Regeln. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aufnahmedaten vollständig laden" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Holt Stichwörter, Größe und Aufnahmezeit für alle Fotos des Servers, damit die Suche sie auch dort findet, wo Sie noch nicht waren. Läuft nur auf diesen Knopf und ändert auf dem Server nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ServerScanMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CancelServerScanCommand}" IsVisible="{Binding ServerScanRunning}">Abbrechen</Button>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ScanNextcloudMetadataCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt laden</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="KI-Stichwörter indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Lädt jedes Bild einmal als temporäre Kopie, erkennt Inhalte lokal und speichert die Ergebnisse nur im lokalen Nextcloud-Index." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Command="{Binding ScanNextcloudAiTagsCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt indizieren</Button>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding NextcloudEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Katalogdaten als XMP-Sidecars ablegen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Erhält vorhandene .xmp-Dateien, ergänzt Bewertung, Farb-Label sowie manuelle und KI-Stichwörter und legt fehlende Sidecars neben den Bildern auf Nextcloud an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Command="{Binding SyncNextcloudCatalogToXmpCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt synchronisieren</Button>
+                        </Grid>
+                    </StackPanel>
+</UserControl>

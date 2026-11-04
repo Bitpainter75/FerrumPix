@@ -1,0 +1,306 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.GeneralSectionView">
+                    <StackPanel Spacing="16">
+                        <Border Height="180" BorderThickness="0" Padding="0, 20" Margin="-22,0,0,0" >
+                            <Grid HorizontalAlignment="Center">
+                                <Image Source="avares://FerrumPix/Assets/FerrumPix_Settings_Dark.png"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"
+                                       IsVisible="{Binding IsDarkOrGrayDarkThemeMode}"/>
+                                <Image Source="avares://FerrumPix/Assets/FerrumPix_Settings_Light.png"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Left"
+                                       IsVisible="{Binding IsLightOrGrayLightThemeMode}"/>
+                            </Grid>
+                        </Border>
+
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" ColumnSpacing="12" >
+                            <TextBlock Text="Version" Foreground="{DynamicResource FP.Text.Muted}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="{Binding DisplayVersion}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="10,4" VerticalAlignment="Center"
+                                        IsVisible="{Binding IsUpdateAvailable}"
+                                        Click="OnReleasePageClick"
+                                        ToolTip.Tip="Veröffentlichte Fassung herunterladen">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"
+                                                       IconBrush="{DynamicResource FP.Accent}"/>
+                                        <TextBlock Text="Aktualisierung verfügbar:" Foreground="{DynamicResource FP.Accent}"/>
+                                        <TextBlock Text="{Binding AvailableVersion}" Foreground="{DynamicResource FP.Accent}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Homepage" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="https://ferrumpix.app" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnHomepageClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"/>
+                                    <TextBlock Text="Öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="GitHub Repository" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="https://github.com/Bitpainter75/FerrumPix" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Click="OnGitHubClick">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"/>
+                                    <TextBlock Text="Öffnen"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- Frei und quelloffen, dazu die Bitte um Unterstuetzung. Die Tasse ist in
+                             XAML gezeichnet und nicht als Bild eingebunden: so nimmt sie Akzentfarbe
+                             und Thema mit, ein fertiges Bild passte nur zu einer Fassung. Bewusst
+                             zurueckhaltend: eine Zeile wie Homepage und GitHub, keine farbige Karte, die
+                             Tasse nur im Knopf. Das Herz ist ein LOCH in der Tasse (F0 = EvenOdd) und
+                             keine Flaeche in Hintergrundfarbe: der Knopf wechselt seinen Grund beim
+                             Ueberfahren, eine gemalte Flaeche stuende dann als Fleck da. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Frei und quelloffen. Für immer." FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="FerrumPix kostet nichts, zeigt keine Werbung und braucht kein Abo. Wenn dir die Anwendung gefällt und du meine Arbeit daran unterstützen möchtest, freue ich mich über einen Kaffee."
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Nur die Tasse, ohne Beschriftung; was der Knopf tut, sagt der Hinweis. -->
+                            <Button Grid.Column="1" Classes="ghost" Padding="10,8" VerticalAlignment="Center"
+                                    Tag="https://ko-fi.com/bitpainter75" Click="OnLicenseLinkClick"
+                                    ToolTip.Tip="Öffnet meine Seite auf Ko-fi">
+                                    <Viewbox Width="34" Height="34" VerticalAlignment="Center">
+                                        <Canvas Width="64" Height="64">
+                                            <!-- Dampf -->
+                                            <Path Data="M22,18 C18,13 26,10 22,4" Stroke="{DynamicResource FP.Text.Muted}"
+                                                  StrokeThickness="4" StrokeLineCap="Round"/>
+                                            <Path Data="M32,17 C28,12 36,9 32,2" Stroke="{DynamicResource FP.Text.Muted}"
+                                                  StrokeThickness="4" StrokeLineCap="Round"/>
+                                            <Path Data="M42,18 C38,13 46,10 42,4" Stroke="{DynamicResource FP.Text.Muted}"
+                                                  StrokeThickness="4" StrokeLineCap="Round"/>
+                                            <!-- Untertasse, Henkel, Tasse mit Herz als Loch -->
+                                            <Rectangle Canvas.Left="6" Canvas.Top="56" Width="52" Height="5"
+                                                       RadiusX="2.5" RadiusY="2.5" Fill="{DynamicResource FP.Text.Muted}"/>
+                                            <Path Data="M50,29 C60,29 61,44 48,45" Stroke="{DynamicResource FP.Accent}"
+                                                  StrokeThickness="5" StrokeLineCap="Round"/>
+                                            <Path Data="F0 M12,24 L52,24 L48,48 C47.5,52 44.5,55 40,55 L24,55 C19.5,55 16.5,52 16,48 Z M32,48 C26,43 22,40 22,36 C22,33 24.5,31 27,31 C29,31 31,32.5 32,34 C33,32.5 35,31 37,31 C39.5,31 42,33 42,36 C42,40 38,43 32,48 Z"
+                                                  Fill="{DynamicResource FP.Accent}"/>
+                                        </Canvas>
+                                    </Viewbox>
+                            </Button>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}"/>
+
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Allgemein" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Grundlegende Einstellungen für Startverhalten und Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Start mit Bilddatei" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, welcher Modus verwendet wird, wenn FerrumPix mit einem Bild als Parameter geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupGalleryMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Gallery">Galerie</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupViewerMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Viewer">Viewer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupEditorMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Editor">Editor</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupFullscreenMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupImageModeCommand}"
+                                        CommandParameter="Fullscreen">Vollbild</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Start ohne Bilddatei" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, was erscheint, wenn FerrumPix ohne ein Bild geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupNoImageGalleryMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupNoImageModeCommand}"
+                                        CommandParameter="Gallery">Galerie</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupNoImageViewerMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupNoImageModeCommand}"
+                                        CommandParameter="Viewer">Viewer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsStartupNoImageEditorMode}"
+                                        Padding="10,6"
+                                        Command="{Binding SetStartupNoImageModeCommand}"
+                                        CommandParameter="Editor">Editor</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sprache" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Verwendet standardmäßig die Systemsprache; falls nicht unterstützt, Englisch." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- AUSWAHLLISTE statt Knopfreihe: mit jeder weiteren Sprache waere die
+                                 Reihe laenger geworden, bis sie nicht mehr in die Zeile passt. Die
+                                 Namen stehen in ihrer eigenen Sprache - wer die Oberflaeche in einer
+                                 Sprache sieht, die er nicht versteht, findet "Deutsch" wieder. -->
+                            <ComboBox Grid.Column="1"
+                                      Name="LanguageComboBox"
+                                      ItemsSource="{Binding LanguageOptions}"
+                                      SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                      MinWidth="200"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Datumsformat" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wie Datum und Uhrzeit angezeigt werden, unabhängig von der Sprache." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding DateFormatOptions}"
+                                      SelectedItem="{Binding SelectedDateFormat, Mode=TwoWay}"
+                                      MinWidth="200"
+                                      VerticalAlignment="Center"
+                                      FontSize="{DynamicResource FP.Font.Body}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Papierkorb überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht Dateien und Ordner dauerhaft, statt sie in den Papierkorb zu verschieben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding DeleteSkipTrash}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sicherheitsabfrage beim Löschen überspringen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht Dateien und Ordner ohne vorherige Bestätigung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding DeleteSkipConfirmation}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Zeichentablett" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schaltflächen und Menüeinträge lösen beim Aufsetzen des Stifts aus statt beim Abheben. Einschalten, wenn sich mit dem Stift zwar Regler ziehen, aber nichts anklicken lässt. Ein Klick lässt sich dann nicht mehr zurücknehmen, indem man vor dem Loslassen wegzieht." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- ClickMode FEST auf Press, und zwar in BEIDEN Richtungen. Dieser eine
+                                 Schalter aendert seinen eigenen ClickMode, waehrend er bedient wird:
+                                 im Modus steht er auf Press, loest also beim Druecken aus, nimmt
+                                 dabei den Stil weg - und beim Loslassen steht er wieder auf Release
+                                 und loest ein ZWEITES Mal aus. Derselbe Klick schaltete damit aus
+                                 und sofort wieder ein. Ein Wert im XAML schlaegt den Stil, damit
+                                 bleibt er waehrend der Geste stehen. Und Press und nicht Release:
+                                 mit dem Stift ist Druecken die Haelfte, die ankommt - sonst laesst
+                                 sich der Modus mit dem Stift gar nicht erst einschalten. -->
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding TabletMode}"
+                                          ClickMode="Press"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Stiftdruck steuert die Pinselgröße" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Leichter Druck malt schmaler, voller Druck in der eingestellten Größe. Gilt für Pinsel, Radierer und Maskenpinsel, und nur mit einem Stift; die Maus malt immer in voller Größe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding PenPressureSize}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Was das blanke Mausrad tut, getrennt fuer Viewer und Vollbild. STRG tut
+                             jeweils das andere, die rechte Taste zoomt immer. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Mausrad im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Was das Mausrad im Viewer tut. Mit STRG tut es jeweils das andere, mit gedrückter rechter Maustaste zoomt es immer." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerWheelNavigate}" Padding="10,6"
+                                        Command="{Binding SetViewerWheelActionCommand}" CommandParameter="Navigate">Bildwechsel</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsViewerWheelZoom}" Padding="10,6"
+                                        Command="{Binding SetViewerWheelActionCommand}" CommandParameter="Zoom">Zoomen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Mausrad im Vollbild und in der Diashow" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Was das Mausrad im Vollbild und in der Diashow tut. Mit STRG tut es jeweils das andere, mit gedrückter rechter Maustaste zoomt es immer." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenWheelNavigate}" Padding="10,6"
+                                        Command="{Binding SetFullscreenWheelActionCommand}" CommandParameter="Navigate">Bildwechsel</Button>
+                                <Button Classes="ghost" Classes.active="{Binding IsFullscreenWheelZoom}" Padding="10,6"
+                                        Command="{Binding SetFullscreenWheelActionCommand}" CommandParameter="Zoom">Zoomen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Trackpad-Modus" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Aktiviert Trackpad-Gesten: Zwei-Finger-Zoom im Viewer, horizontal wischen zum Blättern sowie Pannen mit Ziehen bei vergrößertem Bild. Ist im Viewer Zuschneiden durch Ziehen eingeschaltet, öffnet dort SHIFT+Ziehen den Zuschneidebereich. Die Maus-Standardbedienung bleibt bei ausgeschaltetem Modus unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding TrackpadMode}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+</UserControl>

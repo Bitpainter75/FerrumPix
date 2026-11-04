@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.ImmichSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Immich" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Bindet einen self-hosted Immich-Server ein. Alben erscheinen im Navigationsbereich der Galerie; Bilder lassen sich betrachten und (als Kopie) bearbeiten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Immich aktivieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt den Immich-Zweig mit deinen Alben im Galeriebaum an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Server-URL" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Basis-Adresse deiner Immich-Instanz, z. B. http://nas:2283" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="320"
+                                     PlaceholderText="http://nas:2283"
+                                     Text="{Binding ImmichServerUrl, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="API-Key" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Im Immich-Webinterface unter Konto → API-Keys erzeugen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBox Grid.Column="1" Width="320"
+                                     PasswordChar="•"
+                                     Text="{Binding ImmichApiKey, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <TextBlock Text="{Binding ImmichConnectionMessage}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       HorizontalAlignment="Left"
+                                       MaxWidth="660"
+                                       Margin="0,0,40,0"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                    IsEnabled="{Binding !ImmichIsTesting}"
+                                    Command="{Binding TestImmichConnectionCommand}">Verbindung testen</Button>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sterne in Beschreibung speichern" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Speichert FerrumPix-Bewertungen in einem abgegrenzten Block der Immich-Beschreibung statt im Immich-Rating-Feld." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichStoreRatingInDescription}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Stichwörter in Beschreibung speichern" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Speichert FerrumPix-Stichwörter in einem abgegrenzten Block der Immich-Beschreibung statt als Immich-Stichwörter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichStoreTagsInDescription}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Ab Werk AUS: hier verlässt eine Angabe den Rechner, die sonst nirgends
+                             hingeht - wer auf welchem Foto zu sehen ist. -->
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Erkannte Personen nach Immich schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Schreibt die Namen der auf einem Immich-Bild erkannten Personen als Immich-Stichwörter auf den Server. Nur benannte Gruppen, und nur nach einem Durchlauf der Personenerkennung. Aus: die Erkennung bleibt auf diesem Gerät." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichWritePeopleTags}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Vorhandene Assets aktualisieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Bearbeitungen ersetzen das Immich-Asset, aus dem sie stammen (Alben, Stichwörter, Bewertung und Favorit bleiben erhalten; das Original wandert in den Immich-Papierkorb). Gilt für Speichern UND für Speichern unter mit Ziel Immich. Aus: jede Bearbeitung legt ein neues Asset an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichUpdateExistingAssets}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Löschen in Immich erlauben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löschen wirkt in Galerie und Viewer auch auf Immich-Assets - also auf den Server, nicht nur auf die lokale Ansicht. Aus: Immich-Bilder lassen sich nicht löschen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichAllowDelete}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichAllowDelete}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Endgültig löschen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Umgeht den Immich-Papierkorb: gelöschte Assets sind sofort weg und lassen sich auch im Immich-Webinterface nicht wiederherstellen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ImmichDeletePermanently}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Immich-Cache leeren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Löscht die lokal zwischengespeicherten Immich-Vorschaubilder. Sie werden bei Bedarf neu geladen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ImmichCacheMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CleanImmichCatalogCommand}">Katalogdaten entfernen</Button>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ClearImmichCacheCommand}">Cache leeren</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <!-- Der Durchlauf steht NUR hier und laeuft NUR auf diesen Knopf: er
+                             erzeugt bei einem grossen Bestand zehntausende Anfragen gegen einen
+                             fremden Server. Er raeumt nichts auf; dafuer sind die Knoepfe darueber
+                             da (siehe ServerIndexRunner). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aufnahmedaten vollständig laden" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Holt Kamera, Objektiv, Brennweite, ISO, Blende und Stichwörter für alle Fotos des Servers, damit die Suche sie auch dort findet, wo Sie noch nicht waren. Läuft nur auf diesen Knopf und ändert auf dem Server nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ServerScanMessage}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding CancelServerScanCommand}" IsVisible="{Binding ServerScanRunning}">Abbrechen</Button>
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ScanImmichMetadataCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt laden</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding ImmichEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="KI-Stichwörter indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Lädt jedes Bild einmal als temporäre Kopie, erkennt Inhalte lokal und speichert die Ergebnisse nur im lokalen Immich-Index." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Command="{Binding ScanImmichAiTagsCommand}" IsEnabled="{Binding !ServerScanRunning}">Jetzt indizieren</Button>
+                        </Grid>
+                    </StackPanel>
+</UserControl>

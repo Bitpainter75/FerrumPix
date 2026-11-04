@@ -34,7 +34,8 @@ Namespace Services
 
         ''' <summary>Filtert die Abschnitte. Rueckgabe: wie viele Abschnitte etwas zeigen, oder -1
         ''' bei leerer Suche (dann ist alles wieder wie vorher).</summary>
-        ''' <param name="sections">Die Abschnitte, jeder ein Border um eine Spalte.</param>
+        ''' <param name="sections">Die Abschnitte, jeder ein Border um eine Spalte oder um ein
+        ''' UserControl, das die Spalte als Inhalt traegt.</param>
         ''' <param name="navigation">Zu jedem Abschnitt sein Eintrag in der Bereichsliste, oder
         ''' Nothing.</param>
         Public Function Apply(sections As IEnumerable(Of Border), navigation As Func(Of Border, Control), query As String) As Integer
@@ -50,7 +51,11 @@ Namespace Services
                 If nav IsNot Nothing AndAlso Matches(nav, words) Then
                     hit = True
                 Else
+                    ' Der Inhalt eines Abschnitts ist ein eigenes UserControl (Views/Settings), die
+                    ' Spalte steckt in dessen Content. Direkt als Kind kommt sie nur noch in
+                    ' handgebauten Abschnitten vor, etwa in den Pruefungen.
                     Dim column = TryCast(section.Child, Panel)
+                    If column Is Nothing Then column = TryCast(TryCast(section.Child, UserControl)?.Content, Panel)
                     hit = column IsNot Nothing AndAlso FilterColumn(column, words)
                 End If
                 If hit Then

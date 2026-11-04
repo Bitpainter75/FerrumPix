@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.ViewerSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Viewer" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Legt fest, wie Bilder beim Öffnen dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Bilder an Fenstergröße anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Öffnet Bilder skaliert auf die verfügbare Fensterfläche statt in Originalgröße." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerOpenFitToWindow}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Beim Doppelklick auf das Bild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Öffnet bei Doppelklick auf das Bild den Editor oder kehrt zur Galerie zurück." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerDoubleClickGallery}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerDoubleClickTargetCommand}"
+                                        CommandParameter="Gallery">Galerie</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerDoubleClickEditor}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerDoubleClickTargetCommand}"
+                                        CommandParameter="Editor">Editor</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Zuschneiden durch Ziehen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ziehen mit der linken Maustaste zieht einen Zuschnittrahmen auf und öffnet das Bild damit im Editor. Ausgeschaltet verschiebt das Ziehen ein vergrößertes Bild." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerCropDrag}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt nur für den Viewer: nur verkleinern, wenn das Bild größer als die Anzeigefläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerFitBehaviorOnlyWhenLarger}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        CommandParameter="OnlyWhenLarger">Nur wenn größer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsViewerFitBehaviorAlways}"
+                                        Padding="10,6"
+                                        Command="{Binding SetViewerFitBehaviorCommand}"
+                                        CommandParameter="Always">Immer einpassen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fußzeile im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben, Zoom und Bewertung. Ausgeschaltet bleibt mehr Platz für das Bild; geblättert und gezoomt wird dann über Tastatur, Mausrad und das Menü mit der rechten Maustaste. Der Filmstreifen hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerShowFooter}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Diashow-Dauer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, wie lange ein Bild in der Diashow sichtbar bleibt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1"
+                                                   Maximum="30"
+                                                   DefaultValue="3"
+                                                   Value="{Binding ViewerSlideshowIntervalSeconds}"/>
+                                <TextBlock Text="{Binding ViewerSlideshowIntervalSeconds, StringFormat={}{0}s}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Diashow in zufälliger Reihenfolge" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Die Diashow mischt die Bilder. Jedes Bild kommt einmal dran, bevor neu gemischt wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerSlideshowShuffle}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nach dem Bewerten zum nächsten Bild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Nach dem Vergeben von Sternen geht der Betrachter gleich zum nächsten Bild. Nimmt man die Bewertung wieder weg, bleibt das Bild stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerAdvanceAfterRating}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                    </StackPanel>
+</UserControl>

@@ -2353,8 +2353,14 @@ Namespace Services
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return False
             Return DecodeGate.Run(
                 Function()
-                    If stillWanted IsNot Nothing AndAlso Not stillWanted() Then Return False
-                    If HasRawCacheFor(path) Then Return True
+                    If stillWanted IsNot Nothing AndAlso Not stillWanted() Then
+                        DiagnosticLogService.LogAlways("RawDecodeService.Warm", $"ueberholt unter der Schleuse file={IO.Path.GetFileName(path)}")
+                        Return False
+                    End If
+                    If HasRawCacheFor(path) Then
+                        DiagnosticLogService.LogAlways("RawDecodeService.Warm", $"liegt schon da file={IO.Path.GetFileName(path)}")
+                        Return True
+                    End If
                     Try
                         Dim baseEv = BaseExposureForFile(path)
                         Dim lens = LensCorrectionForFile(path, Nothing)
@@ -2373,7 +2379,8 @@ Namespace Services
                                         Return True
                                     End Function)
                             End Sub)
-                    Catch
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("RawDecodeService.Warm", ex)
                         Return False
                     End Try
                     Return HasRawCacheFor(path)

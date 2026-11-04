@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.ExternalProgramsSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Externe Programme" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Programme, an die FerrumPix Bilder weitergeben kann." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Öffnen mit" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Diese Programme stehen im Kontextmenü von Galerie und Betrachter unter Öffnen mit. Weitergegeben wird immer die Originaldatei, ohne Bearbeitungen. In den Parametern steht %f für den Dateipfad, ohne %f wird er angehängt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding AddOpenWithProgramCommand}">Programm hinzufügen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding OpenWithRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="170,*,Auto,190,Auto" ColumnSpacing="6" Margin="0,0,0,6"
+                                              AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="Name"/>
+                                            <TextBox Grid.Column="1"
+                                                     Text="{Binding ProgramPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="Programm"/>
+                                            <Button Grid.Column="2" Classes="ghost" Padding="10,6"
+                                                    Click="OnBrowseOpenWithProgramClick">Auswählen</Button>
+                                            <TextBox Grid.Column="3"
+                                                     Text="{Binding Arguments, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="Parameter"/>
+                                            <Button Grid.Column="4" Classes="ghost"
+                                                    Width="30" Height="30" Padding="0"
+                                                    VerticalAlignment="Center"
+                                                    Command="{Binding RemoveCommand}"
+                                                    ToolTip.Tip="Entfernen">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                               Width="18" Height="18"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="G'MIC" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Mit G'MIC lässt sich das Bild im Editor über das Menü der Fußzeile bearbeiten, das Ergebnis kommt als Ebene zurück. G'MIC wird nicht mitgeliefert. Bleibt das Feld leer, sucht FerrumPix gmic_qt selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Ueber die volle Breite: ein Programmpfad ist lang, und ein linksbuendiges
+                                 Raster war nur so breit wie sein Inhalt. -->
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                <TextBox Text="{Binding GmicQtPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                         PlaceholderText="Automatisch suchen"/>
+                                <Button Grid.Column="1" Classes="ghost" Padding="10,6"
+                                        Click="OnBrowseGmicClick">Auswählen</Button>
+                            </Grid>
+                            <TextBlock Classes="no-translate" Text="{Binding GmicStatusText}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+</UserControl>

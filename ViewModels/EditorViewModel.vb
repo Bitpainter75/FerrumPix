@@ -6823,27 +6823,27 @@ Namespace ViewModels
             Dim [to] = {CDbl(after.CalibrationRedHue), after.CalibrationRedSaturation, after.CalibrationGreenHue,
                         after.CalibrationGreenSaturation, after.CalibrationBlueHue, after.CalibrationBlueSaturation,
                         after.CalibrationShadowTint}
-            Dim untouched = True
-            Dim differs = False
+            ' JEDER REGLER FUER SICH: wer einen davon verstellt hat, behaelt ihn, die uebrigen
+            ' tauschen trotzdem. Als Paket haette ein einziger eigener Wert die sechs anderen
+            ' Kamerawerte im Negativ stehen lassen.
+            Dim names = {NameOf(CalibrationRedHue), NameOf(CalibrationRedSaturation),
+                         NameOf(CalibrationGreenHue), NameOf(CalibrationGreenSaturation),
+                         NameOf(CalibrationBlueHue), NameOf(CalibrationBlueSaturation),
+                         NameOf(CalibrationShadowTint)}
             For i = 0 To current.Length - 1
-                If Math.Abs(current(i) - from(i)) >= tolerance Then untouched = False
-                If Math.Abs(from(i) - [to](i)) >= tolerance Then differs = True
+                If Math.Abs(current(i) - from(i)) >= tolerance Then Continue For
+                If Math.Abs(from(i) - [to](i)) < tolerance Then Continue For
+                Select Case i
+                    Case 0 : _calibrationRedHue = [to](0)
+                    Case 1 : _calibrationRedSaturation = [to](1)
+                    Case 2 : _calibrationGreenHue = [to](2)
+                    Case 3 : _calibrationGreenSaturation = [to](3)
+                    Case 4 : _calibrationBlueHue = [to](4)
+                    Case 5 : _calibrationBlueSaturation = [to](5)
+                    Case 6 : _calibrationShadowTint = [to](6)
+                End Select
+                Me.RaisePropertyChanged(names(i))
             Next
-            If untouched AndAlso differs Then
-                _calibrationRedHue = [to](0)
-                _calibrationRedSaturation = [to](1)
-                _calibrationGreenHue = [to](2)
-                _calibrationGreenSaturation = [to](3)
-                _calibrationBlueHue = [to](4)
-                _calibrationBlueSaturation = [to](5)
-                _calibrationShadowTint = [to](6)
-                For Each name In {NameOf(CalibrationRedHue), NameOf(CalibrationRedSaturation),
-                                  NameOf(CalibrationGreenHue), NameOf(CalibrationGreenSaturation),
-                                  NameOf(CalibrationBlueHue), NameOf(CalibrationBlueSaturation),
-                                  NameOf(CalibrationShadowTint)}
-                    Me.RaisePropertyChanged(name)
-                Next
-            End If
             RaiseResetButtonStateChanged()
         End Sub
 
@@ -13480,7 +13480,12 @@ Namespace ViewModels
                                ' Der Dichtepunkt (das andere Ende der Kurve) bleibt gemessen - von Hand
                                ' ist er nicht sinnvoll zu treffen, er liegt irgendwo im Motiv.
                                If String.IsNullOrWhiteSpace(_negativeDensityColor) Then MeasureFilmNegative(baseToo:=False)
-                               _negativeEnabled = True
+                               ' Schaltet die Pipette das Negativ ein, gilt dasselbe wie beim Haken:
+                               ' die Startwerte der Kamera weichen denen des Films.
+                               If Not _negativeEnabled Then
+                                   _negativeEnabled = True
+                                   SwitchCameraStartValuesForNegative(True)
+                               End If
                                RaiseNegativePropertiesChanged()
                                SchedulePreviewUpdate()
                            End Sub)
@@ -13539,6 +13544,12 @@ Namespace ViewModels
         End Sub
 
         Private Sub ResetNegativeInternal()
+            ' Wie das Ausschalten am Haken: was noch auf dem Startwert des Films steht, bekommt den
+            ' der Kamera zurueck.
+            If _negativeEnabled Then
+                _negativeEnabled = False
+                SwitchCameraStartValuesForNegative(False)
+            End If
             _negativeEnabled = False
             _negativeMonochrome = False
             _negativeBaseColor = ""
@@ -18171,7 +18182,10 @@ Namespace ViewModels
             AutoNegativeBaseCommand = ReactiveCommand.Create(Sub()
                                                                  PushUndo(CombineHistoryLabel("Filmnegativ", "Automatisch"))
                                                                  MeasureFilmNegative()
-                                                                 _negativeEnabled = True
+                                                                 If Not _negativeEnabled Then
+                                                                     _negativeEnabled = True
+                                                                     SwitchCameraStartValuesForNegative(True)
+                                                                 End If
                                                                  RaiseNegativePropertiesChanged()
                                                                  SchedulePreviewForCurrentTarget()
                                                              End Sub)

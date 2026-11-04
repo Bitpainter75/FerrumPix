@@ -6,6 +6,9 @@
   others in it. Two different pictures no longer end up together only because a third one
   resembles both.
 
+- **Settings open right away:** the first section shows at once and the others fill in below it
+  while you look, instead of the whole page being built in one go.
+
 - **Show only kept pictures:** the gallery filter for kept and rejected pictures can now show
   only the ones you marked as kept, so the keepers from a card can be selected and copied in one
   go. With stacks turned on, the JPEG next to a raw file goes along.

@@ -1,0 +1,514 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.CatalogSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Katalog" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Welche Ordner FerrumPix kennt und was es über sie gespeichert hat." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Katalogindex. Bisher entstanden Katalogeintrag und Vorschaubild erst
+                             beim Ansehen eines Ordners; wer seinen Fotobestand hier einträgt, hat
+                             Suche und Filter darauf, ohne jeden Ordner einmal besucht zu haben. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Ordner überwachen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="FerrumPix liest die Aufnahmedaten dieser Ordner samt Unterordner in den Katalog und legt die Vorschaubilder an. Beim nächsten Mal wird nur gelesen, was sich geändert hat. Neben den Fotos wird dabei nichts angelegt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Click="OnAddCatalogWatchFolderClick">Ordner hinzufügen</Button>
+                            </Grid>
+
+                            <!-- SUCHE UND SAMMELAKTION. Ein Fotobestand hat vierstellig viele Ordner
+                                 (gemessen 1800). Ohne Filter ist die Liste nicht zu bedienen, und
+                                 ohne eine Aktion auf die Treffer müsste man tausendmal einzeln
+                                 klicken. Das Aufräumen-Menü wirkt deshalb auf GENAU DAS, was der
+                                 Filter gerade übrig lässt - die Zahl steht im Knopf und noch einmal
+                                 in der Rückfrage. -->
+                            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
+                                <Border Grid.Column="0"
+                                        Background="{DynamicResource FP.Bg.Input}"
+                                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,0"
+                                        Height="34"
+                                        Margin="0,0,8,0">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                                                       Width="18" Height="18" VerticalAlignment="Center" Opacity="0.65"/>
+                                        <TextBox Grid.Column="1"
+                                                 Classes="search-input"
+                                                 BorderThickness="0"
+                                                 Padding="0"
+                                                 Height="20"
+                                                 Margin="10,0,0,2"
+                                                 Text="{Binding FolderFilter}"
+                                                 PlaceholderText="Ordner suchen"
+                                                 VerticalContentAlignment="Center"/>
+                                        <Button Grid.Column="2" Classes="ghost"
+                                                Width="22" Height="22" Padding="0" Margin="4,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Command="{Binding ClearFolderFilterCommand}"
+                                                IsVisible="{Binding HasFolderFilter}"
+                                                ToolTip.Tip="Suche zurücksetzen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/x.svg"
+                                                           Width="12" Height="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           Opacity="0.75"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="0,0,8,0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding RefreshThumbnailCacheCommand}">Aktualisieren</Button>
+                                <!-- EIN Knopf statt drei: die Zeilen wurden sonst so breit, dass für
+                                     den Pfad nichts übrig blieb. Alle drei Wege fragen vorher nach -
+                                     auch der harmlose, denn eine Reihe, in der nur zwei von drei
+                                     nachfragen, erzieht dazu, die Frage wegzuklicken. -->
+                                <Button Grid.Column="2" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding CanRunFolderActions}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Aktionen" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="no-translate" Text="{Binding FilteredFolderCount, StringFormat=({0})}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button.Flyout>
+                                        <MenuFlyout Opened="OnLocalizedMenuFlyoutOpened">
+                                            <!-- Das Suchen steht ÜBER dem Trenner, das Entfernen
+                                                 darunter: das eine legt etwas an, das andere wirft
+                                                 etwas weg, und die beiden sollen nicht so dicht
+                                                 beieinander liegen, dass man sich verklickt. -->
+                                            <MenuItem Header="Gesichter suchen"
+                                                      Command="{Binding ScanFacesFilteredCommand}"
+                                                      IsEnabled="{Binding FaceIndex.CanStart}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Katalogdaten entfernen"
+                                                      Command="{Binding CleanFilteredCatalogCommand}"/>
+                                            <MenuItem Header="Vorschaubilder löschen"
+                                                      Command="{Binding CleanFilteredThumbnailsCommand}"/>
+                                            <MenuItem Header="Beides entfernen"
+                                                      Command="{Binding CleanFilteredBothCommand}"/>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+
+                            <!-- Der Fortschritt der Gesichtssuche. Sie wird aus der Liste heraus
+                                 gestartet und läuft über eine große Sammlung Stunden - der Stand
+                                 gehört deshalb sichtbar hierher und nicht nur in die Galerie. -->
+                            <StackPanel Spacing="2"
+                                        IsVisible="{Binding FaceIndex.HasStatus}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding FaceIndex.StatusText}"
+                                               Classes="no-translate"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="10,5"
+                                            VerticalAlignment="Center"
+                                            IsVisible="{Binding FaceIndex.IsRunning}"
+                                            Command="{Binding FaceIndex.StopCommand}">Stoppen</Button>
+                                </Grid>
+                                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                             Value="{Binding FaceIndex.ProgressPercent}"
+                                             IsVisible="{Binding FaceIndex.HasProgress}"/>
+                                <TextBlock Text="{Binding FaceIndex.DisabledHint}"
+                                           IsVisible="{Binding FaceIndex.HasDisabledHint}"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <!-- Das Aufräumen meldet sich HIER, nicht nur unten bei "Datenbank
+                                 bereinigen": angestoßen wird es aus dem Zeilenmenü und aus dem
+                                 Aktionsmenü darüber, und bei einer langen Liste steht der andere
+                                 Ort außerhalb des Bildes. Dasselbe Objekt, zwei Anzeigen. -->
+                            <StackPanel Spacing="2" IsVisible="{Binding Cleanup.IsRunning}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding Cleanup.StatusText}"
+                                               Classes="no-translate"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}"
+                                               TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="10,5"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding Cleanup.StopCommand}">Stoppen</Button>
+                                </Grid>
+                                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                             Value="{Binding Cleanup.ProgressPercent}"
+                                             IsVisible="{Binding Cleanup.HasProgress}"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding FolderSummaryText}"
+                                       Classes="no-translate"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"/>
+
+                            <!-- EIGENE HÖHE UND EIGENER SCROLL, und darin eine ListBox statt einer
+                                 ItemsControl: nur so virtualisiert Avalonia. In der scrollenden
+                                 Einstellungsseite entstünden sonst alle Zeilen auf einmal - bei 1800
+                                 Ordnern hängt die Seite beim Öffnen sekundenlang.
+                                 Auswahl ist abgeschaltet: die Zeilen sind zum Lesen und Bedienen da,
+                                 eine markierte Zeile hätte keine Bedeutung. -->
+                            <ListBox ItemsSource="{Binding FolderRows}"
+                                     IsVisible="{Binding HasFolderRows}"
+                                     MaxHeight="420"
+                                     SelectionMode="Single"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerTheme>
+                                    <ControlTheme TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,0,0,4"/>
+                                    </ControlTheme>
+                                </ListBox.ItemContainerTheme>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- Die Zeilen entstehen erst aus dem Template, und zwar
+                                             lange NACH dem Sprachdurchlauf ueber das Fenster: die
+                                             Ordnerzahlen werden im Hintergrund erhoben, die Liste
+                                             virtualisiert, und nach jeder Aktion wird sie neu
+                                             gebaut. Ohne diesen Einstieg stand alles darin in der
+                                             Ausgangssprache (Nutzerbefund). -->
+                                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,8"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
+                                                Margin="{Binding Depth, Converter={StaticResource FolderDepthToMarginConverter}}">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <!-- Das Aufklapp-Zeichen ist ein Knopf und kein
+                                                     bloßes Zeichen: eine Gruppe klappt man an
+                                                     genau dieser Stelle auf, und ein Zeichen ohne
+                                                     Trefferfläche lässt danebenklicken. -->
+                                                <!-- Ein SYMBOL und kein Buchstabe: ein "v" sitzt auf
+                                                     der Grundlinie und damit sichtbar zu tief im
+                                                     runden Knopf (Nutzerbefund). Ein SvgIcon füllt
+                                                     seinen Kasten und zentriert sich darin.
+                                                     Zwei Symbole statt eines gedrehten: die Drehung
+                                                     bräuchte einen RenderTransform samt Ursprung,
+                                                     und der Satz hat beide Richtungen ohnehin. -->
+                                                <Button Grid.Column="0" Classes="ghost"
+                                                        Width="20" Height="20" Padding="0"
+                                                        Margin="0,0,8,0"
+                                                        VerticalAlignment="Center"
+                                                        VerticalContentAlignment="Center"
+                                                        HorizontalContentAlignment="Center"
+                                                        IsVisible="{Binding CanExpand}"
+                                                        Command="{Binding Actions.ToggleFolderRowCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Panel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-right.svg"
+                                                                       Width="18" Height="18"
+                                                                       IsVisible="{Binding !IsExpanded}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                                                                       Width="18" Height="18"
+                                                                       IsVisible="{Binding IsExpanded}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Panel>
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Spacing="2" Margin="0,0,12,0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Classes="no-translate"
+                                                                   Text="{Binding Title}"
+                                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"/>
+                                                        <Border IsVisible="{Binding IsWatched}"
+                                                                Background="{DynamicResource FP.Accent}"
+                                                                CornerRadius="4" Padding="6,1"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="überwacht"
+                                                                       FontSize="{DynamicResource FP.Font.Label}"
+                                                                       Foreground="{DynamicResource FP.OnAccent}"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Classes="no-translate"
+                                                               Text="{Binding DetailText}"
+                                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                                                            VerticalAlignment="Center">
+                                                    <Button Classes="ghost" Padding="10,5"
+                                                            IsVisible="{Binding CanWatch}"
+                                                            Command="{Binding Actions.WatchFolderRowCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Diesen Ordner samt Unterordnern überwachen">Überwachen</Button>
+                                                    <Button Classes="ghost" Padding="10,5"
+                                                            IsVisible="{Binding IsWatched}"
+                                                            Command="{Binding Actions.UnwatchFolderRowCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            ToolTip.Tip="Nicht mehr überwachen. Abgelegte Daten bleiben erhalten.">Nicht überwachen</Button>
+                                                    <!-- EIN Menü für alles, was diese Zeile kann.
+                                                         Drei Knöpfe nebeneinander ließen für den
+                                                         Pfad nichts übrig, und die Zeile ist bei
+                                                         eingerückten Unterordnern ohnehin schmaler. -->
+                                                    <Button Classes="ghost" Padding="10,5"
+                                                            IsEnabled="{Binding Actions.CanRunFolderActions}">
+                                                        <TextBlock Text="Aktionen"/>
+                                                        <Button.Flyout>
+                                                            <MenuFlyout Opened="OnLocalizedMenuFlyoutOpened">
+                                                                <MenuItem Header="Gesichter suchen"
+                                                                          Command="{Binding Actions.ScanFacesRowCommand}"
+                                                                          CommandParameter="{Binding}"
+                                                                          IsEnabled="{Binding Actions.FaceIndex.CanStart}"/>
+                                                                <MenuItem Header="KI-Stichwörter aktualisieren"
+                                                                          Command="{Binding Actions.RunAiTaggingRowCommand}"
+                                                                          CommandParameter="{Binding}"
+                                                                          IsEnabled="{Binding Actions.CanRunAiTagging}"/>
+                                                                <Separator/>
+                                                                <!-- Der Ordnerwähler haengt am TopLevel und ist nur von der
+                                                                     View aus erreichbar - deshalb ein Click-Ereignis statt
+                                                                     eines Kommandos, wie beim Hinzufuegen eines Ordners. -->
+                                                                <MenuItem Header="Neuer Ort für diesen Ordner"
+                                                                          Tag="{Binding Path}"
+                                                                          Click="OnRelocateCatalogFolderClick"/>
+                                                                <Separator/>
+                                                                <MenuItem Header="Katalogdaten entfernen"
+                                                                          IsEnabled="{Binding HasAnything}"
+                                                                          Command="{Binding Actions.CleanRowCatalogCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                                <MenuItem Header="Vorschaubilder löschen"
+                                                                          IsEnabled="{Binding HasAnything}"
+                                                                          Command="{Binding Actions.CleanRowThumbnailsCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                                <MenuItem Header="Beides entfernen"
+                                                                          IsEnabled="{Binding HasAnything}"
+                                                                          Command="{Binding Actions.CleanRowBothCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="{Binding ThumbnailCacheResultMessage}"
+                                       IsVisible="{Binding ThumbnailCacheResultMessage, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"
+                                       Classes="no-translate"/>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Kurz nach dem Start indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Der Lauf beginnt einige Sekunden nach dem Start und arbeitet im Hintergrund. Er lässt sich jederzeit anhalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding CatalogIndexOnStartup}"
+                                              OnContent=""
+                                              OffContent=""
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Jetzt indizieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="{Binding CatalogIndex.StatusText}"
+                                               IsVisible="{Binding CatalogIndex.HasStatus}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"
+                                               FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                                 Value="{Binding CatalogIndex.ProgressPercent}"
+                                                 IsVisible="{Binding CatalogIndex.HasProgress}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <!-- Starten und Stoppen tauschen die Plätze, statt einer davon
+                                         ausgegraut danebenzustehen: zwei Knöpfe, von denen immer
+                                         einer tot ist, sagen weniger als einer, der das Richtige tut. -->
+                                    <Button Classes="ghost" Padding="12,7"
+                                            IsVisible="{Binding !CatalogIndex.IsRunning}"
+                                            IsEnabled="{Binding CatalogIndex.CanStart}"
+                                            Command="{Binding CatalogIndex.StartCommand}">Starten</Button>
+                                    <Button Classes="ghost" Padding="12,7"
+                                            IsVisible="{Binding CatalogIndex.IsRunning}"
+                                            Command="{Binding CatalogIndex.StopCommand}">Stoppen</Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                            <StackPanel Spacing="10" IsEnabled="{Binding ModelRuntimeAvailable}">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                    <TextBlock Text="Automatische KI-Stichwörter" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Analysiert Bildinhalte ausschließlich lokal beim Katalogindex. Dafür muss das Modell im Abschnitt Modelle geladen sein; ohne es bleibt die Funktion aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Bildinhalte beim Indizieren erkennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Aus: Der Katalog liest nur Metadaten. An: Neue oder geänderte Bilder erhalten lokale KI-Stichwörter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding AiTaggingEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AiTaggingEnabled}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Maximale Stichwörter je Bild" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Die besten Treffer bleiben erhalten; modellspezifische Mindestwerte gelten zusätzlich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <!-- Gleicher Regler wie Skalierung und Gesichtsmindestgröße:
+                                             Ziehen/Klicken für den Wert, Mausrad in Einer-Schritten,
+                                             Doppelklick setzt den praxistauglichen Standard zurück. -->
+                                        <icons:RoundSlider Width="150"
+                                                           Minimum="1"
+                                                           Maximum="50"
+                                                           DefaultValue="15"
+                                                           DragIncrement="1"
+                                                           WheelIncrement="1"
+                                                           Value="{Binding AiTaggingMaximumTags}"/>
+                                        <TextBlock Text="{Binding AiTaggingMaximumTags}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                   Width="42" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AiTaggingEnabled}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Mindestwahrscheinlichkeit" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Höhere Werte vermeiden fragliche Treffer; die individuellen Modellsperren werden nie unterschritten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <icons:RoundSlider Width="150"
+                                                           Minimum="0"
+                                                           Maximum="100"
+                                                           DefaultValue="70"
+                                                           DragIncrement="1"
+                                                           WheelIncrement="1"
+                                                           Value="{Binding AiTaggingMinimumConfidence}"/>
+                                        <TextBlock Text="{Binding AiTaggingMinimumConfidence, StringFormat={}{0}%}"
+                                                   Foreground="{DynamicResource FP.Text.Secondary}"
+                                                   FontSize="{DynamicResource FP.Font.Body}"
+                                                   Width="42" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding AiTaggingEnabled}">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="KI-Stichwörter in XMP schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Aus: Ergebnisse bleiben nur in FerrumPix. An: Die kanonischen Begriffe werden zusätzlich in XMP geschrieben; neue Sidecars entstehen nur, wenn das oben bei Metadaten erlaubt ist." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <ToggleSwitch IsChecked="{Binding WriteAiTagsToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                        <Button Classes="ghost" Padding="12,7" Command="{Binding SyncLocalAiTagsToXmpCommand}" IsEnabled="{Binding CanSyncLocalAiTagsToXmp}">Jetzt synchronisieren</Button>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+
+                        </StackPanel>
+
+                        <!-- Die Katalogpflege schließt den Bereich ab: erst kennt FerrumPix die
+                             Ordner und indiziert sie, dann entscheidet man, welche Metadaten beim
+                             Schreiben erhalten bleiben und nach XMP hinausgehen. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Metadaten beim Speichern übernehmen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Übernimmt EXIF/XMP beim Speichern unter, Exportieren und Konvertieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PreserveMetadataOnSave}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="XMP-Katalogdaten synchronisieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Schreibt Bewertung, Farb-Label und Stichworte zusätzlich in ein XMP-Sidecar, damit andere Programme sie sehen. Die .fpxmp-Bearbeitung bleibt unberührt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding SyncCatalogToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Fehlende XMP-Sidecars anlegen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Legt beim Synchronisieren auch neue .xmp-Dateien an, wenn noch keine existiert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding CreateXmpSidecarIfMissing}" IsEnabled="{Binding SyncCatalogToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
+                            <!-- Stichwoerter IN die Bilddatei: zwei Schalter, weil XMP und IPTC
+                                 verschiedene Programme bedienen. KI-Stichwoerter gehen nie mit. -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Stichwörter als XMP in die Bilddatei schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Schreibt manuelle Stichwörter in JPEG, PNG und WebP selbst, beim Vergeben und beim Speichern unter, Exportieren und Konvertieren. KI-Stichwörter bleiben außen vor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding WriteKeywordsToFileXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Stichwörter als IPTC in die Bilddatei schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Dasselbe als IPTC-Stichwörter, die auch ältere Programme lesen. Nur bei JPEG." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding WriteKeywordsToFileIptc}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Datenbank bereinigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Entfernt Metadaten (Bewertungen, Favoriten, Stichwörter) von Bildern, die nicht mehr existieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <!-- Stand und Balken wie bei "Jetzt indizieren": der Lauf prüft
+                                     jede Katalogzeile einzeln auf der Platte und braucht über
+                                     einem Netzlaufwerk Minuten. Ohne Anzeige sah es aus, als tue
+                                     die Anwendung nichts (Nutzerbefund). -->
+                                <TextBlock Text="{Binding Cleanup.StatusText}"
+                                           IsVisible="{Binding Cleanup.HasStatus}"
+                                           Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <ProgressBar Height="4" Minimum="0" Maximum="100"
+                                             Value="{Binding Cleanup.ProgressPercent}"
+                                             IsVisible="{Binding Cleanup.HasProgress}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CleanupResultMessage}" Classes="no-translate" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                <!-- Starten und Stoppen tauschen die Plätze, wie beim Indexlauf
+                                     darüber: zwei Knöpfe, von denen immer einer tot ist, sagen
+                                     weniger als einer, der das Richtige tut. -->
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding !Cleanup.IsRunning}"
+                                        Command="{Binding CleanupDatabaseCommand}">Bereinigen</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        IsVisible="{Binding Cleanup.IsRunning}"
+                                        Command="{Binding Cleanup.StopCommand}">Stoppen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- SICHERUNG: Katalog, Server-Indizes, Einstellungen, Favoriten und Suchen in
+                             eine ZIP und zurück (MainWindowViewModelBackup, CatalogBackupService). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Sicherung" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Sichert Katalog, Einstellungen, Favoriten und gespeicherte Suchen in eine ZIP-Datei und holt sie wieder zurück. Fotos, Vorschaubilder und Modelle gehören nicht dazu." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <Button Classes="ghost" Padding="12,7"
+                                        Command="{Binding BackupCommand}">Sichern</Button>
+                                <Button Classes="ghost" Padding="12,7"
+                                        Command="{Binding RestoreCommand}">Wiederherstellen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                    </StackPanel>
+</UserControl>

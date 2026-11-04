@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.PeopleSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Personen" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Gesichter finden, zu Personen zusammenfassen und benennen - alles auf diesem Gerät." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <!-- Die beiden Schalter stehen HIER und nicht bei den Modellen: dort geht es
+                             um Dateien, hier um die Sache selbst. Sie bleiben sichtbar, auch wenn
+                             die Erkennung aus ist - sonst gäbe es keinen Weg, sie einzuschalten. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Personen erkennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Sucht Gesichter in Ihren Fotos und fasst dieselbe Person zusammen, damit Sie nach ihr suchen können. Läuft auf Ihrem Gerät; die Merkmale bleiben in Ihrer Bibliothek und werden nirgendwohin gesendet. Namen vergeben Sie selbst." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FaceRecognitionEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Relativ zur Bildkante und nicht in Bildpunkten: 80 Punkte sind auf einem
+                             24-Megapixel-Foto ein Kopf in der dritten Reihe und auf einem
+                             Handyschnappschuss ein Porträt. -->
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding FaceRecognitionEnabled}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kleinste erkannte Person" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gesichter unterhalb dieser Größe kommen gar nicht erst in die Bibliothek - gemessen an der kürzeren Bildkante, damit dieselbe Angabe auf jedem Foto dasselbe bedeutet. Auf einem Stadtfest bleibt so die dritte Reihe im Hintergrund draußen. Bei „alle&quot; bleibt, was die Erkennung findet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <!-- Ab Werk 3 Prozent, gemessen und nicht geraten: an einem
+                                     gewachsenen Bestand liegen die kleinsten so noch behaltenen
+                                     Gesichter klar ueber der Grenze, ab der ohnehin nichts mehr
+                                     vermessen wird. Der Regler schneidet dort also nach Geschmack
+                                     und rettet nicht vor Unbrauchbarem.
+                                     BIS 10 und nicht weiter: bei 8 Prozent faellt schon rund die
+                                     Haelfte aller gefundenen Gesichter weg. Ein Bereich, dessen
+                                     obere Haelfte niemand sinnvoll benutzt, macht den nuetzlichen
+                                     Teil nur schwerer zu treffen. -->
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="10"
+                                                   DefaultValue="3"
+                                                   DragIncrement="1"
+                                                   WheelIncrement="1"
+                                                   Value="{Binding FaceMinimumSizePercent}"/>
+                                <TextBlock Text="{Binding FaceMinimumSizeText}" Classes="no-translate"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="56"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+
+                        <Border Height="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+
+                        <!-- HIER STEHEN NUR NOCH DIE SCHALTER. Die Kachelwand ist ein eigener
+                             Bereich geworden, erreichbar über den Knopf in der Galerie: in den
+                             Einstellungen legt man fest, WIE das Programm arbeitet - Gruppen
+                             aufzuräumen ist dagegen Arbeit am Bestand. Der Knopf hier führt
+                             hinüber, damit niemand suchen muss. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Personen verwalten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Die gefundenen Gruppen als Wand aus Gesichtern: benennen, zusammenführen und falsch Zugeordnetes herauslösen. Zu finden in der Galerie über dem Knopf für die Einstellungen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                    IsEnabled="{Binding FaceRecognitionEnabled}"
+                                    Click="OnManagePeopleClick">Öffnen</Button>
+                        </Grid>
+
+                    </StackPanel>
+</UserControl>

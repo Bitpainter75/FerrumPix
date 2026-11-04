@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.MapSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Kartenansicht" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Zeigt die Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet, ab Werk von OpenStreetMap; der Server erfährt dabei, welchen Ausschnitt Sie ansehen. Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap" MaxWidth="660" HorizontalAlignment="Left"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="Einschalten" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding MapViewEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <StackPanel Spacing="8" IsVisible="{Binding MapViewEnabled}">
+                            <TextBlock Text="Kachelserver" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Classes="no-translate"
+                                         Text="{Binding MapTileUrl, UpdateSourceTrigger=LostFocus}"
+                                         MaxWidth="660"
+                                         HorizontalAlignment="Stretch"
+                                         FontSize="{DynamicResource FP.Font.Body}"/>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="8,0,0,0"
+                                        Command="{Binding ResetMapTileUrlCommand}">Zurücksetzen</Button>
+                            </Grid>
+                            <TextBlock Classes="no-translate"
+                                       Text="{Binding MapTileUrlError}"
+                                       IsVisible="{Binding MapTileUrlError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       Foreground="{DynamicResource FP.Accent}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Kartenspeicher" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <SelectableTextBlock Classes="no-translate"
+                                                 Text="{Binding MapCacheFolder}"
+                                                 Foreground="{DynamicResource FP.Text.Secondary}"
+                                                 FontSize="{DynamicResource FP.Font.Body}"
+                                                 TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button Classes="ghost" Padding="12,7" Command="{Binding ClearMapCacheCommand}">Cache leeren</Button>
+                                <TextBlock Classes="no-translate"
+                                           Text="{Binding MapCacheMessage}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+</UserControl>

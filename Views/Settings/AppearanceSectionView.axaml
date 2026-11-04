@@ -1,0 +1,403 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.AppearanceSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Darstellung" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wählen Sie das Erscheinungsbild der Benutzeroberfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <Button Grid.Column="0"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsDarkThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="Dark"
+                                    Margin="0,0,6,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#11161B">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.78"/>
+                                    </Border>
+                                    <TextBlock Text="Dunkel" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="1"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsLightThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="Light"
+                                    Margin="6,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#E9EDF2">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery_Light.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.9"/>
+                                    </Border>
+                                    <TextBlock Text="Hell" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsGrayDarkThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="GrayDark"
+                                    Margin="6,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#232628">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery_GrayDark.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.88"/>
+                                    </Border>
+                                    <TextBlock Text="Grau Dunkel" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="3"
+                                    Classes="theme-choice"
+                                    Classes.active="{Binding IsGrayLightThemeMode}"
+                                    Command="{Binding SetThemeModeCommand}"
+                                    CommandParameter="GrayLight"
+                                    Margin="6,0,0,0">
+                                <StackPanel Spacing="10">
+                                    <Border Height="92" CornerRadius="6" ClipToBounds="True" Background="#4A5057">
+                                        <Image Source="avares://FerrumPix/Assets/Gallery_GrayLight.png"
+                                               Stretch="UniformToFill"
+                                               Opacity="0.92"/>
+                                    </Border>
+                                    <TextBlock Text="Grau Hell" Foreground="{DynamicResource FP.Text.Secondary}" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
+                        <!-- FENSTERKNÖPFE. Die Anwendung zeichnet ihre Titelleiste selbst und erbt
+                             damit nichts von der Arbeitsfläche - wer seine Knöpfe links hat, stand
+                             hier ohne. Ab Werk „Systemvorgabe": die Anwendung fragt den Desktop und
+                             richtet sich danach. -->
+                        <StackPanel Spacing="12" Margin="0,4,0,0"
+                                    IsVisible="{Binding IsWindowButtonsSideSelectable}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Fensterknöpfe" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                                <TextBlock Text="Auf welcher Seite der Titelleiste Schließen, Maximieren und Minimieren sitzen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Seite" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Die Systemvorgabe übernimmt die Anordnung der Arbeitsfläche." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsWindowButtonsSystem}"
+                                            Padding="10,6"
+                                            Command="{Binding SetWindowButtonsSideCommand}"
+                                            CommandParameter="System">Systemvorgabe</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsWindowButtonsLeft}"
+                                            Padding="10,6"
+                                            Command="{Binding SetWindowButtonsSideCommand}"
+                                            CommandParameter="Left">Links</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsWindowButtonsRight}"
+                                            Padding="10,6"
+                                            Command="{Binding SetWindowButtonsSideCommand}"
+                                            CommandParameter="Right">Rechts</Button>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12" Margin="0,4,0,0">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Akzentfarbe" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wählen Sie eine Akzentfarbe für Hervorhebungen und aktive Elemente." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button Classes="swatch" Classes.active="{Binding IsOrangeAccent}" Background="#F08A1A" Command="{Binding SetAccentColorCommand}" CommandParameter="#F08A1A"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsRedAccent}" Background="#E74C3C" Command="{Binding SetAccentColorCommand}" CommandParameter="#E74C3C"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsPinkAccent}" Background="#F03B88" Command="{Binding SetAccentColorCommand}" CommandParameter="#F03B88"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsPurpleAccent}" Background="#8B5CF6" Command="{Binding SetAccentColorCommand}" CommandParameter="#8B5CF6"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsBlueAccent}" Background="#3B82F6" Command="{Binding SetAccentColorCommand}" CommandParameter="#3B82F6"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsCyanAccent}" Background="#0891B2" Command="{Binding SetAccentColorCommand}" CommandParameter="#0891B2"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsTealAccent}" Background="#0F766E" Command="{Binding SetAccentColorCommand}" CommandParameter="#0F766E"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsGreenAccent}" Background="#22C55E" Command="{Binding SetAccentColorCommand}" CommandParameter="#22C55E"/>
+                            <Button Classes="swatch" Classes.active="{Binding IsYellowAccent}" Background="#FACC15" Command="{Binding SetAccentColorCommand}" CommandParameter="#FACC15"/>
+                        </StackPanel>
+
+                        <!-- Die Staerke steht NEBEN der Farbwahl und ersetzt sie nicht: welche Farbe
+                             hervorhebt, ist eine andere Frage als wie laut sie das tut. Bei 0 bleibt
+                             die Hervorhebung als Helligkeit bestehen, nur die Farbigkeit ist weg. -->
+                        <StackPanel Spacing="2" Margin="0,8,0,0">
+                            <TextBlock Text="Farbstärke" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Wie kräftig der Akzent wirkt. Bei 0 % bleibt die Hervorhebung erhalten, nur ohne Farbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength100}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="100">100 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength75}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="75">75 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength50}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="50">50 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength25}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="25">25 %</Button>
+                            <Button Classes="ghost" Classes.active="{Binding IsAccentStrength0}" Padding="12,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="0">0 %</Button>
+                        </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Spacing="12" Margin="0,4,0,0">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Transparenz-Hintergrund" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                                <TextBlock Text="Legt fest, wie transparente Bildbereiche in Viewer und Editor dargestellt werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Darstellung" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Schachbrettmuster (Standard), echt durchsichtig oder eine feste Farbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsTransparencyCheckerboardMode}"
+                                            Padding="10,6"
+                                            Command="{Binding SetTransparencyBackgroundModeCommand}"
+                                            CommandParameter="Checkerboard">Schachbrett</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsTransparencyNoneMode}"
+                                            Padding="10,6"
+                                            Command="{Binding SetTransparencyBackgroundModeCommand}"
+                                            CommandParameter="None">Transparent</Button>
+                                    <Button Classes="ghost"
+                                            Classes.active="{Binding IsTransparencySolidMode}"
+                                            Padding="10,6"
+                                            Command="{Binding SetTransparencyBackgroundModeCommand}"
+                                            CommandParameter="Solid">Farbe</Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsTransparencySolidMode}">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Hintergrundfarbe" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Volltonfarbe hinter transparenten Bereichen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <icons:ColorPickerButton Grid.Column="1"
+                                                         VerticalAlignment="Center"
+                                                         ShowEyedropper="False"
+                                                         SelectedColor="{Binding TransparencyBackgroundColorValue, Mode=TwoWay}"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Schriftgrad" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Vergrößert oder verkleinert die Schrift der Oberfläche in ganzen Stufen. Wirkt sofort."
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Acht Stufen, acht Schaltflächen. Ein Regler war hier das falsche
+                                 Werkzeug: er rechnete eine Stufe je Bildpunkt und maß den Zug
+                                 relativ zu sich selbst, wanderte also unter dem Zeiger weg,
+                                 sobald die Schrift wuchs. Jede Fläche zeigt "aA" in der Größe,
+                                 die sie einstellt - man sieht die Wahl, statt eine Zahl zu
+                                 deuten. Die feste Höhe hält die Zeile ruhig, damit nicht die
+                                 ganze Reihe springt, wenn die größte Stufe gewählt wird. -->
+                            <ItemsControl Grid.Column="1"
+                                          ItemsSource="{Binding FontSizeOffsetOptions}"
+                                          VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="2" Height="30"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- Der Text steht als Content am Knopf, NICHT als eigener
+                                             TextBlock darin: der globale TextBlock-Stil setzt eine
+                                             Vordergrundfarbe, und ein Stil-Setter schlaegt den vom
+                                             Knopf geerbten Wert - die aktive Stufe bekam so nie den
+                                             Akzent. Denselben Weg gehen die uebrigen Auswahlknoepfe
+                                             im Theme. -->
+                                        <Button Classes="font-step no-translate"
+                                                Classes.active="{Binding IsActive}"
+                                                FontSize="{Binding PreviewFontSize}"
+                                                Content="aA"
+                                                Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).SetFontSizeOffsetCommand}"
+                                                CommandParameter="{Binding Offset}"
+                                                ToolTip.Tip="{Binding Label}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+
+                        <!-- Nur macOS: dort rechnet das System selbst um, sobald die Zeichenflaeche
+                             einen Farbraum traegt. Warum das anderswo nicht hilft, steht am
+                             ViewModel. Ausdruecklich als Versuch beschriftet - ob die Ebene den
+                             Farbraum annimmt, konnte hier niemand pruefen.
+
+                             ZWEI AUSWAHLEN statt eines Schalters: das erste Verfahren traegt
+                             gemessen nicht, und welches der uebrigen es tut, entscheidet nur ein
+                             Geraet mit weitem Farbumfang. Wer eines hat, probiert sie durch, ohne
+                             fuer jeden Versuch eine neue Fassung zu brauchen. Der Zeichenweg
+                             gehoert dazu, weil nur einer von ihnen ueberhaupt eine Ebene anlegt,
+                             die einen Farbraum tragen kann. Begruendung im
+                             MacWindowColorSpaceService. -->
+                        <StackPanel Spacing="14" IsVisible="{Binding IsWindowColorSpaceFixSupported}">
+                            <!-- EIN Schalter, ohne Fachbegriffe. Was dahinter steht, entscheidet
+                                 das ViewModel: eingeschaltet ist die haltbare Kombination. -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Farben an den Bildschirm anpassen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Viele Bildschirme können mehr Farben zeigen, als ein Foto enthält. Ohne Anpassung wirken Fotos und Oberfläche dort zu kräftig. Eingeschaltet rechnet macOS die Farben für den angeschlossenen Bildschirm um; auf einem gewöhnlichen Bildschirm bleibt alles wie es ist." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding MacWindowColorSpaceEnabled}"
+                                              OnContent=""
+                                              OffContent=""
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Nur bei eingeschaltetem Diagnoseprotokoll: die Felder sind fuer eine
+                                 Rueckfrage gebaut. Welches Verfahren greift und welchen Zeichenweg
+                                 das Toolkit nimmt, interessiert niemanden, dessen Farben stimmen. -->
+                            <StackPanel Spacing="14" IsVisible="{Binding IsWindowColorSpaceDetailVisible}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Farben an Bildschirme mit weitem Farbumfang anpassen (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <!-- Auswaehlbar statt nur lesbar: die Zeile ist der ganze
+                                             Messbefund und soll sich kopieren lassen. no-translate,
+                                             weil der Inhalt aus einer Bindung kommt (siehe
+                                             LocalizationService.NoTranslateClass). -->
+                                        <SelectableTextBlock Classes="no-translate"
+                                                             Text="{Binding WindowColorSpaceStatusText}"
+                                                             Foreground="{DynamicResource FP.Text.Muted}"
+                                                             FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="260"
+                                              ItemsSource="{Binding WindowColorSpaceMethodOptions}"
+                                              SelectedItem="{Binding SelectedWindowColorSpaceMethod, Mode=TwoWay}"
+                                              VerticalAlignment="Center">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                        <TextBlock Text="Zeichenweg (Versuch)" FontSize="{DynamicResource FP.Font.Body}"/>
+                                        <TextBlock Text="Welchen Weg FerrumPix zum Zeichnen nimmt. Wirkt nach einem Neustart." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1"
+                                              MinWidth="260"
+                                              ItemsSource="{Binding MacRenderingModeOptions}"
+                                              SelectedItem="{Binding SelectedMacRenderingMode, Mode=TwoWay}"
+                                              VerticalAlignment="Center">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Windows und Linux: dort rechnet kein System die Werte eines Fensters auf
+                             den Bildschirm um. Je erkanntem Bildschirm ein ICC-Profil; umgerechnet
+                             werden die Fotos in Betrachter und Editor, auf dem Bildschirm, auf dem
+                             das Fenster gerade steht (DisplayProfileService). -->
+                        <StackPanel Spacing="8" IsVisible="{Binding IsDisplayProfileSupported}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Bildschirmprofile" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ein ICC-Profil je Bildschirm, etwa aus der Kalibrierung mit einem Messgerät. Fotos in Betrachter und Editor werden dann für den Bildschirm umgerechnet, auf dem das Fenster gerade steht. Leer lassen, wenn das System schon selbst umrechnet, etwa KDE Plasma mit gesetztem Farbprofil."
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <TextBlock Text="Keine Bildschirme erkannt."
+                                       IsVisible="{Binding HasNoDetectedScreens}"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}"/>
+                            <ItemsControl ItemsSource="{Binding DisplayProfileRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0"
+                                              AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
+                                                <TextBlock Classes="no-translate" Text="{Binding ScreenName}"
+                                                           FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                                <TextBlock Classes="no-translate" Text="{Binding Detail}"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                <TextBlock Classes="no-translate" Text="{Binding ProfileText}"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip.Tip="{Binding ProfilePath}"/>
+                                                <TextBlock Classes="no-translate" Text="{Binding StatusText}"
+                                                           IsVisible="{Binding HasStatus}"
+                                                           Foreground="{DynamicResource FP.Text.Accent}" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="0,0,8,0"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnChooseDisplayProfileClick">Profil wählen</Button>
+                                            <Button Grid.Column="2" Classes="ghost" Padding="12,7"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding HasProfile}"
+                                                    Command="{Binding RemoveCommand}">Entfernen</Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Anwendungsskalierung wirkt nur auf Avalonias X11-Backend, siehe
+                             IsApplicationScaleSupported - unter Windows und macOS skaliert das
+                             System selbst pro Monitor. Eine Zeile je Bildschirm: Avalonia nimmt
+                             mehrere Faktoren entgegen und ordnet sie ueber den Anzeigenamen zu. -->
+                        <StackPanel Spacing="14" IsVisible="{Binding IsApplicationScaleSupported}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Anwendungsskalierung je Bildschirm" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Skaliert die komplette Oberfläche beim nächsten Start. Jeder Bildschirm bekommt seinen eigenen Wert, damit die Oberfläche auf einem hochauflösenden Bildschirm nicht kleiner ausfällt als auf dem daneben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding ApplicationScaleScreenStatusText}"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding ApplicationScaleItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                                            <TextBlock Text="{Binding ScreenName}"
+                                                       Classes="no-translate"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                <!-- BREITER ALS DIE ANDEREN REGLER, und zwar aus einem
+                                                     nachrechenbaren Grund: dieser hier läuft über 150
+                                                     Stufen, und der Wert wird auf ganze Prozent gerundet.
+                                                     Bei 150 Punkten Breite bleiben nach dem Griff 134
+                                                     nutzbare Punkte - weniger als eine Stufe je Punkt,
+                                                     16 Werte waren also gar nicht anzufahren. 300 Punkte
+                                                     geben knapp zwei je Prozent, damit ist jeder Wert
+                                                     erreichbar. -->
+                                                <icons:RoundSlider Width="300"
+                                                                   Minimum="100"
+                                                                   Maximum="250"
+                                                                   DefaultValue="100"
+                                                                   Value="{Binding ScalePercent, Mode=TwoWay}"/>
+                                                <TextBlock Text="{Binding ScaleText}"
+                                                           Classes="no-translate"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                                           FontSize="{DynamicResource FP.Font.Body}"
+                                                           Width="42"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Änderung wird nach einem Neustart aktiv."
+                                       Foreground="{DynamicResource FP.Accent}"
+                                       FontSize="{DynamicResource FP.Font.Body}"
+                                       IsVisible="{Binding IsApplicationScaleRestartRequired}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+</UserControl>

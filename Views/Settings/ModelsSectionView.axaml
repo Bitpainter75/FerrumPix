@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.ModelsSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Modelle" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Einige Werkzeuge brauchen eine Modelldatei, die sich hier nachladen lässt. Fehlt sie, fragt das Werkzeug beim ersten Verwenden nach dem Download." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Spacing="10">
+                            <ItemsControl ItemsSource="{Binding ModelGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Classes="adjustment-group" Margin="0,0,0,8">
+                                            <StackPanel Spacing="6">
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                                        <TextBlock Classes="no-translate" Text="{Binding Description}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                        <TextBlock Classes="no-translate" Text="{Binding StatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding SizeText}" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    <Button Grid.Column="2" Classes="accent" Padding="12,7" VerticalAlignment="Center"
+                                                            IsVisible="{Binding ButtonVisible}"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.FetchModelCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="no-translate" Text="{Binding ButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                    <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                                            IsVisible="{Binding RemoveButtonVisible}"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveModelCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="no-translate" Text="{Binding RemoveButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                    <!-- Abbrechen, solange geladen wird: die Einstellungen lassen sich waehrend
+                                                         eines Downloads nicht verlassen, und eine haengende Verbindung soll
+                                                         niemanden festhalten. -->
+                                                    <Button Grid.Column="4" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                                            IsVisible="{Binding CancelButtonVisible}"
+                                                            Command="{Binding $parent[ItemsControl].DataContext.CancelModelDownloadCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <TextBlock Classes="no-translate" Text="{Binding CancelButtonText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                                    </Button>
+                                                </Grid>
+                                                <ProgressBar Minimum="0" Maximum="1" Value="{Binding Progress}"
+                                                             IsVisible="{Binding Running}" Height="4"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="no-translate" Text="{Binding ModelFolder}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <!-- Was die Ortstabelle leistet, sind NAMEN aus Koordinaten - und
+                                     die entstehen ohne jede Verbindung nach außen. Die Karte darunter
+                                     ist ein eigener Schalter, weil sie das nicht kann. -->
+                                <TextBlock Text="Aufnahmeorte benennen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Macht aus den Koordinaten im Foto einen Ort und ein Land: sie erscheinen in der Info-Leiste, im Ortsfilter über der Galerie und in der Suche. Die Zuordnung kommt aus einer Ortstabelle auf diesem Gerät - es wird nichts abgefragt und nichts gesendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding PhotoMapEnabled}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+</UserControl>

@@ -1,0 +1,517 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.EditorSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Editor" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <TextBlock Text="Ansicht" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <!-- Eigene Einstellung, NICHT dieselbe wie im Betrachter-Abschnitt: beim
+                             Betrachten will man ein kleines Bild oft formatfüllend sehen, beim
+                             Bearbeiten dagegen in Originalgröße. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Einpassen-Verhalten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt nur für den Editor: nur verkleinern, wenn das Bild größer als die Bearbeitungsfläche ist, oder immer auf die Fläche skalieren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorFitBehaviorOnlyWhenLarger}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorFitBehaviorCommand}"
+                                        CommandParameter="OnlyWhenLarger">Nur wenn größer</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorFitBehaviorAlways}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorFitBehaviorCommand}"
+                                        CommandParameter="Always">Immer einpassen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Gehört direkt unter das Einpassen-Verhalten: beide ändern dieselbe
+                             Rechnung, und der Rand ergibt nur zusammen mit ihr einen Sinn. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Rand beim Einpassen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Abstand zwischen dem eingepassten Bild und dem Rand der Bearbeitungsfläche. 0 legt das Bild bündig an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="200"
+                                                   DefaultValue="0"
+                                                   Value="{Binding EditorFitMargin}"/>
+                                <TextBlock Text="{Binding EditorFitMargin, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Lineale im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet die Pixel-Lineale am oberen und linken Rand der Vorschau ein." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorShowRulers}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Raster im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt ein Pixelraster über dem Bild an." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorShowGrid}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Rastergröße" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Kantenlänge einer Rasterzelle im Editor, in Bildpixeln." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="2"
+                                                   Maximum="500"
+                                                   DefaultValue="50"
+                                                   Value="{Binding EditorGridSize}"/>
+                                <TextBlock Text="{Binding EditorGridSize, StringFormat={}{0} px}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="52"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Einrast-Abstand zum Bildrand" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Abstand der Einrast-Linien zu den Bildrändern beim Verschieben von Objekten, in Prozent. 0 = deaktiviert; an Rändern, Mitte und anderen Objekten rasten Objekte immer." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="0"
+                                                   Maximum="20"
+                                                   DefaultValue="4"
+                                                   Value="{Binding EditorSnapMarginPercent}"/>
+                                <TextBlock Text="{Binding EditorSnapMarginPercent, StringFormat={}{0}%}"
+                                           MinWidth="42"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Werkzeuge" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Werkzeug beim Öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Welches Werkzeug aktiv ist, sobald der Editor geöffnet wird." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorStartupToolSelection}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorStartupToolCommand}"
+                                        CommandParameter="Selection">Auswahl</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorStartupToolAdjust}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorStartupToolCommand}"
+                                        CommandParameter="Adjust">Anpassen</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Reihenfolge der Werkzeuggruppen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, in welcher Reihenfolge die Gruppen in der linken Werkzeugleiste des Editors stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Breit genug, dass die längste Gruppenbeschriftung nicht bis an die
+                                 Pfeilknöpfe heranläuft - „Transformieren" braucht in mehreren
+                                 Sprachen deutlich mehr Platz als im Deutschen. -->
+                            <!-- FESTE Breite statt "so breit wie noetig": nur dann stehen die
+                                 Pfeile aller Zeilen an derselben Stelle am rechten Rand. Vorher
+                                 rutschten sie mit der Laenge der Beschriftung hin und her. -->
+                            <ItemsControl ItemsSource="{Binding EditorToolGroupItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,6"
+                                                Margin="0,0,0,6"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
+                                                HorizontalAlignment="Stretch">
+                                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                                <TextBlock Text="{Binding Label}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,24,0"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                                                <Button Grid.Column="1"
+                                                        Classes="ghost"
+                                                        Padding="10,4"
+                                                        Margin="0,0,4,0"
+                                                        ToolTip.Tip="Nach oben"
+                                                        Command="{Binding DataContext.MoveEditorToolGroupUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">▲</Button>
+                                                <Button Grid.Column="2"
+                                                        Classes="ghost"
+                                                        Padding="10,4"
+                                                        ToolTip.Tip="Nach unten"
+                                                        Command="{Binding DataContext.MoveEditorToolGroupDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">▼</Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Werkzeugwechsel im Anpassungspanel" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zwei Knöpfe am unteren Rand des Panels springen zum vorigen und nächsten Werkzeug, im Kreis durch Anpassungen, Transformieren, Auswahl und Maske. Dasselbe geht jederzeit mit STRG+TAB und STRG+SHIFT+TAB." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EditorToolSwitcher}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Farbige Regler" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Regler mit Farbbedeutung zeigen ihre Wirkung als Farbverlauf, etwa Temperatur, Tönung oder Farbmischer. Ausgeschaltet sind alle Regler in der Akzentfarbe." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding ColoredSliders}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Anpassungspanel" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Seite des Anpassungspanels" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wo die Einstellungen des gewählten Werkzeugs stehen: rechts neben der Bearbeitungsfläche oder links direkt neben der Werkzeugleiste. Links liegen Werkzeug und Einstellungen beieinander, was auf breiten Bildschirmen kürzere Wege bedeutet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Links steht links, Rechts steht rechts: die Knopfreihe zeigt damit
+                                 dasselbe, was sie einstellt. Umgekehrt liest sie sich verdreht. -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorAdjustmentsPanelLeft}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsPanelSideCommand}"
+                                        CommandParameter="Left">Links</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorAdjustmentsPanelRight}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsPanelSideCommand}"
+                                        CommandParameter="Right">Rechts</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Bildlaufleiste des Anpassungspanels" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Automatisch zieht sich die Leiste zu einer schmalen Linie zusammen, bis der Zeiger darüber steht, und fehlt ganz, wenn alles ins Panel passt. Immer lässt sie in voller Breite stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorAdjustmentsScrollBarAuto}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsScrollBarCommand}"
+                                        CommandParameter="Auto">Automatisch</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding EditorAdjustmentsScrollBarAlwaysVisible}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorAdjustmentsScrollBarCommand}"
+                                        CommandParameter="Always">Immer</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="Sichtbare Anpassungsgruppen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt fest, welche Gruppen im Anpassungsbereich des Editors erscheinen, in den einzelnen Werkzeugen wie im kompakten Anpassungsmodus. Ausblenden ändert nur die Anzeige: eingestellte Werte bleiben erhalten und wirken weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding AdjustmentGroupItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsVisibleEntry, Mode=TwoWay}"
+                                                  Margin="0,0,12,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Kompakter Anpassungsmodus" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kompakter Anpassungsmodus" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Statt Anpassen, Farbe, Details, Effekte und Filter steht ein einziges Werkzeug „Anpassungen“ in der Leiste. Es zeigt alle Gruppen untereinander, und ab Werk ist immer nur eine davon aufgeklappt: wer eine öffnet, schließt die vorige." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EditorCompactAdjustments}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding EditorCompactAdjustments}">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Andere Gruppen automatisch zuklappen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Gilt im kompakten Anpassungsmodus. Ist der Schalter aus, klappt eine Gruppe nur auf oder zu, wenn man sie anklickt, und das Werkzeug merkt sich, welche Gruppen zuletzt offen waren." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding EditorCompactAutoCollapse}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Reihenfolge der Bloecke im Kompaktwerkzeug (AppSettingsService.CompactGroupBlocks).
+                             Aufbau wie "Reihenfolge der Werkzeuggruppen" darueber. -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EditorCompactAdjustments}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Reihenfolge im kompakten Anpassungsmodus" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Legt fest, in welcher Reihenfolge die Gruppen im Werkzeug „Anpassungen“ stehen. Die einzelnen Werkzeuge behalten ihre Reihenfolge." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="10,4" VerticalAlignment="Center"
+                                        Command="{Binding ResetCompactGroupOrderCommand}">Zurücksetzen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding CompactGroupOrderItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,6"
+                                                Margin="0,0,0,6"
+                                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
+                                                HorizontalAlignment="Stretch">
+                                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                <TextBlock Text="{Binding Label}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,24,0"
+                                                           TextWrapping="Wrap"
+                                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                                                <!-- Das Auge schaltet dieselbe Sichtbarkeit wie
+                                                     "Sichtbare Anpassungsgruppen", mit Akzent = sichtbar. -->
+                                                <Button Grid.Column="1"
+                                                        Classes="ghost"
+                                                        Classes.active="{Binding IsShown}"
+                                                        Padding="8,4"
+                                                        Margin="0,0,8,0"
+                                                        ToolTip.Tip="Im Editor zeigen oder ausblenden"
+                                                        Command="{Binding DataContext.ToggleCompactGroupVisibilityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">
+                                                    <Panel>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18"
+                                                                       IsVisible="{Binding IsShown}"/>
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-closed.svg" Width="18" Height="18"
+                                                                       IsVisible="{Binding !IsShown}"/>
+                                                    </Panel>
+                                                </Button>
+                                                <Button Grid.Column="2"
+                                                        Classes="ghost"
+                                                        Padding="10,4"
+                                                        Margin="0,0,4,0"
+                                                        ToolTip.Tip="Nach oben"
+                                                        Command="{Binding DataContext.MoveCompactGroupUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">▲</Button>
+                                                <Button Grid.Column="3"
+                                                        Classes="ghost"
+                                                        Padding="10,4"
+                                                        ToolTip.Tip="Nach unten"
+                                                        Command="{Binding DataContext.MoveCompactGroupDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding Key}">▼</Button>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Leisten" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Fußzeile im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt unten die Leiste mit Bildangaben und Zoom. Ausgeschaltet bleibt mehr Höhe für die Arbeitsfläche. Der Filmstreifen hat einen eigenen Schalter und bleibt stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorShowFooter}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Ebenen-Seitenleiste im Editor anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet das Ebenen-Panel neben der Info-Leiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorLayersPanelExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Miniaturen im Ebenen-Panel" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt in jeder Zeile ein kleines Abbild dessen, was auf der Ebene liegt, und daneben ihre Maske. Aus: wieder das Symbol des Werkzeugs. Bei vielen Bild-Ebenen dauert der erste Aufbau des Panels damit etwas länger." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorLayerThumbnails}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Separator Background="{DynamicResource FP.Border.Normal}" Height="1" Margin="0,6,0,0"/>
+                        <TextBlock Text="Dateien" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Standardformat" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Vorgewähltes Zielformat in Speichern unter, Exportieren nach und den übrigen Stapelfunktionen. FPX ist das weiterbearbeitbare Projektformat und steht in Speichern unter und Exportieren nach zur Wahl; wo es das nicht gibt, wird JPG genommen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatJpg}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="JPG">JPG</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatPng}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="PNG">PNG</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatWebp}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="WEBP">WEBP</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatJxl}"
+                                        IsVisible="{Binding IsJxlEncodeAvailable}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="JXL">JXL</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatTiff}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="TIFF">TIFF</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatPdf}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="PDF">PDF</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsDefaultSaveFormatFpx}"
+                                        Padding="10,6"
+                                        Command="{Binding SetDefaultSaveFormatCommand}"
+                                        CommandParameter="FPX">FPX</Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Namensvorlage für Speichern unter" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Vorschlag für bearbeitete Kopien. Platzhalter wie beim Stapel-Umbenennen: {name}, ###, {date:FORMAT} Dateidatum, {datetaken:FORMAT} Aufnahmedatum, {camera}, {iso}, {aperture}, {focal}, {width}, {height}. Im Format: yyyy Jahr, MM Monat, MMMM Monatsname, dd Tag, dddd Wochentag, HH mm ss Uhrzeit, zum Beispiel {datetaken:dd MMMM yyyy}." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <!-- Eine Zeile wie die uebrigen Textfelder: ohne feste Breite und Mittelung
+                                 streckte sich das Feld auf die Hoehe des langen Erklaertexts daneben. -->
+                            <TextBox Grid.Column="1" Width="320"
+                                     VerticalAlignment="Center"
+                                     Text="{Binding EditorSaveAsNamePattern, Mode=TwoWay}"
+                                     PlaceholderText="{}{name}_fx"
+                                     ToolTip.Tip="{}{name}_fx erzeugt etwa Foto_fx; ### ist ein Zähler."/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="JPG-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wird für das Speichern und Exportieren als JPG verwendet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <icons:RoundSlider Width="150"
+                                                   Minimum="1"
+                                                   Maximum="100"
+                                                   DefaultValue="90"
+                                                   Value="{Binding JpgSaveQuality}"/>
+                                <TextBlock Text="{Binding JpgSaveQuality, StringFormat={}{0}%}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           Width="34"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Nach „Speichern unter“ die neue Datei öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ausgeschaltet bleibt das bisherige Bild im Editor und die gespeicherte Datei liegt nur auf der Platte. Eingeschaltet wechselt der Editor auf die neue Datei und arbeitet dort weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorSaveAsOpensTarget}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Textebenen aus Photoshop-Dateien" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Beim Öffnen einer Photoshop-Datei mit Textebenen: als Text übernehmen (der Wortlaut bleibt tippbar, das Aussehen kann abweichen), als Bild übernehmen (jeder Bildpunkt stimmt, der Text ist fest) oder jedes Mal nachfragen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsPsdTextImportAsk}"
+                                        Padding="10,6"
+                                        Command="{Binding SetPsdTextImportCommand}"
+                                        CommandParameter="Ask">Immer fragen</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsPsdTextImportText}"
+                                        Padding="10,6"
+                                        Command="{Binding SetPsdTextImportCommand}"
+                                        CommandParameter="Text">Als Text</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsPsdTextImportImage}"
+                                        Padding="10,6"
+                                        Command="{Binding SetPsdTextImportCommand}"
+                                        CommandParameter="Image">Als Bild</Button>
+                            </StackPanel>
+                        </Grid>
+
+                    </StackPanel>
+</UserControl>

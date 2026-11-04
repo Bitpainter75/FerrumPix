@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             xmlns:models="clr-namespace:FerrumPix.Models"
+             xmlns:vm="clr-namespace:FerrumPix.ViewModels"
+             xmlns:views="clr-namespace:FerrumPix.Views"
+             x:Class="FerrumPix.Views.Settings.InfoPanelSectionView">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Info-Leiste" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Die Leiste rechts neben dem Bild: wo sie erscheint und was sie zeigt. Galerie, Viewer und Editor teilen sie sich." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Info-Leiste in der Galerie" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt rechts die Angaben zum markierten Bild: Aufnahmedaten, Histogramm, Bewertung, Etikett und Stichwörter. Lässt sich in der Galerie auch über das Info-Symbol oben rechts umschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryInfoSidebarExpanded}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Info-Leiste im Viewer" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ViewerInfoSidebarExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Info-Leiste im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Blendet die rechte Metadatenleiste ein oder aus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorInfoSidebarExpanded}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Die beiden Orte des Analysebildes stehen bewusst nebeneinander und als
+                             zwei eigene Schalter: sie schliessen sich nicht aus. Beide aus ist
+                             ebenfalls eine gueltige Antwort - dann wird es auch nicht gerechnet. -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Histogramm in der Info-Leiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade in der rechten Leiste von Galerie, Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ScopeInInfoSidebar}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Histogramm bei den Reglern im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt Histogramm, Waveform und RGB-Parade zusätzlich über den Reglern von Anpassen, Farbe, Details, Effekte und Filter. Dort steht es neben dem, was es beantwortet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding ScopeInAdjustmentPanels}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Die Haken bestimmen den Reiter "Allgemein". Eine Zeile ohne Wert bleibt
+                             trotz Haken weg - eine Beschriftung mit Leere dahinter sagt nichts.
+                             Drei Spalten wie bei den Anpassungsgruppen: vierzehn Haken untereinander
+                             waeren eine Bildschirmseite fuer sich. -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Angaben im Reiter Allgemein" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Wählt, welche Zeilen zum Bild angezeigt werden. Was ein Bild nicht hergibt, bleibt trotz Haken weg." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding InfoPanelRowItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsVisibleEntry, Mode=TwoWay}"
+                                                  Margin="0,0,12,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Getrennt von den Zeilen darueber, weil es etwas anderes ist: die drei
+                             sind Bedienung, nicht Auskunft, und sie stehen auch dann in der Leiste,
+                             wenn mehrere Bilder markiert sind und es den Reiter gar nicht gibt. -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                <TextBlock Text="Bereiche der Leiste" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Bewertung, Etikett und Stichwörter lassen sich in der Leiste setzen. Wer sie woanders pflegt, nimmt sie hier heraus." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding InfoPanelSectionItems}" HorizontalAlignment="Stretch">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="3"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsVisibleEntry, Mode=TwoWay}"
+                                                  Margin="0,0,12,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Label}"
+                                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                    </StackPanel>
+</UserControl>
