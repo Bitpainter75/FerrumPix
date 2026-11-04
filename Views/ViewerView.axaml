@@ -257,12 +257,24 @@
                                         <RotateTransform Angle="{Binding RotationAngle}"/>
                                     </TransformGroup>
                                 </Border.RenderTransform>
-                                <Image Name="MainImage"
-                                       Source="{Binding CurrentImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
-                                       Stretch="Uniform"
-                                       Margin="-1"
-                                       RenderOptions.BitmapInterpolationMode="HighQuality"
-                                       PointerExited="OnImagePointerExited" />
+                                <!-- Bild und Fokus-Peaking in derselben Huelle und mit derselben
+                                     Streckung: Zoom, Spiegeln und Drehen des Rahmens treffen beide
+                                     gleich, die Markierung liegt immer deckungsgleich. -->
+                                <Panel>
+                                    <Image Name="MainImage"
+                                           Source="{Binding CurrentImage, Converter={x:Static icons:ColorManagedBitmapConverter.Instance}}"
+                                           Stretch="Uniform"
+                                           Margin="-1"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"
+                                           PointerExited="OnImagePointerExited" />
+                                    <Image Name="FocusPeakingImage"
+                                           Source="{Binding FocusPeakingImage}"
+                                           IsVisible="{Binding IsFocusPeakingEnabled}"
+                                           IsHitTestVisible="False"
+                                           Stretch="Uniform"
+                                           Margin="-1"
+                                           RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                                </Panel>
                             </Border>
                             <Canvas Name="CropSelectionCanvas" IsHitTestVisible="False">
                                 <Border Name="CropSelectionRect"

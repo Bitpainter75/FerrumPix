@@ -431,6 +431,11 @@ Namespace Views
                         ApplyImageFitMode()
                         e.Handled = True
                         Return
+                    Case Key.K
+                        ' Fokus-Peaking. K, weil P druckt, F einpasst und X verwirft.
+                        vm.ToggleFocusPeakingCommand.Execute(Nothing)
+                        e.Handled = True
+                        Return
                 End Select
             End If
 
@@ -1654,6 +1659,15 @@ Namespace Views
             image.Height = imageHeight
             image.MaxWidth = Double.PositiveInfinity
             image.MaxHeight = Double.PositiveInfinity
+            ' Die Fokus-Peaking-Ebene genau so gross wie das Bild: sie liegt in derselben Huelle und
+            ' muss sich mit ihm decken, auch wenn ihre eigene Aufloesung kleiner ist.
+            Dim peaking = Me.FindControl(Of Image)("FocusPeakingImage")
+            If peaking IsNot Nothing Then
+                peaking.Width = imageWidth
+                peaking.Height = imageHeight
+                peaking.MaxWidth = Double.PositiveInfinity
+                peaking.MaxHeight = Double.PositiveInfinity
+            End If
             If background IsNot Nothing Then
                 background.Width = Math.Max(0, imageWidth - 2.0)
                 background.Height = Math.Max(0, imageHeight - 2.0)

@@ -317,6 +317,73 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Farbe aufgenommen")
         End Sub
 
+        ' ── Die Pipette des Farbmischers ───────────────────────────────────────────
+        '
+        ' Ein Klick ins Bild waehlt das Farbband, in dem der Mischer diese Farbe bewegt. Abgetastet
+        ' wird wie bei der Punktfarbe in einem eigenen Vergleichsbild, und zwar mit dem Bild, das der
+        ' MISCHER sieht: ohne den Mischer selbst, ohne Punktfarbe und die Stufen dahinter, und ohne
+        ' Kurven, denn mit einem Mischer im Rezept laufen die Kurven hinter ihm. Eine S/W-Umwandlung
+        ' (ein Filter-Look) faellt dabei mit weg: die Pipette nimmt die Farbe unter dem Grau, genau
+        ' die, nach der der Graumischer sortiert.
+
+        Private _pickHslBandCommand As ICommand
+
+        ''' <summary>Startet die Pipette des Farbmischers.</summary>
+        Public ReadOnly Property PickHslBandCommand As ICommand
+            Get
+                If _pickHslBandCommand Is Nothing Then
+                    _pickHslBandCommand = ReactiveCommand.Create(Sub() BeginColorPickAt(AddressOf SelectHslBandFromPick, sampleRadius:=2))
+                End If
+                Return _pickHslBandCommand
+            End Get
+        End Property
+
+        ''' <summary>Die Pipette hat geklickt: das passende Band wird das gewaehlte. Keine Aenderung am
+        ''' Rezept, also kein Schritt in der Historie.</summary>
+        Private Sub SelectHslBandFromPick(picked As Avalonia.Media.Color, xPercent As Double, yPercent As Double)
+            Dim sample As SkiaSharp.SKColor?
+            If IsObjectAdjustModeActive() Then
+                ' Wie bei der Punktfarbe: bedienen die Regler eine Ebene, zaehlt ihre angezeigte
+                ' Farbe, nicht das Foto darunter.
+                sample = New SkiaSharp.SKColor(picked.R, picked.G, picked.B)
+            Else
+                Dim probe = GetCurrentAdjustments(forPreview:=True)
+                If probe Is Nothing Then Return
+                NeutralizeStagesFromMixer(probe)
+                sample = SampleProbePixel(probe, xPercent, yPercent)
+            End If
+            If Not sample.HasValue Then
+                StatusText = LocalizationService.T("Diese Stelle lässt sich nicht messen")
+                Return
+            End If
+            Dim index = ImageProcessor.HslBandIndexForSrgb(sample.Value.Red / 255.0, sample.Value.Green / 255.0, sample.Value.Blue / 255.0)
+            If index < 0 Then
+                StatusText = LocalizationService.T("Diese Stelle ist fast grau und gehört zu keinem Farbband")
+                Return
+            End If
+            Dim key = HslBands(index).Key
+            SelectedHslBand = key
+            StatusText = String.Format(LocalizationService.T("Farbband gewählt: {0}"), HslBandLabel(key))
+        End Sub
+
+        ''' <summary>Das Vergleichsbild der Mischer-Pipette: der Mischer neutral, die Kurven gerade,
+        ''' Punktfarbe und alles dahinter wie bei der Punktfarben-Pipette.</summary>
+        Private Shared Sub NeutralizeStagesFromMixer(probe As ImageAdjustments)
+            NeutralizeStagesAfterPointColor(probe)
+            Dim neutral = New ImageAdjustments()
+            For Each band In {"Red", "Orange", "Yellow", "Green", "Aqua", "Blue", "Purple", "Magenta"}
+                For Each part In {"Hue", "Saturation", "Luminance"}
+                    Dim p = GetType(ImageAdjustments).GetProperty(band & part)
+                    If p IsNot Nothing Then p.SetValue(probe, p.GetValue(neutral))
+                Next
+            Next
+            probe.CurveRgbPoints = neutral.CurveRgbPoints
+            probe.CurveRedPoints = neutral.CurveRedPoints
+            probe.CurveGreenPoints = neutral.CurveGreenPoints
+            probe.CurveBluePoints = neutral.CurveBluePoints
+            probe.CurveLuminancePoints = neutral.CurveLuminancePoints
+        End Sub
+
         ''' <summary>Die Stufen hinter der Punktfarbe auf neutral, für das Vergleichsbild der Pipette.</summary>
         Private Shared Sub NeutralizeStagesAfterPointColor(probe As ImageAdjustments)
             Dim neutral = New ImageAdjustments()

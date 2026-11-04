@@ -10898,4 +10898,16 @@
   <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
     <value>Opacità della filigrana in percentuale, da 0 a 100</value>
   </data>
+  <data name="Pipette_auf_eine_Farbe_im_Bild_klicken_um_ihr_Fa_57b99dd8" xml:space="preserve">
+    <value>Contagocce: fai clic su un colore della foto per sceglierne la banda di colore</value>
+  </data>
+  <data name="Diese_Stelle_ist_fast_grau_und_geh_rt_zu_keinem__d0955f70" xml:space="preserve">
+    <value>Questo punto è quasi grigio e non appartiene a nessuna banda di colore</value>
+  </data>
+  <data name="Farbband_gew_hlt_0_7ca4a3a8" xml:space="preserve">
+    <value>Banda di colore scelta: {0}</value>
+  </data>
+  <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
+    <value>Focus peaking sì/no</value>
+  </data>
 </root>

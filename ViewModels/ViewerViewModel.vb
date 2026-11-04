@@ -235,9 +235,99 @@ Namespace ViewModels
                     Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                     _mainVm?.RefreshWindowTitle()
                 End If
+                ' Vor dem Freigeben des alten Bildes: das Peaking kopiert das neue sofort.
+                If Not Object.ReferenceEquals(previous, value) Then RefreshFocusPeaking()
                 If previous IsNot Nothing AndAlso Not Object.ReferenceEquals(previous, value) Then DisposeDeferred(previous)
             End Set
         End Property
+
+        ' ── Fokus-Peaking ─────────────────────────────────────────────────────────
+        '
+        ' Eine durchsichtige Ebene ueber dem Bild, scharfe Kanten rot (FocusPeakingService). Sie
+        ' steht in DERSELBEN Rahmenhuelle wie das Bild (ViewerView, MainImageBackgroundBorder) und
+        ' streckt sich wie dieses: Zoom, Spiegeln und Drehen treffen beide gleich. Gerechnet wird im
+        ' Hintergrund; die Pixel werden auf dem Anzeigefaden kopiert, weil das gezeigte Bild nach
+        ' einem Wechsel verzoegert freigegeben wird.
+
+        Private _isFocusPeakingEnabled As Boolean = AppSettingsService.Load().ViewerFocusPeaking
+        Private _focusPeakingImage As Bitmap
+        Private _focusPeakingToken As Integer = 0
+
+        ''' <summary>Fokus-Peaking an? Gemerkt in den Einstellungen.</summary>
+        Public Property IsFocusPeakingEnabled As Boolean
+            Get
+                Return _isFocusPeakingEnabled
+            End Get
+            Set(value As Boolean)
+                If _isFocusPeakingEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_isFocusPeakingEnabled, value)
+                AppSettingsService.Update(Sub(s) s.ViewerFocusPeaking = value)
+                RefreshFocusPeaking()
+            End Set
+        End Property
+
+        ''' <summary>Die Markierungsebene zum gezeigten Bild, Nothing solange aus oder in Arbeit.</summary>
+        Public ReadOnly Property FocusPeakingImage As Bitmap
+            Get
+                Return _focusPeakingImage
+            End Get
+        End Property
+
+        Private _toggleFocusPeakingCommand As ICommand
+
+        Public ReadOnly Property ToggleFocusPeakingCommand As ICommand
+            Get
+                If _toggleFocusPeakingCommand Is Nothing Then
+                    _toggleFocusPeakingCommand = ReactiveCommand.Create(Sub() IsFocusPeakingEnabled = Not IsFocusPeakingEnabled)
+                End If
+                Return _toggleFocusPeakingCommand
+            End Get
+        End Property
+
+        Private Sub SetFocusPeakingImage(value As Bitmap)
+            Dim previous = _focusPeakingImage
+            If Object.ReferenceEquals(previous, value) Then Return
+            _focusPeakingImage = value
+            Me.RaisePropertyChanged(NameOf(FocusPeakingImage))
+            If previous IsNot Nothing Then DisposeDeferred(previous)
+        End Sub
+
+        ''' <summary>Rechnet die Ebene zum gezeigten Bild neu, oder nimmt sie weg. Ein neuerer Aufruf
+        ''' ueberholt einen laufenden (Token), sein Ergebnis wird verworfen.</summary>
+        Private Sub RefreshFocusPeaking()
+            Dim token = System.Threading.Interlocked.Increment(_focusPeakingToken)
+            SetFocusPeakingImage(Nothing)
+            If Not _isFocusPeakingEnabled OrElse _currentImage Is Nothing Then Return
+            Dim copy As SkiaSharp.SKBitmap
+            Try
+                copy = ImageOrientationService.ToSkBitmap(_currentImage)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.FocusPeaking", ex)
+                Return
+            End Try
+            If copy Is Nothing Then Return
+            Dim work = Task.Run(
+                Function() As SkiaSharp.SKBitmap
+                    Using copy
+                        Return FocusPeakingService.Build(copy)
+                    End Using
+                End Function)
+            work.ContinueWith(
+                Sub(done)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            Dim overlay = If(done.IsCompletedSuccessfully, done.Result, Nothing)
+                            Try
+                                If overlay Is Nothing OrElse token <> _focusPeakingToken OrElse Not _isFocusPeakingEnabled Then Return
+                                SetFocusPeakingImage(ImageOrientationService.ToAvaloniaBitmapFast(overlay))
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("Viewer.FocusPeaking", ex)
+                            Finally
+                                overlay?.Dispose()
+                            End Try
+                        End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
 
         ' Das Bild, das LibRaw fuer die Anzeige entwickelt hat. Nur eine Referenz zum Vergleich mit
         ' CurrentImage: jedes andere Bild (eingebettete Vorschau, FPX-Komposit, leer) loest sie ab.

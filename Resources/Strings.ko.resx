@@ -10942,4 +10942,16 @@
   <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
     <value>워터마크 불투명도(퍼센트, 0~100)</value>
   </data>
+  <data name="Pipette_auf_eine_Farbe_im_Bild_klicken_um_ihr_Fa_57b99dd8" xml:space="preserve">
+    <value>스포이트: 사진의 색상을 클릭해 해당 색상 대역을 선택하세요</value>
+  </data>
+  <data name="Diese_Stelle_ist_fast_grau_und_geh_rt_zu_keinem__d0955f70" xml:space="preserve">
+    <value>이 위치는 거의 회색이라 어떤 색상 대역에도 속하지 않습니다</value>
+  </data>
+  <data name="Farbband_gew_hlt_0_7ca4a3a8" xml:space="preserve">
+    <value>선택한 색상 대역: {0}</value>
+  </data>
+  <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
+    <value>피킹 켜기/끄기</value>
+  </data>
 </root>

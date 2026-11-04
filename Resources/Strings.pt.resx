@@ -10897,4 +10897,16 @@
   <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
     <value>Opacidade da marca de água em percentagem, de 0 a 100</value>
   </data>
+  <data name="Pipette_auf_eine_Farbe_im_Bild_klicken_um_ihr_Fa_57b99dd8" xml:space="preserve">
+    <value>Conta-gotas: clique numa cor da foto para escolher a sua banda de cor</value>
+  </data>
+  <data name="Diese_Stelle_ist_fast_grau_und_geh_rt_zu_keinem__d0955f70" xml:space="preserve">
+    <value>Este ponto é quase cinzento e não pertence a nenhuma banda de cor</value>
+  </data>
+  <data name="Farbband_gew_hlt_0_7ca4a3a8" xml:space="preserve">
+    <value>Banda de cor escolhida: {0}</value>
+  </data>
+  <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
+    <value>Focus peaking ligado/desligado</value>
+  </data>
 </root>

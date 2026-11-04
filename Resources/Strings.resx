@@ -10917,4 +10917,16 @@
   <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
     <value>Opacity of the watermark in percent, 0 to 100</value>
   </data>
+  <data name="Pipette_auf_eine_Farbe_im_Bild_klicken_um_ihr_Fa_57b99dd8" xml:space="preserve">
+    <value>Eyedropper: click a color in the photo to pick its color band</value>
+  </data>
+  <data name="Diese_Stelle_ist_fast_grau_und_geh_rt_zu_keinem__d0955f70" xml:space="preserve">
+    <value>This spot is almost gray and belongs to no color band</value>
+  </data>
+  <data name="Farbband_gew_hlt_0_7ca4a3a8" xml:space="preserve">
+    <value>Color band picked: {0}</value>
+  </data>
+  <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
+    <value>Focus peaking on/off</value>
+  </data>
 </root>

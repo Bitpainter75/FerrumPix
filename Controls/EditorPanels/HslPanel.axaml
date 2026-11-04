@@ -56,6 +56,25 @@
                         ToolTip.Tip="Punktfarbe: eine Farbe im Bild aufnehmen und verschieben">
                     <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/target.svg" Width="18" Height="18" />
                 </Button>
+                <!-- DIE PIPETTE DES REITERS, für beide an derselben Stelle: im Mischer wählt sie das
+                     Band einer Farbe, in der Punktfarbe nimmt sie ein neues Farbfeld auf. So ändert
+                     sich die Zeile beim Wechsel nicht, und keiner der beiden Reiter braucht eine
+                     eigene Zeile dafür (die acht Kreise füllen ihre bis auf 16 Bildpunkte). -->
+                <Border Width="1" Margin="4,4" Background="{DynamicResource FP.Border.Normal}" />
+                <Button Classes="icon-btn group-action"
+                        Width="28" Height="28" CornerRadius="6"
+                        IsVisible="{Binding IsMixerTab}"
+                        Command="{Binding PickHslBandCommand}"
+                        ToolTip.Tip="Pipette: auf eine Farbe im Bild klicken, um ihr Farbband zu wählen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg" Width="18" Height="18" />
+                </Button>
+                <Button Classes="icon-btn group-action"
+                        Width="28" Height="28" CornerRadius="6"
+                        IsVisible="{Binding IsPointColorTab}"
+                        Command="{Binding PickPointColorCommand}"
+                        ToolTip.Tip="Pipette: auf die Farbe im Bild klicken, die verschoben werden soll">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg" Width="18" Height="18" />
+                </Button>
             </StackPanel>
             <StackPanel Spacing="8" IsVisible="{Binding IsMixerTab}">
             <!-- EINE ZEILE statt eines Farbrades: dieselbe Bauform wie die Etiketten der Galerie
@@ -160,15 +179,11 @@
             <!-- PUNKTFARBE: eine Farbe im Bild aufnehmen und nur sie verschieben. Bis zu acht
                  Farbfelder, das gewaehlte traegt den Ring; die Regler gelten fuer das gewaehlte. -->
             <StackPanel Spacing="8" IsVisible="{Binding IsPointColorTab}">
-                <!-- Pipette und Farbfelder. Die Pipette in derselben Groesse wie am Farbwaehler;
-                     die Farbfelder brechen um, wenn das Panel schmal ist, statt hinauszulaufen. -->
-                <Grid ColumnDefinitions="Auto,*" HorizontalAlignment="Center">
-                    <Button Classes="icon-btn group-action" Width="28" Height="28" CornerRadius="6" VerticalAlignment="Top"
-                            Command="{Binding PickPointColorCommand}"
-                            ToolTip.Tip="Pipette: auf die Farbe im Bild klicken, die verschoben werden soll">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eyedropper.svg" Width="18" Height="18" />
-                    </Button>
-                    <ItemsControl Grid.Column="1" Margin="5,0,0,0" ItemsSource="{Binding PointColorChips}">
+                <!-- Die Farbfelder; sie brechen um, wenn das Panel schmal ist, statt hinauszulaufen.
+                     Die Pipette dazu steht oben in der Reiterzeile, an derselben Stelle wie die des
+                     Mischers: die Zeile sieht in beiden Reitern gleich aus. -->
+                <Grid HorizontalAlignment="Center">
+                    <ItemsControl ItemsSource="{Binding PointColorChips}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel Orientation="Horizontal" ItemSpacing="5" LineSpacing="4" />

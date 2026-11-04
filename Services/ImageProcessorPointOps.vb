@@ -2319,6 +2319,41 @@ Namespace Services
             Return WarpCircular(ProPhotoHue(lr, lg, lb), ProPhotoBandFrom, HslBandCenters)
         End Function
 
+        ''' <summary>Unterhalb dieser Buntheit (Abstand des groessten zum kleinsten Kanal, sRGB 0 bis 1)
+        ''' hat eine Farbe fuer die Pipette des Farbmischers kein Band: ihr Farbton ist Rauschen, und
+        ''' die Kette gewichtet die Bandwirkung dort ohnehin gegen null.</summary>
+        Public Const MixerPipetteMinimumChroma As Double = 0.04
+
+        ''' <summary>Das Farbband (0 Rot bis 7 Magenta), dem der Farbmischer diese Farbe zuordnet, fuer
+        ''' seine Pipette. DIESELBE Bandsuche wie die Kette (ProPhotoBandHue, ersatzweise
+        ''' ReferenceBandHue im HSL von sRGB), dann der naechste Anker auf dem Kreis: liegt die Farbe
+        ''' zwischen zwei Baendern, gewinnt das, das sie staerker bewegt. -1 fuer eine Farbe ohne
+        ''' nennenswerte Buntheit. r, g, b in sRGB von 0 bis 1.</summary>
+        Public Shared Function HslBandIndexForSrgb(r As Double, g As Double, b As Double) As Integer
+            Dim chroma = Math.Max(r, Math.Max(g, b)) - Math.Min(r, Math.Min(g, b))
+            If chroma < MixerPipetteMinimumChroma Then Return -1
+            Dim hue As Double
+            If MixerBandsInProPhoto Then
+                hue = ProPhotoBandHue(r, g, b)
+            Else
+                Dim h As Double, s As Double, l As Double
+                RgbToHslF(r, g, b, h, s, l)
+                hue = ReferenceBandHue(h)
+            End If
+            hue = ((hue Mod 360.0) + 360.0) Mod 360.0
+            Dim best = 0
+            Dim bestDistance = Double.MaxValue
+            For i = 0 To HslBandCenters.Length - 1
+                Dim d = Math.Abs(hue - HslBandCenters(i))
+                d = Math.Min(d, 360.0 - d)
+                If d < bestDistance Then
+                    bestDistance = d
+                    best = i
+                End If
+            Next
+            Return best
+        End Function
+
         ''' <summary>HSV-Farbton (Grad) von linearem sRGB nach der Umrechnung in ProPhoto (dieselbe
         ''' Matrix wie die Kurven, ApplyCurvesInMelissa).</summary>
         Private Shared Function ProPhotoHue(lr As Double, lg As Double, lb As Double) As Double

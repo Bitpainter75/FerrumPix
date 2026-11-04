@@ -6,6 +6,13 @@
   others in it. Two different pictures no longer end up together only because a third one
   resembles both.
 
+- **Focus peaking in the viewer:** sharp edges can be highlighted in red, so you see at a glance
+  where a picture is in focus without zooming in. Switch it with K; it stays on for the next
+  pictures.
+
+- **Eyedropper in the color mixer:** click a color in the picture and the mixer jumps to the band
+  that moves it. It also works for black and white, where it picks by the color under the gray.
+
 - **Settings open right away:** the first section shows at once and the others fill in below it
   while you look, instead of the whole page being built in one go.
 

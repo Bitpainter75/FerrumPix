@@ -10942,4 +10942,16 @@
   <data name="Deckkraft_des_Wasserzeichens_in_Prozent_0_bis_10_e15a38e9" xml:space="preserve">
     <value>Filigranın opaklığı yüzde olarak, 0 ile 100 arası</value>
   </data>
+  <data name="Pipette_auf_eine_Farbe_im_Bild_klicken_um_ihr_Fa_57b99dd8" xml:space="preserve">
+    <value>Damlalık: renk bandını seçmek için fotoğrafta bir renge tıklayın</value>
+  </data>
+  <data name="Diese_Stelle_ist_fast_grau_und_geh_rt_zu_keinem__d0955f70" xml:space="preserve">
+    <value>Bu yer neredeyse gri ve hiçbir renk bandına ait değil</value>
+  </data>
+  <data name="Farbband_gew_hlt_0_7ca4a3a8" xml:space="preserve">
+    <value>Seçilen renk bandı: {0}</value>
+  </data>
+  <data name="Fokus_Peaking_ein_aus_b11a36cd" xml:space="preserve">
+    <value>Odak vurgulama açık/kapalı</value>
+  </data>
 </root>

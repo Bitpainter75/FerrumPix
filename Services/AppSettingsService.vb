@@ -532,6 +532,9 @@ Namespace Services
         ''' er die eingebettete Vorschau. Die Schnellvorschau entwickelt unabhaengig davon immer
         ''' halb, sie zoomt nicht.
         Public Property ViewerRawFullResolution As Boolean = False
+        ''' Fokus-Peaking im Betrachter: scharfe Kanten farbig markieren (Taste K).
+        ''' Gemerkt, weil man es beim Aussortieren fuer die ganze Serie will.
+        Public Property ViewerFocusPeaking As Boolean = False
         ''' RAWs OHNE .fpxmp-Rezept auch in den Stapelfunktionen voll entwickeln (Demosaic in
         ''' Sensoraufloesung) statt ihre eingebettete JPEG-Vorschau zu nehmen. Mit Rezept wird
         ''' IMMER entwickelt - dort waere die Vorschau schlicht das falsche Bild.
