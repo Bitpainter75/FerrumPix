@@ -10920,4 +10920,7 @@
   <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
     <value>Målet det skal importeres til, mangler fortsatt.</value>
   </data>
+  <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
+    <value>Skjerm uten navn</value>
+  </data>
 </root>

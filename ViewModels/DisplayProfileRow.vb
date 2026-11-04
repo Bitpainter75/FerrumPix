@@ -13,9 +13,12 @@ Namespace ViewModels
     Public Class DisplayProfileRow
         Inherits ReactiveObject
 
-        Public Sub New(screenKey As String, width As Integer, height As Integer, isPrimary As Boolean,
+        Public Sub New(screenKey As String, hasSystemName As Boolean, width As Integer, height As Integer, isPrimary As Boolean,
                        isCurrent As Boolean, profilePath As String, remove As Action(Of DisplayProfileRow))
             Me.ScreenKey = screenKey
+            ' Ohne Namen vom System ist der Schluessel ein Ersatz aus der Aufloesung - der steht in
+            ' der Zeile darunter ohnehin, oben steht dann ein lesbarer Hinweis statt "screen-...".
+            ScreenName = If(hasSystemName, screenKey, LocalizationService.T("Bildschirm ohne Namen"))
             ProfilePath = If(profilePath, "")
             Dim parts As New List(Of String) From {
                 String.Format(LocalizationService.T("{0} x {1} Bildpunkte"), width, height)
@@ -35,8 +38,12 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Name des Bildschirms, wie das System ihn meldet (unter X11 etwa "DP-1"); zugleich
-        ''' der Schlüssel in den Einstellungen.</summary>
+        ''' der Schlüssel in den Einstellungen. Ohne Namen vom System ein Ersatz aus der Auflösung,
+        ''' siehe <see cref="DisplayProfileService.ScreenKey"/>.</summary>
         Public ReadOnly Property ScreenKey As String
+        ''' <summary>Was die Zeile als Namen zeigt: der Schlüssel, oder ohne Namen vom System ein
+        ''' übersetzter Hinweis.</summary>
+        Public ReadOnly Property ScreenName As String
         Public ReadOnly Property Detail As String
         Public ReadOnly Property ProfilePath As String
         Public ReadOnly Property ProfileText As String

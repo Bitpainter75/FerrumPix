@@ -2447,6 +2447,16 @@ Namespace Models
                 ' Galerie fragte diese leere Kachel nie wieder an, bis ein Größenwechsel zufällig
                 ' alles neu aufbaute. Lokale Fehler bekommen stattdessen zwei kurze Nachversuche.
                 If bmp Is Nothing Then
+                    ' Leer zurueck kommt auch eine Kachel, die waehrend des Ladens das Sichtfenster
+                    ' verlassen hat: der Cache bricht dann ueber IsStillWantedForThumbnail bewusst
+                    ' vor dem teuren Teil ab. Das ist kein Lesefehler. Sie faellt auf "nicht
+                    ' geladen" zurueck und kommt erst wieder dran, wenn sie erneut sichtbar wird;
+                    ' eine Wiederholung schoebe sonst fuer jede uebersprungene Kachel einen Decode
+                    ' in die Hintergrund-Schlange.
+                    If Not IsStillWantedForThumbnail() Then
+                        SetThumbStateAfterLoad(0, generation)
+                        Return
+                    End If
                     RetryLocalThumbnailAfterFailure(generation)
                     Return
                 End If

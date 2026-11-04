@@ -1291,11 +1291,25 @@ Namespace ViewModels
                         ' Pinselkorrektur; WELCHES Ziel gemeint ist, entscheidet die Engine.
                         Dim stroke = BuildSourceMaskFromStamp(stamp, rectPx, gradient.Name)
                         If stroke IsNot Nothing Then
-                            If ImageProcessor.ApplyMaskBrushStroke(gradient, stroke, _selectionCombineMode = "Subtract", _selectionCombineMode) Then
+                            Dim componentsBefore = gradient.ComponentCount
+                            If ImageProcessor.ApplyMaskBrushStroke(gradient, stroke, _selectionCombineMode = "Subtract", _selectionCombineMode) AndAlso
+                               gradient.ComponentCount > componentsBefore Then
                                 ' Ein Schnittpinsel am Verlauf wird als eigener Raster-Bestandteil
-                                ' angehängt. Die Liste muss sofort nachziehen, sonst erscheint er
-                                ' erst nach einem späteren Wechsel im Ebenenpanel.
-                                RaiseMaskComponentsChanged()
+                                ' angehängt. Er wird der bediente Bestandteil: die naechsten Striche
+                                ' gehen ueber den Bestandteil-Weg oben in DIESES Raster. Ein weiterer
+                                ' Schnitt verkleinert es, Hinzufuegen malt einen weggeschnittenen
+                                ' Teil des Verlaufs zurueck, Abziehen nimmt weiter weg. Blieb der
+                                ' Verlauf der bediente Bestandteil, landete Hinzufuegen in seiner
+                                ' Pinselkorrektur VOR dem Schnitt und blieb ausserhalb wirkungslos,
+                                ' und jeder weitere Schnittstrich haengte einen neuen Bestandteil an.
+                                ' Der Setter zieht die Liste nach; ohne das erschiene der neue
+                                ' Bestandteil erst nach einem spaeteren Wechsel im Ebenenpanel.
+                                Dim newIndex = gradient.ComponentCount - 1
+                                If ActiveMaskComponentIndex = newIndex Then
+                                    RaiseMaskComponentsChanged()
+                                Else
+                                    ActiveMaskComponentIndex = newIndex
+                                End If
                             End If
                         End If
                     Else

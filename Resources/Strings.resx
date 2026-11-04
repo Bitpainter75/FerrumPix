@@ -10899,4 +10899,7 @@
   <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
     <value>The target to import into is still missing.</value>
   </data>
+  <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
+    <value>Display without a name</value>
+  </data>
 </root>

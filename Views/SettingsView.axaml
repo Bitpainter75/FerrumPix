@@ -871,7 +871,7 @@
                                         <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0"
                                               AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                             <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,16,0" VerticalAlignment="Center">
-                                                <TextBlock Classes="no-translate" Text="{Binding ScreenKey}"
+                                                <TextBlock Classes="no-translate" Text="{Binding ScreenName}"
                                                            FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
                                                 <TextBlock Classes="no-translate" Text="{Binding Detail}"
                                                            Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>

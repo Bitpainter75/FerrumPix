@@ -126,21 +126,50 @@ Namespace Services
             Dim result As New List(Of List(Of T))()
             If count < 2 Then Return result
             Dim maxDistance = CInt(level)
+            ' Jeder Abdruck wird genau EINMAL geholt. hashOf ist beim Aufrufer ein Zugriff ueber den
+            ' Dateipfad; im Vergleich unten je Gruppenmitglied aufgerufen, waeren das bei einigen
+            ' tausend Bildern Millionen Zugriffe statt eines Felds.
+            Dim hashes(count - 1) As ULong
             For i = 0 To count - 1
-                Dim item = items(i)
-                Dim itemHash = hashOf(item)
+                hashes(i) = hashOf(items(i))
+            Next
+
+            ' Die Gruppen fuehren Indizes in hashes, nicht die Elemente selbst.
+            Dim groups As New List(Of List(Of Integer))()
+            For i = 0 To count - 1
+                Dim itemHash = hashes(i)
                 ' Die Eingabereihenfolge ist die Aufnahmezeit. Gibt es mehrere passende Gruppen,
                 ' gewinnt deshalb die aelteste: die Einteilung bleibt bei jedem Lauf gleich.
-                Dim group = result.FirstOrDefault(
-                    Function(candidate) candidate.All(
-                        Function(member) BitOperations.PopCount(itemHash Xor hashOf(member)) <= maxDistance))
-                If group Is Nothing Then
-                    group = New List(Of T)()
-                    result.Add(group)
+                Dim target As List(Of Integer) = Nothing
+                For Each candidate In groups
+                    Dim fitsAll = True
+                    For Each member In candidate
+                        If BitOperations.PopCount(itemHash Xor hashes(member)) > maxDistance Then
+                            fitsAll = False
+                            Exit For
+                        End If
+                    Next
+                    If fitsAll Then
+                        target = candidate
+                        Exit For
+                    End If
+                Next
+                If target Is Nothing Then
+                    target = New List(Of Integer)()
+                    groups.Add(target)
                 End If
-                group.Add(item)
+                target.Add(i)
             Next
-            Return result.Where(Function(group) group.Count >= 2).ToList()
+
+            For Each group In groups
+                If group.Count < 2 Then Continue For
+                Dim members As New List(Of T)(group.Count)
+                For Each index In group
+                    members.Add(items(index))
+                Next
+                result.Add(members)
+            Next
+            Return result
         End Function
 
         ''' <summary>Ein kleines Bild der Datei, siehe Klassenbeschreibung.</summary>

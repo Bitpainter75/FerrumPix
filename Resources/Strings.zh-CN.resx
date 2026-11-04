@@ -10878,4 +10878,7 @@
   <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
     <value>还缺少导入目标。</value>
   </data>
+  <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
+    <value>未命名的显示器</value>
+  </data>
 </root>

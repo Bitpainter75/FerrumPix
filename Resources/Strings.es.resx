@@ -10880,4 +10880,7 @@
   <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
     <value>Todavía falta el destino de la importación.</value>
   </data>
+  <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
+    <value>Pantalla sin nombre</value>
+  </data>
 </root>

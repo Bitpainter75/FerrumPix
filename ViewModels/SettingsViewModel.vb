@@ -894,7 +894,7 @@ Namespace ViewModels
                 Dim key = DisplayProfileService.ScreenKey(screen)
                 Dim path As String = Nothing
                 If profiles IsNot Nothing Then profiles.TryGetValue(key, path)
-                DisplayProfileRows.Add(New DisplayProfileRow(key, screen.Bounds.Width, screen.Bounds.Height, screen.IsPrimary,
+                DisplayProfileRows.Add(New DisplayProfileRow(key, DisplayProfileService.HasSystemName(screen), screen.Bounds.Width, screen.Bounds.Height, screen.IsPrimary,
                                                              String.Equals(key, current, StringComparison.Ordinal), path,
                                                              Sub(row) SetDisplayProfile(row.ScreenKey, Nothing)))
             Next

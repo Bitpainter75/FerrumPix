@@ -84,18 +84,35 @@ Namespace Services
         ''' <summary>Der Schlüssel eines Bildschirms in den Einstellungen.
         '''
         ''' Avalonia liefert unter manchen Windows-Treibern einen Screen ohne <c>DisplayName</c>.
-        ''' Die Geometrie bleibt dann als Ersatz eindeutig, solange die Bildschirmanordnung steht.
         ''' Ein leerer Name darf den Bildschirm nicht aus der Profilliste verschwinden lassen:
-        ''' sonst gibt es keinen Weg, ihm überhaupt ein ICC-Profil zuzuordnen.</summary>
+        ''' sonst gibt es keinen Weg, ihm überhaupt ein ICC-Profil zuzuordnen. Ersatz ist dann die
+        ''' Auflösung, und nur wenn ein zweiter namenloser Bildschirm dieselbe hat, dazu die Lage.
+        ''' Mit der Lage allein ginge das Profil verloren, sobald die Bildschirme in der Anordnung
+        ''' verschoben werden oder ein anderer links dazukommt.</summary>
         Public Shared Function ScreenKey(screen As Screen) As String
             If screen Is Nothing Then Return ""
             Dim displayName = If(screen.DisplayName, "").Trim()
             If displayName.Length > 0 Then Return displayName
 
             Dim bounds = screen.Bounds
+            Dim sizeKey = String.Format(Globalization.CultureInfo.InvariantCulture,
+                                        "screen-{0}x{1}", bounds.Width, bounds.Height)
+            Dim all = _window?.Screens?.All
+            Dim sameSizeTwin = all IsNot Nothing AndAlso all.Any(
+                Function(other) other IsNot Nothing AndAlso
+                                Not other.Bounds.Equals(bounds) AndAlso
+                                String.IsNullOrWhiteSpace(other.DisplayName) AndAlso
+                                other.Bounds.Width = bounds.Width AndAlso
+                                other.Bounds.Height = bounds.Height)
+            If Not sameSizeTwin Then Return sizeKey
             Return String.Format(Globalization.CultureInfo.InvariantCulture,
-                                 "screen-{0}x{1}@{2},{3}",
-                                 bounds.Width, bounds.Height, bounds.X, bounds.Y)
+                                 "{0}@{1},{2}", sizeKey, bounds.X, bounds.Y)
+        End Function
+
+        ''' <summary>Hat der Bildschirm keinen Namen vom System, ist sein Schlüssel ein Ersatz aus
+        ''' der Auflösung (siehe <see cref="ScreenKey"/>) und taugt nicht als Anzeige.</summary>
+        Public Shared Function HasSystemName(screen As Screen) As Boolean
+            Return screen IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(screen.DisplayName)
         End Function
 
         ''' <summary>Die erkannten Bildschirme, der Hauptbildschirm zuerst. Leer, solange kein

@@ -10924,4 +10924,7 @@
   <data name="Es_fehlt_noch_das_Ziel_in_das_importiert_wird_efbb893a" xml:space="preserve">
     <value>가져올 대상이 아직 없습니다.</value>
   </data>
+  <data name="Bildschirm_ohne_Namen_c6f6f135" xml:space="preserve">
+    <value>이름 없는 디스플레이</value>
+  </data>
 </root>

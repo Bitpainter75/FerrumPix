@@ -1421,8 +1421,10 @@ Namespace Services
                 ' Ein Schnittpinsel wird nicht in die beiden Korrekturraster des Verlaufs gelegt:
                 ' diese können nur lokal hinzufuegen oder wegnehmen. Als eigener Bestandteil nach
                 ' dem Verlauf bedeutet er dagegen exakt Minimum(Verlauf, Strich), ohne den Verlauf
-                ' zu backen. Weitere Schnittstriche treffen danach diesen Raster-Bestandteil und
-                ' verkleinern ihn ebenfalls mit Minimum.
+                ' zu backen. Das ViewModel macht den neuen Bestandteil zum bedienten; weitere
+                ' Striche laufen dann ueber ApplyMaskBrushStrokeToComponent in dieses Raster
+                ' (Schneiden mit Minimum, Hinzufuegen mit Maximum, Abziehen zieht ab) und nicht
+                ' hierher.
                 If String.Equals(effective, "Intersect", StringComparison.Ordinal) Then
                     Dim intersection = stroke.PrimaryAsComponent()
                     If intersection Is Nothing OrElse Not intersection.HasPixelData Then Return False
