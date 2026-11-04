@@ -443,11 +443,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt oder
-        ''' der Vermerk eine Modellart nennt, die diese Fassung nicht kennt - dann bleibt der
-        ''' Vorgang liegen, statt mit einem ANDEREN Modell nachgezogen zu werden. Ein Bild, das
-        ''' anders aussieht als beim letzten Mal, ist schlechter als eines, dem etwas fehlt und das
-        ''' es sagt.</summary>
         ''' <summary>Ein vermerktes Hochskalieren nachziehen. Nothing, wenn es nicht geht - dann
         ''' behaelt der Aufrufer sein Bild in der bisherigen Groesse.
         '''
@@ -510,6 +505,11 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt oder
+        ''' der Vermerk eine Modellart nennt, die diese Fassung nicht kennt - dann bleibt der
+        ''' Vorgang liegen, statt mit einem ANDEREN Modell nachgezogen zu werden. Ein Bild, das
+        ''' anders aussieht als beim letzten Mal, ist schlechter als eines, dem etwas fehlt und das
+        ''' es sagt.</summary>
         Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation,
                                                 cancel As Threading.CancellationToken) As SKBitmap
             Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)
@@ -613,17 +613,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -
-        ''' sie ist die einzige, die RAW/ICO/WebP und die EXIF-Orientierung korrekt behandelt.</summary>
-        ''' <param name="developRaw">False = eine RAW-Quelle NICHT entwickeln, sondern ihre
-        ''' eingebettete JPEG-Vorschau nehmen. Fuer Stapellaeufe, in denen Geschwindigkeit vor
-        ''' Aufloesung geht (Einstellung "RAWs ohne Rezept im Stapel entwickeln"). Auf alles
-        ''' andere hat der Schalter keine Wirkung.</param>
-        ''' <param name="lensChoice">Welche Objektivkorrekturen fuer DIESES Bild gelten. Nothing =
-        ''' wie in den Einstellungen vorgegeben. Sie gehoert hierher und nicht in die Reglerkette:
-        ''' sie veraendert den DECODE, nicht die Nachbearbeitung.</param>
-        ''' <param name="recoverHighlights">Lichter aus den Rohdaten zurueckholen. Gehoert aus
-        ''' demselben Grund hierher wie die Objektivkorrektur: sie veraendert den DECODE.</param>
         ''' <summary>Kostet das Oeffnen dieser Datei genug Zeit, dass der Nutzer es gesagt bekommen
         ''' muss? Formate, die wirklich entwickelt oder gerendert werden, brauchen Sekunden; ein
         ''' gewoehnliches JPEG oder PNG steht sofort da und soll beim Blaettern nicht flackern.
@@ -643,6 +632,17 @@ Namespace Services
                    FpxService.IsFpx(path)
         End Function
 
+        ''' <summary>Friend statt Private, damit PrintService dieselbe Dekodier-Route benutzt -
+        ''' sie ist die einzige, die RAW/ICO/WebP und die EXIF-Orientierung korrekt behandelt.</summary>
+        ''' <param name="developRaw">False = eine RAW-Quelle NICHT entwickeln, sondern ihre
+        ''' eingebettete JPEG-Vorschau nehmen. Fuer Stapellaeufe, in denen Geschwindigkeit vor
+        ''' Aufloesung geht (Einstellung "RAWs ohne Rezept im Stapel entwickeln"). Auf alles
+        ''' andere hat der Schalter keine Wirkung.</param>
+        ''' <param name="lensChoice">Welche Objektivkorrekturen fuer DIESES Bild gelten. Nothing =
+        ''' wie in den Einstellungen vorgegeben. Sie gehoert hierher und nicht in die Reglerkette:
+        ''' sie veraendert den DECODE, nicht die Nachbearbeitung.</param>
+        ''' <param name="recoverHighlights">Lichter aus den Rohdaten zurueckholen. Gehoert aus
+        ''' demselben Grund hierher wie die Objektivkorrektur: sie veraendert den DECODE.</param>
         Friend Shared Function DecodeOriented(path As String, Optional developRaw As Boolean = True,
                                               Optional lensChoice As LensDataService.Wahl = Nothing,
                                               Optional recoverHighlights As Boolean = True) As SKBitmap
@@ -2005,8 +2005,10 @@ Namespace Services
         '''
         ''' <paramref name="applyOwnWarp"/>: die eigene Verzerrung des Objekts hier rechnen, VOR den
         ''' Anpassungen (der Objekt-Bitmap-Cache). ObjectX und ObjectY geben dann die Lage des
-        ''' Objektrechtecks im verzerrten Bitmap an.</summary>
-        ''' <summary>Messpunkt um ein einzelnes Objekt, wie es der Kompositor des Editors zeichnet.</summary>
+        ''' Objektrechtecks im verzerrten Bitmap an.
+        '''
+        ''' Diese Huelle ist der Messpunkt um ein einzelnes Objekt, wie es der Kompositor des Editors
+        ''' zeichnet; gerechnet wird in <see cref="RenderAnnotationOverlaySkCore"/>.</summary>
         Public Shared Function RenderAnnotationOverlaySk(annotation As ImageAnnotation, pixelWidth As Integer, pixelHeight As Integer,
                                                          Optional maxRenderDimension As Single = MaxOverlayRenderDim,
                                                          Optional measureClip As SKPoint() = Nothing,
@@ -2149,11 +2151,6 @@ Namespace Services
             End Using
         End Function
 
-        ''' DrawWrappedText setzt die Grundlinie der ersten Zeile auf rect.Top + fontSize, die Glyphen-
-        ''' Oberkante liegt also um (fontSize - Ascent) unter der Oberkante des Objekt-Rechtecks. Avalonia
-        ''' setzt die Glyphen-Oberkante einer TextBox dagegen direkt auf deren Oberkante. Der Rückgabewert
-        ''' ist der Versatz, um den die Live-TextBox nach unten geschoben werden muss, damit ihre Glyphen
-        ''' dort landen, wo das gebackene Bild sie zeichnet.
         ''' <summary>Zeilenabstand des gebackenen Textes, aus den Metriken der Schrift statt aus einem
         ''' festen Faktor. Genau diesen Abstand benutzt auch Avalonia, wenn an der Live-Textbox kein
         ''' LineHeight gesetzt ist - beides liest dieselben hhea-Werte über SkiaSharp. Ein eigener Faktor
@@ -2173,6 +2170,11 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>DrawWrappedText setzt die Grundlinie der ersten Zeile auf rect.Top + fontSize, die
+        ''' Glyphen-Oberkante liegt also um (fontSize - Ascent) unter der Oberkante des Objekt-Rechtecks.
+        ''' Avalonia setzt die Glyphen-Oberkante einer TextBox dagegen direkt auf deren Oberkante. Der
+        ''' Rückgabewert ist der Versatz, um den die Live-TextBox nach unten geschoben werden muss, damit
+        ''' ihre Glyphen dort landen, wo das gebackene Bild sie zeichnet.</summary>
         Public Shared Function GetBakedTextTopOffset(fontFamily As String, fontSize As Single,
                                                      Optional text As String = "", Optional bold As Boolean = False,
                                                      Optional italic As Boolean = False) As Double
@@ -3673,8 +3675,6 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Projiziert eine SourceSpace-Maske durch exakt dieselbe Geometriekette wie das Bild:
-        ''' Preview-Skalierung, Crop, Quarter-Turn/Flip, Begradigung, Resize und Canvas-Offset.</summary>
         ''' <summary>Fingerabdruck NUR der Pixelwerte einer Anpassung. Zwei Ebenen, die gemeinsam
         ''' angepasst wurden, tragen danach denselben - und genau daran werden sie beim Rendern
         ''' wieder zusammengefuehrt.</summary>
@@ -5113,9 +5113,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' <summary>Führt eine zeilenweise Bildoperation über y = 0..height-1 aus - parallel, sobald sich
         ''' der Thread-Overhead lohnt, sonst seriell. Voraussetzung: Die Zeilen sind unabhängig, jeder
         ''' Aufruf schreibt nur in seine eigene Zeile und liest höchstens aus unveränderten Quellpuffern.
-        ''' Dann ist das Ergebnis unabhängig von der Thread-Aufteilung bitgleich zum seriellen Lauf.</summary>
-        ''' <summary>Eine Zeilenschleife, unterhalb von <see cref="ParallelPixelThreshold"/> seriell.
-        ''' DER Hausstandard dafuer - auch fuer die ViewModels (FRIEND), damit es nicht zwei
+        ''' Dann ist das Ergebnis unabhängig von der Thread-Aufteilung bitgleich zum seriellen Lauf.
+        '''
+        ''' Unterhalb von <see cref="ParallelPixelThreshold"/> seriell. DER Hausstandard dafuer - auch fuer die ViewModels (FRIEND), damit es nicht zwei
         ''' Schwellen gibt, die auseinanderlaufen.</summary>
         Friend Shared Sub ForEachRow(width As Integer, height As Integer, body As Action(Of Integer))
             If height <= 0 Then Return
@@ -5494,11 +5494,6 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Select
         End Function
 
-        ''' <summary>Legt das Bild auf die Hintergrundfarbe des Dokuments. Ohne gesetzte Farbe kommt
-        ''' dasselbe Objekt unveraendert zurueck - kein Umkopieren fuer nichts.
-        '''
-        ''' Am Ende der Kette, damit sie ALLES fuellt, was vorher durchsichtig geblieben ist:
-        ''' erweiterte Leinwand, leere Ecken von Begradigen und Verzerren, weggeradierte Stellen.</summary>
         ''' <summary>Die Hintergrundfarbe des Dokuments, oder durchsichtig. EINE Stelle dafuer: sie
         ''' wird an zwei Enden gebraucht - unter dem fertigen Bild (hier) und unter den Objekten,
         ''' wenn die Hintergrundebene ausgeblendet ist. Zwei Auslegungen von "keine Farbe gesetzt"
@@ -5512,6 +5507,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return SKColors.Transparent
         End Function
 
+        ''' <summary>Legt das Bild auf die Hintergrundfarbe des Dokuments. Ohne gesetzte Farbe kommt
+        ''' dasselbe Objekt unveraendert zurueck - kein Umkopieren fuer nichts.
+        '''
+        ''' Am Ende der Kette, damit sie ALLES fuellt, was vorher durchsichtig geblieben ist:
+        ''' erweiterte Leinwand, leere Ecken von Begradigen und Verzerren, weggeradierte Stellen.</summary>
         Private Shared Function ApplyDocumentBackground(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
             Dim color = DocumentBackgroundColor(adj)
@@ -6762,10 +6762,6 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return result
         End Function
 
-        ''' <summary>Dekodiert und verarbeitet das Bild (alle Anpassungen/Objekte gebacken) und liefert die
-        ''' Zauberstab-Maske am Saatpunkt in Bildpixeln. <paramref name="bounds"/> ist das umschließende
-        ''' Rechteck in Bildpixeln.</summary>
-        ''' <paramref name="workingFull"/>: Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).
         ''' <summary>Das fertig gerechnete ANZEIGEBILD, wie es der Editor zeigt - Besitz beim
         ''' Aufrufer. Fuer alles, was auf dem gesehenen Bild arbeiten muss statt auf der Datei:
         ''' Zauberstab, Objektauswahl per Modell.
@@ -6788,6 +6784,10 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             End Try
         End Function
 
+        ''' <summary>Dekodiert und verarbeitet das Bild (alle Anpassungen/Objekte gebacken) und liefert die
+        ''' Zauberstab-Maske am Saatpunkt in Bildpixeln. <paramref name="bounds"/> ist das umschließende
+        ''' Rechteck in Bildpixeln.</summary>
+        ''' <param name="workingFull">Arbeitsbild statt Datei-Decode (siehe SaveImage; Besitz wechselt hierher).</param>
         Public Shared Function BuildMagicWandMaskFromFile(sourcePath As String, adj As ImageAdjustments,
                                                           seedX As Integer, seedY As Integer, tolerance As Single,
                                                           ByRef bounds As SKRectI,

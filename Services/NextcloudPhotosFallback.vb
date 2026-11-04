@@ -77,6 +77,14 @@ Namespace Services
             Return NormalizeServerUrl(s.NextcloudServerUrl) & "|" & If(s.NextcloudUserName, "") & "|" & If(s.NextcloudAppPassword, "")
         End Function
 
+        ''' <summary>Zwingt den Rueckfall, auch wenn Memories antwortet.
+        '''
+        ''' Zwei Zwecke, und beide sind echt: der Pruefstand misst damit den zweiten Weg auf einem
+        ''' Server, auf dem die App liegt (sonst waere er nur dort pruefbar, wo sie fehlt), und wer
+        ''' eine kaputte oder sehr langsame Memories-Installation hat, kommt daran vorbei, ohne sie
+        ''' abschalten zu muessen.</summary>
+        Public Shared Property ForceFallback As Boolean = False
+
         ''' <summary>Erkennt EINMAL je Server und Konto, ob Memories antwortet.
         '''
         ''' Gefragt wird die Zeitachse selbst und nicht /api/describe: describe ist oeffentlich und
@@ -86,14 +94,6 @@ Namespace Services
         '''
         ''' KEINE ANTWORT WIRD NICHT GEMERKT. Ein Netzaussetzer darf einen Server mit Memories nicht
         ''' dauerhaft auf den Rueckfall festlegen; beim naechsten Abruf wird deshalb addedNow gefragt.</summary>
-        ''' <summary>Zwingt den Rueckfall, auch wenn Memories antwortet.
-        '''
-        ''' Zwei Zwecke, und beide sind echt: der Pruefstand misst damit den zweiten Weg auf einem
-        ''' Server, auf dem die App liegt (sonst waere er nur dort pruefbar, wo sie fehlt), und wer
-        ''' eine kaputte oder sehr langsame Memories-Installation hat, kommt daran vorbei, ohne sie
-        ''' abschalten zu muessen.</summary>
-        Public Shared Property ForceFallback As Boolean = False
-
         Friend Shared Async Function EnsureModeAsync(cancellationToken As CancellationToken) As Task(Of ServerMode)
             If ForceFallback Then Return ServerMode.Photos
             Dim signature = ConnectionSignature()

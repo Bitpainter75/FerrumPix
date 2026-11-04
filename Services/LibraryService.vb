@@ -1195,10 +1195,6 @@ Namespace Services
             End Try
         End Sub
 
-        ''' <summary>Speichert die durchsuchbaren EXIF-Felder für eine Datei, ohne Favorit/Bewertung/
-        ''' Stichworte anzutasten (partielles Upsert wie bei SetFavorite/SetRating/SetTags). Liest
-        ''' zusätzlich Dateisystem-Erstellungsdatum und -Änderungsdatum der Datei und schreibt Letzteres
-        ''' als ScannedSourceModifiedAt-Snapshot mit - das ist der Invalidierungs-Schlüssel, der beim
         ''' <summary>Wird nach JEDEM frischen Auslesen von Metadaten aus einer Datei aufgerufen (Viewer/
         ''' Editor-Bildwechsel, Gallery-Scan, Suchauswertung) - vergleicht das Ergebnis mit dem aktuell
         ''' gecachten Katalog-Eintrag und schreibt nur bei tatsächlicher Abweichung (oder fehlendem
@@ -1287,6 +1283,10 @@ Namespace Services
             Return a.Value.Equals(b.Value)
         End Function
 
+        ''' <summary>Speichert die durchsuchbaren EXIF-Felder für eine Datei, ohne Favorit/Bewertung/
+        ''' Stichworte anzutasten (partielles Upsert wie bei SetFavorite/SetRating/SetTags). Liest
+        ''' zusätzlich Dateisystem-Erstellungsdatum und -Änderungsdatum der Datei und schreibt Letzteres
+        ''' als ScannedSourceModifiedAt-Snapshot mit - das ist der Invalidierungs-Schlüssel, der beim
         ''' nächsten Ordner-Scan entscheidet, ob diese EXIF-Daten noch aktuell sind.</summary>
         Public Sub SetExifData(filePath As String, exif As ExifSearchFields, summary As ExifCatalogSummary)
             If exif Is Nothing OrElse summary Is Nothing Then Return
@@ -1904,7 +1904,6 @@ Namespace Services
                 ToList()
         End Function
 
-        ''' <summary>Entfernt Metadaten-Einträge, deren Bilddatei nicht mehr existiert. Gibt die Anzahl gelöschter Einträge zurück.</summary>
         ''' <summary>Je Ordner die Zahl der Katalogzeilen - fuer die Aufraeumliste in den
         ''' Einstellungen.
         '''
@@ -2128,7 +2127,8 @@ Namespace Services
             Return removed
         End Function
 
-        ''' <summary>Raeumt die Katalogzeilen weg, deren Datei es nicht mehr gibt.
+        ''' <summary>Raeumt die Katalogzeilen weg, deren Datei es nicht mehr gibt, und gibt die Anzahl
+        ''' geloeschter Eintraege zurueck.
         '''
         ''' <param name="progress">Wird waehrend des Pruefens gerufen, mit erledigten und gesamten
         ''' Zeilen. Die teure Stelle ist das <c>File.Exists</c> je Zeile: bei einem Bestand auf einem

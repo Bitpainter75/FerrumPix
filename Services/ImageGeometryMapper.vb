@@ -454,12 +454,13 @@ Namespace Services
             Next
         End Sub
 
-        ''' <summary>Wie schnell die Wirkung einer Linie mit dem Abstand nachlaesst. Kleiner Wert am
-        ''' Nenner heisst: direkt an der Linie sehr stark. Der Exponent bestimmt, wie rasch es
-        ''' abfaellt - unter 1 bliebe die Wirkung bis in den letzten Winkel des Bildes spuerbar.</summary>
         ''' <summary>Wie weit die Wirkung einer Linie reicht, als Vielfaches ihrer Laenge.</summary>
         Private Const RangeFactor As Double = 0.55
 
+        ''' <summary>Wie schnell die Wirkung einer Linie mit dem Abstand nachlaesst. Kleiner Wert am
+        ''' Nenner heisst: direkt an der Linie sehr stark. Der Exponent bestimmt, wie rasch es
+        ''' abfaellt - unter 1 bliebe die Wirkung bis in den letzten Winkel des Bildes spuerbar.
+        ''' Gilt fuer GewichtBasis und WeightSteepness.</summary>
         Private Const GewichtBasis As Double = 12.0
         Private Const WeightSteepness As Double = 1.8
 

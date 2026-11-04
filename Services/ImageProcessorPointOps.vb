@@ -613,8 +613,6 @@ Namespace Services
 
         ' ── Vorberechnung ────────────────────────────────────────────────────────
 
-        ''' <summary>Farbmatrix wie in ApplyColorAdjustments - Belichtung bleibt bewusst DRAUSSEN und
-        ''' wandert in die Tonwerttabelle, weil dort die weiche Schulter greift.</summary>
         ''' <summary>Matrix der KAMERAKALIBRIERUNG. Jede Primaerfarbe wird um die Grauachse gedreht
         ''' (Farbton) und in ihrem Abstand davon skaliert (Saettigung); die gedrehten Primaerfarben
         ''' bilden die Spalten der Matrix.
@@ -1108,6 +1106,8 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>Farbmatrix wie in ApplyColorAdjustments - Belichtung bleibt bewusst DRAUSSEN und
+        ''' wandert in die Tonwerttabelle, weil dort die weiche Schulter greift.</summary>
         Private Shared Function BuildPointOpColorMatrix(adj As ImageAdjustments) As Single()
             ' MODELL 2 NIMMT TEMPERATUR UND TÖNUNG HIER HERAUS: sie laufen dort als eigene
             ' Adaptionsstufe im Linearlicht (siehe BuildWhiteBalanceMatrix). Bliebe der Anteil
@@ -1197,11 +1197,6 @@ Namespace Services
         ''' Darunter wird ein Verlauf so flach, dass er im 8-Bit-Bild zur Flaeche wird.</summary>
         Private Const ToneZoneMinSlope As Double = 0.2
 
-        ''' <summary>Der Hub von Kontrast, Lichter, Tiefen, Weiss und Schwarz am Eingangston
-        ''' <paramref name="d0"/>, aus den gemessenen Kennlinien (ToneSliderCurves). Jeder Regler fuer
-        ''' sich bleibt monoton; zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
-        ''' <paramref name="part"/> Local liefert nur Lichter und Tiefen, die an der Basisschicht der
-        ''' Umgebung ausgewertet werden.</summary>
         ''' <summary>Gegenseitige Daempfung von Lichter und Tiefen. Gesetzt zusammen verliert jeder
         ''' der beiden beim Referenzprogramm einen Teil seiner Wirkung, um so mehr, je groesser der
         ''' andere Betrag gegen den eigenen ist. Gemessen mit Diagnostics/Reglereichung/daempfung.py
@@ -1219,6 +1214,11 @@ Namespace Services
             Return Math.Min(ToneZoneDampingMax, perRatio * Math.Abs(other) / Math.Abs(own))
         End Function
 
+        ''' <summary>Der Hub von Kontrast, Lichter, Tiefen, Weiss und Schwarz am Eingangston
+        ''' <paramref name="d0"/>, aus den gemessenen Kennlinien (ToneSliderCurves). Jeder Regler fuer
+        ''' sich bleibt monoton; zusammen koennen sie es nicht, das faengt BuildMonotoneToneZones ab.
+        ''' <paramref name="part"/> Local liefert nur Lichter und Tiefen, die an der Basisschicht der
+        ''' Umgebung ausgewertet werden.</summary>
         Private Shared Function ToneZoneLift(adj As ImageAdjustments, d0 As Double,
                                              Optional reference As ToneReference = Nothing,
                                              Optional part As ToneZonePart = ToneZonePart.All) As Double

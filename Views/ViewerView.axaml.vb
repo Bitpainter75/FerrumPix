@@ -170,14 +170,14 @@ Namespace Views
         End Sub
 
         ''' <summary>Menues entstehen erst beim Oeffnen und verpassen den einmaligen
-        ''' Fenster-Durchlauf der Lokalisierung - deshalb hier ihren eigenen Unterbaum.</summary>
+        ''' Fenster-Durchlauf der Lokalisierung - deshalb hier ihren eigenen Unterbaum. Die Eintraege
+        ''' kommen als Daten und tragen ihre Beschriftung bereits uebersetzt; beim Oeffnen einmal neu
+        ''' lesen lassen, damit ein Sprachwechsel ankommt.</summary>
         Private Sub OnLocalizedMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
             Dim menu = TryCast(sender, Avalonia.LogicalTree.ILogical)
             If menu IsNot Nothing Then LocalizationService.ApplyTo(menu)
         End Sub
 
-        ''' <summary>Die Eintraege kommen als Daten und tragen ihre Beschriftung bereits uebersetzt.
-        ''' Beim Oeffnen einmal neu lesen lassen, damit ein Sprachwechsel ankommt.</summary>
         ''' <summary>Den Zwischenablage-Haken des ViewModels fuellen. Muss hier passieren: die
         ''' Zwischenablage haengt am TopLevel, das ViewModel kommt nicht daran. Ohne das waere
         ''' "Pfad kopieren" ein Eintrag, den es gibt und der nichts tut.</summary>

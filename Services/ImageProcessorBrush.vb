@@ -24,10 +24,6 @@ Namespace Services
 
     Partial Public Class ImageProcessor
 
-        ''' Mehrere Striche derselben Ebene (siehe EditorViewModel.AddBrushStroke - Striche werden
-        ''' gesammelt, statt für jeden eine eigene Ebene anzulegen) sind im Punktestring per ";"
-        ''' getrennt und werden hier als eigenständige Teilpfade (je ein eigenes MoveTo) gezeichnet -
-        ''' eine einzige durchgehende Linie würde sie sonst fälschlich miteinander verbinden.
         ''' <summary>Bekannte Pinsel-Varianten (Stufe 2). "soft" ist der klassische weiche Rundpinsel;
         ''' die übrigen sind texturierte Presets. Radiergummi erzwingt immer "soft".</summary>
         Friend Shared ReadOnly BrushPresetKeys As String() = {"soft", "marker", "acrylic", "sandpaper", "pencil", "smear", "spatter",
@@ -95,6 +91,10 @@ Namespace Services
             Return If(Array.IndexOf(BrushPresetKeys, key) >= 0, key, "soft")
         End Function
 
+        ''' <summary>Mehrere Striche derselben Ebene (siehe EditorViewModel.AddBrushStroke - Striche
+        ''' werden gesammelt, statt für jeden eine eigene Ebene anzulegen) werden hier als
+        ''' eigenständige Teilpfade (je ein eigenes MoveTo) gezeichnet - eine einzige durchgehende
+        ''' Linie würde sie sonst fälschlich miteinander verbinden.</summary>
         Private Shared Sub DrawBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, stroke As SKColor, strokeWidth As Single, hardnessPercent As Single, flowPercent As Single, preset As String, isEraser As Boolean, Optional eraserFill As SKColor? = Nothing)
             If strokes Is Nothing Then Return
 
@@ -410,12 +410,6 @@ Namespace Services
             End Using
         End Sub
 
-        ''' <summary>Stempelbasierte Striche: der Pfad wird per SKPathMeasure abgetastet und an jedem
-        ''' Schritt eine Form gesetzt. "smear" tupft langgezogene, weiche, zur Strichrichtung gedrehte
-        ''' Ovale (verwischter Zug, der der Kurve folgt); "spatter" setzt einen gebrochenen Kern plus
-        ''' zufällig gestreute Tropfen neben der Linie (viele kleine, wenige große - "zu viel Farbe").
-        ''' Alle Zufallswerte stammen deterministisch aus dem Stempelindex, damit Vorschau, gebackenes
-        ''' Bild und Re-Renders identisch bleiben.</summary>
         ''' <summary>Wird diese Pinselart gestempelt? Diese Arten kennen KEINEN Stiftdruck: ihre
         ''' Formen (Borsten, Tropfen, Federabdruecke, Lasuren) sind auf eine feste Breite abgestimmt.
         ''' Die Vorschau fragt hier nach, damit sie nicht einen schmaler werdenden Strich zeigt, der
@@ -426,6 +420,12 @@ Namespace Services
                    key = "calligraphy" OrElse key = "stipple" OrElse key = "watercolor"
         End Function
 
+        ''' <summary>Stempelbasierte Striche: der Pfad wird per SKPathMeasure abgetastet und an jedem
+        ''' Schritt eine Form gesetzt. "smear" tupft langgezogene, weiche, zur Strichrichtung gedrehte
+        ''' Ovale (verwischter Zug, der der Kurve folgt); "spatter" setzt einen gebrochenen Kern plus
+        ''' zufällig gestreute Tropfen neben der Linie (viele kleine, wenige große - "zu viel Farbe").
+        ''' Alle Zufallswerte stammen deterministisch aus dem Stempelindex, damit Vorschau, gebackenes
+        ''' Bild und Re-Renders identisch bleiben.</summary>
         Private Shared Sub DrawStampBrushStroke(canvas As SKCanvas, strokes As IEnumerable(Of BrushStroke), width As Integer, height As Integer, color As SKColor, strokeWidth As Single, blurSigma As Single, flow As Single, key As String)
             Dim minX = Single.MaxValue, minY = Single.MaxValue
             Dim maxX = Single.MinValue, maxY = Single.MinValue

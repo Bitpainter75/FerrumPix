@@ -207,11 +207,10 @@ Namespace Services
             Public Property Key As String = ""
             ''' <summary>Die AKTUELLE Datei. Ihr Name traegt die Version.</summary>
             Public Property FileName As String = ""
-            ''' <summary>Aeltere Fassungen, die weiterhin laufen. Wer nicht aktualisiert hat, soll
-            ''' weiterarbeiten koennen - ein Modellwechsel darf niemandem sein Werkzeug wegnehmen,
-            ''' nur weil er den Knopf noch nicht gedrueckt hat.</summary>
-            ''' <summary>Aeltere Dateinamen, mit denen sich weiterarbeiten laesst.
-            ''' 
+            ''' <summary>Aeltere Dateinamen, mit denen sich weiterarbeiten laesst. Wer nicht aktualisiert
+            ''' hat, soll weiterarbeiten koennen - ein Modellwechsel darf niemandem sein Werkzeug
+            ''' wegnehmen, nur weil er den Knopf noch nicht gedrueckt hat.
+            '''
             ''' NUR, solange der Vertrag derselbe bleibt. Bei "lama" steht hier bewusst nichts: die
             ''' erste Fassung hatte zwei getrennte Eingaenge und gab 0 bis 255 aus, die zweite hat
             ''' einen Eingang mit vier Kanaelen und gibt 0 bis 1. Ein Rueckfall auf die alte Datei
@@ -622,12 +621,6 @@ Namespace Services
             Return New String() {entry.FileName}.Concat(If(entry.Predecessors, Array.Empty(Of String)()))
         End Function
 
-        ''' <summary>Darf diese DATEI auf die Grafikkarte? Die Antwort steht am Register-Eintrag,
-        ''' gilt aber auch fuer dessen aeltere Fassungen - eine alte Datei rechnet dasselbe.
-        '''
-        ''' Unbekannte Dateien bekommen ein Nein. Wer eine eigene Datei in den Modellordner legt,
-        ''' bekommt den Prozessor, und das ist die richtige Antwort: was sie auf der Karte tut, hat
-        ''' niemand gemessen.</summary>
         ''' <summary>Modelle, die in diesem Programmlauf auf einer Karte gescheitert sind, je Datei
         ''' und Karte. Nicht gemerkt: der Grund kann voruebergehend sein (belegter Speicher).</summary>
         Private Shared ReadOnly _gpuFailedModels As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -646,11 +639,6 @@ Namespace Services
             End SyncLock
         End Function
 
-        ''' <summary>Auch die GPU-Probe sperrt so ein Modell, das auf der angehaengten Karte an sich
-        ''' selbst scheitert (GpuAccelerationService.Probe).</summary>
-        ''' <summary>Die GPU-Probe hat dieses Modell auf dieser Karte gerade laufen sehen: die Sperre
-        ''' gilt nicht mehr, sonst bliebe es trotz bestaetigter Tauglichkeit bis zum Programmende
-        ''' auf dem Prozessor.</summary>
         ''' <summary>Fuer die Probe: das Modell sperren, AUSSER es laeuft schon auf dieser Karte.
         ''' Pruefen und Sperren unter _lock, demselben Schloss wie Veroeffentlichen und Entsperren
         ''' im Sitzungsaufbau; siehe dort.</summary>
@@ -663,18 +651,29 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>Die GPU-Probe hat dieses Modell auf dieser Karte gerade laufen sehen: die Sperre
+        ''' gilt nicht mehr, sonst bliebe es trotz bestaetigter Tauglichkeit bis zum Programmende
+        ''' auf dem Prozessor.</summary>
         Friend Shared Sub ClearGpuFailedModel(fileName As String, deviceKey As String)
             SyncLock _gpuFailedModels
                 _gpuFailedModels.Remove(fileName & "|" & deviceKey)
             End SyncLock
         End Sub
 
+        ''' <summary>Auch die GPU-Probe sperrt so ein Modell, das auf der angehaengten Karte an sich
+        ''' selbst scheitert (GpuAccelerationService.Probe).</summary>
         Friend Shared Sub NoteGpuFailedModel(fileName As String, deviceKey As String)
             SyncLock _gpuFailedModels
                 _gpuFailedModels.Add(fileName & "|" & deviceKey)
             End SyncLock
         End Sub
 
+        ''' <summary>Darf diese DATEI auf die Grafikkarte? Die Antwort steht am Register-Eintrag,
+        ''' gilt aber auch fuer dessen aeltere Fassungen - eine alte Datei rechnet dasselbe.
+        '''
+        ''' Unbekannte Dateien bekommen ein Nein. Wer eine eigene Datei in den Modellordner legt,
+        ''' bekommt den Prozessor, und das ist die richtige Antwort: was sie auf der Karte tut, hat
+        ''' niemand gemessen.</summary>
         Public Shared Function IsGpuAllowed(fileName As String) As Boolean
             If String.IsNullOrWhiteSpace(fileName) Then Return False
             For Each entry In KnownEntries

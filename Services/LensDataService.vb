@@ -1076,14 +1076,6 @@ Namespace Services
             Return False
         End Function
 
-        ''' <summary>Sucht das Objektiv. Namensgleichheit allein reicht NICHT: dieselbe Rechnung
-        ''' steht in der Sammlung mehrfach, einmal je Sensorgroesse, an der sie gemessen wurde - und
-        ''' die Fassungen unterscheiden sich stark im Umfang (an einem Beispiel 9 Farbquerfehler- und
-        ''' 120 Vignettierungswerte gegen gar keine). Wer einfach den ersten Namenstreffer nimmt,
-        ''' bekommt zufaellig mal die eine, mal die andere.
-        '''
-        ''' Bei Gleichstand entscheidet deshalb erst der Abstand der Sensorgroesse zur Kamera, dann
-        ''' der Umfang der Messwerte.</summary>
         ''' <summary>Braucht dieses Objektiv eine Brennweitenangabe? Ein Zoom schon - ohne sie ist
         ''' nicht zu entscheiden, welcher Kalibrierpunkt gilt. Fuer die Anzeige, damit die Gruppe
         ''' sagen kann, WARUM nichts passiert, statt stumm zu bleiben.</summary>
@@ -1105,6 +1097,14 @@ Namespace Services
             Return If(values.Count = 1, values(0), 0.0)
         End Function
 
+        ''' <summary>Sucht das Objektiv. Namensgleichheit allein reicht NICHT: dieselbe Rechnung
+        ''' steht in der Sammlung mehrfach, einmal je Sensorgroesse, an der sie gemessen wurde - und
+        ''' die Fassungen unterscheiden sich stark im Umfang (an einem Beispiel 9 Farbquerfehler- und
+        ''' 120 Vignettierungswerte gegen gar keine). Wer einfach den ersten Namenstreffer nimmt,
+        ''' bekommt zufaellig mal die eine, mal die andere.
+        '''
+        ''' Bei Gleichstand entscheidet deshalb erst der Abstand der Sensorgroesse zur Kamera, dann
+        ''' der Umfang der Messwerte.</summary>
         Private Shared Function BestLens(lensName As String, camera As CameraEntry) As LensEntry
             ' Eine Canon schreibt fuer ihre eigenen Objektive den vollen Namen. Steht nur die
             ' Brennweite da ("24-70mm"), ist es ein Fremdobjektiv, dessen Nummer sich nicht

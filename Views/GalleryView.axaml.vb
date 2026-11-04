@@ -1517,10 +1517,6 @@ Namespace Views
 
         ' --- Drag&Drop lokal → Immich (Datei-Payload auf einen Immich-Knoten ablegen = Upload) ---
 
-        ''' <summary>Knoten unter dem Zeiger. Laeuft erst den LOGISCHEN, dann den VISUELLEN Elternpfad
-        ''' hoch: bei Inhalten aus einem ItemTemplate reisst die logische Kette ab, der Knoten waere sonst
-        ''' je nach getroffenem Element mal auffindbar und mal nicht - genau daraus entstand die
-        ''' Abweichung zwischen Mauszeiger und tatsaechlichem Ablegen.</summary>
         ''' <summary>Das Ergebnis der letzten Elternsuche, samt Element, für das es galt.
         '''
         ''' WARUM GEMERKT: Ein Zug erzeugt hunderte Zeigerberichte je Sekunde, und der Zeiger steht
@@ -1575,6 +1571,10 @@ Namespace Views
             End While
         End Sub
 
+        ''' <summary>Knoten unter dem Zeiger. Laeuft erst den LOGISCHEN, dann den VISUELLEN Elternpfad
+        ''' hoch: bei Inhalten aus einem ItemTemplate reisst die logische Kette ab, der Knoten waere sonst
+        ''' je nach getroffenem Element mal auffindbar und mal nicht - genau daraus entstand die
+        ''' Abweichung zwischen Mauszeiger und tatsaechlichem Ablegen.</summary>
         Private Function GetImmichDropNode(e As DragEventArgs) As VirtualNavigationNode
             ResolveDropSource(e)
             Return _lastDropNode
@@ -1585,8 +1585,9 @@ Namespace Views
         ''' <paramref name="requireExistingFiles"/>: beim Ablegen muessen die Dateien wirklich da sein;
         ''' beim Ueberfliegen nicht - unter X11 reicht ein fremder Ziehvorgang die Dateiliste erst BEIM
         ''' Ablegen heraus, waehrend DragOver liest sie sich leer. Der Zeiger zeigte deshalb "geht nicht",
-        ''' obwohl der Upload danach lief.</summary>
-        ''' <summary>Was auf einem Serverknoten abgelegt wird, zerfaellt in ZWEI Sorten: lokale
+        ''' obwohl der Upload danach lief.
+        '''
+        ''' Was auf einem Serverknoten abgelegt wird, zerfaellt in ZWEI Sorten: lokale
         ''' Dateien werden hochgeladen, Bilder DERSELBEN Serverquelle nur zugeordnet. Frueher fielen
         ''' die Serverpfade hier ganz heraus, und ein Ziehen aus "Alle Fotos" in ein Album tat
         ''' schlicht nichts.</summary>
@@ -2839,11 +2840,6 @@ Namespace Views
 
 
 
-        ''' Der Menü-Button der Werkzeugleiste zeigt dasselbe Menü wie ein Rechtsklick auf das Bild - viele
-        ''' Funktionen stecken inzwischen nur dort. Anders als in den Kachel-/Listen-Vorlagen ist der
-        ''' DataContext hier das ViewModel, nicht das Bild: die IsVisible-Bindungen der Einträge
-        ''' (CanEditFile, CanFileOperationCopy, ...) hängen aber am Bild, deshalb wird er vor dem Öffnen
-        ''' auf das ausgewählte Element gesetzt.
         ''' <summary>Neues Bild und Vollbild. Bewusst ueber Click und nicht ueber eine Bindung:
         ''' alle uebrigen Eintraege dieses Menues arbeiten so, und im Popup ist nicht garantiert,
         ''' dass der DataContext ankommt - ein leeres Kommando faerbt den Eintrag stumm grau.</summary>
@@ -3994,10 +3990,11 @@ Namespace Views
             Return AppSettingsService.Load().GalleryOpenTarget = "Editor"
         End Function
 
-        ''' Selektiert und expandiert den Ordner im Baum. Bewusst OHNE Auto-Scrollen: das Nachziehen
-        ''' in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback) - nur das initiale
+        ''' <summary>Selektiert und expandiert den Ordner im Baum. Bewusst OHNE Auto-Scrollen: das
+        ''' Nachziehen in die Mitte bei jeder Navigation stoerte (Nutzer-Feedback) - nur das initiale
         ''' Anzeigen der TreeView stellt Sichtbarkeit her (RestoreFolderTreeSelection).
-        ''' <summary>Gleicht die Baummarkierung an den bereits gewechselten Ordner an (laeuft ueber
+        '''
+        ''' Gleicht die Baummarkierung an den bereits gewechselten Ordner an (laeuft ueber
         ''' CurrentFolder-PropertyChanged, also NACH der Navigation). Das ist ein Wiederherstellen,
         ''' keine Nutzer-Navigation - deshalb unter _restoringFolderTreeSelection, damit
         ''' OnFolderTreeSelectionChanged nicht erneut navigiert UND den Seitenleisten-Tab nicht auf

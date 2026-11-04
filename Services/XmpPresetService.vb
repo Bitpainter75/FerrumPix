@@ -692,10 +692,7 @@ Namespace Services
             End Function
         End Class
 
-        ''' <summary>Nothing, wenn das Preset kein Profil nennt. Der Name steht als ATTRIBUT in der
-        ''' verschachtelten rdf:Description, die Gruppe dagegen als Elementkörper in einem rdf:Alt -
-        ''' beides braucht seinen eigenen Zugriff.</summary>
-        ''' <summary>Liest den Profilblock eines Presets.
+        ''' <summary>Liest den Profilblock eines Presets; Nothing, wenn das Preset kein Profil nennt.
         '''
         ''' ZWEI SCHREIBWEISEN DESSELBEN RDF. Meist stehen die Felder als Attribute einer inneren
         ''' Beschreibung (<c>&lt;crs:Look&gt;&lt;rdf:Description crs:Name="…" crs:Amount="…"&gt;</c>).
@@ -799,9 +796,6 @@ Namespace Services
             Return Double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, result)
         End Function
 
-        ''' Extrahiert eine crs:ToneCurvePV2012[Red|Green|Blue]-Punktliste (rdf:Seq aus rdf:li-Einträgen
-        ''' "x, y") und liefert sie im gleichen "x,y;x,y;..."-Format wie ImageAdjustments.Curve*Points.
-        ''' Nothing wenn das Element fehlt oder keine gültigen Punkte enthält.
         ''' <summary>Die Einträge einer crs:-Liste (rdf:Seq aus rdf:li), roh als Text. Nothing, wenn
         ''' das Element fehlt; eine leere Liste, wenn es leer ist.</summary>
         Private Shared Function ParseXmpSeqItems(text As String, elementName As String) As List(Of String)
@@ -811,6 +805,10 @@ Namespace Services
                 Cast(Of Match)().Select(Function(m) m.Groups("item").Value).ToList()
         End Function
 
+        ''' <summary>Extrahiert eine crs:ToneCurvePV2012[Red|Green|Blue]-Punktliste (rdf:Seq aus
+        ''' rdf:li-Einträgen "x, y") und liefert sie im gleichen "x,y;x,y;..."-Format wie
+        ''' ImageAdjustments.Curve*Points. Nothing wenn das Element fehlt oder keine gültigen Punkte
+        ''' enthält.</summary>
         Private Shared Function ParseXmpCurvePoints(text As String, elementName As String) As String
             Dim blockMatch = Regex.Match(text, $"<crs:{elementName}>(?<body>.*?)</crs:{elementName}>", RegexOptions.Singleline)
             If Not blockMatch.Success Then Return Nothing

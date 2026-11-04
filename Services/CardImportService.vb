@@ -591,8 +591,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Liest die Dateien ein, siehe Klassenbeschreibung. <paramref name="backupRoot"/>
-        ''' leer heisst: kein zweites Ziel. Meldet nach jeder Datei den Stand.</summary>
         ''' <summary>Liegt <paramref name="folder"/> in <paramref name="root"/> oder ist er es selbst?
         ''' Verglichen werden volle Pfade mit Trennzeichen am Ende, damit "/fotos2" nicht als Teil von
         ''' "/fotos" gilt.</summary>
@@ -619,6 +617,8 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Liest die Dateien ein, siehe Klassenbeschreibung. <paramref name="backupRoot"/>
+        ''' leer heisst: kein zweites Ziel. Meldet nach jeder Datei den Stand.</summary>
         ''' <param name="sourceRoot">Die Quelle. Ein Zielordner darin wird nie beschrieben: die Datei
         ''' zaehlt dann als fehlgeschlagen. Der Dialog laesst das gar nicht erst zu; das hier ist die
         ''' letzte Absicherung der Zusage, dass auf der Quelle nichts veraendert wird.</param>

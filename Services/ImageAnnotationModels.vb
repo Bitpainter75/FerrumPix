@@ -976,7 +976,6 @@ Namespace Services
             End Set
         End Property
 
-        ''' <summary>Wird die Kontur mitgemischt? Siehe _blendIncludesStroke.</summary>
         ''' <summary>Die Verzerrung, die dieses Objekt mitmacht - oder Nothing.
         '''
         ''' Sie gehoert ins REZEPT und nicht in die Pixel. Beim Bild wird eine Gitter- oder
@@ -995,6 +994,7 @@ Namespace Services
         ''' Fragen und muessen verschieden mitwandern.</summary>
         Public Property OwnWarp As ObjectWarp
 
+        ''' <summary>Wird die Kontur mitgemischt? Siehe _blendIncludesStroke.</summary>
         Public Property BlendIncludesStroke As Boolean
             Get
                 Return _blendIncludesStroke

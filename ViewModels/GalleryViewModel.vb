@@ -3495,8 +3495,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Ordner-Favorit oeffnen: Ansicht wechseln UND den Ordnerbaum nachziehen, damit
-        ''' der Ordner-Tab denselben Stand zeigt (sonst steht dort noch die alte Markierung).</summary>
         ''' <summary>Wechsel in einen echten Ordner: Tab auf Ordner ziehen und die
         ''' Favoriten-Markierung loesen - sonst zeigte die Rueckkehr aus dem Viewer den
         ''' Favoriten-Tab, obwohl laengst im Ordnerbaum navigiert wurde.</summary>
@@ -3505,6 +3503,8 @@ Namespace ViewModels
             SidebarTab = "Folders"
         End Sub
 
+        ''' <summary>Ordner-Favorit oeffnen: Ansicht wechseln UND den Ordnerbaum nachziehen, damit
+        ''' der Ordner-Tab denselben Stand zeigt (sonst steht dort noch die alte Markierung).</summary>
         Private Sub OpenFolderFromFavorite(folderPath As String)
             If String.IsNullOrWhiteSpace(folderPath) OrElse Not IO.Directory.Exists(folderPath) Then
                 StatusText = LocalizationService.T("Das Ziel dieses Favoriten existiert nicht mehr")
@@ -5575,12 +5575,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Baut die Liste beim Oeffnen neu auf, damit frisch benannte Personen dabei sind.
-        '''
-        ''' NUR BENANNTE GRUPPEN. Eine namenlose Gruppe sagt in einer Filterliste nichts - "Ohne
-        ''' Namen (17)" dreimal untereinander ist keine Auswahl, sondern Rauschen, und bei einem
-        ''' gewachsenen Bestand stehen dort schnell dutzende davon. Gesehen und benannt werden sie am
-        ''' Bild im Infopanel, wo der Ausschnitt danebensteht.</summary>
         ''' <summary>Suchfeld im Personen-Menue. Bei einem gewachsenen Bestand hat man schnell
         ''' dreistellig viele Gruppen; ohne Suche waere die Liste dann nur noch scrollbar, nicht
         ''' benutzbar. Die Auswahl bleibt beim Tippen bestehen - gefiltert wird die ANZEIGE, nicht
@@ -5598,6 +5592,12 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Baut die Liste beim Oeffnen neu auf, damit frisch benannte Personen dabei sind.
+        '''
+        ''' NUR BENANNTE GRUPPEN. Eine namenlose Gruppe sagt in einer Filterliste nichts - "Ohne
+        ''' Namen (17)" dreimal untereinander ist keine Auswahl, sondern Rauschen, und bei einem
+        ''' gewachsenen Bestand stehen dort schnell dutzende davon. Gesehen und benannt werden sie am
+        ''' Bild im Infopanel, wo der Ausschnitt danebensteht.</summary>
         Public Sub RefreshPersonFilterOptions()
             PersonFilterOptions.Clear()
             Try
@@ -6163,23 +6163,6 @@ Namespace ViewModels
             StartIncrementalSavedSearch(node)
         End Sub
 
-        ''' <summary>Führt eine Suchliste auf einem der beiden Server aus - Immich und Nextcloud
-        ''' laufen denselben Weg.
-        '''
-        ''' DER LOKALE KATALOG ZUERST, und zwar allein. Er hält zu jedem Serverbild, das schon einmal
-        ''' eingelesen wurde, Bewertung, Favorit, Stichwörter, Personen und Orte unter dessen
-        ''' Pseudo-Pfad; die Antwort kostet damit keine einzige Anfrage. Das ist die Bedingung dafür,
-        ''' dass ein Klick im Filter-Popup dieselbe Ansicht öffnen darf wie ein Knoten im Baum: eine
-        ''' vollständige Serversuche je Klick wären tausende Netzabrufe.
-        '''
-        ''' Der Server ergänzt danach im Hintergrund, aber nur dort, wo er die Frage ohne einen Abruf
-        ''' je Bild beantworten kann (siehe <see cref="SupplementCachedServerSearchAsync"/>). Er
-        ''' hängt seine Treffer an die bereits sichtbare Liste an und leert sie nie.
-        '''
-        ''' Was der Katalog zu einem nie eingelesenen Serverbild nicht weiß, bleibt offen: eine
-        ''' Bedingung wie „Bildhöhe > 500" kann dort niemand beantworten, ohne das Bild zu holen.
-        ''' Bei einer Ordnersuche ist das anders - dort liest der Suchlauf notfalls die Datei
-        ''' selbst.</summary>
         ''' <summary>Startet die Serversuche und faengt dabei ALLES ab.
         '''
         ''' Ein Async Sub hat keinen Aufrufer, der eine Ausnahme noch sehen koennte: sie landet auf
@@ -6199,7 +6182,24 @@ Namespace ViewModels
             End Try
         End Sub
 
-        ''' <summary>Filtert den bereits gespeicherten Serverkatalog ohne Netzwerkzugriff.
+        ''' <summary>Führt eine Suchliste auf einem der beiden Server aus - Immich und Nextcloud
+        ''' laufen denselben Weg.
+        '''
+        ''' DER LOKALE KATALOG ZUERST, und zwar allein. Er hält zu jedem Serverbild, das schon einmal
+        ''' eingelesen wurde, Bewertung, Favorit, Stichwörter, Personen und Orte unter dessen
+        ''' Pseudo-Pfad; die Antwort kostet damit keine einzige Anfrage. Das ist die Bedingung dafür,
+        ''' dass ein Klick im Filter-Popup dieselbe Ansicht öffnen darf wie ein Knoten im Baum: eine
+        ''' vollständige Serversuche je Klick wären tausende Netzabrufe.
+        '''
+        ''' Der Server ergänzt danach im Hintergrund, aber nur dort, wo er die Frage ohne einen Abruf
+        ''' je Bild beantworten kann (siehe <see cref="SupplementCachedServerSearchAsync"/>). Er
+        ''' hängt seine Treffer an die bereits sichtbare Liste an und leert sie nie.
+        '''
+        ''' Was der Katalog zu einem nie eingelesenen Serverbild nicht weiß, bleibt offen: eine
+        ''' Bedingung wie „Bildhöhe > 500" kann dort niemand beantworten, ohne das Bild zu holen.
+        ''' Bei einer Ordnersuche ist das anders - dort liest der Suchlauf notfalls die Datei
+        ''' selbst.
+        '''
         ''' Vorschaubilder bleiben dabei normale Serverelemente und verwenden ihren vorhandenen
         ''' Thumbnail-Cache; nur fehlende Thumbnails werden wie üblich später geladen.</summary>
         Private Async Function StartCachedServerSearchAsync(node As VirtualNavigationNode) As Task
@@ -7821,10 +7821,6 @@ Namespace ViewModels
             Return variants
         End Function
 
-        ''' Unterstützt AND/OR-Verknüpfung mehrerer Suchbegriffe: " OR "/" ODER " (Groß-/Kleinschreibung
-        ''' egal) trennt Begriffs-GRUPPEN (mind. eine muss zutreffen), innerhalb einer Gruppe müssen
-        ''' alle durch Leerzeichen getrennten Begriffe zutreffen (AND) - Anführungszeichen erlauben
-        ''' Begriffe mit Leerzeichen. Wildcard (*/?) funktioniert weiterhin pro Einzelbegriff.
         ''' <summary>Traegt das Bild mindestens eines dieser Stichwoerter? Leere Liste heisst: keine
         ''' Einschraenkung. Verglichen wird das ganze Stichwort, nicht ein Teil davon - "urlaub"
         ''' soll nicht auch "urlaub2019" mitbringen.</summary>
@@ -7913,7 +7909,12 @@ Namespace ViewModels
         ''' KI-Stichwörter. KI-Tags liegen absichtlich nicht in <c>ImageMeta.Tags</c>, damit ihre
         ''' Herkunft im Infopanel erhalten bleibt; für die Suche gehören sie aber in denselben
         ''' Wortvorrat. Neben dem kanonischen englischen Modellbegriff kommt die Anzeigeform dazu,
-        ''' damit beispielsweise sowohl "dog" als auch "Hund" denselben Treffer finden.</summary>
+        ''' damit beispielsweise sowohl "dog" als auch "Hund" denselben Treffer finden.
+        '''
+        ''' Unterstützt AND/OR-Verknüpfung mehrerer Suchbegriffe: " OR "/" ODER " (Groß-/Kleinschreibung
+        ''' egal) trennt Begriffs-GRUPPEN (mind. eine muss zutreffen), innerhalb einer Gruppe müssen
+        ''' alle durch Leerzeichen getrennten Begriffe zutreffen (AND) - Anführungszeichen erlauben
+        ''' Begriffe mit Leerzeichen. Wildcard (*/?) funktioniert weiterhin pro Einzelbegriff.</summary>
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String), textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
             Dim fileName = IO.Path.GetFileName(filePath)
@@ -8167,9 +8168,6 @@ Namespace ViewModels
             If added Then RequestFilterAndSortDuringFill()
         End Sub
 
-        ''' Nimmt fertig gebaute Elemente - im Hintergrund erzeugt - in den virtuellen Ordner auf,
-        ''' ohne einen einzigen Dateizugriff. Hier wird nur auf Dubletten geprueft und die Liste
-        ''' geaendert.
         ''' <summary>Nimmt Treffer wieder aus einer Suchansicht - wenn sich beim Nachpruefen zeigt,
         ''' dass sie nicht mehr passen. Aus der Pfadmenge ebenfalls, sonst kaeme derselbe Pfad nie
         ''' wieder herein.</summary>
@@ -8183,6 +8181,9 @@ Namespace ViewModels
             If _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso gone.Contains(i.FilePath)) > 0 Then RequestFilterAndSortDuringFill()
         End Sub
 
+        ''' <summary>Nimmt fertig gebaute Elemente - im Hintergrund erzeugt - in den virtuellen Ordner
+        ''' auf, ohne einen einzigen Dateizugriff. Hier wird nur auf Dubletten geprueft und die Liste
+        ''' geaendert.</summary>
         Private Sub AddPrebuiltItemsToVirtualFolder(items As List(Of ImageItem), Optional sortNow As Boolean = True)
             ' Siehe AddMetasToVirtualFolder: Zielpruefung, kein Vertrauen auf den Aufrufer.
             If Not _isVirtualFolder Then Return
@@ -9987,6 +9988,19 @@ Namespace ViewModels
                 Where(Function(i) i IsNot Nothing AndAlso gesehenePfade.Add(If(i.FilePath, ""))).
                 ToList()
 
+            ' Mit Stapeln ist ein RAW+JPEG-Paar EINE Kachel und wird als Ganzes beurteilt: traegt
+            ' eine der beiden Dateien die Markierung, gilt sie fuer beide. BEFUND (Nutzer, Karte mit
+            ' RAW+JPEG): im Betrachter markiert, "Nur behaltene" gefiltert und kopiert, und nur die
+            ' RAWs kamen an. Der Filter lief Datei fuer Datei VOR dem Stapeln, das unmarkierte JPEG
+            ' fiel heraus, und die Kachel trug danach keinen Partner mehr, den das Kopieren
+            ' mitnehmen konnte. Gilt auch fuer schon gesetzte Markierungen.
+            ' Gepaart wird am UNGEFILTERTEN Bestand: eine Suche oder ein anderer Filter, der das
+            ' JPEG vorher herausnimmt, soll nicht entscheiden, ob das RAW als markiert gilt.
+            Dim pairs As Dictionary(Of ImageItem, ImageItem) = Nothing
+            If _filterRejected <> "Show" AndAlso _stacksEnabled AndAlso Not IsSimilarView Then
+                pairs = ImageStackService.PairPartners(filtered)
+            End If
+
             If Not String.IsNullOrEmpty(_searchText) Then
                 filtered = filtered.Where(Function(i) i.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
             End If
@@ -9995,15 +10009,23 @@ Namespace ViewModels
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsFavorite)
             End If
 
+            Dim picked = Function(i As ImageItem) As Boolean
+                             Dim partner As ImageItem = Nothing
+                             Return i.IsPicked OrElse (pairs IsNot Nothing AndAlso pairs.TryGetValue(i, partner) AndAlso partner.IsPicked)
+                         End Function
+            Dim rejected = Function(i As ImageItem) As Boolean
+                               Dim partner As ImageItem = Nothing
+                               Return i.IsRejected OrElse (pairs IsNot Nothing AndAlso pairs.TryGetValue(i, partner) AndAlso partner.IsRejected)
+                           End Function
             If _filterRejected = "Hide" Then
-                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not i.IsRejected)
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not rejected(i))
             ElseIf _filterRejected = "Only" Then
-                filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsRejected)
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse rejected(i))
             ElseIf _filterRejected = "Kept" Then
                 ' Die Gegenrichtung zum Aussortieren: nur, was ausdruecklich behalten wurde. Damit
                 ' lassen sich die Gewinner einer Karte gesammelt auswaehlen und kopieren, ohne
                 ' jedes andere Bild vorher zu verwerfen.
-                filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsPicked)
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse picked(i))
             End If
 
             ' Bearbeitet: hier wird der Vermerk sofort bestimmt, wo die Kachel ihn noch nicht hat
@@ -10510,13 +10532,6 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' <summary>Schraenkt die gefilterte Liste auf die geoeffnete Serie ein.
-        '''
-        ''' Die Ansicht endet von selbst, sobald im BESTAND keine Serie mehr daraus wird - nach dem
-        ''' Loeschen bis auf eine Aufnahme ebenso wie nach einem Ordnerwechsel. Gezaehlt wird am
-        ''' Bestand und nicht an der gefilterten Liste: ein Filter, der die Serie gerade leer oder auf
-        ''' ein Bild zeigt, laesst sich zuruecknehmen, ein geloeschtes Bild nicht. Wird die Serie
-        ''' dabei wieder zur Einzelaufnahme, steht sie danach markiert im Ordner.</summary>
         ''' <summary>Eine umbenannte Datei bleibt in der geoeffneten Serie. Die Ansicht haelt ihre
         ''' Aufnahmen ueber die Pfade; ohne diesen Tausch fiel die Datei nach dem Umbenennen aus der
         ''' Serie und kam erst nach erneutem Oeffnen wieder, obwohl die Serie selbst nach der
@@ -10538,6 +10553,13 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Schraenkt die gefilterte Liste auf die geoeffnete Serie ein.
+        '''
+        ''' Die Ansicht endet von selbst, sobald im BESTAND keine Serie mehr daraus wird - nach dem
+        ''' Loeschen bis auf eine Aufnahme ebenso wie nach einem Ordnerwechsel. Gezaehlt wird am
+        ''' Bestand und nicht an der gefilterten Liste: ein Filter, der die Serie gerade leer oder auf
+        ''' ein Bild zeigt, laesst sich zuruecknehmen, ein geloeschtes Bild nicht. Wird die Serie
+        ''' dabei wieder zur Einzelaufnahme, steht sie danach markiert im Ordner.</summary>
         Private Function ApplyStackFocus(filtered As List(Of ImageItem)) As List(Of ImageItem)
             If _focusedStackPaths Is Nothing Then Return filtered
             Dim remaining = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
@@ -10619,6 +10641,39 @@ Namespace ViewModels
             If hidden.Count = 0 Then Return
             ReplaceSelection(SelectedItems.Where(Function(i) Not hidden.Contains(i)).ToList())
         End Sub
+
+        ''' <summary>Alle Elemente des Ordners, auch die, die ein Filter oder ein zugeklappter Stapel
+        ''' gerade verbirgt. Fuer den Lauscher auf Katalogaenderungen: eine Markierung am Partner
+        ''' muss auch dort ankommen, wo er nicht als Kachel steht.</summary>
+        Friend Function AllItemsSnapshot() As List(Of ImageItem)
+            Return _allItems.ToList()
+        End Function
+
+        ''' <summary>Der Pfad samt seinem RAW+JPEG-Partner, wenn Stapel eingeschaltet sind. Fuer den
+        ''' Betrachter: er zeigt das Paar als ein Bild, und was er markiert, gilt fuer beide Dateien.
+        ''' Gepaart wird am UNGEFILTERTEN Bestand nach derselben Regel wie die Stapel
+        ''' (ImageStackService.PairPartners), nicht an den gerade verborgenen Partnern einer Kachel:
+        ''' ein Filter oder eine Suche, die das JPEG ausblendet, liesse sonst nur das RAW markieren.
+        ''' Ohne Stapel, ohne Kachel im Bestand oder ohne Partner nur der Pfad selbst.</summary>
+        Public Function PathWithHiddenPartners(path As String) As List(Of String)
+            Dim result As New List(Of String)()
+            If String.IsNullOrEmpty(path) Then Return result
+            result.Add(path)
+            If Not _stacksEnabled Then Return result
+            Dim item = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso PathIdentity.Comparer.Equals(i.FilePath, path))
+            If item Is Nothing Then Return result
+            ' Nur die Dateien gleichen Namens im selben Ordner kommen als Partner in Frage; die
+            ' Paarregel selbst (Zeit, Kamera, genau ein RAW) entscheidet der Dienst.
+            Dim folder = IO.Path.GetDirectoryName(path)
+            Dim stem = IO.Path.GetFileNameWithoutExtension(path)
+            Dim sameName = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
+                                                       String.Equals(IO.Path.GetFileNameWithoutExtension(i.FilePath), stem, StringComparison.OrdinalIgnoreCase) AndAlso
+                                                       PathIdentity.Comparer.Equals(IO.Path.GetDirectoryName(i.FilePath), folder))
+            Dim partner As ImageItem = Nothing
+            If ImageStackService.PairPartners(sameName).TryGetValue(item, partner) AndAlso
+               Not String.IsNullOrEmpty(partner.FilePath) Then result.Add(partner.FilePath)
+            Return result
+        End Function
 
         ''' <summary>Nimmt zu jeder Kachel die Dateien derselben Aufnahme dazu, die hinter ihr
         ''' verborgen sind (beim zugeklappten Paar das JPEG). Fuer alles, was die AUFNAHME meint:
@@ -11823,11 +11878,6 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>Die Einstellung „Löschen in Immich erlauben" entscheidet, ob Kontextmenü und Kachel-Knopf
-        ''' bei Immich-Bildern ein Löschen anbieten (ImageItem.CanFileOperationDelete) und ob der Baum „Album
-        ''' löschen" zeigt (VirtualNavigationNode.CanDeleteImmichAlbum) - wird sie umgelegt, während die
-        ''' Galerie offen ist, müssen beide das mitbekommen. Die Album-Knoten baut RefreshImmichAlbumsAsync
-        ''' dafür neu auf (der Knoten hat keine Benachrichtigung).</summary>
         ''' <summary>Nach dem Umlegen von „Dateiarbeit ausserhalb des persönlichen Ordners": jede Kachel
         ''' fragt ihren Löschknopf neu ab.</summary>
         Public Sub RefreshFileOperationFlags()
@@ -11836,6 +11886,11 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Die Einstellung „Löschen in Immich erlauben" entscheidet, ob Kontextmenü und Kachel-Knopf
+        ''' bei Immich-Bildern ein Löschen anbieten (ImageItem.CanFileOperationDelete) und ob der Baum „Album
+        ''' löschen" zeigt (VirtualNavigationNode.CanDeleteImmichAlbum) - wird sie umgelegt, während die
+        ''' Galerie offen ist, müssen beide das mitbekommen. Die Album-Knoten baut RefreshImmichAlbumsAsync
+        ''' dafür neu auf (der Knoten hat keine Benachrichtigung).</summary>
         Public Sub RefreshImmichDeletePermission()
             For Each item In _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImmichAsset)
                 item.RefreshFileOperationFlags()
@@ -12447,11 +12502,6 @@ Namespace ViewModels
             Loop
         End Function
 
-        ''' <summary>Quellen, aus denen eine Collage Bildinhalt beziehen kann. Gefragt wird DIESELBE
-        ''' Funktion wie bei den übrigen Stapelaktionen (IsBatchImageEditReadable) - die eigene
-        ''' Endungsliste hier kannte weder RAW noch .fpx, obwohl das Menü sie anbot: die Auswahl
-        ''' schrumpfte still auf null und der Dialog verlangte "mindestens zwei Bilder". ICO steht
-        ''' zusätzlich drin, weil der Renderer es lesen kann und die Collage es bisher annahm.</summary>
         ''' <summary>Die Quellpfade der Collage aus der Auswahl, OHNE zu laden.
         '''
         ''' Fuer ein Serverelement steht hier die Kopie, die beim Oeffnen des Dialogs in den
@@ -12466,6 +12516,11 @@ Namespace ViewModels
                    ToList()
         End Function
 
+        ''' <summary>Quellen, aus denen eine Collage Bildinhalt beziehen kann. Gefragt wird DIESELBE
+        ''' Funktion wie bei den übrigen Stapelaktionen (IsBatchImageEditReadable) - die eigene
+        ''' Endungsliste hier kannte weder RAW noch .fpx, obwohl das Menü sie anbot: die Auswahl
+        ''' schrumpfte still auf null und der Dialog verlangte "mindestens zwei Bilder". ICO steht
+        ''' zusätzlich drin, weil der Renderer es lesen kann und die Collage es bisher annahm.</summary>
         Private Shared Function IsCollageSourcePath(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             If IO.Path.GetExtension(path).ToLowerInvariant() = ".ico" Then Return True
@@ -12912,9 +12967,6 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>Der komplette "Bildgröße ändern"-Ablauf für eine Liste von Bildern - Dialog,
-        ''' Überschreiben oder Kopie, lokal oder nach Immich. Öffentlich, weil der Betrachter mit
-        ''' Strg+R denselben Ablauf für das gerade angezeigte Bild auslöst: eine Umsetzung, nicht zwei.</summary>
         ''' <summary>Die drei Stapel-Ablaeufe fuer eine VORGEGEBENE Liste. Der Betrachter loest damit
         ''' dasselbe fuer das angezeigte Bild aus, was die Galerie fuer ihre Auswahl tut - dieselbe
         ''' Umsetzung, nur ein anderer Ausgangspunkt (wie bei ResizeImageItemsAsync).</summary>
@@ -12938,7 +12990,11 @@ Namespace ViewModels
             ApplyFilterSelected(items)
         End Sub
 
-        ''' <summary>Der Mantel um den eigentlichen Ablauf: er raeumt die Abbruch-Marke des Stapels
+        ''' <summary>Der komplette "Bildgröße ändern"-Ablauf für eine Liste von Bildern - Dialog,
+        ''' Überschreiben oder Kopie, lokal oder nach Immich. Öffentlich, weil der Betrachter mit
+        ''' Strg+R denselben Ablauf für das gerade angezeigte Bild auslöst: eine Umsetzung, nicht zwei.
+        '''
+        ''' Dies ist der Mantel um den eigentlichen Ablauf: er raeumt die Abbruch-Marke des Stapels
         ''' auf JEDEM Weg wieder ab. Ohne ihn bliebe sie nach einem fruehen Ausstieg stehen und
         ''' zeigte auf einen Lauf, den es nicht mehr gibt.</summary>
         Public Async Function ResizeImageItemsAsync(items As IList(Of ImageItem)) As Task
@@ -13079,10 +13135,6 @@ Namespace ViewModels
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
-        ''' <summary>Stapel: einen eingebauten Filter, ein XMP-Preset (.xmp) oder eine LUT (.cube) auf
-        ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der
-        ''' Vorgabe im Dateinamen).</summary>
-        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         ''' <summary>Der Ordner fuer den Knopf "Aktueller Ordner" eines Stapeldialogs: der
         ''' gemeinsame Ordner der Dateien selbst - erst wenn die Dateien verstreut liegen, der
         ''' offene Galerie-Ordner. Aus Viewer und Editor kommen die Dialoge mit dem EINEN aktuellen
@@ -13127,8 +13179,13 @@ Namespace ViewModels
                 End Function)
         End Function
 
-        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>: er raeumt die
+        ''' <summary>Stapel: einen eingebauten Filter, ein XMP-Preset (.xmp) oder eine LUT (.cube) auf
+        ''' die Auswahl anwenden - entweder in die Originale hinein oder in neue Dateien (mit dem Namen der
+        ''' Vorgabe im Dateinamen).
+        '''
+        ''' Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>: er raeumt die
         ''' Abbruch-Marke des Stapels auf jedem Weg wieder ab.</summary>
+        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         Private Async Sub ApplyFilterSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
             Try
                 Await ApplyFilterSelectedCoreAsync(vorgabe)
@@ -13489,8 +13546,8 @@ Namespace ViewModels
                                            IsBatchImageEditWritable(p)).ToList()
         End Function
 
-        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
+        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         Private Async Sub ApplyWatermarkSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
             Try
                 Await ApplyWatermarkSelectedCoreAsync(vorgabe)
@@ -13852,10 +13909,6 @@ Namespace ViewModels
             Return IO.Path.Combine(dir, $"{stem}{If(nameSuffix, "")}-ferrumpix-{Guid.NewGuid():N}{ext}")
         End Function
 
-        ''' <summary>Zielpfad für ein Asset, das ERSETZT wird: Immich übernimmt den Dateinamen des Uploads als
-        ''' Originalnamen des Assets, also muss er der alte bleiben - weder der Guid-Name aus
-        ''' CreateImmichBatchOutputPath noch ein Filtersuffix haben in einer aktualisierten Bibliothek etwas
-        ''' verloren. Eindeutigkeit stellt stattdessen ein eigener Unterordner je Bild her.</summary>
         ''' <summary>Raeumt den je Datei angelegten Temp-Unterordner weg - aber nur den, nicht den
         ''' gemeinsamen "ImmichBatch"-Ordner (dort koennen parallele Laeufe noch Dateien haben).</summary>
         Private Shared Sub DeleteEmptyTempFolder(folder As String)
@@ -13868,6 +13921,10 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Zielpfad für ein Asset, das ERSETZT wird: Immich übernimmt den Dateinamen des Uploads als
+        ''' Originalnamen des Assets, also muss er der alte bleiben - weder der Guid-Name aus
+        ''' CreateImmichBatchOutputPath noch ein Filtersuffix haben in einer aktualisierten Bibliothek etwas
+        ''' verloren. Eindeutigkeit stellt stattdessen ein eigener Unterordner je Bild her.</summary>
         Private Shared Function CreateImmichReplaceOutputPath(item As ImageItem, requestedExtension As String) As String
             Dim originalName = If(String.IsNullOrWhiteSpace(item.ImmichOriginalFileName), item.ImmichAssetId, item.ImmichOriginalFileName)
             Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(originalName), requestedExtension)
@@ -13880,8 +13937,6 @@ Namespace ViewModels
             Return IO.Path.Combine(dir, stem & ext)
         End Function
 
-        ''' <param name="nameSuffix">Wird an den Dateinamen angehängt ("foto" + "_Vintage" -> "foto_Vintage").
-        ''' Leer lassen, wenn der Name unverändert bleiben soll.</param>
         ''' <summary>Baut aus dem Dialog-Muster den Namensstamm-Erzeuger fuer die Stapel-Schleifen
         ''' (Nothing bei leerem Muster - dann bleibt der Originalname). Der Zaehler laeuft ueber den
         ''' ganzen Stapel; ungueltige Zeichen aus Platzhaltern (Kameranamen) werden entfernt.</summary>
@@ -13896,6 +13951,8 @@ Namespace ViewModels
                    End Function
         End Function
 
+        ''' <param name="nameSuffix">Wird an den Dateinamen angehängt ("foto" + "_Vintage" -> "foto_Vintage").
+        ''' Leer lassen, wenn der Name unverändert bleiben soll.</param>
         ''' <param name="nameBuilder">Liefert den kompletten Namensstamm fuer eine Quelle (Muster
         ''' aus dem Dialog, siehe ExpandTargetNamePattern); Nothing = Originalname + Suffix.</param>
         ''' <param name="makeUnique">True = einer vorhandenen Datei ausweichen (foto_1.jpg). False =
@@ -14304,8 +14361,8 @@ Namespace ViewModels
             If fehler IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Exportieren nach"), fehler)
         End Sub
 
-        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
+        ''' <param name="vorgabe">Siehe BatchConvertSelected.</param>
         Private Async Function ExportSelectedAsync(Optional vorgabe As IList(Of ImageItem) = Nothing) As Task
             Try
                 Await ExportSelectedCoreAsync(vorgabe)
@@ -14499,9 +14556,9 @@ Namespace ViewModels
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) Then SyncFolderItems()
         End Function
 
+        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
         ''' <param name="vorgabe">Wenn gesetzt, gilt DIESE Liste statt der Galerie-Auswahl. So loest
         ''' der Betrachter denselben Ablauf fuer das angezeigte Bild aus - eine Umsetzung, nicht zwei.</param>
-        ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
         Private Async Sub BatchConvertSelected(Optional vorgabe As IList(Of ImageItem) = Nothing)
             Try
                 Await BatchConvertSelectedCoreAsync(vorgabe)

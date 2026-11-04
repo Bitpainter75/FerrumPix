@@ -128,9 +128,6 @@ Namespace Services
         Public Property Modell As String = ""
     End Class
 
-    ''' <summary>Welche Darstellung des Analysebildes zu EINEM Anpassungswerkzeug gehoert. Eine
-    ''' Liste und keine Eigenschaft je Werkzeug: kommt ein Werkzeug dazu, ist hier nichts zu tun,
-    ''' und ein Werkzeug, das es nicht mehr gibt, faellt beim Lesen einfach weg.</summary>
     ''' <summary>Was sich EIN Malwerkzeug ueber Bildwechsel und Neustart merkt: Groesse und Haerte,
     ''' bei Verwischen, Reparaturpinsel und Stempel dazu die Haerte der Kante. Deckkraft, Fluss
     ''' und Farbe gehoeren nicht dazu, sie beginnen je Bild neu.</summary>
@@ -143,6 +140,9 @@ Namespace Services
         Public Property EdgeHardness As Double = 55
     End Class
 
+    ''' <summary>Welche Darstellung des Analysebildes zu EINEM Anpassungswerkzeug gehoert. Eine
+    ''' Liste und keine Eigenschaft je Werkzeug: kommt ein Werkzeug dazu, ist hier nichts zu tun,
+    ''' und ein Werkzeug, das es nicht mehr gibt, faellt beim Lesen einfach weg.</summary>
     Public Class ScopePanelToolMode
         ''' Der Name des Werkzeugs (EditorTool), unuebersetzt.
         Public Property Tool As String = ""
@@ -1607,9 +1607,8 @@ Namespace Services
             JsonStoreService.RemoveStaleTemps(SettingsPath, "Settings")
         End Sub
 
-        ''' <summary>Ändert genau ein paar Felder und speichert. Ersetzt das fünfzehnmal kopierte
-        ''' Load-ändern-Save-Muster.</summary>
-        ''' <summary>Der EINZIGE Weg, Einstellungen zu ändern.
+        ''' <summary>Der EINZIGE Weg, Einstellungen zu ändern: ändert genau ein paar Felder und
+        ''' speichert. Ersetzt das fünfzehnmal kopierte Load-ändern-Save-Muster.
         '''
         ''' <para>Gearbeitet wird auf einer eigenen Ausfertigung, nicht am gemerkten Stand: sonst
         ''' gälte eine halb durchgeführte Änderung schon für alle, und ein Fehler mittendrin ließe

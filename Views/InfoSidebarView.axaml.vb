@@ -34,8 +34,9 @@ Namespace Views
         ''' je Person waere mehr Oberflaeche als Inhalt.
         '''
         ''' Die Id steht im Tag des Feldes, nicht im Text - benannt wird ueber die Id, damit eine
-        ''' Umbenennung die Zuordnung nicht verliert.</summary>
-        ''' <summary>Uebernommen wird beim Verlassen des Feldes - ABER NICHT, solange die
+        ''' Umbenennung die Zuordnung nicht verliert.
+        '''
+        ''' Uebernommen wird beim Verlassen des Feldes - ABER NICHT, solange die
         ''' Vorschlagsliste offen steht.
         '''
         ''' BEFUND: ein Klick auf einen Vorschlag nimmt dem Feld zuerst den Fokus. Ohne diese Sperre

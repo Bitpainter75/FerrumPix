@@ -1219,16 +1219,6 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Sucht einen Tag über ALLE Verzeichnisse des angegebenen Typs und liefert den ersten
-        ''' belegten Wert. RAW-Dateien (DNG/ARW/NEF) bringen mehrere "Exif SubIFD"-Verzeichnisse mit - neben
-        ''' dem der Aufnahme noch je eines für Vorschaubild- und Rohbild-Ebene. Das zuvor verwendete
-        ''' FirstOrDefault erwischte davon regelmäßig ein Ebenen-Verzeichnis ohne Aufnahmedaten, weshalb
-        ''' Blende, ISO, Belichtungszeit und Objektiv bei RAWs leer blieben - und zwar nicht nur in der
-        ''' Anzeige, sondern auch in Suche, Filter und Sortierung, die auf denselben Feldern arbeiten.
-        '''
-        ''' Friend, weil die Objektivkorrektur dieselben Felder aus derselben Datei liest. Solange sie
-        ''' das mit einer EIGENEN Kopie dieser Suche tat, konnten beide Seiten auseinanderlaufen - genau
-        ''' das war zu sehen: die Anzeige nannte das Objektiv, die Korrektur fand es nicht.</summary>
         ''' <summary>Die Empfindlichkeit, wenn das gewohnte EXIF-Feld (0x8827) fehlt.
         '''
         ''' Das tut es bei Nikon in den erweiterten Stufen ueber dem Nennbereich (Hi 0,3 bis Hi 2):
@@ -1264,6 +1254,16 @@ Namespace Services
             Return ""
         End Function
 
+        ''' <summary>Sucht einen Tag über ALLE Verzeichnisse des angegebenen Typs und liefert den ersten
+        ''' belegten Wert. RAW-Dateien (DNG/ARW/NEF) bringen mehrere "Exif SubIFD"-Verzeichnisse mit - neben
+        ''' dem der Aufnahme noch je eines für Vorschaubild- und Rohbild-Ebene. Das zuvor verwendete
+        ''' FirstOrDefault erwischte davon regelmäßig ein Ebenen-Verzeichnis ohne Aufnahmedaten, weshalb
+        ''' Blende, ISO, Belichtungszeit und Objektiv bei RAWs leer blieben - und zwar nicht nur in der
+        ''' Anzeige, sondern auch in Suche, Filter und Sortierung, die auf denselben Feldern arbeiten.
+        '''
+        ''' Friend, weil die Objektivkorrektur dieselben Felder aus derselben Datei liest. Solange sie
+        ''' das mit einer EIGENEN Kopie dieser Suche tat, konnten beide Seiten auseinanderlaufen - genau
+        ''' das war zu sehen: die Anzeige nannte das Objektiv, die Korrektur fand es nicht.</summary>
         Friend Shared Function GetTagDescAcross(Of TDirectory As MetadataExtractor.Directory)(
                 metaDirectories As IEnumerable(Of MetadataExtractor.Directory), tagType As Integer) As String
             For Each metaDir In metaDirectories.OfType(Of TDirectory)()
@@ -1420,6 +1420,13 @@ Namespace Services
             Return value
         End Function
 
+        ''' <summary>Ist der Objektivname nur eine Brennweite ("100mm", "28-70mm")? Canon traegt das
+        ''' bei Fremdobjektiven ein; ein Name, an dem man ein Profil festmachen koennte, ist es nicht.</summary>
+        Friend Shared Function IsFocalLengthOnly(name As String) As Boolean
+            If String.IsNullOrWhiteSpace(name) Then Return False
+            Return Regex.IsMatch(name.Trim(), "^\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*mm$", RegexOptions.IgnoreCase)
+        End Function
+
         ''' <summary>Der Objektivname aus dem Herstellerteil, fuer Gehaeuse, die das EXIF-Feld
         ''' <c>LensModel</c> leer lassen: aeltere Canon EOS, Olympus Four Thirds, Panasonic G bis
         ''' etwa 2016, Samsung NX. Alle tragen den Namen dort, MetadataExtractor liest ihn schon
@@ -1429,13 +1436,6 @@ Namespace Services
         ''' Ebenso wenig die blosse Brennweite ("100mm", "28-70mm"), die Canon bei
         ''' Fremdobjektiven eintraegt: aus ihr raet der Abgleich ein Canon-Objektiv derselben
         ''' Brennweite, also womoeglich das falsche. Dann lieber kein Profil.</summary>
-        ''' <summary>Ist der Objektivname nur eine Brennweite ("100mm", "28-70mm")? Canon traegt das
-        ''' bei Fremdobjektiven ein; ein Name, an dem man ein Profil festmachen koennte, ist es nicht.</summary>
-        Friend Shared Function IsFocalLengthOnly(name As String) As Boolean
-            If String.IsNullOrWhiteSpace(name) Then Return False
-            Return Regex.IsMatch(name.Trim(), "^\d+(?:[.,]\d+)?(?:\s*-\s*\d+(?:[.,]\d+)?)?\s*mm$", RegexOptions.IgnoreCase)
-        End Function
-
         Private Shared Function GetMakerNoteLensName(metaDirectories As IEnumerable(Of MetadataExtractor.Directory)) As String
             Dim candidates = {
                 GetTagDescAcross(Of CanonMakernoteDirectory)(metaDirectories, CanonMakernoteDirectory.TagLensModel),

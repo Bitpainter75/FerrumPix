@@ -1184,7 +1184,9 @@ Namespace ViewModels
                                          End If
                                          Dim ignored = SetImmichRatingAsync(_currentImmichAssetId, value, _currentIndex, previous)
                                      ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                         LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
+                                         For Each target In WithGalleryPartners(_currentImagePath)
+                                             LibraryService.Instance.SetRating(target, value, syncToXmp:=True)
+                                         Next
                                      End If
                                  End Sub
 
@@ -1203,7 +1205,9 @@ Namespace ViewModels
                                            item.IsFavorite = value
                                            Dim ignored = SetNextcloudFavoriteAsync(item, value)
                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                           LibraryService.Instance.SetFavorite(_currentImagePath, value)
+                                           For Each target In WithGalleryPartners(_currentImagePath)
+                                               LibraryService.Instance.SetFavorite(target, value)
+                                           Next
                                        End If
                                    End Sub
 
@@ -1216,7 +1220,7 @@ Namespace ViewModels
                                                  LibraryService.Instance.SetColorLabelForMany({meta.FilePath}, value)
                                              End If
                                          ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                             LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, value, syncToXmp:=True)
+                                             LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(_currentImagePath), value, syncToXmp:=True)
                                          End If
                                      End Sub
 
@@ -1823,12 +1827,6 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanEdit))
         End Sub
 
-        ''' <summary>Bewertung, Favorit und Farbetikett des Bildes aus dem Katalog in Panel und
-        ''' Fusszeile uebernehmen. Die EINE Stelle dafuer: sie lag vorher zweimal wortgleich im
-        ''' Oeffnen- und im Blaettern-Weg, und der Vergleich hatte sie gar nicht.
-        '''
-        ''' Ueber ApplyOwnedState, nicht ueber die Eigenschaften: die Werte kommen gerade aus dem
-        ''' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.</summary>
         ''' <summary>Bewertung, Favorit oder Farbetikett haben sich im Katalog geaendert, etwa in der
         ''' Galerie oder im Editor. Betrifft es das gezeigte Bild, liest der Betrachter sie neu.</summary>
         Friend Sub RefreshCatalogState(changedPaths As IReadOnlyCollection(Of String))
@@ -1837,6 +1835,12 @@ Namespace ViewModels
             ApplyCatalogAttributes(_currentImagePath)
         End Sub
 
+        ''' <summary>Bewertung, Favorit und Farbetikett des Bildes aus dem Katalog in Panel und
+        ''' Fusszeile uebernehmen. Die EINE Stelle dafuer: sie lag vorher zweimal wortgleich im
+        ''' Oeffnen- und im Blaettern-Weg, und der Vergleich hatte sie gar nicht.
+        '''
+        ''' Ueber ApplyOwnedState, nicht ueber die Eigenschaften: die Werte kommen gerade aus dem
+        ''' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.</summary>
         Private Sub ApplyCatalogAttributes(imagePath As String)
             _currentPickState = LibraryService.Instance.GetPickState(imagePath)
             InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(imagePath),
@@ -1890,8 +1894,20 @@ Namespace ViewModels
             Dim target = If(_currentPickState = state, 0, state)
             _currentPickState = target
             RaisePickState()
-            LibraryService.Instance.SetPickStateForMany({_currentImagePath}, target, syncToXmp:=True)
+            LibraryService.Instance.SetPickStateForMany(WithGalleryPartners(_currentImagePath), target, syncToXmp:=True)
         End Sub
+
+        ''' <summary>Der Pfad samt seinem RAW+JPEG-Partner, sobald in der Galerie Stapel eingeschaltet
+        ''' sind (<see cref="GalleryViewModel.PathWithHiddenPartners"/>). Der Partner kommt aus dem
+        ''' UNGEFILTERTEN Bestand, also auch bei Suche, "Nur RAW" oder aufgeklapptem Stapel. Der
+        ''' Betrachter zeigt das Paar als EIN Bild, also gilt eine Markierung hier fuer beide Dateien. BEFUND (Nutzer, Karte
+        ''' mit RAW+JPEG): im Betrachter behalten, "Nur behaltene" kopiert, und nur die RAWs kamen
+        ''' an, weil das JPEG nie markiert war.</summary>
+        Private Function WithGalleryPartners(path As String) As List(Of String)
+            Dim gallery = _mainVm?.Gallery
+            If gallery Is Nothing Then Return New List(Of String) From {path}
+            Return gallery.PathWithHiddenPartners(path)
+        End Function
 
         Private Sub RaisePickState()
             Me.RaisePropertyChanged(NameOf(IsCurrentPicked))
@@ -2168,7 +2184,9 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightRating, _compareLeftRating)
             Dim newValue = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
-            LibraryService.Instance.SetRating(path, newValue)
+            For Each target In WithGalleryPartners(path)
+                LibraryService.Instance.SetRating(target, newValue)
+            Next
             LoadCompareMarkers()
             ' Die Fusszeile zeigt die fokussierte Flaeche - sie muss mit, wenn genau die gemeint war.
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
@@ -2180,7 +2198,7 @@ Namespace ViewModels
             Dim path = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightPick, _compareLeftPick)
-            LibraryService.Instance.SetPickStateForMany({path}, If(bisher = state, 0, state), syncToXmp:=True)
+            LibraryService.Instance.SetPickStateForMany(WithGalleryPartners(path), If(bisher = state, 0, state), syncToXmp:=True)
             LoadCompareMarkers()
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
         End Sub
@@ -2189,7 +2207,9 @@ Namespace ViewModels
             Dim path = PathOfPane(pane)
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightFavorite, _compareLeftFavorite)
-            LibraryService.Instance.SetFavorite(path, Not bisher)
+            For Each target In WithGalleryPartners(path)
+                LibraryService.Instance.SetFavorite(target, Not bisher)
+            Next
             LoadCompareMarkers()
             If pane = _focusedComparePane Then ApplyCatalogAttributes(path)
         End Sub
@@ -2201,7 +2221,7 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim wanted = If(hex, "")
             Dim value = If(String.Equals(_compareRightColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
-            LibraryService.Instance.SetColorLabelForMany({path}, value, syncToXmp:=True)
+            LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(path), value, syncToXmp:=True)
             LoadCompareMarkers()
             If _focusedComparePane = 1 Then ApplyCatalogAttributes(path)
         End Sub
@@ -2211,7 +2231,7 @@ Namespace ViewModels
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
             Dim wanted = If(hex, "")
             Dim value = If(String.Equals(_compareLeftColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
-            LibraryService.Instance.SetColorLabelForMany({path}, value, syncToXmp:=True)
+            LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(path), value, syncToXmp:=True)
             LoadCompareMarkers()
             If _focusedComparePane = 0 Then ApplyCatalogAttributes(path)
         End Sub
@@ -2973,15 +2993,6 @@ Namespace ViewModels
             Return True
         End Function
 
-        ''' Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.
-        ''' <summary>Die Entscheidung, ob ein RAW entwickelt oder als eingebettete Kamera-Vorschau
-        ''' gezeigt wird - bewusst eine reine Funktion ohne Anwendungszustand und keine Eigenschaft,
-        ''' damit sie ohne Anwendung, ohne Einstellungen und ohne LibRaw geprueft werden kann.
-        '''
-        ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst
-        ''' entweder bei eingeschalteter Einstellung UND vorhandener Begleitdatei, oder wenn die
-        ''' zweite Einstellung das Rezept gar nicht zur Bedingung macht - dann wird auch ein
-        ''' unbearbeitetes RAW entwickelt, was je Bild einen vollen Decode kostet.</summary>
         ''' <summary>Wie <see cref="DecodeViewerBitmap"/>, aber ein Auftrag, den ein Bildwechsel
         ''' schon ueberholt hat, rechnet nicht mehr.
         '''
@@ -3023,6 +3034,14 @@ Namespace ViewModels
                                     settings.DevelopRawInViewerWithoutRecipe)
         End Function
 
+        ''' <summary>Die Entscheidung, ob ein RAW entwickelt oder als eingebettete Kamera-Vorschau
+        ''' gezeigt wird - bewusst eine reine Funktion ohne Anwendungszustand und keine Eigenschaft,
+        ''' damit sie ohne Anwendung, ohne Einstellungen und ohne LibRaw geprueft werden kann.
+        '''
+        ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst
+        ''' entweder bei eingeschalteter Einstellung UND vorhandener Begleitdatei, oder wenn die
+        ''' zweite Einstellung das Rezept gar nicht zur Bedingung macht - dann wird auch ein
+        ''' unbearbeitetes RAW entwickelt, was je Bild einen vollen Decode kostet.</summary>
         Friend Shared Function ShouldDevelopRaw(alwaysDevelop As Boolean, libRawAvailable As Boolean,
                                                 settingEnabled As Boolean, sidecarExists As Boolean,
                                                 developWithoutRecipe As Boolean) As Boolean
@@ -3031,6 +3050,7 @@ Namespace ViewModels
             Return settingEnabled AndAlso sidecarExists
         End Function
 
+        ''' <summary>Reiner Decode ohne ViewModel-Zustand - laeuft im Task.Run-Worker.</summary>
         ''' <param name="alwaysDevelop">Im Bildvergleich gesetzt. Dort ist die eingebettete
         ''' Kamera-Vorschau die falsche Quelle: sie zeigt die Wiedergabe der KAMERA, nicht unsere -
         ''' zwei RAWs nebeneinander waeren damit nach der Kamera beurteilt statt nach der eigenen
@@ -4306,19 +4326,11 @@ Namespace ViewModels
             LoadImmichAt(idx)
         End Function
 
-        ''' <summary>Strg+R im Betrachter: derselbe "Bildgröße ändern"-Ablauf wie in der Galerie, nur für
-        ''' das angezeigte Bild. Bewusst über die Galerie-Umsetzung, damit Dialog, Überschreiben/Kopie und
-        ''' der Immich-Weg an EINER Stelle stehen. Danach wird das Bild neu geladen - beim Überschreiben
-        ''' liegt auf dem Pfad jetzt eine andere Datei.</summary>
-        ''' <summary>Reicht das ANGEZEIGTE Bild an einen Stapel-Ablauf der Galerie weiter.
-        ''' Konvertieren, Exportieren und Filter unterscheiden sich nur in der Zeile, die sie
-        ''' aufrufen - der Weg zum Element ist derselbe wie bei ResizeCurrent.</summary>
         ''' <summary>Auf WELCHES Bild sich die naechste Menueaktion bezieht. Leer heisst: das
         ''' auf der Buehne. Gesetzt wird es beim Oeffnen des Kontextmenues, wenn der Klick auf
         ''' einer Filmstreifen-Kachel lag - dann meint der Nutzer diese und nicht die Buehne.</summary>
         Public Property ContextTargetPath As String = ""
 
-        ''' <summary>Der Pfad, auf den sich eine Menueaktion bezieht.</summary>
         ''' <summary>Ist das Ziel ein Video? Dann faellt alles weg, was auf Bildpixeln arbeitet.
         ''' Gefragt wird ueber ImageItem, damit dieselbe Erkennung gilt wie in der Galerie.</summary>
         Private Function TargetIsVideo() As Boolean
@@ -4327,12 +4339,16 @@ Namespace ViewModels
             Return New ImageItem(path).IsVideoFile
         End Function
 
+        ''' <summary>Der Pfad, auf den sich eine Menueaktion bezieht.</summary>
         Private Function TargetPath() As String
             Dim target = If(ContextTargetPath, "")
             If target <> "" AndAlso IO.File.Exists(target) Then Return target
             Return _currentImagePath
         End Function
 
+        ''' <summary>Reicht das ANGEZEIGTE Bild an einen Stapel-Ablauf der Galerie weiter.
+        ''' Konvertieren, Exportieren und Filter unterscheiden sich nur in der Zeile, die sie
+        ''' aufrufen - der Weg zum Element ist derselbe wie bei ResizeCurrent.</summary>
         Private Sub WithCurrentImage(ablauf As Action(Of GalleryViewModel, IList(Of ImageItem)))
             Try
                 Dim path = TargetPath()
@@ -4460,7 +4476,12 @@ Namespace ViewModels
             OpenImage(path, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
         End Function
 
-        ''' <summary>Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann und
+        ''' <summary>Strg+R im Betrachter: derselbe "Bildgröße ändern"-Ablauf wie in der Galerie, nur für
+        ''' das angezeigte Bild. Bewusst über die Galerie-Umsetzung, damit Dialog, Überschreiben/Kopie und
+        ''' der Immich-Weg an EINER Stelle stehen. Danach wird das Bild neu geladen - beim Überschreiben
+        ''' liegt auf dem Pfad jetzt eine andere Datei.
+        '''
+        ''' Function statt Sub, damit der Befehl als CreateFromTask darauf warten kann und
         ''' bis zum Ende gesperrt bleibt - sonst startet ein zweites STRG+R mitten im Schreiblauf
         ''' einen zweiten Durchgang über dieselbe Datei.</summary>
         Private Async Function ResizeCurrentAsync() As Task

@@ -507,6 +507,20 @@ Namespace Services
             Return current
         End Function
 
+        ''' <summary>Eine EINZELNE Wurzel. Nur fuer Aufrufer, die wirklich nur einen Ordner meinen -
+        ''' wer mehrere hat, nimmt <see cref="CollectFromRoots"/> mit der gemeinsamen
+        ''' Besuchsliste.</summary>
+        Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken)
+            CollectFiles(folder, target, token, New HashSet(Of String)(PathIdentity.Comparer), 0)
+        End Sub
+
+        ''' <summary>Wie tief der Abstieg hoechstens geht. ZWEITER Riegel neben der Besuchsliste:
+        ''' laesst sich ein Verweis nicht aufloesen (Netzpfad, Ring, fehlendes Recht), traegt die
+        ''' Liste nicht - und ein Lauf, der nie zurueckkommt, ist schlimmer als einer, der einen
+        ''' sehr tief verschachtelten Ordner auslaesst. Sechzig Ebenen hat kein gewachsener
+        ''' Fotobestand.</summary>
+        Private Const MaxFolderDepth As Integer = 60
+
         ''' <summary>Sammelt die Bilddateien eines Ordners und aller Unterordner.
         '''
         ''' SELBST GESTIEGEN und nicht ueber EnumerateFiles mit AllDirectories: das bricht den
@@ -529,20 +543,6 @@ Namespace Services
         ''' Ring: der Abstieg laeuft dann bis zur Pfadlaenge des Dateisystems und liest denselben
         ''' Bestand hundertfach ein. Beides zusammen geht nur ueber das kanonische Ziel und eine
         ''' Liste des schon Besuchten.</summary>
-        ''' <summary>Eine EINZELNE Wurzel. Nur fuer Aufrufer, die wirklich nur einen Ordner meinen -
-        ''' wer mehrere hat, nimmt <see cref="CollectFromRoots"/> mit der gemeinsamen
-        ''' Besuchsliste.</summary>
-        Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken)
-            CollectFiles(folder, target, token, New HashSet(Of String)(PathIdentity.Comparer), 0)
-        End Sub
-
-        ''' <summary>Wie tief der Abstieg hoechstens geht. ZWEITER Riegel neben der Besuchsliste:
-        ''' laesst sich ein Verweis nicht aufloesen (Netzpfad, Ring, fehlendes Recht), traegt die
-        ''' Liste nicht - und ein Lauf, der nie zurueckkommt, ist schlimmer als einer, der einen
-        ''' sehr tief verschachtelten Ordner auslaesst. Sechzig Ebenen hat kein gewachsener
-        ''' Fotobestand.</summary>
-        Private Const MaxFolderDepth As Integer = 60
-
         Private Shared Sub CollectFiles(folder As String, target As List(Of String), token As CancellationToken,
                                         visited As HashSet(Of String), depth As Integer)
             If token.IsCancellationRequested Then Return

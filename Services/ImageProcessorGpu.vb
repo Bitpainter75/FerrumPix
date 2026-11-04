@@ -394,9 +394,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Das Raster der Basis als Bild: drei Bloecke uebereinander (A, B, geglaettetes
-        ''' Grau), je Wert zwei Kanaele wie bei den Tabellen. Ohne Basis ein Bildpunkt, damit der
-        ''' Shader immer ein Kind hat.</summary>
         ''' <summary>Die Fuehrung des Farbmischers als Bild fuer den Shader (BuildMixerGuide), sonst ein
         ''' einzelner durchsichtiger Punkt: der Shader braucht immer ein Kind, und an der Groesse
         ''' erkennt PointOpShader, ob es eine Fuehrung ist.</summary>
@@ -410,6 +407,9 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Das Raster der Basis als Bild: drei Bloecke uebereinander (A, B, geglaettetes
+        ''' Grau), je Wert zwei Kanaele wie bei den Tabellen. Ohne Basis ein Bildpunkt, damit der
+        ''' Shader immer ein Kind hat.</summary>
         Private Shared Function BuildLocalBaseImage(localBase As LocalToneBase) As SKImage
             Dim w = If(localBase Is Nothing, 1, localBase.Width)
             Dim h = If(localBase Is Nothing, 1, localBase.Height)

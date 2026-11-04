@@ -1,3 +1,15 @@
+## Unreleased
+
+### Fixes
+
+- Film negatives: a converted negative no longer turns pale on its own a moment after the
+  conversion is switched on, for color and black and white film alike.
+
+- RAW+JPEG pairs: marking a picture as kept or rejected in the viewer now marks both files, like
+  in the gallery. The "Kept only" filter shows the whole pair even if only one file was marked
+  before, so copying the kept pictures brings the JPEGs along again. Stars, hearts and color
+  labels set in the viewer also apply to both files.
+
 ## 0.9.76
 
 ### Changes

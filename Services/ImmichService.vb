@@ -449,6 +449,11 @@ Namespace Services
             Return done
         End Function
 
+        ''' <summary>Warum das Original beim letzten Ersetzen STEHEN GEBLIEBEN ist; leer heißt
+        ''' „sauber ersetzt". Unmittelbar nach <see cref="ReplaceAssetAsync"/> zu lesen — Ersetzen
+        ''' wird immer vom Nutzer angestoßen und läuft nacheinander, auch im Stapel.</summary>
+        Public Shared Property LastReplaceWarning As String = ""
+
         ''' <summary>Ersetzt das Original eines vorhandenen Assets durch eine lokale Datei und liefert die
         ''' Asset-ID des Ergebnisses (Nothing bei Fehler).
         '''
@@ -458,11 +463,6 @@ Namespace Services
         ''' Beschreibung/Bewertung/Stichwörter nachziehen und das alte Asset in den Papierkorb legen. Die
         ''' Asset-ID ändert sich dabei zwangsläufig - Aufrufer müssen mit der zurückgegebenen ID
         ''' weiterarbeiten und dürfen die übergebene nicht weiterverwenden.</summary>
-        ''' <summary>Warum das Original beim letzten Ersetzen STEHEN GEBLIEBEN ist; leer heißt
-        ''' „sauber ersetzt". Unmittelbar nach <see cref="ReplaceAssetAsync"/> zu lesen — Ersetzen
-        ''' wird immer vom Nutzer angestoßen und läuft nacheinander, auch im Stapel.</summary>
-        Public Shared Property LastReplaceWarning As String = ""
-
         Public Shared Async Function ReplaceAssetAsync(assetId As String, filePath As String, Optional cancellationToken As CancellationToken = Nothing) As Task(Of String)
             LastReplaceWarning = ""
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(assetId) OrElse String.IsNullOrWhiteSpace(filePath) OrElse Not File.Exists(filePath) Then Return Nothing

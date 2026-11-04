@@ -1365,15 +1365,6 @@ Namespace ViewModels
         End Function
 
 
-        ''' <summary>Traegt eine Verzerrung in ALLE Objekte ein, damit sie mitgehen.
-        '''
-        ''' Gespeichert wird immer als GITTER, egal welches Werkzeug sie erzeugt hat. Das ist die
-        ''' Form, die alles ausdruecken kann, und sie laesst sich verketten: wird ein zweites Mal
-        ''' verzerrt, wandern einfach die vorhandenen Stuetzpunkte durch das neue Feld. Mit drei
-        ''' getrennten Arten muesste man fuer jede Paarung ueberlegen, was ihre Verkettung ist.
-        '''
-        ''' <paramref name="abbildung"/> nimmt einen Punkt in Bildprozent und gibt zurueck, wohin er
-        ''' wandert - ebenfalls in Bildprozent.</summary>
         ''' <summary>Traegt die gerade bestaetigte Perspektive in das eigene Verzerrungsfeld jedes
         ''' Objekts ein - das Gegenstueck zum Gitterverzerren.
         '''
@@ -1423,6 +1414,15 @@ Namespace ViewModels
                                End Function)
         End Sub
 
+        ''' <summary>Traegt eine Verzerrung in ALLE Objekte ein, damit sie mitgehen.
+        '''
+        ''' Gespeichert wird immer als GITTER, egal welches Werkzeug sie erzeugt hat. Das ist die
+        ''' Form, die alles ausdruecken kann, und sie laesst sich verketten: wird ein zweites Mal
+        ''' verzerrt, wandern einfach die vorhandenen Stuetzpunkte durch das neue Feld. Mit drei
+        ''' getrennten Arten muesste man fuer jede Paarung ueberlegen, was ihre Verkettung ist.
+        '''
+        ''' <paramref name="abbildung"/> nimmt einen Punkt in Bildprozent und gibt zurueck, wohin er
+        ''' wandert - ebenfalls in Bildprozent.</summary>
         Private Sub ApplyWarpToObjects(abbildung As Func(Of Double, Double, (X As Double, Y As Double)),
                                        Optional steps As Integer = MaxImageWarpSteps)
             If _annotations Is Nothing OrElse _annotations.Count = 0 Then Return

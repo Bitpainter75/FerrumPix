@@ -353,8 +353,6 @@ Namespace Services
             Return LocalizationService.T("Das Paket libraw der Distribution installieren.") & restartHint
         End Function
 
-        ''' <summary>Die Pfade, unter denen eine mitgelieferte LibRaw liegen kann: direkt neben der
-        ''' Anwendung oder unter runtimes/&lt;rid&gt;/native, wohin packaging/package.sh sie kopiert.</summary>
         ''' <summary>Dieselben Namen in den beiden Homebrew-Verzeichnissen, mit vollem Pfad.
         ''' Ausserhalb von macOS leer - dort gibt es Homebrew nicht, und der Suchpfad des Systems
         ''' findet die Bibliothek ohnehin.</summary>
@@ -367,6 +365,8 @@ Namespace Services
             Next
         End Function
 
+        ''' <summary>Die Pfade, unter denen eine mitgelieferte LibRaw liegen kann: direkt neben der
+        ''' Anwendung oder unter runtimes/&lt;rid&gt;/native, wohin packaging/package.sh sie kopiert.</summary>
         Private Shared Iterator Function BundledCandidates(namen As String()) As IEnumerable(Of String)
             Dim baseDir = AppContext.BaseDirectory
 
@@ -746,15 +746,16 @@ Namespace Services
         Private Shared _cachedHighlightKnee As Double = Double.NaN
         Private Shared _cachedBitmap As SKBitmap
 
-        ''' <summary>Voll aufgelöster, fertig entwickelter Decode (Besitz beim Aufrufer) oder Nothing.
-        ''' Orientierung ist bereits angewandt (libraw dreht nach dem Kamera-Flip).</summary>
+        ''' <summary>Entwickelt ein RAW: voll aufgelöster, fertig entwickelter Decode (Besitz beim
+        ''' Aufrufer) oder Nothing. Orientierung ist bereits angewandt (libraw dreht nach dem
+        ''' Kamera-Flip).
+        '''
+        ''' Laeuft immer nur EINMAL gleichzeitig - siehe <see cref="DecodeGate"/>. Der
+        ''' Zwischenspeicher wird INNERHALB der Schleuse gefragt: wer hinter einem laufenden Decode
+        ''' wartet, bekommt danach dessen Ergebnis, statt denselben Lauf ein zweites Mal anzuwerfen.</summary>
         ''' <param name="lensChoice">Nothing = die Einstellung entscheidet fuer alle drei
         ''' Korrekturen; sonst uebersteuert sie jede einzeln fuer dieses eine Bild (die Schalter im
         ''' Werkzeug).</param>
-        ''' <summary>Entwickelt ein RAW. Laeuft immer nur EINMAL gleichzeitig - siehe
-        ''' <see cref="DecodeGate"/>. Der Zwischenspeicher wird INNERHALB der Schleuse gefragt: wer
-        ''' hinter einem laufenden Decode wartet, bekommt danach dessen Ergebnis, statt denselben
-        ''' Lauf ein zweites Mal anzuwerfen.</summary>
         ''' <param name="knee">Die Staerke der Lichterrettung, siehe
         ''' <see cref="HighlightRecoveryKnee"/>. Die Anwendung laesst sie weg; angeben tut sie nur
         ''' die Messung, die den Wert ueberhaupt erst bestimmt hat.</param>
@@ -2173,12 +2174,6 @@ Namespace Services
             Return AreUsableMultipliers(facts.CamMul) AndAlso AreUsableMultipliers(facts.PreMul)
         End Function
 
-        ''' <summary>Tragen VIER gelesene Multiplikatoren eine Aussage? Die EINZIGE Stelle, an der
-        ''' das entschieden wird - der Decode setzt seinen Weissabgleich nach derselben Regel wie
-        ''' die Kamerafakten ihn lesen.
-        '''
-        ''' Nur die ersten drei Kanaele zaehlen: der vierte ist das zweite Gruen und ist bei den
-        ''' meisten Sensoren 0.</summary>
         ''' <summary>Der Aufnahme-Weissabgleich: LibRaws cam_mul, und wo LibRaw keinen kennt, bei einer
         ''' Canon der aus ihrer ColorData (CameraBaselineTable.CanonColorDataWhiteBalance). Die EOS R8
         ''' Mark II meldet mit LibRaw 0.22.2 nur den Platzhalter 0/1/0; entwickelt wurde sie dann mit
@@ -2199,6 +2194,12 @@ Namespace Services
             Return If(CanonColorData.WhiteBalanceFromWords(words, word), camMul)
         End Function
 
+        ''' <summary>Tragen VIER gelesene Multiplikatoren eine Aussage? Die EINZIGE Stelle, an der
+        ''' das entschieden wird - der Decode setzt seinen Weissabgleich nach derselben Regel wie
+        ''' die Kamerafakten ihn lesen.
+        '''
+        ''' Nur die ersten drei Kanaele zaehlen: der vierte ist das zweite Gruen und ist bei den
+        ''' meisten Sensoren 0.</summary>
         Private Shared Function AreUsableMultipliers(values As Single()) As Boolean
             If values Is Nothing OrElse values.Length < 3 Then Return False
             For i = 0 To 2
@@ -3632,6 +3633,10 @@ Namespace Services
             1.000000
         }
 
+        ''' <summary>FBDD-Stufe von LibRaw: 0 = aus, 1 = leicht, 2 = voll. Siehe Begruendung an der
+        ''' Aufrufstelle - 2 ist beim Farbrauschen gemessen schlechter als 1.</summary>
+        Private Const FbddRauschminderung As Integer = 1
+
         ''' <summary>Grundbelichtung in EV und Schwarzabzug der Belichtungsrampe.
         '''
         ''' Beides sind ECHTE Groessen aus Adobes Pipeline (BaselineExposure bzw. der Schwarzabzug
@@ -3645,15 +3650,9 @@ Namespace Services
         ''' dabei um rund 2 %. Ohne Geometrie-Angleich misst ein Vergleich vor allem
         ''' Fehlregistrierung (WID_7643: 27,2 statt 15,9). FerrumPix baut die Objektivkorrektur
         ''' bewusst NICHT nach - siehe RAW_UND_FARBE.md.</summary>
-        ''' <summary>FBDD-Stufe von LibRaw: 0 = aus, 1 = leicht, 2 = voll. Siehe Begruendung an der
-        ''' Aufrufstelle - 2 ist beim Farbrauschen gemessen schlechter als 1.</summary>
-        Private Const FbddRauschminderung As Integer = 1
-
         Private Const BaseExposureEv As Double = 0.5
         Private Const BlackSubtraction As Double = 0.003
-        ''' <summary>Tabelle LINEAR (0..65535) -> Belichtungsrampe + ACR3-Tonkurve, wieder linear
-        ''' in 0..65535. Einmal gebaut statt pro Pixel gerechnet: die Kurve wird je Pixel ZWEIMAL
-        ''' gebraucht (hellster und dunkelster Kanal).</summary>
+
         ''' <summary>Tontabellen je Grundbelichtung. Frueher gab es genau EINE, weil die
         ''' Grundbelichtung eine Konstante war; mit den Kamera-Referenzwerten gibt es je Kamera eine.
         ''' Der Aufbau kostet 65536 Schritte, in der Praxis liegen aber nur eine Handvoll Werte an -
@@ -3739,12 +3738,6 @@ Namespace Services
         ''' zwar linear, vor der Gamma-Kodierung.</summary>
         Private Shared ReadOnly GammaTable As Integer() = BuildGammaTable()
 
-        ''' <summary>Die Belichtungsrampe samt ACR3-Kurve als Tabelle.
-        '''
-        ''' <paramref name="blackLevel"/> ist seit dem 21.09.2026 ein Parameter: er ist ein ANTEIL
-        ''' des Datenbereichs, und LibRaws Lichtermodus 1 legt dieselben Sensorwerte um den
-        ''' Normierungsfaktor tiefer. Bliebe der Schwarzpunkt fest, zoege die Rampe an einer
-        ''' Stelle ab, die dann kein Schwarz mehr ist.</summary>
         ''' <summary>Das Knie der Lichterschulter, in Einheiten der Rampe: 1,0 heisst KEINE
         ''' Schulter, also harter Beschnitt wie bisher. Darunter rollt die Rampe alles oberhalb
         ''' des Knies weich gegen 1 aus, statt es abzuschneiden.
@@ -3776,6 +3769,14 @@ Namespace Services
             Return knee - span * Math.Log(rest / span)
         End Function
 
+        ''' <summary>Die Belichtungsrampe samt ACR3-Kurve als Tabelle: LINEAR (0..65535) hinein,
+        ''' wieder linear in 0..65535 heraus. Einmal gebaut statt pro Pixel gerechnet: die Kurve wird
+        ''' je Pixel ZWEIMAL gebraucht (hellster und dunkelster Kanal).
+        '''
+        ''' <paramref name="blackLevel"/> ist seit dem 21.09.2026 ein Parameter: er ist ein ANTEIL
+        ''' des Datenbereichs, und LibRaws Lichtermodus 1 legt dieselben Sensorwerte um den
+        ''' Normierungsfaktor tiefer. Bliebe der Schwarzpunkt fest, zoege die Rampe an einer
+        ''' Stelle ab, die dann kein Schwarz mehr ist.</summary>
         Private Shared Function BuildToneTable(ev As Double, blackLevel As Double,
                                                Optional knee As Double = 1.0) As Integer()
             Dim t(65535) As Integer
@@ -4290,38 +4291,6 @@ Namespace Services
         ' widerlegt und stehen dort; wer sie wiederbeleben will, faengt nicht bei null an.
 
 
-        ''' <summary>Traegt die Datei ein bereits fertig gerendertes RGB-Bild statt Sensordaten?
-        ''' Erkannt an PhotometricInterpretation = 2 (RGB). Ein echtes Sensor-RAW steht dort auf
-        ''' 32803 (Farbfilter-Muster), ein lineares DNG auf 34892 - beide sind linear und gehoeren
-        ''' durch unsere Basisstufe. Nur die RGB-Variante ist schon fertig.
-        ''' Faellt das Lesen aus, gilt die Datei als normal - lieber die Basisstufe anwenden als
-        ''' bei jedem unlesbaren Header darauf zu verzichten.</summary>
-        ''' <summary>Ist diese DNG-Datei nur eine Huelle um ein bereits fertig gerendertes
-        ''' RGB-Bild? Dann bleibt es bei LibRaws eigener Gammaausgabe, weil unsere Basisstufe
-        ''' sonst eine ZWEITE Tonkurve darueberlegte.
-        '''
-        ''' <para>GEFRAGT WIRD NUR DAS VOLLBILD, und das ist der Kern. Bis zum 21.09.2026 lief die
-        ''' Pruefung ueber ALLE Verzeichnisse und meldete "fertig gerendert", sobald irgendwo eine
-        ''' 2 stand. Im normalen DNG-Aufbau steht sie aber in IFD0, und das ist die eingebettete
-        ''' VORSCHAU; die Sensordaten liegen in einem SubIFD. Damit galt praktisch JEDE DNG-Datei
-        ''' als RGB-Huelle: der Decode fiel auf 8 Bit zurueck, und die ganze Basisstufe mit
-        ''' Belichtungsrampe und ACR3-Kurve lief fuer sie gar nicht. Nachgelesen an den beiden
-        ''' Pruefdateien - Leica M8: 2 (Vorschau) und 32803 (Sensormuster); die zweite: 2
-        ''' (Vorschau) und 34892 (LinearRaw). Beide sind echte RAW-Dateien.</para>
-        '''
-        ''' <para>DAS VOLLBILD ist das Verzeichnis mit <c>NewSubFileType = 0</c>. Gibt es mehrere,
-        ''' gilt das groesste; gibt es gar keines (aeltere Dateien lassen das Feld weg), gilt
-        ''' ersatzweise das groesste ueberhaupt. Ohne jede lesbare Angabe bleibt es beim normalen
-        ''' RAW-Weg, also beim bisherigen Verhalten - nie geraten.</para>
-        '''
-        ''' <para>NUR EIN SENSORMUSTER (32803) GILT SICHER ALS ROH. LinearRaw (34892) ist
-        ''' zweideutig: die Daten sind schon demosaikiert, und ob sie ausserdem tonwertkorrigiert
-        ''' sind, sagt das Feld nicht. Gemessen an `boyechik_paris_1.dng` sind sie es - durch
-        ''' unsere Basisstufe geschickt wird die Datei 44 Stufen heller als die eingebettete
-        ''' Wiedergabe und 15 Prozent des Bildes fressen aus. Solche Dateien behalten deshalb
-        ''' LibRaws eigene Gammaausgabe, genau wie bisher. Das ist eine bewusste Vorsicht und
-        ''' keine Erkenntnis: ein echtes lineares DNG waere damit ebenfalls zu flau entwickelt,
-        ''' und um die beiden zu trennen fehlt eine Datei, an der man es zeigen koennte.</para></summary>
         ''' <summary>Stammt diese DNG von CHDK, der freien Zusatzfirmware fuer Canon-Kompaktkameras?
         ''' Erkannt am TIFF-Feld Software, das dort mit "CHDK" beginnt.
         '''
@@ -4348,6 +4317,32 @@ Namespace Services
                    Not IsFinishedRgb(path)
         End Function
 
+        ''' <summary>Ist diese DNG-Datei nur eine Huelle um ein bereits fertig gerendertes
+        ''' RGB-Bild? Dann bleibt es bei LibRaws eigener Gammaausgabe, weil unsere Basisstufe
+        ''' sonst eine ZWEITE Tonkurve darueberlegte.
+        '''
+        ''' <para>GEFRAGT WIRD NUR DAS VOLLBILD, und das ist der Kern. Bis zum 21.09.2026 lief die
+        ''' Pruefung ueber ALLE Verzeichnisse und meldete "fertig gerendert", sobald irgendwo eine
+        ''' 2 stand. Im normalen DNG-Aufbau steht sie aber in IFD0, und das ist die eingebettete
+        ''' VORSCHAU; die Sensordaten liegen in einem SubIFD. Damit galt praktisch JEDE DNG-Datei
+        ''' als RGB-Huelle: der Decode fiel auf 8 Bit zurueck, und die ganze Basisstufe mit
+        ''' Belichtungsrampe und ACR3-Kurve lief fuer sie gar nicht. Nachgelesen an den beiden
+        ''' Pruefdateien - Leica M8: 2 (Vorschau) und 32803 (Sensormuster); die zweite: 2
+        ''' (Vorschau) und 34892 (LinearRaw). Beide sind echte RAW-Dateien.</para>
+        '''
+        ''' <para>DAS VOLLBILD ist das Verzeichnis mit <c>NewSubFileType = 0</c>. Gibt es mehrere,
+        ''' gilt das groesste; gibt es gar keines (aeltere Dateien lassen das Feld weg), gilt
+        ''' ersatzweise das groesste ueberhaupt. Ohne jede lesbare Angabe bleibt es beim normalen
+        ''' RAW-Weg, also beim bisherigen Verhalten - nie geraten.</para>
+        '''
+        ''' <para>NUR EIN SENSORMUSTER (32803) GILT SICHER ALS ROH. LinearRaw (34892) ist
+        ''' zweideutig: die Daten sind schon demosaikiert, und ob sie ausserdem tonwertkorrigiert
+        ''' sind, sagt das Feld nicht. Gemessen an `boyechik_paris_1.dng` sind sie es - durch
+        ''' unsere Basisstufe geschickt wird die Datei 44 Stufen heller als die eingebettete
+        ''' Wiedergabe und 15 Prozent des Bildes fressen aus. Solche Dateien behalten deshalb
+        ''' LibRaws eigene Gammaausgabe, genau wie bisher. Das ist eine bewusste Vorsicht und
+        ''' keine Erkenntnis: ein echtes lineares DNG waere damit ebenfalls zu flau entwickelt,
+        ''' und um die beiden zu trennen fehlt eine Datei, an der man es zeigen koennte.</para></summary>
         Private Shared Function IsFinishedRgb(path As String) As Boolean
             Try
                 ' DIESE ZEILE TRAEGT DIE RICHTIGKEIT, sie ist keine Abkuerzung zum Zeitsparen.

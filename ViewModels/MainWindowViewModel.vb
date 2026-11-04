@@ -708,7 +708,11 @@ Namespace ViewModels
                                       If change.PickState.HasValue Then item.PickState = change.PickState.Value
                                   Next
                               End Sub
-                refresh(Gallery?.Items)
+                ' Der ganze Bestand der Galerie, nicht nur die Kacheln: das JPEG hinter einem
+                ' zugeklappten RAW oder eine weggefilterte Datei steht nicht in Items, traegt aber
+                ' dieselbe Markierung, sobald der Betrachter das Paar markiert. Items ist eine
+                ' Teilmenge davon.
+                refresh(Gallery?.AllItemsSnapshot())
                 refresh(Viewer?.FilmstripItems)
                 refresh(Editor?.FilmstripItems)
                 Viewer?.RefreshCatalogState(change.Paths)
@@ -5401,9 +5405,6 @@ Namespace ViewModels
             Return Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
         End Function
 
-        ''' Zieldateinamen-Muster merken. Bewusst NUR beim Bestaetigen eines Dialogs und nicht im
-        ''' Setter: der feuert bei jedem Tastendruck, und jedes Speichern schreibt die
-        ''' Einstellungsdatei.
         ''' <summary>Die gewaehlte Vorlage MIT den Dialogwerten (Anker, Breite/Hoehe) - bewusst als
         ''' KOPIE. Direkt in die gespeicherte Vorlage zu schreiben veraenderte sie als Nebenwirkung
         ''' eines einzelnen Stapellaufs.</summary>
@@ -5422,6 +5423,9 @@ Namespace ViewModels
             Return run
         End Function
 
+        ''' <summary>Zieldateinamen-Muster merken. Bewusst NUR beim Bestaetigen eines Dialogs und
+        ''' nicht im Setter: der feuert bei jedem Tastendruck, und jedes Speichern schreibt die
+        ''' Einstellungsdatei.</summary>
         Private Sub PersistDialogTargetNamePattern()
             AppSettingsService.SaveLastTargetNamePattern(DialogTargetNamePattern)
         End Sub

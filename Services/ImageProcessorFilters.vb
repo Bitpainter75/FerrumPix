@@ -1778,9 +1778,8 @@ Namespace Services
             Return result
         End Function
 
-        ''' Unsharp-Mask-artiger Lokalkontrast-Kern der Struktur. Die Klarheit lief frueher auch hier
-        ''' durch und hat seit ihrem Umbau einen eigenen Weg, siehe ApplyClarity.
-        ''' <summary>Lokaler Kontrast (Unschaerfemaske) - Grundlage der Struktur.
+        ''' <summary>Lokaler Kontrast (Unschaerfemaske) - Grundlage der Struktur. Die Klarheit lief
+        ''' frueher auch hier durch und hat seit ihrem Umbau einen eigenen Weg, siehe ApplyClarity.
         '''
         ''' Lief bis ueber GetPixel/SetPixel, also mit einem P/Invoke JE PIXEL. Gemessen
         ''' kostete Klarheit dadurch 4,3 s bei 6,3 MP - waehrend die gesamte verschmolzene Farbkette
@@ -3808,11 +3807,6 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Koernung. Von GetPixel/SetPixel auf Puffer umgestellt (gemessen 4,3 s bei 6,3 MP).
-        ''' BEWUSST SERIELL: der Zufallsstrom haengt an der Durchlaufreihenfolge. Parallel wuerde das
-        ''' Korn bei jedem Lauf anders fallen - wiederholte Laeufe muessen bitgleich sein, und
-        ''' ein Bild, das sich beim zweiten Rendern aendert, waere auch fuer den Nutzer falsch.
-        ''' Der Gewinn kommt allein aus dem Wegfall des P/Invoke je Pixel.</summary>
         ''' <summary>Körnung. Ohne Größe, Rauheit und Farbe (alle 0) das bisherige feine 1-px-Korn,
         ''' bitgenau unverändert; sonst zellenweise gröber (Größe), optional fleckig (Rauheit) und
         ''' optional farbig (Farbe).</summary>
@@ -3822,12 +3816,6 @@ Namespace Services
             Return ApplyGrainTextured(source, amount, sizeAmount, freqAmount, colorAmount)
         End Function
 
-        ''' <summary>Streuwert einer Zelle je Kanal, -1..1. Bewusst KEIN Zug aus dem Zufallsstrom der
-        ''' Körnung: der bleibt damit Bit für Bit unberührt, das Aufziehen des Farbreglers lässt das
-        ''' Kornmuster also stehen und ändert nur die Kanaldrift. Zweiter Grund ist der Speicher, ein
-        ''' zweites Feld in Bildgröße wären bei 45 Megapixeln drei Puffer zu je 360 MB.
-        ''' Gerechnet wird in ULong und nach jedem Schritt auf 32 Bit maskiert: VB prüft Überläufe,
-        ''' und die Zwischenwerte bleiben so unter ULong.MaxValue.</summary>
         ''' <summary>Der Streuwert des Korns an einer Stelle, -1..1 - als reine Funktion von Ort und
         ''' Startwert, nicht als Zug aus einem Strom.
         '''
@@ -3852,6 +3840,12 @@ Namespace Services
             Return CDbl(h) / 2147483647.5 - 1.0
         End Function
 
+        ''' <summary>Streuwert einer Zelle je Kanal, -1..1. Bewusst KEIN Zug aus dem Streuwert der
+        ''' Körnung: der bleibt damit Bit für Bit unberührt, das Aufziehen des Farbreglers lässt das
+        ''' Kornmuster also stehen und ändert nur die Kanaldrift. Zweiter Grund ist der Speicher, ein
+        ''' zweites Feld in Bildgröße wären bei 45 Megapixeln drei Puffer zu je 360 MB.
+        ''' Gerechnet wird in ULong und nach jedem Schritt auf 32 Bit maskiert: VB prüft Überläufe,
+        ''' und die Zwischenwerte bleiben so unter ULong.MaxValue.</summary>
         Private Shared Function CellChannelNoise(cellIndex As Integer, channel As Integer) As Double
             Dim h As ULong = (CULng(cellIndex) * 2654435761UL + CULng(channel) * 2246822519UL) And &HFFFFFFFFUL
             h = ((h Xor (h >> 15)) * 2246822519UL) And &HFFFFFFFFUL

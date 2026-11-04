@@ -410,13 +410,6 @@ Namespace Services
             ' zu deserialisieren wuerde im zweiten Fall die ganze Antwort werfen.
             <JsonPropertyName("tags")> Public Property TagsRaw As JsonElement
 
-            ''' <summary>Die Stichwoerter, gleich in welcher Form sie kamen.
-            '''
-            ''' JsonIgnore ist hier PFLICHT und nicht Kosmetik: der Serializer nimmt auch berechnete
-            ''' Eigenschaften in sein Modell auf, und "Tags" stiess dort mit dem "tags" von
-            ''' <see cref="TagsRaw"/> zusammen. Das wirft beim ERSTEN Deserialisieren des Typs, also
-            ''' zur Laufzeit und nicht beim Bauen. Dasselbe gilt fuer jede weitere abgeleitete
-            ''' Eigenschaft in diesen Datentypen.</summary>
             ''' <summary>Die Stichwoerter aus dem Index, wenn dieser Eintrag von dort kommt.
             '''
             ''' Sie MUESSEN neben TagsRaw stehen und duerfen es nicht ersetzen: ein JsonElement gilt
@@ -431,6 +424,13 @@ Namespace Services
                 CachedTags = tags
             End Sub
 
+            ''' <summary>Die Stichwoerter, gleich in welcher Form sie kamen.
+            '''
+            ''' JsonIgnore ist hier PFLICHT und nicht Kosmetik: der Serializer nimmt auch berechnete
+            ''' Eigenschaften in sein Modell auf, und "Tags" stiess dort mit dem "tags" von
+            ''' <see cref="TagsRaw"/> zusammen. Das wirft beim ERSTEN Deserialisieren des Typs, also
+            ''' zur Laufzeit und nicht beim Bauen. Dasselbe gilt fuer jede weitere abgeleitete
+            ''' Eigenschaft in diesen Datentypen.</summary>
             <JsonIgnore>
             Public ReadOnly Property Tags As List(Of String)
                 Get
@@ -633,17 +633,16 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Der Filter auf ein Album, an Zeitachse UND Tagesabruf angehaengt.
+        ''' <summary>Der Filter auf einen Cluster, an Zeitachse UND Tagesabruf angehaengt. Der
+        ''' Parameter heisst wie das BACKEND (<c>albums</c>, <c>recognize</c>, <c>places</c>,
+        ''' <c>tags</c>) und nimmt dessen Kennung.
         '''
-        ''' GEMESSEN: der Parameter heisst <c>albums</c> und nimmt die <c>cluster_id</c>
-        ''' ("benutzer/Album"). Ein naheliegendes <c>album=1</c> mit der Zahlenkennung wird
-        ''' STILLSCHWEIGEND IGNORIERT - die Antwort kommt dann ungefiltert und sieht richtig aus.
-        ''' Der Schraegstrich in der Kennung muss kodiert werden, sonst endet er als Pfadtrenner.</summary>
-        ''' <summary>Der Filter auf einen Cluster. Der Parameter heisst wie das BACKEND
-        ''' (<c>albums</c>, <c>recognize</c>, <c>places</c>, <c>tags</c>) und nimmt dessen Kennung.
-        ''' Fuer <c>albums</c> ist das gemessen; fuer die uebrigen folgt es demselben Muster, ist
-        ''' aber ungeprueft, weil auf der Messinstanz weder Orte eingeschaltet waren noch schon
-        ''' Personengruppen bestanden.</summary>
+        ''' GEMESSEN fuer <c>albums</c>: die Kennung ist die <c>cluster_id</c> ("benutzer/Album").
+        ''' Ein naheliegendes <c>album=1</c> mit der Zahlenkennung wird STILLSCHWEIGEND IGNORIERT -
+        ''' die Antwort kommt dann ungefiltert und sieht richtig aus. Der Schraegstrich in der
+        ''' Kennung muss kodiert werden, sonst endet er als Pfadtrenner. Fuer die uebrigen Backends
+        ''' folgt es demselben Muster, ist aber ungeprueft, weil auf der Messinstanz weder Orte
+        ''' eingeschaltet waren noch schon Personengruppen bestanden.</summary>
         Private Shared Function ClusterFilter(backend As String, clusterId As String) As String
             If String.IsNullOrWhiteSpace(backend) OrElse String.IsNullOrWhiteSpace(clusterId) Then Return ""
             Return "?" & Uri.EscapeDataString(backend) & "=" & Uri.EscapeDataString(clusterId)

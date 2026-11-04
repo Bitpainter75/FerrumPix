@@ -745,14 +745,6 @@ Namespace ViewModels
             Return New SKRectI(left, top, right, bottom)
         End Function
 
-        ''' <summary>Die Deckung der Ebene im Anzeige-Raster, als Alpha8 in der Größe von
-        ''' <c>plan.Rect</c>. GEZEICHNET statt Punkt für Punkt gerechnet: dieselbe Kette wie in
-        ''' <c>ImageToDisplay</c>, nur als Leinwand-Transformation - damit setzt Skia die Ebene
-        ''' dorthin, wo der Renderer sie auch hinsetzt, und das Skalieren fällt ab. Eine gespiegelte
-        ''' Pixelschleife über ein bildschirmfüllendes Objekt kostete Millionen Rückrechnungen.
-        '''
-        ''' Läuft im HINTERGRUND (hier steht der Decode) und fasst deshalb nichts am ViewModel an.
-        ''' Nothing heißt „nicht begrenzen".</summary>
         ''' <summary>Verrechnet die Ebenenmaske des Bauplans in die gezeichnete Deckung: was sie
         ''' verbirgt, fällt heraus. Dieselbe Deckung, mit der der Renderer die Ebene zeichnet
         ''' (<c>ImageProcessor.AnnotationLayerMaskCoverage</c>). Liefert die Maske nichts, bleibt die
@@ -808,6 +800,14 @@ Namespace ViewModels
             End Using
         End Sub
 
+        ''' <summary>Die Deckung der Ebene im Anzeige-Raster, als Alpha8 in der Größe von
+        ''' <c>plan.Rect</c>. GEZEICHNET statt Punkt für Punkt gerechnet: dieselbe Kette wie in
+        ''' <c>ImageToDisplay</c>, nur als Leinwand-Transformation - damit setzt Skia die Ebene
+        ''' dorthin, wo der Renderer sie auch hinsetzt, und das Skalieren fällt ab. Eine gespiegelte
+        ''' Pixelschleife über ein bildschirmfüllendes Objekt kostete Millionen Rückrechnungen.
+        '''
+        ''' Läuft im HINTERGRUND (hier steht der Decode) und fasst deshalb nichts am ViewModel an.
+        ''' Nothing heißt „nicht begrenzen".</summary>
         Private Shared Function BuildAnnotationConfineMask(plan As AnnotationConfinePlan) As SKBitmap
             If plan Is Nothing OrElse plan.Placement Is Nothing Then Return Nothing
             If plan.Rect.Width <= 0 OrElse plan.Rect.Height <= 0 Then Return Nothing

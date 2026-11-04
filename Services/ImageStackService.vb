@@ -149,6 +149,20 @@ Namespace Services
             Return stacks
         End Function
 
+        ''' <summary>Die RAW+JPEG-Paare einer Liste, je Datei ihr Partner (in beide Richtungen).
+        ''' Dieselbe Paarregel wie <see cref="Build"/>, ohne Serien: wer vor dem Stapeln filtert,
+        ''' muss ein Paar als die EINE Kachel beurteilen, die es danach ist.</summary>
+        Public Shared Function PairPartners(items As IEnumerable(Of ImageItem)) As Dictionary(Of ImageItem, ImageItem)
+            Dim result As New Dictionary(Of ImageItem, ImageItem)()
+            Dim candidates = items.Where(AddressOf IsStackable).ToList()
+            For Each shot In BuildShots(candidates, New HashSet(Of StackShot)())
+                If Not shot.IsPair Then Continue For
+                result(shot.Files(0)) = shot.Files(1)
+                result(shot.Files(1)) = shot.Files(0)
+            Next
+            Return result
+        End Function
+
         ''' <summary>Sagt die Kamera bei beiden Aufnahmen "Einzelbild", sind sie keine Serie, auch
         ''' wenn sie in derselben Sekunde entstanden: zwei schnelle Einzelausloesungen sind zwei
         ''' Motive, die nicht hinter einer Kachel verschwinden sollen. Fehlt die Angabe bei einer

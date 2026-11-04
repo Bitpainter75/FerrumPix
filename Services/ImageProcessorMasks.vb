@@ -1309,14 +1309,11 @@ Namespace Services
         Private Shared _maskCoverageClock As Long = 0
         Private Const MaskCoverageBudgetBytes As Long = 48L * 1024L * 1024L
 
-        ''' <summary>Deckungsraster einer Objekt-Ebenenmaske in Ausgabegröße, ein Byte je Pixel,
-        ''' Zeilenlänge = <paramref name="targetW"/>.
-        '''
-        ''' Das zurückgegebene Feld gehört dem Speicher und wird geteilt: NUR LESEN.</summary>
         ''' <summary>Die Deckung der Ebenenmaske eines Objekts im Raster <paramref name="targetW"/>
-        ''' mal <paramref name="targetH"/>, DIESELBE, mit der der Renderer das Objekt zeichnet. Für
-        ''' die Auswahlgrenze im Editor: was die Ebenenmaske verbirgt, gehört nicht zur Ebene.
-        ''' Das Feld gehört dem Zwischenspeicher und wird nur gelesen.</summary>
+        ''' mal <paramref name="targetH"/>, DIESELBE, mit der der Renderer das Objekt zeichnet: ein
+        ''' Byte je Pixel, Zeilenlänge = <paramref name="targetW"/>. Für die Auswahlgrenze im
+        ''' Editor: was die Ebenenmaske verbirgt, gehört nicht zur Ebene.
+        ''' Das Feld gehört dem Zwischenspeicher und wird geteilt: NUR LESEN.</summary>
         Public Shared Function AnnotationLayerMaskCoverage(maskData As ImageMask, geometry As ImageAdjustments,
                                                            targetW As Integer, targetH As Integer) As Byte()
             Return GetAnnotationMaskCoverage(maskData, geometry, targetW, targetH)
@@ -1381,9 +1378,6 @@ Namespace Services
             Return coverage
         End Function
 
-        ''' <summary>Packt ein Alpha8-PNG in einen dichten Bytepuffer der erwarteten Groesse aus.
-        ''' Nothing bei leerem String, unlesbaren Daten, falschem Farbtyp oder abweichender Groesse -
-        ''' ein stiller Rueckfall auf halbe Deckung waere hier schlimmer als gar keine Korrektur.</summary>
         ''' <summary>Die Bildpunkte eines Rasters, aber nur wenn es die erwarteten Masse hat.
         ''' Sonst Nothing - der Aufrufer behandelt das wie ein fehlendes Raster.</summary>
         Private Shared Function PixelsOfSize(raster As AlphaRaster, width As Integer, height As Integer) As Byte()
@@ -4191,15 +4185,6 @@ RasterTeil:
                 Function(c) TransformComponentRaster(c, scaleX, scaleY, pivotX, pivotY, offsetX, offsetY))
         End Function
 
-        ''' <summary>Weicher Pinselstrich als Alpha8-Maske in der Größe von <paramref name="rect"/>
-        ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
-        ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
-        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.
-        '''
-        ''' <paramref name="alpha"/> ist die Deckkraft des Strichs: 255 deckt voll, ein kleinerer Wert
-        ''' gibt einen schwächeren Strich. Er begrenzt den HÖCHSTWERT des Stempels, er dämpft ihn nicht
-        ''' nachträglich - der ganze Strich wird EINMAL als ein Pfad gezeichnet, also wird eine Stelle,
-        ''' an der der Strich sich selbst überkreuzt, nicht dunkler als der Rest.</summary>
         ''' <summary>Wie weit eine Auswahl höchstens vergrößert, verkleinert, geglättet oder gerandet
         ''' wird, in Bildpunkten. Die Grenze kommt aus dem Speicher: die Abstände liegen als 16-Bit-
         ''' Quadrate vor, und (200 + 2)² passt dort noch hinein.</summary>
@@ -4659,6 +4644,15 @@ RasterTeil:
             Return result
         End Function
 
+        ''' <summary>Weicher Pinselstrich als Alpha8-Maske in der Größe von <paramref name="rect"/>
+        ''' (Display-Bildraum). Die Strichpunkte liegen im Display-Bildraum; sie werden um rect.Left/Top
+        ''' in die Stempel-lokalen Koordinaten verschoben. Für den Commit eines Strichs, danach über
+        ''' ApplySelectionCandidate mit dem aktuellen Kombiniermodus verrechnet.
+        '''
+        ''' <paramref name="alpha"/> ist die Deckkraft des Strichs: 255 deckt voll, ein kleinerer Wert
+        ''' gibt einen schwächeren Strich. Er begrenzt den HÖCHSTWERT des Stempels, er dämpft ihn nicht
+        ''' nachträglich - der ganze Strich wird EINMAL als ein Pfad gezeichnet, also wird eine Stelle,
+        ''' an der der Strich sich selbst überkreuzt, nicht dunkler als der Rest.</summary>
         Public Shared Function BuildSoftBrushStampMask(pts As IReadOnlyList(Of SKPoint), radius As Single,
                                                        softnessPx As Single, rect As SKRectI,
                                                        Optional alpha As Byte = 255,

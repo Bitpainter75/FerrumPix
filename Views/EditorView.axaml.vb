@@ -251,9 +251,6 @@ Namespace Views
                                              Math.Log(ZoomSliderMaxPercent / ZoomSliderMinPercent) * 100.0))
         End Function
 
-        ''' <summary>Das Fussmenue zeigen. Wie in der Galerie ueber die Schaltflaeche statt ueber
-        ''' einen Rechtsklick: ein Rechtsklick ist nicht auf jedem Geraet bequem. Dasselbe Menue
-        ''' haengt zusaetzlich als Kontextmenue am Bild.</summary>
         ''' <summary>Pfad in die Zwischenablage. Muss in der VIEW liegen: die Zwischenablage
         ''' haengt am TopLevel, das ViewModel kommt nicht daran.</summary>
         Public Async Sub OnCopyPathClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
@@ -268,6 +265,9 @@ Namespace Views
             End Try
         End Sub
 
+        ''' <summary>Das Fussmenue zeigen. Wie in der Galerie ueber die Schaltflaeche statt ueber
+        ''' einen Rechtsklick: ein Rechtsklick ist nicht auf jedem Geraet bequem. Dasselbe Menue
+        ''' haengt zusaetzlich als Kontextmenue am Bild.</summary>
         Private Sub OnFooterMenuButtonClick(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             ' Es gibt nur EIN Menue je Ansicht, und es haengt an der Wurzel. Die Schaltflaeche
@@ -296,8 +296,6 @@ Namespace Views
             If menu IsNot Nothing Then LocalizationService.ApplyTo(menu)
         End Sub
 
-        ''' <summary>Die Eintraege kommen als Daten und tragen ihre Beschriftung bereits uebersetzt.
-        ''' Beim Oeffnen einmal neu lesen lassen, damit ein Sprachwechsel ankommt.</summary>
         ''' <summary>Den Zwischenablage-Haken des ViewModels fuellen. Muss hier passieren: die
         ''' Zwischenablage haengt am TopLevel, das ViewModel kommt nicht daran. Ohne das waere
         ''' "Pfad kopieren" ein Eintrag, den es gibt und der nichts tut.</summary>
@@ -377,6 +375,8 @@ Namespace Views
             Return New ImageItem(path)
         End Function
 
+        ''' <summary>Die Eintraege kommen als Daten und tragen ihre Beschriftung bereits uebersetzt.
+        ''' Beim Oeffnen einmal neu lesen lassen, damit ein Sprachwechsel ankommt.</summary>
         Private Sub OnFooterMenuOpened(sender As Object, e As Avalonia.Interactivity.RoutedEventArgs)
             ' Waehrend eines laufenden Vorgangs bleibt das Menue zu. Die Leisten und die Fusszeile
             ' sind ueber IsInteractionAllowed gesperrt, dieses Menue haengt aber am Wurzelraster und
@@ -642,9 +642,10 @@ Namespace Views
         ''' <summary>Geht die Zeiger-Erfassung während des Auswahlrechtecks verloren (Fokuswechsel,
         ''' Popup), wird der Zug wie ein Loslassen abgewickelt - sonst bliebe das Rechteck sichtbar
         ''' stehen und der nächste Klick liefe in einen halb offenen Zug (dieselbe Lehre wie bei den
-        ''' Einrast-Hilfslinien).</summary>
-        ''' <summary>Die Zeigererfassung ist weg - dann ist die Geste vorbei, ob es ein Loslassen
-        ''' gab oder nicht.
+        ''' Einrast-Hilfslinien).
+        '''
+        ''' Allgemein gilt: Die Zeigererfassung ist weg - dann ist die Geste vorbei, ob es ein
+        ''' Loslassen gab oder nicht.
         '''
         ''' WARUM DAS ZAEHLT: ein Schwenken faengt mit der rechten Maustaste an und endete bisher
         ''' NUR im Loslassen auf dieser Leinwand. Kommt dazwischen etwas, das die Erfassung nimmt -
@@ -779,9 +780,6 @@ Namespace Views
                 rect.Height / imageRect.Height * 100.0)
         End Sub
 
-        ''' <summary>Objektauswahl per Klick auf die Leinwand. Strg oder SHIFT nimmt das Objekt zur bestehenden
-        ''' Auswahl hinzu bzw. heraus; ohne Strg wird neu ausgewählt - und trifft der Klick ein
-        ''' GRUPPEN-Mitglied, wird die ganze Gruppe markiert.</summary>
         ''' <summary>Startet derselbe Druck, der ein Objekt auswählt, auch schon den Zieh-Vorgang?
         ''' Im VERSCHIEBEN-Werkzeug (und im gleichnamigen Untermodus des Auswahl-Werkzeugs) nicht: dort
         ''' ist der Klick primär AUSWAHL, verschoben wird erst, wenn der Druck in einem BEREITS
@@ -817,6 +815,9 @@ Namespace Views
                                         hitSlopPixels / imageRect.Height * 100.0) >= 0
         End Function
 
+        ''' <summary>Objektauswahl per Klick auf die Leinwand. Strg oder SHIFT nimmt das Objekt zur bestehenden
+        ''' Auswahl hinzu bzw. heraus; ohne Strg wird neu ausgewählt - und trifft der Klick ein
+        ''' GRUPPEN-Mitglied, wird die ganze Gruppe markiert.</summary>
         Private Shared Sub SelectAnnotationFromCanvas(vm As EditorViewModel, hitIndex As Integer, modifiers As KeyModifiers)
             If vm Is Nothing Then Return
             If IsAddToSelectionClick(modifiers) Then
@@ -1384,18 +1385,6 @@ Namespace Views
             ScaleSensitive = 2
         End Enum
 
-        ''' <summary>Eine WEISSLISTE der Korrektur-Panels, keine Ausnahme fuer den Zoom-Regler.
-        '''
-        ''' <para>Vorher galt "jeder RoundSlider ausser dem Zoom", und damit starteten auch reine
-        ''' Werkzeug- und Objektregler den Aufbau der verkleinerten Quelle und erzwangen beim
-        ''' Loslassen einen vollen Render - die Pinselgroesse der Auswahl, die Griffe des Rahmens,
-        ''' die Eigenschaften eines Objekts. Die aendern gar keine Bildkorrektur; die Last war
-        ''' umsonst, und waehrend des Zugs konnte die Vorschau kurz weicher werden.</para>
-        '''
-        ''' <para>Panelweise und nicht reglerweise: eine Liste einzelner Regler wuerde beim
-        ''' naechsten neuen Regler still falsch. Wer ein Korrektur-Panel hinzufuegt, traegt es
-        ''' hier ein - sonst bleibt seine Vorschau beim alten, langsameren Verhalten, was der
-        ''' harmlose Fehler von beiden ist.</para></summary>
         ''' <summary>Der Wertgeber, zu dem dieses Ereignis gehoert: der Regler selbst oder das
         ''' Zahlenfeld daneben. Ein Rad- oder Tastenereignis kommt aus dessen INNEREN Teilen,
         ''' deshalb wird von der Quelle aufwaerts gesucht - mit harter Grenze, wie jeder Elternpfad
@@ -1424,6 +1413,18 @@ Namespace Views
             Return Nothing
         End Function
 
+        ''' <summary>Eine WEISSLISTE der Korrektur-Panels, keine Ausnahme fuer den Zoom-Regler.
+        '''
+        ''' <para>Vorher galt "jeder RoundSlider ausser dem Zoom", und damit starteten auch reine
+        ''' Werkzeug- und Objektregler den Aufbau der verkleinerten Quelle und erzwangen beim
+        ''' Loslassen einen vollen Render - die Pinselgroesse der Auswahl, die Griffe des Rahmens,
+        ''' die Eigenschaften eines Objekts. Die aendern gar keine Bildkorrektur; die Last war
+        ''' umsonst, und waehrend des Zugs konnte die Vorschau kurz weicher werden.</para>
+        '''
+        ''' <para>Panelweise und nicht reglerweise: eine Liste einzelner Regler wuerde beim
+        ''' naechsten neuen Regler still falsch. Wer ein Korrektur-Panel hinzufuegt, traegt es
+        ''' hier ein - sonst bleibt seine Vorschau beim alten, langsameren Verhalten, was der
+        ''' harmlose Fehler von beiden ist.</para></summary>
         Private Function ClassifySlider(source As Object) As SliderKind
             ' Die Tonwertkurve ist kein RoundSlider, aber dieselbe Sache: sie rechnet je Bildpunkt.
             If TypeOf source Is CurveEditor Then Return SliderKind.Adjustment
@@ -1712,11 +1713,6 @@ Namespace Views
             RoundSlider.RestoreAllCompared()
         End Sub
 
-        ''' <summary>Der KeyDown-Handler hängt an dieser UserControl - er sieht eine Taste nur, wenn der
-        ''' Tastaturfokus INNERHALB der EditorView liegt. Beim Öffnen des Editors blieb er bisher dort,
-        ''' wo er vorher war (Galerie/Viewer), und keins der Editor-Kürzel griff, bis man zufällig einen
-        ''' fokussierbaren Regler oder ein Filmstreifen-Bild angeklickt hatte. Galerie und Viewer holen
-        ''' sich den Fokus aus demselben Grund beim Anhängen.</summary>
         ''' <summary>Das Einpassen-Verhalten aus den Einstellungen wurde bisher NUR beim ersten Laden
         ''' und beim Druck auf "Einpassen" ausgewertet - beim Umschalten passierte am offenen Bild
         ''' nichts, und der Schalter wirkte wie kaputt. Jetzt zieht die Ansicht sofort nach, aber NUR
@@ -1746,6 +1742,11 @@ Namespace Views
             Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
         End Sub
 
+        ''' <summary>Der KeyDown-Handler hängt an dieser UserControl - er sieht eine Taste nur, wenn der
+        ''' Tastaturfokus INNERHALB der EditorView liegt. Beim Öffnen des Editors blieb er bisher dort,
+        ''' wo er vorher war (Galerie/Viewer), und keins der Editor-Kürzel griff, bis man zufällig einen
+        ''' fokussierbaren Regler oder ein Filmstreifen-Bild angeklickt hatte. Galerie und Viewer holen
+        ''' sich den Fokus aus demselben Grund beim Anhängen.</summary>
         Protected Overrides Sub OnAttachedToVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
             MyBase.OnAttachedToVisualTree(e)
             VerbindeEinstellungen()
@@ -3916,14 +3917,6 @@ Namespace Views
             Return Math.Max(0.0F, Math.Min(1.0F, e.GetCurrentPoint(relativeTo).Properties.Pressure))
         End Function
 
-        ''' <summary>GLÄTTEN WIE AN EINER SCHNUR. Der gezeichnete Punkt folgt dem Zeiger nur um einen
-        ''' Anteil des Abstands nach; kleine Zitterer heben sich dabei auf, und eine Kurve wird
-        ''' runder. Bei 0 ist der Anteil 1, der Punkt IST der Zeiger - genau das Verhalten von
-        ''' vorher. Bei 100 folgt er mit einem Zehntel, das ist stark, aber noch zu führen.
-        '''
-        ''' Gerechnet wird in BÜHNENPUNKTEN, also vor dem Umrechnen ins Bild: das Zittern der Hand ist
-        ''' auf dem Schirm gleich groß, egal wie weit hineingezoomt ist. Und VOR den Linienhilfen
-        ''' (STRG, ALT, SHIFT), damit eine gerade Linie gerade bleibt.</summary>
         ''' <summary>Beim Loslassen den Strich bis an den Zeiger fuehren. Der geglaettete Punkt haengt
         ''' dem Zeiger nach (bei der Vorgabe 100 ruckt er je Bewegung nur ein Zehntel auf), und ohne
         ''' diesen letzten Punkt endet jeder Zug sichtbar vor der Stelle, an der man abgesetzt hat -
@@ -3956,6 +3949,14 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>GLÄTTEN WIE AN EINER SCHNUR. Der gezeichnete Punkt folgt dem Zeiger nur um einen
+        ''' Anteil des Abstands nach; kleine Zitterer heben sich dabei auf, und eine Kurve wird
+        ''' runder. Bei 0 ist der Anteil 1, der Punkt IST der Zeiger - genau das Verhalten von
+        ''' vorher. Bei 100 folgt er mit einem Zehntel, das ist stark, aber noch zu führen.
+        '''
+        ''' Gerechnet wird in BÜHNENPUNKTEN, also vor dem Umrechnen ins Bild: das Zittern der Hand ist
+        ''' auf dem Schirm gleich groß, egal wie weit hineingezoomt ist. Und VOR den Linienhilfen
+        ''' (STRG, ALT, SHIFT), damit eine gerade Linie gerade bleibt.</summary>
         Private Function SmoothBrushPosition(raw As Avalonia.Point, vm As EditorViewModel) As Avalonia.Point
             Dim strength = If(vm Is Nothing, 0.0, Math.Max(0.0, Math.Min(100.0, vm.BrushSmoothing)) / 100.0)
             If strength <= 0.0 OrElse Not _smoothedBrushPosition.HasValue Then
@@ -5516,9 +5517,6 @@ Namespace Views
             overlay.InvalidateVisual()
         End Sub
 
-        ''' <summary>Legt das Stuetzpunktraster der Gitterverzerrung ueber das Bild. Wie beim
-        ''' Verlaufs-Overlay kommen die Punkte in Prozent und werden hier auf den dargestellten
-        ''' Bildbereich gerechnet - damit sitzen sie bei jedem Zoom- und Panstand richtig.</summary>
         ''' <summary>Liegt der Zeiger auf einer Ecke des Verzerrungsvierecks? Nur zur Frage, ob ein
         ''' Klick NEBEN dem Bild durchgelassen werden muss - gefasst wird er weiter unten.</summary>
         Private Function HitsWarpCorner(vm As EditorViewModel, canvas As Canvas,
@@ -5729,6 +5727,9 @@ Namespace Views
             overlay.InvalidateVisual()
         End Sub
 
+        ''' <summary>Legt das Stuetzpunktraster der Gitterverzerrung ueber das Bild. Wie beim
+        ''' Verlaufs-Overlay kommen die Punkte in Prozent und werden hier auf den dargestellten
+        ''' Bildbereich gerechnet - damit sitzen sie bei jedem Zoom- und Panstand richtig.</summary>
         Private Sub PositionGridWarpOverlay(ix As Double, iy As Double, iw As Double, ih As Double)
             Dim overlay = Me.FindControl(Of GridWarpOverlayControl)("GridWarpOverlay")
             If overlay Is Nothing Then Return
@@ -7023,24 +7024,6 @@ Namespace Views
                                       center.Y + dx * sinR + dy * cosR)
         End Function
 
-        ''' <summary>
-        ''' Ordnet einer Zeigerposition die Anfasser-Zone des Objekts zu. Das Overlay wird per
-        ''' RenderTransform um seinen Mittelpunkt gedreht, während Canvas.Left/Top und Width/Height
-        ''' ungedreht bleiben - <paramref name="rect"/> ist also das ungedrehte Rechteck. Der Zeiger
-        ''' wird deshalb um denselben Winkel zurückgedreht; danach liegen alle Zonen wieder
-        ''' achsenparallel und die Prüfung stimmt mit dem überein, was auf dem Bild zu sehen ist.
-        ''' </summary>
-        ''' <summary>
-        ''' Die Drehung, mit der die Trefferprüfung des Auswahlrahmens rechnen MUSS.
-        '''
-        ''' Bei einer Mehrfachauswahl wird der Rahmen ungedreht gezeichnet (die gemeinsame Box hat
-        ''' keine eigene Drehung, siehe PositionTextOverlayFromViewModel) - die Prüfung darf dann auch
-        ''' nicht mit der Drehung des ANKER-Objekts rechnen. Sonst sucht sie die Anfasser an
-        ''' verdrehten Stellen, der Griff geht ins Leere und der Druck gilt als Klick neben die
-        ''' Auswahl: das Aufziehen beginnt und die Auswahl ist beim Loslassen weg
-        ''' („Anfasser nicht anfassbar, Selektionsbox verschwindet"). Genau nach einer
-        ''' Gruppendrehung trat das zuverlässig auf, weil danach jedes Mitglied gedreht ist.
-        ''' </summary>
         ''' <summary>Eine GESPERRTE Auswahl bekommt keine Zug-Modi: kein Anfasser, kein Verschieben,
         ''' kein Drehen. Der Rahmen bleibt sichtbar (man soll sehen, was markiert ist, und die Ebene
         ''' im Panel wieder entsperren können).</summary>
@@ -7064,11 +7047,29 @@ Namespace Views
             Return mode
         End Function
 
+        ''' <summary>
+        ''' Die Drehung, mit der die Trefferprüfung des Auswahlrahmens rechnen MUSS.
+        '''
+        ''' Bei einer Mehrfachauswahl wird der Rahmen ungedreht gezeichnet (die gemeinsame Box hat
+        ''' keine eigene Drehung, siehe PositionTextOverlayFromViewModel) - die Prüfung darf dann auch
+        ''' nicht mit der Drehung des ANKER-Objekts rechnen. Sonst sucht sie die Anfasser an
+        ''' verdrehten Stellen, der Griff geht ins Leere und der Druck gilt als Klick neben die
+        ''' Auswahl: das Aufziehen beginnt und die Auswahl ist beim Loslassen weg
+        ''' („Anfasser nicht anfassbar, Selektionsbox verschwindet"). Genau nach einer
+        ''' Gruppendrehung trat das zuverlässig auf, weil danach jedes Mitglied gedreht ist.
+        ''' </summary>
         Private Shared Function OverlayHitRotation(vm As EditorViewModel) As Double
             If vm Is Nothing Then Return 0
             Return If(vm.HasMultiAnnotationSelection, 0.0, vm.AnnotationRotation)
         End Function
 
+        ''' <summary>
+        ''' Ordnet einer Zeigerposition die Anfasser-Zone des Objekts zu. Das Overlay wird per
+        ''' RenderTransform um seinen Mittelpunkt gedreht, während Canvas.Left/Top und Width/Height
+        ''' ungedreht bleiben - <paramref name="rect"/> ist also das ungedrehte Rechteck. Der Zeiger
+        ''' wird deshalb um denselben Winkel zurückgedreht; danach liegen alle Zonen wieder
+        ''' achsenparallel und die Prüfung stimmt mit dem überein, was auf dem Bild zu sehen ist.
+        ''' </summary>
         Private Function GetTextDragMode(point As Avalonia.Point, rect As Avalonia.Rect, rotationDegrees As Double) As TextDragMode
             If rect.Width < 4 OrElse rect.Height < 4 Then Return TextDragMode.None
 
@@ -7756,8 +7757,7 @@ Namespace Views
         ''' Gruppen des neuen Werkzeugs beginnen oben, und ein stehengebliebener Scrollstand des
         ''' vorigen zeigte mitten in die Liste - die ersten Regler waren dann nicht zu sehen.
         ''' Verzoegert, weil die Gruppen des neuen Werkzeugs erst nach diesem Durchlauf
-        ''' eingeblendet werden und der Inhalt bis dahin die alte Hoehe hat.</summary>
-        ''' <summary>Beim Werkzeugwechsel gehoert das Anpassungspanel wieder an den Anfang.
+        ''' eingeblendet werden und der Inhalt bis dahin die alte Hoehe hat.
         '''
         ''' Der aeussere Scrollbereich allein genuegt dafuer NICHT: Zeichnen und Einfuegen bringen
         ''' einen eigenen mit (die Formenliste ist ueber 20 000 Punkte hoch), und weil die Panels

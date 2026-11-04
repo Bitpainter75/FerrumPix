@@ -242,9 +242,9 @@ Namespace Services
         ''' dessen liegen, was das Format zulaesst, oder das Schreiben fehlschlaegt.
         ''' <paramref name="layers"/> darf leer sein - dann entsteht eine Datei mit einer einzigen
         ''' Hintergrundebene aus dem Gesamtbild.</summary>
-        ''' <summary><paramref name="recipe"/> ist der eigene Zusatzblock aus PsdRecipeService: die
-        ''' vollstaendige Bearbeitung, damit FerrumPix seine eigene Datei spaeter wieder mit Text als
-        ''' Text oeffnen kann. Fremde Programme ueberspringen ihn. Nothing = keinen schreiben.</summary>
+        ''' <param name="recipe">Der eigene Zusatzblock aus PsdRecipeService: die vollstaendige
+        ''' Bearbeitung, damit FerrumPix seine eigene Datei spaeter wieder mit Text als Text oeffnen
+        ''' kann. Fremde Programme ueberspringen ihn. Nothing = keinen schreiben.</param>
         ''' <param name="resolutionDpi">Die Aufloesung in Punkten je Zoll, 0 = keine schreiben (dann
         ''' nimmt jedes Programm seine Vorgabe, Photoshop 72).</param>
         ''' <param name="xmp">Das XMP-Paket der Quelle, Nothing = keins schreiben.</param>

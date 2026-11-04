@@ -254,10 +254,6 @@ Namespace Services
             Return DevelopRawThumbnailsActive() OrElse RawSidecarService.ReadDevelopedThumbnail(filePath)
         End Function
 
-        ''' <summary>Teil des Cache-Dateinamens für die ENTWICKELTE RAW-Vorschau: leer, solange die Option
-        ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
-        ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
-        ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
         ''' <summary>Fassung der RAW-Basisstufe fuer entwickelte Kacheln. Erhoehen, wenn sich die
         ''' Entwicklung einer RAW aendert, ohne dass Datei oder Rezept sich aendern; nur die
         ''' entwickelten RAW-Kacheln werden dann neu gerechnet, nicht der ganze Bestand wie bei
@@ -265,6 +261,10 @@ Namespace Services
         ''' zwei Kameramatrizen.</summary>
         Private Const DevelopedRawBaseVersion As Integer = 3
 
+        ''' <summary>Teil des Cache-Dateinamens für die ENTWICKELTE RAW-Vorschau: leer, solange die Option
+        ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
+        ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
+        ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
         Private Shared Function DevelopedThumbnailSuffix(filePath As String) As String
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawSidecarService.Exists(filePath) Then Return ""
             If Not DevelopsThumbnail(filePath) Then Return ""
@@ -1033,8 +1033,6 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Drehung aus dem RAW-Sidecar (0 fuer alle anderen Formate). Die Vorschau in der
-        ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben.</summary>
         ''' <summary>Orientierung, die auf eine gerade dekodierte Vorschau anzuwenden ist. Bei RAW
         ''' zaehlt der Container, wenn die Vorschau selbst kein Tag traegt (siehe RawPreviewOrigin);
         ''' fuer alle anderen Formate bleibt es beim Tag der Datei.</summary>
@@ -1044,6 +1042,8 @@ Namespace Services
             Return ImageOrientationService.RawPreviewOrigin(filePath, codecOrigin, width, height)
         End Function
 
+        ''' <summary>Drehung aus dem RAW-Sidecar (0 fuer alle anderen Formate). Die Vorschau in der
+        ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben.</summary>
         Private Shared Function SidecarRotationFor(filePath As String) As Integer
             If Not RawSidecarService.IsSidecarFormat(filePath) Then Return 0
             Return RawSidecarService.ReadRotationDegrees(filePath)
@@ -1242,9 +1242,6 @@ Namespace Services
             End Try
         End Sub
 
-        ''' Trägt die frisch gezählten Kennzahlen nach. Bewusst getrennt vom Zählen selbst: der Index
-        ''' wird nur für den kurzen Lesen-Ändern-Schreiben-Abschnitt gesperrt, nicht für den langen
-        ''' Verzeichnisdurchlauf.
         ''' <summary>Streicht Ordner endgueltig aus dem Wurzelverzeichnis - fuer aufgeraeumte
         ''' Temp-Altlasten. Bleibt der Eintrag stehen, taucht der Ordner in den Einstellungen
         ''' weiter als "Ordner fehlt" auf, obwohl nichts mehr da ist.</summary>
@@ -1266,6 +1263,9 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Trägt die frisch gezählten Kennzahlen nach. Bewusst getrennt vom Zählen selbst:
+        ''' der Index wird nur für den kurzen Lesen-Ändern-Schreiben-Abschnitt gesperrt, nicht für
+        ''' den langen Verzeichnisdurchlauf.</summary>
         Private Shared Sub MergeFolderStats(stats As Dictionary(Of String, (Count As Integer, SizeBytes As Long, StampUtc As DateTime)))
             If stats Is Nothing OrElse stats.Count = 0 Then Return
             Try

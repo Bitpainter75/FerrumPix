@@ -3049,14 +3049,14 @@ Namespace ViewModels
         ''' Abfolge, in der die Leiste sie zeichnet.</summary>
         Public ReadOnly Property InfoPanelRowItems As New ObservableCollection(Of InfoPanelRowItem)()
 
-        ''' <summary>Baut die Hakenliste neu auf. Die Beschriftungen kommen ÜBERSETZT aus dem
-        ''' ViewModel: der Sprach-Baumlauf sieht nur, was beim Wechsel schon im Baum steht - was eine
-        ''' Liste erst danach erzeugt, bliebe deutsch.</summary>
         ''' <summary>Die BEREICHE der Leiste - Bewertung, Etikett, Stichwoerter. Eigene Liste, weil
         ''' sie etwas anderes sind als die Zeilen: Bedienung statt Angabe, und sie gelten auch bei
         ''' mehreren markierten Bildern.</summary>
         Public ReadOnly Property InfoPanelSectionItems As New ObservableCollection(Of InfoPanelRowItem)()
 
+        ''' <summary>Baut die Hakenliste neu auf. Die Beschriftungen kommen ÜBERSETZT aus dem
+        ''' ViewModel: der Sprach-Baumlauf sieht nur, was beim Wechsel schon im Baum steht - was eine
+        ''' Liste erst danach erzeugt, bliebe deutsch.</summary>
         Private Sub BuildInfoPanelRowItems()
             InfoPanelRowItems.Clear()
             For Each row In InfoPanelRowSettings.AllRows
@@ -3353,14 +3353,14 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Wirklich ein Modell auf der Karte laden und sofort wieder schließen. Das ist
-        ''' der einzige ehrliche Weg zu der Frage, ob die Beschleunigung auf diesem Rechner
-        ''' funktioniert: die Geräteliste meldet eine Karte auch dann, wenn kein brauchbarer Treiber
-        ''' dahintersteht.</summary>
         ''' <summary>Wurde waehrend einer laufenden Prüfung eine neue verlangt, etwa weil eine
         ''' andere Karte gewaehlt wurde? Dann laeuft sie danach, statt still zu verfallen.</summary>
         Private _gpuAccelerationRecheck As Boolean
 
+        ''' <summary>Wirklich ein Modell auf der Karte laden und sofort wieder schließen. Das ist
+        ''' der einzige ehrliche Weg zu der Frage, ob die Beschleunigung auf diesem Rechner
+        ''' funktioniert: die Geräteliste meldet eine Karte auch dann, wenn kein brauchbarer Treiber
+        ''' dahintersteht.</summary>
         Public Async Function CheckGpuAccelerationAsync() As Task
             If _gpuAccelerationBusy Then
                 ' NICHT verwerfen: die Karte kann inzwischen eine andere sein, und die bliebe sonst
@@ -6124,8 +6124,9 @@ Namespace ViewModels
         ''' GEHOLT WIRD SIE ueber die Aufraeumklammer, nicht ueber TryAcquire: DeleteFolderCatalogData
         ''' nimmt je Ordner dieselbe Sperre, und ein zweiter echter Erwerb scheitert an der eigenen
         ''' Datei. Mit der Rohsperre flogen die Vorschaubilder, die Katalogzeilen aber blieben stehen
-        ''' und die Meldung zaehlte wortlos null.</summary>
-        ''' <summary>Raeumt die gewaehlten Ordner auf - ALS HINTERGRUNDLAUF mit Anzeige.
+        ''' und die Meldung zaehlte wortlos null.
+        '''
+        ''' Raeumt die gewaehlten Ordner auf - ALS HINTERGRUNDLAUF mit Anzeige.
         '''
         ''' Es lief einmal geradeheraus auf dem Anzeigefaden. Bei 1800 Ordnern loescht die Schleife
         ''' je Ordner einen Vorschau-Zwischenspeicher und die Katalogzeilen darunter; die Anwendung
@@ -6887,8 +6888,6 @@ Namespace ViewModels
             Next
         End Sub
 
-        ''' <summary>Holt alle Dateien einer Gruppe, auf den Knopf in den Einstellungen hin. Der
-        ''' einzige andere Weg ist <see cref="RequestModelsAsync"/>, ebenfalls nur nach Rueckfrage.</summary>
         ''' <summary>Die Abbruchmarken der laufenden Downloads aus den Einstellungen, je Gruppe ueber
         ''' ihre Dateien. Ueber die Dateien und nicht das Gruppenobjekt: ein Sprachwechsel baut die
         ''' Gruppen neu auf, der Abbrechen-Knopf haengt dann an einem anderen Objekt.</summary>
@@ -6918,6 +6917,8 @@ Namespace ViewModels
             End While
         End Function
 
+        ''' <summary>Holt alle Dateien einer Gruppe, auf den Knopf in den Einstellungen hin. Der
+        ''' einzige andere Weg ist <see cref="RequestModelsAsync"/>, ebenfalls nur nach Rueckfrage.</summary>
         Public Async Function FetchModelGroupAsync(group As ModelGroup) As Task
             If group Is Nothing OrElse group.Running Then Return
 
@@ -7115,8 +7116,6 @@ Namespace ViewModels
 
     End Class
 
-    ''' <summary>Eine Zeile der Werkzeuggruppen-Reihenfolge auf der Einstellungsseite: der stabile
-    ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
     ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
     Public Class LanguageOption
         Public Property Key As String = ""
@@ -7275,6 +7274,8 @@ Namespace ViewModels
         End Function
     End Class
 
+    ''' <summary>Eine Zeile der Werkzeuggruppen-Reihenfolge auf der Einstellungsseite: der stabile
+    ''' Name (Key) geht an die Verschiebe-Befehle, die Beschriftung ist bereits übersetzt.</summary>
     Public Class EditorToolGroupItem
         Public Property Key As String = ""
         Public Property Label As String = ""

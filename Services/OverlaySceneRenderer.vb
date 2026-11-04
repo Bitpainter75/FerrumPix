@@ -190,15 +190,6 @@ Namespace Services
             Return startIndex
         End Function
 
-        ''' <summary>Zeichnet die Kompositor-Objekte (ab <see cref="ComputeCompositorStartIndex"/>)
-        ''' aus dem Objekt-Bitmap-Cache ueber die Szene. Die PLATZIERUNG ist dieselbe wie beim
-        ''' Backen: TransformAnnotationForGeometry liefert das Objekt im Szenenraum (Schriftgrad und
-        ''' Konturbreite bereits skaliert), ComputeAnnotationRect loest den Anker auf, die Drehung
-        ''' liegt als Matrix um die Rechteckmitte (die Spiegelung steckt in der Cache-Bitmap, wie
-        ''' beim Ghost). Rueckgabe: wie viele Objekte gezeichnet wurden (Messpunkt).
-        '''
-        ''' NUR auf dem UI-Thread aufrufen - der Cache entsorgt Bitmaps bei Invalidierung sofort,
-        ''' und genau dieser Thread ist der einzige, der invalidiert (Vertrag des Caches).</summary>
         ''' <summary>Was der Kompositor WIRKLICH zeichnet - das Gegenstueck zu "Editor.ObjektLage".
         ''' Beide Zeilen zusammen sagen, ob eine Abweichung am Zeichnen oder an der Ansicht liegt:
         ''' Rechteck und Drehung stammen hier aus derselben Objektabbildung, die auch der
@@ -233,6 +224,15 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Zeichnet die Kompositor-Objekte (ab <see cref="ComputeCompositorStartIndex"/>)
+        ''' aus dem Objekt-Bitmap-Cache ueber die Szene. Die PLATZIERUNG ist dieselbe wie beim
+        ''' Backen: TransformAnnotationForGeometry liefert das Objekt im Szenenraum (Schriftgrad und
+        ''' Konturbreite bereits skaliert), ComputeAnnotationRect loest den Anker auf, die Drehung
+        ''' liegt als Matrix um die Rechteckmitte (die Spiegelung steckt in der Cache-Bitmap, wie
+        ''' beim Ghost). Rueckgabe: wie viele Objekte gezeichnet wurden (Messpunkt).
+        '''
+        ''' NUR auf dem UI-Thread aufrufen - der Cache entsorgt Bitmaps bei Invalidierung sofort,
+        ''' und genau dieser Thread ist der einzige, der invalidiert (Vertrag des Caches).</summary>
         Public Shared Function DrawCachedAnnotations(canvas As SKCanvas, adj As ImageAdjustments,
                                                      sceneWidth As Integer, sceneHeight As Integer,
                                                      cache As AnnotationBitmapCache,

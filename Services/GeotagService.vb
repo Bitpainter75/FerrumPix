@@ -7,26 +7,6 @@ Imports System.Text.RegularExpressions
 
 Namespace Services
 
-    ''' <summary>Schreibt Koordinaten an ein Bild.
-    '''
-    ''' Gelesen wurde GPS schon immer (<see cref="ExifService"/>, Katalogspalten,
-    ''' <see cref="PlaceLookupService"/> fuer den Ortsnamen). Hier ist der Rueckweg.
-    '''
-    ''' ZWEI ZIELE, nach Format getrennt:
-    ''' JPEG bekommt die Koordinate in die Datei selbst, weil das die Datei ist, die weitergegeben
-    ''' wird und die jedes fremde Programm liest. Alles andere - RAW, PSD, TIFF, HEIC - bekommt eine
-    ''' XMP-Beistelldatei; an eine RAW-Datei gehen wir grundsaetzlich nicht heran. Der Katalog wird
-    ''' in beiden Faellen bedient, das macht aber der Aufrufer (LibraryService.SetGpsCoordinates).
-    '''
-    ''' WARUM DER JPEG-WEG NICHTS VERSCHIEBT: Ein EXIF-Feld mitten in IFD0 einzufuegen waere der
-    ''' naive Weg und der gefaehrliche - alle nachfolgenden Offsets im TIFF-Block wandern, und
-    ''' Herstellernotizen mit absoluten Zeigern sind danach Schrott. Der Kopf des TIFF-Blocks traegt
-    ''' aber einen ZEIGER auf IFD0, und der laesst sich umbiegen: der vorhandene Block bleibt Byte
-    ''' fuer Byte liegen, hinten kommen das GPS-IFD und eine Kopie der IFD0-Eintraege dazu, und der
-    ''' Kopf zeigt auf die Kopie. Die Eintraege der Kopie sind woertlich uebernommen, ihre Wertzeiger
-    ''' deuten also weiter in den unveraenderten Bereich. Der alte IFD0-Rumpf bleibt als toter
-    ''' Ballast liegen (ein paar hundert Byte) - das ist der Preis dafuer, dass nichts umgerechnet
-    ''' werden muss und damit auch nichts falsch umgerechnet werden kann.</summary>
     ''' <summary>Was aus einem Stapel geworden ist. Getrennt nach Ziel, weil "steht in der Datei"
     ''' und "steht daneben" fuer den Nutzer nicht dasselbe sind.</summary>
     Public Class GeotagBatchResult
@@ -56,6 +36,26 @@ Namespace Services
         Public Property AltitudeMeters As Double?
     End Class
 
+    ''' <summary>Schreibt Koordinaten an ein Bild.
+    '''
+    ''' Gelesen wurde GPS schon immer (<see cref="ExifService"/>, Katalogspalten,
+    ''' <see cref="PlaceLookupService"/> fuer den Ortsnamen). Hier ist der Rueckweg.
+    '''
+    ''' ZWEI ZIELE, nach Format getrennt:
+    ''' JPEG bekommt die Koordinate in die Datei selbst, weil das die Datei ist, die weitergegeben
+    ''' wird und die jedes fremde Programm liest. Alles andere - RAW, PSD, TIFF, HEIC - bekommt eine
+    ''' XMP-Beistelldatei; an eine RAW-Datei gehen wir grundsaetzlich nicht heran. Der Katalog wird
+    ''' in beiden Faellen bedient, das macht aber der Aufrufer (LibraryService.SetGpsCoordinates).
+    '''
+    ''' WARUM DER JPEG-WEG NICHTS VERSCHIEBT: Ein EXIF-Feld mitten in IFD0 einzufuegen waere der
+    ''' naive Weg und der gefaehrliche - alle nachfolgenden Offsets im TIFF-Block wandern, und
+    ''' Herstellernotizen mit absoluten Zeigern sind danach Schrott. Der Kopf des TIFF-Blocks traegt
+    ''' aber einen ZEIGER auf IFD0, und der laesst sich umbiegen: der vorhandene Block bleibt Byte
+    ''' fuer Byte liegen, hinten kommen das GPS-IFD und eine Kopie der IFD0-Eintraege dazu, und der
+    ''' Kopf zeigt auf die Kopie. Die Eintraege der Kopie sind woertlich uebernommen, ihre Wertzeiger
+    ''' deuten also weiter in den unveraenderten Bereich. Der alte IFD0-Rumpf bleibt als toter
+    ''' Ballast liegen (ein paar hundert Byte) - das ist der Preis dafuer, dass nichts umgerechnet
+    ''' werden muss und damit auch nichts falsch umgerechnet werden kann.</summary>
     Public Class GeotagService
 
         ' TIFF-Feldtypen, wie sie in der EXIF-Spezifikation nummeriert sind.
@@ -241,8 +241,6 @@ Namespace Services
             Return 0.0
         End Function
 
-        ''' <summary>Die Koordinate so, wie die Anwendung sie sonst auch zeigt (siehe ExifService) -
-        ''' damit die Vorschau im Dialog und die Zeile in der Infoleiste dieselbe Sprache sprechen.</summary>
         ''' <summary>Die Adresse, unter der OpenStreetMap diesen Punkt zeigt: Marke gesetzt, Karte
         ''' herangezoomt. Die Zahlen gehen mit dem PUNKT als Trenner hinaus - eine deutsche
         ''' Ländereinstellung schriebe sonst "50,809", und die Karte landete im Nirgendwo.</summary>
@@ -253,6 +251,8 @@ Namespace Services
             Return $"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map={zoom}/{lat}/{lon}"
         End Function
 
+        ''' <summary>Die Koordinate so, wie die Anwendung sie sonst auch zeigt (siehe ExifService) -
+        ''' damit die Vorschau im Dialog und die Zeile in der Infoleiste dieselbe Sprache sprechen.</summary>
         Public Shared Function FormatCoordinates(latitude As Double, longitude As Double) As String
             Return $"{latitude:F5}°, {longitude:F5}°"
         End Function

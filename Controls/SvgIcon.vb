@@ -175,6 +175,12 @@ Namespace Controls
             Return Services.IconAssets.ResolveLegacy(Services.IconAssets.Root & "outline/" & mappedFile)
         End Function
 
+        ''' <summary>Ob das Vorladen ueberhaupt laeuft. Der Pruefstand schaltet es ab: er baut die
+        ''' Editoransicht in vielen Pruefungen, und jedes Mal liefe sonst das Einlesen aller
+        ''' Symbole an, das dort niemand braucht und das nur Zeit kostet. Ein Symbol, das trotzdem
+        ''' gezeichnet wird, entsteht wie immer beim ersten Zeichnen (GetIcon).</summary>
+        Public Shared Property PreloadEnabled As Boolean = True
+
         ''' <summary>Liest und zerlegt alle Symbole der Oberfläche (Phosphor, normale Stärke) einmalig im Hintergrund und baut ihre
         ''' Geometrien anschließend häppchenweise auf dem UI-Faden. Ohne das wird jedes Symbol erst
         ''' geparst, wenn es zum ersten Mal gezeichnet wird - beim Aufklappen von "Formen und Symbole"
@@ -184,12 +190,6 @@ Namespace Controls
         ''' Geometry-Objekte MUSS auf dem UI-Faden laufen: Geometry erbt von AvaloniaObject und ist an
         ''' den Faden gebunden, der es angelegt hat.
         ''' Läuft je Programmlauf genau einmal; weitere Aufrufe kehren sofort zurück.</summary>
-        ''' <summary>Ob das Vorladen ueberhaupt laeuft. Der Pruefstand schaltet es ab: er baut die
-        ''' Editoransicht in vielen Pruefungen, und jedes Mal liefe sonst das Einlesen aller
-        ''' Symbole an, das dort niemand braucht und das nur Zeit kostet. Ein Symbol, das trotzdem
-        ''' gezeichnet wird, entsteht wie immer beim ersten Zeichnen (GetIcon).</summary>
-        Public Shared Property PreloadEnabled As Boolean = True
-
         Public Shared Function PreloadIconsAsync() As Task
             If Not PreloadEnabled Then Return Task.CompletedTask
             If Interlocked.Exchange(_preloadStarted, 1) <> 0 Then Return Task.CompletedTask

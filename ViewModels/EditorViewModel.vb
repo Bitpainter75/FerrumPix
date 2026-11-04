@@ -250,6 +250,9 @@ Namespace ViewModels
         ''' Die Filmbasis kam von der Pipette und nicht aus der Messung. Dann misst ein neuer
         ''' Ausschnitt nur den Dichtepunkt nach; die angeklickte Basis bleibt, wie sie ist.
         Private _negativeBasePicked As Boolean = False
+        ''' Die Umkehr wurde auf einem Arbeitsbild vermessen, das die RAW-Stufe gleich ersetzt (siehe
+        ''' MarkNegativeRemeasureAfterRawRebuild). Der naechste uebernommene Neuaufbau misst nach.
+        Private _negativeRemeasureAfterRawRebuild As Boolean = False
         Private _negativeGamma As Double = 0
         ''' Solange die Pipette auf die Filmbasis wartet, muss die Umkehr aus der VORSCHAU heraus: die
         ''' Pipette liest die Farbe, die auf dem Schirm steht - im umgerechneten Positiv würde der Nutzer
@@ -2031,10 +2034,6 @@ Namespace ViewModels
                      End Sub)
         End Sub
 
-        ''' <summary>Sammelt die Symbole ein. Keine Beruehrung mit der Oberflaeche - laeuft im
-        ''' Hintergrund.</summary>
-        ''' <param name="nameSuffix">Ein Anhang am Dateinamen, der nicht zum Namen gehört (die gefüllte
-        ''' Fassung heißt „acorn-fill“).</param>
         ''' <summary>Die englischen Suchwoerter je Symbol, eine Zeile „name TAB wort wort …". Fehlt
         ''' die Datei, sucht die Galerie nur nach Namen.</summary>
         Private Shared Function LoadShapeIconKeywords() As Dictionary(Of String, String)
@@ -2055,6 +2054,10 @@ Namespace ViewModels
             Return result
         End Function
 
+        ''' <summary>Sammelt die Symbole ein. Keine Beruehrung mit der Oberflaeche - laeuft im
+        ''' Hintergrund.</summary>
+        ''' <param name="nameSuffix">Ein Anhang am Dateinamen, der nicht zum Namen gehört (die gefüllte
+        ''' Fassung heißt „acorn-fill“).</param>
         Private Shared Function BuildShapeIcons(folder As String, nameSuffix As String,
                                                 keywords As Dictionary(Of String, String)) As List(Of ShapeIconEntry)
             Dim result As New List(Of ShapeIconEntry)()
@@ -2928,16 +2931,14 @@ Namespace ViewModels
             Return Math.Max(-AnnotationOffsetLimitPercent, Math.Min(AnnotationOffsetLimitPercent, value))
         End Function
 
-        ''' <summary>Bei Text auf einem KREISPFAD ist der gemessene Textkasten die falsche Box: er
-        ''' ist breit und flach, der Kreis nutzt davon aber nur min(Breite, Hoehe) - der
-        ''' Selektionsrahmen stand dadurch weit um einen kleinen Kreis herum
-        ''' (zweimal gemeldet).
-        ''' Stattdessen eine QUADRATISCHE Box, deren Umfang zum Text passt: der Text laeuft einmal
-        ''' herum, also Durchmesser = Textbreite / Pi. Damit umschliesst der Rahmen den Kreis, und
-        ''' die Groesse folgt weiterhin der Schrift - genau wie beim geraden Text.
-        ''' Aendert nichts, wenn kein Kreispfad aktiv ist.</summary>
         ''' <summary>Formt die Box eines Kreistext-Objekts aus dem gemessenen Textkasten: dessen Breite
         ''' ist der Umfang, also ist der Durchmesser Breite/π.
+        '''
+        ''' Bei Text auf einem KREISPFAD ist der gemessene Textkasten die falsche Box: er ist breit
+        ''' und flach, der Kreis nutzt davon aber nur min(Breite, Hoehe) - der Selektionsrahmen stand
+        ''' dadurch weit um einen kleinen Kreis herum (zweimal gemeldet). Die QUADRATISCHE Box
+        ''' umschliesst den Kreis, und die Groesse folgt weiterhin der Schrift - genau wie beim
+        ''' geraden Text. Aendert nichts, wenn kein Kreispfad aktiv ist.
         '''
         ''' <paramref name="alteBreite"/>/<paramref name="alteHoehe"/> sind die Maße, die die Box VOR
         ''' dem Aufruf hatte. Sie müssen von außen kommen, weil jeder Aufrufer die Felder unmittelbar
@@ -3780,7 +3781,6 @@ Namespace ViewModels
             RaiseMultiSelectionChanged()
         End Sub
 
-        ''' <summary>Schatten/Glühen (und andere objekt-eigene Blöcke) nur bei EINZELauswahl zeigen.</summary>
         ''' <summary>Position und Größe im Panel beschreiben bei einer Mehrfachauswahl die GEMEINSAME
         ''' Box, nicht den Anker: sonst zeigte das Panel die Maße des zuletzt angeklickten Objekts, und
         ''' eine Eingabe änderte auch nur dieses. Eingaben laufen über
@@ -3823,6 +3823,7 @@ Namespace ViewModels
             Return FindAnnotationGroup(id)
         End Function
 
+        ''' <summary>Schatten/Glühen (und andere objekt-eigene Blöcke) nur bei EINZELauswahl zeigen.</summary>
         Public ReadOnly Property ShowSingleAnnotationEffects As Boolean
             Get
                 Return ShowAnnotationProperties AndAlso Not HasMultiAnnotationSelection
@@ -3929,11 +3930,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Fasst die markierten Objekte zu einer Gruppe zusammen. Die Mitglieder werden dabei
-        ''' ZUSAMMENHÄNGEND einsortiert - an die Z-Position des obersten markierten Objekts, in ihrer
-        ''' bisherigen relativen Reihenfolge. Ohne diese Verdichtung wäre die Gruppe nur eine Markierung:
-        ''' ein fremdes Objekt könnte zwischen zwei Mitgliedern liegen, und „Gruppe nach vorn" hätte keine
-        ''' definierte Bedeutung.</summary>
         ''' <summary>WAS DIE ENTF-TASTE BEDEUTET - die EINE Stelle dafuer.
         '''
         ''' Die Reihenfolge ist die ganze Regel:
@@ -3963,6 +3959,11 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Fasst die markierten Objekte zu einer Gruppe zusammen. Die Mitglieder werden dabei
+        ''' ZUSAMMENHÄNGEND einsortiert - an die Z-Position des obersten markierten Objekts, in ihrer
+        ''' bisherigen relativen Reihenfolge. Ohne diese Verdichtung wäre die Gruppe nur eine Markierung:
+        ''' ein fremdes Objekt könnte zwischen zwei Mitgliedern liegen, und „Gruppe nach vorn" hätte keine
+        ''' definierte Bedeutung.</summary>
         Public Sub GroupSelectedAnnotations()
             If SelectedAnnotationCount = 0 Then
                 ' Nur Korrekturebenen markiert.
@@ -4285,10 +4286,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' Eigenschaften-Panel ist sichtbar, sobald ein Objekttyp scharf gestellt ODER ein
-        ''' vorhandenes Objekt selektiert ist - unabhängig davon, aus welcher Werkzeuggruppe
-        ''' (Text, Malen, Formen &amp; Symbole) der Typ ausgewählt wurde.
-        ''' <summary>Die Gruppe mit den Objekt-Eigenschaften. Beim Rahmen bleibt sie weg: seine
+        ''' <summary>Die Gruppe mit den Objekt-Eigenschaften. Sie ist sichtbar, sobald ein Objekttyp
+        ''' scharf gestellt ODER ein vorhandenes Objekt selektiert ist - unabhängig davon, aus welcher
+        ''' Werkzeuggruppe (Text, Malen, Formen &amp; Symbole) der Typ ausgewählt wurde. Beim Rahmen bleibt sie weg: seine
         ''' Eigenschaften stehen vollstaendig in der Rahmengruppe, und zwei Gruppen mit denselben
         ''' Reglern nebeneinander waren genau die Dopplung, die weg sollte.
         '''
@@ -5220,12 +5220,11 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Breite der linken Werkzeugleiste: eingeklappt bleibt genau Platz für die Symbole
-        ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18).</summary>
-        ''' <summary>Breite der Werkzeugleiste. Ausgeklappt waechst sie mit der Schriftgroesse mit:
-        ''' bei fester Breite schnitt der laengste Eintrag ("Drehen und Verzerren") ab einem
-        ''' Schriftversatz von etwa +3 sein letztes Wort ab, und das sah aus wie ein fehlender Text.
-        ''' Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.</summary>
+        ''' <summary>Breite der linken Werkzeugleiste. Eingeklappt bleibt genau Platz für die Symbole
+        ''' samt Knopf-Innenabstand (Leisten-Padding 8+8, Knopf-Padding 10, Symbol 18). Ausgeklappt
+        ''' waechst sie mit der Schriftgroesse mit: bei fester Breite schnitt der laengste Eintrag
+        ''' ("Drehen und Verzerren") ab einem Schriftversatz von etwa +3 sein letztes Wort ab, und das
+        ''' sah aus wie ein fehlender Text. Zehn Punkt je Schriftpunkt decken den laengsten Eintrag ab.</summary>
         Public ReadOnly Property ToolSidebarWidth As Double
             Get
                 If IsToolSidebarCollapsed Then Return 54.0
@@ -6078,10 +6077,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Steht das Analysebild im Anpassungspanel? Nur bei den fuenf Werkzeugen, zu
-        ''' denen es etwas zu sagen hat: Anpassen, Farbe, Details, Effekte, Filter. Beim Zuschneiden
-        ''' oder Retuschieren waere es ein Kasten, der Platz kostet und keine Frage beantwortet.
-        ''' Videos haben keines (siehe InfoPanelViewModel.HasScope).</summary>
         ''' <summary>Unter welchem Namen die Darstellung des Analysebildes gemerkt wird - LEER,
         ''' wenn das Panel bei diesem Werkzeug gar nicht steht.
         '''
@@ -6112,6 +6107,10 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Steht das Analysebild im Anpassungspanel? Nur bei den fuenf Werkzeugen, zu
+        ''' denen es etwas zu sagen hat: Anpassen, Farbe, Details, Effekte, Filter. Beim Zuschneiden
+        ''' oder Retuschieren waere es ein Kasten, der Platz kostet und keine Frage beantwortet.
+        ''' Videos haben keines (siehe InfoPanelViewModel.HasScope).</summary>
         Public ReadOnly Property IsScopeInAdjustmentPanelsVisible As Boolean
             Get
                 If Not ScopeSelectionViewModel.ShowInAdjustmentPanels Then Return False
@@ -6788,6 +6787,7 @@ Namespace ViewModels
                 _negativeEnabled = value
                 SwitchCameraStartValuesForNegative(value)
                 If value Then MeasureFilmNegative()
+                MarkNegativeRemeasureAfterRawRebuild()
                 RaiseNegativePropertiesChanged()
                 SchedulePreviewForCurrentTarget()
             End Set
@@ -7187,13 +7187,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Der EINE Regler „Farbrauschen" im Panel, bipolar wie sein Nachbar „Rauschen":
-        ''' minus entfernt Farbrauschen, plus fuegt welches hinzu. Er ist bewusst nur die Anzeigeseite
-        ''' zweier getrennt gespeicherter Werte - <see cref="ColorNoiseReduction"/> muss 0-100
-        ''' „Entfernung" bleiben, weil genau das aus crs:ColorNoiseReduction eines XMP-Presets
-        ''' kommt und auch dorthin zurueckgeschrieben wird. Eine gemeinsame Skala mit Vorzeichen waere
-        ''' beim Preset-Import zweideutig gewesen.
-        ''' Die beiden Seiten schliessen sich aus: wer ins Minus zieht, hat kein Plus mehr stehen.</summary>
         ''' <summary>Die dritte Stufe: mehrskalige Minderung des GROBFLECKIGEN Farbrauschens. Die
         ''' beiden Nachbarregler arbeiten auf EINER Groesse; grosse Farbflecken aus hochgezogenen
         ''' Aufnahmen erreichen sie nur mit einem Radius, der alles andere mitfrisst.</summary>
@@ -7210,7 +7203,6 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Wie grosse Flecken noch erfasst werden.</summary>
         ''' <summary>Die Fleckengroesse ist nur dann zu bedienen, wenn ueberhaupt etwas gemildert
         ''' wird - sonst stellt man eine Groesse fuer eine Wirkung ein, die es nicht gibt.</summary>
         Public ReadOnly Property HasColorBlotches As Boolean
@@ -7219,6 +7211,7 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Wie grosse Flecken noch erfasst werden.</summary>
         Public Property ColorNoiseCoarseScale As Double
             Get
                 Return _farbrauschGrobSkala
@@ -7231,6 +7224,13 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Der EINE Regler „Farbrauschen" im Panel, bipolar wie sein Nachbar „Rauschen":
+        ''' minus entfernt Farbrauschen, plus fuegt welches hinzu. Er ist bewusst nur die Anzeigeseite
+        ''' zweier getrennt gespeicherter Werte - <see cref="ColorNoiseReduction"/> muss 0-100
+        ''' „Entfernung" bleiben, weil genau das aus crs:ColorNoiseReduction eines XMP-Presets
+        ''' kommt und auch dorthin zurueckgeschrieben wird. Eine gemeinsame Skala mit Vorzeichen waere
+        ''' beim Preset-Import zweideutig gewesen.
+        ''' Die beiden Seiten schliessen sich aus: wer ins Minus zieht, hat kein Plus mehr stehen.</summary>
         Public Property ColorNoiseAmount As Double
             Get
                 If _colorNoiseAdd > 0 Then Return _colorNoiseAdd
@@ -7552,8 +7552,7 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Die aktuelle Zuordnung von Hand, leer bei automatischer Erkennung.</summary>
-        ''' <summary>Die Zuordnung von Hand. ZWEI Wege, je nachdem, ob die Aufnahmedaten ein
+        ''' <summary>Die aktuelle Zuordnung von Hand, leer bei automatischer Erkennung. ZWEI Wege, je nachdem, ob die Aufnahmedaten ein
         ''' Objektiv nennen:
         '''
         ''' - MIT Objektivnamen: dauerhaft ueber den Namen gemerkt, gilt fuer den ganzen Bestand
@@ -7738,14 +7737,6 @@ Namespace ViewModels
             RequestLensRebuild()
         End Sub
 
-        ''' <summary>Die Objektiv-Wahl aus den Editor-Feldern. Eigene Stelle, damit jeder Weg, der
-        ''' das Arbeitsbild neu dekodiert, dieselben Werte benutzt.
-        '''
-        ''' MUSS FELD FUER FELD mit <see cref="ImageProcessor.LensChoiceFrom"/> uebereinstimmen, dem
-        ''' Gegenstueck fuer Kachel, Vergleich und Export. Das Objektivmodell fehlte hier und stand
-        ''' dort: wer bei fehlender Objektivangabe eines von Hand waehlte, sah es in der Statuszeile
-        ''' stehen, bekam aber "kein Objektiv vorgegeben" in den Decode. Das Bild blieb
-        ''' unveraendert, Kachel und Export waren korrigiert.</summary>
         ''' <summary>Die Belichtung des BILDES in Blendenstufen, die in die RAW-Stufe gehoert
         ''' (ImageAdjustments.RawExposureEv): Belichtung und Filmnegativ des Bildes.
         '''
@@ -7928,6 +7919,7 @@ Namespace ViewModels
                                       hasBakedContent:=False,
                                       hasAlphaHoles:=_newDocTransparentBackground,
                                       scheduleInitialRender:=True)
+            RemeasureFilmNegativeAfterRawRebuild()
             DiagnosticLogService.LogAlways("Editor.RawExposureRebuild", String.Format(Globalization.CultureInfo.InvariantCulture,
                 "exposure={0}; knee={1:F3}; developed={2}; decode={3:F0}; aufbereiten={4:F0}; warten auf Anzeige={5:F0}; uebernehmen={6:F0}; gesamt={7:F0}",
                 _workingImageExposure, _workingImageKnee, prepared.RawDeveloped, decodeMs, prepareMs,
@@ -7944,6 +7936,14 @@ Namespace ViewModels
                    WantedRawExposureEv() <> exposureEv OrElse WantedRawHighlightKnee() <> knee
         End Function
 
+        ''' <summary>Die Objektiv-Wahl aus den Editor-Feldern. Eigene Stelle, damit jeder Weg, der
+        ''' das Arbeitsbild neu dekodiert, dieselben Werte benutzt.
+        '''
+        ''' MUSS FELD FUER FELD mit <see cref="ImageProcessor.LensChoiceFrom"/> uebereinstimmen, dem
+        ''' Gegenstueck fuer Kachel, Vergleich und Export. Das Objektivmodell fehlte hier und stand
+        ''' dort: wer bei fehlender Objektivangabe eines von Hand waehlte, sah es in der Statuszeile
+        ''' stehen, bekam aber "kein Objektiv vorgegeben" in den Decode. Das Bild blieb
+        ''' unveraendert, Kachel und Export waren korrigiert.</summary>
         Private Function LensChoiceFromFields() As LensDataService.Wahl
             Return New LensDataService.Wahl With {
                 .Distortion = _lensDistortion,
@@ -7972,8 +7972,6 @@ Namespace ViewModels
             RebuildWorkingImageForLens()
         End Sub
 
-        ''' <summary>Das Arbeitsbild neu dekodieren. Die Objektivkorrektur sitzt VOR der Reglerkette,
-        ''' ein blosses Nachrendern zeigte deshalb weiter das alte Bild.</summary>
         ''' <summary>Zurueck auf automatische Erkennung: die drei Schalter folgen wieder der Vorgabe
         ''' aus den Einstellungen, und eine von Hand gesetzte Zuordnung faellt weg. Der Weg zurueck,
         ''' wenn die Zuordnung danebenlag - ohne ihn muesste man in der Liste einen Eintrag suchen,
@@ -8040,6 +8038,8 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Arbeitsbild neu dekodieren. Die Objektivkorrektur sitzt VOR der Reglerkette,
+        ''' ein blosses Nachrendern zeigte deshalb weiter das alte Bild.</summary>
         Private Sub RebuildWorkingImageForLens()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
             ' Dieser Weg ersetzt die Quelle direkt und laeuft deshalb an SchedulePreviewUpdate
@@ -10873,9 +10873,10 @@ Namespace ViewModels
         End Sub
 
 
-        ''' KAMERAKALIBRIERUNG: dreht und saettigt die Primaerfarben, wirkt vor Weissabgleich und
-        ''' Saettigung. Macht einen guten Teil des Farbstichs importierter Presets aus.
-        ''' <summary>Die sieben Regler der KALIBRIERUNG gehen ueber denselben Weg wie jeder andere
+        ''' <summary>KAMERAKALIBRIERUNG: dreht und saettigt die Primaerfarben, wirkt vor Weissabgleich
+        ''' und Saettigung. Macht einen guten Teil des Farbstichs importierter Presets aus.
+        '''
+        ''' Die sieben Regler der KALIBRIERUNG gehen ueber denselben Weg wie jeder andere
         ''' Regler (<see cref="SetUndoableDouble"/>). Vorher schrieben sie nur ihren Wert und stiessen
         ''' die Vorschau an: es gab keinen Rueckgaengig-Punkt, Strg+Z ging an ihnen vorbei, und in
         ''' der Historie stand nichts (Nutzerbefund).</summary>
@@ -13488,6 +13489,7 @@ Namespace ViewModels
                                If Not _negativeEnabled Then
                                    _negativeEnabled = True
                                    SwitchCameraStartValuesForNegative(True)
+                                   MarkNegativeRemeasureAfterRawRebuild()
                                End If
                                RaiseNegativePropertiesChanged()
                                SchedulePreviewUpdate()
@@ -13534,6 +13536,36 @@ Namespace ViewModels
             RaiseNegativePropertiesChanged()
         End Sub
 
+        ''' <summary>Merkt die Nachmessung vor, wenn das Einschalten des Negativs das Arbeitsbild noch
+        ''' aendert.
+        '''
+        ''' BEFUND (Forum, Schwarzweissnegativ von einer 5DS R): ohne Negativ entwickelt die RAW-Stufe
+        ''' die Belichtung ins Arbeitsbild mit, beim Negativ nicht (ImageAdjustments.RawExposureEv).
+        ''' Der Haken mass Basis und Dichtepunkt aber sofort, also am ALTEN Arbeitsbild mit der
+        ''' Kamerastufe der Tonwertprioritaet. Eine Sekunde spaeter kam das neue, dunklere Bild aus
+        ''' der RAW-Stufe, die Messung passte nicht mehr dazu, und das Positiv wurde "von selbst"
+        ''' blass. Die sofortige Messung bleibt, damit gleich ein Positiv steht; das neue Arbeitsbild
+        ''' wird danach noch einmal vermessen und ist ab da der Ausgangspunkt der Umkehr.</summary>
+        Private Sub MarkNegativeRemeasureAfterRawRebuild()
+            _negativeRemeasureAfterRawRebuild = _negativeEnabled AndAlso
+                                                 Not IsObjectAdjustModeActive() AndAlso
+                                                 Not IsSelectionAdjustModeActive() AndAlso
+                                                 NeedsRawExposureRebuild()
+        End Sub
+
+        ''' <summary>Nach einem uebernommenen Neuaufbau der RAW-Stufe: die vorgemerkte Nachmessung.
+        ''' Wie nach einem Zuschnitt bleibt eine mit der Pipette gesetzte Basis stehen, der
+        ''' Dichtepunkt wird immer neu gemessen. Einmalig: spaetere Neuaufbauten aendern beim
+        ''' Negativ nichts mehr an der Belichtung der RAW-Stufe und vermessen nichts still neu.</summary>
+        Private Sub RemeasureFilmNegativeAfterRawRebuild()
+            If Not _negativeRemeasureAfterRawRebuild Then Return
+            _negativeRemeasureAfterRawRebuild = False
+            If Not _negativeEnabled OrElse IsObjectAdjustModeActive() OrElse IsSelectionAdjustModeActive() Then Return
+            MeasureFilmNegative(baseToo:=Not _negativeBasePicked)
+            RaiseNegativePropertiesChanged()
+            SchedulePreviewUpdate(markDirty:=False)
+        End Sub
+
         Private Shared Function SkColorToHex(color As SKColor) As String
             Return $"#FF{color.Red:X2}{color.Green:X2}{color.Blue:X2}"
         End Function
@@ -13558,6 +13590,7 @@ Namespace ViewModels
             _negativeBaseColor = ""
             _negativeDensityColor = ""
             _negativeBasePicked = False
+            _negativeRemeasureAfterRawRebuild = False
             _negativeGamma = 0
             RaiseNegativePropertiesChanged()
             RaiseResetButtonStateChanged()
@@ -13912,13 +13945,13 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
+        ''' <summary>Der zuletzt gemeldete Stand von IsSelectionStyleContext, um den Übergang zu erkennen.</summary>
+        Private _lastSelectionStyleContext As Boolean
+
         ''' <summary>Meinen Füllung, Kontur, Schatten und Glühen gerade die AUSWAHL? Im Auswahl-Werkzeug,
         ''' solange kein Objekt markiert ist. Ist eines markiert, bringt es diese Gruppen selbst mit:
         ''' die der Auswahl stuenden doppelt da (Nutzerbefund), und weil Schatten und Glühen ihre Werte
         ''' mit dem Objekt teilen, landete sonst der Schatten des Objekts auf der Auswahl.</summary>
-        ''' <summary>Der zuletzt gemeldete Stand von IsSelectionStyleContext, um den Übergang zu erkennen.</summary>
-        Private _lastSelectionStyleContext As Boolean
-
         Public ReadOnly Property IsSelectionStyleContext As Boolean
             Get
                 Return ShowSelectionAdjustments AndAlso Not HasSelectedAnnotation
@@ -15862,13 +15895,6 @@ Namespace ViewModels
             End Try
         End Sub
 
-        ''' <summary>Der Drehwinkel, unter dem ein gespeichertes Objekt auf dem Bildschirm steht.
-        '''
-        ''' Die Transform-Schritte werden EINZELN und in Renderer-Reihenfolge durchlaufen. Innerhalb
-        ''' eines Schritts dreht/spiegelt <c>ApplyGeometryTransforms</c> zuerst, danach addiert
-        ''' <c>ApplyStraighten</c> den Ausrichtwinkel. Ein zusammengefasster Lagezustand verliert
-        ''' diese Reihenfolge: bei "horizontal spiegeln + um 33 Grad ausrichten" entstand aus 0 Grad
-        ''' faelschlich -33 Grad fuer den Rahmen, waehrend der Renderer korrekt +33 Grad zeichnet.</summary>
         ''' <summary>Geht dieses Objekt die Vierteldrehung und die Spiegelung des Bildes mit?
         '''
         ''' NEIN beim verankerten Wasserzeichen: es liegt auf dem FERTIGEN Bild und nicht auf
@@ -15887,6 +15913,13 @@ Namespace ViewModels
             Return AnnotationFollowsImageTurn(kind, anchor)
         End Function
 
+        ''' <summary>Der Drehwinkel, unter dem ein gespeichertes Objekt auf dem Bildschirm steht.
+        '''
+        ''' Die Transform-Schritte werden EINZELN und in Renderer-Reihenfolge durchlaufen. Innerhalb
+        ''' eines Schritts dreht/spiegelt <c>ApplyGeometryTransforms</c> zuerst, danach addiert
+        ''' <c>ApplyStraighten</c> den Ausrichtwinkel. Ein zusammengefasster Lagezustand verliert
+        ''' diese Reihenfolge: bei "horizontal spiegeln + um 33 Grad ausrichten" entstand aus 0 Grad
+        ''' faelschlich -33 Grad fuer den Rahmen, waehrend der Renderer korrekt +33 Grad zeichnet.</summary>
         Private Function StoredAnnotationRotationToDisplay(annotation As ImageAnnotation) As Double
             If annotation Is Nothing Then Return 0.0
             Dim kind = NormalizeAnnotationKind(annotation.Kind)
@@ -16125,6 +16158,14 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(StraightenAutoCrop))
         End Sub
 
+        ''' <summary>Den Stand der beiden Haken als Gewohnheit festhalten. Nur aus den SETTERN, also
+        ''' nur nach einem Griff des Nutzers - nicht aus einem geladenen Rezept und nicht aus dem
+        ''' Zwang eines Beschnitts, sonst merkte sich der Editor die Eigenart eines einzelnen
+        ''' Bildes als Vorgabe fuer alle weiteren.</summary>
+        Private Sub RememberStraightenCanvasPreference()
+            AppSettingsService.SaveEditorStraightenCanvas(_straightenExpandCanvas, _straightenAutoCrop)
+        End Sub
+
         ''' <summary>Die gemerkten Leinwand-Haken einsetzen - beim Aufbau des Editors und bei jedem
         ''' Zuruecksetzen der Lage. Sie sagen, WIE gedreht wird, gelten also fuer das naechste Bild
         ''' weiter (siehe AppSettings.EditorStraightenExpandCanvas).
@@ -16136,14 +16177,6 @@ Namespace ViewModels
         ''' Der Ausschluss wird beim Einsetzen noch einmal erzwungen: eine von Hand verstellte
         ''' Einstellungsdatei koennte beide Haken tragen, und in der Bedienung gibt es diesen Stand
         ''' nicht.</summary>
-        ''' <summary>Den Stand der beiden Haken als Gewohnheit festhalten. Nur aus den SETTERN, also
-        ''' nur nach einem Griff des Nutzers - nicht aus einem geladenen Rezept und nicht aus dem
-        ''' Zwang eines Beschnitts, sonst merkte sich der Editor die Eigenart eines einzelnen
-        ''' Bildes als Vorgabe fuer alle weiteren.</summary>
-        Private Sub RememberStraightenCanvasPreference()
-            AppSettingsService.SaveEditorStraightenCanvas(_straightenExpandCanvas, _straightenAutoCrop)
-        End Sub
-
         Private Sub LoadStraightenCanvasPreference()
             Dim settings = AppSettingsService.Load()
             _straightenExpandCanvas = settings.EditorStraightenExpandCanvas
@@ -18188,6 +18221,7 @@ Namespace ViewModels
                                                                  If Not _negativeEnabled Then
                                                                      _negativeEnabled = True
                                                                      SwitchCameraStartValuesForNegative(True)
+                                                                     MarkNegativeRemeasureAfterRawRebuild()
                                                                  End If
                                                                  RaiseNegativePropertiesChanged()
                                                                  SchedulePreviewForCurrentTarget()
@@ -18645,9 +18679,6 @@ Namespace ViewModels
                                      tempFile:=tempPath)
         End Function
 
-        ''' <summary>Reicht das GEOEFFNETE Bild an einen Stapel-Ablauf der Galerie weiter, wie es
-        ''' der Betrachter tut. Gearbeitet wird auf der DATEI: ungespeicherte Aenderungen im Editor
-        ''' sind darin nicht enthalten, das ist bei allen diesen Ablaeufen so.</summary>
         ''' <summary>Auf WELCHES Bild sich die naechste Menueaktion bezieht. Leer heisst: das
         ''' auf der Buehne. Gesetzt wird es beim Oeffnen des Kontextmenues, wenn der Klick auf
         ''' einer Filmstreifen-Kachel lag - dann meint der Nutzer diese und nicht die Buehne.</summary>
@@ -18660,6 +18691,9 @@ Namespace ViewModels
             Return _currentImagePath
         End Function
 
+        ''' <summary>Reicht das GEOEFFNETE Bild an einen Stapel-Ablauf der Galerie weiter, wie es
+        ''' der Betrachter tut. Gearbeitet wird auf der DATEI: ungespeicherte Aenderungen im Editor
+        ''' sind darin nicht enthalten, das ist bei allen diesen Ablaeufen so.</summary>
         Private Sub WithCurrentImage(ablauf As Action(Of GalleryViewModel, IList(Of ImageItem)))
             Try
                 Dim path = TargetPath()
@@ -21808,9 +21842,6 @@ Namespace ViewModels
             End SyncLock
         End Function
 
-        ''' <summary>Aktiviert die kleine, proportional skalierte Live-Quelle für Bild-Regler.
-        ''' Overlay-Objekte werden davon nicht abgeleitet: sie zeichnet der bestehende
-        ''' Kompositor separat über die Szene.</summary>
         ''' <summary>Ist im REZEPT eine Stufe aktiv, deren Ergebnis am Bildmassstab haengt?
         '''
         ''' <para>Es reicht NICHT, den gezogenen Regler zu betrachten. Wer bei eingeschalteter
@@ -21897,6 +21928,9 @@ Namespace ViewModels
             _sliderStepIdleTimer.Start()
         End Sub
 
+        ''' <summary>Aktiviert die kleine, proportional skalierte Live-Quelle für Bild-Regler.
+        ''' Overlay-Objekte werden davon nicht abgeleitet: sie zeichnet der bestehende
+        ''' Kompositor separat über die Szene.</summary>
         Private Sub EnsureSliderPreviewSource()
             Dim path = RenderSourcePath
             Dim workingVersion = _workingImage.Version
@@ -23274,15 +23308,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>"Speichern" fuer RAW/PSD: schreibt das Rezept in die Begleitdatei
-        ''' (die Quelldatei selbst wird nie angefasst).</summary>
-        ''' <summary>Schreibt das Rezept neben das Original AUF DEM SERVER.
-        '''
-        ''' Zwei Schritte, und der zweite darf nicht stillschweigend fehlschlagen: erst entsteht die
-        ''' Begleitdatei neben der Temp-Kopie (genau wie lokal, damit es nur EINEN Schreibweg für das
-        ''' Format gibt), dann wandert sie per WebDAV neben das Original. Bleibt der zweite Schritt
-        ''' aus, gilt NICHT als gespeichert - sonst hielte der Nutzer eine Bearbeitung für gesichert,
-        ''' die nur in einem Temp-Ordner steht und beim nächsten Aufräumen verschwindet.</summary>
         ''' <summary>"Speichern" bei einem Nextcloud-Bild mit eingeschaltetem Ersetzen: die
         ''' Bearbeitung wird gerendert und tritt AN DIE STELLE DES ORIGINALS.
         '''
@@ -23389,6 +23414,13 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>Schreibt das Rezept neben das Original AUF DEM SERVER.
+        '''
+        ''' Zwei Schritte, und der zweite darf nicht stillschweigend fehlschlagen: erst entsteht die
+        ''' Begleitdatei neben der Temp-Kopie (genau wie lokal, damit es nur EINEN Schreibweg für das
+        ''' Format gibt), dann wandert sie per WebDAV neben das Original. Bleibt der zweite Schritt
+        ''' aus, gilt NICHT als gespeichert - sonst hielte der Nutzer eine Bearbeitung für gesichert,
+        ''' die nur in einem Temp-Ordner steht und beim nächsten Aufräumen verschwindet.</summary>
         Private Async Function SaveSidecarToNextcloudAsync() As Task(Of Boolean)
             FlushPendingLensRebuild()
             If Not TrySaveSidecar() Then Return False
@@ -23465,6 +23497,8 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>"Speichern" fuer RAW/PSD: schreibt das Rezept in die Begleitdatei
+        ''' (die Quelldatei selbst wird nie angefasst).</summary>
         Private Function TrySaveSidecar() As Boolean
             If Not CanSaveSidecar Then
                 DiagnosticLogService.LogAlways("Editor.Save",
@@ -23551,9 +23585,6 @@ Namespace ViewModels
             Return Await SaveImageAsync(Not CanSaveInPlace)
         End Function
 
-        ''' <remarks>NegativeEnabled: nur die VORSCHAU blendet die Umkehr während der Pipetten-Aufnahme
-        ''' aus (siehe _suppressNegativeForPick). Der kanonische Stand - Undo-Schnappschuss, Speichern -
-        ''' bleibt davon unberührt.</remarks>
         ''' <summary>Der Anpassungssatz, mit dem gerendert, gespeichert und rückgängig gemacht wird.
         '''
         ''' Ist ein Objekt markiert und ein objektfähiges Werkzeug aktiv (Anpassen/Farbe/Details+Effekte/
@@ -23561,6 +23592,9 @@ Namespace ViewModels
         ''' das Objekt, und das Bild bekommt seine eigenen (in _imagePixelAdjustments geparkten) zurück. Nach
         ''' außen sieht die Pipeline damit immer dasselbe: Bild-Anpassungen + Objekte, die ihre eigenen
         ''' mitbringen.</summary>
+        ''' <remarks>NegativeEnabled: nur die VORSCHAU blendet die Umkehr während der Pipetten-Aufnahme
+        ''' aus (siehe _suppressNegativeForPick). Der kanonische Stand - Undo-Schnappschuss, Speichern -
+        ''' bleibt davon unberührt.</remarks>
         Private Function GetCurrentAdjustments(Optional forPreview As Boolean = False,
                                                Optional includeEditorOverlayAnnotations As Boolean = False) As ImageAdjustments
             Dim adj = BuildAdjustmentsFromFields(forPreview, includeEditorOverlayAnnotations)
@@ -25126,16 +25160,6 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <param name="resetTransientSelectionBinding">Nur beim ECHTEN Wiederherstellen eines Zustands
-        ''' (Undo/Redo, Dokument laden) True. Die Regler-Ziel-Wechsel in RefreshSelectionAdjustMode/
-        ''' CommitSelectionAdjustModeToModel rufen dieselbe Methode - würden sie die transienten
-        ''' Auswahl-Bindungen mitlöschen, verlöre JEDER Werkzeug- oder Zeilenwechsel die Information
-        ''' "die aktive Auswahl ist eine MASKE" und die strikte Trennung Auswahl/Maske griffe nie.</param>
-        ''' <param name="scheduleRender">Aus, wenn das Rezept nur die REGLER umstellt und am Bild
-        ''' nachweislich nichts anders wird. Genau dafuer gibt es den Schalter: das Umschalten des
-        ''' Reglerziels beim Ebenenwechsel rechnete sonst die Szene neu, zweimal je Wechsel und bei
-        ''' einem grossen Dokument ueber eine Sekunde lang - obwohl sich am Bild nichts aendert.
-        ''' Wer ihn setzt, muss sicher sein, dass kein Pixel anders wird; im Zweifel rendern.</param>
         ''' <summary>Die Felder der Objektivkorrektur und des Sensorrands, in denen das Rezept vom
         ''' Stand im Editor abweicht, jeweils als "Name alt>neu". Leer heisst: der Decode bleibt
         ''' gueltig. Die Namen stehen im Protokoll, damit ein Neuaufbau beim Oeffnen seinen Grund
@@ -25178,6 +25202,16 @@ Namespace ViewModels
             _lensModel = If(adj.LensModel, "")
         End Sub
 
+        ''' <param name="resetTransientSelectionBinding">Nur beim ECHTEN Wiederherstellen eines Zustands
+        ''' (Undo/Redo, Dokument laden) True. Die Regler-Ziel-Wechsel in RefreshSelectionAdjustMode/
+        ''' CommitSelectionAdjustModeToModel rufen dieselbe Methode - würden sie die transienten
+        ''' Auswahl-Bindungen mitlöschen, verlöre JEDER Werkzeug- oder Zeilenwechsel die Information
+        ''' "die aktive Auswahl ist eine MASKE" und die strikte Trennung Auswahl/Maske griffe nie.</param>
+        ''' <param name="scheduleRender">Aus, wenn das Rezept nur die REGLER umstellt und am Bild
+        ''' nachweislich nichts anders wird. Genau dafuer gibt es den Schalter: das Umschalten des
+        ''' Reglerziels beim Ebenenwechsel rechnete sonst die Szene neu, zweimal je Wechsel und bei
+        ''' einem grossen Dokument ueber eine Sekunde lang - obwohl sich am Bild nichts aendert.
+        ''' Wer ihn setzt, muss sicher sein, dass kein Pixel anders wird; im Zweifel rendern.</param>
         Private Sub ApplyAdjustments(adj As ImageAdjustments,
                                      Optional resetTransientSelectionBinding As Boolean = False,
                                      Optional scheduleRender As Boolean = True)
@@ -25289,6 +25323,13 @@ Namespace ViewModels
             ' Anpassungen zurueckschreibt. Danach galt jede gemessene Basis als angeklickt.
             If Not String.Equals(_negativeBaseColor, adj.NegativeBaseColor, StringComparison.Ordinal) Then
                 _negativeBasePicked = Not String.IsNullOrWhiteSpace(adj.NegativeBaseColor)
+            End If
+            ' Ein anderer Stand der Umkehr (Rueckgaengig, Rezept) bringt seine eigenen Messwerte mit;
+            ' eine noch offene Nachmessung vom Einschalten gehoert nicht zu ihm. Der Werkzeugwechsel
+            ' schreibt dieselben Werte zurueck und laesst sie stehen.
+            If Not String.Equals(_negativeBaseColor, adj.NegativeBaseColor, StringComparison.Ordinal) OrElse
+               Not String.Equals(_negativeDensityColor, adj.NegativeDensityColor, StringComparison.Ordinal) Then
+                _negativeRemeasureAfterRawRebuild = False
             End If
             _negativeBaseColor = adj.NegativeBaseColor
             _negativeDensityColor = adj.NegativeDensityColor
@@ -25942,6 +25983,7 @@ Namespace ViewModels
             _negativeBaseColor = ""
             _negativeDensityColor = ""
             _negativeBasePicked = False
+            _negativeRemeasureAfterRawRebuild = False
             _negativeGamma = 0
             ResetCurvePoints()
             ResetHslFields()
@@ -26620,11 +26662,6 @@ Namespace ViewModels
             RaiseAnnotationSizeChanged()
         End Sub
 
-        ''' <summary>Maße des aktuell angezeigten Bildes, also nach dem bereits angewendeten Beschnitt.
-        ''' Bezugsgröße für das Auswahlrechteck, die Größenanzeige und die Pixel-Eingabefelder.
-        ''' Gerechnet wird kantenweise in ganzen Pixeln - exakt so, wie ImageProcessor.ApplyCrop das
-        ''' Original beschneidet. Ein "remaining"-Prozentsatz auf die Gesamtbreite kann davon um ein
-        ''' Pixel abweichen, und dann zeigte das Panel eine andere Größe an, als die Datei bekommt.</summary>
         ''' <summary>Die Maße des aktuell sichtbaren Bildes, entlang der QUELL-Achsen gelesen (bei
         ''' 90 und 270 Grad sind sie gegenüber dem Bildschirm getauscht, siehe
         ''' <see cref="EffectiveDisplayImageWidthPixels"/>).
@@ -27914,9 +27951,6 @@ Namespace ViewModels
             SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>Panel-Drag für beide Zeilentypen. Objekt- und Einstellungsebenen bilden derzeit
-        ''' getrennte Rendergruppen (Objekte liegen über Korrekturen), daher wird nur innerhalb derselben
-        ''' Gruppe umsortiert.</summary>
         ''' <summary>Welche Zeilenart steckt hinter einer Panel-Zeile? Eine Gruppen-Kopfzeile zählt als
         ''' die Art ihrer Mitglieder - Objekt- und Korrekturebenen sind getrennte Rendergruppen und
         ''' dürfen einander nicht aufnehmen.</summary>
@@ -27963,6 +27997,9 @@ Namespace ViewModels
             Return a.Value = b.Value
         End Function
 
+        ''' <summary>Panel-Drag für beide Zeilentypen. Objekt- und Einstellungsebenen bilden derzeit
+        ''' getrennte Rendergruppen (Objekte liegen über Korrekturen), daher wird nur innerhalb derselben
+        ''' Gruppe umsortiert.</summary>
         Public Sub ReorderLayerRelative(dragged As LayerPanelRow, targetRow As LayerPanelRow, below As Boolean)
             If dragged Is Nothing OrElse targetRow Is Nothing Then Return
             If Not CanDropLayerOn(dragged, targetRow) Then Return
@@ -29050,13 +29087,6 @@ Namespace ViewModels
                                  $" Verlauf={isGradient} Bild vorher={hadOverlay} nachher={_selectionMaskPreviewImage IsNot Nothing}")
         End Sub
 
-        ''' <summary>Der Zoom, mit dem ein Bild in die Bearbeitungsflaeche passt - in Prozent.
-        ''' <paramref name="nurVerkleinern"/> entspricht der Einstellung "nur verkleinern": ein Bild,
-        ''' das kleiner als die Flaeche ist, wird dann NICHT hochskaliert.
-        ''' Eigene Funktion, damit die Regel geprueft werden kann - die beiden Aufrufer liegen in der
-        ''' View, und die erreicht der Pruefstand nicht. Genau diese Regel war zweimal defekt: einmal
-        ''' wirkte die Einstellung erst nach erneutem Oeffnen, einmal passte eine Groessenaenderung
-        ''' der Flaeche nicht neu ein.</summary>
         ''' <summary>Muss nach einem Bildwechsel neu eingepasst werden?
         '''
         ''' Bei RAW zeigt der Editor zuerst die kleine eingebettete Vorschau und danach den vollen
@@ -29089,6 +29119,13 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Der Zoom in Prozent, mit dem das Bild in die Fläche passt.
+        '''
+        ''' <paramref name="shrinkOnly"/> entspricht der Einstellung "nur verkleinern": ein Bild,
+        ''' das kleiner als die Flaeche ist, wird dann NICHT hochskaliert. Eigene Funktion, damit
+        ''' die Regel geprueft werden kann - die beiden Aufrufer liegen in der View, und die
+        ''' erreicht der Pruefstand nicht. Genau diese Regel war zweimal defekt: einmal wirkte die
+        ''' Einstellung erst nach erneutem Oeffnen, einmal passte eine Groessenaenderung der Flaeche
+        ''' nicht neu ein.
         '''
         ''' <paramref name="marginPoints"/> ist der gewünschte Abstand zwischen Bild und Flächenrand
         ''' (Editor-Einstellung, 0 = bündig wie bisher). Er wird von der Fläche abgezogen, BEVOR der
@@ -29140,6 +29177,20 @@ Namespace ViewModels
             Return tool = EditorTool.Text OrElse tool = EditorTool.Geometry OrElse tool = EditorTool.Insert
         End Function
 
+        ''' <summary>Ist genau eine Ebene markiert, und ist sie von der Art, die das gewählte
+        ''' Einfüge-Werkzeug anlegt? Bild zählt auch für eine Auswahlkopie (SelectionImage), denn
+        ''' beide bearbeitet dasselbe Werkzeug.</summary>
+        Private Function SelectedAnnotationMatchesInsertKind(insertKind As String) As Boolean
+            If HasMultiAnnotationSelection Then Return False
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
+            Dim annotation = _annotations(_selectedAnnotationIndex)
+            If annotation Is Nothing Then Return False
+            Dim kind = NormalizeAnnotationKind(annotation.Kind)
+            If String.Equals(insertKind, "Image", StringComparison.Ordinal) AndAlso
+               String.Equals(kind, "SelectionImage", StringComparison.Ordinal) Then Return True
+            Return String.Equals(kind, insertKind, StringComparison.Ordinal)
+        End Function
+
         ''' <summary>Die AUSNAHMEN zum Abwählen beim Werkzeugwechsel: Werkzeuge, die kein
         ''' Ebenen-Werkzeug sind und in denen die markierte Ebene trotzdem stehen bleibt.
         '''
@@ -29158,20 +29209,6 @@ Namespace ViewModels
         ''' Klick auf eine Ebene im Auswahl-Werkzeug dort stehen bleibt: hin und zurück müssen
         ''' dasselbe ergeben, sonst verliert der Wechsel aus Verschieben ins Auswahl-Werkzeug genau
         ''' die Ebene, für die man wechselt.</summary>
-        ''' <summary>Ist genau eine Ebene markiert, und ist sie von der Art, die das gewählte
-        ''' Einfüge-Werkzeug anlegt? Bild zählt auch für eine Auswahlkopie (SelectionImage), denn
-        ''' beide bearbeitet dasselbe Werkzeug.</summary>
-        Private Function SelectedAnnotationMatchesInsertKind(insertKind As String) As Boolean
-            If HasMultiAnnotationSelection Then Return False
-            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-            Dim annotation = _annotations(_selectedAnnotationIndex)
-            If annotation Is Nothing Then Return False
-            Dim kind = NormalizeAnnotationKind(annotation.Kind)
-            If String.Equals(insertKind, "Image", StringComparison.Ordinal) AndAlso
-               String.Equals(kind, "SelectionImage", StringComparison.Ordinal) Then Return True
-            Return String.Equals(kind, insertKind, StringComparison.Ordinal)
-        End Function
-
         Private Function ToolKeepsSelectedAnnotationOnEnter(tool As EditorTool) As Boolean
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
             Dim annotation = _annotations(_selectedAnnotationIndex)
@@ -29237,8 +29274,6 @@ Namespace ViewModels
             Return IsObjectTransformTool(tool) OrElse IsObjectAdjustTool(tool)
         End Function
 
-        ''' <summary>Verwirft den Objekt-Modus OHNE Rückschreiben - für den Fall, dass das Objekt gerade
-        ''' verschwindet (Löschen). Die Bildwerte kommen zurück in die Regler.</summary>
         ''' <summary>Schreibt aktive Objekt-Reglerwerte in die aktuell bearbeitete Ebene und stellt die
         ''' Bild-Regler wieder her, bevor der Ebenenstapel seine Indizes ändert.</summary>
         Private Sub CommitObjectAdjustModeToModel()
@@ -29563,10 +29598,6 @@ Namespace ViewModels
             If imageChanges Then SchedulePreviewUpdate()
         End Sub
 
-        ''' <summary>ApplyAdjustments verwirft die Objektmarkierung (es baut die Objektliste neu auf). Beim
-        ''' Umschalten des Reglerziels darf das markierte Objekt aber nicht verlorengehen - die Markierung
-        ''' wird deshalb direkt am Feld wiederhergestellt (der Property-Setter würde RefreshObjectAdjustMode
-        ''' erneut auslösen).</summary>
         ''' <summary>Tragen zwei Objekt-Anpassungssaetze dasselbe? Nothing und ein neutraler Satz
         ''' gelten als gleich - beides heisst "dieses Objekt hat keine eigenen Anpassungen".
         '''
@@ -29583,6 +29614,10 @@ Namespace ViewModels
             Return True
         End Function
 
+        ''' <summary>ApplyAdjustments verwirft die Objektmarkierung (es baut die Objektliste neu auf). Beim
+        ''' Umschalten des Reglerziels darf das markierte Objekt aber nicht verlorengehen - die Markierung
+        ''' wird deshalb direkt am Feld wiederhergestellt (der Property-Setter würde RefreshObjectAdjustMode
+        ''' erneut auslösen).</summary>
         Private Sub ApplyAdjustmentsKeepingSelection(adj As ImageAdjustments, keepIndex As Integer,
                                                      Optional scheduleRender As Boolean = True)
             ' DIE GANZE AUSWAHL GEHOERT DAZU, nicht nur der Anker. ApplyAdjustments raeumt die
@@ -30223,8 +30258,6 @@ Namespace ViewModels
             End If
         End Sub
 
-        ''' captureUndo=True markiert den Beginn eines Zuges (Mausklick), False die Zwischenpunkte
-        ''' beim Ziehen.
         ''' <summary>Rechnet eine Klick-Position (Prozent, im ANGEZEIGTEN = per Rezept gedrehten Bild) in
         ''' die Prozente des UNGEDREHTEN Arbeitsbilds um. Nötig für alles, was ins Arbeitsbild GEBACKEN
         ''' wird (Pinsel, Retusche): das Arbeitsbild wird beim Rendern erst DANACH gedreht, also müssen die
@@ -30594,8 +30627,9 @@ Namespace ViewModels
         ''' räumte damit auch Licht, Farbe, Details, Effekte, HSL, Farbgradierung und Kurven weg. Die
         ''' Begründung dafür war, dass XMP-Presets und LUTs im selben Bereich angewendet werden
         ''' - nur sah man dem kleinen Pfeil in der Ecke nicht an, dass er die ganze Bearbeitung
-        ''' verwirft. Dieser Weg gibt es weiterhin, aber sichtbar beschriftet: der Knopf „Keine".</summary>
-        ''' <summary>Seit „Auto" im selben Panel sitzt, nimmt dieser Zurücksetzer auch die automatische
+        ''' verwirft. Dieser Weg gibt es weiterhin, aber sichtbar beschriftet: der Knopf „Keine".
+        '''
+        ''' Seit „Auto" im selben Panel sitzt, nimmt dieser Zurücksetzer auch die automatische
         ''' Bildverbesserung wieder heraus - sie ist Teil der Gruppe, also muss sie hier verschwinden
         ''' (Symmetrie Setzen/Zurücksetzen). Zurückgenommen wird nur, was seither unangetastet blieb.</summary>
         Private Sub ResetFilterGroupInternal()
@@ -31660,10 +31694,6 @@ Namespace ViewModels
             Return profileNotice
         End Function
 
-        ''' <summary>Importiert die lokalen Korrekturen (Radial-/Verlaufsmasken) eines Presets als
-        ''' Anpassungsebenen. Die Masken werden JETZT mit den echten Bildmaßen gerastert (im Preset stehen
-        ''' nur Bruchkoordinaten). v1: fügt hinzu (mehrfaches Anwenden stapelt - per Undo widerrufbar);
-        ''' Pinsel-/Bereichsmasken werden übersprungen.</summary>
         ''' <summary>Entfernt alle aus einem Preset importierten Korrekturebenen (und ihre nun ungenutzten
         ''' Masken), damit ein Preset-Wechsel die vorigen nicht stapelt. MANUELLE Ebenen (FromPreset=False)
         ''' bleiben unangetastet.</summary>
@@ -31682,6 +31712,10 @@ Namespace ViewModels
             If removedMaskIds.Contains(_editingLayerMaskId) Then _editingLayerMaskId = ""
         End Sub
 
+        ''' <summary>Importiert die lokalen Korrekturen (Radial-/Verlaufsmasken) eines Presets als
+        ''' Anpassungsebenen. Die Masken werden JETZT mit den echten Bildmaßen gerastert (im Preset stehen
+        ''' nur Bruchkoordinaten). v1: fügt hinzu (mehrfaches Anwenden stapelt - per Undo widerrufbar);
+        ''' Pinsel-/Bereichsmasken werden übersprungen.</summary>
         Private Sub ImportLocalCorrectionsFromPreset(xmpPath As String)
             ' IMMER zuerst die Ebenen des VORIGEN Presets entfernen - sonst stapeln sich Presets beim
             ' Wechsel aufeinander (z. B. bleibt eine radiale Abdunklung als Ebene "für immer" aktiv, die

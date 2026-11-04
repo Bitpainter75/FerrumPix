@@ -101,6 +101,8 @@ Namespace ViewModels
                 End Sub)
         End Sub
 
+        ''' <param name="captureUndo">True markiert den Beginn eines Zuges (Mausklick), False die
+        ''' Zwischenpunkte beim Ziehen.</param>
         Public Sub AddRetouchSpot(xPercent As Double, yPercent As Double, Optional captureUndo As Boolean = True)
             If Not CanUsePixelTools Then Return
             ' Ist eine Bild-Ebene markiert, geht der Zug in DEREN Bild - dieselbe Regel wie beim

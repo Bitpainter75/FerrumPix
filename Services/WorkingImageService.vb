@@ -2,20 +2,6 @@ Imports SkiaSharp
 
 Namespace Services
 
-    ''' <summary>
-    ''' Das ARBEITSBILD des Editors: das voll aufgelöste Bild, in das Retusche,
-    ''' Pinsel-/Radiererstriche und gerasterte Ebenen einmalig REGIONAL eingebacken werden,
-    ''' statt sie bei jedem Render aus dem Rezept neu abzuspielen. Die Editor-Vorschau ist
-    ''' eine Herunterskalierung dieses Bildes; Export/Zoom-Detail lesen es direkt.
-    '''
-    ''' Besitzverhältnisse: der Service besitzt das VOLL-Bitmap. Das VORSCHAU-Bitmap geht bei
-    ''' Init in den Besitz des EditorViewModels über (dessen _previewSource-/Stale-Mechanik
-    ''' entsorgt es beim Bildwechsel); der Service behält nur eine Referenz, um ab Stufe D
-    ''' Commit-Regionen nachzuziehen.
-    '''
-    ''' Stand Stufe A: Skelett ohne Commits/Undo-Patches - Verhalten des Editors unverändert,
-    ''' die Vorschau entspricht exakt ImageProcessor.LoadPreviewSource (gleiche Skalierung).
-    ''' </summary>
     ''' <summary>Regionaler VORHER-Ausschnitt eines Commits für das Undo (Tausch-Schema: beim
     ''' Rückgängig wird die aktuelle Region als Wiederholen-Inhalt in denselben Patch getauscht).
     ''' Nach Budget-Verdrängung ist <see cref="IsAlive"/> False - die Pixel dieses Zugs sind dann
@@ -48,6 +34,17 @@ Namespace Services
         End Sub
     End Class
 
+    ''' <summary>
+    ''' Das ARBEITSBILD des Editors: das voll aufgelöste Bild, in das Retusche,
+    ''' Pinsel-/Radiererstriche und gerasterte Ebenen einmalig REGIONAL eingebacken werden,
+    ''' statt sie bei jedem Render aus dem Rezept neu abzuspielen. Die Editor-Vorschau ist
+    ''' eine Herunterskalierung dieses Bildes; Export/Zoom-Detail lesen es direkt.
+    '''
+    ''' Besitzverhältnisse: der Service besitzt das VOLL-Bitmap. Das VORSCHAU-Bitmap geht bei
+    ''' Init in den Besitz des EditorViewModels über (dessen _previewSource-/Stale-Mechanik
+    ''' entsorgt es beim Bildwechsel); der Service behält nur eine Referenz, um die
+    ''' Commit-Regionen darin nachzuziehen.
+    ''' </summary>
     Public NotInheritable Class WorkingImageService
         Implements IDisposable
 

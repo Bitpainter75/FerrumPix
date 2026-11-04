@@ -1668,10 +1668,9 @@ Namespace ViewModels
             Return If(id.Length <= 8, id, id.Substring(0, 8))
         End Function
 
-        ''' <summary>Fingerabdruck der Maskenpixel: Laenge plus Kurzhash. Gleicher Wert = gleiche Form.</summary>
-        ''' <summary>Die Form einer Maske kurz, fuer die Ablaufspur. UEBER DAS RASTER: die
-        ''' Speicherform dafuer zu packen kostete bei einer grossen Maske mehr als der Vorgang,
-        ''' der protokolliert werden soll.</summary>
+        ''' <summary>Die Form einer Maske kurz, fuer die Ablaufspur: Masse plus Kurzhash, gleicher
+        ''' Wert = gleiche Form. UEBER DAS RASTER: die Speicherform dafuer zu packen kostete bei einer
+        ''' grossen Maske mehr als der Vorgang, der protokolliert werden soll.</summary>
         Private Shared Function FormKurz(raster As AlphaRaster) As String
             If raster Is Nothing Then Return "leer"
             Try
@@ -1893,13 +1892,6 @@ Namespace ViewModels
         ''' die man verändert hat. Die Fußzeile sagt es, statt still etwas anderes zu tun.</summary>
         Private _selectionModifyRunning As Boolean
 
-        ''' <remarks>GERECHNET WIRD IM HINTERGRUND. Bei einer bildgroßen Auswahl auf 24 MP dauert
-        ''' die Rechnung eine halbe bis gut eine Sekunde (gemessen in "MESSUNG Auswahl verändern");
-        ''' so lange stünde die Oberfläche. Die Maske ist eine Kopie, die Rechnung eine reine
-        ''' Funktion. Beim Eintreffen muss die Auswahl noch DIESELBE sein - dieselbe Maske und
-        ''' dasselbe Rechteck -, sonst wird das Ergebnis verworfen: es gehörte zu einer Auswahl, die
-        ''' es nicht mehr gibt. Solange eine Rechnung läuft, nimmt der Befehl keinen weiteren Klick
-        ''' an; zwei Rechnungen auf demselben Stand ergäben nicht zweimal die Wirkung, sondern einmal.</remarks>
         ''' <summary>Mantel um den Ablauf: ein Async Sub, der eine Ausnahme durchlaesst, beendet die
         ''' Anwendung. Erweitern oder Umranden einer grossen Auswahl legt mehrere Felder in Bildgroesse
         ''' an, und ein Speicherfehler dort darf nur den Schritt kosten.</summary>
@@ -1912,6 +1904,13 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <remarks>GERECHNET WIRD IM HINTERGRUND. Bei einer bildgroßen Auswahl auf 24 MP dauert
+        ''' die Rechnung eine halbe bis gut eine Sekunde (gemessen in "MESSUNG Auswahl verändern");
+        ''' so lange stünde die Oberfläche. Die Maske ist eine Kopie, die Rechnung eine reine
+        ''' Funktion. Beim Eintreffen muss die Auswahl noch DIESELBE sein - dieselbe Maske und
+        ''' dasselbe Rechteck -, sonst wird das Ergebnis verworfen: es gehörte zu einer Auswahl, die
+        ''' es nicht mehr gibt. Solange eine Rechnung läuft, nimmt der Befehl keinen weiteren Klick
+        ''' an; zwei Rechnungen auf demselben Stand ergäben nicht zweimal die Wirkung, sondern einmal.</remarks>
         Private Async Function ModifySelectionAsync(kind As String) As Task
             If Not _hasActiveSelection OrElse _selectionModifyRunning Then Return
             If kind <> "Expand" AndAlso kind <> "Contract" AndAlso kind <> "Smooth" AndAlso kind <> "Border" AndAlso
@@ -3373,20 +3372,18 @@ Namespace ViewModels
             ReloadEditedLayerMaskIntoSelection()
         End Sub
 
-        ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
-        ''' zurück (Anzeige- → Quellraum via CreateSourceMaskFromSelection). FeatherPixels bleibt unberührt
-        ''' (die "Weiche Kante" pflegt sie über die bestehende Brücke). Danach folgt die Anpassung der
-        ''' Ebene der neuen Maske, weil der Render adj.Masks je Frame neu liest.
+        ''' <summary>Pruefsumme ueber die Maskenbildpunkte.
         '''
-        ''' NUR FUER EINTEILIGE MASKEN. Seit die Auswahl die SUMME aller Bestandteile traegt, waere
-        ''' das Zurueckschreiben bei einer mehrteiligen Maske ein Abflachen: die Summe landete im
-        ''' ersten Bestandteil, und die uebrigen kaemen beim Rendern ein zweites Mal obendrauf - ein
-        ''' hinzugefuegter Verlauf addierte sich nach dem Umkehren wieder auf, ein abgezogener
-        ''' Bestandteil mit Zwischenwerten wurde doppelt abgezogen, und ein spaeter geloeschter
-        ''' Bestandteil liesse seinen Geist im Primaerraster zurueck. Wer eine mehrteilige Maske
-        ''' aendern will, geht deshalb an den BESTANDTEIL (ApplyMaskBrushStrokeToComponent) oder ans
-        ''' Ergebnis (ImageMask.InvertResult).</summary>
-        ''' <returns>False, wenn nichts geschrieben wurde - der Aufrufer muss dann seinen eigenen Weg gehen.</returns>
+        ''' SHA-256 und keine selbstgebaute Multiplikationskette: VB prueft jede Multiplikation auf
+        ''' Ueberlauf und wirft dabei, eine FNV-Schleife stirbt also am ersten Bildpunkt (siehe die
+        ''' VB-Fallen). Die Hardware rechnet SHA-256 mit, ueber knapp drei Megabyte sind es wenige
+        ''' Millisekunden - gegen mehrere hundert, die die Pruefsumme erspart.</summary>
+        Private Function SelectionMaskContentHash() As String
+            Dim raster = _selectionMaskRaster
+            If raster Is Nothing OrElse raster.Pixels Is Nothing Then Return "-"
+            Return Convert.ToHexString(Security.Cryptography.SHA256.HashData(raster.Pixels))
+        End Function
+
         ''' <summary>Alles, was das Ergebnis des Zurueckschreibens bestimmt, in einer Zeichenkette.
         '''
         ''' WOFUER: das Zurueckschreiben rechnet fuer JEDEN Bildpunkt des Quellbilds die
@@ -3416,18 +3413,6 @@ Namespace ViewModels
         ''' Ein vergessenes Feld ist kein Schoenheitsfehler, sondern eine nicht geschriebene
         ''' Aenderung. Die Diagnose verstellt deshalb jedes dieser Felder einzeln und verlangt, dass
         ''' danach geschrieben wird.</summary>
-        ''' <summary>Pruefsumme ueber die Maskenbildpunkte.
-        '''
-        ''' SHA-256 und keine selbstgebaute Multiplikationskette: VB prueft jede Multiplikation auf
-        ''' Ueberlauf und wirft dabei, eine FNV-Schleife stirbt also am ersten Bildpunkt (siehe die
-        ''' VB-Fallen). Die Hardware rechnet SHA-256 mit, ueber knapp drei Megabyte sind es wenige
-        ''' Millisekunden - gegen mehrere hundert, die die Pruefsumme erspart.</summary>
-        Private Function SelectionMaskContentHash() As String
-            Dim raster = _selectionMaskRaster
-            If raster Is Nothing OrElse raster.Pixels Is Nothing Then Return "-"
-            Return Convert.ToHexString(Security.Cryptography.SHA256.HashData(raster.Pixels))
-        End Function
-
         Private Function SelectionMaskStamp(adj As ImageAdjustments) As String
             Return String.Join("|", _editingLayerMaskId, SelectionMaskContentHash(),
                                _selectionMaskRect.Left.ToString(), _selectionMaskRect.Top.ToString(),
@@ -3441,6 +3426,20 @@ Namespace ViewModels
         ''' "unbekannt", und unbekannt heisst IMMER schreiben.</summary>
         Private _editingLayerMaskStamp As String = ""
 
+        ''' <summary>Schreibt die aktuelle _selectionMask (harte Form) in die bearbeitete Ebenen-Maske
+        ''' zurück (Anzeige- → Quellraum via CreateSourceMaskFromSelection). FeatherPixels bleibt unberührt
+        ''' (die "Weiche Kante" pflegt sie über die bestehende Brücke). Danach folgt die Anpassung der
+        ''' Ebene der neuen Maske, weil der Render adj.Masks je Frame neu liest.
+        '''
+        ''' NUR FUER EINTEILIGE MASKEN. Seit die Auswahl die SUMME aller Bestandteile traegt, waere
+        ''' das Zurueckschreiben bei einer mehrteiligen Maske ein Abflachen: die Summe landete im
+        ''' ersten Bestandteil, und die uebrigen kaemen beim Rendern ein zweites Mal obendrauf - ein
+        ''' hinzugefuegter Verlauf addierte sich nach dem Umkehren wieder auf, ein abgezogener
+        ''' Bestandteil mit Zwischenwerten wurde doppelt abgezogen, und ein spaeter geloeschter
+        ''' Bestandteil liesse seinen Geist im Primaerraster zurueck. Wer eine mehrteilige Maske
+        ''' aendern will, geht deshalb an den BESTANDTEIL (ApplyMaskBrushStrokeToComponent) oder ans
+        ''' Ergebnis (ImageMask.InvertResult).</summary>
+        ''' <returns>False, wenn nichts geschrieben wurde - der Aufrufer muss dann seinen eigenen Weg gehen.</returns>
         Private Function WriteSelectionMaskBackToLayer() As Boolean
             If _editingLayerMaskId = "" Then Return False
             Dim mask = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso m.Id = _editingLayerMaskId)
@@ -4741,18 +4740,6 @@ Namespace ViewModels
             RefreshOverlayAfterAnnotationChange(ComputeSceneDirtyRectFor(a))
         End Sub
 
-        ''' <summary>Eine Deckung, die genau den Bereich des Objekts umfasst - der Ausgangspunkt einer
-        ''' neuen Ebenenmaske ohne Auswahl.
-        '''
-        ''' Bezug ist das Rechteck, das das Objekt auf der Szene beruehrt (`ComputeAnnotationDirtyRect`),
-        ''' nicht seine Kastenmasse: bei einem gedrehten Objekt ragen die Ecken aus dem unrotierten
-        ''' Kasten heraus, und genau dort haette die Maske es beschnitten. Schatten und Schein sind
-        ''' darin enthalten, und das ist richtig so - sie gehoeren zum Objekt.
-        '''
-        ''' Gebaut wird sie ueber denselben Weg wie eine Auswahlmaske, nur mit dem Objektrechteck
-        ''' anstelle der Auswahl: auf einer KOPIE der Anpassungen, damit eine laufende Auswahl
-        ''' unberuehrt bleibt. Damit liegt sie automatisch im Quellraum und traegt dieselben
-        ''' Koordinaten wie jede andere Maske.</summary>
         ''' <summary>Legt die Maske der GRUPPE an. Eine laufende Auswahl ist die Ansage, welcher Teil
         ''' der Gruppe sichtbar bleiben soll; ohne Auswahl deckt sie erst einmal alles, was die
         ''' Gruppe zeichnet, und der Maskenpinsel nimmt danach weg.
@@ -4834,6 +4821,18 @@ Namespace ViewModels
             Return ImageProcessor.CreateSourceMaskFromSelection(adj, maskName)
         End Function
 
+        ''' <summary>Eine Deckung, die genau den Bereich des Objekts umfasst - der Ausgangspunkt einer
+        ''' neuen Ebenenmaske ohne Auswahl.
+        '''
+        ''' Bezug ist das Rechteck, das das Objekt auf der Szene beruehrt (`ComputeAnnotationDirtyRect`),
+        ''' nicht seine Kastenmasse: bei einem gedrehten Objekt ragen die Ecken aus dem unrotierten
+        ''' Kasten heraus, und genau dort haette die Maske es beschnitten. Schatten und Schein sind
+        ''' darin enthalten, und das ist richtig so - sie gehoeren zum Objekt.
+        '''
+        ''' Gebaut wird sie ueber denselben Weg wie eine Auswahlmaske, nur mit dem Objektrechteck
+        ''' anstelle der Auswahl: auf einer KOPIE der Anpassungen, damit eine laufende Auswahl
+        ''' unberuehrt bleibt. Damit liegt sie automatisch im Quellraum und traegt dieselben
+        ''' Koordinaten wie jede andere Maske.</summary>
         Private Function CreateObjectCoverageMask(annotation As ImageAnnotation, maskName As String) As ImageMask
             If annotation Is Nothing Then Return Nothing
             Dim sceneSize = GetCurrentScenePixelSize()

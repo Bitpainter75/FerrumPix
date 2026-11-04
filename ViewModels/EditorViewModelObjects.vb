@@ -413,8 +413,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' "None" kommt vom "Kein"-Knopf: ein leeres CommandParameter laesst sich in XAML nicht
-        ''' ausdruecken, ohne den XAML-Compiler zu brechen (AVLN2000 bei ConverterParameter=).
         ''' <summary>True fuer beide Kreisformen. Bewusst StartsWith - "CircleInverted" ist
         ''' geometrisch derselbe Kreis, und ein Equals-Vergleich hat den invertierten Modus schon
         ''' einmal stillschweigend anders behandelt.</summary>
@@ -443,6 +441,9 @@ Namespace ViewModels
             Return a IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(a.PathPoints)
         End Function
 
+        ''' <param name="kind">"None" kommt vom "Kein"-Knopf: ein leeres CommandParameter laesst sich
+        ''' in XAML nicht ausdruecken, ohne den XAML-Compiler zu brechen (AVLN2000 bei
+        ''' ConverterParameter=).</param>
         Public Sub SetAnnotationTextPathKind(kind As String)
             AnnotationTextPathKind = If(String.Equals(kind, "None", StringComparison.OrdinalIgnoreCase), "", If(kind, ""))
             ' Ein Kreis braucht eine quadratische Box, sonst steht der Selektionsrahmen weit um den

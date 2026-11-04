@@ -132,8 +132,9 @@ Namespace Views
         ''' der Eingabetaste - dieselbe Bedienung wie im Infopanel.
         '''
         ''' Ein vorhandener Name fuehrt die beiden Gruppen zusammen; das entscheidet die Bibliothek,
-        ''' nicht die Ansicht.</summary>
-        ''' <summary>NICHT uebernehmen, solange die Vorschlagsliste offen steht: ein Klick auf einen
+        ''' nicht die Ansicht.
+        '''
+        ''' NICHT uebernehmen, solange die Vorschlagsliste offen steht: ein Klick auf einen
         ''' Vorschlag nimmt dem Feld zuerst den Fokus, und ohne diese Sperre liefe die Uebernahme mit
         ''' dem Text von VOR dem Klick. Wer "Chr" tippt und "Christina" anklickt, benennt die Gruppe
         ''' sonst "Chr". Dieselbe Sperre steht in der Infoleiste, dort ausfuehrlich begruendet.</summary>

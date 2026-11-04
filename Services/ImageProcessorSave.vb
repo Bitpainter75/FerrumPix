@@ -54,14 +54,6 @@ Namespace Services
                    (JxlDecodeService.IsSupportedJxl(path) AndAlso JxlEncodeService.IsAvailable)
         End Function
 
-        ''' <paramref name="workingFull"/>: voll aufgelöstes ARBEITSBILD des Editors (Umbau Stufe C) -
-        ''' wenn gesetzt, ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher,
-        ''' wird disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).
-        ''' <param name="applyPendingBaked">Vermerkte, aber noch nicht in den Pixeln steckende
-        ''' Vorgaenge mitrechnen (Entrauschen, Objektentfernen, Retusche, Striche)? Wirkt NUR, wenn
-        ''' hier selbst dekodiert wird - also im Stapel. Kommt ein fertiges Arbeitsbild herein
-        ''' (<paramref name="workingFull"/>), stecken die Vorgaenge bereits darin, und ein zweiter
-        ''' Durchlauf wuerde sie doppelt anwenden.</param>
         ''' <summary>Schreibt das Dokument als Photoshop-Datei MIT Ebenen - der Weg aus dem eigenen
         ''' Format hinaus zu Photoshop, Affinity oder GIMP.
         '''
@@ -602,6 +594,14 @@ Namespace Services
             SaveWithoutMetadata
         End Enum
 
+        ''' <param name="workingFull">Voll aufgelöstes ARBEITSBILD des Editors - wenn gesetzt,
+        ''' ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher, wird
+        ''' disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).</param>
+        ''' <param name="applyPendingBaked">Vermerkte, aber noch nicht in den Pixeln steckende
+        ''' Vorgaenge mitrechnen (Entrauschen, Objektentfernen, Retusche, Striche)? Wirkt NUR, wenn
+        ''' hier selbst dekodiert wird - also im Stapel. Kommt ein fertiges Arbeitsbild herein
+        ''' (<paramref name="workingFull"/>), stecken die Vorgaenge bereits darin, und ein zweiter
+        ''' Durchlauf wuerde sie doppelt anwenden.</param>
         Public Shared Function SaveImage(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
                                          Optional preserveMetadata As Boolean = True,
                                          Optional workingFull As SKBitmap = Nothing,
@@ -1593,24 +1593,6 @@ Namespace Services
             End Try
         End Sub
 
-        ''' <summary>Setzt die FARBRAUM-Angabe der uebernommenen Aufnahmedaten auf sRGB.
-        '''
-        ''' Notwendig geworden mit dem Farbmanagement: die geschriebenen Bildpunkte sind seit dem
-        ''' Umbau immer sRGB, und das ICC-Profil der Quelle bleibt beim Kopieren draussen (siehe
-        ''' IsJpegIccSegment). Die Aufnahmedaten reisen aber sonst bytegenau mit - stand dort
-        ''' "Uncalibrated", behauptete die Zieldatei weiterhin einen anderen Farbraum, als sie hat.
-        ''' Ein Bildprogramm, das diese Angabe auswertet, rechnete daraufhin ein zweites Mal um.
-        '''
-        ''' Zwei Angaben tragen die Aussage, und beide werden gesetzt:
-        ''' 0xA001 (ColorSpace) im Exif-Unterverzeichnis auf 1, und 0x0001 (InteropIndex) im
-        ''' Kompatibilitaets-Unterverzeichnis von "R03" (Adobe RGB) auf "R98" (sRGB). Beide Werte
-        ''' passen in die vier Byte des Eintrags selbst, die Laenge des Blocks aendert sich also
-        ''' nicht - genau wie beim Patch der Ausrichtung daneben.
-        '''
-        ''' GRENZE: XMP bleibt unangetastet. Ein Feld wie photoshop:ICCProfile stuende dort als
-        ''' Text, und ein Ersetzen aenderte die Laenge des Blocks. Steht in OFFENE_PUNKTE.md.</summary>
-        ''' <param name="tiffStart">Wo der TIFF-Kopf im Puffer beginnt: 10 in einem JPEG-Segment
-        ''' (hinter Marker, Laenge und "Exif\0\0"), 0 in einem nackten Block aus PNG oder WebP.</param>
         ''' <summary>Wo in einem nackten EXIF-Block der TIFF-Kopf beginnt. MANCHE ERZEUGER SCHREIBEN
         ''' DEN JPEG-VORSPANN "Exif\0\0" AUCH IN DEN PNG- ODER WEBP-BLOCK. Fest mit 0 gerechnet sucht
         ''' der Fleck den Kopf an der falschen Stelle, findet weder II noch MM und kehrt STILL
@@ -1639,6 +1621,24 @@ Namespace Services
             Return rest
         End Function
 
+        ''' <summary>Setzt die FARBRAUM-Angabe der uebernommenen Aufnahmedaten auf sRGB.
+        '''
+        ''' Notwendig geworden mit dem Farbmanagement: die geschriebenen Bildpunkte sind seit dem
+        ''' Umbau immer sRGB, und das ICC-Profil der Quelle bleibt beim Kopieren draussen (siehe
+        ''' IsJpegIccSegment). Die Aufnahmedaten reisen aber sonst bytegenau mit - stand dort
+        ''' "Uncalibrated", behauptete die Zieldatei weiterhin einen anderen Farbraum, als sie hat.
+        ''' Ein Bildprogramm, das diese Angabe auswertet, rechnete daraufhin ein zweites Mal um.
+        '''
+        ''' Zwei Angaben tragen die Aussage, und beide werden gesetzt:
+        ''' 0xA001 (ColorSpace) im Exif-Unterverzeichnis auf 1, und 0x0001 (InteropIndex) im
+        ''' Kompatibilitaets-Unterverzeichnis von "R03" (Adobe RGB) auf "R98" (sRGB). Beide Werte
+        ''' passen in die vier Byte des Eintrags selbst, die Laenge des Blocks aendert sich also
+        ''' nicht - genau wie beim Patch der Ausrichtung daneben.
+        '''
+        ''' GRENZE: XMP bleibt unangetastet. Ein Feld wie photoshop:ICCProfile stuende dort als
+        ''' Text, und ein Ersetzen aenderte die Laenge des Blocks. Steht in OFFENE_PUNKTE.md.</summary>
+        ''' <param name="tiffStart">Wo der TIFF-Kopf im Puffer beginnt: 10 in einem JPEG-Segment
+        ''' (hinter Marker, Laenge und "Exif\0\0"), 0 in einem nackten Block aus PNG oder WebP.</param>
         Private Shared Sub PatchExifColorSpaceToSrgb(buffer As Byte(), tiffStart As Integer)
             Try
                 If buffer Is Nothing OrElse buffer.Length < tiffStart + 8 Then Return
@@ -1811,19 +1811,6 @@ Namespace Services
             Return target
         End Function
 
-        ''' <summary>Setzt die Bildmasse in den Aufnahmedaten auf die Masse der GESCHRIEBENEN
-        ''' Datei.
-        '''
-        ''' Warum ueberhaupt: die Aufnahmedaten reisen sonst bytegenau mit, und 0xA002/0xA003
-        ''' (PixelXDimension/PixelYDimension) beschreiben dann noch die Quelle. Nach einem
-        ''' Beschnitt oder einer Groessenaenderung behauptet die Zieldatei damit Masse, die sie
-        ''' nicht hat - ein Programm, das diese Felder auswertet statt den Rahmenkopf zu lesen,
-        ''' rechnet damit falsch.
-        '''
-        ''' Beide Eintraege liegen inline in ihren vier Wertbytes (Anzahl 1), die Laenge des Blocks
-        ''' aendert sich also nicht - wie beim Patch der Ausrichtung. Ein SHORT-Eintrag, in den die
-        ''' Zahl nicht passt (Bildkante ueber 65535), bleibt unangetastet: eine falsche kleine Zahl
-        ''' waere schlimmer als die alte.</summary>
         ''' <summary>ZWEI DINGE, DIE SONST FALSCH MITREISEN. Die Aufnahmedaten werden bytegenau
         ''' uebernommen; nach einem Beschnitt oder einer Groessenaenderung beschreiben ihre Bildmasse
         ''' noch die Quelle, und ihr eingebettetes Vorschaubild zeigt das unbearbeitete Bild.
@@ -1838,6 +1825,19 @@ Namespace Services
             DetachExifThumbnail(tiff, tiffStart)
         End Sub
 
+        ''' <summary>Setzt die Bildmasse in den Aufnahmedaten auf die Masse der GESCHRIEBENEN
+        ''' Datei.
+        '''
+        ''' Warum ueberhaupt: die Aufnahmedaten reisen sonst bytegenau mit, und 0xA002/0xA003
+        ''' (PixelXDimension/PixelYDimension) beschreiben dann noch die Quelle. Nach einem
+        ''' Beschnitt oder einer Groessenaenderung behauptet die Zieldatei damit Masse, die sie
+        ''' nicht hat - ein Programm, das diese Felder auswertet statt den Rahmenkopf zu lesen,
+        ''' rechnet damit falsch.
+        '''
+        ''' Beide Eintraege liegen inline in ihren vier Wertbytes (Anzahl 1), die Laenge des Blocks
+        ''' aendert sich also nicht - wie beim Patch der Ausrichtung. Ein SHORT-Eintrag, in den die
+        ''' Zahl nicht passt (Bildkante ueber 65535), bleibt unangetastet: eine falsche kleine Zahl
+        ''' waere schlimmer als die alte.</summary>
         Private Shared Sub PatchExifPixelDimensions(buffer As Byte(), tiffStart As Integer,
                                                     width As Integer, height As Integer)
             Try

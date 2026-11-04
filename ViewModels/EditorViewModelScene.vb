@@ -129,16 +129,16 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Ersetzt die persistente Szene komplett (nach einem Vollrender) und blittet sie in
-        ''' die persistente Anzeige. Uebernimmt die Ownership von sceneSk.</summary>
-        ''' <param name="sourceScale">Verhaeltnis der gewohnten Vorschauquelle zur Quelle, aus der
-        ''' diese Szene gerechnet ist - siehe <see cref="SceneDisplayScale"/>.</param>
         ''' <summary>Messhuelle: der Szenenwechsel laeuft auf dem Anzeigefaden, und eine Stockung dort
         ''' soll ihren Messpunkt haben (siehe PerformanceTraceService, Waechter).</summary>
         Private Sub SetSceneBitmap(sceneSk As SKBitmap, Optional sourceScale As Double = 1.0)
             PerformanceTraceService.Measure("Editor: Szene uebernehmen", Sub() SetSceneBitmapCore(sceneSk, sourceScale))
         End Sub
 
+        ''' <summary>Ersetzt die persistente Szene komplett (nach einem Vollrender) und blittet sie in
+        ''' die persistente Anzeige. Uebernimmt die Ownership von sceneSk.</summary>
+        ''' <param name="sourceScale">Verhaeltnis der gewohnten Vorschauquelle zur Quelle, aus der
+        ''' diese Szene gerechnet ist - siehe <see cref="SceneDisplayScale"/>.</param>
         Private Sub SetSceneBitmapCore(sceneSk As SKBitmap, sourceScale As Double)
             If sceneSk Is Nothing Then Return
             _sceneSourceScale = If(sourceScale > 0.0 AndAlso Not Double.IsNaN(sourceScale), sourceScale, 1.0)
@@ -548,11 +548,6 @@ Namespace ViewModels
             If _zoomDetailSk IsNot Nothing AndAlso _zoomDetailWanted Then ExtractZoomDetailRegion()
         End Sub
 
-        ''' <summary>STUFE 2: rendert eine Region (Basis + Striche + ALLE Objekte in Z-Order) in die
-        ''' persistente Szene und aktualisiert die Anzeige. Schneidet die Aenderung einen
-        ''' Mischmodus-Abhaengigkeitsbereich, wird dieser automatisch mitgerendert (das Blend-Ergebnis
-        ''' haengt vom Untergrund ab). False bei kaltem/gesperrtem Base-Cache oder fehlender Szene -
-        ''' der Aufrufer plant dann den asynchronen Vollrender.</summary>
         ''' <summary>Passt die Szene noch zur AKTUELLEN Rezept-Geometrie? Ein Region-Patch kann die
         ''' Szenengroesse nie aendern - nach einem Geometriewechsel (etwa dem Live-Zuschnitt beim
         ''' Verlassen des Zuschneide-Werkzeugs) MUSS der Vollrender laufen. Ohne diesen Waechter
@@ -575,6 +570,11 @@ Namespace ViewModels
                    Math.Abs(_sceneSk.Height - expected.Height) <= 1
         End Function
 
+        ''' <summary>STUFE 2: rendert eine Region (Basis + Striche + ALLE Objekte in Z-Order) in die
+        ''' persistente Szene und aktualisiert die Anzeige. Schneidet die Aenderung einen
+        ''' Mischmodus-Abhaengigkeitsbereich, wird dieser automatisch mitgerendert (das Blend-Ergebnis
+        ''' haengt vom Untergrund ab). False bei kaltem/gesperrtem Base-Cache oder fehlender Szene -
+        ''' der Aufrufer plant dann den asynchronen Vollrender.</summary>
         Private Function TryRenderSceneRegionSync(dirtyRect As SKRectI) As Boolean
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing OrElse _sceneSk Is Nothing OrElse dirtyRect.IsEmpty Then Return False

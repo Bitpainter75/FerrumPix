@@ -38,10 +38,6 @@ Namespace Controls
         Public Shared ReadOnly DragIncrementProperty As StyledProperty(Of Double) =
             AvaloniaProperty.Register(Of RoundSlider, Double)(NameOf(DragIncrement), 0)
 
-        ''' <summary>Rechtsklick schaltet den EINZELVERGLEICH: der Wert geht auf den Standardwert,
-        ''' der eingestellte wird gemerkt, und der nächste Rechtsklick holt ihn zurück. Ab Werk aus;
-        ''' das Anpassungspanel des Editors schaltet es per Stil ein (EditorView.axaml). Das
-        ''' Zahlenfeld daneben (SliderValueUpDown) folgt seinem Regler.</summary>
         ''' <summary>Die FARBSPUR eines Reglers mit Farbbedeutung: ein Verlauf, der zeigt, wohin der
         ''' Regler führt (Temperatur blau nach gelb, Tönung grün nach magenta, ein Farbband, die
         ''' Punktfarbe). Gezeichnet wird sie nur, wenn <see cref="ColoredTracks"/> an ist; dann
@@ -73,6 +69,10 @@ Namespace Controls
             End Set
         End Property
 
+        ''' <summary>Rechtsklick schaltet den EINZELVERGLEICH: der Wert geht auf den Standardwert,
+        ''' der eingestellte wird gemerkt, und der nächste Rechtsklick holt ihn zurück. Ab Werk aus;
+        ''' das Anpassungspanel des Editors schaltet es per Stil ein (EditorView.axaml). Das
+        ''' Zahlenfeld daneben (SliderValueUpDown) folgt seinem Regler.</summary>
         Public Shared ReadOnly CompareOnRightClickProperty As StyledProperty(Of Boolean) =
             AvaloniaProperty.Register(Of RoundSlider, Boolean)(NameOf(CompareOnRightClick), False)
 

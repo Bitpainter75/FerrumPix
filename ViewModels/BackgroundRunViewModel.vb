@@ -148,8 +148,9 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Setzt Text und Balken auf dem Oberflaechen-Thread. Eigener Weg, weil jede
-        ''' Meldung aus dem Hintergrund kommt und ein gebundener Wert nur dort gesetzt werden darf.</summary>
-        ''' <summary>Der Parameter heisst NICHT wie die Eigenschaft, und das ist kein Geschmack.
+        ''' Meldung aus dem Hintergrund kommt und ein gebundener Wert nur dort gesetzt werden darf.
+        '''
+        ''' Der Parameter heisst NICHT wie die Eigenschaft, und das ist kein Geschmack.
         '''
         ''' VB unterscheidet keine Gross- und Kleinschreibung: hiess er <c>hasProgress</c>, war
         ''' <c>HasProgress = hasProgress</c> eine Zuweisung des Parameters an sich selbst. Die

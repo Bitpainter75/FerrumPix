@@ -425,12 +425,6 @@ Namespace ViewModels
             End Select
         End Sub
 
-        ''' <summary>Die gemeinsamen Stichwoerter der Auswahl - der TEURE Teil der Uebersicht.
-        '''
-        ''' Gefragt wird in EINER Abfrage ueber alle Pfade, nicht je Bild einzeln. Vorher oeffnete
-        ''' jedes markierte Bild seine eigene Verbindung; bei Strg+A auf einem grossen Ordner stand
-        ''' die Oberflaeche. Aus demselben Grund laeuft das hier nur bei OFFENER Leiste - genau die
-        ''' Zusage, die fuer den Hintergrundteil schon galt.</summary>
         ''' <summary>Die Personen auf dem markierten Bild. Nur bei GENAU EINEM Bild - bei mehreren
         ''' waere jede Angabe eine Behauptung ueber alle, und anders als bei Stichwoertern ist die
         ''' Schnittmenge hier fast immer leer (selten stehen dieselben Menschen auf allen Bildern
@@ -751,12 +745,6 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowPlaceRow))
         End Sub
 
-        ''' <summary>Hebt die Zuordnung EINES Gesichts auf: es bekommt eine eigene, namenlose Gruppe.
-        '''
-        ''' Fuer den Fall, dass die Erkennung jemanden verwechselt hat. Andere Bilder derselben
-        ''' Person bleiben unberuehrt - geaendert wird nur dieses eine Gesicht. Danach steht das Feld
-        ''' wieder leer, und der richtige Name traegt es in die richtige Gruppe (heisst schon jemand
-        ''' so, verschmilzt die Bibliothek beides).</summary>
         ''' <summary>Bestaetigt, dass die Erkennung dieses Gesicht richtig zugeordnet hat.
         '''
         ''' Der Name bleibt, wie er ist; nur das Gesicht gilt danach als von Hand gesetzt. Damit
@@ -776,6 +764,12 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Hebt die Zuordnung EINES Gesichts auf: es bekommt eine eigene, namenlose Gruppe.
+        '''
+        ''' Fuer den Fall, dass die Erkennung jemanden verwechselt hat. Andere Bilder derselben
+        ''' Person bleiben unberuehrt - geaendert wird nur dieses eine Gesicht. Danach steht das Feld
+        ''' wieder leer, und der richtige Name traegt es in die richtige Gruppe (heisst schon jemand
+        ''' so, verschmilzt die Bibliothek beides).</summary>
         Public Sub DetachFace(faceId As String) Implements IInfoSidebarPanel.DetachFace
             If String.IsNullOrWhiteSpace(faceId) Then Return
             Try
@@ -786,6 +780,12 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Die gemeinsamen Stichwoerter der Auswahl - der TEURE Teil der Uebersicht.
+        '''
+        ''' Gefragt wird in EINER Abfrage ueber alle Pfade, nicht je Bild einzeln. Vorher oeffnete
+        ''' jedes markierte Bild seine eigene Verbindung; bei Strg+A auf einem grossen Ordner stand
+        ''' die Oberflaeche. Aus demselben Grund laeuft das hier nur bei OFFENER Leiste - genau die
+        ''' Zusage, die fuer den Hintergrundteil schon galt.</summary>
         Private Sub LoadSummaryTags()
             Tags.Clear()
             If _items.Count = 0 Then Return

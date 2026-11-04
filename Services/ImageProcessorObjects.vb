@@ -423,11 +423,6 @@ Namespace Services
             Return False
         End Function
 
-        ''' <summary>Zeichnet die Objekte in Z-Reihenfolge und gibt zurueck, WIE VIELE wirklich
-        ''' gezeichnet wurden (sichtbar, mit Geometrie, nicht vom Clip verworfen). Die Zahl ist der
-        ''' Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1): sie zeigt je
-        ''' Patch, wie viel Objektarbeit der Region-Weg heute leistet. Aufrufer duerfen den
-        ''' Rueckgabewert ignorieren.</summary>
         ''' <summary>Das Objekt, auf dessen Deckung eine Schnittmaske sich bezieht: das naechste
         ''' SICHTBARE darunter, das nicht selbst beschraenkt ist. Mehrere beschraenkte Objekte
         ''' uebereinander teilen sich damit dieselbe Basis. Nothing = keine Basis vorhanden; der
@@ -598,6 +593,11 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Zeichnet die Objekte in Z-Reihenfolge und gibt zurueck, WIE VIELE wirklich
+        ''' gezeichnet wurden (sichtbar, mit Geometrie, nicht vom Clip verworfen). Die Zahl ist der
+        ''' Messpunkt fuer den Kompositor-Umbau (OFFENE_PUNKTE Abschnitt 2, Stufe 1): sie zeigt je
+        ''' Patch, wie viel Objektarbeit der Region-Weg heute leistet. Aufrufer duerfen den
+        ''' Rueckgabewert ignorieren.</summary>
         Friend Shared Function DrawAnnotationsOnCanvas(canvas As SKCanvas, adj As ImageAdjustments,
                                                    sourceWidth As Integer, sourceHeight As Integer,
                                                    offsetX As Integer, offsetY As Integer,
@@ -1666,21 +1666,6 @@ Namespace Services
             End Select
         End Sub
 
-        ' Rendert das Objekt einmal auf eine transparente Offscreen-Maske derselben Canvas-Größe,
-        ' färbt diese Silhouette per SKBlendMode.SrcIn auf Schatten-/Glow-Farbe um, blurrt sie und
-        ' komponiert sie (versetzt bzw. additiv) VOR dem eigentlichen Objekt auf den Haupt-Canvas.
-        ''' Die Maske wird nur so groß wie nötig (Objekt-Bounds + Blur/Versatz-Rand) statt
-        ''' bildschirmfüllend angelegt - bei größeren Fotos und häufigen Live-Neuzeichnungen
-        ''' (z.B. während des Verschiebens per Slider) spart das pro Aufruf eine große
-        ''' Bitmap-Allokation samt Blur über die gesamte Canvas. Bei rotierten Objekten (der
-        ''' Canvas hat zu diesem Zeitpunkt schon die RotateDegrees-Transformation aktiv, siehe
-        ''' ApplyAnnotations) ist die tatsächliche Bildschirm-Bounding-Box in unrotierten
-        ''' rect-Koordinaten nicht trivial zu bestimmen - dort bleibt es beim sicheren,
-        ''' bildschirmfüllenden Fallback.
-        ''' <summary>Grenzen, in denen das Glühen gerechnet wird (siehe DrawAnnotationEffects). Die Kosten
-        ''' hängen an FLÄCHE × RADIUS, deshalb müssen beide gedeckelt werden: Skias Dilate kostet linear im
-        ''' Radius, und der Radius wächst mit der Objektgröße - aber auch ein kleiner Radius auf einer sehr
-        ''' großen Maske ist teuer. Was darüber liegt, wird verkleinert gerechnet und wieder hochgezogen.</summary>
         ''' <summary>Regler "Weichzeichnen" (0-100) -> Gauss-Sigma, bemessen an der Objektgroesse.
         ''' Der Faktor lag bei 0.6, solange die Weichzeichnung wirkungslos war (MaskFilter bei
         ''' DrawBitmap, siehe unten) - er war nie an einem sichtbaren Ergebnis geeicht. Mit wirksamem
@@ -1694,9 +1679,26 @@ Namespace Services
         ''' ("macht nur bis zur Haelfte Sinn, danach ist der Schatten quasi weg").</summary>
         Private Const ShadowBlurSigmaFactor As Single = 0.075F
 
+        ''' <summary>Grenzen, in denen das Glühen gerechnet wird (siehe DrawAnnotationEffects). Die Kosten
+        ''' hängen an FLÄCHE × RADIUS, deshalb müssen beide gedeckelt werden: Skias Dilate kostet linear im
+        ''' Radius, und der Radius wächst mit der Objektgröße - aber auch ein kleiner Radius auf einer sehr
+        ''' großen Maske ist teuer. Was darüber liegt, wird verkleinert gerechnet und wieder hochgezogen.</summary>
         Private Const MaxGlowDilatePx As Single = 12.0F
         Private Const MaxGlowDim As Single = 512.0F
 
+        ''' <summary>Rendert das Objekt einmal auf eine transparente Offscreen-Maske derselben
+        ''' Canvas-Größe, färbt diese Silhouette per SKBlendMode.SrcIn auf Schatten-/Glow-Farbe um,
+        ''' blurrt sie und komponiert sie (versetzt bzw. additiv) VOR dem eigentlichen Objekt auf den
+        ''' Haupt-Canvas.
+        '''
+        ''' Die Maske wird nur so groß wie nötig (Objekt-Bounds + Blur/Versatz-Rand) statt
+        ''' bildschirmfüllend angelegt - bei größeren Fotos und häufigen Live-Neuzeichnungen
+        ''' (z.B. während des Verschiebens per Slider) spart das pro Aufruf eine große
+        ''' Bitmap-Allokation samt Blur über die gesamte Canvas. Bei rotierten Objekten (der
+        ''' Canvas hat zu diesem Zeitpunkt schon die RotateDegrees-Transformation aktiv, siehe
+        ''' ApplyAnnotations) ist die tatsächliche Bildschirm-Bounding-Box in unrotierten
+        ''' rect-Koordinaten nicht trivial zu bestimmen - dort bleibt es beim sicheren,
+        ''' bildschirmfüllenden Fallback.</summary>
         ''' <param name="inner">False: Schatten und Gluehen AUSSEN, vor dem Objekt zu zeichnen. True: die
         ''' INNEREN, nach dem Objekt, auf seine Flaeche beschnitten (DrawInnerSilhouetteEffects). Beide
         ''' Durchgaenge bauen dieselbe Silhouette.</param>
@@ -2332,13 +2334,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Pfad fuer "Text an Pfad", aus dem Objektrechteck abgeleitet und als dichte
-        ''' Punktfolge aufgebaut (die Glyphen werden per Bogenlaenge platziert, eine Polylinie mit
-        ''' 96 Stuetzen ist dafuer unsichtbar glatt und erspart die Winkelmathematik dreier
-        ''' Sonderfaelle). Bogen: Kreisbogen ueber die Rechteckbreite, Pfeilhoehe aus der Kruemmung
-        ''' (negativ = nach unten). Welle: eine Sinusperiode, Amplitude aus der Kruemmung. Kreis:
-        ''' ins Rechteck eingepasst, Start oben plus Startversatz; negative Kruemmung laeuft innen
-        ''' (gegen den Uhrzeigersinn).</summary>
         ''' <summary>Ein Stützpunkt eines freien Pfades, alles in Prozent des Objektrechtecks.
         ''' <see cref="HandleIn"/> und <see cref="HandleOut"/> liegen ABSOLUT in demselben Raum, nicht
         ''' als Abstand zum Stützpunkt: so ist jede Rechnung darauf dieselbe wie auf dem Stützpunkt,
@@ -2435,6 +2430,13 @@ Namespace Services
             Return path
         End Function
 
+        ''' <summary>Pfad fuer "Text an Pfad", aus dem Objektrechteck abgeleitet und als dichte
+        ''' Punktfolge aufgebaut (die Glyphen werden per Bogenlaenge platziert, eine Polylinie mit
+        ''' 96 Stuetzen ist dafuer unsichtbar glatt und erspart die Winkelmathematik dreier
+        ''' Sonderfaelle). Bogen: Kreisbogen ueber die Rechteckbreite, Pfeilhoehe aus der Kruemmung
+        ''' (negativ = nach unten). Welle: eine Sinusperiode, Amplitude aus der Kruemmung. Kreis:
+        ''' ins Rechteck eingepasst, Start oben plus Startversatz; negative Kruemmung laeuft innen
+        ''' (gegen den Uhrzeigersinn).</summary>
         Private Shared Function BuildTextPath(rect As SKRect, kind As String, inverted As Boolean, bend As Single, startOffset As Single,
                                               Optional pathPoints As String = "",
                                               Optional pathClosed As Boolean = False) As SKPath
@@ -3326,14 +3328,6 @@ Namespace Services
             End Using
         End Sub
 
-        ''' <summary>Zeichnet Textzeilen eines Text-Objekts. KEIN automatischer Umbruch an der
-        ''' Boxbreite mehr: die Auswahlbox wird aus den EXPLIZITEN Zeilen
-        ''' gemessen (EstimateTextAnnotationSizePercent) - ein Breiten-Umbruch hier zeichnete dann
-        ''' hoeher als die Box, und beim Verschieben blieben Fragmente des alten Stands stehen
-        ''' (Geist ausserhalb des uebergebenen Rechtecks). Neue Zeilen entstehen ausschliesslich
-        ''' ueber echte Zeilenumbrueche im Text (Strg+Enter in den Eingabefeldern).
-        ''' <paramref name="maxWidth"/> bleibt in der Signatur, weil die Aufrufer sie fuer Formen
-        ''' weiterreichen - fuer Text ist sie bewusst ohne Wirkung.</summary>
         ''' <summary>WO DER TEXT EINES OBJEKTS LANDET, relativ zur linken oberen Ecke seines
         ''' Rahmens - nach genau der Anordnung von <see cref="DrawWrappedText"/>: erste Grundlinie
         ''' bei Schriftgröße, Zeilen nur an Zeilenenden, kein Umbruch am Rahmen. Ein langes Wort
@@ -3471,6 +3465,14 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Zeichnet Textzeilen eines Text-Objekts. KEIN automatischer Umbruch an der
+        ''' Boxbreite mehr: die Auswahlbox wird aus den EXPLIZITEN Zeilen
+        ''' gemessen (EstimateTextAnnotationSizePercent) - ein Breiten-Umbruch hier zeichnete dann
+        ''' hoeher als die Box, und beim Verschieben blieben Fragmente des alten Stands stehen
+        ''' (Geist ausserhalb des uebergebenen Rechtecks). Neue Zeilen entstehen ausschliesslich
+        ''' ueber echte Zeilenumbrueche im Text (Strg+Enter in den Eingabefeldern).
+        ''' <paramref name="maxWidth"/> bleibt in der Signatur, weil die Aufrufer sie fuer Formen
+        ''' weiterreichen - fuer Text ist sie bewusst ohne Wirkung.</summary>
         Private Shared Sub DrawWrappedText(canvas As SKCanvas, text As String, x As Single, y As Single, maxWidth As Single, fontSize As Single, font As SKFont, paint As SKPaint, Optional spacing As Single = 0, Optional alignment As String = "Left")
             If String.IsNullOrEmpty(text) Then Return
             Dim lineHeight = GetLineHeight(font.Metrics)

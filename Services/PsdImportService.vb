@@ -59,9 +59,6 @@ Namespace Services
             Public Property FromOwnRecipe As Boolean
         End Class
 
-        ''' <summary>Baut aus der Datei ein Dokument mit Ebenen. Nothing, wenn die Datei keine
-        ''' Ebenen trägt oder in einer Spielart vorliegt, die der Leser nicht beherrscht - dann
-        ''' bleibt der Aufrufer beim gewohnten flachen Gesamtbild.</summary>
         ''' <summary>Wie viele Ebenen der Datei einen Wortlaut tragen. Damit lässt sich vor dem Öffnen
         ''' fragen, ob sie als Text übernommen werden sollen - ohne die Datei zweimal zu laden, denn
         ''' gelesen wird dafür nur das Verzeichnis, nicht die Bildpunkte.</summary>
@@ -81,6 +78,9 @@ Namespace Services
             Return count
         End Function
 
+        ''' <summary>Baut aus der Datei ein Dokument mit Ebenen. Nothing, wenn die Datei keine
+        ''' Ebenen trägt oder in einer Spielart vorliegt, die der Leser nicht beherrscht - dann
+        ''' bleibt der Aufrufer beim gewohnten flachen Gesamtbild.</summary>
         ''' <param name="textAsText">Textebenen als Textobjekte übernehmen statt als Bild. Der
         ''' Wortlaut lässt sich dann weiterbearbeiten, das Aussehen kann aber abweichen - Schrift und
         ''' Grad stehen in der Datei an einer Stelle, die nicht verlässlich zu lesen ist.</param>

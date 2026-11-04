@@ -185,9 +185,6 @@ Namespace Views
             TryCast(DataContext, EditorViewModel)?.UseAnnotationMask()
         End Sub
 
-        ''' <summary>Klick auf das Maskensymbol EINER ZEILE: erst diese Zeile markieren, dann ihre
-        ''' Maske öffnen. Die Reihenfolge ist der Punkt - die Befehle des ViewModels arbeiten auf der
-        ''' markierten Ebene, und angeklickt wurde vielleicht eine andere.</summary>
         ''' <summary>Alt- und Umschalt-Klick auf eine Maskenminiatur: nur die Maske zeigen bzw. sie
         ''' stilllegen. Die beiden Handgriffe, die jeder aus anderen Bildbearbeitungen mitbringt.
         '''
@@ -254,6 +251,9 @@ Namespace Views
             Return True
         End Function
 
+        ''' <summary>Klick auf das Maskensymbol EINER ZEILE: erst diese Zeile markieren, dann ihre
+        ''' Maske öffnen. Die Reihenfolge ist der Punkt - die Befehle des ViewModels arbeiten auf der
+        ''' markierten Ebene, und angeklickt wurde vielleicht eine andere.</summary>
         Private Sub OnLayerMaskIconClick(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim row = TryCast(TryCast(sender, Control)?.DataContext, LayerPanelRow)

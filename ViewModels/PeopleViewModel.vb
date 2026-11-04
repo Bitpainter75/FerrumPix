@@ -280,14 +280,6 @@ Namespace ViewModels
         Public ReadOnly Property RefreshPeopleCommand As ICommand
         Public ReadOnly Property OpenSettingsCommand As ICommand
 
-        ''' <summary>Baut die Wand neu auf.
-        '''
-        ''' Die Bilder holt der Dienst im Hintergrund nach, verkleinert dekodiert und durch die
-        ''' Decode-Schleuse - bei hundert Gruppen waere ein voller Decode je Kachel im Vordergrund
-        ''' eine Vollbremsung.
-        '''
-        ''' Die Marke haelt einen spaeten Nachschub von der naechsten Wand fern: wer waehrend des
-        ''' Ladens aktualisiert, bekaeme sonst Gesichter, die zu Kacheln von vorhin gehoeren.</summary>
         ''' <summary>Die schon geholten Aushaengeschilder, ueber Person UND Bildstelle verschluesselt.
         '''
         ''' WOZU: jeder Aufbau der Wand legt neue Eintraege an, und mit ihnen waren die Bilder weg -
@@ -307,6 +299,14 @@ Namespace ViewModels
             Return $"{personId}|{coverPath}|{x:0}|{y:0}"
         End Function
 
+        ''' <summary>Baut die Wand neu auf.
+        '''
+        ''' Die Bilder holt der Dienst im Hintergrund nach, verkleinert dekodiert und durch die
+        ''' Decode-Schleuse - bei hundert Gruppen waere ein voller Decode je Kachel im Vordergrund
+        ''' eine Vollbremsung.
+        '''
+        ''' Die Marke haelt einen spaeten Nachschub von der naechsten Wand fern: wer waehrend des
+        ''' Ladens aktualisiert, bekaeme sonst Gesichter, die zu Kacheln von vorhin gehoeren.</summary>
         Public Sub RefreshPeople()
             SelectedPerson = Nothing
             SelectedPersonFaces.Clear()

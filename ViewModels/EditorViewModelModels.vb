@@ -407,13 +407,6 @@ Namespace ViewModels
             Return True
         End Function
 
-        ''' <summary>Das aktuelle Rezept OHNE die eingefuegten Ebenen.
-        '''
-        ''' Fuer alles, was mit Tiefe zu tun hat, ist das die richtige Vorlage. Ein aufgeklebtes
-        ''' Objekt hat keine Entfernung - das Modell wuerde ihm eine andichten, und die Unschaerfe
-        ''' liefe darum herum, statt es zu treffen. In der Vorschau kommt hinzu: die Objekte werden
-        ''' beim Anwenden ohnehin nicht mitgerechnet, und scharf ueber einem verwischten Hintergrund
-        ''' zeigten sie etwas, das nachher anders aussieht.</summary>
         ''' <summary>Begrenzt eine bildgroße Maske auf die Ebene des Bauplans. Ohne Bauplan bleibt sie
         ''' unverändert und True; False heißt, auf der Ebene bleibt nichts. Läuft im Worker (hier
         ''' wird das Ebenenbild dekodiert), <paramref name="bounds"/> ist danach die neue Hülle.</summary>
@@ -426,6 +419,13 @@ Namespace ViewModels
             End Using
         End Function
 
+        ''' <summary>Das aktuelle Rezept OHNE die eingefuegten Ebenen.
+        '''
+        ''' Fuer alles, was mit Tiefe zu tun hat, ist das die richtige Vorlage. Ein aufgeklebtes
+        ''' Objekt hat keine Entfernung - das Modell wuerde ihm eine andichten, und die Unschaerfe
+        ''' liefe darum herum, statt es zu treffen. In der Vorschau kommt hinzu: die Objekte werden
+        ''' beim Anwenden ohnehin nicht mitgerechnet, und scharf ueber einem verwischten Hintergrund
+        ''' zeigten sie etwas, das nachher anders aussieht.</summary>
         Private Function RecipeWithoutObjects() As ImageAdjustments
             Dim rezept = GetCurrentAdjustments()
             If rezept Is Nothing Then Return Nothing

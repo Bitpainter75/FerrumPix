@@ -1484,8 +1484,9 @@ Namespace Models
 
         ''' <summary>Verdrängt vom ältesten Ende der LRU-Liste, bis MaxResidentThumbnails erreicht
         ''' ist oder keine weiteren nicht aktuell sichtbaren Kandidaten mehr existieren. Muss unter
-        ''' _thumbnailQueueLock aufgerufen werden.</summary>
-        ''' <summary>Das Leeren von _thumbnail gehoert MIT unter das Lock - lag es frueher im
+        ''' _thumbnailQueueLock aufgerufen werden.
+        '''
+        ''' Das Leeren von _thumbnail gehoert MIT unter das Lock - lag es frueher im
         ''' nachgelagerten Dispose-Schritt, konnte ein Worker sein Ergebnis dazwischen einhaengen und
         ''' die Verdraengung nullte es gleich wieder weg (bzw. umgekehrt). Herausgegeben wird deshalb
         ''' das abgeloeste Bitmap, nicht das Element.</summary>

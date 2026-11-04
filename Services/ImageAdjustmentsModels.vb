@@ -59,8 +59,6 @@ Namespace Services
         Deconvolution = 1
     End Enum
 
-    ''' <summary>Ein bestätigter, nicht-destruktiver Schritt der Bildgeometrie. Anders als die
-    ''' früheren globalen Regler behält die Liste ihre zeitliche Reihenfolge bei.</summary>
     ''' <summary>Die Objektabbildung eines Rezepts in ihrer einfachsten Form: Mittelpunkt auf
     ''' Mittelpunkt, Massstab je Achse, ein Drehwinkel und die beiden Spiegelungen. Mehr braucht
     ''' sie nicht, denn alles, was ein Objekt mitmacht - Beschnitt, Vierteldrehung, Spiegelung,
@@ -111,6 +109,8 @@ Namespace Services
         End Property
     End Class
 
+    ''' <summary>Ein bestätigter, nicht-destruktiver Schritt der Bildgeometrie. Anders als die
+    ''' früheren globalen Regler behält die Liste ihre zeitliche Reihenfolge bei.</summary>
     Public Class GeometryOperation
         Public Property Kind As String = ""
         Public Property Adjustments As ImageAdjustments = Nothing
@@ -1359,7 +1359,6 @@ Namespace Services
             Next
         End Sub
 
-        ''' <summary>Nur die Pixel-Anpassungen als eigenes Objekt - das ist der Satz, den ein Objekt mitträgt.</summary>
         ''' <summary>Die Pixel-Anpassungen als eigenes Rezept - für eine Maskenebene oder ein
         ''' Objekt, also für einen TEIL DIESES BILDES.
         '''
@@ -1445,8 +1444,6 @@ Namespace Services
             Return True
         End Function
 
-        ''' <summary>Wie IsAnnotationRenderVisible, aber für lokale Korrekturebenen: eigene Sichtbarkeit
-        ''' UND die ihrer Gruppe.</summary>
         ''' <summary>Ist dieses Objekt geometrisch gesperrt - eigenes Schloss oder das seiner Gruppe?
         ''' Der Renderer fragt das nie; es entscheidet allein, was der Editor zulässt.</summary>
         Public Function IsAnnotationGeometryLocked(annotation As ImageAnnotation) As Boolean
@@ -1459,6 +1456,8 @@ Namespace Services
             Return False
         End Function
 
+        ''' <summary>Wie IsAnnotationRenderVisible, aber für lokale Korrekturebenen: eigene Sichtbarkeit
+        ''' UND die ihrer Gruppe.</summary>
         Public Function IsMaskedLayerRenderVisible(layer As MaskedAdjustmentLayer) As Boolean
             If layer Is Nothing OrElse Not layer.IsVisible Then Return False
             Return IsGroupChainVisible(layer.GroupId)
