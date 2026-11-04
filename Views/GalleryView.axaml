@@ -3239,6 +3239,10 @@
                  mittlere Gruppe weg. Mittig heisst hier mittig zur LEISTE - die beginnt rechts der
                  Ordnerspalte, und weiter links waere die Mitte halb unter der Seitenleiste. -->
             <Grid VerticalAlignment="Center">
+                <!-- EIN Abstand fuer alle Knoepfe der Gruppe, 11 Punkte wie zwischen Menue und
+                     Werkzeugleisten-Knopf im Editor (Reihenabstand 16, Knopf 5 herangerueckt). Er
+                     sitzt links an jedem Knopf: faellt "Exportieren" ohne Auswahl weg, rueckt der
+                     naechste nicht an seinen Vorgaenger heran. -->
                 <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center" HorizontalAlignment="Left">
                     <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die
                          meisten Stapelfunktionen, und ein Rechtsklick ist nicht auf jedem Gerät bequem.
@@ -3255,9 +3259,7 @@
                                        Width="18" Height="18"/>
                     </Button>
                     <!-- Wie die Werkzeugleiste im Editor: der Knopf sitzt in der Fusszeile, damit er
-                         bei eingeklappter Leiste an derselben Stelle bleibt. Derselbe Abstand zum
-                         Menueknopf wie dort (Reihenabstand 16, Knopf 5 herangerueckt), hier ohne
-                         Reihenabstand also 11. -->
+                         bei eingeklappter Leiste an derselben Stelle bleibt. -->
                     <Button Classes="icon-btn" Width="28" Height="28"
                             Margin="11,0,0,0"
                             Command="{Binding ToggleFolderSidebarCommand}"
@@ -3273,7 +3275,7 @@
                          Akzentrahmen. Nur da, solange Bilder ausgewaehlt sind: ohne Auswahl gaebe es
                          nichts zu exportieren. Derselbe Befehl wie "Exportieren nach" im Menue. -->
                     <Button Classes="accent-outline" Height="28" Padding="10,0"
-                            Margin="6,0,6,0"
+                            Margin="11,0,0,0"
                             VerticalContentAlignment="Center"
                             IsVisible="{Binding HasSelectedImage}"
                             Command="{Binding ExportSelectedCommand}"
@@ -3286,13 +3288,14 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="icon-btn" Width="28" Height="28"
+                            Margin="11,0,0,0"
                             Command="{Binding SelectAllCommand}"
                             ToolTip.Tip="Alle auswählen">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg"
                                        Width="18" Height="18"/>
                     </Button>
                     <Button Classes="icon-btn" Width="28" Height="28"
-                            Margin="6,0,0,0"
+                            Margin="11,0,0,0"
                             Command="{Binding ClearSelectionCommand}"
                             IsEnabled="{Binding HasSelection}"
                             ToolTip.Tip="Alle abwählen">
@@ -3303,7 +3306,7 @@
                          mit dessen Text: StacksEnabled speichert und meldet den Stand dorthin
                          (SettingsViewModel.SyncGalleryStacks). -->
                     <ToggleButton Classes="icon-btn" Width="28" Height="28"
-                                  Margin="6,0,0,0"
+                                  Margin="11,0,0,0"
                                   IsChecked="{Binding StacksEnabled, Mode=TwoWay}"
                                   ToolTip.Tip="Serien und RAW+JPEG stapeln">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stack.svg"
