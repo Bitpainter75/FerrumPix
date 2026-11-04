@@ -1246,8 +1246,16 @@ Namespace Services
         ''' Belichtung. NUR HIER, und das ist der Punkt: dieser Weg laeuft ausschliesslich fuer eine
         ''' RAW OHNE Rezept. Liegt eine Beistelldatei mit eigener Belichtung daneben, kommen die
         ''' Aufrufer gar nicht erst hierher, und der gespeicherte Wert bleibt der, der er war.
-        ''' Ohne Pfad bleibt es bei den blossen Startwerten.</para></summary>
-        Public Shared Function ForUneditedRaw(Optional path As String = Nothing) As ImageAdjustments
+        ''' Ohne Pfad bleibt es bei den blossen Startwerten.</para>
+        '''
+        ''' <para><paramref name="forNegative"/>: die Startwerte eines abfotografierten FILMS. Zwei
+        ''' Werte beschreiben die Kamera beim Fotografieren einer Szene und fallen dann weg: die
+        ''' Belichtung aus der Datei (etwa +1 Stufe bei Canons Tonwertprioritaet) und die
+        ''' Farbkalibrierung des Kameramodells. Beim Negativ wirkt die Belichtung erst NACH der
+        ''' Umkehr auf das Positiv, eine Stufe mehr machte es blass; die Kalibrierung verschoebe die
+        ''' Farben des Films vor der Umkehr und beim Schwarzweissnegativ die Mischung zum Grau.</para></summary>
+        Public Shared Function ForUneditedRaw(Optional path As String = Nothing,
+                                              Optional forNegative As Boolean = False) As ImageAdjustments
             ' Die beiden Farbrausch-Startwerte kommen aus den Einstellungen (RAW-Entwicklung), 0 heisst
             ' aus. Die grobe Stufe ist die teuerste der Pixelkette und laeuft bei jedem Bildwechsel;
             ' wer auf einem langsamen Rechner arbeitet, soll sie abstellen oder durch die billigere
@@ -1266,13 +1274,13 @@ Namespace Services
             ' laesst er sich abschalten. Nur hier und nicht als Vorgabe des Feldes: ein Rezept ohne
             ' das Feld stammt aus der Zeit davor und muss ohne Beschnitt weiterrechnen.
             values.RawSensorEdgeCrop = True
-            Dim stops = RawDecodeService.BaselineExposureStops(path)
+            Dim stops = If(forNegative, 0.0, RawDecodeService.BaselineExposureStops(path))
             If stops <> 0.0 Then values.Exposure = CSng(stops * ExposurePointsPerStop)
             ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
             ' Sie bleibt eine optionale Vorgabe und wird nie in ein vorhandenes Rezept gemischt.
             ' Sie haengt an einer EIGENEN Einstellung, nicht an der Grundhelligkeit: gleich helle
             ' Kameras und eine andere Farbwiedergabe sind zwei verschiedene Wuensche.
-            If Not String.IsNullOrWhiteSpace(path) AndAlso settings.UseCameraColorTable Then
+            If Not forNegative AndAlso Not String.IsNullOrWhiteSpace(path) AndAlso settings.UseCameraColorTable Then
                 Try
                     Dim calibration = RawDecodeService.ColorCalibrationForFile(path)
                     If calibration IsNot Nothing Then

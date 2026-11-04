@@ -785,18 +785,19 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
-    <!-- Die freien Punkte des Ankers in der Farbe gedämpften TEXTES, nicht eines Rahmens: mit
-         FP.Border.Strong lagen sie im dunklen Thema kaum über dem Hintergrund und waren bei
-         schwächerer Sicht nicht zu finden. Der Rahmen darum nutzt dieselbe Farbe
-         (Klasse anchor-frame). -->
+    <!-- Die freien Punkte des Ankers in der Farbe gedämpften TEXTES mit drei Vierteln Deckkraft:
+         mit FP.Border.Strong lagen sie im dunklen Thema kaum über dem Hintergrund und waren bei
+         schwächerer Sicht nicht zu finden, in voller Textfarbe wirkte das Feld zu hart. Der Rahmen
+         darum bleibt eine Rahmenfarbe, aber die kräftigere (Klasse anchor-frame). -->
     <Style Selector="Border.anchor-frame">
-        <Setter Property="BorderBrush" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
     </Style>
     <Style Selector="Border.anchor-dot-idle">
         <Setter Property="Width" Value="12"/>
         <Setter Property="Height" Value="12"/>
         <Setter Property="CornerRadius" Value="2"/>
         <Setter Property="Background" Value="{DynamicResource FP.Text.Muted}"/>
+        <Setter Property="Opacity" Value="0.75"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -2281,9 +2282,12 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
     </Style>
+    <!-- Beim Überfahren nur der Rahmen, wie bei jedem Textfeld. Der hellere Hintergrund einer
+         Auswahlliste gehört nicht hierher: ein Eingabefeld, das beim Überfahren aufleuchtet, sieht
+         wie ein Knopf aus, und die Zahlenfelder der Stapelformulare flackerten beim Darüberfahren. -->
     <Style Selector="TextBox.combo-like:pointerover /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
-        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Input}"/>
     </Style>
     <Style Selector="TextBox.combo-like:focus /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>

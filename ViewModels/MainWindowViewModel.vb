@@ -4558,31 +4558,32 @@ Namespace ViewModels
         ''' Breite gelten beide fuer Bild- UND Textwasserzeichen eindeutig und sind deshalb immer
         ''' einstellbar. Wie die Breite nur fuer diesen Lauf; die Vorlage bleibt unveraendert.
         Private _dialogWatermarkOpacity As Double = 100
-        Private _dialogWatermarkOpacityText As String = "100"
+        ''' Die Deckkraft der gewaehlten Vorlage: Startwert des Reglers und Ziel seines Doppelklicks.
+        Private _dialogWatermarkOpacityDefault As Double = 100
         Private _dialogWatermarkOffsetXPixels As Integer = 24
         Private _dialogWatermarkOffsetYPixels As Integer = 24
         Private _dialogWatermarkOffsetXText As String = "24"
         Private _dialogWatermarkOffsetYText As String = "24"
 
-        ''' <summary>Deckkraft in Prozent, als Text wie die Breite. Ein leeres Feld laesst den
-        ''' zuletzt gueltigen Wert stehen.</summary>
-        Public Property DialogWatermarkOpacityText As String
+        ''' <summary>Deckkraft in Prozent, ein Regler wie die JPG-Qualitaet im selben Dialog. Ganze
+        ''' Prozent, mehr unterscheidet niemand an einem Wasserzeichen.</summary>
+        Public Property DialogWatermarkOpacity As Double
             Get
-                Return _dialogWatermarkOpacityText
+                Return _dialogWatermarkOpacity
             End Get
-            Set(value As String)
-                Dim normalized = NormalizeWatermarkNumberText(value, allowNegative:=False, maxDigits:=3)
-                Dim parsed As Integer
-                If Integer.TryParse(normalized, Globalization.NumberStyles.Integer,
-                                    Globalization.CultureInfo.InvariantCulture, parsed) AndAlso parsed > 100 Then
-                    normalized = "100"
-                End If
-                Me.RaiseAndSetIfChanged(_dialogWatermarkOpacityText, normalized)
-                If Integer.TryParse(normalized, Globalization.NumberStyles.Integer,
-                                    Globalization.CultureInfo.InvariantCulture, parsed) Then
-                    _dialogWatermarkOpacity = Math.Max(0, Math.Min(100, parsed))
-                End If
+            Set(value As Double)
+                Dim clamped = Math.Round(Math.Max(0.0, Math.Min(100.0, value)))
+                If clamped = _dialogWatermarkOpacity Then Return
+                _dialogWatermarkOpacity = clamped
+                Me.RaisePropertyChanged(NameOf(DialogWatermarkOpacity))
             End Set
+        End Property
+
+        ''' <summary>Wohin der Doppelklick auf den Regler zurueckstellt: die Deckkraft der Vorlage.</summary>
+        Public ReadOnly Property DialogWatermarkOpacityDefault As Double
+            Get
+                Return _dialogWatermarkOpacityDefault
+            End Get
         End Property
 
         ''' <summary>Waagrechter Randabstand von der Ankerecke in Bildpunkten. Darf negativ sein: die
@@ -4719,15 +4720,16 @@ Namespace ViewModels
             _dialogWatermarkAspect = If(_dialogWatermarkHeightPixels > 0,
                                         _dialogWatermarkWidthPixels / CDbl(_dialogWatermarkHeightPixels), 1.0)
             _dialogWatermarkWidthText = _dialogWatermarkWidthPixels.ToString(Globalization.CultureInfo.InvariantCulture)
-            _dialogWatermarkOpacity = Math.Max(0.0, Math.Min(100.0, preset.Opacity))
-            _dialogWatermarkOpacityText = CInt(Math.Round(_dialogWatermarkOpacity)).ToString(Globalization.CultureInfo.InvariantCulture)
+            _dialogWatermarkOpacity = Math.Round(Math.Max(0.0, Math.Min(100.0, preset.Opacity)))
+            _dialogWatermarkOpacityDefault = _dialogWatermarkOpacity
             _dialogWatermarkOffsetXPixels = CInt(Math.Max(-100000.0, Math.Min(100000.0, Math.Round(preset.OffsetXPixels))))
             _dialogWatermarkOffsetYPixels = CInt(Math.Max(-100000.0, Math.Min(100000.0, Math.Round(preset.OffsetYPixels))))
             _dialogWatermarkOffsetXText = _dialogWatermarkOffsetXPixels.ToString(Globalization.CultureInfo.InvariantCulture)
             _dialogWatermarkOffsetYText = _dialogWatermarkOffsetYPixels.ToString(Globalization.CultureInfo.InvariantCulture)
             For Each name In {NameOf(DialogWatermarkAnchor), NameOf(DialogWatermarkWidthText),
                               NameOf(DialogWatermarkHeightText), NameOf(IsDialogWatermarkWidthVisible),
-                              NameOf(DialogWatermarkOpacityText), NameOf(DialogWatermarkOffsetXText),
+                              NameOf(DialogWatermarkOpacity), NameOf(DialogWatermarkOpacityDefault),
+                              NameOf(DialogWatermarkOffsetXText),
                               NameOf(DialogWatermarkOffsetYText)}
                 Me.RaisePropertyChanged(name)
             Next

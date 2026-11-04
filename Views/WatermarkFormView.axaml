@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.WatermarkFormView">
     <!-- Vorlage, Anker und Breite - geteilt zwischen dem Einzeldialog „Wasserzeichen anwenden"
          und der Sektion im Export-Dialog. Alle Beschriftungsspalten hängen in der Gruppe
@@ -168,27 +169,35 @@
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
         </Grid>
 
-        <!-- Deckkraft für diesen Lauf; die Vorlage bringt ihren Wert mit. Feld wie die Größe,
-             mit derselben Breite, damit beide Zeilen bündig stehen. -->
+        <!-- Deckkraft für diesen Lauf als Regler, aufgebaut wie die JPG-Qualität im selben Dialog.
+             Startwert und Doppelklick: die Deckkraft der Vorlage. -->
         <Grid ColumnSpacing="14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" SharedSizeGroup="DialogLabelColumn"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock Text="Deckkraft"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <TextBox Grid.Column="1"
-                     Classes="combo-like"
-                     Text="{Binding DialogWatermarkOpacityText, Mode=TwoWay}"
-                     MinHeight="36"
-                     ToolTip.Tip="Deckkraft des Wasserzeichens in Prozent, 0 bis 100"/>
-            <TextBlock Grid.Column="2" Text="%"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <Grid Grid.Column="1"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+                <icons:RoundSlider Minimum="0"
+                                   Maximum="100"
+                                   DefaultValue="{Binding DialogWatermarkOpacityDefault}"
+                                   Value="{Binding DialogWatermarkOpacity, Mode=TwoWay}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Stretch"
+                                   Height="28"
+                                   MinHeight="0"
+                                   ToolTip.Tip="Deckkraft des Wasserzeichens in Prozent, 0 bis 100"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding DialogWatermarkOpacity, StringFormat={}{0:0}%}"
+                           MinWidth="42"
+                           TextAlignment="Right"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+            </Grid>
         </Grid>
 
         <!-- Nur im Sammel-Export und nur bei aktiver Größenänderung sichtbar: ohne Skalierung

@@ -6783,11 +6783,77 @@ Namespace ViewModels
                 If _negativeEnabled = value Then Return
                 CaptureUndoState(NameOf(NegativeEnabled))
                 _negativeEnabled = value
+                SwitchCameraStartValuesForNegative(value)
                 If value Then MeasureFilmNegative()
                 RaiseNegativePropertiesChanged()
                 SchedulePreviewForCurrentTarget()
             End Set
         End Property
+
+        ''' <summary>Tauscht beim Umschalten des Negativs die Startwerte, die von der KAMERA kommen:
+        ''' die Belichtung aus der Datei (Canons Tonwertprioritaet traegt +1 Stufe ein) und die
+        ''' Farbkalibrierung des Modells. Beides beschreibt das Fotografieren einer Szene, nicht eines
+        ''' Films; beim Negativ machte die Stufe das Positiv blass, und die Kalibrierung verschob die
+        ''' Mischung zum Grau (siehe ImageAdjustments.ForUneditedRaw, forNegative).
+        '''
+        ''' Getauscht wird nur, was noch auf dem Startwert des bisherigen Zustands steht; was der
+        ''' Nutzer selbst eingestellt hat, bleibt. In beide Richtungen, damit ein versehentliches
+        ''' Ein- und Ausschalten den Ausgangsstand zurueckbringt. Teil desselben Rueckgaengig-Schritts
+        ''' wie der Haken, der Aufrufer hat ihn schon festgehalten. Nur fuer das Foto: bei einem Objekt
+        ''' oder einer Korrekturebene gehoeren die Kamerawerte nicht zu den Reglern.</summary>
+        Private Sub SwitchCameraStartValuesForNegative(toNegative As Boolean)
+            If IsObjectAdjustModeActive() OrElse IsSelectionAdjustModeActive() Then Return
+            If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return
+            Dim before = ImageAdjustments.ForUneditedRaw(RenderSourcePath, forNegative:=Not toNegative)
+            Dim after = ImageAdjustments.ForUneditedRaw(RenderSourcePath, forNegative:=toNegative)
+            Const tolerance As Double = 0.0001
+
+            If Math.Abs(_exposure - before.Exposure) < tolerance AndAlso
+               Math.Abs(CDbl(before.Exposure) - after.Exposure) >= tolerance Then
+                _exposure = after.Exposure
+                RaiseLightPropertiesChanged()
+            End If
+
+            Dim current = {_calibrationRedHue, _calibrationRedSaturation, _calibrationGreenHue,
+                           _calibrationGreenSaturation, _calibrationBlueHue, _calibrationBlueSaturation,
+                           _calibrationShadowTint}
+            Dim from = {CDbl(before.CalibrationRedHue), before.CalibrationRedSaturation, before.CalibrationGreenHue,
+                        before.CalibrationGreenSaturation, before.CalibrationBlueHue, before.CalibrationBlueSaturation,
+                        before.CalibrationShadowTint}
+            Dim [to] = {CDbl(after.CalibrationRedHue), after.CalibrationRedSaturation, after.CalibrationGreenHue,
+                        after.CalibrationGreenSaturation, after.CalibrationBlueHue, after.CalibrationBlueSaturation,
+                        after.CalibrationShadowTint}
+            Dim untouched = True
+            Dim differs = False
+            For i = 0 To current.Length - 1
+                If Math.Abs(current(i) - from(i)) >= tolerance Then untouched = False
+                If Math.Abs(from(i) - [to](i)) >= tolerance Then differs = True
+            Next
+            If untouched AndAlso differs Then
+                _calibrationRedHue = [to](0)
+                _calibrationRedSaturation = [to](1)
+                _calibrationGreenHue = [to](2)
+                _calibrationGreenSaturation = [to](3)
+                _calibrationBlueHue = [to](4)
+                _calibrationBlueSaturation = [to](5)
+                _calibrationShadowTint = [to](6)
+                For Each name In {NameOf(CalibrationRedHue), NameOf(CalibrationRedSaturation),
+                                  NameOf(CalibrationGreenHue), NameOf(CalibrationGreenSaturation),
+                                  NameOf(CalibrationBlueHue), NameOf(CalibrationBlueSaturation),
+                                  NameOf(CalibrationShadowTint)}
+                    Me.RaisePropertyChanged(name)
+                Next
+            End If
+            RaiseResetButtonStateChanged()
+        End Sub
+
+        ''' <summary>Steht das FOTO gerade auf Negativ? Im Objekt- oder Ebenenmodus haelt der
+        ''' geparkte Bildstand den Haken, die Felder gehoeren dann dem Objekt.</summary>
+        Private Function ImageNegativeEnabled() As Boolean
+            If IsObjectAdjustModeActive() AndAlso _imagePixelAdjustments IsNot Nothing Then Return _imagePixelAdjustments.NegativeEnabled
+            If IsSelectionAdjustModeActive() AndAlso _selectionImagePixelAdjustments IsNot Nothing Then Return _selectionImagePixelAdjustments.NegativeEnabled
+            Return _negativeEnabled
+        End Function
 
         Public Property NegativeMonochrome As Boolean
             Get
@@ -30152,8 +30218,11 @@ Namespace ViewModels
             ' halbe Stufe weniger will (BaselineExposure), dann ist DAS ihr unbearbeiteter Stand -
             ' genau wie beim Zuruecksetzen aller Bearbeitungen. Stuende hier stur die Null, machte
             ' ausgerechnet der kleine Knopf das Bild kaputt, das der grosse richtig stellt.
+            ' Beim Negativ ohne die Belichtung der Kamera, sonst brachte Zuruecksetzen die Stufe
+            ' wieder, die das Umschalten herausgenommen hat.
             _exposure = ImageAdjustments.ForUneditedRaw(
-                If(RawPreviewService.IsSupportedRaw(RenderSourcePath), RenderSourcePath, Nothing)).Exposure
+                If(RawPreviewService.IsSupportedRaw(RenderSourcePath), RenderSourcePath, Nothing),
+                forNegative:=ImageNegativeEnabled()).Exposure
             RaiseLightPropertiesChanged()
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
@@ -30186,7 +30255,8 @@ Namespace ViewModels
         Private Function CalibrationStartValues() As ImageAdjustments
             If IsObjectAdjustModeActive() OrElse IsSelectionAdjustModeActive() Then Return New ImageAdjustments()
             If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return New ImageAdjustments()
-            Return ImageAdjustments.ForUneditedRaw(RenderSourcePath)
+            ' Beim Negativ ohne die Kamerafarben, siehe SwitchCameraStartValuesForNegative.
+            Return ImageAdjustments.ForUneditedRaw(RenderSourcePath, forNegative:=_negativeEnabled)
         End Function
 
         ''' <summary>Setzt die Kamerakalibrierung (die 7 Calibration*-Regler) zurück. Presets setzen sie über

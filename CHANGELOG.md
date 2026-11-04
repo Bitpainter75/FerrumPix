@@ -25,6 +25,9 @@
 
 - The anchor points for watermarks, objects, canvas and collage are easier to see.
 
+- Film negatives: turning on the negative conversion no longer keeps the camera's own exposure
+  and color settings, which could wash out a scanned negative. Values you changed yourself stay.
+
 - Gallery: after leaving the viewer, the gallery shows the picture you last looked at again
   instead of an old scroll position.
 
