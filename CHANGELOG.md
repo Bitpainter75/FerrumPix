@@ -6,6 +6,9 @@
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the
   filmstrip, so the strip moves instead of the selection.
 
+- Windows on ARM: the portable package now plays videos and opens HEIC and JPEG XL files, like
+  the x64 package.
+
 - Lens correction knows two more Nikon lenses, among them the Nikkor Z 24-70mm f/2.8 S II.
 
 ### Fixes
