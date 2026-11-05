@@ -10911,4 +10911,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>折叠或展开侧边栏</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>在胶片条中标记已编辑的图像</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>像图库缩略图一样，在含有编辑的图像上显示标记。适用于查看器、编辑器和地图条。</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>让当前图像始终位于胶片条中央</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>所选图像始终停在胶片条中间。切换图像时移动的是胶片条，而不是选中项。适用于查看器和编辑器。</value>
+  </data>
 </root>

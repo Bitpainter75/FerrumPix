@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Zijbalk in- of uitklappen</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Bewerkte foto's in de filmstrip markeren</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Toont net als op de galerietegel een teken op foto's die bewerkingen bevatten. Geldt voor viewer, editor en de strook van de kaart.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Huidige foto in het midden van de filmstrip houden</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>De geselecteerde foto blijft in het midden van de filmstrip staan. Bij het bladeren schuift de strook verder, niet de selectie. Geldt voor viewer en editor.</value>
+  </data>
 </root>

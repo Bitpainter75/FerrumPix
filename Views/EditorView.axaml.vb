@@ -1296,6 +1296,10 @@ Namespace Views
             _filmstripController = New FilmstripInteractionController(Me, New ViewportThumbnailTracker(),
                 Function() TryCast(DataContext, EditorViewModel)?.FilmstripItems,
                 Function() If(TryCast(DataContext, EditorViewModel) Is Nothing, -1, TryCast(DataContext, EditorViewModel).CurrentFilmstripIndex))
+            _filmstripController.KeepSelectionCentered = Function()
+                                                             Dim editorVm = TryCast(DataContext, EditorViewModel)
+                                                             Return editorVm IsNot Nothing AndAlso editorVm.FilmstripKeepSelectionCentered
+                                                         End Function
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("EditorRootGrid"), AddressOf OnContextRequested)
             Me.AddHandler(InputElement.KeyDownEvent, AddressOf OnEditorKeyDownTunnel, RoutingStrategies.Tunnel)
@@ -1989,7 +1993,8 @@ Namespace Views
                 Case NameOf(EditorViewModel.CurrentFilmstripIndex)
                     _filmstripController.ScrollToCurrent()
                 Case NameOf(EditorViewModel.FilmstripPosition),
-                     NameOf(EditorViewModel.ShowFilmstrip)
+                     NameOf(EditorViewModel.ShowFilmstrip),
+                     NameOf(EditorViewModel.FilmstripKeepSelectionCentered)
                     ApplyFilmstripPlacement()
                 Case NameOf(EditorViewModel.IsInfoSidebarVisible)
                     UpdateInfoSidebarLayoutState()

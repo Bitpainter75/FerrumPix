@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Laajenna tai supista sivupalkki</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Merkitse muokatut kuvat filminauhassa</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Näyttää merkin kuvissa, joissa on muokkauksia, kuten gallerian ruudussa. Koskee katselinta, editoria ja kartan nauhaa.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Pidä nykyinen kuva filminauhan keskellä</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Valittu kuva pysyy filminauhan keskellä. Selatessa liikkuu nauha eikä valinta. Koskee katselinta ja editoria.</value>
+  </data>
 </root>

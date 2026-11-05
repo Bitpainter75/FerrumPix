@@ -10913,4 +10913,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Réduire ou développer la barre latérale</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Signaler les images modifiées dans la pellicule</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Affiche une marque sur les images qui contiennent des modifications, comme sur la vignette de la galerie. S'applique à la visionneuse, à l'éditeur et à la bande de la carte.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Garder l'image actuelle au centre de la pellicule</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>L'image sélectionnée reste au milieu de la pellicule. Quand vous passez d'une image à l'autre, c'est la bande qui défile et non la sélection. S'applique à la visionneuse et à l'éditeur.</value>
+  </data>
 </root>

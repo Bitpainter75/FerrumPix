@@ -4892,6 +4892,22 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Zeichen "bearbeitet" auf den Kacheln des Filmstreifens.</summary>
+        Public ReadOnly Property ShowFilmstripEditedBadge As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripEditedBadgeVisible
+            End Get
+        End Property
+
+        ''' <summary>Das gewählte Bild steht im Filmstreifen immer in der Mitte.</summary>
+        Public ReadOnly Property FilmstripKeepSelectionCentered As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripKeepSelectionCentered
+            End Get
+        End Property
+
         ''' <summary>Aussenrand einer Filmstreifen-Kachel: der halbe eingestellte Abstand links und
         ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).
         ''' Steht der Streifen seitlich, liegt der Abstand zwischen den Kacheln, also oben und unten.</summary>

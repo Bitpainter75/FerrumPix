@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Fell sidepanelet ut eller sammen</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Merk redigerte bilder i filmstripen</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Viser et merke på bilder som inneholder redigeringer, som på gallerieflisen. Gjelder visningen, redigeringen og kartets stripe.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Hold det gjeldende bildet midt i filmstripen</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Det valgte bildet blir stående midt i filmstripen. Når du blar, flytter stripen seg i stedet for markeringen. Gjelder visningen og redigeringen.</value>
+  </data>
 </root>

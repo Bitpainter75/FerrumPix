@@ -813,6 +813,22 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Das Zeichen "bearbeitet" auf den Kacheln des Filmstreifens.</summary>
+        Public ReadOnly Property ShowFilmstripEditedBadge As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripEditedBadgeVisible
+            End Get
+        End Property
+
+        ''' <summary>Das gewählte Bild steht im Filmstreifen immer in der Mitte.</summary>
+        Public ReadOnly Property FilmstripKeepSelectionCentered As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripKeepSelectionCentered
+            End Get
+        End Property
+
         ''' <summary>Seite des Filmstreifens aus der Einstellung (FilmstripPlacement).</summary>
         Public ReadOnly Property FilmstripPosition As String
             Get

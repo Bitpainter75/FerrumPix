@@ -319,6 +319,12 @@ Namespace Services
         Public Property ViewerFilmstripPosition As String = "Bottom"
         ''' Markierungen im Filmstrip kosten etwas Bildruhe und sind deshalb ab Werk aus.
         Public Property FilmstripItemBadgesVisible As Boolean = False
+        ''' Das Zeichen "bearbeitet" der Galeriekachel auch im Filmstreifen. Ab Werk aus, aus
+        ''' demselben Grund wie die Markierungen darueber.
+        Public Property FilmstripEditedBadgeVisible As Boolean = False
+        ''' Das gewaehlte Bild steht im Filmstreifen immer in der Mitte, und der Streifen laeuft
+        ''' darunter weiter, statt dass die Auswahl ueber einen stehenden Streifen wandert. Ab Werk aus.
+        Public Property FilmstripKeepSelectionCentered As Boolean = False
         ''' Runde Ecken und der ruhende Rahmen um eine Kachel. AB WERK AN, das ist das bisherige
         ''' Aussehen; aus heisst eckig und ohne Rahmen, und damit steht mehr Bild auf derselben
         ''' Flaeche. Der Akzentrahmen der AUSWAHL bleibt in beiden Stellungen - nur eckig statt rund.

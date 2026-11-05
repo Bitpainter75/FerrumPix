@@ -84,6 +84,13 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ShowFilmstripEditedBadge As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso
+                       _mainVm.Settings.FilmstripEditedBadgeVisible
+            End Get
+        End Property
+
         ''' <summary>Aussenrand einer Filmstreifen-Kachel: der halbe eingestellte Abstand links und
         ''' rechts, oben und unten fest 5 wie im Stil der thumb-card (die Hoehe des Streifens steht).</summary>
         Public ReadOnly Property FilmstripTileMargin As Avalonia.Thickness

@@ -79,6 +79,30 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Bearbeitete Bilder im Filmstreifen kennzeichnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt wie an der Galeriekachel ein Zeichen auf den Bildern, die Bearbeitungen enthalten. Gilt für Viewer, Editor und den Streifen der Karte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripEditedBadgeVisible}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Aktuelles Bild im Filmstreifen mittig halten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Das gewählte Bild bleibt in der Mitte des Filmstreifens stehen. Beim Blättern läuft der Streifen weiter, nicht die Auswahl. Gilt für Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FilmstripKeepSelectionCentered}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Runde Ecken und Rahmen im Filmstreifen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Ausgeschaltet stehen die Kacheln des Filmstreifens eckig und ohne Rahmen da. Der Rahmen um das aktuelle Bild bleibt, er wird nur eckig." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

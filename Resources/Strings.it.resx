@@ -10913,4 +10913,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Comprimi o espandi la barra laterale</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Segna le immagini modificate nella striscia di miniature</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Mostra un segno sulle immagini che contengono modifiche, come sulla miniatura della galleria. Vale per visualizzatore, editor e striscia della mappa.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Tieni l'immagine attuale al centro della striscia di miniature</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>L'immagine selezionata resta al centro della striscia di miniature. Scorrendo le immagini si sposta la striscia, non la selezione. Vale per visualizzatore ed editor.</value>
+  </data>
 </root>

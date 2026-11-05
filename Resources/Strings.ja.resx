@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>サイドバーを折りたたむ、または開く</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>フィルムストリップで編集済みの画像に印を付ける</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>ギャラリーのタイルと同じように、編集を含む画像に印を表示します。ビューア、エディター、地図のストリップに適用されます。</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>現在の画像をフィルムストリップの中央に保つ</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>選択した画像はフィルムストリップの中央に留まります。画像を切り替えると、選択ではなくストリップが動きます。ビューアとエディターに適用されます。</value>
+  </data>
 </root>

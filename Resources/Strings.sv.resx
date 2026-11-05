@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Fäll ut eller ihop sidopanelen</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Markera redigerade bilder i filmremsan</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Visar ett märke på bilder som innehåller redigeringar, som på galleriets ruta. Gäller visaren, redigeraren och kartans remsa.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Håll den aktuella bilden i mitten av filmremsan</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Den valda bilden stannar i mitten av filmremsan. När du bläddrar flyttas remsan i stället för markeringen. Gäller visaren och redigeraren.</value>
+  </data>
 </root>

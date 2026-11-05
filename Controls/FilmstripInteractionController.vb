@@ -31,6 +31,24 @@ Namespace Controls
         ''' waagerechtem Versatz.</summary>
         Public Property IsVertical As Boolean
 
+        ''' <summary>Liefert die Einstellung "gewähltes Bild mittig halten". Ist sie an, rollt der
+        ''' Streifen bei jeder Auswahl so, dass die gewählte Kachel in der Mitte steht, und trägt an
+        ''' beiden Enden ein Polster, damit auch das erste und das letzte Bild dorthin kommen. Nicht
+        ''' gesetzt heißt aus (die Kartenansicht der Galerie).</summary>
+        Public Property KeepSelectionCentered As Func(Of Boolean)
+
+        ''' <summary>Halbe Breite der schmalsten Kachel (Hochformat 1:2 bei 96 Bildhöhe samt
+        ''' Rahmen). Das Polster an den Enden ist die halbe Sichtbreite weniger dieses Werts: so kommt
+        ''' jede Kachel in die Mitte, eine breitere lässt nur etwas mehr Rollweg am Ende.</summary>
+        Private Const NarrowestHalfTile As Double = 26.0
+
+        ''' <summary>Abstand des Panels zur Rollleiste, wie FilmstripPlacement ihn setzt: unten bei
+        ''' waagerechtem, rechts bei senkrechtem Streifen.</summary>
+        Private Const PanelScrollBarGap As Double = 8.0
+
+        Private _centerPaddingApplied As Boolean = False
+        Private _centerQueued As Boolean = False
+
         Private ReadOnly _owner As Control
         Private ReadOnly _tracker As ViewportThumbnailTracker
         Private ReadOnly _getItems As Func(Of IReadOnlyList(Of ImageItem))
@@ -63,6 +81,7 @@ Namespace Controls
         Public Sub AttachTo(filmstrip As ListBox)
             If filmstrip Is Nothing Then Return
             AddHandler filmstrip.PropertyChanged, AddressOf OnFilmstripPropertyChanged
+            AddHandler filmstrip.SelectionChanged, AddressOf OnFilmstripSelectionChanged
             filmstrip.AddHandler(ScrollViewer.ScrollChangedEvent, AddressOf OnFilmstripScrollChanged, RoutingStrategies.Bubble)
         End Sub
 
@@ -70,14 +89,103 @@ Namespace Controls
             Dispatcher.UIThread.Post(Sub()
                                           Dim items = _getItems()
                                           Dim idx = _getCurrentIndex()
-                                          If idx < 0 OrElse items Is Nothing OrElse idx >= items.Count Then Return
                                           Dim listBox = _owner.FindControl(Of ListBox)(_listBoxName)
+                                          ' Auch ohne aktuelles Bild: ein Ausschalten der Einstellung
+                                          ' muss das Polster wieder abnehmen.
+                                          If listBox IsNot Nothing Then ApplyCenterPadding(listBox)
+                                          If idx < 0 OrElse items Is Nothing OrElse idx >= items.Count Then Return
                                           If listBox Is Nothing Then Return
                                           listBox.SelectedIndex = idx
                                           listBox.ScrollIntoView(items(idx))
+                                          If IsCentering() Then QueueCenterSelection()
                                           QueueThumbnailRefresh()
                                           Dispatcher.UIThread.Post(Sub() RefreshThumbnails(), DispatcherPriority.Background)
                                       End Sub, DispatcherPriority.Loaded)
+        End Sub
+
+        Private Function IsCentering() As Boolean
+            Dim getter = KeepSelectionCentered
+            Return getter IsNot Nothing AndAlso getter()
+        End Function
+
+        ''' <summary>Eine Auswahl ist auch die Pfeiltaste im Editor, die nur wählt und nicht öffnet,
+        ''' und der Klick auf eine Kachel. In beiden Fällen rückt der Streifen sie in die Mitte.</summary>
+        Private Sub OnFilmstripSelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            If IsCentering() Then QueueCenterSelection()
+        End Sub
+
+        ''' <summary>Das Polster an beiden Enden, als Rand des Panels: er liegt im Rollbereich und
+        ''' verlängert ihn. Bei jedem Aufruf neu gesetzt, weil FilmstripPlacement das Panel beim
+        ''' Wechsel der Ausrichtung neu baut. Die Liste rollt bei eingeschalteter Einstellung nicht
+        ''' mehr selbst zur Auswahl; sie liefe sonst erst an den Rand und dann in die Mitte.
+        ''' Wahr, wenn sich das Polster geändert hat: Lage und Ausdehnung stimmen dann erst nach
+        ''' dem nächsten Layout.</summary>
+        Private Function ApplyCenterPadding(listBox As ListBox) As Boolean
+            Dim panel = TryCast(listBox.ItemsPanelRoot, Control)
+            Dim centering = IsCentering()
+            listBox.AutoScrollToSelectedItem = Not centering
+            If panel Is Nothing Then Return False
+            Dim wanted As Avalonia.Thickness
+            If Not centering Then
+                If Not _centerPaddingApplied Then Return False
+                wanted = If(IsVertical, New Avalonia.Thickness(0, 0, PanelScrollBarGap, 0), New Avalonia.Thickness(0, 0, 0, PanelScrollBarGap))
+                _centerPaddingApplied = False
+            Else
+                Dim sv = GetFilmstripScrollViewer()
+                If sv Is Nothing Then Return False
+                Dim visible = If(IsVertical, sv.Viewport.Height, sv.Viewport.Width)
+                If visible <= 0 Then Return False
+                Dim pad = Math.Max(0.0, visible / 2.0 - NarrowestHalfTile)
+                wanted = If(IsVertical, New Avalonia.Thickness(0, pad, PanelScrollBarGap, pad), New Avalonia.Thickness(pad, 0, pad, PanelScrollBarGap))
+                _centerPaddingApplied = True
+            End If
+            If panel.Margin = wanted Then Return False
+            panel.Margin = wanted
+            Return True
+        End Function
+
+        Private Sub QueueCenterSelection()
+            If _centerQueued Then Return
+            _centerQueued = True
+            Dispatcher.UIThread.Post(Sub()
+                                          _centerQueued = False
+                                          CenterSelection(0)
+                                      End Sub, DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Rollt so, dass die Mitte der gewählten Kachel auf der Mitte der Sichtfläche
+        ''' liegt. Ist die Kachel noch nicht gebaut (Sprung weit weg, die Liste virtualisiert), holt
+        ''' ScrollIntoView sie erst heran, und der nächste Durchgang zentriert.</summary>
+        Private Sub CenterSelection(attempt As Integer)
+            If Not IsCentering() Then Return
+            Dim listBox = _owner.FindControl(Of ListBox)(_listBoxName)
+            If listBox Is Nothing Then Return
+            Dim idx = listBox.SelectedIndex
+            If idx < 0 Then Return
+            If ApplyCenterPadding(listBox) AndAlso attempt < 3 Then
+                Dispatcher.UIThread.Post(Sub() CenterSelection(attempt + 1), DispatcherPriority.Loaded)
+                Return
+            End If
+            Dim sv = GetFilmstripScrollViewer()
+            If sv Is Nothing Then Return
+            Dim container = listBox.ContainerFromIndex(idx)
+            If container Is Nothing Then
+                If attempt >= 3 Then Return
+                listBox.ScrollIntoView(idx)
+                Dispatcher.UIThread.Post(Sub() CenterSelection(attempt + 1), DispatcherPriority.Loaded)
+                Return
+            End If
+            Dim topLeft = Avalonia.VisualExtensions.TranslatePoint(container, New Avalonia.Point(0, 0), sv)
+            If Not topLeft.HasValue Then Return
+            If IsVertical Then
+                Dim target = sv.Offset.Y + topLeft.Value.Y + container.Bounds.Height / 2.0 - sv.Viewport.Height / 2.0
+                Dim maxOffset = Math.Max(0.0, sv.Extent.Height - sv.Viewport.Height)
+                sv.Offset = New Avalonia.Vector(sv.Offset.X, Math.Clamp(target, 0.0, maxOffset))
+            Else
+                Dim target = sv.Offset.X + topLeft.Value.X + container.Bounds.Width / 2.0 - sv.Viewport.Width / 2.0
+                Dim maxOffset = Math.Max(0.0, sv.Extent.Width - sv.Viewport.Width)
+                sv.Offset = New Avalonia.Vector(Math.Clamp(target, 0.0, maxOffset), sv.Offset.Y)
+            End If
         End Sub
 
         Private Sub OnFilmstripScrollChanged(sender As Object, e As ScrollChangedEventArgs)
@@ -86,6 +194,8 @@ Namespace Controls
 
         Private Sub OnFilmstripPropertyChanged(sender As Object, e As Avalonia.AvaloniaPropertyChangedEventArgs)
             If e.Property <> Avalonia.Visual.BoundsProperty AndAlso e.Property <> ScrollViewer.ViewportProperty Then Return
+            ' Eine andere Fenstergroesse verschiebt die Mitte: Polster und Lage neu.
+            If IsCentering() Then QueueCenterSelection()
             QueueThumbnailRefresh()
             Dispatcher.UIThread.Post(Sub() RefreshThumbnails(), DispatcherPriority.Background)
         End Sub

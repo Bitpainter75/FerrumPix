@@ -3172,6 +3172,16 @@
                                                                            IsVisible="{Binding IsFavorite}"/>
                                                         </StackPanel>
                                                     </Border>
+                                                    <!-- BEARBEITET wie an der Galeriekachel (Einstellung des Filmstreifens). -->
+                                                    <Panel IsVisible="{Binding DataContext.ShowFilmstripEditedBadge, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                        <Border Classes="filmstrip-edited-badge" IsVisible="{Binding IsEdited}">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders.svg"
+                                                                           Width="14" Height="14"
+                                                                           IconBrush="{DynamicResource FP.OnAccent}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </Panel>
                                                 </Grid>
                                             </Border>
                                         </Border>

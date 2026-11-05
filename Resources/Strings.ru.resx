@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Развернуть или свернуть боковую панель</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Отмечать изменённые снимки на ленте кадров</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Как на плитке галереи, показывает знак на снимках, которые содержат правки. Действует в просмотрщике, редакторе и на ленте карты.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Держать текущий снимок в центре ленты кадров</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Выбранный снимок остаётся в середине ленты кадров. При листании движется лента, а не выделение. Действует в просмотрщике и редакторе.</value>
+  </data>
 </root>

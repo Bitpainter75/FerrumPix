@@ -1915,6 +1915,20 @@
     <Style Selector="Border.thumb-card.wall Button.edited-badge">
         <Setter Property="Opacity" Value="0"/>
     </Style>
+    <!-- Dasselbe Zeichen im Filmstreifen (Einstellung, ab Werk aus): kleiner, weil die Kachel dort
+         nur 100 hoch ist, und kein Knopf, damit ein Klick wie ueberall im Streifen die Kachel waehlt. -->
+    <Style Selector="Border.filmstrip-edited-badge">
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="0,5,0,0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
     <Style Selector="Border.thumb-card.wall:pointerover Button.edited-badge">
         <Setter Property="Opacity" Value="1"/>
     </Style>

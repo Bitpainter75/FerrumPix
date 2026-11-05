@@ -10957,4 +10957,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Kenar çubuğunu daralt ya da genişlet</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Film şeridinde düzenlenmiş fotoğrafları işaretle</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Galeri kutucuğundaki gibi, düzenleme içeren fotoğrafların üzerinde bir işaret gösterir. Görüntüleyici, düzenleyici ve harita şeridi için geçerlidir.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Geçerli fotoğrafı film şeridinin ortasında tut</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Seçilen fotoğraf film şeridinin ortasında kalır. Fotoğraflar arasında geçerken seçim değil şerit kayar. Görüntüleyici ve düzenleyici için geçerlidir.</value>
+  </data>
 </root>

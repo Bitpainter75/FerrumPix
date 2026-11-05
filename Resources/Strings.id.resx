@@ -10957,4 +10957,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Ciutkan atau bentangkan bilah sisi</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Tandai gambar yang disunting di pita gambar</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Menampilkan tanda pada gambar yang berisi suntingan, seperti pada ubin galeri. Berlaku untuk penampil, editor, dan strip peta.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Pertahankan gambar saat ini di tengah pita gambar</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Gambar yang dipilih tetap berada di tengah pita gambar. Saat berpindah gambar, pita yang bergeser, bukan pilihannya. Berlaku untuk penampil dan editor.</value>
+  </data>
 </root>

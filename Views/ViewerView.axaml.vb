@@ -60,6 +60,7 @@ Namespace Views
             _filmstripController = New FilmstripInteractionController(Me, New ViewportThumbnailTracker(),
                 Function() GetVm()?.FilmstripItems,
                 Function() If(GetVm() Is Nothing, -1, GetVm().CurrentFilmstripIndex))
+            _filmstripController.KeepSelectionCentered = Function() GetVm() IsNot Nothing AndAlso GetVm().FilmstripKeepSelectionCentered
             AddHandler DataContextChanged, AddressOf HandleDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("ViewerRootGrid"), AddressOf OnContextRequested)
             AddHandler Loaded, Sub(s, e)
@@ -1352,7 +1353,8 @@ Namespace Views
             End If
 
             If e.PropertyName = NameOf(ViewerViewModel.FilmstripPosition) OrElse
-               e.PropertyName = NameOf(ViewerViewModel.ShowFilmstrip) Then
+               e.PropertyName = NameOf(ViewerViewModel.ShowFilmstrip) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.FilmstripKeepSelectionCentered) Then
                 ApplyFilmstripPlacement()
             End If
 

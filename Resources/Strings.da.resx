@@ -10953,4 +10953,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Fold sidepanelet ud eller sammen</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Marker redigerede billeder i filmstriben</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Viser et mærke på billeder, der indeholder redigeringer, som på gallerifeltet. Gælder fremviseren, editoren og kortets strimmel.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Hold det aktuelle billede i midten af filmstriben</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Det valgte billede bliver i midten af filmstriben. Når du bladrer, flytter strimlen sig i stedet for markeringen. Gælder fremviseren og editoren.</value>
+  </data>
 </root>

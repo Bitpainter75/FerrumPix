@@ -69,6 +69,8 @@ Namespace ViewModels
         Private _editorFilmstripPosition As String = "Bottom"
         Private _fullscreenFilmstripPosition As String = "Bottom"
         Private _filmstripItemBadgesVisible As Boolean = False
+        Private _filmstripEditedBadgeVisible As Boolean = False
+        Private _filmstripKeepSelectionCentered As Boolean = False
         Private _galleryTileFrame As Boolean = True
         Private _galleryWallBadgesOnHover As Boolean = True
         Private _galleryTileCaptionLeft As String = TileCaptionSettings.DefaultLeft
@@ -258,6 +260,8 @@ Namespace ViewModels
         Private _savedEditorFilmstripPosition As String = "Bottom"
         Private _savedFullscreenFilmstripPosition As String = "Bottom"
         Private _savedFilmstripItemBadgesVisible As Boolean = False
+        Private _savedFilmstripEditedBadgeVisible As Boolean = False
+        Private _savedFilmstripKeepSelectionCentered As Boolean = False
         Private _savedGalleryTileFrame As Boolean = True
         Private _savedGalleryWallBadgesOnHover As Boolean = True
         Private _savedGalleryTileCaptionLeft As String = TileCaptionSettings.DefaultLeft
@@ -2172,6 +2176,34 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _filmstripItemBadgesVisible = value Then Return
                 Me.RaiseAndSetIfChanged(_filmstripItemBadgesVisible, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Das Zeichen "bearbeitet" der Galeriekachel auch auf den Kacheln des
+        ''' Filmstreifens. Standardmäßig aus, wie die Markierungen.</summary>
+        Public Property FilmstripEditedBadgeVisible As Boolean
+            Get
+                Return _filmstripEditedBadgeVisible
+            End Get
+            Set(value As Boolean)
+                If _filmstripEditedBadgeVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripEditedBadgeVisible, value)
+                _mainVm?.RefreshLayoutBindings()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Das gewählte Bild steht im Filmstreifen immer in der Mitte, der Streifen läuft
+        ''' darunter weiter. Standardmäßig aus.</summary>
+        Public Property FilmstripKeepSelectionCentered As Boolean
+            Get
+                Return _filmstripKeepSelectionCentered
+            End Get
+            Set(value As Boolean)
+                If _filmstripKeepSelectionCentered = value Then Return
+                Me.RaiseAndSetIfChanged(_filmstripKeepSelectionCentered, value)
                 _mainVm?.RefreshLayoutBindings()
                 SaveLayoutSettings()
             End Set
@@ -4756,6 +4788,8 @@ Namespace ViewModels
             _editorFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.EditorFilmstripPosition)
             _fullscreenFilmstripPosition = AppSettingsService.NormalizeFilmstripPosition(_appSettings.FullscreenFilmstripPosition)
             _filmstripItemBadgesVisible = _appSettings.FilmstripItemBadgesVisible
+            _filmstripEditedBadgeVisible = _appSettings.FilmstripEditedBadgeVisible
+            _filmstripKeepSelectionCentered = _appSettings.FilmstripKeepSelectionCentered
             _galleryTileFrame = _appSettings.GalleryTileFrame
             _galleryWallBadgesOnHover = _appSettings.GalleryWallBadgesOnHover
             _galleryTileCaptionLeft = TileCaptionSettings.Format(TileCaptionSettings.Parse(_appSettings.GalleryTileCaptionLeft))
@@ -5198,6 +5232,8 @@ Namespace ViewModels
             _savedEditorFilmstripPosition = _editorFilmstripPosition
             _savedFullscreenFilmstripPosition = _fullscreenFilmstripPosition
             _savedFilmstripItemBadgesVisible = _filmstripItemBadgesVisible
+            _savedFilmstripEditedBadgeVisible = _filmstripEditedBadgeVisible
+            _savedFilmstripKeepSelectionCentered = _filmstripKeepSelectionCentered
             _savedGalleryTileFrame = _galleryTileFrame
             _savedGalleryWallBadgesOnHover = _galleryWallBadgesOnHover
             _savedGalleryTileCaptionLeft = _galleryTileCaptionLeft
@@ -5388,6 +5424,8 @@ Namespace ViewModels
             EditorFilmstripPosition = _savedEditorFilmstripPosition
             FullscreenFilmstripPosition = _savedFullscreenFilmstripPosition
             FilmstripItemBadgesVisible = _savedFilmstripItemBadgesVisible
+            FilmstripEditedBadgeVisible = _savedFilmstripEditedBadgeVisible
+            FilmstripKeepSelectionCentered = _savedFilmstripKeepSelectionCentered
             GalleryTileFrame = _savedGalleryTileFrame
             GalleryWallBadgesOnHover = _savedGalleryWallBadgesOnHover
             SetGalleryTileCaption(_savedGalleryTileCaptionLeft, _savedGalleryTileCaptionRight)
@@ -5536,6 +5574,8 @@ Namespace ViewModels
             EditorFilmstripPosition = "Bottom"
             FullscreenFilmstripPosition = "Bottom"
             FilmstripItemBadgesVisible = False
+            FilmstripEditedBadgeVisible = False
+            FilmstripKeepSelectionCentered = False
             GalleryTileFrame = True
             GalleryWallBadgesOnHover = True
             SetGalleryTileCaption(TileCaptionSettings.DefaultLeft, TileCaptionSettings.DefaultRight)
@@ -5926,6 +5966,8 @@ Namespace ViewModels
                                           s.EditorFilmstripPosition = _editorFilmstripPosition
                                           s.FullscreenFilmstripPosition = _fullscreenFilmstripPosition
                                           s.FilmstripItemBadgesVisible = _filmstripItemBadgesVisible
+                                          s.FilmstripEditedBadgeVisible = _filmstripEditedBadgeVisible
+                                          s.FilmstripKeepSelectionCentered = _filmstripKeepSelectionCentered
                                           s.GalleryTileFrame = _galleryTileFrame
                                           s.GalleryWallBadgesOnHover = _galleryWallBadgesOnHover
                                           s.FilmstripTileFrame = _filmstripTileFrame

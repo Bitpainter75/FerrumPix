@@ -10957,4 +10957,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>사이드바 접기 또는 펼치기</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>필름 스트립에서 편집된 사진 표시</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>갤러리 타일처럼 편집이 포함된 사진에 표식을 보여 줍니다. 뷰어, 편집기, 지도 스트립에 적용됩니다.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>현재 사진을 필름 스트립 가운데에 유지</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>선택한 사진이 필름 스트립 가운데에 머뭅니다. 사진을 넘기면 선택 대신 스트립이 움직입니다. 뷰어와 편집기에 적용됩니다.</value>
+  </data>
 </root>

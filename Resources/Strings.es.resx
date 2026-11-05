@@ -10913,4 +10913,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Contraer o expandir la barra lateral</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Marcar las fotos editadas en la tira de imágenes</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Muestra una marca en las fotos que contienen ediciones, como en la miniatura de la galería. Se aplica al visor, al editor y a la tira del mapa.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Mantener la foto actual centrada en la tira de imágenes</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>La foto seleccionada permanece en el centro de la tira de imágenes. Al pasar de una foto a otra, se desplaza la tira y no la selección. Se aplica al visor y al editor.</value>
+  </data>
 </root>

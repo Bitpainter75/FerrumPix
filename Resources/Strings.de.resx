@@ -10931,4 +10931,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>Seitenleiste ein- oder ausklappen</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>Bearbeitete Bilder im Filmstreifen kennzeichnen</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>Zeigt wie an der Galeriekachel ein Zeichen auf den Bildern, die Bearbeitungen enthalten. Gilt für Viewer, Editor und den Streifen der Karte.</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>Aktuelles Bild im Filmstreifen mittig halten</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>Das gewählte Bild bleibt in der Mitte des Filmstreifens stehen. Beim Blättern läuft der Streifen weiter, nicht die Auswahl. Gilt für Viewer und Editor.</value>
+  </data>
 </root>

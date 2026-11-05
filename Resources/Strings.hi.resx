@@ -10957,4 +10957,16 @@
   <data name="Seitenleiste_ein_oder_ausklappen_641d34ec" xml:space="preserve">
     <value>बगल पट्टी समेटें या फैलाएँ</value>
   </data>
+  <data name="Bearbeitete_Bilder_im_Filmstreifen_kennzeichnen_c9931096" xml:space="preserve">
+    <value>फ़िल्मपट्टी में संपादित चित्र चिह्नित करें</value>
+  </data>
+  <data name="Zeigt_wie_an_der_Galeriekachel_ein_Zeichen_auf_d_06f7f17d" xml:space="preserve">
+    <value>गैलरी टाइल की तरह उन चित्रों पर एक चिह्न दिखाता है जिनमें संपादन हैं। व्यूअर, एडिटर और नक्शे की पट्टी पर लागू होता है।</value>
+  </data>
+  <data name="Aktuelles_Bild_im_Filmstreifen_mittig_halten_c5421504" xml:space="preserve">
+    <value>मौजूदा चित्र को फ़िल्मपट्टी के बीच में रखें</value>
+  </data>
+  <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
+    <value>चुना गया चित्र फ़िल्मपट्टी के बीच में बना रहता है। चित्र बदलने पर चयन नहीं, पट्टी आगे खिसकती है। व्यूअर और एडिटर पर लागू होता है।</value>
+  </data>
 </root>
