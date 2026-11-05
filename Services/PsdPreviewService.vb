@@ -161,6 +161,23 @@ Namespace Services
             Return versionInfo IsNot Nothing AndAlso versionInfo.Length >= 5 AndAlso versionInfo(4) = 0
         End Function
 
+        ''' <summary>Nennt Ressource 1057 Photoshop als schreibendes Programm? Aufbau: Version (vier
+        ''' Byte), ein Byte "echtes Gesamtbild", dann der Name des Schreibers als Länge in Zeichen
+        ''' (vier Byte) und UTF-16 Big-Endian. Photoshop trägt dort seinen Namen mit Herstellervorsatz
+        ''' ein, gesucht wird deshalb nur das Wort selbst.</summary>
+        Private Shared Function WrittenByPhotoshop(resources As Byte()) As Boolean
+            Dim versionInfo = FindResource(resources, 1057)
+            If versionInfo Is Nothing OrElse versionInfo.Length < 9 Then Return False
+            Dim length = (CLng(versionInfo(5)) << 24) Or (CLng(versionInfo(6)) << 16) Or
+                         (CLng(versionInfo(7)) << 8) Or CLng(versionInfo(8))
+            If length <= 0 OrElse 9 + length * 2 > versionInfo.Length Then Return False
+            Dim sb As New Text.StringBuilder()
+            For i = 0 To CInt(length) - 1
+                sb.Append(ChrW(CInt(versionInfo(9 + i * 2)) * 256 + versionInfo(9 + i * 2 + 1)))
+            Next
+            Return sb.ToString().Contains("Photoshop", StringComparison.Ordinal)
+        End Function
+
         Private Shared Function DecodeComposite(fs As FileStream) As SKBitmap
             Dim header As PsdHeader
             If Not TryReadHeader(fs, header) Then Return Nothing
@@ -459,7 +476,12 @@ Namespace Services
         ''' erste "Transparency" heißt. So schreibt es Photoshop; abgeleitet aus Dateien, die es
         ''' selbst geschrieben hat. Bei Dateien ohne Ebenen unterscheiden Kanalnamen eine
         ''' gespeicherte Auswahl von Transparenz. Ohne Kanalnamen ist die Belegung nicht eindeutig;
-        ''' bei ebenenlosen Dateien wird der erste Zusatzkanal dann als Transparenz angenommen.
+        ''' bei ebenenlosen Dateien wird der erste Zusatzkanal dann als Transparenz angenommen,
+        ''' AUSSER Photoshop hat die Datei geschrieben (Ressource 1057 nennt es als Schreiber): eine
+        ''' Datei ohne Ebenen hat dort einen Hintergrund und keine Transparenz, ein Zusatzkanal ist
+        ''' also eine gespeicherte Auswahl. Nur auf Photoshop beschränkt, weil auch andere Schreiber
+        ''' 1057 anlegen, FerrumPix selbst eingeschlossen, und eine flache Datei mit Transparenz
+        ''' schreiben können.
         '''
         ''' Der Strom steht beim Aufruf am Anfang der Ebenen-Sektion, hinter ihrer Länge. Wo er
         ''' danach steht, ist gleich: der Aufrufer springt selbst an das Ende. Lässt sich die
@@ -468,6 +490,7 @@ Namespace Services
                                                     resources As Byte(), extraChannels As Integer) As Boolean
             Try
                 Dim namedTransparency = MergedTransparencyFromNames(resources, extraChannels)
+                If Not namedTransparency.HasValue AndAlso WrittenByPhotoshop(resources) Then namedTransparency = False
                 If fs.Position >= sectionEnd Then Return If(namedTransparency, True)
 
                 Dim hasLayers = False

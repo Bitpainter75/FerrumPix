@@ -38,6 +38,9 @@ Namespace Services
             Public Property Text As String = ""
             ''' Der PostScript-Name des Schriftschnitts, so wie Photoshop ihn in der Schriftliste führt.
             Public Property FontPostScriptName As String = ""
+            ''' Die Art der Schrift im FontSet: 0 OpenType mit CFF-Umrissen, 1 TrueType. Steht eine
+            ''' CFF-Schrift als TrueType darin, sucht Photoshop beim Öffnen eine andere Schrift aus.
+            Public Property FontType As Integer = 1
             Public Property FontSize As Double
             ''' Abstand zweier Grundlinien.
             Public Property Leading As Double
@@ -302,7 +305,7 @@ Namespace Services
                 ("FontSet", CObj(New List(Of Object) From {
                     Dict(("Name", CObj(New EngineString(spec.FontPostScriptName))),
                          ("Script", CObj(0)),
-                         ("FontType", CObj(1)),
+                         ("FontType", CObj(spec.FontType)),
                          ("Synthetic", CObj(0)))})),
                 ("StyleSheetSet", CObj(New List(Of Object) From {
                     Dict(("Name", CObj(New EngineString("Normal RGB"))),

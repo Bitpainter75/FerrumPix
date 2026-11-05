@@ -480,15 +480,20 @@ Namespace Services
                     Next
                 Next
 
-                ' Das Verzeichnis wird auf eine gerade Laenge aufgefuellt; die Sektion darum enthaelt
-                ' zusaetzlich die vier Bytes der globalen Maskenlaenge.
+                ' Das Verzeichnis wird auf ein Vielfaches von vier aufgefuellt, die Fuellbytes
+                ' zaehlen zur Laenge. Die Spezifikation verlangt nur eine gerade Laenge, Photoshop
+                ' haelt in seinen eigenen Dateien aber die Viererteilung, und manche Leser gehen in
+                ' Viererschritten weiter. Die Sektion darum enthaelt zusaetzlich die vier Bytes der
+                ' globalen Maskenlaenge.
                 Dim infoLen = CInt(info.Length)
-                Dim padded = infoLen + (infoLen And 1)
+                Dim padded = (infoLen + 3) And Not 3
                 WriteU32(fs, padded + 4 + 4)
                 WriteU32(fs, padded)
                 info.Position = 0
                 info.CopyTo(fs)
-                If padded <> infoLen Then fs.WriteByte(0)
+                For i = infoLen + 1 To padded
+                    fs.WriteByte(0)
+                Next
                 WriteU32(fs, 0)  ' globale Ebenenmaske: keine
             End Using
         End Sub
@@ -807,8 +812,10 @@ Namespace Services
             ms.Write(Encoding.ASCII.GetBytes("luni"), 0, 4)
 
             ' Laenge in Zeichen, danach der Text als UTF-16 Big-Endian mit abschliessender Null.
+            ' Aufgefuellt auf ein Vielfaches von vier innerhalb der Laenge wie bei
+            ' WriteTaggedBlock; bei einem Namen gerader Laenge fehlten sonst zwei Bytes.
             Dim payloadLen = 4 + (text.Length + 1) * 2
-            Dim padded = payloadLen + (payloadLen And 1)
+            Dim padded = (payloadLen + 3) And Not 3
             WriteU32(ms, padded)
             WriteU32(ms, text.Length)
             For Each ch In text
@@ -818,7 +825,9 @@ Namespace Services
             Next
             ms.WriteByte(0)
             ms.WriteByte(0)
-            If padded <> payloadLen Then ms.WriteByte(0)
+            For i = payloadLen + 1 To padded
+                ms.WriteByte(0)
+            Next
         End Sub
 
         ''' <summary>Ein Zusatzblock der Ebene: Signatur, Schlüssel, Länge, Daten. Aufgefüllt auf

@@ -523,12 +523,14 @@ Namespace Services
             Dim fontSize = Math.Max(8.0F, render.FontSizePixels)
 
             Dim postScriptName As String
+            Dim fontType As Integer
             Dim lineHeight As Single
             Using font = CreateTextFont(render.FontFamily, fontSize, render.Text, render.Bold, render.Italic)
                 postScriptName = If(font.Typeface?.PostScriptName, "")
                 If String.IsNullOrWhiteSpace(postScriptName) Then
                     postScriptName = If(font.Typeface?.FamilyName, "Arial").Replace(" ", "") & "-Regular"
                 End If
+                fontType = If(HasCffOutlines(font.Typeface), 0, 1)
                 lineHeight = GetLineHeight(font.Metrics)
                 ' Mittig und rechts weicht der Renderer bei einer Zeile, die breiter ist als der
                 ' Rahmen, auf linksbündig aus; ein Punkttext liefe dort über den linken Rand.
@@ -558,6 +560,7 @@ Namespace Services
             Return PsdTextLayerWriter.Build(New PsdTextLayerWriter.TextLayerSpec With {
                 .Text = render.Text,
                 .FontPostScriptName = postScriptName,
+                .FontType = fontType,
                 .FontSize = fontSize,
                 .Leading = lineHeight,
                 .Tracking = CInt(Math.Round(render.LetterSpacingPercent * 10.0F)),
@@ -573,6 +576,17 @@ Namespace Services
                 .BoundsBottom = rect.Bottom - originY,
                 .TextIndex = textIndex
             })
+        End Function
+
+        ''' <summary>Ob der Schriftschnitt CFF-Umrisse traegt (OpenType mit Tabelle "CFF " oder "CFF2")
+        ''' statt TrueType-Umrissen. Die Textebene der PSD nennt die Art der Schrift; Photoshop sucht
+        ''' bei falscher Angabe eine andere Schrift aus.</summary>
+        Private Shared Function HasCffOutlines(typeface As SKTypeface) As Boolean
+            If typeface Is Nothing Then Return False
+            Const cffTag As UInteger = &H43464620UI   ' "CFF "
+            Const cff2Tag As UInteger = &H43464632UI  ' "CFF2"
+            Dim tags = typeface.GetTableTags()
+            Return tags IsNot Nothing AndAlso (Array.IndexOf(tags, cffTag) >= 0 OrElse Array.IndexOf(tags, cff2Tag) >= 0)
         End Function
 
         ''' <summary>Was SaveImage tut, wenn die Aufnahmedaten mitgenommen werden sollen, die Quelle
