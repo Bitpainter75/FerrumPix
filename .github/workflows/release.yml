@@ -302,7 +302,7 @@ jobs:
       - name: makeappx bereitlegen
         shell: pwsh
         run: |
-          $fassung = "10.0.28000.2705"
+          $fassung = "10.0.28000.2957"
           $adresse = "https://api.nuget.org/v3-flatcontainer/microsoft.windows.sdk.buildtools/$fassung/microsoft.windows.sdk.buildtools.$fassung.nupkg"
           Invoke-WebRequest -Uri $adresse -OutFile sdk.zip
           Expand-Archive -Path sdk.zip -DestinationPath sdk
@@ -403,7 +403,7 @@ jobs:
       # Die Fassung der CLI ist festgenagelt wie makeappx; check-updates.sh meldet neuere.
       - uses: microsoft/microsoft-store-apppublisher@v1.4
         with:
-          version: 'v0.4.3'
+          version: 'v0.4.4'
 
       - name: Als Entwurf hochladen
         shell: pwsh
