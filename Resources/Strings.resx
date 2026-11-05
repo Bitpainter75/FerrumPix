@@ -10944,4 +10944,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>The selected picture stays in the middle of the filmstrip. When you move through the pictures, the strip moves instead of the selection. Applies to the viewer and the editor.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>All caps</value>
+  </data>
 </root>

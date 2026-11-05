@@ -2016,6 +2016,7 @@ Namespace Views
                      NameOf(EditorViewModel.AnnotationFontFamily),
                      NameOf(EditorViewModel.AnnotationBold),
                      NameOf(EditorViewModel.AnnotationItalic),
+                     NameOf(EditorViewModel.AnnotationAllCaps),
                      NameOf(EditorViewModel.AnnotationTextAlignment),
                      NameOf(EditorViewModel.AnnotationLetterSpacingPercent),
                      NameOf(EditorViewModel.AnnotationOpacity),
@@ -6768,6 +6769,9 @@ Namespace Views
                 ' Overlay darunter vollständig, die Textbox bleibt nur noch für Eingabe und Schreibmarke da.
                 editor.Foreground = Brushes.Transparent
                 editor.CaretBrush = Brushes.Transparent
+                ' Mit "Alle Großbuchstaben" zeichnet die Schreibmarke auch die Auswahl: die der
+                ' Textbox stünde an der kleingeschriebenen, schmaleren Fassung.
+                editor.Classes.Set("all-caps", vm.AnnotationAllCaps)
                 Dim caret = Me.FindControl(Of TextOverlayCaret)("TextOverlayCaret")
                 If caret IsNot Nothing Then
                     caret.Editor = editor
@@ -6776,11 +6780,11 @@ Namespace Views
                     Dim caretBox = If(editorBox.HasValue, editorBox.Value, New Avalonia.Rect(0, 0, frameWidth, 0))
                     caret.SetLayout(caretBox.TopLeft, caretBox.Width, vm.AnnotationFontFamily, displayFontSize,
                                     editor.LetterSpacing, vm.AnnotationBold, vm.AnnotationItalic,
-                                    If(vm.AnnotationTextAlignment, "Left").Trim())
+                                    If(vm.AnnotationTextAlignment, "Left").Trim(), vm.AnnotationAllCaps)
                 End If
                 ' Skia hängt die erste Zeile an der Grundlinie unter der Oberkante auf, Avalonia an der
                 ' Glyphen-Oberkante - ohne diesen Versatz säße der Live-Text über dem gebackenen.
-                editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize), vm.AnnotationText, vm.AnnotationBold, vm.AnnotationItalic))
+                editor.RenderTransform = New TranslateTransform(0, ImageProcessor.GetBakedTextTopOffset(vm.AnnotationFontFamily, CSng(displayFontSize), ImageAnnotation.ApplyCaps(vm.AnnotationText, vm.AnnotationAllCaps), vm.AnnotationBold, vm.AnnotationItalic))
             End If
         End Sub
 

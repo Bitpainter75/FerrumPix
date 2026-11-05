@@ -611,6 +611,7 @@ Namespace ViewModels
         Private _annotationLetterSpacingPercent As Double = 0
         Private _annotationBold As Boolean = False
         Private _annotationItalic As Boolean = False
+        Private _annotationAllCaps As Boolean = False
         Private _annotationFillColor2 As String = "#FFFFFFFF"
         Private _annotationGradientAngle As Double = 0
         Private _annotationGradientInverted As Boolean = False
@@ -2625,6 +2626,7 @@ Namespace ViewModels
             _annotationStrokeCorners = If(preset.StrokeCorners, "")
             _annotationBold = preset.Bold
             _annotationItalic = preset.Italic
+            _annotationAllCaps = preset.AllCaps
             _annotationLetterSpacingPercent = preset.LetterSpacingPercent
             _annotationFlipH = preset.FlipHorizontal
             _annotationFlipV = preset.FlipVertical
@@ -2691,6 +2693,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(UsesAnnotationBlendMode))
             Me.RaisePropertyChanged(NameOf(AnnotationBold))
             Me.RaisePropertyChanged(NameOf(AnnotationItalic))
+            Me.RaisePropertyChanged(NameOf(AnnotationAllCaps))
             Me.RaisePropertyChanged(NameOf(AnnotationLetterSpacingPercent))
             Me.RaisePropertyChanged(NameOf(AnnotationFlipHorizontal))
             Me.RaisePropertyChanged(NameOf(AnnotationFlipVertical))
@@ -2801,6 +2804,7 @@ Namespace ViewModels
             existing.StrokeCorners = _annotationStrokeCorners
             existing.Bold = _annotationBold
             existing.Italic = _annotationItalic
+            existing.AllCaps = _annotationAllCaps
             existing.LetterSpacingPercent = _annotationLetterSpacingPercent
             existing.FlipHorizontal = _annotationFlipH
             existing.FlipVertical = _annotationFlipV
@@ -4709,6 +4713,7 @@ Namespace ViewModels
             AnnotationLetterSpacingPercent = 0
             AnnotationBold = False
             AnnotationItalic = False
+            AnnotationAllCaps = False
             If normalizedKind = "Watermark" Then
                 _annotationXPercent = 4
                 _annotationYPercent = 4
@@ -24566,6 +24571,7 @@ Namespace ViewModels
                 Case NameOf(AnnotationFontSize) : Return LocalizationService.T("Größe")
                 Case NameOf(AnnotationBold) : Return LocalizationService.T("Fett")
                 Case NameOf(AnnotationItalic) : Return LocalizationService.T("Kursiv")
+                Case NameOf(AnnotationAllCaps) : Return LocalizationService.T("Alle Großbuchstaben")
                 Case NameOf(AnnotationLetterSpacingPercent) : Return LocalizationService.T("Zeichenabstand")
                 Case NameOf(AnnotationTextAlignment) : Return LocalizationService.T("Ausrichtung")
                 Case NameOf(AnnotationTextPathKind), NameOf(SetAnnotationTextPathKind)
@@ -26223,6 +26229,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(AnnotationTextAlignment))
             Me.RaisePropertyChanged(NameOf(AnnotationBold))
             Me.RaisePropertyChanged(NameOf(AnnotationItalic))
+            Me.RaisePropertyChanged(NameOf(AnnotationAllCaps))
             Me.RaisePropertyChanged(NameOf(ShowTextPathControls))
             _annotationFillColor2 = "#FFFFFFFF"
             _annotationGradientAngle = 0
@@ -26450,6 +26457,8 @@ Namespace ViewModels
             If baseWidth <= 0 OrElse baseHeight <= 0 Then Return (_annotationWidthPercent, _annotationHeightPercent)
 
             Dim fontSizePx = Math.Max(8.0, fontSizePixels)
+            ' Gemessen wird, was gezeichnet wird: mit "Alle Großbuchstaben" sind die Zeilen breiter.
+            text = ImageAnnotation.ApplyCaps(text, _annotationAllCaps)
 
             ' GLEICHE RÄNDER GEGENÜBER, gemessen an den sichtbaren Glyphen. Gezeichnet wird weiter
             ' ab der linken oberen Ecke (erste Grundlinie auf Oberkante + Schriftgrad, siehe
@@ -26571,9 +26580,9 @@ Namespace ViewModels
             Dim kind = NormalizeAnnotationKind(annotation.Kind)
             Dim text As String
             If kind = "Text" Then
-                text = annotation.Text
+                text = annotation.DisplayText()
             ElseIf kind = "Watermark" AndAlso String.IsNullOrWhiteSpace(annotation.ImagePath) Then
-                text = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
+                text = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.DisplayText())
             Else
                 Return Nothing
             End If
@@ -29744,6 +29753,7 @@ Namespace ViewModels
                     AnnotationLetterSpacingPercent = a.LetterSpacingPercent
                     AnnotationBold = a.Bold
                     AnnotationItalic = a.Italic
+                    AnnotationAllCaps = a.AllCaps
                     LoadGradientBuffersFrom(a)
                     AnnotationShadowEnabled = a.ShadowEnabled
                     AnnotationShadowOffsetX = a.ShadowOffsetXPercent
@@ -29935,6 +29945,7 @@ Namespace ViewModels
             a.LetterSpacingPercent = CSng(_annotationLetterSpacingPercent)
             a.Bold = _annotationBold
             a.Italic = _annotationItalic
+            a.AllCaps = _annotationAllCaps
             ApplyGradientBuffersTo(a)
             a.ShadowEnabled = _annotationShadowEnabled
             a.ShadowOffsetXPercent = CSng(_annotationShadowOffsetX)

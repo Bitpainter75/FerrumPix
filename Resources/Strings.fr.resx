@@ -10925,4 +10925,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>L'image sélectionnée reste au milieu de la pellicule. Quand vous passez d'une image à l'autre, c'est la bande qui défile et non la sélection. S'applique à la visionneuse et à l'éditeur.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Tout en majuscules</value>
+  </data>
 </root>

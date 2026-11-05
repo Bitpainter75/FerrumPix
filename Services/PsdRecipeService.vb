@@ -201,7 +201,13 @@ Namespace Services
                     ' steht jedem frei, ein Riesenblock dort ist also eher ein fremder als ein
                     ' eigener - und selbst wenn er eigen waere, kaeme er aus einer Fassung, die
                     ' den Deckel beim Schreiben nicht hatte.
-                    If id = ResourceId AndAlso dataLen > 0 AndAlso dataLen <= MaxPayloadBytes Then
+                    ' Die Nummer allein genuegt nicht: der Bereich ab 4000 gehoert allen
+                    ' Erweiterungen, und Vorlagen aus fremden Werkzeugen tragen dort eigene Bloecke.
+                    ' Ohne Blick in die Daten galt eine solche Datei beim blossen Nachsehen als eigene
+                    ' mit Rezept, und der Editor fragte nicht, ob ihr Text als Text kommen soll.
+                    If id = ResourceId AndAlso dataLen > 0 AndAlso dataLen <= MaxPayloadBytes AndAlso
+                       StartsWithSignature(fs, dataLen) Then
+                        fs.Seek(dataStart, SeekOrigin.Begin)
                         If Not readData Then
                             found = True
                             Return Nothing
@@ -218,6 +224,16 @@ Namespace Services
                 found = False
             End Try
             Return Nothing
+        End Function
+
+        ''' <summary>Traegt der Block, auf dessen Daten der Strom steht, unsere Signatur? Gelesen wird
+        ''' nur der Anfang: <see cref="Build"/> schreibt die Huelle mit der Signatur als ERSTEM Feld,
+        ''' sie steht also in den ersten Bytes. Wo der Strom danach steht, ist offen.</summary>
+        Private Shared Function StartsWithSignature(fs As Stream, dataLen As Long) As Boolean
+            Dim head(CInt(Math.Min(dataLen, 128L)) - 1) As Byte
+            Dim read = fs.Read(head, 0, head.Length)
+            If read <= 0 Then Return False
+            Return Encoding.UTF8.GetString(head, 0, read).Contains("""" & Signature & """", StringComparison.Ordinal)
         End Function
 
         Private Shared Function ReadU16(fs As Stream) As Integer

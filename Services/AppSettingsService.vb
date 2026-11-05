@@ -81,6 +81,7 @@ Namespace Services
         Public Property StrokeCorners As String = ""
         Public Property Bold As Boolean = False
         Public Property Italic As Boolean = False
+        Public Property AllCaps As Boolean = False
         Public Property LetterSpacingPercent As Double = 0
         Public Property FlipHorizontal As Boolean = False
         Public Property FlipVertical As Boolean = False
@@ -2507,6 +2508,7 @@ Namespace Services
                     .StrokeCorners = If(preset.StrokeCorners, ""),
                     .Bold = preset.Bold,
                     .Italic = preset.Italic,
+                    .AllCaps = preset.AllCaps,
                     .LetterSpacingPercent = Math.Max(-100, Math.Min(500, preset.LetterSpacingPercent)),
                     .FlipHorizontal = preset.FlipHorizontal,
                     .FlipVertical = preset.FlipVertical,

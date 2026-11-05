@@ -13705,6 +13705,7 @@ Namespace ViewModels
                 .LetterSpacingPercent = CSng(preset.LetterSpacingPercent),
                 .Bold = preset.Bold,
                 .Italic = preset.Italic,
+                .AllCaps = preset.AllCaps,
                 .ShadowEnabled = preset.ShadowEnabled,
                 .ShadowOffsetXPercent = CSng(preset.ShadowOffsetXPercent),
                 .ShadowOffsetYPercent = CSng(preset.ShadowOffsetYPercent),

@@ -10965,4 +10965,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>Det valgte bildet blir stående midt i filmstripen. Når du blar, flytter stripen seg i stedet for markeringen. Gjelder visningen og redigeringen.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Bare store bokstaver</value>
+  </data>
 </root>

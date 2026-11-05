@@ -400,6 +400,7 @@ Namespace Services
         Private _letterSpacingPercent As Single
         Private _bold As Boolean
         Private _italic As Boolean = False
+        Private _allCaps As Boolean = False
         Private _fillColor2 As String = "#FFFFFFFF"
         Private _gradientAngleDegrees As Single = 0
         Private _gradientInverted As Boolean = False
@@ -1233,6 +1234,33 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Text in Großbuchstaben zeigen, ohne den Wortlaut zu ändern (in Photoshop
+        ''' „Alle Großbuchstaben", dort <c>FontCaps</c> 2). Gespeichert bleibt die eingegebene
+        ''' Schreibung; gezeichnet und gemessen wird <see cref="DisplayText"/>.</summary>
+        Public Property AllCaps As Boolean
+            Get
+                Return _allCaps
+            End Get
+            Set(value As Boolean)
+                SetField(_allCaps, value)
+            End Set
+        End Property
+
+        ''' <summary>Der Wortlaut, wie er gezeichnet wird: mit <see cref="AllCaps"/> in
+        ''' Großbuchstaben. Eine Funktion und keine Eigenschaft, damit er nicht ins Rezept
+        ''' serialisiert wird.</summary>
+        Public Function DisplayText() As String
+            Return ApplyCaps(Text, AllCaps)
+        End Function
+
+        ''' <summary>Großbuchstaben unabhängig von der Spracheinstellung, damit jeder Rechner gleich
+        ''' zeichnet. Die Länge bleibt gleich (.NET bildet Zeichen für Zeichen ab, „ß" bleibt „ß"),
+        ''' Schreibmarke und Auswahl gelten deshalb für beide Fassungen.</summary>
+        Public Shared Function ApplyCaps(text As String, allCaps As Boolean) As String
+            If Not allCaps OrElse String.IsNullOrEmpty(text) Then Return text
+            Return text.ToUpperInvariant()
+        End Function
+
         Public Property FillColor2 As String
             Get
                 Return _fillColor2
@@ -1548,6 +1576,7 @@ Namespace Services
                 .LetterSpacingPercent = LetterSpacingPercent,
                 .Bold = Bold,
                 .Italic = Italic,
+                .AllCaps = AllCaps,
                 .FillColor2 = FillColor2,
                 .GradientAngleDegrees = GradientAngleDegrees,
                 .GradientInverted = GradientInverted,

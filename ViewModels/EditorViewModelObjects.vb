@@ -367,9 +367,9 @@ Namespace ViewModels
                 Return _annotationBold
             End Get
             Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_annotationBold, value)
-                UpdatePendingTextAnnotationSize()
-                SyncSelectedAnnotation()
+                If _annotationBold = value Then Return
+                _annotationBold = value
+                ApplyTextStyleToggle(NameOf(AnnotationBold))
             End Set
         End Property
 
@@ -378,11 +378,37 @@ Namespace ViewModels
                 Return _annotationItalic
             End Get
             Set(value As Boolean)
-                Me.RaiseAndSetIfChanged(_annotationItalic, value)
-                UpdatePendingTextAnnotationSize()
-                SyncSelectedAnnotation()
+                If _annotationItalic = value Then Return
+                _annotationItalic = value
+                ApplyTextStyleToggle(NameOf(AnnotationItalic))
             End Set
         End Property
+
+        ''' <summary>Alle Großbuchstaben: der Text erscheint in Großbuchstaben, der Wortlaut bleibt,
+        ''' wie er getippt wurde (<see cref="ImageAnnotation.AllCaps"/>).</summary>
+        Public Property AnnotationAllCaps As Boolean
+            Get
+                Return _annotationAllCaps
+            End Get
+            Set(value As Boolean)
+                If _annotationAllCaps = value Then Return
+                _annotationAllCaps = value
+                ApplyTextStyleToggle(NameOf(AnnotationAllCaps))
+            End Set
+        End Property
+
+        ''' <summary>Fett, Kursiv und Alle Großbuchstaben: erst ins markierte Objekt schreiben, DANN
+        ''' melden. Die Ansicht misst den Auswahlrahmen beim Melden an den Glyphen des GESPEICHERTEN
+        ''' Objekts (GetSelectedTextInkPercent); meldete der Setter vorher, maß sie noch den alten
+        ''' Schnitt, und der Rahmen zog erst mit dem nächsten fertigen Renderlauf nach.
+        ''' Der Name geht AUSDRÜCKLICH an SyncSelectedAnnotation: es nimmt sonst über
+        ''' CallerMemberName den Namen dieser Hilfsfunktion, und der Verlaufsschritt hieße nicht
+        ''' mehr „Fett" oder „Kursiv".</summary>
+        Private Sub ApplyTextStyleToggle(propertyName As String)
+            UpdatePendingTextAnnotationSize()
+            SyncSelectedAnnotation(propertyName)
+            Me.RaisePropertyChanged(propertyName)
+        End Sub
 
         ''' <summary>Die Pfad-Zeile gilt fuer alles, was Text zeichnet - also auch fuer das
         ''' Wasserzeichen. Frueher war sie dort ausgeblendet, weil die Zeichenstelle die

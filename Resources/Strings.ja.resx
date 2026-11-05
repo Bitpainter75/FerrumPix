@@ -10965,4 +10965,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>選択した画像はフィルムストリップの中央に留まります。画像を切り替えると、選択ではなくストリップが動きます。ビューアとエディターに適用されます。</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>すべて大文字</value>
+  </data>
 </root>

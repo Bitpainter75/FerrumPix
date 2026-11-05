@@ -1104,6 +1104,10 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="SelectionBrush" Value="#55F08A1A"/>
     </Style>
+    <!-- Bei "Alle Großbuchstaben" zeichnet TextOverlayCaret die Auswahl an den Stellen des Renderers. -->
+    <Style Selector="TextBox.overlay-editor.all-caps">
+        <Setter Property="SelectionBrush" Value="Transparent"/>
+    </Style>
     <Style Selector="TextBox.overlay-editor /template/ Border#PART_BorderElement">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="Transparent"/>

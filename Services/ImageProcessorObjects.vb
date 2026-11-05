@@ -1650,7 +1650,7 @@ Namespace Services
                     If Not String.IsNullOrWhiteSpace(annotation.ImagePath) Then
                         DrawImageAnnotation(canvas, annotation.ImagePath, rect, annotation.Opacity, stroke, annotation.StrokeWidth, stretchToFill:=Not annotation.LockAspect)
                     Else
-                        Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
+                        Dim watermark = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.DisplayText())
                         ' Pfad-Parameter durchreichen wie beim normalen Text: der Renderer kann
                         ' das laengst, hier wurden sie nur nicht weitergegeben - das Wasserzeichen
                         ' blieb dadurch immer gerade.
@@ -1661,7 +1661,7 @@ Namespace Services
                     End If
                 Case Else
                     If Not String.IsNullOrWhiteSpace(annotation.Text) Then
-                        DrawAnnotationText(canvas, annotation.Text, x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
+                        DrawAnnotationText(canvas, annotation.DisplayText(), x, y, maxWidth, fontSize, fill, stroke, annotation.StrokeWidth, annotation.FontFamily, rect, gradient, annotation.TextPathKind, annotation.TextPathInverted, annotation.TextPathBend, annotation.TextPathStartOffset, annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic, annotation.TextAlignment, annotation.PathPoints, annotation.PathClosed)
                     End If
             End Select
         End Sub
@@ -2297,7 +2297,7 @@ Namespace Services
         ''' mit der EFFEKTIVEN Groesse rechnen, sonst beschneiden sie gewachsene Kreis-Texte.</summary>
         Friend Shared Function ComputeTextPathFitRatio(annotation As ImageAnnotation) As Single
             If annotation Is Nothing OrElse String.IsNullOrWhiteSpace(annotation.TextPathKind) Then Return 1.0F
-            Dim text = If(annotation.Text, "").Replace(vbCrLf, " ").Replace(vbCr, " ").Replace(vbLf, " ")
+            Dim text = If(annotation.DisplayText(), "").Replace(vbCrLf, " ").Replace(vbCr, " ").Replace(vbLf, " ")
             ' Ein Wasserzeichen ohne eigenen Text wird als "FerrumPix" gezeichnet - die Einpassung
             ' muss auf DEMSELBEN Text rechnen, sonst passt der Kreis nicht zum sichtbaren Wort.
             If String.IsNullOrWhiteSpace(text) AndAlso

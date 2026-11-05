@@ -10925,4 +10925,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>L'immagine selezionata resta al centro della striscia di miniature. Scorrendo le immagini si sposta la striscia, non la selezione. Vale per visualizzatore ed editor.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Tutto maiuscolo</value>
+  </data>
 </root>

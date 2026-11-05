@@ -10969,4 +10969,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>선택한 사진이 필름 스트립 가운데에 머뭅니다. 사진을 넘기면 선택 대신 스트립이 움직입니다. 뷰어와 편집기에 적용됩니다.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>모두 대문자</value>
+  </data>
 </root>

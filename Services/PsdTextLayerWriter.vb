@@ -62,6 +62,8 @@ Namespace Services
             ''' Die Nummer des Textobjekts. Jede Textebene der Datei braucht eine eigene, sonst
             ''' beanspruchen alle das Objekt 0 im globalen Textblock eines Programms, das einen führt.
             Public Property TextIndex As Integer
+            ''' In Großbuchstaben zeigen, ohne den Wortlaut zu ändern (FontCaps 2).
+            Public Property AllCaps As Boolean
         End Class
 
         Public Shared Function Build(spec As TextLayerSpec) As Byte()
@@ -277,7 +279,7 @@ Namespace Services
                 ("AutoKerning", CObj(True)),
                 ("Kerning", CObj(0)),
                 ("BaselineShift", CObj(0.0)),
-                ("FontCaps", CObj(0)),
+                ("FontCaps", CObj(If(spec.AllCaps, 2, 0))),
                 ("FontBaseline", CObj(0)),
                 ("Underline", CObj(False)),
                 ("Strikethrough", CObj(False)),

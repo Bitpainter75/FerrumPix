@@ -27,7 +27,11 @@ Namespace Controls
         Private _spacing As Double
         Private _bold As Boolean
         Private _italic As Boolean
+        Private _allCaps As Boolean
         Private _alignment As String = "Left"
+
+        ''' Dieselbe Farbe wie die Auswahl der Textbox (Stil overlay-editor in FerrumPixTheme).
+        Private Shared ReadOnly SelectionFill As IBrush = New SolidColorBrush(Color.FromArgb(&H55, &HF0, &H8A, &H1A))
 
         Public Sub New()
             AddHandler _timer.Tick, Sub()
@@ -54,8 +58,12 @@ Namespace Controls
         ''' eine Schriftgröße darunter.</param>
         ''' <param name="lineWidth">Breite des Kastens, an ihr hängt die Ausrichtung.</param>
         ''' <param name="spacing">Zeichenabstand in Punkten.</param>
+        ''' <param name="allCaps">Der Renderer zeichnet den Text in Großbuchstaben. Gemessen wird
+        ''' dann an dieser Fassung, und die Auswahl zeichnet dieses Steuerelement selbst: die der
+        ''' Textbox läge an der kleingeschriebenen, schmaleren Fassung.</param>
         Public Sub SetLayout(boxOrigin As Point, lineWidth As Double, fontFamily As String, fontSize As Double,
-                             spacing As Double, bold As Boolean, italic As Boolean, alignment As String)
+                             spacing As Double, bold As Boolean, italic As Boolean, alignment As String,
+                             allCaps As Boolean)
             _boxOrigin = boxOrigin
             _lineWidth = lineWidth
             _fontFamily = If(fontFamily, "")
@@ -63,6 +71,7 @@ Namespace Controls
             _spacing = spacing
             _bold = bold
             _italic = italic
+            _allCaps = allCaps
             _alignment = If(alignment, "Left")
             _visible = True
             InvalidateVisual()
@@ -90,6 +99,8 @@ Namespace Controls
         End Function
 
         Private Function CaretAt(text As String, index As Integer) As SkiaSharp.SKPoint
+            ' Die Großschreibung behält die Länge, die Zeichenstelle gilt also für beide Fassungen.
+            text = ImageAnnotation.ApplyCaps(text, _allCaps)
             Return ImageProcessor.MeasureAnnotationCaret(text, index, _fontFamily, CSng(_fontSize), CSng(_spacing),
                                                          _bold, _italic, _alignment, CSng(_lineWidth))
         End Function
@@ -121,6 +132,7 @@ Namespace Controls
             If _fontSize <= 0 Then Return
             Dim ink = CapInk()
             If ink.IsEmpty Then Return
+            If _allCaps Then DrawSelection(context, ink)
             Dim hit = CaretAt(_editor.Text, _editor.CaretIndex)
             Dim x = _boxOrigin.X + hit.X
             Dim top = _boxOrigin.Y + hit.Y + ink.Top
@@ -129,6 +141,30 @@ Namespace Controls
             ' Heller Kern mit dunkler Kontur bleibt auf Bild und Text jeder Farbe sichtbar.
             context.DrawLine(New Pen(Brushes.Black, 4.0), start, finish)
             context.DrawLine(New Pen(Brushes.White, 2.0), start, finish)
+        End Sub
+
+        ''' <summary>Die Auswahl an den Zeichenstellen des Renderers, Zeichen für Zeichen; ein
+        ''' Zeilenwechsel liegt zwischen zwei Stellen verschiedener Höhe und bekommt kein Feld.
+        ''' Höhe wie die Schreibmarke, oben und unten um ein Viertel des Grads erweitert. Die Stellen
+        ''' fallen bei Text von rechts nach links (Arabisch, Hebräisch); das Feld reicht deshalb von
+        ''' der kleineren zur größeren, nicht vom vorigen zum nächsten Zeichen.</summary>
+        Private Sub DrawSelection(context As DrawingContext, ink As SkiaSharp.SKRect)
+            Dim text = If(_editor.Text, "")
+            Dim first = Math.Max(0, Math.Min(_editor.SelectionStart, _editor.SelectionEnd))
+            Dim last = Math.Min(text.Length, Math.Max(_editor.SelectionStart, _editor.SelectionEnd))
+            If last <= first Then Return
+            Dim pad = _fontSize * 0.25
+            Dim previous = CaretAt(text, first)
+            For index = first To last - 1
+                Dim [next] = CaretAt(text, index + 1)
+                Dim width = Math.Abs([next].X - previous.X)
+                If Math.Abs([next].Y - previous.Y) < 0.5 AndAlso width > 0 Then
+                    Dim top = _boxOrigin.Y + previous.Y + ink.Top - pad
+                    context.FillRectangle(SelectionFill,
+                                          New Rect(_boxOrigin.X + Math.Min(previous.X, [next].X), top, width, ink.Height + 2 * pad))
+                End If
+                previous = [next]
+            Next
         End Sub
     End Class
 End Namespace

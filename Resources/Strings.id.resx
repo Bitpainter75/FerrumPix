@@ -10969,4 +10969,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>Gambar yang dipilih tetap berada di tengah pita gambar. Saat berpindah gambar, pita yang bergeser, bukan pilihannya. Berlaku untuk penampil dan editor.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Semua huruf kapital</value>
+  </data>
 </root>

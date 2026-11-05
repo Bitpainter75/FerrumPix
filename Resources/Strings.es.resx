@@ -10925,4 +10925,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>La foto seleccionada permanece en el centro de la tira de imágenes. Al pasar de una foto a otra, se desplaza la tira y no la selección. Se aplica al visor y al editor.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Todo en mayúsculas</value>
+  </data>
 </root>

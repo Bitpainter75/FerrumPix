@@ -296,6 +296,7 @@ Namespace Services
                             .LockTransparentPixels = layer.LockTransparency
                         }
                         If style IsNot Nothing Then
+                            annotation.AllCaps = style.AllCaps
                             ApplyPsdFont(annotation, style.FontName)
                             ApplyPsdTextLayout(annotation, style)
                         End If
@@ -575,13 +576,19 @@ Namespace Services
             If String.IsNullOrWhiteSpace(postscriptName) Then Return
             Dim parts = postscriptName.Split("-"c, 2)
             Dim familyKey = parts(0).Replace(" ", "")
-            Dim family As String = Nothing
-            For Each candidate In SKFontManager.Default.FontFamilies
-                If String.Equals(candidate.Replace(" ", ""), familyKey, StringComparison.OrdinalIgnoreCase) Then
-                    family = candidate
-                    Exit For
-                End If
-            Next
+            Dim families = SKFontManager.Default.FontFamilies
+            Dim family = FindFamily(families, familyKey)
+            ' Manche Schriften tragen ihren Hersteller als Endung im PostScript-Namen: "ArialMT",
+            ' "TimesNewRomanPSMT", "TimesNewRomanPS-BoldMT". Die Familie heisst ohne diese Endung;
+            ' ohne den zweiten Versuch kam Text in Times New Roman in der Vorgabeschrift.
+            If family Is Nothing Then
+                For Each suffix In {"PSMT", "MT", "PS"}
+                    If familyKey.Length > suffix.Length AndAlso familyKey.EndsWith(suffix, StringComparison.Ordinal) Then
+                        family = FindFamily(families, familyKey.Substring(0, familyKey.Length - suffix.Length))
+                        If family IsNot Nothing Then Exit For
+                    End If
+                Next
+            End If
             If family Is Nothing Then Return
             annotation.FontFamily = family
             If parts.Length > 1 Then
@@ -590,6 +597,15 @@ Namespace Services
                                     parts(1).IndexOf("oblique", StringComparison.OrdinalIgnoreCase) >= 0
             End If
         End Sub
+
+        ''' <summary>Die installierte Familie, deren Name ohne Leerzeichen dem Schlüssel gleicht,
+        ''' ohne Rücksicht auf Groß- und Kleinschreibung; Nothing, wenn es keine gibt.</summary>
+        Private Shared Function FindFamily(families As IEnumerable(Of String), familyKey As String) As String
+            For Each candidate In families
+                If String.Equals(candidate.Replace(" ", ""), familyKey, StringComparison.OrdinalIgnoreCase) Then Return candidate
+            Next
+            Return Nothing
+        End Function
 
         ''' <summary>Ob die Matrix der Textebene mehr tut als drehen und gleichmäßig skalieren:
         ''' waagerecht anders strecken als senkrecht, scheren oder spiegeln. Ein Textobjekt kennt nur

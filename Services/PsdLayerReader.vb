@@ -714,7 +714,10 @@ Namespace Services
                     hasLegacyEffects = True
                 ElseIf bk = "SoLd" OrElse bk = "SoLE" OrElse bk = "PlLd" OrElse bk = "plLd" Then
                     hasSmart = True
-                ElseIf bk = "vscg" OrElse bk = "vogk" Then
+                ElseIf bk = "vscg" Then
+                    ' NUR die Füllung der Form. "vogk" (Ursprungsdaten des Pfads) schreibt Photoshop
+                    ' zu JEDEM Vektorpfad, auch zur bloßen Vektormaske einer Bildebene; galt es als
+                    ' Form, hielt der Leser die Bildebene für gerendert und verwarf ihre Maske.
                     hasShapeContent = True
                 ElseIf bk = "vmsk" OrElse bk = "vsms" Then
                     hasVectorMask = True
@@ -869,10 +872,10 @@ Namespace Services
         ''' Merkmale. Der Aufrufer springt danach über die Blocklänge weiter, hier wird also nur
         ''' gelesen, was gebraucht wird.
         '''
-        ''' Das Merkmal-Byte trägt in Bit 1 das Abschalten der Maske und in Bit 0 die Aussage, dass
-        ''' ihr Rechteck RELATIV zur Ebene gemeint ist statt absolut im Dokument. Das kommt selten
-        ''' vor, kostet aber nichts - und übergangen säße die Maske um den Ebenenversatz verschoben,
-        ''' was bei einer Ebene am Bildrand sofort auffiele und bei einer bildgroßen nie.
+        ''' Das Merkmal-Byte trägt in Bit 1 das Abschalten der Maske. Bit 0 heißt laut
+        ''' Formatbeschreibung „Lage relativ zur Ebene"; Photoshop schreibt das Rechteck aber auch
+        ''' dann in Dokumentkoordinaten. Welche Lesart gilt, entscheidet die Lage des Rechtecks zur
+        ''' Ebene (<see cref="MaskRectIsRelative"/>).
         '''
         ''' Bit 3 heißt: Photoshop hat die Maske aus Vektordaten gerechnet. Bit 4 heißt: es folgen
         ''' Parameter (Dichte, weiche Kante). Trägt die Ebene eine gemalte Maske UND eine
@@ -962,8 +965,8 @@ Namespace Services
         End Sub
 
         ''' <summary>Liest ein Maskenrechteck (oben, links, unten, rechts) ab
-        ''' <paramref name="offset"/> und gibt es weiter, wenn es eine Fläche hat. Bit 0 der
-        ''' Merkmale verschiebt es um die Lage der Ebene (siehe ReadMaskBlock).</summary>
+        ''' <paramref name="offset"/> und gibt es weiter, wenn es eine Fläche hat. Zur Lesart bei
+        ''' Merkmal Bit 0 siehe <see cref="MaskRectIsRelative"/>.</summary>
         Private Shared Function ApplyMaskRect(rec As LayerRecord, data As Byte(), offset As Integer,
                                               flags As Integer,
                                               apply As Action(Of Integer, Integer, Integer, Integer)) As Boolean
@@ -971,13 +974,36 @@ Namespace Services
             Dim left = ReadI32(data, offset + 4)
             Dim bottom = ReadI32(data, offset + 8)
             Dim right = ReadI32(data, offset + 12)
-            If (flags And 1) <> 0 Then
+            If right <= left OrElse bottom <= top Then Return False
+            If (flags And 1) <> 0 AndAlso MaskRectIsRelative(rec, top, left, bottom, right) Then
                 left += rec.Left : right += rec.Left
                 top += rec.Top : bottom += rec.Top
             End If
-            If right <= left OrElse bottom <= top Then Return False
             apply(top, left, bottom, right)
             Return True
+        End Function
+
+        ''' <summary>Steht ein Maskenrechteck mit Merkmal Bit 0 relativ zur Ebene?
+        '''
+        ''' Die Formatbeschreibung sagt ja („Lage relativ zur Ebene"). Photoshop schreibt das
+        ''' Rechteck aber auch mit Bit 0 in Dokumentkoordinaten: am PSD-Korpus der Ablage trugen 51
+        ''' Masken in 8 Dateien das Merkmal, und alle lagen absolut auf ihrer Ebene. Verschoben fiel
+        ''' etwa die Maske einer über den Rand ragenden Wasserebene unter das Bild, außerhalb galt
+        ''' der Vorgabewert 0, und die Ebene verschwand.
+        '''
+        ''' Entschieden wird deshalb an der Lage: trifft das Rechteck absolut gelesen die Ebene, gilt
+        ''' es absolut, wie bei Photoshop. Nur wenn allein die relative Lesart die Ebene trifft, wird
+        ''' verschoben, wie die Formatbeschreibung es will. Trifft keine (eine Ebene ohne Fläche, etwa
+        ''' eine Gruppenzeile), bleibt es absolut.</summary>
+        Private Shared Function MaskRectIsRelative(rec As LayerRecord, top As Integer, left As Integer,
+                                                   bottom As Integer, right As Integer) As Boolean
+            If rec.Right <= rec.Left OrElse rec.Bottom <= rec.Top Then Return False
+            If Overlaps(left, top, right, bottom, rec) Then Return False
+            Return Overlaps(CLng(left) + rec.Left, CLng(top) + rec.Top, CLng(right) + rec.Left, CLng(bottom) + rec.Top, rec)
+        End Function
+
+        Private Shared Function Overlaps(left As Long, top As Long, right As Long, bottom As Long, rec As LayerRecord) As Boolean
+            Return left < rec.Right AndAlso right > rec.Left AndAlso top < rec.Bottom AndAlso bottom > rec.Top
         End Function
 
         ''' Wie viele Byte die Parameter hinter ihrem Merkmalbyte belegen: Bit 0 Dichte der

@@ -189,6 +189,14 @@
                               ToolTip.Tip="Kursiv">
                     <TextBlock Text="K" FontStyle="Italic" FontSize="{DynamicResource FP.Font.Small}" />
                 </ToggleButton>
+                <!-- Alle Großbuchstaben: zeigt den Text groß, der Wortlaut bleibt, wie er getippt
+                     wurde. Aktiv mit Akzentrahmen (ghost:checked). -->
+                <ToggleButton Classes="ghost" Padding="8,3" Margin="0,0,6,4"
+                              IsChecked="{Binding AnnotationAllCaps}"
+                              ToolTip.Tip="Alle Großbuchstaben">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/custom/text-all-caps.svg"
+                                   Width="16" Height="16" />
+                </ToggleButton>
             </WrapPanel>
         </Grid>
         <!-- Mehrzeilige Texte haben explizite Zeilenumbrüche. Ihre gemeinsame Satzbreite ist die

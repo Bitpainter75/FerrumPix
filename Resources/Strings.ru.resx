@@ -10965,4 +10965,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>Выбранный снимок остаётся в середине ленты кадров. При листании движется лента, а не выделение. Действует в просмотрщике и редакторе.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Все прописные</value>
+  </data>
 </root>

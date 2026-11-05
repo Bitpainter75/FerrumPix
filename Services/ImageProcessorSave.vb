@@ -509,7 +509,10 @@ Namespace Services
             Dim render = TransformAnnotationForGeometry(annotation, adj, width, height)
             If render Is Nothing OrElse render.FlipHorizontal OrElse render.FlipVertical OrElse HasWarp(render) Then Return Nothing
 
-            Dim lines = render.Text.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
+            ' Gemessen wird der gezeichnete Wortlaut (bei AllCaps in Großbuchstaben), geschrieben
+            ' der eingegebene samt FontCaps: so zeigt Photoshop dasselbe und der Import holt die
+            ' ursprüngliche Schreibung zurück.
+            Dim lines = render.DisplayText().Replace(vbCrLf, vbLf).Replace(vbCr, vbLf).Split(ControlChars.Lf)
             Dim alignment = If(render.TextAlignment, "Left").Trim()
             ' Blocksatz streckt jede Zeile ausser der letzten auf die Rahmenbreite; Punkttext kennt
             ' das nicht. Eine einzelne Zeile setzt der Renderer ohnehin linksbündig.
@@ -525,7 +528,7 @@ Namespace Services
             Dim postScriptName As String
             Dim fontType As Integer
             Dim lineHeight As Single
-            Using font = CreateTextFont(render.FontFamily, fontSize, render.Text, render.Bold, render.Italic)
+            Using font = CreateTextFont(render.FontFamily, fontSize, render.DisplayText(), render.Bold, render.Italic)
                 postScriptName = If(font.Typeface?.PostScriptName, "")
                 If String.IsNullOrWhiteSpace(postScriptName) Then
                     postScriptName = If(font.Typeface?.FamilyName, "Arial").Replace(" ", "") & "-Regular"
@@ -559,6 +562,7 @@ Namespace Services
             Dim fillColor = ParseColor(render.FillColor, SKColors.White)
             Return PsdTextLayerWriter.Build(New PsdTextLayerWriter.TextLayerSpec With {
                 .Text = render.Text,
+                .AllCaps = render.AllCaps,
                 .FontPostScriptName = postScriptName,
                 .FontType = fontType,
                 .FontSize = fontSize,

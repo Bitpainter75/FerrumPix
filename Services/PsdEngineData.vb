@@ -14,6 +14,8 @@ Namespace Services
         ''' Die Ausrichtung des ersten Absatzes: 0 links, 1 rechts, 2 Mitte, 3 bis 6 Blocksatz;
         ''' -1, wenn keine dasteht.
         Public Property Justification As Integer = -1
+        ''' „Alle Großbuchstaben" (FontCaps 2). Kapitälchen (1) sind etwas anderes und bleiben aus.
+        Public Property AllCaps As Boolean
 
         ''' <summary>Die Abbildung aus dem Textraum ins Dokument (xx, xy, yx, yy, tx, ty) und der
         ''' Rahmen im Textraum, beides aus dem TySh-Block (siehe <see cref="PsdTextReader.ExtractStyle"/>).
@@ -37,12 +39,30 @@ Namespace Services
                 Dim engine = Dict(root, "EngineDict")
                 Dim run = Dict(engine, "StyleRun")
                 Dim runs = Arr(run, "RunArray")
-                If runs Is Nothing OrElse runs.Count <> 1 Then Return Nothing
-                Dim style = Dict(Dict(TryCast(runs(0), Dictionary(Of String, Object)), "StyleSheet"), "StyleSheetData")
+                If runs Is Nothing OrElse runs.Count = 0 Then Return Nothing
+                ' Mehrere Stilabschnitte: es gilt der, der die meisten Zeichen deckt. Ein Textobjekt
+                ' kennt nur EINE Schrift und einen Grad; ganz ohne Stil gingen aber auch Matrix und
+                ' Rahmen verloren (PsdTextReader haengt sie an dieses Ergebnis), und der Text kaeme
+                ' in der Vorgabeschrift, mit geschaetztem Grad, ungedreht und ohne Pruefung auf
+                ' Streckung. Im Korpus traf das jede fuenfte Textebene, oft nur wegen eines
+                ' abschliessenden Zeilenumbruchs in eigenem Abschnitt.
+                Dim lengths = Arr(run, "RunLengthArray")
+                Dim chosen = 0
+                If lengths IsNot Nothing AndAlso lengths.Count = runs.Count Then
+                    Dim longest = -1.0
+                    For i = 0 To lengths.Count - 1
+                        If TypeOf lengths(i) Is Double AndAlso CDbl(lengths(i)) > longest Then
+                            longest = CDbl(lengths(i))
+                            chosen = i
+                        End If
+                    Next
+                End If
+                Dim style = Dict(Dict(TryCast(runs(chosen), Dictionary(Of String, Object)), "StyleSheet"), "StyleSheetData")
                 If style Is Nothing Then Return Nothing
                 Dim result As New PsdEngineData()
                 Dim size = Number(style, "FontSize")
                 If size > 0 AndAlso size <= 100_000 Then result.FontSize = size
+                result.AllCaps = Number(style, "FontCaps") = 2
                 If style.ContainsKey("Tracking") AndAlso TypeOf style("Tracking") Is Double Then
                     Dim tracking = CDbl(style("Tracking"))
                     If Double.IsFinite(tracking) AndAlso Math.Abs(tracking) <= 10_000 Then result.Tracking = tracking

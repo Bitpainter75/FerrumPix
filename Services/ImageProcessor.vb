@@ -1682,10 +1682,10 @@ Namespace Services
             Dim textForExtent = ""
             If kind = "watermark" Then
                 If String.IsNullOrWhiteSpace(annotation.ImagePath) Then
-                    textForExtent = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.Text)
+                    textForExtent = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.DisplayText())
                 End If
             ElseIf kind = "text" Then
-                textForExtent = If(annotation.Text, "")
+                textForExtent = If(annotation.DisplayText(), "")
             End If
             If textForExtent.Length > 0 AndAlso String.IsNullOrWhiteSpace(annotation.TextPathKind) Then
                 Dim textExtent = MeasureAnnotationTextExtent(textForExtent, annotation.FontFamily,
@@ -1955,10 +1955,10 @@ Namespace Services
             Dim drawnText = ""
             If overlayKind = "watermark" Then
                 If String.IsNullOrWhiteSpace(renderAnnotation.ImagePath) Then
-                    drawnText = If(String.IsNullOrWhiteSpace(renderAnnotation.Text), "FerrumPix", renderAnnotation.Text)
+                    drawnText = If(String.IsNullOrWhiteSpace(renderAnnotation.Text), "FerrumPix", renderAnnotation.DisplayText())
                 End If
             ElseIf overlayKind = "text" OrElse overlayKind = "" Then
-                drawnText = If(renderAnnotation.Text, "")
+                drawnText = If(renderAnnotation.DisplayText(), "")
             End If
             If drawnText.Length > 0 AndAlso String.IsNullOrWhiteSpace(renderAnnotation.TextPathKind) Then
                 Dim extent = MeasureAnnotationTextExtent(drawnText, renderAnnotation.FontFamily,

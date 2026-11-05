@@ -10943,4 +10943,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>Das gewählte Bild bleibt in der Mitte des Filmstreifens stehen. Beim Blättern läuft der Streifen weiter, nicht die Auswahl. Gilt für Viewer und Editor.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Alle Großbuchstaben</value>
+  </data>
 </root>

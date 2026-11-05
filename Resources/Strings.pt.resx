@@ -10924,4 +10924,7 @@
   <data name="Das_gew_hlte_Bild_bleibt_in_der_Mitte_des_Filmst_2690e68e" xml:space="preserve">
     <value>A imagem selecionada fica no meio da tira de filme. Ao passar de uma imagem para outra, é a tira que se desloca e não a seleção. Aplica-se ao visualizador e ao editor.</value>
   </data>
+  <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
+    <value>Todas em maiúsculas</value>
+  </data>
 </root>
