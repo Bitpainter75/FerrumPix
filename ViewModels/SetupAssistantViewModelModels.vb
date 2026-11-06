@@ -259,10 +259,17 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Was der Download fuer die angehakten Funktionen umfasst, als ein Text.</summary>
+        ''' <summary>Steht etwas zum Laden an? Sonst bleibt die Zeile mit der Groesse ganz weg.</summary>
+        Public ReadOnly Property HasModelDownloadSize As Boolean
+            Get
+                Return SelectedMissingFiles().Count > 0
+            End Get
+        End Property
+
         Public ReadOnly Property ModelDownloadSizeText As String
             Get
                 Dim files = SelectedMissingFiles()
-                If files.Count = 0 Then Return LocalizationService.T("Nichts ausgewählt")
+                If files.Count = 0 Then Return ""
                 Return String.Format(LocalizationService.T("Download insgesamt: {0}"),
                                      CardImportService.FormatBytes(files.Sum(Function(d) d.Bytes)))
             End Get
@@ -315,6 +322,7 @@ Namespace ViewModels
 
         Private Sub RaiseModelSelectionChanged()
             Me.RaisePropertyChanged(NameOf(ModelDownloadSizeText))
+            Me.RaisePropertyChanged(NameOf(HasModelDownloadSize))
             ModelDownloadMessage = ""
         End Sub
 

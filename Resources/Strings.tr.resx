@@ -11236,9 +11236,6 @@
   <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
     <value>Her şey hazır</value>
   </data>
-  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
-    <value>FerrumPix, birçok ayarla tam çalışma şeklinize göre uyarlanabilir: galeri ve döşemeler, görüntüleyici ve slayt gösterisi, bilgi paneli, RAW banyosu, klavye kısayolları ve çok daha fazlası. Bir göz atmaya değer.</value>
-  </data>
   <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
     <value>Ayarlara göz at</value>
   </data>
@@ -11271,9 +11268,6 @@
   </data>
   <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
     <value>FerrumPix zahmetli işleri ekran kartına verebilir.</value>
-  </data>
-  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
-    <value>Hiçbir şey seçilmedi</value>
   </data>
   <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
     <value>Toplam indirme: {0}</value>
@@ -11313,5 +11307,8 @@
   </data>
   <data name="Zustimmen_e0a817b3" xml:space="preserve">
     <value>Kabul et</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
+    <value>FerrumPix, birçok ayarla tam çalışma şeklinize göre uyarlanabilir: galeri ve döşemeler, görüntüleyici ve slayt gösterisi, düzenleyici ve araçlar, bilgi paneli, RAW banyosu ve çok daha fazlası. Ayarlara bir göz atmaya değer.</value>
   </data>
 </root>

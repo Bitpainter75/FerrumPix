@@ -11192,9 +11192,6 @@
   <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
     <value>Todo listo</value>
   </data>
-  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
-    <value>FerrumPix se puede ajustar a tu forma de trabajar con muchos ajustes: galería y miniaturas, visor y presentación, barra de información, revelado RAW, atajos de teclado y mucho más. Merece la pena echar un vistazo.</value>
-  </data>
   <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
     <value>Ver los ajustes</value>
   </data>
@@ -11227,9 +11224,6 @@
   </data>
   <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
     <value>FerrumPix puede pasar el trabajo exigente a la tarjeta gráfica.</value>
-  </data>
-  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
-    <value>Nada seleccionado</value>
   </data>
   <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
     <value>Descarga total: {0}</value>
@@ -11269,5 +11263,8 @@
   </data>
   <data name="Zustimmen_e0a817b3" xml:space="preserve">
     <value>Aceptar</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
+    <value>FerrumPix se puede ajustar a tu forma de trabajar con muchos ajustes: galería y miniaturas, visor y presentación, editor y herramientas, barra de información, revelado RAW y mucho más. Merece la pena echar un vistazo a los ajustes.</value>
   </data>
 </root>

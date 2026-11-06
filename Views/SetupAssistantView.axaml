@@ -415,7 +415,7 @@
                                  waehrend des Downloads der Fortschritt mit Abbrechen, danach das Ergebnis.
                                  Einen eigenen Knopf zum Laden gibt es nicht, Weiter startet ihn. -->
                             <StackPanel Grid.Row="2" Spacing="6">
-                                <TextBlock Classes="on-image no-translate" Text="{Binding ModelDownloadSizeText}" FontWeight="SemiBold"
+                                <TextBlock Classes="on-image no-translate" Text="{Binding ModelDownloadSizeText}" IsVisible="{Binding HasModelDownloadSize}" FontWeight="SemiBold"
                                            FontSize="{DynamicResource FP.Font.Body}"/>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" IsVisible="{Binding IsDownloadingModels}">
                                     <ProgressBar Minimum="0" Maximum="1" Value="{Binding ModelDownloadProgress}" Height="6" VerticalAlignment="Center"/>
@@ -480,7 +480,7 @@
                             </Border>
                             <TextBlock Classes="setup-title" Text="Alles bereit" HorizontalAlignment="Center" TextAlignment="Center"/>
                             <TextBlock Classes="setup-lead" TextAlignment="Center"
-                                       Text="FerrumPix lässt sich in vielen Einstellungen genau auf deine Arbeitsweise abstimmen: Galerie und Kacheln, Viewer und Diashow, Info-Leiste, RAW-Entwicklung, Tastenkürzel und vieles mehr. Ein Blick hinein lohnt sich."/>
+                                       Text="FerrumPix lässt sich in vielen Einstellungen genau auf deine Arbeitsweise abstimmen: Galerie und Kacheln, Viewer und Diashow, Editor und Werkzeuge, Info-Leiste, RAW-Entwicklung und vieles mehr. Ein Blick in die Einstellungen lohnt sich."/>
                             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,8,0,0">
                                 <Button Classes="ghost" Padding="18,10" Command="{Binding OpenSettingsCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">

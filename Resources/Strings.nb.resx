@@ -11232,9 +11232,6 @@
   <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
     <value>Alt er klart</value>
   </data>
-  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
-    <value>FerrumPix kan tilpasses akkurat din måte å jobbe på i mange innstillinger: galleri og fliser, visning og lysbildefremvisning, infopanel, RAW-fremkalling, hurtigtaster og mye mer. Det er verdt en titt.</value>
-  </data>
   <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
     <value>Se innstillingene</value>
   </data>
@@ -11267,9 +11264,6 @@
   </data>
   <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
     <value>FerrumPix kan gi krevende arbeid til grafikkortet.</value>
-  </data>
-  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
-    <value>Ingenting valgt</value>
   </data>
   <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
     <value>Samlet nedlasting: {0}</value>
@@ -11309,5 +11303,8 @@
   </data>
   <data name="Zustimmen_e0a817b3" xml:space="preserve">
     <value>Godta</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
+    <value>FerrumPix kan tilpasses akkurat din måte å jobbe på i mange innstillinger: galleri og fliser, visning og lysbildefremvisning, redigering og verktøy, infopanel, RAW-fremkalling og mye mer. Innstillingene er verdt en titt.</value>
   </data>
 </root>

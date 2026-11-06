@@ -11211,9 +11211,6 @@
   <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
     <value>All set</value>
   </data>
-  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
-    <value>FerrumPix can be tuned to the way you work in many settings: gallery and tiles, viewer and slideshow, info sidebar, RAW development, keyboard shortcuts and much more. It is worth a look.</value>
-  </data>
   <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
     <value>Explore the settings</value>
   </data>
@@ -11246,9 +11243,6 @@
   </data>
   <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
     <value>FerrumPix can hand demanding work to the graphics card.</value>
-  </data>
-  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
-    <value>Nothing selected</value>
   </data>
   <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
     <value>Total download: {0}</value>
@@ -11288,5 +11282,8 @@
   </data>
   <data name="Zustimmen_e0a817b3" xml:space="preserve">
     <value>Agree</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
+    <value>FerrumPix can be tuned to the way you work in many settings: gallery and tiles, viewer and slideshow, editor and tools, info sidebar, RAW development and much more. The settings are worth a look.</value>
   </data>
 </root>

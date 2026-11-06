@@ -11236,9 +11236,6 @@
   <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
     <value>Semua siap</value>
   </data>
-  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
-    <value>FerrumPix dapat disesuaikan dengan cara kerja Anda melalui banyak pengaturan: galeri dan ubin, penampil dan tayangan slide, bilah info, pengolahan RAW, pintasan papan ketik, dan banyak lagi. Layak untuk dilihat.</value>
-  </data>
   <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
     <value>Lihat pengaturan</value>
   </data>
@@ -11271,9 +11268,6 @@
   </data>
   <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
     <value>FerrumPix dapat menyerahkan pekerjaan berat ke kartu grafis.</value>
-  </data>
-  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
-    <value>Tidak ada yang dipilih</value>
   </data>
   <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
     <value>Total unduhan: {0}</value>
@@ -11313,5 +11307,8 @@
   </data>
   <data name="Zustimmen_e0a817b3" xml:space="preserve">
     <value>Setuju</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
+    <value>FerrumPix dapat disesuaikan dengan cara kerja Anda melalui banyak pengaturan: galeri dan ubin, penampil dan tayangan slide, editor dan alat, bilah info, pengolahan RAW, dan banyak lagi. Pengaturannya layak untuk dilihat.</value>
   </data>
 </root>

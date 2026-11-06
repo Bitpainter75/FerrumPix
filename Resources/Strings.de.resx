@@ -11210,9 +11210,6 @@
   <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
     <value>Alles bereit</value>
   </data>
-  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
-    <value>FerrumPix lässt sich in vielen Einstellungen genau auf deine Arbeitsweise abstimmen: Galerie und Kacheln, Viewer und Diashow, Info-Leiste, RAW-Entwicklung, Tastenkürzel und vieles mehr. Ein Blick hinein lohnt sich.</value>
-  </data>
   <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
     <value>Einstellungen ansehen</value>
   </data>
@@ -11245,9 +11242,6 @@
   </data>
   <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
     <value>FerrumPix kann rechenintensive Arbeit an die Grafikkarte geben.</value>
-  </data>
-  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
-    <value>Nichts ausgewählt</value>
   </data>
   <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
     <value>Download insgesamt: {0}</value>
@@ -11287,5 +11281,8 @@
   </data>
   <data name="Zustimmen_e0a817b3" xml:space="preserve">
     <value>Zustimmen</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
+    <value>FerrumPix lässt sich in vielen Einstellungen genau auf deine Arbeitsweise abstimmen: Galerie und Kacheln, Viewer und Diashow, Editor und Werkzeuge, Info-Leiste, RAW-Entwicklung und vieles mehr. Ein Blick in die Einstellungen lohnt sich.</value>
   </data>
 </root>
