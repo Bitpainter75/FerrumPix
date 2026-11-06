@@ -1281,6 +1281,12 @@ Namespace Views
                 ' darunter prueft keine Zusatztasten und machte daraus sonst ein Blaettern.
                 Dim isViewerPanKey = e.KeyModifiers = KeyModifiers.Shift AndAlso
                                      (e.Key = Key.Left OrElse e.Key = Key.Right OrElse e.Key = Key.Up OrElse e.Key = Key.Down)
+                ' Ein Eingabefeld im Vollbild (das Stichwort- oder Namensfeld des Infopanels) behaelt
+                ' seine Tasten: sonst hielte die Leertaste beim Tippen die Diashow an, die Pfeile
+                ' blaetterten und ENTF loeschte das Bild statt eines Zeichens.
+                If vm.IsFullscreen AndAlso Not isViewerPanKey AndAlso PlatformShortcutService.IsInputFieldSource(e.Source) Then
+                    Return
+                End If
                 If vm.IsFullscreen AndAlso Not isViewerPanKey Then
                     ' Die Zoomtasten des Vollbilds hat die Ansicht des Betrachters; sie sieht sie
                     ' hier nicht selbst, also geht die Taste ausdruecklich an sie.
@@ -1314,6 +1320,20 @@ Namespace Views
                         Case Key.F2
                             vm.Viewer.RenameCurrentCommand.Execute(Nothing)
                             e.Handled = True
+                        Case Key.I
+                            ' I und STRG+I schalten das Infopanel im Vollbild (der Befehl des
+                            ' Betrachters leitet dort auf den eigenen Schalter um). Die Ansicht sieht
+                            ' im Vollbild keine Tasten, deshalb steht es hier.
+                            ' Mit Zusatztaste: STRG, auf macOS auch die Befehlstaste (das primaere
+                            ' Kuerzel dort); HasApplicationModifier allein kennt nur STRG.
+                            Dim withShortcutModifier = (PlatformShortcutService.HasApplicationModifier(e.KeyModifiers) OrElse
+                                                        PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers)) AndAlso
+                                                       Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+                                                       Not e.KeyModifiers.HasFlag(KeyModifiers.Alt)
+                            If e.KeyModifiers = KeyModifiers.None OrElse withShortcutModifier Then
+                                vm.Viewer?.ToggleInfoSidebarCommand.Execute(Nothing)
+                                e.Handled = True
+                            End If
                     End Select
                     Return
                 End If

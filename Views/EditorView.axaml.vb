@@ -4564,8 +4564,8 @@ Namespace Views
             Dim sidebar = Me.FindControl(Of Border)("InfoSidebarBorder")
             If root Is Nothing Then Return
 
-            If root.ColumnDefinitions.Count >= 4 Then
-                root.ColumnDefinitions(3).Width = If(vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible, New GridLength(300), New GridLength(0))
+            If root.ColumnDefinitions.Count > InfoSidebarColumn Then
+                root.ColumnDefinitions(InfoSidebarColumn).Width = If(vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible, New GridLength(InfoSidebarWidth), New GridLength(0))
             End If
 
             If sidebar IsNot Nothing Then
@@ -4573,15 +4573,24 @@ Namespace Views
             End If
         End Sub
 
-        ' Klappt die Ebenen-Panel-Spalte (Index 4) auf 0 zusammen, wenn das Panel aus ist - wie die
-        ' Info-Seitenleiste (Spalte 3). Die Border-Sichtbarkeit selbst hängt zusätzlich an der Bindung.
+        ''' <summary>Die beiden rechten Spalten von EditorRootGrid: das Ebenenpanel, ganz rechts das
+        ''' Infopanel (wie in Galerie und Betrachter). Muss zur Reihenfolge im XAML passen.</summary>
+        Private Const LayersPanelColumn As Integer = 3
+        Private Const InfoSidebarColumn As Integer = 4
+        ''' <summary>Muss die Breite der InfoSidebarView im XAML sein (320). Stand hier 300, ragte
+        ''' das Panel zentriert je 10 Pixel aus seiner Spalte und deckte links den Rand und den
+        ''' Rollbalken des Ebenenpanels ab.</summary>
+        Private Const InfoSidebarWidth As Double = 320
+
+        ' Klappt die Ebenen-Panel-Spalte auf 0 zusammen, wenn das Panel aus ist - wie die
+        ' Info-Seitenleiste. Die Border-Sichtbarkeit selbst hängt zusätzlich an der Bindung.
         Private Sub UpdateLayersPanelLayout()
             Dim vm = TryCast(DataContext, EditorViewModel)
             Dim root = Me.FindControl(Of Grid)("EditorRootGrid")
             If root Is Nothing Then Return
 
-            If root.ColumnDefinitions.Count >= 5 Then
-                root.ColumnDefinitions(4).Width = If(vm IsNot Nothing AndAlso vm.IsLayersPanelVisible, New GridLength(300), New GridLength(0))
+            If root.ColumnDefinitions.Count > LayersPanelColumn Then
+                root.ColumnDefinitions(LayersPanelColumn).Width = If(vm IsNot Nothing AndAlso vm.IsLayersPanelVisible, New GridLength(300), New GridLength(0))
             End If
         End Sub
 

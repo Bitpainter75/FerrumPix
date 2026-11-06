@@ -2471,10 +2471,10 @@
                                                                        VerticalAlignment="Bottom"
                                                                        IsHitTestVisible="False">
                                                                 <icons:SvgIcon.Effect>
-                                                                    <DropShadowEffect BlurRadius="6"
+                                                                    <DropShadowEffect BlurRadius="2"
                                                                                       OffsetX="0"
-                                                                                      OffsetY="1"
-                                                                                      Color="#B0000000"/>
+                                                                                      OffsetY="0"
+                                                                                      Color="#FF000000"/>
                                                                 </icons:SvgIcon.Effect>
                                                             </icons:SvgIcon>
                                                         </Border>
@@ -2494,10 +2494,10 @@
                                                                        VerticalAlignment="Bottom"
                                                                        IsHitTestVisible="False">
                                                                 <icons:SvgIcon.Effect>
-                                                                    <DropShadowEffect BlurRadius="6"
+                                                                    <DropShadowEffect BlurRadius="2"
                                                                                       OffsetX="0"
-                                                                                      OffsetY="1"
-                                                                                      Color="#B0000000"/>
+                                                                                      OffsetY="0"
+                                                                                      Color="#FF000000"/>
                                                                 </icons:SvgIcon.Effect>
                                                             </icons:SvgIcon>
                                                         </Border>
@@ -2517,10 +2517,10 @@
                                                                        VerticalAlignment="Bottom"
                                                                        IsHitTestVisible="False">
                                                                 <icons:SvgIcon.Effect>
-                                                                    <DropShadowEffect BlurRadius="6"
+                                                                    <DropShadowEffect BlurRadius="2"
                                                                                       OffsetX="0"
-                                                                                      OffsetY="1"
-                                                                                      Color="#B0000000"/>
+                                                                                      OffsetY="0"
+                                                                                      Color="#FF000000"/>
                                                                 </icons:SvgIcon.Effect>
                                                             </icons:SvgIcon>
                                                         </Border>
@@ -2540,10 +2540,10 @@
                                                                        VerticalAlignment="Bottom"
                                                                        IsHitTestVisible="False">
                                                                 <icons:SvgIcon.Effect>
-                                                                    <DropShadowEffect BlurRadius="6"
+                                                                    <DropShadowEffect BlurRadius="2"
                                                                                       OffsetX="0"
-                                                                                      OffsetY="1"
-                                                                                      Color="#B0000000"/>
+                                                                                      OffsetY="0"
+                                                                                      Color="#FF000000"/>
                                                                 </icons:SvgIcon.Effect>
                                                             </icons:SvgIcon>
                                                         </Border>
@@ -2859,10 +2859,10 @@
                                                                        IconBrush="White"
                                                                        IsHitTestVisible="False">
                                                             <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="6"
+                                                                <DropShadowEffect BlurRadius="2"
                                                                                   OffsetX="0"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
+                                                                                  OffsetY="0"
+                                                                                  Color="#FF000000"/>
                                                             </icons:SvgIcon.Effect>
                                                         </icons:SvgIcon>
                                                     </Border>
@@ -2880,10 +2880,10 @@
                                                                        IconBrush="White"
                                                                        IsHitTestVisible="False">
                                                             <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="6"
+                                                                <DropShadowEffect BlurRadius="2"
                                                                                   OffsetX="0"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
+                                                                                  OffsetY="0"
+                                                                                  Color="#FF000000"/>
                                                             </icons:SvgIcon.Effect>
                                                         </icons:SvgIcon>
                                                     </Border>
@@ -2901,10 +2901,10 @@
                                                                        IconBrush="White"
                                                                        IsHitTestVisible="False">
                                                             <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="6"
+                                                                <DropShadowEffect BlurRadius="2"
                                                                                   OffsetX="0"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
+                                                                                  OffsetY="0"
+                                                                                  Color="#FF000000"/>
                                                             </icons:SvgIcon.Effect>
                                                         </icons:SvgIcon>
                                                     </Border>
@@ -2922,10 +2922,10 @@
                                                                        IconBrush="White"
                                                                        IsHitTestVisible="False">
                                                             <icons:SvgIcon.Effect>
-                                                                <DropShadowEffect BlurRadius="6"
+                                                                <DropShadowEffect BlurRadius="2"
                                                                                   OffsetX="0"
-                                                                                  OffsetY="1"
-                                                                                  Color="#B0000000"/>
+                                                                                  OffsetY="0"
+                                                                                  Color="#FF000000"/>
                                                             </icons:SvgIcon.Effect>
                                                         </icons:SvgIcon>
                                                     </Border>

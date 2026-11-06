@@ -124,9 +124,44 @@ Namespace ViewModels
         ''' Betrachter ist die Ansicht auf dem Schirm. Der Betrachter besteht die ganze Sitzung ueber
         ''' und merkt sich seinen Ausklappzustand - ohne die zweite Bedingung rechnete er auch dann,
         ''' wenn Galerie oder Editor vorne stehen.</summary>
+        ''' <summary>Das Infopanel im Vollbild: ein eigener Schalter in der Bedienleiste, ab Werk aus
+        ''' und nur fuer die Sitzung. Er ist bewusst NICHT derselbe wie im Fenster: wer dort die
+        ''' Leiste offen hat, will das Vollbild trotzdem frei sehen.</summary>
+        Private _fullscreenInfoRequested As Boolean
+
+        ''' <summary>Steht das Infopanel gerade im Vollbild? Nur im Vollbild und nur mit dem Schalter.</summary>
+        Public ReadOnly Property ShowsFullscreenInfo As Boolean
+            Get
+                Return IsFullscreenMode AndAlso _fullscreenInfoRequested
+            End Get
+        End Property
+
+        ''' <summary>Zeigt irgendeine Stelle das Infopanel: im Fenster die Leiste, im Vollbild der
+        ''' eigene Schalter. Das Panel rechnet Histogramm und Analysebild nur dann.</summary>
+        Private ReadOnly Property IsInfoShownAnywhere As Boolean
+            Get
+                Return If(IsFullscreenMode, ShowsFullscreenInfo, IsInfoSidebarVisible)
+            End Get
+        End Property
+
+        Public ReadOnly Property ToggleFullscreenInfoCommand As ICommand
+
+        Private Sub ToggleFullscreenInfo()
+            _fullscreenInfoRequested = Not _fullscreenInfoRequested
+            SyncInfoPanelVisibility()
+        End Sub
+
+        ''' <summary>Meldet den neuen Stand an View und Panel, nach dem Schalter und beim Wechsel
+        ''' ins oder aus dem Vollbild.</summary>
+        Private Sub SyncInfoPanelVisibility()
+            Me.RaisePropertyChanged(NameOf(ShowsFullscreenInfo))
+            InfoPanel.IsInfoSidebarVisible = IsInfoShownAnywhere
+            If IsInfoShownAnywhere Then EnsureHistogramLoaded()
+        End Sub
+
         Private ReadOnly Property IsScopeLive As Boolean
             Get
-                Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoSidebarVisible AndAlso
+                Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoShownAnywhere AndAlso
                        _mainVm IsNot Nothing AndAlso _mainVm.CurrentMode = AppMode.Viewer
             End Get
         End Property
@@ -1084,7 +1119,14 @@ Namespace ViewModels
                                                            ZoomLevel = 1.0
                                                        End Sub)
             EditCommand = ReactiveCommand.CreateFromTask(Function() OpenCurrentInEditorAsync())
+            ToggleFullscreenInfoCommand = ReactiveCommand.Create(AddressOf ToggleFullscreenInfo)
             ToggleInfoSidebarCommand = ReactiveCommand.Create(Sub()
+                                                                   ' Im Vollbild schalten I und STRG+I das Panel dort,
+                                                                   ' nicht die Leiste des Fensters.
+                                                                   If IsFullscreenMode Then
+                                                                       ToggleFullscreenInfo()
+                                                                       Return
+                                                                   End If
                                                                    If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
                                                                    _mainVm.Settings.ViewerInfoSidebarExpanded = Not _mainVm.Settings.ViewerInfoSidebarExpanded
                                                                    Me.RaisePropertyChanged(NameOf(IsInfoSidebarVisible))
@@ -4727,6 +4769,7 @@ Namespace ViewModels
         Public Sub RaiseFullscreenChanged()
             Me.RaisePropertyChanged(NameOf(IsFullscreenMode))
             Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+            SyncInfoPanelVisibility()
         End Sub
 
         Private Sub MarkCurrentFilmstripItem()

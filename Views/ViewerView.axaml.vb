@@ -1313,6 +1313,7 @@ Namespace Views
                 If _fullscreenFilmstripEdge IsNot Nothing Then HideFullscreenFilmstrip()
                 ApplyFullscreenImageMode()
                 ApplyVideoLayout()
+                UpdateFullscreenInfoLayout()
                 ' Beim Betreten kurz zeigen, dass es die Leiste gibt; die Ruhezeit nimmt sie wieder.
                 _fullscreenVideoControlsVisible = True
                 ResetFullscreenVideoControlsVisibility()
@@ -1360,6 +1361,10 @@ Namespace Views
 
             If e.PropertyName = NameOf(ViewerViewModel.IsInfoSidebarVisible) Then
                 UpdateInfoSidebarLayoutState()
+            End If
+
+            If e.PropertyName = NameOf(ViewerViewModel.ShowsFullscreenInfo) Then
+                UpdateFullscreenInfoLayout()
             End If
         End Sub
 
@@ -1510,7 +1515,8 @@ Namespace Views
                 Grid.SetRow(overlay, 0)
                 Grid.SetColumn(overlay, 0)
                 Grid.SetRowSpan(overlay, 3)
-                Grid.SetColumnSpan(overlay, 2)
+                ' Mit dem Infopanel im Vollbild nur die erste Spalte, wie die Bildflaeche.
+                Grid.SetColumnSpan(overlay, If(vm.ShowsFullscreenInfo, 1, 2))
                 overlay.Margin = New Thickness(0)
             Else
                 Grid.SetRow(overlay, 1)
@@ -1630,13 +1636,55 @@ Namespace Views
             Dim root = Me.FindControl(Of Grid)("ViewerRootGrid")
             Dim sidebar = Me.FindControl(Of Border)("ViewerInfoSidebarBorder")
             If root Is Nothing Then Return
+            ' Im Vollbild gilt der eigene Schalter, nicht der des Fensters.
+            If vm IsNot Nothing AndAlso vm.IsFullscreenMode Then
+                UpdateFullscreenInfoLayout()
+                Return
+            End If
 
             If root.ColumnDefinitions.Count >= 2 Then
-                root.ColumnDefinitions(1).Width = If(vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible, New GridLength(300), New GridLength(0))
+                ' 320 wie die InfoSidebarView im XAML; eine schmalere Spalte liesse das Panel je
+                ' 10 Pixel ueberstehen, aus dem Fenster und ueber das Bild.
+                root.ColumnDefinitions(1).Width = If(vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible, New GridLength(320), New GridLength(0))
             End If
 
             If sidebar IsNot Nothing Then
                 sidebar.IsVisible = vm IsNot Nothing AndAlso vm.IsInfoSidebarVisible
+            End If
+        End Sub
+
+        ''' <summary>Das Infopanel im Vollbild. Die Bildflaeche (FullscreenViewport) und eine
+        ''' Videoflaeche ruecken auf die erste Spalte, das Panel steht in der zweiten ueber die volle
+        ''' Hoehe und liegt ueber Kopf- und Fussleiste des Fensters. So misst alles, was an der
+        ''' Bildflaeche haengt (Einpassen, Zoom, Verschieben, die Leisten in ihrer Mitte), an der
+        ''' kleineren Flaeche und stimmt ohne eigene Rechnung. Ausserhalb des Vollbilds steht alles
+        ''' wieder an seinem Platz im Fenster, die Spaltenbreite setzt UpdateInfoSidebarLayoutState.</summary>
+        Private Sub UpdateFullscreenInfoLayout()
+            Dim vm = GetVm()
+            Dim root = Me.FindControl(Of Grid)("ViewerRootGrid")
+            Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
+            Dim panel = Me.FindControl(Of Control)("ViewerInfoPanel")
+            Dim overlay = Me.FindControl(Of Grid)("VideoOverlay")
+            If vm Is Nothing OrElse root Is Nothing OrElse viewport Is Nothing OrElse panel Is Nothing Then Return
+
+            If vm.IsFullscreenMode Then
+                Dim show = vm.ShowsFullscreenInfo
+                Grid.SetColumnSpan(viewport, If(show, 1, 2))
+                If overlay IsNot Nothing Then Grid.SetColumnSpan(overlay, If(show, 1, 2))
+                If root.ColumnDefinitions.Count >= 2 Then
+                    root.ColumnDefinitions(1).Width = If(show, New GridLength(320), New GridLength(0))
+                End If
+                Grid.SetRow(panel, 0)
+                Grid.SetRowSpan(panel, 3)
+                panel.ZIndex = 20
+                panel.IsVisible = show
+            Else
+                Grid.SetColumnSpan(viewport, 2)
+                Grid.SetRow(panel, 1)
+                Grid.SetRowSpan(panel, 1)
+                panel.ZIndex = 0
+                panel.IsVisible = True
+                UpdateInfoSidebarLayoutState()
             End If
         End Sub
 

@@ -1347,6 +1347,13 @@
     <Style Selector="ListBox.layers-panel-list">
         <Setter Property="Background" Value="Transparent"/>
     </Style>
+    <!-- Platz für den Rollbalken rechts: er liegt ÜBER dem Inhalt (eingeblendeter Rollbalken),
+         und ohne diesen Rand stand er bei einer langen Liste auf den Augen- und Schlosssymbolen
+         am rechten Zeilenende. Der Rand sitzt innen an der Liste, der Rollbalken bleibt außen am
+         Panelrand. Gilt für Ebenenstapel und Historie. -->
+    <Style Selector="ListBox.layers-panel-list /template/ ItemsPresenter">
+        <Setter Property="Margin" Value="0,0,12,0"/>
+    </Style>
     <Style Selector="ListBox.layers-panel-list ListBoxItem">
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="0"/>
@@ -2237,6 +2244,39 @@
     <Style Selector="Button.star-btn.active icons|SvgIcon.rating-star">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <!-- AUF DER KACHEL zwei Schatten übereinander, damit Sterne, Herz und die Metadaten-Symbole
+         auch über hellem Himmel, Schnee oder weißer Wand lesbar bleiben. Ein großer Weichzeichner
+         allein hilft NICHT: er verteilt dieselbe Deckung auf mehr Fläche, die Kante wird dünner.
+         Deshalb am Symbol ein enger, voll deckender Rand (Weichzeichnung 2, ohne Versatz) und am
+         Knopf bzw. Kästchen darum ein weicher Hof. Ein Element trägt nur EINEN Effekt; der am
+         Elternteil schließt den Schatten des Kindes mit ein. Der Hintergrund der Knöpfe und
+         Kästchen ist durchsichtig, der Hof folgt also der Form des Symbols. Nur auf der Kachel;
+         in Infoleiste und Betrachter bleibt der schlanke Schatten oben. -->
+    <Style Selector="Border.thumb-card Button.star-btn icons|SvgIcon.rating-star">
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="0" Color="#FF000000"/>
+        </Setter>
+    </Style>
+    <Style Selector="Border.thumb-card Button.favorite-btn icons|SvgIcon.fav-heart">
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="0" Color="#FF000000"/>
+        </Setter>
+    </Style>
+    <Style Selector="Border.thumb-card Button.star-btn">
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1" Color="#C0000000"/>
+        </Setter>
+    </Style>
+    <Style Selector="Border.thumb-card Button.favorite-btn">
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1" Color="#C0000000"/>
+        </Setter>
+    </Style>
+    <Style Selector="StackPanel.gallery-meta-badges > Border">
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1" Color="#C0000000"/>
+        </Setter>
     </Style>
 
     <!-- SVG-Grafiken bekommen in Kacheln und Filmstreifen eine helle Unterlage wie ein Blatt

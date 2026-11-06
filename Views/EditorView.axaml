@@ -21,8 +21,12 @@
 
          Die 380 der dritten Spalte ist die Vorgabe des Anpassungspanels und muss dieselbe Zahl sein
          wie AdjustmentsPanelWidth im Codebehind: liegt das Panel links, setzt UpdateAdjustmentsPanelSide
-         sie auf die zweite Spalte um. -->
-    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,380,320,300">
+         sie auf die zweite Spalte um.
+
+         Die beiden letzten Spalten: erst das Ebenenpanel (Index 3), ganz rechts das Infopanel
+         (Index 4), wie in Galerie und Betrachter, wo das Infopanel ebenfalls am rechten Rand
+         steht. Die Nummern stehen im Codebehind als LayersPanelColumn und InfoSidebarColumn. -->
+    <Grid x:Name="EditorRootGrid" RowDefinitions="52,*,Auto" ColumnDefinitions="Auto,*,380,300,320">
 
         <!-- EIN Kontextmenue fuer Filmstreifen und Fusszeile. Sonst nirgends im Editor: weder auf
              der Buehne noch in den Panels rechts (siehe OnContextRequested). -->
@@ -2020,10 +2024,10 @@
 
         <!-- Der Datenkontext ist das Panel, nicht der Editor: seinen Zustand haelt seit dem
              2026-08-06 das gemeinsame InfoPanelViewModel, dasselbe wie in Galerie und Betrachter. -->
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="3" Width="320"
-                               DataContext="{Binding InfoPanel}" />
+        <views:LayersPanelView Grid.Row="1" Grid.Column="3" Width="300" />
 
-        <views:LayersPanelView Grid.Row="1" Grid.Column="4" Width="300" />
+        <views:InfoSidebarView Grid.Row="1" Grid.Column="4" Width="320"
+                               DataContext="{Binding InfoPanel}" />
 
         <!-- Leerzustand: der Editor hält gar kein Dokument (Start ohne Bilddatei, oder der
              Neu-Dialog wurde abgebrochen). Deckt die ganze Arbeitszeile ab - Werkzeuge und Panels

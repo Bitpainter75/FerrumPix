@@ -32,6 +32,12 @@
 
 - Gallery tiles now show a green thumbs up on kept pictures, just like the mark on rejected ones.
   A click on it removes the keep mark again. Both marks can be switched off in the gallery settings.
+  Stars, heart and the EXIF, IPTC, XMP and ICC symbols on the tiles have a stronger shadow, so
+  they stay readable on bright pictures.
+
+- Info sidebar: in the editor it now sits on the far right, next to the layers panel. In fullscreen
+  a new button in the control bar (or the I key) shows and hides it, and the picture makes room for
+  it.
 
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the

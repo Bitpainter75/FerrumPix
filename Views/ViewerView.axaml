@@ -591,7 +591,7 @@
 
         <!-- Der Datenkontext ist das Panel, nicht der Betrachter: seinen Zustand haelt seit dem
              2026-08-06 das gemeinsame InfoPanelViewModel, dasselbe wie in Galerie und Editor. -->
-        <views:InfoSidebarView Grid.Row="1" Grid.Column="1" Width="320"
+        <views:InfoSidebarView Name="ViewerInfoPanel" Grid.Row="1" Grid.Column="1" Width="320"
                                DataContext="{Binding InfoPanel}"/>
 
         <!-- Der ganze untere Rand. Er traegt ZWEI Dinge mit je eigenem Schalter: den Filmstreifen
@@ -949,6 +949,15 @@
                             Click="OnFullscreenFilmstripToggleClick"
                             ToolTip.Tip="Filmstreifen ein- oder ausblenden">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/film-strip.svg" Width="18" Height="18"/>
+                    </Button>
+                    <!-- Das Infopanel im Vollbild: ein eigener Schalter (ShowsFullscreenInfo), nicht
+                         der des Fensters. Die Bildflaeche rueckt dafuer zur Seite, siehe
+                         UpdateFullscreenInfoLayout. -->
+                    <Button Classes="icon-btn bar-toggle" Width="36" Height="36"
+                            Command="{Binding ToggleFullscreenInfoCommand}"
+                            Classes.active="{Binding ShowsFullscreenInfo}"
+                            ToolTip.Tip="Info">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/info.svg" Width="18" Height="18"/>
                     </Button>
                     <Border Width="1" Margin="6,6" Background="#40FFFFFF"/>
                     <!-- Die Pause der Diashow in Stufen, dieselbe Einstellung wie in den
