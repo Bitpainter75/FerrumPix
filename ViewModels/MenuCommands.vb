@@ -123,6 +123,13 @@ Namespace ViewModels
         Public Property SetCaptureDate As ICommand
         ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe.</summary>
         Public Property SetDescription As ICommand
+        ''' <summary>Bewertung, Etikett, Markierung und Stichwoerter aus Datei und Beistelldatei in
+        ''' den Katalog.</summary>
+        Public Property ImportMetadataToCatalog As ICommand
+        ''' <summary>Dieselben Angaben aus dem Katalog in Datei bzw. Beistelldatei.</summary>
+        Public Property WriteCatalogToFiles As ICommand
+        ''' <summary>Datei und Katalog fuer EIN Bild nebeneinander.</summary>
+        Public Property CompareMetadata As ICommand
         Public Property OpenPlaceInOsm As ICommand
 
         ' Wege nach draussen

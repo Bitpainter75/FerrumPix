@@ -3,6 +3,16 @@
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.SearchDialogView">
 
+    <!-- Sterne in der Auswahlliste der Bewertung: neutral, angehakt im Akzentton. -->
+    <UserControl.Styles>
+        <Style Selector="icons|SvgIcon.search-star">
+            <Setter Property="IconBrush" Value="{DynamicResource FP.Text.Secondary}"/>
+        </Style>
+        <Style Selector="Button.active icons|SvgIcon.search-star">
+            <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
           RowSpacing="14">
         <!-- ZWEI ABSCHNITTE. Oben, wonach sich immer suchen laesst - der Name der Datei. Unten alles,
@@ -64,18 +74,68 @@
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
         </StackPanel>
 
-        <Grid Grid.Row="4" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
+        <!-- Favorit, Markierung und Etikett als SYMBOLE wie in der Infoleiste: im Akzentton
+             angehakt (danach wird gesucht), sonst neutral (egal). Ein Klick auf ein angehaktes
+             Symbol nimmt es zurueck. Mehrere Markierungen oder Etiketten sind eine ODER-Liste. -->
+        <Grid Grid.Row="4" ColumnDefinitions="200,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10"
+              ColumnSpacing="8" Margin="0,2,0,0">
             <TextBlock Text="Favoriten" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                <Button Classes="segmented"
-                        Classes.active="{Binding IsDialogSearchFavoriteOnly}"
-                        Click="OnFavoriteClick"
-                        Tag="Only">Nur Favoriten</Button>
-                <Button Classes="segmented"
-                        Classes.active="{Binding IsDialogSearchFavoriteNot}"
-                        Click="OnFavoriteClick"
-                        Tag="Not">Ohne Favoriten</Button>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                <Button Classes="icon-btn" Width="30" Height="30" Click="OnFavoriteClick" Tag="Only"
+                        ToolTip.Tip="Nur Favoriten">
+                    <Grid Width="20" Height="20">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                       Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsDialogSearchFavoriteOnly}"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                                       Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsDialogSearchFavoriteOnly}"/>
+                    </Grid>
+                </Button>
+                <Button Classes="icon-btn" Width="30" Height="30" Click="OnFavoriteClick" Tag="Not"
+                        ToolTip.Tip="Ohne Favoriten">
+                    <Grid Width="20" Height="20">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart-break.svg"
+                                       Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsDialogSearchFavoriteNot}"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart-break.svg"
+                                       Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsDialogSearchFavoriteNot}"/>
+                    </Grid>
+                </Button>
             </StackPanel>
+
+            <TextBlock Grid.Row="1" Text="Markierung" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                <Button Classes="icon-btn pick-btn pick-keep" Width="30" Height="30"
+                        Classes.active="{Binding IsDialogSearchPickKeep}" Click="OnPickClick" Tag="1"
+                        ToolTip.Tip="Behalten">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18"/>
+                </Button>
+                <Button Classes="icon-btn pick-btn pick-reject" Width="30" Height="30"
+                        Classes.active="{Binding IsDialogSearchPickReject}" Click="OnPickClick" Tag="-1"
+                        ToolTip.Tip="Verworfen">
+                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18"/>
+                </Button>
+            </StackPanel>
+
+            <TextBlock Grid.Row="2" Text="Etikett" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <ItemsControl Grid.Row="2" Grid.Column="1" ItemsSource="{Binding DialogSearchLabelOptions}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel ItemSpacing="5" LineSpacing="5"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Classes="ghost" Width="26" Height="26" Padding="0" CornerRadius="13"
+                                Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding ToolTip}">
+                            <Grid>
+                                <Ellipse Width="16" Height="16" Fill="{Binding Brush}"/>
+                                <Ellipse Width="24" Height="24" Stroke="{DynamicResource FP.Accent}" StrokeThickness="2"
+                                         IsVisible="{Binding IsActive}"/>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,-4,0,0" TextWrapping="Wrap"
+                       FontSize="{DynamicResource FP.Font.Small}" Foreground="{DynamicResource FP.Text.Muted}"
+                       Text="Mehrere Markierungen oder Etiketten: eines davon genügt."/>
         </Grid>
 
         <Grid Grid.Row="5" ColumnDefinitions="200,*" ColumnSpacing="8" Margin="0,2,0,0">
@@ -100,35 +160,46 @@
                                     <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRatingUnrated}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
                                 </Grid>
                             </Button>
-                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="1">
-                                <Grid ColumnDefinitions="*,20">
-                                    <TextBlock Text="1 Stern"/>
-                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating1}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
-                                </Grid>
+                            <!-- Je Eintrag so viele Sterne wie die Bewertung; angehakt im Akzentton. -->
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="1"
+                                    Classes.active="{Binding IsDialogSearchRating1}" ToolTip.Tip="1 Stern">
+                                <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                </StackPanel>
                             </Button>
-                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="2">
-                                <Grid ColumnDefinitions="*,20">
-                                    <TextBlock Text="2 Sterne"/>
-                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating2}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
-                                </Grid>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="2"
+                                    Classes.active="{Binding IsDialogSearchRating2}" ToolTip.Tip="2 Sterne">
+                                <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                </StackPanel>
                             </Button>
-                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="3">
-                                <Grid ColumnDefinitions="*,20">
-                                    <TextBlock Text="3 Sterne"/>
-                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating3}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
-                                </Grid>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="3"
+                                    Classes.active="{Binding IsDialogSearchRating3}" ToolTip.Tip="3 Sterne">
+                                <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                </StackPanel>
                             </Button>
-                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="4">
-                                <Grid ColumnDefinitions="*,20">
-                                    <TextBlock Text="4 Sterne"/>
-                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating4}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
-                                </Grid>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="4"
+                                    Classes.active="{Binding IsDialogSearchRating4}" ToolTip.Tip="4 Sterne">
+                                <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                </StackPanel>
                             </Button>
-                            <Button Classes="dropdown-item" HorizontalContentAlignment="Stretch" Click="OnRatingClick" Tag="5">
-                                <Grid ColumnDefinitions="*,20">
-                                    <TextBlock Text="5 Sterne"/>
-                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsDialogSearchRating5}" Foreground="{DynamicResource FP.Accent}" FontWeight="Bold"/>
-                                </Grid>
+                            <Button Classes="dropdown-item" HorizontalContentAlignment="Left" Click="OnRatingClick" Tag="5"
+                                    Classes.active="{Binding IsDialogSearchRating5}" ToolTip.Tip="5 Sterne">
+                                <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/star-fill.svg" Classes="search-star" Width="16" Height="16"/>
+                                </StackPanel>
                             </Button>
                         </StackPanel>
                     </Flyout>
@@ -144,14 +215,18 @@
                 <ItemsControl ItemsSource="{Binding DialogSearchConditions}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="120,90,*,Auto" ColumnSpacing="6" Margin="0,0,0,6"
+                            <!-- Feld, Vergleich und Wert teilen sich die Breite anteilig (3 zu 2 zu 4),
+                                 statt fester Spalten: so wachsen sie mit dem breiteren Dialog mit,
+                                 und es bleibt keine Luecke zwischen ihnen. -->
+                            <Grid ColumnDefinitions="3*,2*,4*,Auto" ColumnSpacing="6" Margin="0,0,0,6"
                                   AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                 <!-- Der WERT bleibt der Feldname ("Person", "Place") - er steht so in
                                      jeder gespeicherten Suche. Übersetzt wird nur die Anzeige, sonst
                                      passte der Vergleich nach einem Sprachwechsel nicht mehr. Der
                                      Baumdurchlauf der Lokalisierung fasst diese Texte nicht an
                                      ("no-translate"): er würde die Bindung überschreiben. -->
-                                <ComboBox ItemsSource="{Binding DataContext.DialogSearchConditionFieldOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{Binding DataContext.DialogSearchConditionFieldOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           SelectedItem="{Binding Field, Mode=TwoWay}"
                                           MinHeight="32">
                                     <ComboBox.ItemTemplate>
@@ -161,7 +236,7 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <ComboBox Grid.Column="1"
+                                <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
                                           ItemsSource="{Binding DataContext.DialogSearchConditionOperatorOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           SelectedItem="{Binding Operator, Mode=TwoWay}"
                                           MinHeight="32">
@@ -172,8 +247,10 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
+                                <!-- Bei "ist leer" und "ist nicht leer" gibt es nichts einzutragen. -->
                                 <TextBox Grid.Column="2"
                                          Text="{Binding Value, Mode=TwoWay}"
+                                         IsVisible="{Binding NeedsValue}"
                                          PlaceholderText="Wert"
                                          MinHeight="32"/>
                                 <Button Grid.Column="3"

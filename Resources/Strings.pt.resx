@@ -10960,4 +10960,172 @@
   <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
     <value>Título e descrição guardados para {0} de {1} imagens</value>
   </data>
+  <data name="Metadaten_in_den_Katalog_bernehmen_29392693" xml:space="preserve">
+    <value>Passar os metadados para o catálogo</value>
+  </data>
+  <data name="Katalogdaten_in_die_Dateien_schreiben_8396d136" xml:space="preserve">
+    <value>Escrever os dados do catálogo nos ficheiros</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Die_Werte_aus_Datei_und_Beiste_2e3dcc9d" xml:space="preserve">
+    <value>Aplica-se a {0} imagens. Os valores do ficheiro e do ficheiro anexo substituem os do catálogo.</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_JPEG_PNG_und_WebP_bekommen_die_0449426f" xml:space="preserve">
+    <value>Aplica-se a {0} imagens. JPEG, PNG e WebP recebem os valores no ficheiro, todos os outros formatos num ficheiro anexo XMP.</value>
+  </data>
+  <data name="Schreiben_f4f5c5f4" xml:space="preserve">
+    <value>Escrever</value>
+  </data>
+  <data name="Metadaten_vergleichen_bc304f53" xml:space="preserve">
+    <value>Comparar metadados</value>
+  </data>
+  <data name="Nur_aus_der_Datei_43386bad" xml:space="preserve">
+    <value>Só do ficheiro</value>
+  </data>
+  <data name="Aus_Datei_und_Beistelldatei_9d443403" xml:space="preserve">
+    <value>Do ficheiro e do ficheiro anexo</value>
+  </data>
+  <data name="Zus_tzlich_Bewertung_Etikett_Stichw_rter_und_Mar_47654e13" xml:space="preserve">
+    <value>Também avaliação, etiqueta, palavras-chave e marcação no catálogo</value>
+  </data>
+  <data name="Personen_und_Favoriten_bleiben_in_jedem_Fall_Aus_0c007c9d" xml:space="preserve">
+    <value>Pessoas e favoritos ficam sempre. Do ficheiro anexo só se removem os campos conhecidos; os outros dados ficam.</value>
+  </data>
+  <data name="Markierung_2db7c266" xml:space="preserve">
+    <value>Marcação</value>
+  </data>
+  <data name="Zusammenf_hren_dcab7118" xml:space="preserve">
+    <value>Juntar</value>
+  </data>
+  <data name="Ersetzen_0556e76a" xml:space="preserve">
+    <value>Substituir</value>
+  </data>
+  <data name="Datei_e9e7baf1" xml:space="preserve">
+    <value>Ficheiro</value>
+  </data>
+  <data name="An_der_Datei_entfernen_1db87f8a" xml:space="preserve">
+    <value>Remover do ficheiro</value>
+  </data>
+  <data name="Katalogwert_in_die_Datei_dafedfe9" xml:space="preserve">
+    <value>Valor do catálogo para o ficheiro</value>
+  </data>
+  <data name="Dateiwert_in_den_Katalog_9dfb2cfb" xml:space="preserve">
+    <value>Valor do ficheiro para o catálogo</value>
+  </data>
+  <data name="Im_Katalog_entfernen_1b7a3aa5" xml:space="preserve">
+    <value>Remover do catálogo</value>
+  </data>
+  <data name="Datei_und_Katalog_weichen_ab_a371dcb4" xml:space="preserve">
+    <value>Ficheiro e catálogo diferem</value>
+  </data>
+  <data name="Alles_in_den_Katalog_5d8401d4" xml:space="preserve">
+    <value>Tudo para o catálogo</value>
+  </data>
+  <data name="Alles_in_die_Datei_6944b40e" xml:space="preserve">
+    <value>Tudo para o ficheiro</value>
+  </data>
+  <data name="Nur_hier_0_8094a5e0" xml:space="preserve">
+    <value>Só aqui: {0}</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_Datei_eine_v_ecadc9a3" xml:space="preserve">
+    <value>As alterações ao ficheiro vão para o ficheiro; um ficheiro anexo existente também é atualizado.</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_XMP_Beistell_644658a3" xml:space="preserve">
+    <value>As alterações ao ficheiro vão para o ficheiro anexo XMP; o ficheiro de imagem fica inalterado.</value>
+  </data>
+  <data name="Bewertung_und_Ordnung_c6dc3a8f" xml:space="preserve">
+    <value>Avaliação e ordem</value>
+  </data>
+  <data name="Gibt_es_nur_im_Katalog_35597649" xml:space="preserve">
+    <value>Só existe no catálogo</value>
+  </data>
+  <data name="Ja_283c735c" xml:space="preserve">
+    <value>Sim</value>
+  </data>
+  <data name="Nein_70bb8137" xml:space="preserve">
+    <value>Não</value>
+  </data>
+  <data name="0_nderungen_vorgemerkt_9c633b90" xml:space="preserve">
+    <value>{0} alterações pendentes</value>
+  </data>
+  <data name="Datei_und_Beistelldatei_weichen_ab_in_der_Datei__b1206367" xml:space="preserve">
+    <value>Ficheiro e ficheiro anexo diferem: no ficheiro {0}, no ficheiro anexo {1}</value>
+  </data>
+  <data name="0_von_5_53a26ac6" xml:space="preserve">
+    <value>{0} de 5</value>
+  </data>
+  <data name="0_Beistelldatei_en_lie_en_sich_nicht_bereinigen_a85066d0" xml:space="preserve">
+    <value>Não foi possível limpar {0} ficheiro(s) anexo(s)</value>
+  </data>
+  <data name="0_Bilder_abgeglichen_aa6c1a23" xml:space="preserve">
+    <value>{0} imagens sincronizadas</value>
+  </data>
+  <data name="0_von_1_Bildern_abgeglichen_afac4734" xml:space="preserve">
+    <value>{0} de {1} imagens sincronizadas</value>
+  </data>
+  <data name="Nicht_alle_nderungen_lie_en_sich_in_die_Datei_sc_15b91a65" xml:space="preserve">
+    <value>Nem todas as alterações puderam ser escritas no ficheiro</value>
+  </data>
+  <data name="Metadaten_abgeglichen_99f2f666" xml:space="preserve">
+    <value>Metadados sincronizados</value>
+  </data>
+  <data name="Keine_Angabe_1a1c7d9c" xml:space="preserve">
+    <value>Não definido</value>
+  </data>
+  <data name="In_den_Katalog_kopieren_5111e778" xml:space="preserve">
+    <value>Copiar para o catálogo</value>
+  </data>
+  <data name="In_die_Datei_kopieren_5b76be3f" xml:space="preserve">
+    <value>Copiar para o ficheiro</value>
+  </data>
+  <data name="Wo_sollen_die_Metadaten_von_0_Bild_ern_entfernt__19d35efc" xml:space="preserve">
+    <value>Onde devem ser removidos os metadados de {0} imagem(ns)? Não é possível anular.</value>
+  </data>
+  <data name="In_der_Bilddatei_Aufnahmedaten_IPTC_XMP_und_Farb_f2c816c4" xml:space="preserve">
+    <value>No ficheiro de imagem: dados de captura, IPTC, XMP e perfil de cor. O ficheiro é reescrito.</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_Bewertung_Etikett_Stich_ab6e3e7f" xml:space="preserve">
+    <value>No ficheiro anexo XMP: avaliação, etiqueta, palavras-chave, descrição, direitos de autor, local e hora da captura.</value>
+  </data>
+  <data name="Im_Katalog_Bewertung_Etikett_Stichw_rter_und_Mar_43c85e39" xml:space="preserve">
+    <value>No catálogo: avaliação, etiqueta, palavras-chave e marcação.</value>
+  </data>
+  <data name="Welche_Metadaten_von_0_Bild_ern_sollen_wo_entfer_1435d327" xml:space="preserve">
+    <value>Que metadados de {0} imagem(ns) devem ser removidos, e onde? Não é possível anular.</value>
+  </data>
+  <data name="Welche_Angaben_b5cfffe0" xml:space="preserve">
+    <value>Que dados</value>
+  </data>
+  <data name="Alles_Aufnahmedaten_IPTC_XMP_und_Farbprofil_4222b121" xml:space="preserve">
+    <value>Tudo: dados de captura, IPTC, XMP e perfil de cor</value>
+  </data>
+  <data name="Aufnahmeort_b700fa16" xml:space="preserve">
+    <value>Local da captura</value>
+  </data>
+  <data name="Wo_c1cfb73d" xml:space="preserve">
+    <value>Onde</value>
+  </data>
+  <data name="In_der_Bilddatei_63daa147" xml:space="preserve">
+    <value>No ficheiro de imagem</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_c25ddb23" xml:space="preserve">
+    <value>No ficheiro anexo XMP</value>
+  </data>
+  <data name="Im_Katalog_788ff1c9" xml:space="preserve">
+    <value>No catálogo</value>
+  </data>
+  <data name="Mit_Alles_wird_die_Bilddatei_ohne_Metadaten_neu__81ffceb9" xml:space="preserve">
+    <value>Com Tudo, o ficheiro de imagem é reescrito sem metadados. No catálogo só contam avaliação, etiqueta, marcação e palavras-chave; descrição, direitos de autor e local seguem lá o ficheiro. Pessoas e favoritos ficam sempre, e do ficheiro anexo só se removem os campos conhecidos.</value>
+  </data>
+  <data name="ist_leer_f0f24cb3" xml:space="preserve">
+    <value>está vazio</value>
+  </data>
+  <data name="ist_nicht_leer_b65732fa" xml:space="preserve">
+    <value>não está vazio</value>
+  </data>
+  <data name="RAW_und_andere_Formate_die_sich_nicht_zur_ckschr_d5681bc0" xml:space="preserve">
+    <value>RAW e outros formatos que não podem ser reescritos só são limpos no ficheiro anexo e no catálogo; o ficheiro de imagem fica inalterado.</value>
+  </data>
+  <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
+    <value>Várias marcações ou etiquetas: basta uma delas.</value>
+  </data>
 </root>

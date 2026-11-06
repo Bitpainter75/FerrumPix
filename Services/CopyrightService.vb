@@ -187,17 +187,7 @@ Namespace Services
             Dim removedSomething = False
             If GeotagService.IsJpegPath(imagePath) AndAlso File.Exists(imagePath) Then
                 Try
-                    If GeotagService.RewriteJpegExifAtomic(imagePath,
-                        Function(existingSegment)
-                            Dim existing(existingSegment.Length - 10 - 1) As Byte
-                            Buffer.BlockCopy(existingSegment, 10, existing, 0, existing.Length)
-                            ' Nothing heisst beim ENTFERNEN schlicht: es stand keiner drin. Dann
-                            ' bleibt die Datei unangetastet, und weil ohne EXIF-Block gar nichts
-                            ' angelegt wird (kein createIfMissing), gilt dasselbe fuer eine Datei
-                            ' ohne jedes EXIF.
-                            Dim tiff = SetCopyrightInTiff(existing, "")
-                            Return If(tiff Is Nothing, Nothing, GeotagService.BuildExifSegment(tiff))
-                        End Function) Then
+                    If RemoveCopyrightFromJpeg(imagePath) Then
                         removedSomething = True
                         result.Target = CopyrightTarget.EmbeddedExif
                     End If
@@ -219,6 +209,23 @@ Namespace Services
             result.Success = removedSomething
             If Not removedSomething Then SetReason(result, "Es stand kein Urheberrechtshinweis in der Datei")
             Return result
+        End Function
+
+        ''' <summary>Nur der Teil IN der JPEG-Datei: der Hinweis aus dem EXIF, mit ueberschriebenen
+        ''' Textbytes (siehe RemoveCopyright). Die Beistelldatei bleibt, wie sie ist.</summary>
+        ''' <returns>True, wenn ein Hinweis entfernt wurde.</returns>
+        Friend Shared Function RemoveCopyrightFromJpeg(imagePath As String) As Boolean
+            If Not GeotagService.IsJpegPath(imagePath) OrElse Not File.Exists(imagePath) Then Return False
+            Return GeotagService.RewriteJpegExifAtomic(imagePath,
+                Function(existingSegment)
+                    Dim existing(existingSegment.Length - 10 - 1) As Byte
+                    Buffer.BlockCopy(existingSegment, 10, existing, 0, existing.Length)
+                    ' Nothing heisst beim ENTFERNEN schlicht: es stand keiner drin. Dann bleibt die
+                    ' Datei unangetastet, und weil ohne EXIF-Block gar nichts angelegt wird (kein
+                    ' createIfMissing), gilt dasselbe fuer eine Datei ohne jedes EXIF.
+                    Dim tiff = SetCopyrightInTiff(existing, "")
+                    Return If(tiff Is Nothing, Nothing, GeotagService.BuildExifSegment(tiff))
+                End Function)
         End Function
 
         ''' <summary>Setzt den Hinweis in einen vorhandenen TIFF-Block, ohne ein einziges vorhandenes

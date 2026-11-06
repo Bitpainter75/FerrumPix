@@ -98,6 +98,10 @@ Namespace Services
         ''' Dialog und die Info-Leiste lesen ihn weiter aus der Datei.</summary>
         Public Property Copyright As String = ""
 
+        ''' <summary>Abschriften, die im Katalog bewusst geleert wurden (durch Komma getrennt, siehe
+        ''' LibraryService.ClearCatalogCopies). Sie bleiben leer, auch wenn die Datei sie fuehrt.</summary>
+        Public Property ClearedCopies As String = ""
+
         ''' <summary>Beschreibende Felder und Urheberrechtshinweis als EIN Suchtext, gleich gebaut
         ''' wie ExifSearchFields.CatalogSearchText.</summary>
         Public ReadOnly Property CatalogSearchText As String
@@ -522,7 +526,8 @@ Namespace Services
             ("Description", "TEXT"),
             ("Creator", "TEXT"),
             ("Credit", "TEXT"),
-            ("Copyright", "TEXT")
+            ("Copyright", "TEXT"),
+            ("ClearedCopies", "TEXT")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -1036,6 +1041,78 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Die Abschriften, die sich im Katalog einzeln leeren lassen.</summary>
+        Public Shared ReadOnly ClearableCopyKeys As String() =
+            {"Title", "Headline", "Description", "Creator", "Credit", "Copyright", "Place"}
+
+        ''' <summary>Leert Abschriften der Datei im Katalog: "Title", "Headline", "Description",
+        ''' "Creator", "Credit", "Copyright" und "Place" (Ort, Land, Kuerzel und Koordinate). Nur der
+        ''' Katalog; die Datei bleibt, wie sie ist ("Metadaten vergleichen", Loeschen rechts).
+        '''
+        ''' Die geleerten Felder merkt sich die Spalte ClearedCopies. Ohne sie holte der naechste
+        ''' Abgleich mit der Datei (Betrachter, Katalogindex) den Wert sofort zurueck; SetExifData
+        ''' und ExifDataMatches behandeln ein gemerktes Feld deshalb als leer. Aufgehoben wird das
+        ''' nur ausdruecklich, mit <see cref="ReleaseClearedCopies"/>.</summary>
+        Public Sub ClearCatalogCopies(filePath As String, keys As IEnumerable(Of String))
+            If Not IsCatalogWritable(filePath) OrElse keys Is Nothing Then Return
+            Dim wanted = keys.Where(Function(k) ClearableCopyKeys.Contains(k, StringComparer.Ordinal)).ToList()
+            If wanted.Count = 0 Then Return
+            Dim existing As LibraryImageMeta = Nothing
+            GetMetaForPaths({filePath}).TryGetValue(filePath, existing)
+            Dim cleared = ParseClearedCopies(If(existing?.ClearedCopies, ""))
+            cleared.UnionWith(wanted)
+
+            Dim assignments As New List(Of String)()
+            For Each key In wanted.Distinct(StringComparer.Ordinal)
+                If key = "Place" Then
+                    assignments.Add("City='', Country='', CountryCode='', GpsLatitude=NULL, GpsLongitude=NULL")
+                Else
+                    assignments.Add(key & "=''")
+                End If
+            Next
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    ' Die Spaltennamen kommen aus der festen Liste oben, nie vom Aufrufer.
+                    cmd.CommandText = "UPDATE ImageMeta SET " & String.Join(", ", assignments) & ", ClearedCopies=$c WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    cmd.Parameters.AddWithValue("$c", JoinClearedCopies(cleared))
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>Hebt das Leeren wieder auf: die genannten Abschriften (Nothing = alle) kommen
+        ''' beim naechsten Abgleich wieder aus der Datei. Den Abgleich selbst stoesst der Aufrufer an,
+        ''' und zwar mit einem Stempel, der nicht mehr passt; deshalb wird hier der Lesestempel der
+        ''' Datei zurueckgesetzt.</summary>
+        Public Sub ReleaseClearedCopies(filePath As String, Optional keys As IEnumerable(Of String) = Nothing)
+            If Not IsCatalogWritable(filePath) Then Return
+            Dim existing As LibraryImageMeta = Nothing
+            GetMetaForPaths({filePath}).TryGetValue(filePath, existing)
+            If existing Is Nothing OrElse String.IsNullOrEmpty(existing.ClearedCopies) Then Return
+            Dim cleared = ParseClearedCopies(existing.ClearedCopies)
+            If keys Is Nothing Then cleared.Clear() Else cleared.ExceptWith(keys)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "UPDATE ImageMeta SET ClearedCopies=$c, ScannedSourceModifiedAt='' WHERE FilePath=$p"
+                    cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    cmd.Parameters.AddWithValue("$c", JoinClearedCopies(cleared))
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        End Sub
+
+        Friend Shared Function ParseClearedCopies(text As String) As HashSet(Of String)
+            Return New HashSet(Of String)(If(text, "").Split(","c, StringSplitOptions.RemoveEmptyEntries Or StringSplitOptions.TrimEntries),
+                                          StringComparer.Ordinal)
+        End Function
+
+        Private Shared Function JoinClearedCopies(keys As IEnumerable(Of String)) As String
+            Return String.Join(",", ClearableCopyKeys.Where(Function(k) keys.Contains(k)))
+        End Function
+
         Public Sub SetTags(filePath As String, tags As IEnumerable(Of String), Optional syncToXmp As Boolean = False)
             If Not IsCatalogWritable(filePath) Then Return
             Using conn = New SqliteConnection(_connectionString)
@@ -1277,8 +1354,7 @@ Namespace Services
                    NullableEquals(existing.FocalLengthMm, exif.FocalLengthMm) AndAlso
                    NullableEquals(existing.Iso, exif.Iso) AndAlso
                    String.Equals(existing.ShutterSpeed, If(exif.ShutterSpeed, ""), StringComparison.Ordinal) AndAlso
-                   NullableEquals(existing.GpsLatitude, exif.GpsLatitude) AndAlso
-                   NullableEquals(existing.GpsLongitude, exif.GpsLongitude) AndAlso
+                   PlaceMatches(existing, exif) AndAlso
                    NullableEquals(existing.ImageWidth, exif.ImageWidth) AndAlso
                    NullableEquals(existing.ImageHeight, exif.ImageHeight) AndAlso
                    DescriptionMatches(existing, exif.Description) AndAlso
@@ -1287,15 +1363,38 @@ Namespace Services
 
         Private Shared Function DescriptionMatches(existing As LibraryImageMeta, description As ImageDescription) As Boolean
             Dim value = If(description, New ImageDescription())
-            Return String.Equals(existing.Title, value.Title, StringComparison.Ordinal) AndAlso
-                   String.Equals(existing.Headline, value.Headline, StringComparison.Ordinal) AndAlso
-                   String.Equals(existing.Description, value.Description, StringComparison.Ordinal) AndAlso
-                   String.Equals(existing.Creator, value.Creator, StringComparison.Ordinal) AndAlso
-                   String.Equals(existing.Credit, value.Credit, StringComparison.Ordinal)
+            Dim cleared = ParseClearedCopies(existing.ClearedCopies)
+            Return CopyMatches(existing.Title, value.Title, cleared, "Title") AndAlso
+                   CopyMatches(existing.Headline, value.Headline, cleared, "Headline") AndAlso
+                   CopyMatches(existing.Description, value.Description, cleared, "Description") AndAlso
+                   CopyMatches(existing.Creator, value.Creator, cleared, "Creator") AndAlso
+                   CopyMatches(existing.Credit, value.Credit, cleared, "Credit")
+        End Function
+
+        Private Shared Function PlaceMatches(existing As LibraryImageMeta, exif As ExifSearchFields) As Boolean
+            If ParseClearedCopies(existing.ClearedCopies).Contains("Place") Then
+                Return Not existing.GpsLatitude.HasValue AndAlso Not existing.GpsLongitude.HasValue
+            End If
+            Return NullableEquals(existing.GpsLatitude, exif.GpsLatitude) AndAlso
+                   NullableEquals(existing.GpsLongitude, exif.GpsLongitude)
         End Function
 
         Private Shared Function CopyrightMatches(existing As LibraryImageMeta, exif As ExifSearchFields) As Boolean
-            Return String.Equals(existing.Copyright, If(exif.Copyright, ""), StringComparison.Ordinal)
+            Return CopyMatches(existing.Copyright, exif.Copyright, ParseClearedCopies(existing.ClearedCopies), "Copyright")
+        End Function
+
+        ''' <summary>Eine im Katalog geleerte Abschrift stimmt, solange sie leer ist - gleich, was
+        ''' die Datei fuehrt.</summary>
+        Private Shared Function CopyMatches(catalogValue As String, fileValue As String, cleared As HashSet(Of String), key As String) As Boolean
+            Dim expected = If(cleared.Contains(key), "", If(fileValue, ""))
+            Return String.Equals(If(catalogValue, ""), expected, StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Zuweisung im Upsert von SetExifData, die eine geleerte Abschrift (ClearedCopies)
+        ''' stehen laesst. Spalte und Schluessel kommen nur aus festen Texten im Aufrufer.</summary>
+        Private Shared Function MaskedAssignment(column As String, key As String, emptyValue As String) As String
+            Return $"{column}=CASE WHEN instr(',' || IFNULL(ImageMeta.ClearedCopies,'') || ',', ',{key},') > 0 " &
+                   $"THEN {emptyValue} ELSE excluded.{column} END"
         End Function
 
         ''' <summary>Zustand der Begleitdateien als eine Zeichenkette: Änderungsdatum der XMP-Beistelldatei
@@ -1357,7 +1456,8 @@ Namespace Services
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
-                        "ShutterSpeed=excluded.ShutterSpeed, GpsLatitude=excluded.GpsLatitude, GpsLongitude=excluded.GpsLongitude, " &
+                        "ShutterSpeed=excluded.ShutterSpeed, " &
+                        MaskedAssignment("GpsLatitude", "Place", "NULL") & ", " & MaskedAssignment("GpsLongitude", "Place", "NULL") & ", " &
                         "ImageWidth=excluded.ImageWidth, ImageHeight=excluded.ImageHeight, " &
                         "FileCreatedAt=excluded.FileCreatedAt, HasExifMetadata=excluded.HasExifMetadata, " &
                         "HasIptcMetadata=excluded.HasIptcMetadata, HasXmpMetadata=excluded.HasXmpMetadata, " &
@@ -1365,10 +1465,12 @@ Namespace Services
                         "ScannedSidecarModifiedAt=excluded.ScannedSidecarModifiedAt, " &
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
-                        "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country, " &
-                        "CountryCode=excluded.CountryCode, CaptureMode=excluded.CaptureMode, " &
-                        "Title=excluded.Title, Headline=excluded.Headline, Description=excluded.Description, " &
-                        "Creator=excluded.Creator, Credit=excluded.Credit, Copyright=excluded.Copyright"
+                        "HasIccProfile=excluded.HasIccProfile, CaptureMode=excluded.CaptureMode, " &
+                        MaskedAssignment("City", "Place", "''") & ", " & MaskedAssignment("Country", "Place", "''") & ", " &
+                        MaskedAssignment("CountryCode", "Place", "''") & ", " &
+                        MaskedAssignment("Title", "Title", "''") & ", " & MaskedAssignment("Headline", "Headline", "''") & ", " &
+                        MaskedAssignment("Description", "Description", "''") & ", " & MaskedAssignment("Creator", "Creator", "''") & ", " &
+                        MaskedAssignment("Credit", "Credit", "''") & ", " & MaskedAssignment("Copyright", "Copyright", "''")
                     cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                     Dim description = If(exif.Description, New ImageDescription())
                     cmd.Parameters.AddWithValue("$title", description.Title)
@@ -1413,7 +1515,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright, ClearedCopies"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -1456,7 +1558,8 @@ Namespace Services
                 .Description = If(reader.IsDBNull(36), "", reader.GetString(36)),
                 .Creator = If(reader.IsDBNull(37), "", reader.GetString(37)),
                 .Credit = If(reader.IsDBNull(38), "", reader.GetString(38)),
-                .Copyright = If(reader.IsDBNull(39), "", reader.GetString(39))
+                .Copyright = If(reader.IsDBNull(39), "", reader.GetString(39)),
+                .ClearedCopies = If(reader.IsDBNull(40), "", reader.GetString(40))
             }
         End Function
 

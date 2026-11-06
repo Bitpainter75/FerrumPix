@@ -11005,4 +11005,172 @@
   <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
     <value>Judul dan deskripsi disimpan untuk {0} dari {1} foto</value>
   </data>
+  <data name="Metadaten_in_den_Katalog_bernehmen_29392693" xml:space="preserve">
+    <value>Ambil metadata ke katalog</value>
+  </data>
+  <data name="Katalogdaten_in_die_Dateien_schreiben_8396d136" xml:space="preserve">
+    <value>Tulis data katalog ke berkas</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Die_Werte_aus_Datei_und_Beiste_2e3dcc9d" xml:space="preserve">
+    <value>Berlaku untuk {0} foto. Nilai dari berkas dan sidecar menggantikan nilai di katalog.</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_JPEG_PNG_und_WebP_bekommen_die_0449426f" xml:space="preserve">
+    <value>Berlaku untuk {0} foto. JPEG, PNG, dan WebP menerima nilai di dalam berkas, semua format lain di sidecar XMP.</value>
+  </data>
+  <data name="Schreiben_f4f5c5f4" xml:space="preserve">
+    <value>Tulis</value>
+  </data>
+  <data name="Metadaten_vergleichen_bc304f53" xml:space="preserve">
+    <value>Bandingkan metadata</value>
+  </data>
+  <data name="Nur_aus_der_Datei_43386bad" xml:space="preserve">
+    <value>Hanya dari berkas</value>
+  </data>
+  <data name="Aus_Datei_und_Beistelldatei_9d443403" xml:space="preserve">
+    <value>Dari berkas dan sidecar</value>
+  </data>
+  <data name="Zus_tzlich_Bewertung_Etikett_Stichw_rter_und_Mar_47654e13" xml:space="preserve">
+    <value>Juga peringkat, label, kata kunci, dan tanda di katalog</value>
+  </data>
+  <data name="Personen_und_Favoriten_bleiben_in_jedem_Fall_Aus_0c007c9d" xml:space="preserve">
+    <value>Orang dan favorit selalu tetap. Dari sidecar hanya kolom yang dikenal yang dihapus, data lain di dalamnya tetap.</value>
+  </data>
+  <data name="Markierung_2db7c266" xml:space="preserve">
+    <value>Tanda</value>
+  </data>
+  <data name="Zusammenf_hren_dcab7118" xml:space="preserve">
+    <value>Gabungkan</value>
+  </data>
+  <data name="Ersetzen_0556e76a" xml:space="preserve">
+    <value>Ganti</value>
+  </data>
+  <data name="Datei_e9e7baf1" xml:space="preserve">
+    <value>Berkas</value>
+  </data>
+  <data name="An_der_Datei_entfernen_1db87f8a" xml:space="preserve">
+    <value>Hapus dari berkas</value>
+  </data>
+  <data name="Katalogwert_in_die_Datei_dafedfe9" xml:space="preserve">
+    <value>Nilai katalog ke berkas</value>
+  </data>
+  <data name="Dateiwert_in_den_Katalog_9dfb2cfb" xml:space="preserve">
+    <value>Nilai berkas ke katalog</value>
+  </data>
+  <data name="Im_Katalog_entfernen_1b7a3aa5" xml:space="preserve">
+    <value>Hapus dari katalog</value>
+  </data>
+  <data name="Datei_und_Katalog_weichen_ab_a371dcb4" xml:space="preserve">
+    <value>Berkas dan katalog berbeda</value>
+  </data>
+  <data name="Alles_in_den_Katalog_5d8401d4" xml:space="preserve">
+    <value>Semua ke katalog</value>
+  </data>
+  <data name="Alles_in_die_Datei_6944b40e" xml:space="preserve">
+    <value>Semua ke berkas</value>
+  </data>
+  <data name="Nur_hier_0_8094a5e0" xml:space="preserve">
+    <value>Hanya di sini: {0}</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_Datei_eine_v_ecadc9a3" xml:space="preserve">
+    <value>Perubahan pada berkas masuk ke berkas; sidecar yang ada juga diperbarui.</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_XMP_Beistell_644658a3" xml:space="preserve">
+    <value>Perubahan pada berkas masuk ke sidecar XMP; berkas gambar itu sendiri tidak berubah.</value>
+  </data>
+  <data name="Bewertung_und_Ordnung_c6dc3a8f" xml:space="preserve">
+    <value>Peringkat dan urutan</value>
+  </data>
+  <data name="Gibt_es_nur_im_Katalog_35597649" xml:space="preserve">
+    <value>Hanya ada di katalog</value>
+  </data>
+  <data name="Ja_283c735c" xml:space="preserve">
+    <value>Ya</value>
+  </data>
+  <data name="Nein_70bb8137" xml:space="preserve">
+    <value>Tidak</value>
+  </data>
+  <data name="0_nderungen_vorgemerkt_9c633b90" xml:space="preserve">
+    <value>{0} perubahan menunggu</value>
+  </data>
+  <data name="Datei_und_Beistelldatei_weichen_ab_in_der_Datei__b1206367" xml:space="preserve">
+    <value>Berkas dan sidecar berbeda: di berkas {0}, di sidecar {1}</value>
+  </data>
+  <data name="0_von_5_53a26ac6" xml:space="preserve">
+    <value>{0} dari 5</value>
+  </data>
+  <data name="0_Beistelldatei_en_lie_en_sich_nicht_bereinigen_a85066d0" xml:space="preserve">
+    <value>{0} sidecar tidak dapat dibersihkan</value>
+  </data>
+  <data name="0_Bilder_abgeglichen_aa6c1a23" xml:space="preserve">
+    <value>{0} foto diselaraskan</value>
+  </data>
+  <data name="0_von_1_Bildern_abgeglichen_afac4734" xml:space="preserve">
+    <value>{0} dari {1} foto diselaraskan</value>
+  </data>
+  <data name="Nicht_alle_nderungen_lie_en_sich_in_die_Datei_sc_15b91a65" xml:space="preserve">
+    <value>Tidak semua perubahan dapat ditulis ke berkas</value>
+  </data>
+  <data name="Metadaten_abgeglichen_99f2f666" xml:space="preserve">
+    <value>Metadata diselaraskan</value>
+  </data>
+  <data name="Keine_Angabe_1a1c7d9c" xml:space="preserve">
+    <value>Tidak diatur</value>
+  </data>
+  <data name="In_den_Katalog_kopieren_5111e778" xml:space="preserve">
+    <value>Salin ke katalog</value>
+  </data>
+  <data name="In_die_Datei_kopieren_5b76be3f" xml:space="preserve">
+    <value>Salin ke berkas</value>
+  </data>
+  <data name="Wo_sollen_die_Metadaten_von_0_Bild_ern_entfernt__19d35efc" xml:space="preserve">
+    <value>Di mana metadata {0} foto harus dihapus? Ini tidak dapat dibatalkan.</value>
+  </data>
+  <data name="In_der_Bilddatei_Aufnahmedaten_IPTC_XMP_und_Farb_f2c816c4" xml:space="preserve">
+    <value>Di berkas gambar: data pemotretan, IPTC, XMP, dan profil warna. Berkas ditulis ulang.</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_Bewertung_Etikett_Stich_ab6e3e7f" xml:space="preserve">
+    <value>Di sidecar XMP: peringkat, label, kata kunci, deskripsi, hak cipta, tempat, dan waktu pemotretan.</value>
+  </data>
+  <data name="Im_Katalog_Bewertung_Etikett_Stichw_rter_und_Mar_43c85e39" xml:space="preserve">
+    <value>Di katalog: peringkat, label, kata kunci, dan tanda.</value>
+  </data>
+  <data name="Welche_Metadaten_von_0_Bild_ern_sollen_wo_entfer_1435d327" xml:space="preserve">
+    <value>Metadata apa dari {0} foto yang harus dihapus, dan di mana? Ini tidak dapat dibatalkan.</value>
+  </data>
+  <data name="Welche_Angaben_b5cfffe0" xml:space="preserve">
+    <value>Data apa</value>
+  </data>
+  <data name="Alles_Aufnahmedaten_IPTC_XMP_und_Farbprofil_4222b121" xml:space="preserve">
+    <value>Semua: data pemotretan, IPTC, XMP, dan profil warna</value>
+  </data>
+  <data name="Aufnahmeort_b700fa16" xml:space="preserve">
+    <value>Tempat pemotretan</value>
+  </data>
+  <data name="Wo_c1cfb73d" xml:space="preserve">
+    <value>Di mana</value>
+  </data>
+  <data name="In_der_Bilddatei_63daa147" xml:space="preserve">
+    <value>Di berkas gambar</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_c25ddb23" xml:space="preserve">
+    <value>Di sidecar XMP</value>
+  </data>
+  <data name="Im_Katalog_788ff1c9" xml:space="preserve">
+    <value>Di katalog</value>
+  </data>
+  <data name="Mit_Alles_wird_die_Bilddatei_ohne_Metadaten_neu__81ffceb9" xml:space="preserve">
+    <value>Dengan Semua, berkas gambar ditulis ulang tanpa metadata. Di katalog hanya peringkat, label, tanda, dan kata kunci yang berlaku; deskripsi, hak cipta, dan tempat di sana mengikuti berkas. Orang dan favorit selalu tetap, dan dari sidecar hanya kolom yang dikenal yang dihapus.</value>
+  </data>
+  <data name="ist_leer_f0f24cb3" xml:space="preserve">
+    <value>kosong</value>
+  </data>
+  <data name="ist_nicht_leer_b65732fa" xml:space="preserve">
+    <value>tidak kosong</value>
+  </data>
+  <data name="RAW_und_andere_Formate_die_sich_nicht_zur_ckschr_d5681bc0" xml:space="preserve">
+    <value>RAW dan format lain yang tidak dapat ditulis ulang hanya dibersihkan di sidecar dan katalog; berkas gambar itu sendiri tidak berubah.</value>
+  </data>
+  <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
+    <value>Beberapa tanda atau label: salah satunya sudah cukup.</value>
+  </data>
 </root>

@@ -546,7 +546,9 @@ Namespace Services
                     "INSERT INTO ImageMeta(FilePath,GpsLatitude,GpsLongitude,City,Country,CountryCode) " &
                     "VALUES($p,$lat,$lon,'','','') " &
                     "ON CONFLICT(FilePath) DO UPDATE SET GpsLatitude=$lat, GpsLongitude=$lon, " &
-                    "City='', Country='', CountryCode=''"
+                    "City='', Country='', CountryCode='', " &
+                    "ClearedCopies=TRIM(REPLACE(',' || IFNULL(ClearedCopies,'') || ',', ',Place,', ','), ',')"
+                ' Ein ausdruecklich gesetzter Ort hebt das Leeren im Katalog (ClearCatalogCopies) auf.
                 cmd.Parameters.AddWithValue("$p", PathKey(filePath))
                 cmd.Parameters.AddWithValue("$lat", latitude)
                 cmd.Parameters.AddWithValue("$lon", longitude)

@@ -2298,6 +2298,9 @@ Namespace ViewModels
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightForSelectedAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateForSelectedAsync())
             SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() SetDescriptionForSelectedAsync())
+            ImportMetadataToCatalogCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogForSelectedAsync(toCatalog:=True))
+            WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogForSelectedAsync(toCatalog:=False))
+            CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() CompareMetadataForSelectedAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
@@ -2429,6 +2432,9 @@ Namespace ViewModels
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property SetDescriptionCommand As ICommand
+        Public ReadOnly Property ImportMetadataToCatalogCommand As ICommand
+        Public ReadOnly Property WriteCatalogToFilesCommand As ICommand
+        Public ReadOnly Property CompareMetadataCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
 
@@ -2746,7 +2752,9 @@ Namespace ViewModels
                                 Continue For
                             End If
                             written.Add(path)
-                            If result.Target = ImageDescriptionTarget.InFile Then inFile += 1 Else besideFile += 1
+                            ' Ausdruecklich gesetzt: eine im Katalog geleerte Abschrift folgt wieder der Datei.
+                            LibraryService.Instance.ReleaseClearedCopies(path, changes.Keys.Select(Function(f) f.ToString()).ToList())
+                            If result.Target = MetadataWriteTarget.InFile Then inFile += 1 Else besideFile += 1
                         Next
                         Return (InFile:=inFile, BesideFile:=besideFile, Failed:=failed)
                     End Function)
@@ -2945,6 +2953,7 @@ Namespace ViewModels
                     Continue For
                 End If
                 written.Add(item)
+                LibraryService.Instance.ReleaseClearedCopies(item.FilePath, {"Copyright"})
                 If result.Target = CopyrightTarget.EmbeddedExif Then
                     inFile += 1
                 Else
@@ -2989,7 +2998,11 @@ Namespace ViewModels
                                 Dim exif = ExifService.ReadExif(path)
                                 Dim fields = ExifService.ExtractSearchFields(exif, path)
                                 LibraryService.Instance.SyncExifData(path, fields, ExifService.BuildCatalogSummary(exif, fields))
-                                result(path) = fields.CatalogSearchText
+                                ' Aus dem Katalog, nicht aus der Datei: dort sind im Katalog geleerte
+                                ' Abschriften (ClearedCopies) schon herausgenommen.
+                                Dim meta As LibraryImageMeta = Nothing
+                                LibraryService.Instance.GetMetaForPaths({path}).TryGetValue(path, meta)
+                                result(path) = If(meta IsNot Nothing, meta.CatalogSearchText, fields.CatalogSearchText)
                             Catch ex As Exception
                                 DiagnosticLogService.LogException("Gallery.RefreshCatalogAfterWrite", ex)
                             End Try
@@ -3003,6 +3016,170 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_searchText) Then FilterAndSort()
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshCatalogAfterWrite", ex)
+            End Try
+        End Function
+
+        ''' <summary>Der Weg fuer Betrachter und Editor, wie beim Urheberrechtshinweis.</summary>
+        Public Async Function CompareMetadataForImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await CompareMetadataForSelectedAsync(items)
+        End Function
+
+        ''' <summary>"Metadaten vergleichen" fuer EIN Bild: Datei und Katalog nebeneinander, mit
+        ''' Kopieren und Loeschen je Angabe (MetadataCompareViewModel). Geschrieben wird erst nach
+        ''' "Anwenden", und zwar in dieser Reihenfolge: erst die Datei (Bewertung bis
+        ''' Stichwoerter, dann die geloeschten beschreibenden Felder, Copyright und Ort), dann der
+        ''' Katalog. Scheitert ein Schreiben an der Datei, sagt die Statuszeile es; der Katalog wird
+        ''' trotzdem gesetzt, er ist eine eigene Angabe und haengt nicht an der Datei.</summary>
+        Private Async Function CompareMetadataForSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
+            Try
+                Dim images = GetPlaceTargets(preset)
+                If images.Count <> 1 OrElse _mainVm Is Nothing Then Return
+                Dim item = images(0)
+                Dim path = item.FilePath
+                Dim compare = Await Task.Run(Function() MetadataCompareViewModel.Load(path))
+                If Not Await _mainVm.ShowMetadataCompareAsync(compare) Then Return
+                Dim changes = compare.BuildChanges()
+                If Not changes.HasChanges Then Return
+
+                Dim fileFailed = Await Task.Run(
+                    Function()
+                        Dim failed = False
+                        If changes.FileFields <> CatalogField.None Then
+                            failed = Not CatalogMetadataService.WriteToFile(path, changes.FileValues, changes.FileFields).Success
+                        End If
+                        If changes.SetDescription.Count > 0 Then
+                            failed = Not ImageDescriptionService.Write(path, changes.SetDescription).Success OrElse failed
+                        End If
+                        If changes.SetCopyright IsNot Nothing Then
+                            ' Leer heisst entfernen. RemoveCopyright meldet False auch, wenn gar
+                            ' keiner da war; hier stand einer, sonst gaebe es den Knopf nicht.
+                            Dim copyrightResult = If(changes.SetCopyright.Length = 0,
+                                                     CopyrightService.RemoveCopyright(path),
+                                                     CopyrightService.WriteCopyright(path, changes.SetCopyright))
+                            failed = Not copyrightResult.Success OrElse failed
+                        End If
+                        If changes.ClearPlace Then
+                            ' Ortsnamen (photoshop:City und Verwandte, IPTC) gezielt, dann die
+                            ' Koordinate auf dem gewohnten Weg; der Ort kann auch ohne Koordinate
+                            ' in der Datei stehen.
+                            Dim placeCleared = CatalogMetadataService.RemoveFromFile(path, MetadataRemovalFields.Place) And
+                                               CatalogMetadataService.RemoveFromSidecar(path, MetadataRemovalFields.Place)
+                            placeCleared = LibraryService.Instance.ClearGpsCoordinatesForMany({path}.ToList()).SucceededCount > 0 And placeCleared
+                            failed = Not placeCleared OrElse failed
+                        End If
+                        If changes.CatalogFields <> CatalogField.None Then
+                            CatalogMetadataService.ApplyToCatalog(path, changes.CatalogValues, changes.CatalogFields)
+                        End If
+                        If changes.RefreshCatalogKeys.Count > 0 Then
+                            LibraryService.Instance.ReleaseClearedCopies(path, changes.RefreshCatalogKeys)
+                        End If
+                        Return failed
+                    End Function)
+
+                If (changes.CatalogFields And CatalogField.Keywords) <> 0 Then
+                    item.Tags = CatalogMetadataService.MergeKeywords(changes.CatalogValues.Keywords)
+                End If
+                Await RefreshCatalogAfterMetadataWriteAsync(images)
+                If changes.ClearCatalogCopies.Count > 0 Then
+                    ' Erst NACH dem Nachlesen leeren, sonst kaeme der Dateiwert gleich wieder.
+                    Dim meta = Await Task.Run(
+                        Function()
+                            LibraryService.Instance.ClearCatalogCopies(path, changes.ClearCatalogCopies)
+                            Dim found As LibraryImageMeta = Nothing
+                            LibraryService.Instance.GetMetaForPaths({path}).TryGetValue(path, found)
+                            Return found
+                        End Function)
+                    If meta IsNot Nothing Then
+                        item.CatalogSearchText = meta.CatalogSearchText
+                        item.SetCatalogPlace(meta.City, meta.Country, meta.CountryCode)
+                    End If
+                    If Not String.IsNullOrEmpty(_searchText) Then FilterAndSort()
+                End If
+                StatusText = If(fileFailed,
+                                LocalizationService.T("Nicht alle Änderungen ließen sich in die Datei schreiben"),
+                                LocalizationService.T("Metadaten abgeglichen"))
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                InfoPanel.RefreshPlace()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.CompareMetadata", ex)
+            End Try
+        End Function
+
+        ''' <summary>Der Weg fuer Betrachter und Editor, wie beim Urheberrechtshinweis.</summary>
+        Public Async Function TransferCatalogForImageItemsAsync(items As IList(Of ImageItem), toCatalog As Boolean) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await TransferCatalogForSelectedAsync(toCatalog, items)
+        End Function
+
+        ''' <summary>"Metadaten in den Katalog uebernehmen" (<paramref name="toCatalog"/>) bzw.
+        ''' "Katalogdaten in die Dateien schreiben" fuer die Auswahl: Bewertung, Etikett, Markierung
+        ''' und Stichwoerter, je nach Haken im Dialog.
+        '''
+        ''' In den Katalog: die Werte, die andere Programme an der Datei sehen (Beistelldatei vor
+        ''' Datei, siehe CatalogMetadataService.ReadFile), ERSETZEN die im Katalog; Stichwoerter
+        ''' wahlweise zusammengefuehrt. In die Dateien: der Katalog ist die Quelle und ersetzt, was
+        ''' dort steht, auf dem Weg von MetadataFileWriter (Beistelldatei zuerst, Zuruecksetzen beim
+        ''' Scheitern). Gelesen und geschrieben wird im Hintergrund.</summary>
+        Private Async Function TransferCatalogForSelectedAsync(toCatalog As Boolean, Optional preset As IList(Of ImageItem) = Nothing) As Task
+            Try
+                Dim images = GetPlaceTargets(preset)
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+                Dim choice = Await _mainVm.ShowCatalogTransferAsync(toCatalog, images.Count)
+                If choice Is Nothing Then Return
+                Dim paths = images.Select(Function(i) i.FilePath).ToList()
+
+                Dim keywordsByPath As New Dictionary(Of String, List(Of String))(PathIdentity.Comparer)
+                Dim outcome = Await Task.Run(
+                    Function()
+                        Dim succeeded = 0, failed = 0
+                        For Each path In paths
+                            Try
+                                If toCatalog Then
+                                    Dim values = CatalogMetadataService.ReadFile(path).Effective
+                                    If choice.MergeKeywords Then
+                                        values.Keywords = CatalogMetadataService.MergeKeywords(
+                                            CatalogMetadataService.ReadCatalog(path).Keywords, values.Keywords)
+                                    End If
+                                    CatalogMetadataService.ApplyToCatalog(path, values, choice.Fields)
+                                    SyncLock keywordsByPath
+                                        keywordsByPath(path) = values.Keywords
+                                    End SyncLock
+                                    succeeded += 1
+                                Else
+                                    Dim result = CatalogMetadataService.WriteToFile(path, CatalogMetadataService.ReadCatalog(path), choice.Fields)
+                                    If result.Success Then succeeded += 1 Else failed += 1
+                                End If
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("Gallery.TransferCatalog", ex)
+                                failed += 1
+                            End Try
+                        Next
+                        Return (Succeeded:=succeeded, Failed:=failed)
+                    End Function)
+
+                ' Bewertung, Etikett und Markierung meldet der Katalog selbst an die Elemente; die
+                ' Stichwoerter nicht.
+                If toCatalog AndAlso (choice.Fields And CatalogField.Keywords) <> 0 Then
+                    For Each item In images
+                        Dim keywords As List(Of String) = Nothing
+                        If keywordsByPath.TryGetValue(item.FilePath, keywords) Then item.Tags = keywords
+                    Next
+                End If
+                ' In die Dateien geschrieben: die Dateien haben sich geaendert, ihr Katalogeintrag
+                ' (Zusammenfassung, Suchtext) zieht nach.
+                If Not toCatalog Then Await RefreshCatalogAfterMetadataWriteAsync(images)
+
+                StatusText = If(outcome.Failed = 0,
+                                String.Format(LocalizationService.T("{0} Bilder abgeglichen"), outcome.Succeeded),
+                                String.Format(LocalizationService.T("{0} von {1} Bildern abgeglichen"), outcome.Succeeded, images.Count))
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.TransferCatalog", ex)
             End Try
         End Function
 
@@ -5152,6 +5329,8 @@ Namespace ViewModels
                 .FavoriteMode = result.FavoriteMode,
                 .RatingMin = result.RatingMin,
                 .Ratings = If(result.Ratings, New List(Of Integer)()),
+                .PickStates = If(result.PickStates, New List(Of Integer)()),
+                .ColorLabels = If(result.ColorLabels, New List(Of String)()),
                 .Conditions = If(result.Conditions, New List(Of SearchCondition)()),
                 .ConditionCombinator = If(result.ConditionCombinator, "AND")
             }
@@ -5185,6 +5364,8 @@ Namespace ViewModels
                 existing.FavoriteMode = result.FavoriteMode
                 existing.RatingMin = result.RatingMin
                 existing.Ratings = If(result.Ratings, New List(Of Integer)())
+                existing.PickStates = If(result.PickStates, New List(Of Integer)())
+                existing.ColorLabels = If(result.ColorLabels, New List(Of String)())
                 existing.Conditions = If(result.Conditions, New List(Of SearchCondition)())
                 existing.ConditionCombinator = If(result.ConditionCombinator, "AND")
                 ' Zwischengespeicherte Treffer verwerfen - sie können durch die geänderten Parameter veraltet sein.
@@ -6636,6 +6817,8 @@ Namespace ViewModels
                 .FavoriteMode = search.FavoriteMode,
                 .RatingMin = search.RatingMin,
                 .Ratings = If(search.Ratings, New List(Of Integer)()),
+                .PickStates = If(search.PickStates, New List(Of Integer)()),
+                .ColorLabels = If(search.ColorLabels, New List(Of String)()),
                 .Results = If(search.Results, New List(Of String)()),
                 .Conditions = If(search.Conditions, New List(Of SearchCondition)()),
                 .ConditionCombinator = If(search.ConditionCombinator, "AND"),
@@ -7247,6 +7430,12 @@ Namespace ViewModels
             If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Return False
             If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return False
             If favoriteMode = "Not" AndAlso meta.IsFavorite Then Return False
+            ' Markierung und Etikett: angehakte Werte sind eine ODER-Liste (behalten oder
+            ' verworfen, rot oder gelb), leer heisst egal.
+            If node.PickStates IsNot Nothing AndAlso node.PickStates.Count > 0 AndAlso
+               Not node.PickStates.Contains(LibraryService.NormalizePickState(meta.PickState)) Then Return False
+            If node.ColorLabels IsNot Nothing AndAlso node.ColorLabels.Count > 0 AndAlso
+               Not node.ColorLabels.Contains(If(meta.ColorLabel, ""), StringComparer.OrdinalIgnoreCase) Then Return False
             If selectedRatings IsNot Nothing AndAlso selectedRatings.Count > 0 Then
                 If Not selectedRatings.Contains(meta.Rating) Then Return False
             Else
@@ -7655,7 +7844,37 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Steht in diesem Feld ueberhaupt ein Wert? Fuer "leer" und "nicht leer". Beim Ort
+        ''' genuegt Ort ODER Land, bei Personen eine einzige zugeordnete.</summary>
+        Private Shared Function ConditionFieldHasValue(meta As LibraryImageMeta, field As String) As Boolean
+            Select Case field
+                Case "Width" : Return meta.ImageWidth.HasValue
+                Case "Height" : Return meta.ImageHeight.HasValue
+                Case "Iso" : Return meta.Iso.HasValue
+                Case "Aperture" : Return meta.Aperture.HasValue
+                Case "FocalLength" : Return meta.FocalLengthMm.HasValue
+                Case "Camera" : Return Not String.IsNullOrWhiteSpace(meta.Camera)
+                Case "DateTaken" : Return Not String.IsNullOrWhiteSpace(meta.DateTaken)
+                Case "Place" : Return Not String.IsNullOrWhiteSpace(meta.City) OrElse Not String.IsNullOrWhiteSpace(meta.Country)
+                Case "Person" : Return MatchesPersonCondition(meta.FilePath, New SearchCondition With {.Field = "Person", .Operator = SearchCondition.IsNotEmptyOperator})
+                Case "Title" : Return Not String.IsNullOrWhiteSpace(meta.Title)
+                Case "Headline" : Return Not String.IsNullOrWhiteSpace(meta.Headline)
+                Case "Description" : Return Not String.IsNullOrWhiteSpace(meta.Description)
+                Case "Creator" : Return Not String.IsNullOrWhiteSpace(meta.Creator)
+                Case "Credit" : Return Not String.IsNullOrWhiteSpace(meta.Credit)
+                Case "Copyright" : Return Not String.IsNullOrWhiteSpace(meta.Copyright)
+                Case Else : Return False
+            End Select
+        End Function
+
         Private Shared Function EvaluateSingleCondition(meta As LibraryImageMeta, condition As SearchCondition) As Boolean
+            ' "leer" und "nicht leer" fragen nur, ob ein Wert da ist, gleich welches Feld.
+            If String.Equals(condition.Operator, SearchCondition.IsEmptyOperator, StringComparison.OrdinalIgnoreCase) Then
+                Return Not ConditionFieldHasValue(meta, condition.Field)
+            End If
+            If String.Equals(condition.Operator, SearchCondition.IsNotEmptyOperator, StringComparison.OrdinalIgnoreCase) Then
+                Return ConditionFieldHasValue(meta, condition.Field)
+            End If
             Select Case condition.Field
                 Case "Width"
                     Return CompareNumericCondition(If(meta.ImageWidth.HasValue, CDbl(meta.ImageWidth.Value), CType(Nothing, Double?)), condition.Operator, condition.Value)
@@ -7792,6 +8011,8 @@ Namespace ViewModels
         Private Shared Function CompareTextCondition(actual As String, op As String, valueText As String) As Boolean
             If String.IsNullOrWhiteSpace(actual) Then Return False
             Select Case op
+                ' Hier steht schon ein Wert (die Zeile darueber); fuer Personen, die je Name gefragt werden.
+                Case SearchCondition.IsNotEmptyOperator : Return True
                 Case "Contains" : Return actual.Contains(valueText, StringComparison.OrdinalIgnoreCase)
                 Case "=" : Return String.Equals(actual, valueText, StringComparison.OrdinalIgnoreCase)
                 Case ">" : Return String.Compare(actual, valueText, StringComparison.OrdinalIgnoreCase) > 0
@@ -13656,24 +13877,78 @@ Namespace ViewModels
                 End If
 
                 ' Rueckfrage: die Dateien werden AN ORT UND STELLE neu geschrieben, EXIF, XMP und
-                ' ICC sind danach weg. Das laesst sich nicht zuruecknehmen.
-                Dim frage = String.Format(
-                    LocalizationService.T("Aus {0} Datei(en) werden Aufnahmedaten, XMP und Farbprofil entfernt. Die Dateien werden dabei neu geschrieben, das lässt sich nicht rückgängig machen."),
-                    targets.Count)
-                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Metadaten entfernen"), frage,
-                                                      LocalizationService.T("Entfernen"),
-                                                      LocalizationService.T("Abbrechen")) Then Return 0
+                ' ICC sind danach weg. Das laesst sich nicht zuruecknehmen. Dazu die Wahl, ob auch
+                ' die Beistelldatei und der Katalog bereinigt werden: sonst kaemen Copyright,
+                ' Aufnahmezeit, Ort und Stichwoerter ueber sie zurueck, und es saehe aus, als
+                ' haette das Entfernen nichts getan.
+                ' Die Bilddatei selbst laesst sich nur bei JPEG, PNG und WebP bereinigen; der Rest
+                ' (RAW, HEIC, TIFF ...) nur ueber Beistelldatei und Katalog.
+                Dim writable = targets.Where(Function(p) IsBatchImageEditWritable(p)).ToList()
+                Dim notWritable = targets.Where(Function(p) Not IsBatchImageEditWritable(p)).ToList()
+                Dim scope = Await _mainVm.ShowRemoveMetadataAsync(targets.Count, writable.Count)
+                If scope Is Nothing Then Return 0
 
                 StatusText = LocalizationService.T("Entferne Metadaten...")
                 ' Auch dieser Weg schreibt eine ganze Liste an Ort und Stelle und braucht deshalb
                 ' seinen Zaehler; ohne Anmeldung stuende in der Anzeige "1 von 0".
                 Dim cancel = BeginBatchRun(targets.Count)
-                Dim changedCount = Await RewriteImagesInPlaceAsync(targets,
-                    Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95,
-                                                                    preserveMetadata:=False, cancel:=cancel))
+                Dim what = scope.What
+                Dim removeFile = (scope.Where And RemoveMetadataScope.File) <> 0
+                Dim removeSidecar = (scope.Where And RemoveMetadataScope.Sidecar) <> 0
+                Dim removeCatalog = (scope.Where And RemoveMetadataScope.Catalog) <> 0
+                Dim everything = (what And MetadataRemovalFields.Everything) <> 0
+
+                ' Mit der Datei: Beistelldatei und Katalog NUR fuer die Bilder, deren Datei wirklich
+                ' bereinigt wurde. Nach einem Schreibfehler oder Abbruch behielte das Bild sonst
+                ' seine Metadaten, waehrend Beistelldatei und Katalog schon unwiderruflich leer
+                ' sind. Ohne die Datei gilt es fuer alle Ziele, und Dateien, deren Bild sich gar
+                ' nicht schreiben laesst (RAW ...), gehen ohne diesen Schritt weiter.
+                Dim cleaned As List(Of String) = targets
+                Dim changedCount = targets.Count
+                If removeFile AndAlso everything AndAlso writable.Count > 0 Then
+                    ' Alles: ohne EXIF, IPTC, XMP und Farbprofil neu schreiben.
+                    Dim rewritten As New List(Of String)()
+                    changedCount = Await RewriteImagesInPlaceAsync(writable,
+                        Function(source, temp) ImageProcessor.SaveImage(source, temp, New ImageAdjustments(), 95,
+                                                                        preserveMetadata:=False, cancel:=cancel),
+                        rewritten)
+                    cleaned = rewritten.Concat(notWritable).ToList()
+                    changedCount += notWritable.Count
+                ElseIf removeFile AndAlso writable.Count > 0 Then
+                    ' Einzelne Angaben: gezielt aus XMP, IPTC und den beiden EXIF-Feldern, ohne die
+                    ' Bilddaten neu zu kodieren.
+                    Dim fileCleaned = Await Task.Run(Function() writable.Where(Function(p) CatalogMetadataService.RemoveFromFile(p, what)).ToList())
+                    cleaned = fileCleaned.Concat(notWritable).ToList()
+                    changedCount = cleaned.Count
+                End If
+
+                Dim sidecarFailures = 0
+                If removeSidecar AndAlso cleaned.Count > 0 Then
+                    sidecarFailures = Await Task.Run(Function() cleaned.Where(Function(p) Not CatalogMetadataService.RemoveFromSidecar(p, what)).Count())
+                End If
+                Dim rewrittenItems = _allItems.Where(Function(i) i IsNot Nothing AndAlso cleaned.Contains(i.FilePath, PathIdentity.Comparer)).ToList()
+                If removeCatalog AndAlso cleaned.Count > 0 Then
+                    Await Task.Run(Sub() CatalogMetadataService.RemoveFromCatalog(cleaned, what))
+                    ' Bewertung, Etikett und Markierung meldet der Katalog selbst an die Elemente;
+                    ' die Stichwoerter nicht, sie werden hier nachgezogen.
+                    If everything OrElse (what And MetadataRemovalFields.Keywords) <> 0 Then
+                        For Each item In rewrittenItems
+                            item.Tags = New List(Of String)()
+                        Next
+                    End If
+                End If
 
                 StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) bereinigt"), changedCount, targets.Count)
+                If sidecarFailures > 0 Then
+                    StatusText = String.Format(LocalizationService.T("{0} Beistelldatei(en) ließen sich nicht bereinigen"), sidecarFailures)
+                End If
                 RefreshAfterBatchFileRewrite(targets)
+                ' Katalog und Suchtext aus dem neuen Stand der Dateien, und das Infopanel neu: bei
+                ' gleichem Pfad steigt es sonst sofort wieder aus und zeigte weiter die alten Angaben.
+                Await RefreshCatalogAfterMetadataWriteAsync(rewrittenItems)
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                RefreshContextActions()
                 Return changedCount
             Catch ex As Exception
                 DiagnosticLogService.LogException("GalleryViewModel.RemoveMetadataSelected", ex)
@@ -13692,17 +13967,16 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Die Dateien, aus denen Metadaten entfernt werden: die VORGEGEBENE Liste, sonst
-        ''' die Auswahl.
-        '''
-        ''' Massgeblich ist IsBatchImageEditWritable, nicht ...Readable: lesen koennen wir auch TIFF,
-        ''' HEIC, BMP und GIF, schreiben nicht. Mit der Lese-Pruefung landete eine solche Datei in
-        ''' der Liste und wurde im falschen Format zurueckgeschrieben.</summary>
+        ''' die Auswahl. ALLE vorhandenen lokalen Dateien, auch RAW, HEIC und TIFF: Beistelldatei und
+        ''' Katalog lassen sich bei jedem Format bereinigen. Nur die Bilddatei selbst geht allein bei
+        ''' den Formaten, die SaveImage zurueckschreiben kann (IsBatchImageEditWritable); das prueft
+        ''' der Ablauf je Datei. Vorher fiel hier jede RAW heraus, und der Menueeintrag tat bei ihr
+        ''' sichtbar nichts (nur eine Zeile in der Statusleiste).</summary>
         Private Function GetMetadataTargetPaths(preset As IList(Of ImageItem)) As List(Of String)
             Dim paths = If(preset IsNot Nothing AndAlso preset.Count > 0,
                            preset.Where(Function(i) i IsNot Nothing).Select(Function(i) i.FilePath),
                            GetSelectedPaths().AsEnumerable())
-            Return paths.Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso File.Exists(p) AndAlso
-                                           IsBatchImageEditWritable(p)).ToList()
+            Return paths.Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso File.Exists(p)).ToList()
         End Function
 
         ''' <summary>Mantel um den Ablauf, siehe <see cref="ResizeImageItemsAsync"/>.</summary>
@@ -13983,7 +14257,12 @@ Namespace ViewModels
             Return String.Format(template, done, total)
         End Function
 
-        Private Async Function RewriteImagesInPlaceAsync(targets As List(Of String), writer As Func(Of String, String, Boolean)) As Task(Of Integer)
+        ''' <param name="rewritten">Wenn angegeben: bekommt genau die Pfade, deren Datei wirklich
+        ''' ersetzt wurde. Fuer Aufrufer, die danach an DIESEN Dateien weiterarbeiten (Metadaten
+        ''' entfernen bereinigt Beistelldatei und Katalog) - ein Schreibfehler oder Abbruch darf dort
+        ''' nicht dazu fuehren, dass die Nebendaten weg sind und das Bild seine Metadaten behaelt.</param>
+        Private Async Function RewriteImagesInPlaceAsync(targets As List(Of String), writer As Func(Of String, String, Boolean),
+                                                         Optional rewritten As List(Of String) = Nothing) As Task(Of Integer)
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
             Try
@@ -14008,6 +14287,7 @@ Namespace ViewModels
                             If written AndAlso File.Exists(source) Then
                                 File.Copy(temp, source, True)
                                 changedCount += 1
+                                rewritten?.Add(source)
                                 ExifService.Invalidate(source)
                             End If
                         Finally

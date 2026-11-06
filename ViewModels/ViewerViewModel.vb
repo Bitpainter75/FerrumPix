@@ -987,6 +987,9 @@ Namespace ViewModels
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
                                                     .SetDescription = SetDescriptionCommand,
+                                                    .ImportMetadataToCatalog = ImportMetadataToCatalogCommand,
+                                                    .WriteCatalogToFiles = WriteCatalogToFilesCommand,
+                                                    .CompareMetadata = CompareMetadataCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
@@ -1032,6 +1035,9 @@ Namespace ViewModels
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property SetDescriptionCommand As ICommand
+        Public ReadOnly Property ImportMetadataToCatalogCommand As ICommand
+        Public ReadOnly Property WriteCatalogToFilesCommand As ICommand
+        Public ReadOnly Property CompareMetadataCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
@@ -1117,6 +1123,9 @@ Namespace ViewModels
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
             SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() SetDescriptionCurrentAsync())
+            ImportMetadataToCatalogCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogCurrentAsync(toCatalog:=True))
+            WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogCurrentAsync(toCatalog:=False))
+            CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() CompareMetadataCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
@@ -4460,6 +4469,24 @@ Namespace ViewModels
             RefreshContextActions()
         End Function
 
+        ''' <summary>Datei und Katalog fuer das angezeigte Bild vergleichen, ueber die Galerie.</summary>
+        Private Async Function CompareMetadataCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.CompareMetadataForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        ''' <summary>Katalog und Datei fuer das angezeigte Bild abgleichen, ueber die Galerie.</summary>
+        Private Async Function TransferCatalogCurrentAsync(toCatalog As Boolean) As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.TransferCatalogForImageItemsAsync(i, toCatalog)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
         ''' <summary>Titel und Beschreibung fuer das angezeigte Bild, auf demselben Weg wie der
         ''' Urheberrechtshinweis darueber.</summary>
         Private Async Function SetDescriptionCurrentAsync() As Task
@@ -4497,6 +4524,10 @@ Namespace ViewModels
             Await WithCurrentImageAsync(Async Function(g, i)
                                             changedCount = Await g.RemoveMetadataForImageItemsAsync(i)
                                         End Function)
+            ' Die Leiste des Betrachters ist eine eigene; sie liest nach dem Neuladen zwar neu, nach
+            ' einem Abbruch oder einem gescheiterten Schreiben aber nicht.
+            InfoPanel.Refresh()
+            RefreshContextActions()
             If changedCount = 0 OrElse String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
 
             Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso

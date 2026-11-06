@@ -59,6 +59,10 @@ Namespace Models
         Public Property FavoriteMode As String = "Any"
         Public Property RatingMin As Integer = -1
         Public Property Ratings As New List(Of Integer)()
+        ''' <summary>Markierungen, nach denen gesucht wird (1 behalten, -1 verworfen); leer heisst egal.</summary>
+        Public Property PickStates As New List(Of Integer)()
+        ''' <summary>Etiketten als Hex-Wert der Palette; leer heisst egal.</summary>
+        Public Property ColorLabels As New List(Of String)()
         Public Property Results As New List(Of String)()
         Public Property Conditions As New List(Of SearchCondition)()
         Public Property ConditionCombinator As String = "AND"

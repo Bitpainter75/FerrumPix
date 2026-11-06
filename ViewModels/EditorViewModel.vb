@@ -17883,6 +17883,9 @@ Namespace ViewModels
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
         Public ReadOnly Property SetDescriptionCommand As ICommand
+        Public ReadOnly Property ImportMetadataToCatalogCommand As ICommand
+        Public ReadOnly Property WriteCatalogToFilesCommand As ICommand
+        Public ReadOnly Property CompareMetadataCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
@@ -18627,12 +18630,12 @@ Namespace ViewModels
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
             SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() SetDescriptionCurrentAsync())
+            ImportMetadataToCatalogCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogCurrentAsync(toCatalog:=True))
+            WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogCurrentAsync(toCatalog:=False))
+            CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() CompareMetadataCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
-            RemoveMetadataCommand = ReactiveCommand.CreateFromTask(
-                Function() WithCurrentImageAsync(Async Function(g, i2)
-                                                     Await g.RemoveMetadataForImageItemsAsync(i2)
-                                                 End Function))
+            RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             PrintCommand = ReactiveCommand.CreateFromTask(Function() PrintCurrentAsync())
 
             ShowNewDocumentDialogCommand = ReactiveCommand.Create(Sub() ShowNewDocumentDialog())
@@ -18798,6 +18801,40 @@ Namespace ViewModels
             RefreshContextActions()
         End Function
 
+        ''' <summary>Datei und Katalog fuer das angezeigte Bild vergleichen, ueber die Galerie.</summary>
+        Private Async Function CompareMetadataCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.CompareMetadataForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        ''' <summary>Katalog und Datei fuer das angezeigte Bild abgleichen, ueber die Galerie.
+        ''' In die Datei gehen dabei nur Metadaten; das Bild auf der Buehne bleibt.</summary>
+        Private Async Function TransferCatalogCurrentAsync(toCatalog As Boolean) As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.TransferCatalogForImageItemsAsync(i, toCatalog)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        ''' <summary>"Metadaten entfernen" fuer das angezeigte Bild, ueber die Galerie wie im
+        ''' Betrachter. Die Datei liegt danach neu geschrieben auf der Platte; ohne Neuladen zeigte
+        ''' der Editor weiter das Bild von vorher samt Angaben und EXIF-Drehung. Neu geladen wird nur
+        ''' ohne ungespeicherte Bearbeitung - sonst ginge die verloren, und das Bild bleibt stehen,
+        ''' bis gespeichert oder verworfen ist.</summary>
+        Private Async Function RemoveMetadataCurrentAsync() As Task
+            Dim changedCount = 0
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            changedCount = Await g.RemoveMetadataForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+            If changedCount > 0 AndAlso Not HasUnsavedChanges Then Await ReloadCurrentDocumentAsync()
+        End Function
+
         ''' <summary>Titel und Beschreibung fuer das angezeigte Bild, auf demselben Weg wie der
         ''' Urheberrechtshinweis darueber.</summary>
         Private Async Function SetDescriptionCurrentAsync() As Task
@@ -18863,6 +18900,9 @@ Namespace ViewModels
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
                                                     .SetDescription = SetDescriptionCommand,
+                                                    .ImportMetadataToCatalog = ImportMetadataToCatalogCommand,
+                                                    .WriteCatalogToFiles = WriteCatalogToFilesCommand,
+                                                    .CompareMetadata = CompareMetadataCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,

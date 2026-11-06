@@ -2971,6 +2971,57 @@ Namespace ViewModels
             RaiseDialogSearchRatingState()
         End Sub
 
+        ' ---- Markierung und Etikett im Suchdialog: Schalter, angehakt heisst "danach suchen".
+        ' Mehrere angehakte Werte derselben Art sind eine ODER-Liste, keiner heisst egal.
+
+        Private ReadOnly _dialogSearchPicks As New HashSet(Of Integer)()
+
+        Public ReadOnly Property IsDialogSearchPickKeep As Boolean
+            Get
+                Return _dialogSearchPicks.Contains(1)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogSearchPickReject As Boolean
+            Get
+                Return _dialogSearchPicks.Contains(-1)
+            End Get
+        End Property
+
+        Public Sub ToggleDialogSearchPick(value As Integer)
+            If value <> 1 AndAlso value <> -1 Then Return
+            If Not _dialogSearchPicks.Remove(value) Then _dialogSearchPicks.Add(value)
+            Me.RaisePropertyChanged(NameOf(IsDialogSearchPickKeep))
+            Me.RaisePropertyChanged(NameOf(IsDialogSearchPickReject))
+        End Sub
+
+        ''' <summary>Die Palette der Etiketten, dieselbe wie in der Infoleiste.</summary>
+        Private Shared ReadOnly SearchLabelPalette As (Hex As String, Name As String)() = {
+            ("#F08A1A", "Orange"), ("#E74C3C", "Rot"), ("#F03B88", "Pink"), ("#8B5CF6", "Lila"),
+            ("#3B82F6", "Blau"), ("#0891B2", "Cyan"), ("#0F766E", "Türkis"), ("#22C55E", "Grün"),
+            ("#FACC15", "Gelb")}
+
+        Private _dialogSearchLabelOptions As ObservableCollection(Of SearchLabelOption)
+
+        ''' <summary>Die Etiketten als Schalter. Entstehen beim ersten Zugriff, also auf dem
+        ''' Anzeigefaden; der Name steht als Tooltip und wird erst dort uebersetzt.</summary>
+        Public ReadOnly Property DialogSearchLabelOptions As ObservableCollection(Of SearchLabelOption)
+            Get
+                If _dialogSearchLabelOptions Is Nothing Then
+                    _dialogSearchLabelOptions = New ObservableCollection(Of SearchLabelOption)()
+                    For Each entry In SearchLabelPalette
+                        Dim item As New SearchLabelOption With {
+                            .Hex = entry.Hex,
+                            .Brush = New Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(entry.Hex)),
+                            .ToolTip = LocalizationService.T(entry.Name)}
+                        item.ToggleCommand = ReactiveCommand.Create(Sub() item.IsActive = Not item.IsActive)
+                        _dialogSearchLabelOptions.Add(item)
+                    Next
+                End If
+                Return _dialogSearchLabelOptions
+            End Get
+        End Property
+
         Public ReadOnly Property IsDialogSearchFavoriteOnly As Boolean
             Get
                 Return _dialogSearchFavoriteMode = "Only"
@@ -3073,6 +3124,9 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsGpxTrack))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
                 Me.RaisePropertyChanged(NameOf(DialogShowsImageDescription))
+                Me.RaisePropertyChanged(NameOf(DialogShowsRemoveMetadata))
+                Me.RaisePropertyChanged(NameOf(DialogShowsCatalogTransfer))
+                Me.RaisePropertyChanged(NameOf(DialogShowsCompareMetadata))
                 Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
                 Me.RaisePropertyChanged(NameOf(DialogShowsImport))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackup))
@@ -3121,6 +3175,9 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.SetPlace AndAlso
                        _dialogKind <> AppDialogKind.CaptureDate AndAlso
                        _dialogKind <> AppDialogKind.ImageDescription AndAlso
+                       _dialogKind <> AppDialogKind.RemoveMetadata AndAlso
+                       _dialogKind <> AppDialogKind.CatalogTransfer AndAlso
+                       _dialogKind <> AppDialogKind.CompareMetadata AndAlso
                        _dialogKind <> AppDialogKind.ModelDownload AndAlso
                        _dialogKind <> AppDialogKind.Import AndAlso
                        _dialogKind <> AppDialogKind.Backup AndAlso
@@ -3518,6 +3575,11 @@ Namespace ViewModels
                 ' Kein Treffer, nichts zu setzen: der Knopf bliebe sonst offen und taete nichts.
                 If _dialogKind = AppDialogKind.GpxTrack Then Return HasDialogGpxMatch
                 If _dialogKind = AppDialogKind.CaptureDate Then Return HasDialogCaptureDate
+                ' Ohne einen einzigen Haken gaebe es nichts zu uebertragen.
+                If _dialogKind = AppDialogKind.CatalogTransfer Then Return DialogCatalogFields <> CatalogField.None
+                If _dialogKind = AppDialogKind.RemoveMetadata Then
+                    Return _dialogRemoveMetadataScope <> RemoveMetadataScope.None AndAlso EffectiveRemoveWhat <> MetadataRemovalFields.None
+                End If
                 If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
                 If _dialogKind = AppDialogKind.Import Then Return IsDialogImportPrimaryEnabled()
                 If _dialogKind = AppDialogKind.Backup OrElse _dialogKind = AppDialogKind.Restore Then Return IsBackupDialogPrimaryEnabled()
@@ -4076,8 +4138,12 @@ Namespace ViewModels
 
         Public ReadOnly Property DialogWidth As Double
             Get
+                ' Der Suchdialog: Feld, Vergleich und Wert jeder Bedingung nebeneinander, dazu die
+                ' Beschriftungsspalte von 200; "ist nicht leer" und die langen Feldnamen brauchen
+                ' mehr als die 820 von vorher (Nutzerwunsch).
+                If DialogShowsSearch Then Return 980
                 ' Die Tastenkuerzel brauchen die Breite fuer ihre zwei Spalten (Taste 230, Wirkung).
-                If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse DialogShowsSearch OrElse
+                If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse
                    DialogShowsShortcuts Then Return 820
                 ' Die Stapel-Dialoge teilen sich mit „Exportieren nach“ umfangreiche Formulare
                 ' und den Speichern-unter-Block. 570 px lässt insbesondere die Quellenwahl,
@@ -4105,6 +4171,13 @@ Namespace ViewModels
                 ' Titel und Beschreibung: dasselbe Untermenue, dieselbe Breite. Die Beschreibung
                 ' ist mehrzeilig und braucht die Breite fuer lesbare Zeilen.
                 If DialogShowsImageDescription Then Return 570
+                ' Die beiden Metadaten-Rueckfragen mit Optionen: dieselbe Breite, die laengste
+                ' Option ("zusaetzlich Bewertung, Etikett ...") bricht sonst in drei Zeilen um.
+                If DialogShowsRemoveMetadata OrElse DialogShowsCatalogTransfer Then Return 570
+                ' Der Vergleich hat zwei Wertspalten nebeneinander, dazu Beschriftung, Pfeile,
+                ' Loeschknoepfe und im Fuss drei Bedienelemente. Bei 840 ueberlappten sich die
+                ' Bedienelemente (Nutzerbefund); 1100 gibt jeder Wertspalte gut 400 Punkte.
+                If DialogShowsCompareMetadata Then Return 1100
                 ' Einlesen: Quelle und Ziel stehen als Pfade da und sollen lesbar bleiben.
                 If DialogShowsImport Then Return 680
                 If DialogShowsBackupOrRestore Then Return 620
@@ -5060,6 +5133,362 @@ Namespace ViewModels
             Return changes
         End Function
 
+        ' ---------------------------------------------------------------- Metadaten entfernen
+
+        Private _dialogRemoveMetadataScope As RemoveMetadataScope = RemoveMetadataScope.File
+
+        Public ReadOnly Property DialogShowsRemoveMetadata As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.RemoveMetadata
+            End Get
+        End Property
+
+        ' Drei Haken, jeder fuer sich: Datei, Beistelldatei und Katalog sind drei Orte, und wer nur
+        ' den Katalog leeren will, soll dafuer nicht die Datei neu schreiben muessen.
+        Public Property DialogRemoveMetadataFile As Boolean
+            Get
+                Return (_dialogRemoveMetadataScope And RemoveMetadataScope.File) <> 0
+            End Get
+            Set(value As Boolean)
+                SetDialogRemoveMetadataFlag(RemoveMetadataScope.File, value)
+            End Set
+        End Property
+
+        Public Property DialogRemoveMetadataSidecar As Boolean
+            Get
+                Return (_dialogRemoveMetadataScope And RemoveMetadataScope.Sidecar) <> 0
+            End Get
+            Set(value As Boolean)
+                SetDialogRemoveMetadataFlag(RemoveMetadataScope.Sidecar, value)
+            End Set
+        End Property
+
+        Public Property DialogRemoveMetadataCatalog As Boolean
+            Get
+                Return (_dialogRemoveMetadataScope And RemoveMetadataScope.Catalog) <> 0
+            End Get
+            Set(value As Boolean)
+                SetDialogRemoveMetadataFlag(RemoveMetadataScope.Catalog, value)
+            End Set
+        End Property
+
+        ' Welche Angaben. "Alles" schliesst die einzelnen ein; solange es angehakt ist, sind die
+        ' einzelnen Haken gesperrt, damit nicht zwei Antworten auf dieselbe Frage dastehen.
+        Private _dialogRemoveWhat As MetadataRemovalFields = MetadataRemovalFields.Everything
+
+        Public Property DialogRemoveEverything As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.Everything)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.Everything, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property DialogRemoveSelective As Boolean
+            Get
+                Return Not HasRemoveWhat(MetadataRemovalFields.Everything)
+            End Get
+        End Property
+
+        Public Property DialogRemoveRating As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.Rating)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.Rating, value)
+            End Set
+        End Property
+
+        Public Property DialogRemoveColorLabel As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.ColorLabel)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.ColorLabel, value)
+            End Set
+        End Property
+
+        Public Property DialogRemovePickState As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.PickState)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.PickState, value)
+            End Set
+        End Property
+
+        Public Property DialogRemoveKeywords As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.Keywords)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.Keywords, value)
+            End Set
+        End Property
+
+        Public Property DialogRemoveDescription As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.Description)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.Description, value)
+            End Set
+        End Property
+
+        Public Property DialogRemoveCopyright As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.Copyright)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.Copyright, value)
+            End Set
+        End Property
+
+        Public Property DialogRemovePlace As Boolean
+            Get
+                Return HasRemoveWhat(MetadataRemovalFields.Place)
+            End Get
+            Set(value As Boolean)
+                SetRemoveWhat(MetadataRemovalFields.Place, value)
+            End Set
+        End Property
+
+        Private Function HasRemoveWhat(flag As MetadataRemovalFields) As Boolean
+            Return (_dialogRemoveWhat And flag) <> 0
+        End Function
+
+        Private Sub SetRemoveWhat(flag As MetadataRemovalFields, value As Boolean)
+            Dim what = If(value, _dialogRemoveWhat Or flag, _dialogRemoveWhat And Not flag)
+            If what = _dialogRemoveWhat Then Return
+            _dialogRemoveWhat = what
+            RaiseRemoveWhat()
+        End Sub
+
+        Private Sub RaiseRemoveWhat()
+            For Each name In {NameOf(DialogRemoveEverything), NameOf(DialogRemoveSelective), NameOf(DialogRemoveRating),
+                              NameOf(DialogRemoveColorLabel), NameOf(DialogRemovePickState), NameOf(DialogRemoveKeywords),
+                              NameOf(DialogRemoveDescription), NameOf(DialogRemoveCopyright), NameOf(DialogRemovePlace),
+                              NameOf(IsDialogPrimaryEnabled)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
+
+        ''' <summary>Was beim Bestaetigen wirklich gilt: "Alles", sonst die einzelnen Haken.</summary>
+        Private ReadOnly Property EffectiveRemoveWhat As MetadataRemovalFields
+            Get
+                If HasRemoveWhat(MetadataRemovalFields.Everything) Then Return MetadataRemovalFields.Everything
+                Return _dialogRemoveWhat
+            End Get
+        End Property
+
+        Private _dialogRemoveFileAvailable As Boolean = True
+        Private _dialogRemovePartialFiles As Boolean
+
+        ''' <summary>Laesst sich wenigstens eine der Dateien selbst bereinigen (JPEG, PNG, WebP)?</summary>
+        Public ReadOnly Property DialogRemoveMetadataFileAvailable As Boolean
+            Get
+                Return _dialogRemoveFileAvailable
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis, dass RAW und andere Formate nur ueber Beistelldatei und Katalog
+        ''' gehen: wenn keine oder nur ein Teil der Dateien selbst bereinigt werden kann.</summary>
+        Public ReadOnly Property DialogRemoveMetadataShowsFormatHint As Boolean
+            Get
+                Return Not _dialogRemoveFileAvailable OrElse _dialogRemovePartialFiles
+            End Get
+        End Property
+
+        Private Sub SetDialogRemoveMetadataFlag(flag As RemoveMetadataScope, value As Boolean)
+            Dim scope = If(value, _dialogRemoveMetadataScope Or flag, _dialogRemoveMetadataScope And Not flag)
+            SetDialogRemoveMetadataScope(scope)
+        End Sub
+
+        Private Sub SetDialogRemoveMetadataScope(scope As RemoveMetadataScope)
+            If _dialogRemoveMetadataScope = scope Then Return
+            _dialogRemoveMetadataScope = scope
+            Me.RaisePropertyChanged(NameOf(DialogRemoveMetadataFile))
+            Me.RaisePropertyChanged(NameOf(DialogRemoveMetadataSidecar))
+            Me.RaisePropertyChanged(NameOf(DialogRemoveMetadataCatalog))
+            Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+        End Sub
+
+        ''' <summary>Die Rueckfrage zu "Metadaten entfernen": WELCHE Angaben (alles oder einzelne)
+        ''' und WO (Datei, Beistelldatei, Katalog), je fuer sich. Vorgabe ist "alles, nur in der
+        ''' Datei" wie bisher; Beistelldatei und Katalog loeschen Arbeit, die sich nicht
+        ''' wiederherstellen laesst, und muessen bewusst angehakt werden. Ohne Haken in einer der
+        ''' beiden Gruppen bleibt der Knopf gesperrt. Nothing heisst abgebrochen.</summary>
+        Public Async Function ShowRemoveMetadataAsync(fileCount As Integer, Optional writableCount As Integer = -1) As Task(Of RemoveMetadataDialogResult)
+            ' Die Bilddatei laesst sich nur bei JPEG, PNG und WebP bereinigen. Ist keine davon
+            ' dabei (etwa nur RAWs), ist der Haken gesperrt und die Vorgabe die Beistelldatei.
+            If writableCount < 0 Then writableCount = fileCount
+            _dialogRemoveFileAvailable = writableCount > 0
+            _dialogRemovePartialFiles = writableCount > 0 AndAlso writableCount < fileCount
+            Me.RaisePropertyChanged(NameOf(DialogRemoveMetadataFileAvailable))
+            Me.RaisePropertyChanged(NameOf(DialogRemoveMetadataShowsFormatHint))
+            SetDialogRemoveMetadataScope(If(_dialogRemoveFileAvailable, RemoveMetadataScope.File, RemoveMetadataScope.Sidecar))
+            _dialogRemoveWhat = MetadataRemovalFields.Everything
+            RaiseRemoveWhat()
+            Dim message = String.Format(
+                LocalizationService.T("Welche Metadaten von {0} Bild(ern) sollen wo entfernt werden? Das lässt sich nicht rückgängig machen."),
+                fileCount)
+            Dim confirmed = Await ShowDialogAsync(AppDialogKind.RemoveMetadata, "Metadaten entfernen", message,
+                                                  "", "Entfernen", "Abbrechen")
+            If confirmed Is Nothing OrElse _dialogRemoveMetadataScope = RemoveMetadataScope.None OrElse
+               EffectiveRemoveWhat = MetadataRemovalFields.None Then Return Nothing
+            Return New RemoveMetadataDialogResult With {.Where = _dialogRemoveMetadataScope, .What = EffectiveRemoveWhat}
+        End Function
+
+        ' ---------------------------------------------------------------- Metadaten vergleichen
+
+        Private _dialogMetadataCompare As MetadataCompareViewModel
+
+        Public ReadOnly Property DialogShowsCompareMetadata As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.CompareMetadata
+            End Get
+        End Property
+
+        ''' <summary>Der Inhalt des Vergleichs; eigener Datenkontext der Ansicht.</summary>
+        Public Property DialogMetadataCompare As MetadataCompareViewModel
+            Get
+                Return _dialogMetadataCompare
+            End Get
+            Private Set(value As MetadataCompareViewModel)
+                Me.RaiseAndSetIfChanged(_dialogMetadataCompare, value)
+            End Set
+        End Property
+
+        ''' <summary>Zeigt den Vergleich. True heisst: mit "Anwenden" bestaetigt; was dann zu
+        ''' schreiben ist, sagt compare.BuildChanges(). Der Vergleich bleibt danach nicht stehen,
+        ''' damit er nicht ueber den naechsten Dialog hinweg Speicher haelt.</summary>
+        Public Async Function ShowMetadataCompareAsync(compare As MetadataCompareViewModel) As Task(Of Boolean)
+            If compare Is Nothing Then Return False
+            compare.BuildRows()
+            DialogMetadataCompare = compare
+            Try
+                Dim confirmed = Await ShowDialogAsync(AppDialogKind.CompareMetadata, "Metadaten vergleichen",
+                                                      "", "", "Anwenden", "Abbrechen")
+                Return confirmed IsNot Nothing
+            Finally
+                DialogMetadataCompare = Nothing
+            End Try
+        End Function
+
+        ' ---------------------------------------------------------------- Katalog und Dateien
+
+        Private _dialogCatalogTransferToCatalog As Boolean
+        Private _dialogCatalogRating As Boolean = True
+        Private _dialogCatalogColorLabel As Boolean = True
+        Private _dialogCatalogPickState As Boolean = True
+        Private _dialogCatalogKeywords As Boolean = True
+        Private _dialogCatalogMergeKeywords As Boolean = True
+
+        Public ReadOnly Property DialogShowsCatalogTransfer As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.CatalogTransfer
+            End Get
+        End Property
+
+        ''' <summary>Die Wahl "ersetzen oder zusammenfuehren" gibt es nur in Richtung Katalog: in
+        ''' die Datei geschrieben ist der Katalog die Quelle, und die Liste dort wird ersetzt.</summary>
+        Public ReadOnly Property DialogCatalogTransferShowsKeywordMode As Boolean
+            Get
+                Return _dialogCatalogTransferToCatalog
+            End Get
+        End Property
+
+        Public Property DialogCatalogRating As Boolean
+            Get
+                Return _dialogCatalogRating
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogCatalogRating, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCatalogColorLabel As Boolean
+            Get
+                Return _dialogCatalogColorLabel
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogCatalogColorLabel, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCatalogPickState As Boolean
+            Get
+                Return _dialogCatalogPickState
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogCatalogPickState, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCatalogKeywords As Boolean
+            Get
+                Return _dialogCatalogKeywords
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogCatalogKeywords, value)
+                Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
+            End Set
+        End Property
+
+        Public Property DialogCatalogMergeKeywords As Boolean
+            Get
+                Return _dialogCatalogMergeKeywords
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogCatalogMergeKeywords, value)
+                Me.RaisePropertyChanged(NameOf(DialogCatalogReplaceKeywords))
+            End Set
+        End Property
+
+        Public Property DialogCatalogReplaceKeywords As Boolean
+            Get
+                Return Not _dialogCatalogMergeKeywords
+            End Get
+            Set(value As Boolean)
+                DialogCatalogMergeKeywords = Not value
+            End Set
+        End Property
+
+        Private ReadOnly Property DialogCatalogFields As CatalogField
+            Get
+                Dim fields = CatalogField.None
+                If _dialogCatalogRating Then fields = fields Or CatalogField.Rating
+                If _dialogCatalogColorLabel Then fields = fields Or CatalogField.ColorLabel
+                If _dialogCatalogPickState Then fields = fields Or CatalogField.PickState
+                If _dialogCatalogKeywords Then fields = fields Or CatalogField.Keywords
+                Return fields
+            End Get
+        End Property
+
+        ''' <summary>"Metadaten in den Katalog uebernehmen" (<paramref name="toCatalog"/>) bzw.
+        ''' "Katalogdaten in die Dateien schreiben": welche Angaben, und bei Stichwoertern in den
+        ''' Katalog, ob ersetzt oder zusammengefuehrt wird. Die Haken bleiben zwischen zwei Aufrufen
+        ''' stehen, die Vorgabe fuer Stichwoerter ist "zusammenfuehren", weil es nichts loescht.
+        ''' Nothing heisst abgebrochen.</summary>
+        Public Async Function ShowCatalogTransferAsync(toCatalog As Boolean, imageCount As Integer) As Task(Of CatalogTransferDialogResult)
+            _dialogCatalogTransferToCatalog = toCatalog
+            Me.RaisePropertyChanged(NameOf(DialogCatalogTransferShowsKeywordMode))
+            Dim title = If(toCatalog, "Metadaten in den Katalog übernehmen", "Katalogdaten in die Dateien schreiben")
+            Dim message = If(toCatalog,
+                             String.Format(LocalizationService.T("Gilt für {0} Bilder. Die Werte aus Datei und Beistelldatei ersetzen die im Katalog."), imageCount),
+                             String.Format(LocalizationService.T("Gilt für {0} Bilder. JPEG, PNG und WebP bekommen die Werte in die Datei, alle anderen Formate in eine XMP-Beistelldatei."), imageCount))
+            Dim confirmed = Await ShowDialogAsync(AppDialogKind.CatalogTransfer, title, message, "",
+                                                  If(toCatalog, "Anwenden", "Schreiben"), "Abbrechen")
+            If confirmed Is Nothing OrElse DialogCatalogFields = CatalogField.None Then Return Nothing
+            Return New CatalogTransferDialogResult With {
+                .Fields = DialogCatalogFields,
+                .MergeKeywords = toCatalog AndAlso _dialogCatalogMergeKeywords}
+        End Function
+
         Public Async Function ShowCaptureDateAsync(initial As DateTime?) As Task(Of CaptureDateDialogResult)
             ' Die Vorgabe ist die Zeit des angeklickten Bildes - dann sieht man, was gilt, und
             ' korrigiert sie, statt sie neu zu tippen. Eine Zeit ausserhalb des sinnvollen Bereichs
@@ -5309,6 +5738,14 @@ Namespace ViewModels
                                                    Optional source As String = "Local") As Task(Of SearchDialogResult)
             Dim isEdit = prefill IsNot Nothing
             _dialogSearchRatings.Clear()
+            _dialogSearchPicks.Clear()
+            If isEdit Then _dialogSearchPicks.UnionWith(If(prefill.PickStates, New List(Of Integer)()))
+            Me.RaisePropertyChanged(NameOf(IsDialogSearchPickKeep))
+            Me.RaisePropertyChanged(NameOf(IsDialogSearchPickReject))
+            Dim wantedLabels = If(isEdit, If(prefill.ColorLabels, New List(Of String)()), New List(Of String)())
+            For Each labelOption In DialogSearchLabelOptions
+                labelOption.IsActive = wantedLabels.Contains(labelOption.Hex, StringComparer.OrdinalIgnoreCase)
+            Next
             DialogSearchConditions.Clear()
             If isEdit Then
                 DialogSearchName = If(prefill.Name, "")
@@ -5370,9 +5807,13 @@ Namespace ViewModels
                 .FavoriteMode = DialogSearchFavoriteMode,
                 .RatingMin = -1,
                 .Ratings = _dialogSearchRatings.OrderBy(Function(r) r).ToList(),
+                .PickStates = _dialogSearchPicks.OrderBy(Function(p) p).ToList(),
+                .ColorLabels = DialogSearchLabelOptions.Where(Function(o) o.IsActive).Select(Function(o) o.Hex).ToList(),
                 .Conditions = DialogSearchConditions.
-                    Where(Function(c) Not String.IsNullOrWhiteSpace(c.Value)).
-                    Select(Function(c) New SearchCondition With {.Field = c.Field, .Operator = c.Operator, .Value = c.Value.Trim()}).
+                    Where(Function(c) Not String.IsNullOrWhiteSpace(c.Value) OrElse SearchCondition.IsPresenceOperator(c.Operator)).
+                    Select(Function(c) New SearchCondition With {
+                        .Field = c.Field, .Operator = c.Operator,
+                        .Value = If(SearchCondition.IsPresenceOperator(c.Operator), "", If(c.Value, "").Trim())}).
                     ToList(),
                 .ConditionCombinator = DialogSearchConditionCombinator
             }
@@ -5645,8 +6086,11 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>Das Herz und das gebrochene Herz sind Schalter: ein Klick auf den angehakten
+        ''' nimmt ihn zurueck ("egal"), ein Klick auf den anderen wechselt.</summary>
         Public Sub SetDialogSearchFavoriteMode(mode As String)
-            DialogSearchFavoriteMode = mode
+            Dim normalized = AppSettingsService.NormalizeSearchFavoriteMode(mode)
+            DialogSearchFavoriteMode = If(String.Equals(normalized, _dialogSearchFavoriteMode, StringComparison.Ordinal), "Any", normalized)
         End Sub
 
         Public Sub SetDialogSearchRatingMin(valueText As String)

@@ -11001,4 +11001,172 @@
   <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
     <value>Titel och beskrivning sparade för {0} av {1} bilder</value>
   </data>
+  <data name="Metadaten_in_den_Katalog_bernehmen_29392693" xml:space="preserve">
+    <value>För över metadata till katalogen</value>
+  </data>
+  <data name="Katalogdaten_in_die_Dateien_schreiben_8396d136" xml:space="preserve">
+    <value>Skriv katalogdata till filerna</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Die_Werte_aus_Datei_und_Beiste_2e3dcc9d" xml:space="preserve">
+    <value>Gäller för {0} bilder. Värdena från fil och sidofil ersätter dem i katalogen.</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_JPEG_PNG_und_WebP_bekommen_die_0449426f" xml:space="preserve">
+    <value>Gäller för {0} bilder. JPEG, PNG och WebP får värdena i filen, alla andra format i en XMP-sidofil.</value>
+  </data>
+  <data name="Schreiben_f4f5c5f4" xml:space="preserve">
+    <value>Skriv</value>
+  </data>
+  <data name="Metadaten_vergleichen_bc304f53" xml:space="preserve">
+    <value>Jämför metadata</value>
+  </data>
+  <data name="Nur_aus_der_Datei_43386bad" xml:space="preserve">
+    <value>Bara från filen</value>
+  </data>
+  <data name="Aus_Datei_und_Beistelldatei_9d443403" xml:space="preserve">
+    <value>Från fil och sidofil</value>
+  </data>
+  <data name="Zus_tzlich_Bewertung_Etikett_Stichw_rter_und_Mar_47654e13" xml:space="preserve">
+    <value>Även betyg, etikett, nyckelord och markering i katalogen</value>
+  </data>
+  <data name="Personen_und_Favoriten_bleiben_in_jedem_Fall_Aus_0c007c9d" xml:space="preserve">
+    <value>Personer och favoriter finns alltid kvar. Ur sidofilen tas bara de kända fälten bort, andra uppgifter i den finns kvar.</value>
+  </data>
+  <data name="Markierung_2db7c266" xml:space="preserve">
+    <value>Markering</value>
+  </data>
+  <data name="Zusammenf_hren_dcab7118" xml:space="preserve">
+    <value>Slå ihop</value>
+  </data>
+  <data name="Ersetzen_0556e76a" xml:space="preserve">
+    <value>Ersätt</value>
+  </data>
+  <data name="Datei_e9e7baf1" xml:space="preserve">
+    <value>Fil</value>
+  </data>
+  <data name="An_der_Datei_entfernen_1db87f8a" xml:space="preserve">
+    <value>Ta bort från filen</value>
+  </data>
+  <data name="Katalogwert_in_die_Datei_dafedfe9" xml:space="preserve">
+    <value>Katalogvärde till filen</value>
+  </data>
+  <data name="Dateiwert_in_den_Katalog_9dfb2cfb" xml:space="preserve">
+    <value>Filvärde till katalogen</value>
+  </data>
+  <data name="Im_Katalog_entfernen_1b7a3aa5" xml:space="preserve">
+    <value>Ta bort från katalogen</value>
+  </data>
+  <data name="Datei_und_Katalog_weichen_ab_a371dcb4" xml:space="preserve">
+    <value>Fil och katalog skiljer sig</value>
+  </data>
+  <data name="Alles_in_den_Katalog_5d8401d4" xml:space="preserve">
+    <value>Allt till katalogen</value>
+  </data>
+  <data name="Alles_in_die_Datei_6944b40e" xml:space="preserve">
+    <value>Allt till filen</value>
+  </data>
+  <data name="Nur_hier_0_8094a5e0" xml:space="preserve">
+    <value>Bara här: {0}</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_Datei_eine_v_ecadc9a3" xml:space="preserve">
+    <value>Ändringar i filen hamnar i filen; en befintlig sidofil uppdateras också.</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_XMP_Beistell_644658a3" xml:space="preserve">
+    <value>Ändringar i filen hamnar i XMP-sidofilen; själva bildfilen lämnas orörd.</value>
+  </data>
+  <data name="Bewertung_und_Ordnung_c6dc3a8f" xml:space="preserve">
+    <value>Betyg och ordning</value>
+  </data>
+  <data name="Gibt_es_nur_im_Katalog_35597649" xml:space="preserve">
+    <value>Finns bara i katalogen</value>
+  </data>
+  <data name="Ja_283c735c" xml:space="preserve">
+    <value>Ja</value>
+  </data>
+  <data name="Nein_70bb8137" xml:space="preserve">
+    <value>Nej</value>
+  </data>
+  <data name="0_nderungen_vorgemerkt_9c633b90" xml:space="preserve">
+    <value>{0} ändringar förberedda</value>
+  </data>
+  <data name="Datei_und_Beistelldatei_weichen_ab_in_der_Datei__b1206367" xml:space="preserve">
+    <value>Fil och sidofil skiljer sig: i filen {0}, i sidofilen {1}</value>
+  </data>
+  <data name="0_von_5_53a26ac6" xml:space="preserve">
+    <value>{0} av 5</value>
+  </data>
+  <data name="0_Beistelldatei_en_lie_en_sich_nicht_bereinigen_a85066d0" xml:space="preserve">
+    <value>{0} sidofil(er) kunde inte rensas</value>
+  </data>
+  <data name="0_Bilder_abgeglichen_aa6c1a23" xml:space="preserve">
+    <value>{0} bilder synkade</value>
+  </data>
+  <data name="0_von_1_Bildern_abgeglichen_afac4734" xml:space="preserve">
+    <value>{0} av {1} bilder synkade</value>
+  </data>
+  <data name="Nicht_alle_nderungen_lie_en_sich_in_die_Datei_sc_15b91a65" xml:space="preserve">
+    <value>Alla ändringar kunde inte skrivas till filen</value>
+  </data>
+  <data name="Metadaten_abgeglichen_99f2f666" xml:space="preserve">
+    <value>Metadata synkade</value>
+  </data>
+  <data name="Keine_Angabe_1a1c7d9c" xml:space="preserve">
+    <value>Inte angivet</value>
+  </data>
+  <data name="In_den_Katalog_kopieren_5111e778" xml:space="preserve">
+    <value>Kopiera till katalogen</value>
+  </data>
+  <data name="In_die_Datei_kopieren_5b76be3f" xml:space="preserve">
+    <value>Kopiera till filen</value>
+  </data>
+  <data name="Wo_sollen_die_Metadaten_von_0_Bild_ern_entfernt__19d35efc" xml:space="preserve">
+    <value>Var ska metadata för {0} bild(er) tas bort? Det kan inte ångras.</value>
+  </data>
+  <data name="In_der_Bilddatei_Aufnahmedaten_IPTC_XMP_und_Farb_f2c816c4" xml:space="preserve">
+    <value>I bildfilen: fotodata, IPTC, XMP och färgprofil. Filen skrivs om.</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_Bewertung_Etikett_Stich_ab6e3e7f" xml:space="preserve">
+    <value>I XMP-sidofilen: betyg, etikett, nyckelord, beskrivning, upphovsrätt, plats och tagningstid.</value>
+  </data>
+  <data name="Im_Katalog_Bewertung_Etikett_Stichw_rter_und_Mar_43c85e39" xml:space="preserve">
+    <value>I katalogen: betyg, etikett, nyckelord och markering.</value>
+  </data>
+  <data name="Welche_Metadaten_von_0_Bild_ern_sollen_wo_entfer_1435d327" xml:space="preserve">
+    <value>Vilka metadata för {0} bild(er) ska tas bort och var? Det kan inte ångras.</value>
+  </data>
+  <data name="Welche_Angaben_b5cfffe0" xml:space="preserve">
+    <value>Vilka uppgifter</value>
+  </data>
+  <data name="Alles_Aufnahmedaten_IPTC_XMP_und_Farbprofil_4222b121" xml:space="preserve">
+    <value>Allt: fotodata, IPTC, XMP och färgprofil</value>
+  </data>
+  <data name="Aufnahmeort_b700fa16" xml:space="preserve">
+    <value>Tagningsplats</value>
+  </data>
+  <data name="Wo_c1cfb73d" xml:space="preserve">
+    <value>Var</value>
+  </data>
+  <data name="In_der_Bilddatei_63daa147" xml:space="preserve">
+    <value>I bildfilen</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_c25ddb23" xml:space="preserve">
+    <value>I XMP-sidofilen</value>
+  </data>
+  <data name="Im_Katalog_788ff1c9" xml:space="preserve">
+    <value>I katalogen</value>
+  </data>
+  <data name="Mit_Alles_wird_die_Bilddatei_ohne_Metadaten_neu__81ffceb9" xml:space="preserve">
+    <value>Med Allt skrivs bildfilen om utan metadata. I katalogen gäller bara betyg, etikett, markering och nyckelord; beskrivning, upphovsrätt och plats följer filen där. Personer och favoriter finns alltid kvar, och ur sidofilen tas bara de kända fälten bort.</value>
+  </data>
+  <data name="ist_leer_f0f24cb3" xml:space="preserve">
+    <value>är tom</value>
+  </data>
+  <data name="ist_nicht_leer_b65732fa" xml:space="preserve">
+    <value>är inte tom</value>
+  </data>
+  <data name="RAW_und_andere_Formate_die_sich_nicht_zur_ckschr_d5681bc0" xml:space="preserve">
+    <value>RAW och andra format som inte kan skrivas tillbaka rensas bara i sidofil och katalog; själva bildfilen lämnas orörd.</value>
+  </data>
+  <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
+    <value>Flera markeringar eller etiketter: en av dem räcker.</value>
+  </data>
 </root>

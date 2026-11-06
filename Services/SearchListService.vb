@@ -11,9 +11,44 @@ Namespace Services
     ''' zusätzlich zu (nicht anstelle von) den bestehenden Basisfiltern Text/Favorit/Bewertung,
     ''' die weiterhin immer per AND angewendet werden.
     Public Class SearchCondition
+        Implements System.ComponentModel.INotifyPropertyChanged
+
+        Public Event PropertyChanged As System.ComponentModel.PropertyChangedEventHandler Implements System.ComponentModel.INotifyPropertyChanged.PropertyChanged
+
         Public Property Field As String = "Width"
-        Public Property [Operator] As String = ">"
+
+        Private _operator As String = ">"
+        ''' <summary>Meldet sich, damit der Dialog das Wertfeld bei "leer" und "nicht leer"
+        ''' ausblenden kann (<see cref="NeedsValue"/>).</summary>
+        Public Property [Operator] As String
+            Get
+                Return _operator
+            End Get
+            Set(value As String)
+                If String.Equals(_operator, value, StringComparison.Ordinal) Then Return
+                _operator = value
+                RaiseEvent PropertyChanged(Me, New System.ComponentModel.PropertyChangedEventArgs(NameOf([Operator])))
+                RaiseEvent PropertyChanged(Me, New System.ComponentModel.PropertyChangedEventArgs(NameOf(NeedsValue)))
+            End Set
+        End Property
+
         Public Property Value As String = ""
+
+        ''' <summary>"leer" und "nicht leer" fragen nur, OB ein Wert da ist; sie brauchen keinen.</summary>
+        Public Const IsEmptyOperator As String = "IsEmpty"
+        Public Const IsNotEmptyOperator As String = "IsNotEmpty"
+
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public ReadOnly Property NeedsValue As Boolean
+            Get
+                Return Not IsPresenceOperator(_operator)
+            End Get
+        End Property
+
+        Public Shared Function IsPresenceOperator(op As String) As Boolean
+            Return String.Equals(op, IsEmptyOperator, StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(op, IsNotEmptyOperator, StringComparison.OrdinalIgnoreCase)
+        End Function
 
         ''' <summary>"Person" und "Place" stehen bewusst in derselben Liste wie Kamera und ISO, statt
         ''' einen eigenen Filterzustand daneben zu bekommen. Nur so lassen sie sich mit allem anderen
@@ -29,7 +64,7 @@ Namespace Services
         ''' der Urheberrechtshinweis; alle als Text im Katalog wie der Ort.</summary>
         Public Shared ReadOnly ValidFields As String() = {"Width", "Height", "Camera", "Iso", "Aperture", "FocalLength", "DateTaken", "Person", "Place",
                                                            "Title", "Headline", "Description", "Creator", "Credit", "Copyright"}
-        Public Shared ReadOnly ValidOperators As String() = {">", "<", ">=", "<=", "=", "Contains"}
+        Public Shared ReadOnly ValidOperators As String() = {">", "<", ">=", "<=", "=", "Contains", IsEmptyOperator, IsNotEmptyOperator}
 
         ''' <summary>Der Anzeigetext zu einem Feldnamen.
         '''
@@ -59,12 +94,14 @@ Namespace Services
             End Select
         End Function
 
-        ''' <summary>Der Anzeigetext zu einem Vergleich. Nur "Contains" ist ein Wort und gehoert
-        ''' uebersetzt; die Zeichen sprechen fuer sich.</summary>
+        ''' <summary>Der Anzeigetext zu einem Vergleich. Die Worte ("enthält", "ist leer", "ist
+        ''' nicht leer") gehoeren uebersetzt; die Zeichen sprechen fuer sich.</summary>
         Public Shared Function OperatorLabel(op As String) As String
-            If String.Equals(If(op, "").Trim(), "Contains", StringComparison.Ordinal) Then
-                Return LocalizationService.T("enthält")
-            End If
+            Select Case If(op, "").Trim()
+                Case "Contains" : Return LocalizationService.T("enthält")
+                Case IsEmptyOperator : Return LocalizationService.T("ist leer")
+                Case IsNotEmptyOperator : Return LocalizationService.T("ist nicht leer")
+            End Select
             Return If(op, "")
         End Function
     End Class
@@ -82,6 +119,10 @@ Namespace Services
         Public Property FavoriteMode As String = "Any"
         Public Property RatingMin As Integer = -1
         Public Property Ratings As New List(Of Integer)()
+        ''' <summary>Markierungen (1 behalten, -1 verworfen); leer heisst egal.</summary>
+        Public Property PickStates As New List(Of Integer)()
+        ''' <summary>Etiketten als Hex-Wert der Palette; leer heisst egal.</summary>
+        Public Property ColorLabels As New List(Of String)()
         Public Property Results As New List(Of String)()
         Public Property Conditions As New List(Of SearchCondition)()
         Public Property ConditionCombinator As String = "AND"
@@ -178,6 +219,11 @@ Namespace Services
                         Distinct().
                         OrderBy(Function(r) r).
                         ToList(),
+                    .PickStates = If(item.PickStates, New List(Of Integer)()).
+                        Where(Function(p) p = 1 OrElse p = -1).Distinct().OrderBy(Function(p) p).ToList(),
+                    .ColorLabels = If(item.ColorLabels, New List(Of String)()).
+                        Where(Function(c) Not String.IsNullOrWhiteSpace(c)).
+                        Select(Function(c) c.Trim().ToUpperInvariant()).Distinct().ToList(),
                     .Results = NormalizeResults(item.Results),
                     .Conditions = NormalizeConditions(item.Conditions),
                     .ConditionCombinator = If(String.Equals(item.ConditionCombinator, "OR", StringComparison.OrdinalIgnoreCase), "OR", "AND")
@@ -208,11 +254,13 @@ Namespace Services
                 If item Is Nothing Then Continue For
                 If Not SearchCondition.ValidFields.Contains(item.Field, StringComparer.OrdinalIgnoreCase) Then Continue For
                 If Not SearchCondition.ValidOperators.Contains(item.Operator, StringComparer.OrdinalIgnoreCase) Then Continue For
-                If String.IsNullOrWhiteSpace(item.Value) Then Continue For
+                ' "leer" und "nicht leer" brauchen keinen Wert; alle anderen ohne Wert sind
+                ' unvollstaendig und fallen weg.
+                If String.IsNullOrWhiteSpace(item.Value) AndAlso Not SearchCondition.IsPresenceOperator(item.Operator) Then Continue For
                 result.Add(New SearchCondition With {
                     .Field = item.Field,
                     .Operator = item.Operator,
-                    .Value = item.Value.Trim()
+                    .Value = If(SearchCondition.IsPresenceOperator(item.Operator), "", If(item.Value, "").Trim())
                 })
             Next
             Return result

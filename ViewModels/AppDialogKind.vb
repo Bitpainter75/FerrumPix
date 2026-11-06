@@ -22,6 +22,13 @@ Namespace ViewModels
         ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe
         ''' (ImageDescriptionService).</summary>
         ImageDescription
+        ''' <summary>"Metadaten entfernen" mit der Wahl, wie weit (Datei, Beistelldatei, Katalog).</summary>
+        RemoveMetadata
+        ''' <summary>Bewertung, Etikett, Markierung und Stichwoerter zwischen Datei und Katalog
+        ''' uebertragen, in die eine oder die andere Richtung.</summary>
+        CatalogTransfer
+        ''' <summary>Datei und Katalog fuer EIN Bild nebeneinander (MetadataCompareViewModel).</summary>
+        CompareMetadata
         ''' <summary>Modell herunterladen: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
         ''' Dialog (MainWindowViewModelModelDownload.vb).</summary>
         ModelDownload
@@ -34,6 +41,33 @@ Namespace ViewModels
         ''' Einstellungen).</summary>
         Shortcuts
     End Enum
+
+    ''' <summary>Wo "Metadaten entfernen" wirkt. Jede Stelle fuer sich waehlbar.</summary>
+    <Flags>
+    Public Enum RemoveMetadataScope
+        None = 0
+        ''' <summary>Die Bilddatei wird ohne EXIF, IPTC, XMP und Farbprofil neu geschrieben.</summary>
+        File = 1
+        ''' <summary>Die bekannten Felder der XMP-Beistelldatei.</summary>
+        Sidecar = 2
+        ''' <summary>Bewertung, Etikett, Stichwoerter und Markierung im Katalog.</summary>
+        Catalog = 4
+    End Enum
+
+    ''' <summary>Was "Metadaten entfernen" herausgibt: wo und welche Angaben.</summary>
+    Public Class RemoveMetadataDialogResult
+        Public Property Where As RemoveMetadataScope
+        Public Property What As Services.MetadataRemovalFields
+    End Class
+
+    ''' <summary>Was der Dialog "Metadaten in den Katalog uebernehmen" bzw. "Katalogdaten in die
+    ''' Dateien schreiben" herausgibt.</summary>
+    Public Class CatalogTransferDialogResult
+        Public Property Fields As Services.CatalogField
+        ''' <summary>Nur in Richtung Katalog: Stichwoerter mit den vorhandenen zusammenfuehren statt
+        ''' sie zu ersetzen.</summary>
+        Public Property MergeKeywords As Boolean
+    End Class
 
     ''' <summary>Was der Dialog "Aufnahmeort setzen" herausgibt: die Koordinate und, wenn bekannt,
     ''' der Ortsname dazu. Der Name dient nur der Rueckmeldung an den Nutzer - geschrieben wird die
@@ -201,6 +235,10 @@ Namespace ViewModels
         Public Property FavoriteMode As String
         Public Property RatingMin As Integer
         Public Property Ratings As List(Of Integer)
+        ''' <summary>Markierungen (1 behalten, -1 verworfen); leer heisst egal.</summary>
+        Public Property PickStates As New List(Of Integer)()
+        ''' <summary>Etiketten als Hex-Wert der Palette; leer heisst egal.</summary>
+        Public Property ColorLabels As New List(Of String)()
         Public Property Conditions As List(Of SearchCondition)
         Public Property ConditionCombinator As String
     End Class

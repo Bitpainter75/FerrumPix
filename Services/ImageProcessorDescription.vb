@@ -5,63 +5,82 @@ Imports System.Linq
 Imports System.Text
 Imports System.Xml.Linq
 
-' Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe in die Bilddatei selbst: XMP in
-' JPEG, PNG und WebP, dazu IPTC im JPEG. Derselbe Schreibweg wie bei den Stichwoertern
-' (ImageProcessorKeywords.vb), nur mit anderen Feldern. Eingang ist ImageDescriptionService.
-' Kein eigener Zustand.
+' Metadaten in die Bilddatei selbst, ueber eine Aenderung am XMP-Paket: XMP in JPEG, PNG und WebP,
+' dazu IPTC im JPEG. Derselbe Byteweg wie bei den Stichwoertern (ImageProcessorKeywords.vb).
+' Nutzer sind ImageDescriptionService (Titel, Beschreibung ...) und CatalogMetadataService
+' (Bewertung, Etikett, Markierung, Stichwoerter; Felder entfernen). Kein eigener Zustand.
 Namespace Services
 
     Partial Public Class ImageProcessor
 
-        ''' <summary>Schreibt die genannten Felder in die Datei und ERSETZT dabei die vorhandenen;
-        ''' ein leerer Wert entfernt das Feld. Alle uebrigen Felder und die Bilddaten bleiben Byte
-        ''' fuer Byte liegen. Laesst sich ein vorhandener Block nicht sicher zerlegen, bleibt die
-        ''' Datei unangetastet, und zwar GANZ: im JPEG wird dann auch der andere Block nicht neu
-        ''' geschrieben (RewriteJpegXmpAndIptc, alles oder nichts).
+        ''' <summary>Schreibt die genannten beschreibenden Felder in die Datei und ERSETZT dabei die
+        ''' vorhandenen; ein leerer Wert entfernt das Feld. Im JPEG geht IPTC IMMER mit, nicht nur,
+        ''' wenn die Einstellung fuer die Stichwoerter es verlangt: der Dialog ist ein bewusster
+        ''' Schreibbefehl, und ein Programm, das nur IPTC liest, zeigte sonst den alten Titel neben
+        ''' einem neuen im XMP. Die Regeln des Schreibens stehen bei <see cref="EditXmpInFile"/>.</summary>
+        Public Shared Function WriteDescriptionIntoFile(path As String,
+                                                        changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Boolean
+            If changes Is Nothing OrElse changes.Count = 0 Then Return False
+            Dim replacements As New Dictionary(Of Integer, List(Of String))()
+            For Each pair In changes
+                replacements(ImageDescriptionService.IptcDataSet(pair.Key)) =
+                    ImageDescriptionService.IptcValues(pair.Key, pair.Value)
+            Next
+            Return EditXmpInFile(path,
+                                 createPacket:=changes.Values.Any(Function(v) Not String.IsNullOrEmpty(v)),
+                                 edit:=Function(descriptions, target) ImageDescriptionService.ApplyToXmp(descriptions, target, changes),
+                                 iptcReplacements:=replacements)
+        End Function
+
+        ''' <summary>Aendert das eingebettete XMP-Paket einer JPEG-, PNG- oder WebP-Datei und, im
+        ''' JPEG, die genannten IPTC-Datensaetze von Record 2 (je Nummer die neue Werteliste, leer
+        ''' entfernt sie). Alle uebrigen Felder und die Bilddaten bleiben Byte fuer Byte liegen.
         '''
-        ''' Im JPEG geht IPTC IMMER mit, nicht nur, wenn die Einstellung fuer die Stichwoerter es
-        ''' verlangt: der Dialog ist ein bewusster Schreibbefehl, und ein Programm, das nur IPTC
-        ''' liest, zeigte sonst den alten Titel neben einem neuen im XMP.</summary>
+        ''' <paramref name="edit"/> bekommt alle rdf:Description-Knoten und den, in den neue Werte
+        ''' gehoeren, und meldet, ob es etwas geaendert hat. Fehlt das Paket, entsteht eines nur bei
+        ''' <paramref name="createPacket"/>; ohne Paket und ohne Wert gibt es nichts zu tun.
+        '''
+        ''' Laesst sich ein vorhandener Block nicht sicher zerlegen, bleibt die Datei GANZ
+        ''' unangetastet: im JPEG wird dann auch der andere Block nicht geschrieben
+        ''' (RewriteJpegXmpAndIptc, alles oder nichts).</summary>
         ''' <returns>True, wenn die Datei neu geschrieben wurde; False, wenn es nichts zu aendern
         ''' gab.</returns>
         ''' <exception cref="InvalidDataException">Ein Block oder der Aufbau der Datei laesst sich
         ''' nicht sicher lesen; die Datei ist unveraendert.</exception>
         ''' <exception cref="IOException">Das Schreiben ist gescheitert; die Datei ist unveraendert
         ''' (WriteFileAtomic).</exception>
-        Public Shared Function WriteDescriptionIntoFile(path As String,
-                                                        changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Boolean
-            If changes Is Nothing OrElse changes.Count = 0 Then Return False
+        Friend Shared Function EditXmpInFile(path As String, createPacket As Boolean,
+                                             edit As Func(Of IEnumerable(Of XElement), XElement, Boolean),
+                                             Optional iptcReplacements As Dictionary(Of Integer, List(Of String)) = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Throw New FileNotFoundException("Datei nicht gefunden", path)
-            Dim xmpBuilder As Func(Of Byte(), Byte()) = Function(existing) BuildDescriptionXmpPacket(existing, changes)
+            Dim xmpBuilder As Func(Of Byte(), Byte()) = Function(existing) BuildEditedXmpPacket(existing, createPacket, edit)
             ' Bewusst OHNE Fangnetz: "nichts zu aendern" (False) und "geht nicht" (Ausnahme) muss
             ' der Aufrufer auseinanderhalten koennen, sonst meldet er einen Fehlschlag als Erfolg.
             Select Case IO.Path.GetExtension(path).ToLowerInvariant()
                 Case ".jpg", ".jpeg"
-                    Dim replacements As New Dictionary(Of Integer, List(Of String))()
-                    For Each pair In changes
-                        replacements(ImageDescriptionService.IptcDataSet(pair.Key)) =
-                            ImageDescriptionService.IptcValues(pair.Key, pair.Value)
-                    Next
-                    Return RewriteJpegXmpAndIptc(path, xmpBuilder,
-                                                 Function(existing) BuildPhotoshopIptcPayload(existing, replacements))
+                    Dim iptcBuilder As Func(Of Byte(), Byte()) = Nothing
+                    If iptcReplacements IsNot Nothing AndAlso iptcReplacements.Count > 0 Then
+                        iptcBuilder = Function(existing) BuildPhotoshopIptcPayload(existing, iptcReplacements)
+                    End If
+                    Return RewriteJpegXmpAndIptc(path, xmpBuilder, iptcBuilder)
                 Case ".png"
                     Return RewritePngXmp(path, xmpBuilder)
                 Case ".webp"
                     Return RewriteWebpXmp(path, xmpBuilder)
                 Case Else
-                    Throw New NotSupportedException("Format traegt die Felder nicht in der Datei: " & path)
+                    Throw New NotSupportedException("Format traegt kein XMP in der Datei: " & path)
             End Select
         End Function
 
-        ''' <summary>Das XMP-Paket mit den geaenderten Feldern, oder Nothing, wenn nichts zu
-        ''' schreiben ist (kein Paket und nur leere Werte, oder am Paket aendert sich nichts). Ein
-        ''' vorhandenes Paket, das sich nicht lesen laesst, WIRFT: dann darf auch der IPTC-Block
-        ''' nicht allein neu geschrieben werden (RewriteJpegXmpAndIptc, alles oder nichts).</summary>
-        Private Shared Function BuildDescriptionXmpPacket(packet As Byte(),
-                                                          changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Byte()
+        ''' <summary>Das geaenderte XMP-Paket, oder Nothing, wenn nichts zu schreiben ist (kein
+        ''' Paket und keines anzulegen, oder am Paket aendert sich nichts). Ein vorhandenes Paket,
+        ''' das sich nicht lesen laesst, WIRFT: dann darf auch der IPTC-Block nicht allein neu
+        ''' geschrieben werden.</summary>
+        Private Shared Function BuildEditedXmpPacket(packet As Byte(), createPacket As Boolean,
+                                                     edit As Func(Of IEnumerable(Of XElement), XElement, Boolean)) As Byte()
             Dim doc As XDocument
             If packet Is Nothing Then
-                If Not changes.Values.Any(Function(v) Not String.IsNullOrEmpty(v)) Then Return Nothing
+                If Not createPacket Then Return Nothing
                 doc = XDocument.Parse(NewEmptyXmpPacket(), LoadOptions.PreserveWhitespace)
             Else
                 Try
@@ -82,7 +101,7 @@ Namespace Services
                 rdfRoot.Add(target)
                 descriptions.Add(target)
             End If
-            If Not ImageDescriptionService.ApplyToXmp(descriptions, target, changes) Then Return Nothing
+            If Not edit(descriptions, target) Then Return Nothing
             Return Encoding.UTF8.GetBytes(doc.ToString(SaveOptions.DisableFormatting))
         End Function
 

@@ -55,6 +55,8 @@ Ratings, colour labels, keywords and reject marks are read from the sidecars Lig
 
 If you like, the keywords you add go into JPEG, PNG and WebP files themselves too, as XMP, IPTC or both, when you add them and when you save or export; keywords found by the AI recognition always stay in FerrumPix.
 
+When file and catalog have drifted apart, a side-by-side comparison shows both for one picture and lets you copy or remove single values in either direction. Rating, label, pick mark and keywords can also be taken from the files into the catalog, or written from the catalog into the files and sidecars, for a whole selection.
+
 Title, headline, description, creator and credit line can be set for one picture or a whole selection. JPEG, PNG and WebP carry them inside the file, other formats such as RAW in an XMP sidecar, and an export takes them along. They are read from the pictures as well, so search and saved searches find them, and the info sidebar can show them if you switch them on.
 
 Name the folders your photos live in and they appear at the top of the folder tree, one click away, and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos. Renaming or moving a folder in FerrumPix takes its ratings, labels, keywords, people and thumbnails along; if you moved it outside FerrumPix, you can point the settings at its new location.

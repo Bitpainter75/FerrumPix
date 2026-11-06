@@ -11001,4 +11001,172 @@
   <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
     <value>{1} 枚中 {0} 枚のタイトルと説明を保存</value>
   </data>
+  <data name="Metadaten_in_den_Katalog_bernehmen_29392693" xml:space="preserve">
+    <value>メタデータをカタログに取り込む</value>
+  </data>
+  <data name="Katalogdaten_in_die_Dateien_schreiben_8396d136" xml:space="preserve">
+    <value>カタログのデータをファイルに書き込む</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Die_Werte_aus_Datei_und_Beiste_2e3dcc9d" xml:space="preserve">
+    <value>{0} 枚の画像に適用されます。ファイルと付随ファイルの値でカタログの値を置き換えます。</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_JPEG_PNG_und_WebP_bekommen_die_0449426f" xml:space="preserve">
+    <value>{0} 枚の画像に適用されます。JPEG、PNG、WebP はファイル内に、その他の形式は XMP 付随ファイルに書き込みます。</value>
+  </data>
+  <data name="Schreiben_f4f5c5f4" xml:space="preserve">
+    <value>書き込む</value>
+  </data>
+  <data name="Metadaten_vergleichen_bc304f53" xml:space="preserve">
+    <value>メタデータを比較</value>
+  </data>
+  <data name="Nur_aus_der_Datei_43386bad" xml:space="preserve">
+    <value>ファイルからのみ</value>
+  </data>
+  <data name="Aus_Datei_und_Beistelldatei_9d443403" xml:space="preserve">
+    <value>ファイルと付随ファイルから</value>
+  </data>
+  <data name="Zus_tzlich_Bewertung_Etikett_Stichw_rter_und_Mar_47654e13" xml:space="preserve">
+    <value>カタログの評価、ラベル、キーワード、マークも削除</value>
+  </data>
+  <data name="Personen_und_Favoriten_bleiben_in_jedem_Fall_Aus_0c007c9d" xml:space="preserve">
+    <value>人物とお気に入りは常に残ります。付随ファイルからは既知の項目だけを削除し、その他の情報は残します。</value>
+  </data>
+  <data name="Markierung_2db7c266" xml:space="preserve">
+    <value>マーク</value>
+  </data>
+  <data name="Zusammenf_hren_dcab7118" xml:space="preserve">
+    <value>統合</value>
+  </data>
+  <data name="Ersetzen_0556e76a" xml:space="preserve">
+    <value>置き換え</value>
+  </data>
+  <data name="Datei_e9e7baf1" xml:space="preserve">
+    <value>ファイル</value>
+  </data>
+  <data name="An_der_Datei_entfernen_1db87f8a" xml:space="preserve">
+    <value>ファイルから削除</value>
+  </data>
+  <data name="Katalogwert_in_die_Datei_dafedfe9" xml:space="preserve">
+    <value>カタログの値をファイルへ</value>
+  </data>
+  <data name="Dateiwert_in_den_Katalog_9dfb2cfb" xml:space="preserve">
+    <value>ファイルの値をカタログへ</value>
+  </data>
+  <data name="Im_Katalog_entfernen_1b7a3aa5" xml:space="preserve">
+    <value>カタログから削除</value>
+  </data>
+  <data name="Datei_und_Katalog_weichen_ab_a371dcb4" xml:space="preserve">
+    <value>ファイルとカタログが異なります</value>
+  </data>
+  <data name="Alles_in_den_Katalog_5d8401d4" xml:space="preserve">
+    <value>すべてカタログへ</value>
+  </data>
+  <data name="Alles_in_die_Datei_6944b40e" xml:space="preserve">
+    <value>すべてファイルへ</value>
+  </data>
+  <data name="Nur_hier_0_8094a5e0" xml:space="preserve">
+    <value>ここだけ: {0}</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_Datei_eine_v_ecadc9a3" xml:space="preserve">
+    <value>ファイルへの変更はファイル内に書き込まれ、既存の付随ファイルも更新されます。</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_XMP_Beistell_644658a3" xml:space="preserve">
+    <value>ファイルへの変更は XMP 付随ファイルに書き込まれ、画像ファイル自体は変更されません。</value>
+  </data>
+  <data name="Bewertung_und_Ordnung_c6dc3a8f" xml:space="preserve">
+    <value>評価と整理</value>
+  </data>
+  <data name="Gibt_es_nur_im_Katalog_35597649" xml:space="preserve">
+    <value>カタログにのみ存在</value>
+  </data>
+  <data name="Ja_283c735c" xml:space="preserve">
+    <value>はい</value>
+  </data>
+  <data name="Nein_70bb8137" xml:space="preserve">
+    <value>いいえ</value>
+  </data>
+  <data name="0_nderungen_vorgemerkt_9c633b90" xml:space="preserve">
+    <value>{0} 件の変更を保留中</value>
+  </data>
+  <data name="Datei_und_Beistelldatei_weichen_ab_in_der_Datei__b1206367" xml:space="preserve">
+    <value>ファイルと付随ファイルが異なります: ファイルは {0}、付随ファイルは {1}</value>
+  </data>
+  <data name="0_von_5_53a26ac6" xml:space="preserve">
+    <value>{0} / 5</value>
+  </data>
+  <data name="0_Beistelldatei_en_lie_en_sich_nicht_bereinigen_a85066d0" xml:space="preserve">
+    <value>{0} 件の付随ファイルを整理できませんでした</value>
+  </data>
+  <data name="0_Bilder_abgeglichen_aa6c1a23" xml:space="preserve">
+    <value>{0} 枚の画像を同期しました</value>
+  </data>
+  <data name="0_von_1_Bildern_abgeglichen_afac4734" xml:space="preserve">
+    <value>{1} 枚中 {0} 枚の画像を同期しました</value>
+  </data>
+  <data name="Nicht_alle_nderungen_lie_en_sich_in_die_Datei_sc_15b91a65" xml:space="preserve">
+    <value>一部の変更をファイルに書き込めませんでした</value>
+  </data>
+  <data name="Metadaten_abgeglichen_99f2f666" xml:space="preserve">
+    <value>メタデータを同期しました</value>
+  </data>
+  <data name="Keine_Angabe_1a1c7d9c" xml:space="preserve">
+    <value>未設定</value>
+  </data>
+  <data name="In_den_Katalog_kopieren_5111e778" xml:space="preserve">
+    <value>カタログにコピー</value>
+  </data>
+  <data name="In_die_Datei_kopieren_5b76be3f" xml:space="preserve">
+    <value>ファイルにコピー</value>
+  </data>
+  <data name="Wo_sollen_die_Metadaten_von_0_Bild_ern_entfernt__19d35efc" xml:space="preserve">
+    <value>{0} 枚の画像のメタデータをどこから削除しますか？元に戻せません。</value>
+  </data>
+  <data name="In_der_Bilddatei_Aufnahmedaten_IPTC_XMP_und_Farb_f2c816c4" xml:space="preserve">
+    <value>画像ファイル内: 撮影データ、IPTC、XMP、カラープロファイル。ファイルは書き直されます。</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_Bewertung_Etikett_Stich_ab6e3e7f" xml:space="preserve">
+    <value>XMP 付随ファイル内: 評価、ラベル、キーワード、説明、著作権、場所、撮影日時。</value>
+  </data>
+  <data name="Im_Katalog_Bewertung_Etikett_Stichw_rter_und_Mar_43c85e39" xml:space="preserve">
+    <value>カタログ内: 評価、ラベル、キーワード、マーク。</value>
+  </data>
+  <data name="Welche_Metadaten_von_0_Bild_ern_sollen_wo_entfer_1435d327" xml:space="preserve">
+    <value>{0} 枚の画像のどのメタデータをどこから削除しますか？元に戻せません。</value>
+  </data>
+  <data name="Welche_Angaben_b5cfffe0" xml:space="preserve">
+    <value>削除する情報</value>
+  </data>
+  <data name="Alles_Aufnahmedaten_IPTC_XMP_und_Farbprofil_4222b121" xml:space="preserve">
+    <value>すべて: 撮影データ、IPTC、XMP、カラープロファイル</value>
+  </data>
+  <data name="Aufnahmeort_b700fa16" xml:space="preserve">
+    <value>撮影場所</value>
+  </data>
+  <data name="Wo_c1cfb73d" xml:space="preserve">
+    <value>削除する場所</value>
+  </data>
+  <data name="In_der_Bilddatei_63daa147" xml:space="preserve">
+    <value>画像ファイル</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_c25ddb23" xml:space="preserve">
+    <value>XMP 付随ファイル</value>
+  </data>
+  <data name="Im_Katalog_788ff1c9" xml:space="preserve">
+    <value>カタログ</value>
+  </data>
+  <data name="Mit_Alles_wird_die_Bilddatei_ohne_Metadaten_neu__81ffceb9" xml:space="preserve">
+    <value>すべてを選ぶと、画像ファイルはメタデータなしで書き直されます。カタログでは評価、ラベル、マーク、キーワードのみが対象で、説明、著作権、場所はファイルに従います。人物とお気に入りは常に残り、付随ファイルからは既知の項目だけを削除します。</value>
+  </data>
+  <data name="ist_leer_f0f24cb3" xml:space="preserve">
+    <value>空</value>
+  </data>
+  <data name="ist_nicht_leer_b65732fa" xml:space="preserve">
+    <value>空でない</value>
+  </data>
+  <data name="RAW_und_andere_Formate_die_sich_nicht_zur_ckschr_d5681bc0" xml:space="preserve">
+    <value>RAW など書き戻せない形式は、付随ファイルとカタログだけを整理し、画像ファイル自体は変更しません。</value>
+  </data>
+  <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
+    <value>複数のマークやラベル: どれか一つに当てはまれば十分です。</value>
+  </data>
 </root>

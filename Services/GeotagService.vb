@@ -347,13 +347,7 @@ Namespace Services
 
             If IsJpegPath(imagePath) AndAlso File.Exists(imagePath) Then
                 Try
-                    If RewriteJpegExifAtomic(imagePath,
-                        Function(existingSegment)
-                            Dim tiff(existingSegment.Length - 10 - 1) As Byte
-                            Buffer.BlockCopy(existingSegment, 10, tiff, 0, tiff.Length)
-                            Dim stripped = RemoveGpsFromTiff(tiff)
-                            Return If(stripped Is Nothing, Nothing, BuildExifSegment(stripped))
-                        End Function) Then
+                    If RemoveCoordinatesFromJpeg(imagePath) Then
                         removedSomething = True
                         result.Target = GeotagTarget.EmbeddedExif
                     End If
@@ -377,6 +371,21 @@ Namespace Services
             result.Success = removedSomething
             If Not removedSomething Then SetReason(result, "Es stand kein Aufnahmeort in der Datei")
             Return result
+        End Function
+
+        ''' <summary>Nur der Teil IN der JPEG-Datei: die Koordinate aus dem EXIF, mit ueberschriebenen
+        ''' Bytes (siehe RemoveCoordinates). Die Beistelldatei bleibt, wie sie ist; fuer Aufrufer, die
+        ''' Datei und Beistelldatei getrennt behandeln ("Metadaten entfernen" mit Auswahl).</summary>
+        ''' <returns>True, wenn eine Koordinate entfernt wurde.</returns>
+        Friend Shared Function RemoveCoordinatesFromJpeg(imagePath As String) As Boolean
+            If Not IsJpegPath(imagePath) OrElse Not File.Exists(imagePath) Then Return False
+            Return RewriteJpegExifAtomic(imagePath,
+                Function(existingSegment)
+                    Dim tiff(existingSegment.Length - 10 - 1) As Byte
+                    Buffer.BlockCopy(existingSegment, 10, tiff, 0, tiff.Length)
+                    Dim stripped = RemoveGpsFromTiff(tiff)
+                    Return If(stripped Is Nothing, Nothing, BuildExifSegment(stripped))
+                End Function)
         End Function
 
         ''' <summary>Derselbe Anbau wie beim Setzen, nur ohne den GPS-Eintrag: eine Kopie von IFD0

@@ -1849,9 +1849,27 @@ Namespace Services
                                                           changes As IReadOnlyDictionary(Of ImageDescriptionField, String),
                                                           createIfMissing As Boolean) As String
             If String.IsNullOrWhiteSpace(imagePath) OrElse changes Is Nothing OrElse changes.Count = 0 Then Return ""
+            Return EditXmpSidecar(imagePath, createIfMissing,
+                                  Function(descriptions, target) ImageDescriptionService.ApplyToXmp(descriptions, target, changes))
+        End Function
+
+        ''' <summary>Der allgemeine Schreibweg fuer eine XMP-Beistelldatei: vorhandene Datei lesen
+        ''' (oder ein leeres Geruest, wenn <paramref name="createIfMissing"/>), die Aenderung an den
+        ''' rdf:Description-Knoten vornehmen, atomar zurueckschreiben. Fremde Knoten bleiben
+        ''' unangetastet. Die Aenderung bekommt ALLE Description-Knoten und den, in den neue Werte
+        ''' gehoeren.
+        '''
+        ''' Meldet die Aenderung "nichts geaendert" (False), wird nichts geschrieben und der Pfad
+        ''' trotzdem zurueckgegeben: es gab nichts zu tun, und das ist kein Fehler.</summary>
+        ''' <returns>Der Pfad der Beistelldatei, oder "" wenn nichts geschrieben werden konnte oder
+        ''' keine da ist und keine angelegt werden soll.</returns>
+        Friend Shared Function EditXmpSidecar(imagePath As String, createIfMissing As Boolean,
+                                              edit As Func(Of IEnumerable(Of XElement), XElement, Boolean)) As String
+            If String.IsNullOrWhiteSpace(imagePath) OrElse edit Is Nothing Then Return ""
 
             Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
-            If String.IsNullOrEmpty(sidecarPath) Then
+            Dim existed = Not String.IsNullOrEmpty(sidecarPath)
+            If Not existed Then
                 If Not createIfMissing Then Return ""
                 sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
                 If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
@@ -1863,11 +1881,14 @@ Namespace Services
                 Dim target = GetOrCreateSidecarDescription(doc)
                 If target Is Nothing Then Return ""
                 Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                ImageDescriptionService.ApplyToXmp(doc.Descendants(rdfNamespace + "Description"), target, changes)
+                Dim changed = edit(doc.Descendants(rdfNamespace + "Description").ToList(), target)
+                ' Eine vorhandene Datei, an der sich nichts aendert, bleibt Byte fuer Byte liegen;
+                ' eine neue wird nur angelegt, wenn wirklich etwas hineinkommt.
+                If Not changed Then Return If(existed, sidecarPath, "")
                 If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
                 Return sidecarPath
             Catch ex As Exception
-                DiagnosticLogService.LogException("Exif.WriteXmpDescriptionSidecar", ex)
+                DiagnosticLogService.LogException("Exif.EditXmpSidecar", ex)
                 Return ""
             End Try
         End Function

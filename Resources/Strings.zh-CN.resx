@@ -10959,4 +10959,172 @@
   <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
     <value>已为 {1} 张图片中的 {0} 张保存标题和描述</value>
   </data>
+  <data name="Metadaten_in_den_Katalog_bernehmen_29392693" xml:space="preserve">
+    <value>将元数据导入目录</value>
+  </data>
+  <data name="Katalogdaten_in_die_Dateien_schreiben_8396d136" xml:space="preserve">
+    <value>将目录数据写入文件</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Die_Werte_aus_Datei_und_Beiste_2e3dcc9d" xml:space="preserve">
+    <value>适用于 {0} 张图片。文件和附带文件中的值将替换目录中的值。</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_JPEG_PNG_und_WebP_bekommen_die_0449426f" xml:space="preserve">
+    <value>适用于 {0} 张图片。JPEG、PNG 和 WebP 将值写入文件本身，其他格式写入 XMP 附带文件。</value>
+  </data>
+  <data name="Schreiben_f4f5c5f4" xml:space="preserve">
+    <value>写入</value>
+  </data>
+  <data name="Metadaten_vergleichen_bc304f53" xml:space="preserve">
+    <value>比较元数据</value>
+  </data>
+  <data name="Nur_aus_der_Datei_43386bad" xml:space="preserve">
+    <value>仅从文件中</value>
+  </data>
+  <data name="Aus_Datei_und_Beistelldatei_9d443403" xml:space="preserve">
+    <value>从文件和附带文件中</value>
+  </data>
+  <data name="Zus_tzlich_Bewertung_Etikett_Stichw_rter_und_Mar_47654e13" xml:space="preserve">
+    <value>同时清除目录中的星级、标签、关键词和标记</value>
+  </data>
+  <data name="Personen_und_Favoriten_bleiben_in_jedem_Fall_Aus_0c007c9d" xml:space="preserve">
+    <value>人物和收藏始终保留。附带文件中只移除已知字段，其中的其他信息保持不变。</value>
+  </data>
+  <data name="Markierung_2db7c266" xml:space="preserve">
+    <value>标记</value>
+  </data>
+  <data name="Zusammenf_hren_dcab7118" xml:space="preserve">
+    <value>合并</value>
+  </data>
+  <data name="Ersetzen_0556e76a" xml:space="preserve">
+    <value>替换</value>
+  </data>
+  <data name="Datei_e9e7baf1" xml:space="preserve">
+    <value>文件</value>
+  </data>
+  <data name="An_der_Datei_entfernen_1db87f8a" xml:space="preserve">
+    <value>从文件中移除</value>
+  </data>
+  <data name="Katalogwert_in_die_Datei_dafedfe9" xml:space="preserve">
+    <value>目录值写入文件</value>
+  </data>
+  <data name="Dateiwert_in_den_Katalog_9dfb2cfb" xml:space="preserve">
+    <value>文件值写入目录</value>
+  </data>
+  <data name="Im_Katalog_entfernen_1b7a3aa5" xml:space="preserve">
+    <value>从目录中移除</value>
+  </data>
+  <data name="Datei_und_Katalog_weichen_ab_a371dcb4" xml:space="preserve">
+    <value>文件与目录不一致</value>
+  </data>
+  <data name="Alles_in_den_Katalog_5d8401d4" xml:space="preserve">
+    <value>全部写入目录</value>
+  </data>
+  <data name="Alles_in_die_Datei_6944b40e" xml:space="preserve">
+    <value>全部写入文件</value>
+  </data>
+  <data name="Nur_hier_0_8094a5e0" xml:space="preserve">
+    <value>仅此处：{0}</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_Datei_eine_v_ecadc9a3" xml:space="preserve">
+    <value>对文件的更改写入文件本身；已有的附带文件也会同步更新。</value>
+  </data>
+  <data name="nderungen_an_der_Datei_gehen_in_die_XMP_Beistell_644658a3" xml:space="preserve">
+    <value>对文件的更改写入 XMP 附带文件；图片文件本身保持不变。</value>
+  </data>
+  <data name="Bewertung_und_Ordnung_c6dc3a8f" xml:space="preserve">
+    <value>星级与整理</value>
+  </data>
+  <data name="Gibt_es_nur_im_Katalog_35597649" xml:space="preserve">
+    <value>仅存在于目录中</value>
+  </data>
+  <data name="Ja_283c735c" xml:space="preserve">
+    <value>是</value>
+  </data>
+  <data name="Nein_70bb8137" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="0_nderungen_vorgemerkt_9c633b90" xml:space="preserve">
+    <value>已准备 {0} 项更改</value>
+  </data>
+  <data name="Datei_und_Beistelldatei_weichen_ab_in_der_Datei__b1206367" xml:space="preserve">
+    <value>文件与附带文件不一致：文件中为 {0}，附带文件中为 {1}</value>
+  </data>
+  <data name="0_von_5_53a26ac6" xml:space="preserve">
+    <value>{0}/5</value>
+  </data>
+  <data name="0_Beistelldatei_en_lie_en_sich_nicht_bereinigen_a85066d0" xml:space="preserve">
+    <value>{0} 个附带文件无法清理</value>
+  </data>
+  <data name="0_Bilder_abgeglichen_aa6c1a23" xml:space="preserve">
+    <value>已同步 {0} 张图片</value>
+  </data>
+  <data name="0_von_1_Bildern_abgeglichen_afac4734" xml:space="preserve">
+    <value>已同步 {1} 张图片中的 {0} 张</value>
+  </data>
+  <data name="Nicht_alle_nderungen_lie_en_sich_in_die_Datei_sc_15b91a65" xml:space="preserve">
+    <value>并非所有更改都能写入文件</value>
+  </data>
+  <data name="Metadaten_abgeglichen_99f2f666" xml:space="preserve">
+    <value>元数据已同步</value>
+  </data>
+  <data name="Keine_Angabe_1a1c7d9c" xml:space="preserve">
+    <value>未设置</value>
+  </data>
+  <data name="In_den_Katalog_kopieren_5111e778" xml:space="preserve">
+    <value>复制到目录</value>
+  </data>
+  <data name="In_die_Datei_kopieren_5b76be3f" xml:space="preserve">
+    <value>复制到文件</value>
+  </data>
+  <data name="Wo_sollen_die_Metadaten_von_0_Bild_ern_entfernt__19d35efc" xml:space="preserve">
+    <value>要从哪里移除 {0} 张图片的元数据？此操作无法撤销。</value>
+  </data>
+  <data name="In_der_Bilddatei_Aufnahmedaten_IPTC_XMP_und_Farb_f2c816c4" xml:space="preserve">
+    <value>图片文件中：拍摄数据、IPTC、XMP 和颜色配置文件。文件会被重新写入。</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_Bewertung_Etikett_Stich_ab6e3e7f" xml:space="preserve">
+    <value>XMP 附带文件中：星级、标签、关键词、描述、版权、地点和拍摄时间。</value>
+  </data>
+  <data name="Im_Katalog_Bewertung_Etikett_Stichw_rter_und_Mar_43c85e39" xml:space="preserve">
+    <value>目录中：星级、标签、关键词和标记。</value>
+  </data>
+  <data name="Welche_Metadaten_von_0_Bild_ern_sollen_wo_entfer_1435d327" xml:space="preserve">
+    <value>要从哪里移除 {0} 张图片的哪些元数据？此操作无法撤销。</value>
+  </data>
+  <data name="Welche_Angaben_b5cfffe0" xml:space="preserve">
+    <value>哪些信息</value>
+  </data>
+  <data name="Alles_Aufnahmedaten_IPTC_XMP_und_Farbprofil_4222b121" xml:space="preserve">
+    <value>全部：拍摄数据、IPTC、XMP 和颜色配置文件</value>
+  </data>
+  <data name="Aufnahmeort_b700fa16" xml:space="preserve">
+    <value>拍摄地点</value>
+  </data>
+  <data name="Wo_c1cfb73d" xml:space="preserve">
+    <value>位置</value>
+  </data>
+  <data name="In_der_Bilddatei_63daa147" xml:space="preserve">
+    <value>图片文件中</value>
+  </data>
+  <data name="In_der_XMP_Beistelldatei_c25ddb23" xml:space="preserve">
+    <value>XMP 附带文件中</value>
+  </data>
+  <data name="Im_Katalog_788ff1c9" xml:space="preserve">
+    <value>目录中</value>
+  </data>
+  <data name="Mit_Alles_wird_die_Bilddatei_ohne_Metadaten_neu__81ffceb9" xml:space="preserve">
+    <value>选择全部时，图片文件会在不含元数据的情况下重新写入。目录中只涉及星级、标签、标记和关键词；描述、版权和地点在目录中随文件变化。人物和收藏始终保留，附带文件中只移除已知字段。</value>
+  </data>
+  <data name="ist_leer_f0f24cb3" xml:space="preserve">
+    <value>为空</value>
+  </data>
+  <data name="ist_nicht_leer_b65732fa" xml:space="preserve">
+    <value>不为空</value>
+  </data>
+  <data name="RAW_und_andere_Formate_die_sich_nicht_zur_ckschr_d5681bc0" xml:space="preserve">
+    <value>RAW 及其他无法回写的格式只在附带文件和目录中清理；图片文件本身保持不变。</value>
+  </data>
+  <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
+    <value>多个标记或标签：满足其中一个即可。</value>
+  </data>
 </root>

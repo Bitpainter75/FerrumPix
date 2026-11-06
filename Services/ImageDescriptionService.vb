@@ -60,17 +60,6 @@ Namespace Services
         End Property
     End Class
 
-    Public Enum ImageDescriptionTarget
-        None = 0
-        InFile = 1
-        XmpSidecar = 2
-    End Enum
-
-    Public Class ImageDescriptionWriteResult
-        Public Property Success As Boolean
-        Public Property Target As ImageDescriptionTarget = ImageDescriptionTarget.None
-    End Class
-
     ''' <summary>
     ''' Liest und schreibt Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe.
     '''
@@ -188,7 +177,7 @@ Namespace Services
         ''' <summary>Eingebettetes XMP vor IPTC. Die XMP-Namen kommen von MetadataExtractor mit
         ''' laufender Nummer ("dc:title[1]", "dc:creator[2]"); Qualifier wie die Sprache tragen
         ''' einen Zusatz hinter der Nummer und fallen damit von selbst heraus.</summary>
-        Private Shared Function FromEmbeddedTags(data As ExifData) As ImageDescription
+        Friend Shared Function FromEmbeddedTags(data As ExifData) As ImageDescription
             Dim result As New ImageDescription()
             Dim creators As New List(Of String)()
             For Each tag In If(data.XmpTags, New List(Of ExifTag)())
@@ -257,76 +246,20 @@ Namespace Services
         ''' <summary>Schreibt die genannten Felder an die Datei. Ein Feld, das in
         ''' <paramref name="changes"/> fehlt, bleibt unangetastet; ein LEERER Wert entfernt es.
         ''' Anders als beim Urheberrechtshinweis ist Leeren hier eine bewusste Eingabe: der Dialog
-        ''' zeigt, was gilt, und uebergibt nur, was sich daran geaendert hat.</summary>
+        ''' zeigt, was gilt, und uebergibt nur, was sich daran geaendert hat.
+        '''
+        ''' Wohin und in welcher Reihenfolge (Beistelldatei zuerst, Zuruecksetzen beim Scheitern
+        ''' der Bilddatei), steht an EINER Stelle: <see cref="MetadataFileWriter.Write"/>.</summary>
         Public Shared Function Write(imagePath As String,
-                                     changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As ImageDescriptionWriteResult
-            Dim result As New ImageDescriptionWriteResult()
-            If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return result
+                                     changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As MetadataWriteResult
+            If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return New MetadataWriteResult()
             Dim cleaned = CleanChanges(changes)
-            If cleaned.Count = 0 Then
-                result.Success = True
-                Return result
-            End If
-
-            If CanWriteIntoFile(imagePath) Then
-                result.Target = ImageDescriptionTarget.InFile
-                ' KEIN Ausweichen in die Beistelldatei, wenn die Datei sich nicht schreiben laesst:
-                ' die Datei behielte dann ihren alten Wert, und jedes Programm, das nur in die Datei
-                ' sieht, zeigte ihn weiter. Ein ehrlicher Fehlschlag ist besser als ein halber Erfolg.
-                '
-                ' Eine VORHANDENE Beistelldatei muss mit, denn sie geht beim Lesen vor. Zwei Dateien
-                ' lassen sich nicht in einem Zug schreiben, deshalb diese Reihenfolge:
-                '   1. alten Inhalt der Beistelldatei sichern, dann sie schreiben (klein, atomar).
-                '      Scheitert das, ist noch NICHTS veraendert.
-                '   2. die Bilddatei schreiben (atomar). Scheitert DAS, wird die Beistelldatei auf
-                '      den gesicherten Stand zurueckgesetzt.
-                ' So stehen am Ende beide auf dem neuen oder beide auf dem alten Stand. Andersherum
-                ' (Bild zuerst) liesse sich eine schon geschriebene Bilddatei nicht ohne eine Kopie
-                ' des ganzen Fotos zuruecknehmen.
-                Dim existingSidecar = XmpSidecarService.FindSidecar(imagePath)
-                Dim sidecarBefore As Byte() = Nothing
-                If Not String.IsNullOrEmpty(existingSidecar) Then
-                    Try
-                        sidecarBefore = File.ReadAllBytes(existingSidecar)
-                    Catch ex As Exception
-                        DiagnosticLogService.LogException("Description.ReadSidecar", ex)
-                        Return result
-                    End Try
-                    If String.IsNullOrEmpty(ExifService.WriteXmpDescriptionSidecar(imagePath, cleaned, createIfMissing:=False)) Then
-                        DiagnosticLogService.LogAlways("Description.SyncSidecar",
-                                                       "Beistelldatei nicht geschrieben, Bild unveraendert: " & imagePath)
-                        Return result
-                    End If
-                End If
-
-                Try
-                    ' False heisst hier "nichts zu aendern" (etwa ein Feld leeren, das gar nicht in
-                    ' der Datei stand); jedes "geht nicht" kommt als Ausnahme.
-                    If ImageProcessor.WriteDescriptionIntoFile(imagePath, cleaned) Then ExifService.Invalidate(imagePath)
-                Catch ex As Exception
-                    DiagnosticLogService.LogException("Description.WriteIntoFile", ex)
-                    If sidecarBefore IsNot Nothing AndAlso Not ExifService.RestoreXmpSidecar(existingSidecar, sidecarBefore) Then
-                        DiagnosticLogService.LogAlways("Description.SyncSidecar",
-                                                       "Bild nicht geschrieben und Beistelldatei nicht zurueckgesetzt, sie traegt den neuen Stand: " & existingSidecar)
-                    End If
-                    Return result
-                End Try
-                result.Success = True
-                Return result
-            End If
-
-            ' Ohne Beistelldatei und ohne einen Wert, der gesetzt wird, wird keine angelegt: eine
-            ' Datei, die nur das Fehlen von Feldern festhaelt, hat niemand verlangt.
-            Dim needsNewSidecar = cleaned.Values.Any(Function(v) v.Length > 0)
-            If Not needsNewSidecar AndAlso String.IsNullOrEmpty(XmpSidecarService.FindSidecar(imagePath)) Then
-                result.Success = True
-                result.Target = ImageDescriptionTarget.XmpSidecar
-                Return result
-            End If
-            Dim sidecarPath = ExifService.WriteXmpDescriptionSidecar(imagePath, cleaned, createIfMissing:=True)
-            result.Success = Not String.IsNullOrEmpty(sidecarPath)
-            If result.Success Then result.Target = ImageDescriptionTarget.XmpSidecar
-            Return result
+            If cleaned.Count = 0 Then Return New MetadataWriteResult With {.Success = True}
+            Return MetadataFileWriter.Write(imagePath,
+                                            Function() ImageProcessor.WriteDescriptionIntoFile(imagePath, cleaned),
+                                            Function(descriptions, target) ApplyToXmp(descriptions, target, cleaned),
+                                            createsValues:=cleaned.Values.Any(Function(v) v.Length > 0),
+                                            logName:="Description")
         End Function
 
         Private Shared Function CleanChanges(changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Dictionary(Of ImageDescriptionField, String)

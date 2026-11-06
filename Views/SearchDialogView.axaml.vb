@@ -43,6 +43,15 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        Private Sub OnPickClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If button Is Nothing OrElse vm Is Nothing Then Return
+            Dim value As Integer
+            If Integer.TryParse(If(button.Tag, "").ToString(), value) Then vm.ToggleDialogSearchPick(value)
+            e.Handled = True
+        End Sub
+
         Private Sub OnRatingClick(sender As Object, e As RoutedEventArgs)
             Dim button = TryCast(sender, Button)
             Dim vm = TryCast(DataContext, MainWindowViewModel)

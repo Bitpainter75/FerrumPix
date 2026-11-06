@@ -351,6 +351,18 @@ Namespace ViewModels
                 AddIfOffered(children, commands.SetCopyright, FooterMenuCatalog.SetCopyright(commands.SetCopyright))
                 AddIfOffered(children, commands.SetCaptureDate, FooterMenuCatalog.SetCaptureDate(commands.SetCaptureDate))
 
+                ' Datei und Katalog abgleichen. Der Vergleich gilt EINEM Bild: zwei Spalten fuer
+                ' eine ganze Auswahl liessen sich nicht lesen. Die beiden Uebertragungen gelten der
+                ' ganzen Auswahl.
+                children.Add(FooterMenuCatalog.Divider())
+                If localImages.Count = 1 Then
+                    AddIfOffered(children, commands.CompareMetadata, FooterMenuCatalog.CompareMetadata(commands.CompareMetadata))
+                End If
+                AddIfOffered(children, commands.ImportMetadataToCatalog,
+                             FooterMenuCatalog.ImportMetadataToCatalog(commands.ImportMetadataToCatalog))
+                AddIfOffered(children, commands.WriteCatalogToFiles,
+                             FooterMenuCatalog.WriteCatalogToFiles(commands.WriteCatalogToFiles))
+
                 ' Eine bewusste Neu-Analyse ersetzt nur unsere Katalogtags; sie braucht weder die
                 ' aktivierte Katalog-Automatik noch Schreibzugriff auf XMP. Der Eintrag steht bei
                 ' den übrigen Aufnahmeangaben, weil das Ergebnis optional als XMP-Metadatum

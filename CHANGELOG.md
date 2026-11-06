@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.77
 
 ### Changes
 
@@ -9,8 +9,20 @@
   sidebar can show each of them (off by default, switch them on in Settings), and an export from a
   RAW now carries the title and description from its sidecar into the new file.
 
+- **File and catalog**: the Metadata menu can compare one picture's file and catalog side by side and
+  copy or remove single values in either direction, take rating, label, pick mark and keywords from the
+  files into the catalog, or write them from the catalog into the files or their sidecars.
+
+- **Remove metadata** now asks which details to remove (everything, or single ones such as keywords,
+  title and description, copyright or the place) and where: in the file, in the sidecar, in the
+  catalog. Copyright, date and keywords no longer come back from the sidecar, and the info sidebar
+  shows the result right away.
+
 - **Search**: the gallery search and the text of saved searches now also find the place a picture
   was taken and its copyright notice, and saved searches have a new condition for the copyright.
+  Saved searches can also look for keep and reject marks and for labels, chosen like in the info
+  sidebar with heart, thumbs and colour dots, and the rating list shows stars. Every condition can
+  now also ask whether a field is empty or not empty, and the search dialog is wider.
 
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the

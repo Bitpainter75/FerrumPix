@@ -194,6 +194,20 @@ Namespace ViewModels
             Return Build("Titel und Beschreibung", "article", c)
         End Function
 
+        ''' <summary>Datei und Katalog fuer EIN Bild nebeneinander, mit Kopieren und Loeschen je
+        ''' Angabe.</summary>
+        Public Shared Function CompareMetadata(c As ICommand) As AppAction
+            Return Build("Metadaten vergleichen", "arrows-left-right", c)
+        End Function
+
+        Public Shared Function ImportMetadataToCatalog(c As ICommand) As AppAction
+            Return Build("Metadaten in den Katalog übernehmen", "tray-arrow-down", c)
+        End Function
+
+        Public Shared Function WriteCatalogToFiles(c As ICommand) As AppAction
+            Return Build("Katalogdaten in die Dateien schreiben", "tray-arrow-up", c)
+        End Function
+
         Public Shared Function SetPlace(c As ICommand) As AppAction
             ' Ohne Auslassungspunkte, wie die uebrigen Eintraege, die einen Dialog oeffnen
             ' ("Größe ändern", "Exportieren nach").

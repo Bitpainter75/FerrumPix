@@ -225,6 +225,77 @@
                                      MinHeight="36"/>
                         </Grid>
 
+                        <!-- Metadaten entfernen: WAS (alles oder einzelne Angaben) und WO (Datei,
+                             Beistelldatei, Katalog), zwei Spalten nebeneinander. Vorgabe: alles,
+                             nur in der Datei. Solange "Alles" angehakt ist, sind die einzelnen
+                             Angaben gesperrt. Der Satz darunter sagt, was in keinem Fall
+                             angefasst wird und was im Katalog nur der Datei folgt. -->
+                        <StackPanel Grid.Row="3"
+                                    Margin="0,16,0,0"
+                                    Spacing="12"
+                                    IsVisible="{Binding DialogShowsRemoveMetadata}">
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Welche Angaben" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <CheckBox IsChecked="{Binding DialogRemoveEverything, Mode=TwoWay}">
+                                        <TextBlock Text="Alles: Aufnahmedaten, IPTC, XMP und Farbprofil" TextWrapping="Wrap"/>
+                                    </CheckBox>
+                                    <StackPanel Spacing="6" Margin="24,0,0,0" IsEnabled="{Binding DialogRemoveSelective}">
+                                        <CheckBox Content="Bewertung" IsChecked="{Binding DialogRemoveRating, Mode=TwoWay}"/>
+                                        <CheckBox Content="Etikett" IsChecked="{Binding DialogRemoveColorLabel, Mode=TwoWay}"/>
+                                        <CheckBox Content="Markierung" IsChecked="{Binding DialogRemovePickState, Mode=TwoWay}"/>
+                                        <CheckBox Content="Stichwörter" IsChecked="{Binding DialogRemoveKeywords, Mode=TwoWay}"/>
+                                        <CheckBox Content="Titel und Beschreibung" IsChecked="{Binding DialogRemoveDescription, Mode=TwoWay}"/>
+                                        <CheckBox Content="Copyright" IsChecked="{Binding DialogRemoveCopyright, Mode=TwoWay}"/>
+                                        <CheckBox Content="Aufnahmeort" IsChecked="{Binding DialogRemovePlace, Mode=TwoWay}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="Wo" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <CheckBox Content="In der Bilddatei" IsChecked="{Binding DialogRemoveMetadataFile, Mode=TwoWay}"
+                                              IsEnabled="{Binding DialogRemoveMetadataFileAvailable}"/>
+                                    <CheckBox Content="In der XMP-Beistelldatei" IsChecked="{Binding DialogRemoveMetadataSidecar, Mode=TwoWay}"/>
+                                    <CheckBox Content="Im Katalog" IsChecked="{Binding DialogRemoveMetadataCatalog, Mode=TwoWay}"/>
+                                    <TextBlock Text="RAW und andere Formate, die sich nicht zurückschreiben lassen, werden nur in Beistelldatei und Katalog bereinigt; die Bilddatei selbst bleibt unverändert."
+                                               IsVisible="{Binding DialogRemoveMetadataShowsFormatHint}"
+                                               TextWrapping="Wrap" Margin="0,4,0,0"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="Mit Alles wird die Bilddatei ohne Metadaten neu geschrieben. Im Katalog gelten nur Bewertung, Etikett, Markierung und Stichwörter; Beschreibung, Copyright und Ort folgen dort der Datei. Personen und Favoriten bleiben in jedem Fall, und aus der Beistelldatei werden nur die bekannten Felder entfernt."
+                                       TextWrapping="Wrap"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                        </StackPanel>
+
+                        <views:MetadataCompareDialogView Grid.Row="3"
+                                                         Margin="0,8,0,0"
+                                                         DataContext="{Binding DialogMetadataCompare}"
+                                                         IsVisible="{Binding $parent[UserControl].DataContext.DialogShowsCompareMetadata}"/>
+
+                        <!-- Katalog und Dateien: welche Angaben uebertragen werden. Die Wahl fuer
+                             Stichwoerter gibt es nur in Richtung Katalog. -->
+                        <StackPanel Grid.Row="3"
+                                    Margin="0,16,0,0"
+                                    Spacing="10"
+                                    IsVisible="{Binding DialogShowsCatalogTransfer}">
+                            <CheckBox Content="Bewertung" IsChecked="{Binding DialogCatalogRating, Mode=TwoWay}"/>
+                            <CheckBox Content="Etikett" IsChecked="{Binding DialogCatalogColorLabel, Mode=TwoWay}"/>
+                            <CheckBox Content="Markierung" IsChecked="{Binding DialogCatalogPickState, Mode=TwoWay}"/>
+                            <CheckBox Content="Stichwörter" IsChecked="{Binding DialogCatalogKeywords, Mode=TwoWay}"/>
+                            <WrapPanel ItemSpacing="20" LineSpacing="8" Margin="28,0,0,0"
+                                       IsVisible="{Binding DialogCatalogTransferShowsKeywordMode}"
+                                       IsEnabled="{Binding DialogCatalogKeywords}">
+                                <RadioButton GroupName="CatalogKeywordMode"
+                                             Content="Zusammenführen"
+                                             IsChecked="{Binding DialogCatalogMergeKeywords, Mode=TwoWay}"/>
+                                <RadioButton GroupName="CatalogKeywordMode"
+                                             Content="Ersetzen"
+                                             IsChecked="{Binding DialogCatalogReplaceKeywords, Mode=TwoWay}"/>
+                            </WrapPanel>
+                        </StackPanel>
+
                         <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
                              seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
                              beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->
