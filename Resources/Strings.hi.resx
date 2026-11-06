@@ -11176,4 +11176,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>केवल अंतिम दिन</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>रखी और अस्वीकृत तस्वीरें चिह्नित करें</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>टाइल के ऊपर रखी गई तस्वीरों पर हरा अंगूठा ऊपर और अस्वीकृत तस्वीरों पर लाल अंगूठा नीचे दिखाता है। उस पर क्लिक करने से चिह्न हट जाता है। अस्वीकृत तस्वीरें चिह्न के बिना भी धुंधली रहती हैं।</value>
+  </data>
 </root>

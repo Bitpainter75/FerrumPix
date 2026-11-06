@@ -11132,4 +11132,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Dernier jour seulement</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Signaler les photos conservées et rejetées</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Affiche en haut de la vignette un pouce vert levé pour les photos conservées et un pouce rouge baissé pour les photos rejetées. Un clic dessus retire le marquage. Les photos rejetées restent assombries même sans le signe.</value>
+  </data>
 </root>

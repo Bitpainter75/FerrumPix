@@ -11172,4 +11172,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Alleen de laatste dag</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Bewaarde en afgewezen foto's aanduiden</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Toont bovenaan de tegel een groene duim omhoog bij bewaarde en een rode duim omlaag bij afgewezen foto's. Een klik erop haalt de markering weg. Afgewezen foto's blijven ook zonder het teken gedimd.</value>
+  </data>
 </root>

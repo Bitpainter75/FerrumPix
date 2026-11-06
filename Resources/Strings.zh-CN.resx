@@ -11130,4 +11130,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>仅最近一天</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>标记保留和拒绝的照片</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>在缩略图顶部为保留的照片显示绿色竖拇指，为拒绝的照片显示红色倒拇指。点击它即可取消标记。即使不显示标记，被拒绝的照片仍保持变暗。</value>
+  </data>
 </root>

@@ -4140,7 +4140,7 @@ Namespace ViewModels
             Get
                 ' Der Suchdialog: Feld, Vergleich und Wert jeder Bedingung nebeneinander, dazu die
                 ' Beschriftungsspalte von 200; "ist nicht leer" und die langen Feldnamen brauchen
-                ' mehr als die 820 von vorher (Nutzerwunsch).
+                ' mehr als die 820 von vorher.
                 If DialogShowsSearch Then Return 980
                 ' Die Tastenkuerzel brauchen die Breite fuer ihre zwei Spalten (Taste 230, Wirkung).
                 If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse

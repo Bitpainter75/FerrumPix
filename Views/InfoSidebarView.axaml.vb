@@ -73,6 +73,38 @@ Namespace Views
         ''' ENTER auf einem UNVERAENDERTEN Namen, den die Erkennung vergeben hat, bestaetigt ihn -
         ''' beim Durchgehen mit der Tastatur der Weg, ohne zur Maus zu greifen. Das blosse Verlassen
         ''' des Feldes bestaetigt nichts: wer durchtabbt, hat noch nichts entschieden.</summary>
+        ''' <summary>ENTER im Stichwortfeld fuegt hinzu wie der Knopf daneben; das Feld leert sich
+        ''' (AddTag setzt den Text zurueck) und behaelt den Fokus fuer das naechste Stichwort. Steht
+        ''' die Vorschlagsliste offen, verbraucht der Rahmen den ersten Druck fuer die Auswahl, und
+        ''' dieses Ereignis kommt nicht an: erst der zweite Druck fuegt den gewaehlten Vorschlag
+        ''' hinzu. Der Knopf wird als Nachbar im selben Raster gesucht, nicht ueber seinen Namen.</summary>
+        Private Sub OnNewTagKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter OrElse e.KeyModifiers <> KeyModifiers.None Then Return
+            Dim box = TryCast(sender, AutoCompleteBox)
+            Dim addButton = TryCast(box?.Parent, Panel)?.Children.OfType(Of Button)().FirstOrDefault()
+            Dim command = addButton?.Command
+            If command Is Nothing Then Return
+            If command.CanExecute(Nothing) Then command.Execute(Nothing)
+            box.Text = ""
+            e.Handled = True
+            ' Erst NACH dem Neuaufbau, den das Hinzufuegen ausloest (Stichwortliste, Trennlinie,
+            ' Filteroptionen der Galerie): dabei setzt Avalonia den Fokus auf niemanden, ein
+            ' sofortiges Focus() ginge dabei verloren. Gezielt das innere Textfeld, damit der
+            ' Cursor wirklich darin steht.
+            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() FocusTagInput(box), Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
+
+        Private Shared Sub FocusTagInput(box As AutoCompleteBox)
+            If box Is Nothing OrElse Not box.IsEffectivelyVisible OrElse Not box.IsEffectivelyEnabled Then Return
+            Dim input = box.GetVisualDescendants().OfType(Of TextBox)().FirstOrDefault()
+            If input IsNot Nothing Then
+                input.Focus()
+                input.CaretIndex = If(input.Text, "").Length
+            Else
+                box.Focus()
+            End If
+        End Sub
+
         Private Sub OnPersonNameKeyDown(sender As Object, e As KeyEventArgs)
             ' Nur TAB und SHIFT+TAB. Mit STRG wechselt der Editor das Werkzeug, das bleibt ihm.
             If e.Key = Key.Tab AndAlso (e.KeyModifiers And (KeyModifiers.Control Or KeyModifiers.Alt Or KeyModifiers.Meta)) = KeyModifiers.None Then

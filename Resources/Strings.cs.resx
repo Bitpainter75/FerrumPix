@@ -11172,4 +11172,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Jen poslední den</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Označit ponechané a zamítnuté snímky</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Zobrazí nahoře na dlaždici zelený palec nahoru u ponechaných a červený palec dolů u zamítnutých snímků. Kliknutím na něj se označení zruší. Zamítnuté snímky zůstanou ztlumené i bez značky.</value>
+  </data>
 </root>

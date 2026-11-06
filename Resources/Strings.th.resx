@@ -11176,4 +11176,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>เฉพาะวันล่าสุด</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>แสดงภาพที่เก็บและภาพที่ปฏิเสธ</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>แสดงนิ้วโป้งชี้ขึ้นสีเขียวบนภาพที่เก็บไว้ และนิ้วโป้งชี้ลงสีแดงบนภาพที่ปฏิเสธที่ด้านบนของไทล์ คลิกที่สัญลักษณ์เพื่อยกเลิกการทำเครื่องหมาย ภาพที่ปฏิเสธยังคงหรี่อยู่แม้ไม่มีสัญลักษณ์</value>
+  </data>
 </root>

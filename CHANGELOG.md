@@ -27,6 +27,12 @@
 - **Import**: the list of shooting days has buttons to tick all days, none, or only the latest day,
   so a card that is rarely cleared no longer means unticking dozens of days by hand.
 
+- Keywords in the info sidebar: pressing Enter adds the keyword, and the field is empty and ready
+  for the next one.
+
+- Gallery tiles now show a green thumbs up on kept pictures, just like the mark on rejected ones.
+  A click on it removes the keep mark again. Both marks can be switched off in the gallery settings.
+
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the
   filmstrip, so the strip moves instead of the selection.

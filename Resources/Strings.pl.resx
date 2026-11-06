@@ -11172,4 +11172,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Tylko ostatni dzień</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Oznaczaj zachowane i odrzucone zdjęcia</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Pokazuje u góry kafelka zielony kciuk w górę przy zachowanych i czerwony kciuk w dół przy odrzuconych zdjęciach. Kliknięcie usuwa oznaczenie. Odrzucone zdjęcia pozostają przyciemnione także bez znaku.</value>
+  </data>
 </root>

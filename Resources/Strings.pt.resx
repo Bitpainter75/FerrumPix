@@ -11131,4 +11131,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Apenas o último dia</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Assinalar fotos mantidas e rejeitadas</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Mostra no topo da miniatura um polegar verde para cima nas fotos mantidas e um polegar vermelho para baixo nas rejeitadas. Um clique nele retira a marcação. As fotos rejeitadas continuam escurecidas mesmo sem o sinal.</value>
+  </data>
 </root>

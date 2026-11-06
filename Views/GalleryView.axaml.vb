@@ -2053,6 +2053,16 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Das Behalten-Zeichen auf der Kachel: ein Klick hebt das Behalten fuer genau
+        ''' dieses Bild auf, wie das Verwerfen-Zeichen daneben.</summary>
+        Public Sub OnKeepBadgeClick(sender As Object, e As RoutedEventArgs)
+            Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse item Is Nothing OrElse Not item.IsPicked Then Return
+            vm.SetPickStateFor({item}, 0)
+            e.Handled = True
+        End Sub
+
         Public Sub OnStackBadgeClick(sender As Object, e As RoutedEventArgs)
             Dim item = TryCast(TryCast(sender, Control)?.DataContext, ImageItem)
             Dim vm = GetVm()

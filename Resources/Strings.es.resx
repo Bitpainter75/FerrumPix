@@ -11132,4 +11132,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Solo el último día</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Señalar fotos conservadas y descartadas</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Muestra en la parte superior de la miniatura un pulgar verde hacia arriba en las fotos conservadas y uno rojo hacia abajo en las descartadas. Un clic sobre él quita la marca. Las fotos descartadas siguen atenuadas aunque no se muestre la señal.</value>
+  </data>
 </root>

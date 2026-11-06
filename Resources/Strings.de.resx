@@ -11150,4 +11150,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Nur der letzte Tag</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Behalten und Verworfen kennzeichnen</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Zeigt oben auf der Kachel einen grünen Daumen nach oben für behaltene und einen roten Daumen nach unten für verworfene Bilder. Ein Klick darauf nimmt die Markierung zurück. Verworfene Bilder bleiben auch ohne das Zeichen gedimmt.</value>
+  </data>
 </root>

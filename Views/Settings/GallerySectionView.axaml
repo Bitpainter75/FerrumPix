@@ -120,6 +120,14 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Behalten und Verworfen kennzeichnen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt oben auf der Kachel einen grünen Daumen nach oben für behaltene und einen roten Daumen nach unten für verworfene Bilder. Ein Klick darauf nimmt die Markierung zurück. Verworfene Bilder bleiben auch ohne das Zeichen gedimmt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryPickBadge}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Symbole der Fotowand nur beim Überfahren" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Blendet in der Fotowand Sterne, Herz, Metadaten-Symbole, Auswahlkreis und Abspielknopf aus, bis die Maus über der Kachel steht. Gilt auch für Symbole, die oben auf immer anzeigen stehen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

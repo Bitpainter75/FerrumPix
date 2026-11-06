@@ -11151,4 +11151,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Latest day only</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Mark kept and rejected pictures</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Shows a green thumbs up on kept and a red thumbs down on rejected pictures at the top of the tile. A click on it removes the mark. Rejected pictures stay dimmed even without the mark.</value>
+  </data>
 </root>

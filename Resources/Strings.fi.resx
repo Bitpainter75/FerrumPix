@@ -11172,4 +11172,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Vain viimeisin päivä</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Merkitse säilytetyt ja hylätyt kuvat</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Näyttää ruudun yläreunassa vihreän peukalon ylös säilytetyille ja punaisen peukalon alas hylätyille kuville. Napsautus poistaa merkinnän. Hylätyt kuvat pysyvät himmennettyinä myös ilman merkkiä.</value>
+  </data>
 </root>

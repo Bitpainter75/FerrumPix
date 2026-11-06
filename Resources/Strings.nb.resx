@@ -11172,4 +11172,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Bare siste dag</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Merk beholdte og forkastede bilder</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Viser øverst på flisen en grønn tommel opp for beholdte og en rød tommel ned for forkastede bilder. Et klikk på den fjerner merket. Forkastede bilder forblir dempet også uten merket.</value>
+  </data>
 </root>

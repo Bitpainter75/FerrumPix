@@ -12,6 +12,14 @@ Namespace Views
             AvaloniaXamlLoader.Load(Me)
         End Sub
 
+        ''' <summary>Die Zeilen und Stichwort-Chips entstehen erst aus ihrem Template, nach dem
+        ''' einmaligen Durchlauf der Uebersetzung; ihre festen Texte (Kurzhinweise der Knoepfe)
+        ''' blieben sonst in der Ausgangssprache.</summary>
+        Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As Avalonia.VisualTreeAttachmentEventArgs)
+            Dim itemRoot = TryCast(sender, Avalonia.Visual)
+            If itemRoot IsNot Nothing Then FerrumPix.Services.LocalizationService.ApplyToMaterialized(itemRoot)
+        End Sub
+
     End Class
 
 End Namespace

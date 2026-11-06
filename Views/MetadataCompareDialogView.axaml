@@ -104,7 +104,7 @@
             <ItemsControl ItemsSource="{Binding Rows}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Panel>
+                        <Panel AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                             <!-- Abschnitt: Symbol, Titel und eine Linie bis zum Rand. -->
                             <Grid IsVisible="{Binding IsSection}" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8"
                                   Margin="2,14,0,8">
@@ -157,7 +157,7 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                            <Border Classes="chip" Classes.only="{Binding OnlyHere}">
+                                                            <Border Classes="chip" Classes.only="{Binding OnlyHere}" AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                                                 <StackPanel Orientation="Horizontal" Spacing="3">
                                                                     <TextBlock Text="{Binding Text}" Classes="no-translate" VerticalAlignment="Center"/>
                                                                     <Button Classes="icon-btn mini" Command="{Binding CopyCommand}"
@@ -236,7 +236,7 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate>
-                                                            <Border Classes="chip" Classes.only="{Binding OnlyHere}">
+                                                            <Border Classes="chip" Classes.only="{Binding OnlyHere}" AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
                                                                 <StackPanel Orientation="Horizontal" Spacing="3">
                                                                     <TextBlock Text="{Binding Text}" Classes="no-translate" VerticalAlignment="Center"/>
                                                                     <Button Classes="icon-btn mini" Command="{Binding CopyCommand}"

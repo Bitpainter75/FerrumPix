@@ -11176,4 +11176,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>마지막 날만</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>보관 및 거부 표시</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>타일 위쪽에 보관한 사진에는 초록색 엄지 위, 거부한 사진에는 빨간색 엄지 아래를 표시합니다. 클릭하면 표시가 해제됩니다. 거부한 사진은 표시가 없어도 어둡게 유지됩니다.</value>
+  </data>
 </root>

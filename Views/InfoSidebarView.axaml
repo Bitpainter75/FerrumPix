@@ -592,7 +592,8 @@
                                                  FilterMode="Contains"
                                                  MinimumPrefixLength="0"
                                                  FontSize="{DynamicResource FP.Font.Small}"
-                                                 Padding="8,5"/>
+                                                 Padding="8,5"
+                                                 KeyDown="OnNewTagKeyDown"/>
                                 <Button Grid.Column="1" Classes="ghost" Padding="10,5" Margin="6,0,0,0"
                                         Command="{Binding AddTagCommand}">
                                     <TextBlock Text="+ Hinzufügen" FontSize="{DynamicResource FP.Font.Small}"/>

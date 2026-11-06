@@ -11172,4 +11172,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>最新の日のみ</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>採用と不採用を表示</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>タイルの上部に、採用した写真には緑の親指アップ、不採用の写真には赤の親指ダウンを表示します。クリックすると印が外れます。不採用の写真は印がなくても暗く表示されたままです。</value>
+  </data>
 </root>

@@ -314,6 +314,9 @@ Namespace Services
         ''' es ist ein weiteres Zeichen auf dem Bild und soll bewusst eingeschaltet werden. In der
         ''' Fotowand erscheint es nur beim Ueberfahren.</summary>
         Public Property GalleryEditedBadge As Boolean = False
+        ''' <summary>Die Zeichen fuer behalten und verworfen oben auf der Kachel (ab Werk an). Das
+        ''' Dimmen verworfener Bilder haengt nicht daran.</summary>
+        Public Property GalleryPickBadge As Boolean = True
         Public Property GalleryStartupFolderMode As String = "Pictures"
         Public Property GalleryStartupCustomFolder As String = ""
         Public Property LastGalleryFolder As String = ""

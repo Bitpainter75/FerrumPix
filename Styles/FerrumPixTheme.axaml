@@ -1891,6 +1891,28 @@
     <Style Selector="Button.reject-badge:pressed /template/ ContentPresenter">
         <Setter Property="Background" Value="#E0702020"/>
     </Style>
+    <!-- BEHALTEN: dieselbe Pille in Gruen (der Ton des Behalten-Knopfs), das Bild bleibt hell. -->
+    <Style Selector="Button.keep-badge">
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="#C0167A3E"/>
+        <Setter Property="BorderBrush" Value="#E022A04F"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.keep-badge:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#E01E9150"/>
+        <Setter Property="BorderBrush" Value="#FF2FC064"/>
+    </Style>
+    <Style Selector="Button.keep-badge:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="#E0105C2E"/>
+    </Style>
     <!-- BEARBEITET: dieselbe Pille wie bei verworfen, in der Akzentfarbe statt Rot - ein Hinweis,
          keine Warnung. In der Fotowand (Klasse wall an der Kachel) nur beim Ueberfahren. -->
     <!-- Es ist ein Knopf (Klick öffnet den Editor): Polster weg, damit das Zeichen mittig in der

@@ -11132,4 +11132,10 @@
   <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
     <value>Solo l'ultimo giorno</value>
   </data>
+  <data name="Behalten_und_Verworfen_kennzeichnen_70dbba3a" xml:space="preserve">
+    <value>Segnala le foto tenute e scartate</value>
+  </data>
+  <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
+    <value>Mostra in alto sulla miniatura un pollice verde in su per le foto tenute e un pollice rosso in giù per quelle scartate. Un clic sopra toglie il contrassegno. Le foto scartate restano attenuate anche senza il segno.</value>
+  </data>
 </root>

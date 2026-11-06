@@ -73,6 +73,7 @@ Namespace ViewModels
         Private _metadataBadgesAlwaysVisible As Boolean = True
         ''' Abzeichen "bearbeitet" an der Kachel (Einstellung, ab Werk aus).
         Private _editedBadgeEnabled As Boolean = False
+        Private _pickBadgeEnabled As Boolean = True
         ''' Bearbeitete Bilder: "All", "Only" (nur bearbeitete) oder "Hide" (nur unbearbeitete).
         Private _filterEdited As String = "All"
         Private _viewMode As String = "Grid"
@@ -1524,6 +1525,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Zeichen fuer behalten und verworfen oben auf der Kachel (Einstellung, ab
+        ''' Werk an). Aus, bleibt ein verworfenes Bild trotzdem gedimmt.</summary>
+        Public Property PickBadgeEnabled As Boolean
+            Get
+                Return _pickBadgeEnabled
+            End Get
+            Set(value As Boolean)
+                If _pickBadgeEnabled = value Then Return
+                Me.RaiseAndSetIfChanged(_pickBadgeEnabled, value)
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
 
         Public Property ShowParentFolder As Boolean
             Get
@@ -2188,6 +2202,7 @@ Namespace ViewModels
             _filterRejected = NormalizeRejectedFilter(settings.GalleryFilterRejected)
             _filterEdited = NormalizeEditedFilter(settings.GalleryFilterEdited)
             _editedBadgeEnabled = settings.GalleryEditedBadge
+            _pickBadgeEnabled = settings.GalleryPickBadge
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
             ' ungebuehrlich am Leben (siehe InfoPanelRowSettings, dasselbe Muster).
             AddHandler TileCaptionSettings.Changed, AddressOf OnTileCaptionSettingsChanged
@@ -15225,6 +15240,7 @@ Namespace ViewModels
                                           s.GalleryFilterRejected = _filterRejected
                                           s.GalleryFilterEdited = _filterEdited
                                           s.GalleryEditedBadge = _editedBadgeEnabled
+                                          s.GalleryPickBadge = _pickBadgeEnabled
                                       End Sub)
         End Sub
 
