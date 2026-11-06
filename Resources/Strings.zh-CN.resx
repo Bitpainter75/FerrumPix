@@ -11148,4 +11148,100 @@
   <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
     <value>在全屏时始终显示胶片条，而不是仅在鼠标到达边缘时显示。全屏时也可通过控制栏的胶片条图标切换。</value>
   </data>
+  <data name="Bewertungsleiste_im_Vollbild_und_in_der_Diashow_afa79262" xml:space="preserve">
+    <value>全屏和幻灯片中的评分栏</value>
+  </data>
+  <data name="Zeigt_oben_Sterne_Favorit_Farbetikett_Behalten_u_a7926739" xml:space="preserve">
+    <value>鼠标一移动，就会在顶部显示星级、收藏、颜色标签、保留和拒绝，并与底部的控制栏一起出现。关闭后顶部保持空白。</value>
+  </data>
+  <data name="Sichten_und_ordnen_fddac69a" xml:space="preserve">
+    <value>浏览与整理</value>
+  </data>
+  <data name="Sterne_Etiketten_Stichw_rter_und_Suche_f_r_Ordne_003d3ea0" xml:space="preserve">
+    <value>星级、标签、关键词和搜索，适用于文件夹和目录。</value>
+  </data>
+  <data name="RAW_entwickeln_fb82ee4b" xml:space="preserve">
+    <value>冲印 RAW</value>
+  </data>
+  <data name="Licht_Farbe_und_Details_ohne_das_Original_anzuta_2ed40f5d" xml:space="preserve">
+    <value>光线、色彩和细节，不触碰原片。</value>
+  </data>
+  <data name="Gestalten_5db59a6f" xml:space="preserve">
+    <value>创作</value>
+  </data>
+  <data name="Ebenen_Masken_Text_und_Retusche_im_selben_Editor_212f4fb5" xml:space="preserve">
+    <value>图层、蒙版、文字和修饰，都在同一个编辑器中。</value>
+  </data>
+  <data name="Wie_soll_FerrumPix_aussehen_3ca3680e" xml:space="preserve">
+    <value>FerrumPix 应该是什么样子？</value>
+  </data>
+  <data name="Zus_tzliche_F_higkeiten_4b56ea0b" xml:space="preserve">
+    <value>更多能力</value>
+  </data>
+  <data name="Deine_Grafikkarte_mitarbeiten_lassen_3fd30dc2" xml:space="preserve">
+    <value>让显卡来帮忙</value>
+  </data>
+  <data name="Farbe_und_Tonwerte_in_Vorschau_Export_und_Stapel_76c9ab52" xml:space="preserve">
+    <value>预览、导出和批处理中的色彩与色调在显卡上计算。</value>
+  </data>
+  <data name="Entrauschen_Hochskalieren_Objektauswahl_und_Tief_7e8d8bc3" xml:space="preserve">
+    <value>降噪、放大、对象选择和深度图在显卡上计算。</value>
+  </data>
+  <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
+    <value>一切就绪</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
+    <value>FerrumPix 可以通过众多设置贴合你的工作方式：图库与缩略图、查看器与幻灯片、信息栏、RAW 冲印、键盘快捷键等等。值得看一看。</value>
+  </data>
+  <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
+    <value>查看设置</value>
+  </data>
+  <data name="Zu_meinen_Bildern_6c36cfac" xml:space="preserve">
+    <value>前往我的照片</value>
+  </data>
+  <data name="Loslegen_caeb7b14" xml:space="preserve">
+    <value>开始使用</value>
+  </data>
+  <data name="Einrichtung_30d1bc59" xml:space="preserve">
+    <value>初始设置</value>
+  </data>
+  <data name="Einrichtung_erneut_starten_bb8dd17b" xml:space="preserve">
+    <value>重新运行初始设置</value>
+  </data>
+  <data name="Zeigt_noch_einmal_den_Assistenten_vom_ersten_Sta_5d447c25" xml:space="preserve">
+    <value>再次显示首次启动时的助手：语言、外观、模型和显卡。</value>
+  </data>
+  <data name="Es_wird_noch_ein_Modell_heruntergeladen_Den_Down_5e5a6942" xml:space="preserve">
+    <value>仍在下载模型。要取消下载并关闭初始设置吗？</value>
+  </data>
+  <data name="Fotos_sichten_entwickeln_und_gestalten_alles_an__bbf33361" xml:space="preserve">
+    <value>浏览、冲印和创作，全部集中在一处，全部在你自己的电脑上。</value>
+  </data>
+  <data name="Ein_paar_Handgriffe_und_FerrumPix_f_hlt_sich_an__35d0f7da" xml:space="preserve">
+    <value>只需几个快速选择，FerrumPix 就会变成你的样子。</value>
+  </data>
+  <data name="Einige_Werkzeuge_arbeiten_mit_Modellen_die_auf_d_cb77cec0" xml:space="preserve">
+    <value>一些工具使用在本机运行的模型。现在下载需要的模型，或稍后在设置、模型中下载。</value>
+  </data>
+  <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
+    <value>FerrumPix 可以把繁重的工作交给显卡。</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
+    <value>未选择任何项</value>
+  </data>
+  <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
+    <value>下载总计：{0}</value>
+  </data>
+  <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
+    <value>所有选定的模型都已就绪。</value>
+  </data>
+  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
+    <value>在图库中把你的照片显示在地图上。地图瓦片来自互联网。</value>
+  </data>
+  <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
+    <value>随时可在设置、外观中更改。</value>
+  </data>
+  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
+    <value>在你的照片中查找人脸，并把同一个人归到一起。</value>
+  </data>
 </root>

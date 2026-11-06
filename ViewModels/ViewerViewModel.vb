@@ -149,6 +149,17 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Steht die Bewertungsleiste oben im Vollbild (Einstellung, ab Werk an)?</summary>
+        Public ReadOnly Property FullscreenRatingBarVisible As Boolean
+            Get
+                Return _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing OrElse _mainVm.Settings.FullscreenRatingBarVisible
+            End Get
+        End Property
+
+        Public Sub RefreshFullscreenRatingBar()
+            Me.RaisePropertyChanged(NameOf(FullscreenRatingBarVisible))
+        End Sub
+
         Public Sub RefreshFullscreenFilmstripPinned()
             Me.RaisePropertyChanged(NameOf(FullscreenFilmstripPinned))
         End Sub

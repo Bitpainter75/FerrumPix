@@ -259,11 +259,18 @@ Namespace ViewModels
         ''' <summary>Duerfen die Einstellungen jetzt geschlossen werden? Laeuft dort ein Download,
         ''' wird gefragt, ob er abgebrochen werden soll; ein Haengen der Verbindung soll niemanden in
         ''' den Einstellungen festhalten. True, wenn danach nichts mehr laedt.</summary>
-        Public Async Function ConfirmLeaveSettingsAsync() As Task(Of Boolean)
+        Public Function ConfirmLeaveSettingsAsync() As Task(Of Boolean)
+            Return ConfirmCancelModelDownloadsAsync(LocalizationService.T("Einstellungen"),
+                LocalizationService.T("Es wird noch ein Modell heruntergeladen. Den Download abbrechen und die Einstellungen schließen?"))
+        End Function
+
+        ''' <summary>Laeuft ein Download aus den Einstellungen (auch aus dem Einrichtungsassistenten,
+        ''' der dieselben Knoepfe nutzt), fragt diese Rueckfrage, ob er abgebrochen werden soll,
+        ''' bevor die Oberflaeche geschlossen wird, die ihn gestartet hat. True heisst: es laeuft
+        ''' keiner mehr, schliessen ist erlaubt.</summary>
+        Public Async Function ConfirmCancelModelDownloadsAsync(title As String, message As String) As Task(Of Boolean)
             If Not ModelDownloadService.AnyRunning Then Return True
-            Dim cancelDownloads = Await ShowConfirmAsync(LocalizationService.T("Einstellungen"),
-                LocalizationService.T("Es wird noch ein Modell heruntergeladen. Den Download abbrechen und die Einstellungen schließen?"),
-                "Download abbrechen", "Weiter laden")
+            Dim cancelDownloads = Await ShowConfirmAsync(title, message, "Download abbrechen", "Weiter laden")
             If Not cancelDownloads Then Return False
             ' Das Warten auf das Ende der Downloads ist ebenso MODAL wie ein Download aus einer
             ' Rueckfrage: sonst waeren die Einstellungen bis zu zehn Sekunden bedienbar, ein
@@ -1402,6 +1409,7 @@ Namespace ViewModels
             Viewer?.RefreshLocalization()
             Editor?.RefreshLocalization()
             Settings?.RefreshLocalization()
+            _setupAssistant?.RefreshTexts()
         End Sub
 
         Public Property DialogTitle As String

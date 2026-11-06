@@ -2,6 +2,11 @@
 
 ### Changes
 
+- **Welcome**: on its first start FerrumPix now greets you with a short setup: language, the look of
+  the app, the models you want to download and, if you have one, the graphics card. Everything takes
+  effect right away and can be changed later in the settings, where you can also run the setup again.
+  Existing installations see it once after this update.
+
 - **Title and description**: a new dialog in the Metadata menu sets title, headline,
   description, creator and credit line, for one picture or a whole selection. JPEG, PNG and WebP
   get them inside the file (JPEG also as IPTC), other formats such as RAW in an XMP sidecar. The
@@ -39,6 +44,8 @@
   a new button in the control bar (or the I key) shows and hides it, and the picture makes room for
   it. Both the info sidebar and the filmstrip can be kept visible in fullscreen with a setting, and
   the buttons in the control bar remember your choice.
+  The rating bar at the top of fullscreen and the slideshow can be switched off in the viewer
+  settings.
 
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the

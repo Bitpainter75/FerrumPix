@@ -129,5 +129,17 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Bewertungsleiste im Vollbild und in der Diashow" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Zeigt oben Sterne, Favorit, Farbetikett, Behalten und Verwerfen, sobald die Maus bewegt wird, zusammen mit der Bedienleiste unten. Ausgeschaltet bleibt oben alles frei." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding FullscreenRatingBarVisible}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                     </StackPanel>
 </UserControl>

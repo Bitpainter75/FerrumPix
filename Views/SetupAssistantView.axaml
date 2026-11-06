@@ -1,0 +1,532 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.SetupAssistantView">
+
+    <!-- Der Einrichtungsassistent (SetupAssistantViewModel). Eine Karte mitten im abgedunkelten
+         Fenster, darin die Seiten uebereinander; sichtbar ist nur die aktuelle, die anderen sind
+         durchsichtig, nicht treffbar und gesperrt (Klasse current), damit der Wechsel als weiche
+         Ueberblendung mit einem kleinen Gleiten laeuft statt hart umzuspringen. Jede Seite bindet
+         direkt an die Einstellungen; was hier gewaehlt wird, wirkt sofort und ist gespeichert. -->
+    <UserControl.Styles>
+        <Style Selector="Panel.setup-page">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="IsEnabled" Value="False"/>
+            <Setter Property="RenderTransform" Value="translateX(28px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.28" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.32" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.setup-page.current">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+            <Setter Property="IsEnabled" Value="True"/>
+            <Setter Property="RenderTransform" Value="translateX(0px)"/>
+            <Setter Property="ZIndex" Value="1"/>
+        </Style>
+        <!-- Banner und Hintergrund blenden beim Wechsel zwischen erster und folgender Seite
+             weich ineinander, wie die Seiten selbst. -->
+        <Style Selector="Panel.setup-backdrop">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.setup-backdrop.shown">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="TextBlock.setup-title">
+            <Setter Property="FontSize" Value="26"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Effect">
+                <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="1" Color="#FF000000"/>
+            </Setter>
+        </Style>
+        <!-- Ueberschrift und Einleitung stehen auf den Folgeseiten vor dem Hintergrundbild: wie
+             beim Willkommenstext in der Hauptschriftfarbe und mit weichem dunklem Schatten. -->
+        <Style Selector="TextBlock.setup-lead">
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Subtitle}"/>
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="LineHeight" Value="22"/>
+            <Setter Property="Effect">
+                <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="1" Color="#FF000000"/>
+            </Setter>
+        </Style>
+        <!-- Der Willkommenstext steht vor der Grafik: in der Hauptschriftfarbe statt gedaempft
+             und mit einem weichen dunklen Schatten, damit er sich von den Lichtboegen abhebt. -->
+        <Style Selector="TextBlock.welcome-lead">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Effect">
+                <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="1" Color="#FF000000"/>
+            </Setter>
+        </Style>
+        <Style Selector="TextBlock.setup-label">
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+            <Setter Property="Effect">
+                <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="1" Color="#FF000000"/>
+            </Setter>
+        </Style>
+        <!-- JEDER Text, der direkt auf dem Hintergrundbild steht, traegt denselben Schatten:
+             Ueberschrift, Einleitung, Beschriftungen und die freistehenden Texte (Klasse
+             on-image). Texte in Karten und auf Knoepfen stehen auf eigenem Grund und brauchen
+             keinen. -->
+        <Style Selector="TextBlock.on-image">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Primary}"/>
+            <Setter Property="Effect">
+                <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="1" Color="#FF000000"/>
+            </Setter>
+        </Style>
+        <Style Selector="icons|SvgIcon.on-image">
+            <Setter Property="Effect">
+                <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="1" Color="#FF000000"/>
+            </Setter>
+        </Style>
+        <!-- Die Fortschrittspunkte: erledigt ein kleiner Punkt in Akzent, der aktuelle eine
+             breitere Pille, die kommenden ein gedaempfter Punkt. -->
+        <Style Selector="Border.setup-dot">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource FP.Border.Strong}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.setup-dot.done">
+            <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+        <Style Selector="Border.setup-dot.current">
+            <Setter Property="Width" Value="26"/>
+            <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+        <!-- Kleine Karten fuer die Funktionen auf der Willkommensseite und die Modelle. -->
+        <Style Selector="Border.setup-card">
+            <Setter Property="Background" Value="{DynamicResource FP.Bg.Content}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Normal}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+        <Style Selector="icons|SvgIcon.setup-accent">
+            <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Abgedunkelter Grund ueber dem ganzen Fenster; er faengt jeden Klick ab. -->
+    <Border Background="#B8000000" IsHitTestVisible="True">
+        <Border Background="{DynamicResource FP.Bg.Elevated}"
+                CornerRadius="16"
+                BoxShadow="0 24 70 0 #B0000000"
+                MaxWidth="860" MaxHeight="620"
+                Margin="24"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!-- DIE RUNDUNG: ClipToBounds schneidet Kinder nur rechteckig zu; ein Bild als eigenes
+                 Element malte seine Ecken ueber den runden Rand, dem fehlte dort die Linie. Die
+                 Bilder sind deshalb HINTERGRUND eines Rahmens mit derselben Rundung (ImageBrush),
+                 und die Randlinie liegt als eigener Rahmen ganz oben. -->
+            <Grid RowDefinitions="*,Auto">
+
+                <!-- HINTERGRUND DER FOLGESEITEN: Assistent.jpg ueber die ganze Karte, darueber ein
+                     Schleier in der Kartenfarbe des Themas. Im dunklen Thema leuchten die Boegen
+                     gedaempft durch, im hellen werden sie zu Pastell; ohne den Schleier stuende
+                     dort dunkler Text auf dunklem Bild. -->
+                <Panel Grid.RowSpan="2" Classes="setup-backdrop" Classes.shown="{Binding !IsWelcomePage}" IsHitTestVisible="False">
+                    <Border CornerRadius="16">
+                        <Border.Background>
+                            <ImageBrush Source="avares://FerrumPix/Assets/Assistent.jpg" Stretch="UniformToFill"/>
+                        </Border.Background>
+                    </Border>
+                    <Border CornerRadius="16" Background="{DynamicResource FP.Bg.Elevated}" Opacity="0.8"/>
+                </Panel>
+
+                <!-- ERSTE SEITE: Welcome.jpg ueber die ganze Karte. Es traegt Logo und Schriftzug
+                     im oberen Teil; unten liegt ein Schleier in der Kartenfarbe, der von oben weich
+                     einlaeuft, damit Satz, Karten und Sprache in jedem Thema lesbar bleiben. -->
+                <Panel Grid.RowSpan="2" Classes="setup-backdrop" Classes.shown="{Binding IsWelcomePage}" IsHitTestVisible="False">
+                    <Border CornerRadius="16">
+                        <Border.Background>
+                            <ImageBrush Source="avares://FerrumPix/Assets/Welcome.jpg" Stretch="UniformToFill"/>
+                        </Border.Background>
+                    </Border>
+                    <Border CornerRadius="16" Background="{DynamicResource FP.Bg.Elevated}" Opacity="0.9">
+                        <Border.OpacityMask>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                <GradientStop Offset="0" Color="#00000000"/>
+                                <GradientStop Offset="0.46" Color="#00000000"/>
+                                <GradientStop Offset="0.6" Color="#FF000000"/>
+                                <GradientStop Offset="1" Color="#FF000000"/>
+                            </LinearGradientBrush>
+                        </Border.OpacityMask>
+                    </Border>
+                </Panel>
+
+                <!-- DIE SEITEN, uebereinander. Breite und Hoehe richten sich nach der groessten. -->
+                <Panel Grid.Row="0" Margin="44,30,44,4" Width="772" MinHeight="470">
+
+                    <!-- 1 WILLKOMMEN -->
+                    <Panel Classes="setup-page" Classes.current="{Binding IsWelcomePage}">
+                        <!-- Unten auf der Seite, unter dem Banner: das traegt Logo und Schriftzug, ein
+                             eigener Titel daneben waere doppelt. -->
+                        <StackPanel Spacing="14" VerticalAlignment="Bottom">
+                            <!-- Zwei Saetze, zwei Zeilen: der zweite beginnt immer in einer eigenen. -->
+                            <StackPanel Spacing="2" HorizontalAlignment="Center" MaxWidth="680">
+                                <TextBlock Classes="setup-lead welcome-lead" TextAlignment="Center" HorizontalAlignment="Center"
+                                           Text="Fotos sichten, entwickeln und gestalten, alles an einem Ort und alles auf deinem Rechner."/>
+                                <TextBlock Classes="setup-lead welcome-lead" TextAlignment="Center" HorizontalAlignment="Center"
+                                           Text="Ein paar Handgriffe, und FerrumPix fühlt sich an wie deins."/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                                <Border Grid.Column="0" Classes="setup-card">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/images.svg" Width="24" Height="24" VerticalAlignment="Top"/>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="Sichten und ordnen" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Sterne, Etiketten, Stichwörter und Suche, für Ordner und Katalog." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <Border Grid.Column="1" Classes="setup-card">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/aperture.svg" Width="24" Height="24" VerticalAlignment="Top"/>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="RAW entwickeln" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Licht, Farbe und Details, ohne das Original anzutasten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <Border Grid.Column="2" Classes="setup-card">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stack.svg" Width="24" Height="24" VerticalAlignment="Top"/>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="Gestalten" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Ebenen, Masken, Text und Retusche im selben Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" DataContext="{Binding Settings}">
+                                <icons:SvgIcon Classes="on-image" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/globe.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                <TextBlock Classes="on-image" Text="Sprache" VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding LanguageOptions}"
+                                          SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                          MinWidth="220" VerticalAlignment="Center">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </StackPanel>
+                    </Panel>
+
+                    <!-- 2 DARSTELLUNG -->
+                    <Panel Classes="setup-page" Classes.current="{Binding IsAppearancePage}">
+                        <StackPanel Spacing="18" DataContext="{Binding Settings}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="setup-title" Text="Wie soll FerrumPix aussehen?"/>
+                                <TextBlock Classes="setup-lead" Text="Ändern lässt es sich jederzeit unter Einstellungen, Darstellung."/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                                <Button Grid.Column="0" Classes="theme-choice" Classes.active="{Binding IsDarkThemeMode}"
+                                        Command="{Binding SetThemeModeCommand}" CommandParameter="Dark">
+                                    <StackPanel Spacing="10">
+                                        <Border Height="84" CornerRadius="6" ClipToBounds="True" Background="#11161B">
+                                            <Image Source="avares://FerrumPix/Assets/Gallery.png" Stretch="UniformToFill" Opacity="0.85"/>
+                                        </Border>
+                                        <TextBlock Text="Dunkel" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="1" Classes="theme-choice" Classes.active="{Binding IsGrayDarkThemeMode}"
+                                        Command="{Binding SetThemeModeCommand}" CommandParameter="GrayDark">
+                                    <StackPanel Spacing="10">
+                                        <Border Height="84" CornerRadius="6" ClipToBounds="True" Background="#232628">
+                                            <Image Source="avares://FerrumPix/Assets/Gallery_GrayDark.png" Stretch="UniformToFill" Opacity="0.85"/>
+                                        </Border>
+                                        <TextBlock Text="Grau Dunkel" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" Classes="theme-choice" Classes.active="{Binding IsGrayLightThemeMode}"
+                                        Command="{Binding SetThemeModeCommand}" CommandParameter="GrayLight">
+                                    <StackPanel Spacing="10">
+                                        <Border Height="84" CornerRadius="6" ClipToBounds="True" Background="#4A5057">
+                                            <Image Source="avares://FerrumPix/Assets/Gallery_GrayLight.png" Stretch="UniformToFill" Opacity="0.85"/>
+                                        </Border>
+                                        <TextBlock Text="Grau Hell" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="3" Classes="theme-choice" Classes.active="{Binding IsLightThemeMode}"
+                                        Command="{Binding SetThemeModeCommand}" CommandParameter="Light">
+                                    <StackPanel Spacing="10">
+                                        <Border Height="84" CornerRadius="6" ClipToBounds="True" Background="#E9EDF2">
+                                            <Image Source="avares://FerrumPix/Assets/Gallery_Light.png" Stretch="UniformToFill" Opacity="0.85"/>
+                                        </Border>
+                                        <TextBlock Text="Hell" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <!-- Akzentfarbe, Farbstaerke und Schriftgrad untereinander, die Beschriftung
+                                 links, die Auswahl rechts daneben. Die Zeilen sind gleich hoch und der
+                                 Inhalt darin mittig: Farbpunkte, Prozentknoepfe und Schriftstufen sind
+                                 verschieden hoch, mit Auto-Zeilen wirkten die Luecken ungleich. -->
+                            <Grid ColumnDefinitions="140,*" RowDefinitions="40,40,40" RowSpacing="10" Margin="0,14,0,0">
+                                <TextBlock Grid.Row="0" Classes="setup-label" Text="Akzentfarbe" VerticalAlignment="Center"/>
+                                <Panel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <Button Classes="swatch" Classes.active="{Binding IsOrangeAccent}" Background="#F08A1A" Command="{Binding SetAccentColorCommand}" CommandParameter="#F08A1A"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsRedAccent}" Background="#E74C3C" Command="{Binding SetAccentColorCommand}" CommandParameter="#E74C3C"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsPinkAccent}" Background="#F03B88" Command="{Binding SetAccentColorCommand}" CommandParameter="#F03B88"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsPurpleAccent}" Background="#8B5CF6" Command="{Binding SetAccentColorCommand}" CommandParameter="#8B5CF6"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsBlueAccent}" Background="#3B82F6" Command="{Binding SetAccentColorCommand}" CommandParameter="#3B82F6"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsCyanAccent}" Background="#0891B2" Command="{Binding SetAccentColorCommand}" CommandParameter="#0891B2"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsTealAccent}" Background="#0F766E" Command="{Binding SetAccentColorCommand}" CommandParameter="#0F766E"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsGreenAccent}" Background="#22C55E" Command="{Binding SetAccentColorCommand}" CommandParameter="#22C55E"/>
+                                        <Button Classes="swatch" Classes.active="{Binding IsYellowAccent}" Background="#FACC15" Command="{Binding SetAccentColorCommand}" CommandParameter="#FACC15"/>
+                                    </StackPanel>
+                                </Panel>
+                                <TextBlock Grid.Row="1" Classes="setup-label" Text="Farbstärke" VerticalAlignment="Center"/>
+                                <Panel Grid.Row="1" Grid.Column="1" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <Button Classes="ghost" Classes.active="{Binding IsAccentStrength100}" Padding="10,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="100">100 %</Button>
+                                        <Button Classes="ghost" Classes.active="{Binding IsAccentStrength75}" Padding="10,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="75">75 %</Button>
+                                        <Button Classes="ghost" Classes.active="{Binding IsAccentStrength50}" Padding="10,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="50">50 %</Button>
+                                        <Button Classes="ghost" Classes.active="{Binding IsAccentStrength25}" Padding="10,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="25">25 %</Button>
+                                        <Button Classes="ghost" Classes.active="{Binding IsAccentStrength0}" Padding="10,6" Command="{Binding SetAccentStrengthCommand}" CommandParameter="0">0 %</Button>
+                                    </StackPanel>
+                                </Panel>
+                                <TextBlock Grid.Row="2" Classes="setup-label" Text="Schriftgrad" VerticalAlignment="Center"/>
+                                <Panel Grid.Row="2" Grid.Column="1" VerticalAlignment="Center">
+                                    <ItemsControl ItemsSource="{Binding FontSizeOffsetOptions}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="4" Height="34"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Classes="font-step no-translate"
+                                                    Classes.active="{Binding IsActive}"
+                                                    FontSize="{Binding PreviewFontSize}"
+                                                    Content="aA"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.SetFontSizeOffsetCommand}"
+                                                    CommandParameter="{Binding Offset}"
+                                                    ToolTip.Tip="{Binding Label}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                </Panel>
+                            </Grid>
+                        </StackPanel>
+                    </Panel>
+
+                    <!-- 3 MODELLE: je Funktion eine Karte mit Schalter, ohne Groesse und Stand; darunter
+                         die Gesamtgroesse der eingeschalteten, die noch fehlen, und EIN Fortschritt fuer
+                         alle (SetupAssistantViewModelModels). Weiter startet den Download. Wird der
+                         Assistent waehrend des Downloads geschlossen, fragt er, ob abgebrochen werden soll. -->
+                    <Panel Classes="setup-page" Classes.current="{Binding IsModelsPage}">
+                        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="setup-title" Text="Zusätzliche Fähigkeiten"/>
+                                <TextBlock Classes="setup-lead" Text="Einige Werkzeuge arbeiten mit Modellen, die auf diesem Rechner laufen. Lade jetzt, was du brauchst, oder später unter Einstellungen, Modelle."/>
+                            </StackPanel>
+                            <!-- Jede Funktion als Karte mit Symbol, Name, Satz und Schalter, zweispaltig;
+                                 vorhandene stehen an und gesperrt. Kartenansicht und Personen schliessen das
+                                 Raster unten ab. Die Kartenansicht fragt beim Einschalten nach
+                                 (AskAndEnableMapViewAsync); "Personen erkennen" (PeopleEnabled) fragt ohne
+                                 Modell sofort nach dessen Bedingung, geladen wird mit Weiter. -->
+                            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" MaxHeight="330">
+                                <StackPanel Margin="-4,-4,10,0">
+                                    <ItemsControl ItemsSource="{Binding ModelOptions}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Classes="setup-card" Margin="4">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                        <icons:SvgIcon Classes="setup-accent" Source="{Binding IconSource}" Width="24" Height="24" VerticalAlignment="Center"/>
+                                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                            <TextBlock Classes="no-translate" Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                            <TextBlock Classes="no-translate" Text="{Binding Description}" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <ToggleSwitch Grid.Column="2" IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanChoose}"
+                                                                      OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Grid ColumnDefinitions="*,*">
+                                            <Border Classes="setup-card" Margin="4" DataContext="{Binding Settings}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                    <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-trifold.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Text="Kartenansicht" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="Zeigt deine Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <ToggleSwitch Grid.Column="2" IsChecked="{Binding MapViewEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                            <Border Grid.Column="1" Classes="setup-card" Margin="4" IsVisible="{Binding HasPeopleOption}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                    <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/users-three.svg" Width="24" Height="24" VerticalAlignment="Center"/>
+                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Text="Personen erkennen" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="Findet Gesichter in deinen Fotos und fasst dieselbe Person zusammen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                    <ToggleSwitch Grid.Column="2" IsChecked="{Binding PeopleEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                            <!-- Unter den Karten: die Groesse des Downloads fuer das Eingeschaltete,
+                                 waehrend des Downloads der Fortschritt mit Abbrechen, danach das Ergebnis.
+                                 Einen eigenen Knopf zum Laden gibt es nicht, Weiter startet ihn. -->
+                            <StackPanel Grid.Row="2" Spacing="6">
+                                <TextBlock Classes="on-image no-translate" Text="{Binding ModelDownloadSizeText}" FontWeight="SemiBold"
+                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" IsVisible="{Binding IsDownloadingModels}">
+                                    <ProgressBar Minimum="0" Maximum="1" Value="{Binding ModelDownloadProgress}" Height="6" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Classes="on-image no-translate" Text="{Binding ModelDownloadPercentText}"
+                                               FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="12,5" Command="{Binding CancelModelDownloadCommand}">
+                                        <TextBlock Text="Abbrechen"/>
+                                    </Button>
+                                </Grid>
+                                <TextBlock Classes="on-image no-translate" Text="{Binding ModelDownloadMessage}" IsVisible="{Binding HasModelDownloadMessage}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </Panel>
+
+                    <!-- 4 GRAFIKKARTE: nur, wenn eine erkannt wird (SetupAssistantViewModel.HasGpu). -->
+                    <Panel Classes="setup-page" Classes.current="{Binding IsGpuPage}">
+                        <StackPanel Spacing="18">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="setup-title" Text="Deine Grafikkarte mitarbeiten lassen"/>
+                                <TextBlock Classes="setup-lead" Text="FerrumPix kann rechenintensive Arbeit an die Grafikkarte geben."/>
+                            </StackPanel>
+                            <Border Classes="setup-card">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/graphics-card.svg" Width="26" Height="26" VerticalAlignment="Center"/>
+                                    <TextBlock Classes="no-translate" Text="{Binding GpuNames}" VerticalAlignment="Center" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Spacing="10" DataContext="{Binding Settings}">
+                                <Border Classes="setup-card">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Grafikkarte für die Bildbearbeitung nutzen" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Farbe und Tonwerte in Vorschau, Export und Stapel rechnen auf der Grafikkarte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                            <TextBlock Classes="no-translate" Text="{Binding GpuImageProcessingStatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding GpuImageProcessing}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                                <Border Classes="setup-card">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="Grafikkarte für gelernte Modelle nutzen" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Entrauschen, Hochskalieren, Objektauswahl und Tiefenkarte rechnen auf der Grafikkarte." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                            <TextBlock Classes="no-translate" Text="{Binding GpuAccelerationStatusText}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding GpuAccelerationEnabled}" IsEnabled="{Binding GpuAccelerationAvailable}"
+                                                      OnContent="" OffContent="" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Panel>
+
+                    <!-- 5 FERTIG: der Hinweis auf die Einstellungen. -->
+                    <Panel Classes="setup-page" Classes.current="{Binding IsDonePage}">
+                        <StackPanel Spacing="20" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="600">
+                            <Border Width="84" Height="84" CornerRadius="42" HorizontalAlignment="Center"
+                                    Background="{DynamicResource FP.Accent}">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg" Width="44" Height="44"
+                                               IconBrush="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Classes="setup-title" Text="Alles bereit" HorizontalAlignment="Center" TextAlignment="Center"/>
+                            <TextBlock Classes="setup-lead" TextAlignment="Center"
+                                       Text="FerrumPix lässt sich in vielen Einstellungen genau auf deine Arbeitsweise abstimmen: Galerie und Kacheln, Viewer und Diashow, Info-Leiste, RAW-Entwicklung, Tastenkürzel und vieles mehr. Ein Blick hinein lohnt sich."/>
+                            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,8,0,0">
+                                <Button Classes="ghost" Padding="18,10" Command="{Binding OpenSettingsCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/gear.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Einstellungen ansehen" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="accent" Padding="22,10" Command="{Binding FinishCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="Zu meinen Bildern" VerticalAlignment="Center"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-right.svg" Width="18" Height="18"
+                                                       IconBrush="White" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Panel>
+                </Panel>
+
+                <!-- FUSSZEILE: Zurueck, Fortschrittspunkte, Ueberspringen und Weiter. -->
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" Margin="44,6,44,22">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Classes="ghost" Padding="14,8" Command="{Binding BackCommand}" IsVisible="{Binding CanGoBack}" IsEnabled="{Binding !IsDownloadingModels}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-left.svg" Width="16" Height="16" VerticalAlignment="Center"/>
+                                <TextBlock Text="Zurück" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <!-- Mitte: die Fortschrittspunkte. -->
+                    <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+                        <ItemsControl ItemsSource="{Binding Steps}" HorizontalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8"/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Classes="setup-dot" Classes.current="{Binding IsCurrent}" Classes.done="{Binding IsDone}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                IsVisible="{Binding ShowsNext}">
+                        <Button Classes="ghost" Padding="14,8" Command="{Binding SkipCommand}" BorderThickness="0" Background="Transparent">
+                            <TextBlock Classes="on-image" Text="Überspringen"/>
+                        </Button>
+                        <Button Classes="accent" Padding="22,10" Command="{Binding NextCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Classes="no-translate" Text="{Binding NextText}" VerticalAlignment="Center"/>
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-right.svg" Width="16" Height="16"
+                                               IconBrush="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Die Randlinie der Karte, ueber allem, damit kein Bild sie verdeckt. -->
+                <Border Grid.RowSpan="2" CornerRadius="16" BorderThickness="1"
+                        BorderBrush="{DynamicResource FP.Border.Strong}" IsHitTestVisible="False"/>
+            </Grid>
+        </Border>
+    </Border>
+</UserControl>

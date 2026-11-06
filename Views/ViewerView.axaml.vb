@@ -1371,6 +1371,10 @@ Namespace Views
             If e.PropertyName = NameOf(ViewerViewModel.FullscreenFilmstripPinned) Then
                 ApplyFullscreenFilmstripPinned()
             End If
+
+            If e.PropertyName = NameOf(ViewerViewModel.FullscreenRatingBarVisible) Then
+                UpdateFullscreenImageBar()
+            End If
         End Sub
 
         ''' <summary>Stellt den Filmstreifen an die eingestellte Seite und rueckt Bildflaeche und
@@ -2009,7 +2013,8 @@ Namespace Views
             ' stehenden Filmstreifen.
             Dim ratingBar = Me.FindControl(Of Border)("FullscreenRatingBar")
             If ratingBar IsNot Nothing Then
-                ratingBar.IsVisible = bar.IsVisible
+                ' Nur, wenn sie in den Einstellungen nicht abgeschaltet ist (FullscreenRatingBarVisible).
+                ratingBar.IsVisible = bar.IsVisible AndAlso If(GetVm()?.FullscreenRatingBarVisible, True)
                 ratingBar.Margin = New Thickness(0, If(_fullscreenFilmstripEdge = FilmstripPlacement.PositionTop, 24 + FilmstripPlacement.TopExtent, 24), 0, 0)
             End If
             Dim toggle = Me.FindControl(Of Button)("FullscreenFilmstripButton")

@@ -726,6 +726,14 @@ Namespace Services
         ''' <summary>Der Filmstreifen im Vollbild steht dauerhaft, ab Werk aus; sein Knopf in der
         ''' Bedienleiste legt denselben Wert um. Aus, erscheint er nur ueber den Rand.</summary>
         Public Property FullscreenFilmstripPinned As Boolean = False
+        ''' <summary>Der Einrichtungsassistent ist einmal durchlaufen oder uebersprungen worden. Ab
+        ''' Werk False, und zwar auch fuer eine schon vorhandene Einstellungsdatei, die den Wert
+        ''' noch nicht kennt: so erscheint der Assistent nach dem Update genau einmal auch bei
+        ''' bestehenden Installationen, mit deren Einstellungen vorausgewaehlt.</summary>
+        Public Property SetupAssistantDone As Boolean = False
+        ''' <summary>Die Bewertungsleiste oben im Vollbild und in der Diashow, ab Werk an. Sie kommt
+        ''' und geht mit der Bedienleiste unten; aus, bleibt sie ganz weg.</summary>
+        Public Property FullscreenRatingBarVisible As Boolean = True
         ''' In der Galerie ist die Info-Leiste ab Werk ZU: dort stehen links schon Ordnerbaum und
         ''' Filter, und wer die Galerie oeffnet, sucht ein Bild und liest keine Metadaten.
         Public Property GalleryInfoSidebarExpanded As Boolean = False
@@ -2876,6 +2884,10 @@ Namespace Services
                        s.PrintShowCaption = options.ShowCaption
                        s.PrintBorderless = options.Borderless
                    End Sub)
+        End Sub
+
+        Public Shared Sub SaveSetupAssistantDone(value As Boolean)
+            Update(Sub(s) s.SetupAssistantDone = value)
         End Sub
 
         Public Shared Sub SaveEditorSnapMarginPercent(value As Integer)

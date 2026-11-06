@@ -11194,4 +11194,100 @@
   <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
     <value>마우스가 가장자리에 닿을 때만이 아니라 전체 화면에서 필름 스트립을 항상 표시합니다. 전체 화면에서는 컨트롤 바의 필름 스트립 아이콘으로도 전환할 수 있습니다.</value>
   </data>
+  <data name="Bewertungsleiste_im_Vollbild_und_in_der_Diashow_afa79262" xml:space="preserve">
+    <value>전체 화면 및 슬라이드쇼의 평가 막대</value>
+  </data>
+  <data name="Zeigt_oben_Sterne_Favorit_Farbetikett_Behalten_u_a7926739" xml:space="preserve">
+    <value>마우스를 움직이면 아래 컨트롤 바와 함께 위쪽에 별점, 즐겨찾기, 색상 레이블, 보관 및 거부를 표시합니다. 끄면 위쪽은 비어 있습니다.</value>
+  </data>
+  <data name="Sichten_und_ordnen_fddac69a" xml:space="preserve">
+    <value>보기와 정리</value>
+  </data>
+  <data name="Sterne_Etiketten_Stichw_rter_und_Suche_f_r_Ordne_003d3ea0" xml:space="preserve">
+    <value>별점, 레이블, 키워드, 검색을 폴더와 카탈로그 모두에서.</value>
+  </data>
+  <data name="RAW_entwickeln_fb82ee4b" xml:space="preserve">
+    <value>RAW 현상</value>
+  </data>
+  <data name="Licht_Farbe_und_Details_ohne_das_Original_anzuta_2ed40f5d" xml:space="preserve">
+    <value>빛, 색, 디테일을 원본은 그대로 둔 채.</value>
+  </data>
+  <data name="Gestalten_5db59a6f" xml:space="preserve">
+    <value>편집</value>
+  </data>
+  <data name="Ebenen_Masken_Text_und_Retusche_im_selben_Editor_212f4fb5" xml:space="preserve">
+    <value>레이어, 마스크, 텍스트, 리터칭을 하나의 편집기에서.</value>
+  </data>
+  <data name="Wie_soll_FerrumPix_aussehen_3ca3680e" xml:space="preserve">
+    <value>FerrumPix를 어떤 모습으로 할까요?</value>
+  </data>
+  <data name="Zus_tzliche_F_higkeiten_4b56ea0b" xml:space="preserve">
+    <value>추가 기능</value>
+  </data>
+  <data name="Deine_Grafikkarte_mitarbeiten_lassen_3fd30dc2" xml:space="preserve">
+    <value>그래픽 카드의 도움 받기</value>
+  </data>
+  <data name="Farbe_und_Tonwerte_in_Vorschau_Export_und_Stapel_76c9ab52" xml:space="preserve">
+    <value>미리보기, 내보내기, 일괄 처리의 색과 톤을 그래픽 카드에서 계산합니다.</value>
+  </data>
+  <data name="Entrauschen_Hochskalieren_Objektauswahl_und_Tief_7e8d8bc3" xml:space="preserve">
+    <value>노이즈 제거, 업스케일, 개체 선택, 깊이 맵을 그래픽 카드에서 계산합니다.</value>
+  </data>
+  <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
+    <value>모두 준비되었습니다</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
+    <value>FerrumPix는 여러 설정으로 작업 방식에 꼭 맞게 조정할 수 있습니다. 갤러리와 타일, 뷰어와 슬라이드쇼, 정보 패널, RAW 현상, 바로 가기 키 등 다양합니다. 한번 둘러볼 만합니다.</value>
+  </data>
+  <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
+    <value>설정 둘러보기</value>
+  </data>
+  <data name="Zu_meinen_Bildern_6c36cfac" xml:space="preserve">
+    <value>내 사진으로 가기</value>
+  </data>
+  <data name="Loslegen_caeb7b14" xml:space="preserve">
+    <value>시작하기</value>
+  </data>
+  <data name="Einrichtung_30d1bc59" xml:space="preserve">
+    <value>초기 설정</value>
+  </data>
+  <data name="Einrichtung_erneut_starten_bb8dd17b" xml:space="preserve">
+    <value>초기 설정 다시 실행</value>
+  </data>
+  <data name="Zeigt_noch_einmal_den_Assistenten_vom_ersten_Sta_5d447c25" xml:space="preserve">
+    <value>첫 실행 때의 도우미를 다시 보여 줍니다. 언어, 모양, 모델, 그래픽 카드.</value>
+  </data>
+  <data name="Es_wird_noch_ein_Modell_heruntergeladen_Den_Down_5e5a6942" xml:space="preserve">
+    <value>아직 모델을 다운로드하는 중입니다. 다운로드를 취소하고 초기 설정을 닫을까요?</value>
+  </data>
+  <data name="Fotos_sichten_entwickeln_und_gestalten_alles_an__bbf33361" xml:space="preserve">
+    <value>사진 보기, 현상, 편집을 한곳에서, 모두 내 컴퓨터에서.</value>
+  </data>
+  <data name="Ein_paar_Handgriffe_und_FerrumPix_f_hlt_sich_an__35d0f7da" xml:space="preserve">
+    <value>몇 가지만 고르면 FerrumPix가 내 것처럼 느껴집니다.</value>
+  </data>
+  <data name="Einige_Werkzeuge_arbeiten_mit_Modellen_die_auf_d_cb77cec0" xml:space="preserve">
+    <value>일부 도구는 이 컴퓨터에서 실행되는 모델을 사용합니다. 필요한 것을 지금 받거나 나중에 설정, 모델에서 받으세요.</value>
+  </data>
+  <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
+    <value>FerrumPix는 무거운 작업을 그래픽 카드에 맡길 수 있습니다.</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
+    <value>선택된 항목 없음</value>
+  </data>
+  <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
+    <value>총 다운로드: {0}</value>
+  </data>
+  <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
+    <value>선택한 모델이 모두 준비되었습니다.</value>
+  </data>
+  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
+    <value>갤러리에서 사진을 지도 위에 표시합니다. 지도 타일은 인터넷에서 가져옵니다.</value>
+  </data>
+  <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
+    <value>언제든 설정, 모양에서 바꿀 수 있습니다.</value>
+  </data>
+  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
+    <value>사진에서 얼굴을 찾아 같은 사람끼리 묶습니다.</value>
+  </data>
 </root>

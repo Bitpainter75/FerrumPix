@@ -181,6 +181,10 @@
                 </Border>
             </Border>
 
+            <!-- Der Einrichtungsassistent beim ersten Start (SetupAssistantView). UNTER den Dialogen:
+                 eine Rueckfrage aus ihm heraus, etwa zur Lizenz eines Modells, muss davor liegen. -->
+            <ContentControl x:Name="SetupAssistantHost" ZIndex="496"/>
+
             <ContentControl x:Name="DialogOverlayHost" ZIndex="500"/>
 
             <!-- Der Druckdialog liegt hier und nicht in einer der Modus-Views, weil er aus

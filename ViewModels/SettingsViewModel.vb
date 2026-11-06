@@ -131,6 +131,7 @@ Namespace ViewModels
         Private _viewerInfoSidebarExpanded As Boolean = True
         Private _fullscreenInfoSidebarExpanded As Boolean = False
         Private _fullscreenFilmstripPinned As Boolean = False
+        Private _fullscreenRatingBarVisible As Boolean = True
         Private _galleryInfoSidebarExpanded As Boolean = False
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
@@ -291,6 +292,7 @@ Namespace ViewModels
         Private _savedViewerInfoSidebarExpanded As Boolean = True
         Private _savedFullscreenInfoSidebarExpanded As Boolean = False
         Private _savedFullscreenFilmstripPinned As Boolean = False
+        Private _savedFullscreenRatingBarVisible As Boolean = True
         Private _savedGalleryInfoSidebarExpanded As Boolean = False
         Private _savedStartupImageMode As String = "Viewer"
         Private _savedGalleryOpenTarget As String = "Viewer"
@@ -3260,6 +3262,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Bewertungsleiste oben im Vollbild und in der Diashow (ab Werk an). Aus, steht
+        ''' dort nur noch die Bedienleiste unten.</summary>
+        Public Property FullscreenRatingBarVisible As Boolean
+            Get
+                Return _fullscreenRatingBarVisible
+            End Get
+            Set(value As Boolean)
+                If _fullscreenRatingBarVisible = value Then Return
+                Me.RaiseAndSetIfChanged(_fullscreenRatingBarVisible, value)
+                _mainVm?.Viewer?.RefreshFullscreenRatingBar()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         Public Property GalleryInfoSidebarExpanded As Boolean
             Get
                 Return _galleryInfoSidebarExpanded
@@ -4900,6 +4916,7 @@ Namespace ViewModels
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
             _fullscreenInfoSidebarExpanded = _appSettings.FullscreenInfoSidebarExpanded
             _fullscreenFilmstripPinned = _appSettings.FullscreenFilmstripPinned
+            _fullscreenRatingBarVisible = _appSettings.FullscreenRatingBarVisible
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
@@ -4979,6 +4996,7 @@ Namespace ViewModels
             ' Rueckfrage zurueckkommt, liess "Abbrechen" die Einstellungen spaeter zuruecknehmen als
             ' im Moment des Klicks. Nur waehrend eines Downloads wird erst gefragt.
             ApplyCommand = ReactiveCommand.Create(Sub() LeaveSettings(keepChanges:=True))
+            StartSetupAssistantCommand = ReactiveCommand.CreateFromTask(AddressOf StartSetupAssistantAsync)
             CancelCommand = ReactiveCommand.Create(Sub() LeaveSettings(keepChanges:=False))
             SetThemeModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ThemeMode = m)
             SetWindowButtonsSideCommand = ReactiveCommand.Create(Of String)(Sub(m) WindowButtonsSide = m)
@@ -5317,6 +5335,7 @@ Namespace ViewModels
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
             _savedFullscreenInfoSidebarExpanded = _fullscreenInfoSidebarExpanded
             _savedFullscreenFilmstripPinned = _fullscreenFilmstripPinned
+            _savedFullscreenRatingBarVisible = _fullscreenRatingBarVisible
             _savedGalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
             _savedGalleryOpenTarget = _galleryOpenTarget
@@ -5349,6 +5368,22 @@ Namespace ViewModels
                 FinishLeavingSettings(keepChanges)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Settings.LeaveSettings", ex)
+            End Try
+        End Function
+
+        ''' <summary>"Einrichtung erneut starten": verlaesst die Einstellungen wie "Fertig" und zeigt
+        ''' dann den Einrichtungsassistenten. Erst verlassen, weil der Assistent die Einstellungen
+        ''' direkt aendert und ein spaeteres "Abbrechen" hier sie sonst wieder zuruecknaehme.</summary>
+        Public ReadOnly Property StartSetupAssistantCommand As ICommand
+
+        Private Async Function StartSetupAssistantAsync() As Task
+            Try
+                If _mainVm Is Nothing Then Return
+                If Not Await _mainVm.ConfirmLeaveSettingsAsync() Then Return
+                FinishLeavingSettings(keepChanges:=True)
+                _mainVm.ShowSetupAssistant()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.StartSetupAssistant", ex)
             End Try
         End Function
 
@@ -5511,6 +5546,7 @@ Namespace ViewModels
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
             FullscreenInfoSidebarExpanded = _savedFullscreenInfoSidebarExpanded
             FullscreenFilmstripPinned = _savedFullscreenFilmstripPinned
+            FullscreenRatingBarVisible = _savedFullscreenRatingBarVisible
             GalleryInfoSidebarExpanded = _savedGalleryInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
             GalleryOpenTarget = _savedGalleryOpenTarget
@@ -5671,6 +5707,7 @@ Namespace ViewModels
             ViewerInfoSidebarExpanded = True
             FullscreenInfoSidebarExpanded = False
             FullscreenFilmstripPinned = False
+            FullscreenRatingBarVisible = True
             GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
             DateFormatMode = "System"
@@ -6079,6 +6116,7 @@ Namespace ViewModels
                                           s.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
                                           s.FullscreenInfoSidebarExpanded = _fullscreenInfoSidebarExpanded
                                           s.FullscreenFilmstripPinned = _fullscreenFilmstripPinned
+                                          s.FullscreenRatingBarVisible = _fullscreenRatingBarVisible
                                           s.GalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
                                       End Sub)
         End Sub

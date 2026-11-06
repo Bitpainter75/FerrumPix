@@ -11190,4 +11190,100 @@
   <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
     <value>マウスが端に来たときだけでなく、全画面で常にフィルムストリップを表示します。全画面では操作バーのフィルムストリップアイコンでも切り替えられます。</value>
   </data>
+  <data name="Bewertungsleiste_im_Vollbild_und_in_der_Diashow_afa79262" xml:space="preserve">
+    <value>全画面とスライドショーの評価バー</value>
+  </data>
+  <data name="Zeigt_oben_Sterne_Favorit_Farbetikett_Behalten_u_a7926739" xml:space="preserve">
+    <value>マウスを動かすと、下部の操作バーと一緒に上部に星、お気に入り、カラーラベル、採用、不採用を表示します。オフにすると上部には何も表示されません。</value>
+  </data>
+  <data name="Sichten_und_ordnen_fddac69a" xml:space="preserve">
+    <value>閲覧と整理</value>
+  </data>
+  <data name="Sterne_Etiketten_Stichw_rter_und_Suche_f_r_Ordne_003d3ea0" xml:space="preserve">
+    <value>星、ラベル、キーワード、検索。フォルダーにもカタログにも。</value>
+  </data>
+  <data name="RAW_entwickeln_fb82ee4b" xml:space="preserve">
+    <value>RAW 現像</value>
+  </data>
+  <data name="Licht_Farbe_und_Details_ohne_das_Original_anzuta_2ed40f5d" xml:space="preserve">
+    <value>光、色、ディテールを、元の写真に手を加えずに。</value>
+  </data>
+  <data name="Gestalten_5db59a6f" xml:space="preserve">
+    <value>作成</value>
+  </data>
+  <data name="Ebenen_Masken_Text_und_Retusche_im_selben_Editor_212f4fb5" xml:space="preserve">
+    <value>レイヤー、マスク、テキスト、レタッチをひとつのエディターで。</value>
+  </data>
+  <data name="Wie_soll_FerrumPix_aussehen_3ca3680e" xml:space="preserve">
+    <value>FerrumPix の見た目はどうしますか?</value>
+  </data>
+  <data name="Zus_tzliche_F_higkeiten_4b56ea0b" xml:space="preserve">
+    <value>追加の機能</value>
+  </data>
+  <data name="Deine_Grafikkarte_mitarbeiten_lassen_3fd30dc2" xml:space="preserve">
+    <value>グラフィックカードに手伝ってもらう</value>
+  </data>
+  <data name="Farbe_und_Tonwerte_in_Vorschau_Export_und_Stapel_76c9ab52" xml:space="preserve">
+    <value>プレビュー、書き出し、一括処理の色と階調をグラフィックカードで計算します。</value>
+  </data>
+  <data name="Entrauschen_Hochskalieren_Objektauswahl_und_Tief_7e8d8bc3" xml:space="preserve">
+    <value>ノイズ除去、拡大、被写体選択、深度マップをグラフィックカードで計算します。</value>
+  </data>
+  <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
+    <value>準備完了</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
+    <value>FerrumPix は多くの設定で、あなたの作業スタイルにぴったり合わせられます。ギャラリーとタイル、ビューアーとスライドショー、情報パネル、RAW 現像、キーボードショートカットなど。ぜひ一度のぞいてみてください。</value>
+  </data>
+  <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
+    <value>設定を見る</value>
+  </data>
+  <data name="Zu_meinen_Bildern_6c36cfac" xml:space="preserve">
+    <value>写真へ進む</value>
+  </data>
+  <data name="Loslegen_caeb7b14" xml:space="preserve">
+    <value>はじめる</value>
+  </data>
+  <data name="Einrichtung_30d1bc59" xml:space="preserve">
+    <value>初期設定</value>
+  </data>
+  <data name="Einrichtung_erneut_starten_bb8dd17b" xml:space="preserve">
+    <value>初期設定をもう一度実行</value>
+  </data>
+  <data name="Zeigt_noch_einmal_den_Assistenten_vom_ersten_Sta_5d447c25" xml:space="preserve">
+    <value>初回起動時のアシスタントをもう一度表示します。言語、外観、モデル、グラフィックカード。</value>
+  </data>
+  <data name="Es_wird_noch_ein_Modell_heruntergeladen_Den_Down_5e5a6942" xml:space="preserve">
+    <value>まだモデルをダウンロード中です。ダウンロードを中止して初期設定を閉じますか?</value>
+  </data>
+  <data name="Fotos_sichten_entwickeln_und_gestalten_alles_an__bbf33361" xml:space="preserve">
+    <value>写真の閲覧、現像、作成をひとつの場所で、すべてあなたのコンピューター上で。</value>
+  </data>
+  <data name="Ein_paar_Handgriffe_und_FerrumPix_f_hlt_sich_an__35d0f7da" xml:space="preserve">
+    <value>いくつか選ぶだけで、FerrumPix があなた好みになります。</value>
+  </data>
+  <data name="Einige_Werkzeuge_arbeiten_mit_Modellen_die_auf_d_cb77cec0" xml:space="preserve">
+    <value>一部のツールは、このコンピューター上で動くモデルを使います。必要なものを今ダウンロードするか、あとで設定のモデルから入手できます。</value>
+  </data>
+  <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
+    <value>FerrumPix は重い処理をグラフィックカードに任せられます。</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
+    <value>何も選択されていません</value>
+  </data>
+  <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
+    <value>ダウンロード合計: {0}</value>
+  </data>
+  <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
+    <value>選択したモデルはすべて準備できています。</value>
+  </data>
+  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
+    <value>ギャラリーで写真を地図上に表示します。地図タイルはインターネットから取得します。</value>
+  </data>
+  <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
+    <value>設定の外観でいつでも変更できます。</value>
+  </data>
+  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
+    <value>写真の顔を見つけ、同じ人物をまとめます。</value>
+  </data>
 </root>

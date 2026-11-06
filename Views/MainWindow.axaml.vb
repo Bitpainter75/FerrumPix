@@ -72,6 +72,7 @@ Namespace Views
             ' sich beim Rollen als hakende Bildlaufleiste zeigt.
             AddHandler Loaded, Sub(s, e) Services.PerformanceTraceService.StartUiThreadWatchdog()
             AddHandler Opened, Sub(s, e) RestoreWindowPlacement()
+            AddHandler Opened, Sub(s, e) ShowSetupAssistantOnFirstStart()
             ' Erst wenn das Fenster offen ist, gibt es eine Zeichenflaeche, an der ein Farbraum
             ' haengen koennte. Der Aufruf prueft die Einstellung selbst und tut ausserhalb von
             ' macOS nichts.
@@ -218,6 +219,38 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Baut die Ansicht des Einrichtungsassistenten, sobald er erscheint, und nimmt sie
+        ''' wieder heraus, wenn er geschlossen wird; sie wird nur einmal je Installation gebraucht und
+        ''' soll danach nichts mehr kosten. Uebersetzt wird beim Einhaengen, wie bei den Dialogen.</summary>
+        Private Sub UpdateSetupAssistantView(vm As MainWindowViewModel)
+            Dim host = Me.FindControl(Of ContentControl)("SetupAssistantHost")
+            If host Is Nothing Then Return
+            If vm Is Nothing OrElse vm.SetupAssistant Is Nothing Then
+                host.Content = Nothing
+                Return
+            End If
+            Dim view As New SetupAssistantView With {.DataContext = vm.SetupAssistant}
+            host.Content = view
+            LocalizationService.ApplyTo(view)
+            ' Den Fokus in den Assistenten holen, auf den letzten Knopf der Fusszeile (Loslegen):
+            ' sonst behielt ihn die Ansicht dahinter, und ihre eigenen Tasten wirkten weiter.
+            Dispatcher.UIThread.Post(
+                Sub()
+                    Dim target = view.GetVisualDescendants().OfType(Of Button)().
+                        LastOrDefault(Function(b) b.IsEffectivelyVisible AndAlso b.IsEffectivelyEnabled)
+                    target?.Focus()
+                End Sub, DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Nach dem Oeffnen des Fensters: der Einrichtungsassistent, einmal je Installation
+        ''' (AppSettings.SetupAssistantDone). Erst wenn alles steht, damit er nicht vor einem leeren
+        ''' Fenster erscheint.</summary>
+        Private Sub ShowSetupAssistantOnFirstStart()
+            If Not MainWindowViewModel.ShouldShowSetupAssistant() Then Return
+            Dispatcher.UIThread.Post(Sub() TryCast(DataContext, MainWindowViewModel)?.ShowSetupAssistant(),
+                                     DispatcherPriority.Background)
+        End Sub
+
         Private Sub HandleDataContextChanged(sender As Object, e As EventArgs)
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm IsNot Nothing Then
@@ -251,6 +284,8 @@ Namespace Views
                 ApplyLocalization()
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.IsPrintDialogOpen) Then
                 EnsureDialogOverlays(TryCast(sender, MainWindowViewModel))
+            ElseIf e.PropertyName = NameOf(MainWindowViewModel.SetupAssistant) Then
+                UpdateSetupAssistantView(TryCast(sender, MainWindowViewModel))
             ElseIf e.PropertyName = NameOf(MainWindowViewModel.CurrentContent) OrElse
                    e.PropertyName = NameOf(MainWindowViewModel.CurrentMode) Then
                 ' OHNE Uebersetzungsdurchlauf: den braucht nur eine FRISCH gebaute Ansicht, und den
@@ -1063,6 +1098,18 @@ Namespace Views
                         Case Else
                             e.Handled = False
                     End Select
+                    Return
+                End If
+
+                ' Der Einrichtungsassistent: ESC ueberspringt ihn, alles andere bleibt bei seinen
+                ' Bedienelementen und erreicht keine Ansicht dahinter (sonst blaetterten die Pfeile
+                ' in der Galerie, waehrend vorne die Darstellung gewaehlt wird). Ein Dialog aus ihm
+                ' heraus liegt davor und hat seinen Zweig oben schon genommen.
+                If vm.IsSetupAssistantOpen Then
+                    If e.Key = Key.Escape Then
+                        vm.CloseSetupAssistant(openSettings:=False)
+                        e.Handled = True
+                    End If
                     Return
                 End If
 

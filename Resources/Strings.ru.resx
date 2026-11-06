@@ -11190,4 +11190,100 @@
   <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
     <value>Показывает ленту миниатюр в полноэкранном режиме постоянно, а не только когда мышь доходит до края. В полноэкранном режиме её также можно переключить значком ленты на панели управления.</value>
   </data>
+  <data name="Bewertungsleiste_im_Vollbild_und_in_der_Diashow_afa79262" xml:space="preserve">
+    <value>Панель оценки в полноэкранном режиме и слайд-шоу</value>
+  </data>
+  <data name="Zeigt_oben_Sterne_Favorit_Farbetikett_Behalten_u_a7926739" xml:space="preserve">
+    <value>Показывает вверху звёзды, избранное, цветовую метку, «оставить» и «отклонить», как только мышь сдвигается, вместе с панелью управления внизу. Если выключено, верх остаётся свободным.</value>
+  </data>
+  <data name="Sichten_und_ordnen_fddac69a" xml:space="preserve">
+    <value>Просмотр и упорядочивание</value>
+  </data>
+  <data name="Sterne_Etiketten_Stichw_rter_und_Suche_f_r_Ordne_003d3ea0" xml:space="preserve">
+    <value>Звёзды, метки, ключевые слова и поиск, для папок и каталога.</value>
+  </data>
+  <data name="RAW_entwickeln_fb82ee4b" xml:space="preserve">
+    <value>Проявка RAW</value>
+  </data>
+  <data name="Licht_Farbe_und_Details_ohne_das_Original_anzuta_2ed40f5d" xml:space="preserve">
+    <value>Свет, цвет и детали, не трогая оригинал.</value>
+  </data>
+  <data name="Gestalten_5db59a6f" xml:space="preserve">
+    <value>Творчество</value>
+  </data>
+  <data name="Ebenen_Masken_Text_und_Retusche_im_selben_Editor_212f4fb5" xml:space="preserve">
+    <value>Слои, маски, текст и ретушь в одном редакторе.</value>
+  </data>
+  <data name="Wie_soll_FerrumPix_aussehen_3ca3680e" xml:space="preserve">
+    <value>Как должен выглядеть FerrumPix?</value>
+  </data>
+  <data name="Zus_tzliche_F_higkeiten_4b56ea0b" xml:space="preserve">
+    <value>Дополнительные возможности</value>
+  </data>
+  <data name="Deine_Grafikkarte_mitarbeiten_lassen_3fd30dc2" xml:space="preserve">
+    <value>Пусть поможет видеокарта</value>
+  </data>
+  <data name="Farbe_und_Tonwerte_in_Vorschau_Export_und_Stapel_76c9ab52" xml:space="preserve">
+    <value>Цвет и тона в предпросмотре, экспорте и пакетной обработке рассчитываются на видеокарте.</value>
+  </data>
+  <data name="Entrauschen_Hochskalieren_Objektauswahl_und_Tief_7e8d8bc3" xml:space="preserve">
+    <value>Шумоподавление, увеличение, выделение объектов и карта глубины рассчитываются на видеокарте.</value>
+  </data>
+  <data name="Alles_bereit_9e6cdaf8" xml:space="preserve">
+    <value>Всё готово</value>
+  </data>
+  <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_885f373a" xml:space="preserve">
+    <value>FerrumPix можно точно подстроить под ваш способ работы с помощью множества настроек: галерея и плитки, просмотр и слайд-шоу, панель сведений, проявка RAW, сочетания клавиш и многое другое. Туда стоит заглянуть.</value>
+  </data>
+  <data name="Einstellungen_ansehen_4a33ff92" xml:space="preserve">
+    <value>Посмотреть настройки</value>
+  </data>
+  <data name="Zu_meinen_Bildern_6c36cfac" xml:space="preserve">
+    <value>К моим фото</value>
+  </data>
+  <data name="Loslegen_caeb7b14" xml:space="preserve">
+    <value>Начать</value>
+  </data>
+  <data name="Einrichtung_30d1bc59" xml:space="preserve">
+    <value>Первоначальная настройка</value>
+  </data>
+  <data name="Einrichtung_erneut_starten_bb8dd17b" xml:space="preserve">
+    <value>Запустить настройку снова</value>
+  </data>
+  <data name="Zeigt_noch_einmal_den_Assistenten_vom_ersten_Sta_5d447c25" xml:space="preserve">
+    <value>Снова показывает помощника первого запуска: язык, оформление, модели и видеокарта.</value>
+  </data>
+  <data name="Es_wird_noch_ein_Modell_heruntergeladen_Den_Down_5e5a6942" xml:space="preserve">
+    <value>Модель ещё загружается. Прервать загрузку и закрыть настройку?</value>
+  </data>
+  <data name="Fotos_sichten_entwickeln_und_gestalten_alles_an__bbf33361" xml:space="preserve">
+    <value>Просматривайте, проявляйте и создавайте, всё в одном месте и всё на вашем компьютере.</value>
+  </data>
+  <data name="Ein_paar_Handgriffe_und_FerrumPix_f_hlt_sich_an__35d0f7da" xml:space="preserve">
+    <value>Несколько быстрых решений, и FerrumPix станет по-настоящему вашим.</value>
+  </data>
+  <data name="Einige_Werkzeuge_arbeiten_mit_Modellen_die_auf_d_cb77cec0" xml:space="preserve">
+    <value>Некоторые инструменты работают с моделями, которые выполняются на этом компьютере. Загрузите нужное сейчас или позже в разделе Настройки, Модели.</value>
+  </data>
+  <data name="FerrumPix_kann_rechenintensive_Arbeit_an_die_Gra_a2b6cdca" xml:space="preserve">
+    <value>FerrumPix может передать тяжёлую работу видеокарте.</value>
+  </data>
+  <data name="Nichts_ausgew_hlt_1343a213" xml:space="preserve">
+    <value>Ничего не выбрано</value>
+  </data>
+  <data name="Download_insgesamt_0_8cf81821" xml:space="preserve">
+    <value>Всего к загрузке: {0}</value>
+  </data>
+  <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
+    <value>Все выбранные модели готовы.</value>
+  </data>
+  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
+    <value>Показывает ваши фото на карте в галерее. Фрагменты карты загружаются из интернета.</value>
+  </data>
+  <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
+    <value>Изменить это можно в любой момент в разделе Настройки, Оформление.</value>
+  </data>
+  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
+    <value>Находит лица на ваших фото и объединяет одного и того же человека.</value>
+  </data>
 </root>
