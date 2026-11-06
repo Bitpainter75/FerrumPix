@@ -559,6 +559,20 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Die Knoepfe ueber den Aufnahmetagen: alle, keinen oder nur den neuesten Tag
+        ''' anhaken. Auf einer Karte, die selten geleert wird, stehen Dutzende Tage, und meist will
+        ''' man nur die letzte Aufnahme. Die Liste ist aufsteigend sortiert, der neueste Tag steht
+        ''' also unten.</summary>
+        Public Sub SelectDialogImportDays(mode As String)
+            If DialogImportDays.Count = 0 Then Return
+            Dim newest = DialogImportDays(DialogImportDays.Count - 1)
+            For Each entry In DialogImportDays
+                Dim selected = mode = "All" OrElse (mode = "Newest" AndAlso entry Is newest)
+                entry.SetSelectedQuietly(selected)
+            Next
+            RaiseDialogImportSummary()
+        End Sub
+
         Private Sub RaiseDialogImportScan()
             Me.RaisePropertyChanged(NameOf(HasDialogImportDays))
             Me.RaisePropertyChanged(NameOf(HasDialogImportRawPartners))

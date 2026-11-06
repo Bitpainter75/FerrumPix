@@ -85,6 +85,14 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Setzt den Haken, OHNE den Rueckruf auszuloesen: fuer "Alle", "Keine" und "Nur der
+        ''' letzte Tag", die viele Tage auf einmal umstellen und die Zusammenfassung danach EINMAL
+        ''' neu rechnen lassen.</summary>
+        Public Sub SetSelectedQuietly(value As Boolean)
+            If _isSelected = value Then Return
+            Me.RaiseAndSetIfChanged(_isSelected, value, NameOf(IsSelected))
+        End Sub
+
         ''' <summary>Neue Zahlen, wenn die EXIF-Daten Dateien auf einen anderen Tag verschieben. Der
         ''' Haken bleibt, wie er ist.</summary>
         Public Sub UpdateTotals(newCount As Integer, newBytes As Long)

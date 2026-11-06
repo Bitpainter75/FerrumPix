@@ -20,6 +20,15 @@ Namespace Views
             AvaloniaXamlLoader.Load(Me)
         End Sub
 
+        ''' <summary>"Alle", "Keine" und "Nur der letzte Tag" ueber den Aufnahmetagen; welcher
+        ''' Knopf es war, sagt sein Tag.</summary>
+        Private Sub OnSelectDaysClick(sender As Object, e As RoutedEventArgs)
+            Dim mode = TryCast(TryCast(sender, Control)?.Tag, String)
+            If mode Is Nothing Then Return
+            TryCast(DataContext, MainWindowViewModel)?.SelectDialogImportDays(mode)
+            e.Handled = True
+        End Sub
+
         Private Sub OnRefreshSourcesClick(sender As Object, e As RoutedEventArgs)
             TryCast(DataContext, MainWindowViewModel)?.RefreshDialogImportSources()
             e.Handled = True

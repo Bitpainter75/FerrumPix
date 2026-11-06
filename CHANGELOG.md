@@ -24,6 +24,9 @@
   sidebar with heart, thumbs and colour dots, and the rating list shows stars. Every condition can
   now also ask whether a field is empty or not empty, and the search dialog is wider.
 
+- **Import**: the list of shooting days has buttons to tick all days, none, or only the latest day,
+  so a card that is rarely cleared no longer means unticking dozens of days by hand.
+
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the
   filmstrip, so the strip moves instead of the selection.

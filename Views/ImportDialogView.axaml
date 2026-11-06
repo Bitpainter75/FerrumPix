@@ -41,11 +41,21 @@
             <TextBlock Text="Mit Unterordnern"/>
         </CheckBox>
 
-        <!-- AUFNAHMETAGE: je Tag ein Haken, alle ab Werk an. -->
-        <TextBlock Text="Aufnahmetage"
-                   IsVisible="{Binding HasDialogImportDays}"
-                   FontSize="{DynamicResource FP.Font.Small}"
-                   Foreground="{DynamicResource FP.Text.Secondary}"/>
+        <!-- AUFNAHMETAGE: je Tag ein Haken, alle ab Werk an. Rechts daneben alle, keinen oder nur
+             den neuesten Tag anhaken; eine selten geleerte Karte traegt Dutzende Tage. -->
+        <DockPanel IsVisible="{Binding HasDialogImportDays}">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                <Button Classes="ghost" Padding="8,2" Click="OnSelectDaysClick" Tag="All"
+                        FontSize="{DynamicResource FP.Font.Small}" Content="Alle"/>
+                <Button Classes="ghost" Padding="8,2" Click="OnSelectDaysClick" Tag="None"
+                        FontSize="{DynamicResource FP.Font.Small}" Content="Keine"/>
+                <Button Classes="ghost" Padding="8,2" Click="OnSelectDaysClick" Tag="Newest"
+                        FontSize="{DynamicResource FP.Font.Small}" Content="Nur der letzte Tag"/>
+            </StackPanel>
+            <TextBlock Text="Aufnahmetage" VerticalAlignment="Center"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+        </DockPanel>
         <Border IsVisible="{Binding HasDialogImportDays}"
                 BorderBrush="{DynamicResource FP.Border.Subtle}"
                 BorderThickness="1"

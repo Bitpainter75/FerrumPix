@@ -11173,4 +11173,7 @@
   <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
     <value>여러 표시나 레이블: 그중 하나만 맞으면 됩니다.</value>
   </data>
+  <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
+    <value>마지막 날만</value>
+  </data>
 </root>

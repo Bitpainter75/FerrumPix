@@ -11127,4 +11127,7 @@
   <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
     <value>多个标记或标签：满足其中一个即可。</value>
   </data>
+  <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
+    <value>仅最近一天</value>
+  </data>
 </root>

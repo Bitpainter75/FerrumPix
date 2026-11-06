@@ -11129,4 +11129,7 @@
   <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
     <value>Più contrassegni o etichette: ne basta uno.</value>
   </data>
+  <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
+    <value>Solo l'ultimo giorno</value>
+  </data>
 </root>

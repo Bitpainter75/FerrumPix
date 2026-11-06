@@ -11173,4 +11173,7 @@
   <data name="Mehrere_Markierungen_oder_Etiketten_eines_davon__f4f22d1f" xml:space="preserve">
     <value>कई चिह्न या लेबल: उनमें से कोई एक काफ़ी है।</value>
   </data>
+  <data name="Nur_der_letzte_Tag_745dc702" xml:space="preserve">
+    <value>केवल अंतिम दिन</value>
+  </data>
 </root>
