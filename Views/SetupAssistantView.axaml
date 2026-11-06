@@ -122,6 +122,20 @@
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="14,12"/>
         </Style>
+        <!-- Die Karten der Modellseite: knappes Polster oben und unten. Gleich hoch macht sie das
+             Raster (UniformGrid gibt jeder Zelle die Hoehe der hoechsten), nicht eine feste Hoehe:
+             die liess bei einzeiligem Satz oben und unten viel Luft. Der Satz hat hoechstens zwei
+             Zeilen und endet sonst mit Auslassungspunkten. -->
+        <Style Selector="Border.model-card">
+            <Setter Property="Padding" Value="14,9"/>
+        </Style>
+        <Style Selector="TextBlock.card-text">
+            <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+            <Setter Property="FontSize" Value="{DynamicResource FP.Font.Body}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="MaxLines" Value="2"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
         <Style Selector="icons|SvgIcon.setup-accent">
             <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
         </Style>
@@ -132,7 +146,7 @@
         <Border Background="{DynamicResource FP.Bg.Elevated}"
                 CornerRadius="16"
                 BoxShadow="0 24 70 0 #B0000000"
-                MaxWidth="860" MaxHeight="620"
+                MaxWidth="860" MaxHeight="700"
                 Margin="24"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
             <!-- DIE RUNDUNG: ClipToBounds schneidet Kinder nur rechteckig zu; ein Bild als eigenes
@@ -348,8 +362,10 @@
                                  vorhandene stehen an und gesperrt. Kartenansicht und Personen schliessen das
                                  Raster unten ab. Die Kartenansicht fragt beim Einschalten nach
                                  (AskAndEnableMapViewAsync); "Personen erkennen" (PeopleEnabled) fragt ohne
-                                 Modell sofort nach dessen Bedingung, geladen wird mit Weiter. -->
-                            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" MaxHeight="330">
+                                 Modell sofort nach dessen Bedingung, geladen wird mit Weiter. Ohne eigene
+                                 Hoehengrenze: die Karte des Assistenten waechst bis 700 und zeigt alle Karten;
+                                 gerollt wird nur, wenn das Fenster kleiner ist. -->
+                            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel Margin="-4,-4,10,0">
                                     <ItemsControl ItemsSource="{Binding ModelOptions}">
                                         <ItemsControl.ItemsPanel>
@@ -357,13 +373,12 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Classes="setup-card" Margin="4">
+                                                <Border Classes="setup-card model-card" Margin="4">
                                                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                         <icons:SvgIcon Classes="setup-accent" Source="{Binding IconSource}" Width="24" Height="24" VerticalAlignment="Center"/>
                                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                                             <TextBlock Classes="no-translate" Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                            <TextBlock Classes="no-translate" Text="{Binding Description}" Foreground="{DynamicResource FP.Text.Secondary}"
-                                                                       FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                            <TextBlock Classes="no-translate card-text" Text="{Binding ShortDescription}"/>
                                                         </StackPanel>
                                                         <ToggleSwitch Grid.Column="2" IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanChoose}"
                                                                       OnContent="" OffContent="" VerticalAlignment="Center"/>
@@ -373,22 +388,22 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                     <Grid ColumnDefinitions="*,*">
-                                            <Border Classes="setup-card" Margin="4" DataContext="{Binding Settings}">
+                                            <Border Classes="setup-card model-card" Margin="4" DataContext="{Binding Settings}">
                                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                     <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/map-trifold.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                                         <TextBlock Text="Kartenansicht" FontWeight="SemiBold"/>
-                                                        <TextBlock Text="Zeigt deine Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                        <TextBlock Classes="card-text" Text="Deine Fotos auf einer Karte, mit Kacheln aus dem Internet."/>
                                                     </StackPanel>
                                                     <ToggleSwitch Grid.Column="2" IsChecked="{Binding MapViewEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                                                 </Grid>
                                             </Border>
-                                            <Border Grid.Column="1" Classes="setup-card" Margin="4" IsVisible="{Binding HasPeopleOption}">
+                                            <Border Grid.Column="1" Classes="setup-card model-card" Margin="4" IsVisible="{Binding HasPeopleOption}">
                                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                     <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/users-three.svg" Width="24" Height="24" VerticalAlignment="Center"/>
                                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                                         <TextBlock Text="Personen erkennen" FontWeight="SemiBold"/>
-                                                        <TextBlock Text="Findet Gesichter in deinen Fotos und fasst dieselbe Person zusammen." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                                        <TextBlock Classes="card-text" Text="Findet Gesichter und fasst dieselbe Person zusammen."/>
                                                     </StackPanel>
                                                     <ToggleSwitch Grid.Column="2" IsChecked="{Binding PeopleEnabled}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                                                 </Grid>

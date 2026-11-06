@@ -11277,13 +11277,37 @@
   <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
     <value>Alle valgte modeller er klare.</value>
   </data>
-  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
-    <value>Viser bildene dine på et kart i galleriet. Kartflisene kommer fra internett.</value>
-  </data>
   <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
     <value>Du kan endre det når som helst under Innstillinger, Utseende.</value>
   </data>
-  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
-    <value>Finner ansikter i bildene dine og samler samme person.</value>
+  <data name="Ein_Objekt_anklicken_die_Maske_entsteht_von_selb_3371e6e9" xml:space="preserve">
+    <value>Klikk på et objekt, masken lages av seg selv.</value>
+  </data>
+  <data name="Masken_nach_Entfernung_und_Unsch_rfe_nach_Tiefe_3b06c353" xml:space="preserve">
+    <value>Masker etter avstand og uskarphet etter dybde.</value>
+  </data>
+  <data name="St_rendes_entfernen_der_Hintergrund_wird_erg_nzt_b927fafd" xml:space="preserve">
+    <value>Fjern forstyrrende ting, bakgrunnen fylles inn.</value>
+  </data>
+  <data name="Rauschen_aus_Fotos_mit_hoher_ISO_entfernen_c3586a29" xml:space="preserve">
+    <value>Fjern støy fra bilder med høy ISO.</value>
+  </data>
+  <data name="Fotos_zwei_oder_vierfach_vergr_ern_d687e15c" xml:space="preserve">
+    <value>Forstørr bilder to eller fire ganger.</value>
+  </data>
+  <data name="Bildinhalte_erkennen_und_als_Stichw_rter_ablegen_0f9e72a9" xml:space="preserve">
+    <value>Gjenkjenn bildeinnhold og lagre det som nøkkelord.</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Foto_569e683e" xml:space="preserve">
+    <value>Stedsnavn til koordinatene i bildet.</value>
+  </data>
+  <data name="Deine_Fotos_auf_einer_Karte_mit_Kacheln_aus_dem__4f140738" xml:space="preserve">
+    <value>Bildene dine på et kart, med fliser fra internett.</value>
+  </data>
+  <data name="Findet_Gesichter_und_fasst_dieselbe_Person_zusam_284b9729" xml:space="preserve">
+    <value>Finner ansikter og samler samme person.</value>
+  </data>
+  <data name="Zustimmen_e0a817b3" xml:space="preserve">
+    <value>Godta</value>
   </data>
 </root>

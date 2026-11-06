@@ -11237,13 +11237,37 @@
   <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
     <value>Tous les modèles sélectionnés sont prêts.</value>
   </data>
-  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
-    <value>Affiche vos photos sur une carte dans la galerie. Les tuiles de la carte viennent d'Internet.</value>
-  </data>
   <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
     <value>Vous pouvez le modifier à tout moment dans Paramètres, Apparence.</value>
   </data>
-  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
-    <value>Trouve les visages dans vos photos et regroupe la même personne.</value>
+  <data name="Ein_Objekt_anklicken_die_Maske_entsteht_von_selb_3371e6e9" xml:space="preserve">
+    <value>Cliquez sur un objet, le masque se crée tout seul.</value>
+  </data>
+  <data name="Masken_nach_Entfernung_und_Unsch_rfe_nach_Tiefe_3b06c353" xml:space="preserve">
+    <value>Masques selon la distance et flou selon la profondeur.</value>
+  </data>
+  <data name="St_rendes_entfernen_der_Hintergrund_wird_erg_nzt_b927fafd" xml:space="preserve">
+    <value>Retirez ce qui gêne, l'arrière-plan est complété.</value>
+  </data>
+  <data name="Rauschen_aus_Fotos_mit_hoher_ISO_entfernen_c3586a29" xml:space="preserve">
+    <value>Supprimer le bruit des photos à ISO élevé.</value>
+  </data>
+  <data name="Fotos_zwei_oder_vierfach_vergr_ern_d687e15c" xml:space="preserve">
+    <value>Agrandir les photos deux ou quatre fois.</value>
+  </data>
+  <data name="Bildinhalte_erkennen_und_als_Stichw_rter_ablegen_0f9e72a9" xml:space="preserve">
+    <value>Reconnaître le contenu et l'enregistrer en mots-clés.</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Foto_569e683e" xml:space="preserve">
+    <value>Noms de lieux pour les coordonnées de la photo.</value>
+  </data>
+  <data name="Deine_Fotos_auf_einer_Karte_mit_Kacheln_aus_dem__4f140738" xml:space="preserve">
+    <value>Vos photos sur une carte, avec des tuiles d'Internet.</value>
+  </data>
+  <data name="Findet_Gesichter_und_fasst_dieselbe_Person_zusam_284b9729" xml:space="preserve">
+    <value>Trouve les visages et regroupe la même personne.</value>
+  </data>
+  <data name="Zustimmen_e0a817b3" xml:space="preserve">
+    <value>Accepter</value>
   </data>
 </root>

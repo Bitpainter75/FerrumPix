@@ -11281,13 +11281,37 @@
   <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
     <value>선택한 모델이 모두 준비되었습니다.</value>
   </data>
-  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
-    <value>갤러리에서 사진을 지도 위에 표시합니다. 지도 타일은 인터넷에서 가져옵니다.</value>
-  </data>
   <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
     <value>언제든 설정, 모양에서 바꿀 수 있습니다.</value>
   </data>
-  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
-    <value>사진에서 얼굴을 찾아 같은 사람끼리 묶습니다.</value>
+  <data name="Ein_Objekt_anklicken_die_Maske_entsteht_von_selb_3371e6e9" xml:space="preserve">
+    <value>개체를 클릭하면 마스크가 저절로 만들어집니다.</value>
+  </data>
+  <data name="Masken_nach_Entfernung_und_Unsch_rfe_nach_Tiefe_3b06c353" xml:space="preserve">
+    <value>거리에 따른 마스크와 깊이에 따른 흐림.</value>
+  </data>
+  <data name="St_rendes_entfernen_der_Hintergrund_wird_erg_nzt_b927fafd" xml:space="preserve">
+    <value>방해 요소를 지우면 배경이 채워집니다.</value>
+  </data>
+  <data name="Rauschen_aus_Fotos_mit_hoher_ISO_entfernen_c3586a29" xml:space="preserve">
+    <value>높은 ISO 사진의 노이즈를 제거합니다.</value>
+  </data>
+  <data name="Fotos_zwei_oder_vierfach_vergr_ern_d687e15c" xml:space="preserve">
+    <value>사진을 2배 또는 4배로 확대합니다.</value>
+  </data>
+  <data name="Bildinhalte_erkennen_und_als_Stichw_rter_ablegen_0f9e72a9" xml:space="preserve">
+    <value>이미지 내용을 인식해 키워드로 저장합니다.</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Foto_569e683e" xml:space="preserve">
+    <value>사진의 좌표에 장소 이름을 붙입니다.</value>
+  </data>
+  <data name="Deine_Fotos_auf_einer_Karte_mit_Kacheln_aus_dem__4f140738" xml:space="preserve">
+    <value>인터넷 타일로 사진을 지도에 표시합니다.</value>
+  </data>
+  <data name="Findet_Gesichter_und_fasst_dieselbe_Person_zusam_284b9729" xml:space="preserve">
+    <value>얼굴을 찾아 같은 사람끼리 묶습니다.</value>
+  </data>
+  <data name="Zustimmen_e0a817b3" xml:space="preserve">
+    <value>동의</value>
   </data>
 </root>

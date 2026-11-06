@@ -38,6 +38,24 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Ein kurzer Satz fuer die Karte im Assistenten: nur, was die Funktion tut. Die
+        ''' Beschreibungen der Einstellungen nennen dazu Modellzahl, Groesse und Herkunft; hier
+        ''' liessen sie die Karten ungleich hoch werden und sagen dem Einsteiger nichts.</summary>
+        Public ReadOnly Property ShortDescription As String
+            Get
+                Select Case If(Group.Files.FirstOrDefault()?.Group, "")
+                    Case "Objektauswahl" : Return LocalizationService.T("Ein Objekt anklicken, die Maske entsteht von selbst.")
+                    Case "Tiefe" : Return LocalizationService.T("Masken nach Entfernung und Unschärfe nach Tiefe.")
+                    Case "Objekt entfernen" : Return LocalizationService.T("Störendes entfernen, der Hintergrund wird ergänzt.")
+                    Case "Entrauschen" : Return LocalizationService.T("Rauschen aus Fotos mit hoher ISO entfernen.")
+                    Case "Hochskalieren" : Return LocalizationService.T("Fotos zwei- oder vierfach vergrößern.")
+                    Case "Automatische Stichwörter" : Return LocalizationService.T("Bildinhalte erkennen und als Stichwörter ablegen.")
+                    Case "Orte" : Return LocalizationService.T("Ortsnamen zu den Koordinaten im Foto.")
+                    Case Else : Return Group.Description
+                End Select
+            End Get
+        End Property
+
         ''' <summary>Das Symbol der Karte, nach der festen Gruppe der Dateien (nicht nach dem
         ''' uebersetzten Namen).</summary>
         Public ReadOnly Property IconSource As String
@@ -159,9 +177,11 @@ Namespace ViewModels
                     _peopleChosen = IsPeopleModelInstalled AndAlso _main.Settings IsNot Nothing AndAlso _main.Settings.FaceRecognitionEnabled
                     _peopleChosenInitialized = True
                 End If
-                Return _peopleChosen
+                ' Waehrend die Rueckfrage offen ist, steht der Schalter so, wie er geklickt wurde.
+                Return _peopleChosen OrElse _peopleAsking
             End Get
             Set(value As Boolean)
+                If _peopleAsking Then Return
                 If PeopleEnabled = value Then Return
                 If Not value Then
                     _peopleChosen = False
@@ -176,9 +196,12 @@ Namespace ViewModels
                     If _main.Settings IsNot Nothing Then _main.Settings.FaceRecognitionEnabled = True
                     Return
                 End If
-                ' Der Schalter hat sich schon umgelegt; zurueck, bis die Rueckfrage bestaetigt ist,
-                ' und zwar erst nach dem laufenden Bindungsdurchgang (wie bei der Kartenansicht).
-                Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.RaisePropertyChanged(NameOf(PeopleEnabled)))
+                ' Der Schalter hat sich schon umgelegt. Er BLEIBT so, solange die Rueckfrage offen ist
+                ' (_peopleAsking), und geht erst bei Ablehnung zurueck. Ihn sofort zurueckzumelden
+                ' half nicht: die Bindung hatte zuletzt "aus" gelesen, sah in einem erneuten "aus"
+                ' keine Aenderung und liess den Schalter stehen. Erst ein echter Wechsel von "an"
+                ' nach "aus" stellt ihn zurueck.
+                _peopleAsking = True
                 Dim ignored = AskAndChoosePeopleAsync()
             End Set
         End Property
@@ -188,15 +211,22 @@ Namespace ViewModels
                 Dim goAhead = Await _main.ShowConfirmAsync(
                     LocalizationService.T("Nur für nicht-kommerzielle Forschung"),
                     LocalizationService.T("ArcFace ResNet100 wird aus dem ONNX Model Zoo auf Hugging Face heruntergeladen. Die vortrainierten Gewichte stammen laut InsightFace aus Daten, die nur für nicht-kommerzielle Forschung freigegeben sind. Bei kommerzieller Nutzung von FerrumPix darf das Modell nicht heruntergeladen oder verwendet werden; die übrigen Funktionen bleiben verfügbar."),
-                    "Herunterladen", "Abbrechen")
-                If Not goAhead Then Return
-                _peopleChosen = True
-                Me.RaisePropertyChanged(NameOf(PeopleEnabled))
-                RaiseModelSelectionChanged()
+                    "Zustimmen", "Abbrechen")
+                _peopleChosen = goAhead
             Catch ex As Exception
                 DiagnosticLogService.LogException("SetupAssistant.ChoosePeople", ex)
+                _peopleChosen = False
+            Finally
+                ' Erst jetzt endet das Fragen: bei Ablehnung wechselt der gemeldete Wert von "an"
+                ' nach "aus", und genau dieser Wechsel stellt den Schalter zurueck.
+                _peopleAsking = False
+                Me.RaisePropertyChanged(NameOf(PeopleEnabled))
+                RaiseModelSelectionChanged()
             End Try
         End Function
+
+        ''' <summary>Die Rueckfrage zum Personenmodell ist gerade offen.</summary>
+        Private _peopleAsking As Boolean
 
         ''' <summary>Nach einem gelungenen Download: ist der Schalter an und das Modell jetzt da,
         ''' die Erkennung einschalten. Erst jetzt, sonst oeffnete der Setter der Einstellungen

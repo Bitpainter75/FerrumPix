@@ -23,7 +23,7 @@
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto">
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                        <TextBlock Text="{Binding DialogTitle}"
+                        <TextBlock Classes="no-translate" Text="{Binding DialogTitle}"
                                    FontSize="{DynamicResource FP.Font.Heading}"
                                    FontWeight="SemiBold"/>
                         <TextBlock Grid.Row="1"
@@ -68,7 +68,7 @@
                                     Spacing="8"
                                     IsVisible="{Binding DialogShowsWatermarkPreset}">
                             <views:WatermarkFormView />
-                            <TextBlock Text="{Binding DialogBatchOverwriteUnavailableHint}"
+                            <TextBlock Classes="no-translate" Text="{Binding DialogBatchOverwriteUnavailableHint}"
                                        IsVisible="{Binding !IsDialogBatchOverwriteAvailable}"
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Small}"
@@ -377,7 +377,7 @@
                                                                 HorizontalAlignment="Stretch"
                                                                 HorizontalContentAlignment="Stretch"
                                                                 Click="OnDialogFormatOptionClick">
-                                                            <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                                                            <TextBlock Classes="no-translate" Text="{Binding}" VerticalAlignment="Center"/>
                                                         </Button>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -385,7 +385,7 @@
                                         </Flyout>
                                     </Button.Flyout>
                                     <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="{Binding DialogSelectedFormat}"
+                                        <TextBlock Classes="no-translate" Text="{Binding DialogSelectedFormat}"
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <icons:SvgIcon Grid.Column="1"
@@ -676,17 +676,17 @@
                     <Button Classes="ghost"
                             Command="{Binding DialogCancelCommand}"
                             IsVisible="{Binding IsDialogCancelVisible}">
-                        <TextBlock Text="{Binding DialogCancelText}"/>
+                        <TextBlock Classes="no-translate" Text="{Binding DialogCancelText}"/>
                     </Button>
                     <Button Classes="ghost"
                             Command="{Binding DialogSecondaryCommand}"
                             IsVisible="{Binding IsDialogSecondaryVisible}">
-                        <TextBlock Text="{Binding DialogSecondaryText}"/>
+                        <TextBlock Classes="no-translate" Text="{Binding DialogSecondaryText}"/>
                     </Button>
                     <Button Classes="accent"
                             Command="{Binding DialogConfirmCommand}"
                             IsEnabled="{Binding IsDialogPrimaryEnabled}">
-                        <TextBlock Text="{Binding DialogConfirmText}"/>
+                        <TextBlock Classes="no-translate" Text="{Binding DialogConfirmText}"/>
                     </Button>
                 </StackPanel>
 
@@ -721,7 +721,7 @@
                         </Button>
                         <Button Classes="accent"
                                 Command="{Binding DialogConfirmCommand}">
-                            <TextBlock Text="{Binding DialogConfirmText}"/>
+                            <TextBlock Classes="no-translate" Text="{Binding DialogConfirmText}"/>
                         </Button>
                     </StackPanel>
                 </Grid>

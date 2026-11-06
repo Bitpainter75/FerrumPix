@@ -61,6 +61,9 @@
 
 ### Fixes
 
+- Questions and messages no longer show the button text or title of an earlier one, for example
+  Remove where Download belongs.
+
 - Film negatives: a converted negative no longer turns pale on its own a moment after the
   conversion is switched on, for color and black and white film alike.
 

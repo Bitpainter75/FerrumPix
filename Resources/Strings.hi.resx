@@ -11281,13 +11281,37 @@
   <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
     <value>सभी चुने गए मॉडल तैयार हैं।</value>
   </data>
-  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
-    <value>गैलरी में आपकी तस्वीरें मानचित्र पर दिखाता है। मानचित्र टाइलें इंटरनेट से आती हैं।</value>
-  </data>
   <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
     <value>इसे कभी भी सेटिंग्स, रूप में बदला जा सकता है।</value>
   </data>
-  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
-    <value>आपकी तस्वीरों में चेहरे ढूँढता है और एक ही व्यक्ति को एक साथ रखता है।</value>
+  <data name="Ein_Objekt_anklicken_die_Maske_entsteht_von_selb_3371e6e9" xml:space="preserve">
+    <value>किसी वस्तु पर क्लिक करें, मास्क अपने आप बन जाता है।</value>
+  </data>
+  <data name="Masken_nach_Entfernung_und_Unsch_rfe_nach_Tiefe_3b06c353" xml:space="preserve">
+    <value>दूरी के अनुसार मास्क और गहराई के अनुसार धुंधलापन।</value>
+  </data>
+  <data name="St_rendes_entfernen_der_Hintergrund_wird_erg_nzt_b927fafd" xml:space="preserve">
+    <value>बाधक चीज़ें हटाएँ, पृष्ठभूमि भर दी जाती है।</value>
+  </data>
+  <data name="Rauschen_aus_Fotos_mit_hoher_ISO_entfernen_c3586a29" xml:space="preserve">
+    <value>ऊँचे ISO वाली तस्वीरों से नॉइज़ हटाएँ।</value>
+  </data>
+  <data name="Fotos_zwei_oder_vierfach_vergr_ern_d687e15c" xml:space="preserve">
+    <value>तस्वीरें दो या चार गुना बड़ी करें।</value>
+  </data>
+  <data name="Bildinhalte_erkennen_und_als_Stichw_rter_ablegen_0f9e72a9" xml:space="preserve">
+    <value>तस्वीर की सामग्री पहचानें और कीवर्ड के रूप में रखें।</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Foto_569e683e" xml:space="preserve">
+    <value>तस्वीर के निर्देशांकों के लिए स्थानों के नाम।</value>
+  </data>
+  <data name="Deine_Fotos_auf_einer_Karte_mit_Kacheln_aus_dem__4f140738" xml:space="preserve">
+    <value>आपकी तस्वीरें मानचित्र पर, इंटरनेट की टाइलों के साथ।</value>
+  </data>
+  <data name="Findet_Gesichter_und_fasst_dieselbe_Person_zusam_284b9729" xml:space="preserve">
+    <value>चेहरे ढूँढता है और एक ही व्यक्ति को एक साथ रखता है।</value>
+  </data>
+  <data name="Zustimmen_e0a817b3" xml:space="preserve">
+    <value>सहमत हैं</value>
   </data>
 </root>

@@ -11281,13 +11281,37 @@
   <data name="Alle_ausgew_hlten_Modelle_sind_bereit_fcb3a710" xml:space="preserve">
     <value>Seçilen tüm modeller hazır.</value>
   </data>
-  <data name="Zeigt_deine_Fotos_in_der_Galerie_auf_einer_Karte_415c67d3" xml:space="preserve">
-    <value>Fotoğraflarınızı galeride bir harita üzerinde gösterir. Harita döşemeleri internetten gelir.</value>
-  </data>
   <data name="ndern_l_sst_es_sich_jederzeit_unter_Einstellunge_3dc98b97" xml:space="preserve">
     <value>İstediğiniz zaman Ayarlar, Görünüm altında değiştirebilirsiniz.</value>
   </data>
-  <data name="Findet_Gesichter_in_deinen_Fotos_und_fasst_diese_c99943d8" xml:space="preserve">
-    <value>Fotoğraflarınızdaki yüzleri bulur ve aynı kişiyi bir araya getirir.</value>
+  <data name="Ein_Objekt_anklicken_die_Maske_entsteht_von_selb_3371e6e9" xml:space="preserve">
+    <value>Bir nesneye tıklayın, maske kendiliğinden oluşur.</value>
+  </data>
+  <data name="Masken_nach_Entfernung_und_Unsch_rfe_nach_Tiefe_3b06c353" xml:space="preserve">
+    <value>Uzaklığa göre maskeler ve derinliğe göre bulanıklık.</value>
+  </data>
+  <data name="St_rendes_entfernen_der_Hintergrund_wird_erg_nzt_b927fafd" xml:space="preserve">
+    <value>Dikkat dağıtanı kaldırın, arka plan tamamlanır.</value>
+  </data>
+  <data name="Rauschen_aus_Fotos_mit_hoher_ISO_entfernen_c3586a29" xml:space="preserve">
+    <value>Yüksek ISO'lu fotoğraflardan gürültüyü kaldırın.</value>
+  </data>
+  <data name="Fotos_zwei_oder_vierfach_vergr_ern_d687e15c" xml:space="preserve">
+    <value>Fotoğrafları iki ya da dört kat büyütün.</value>
+  </data>
+  <data name="Bildinhalte_erkennen_und_als_Stichw_rter_ablegen_0f9e72a9" xml:space="preserve">
+    <value>Görüntü içeriğini tanıyıp anahtar kelime olarak kaydedin.</value>
+  </data>
+  <data name="Ortsnamen_zu_den_Koordinaten_im_Foto_569e683e" xml:space="preserve">
+    <value>Fotoğraftaki koordinatlar için yer adları.</value>
+  </data>
+  <data name="Deine_Fotos_auf_einer_Karte_mit_Kacheln_aus_dem__4f140738" xml:space="preserve">
+    <value>Fotoğraflarınız haritada, internetten gelen döşemelerle.</value>
+  </data>
+  <data name="Findet_Gesichter_und_fasst_dieselbe_Person_zusam_284b9729" xml:space="preserve">
+    <value>Yüzleri bulur ve aynı kişiyi bir araya getirir.</value>
+  </data>
+  <data name="Zustimmen_e0a817b3" xml:space="preserve">
+    <value>Kabul et</value>
   </data>
 </root>
