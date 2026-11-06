@@ -187,43 +187,76 @@ Namespace Services
         End Class
 
         Private Shared Function WriteJpegKeywords(path As String, keywords As List(Of String), fields As KeywordFileFields) As Boolean
+            Dim xmpBuilder As Func(Of Byte(), Byte()) = Nothing
+            Dim iptcBuilder As Func(Of Byte(), Byte()) = Nothing
+            If (fields And KeywordFileFields.Xmp) <> 0 Then xmpBuilder = KeywordXmpBuilder(keywords)
+            If (fields And KeywordFileFields.Iptc) <> 0 Then
+                iptcBuilder = Function(existing) BuildKeywordPhotoshopPayload(existing, keywords)
+            End If
+            Return RewriteJpegXmpAndIptc(path, xmpBuilder, iptcBuilder)
+        End Function
+
+        ''' <summary>Der XMP-Bauer der Stichwoerter fuer alle drei Formate. Ein unlesbares Paket
+        ''' WIRFT (siehe <see cref="RewriteJpegXmpAndIptc"/>): "nichts zu tun" und "geht nicht" sind
+        ''' zwei Antworten, und nur die erste darf den anderen Block allein schreiben lassen.</summary>
+        Private Shared Function KeywordXmpBuilder(keywords As List(Of String)) As Func(Of Byte(), Byte())
+            Return Function(existing)
+                       Dim failed = False
+                       Dim packet = BuildKeywordXmpPacket(existing, keywords, failed)
+                       If failed Then Throw New InvalidDataException("XMP-Paket nicht lesbar")
+                       Return packet
+                   End Function
+        End Function
+
+        ''' <summary>Schreibt XMP-Paket und Photoshop-Block (IPTC) eines JPEG neu, ohne die
+        ''' Bilddaten anzufassen. Gemeinsamer Weg fuer Stichwoerter und die beschreibenden Felder
+        ''' (ImageProcessorDescription.vb), damit beide dieselben Regeln haben.
+        '''
+        ''' Jeder Bauer bekommt den vorhandenen Inhalt (XMP ohne Kennung, APP13 samt Kennung) oder
+        ''' Nothing und gibt den neuen zurueck; Nothing heisst dort "nichts zu tun". Ein Bauer, der
+        ''' Nothing ist, laesst sein Segment unangetastet.
+        '''
+        ''' ALLES ODER NICHTS: laesst sich ein verlangter Block nicht sicher bauen (unlesbar, fremder
+        ''' Zeichensatz, ueber mehrere Segmente verteilt, zu gross fuer ein Segment), WIRFT der Bauer
+        ''' bzw. diese Funktion, und zwar bevor ein Byte geschrieben ist. Wuerde nur der andere Block
+        ''' neu geschrieben, stuende in der Datei ein neuer Wert neben einem alten, und je nach Leser
+        ''' gewaenne der alte. Die Aufrufer fangen die Ausnahme und melden False.</summary>
+        Private Shared Function RewriteJpegXmpAndIptc(path As String,
+                                                      xmpBuilder As Func(Of Byte(), Byte()),
+                                                      iptcBuilder As Func(Of Byte(), Byte())) As Boolean
             Dim segments As New List(Of JpegHeaderSegment)()
             Dim headerEnd As Long = 0
-            If Not ReadJpegHeaderSegments(path, segments, headerEnd) Then Return False
+            If Not ReadJpegHeaderSegments(path, segments, headerEnd) Then Throw New InvalidDataException("JPEG-Kopf nicht lesbar: " & path)
 
             Dim xmpIndex = segments.FindIndex(Function(s) IsJpegXmpSegment(s))
             Dim app13Index = segments.FindIndex(Function(s) IsJpegPhotoshopSegment(s))
-            If segments.Where(Function(s) IsJpegPhotoshopSegment(s)).Skip(1).Any() Then
+            If iptcBuilder IsNot Nothing AndAlso segments.Where(Function(s) IsJpegPhotoshopSegment(s)).Skip(1).Any() Then
                 ' Ein IPTC-Block ueber mehrere Segmente verteilt: zu selten, um ihn sicher
-                ' zusammenzusetzen, und ein halber waere schlimmer als keiner.
-                fields = fields And Not KeywordFileFields.Iptc
+                ' zusammenzusetzen, und ein halber waere schlimmer als keiner. Nur das XMP zu
+                ' schreiben hiesse aber, den alten IPTC-Wert neben dem neuen stehen zu lassen.
+                Throw New InvalidDataException("IPTC-Block ueber mehrere Segmente: " & path)
             End If
 
             Dim newXmp As Byte() = Nothing
             Dim newApp13 As Byte() = Nothing
-            If (fields And KeywordFileFields.Xmp) <> 0 Then
+            If xmpBuilder IsNot Nothing Then
                 Dim existing As Byte() = Nothing
                 If xmpIndex >= 0 Then
                     Dim payload = segments(xmpIndex).Payload
                     existing = New Byte(payload.Length - JpegXmpSignature.Length - 1) {}
                     Buffer.BlockCopy(payload, JpegXmpSignature.Length, existing, 0, existing.Length)
                 End If
-                Dim failed = False
-                Dim packet = BuildKeywordXmpPacket(existing, keywords, failed)
+                Dim packet = xmpBuilder(existing)
                 If packet IsNot Nothing Then
                     newXmp = CombineBytes(JpegXmpSignature, packet)
-                    If newXmp.Length > 65533 Then
-                        DiagnosticLogService.LogAlways("Keywords.Jpeg", "XMP passt nicht mehr in ein Segment: " & path)
-                        newXmp = Nothing
-                    End If
+                    If newXmp.Length > 65533 Then Throw New InvalidDataException("XMP passt nicht mehr in ein Segment: " & path)
                 End If
             End If
-            If (fields And KeywordFileFields.Iptc) <> 0 Then
+            If iptcBuilder IsNot Nothing Then
                 Dim existing = If(app13Index >= 0, segments(app13Index).Payload, Nothing)
-                newApp13 = BuildKeywordPhotoshopPayload(existing, keywords)
+                newApp13 = iptcBuilder(existing)
                 If newApp13 IsNot Nothing AndAlso newApp13.Length > 65533 Then
-                    DiagnosticLogService.LogAlways("Keywords.Jpeg", "IPTC passt nicht mehr in ein Segment: " & path)
-                    newApp13 = Nothing
+                    Throw New InvalidDataException("IPTC passt nicht mehr in ein Segment: " & path)
                 End If
             End If
             If newXmp Is Nothing AndAlso newApp13 Is Nothing Then Return False
@@ -381,7 +414,8 @@ Namespace Services
         End Class
 
         ''' <summary>Der neue Inhalt des APP13-Segments mit den Stichwoertern als IPTC 2:25, oder
-        ''' Nothing, wenn nichts zu tun ist oder der vorhandene Block nicht sicher zerlegbar ist.
+        ''' Nothing, wenn nichts zu tun ist. Ist der vorhandene Block nicht sicher zerlegbar, wirft
+        ''' sie (siehe <see cref="BuildPhotoshopIptcPayload"/>).
         '''
         ''' Drei Regeln: die uebrigen Datensaetze und Ressourcen bleiben, wie sie sind; nicht-ASCII
         ''' wird nur geschrieben, wenn der Block UTF-8 erklaert (1:90) oder noch gar keine
@@ -393,53 +427,65 @@ Namespace Services
         ''' geschrieben: gekuerzt kaeme beim naechsten Einlesen ein anderes Wort zurueck, und die
         ''' gaengigen Leser nehmen auch laengere an.</summary>
         Private Shared Function BuildKeywordPhotoshopPayload(existing As Byte(), keywords As List(Of String)) As Byte()
+            Return BuildPhotoshopIptcPayload(existing,
+                                             New Dictionary(Of Integer, List(Of String)) From {{25, keywords}})
+        End Function
+
+        ''' <summary>Der neue Inhalt des APP13-Segments, in dem die genannten Datensaetze von
+        ''' Record 2 ERSETZT sind: je Nummer die neue Werteliste, eine leere Liste entfernt die
+        ''' Nummer. Gemeinsamer Weg fuer Stichwoerter (2:25) und die beschreibenden Felder; die
+        ''' Regeln stehen bei <see cref="BuildKeywordPhotoshopPayload"/>. Nothing, wenn nichts zu
+        ''' tun ist; ist der vorhandene Block nicht sicher zerlegbar oder traegt er einen fremden
+        ''' Zeichensatz, WIRFT sie (siehe <see cref="RewriteJpegXmpAndIptc"/>, alles oder nichts).</summary>
+        Private Shared Function BuildPhotoshopIptcPayload(existing As Byte(),
+                                                          replacements As Dictionary(Of Integer, List(Of String))) As Byte()
+            Dim hasValues = replacements.Values.Any(Function(v) v IsNot Nothing AndAlso v.Count > 0)
             Dim resources As New List(Of PhotoshopResource)()
             If existing IsNot Nothing Then
-                If Not ParsePhotoshopResources(existing, resources) Then
-                    DiagnosticLogService.LogAlways("Keywords.Iptc", "Photoshop-Block nicht zerlegbar")
-                    Return Nothing
-                End If
-            ElseIf keywords.Count = 0 Then
+                If Not ParsePhotoshopResources(existing, resources) Then Throw New InvalidDataException("Photoshop-Block nicht zerlegbar")
+            ElseIf Not hasValues Then
                 Return Nothing
             End If
 
             Dim iptcResource = resources.FirstOrDefault(Function(r) r.Id = &H404 AndAlso IsEightBim(r.Signature))
             Dim dataSets As New List(Of IptcDataSet)()
             If iptcResource IsNot Nothing Then
-                If Not ParseIptcDataSets(iptcResource.Data, dataSets) Then
-                    DiagnosticLogService.LogAlways("Keywords.Iptc", "IPTC-Block nicht zerlegbar")
-                    Return Nothing
-                End If
-            ElseIf keywords.Count = 0 Then
+                If Not ParseIptcDataSets(iptcResource.Data, dataSets) Then Throw New InvalidDataException("IPTC-Block nicht zerlegbar")
+            ElseIf Not hasValues Then
                 Return Nothing
             End If
 
-            dataSets.RemoveAll(Function(d) d.Record = 2 AndAlso d.DataSet = 25)
+            dataSets.RemoveAll(Function(d) d.Record = 2 AndAlso replacements.ContainsKey(d.DataSet))
 
-            Dim needsUtf8 = keywords.Any(Function(k) k.Any(Function(c) AscW(c) > 127))
+            Dim needsUtf8 = replacements.Values.Any(Function(list) list IsNot Nothing AndAlso
+                                                        list.Any(Function(k) k.Any(Function(c) AscW(c) > 127)))
             Dim charset = dataSets.FirstOrDefault(Function(d) d.Record = 1 AndAlso d.DataSet = 90)
             If needsUtf8 Then
                 If charset Is Nothing Then
                     Dim lastRecord1 = dataSets.FindLastIndex(Function(d) d.Record = 1)
                     dataSets.Insert(lastRecord1 + 1, New IptcDataSet With {.Record = 1, .DataSet = 90, .Value = IptcUtf8Marker})
                 ElseIf Not charset.Value.SequenceEqual(IptcUtf8Marker) Then
-                    DiagnosticLogService.LogAlways("Keywords.Iptc", "IPTC-Block mit fremdem Zeichensatz, Stichwoerter nicht geschrieben")
-                    Return Nothing
+                    Throw New InvalidDataException("IPTC-Block mit fremdem Zeichensatz")
                 End If
             End If
 
-            If keywords.Count > 0 AndAlso Not dataSets.Any(Function(d) d.Record = 2 AndAlso d.DataSet = 0) Then
+            If hasValues AndAlso Not dataSets.Any(Function(d) d.Record = 2 AndAlso d.DataSet = 0) Then
                 Dim afterRecord1 = dataSets.FindLastIndex(Function(d) d.Record < 2)
                 dataSets.Insert(afterRecord1 + 1, New IptcDataSet With {.Record = 2, .DataSet = 0, .Value = {CByte(0), CByte(4)}})
             End If
 
-            Dim insertAt = dataSets.FindIndex(Function(d) d.Record > 2 OrElse (d.Record = 2 AndAlso d.DataSet > 25))
-            If insertAt < 0 Then insertAt = dataSets.Count
-            For Each keyword In keywords
-                Dim value = Encoding.UTF8.GetBytes(keyword)
-                If value.Length > 32767 Then Continue For
-                dataSets.Insert(insertAt, New IptcDataSet With {.Record = 2, .DataSet = 25, .Value = value})
-                insertAt += 1
+            ' In aufsteigender Nummer, wie der Standard es fuer Record 2 erwartet.
+            For Each pair In replacements.OrderBy(Function(p) p.Key)
+                If pair.Value Is Nothing Then Continue For
+                Dim number = pair.Key
+                Dim insertAt = dataSets.FindIndex(Function(d) d.Record > 2 OrElse (d.Record = 2 AndAlso d.DataSet > number))
+                If insertAt < 0 Then insertAt = dataSets.Count
+                For Each entry In pair.Value
+                    Dim value = Encoding.UTF8.GetBytes(entry)
+                    If value.Length > 32767 Then Continue For
+                    dataSets.Insert(insertAt, New IptcDataSet With {.Record = 2, .DataSet = number, .Value = value})
+                    insertAt += 1
+                Next
             Next
 
             Dim iptcBytes = SerializeIptcDataSets(dataSets)
@@ -555,20 +601,29 @@ Namespace Services
         ''' vor dem ersten IDAT eingesetzt. Geschrieben wird er immer unkomprimiert, wie es die
         ''' XMP-Spezifikation fuer PNG empfiehlt.</summary>
         Private Shared Function WritePngKeywords(path As String, keywords As List(Of String)) As Boolean
+            Return RewritePngXmp(path, KeywordXmpBuilder(keywords))
+        End Function
+
+        ''' <summary>Das XMP eines PNG neu schreiben; der Bauer wie bei
+        ''' <see cref="RewriteJpegXmpAndIptc"/>.</summary>
+        Private Shared Function RewritePngXmp(path As String, xmpBuilder As Func(Of Byte(), Byte())) As Boolean
+            ' Ein Aufbau, der sich nicht sicher lesen laesst, WIRFT statt False zu melden: False
+            ' heisst bei allen drei Formaten "nichts zu tun", und der Aufrufer muss beides
+            ' unterscheiden koennen (ImageDescriptionService.Write).
             Dim bytes = File.ReadAllBytes(path)
-            If Not IsPngBytes(bytes) Then Return False
+            If Not IsPngBytes(bytes) Then Throw New InvalidDataException("kein PNG: " & path)
 
             Dim chunks As New List(Of (Offset As Integer, Length As Integer, Type As String))()
             Dim pos = 8
             While pos + 12 <= bytes.Length
                 Dim dataLength = ReadInt32BE(bytes, pos)
-                If dataLength < 0 OrElse pos + 12L + dataLength > bytes.Length Then Return False
+                If dataLength < 0 OrElse pos + 12L + dataLength > bytes.Length Then Throw New InvalidDataException("PNG-Block ueber das Dateiende: " & path)
                 Dim chunkType = Encoding.ASCII.GetString(bytes, pos + 4, 4)
                 chunks.Add((pos, dataLength + 12, chunkType))
                 pos += dataLength + 12
                 If chunkType = "IEND" Then Exit While
             End While
-            If chunks.Count = 0 OrElse chunks.Last().Type <> "IEND" Then Return False
+            If chunks.Count = 0 OrElse chunks.Last().Type <> "IEND" Then Throw New InvalidDataException("PNG ohne IEND: " & path)
 
             Dim xmpIndex = -1
             Dim existing As Byte() = Nothing
@@ -581,8 +636,7 @@ Namespace Services
                 Exit For
             Next
 
-            Dim failed = False
-            Dim newPacket = BuildKeywordXmpPacket(existing, keywords, failed)
+            Dim newPacket = xmpBuilder(existing)
             If newPacket Is Nothing Then Return False
 
             Dim keywordBytes = Encoding.ASCII.GetBytes(PngXmpKeyword)
@@ -593,7 +647,7 @@ Namespace Services
             Dim newChunk = CreatePngChunk("iTXt", payload)
 
             Dim insertBefore = If(xmpIndex >= 0, xmpIndex, chunks.FindIndex(Function(c) c.Type = "IDAT"))
-            If insertBefore < 0 Then Return False
+            If insertBefore < 0 Then Throw New InvalidDataException("PNG ohne IDAT: " & path)
             Return WriteFileAtomic(path,
                 Sub(destination)
                     destination.Write(bytes, 0, 8)
@@ -642,20 +696,27 @@ Namespace Services
         ''' Bildgroesse. Anders als WithWebpMetadata bleibt das Farbprofil (ICCP) stehen: hier wird
         ''' nicht neu kodiert, die Bildpunkte gehoeren noch zu ihm.</summary>
         Private Shared Function WriteWebpKeywords(path As String, keywords As List(Of String)) As Boolean
+            Return RewriteWebpXmp(path, KeywordXmpBuilder(keywords))
+        End Function
+
+        ''' <summary>Das XMP eines WebP neu schreiben; der Bauer wie bei
+        ''' <see cref="RewriteJpegXmpAndIptc"/>.</summary>
+        Private Shared Function RewriteWebpXmp(path As String, xmpBuilder As Func(Of Byte(), Byte())) As Boolean
             Dim bytes = File.ReadAllBytes(path)
+            ' Wie bei PNG: ein Aufbau, der sich nicht sicher lesen laesst, WIRFT; False heisst
+            ' "nichts zu tun".
             Dim chunks = ReadWebpChunks(bytes)
-            If chunks.Count = 0 Then Return False
+            If chunks.Count = 0 Then Throw New InvalidDataException("WebP-Aufbau nicht lesbar: " & path)
             ' Nur weiter, wenn die Bloecke die ganze Datei abdecken; sonst ginge beim Neuschreiben
             ' etwas verloren, das ReadWebpChunks nicht erkannt hat.
             Dim covered = 12L
             For Each chunk In chunks
                 covered += 8 + chunk.Data.Length + (chunk.Data.Length Mod 2)
             Next
-            If covered <> bytes.Length Then Return False
+            If covered <> bytes.Length Then Throw New InvalidDataException("WebP-Bloecke decken die Datei nicht ab: " & path)
 
             Dim xmpChunk = chunks.FirstOrDefault(Function(c) c.Type = "XMP ")
-            Dim failed = False
-            Dim newPacket = BuildKeywordXmpPacket(If(xmpChunk?.Data, Nothing), keywords, failed)
+            Dim newPacket = xmpBuilder(If(xmpChunk?.Data, Nothing))
             If newPacket Is Nothing Then Return False
 
             If xmpChunk IsNot Nothing Then
@@ -666,13 +727,13 @@ Namespace Services
 
             Dim vp8x = chunks.FirstOrDefault(Function(c) c.Type = "VP8X")
             If vp8x IsNot Nothing Then
-                If vp8x.Data.Length < 10 Then Return False
+                If vp8x.Data.Length < 10 Then Throw New InvalidDataException("WebP-Kopf VP8X zu kurz: " & path)
                 vp8x.Data(0) = CByte(vp8x.Data(0) Or &H4)
             Else
                 Dim imageChunk = chunks.FirstOrDefault(Function(c) c.Type = "VP8 " OrElse c.Type = "VP8L")
-                If imageChunk Is Nothing Then Return False
+                If imageChunk Is Nothing Then Throw New InvalidDataException("WebP ohne Bildblock: " & path)
                 Dim size = ReadWebpImageSize(imageChunk)
-                If size.Width <= 0 OrElse size.Height <= 0 Then Return False
+                If size.Width <= 0 OrElse size.Height <= 0 Then Throw New InvalidDataException("WebP-Bildgroesse nicht lesbar: " & path)
                 Dim flags As Byte = &H4
                 If chunks.Any(Function(c) c.Type = "ALPH") Then flags = CByte(flags Or &H10)
                 If imageChunk.Type = "VP8L" AndAlso imageChunk.Data.Length >= 5 AndAlso (imageChunk.Data(4) And &H10) <> 0 Then

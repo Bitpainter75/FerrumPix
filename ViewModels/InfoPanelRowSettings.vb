@@ -30,6 +30,13 @@ Namespace ViewModels
         Tags = 19
         AiTags = 20
         ExposureCompensation = 21
+        ''' <summary>Die beschreibenden Felder (ImageDescriptionService). Wie Ort und
+        ''' Urheberrecht ueber beide Spalten und umbrochen: sie sind Saetze, keine Zahlen.</summary>
+        Title = 22
+        Headline = 23
+        Description = 24
+        Creator = 25
+        Credit = 26
     End Enum
 
     ''' <summary>
@@ -67,7 +74,8 @@ Namespace ViewModels
         ''' <summary>Die Zeilen des Reiters "Allgemein" in ihrer ANZEIGEREIHENFOLGE. Ein Ort fuer die
         ''' Reihenfolge: die Leiste zeichnet sie, der Einstellungsdialog listet sie, und beide sollen
         ''' dieselbe Abfolge zeigen. Der Ordner steht vorn, weil er in der Leiste unter dem
-        ''' Dateinamen steht; Ort und Urheberrecht schliessen die Liste ab.</summary>
+        ''' Dateinamen steht; die beschreibenden Felder, Ort und Urheberrecht schliessen die Liste
+        ''' ab, alle ueber die ganze Breite.</summary>
         Public Shared ReadOnly Property AllRows As IReadOnlyList(Of InfoPanelRow) =
             New InfoPanelRow() {InfoPanelRow.FolderPath,
                                 InfoPanelRow.DateTaken, InfoPanelRow.Camera, InfoPanelRow.Lens,
@@ -77,6 +85,8 @@ Namespace ViewModels
                                 InfoPanelRow.Megapixels, InfoPanelRow.AspectRatio,
                                 InfoPanelRow.ColorSpace, InfoPanelRow.FileSize,
                                 InfoPanelRow.FileCreated, InfoPanelRow.FileModified,
+                                InfoPanelRow.Title, InfoPanelRow.Headline, InfoPanelRow.Description,
+                                InfoPanelRow.Creator, InfoPanelRow.Credit,
                                 InfoPanelRow.Place, InfoPanelRow.Copyright}
 
         ''' <summary>Die BEREICHE unter dem Reiter. Sie stehen im Dialog getrennt von den Zeilen,
@@ -123,6 +133,11 @@ Namespace ViewModels
             _visible(InfoPanelRow.FolderPath) = settings.InfoPanelShowFolderPath
             _visible(InfoPanelRow.Place) = settings.InfoPanelShowPlace
             _visible(InfoPanelRow.Copyright) = settings.InfoPanelShowCopyright
+            _visible(InfoPanelRow.Title) = settings.InfoPanelShowTitle
+            _visible(InfoPanelRow.Headline) = settings.InfoPanelShowHeadline
+            _visible(InfoPanelRow.Description) = settings.InfoPanelShowDescription
+            _visible(InfoPanelRow.Creator) = settings.InfoPanelShowCreator
+            _visible(InfoPanelRow.Credit) = settings.InfoPanelShowCredit
             _visible(InfoPanelRow.Rating) = settings.InfoPanelShowRating
             _visible(InfoPanelRow.ColorLabel) = settings.InfoPanelShowColorLabel
             _visible(InfoPanelRow.Tags) = settings.InfoPanelShowTags
@@ -150,6 +165,11 @@ Namespace ViewModels
                 Case InfoPanelRow.FolderPath : settings.InfoPanelShowFolderPath = visible
                 Case InfoPanelRow.Place : settings.InfoPanelShowPlace = visible
                 Case InfoPanelRow.Copyright : settings.InfoPanelShowCopyright = visible
+                Case InfoPanelRow.Title : settings.InfoPanelShowTitle = visible
+                Case InfoPanelRow.Headline : settings.InfoPanelShowHeadline = visible
+                Case InfoPanelRow.Description : settings.InfoPanelShowDescription = visible
+                Case InfoPanelRow.Creator : settings.InfoPanelShowCreator = visible
+                Case InfoPanelRow.Credit : settings.InfoPanelShowCredit = visible
                 Case InfoPanelRow.Rating : settings.InfoPanelShowRating = visible
                 Case InfoPanelRow.ColorLabel : settings.InfoPanelShowColorLabel = visible
                 Case InfoPanelRow.Tags : settings.InfoPanelShowTags = visible

@@ -157,6 +157,23 @@ Namespace Models
             End Set
         End Property
 
+        Private _catalogSearchText As String = ""
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber, Quellenangabe und
+        ''' Urheberrechtshinweis aus dem Katalog als EIN Text (LibraryImageMeta.CatalogSearchText).
+        ''' Nur fuer die Suche der Galerie; die Werte selbst stehen in der Datei und im Katalog. Der
+        ''' Ort kommt NICHT hierher, er steht schon am Element (SetCatalogPlace).</summary>
+        Public Property CatalogSearchText As String
+            Get
+                Return _catalogSearchText
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If String.Equals(_catalogSearchText, value, StringComparison.Ordinal) Then Return
+                _catalogSearchText = value
+                InvalidateSearchText()
+            End Set
+        End Property
+
         ''' <summary>Kopfzeile einer Gruppe in der Gruppenansicht. Ein solcher Eintrag steht NUR im
         ''' Anzeigefenster der Ansicht, nie in Items oder im Gesamtbestand - er hat keine Datei, keine
         ''' Auswahl und kein Vorschaubild. Aufgebaut wird er ueber CreateGroupHeader.</summary>
@@ -489,7 +506,8 @@ Namespace Models
         ''' die Stichwörter, pro Element, pro Tastendruck. Bei ein paar tausend Fotos im Ordner ist das der
         ''' Hauptteil der Arbeit beim Tippen.
         ''' Der Cache verfällt über <see cref="InvalidateSearchText"/> bei jeder Änderung an Dateiname,
-        ''' Bewertung, Favorit oder Stichwörtern - die vier Quellen, aus denen er sich speist. Die
+        ''' Bewertung, Favorit, Stichwörtern, Ort oder den Katalogtexten (Titel, Beschreibung,
+        ''' Copyright ...) - die sechs Quellen, aus denen er sich speist. Die
         ''' Stichwortliste wird nirgends an Ort und Stelle verändert, sondern immer komplett zugewiesen;
         ''' sonst müsste sie eine beobachtbare Sammlung sein.</summary>
         Public ReadOnly Property SearchText As String
@@ -502,6 +520,13 @@ Namespace Models
                     Else
                         _searchTextCache = FileName & " " & String.Join(" ", Tags) & " " & ratingToken & " " & favoriteToken
                     End If
+                    If _catalogSearchText.Length > 0 Then _searchTextCache &= " " & _catalogSearchText
+                    ' Der Ort so, wie er angezeigt wird (Landesname uebersetzt), UND der Landesname
+                    ' der Datei bzw. Tabelle: wer "Germany" tippt, soll ihn genauso finden wie wer
+                    ' "Deutschland" tippt.
+                    Dim place = CatalogPlace
+                    If Not String.IsNullOrEmpty(place) Then _searchTextCache &= " " & place
+                    If _catalogCountry.Length > 0 Then _searchTextCache &= " " & _catalogCountry
                 End If
                 Return _searchTextCache
             End Get
@@ -962,6 +987,7 @@ Namespace Models
             ExifFocalLength = scanned.ExifFocalLength
             ExifShutterSpeed = scanned.ExifShutterSpeed
             SetCatalogPlace(scanned._catalogCity, scanned._catalogCountry, scanned._catalogCountryCode)
+            CatalogSearchText = scanned.CatalogSearchText
             HasExifMetadata = scanned.HasExifMetadata
             HasIptcMetadata = scanned.HasIptcMetadata
             HasXmpMetadata = scanned.HasXmpMetadata
@@ -1121,6 +1147,8 @@ Namespace Models
             _catalogCountry = country
             _catalogCountryCode = countryCode
             RaisePropertyChanged(NameOf(CatalogPlace))
+            ' Der Ort steht im Suchtext der Galerie, also verfaellt der mit.
+            InvalidateSearchText()
         End Sub
 
         ''' <summary>Aufnahmeort eines IMMICH-Assets, so wie ihn der Server benannt hat.
@@ -2018,6 +2046,7 @@ Namespace Models
             ExifFocalLength = meta.FocalLengthMm
             ExifShutterSpeed = meta.ShutterSpeed
             SetCatalogPlace(meta.City, meta.Country, meta.CountryCode)
+            CatalogSearchText = meta.CatalogSearchText
         End Sub
 
         ''' Ein Datum, das es nicht gibt (DateTime.MinValue), ist leer und nicht der 1. Januar 0001.

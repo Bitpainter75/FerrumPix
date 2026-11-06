@@ -978,6 +978,12 @@ Namespace Services
                     ' Metadaten. Nur mit Uebernahme der Metadaten: wer sie abschaltet, will eine
                     ' saubere Datei. Ob und wohin, sagt die Einstellung (ApplyCatalogKeywords).
                     If preserveMetadata AndAlso Not isPdf AndAlso Not isFpxTarget Then ApplyCatalogKeywords(sourcePath, targetPath)
+                    ' Titel, Beschreibung und Co. aus der Beistelldatei der Quelle. Eingebettete
+                    ' reisen schon mit den kopierten Metadaten; die einer RAW stehen daneben und
+                    ' kaemen sonst nie im exportierten Bild an. Nur in eine NEUE Datei.
+                    If preserveMetadata AndAlso Not isPdf AndAlso Not isFpxTarget Then
+                        ImageDescriptionService.CarrySidecarIntoSavedFile(sourcePath, targetPath)
+                    End If
                     Return True
                 End Using
             Catch ex As Exception

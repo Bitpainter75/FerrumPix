@@ -241,6 +241,34 @@
                                      es ist, und lange Ortsnamen ("Sant Feliu de Guixols, Katalonien,
                                      Spanien") haben so die ganze Breite zum Umbrechen statt der halben.
                                      Der Abstand oben trennt ihn von den Datumszeilen darueber. -->
+                                <!-- Titel, Ueberschrift, Beschreibung, Urheber, Quellenangabe: die
+                                     beschreibenden Felder der Datei, ab Werk ausgeblendet. Anders als
+                                     die Zeilen darueber steht die Beschriftung UEBER dem Wert, und
+                                     beide nehmen die ganze Breite: eine Beschreibung ist ein Absatz
+                                     mit eigenen Zeilenumbruechen, und rechts in einer halben Spalte
+                                     waere sie unlesbar. Fuenf Texte ohne Beschriftung liessen
+                                     dagegen raten, welcher welcher ist. Kein Uebersetzungsdurchlauf
+                                     auf die Werte - sie gehoeren dem Bild. -->
+                                <StackPanel Margin="0,12,0,0" Spacing="2" IsVisible="{Binding ShowTitleRow}">
+                                    <TextBlock Text="Titel" FontSize="{DynamicResource FP.Font.Small}" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding ExifInfo.Description.Title}" Classes="no-translate" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,12,0,0" Spacing="2" IsVisible="{Binding ShowHeadlineRow}">
+                                    <TextBlock Text="Überschrift" FontSize="{DynamicResource FP.Font.Small}" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding ExifInfo.Description.Headline}" Classes="no-translate" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,12,0,0" Spacing="2" IsVisible="{Binding ShowDescriptionRow}">
+                                    <TextBlock Text="Beschreibung" FontSize="{DynamicResource FP.Font.Small}" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding ExifInfo.Description.Description}" Classes="no-translate" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,12,0,0" Spacing="2" IsVisible="{Binding ShowCreatorRow}">
+                                    <TextBlock Text="Urheber" FontSize="{DynamicResource FP.Font.Small}" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding ExifInfo.Description.Creator}" Classes="no-translate" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Margin="0,12,0,0" Spacing="2" IsVisible="{Binding ShowCreditRow}">
+                                    <TextBlock Text="Quellenangabe" FontSize="{DynamicResource FP.Font.Small}" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                    <TextBlock Text="{Binding ExifInfo.Description.Credit}" Classes="no-translate" TextWrapping="Wrap"/>
+                                </StackPanel>
                                 <!-- DockPanel statt waagrechtem StackPanel: der misst mit
                                      unendlicher Breite, und der Text braeche dort nie um. -->
                                 <DockPanel Margin="0,12,0,0" IsVisible="{Binding ShowPlaceRow}">

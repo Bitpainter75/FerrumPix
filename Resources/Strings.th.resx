@@ -10972,4 +10972,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>ตัวพิมพ์ใหญ่ทั้งหมด</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>ชื่อเรื่องและคำอธิบาย</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>ชื่อเรื่อง</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>พาดหัว</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>คำอธิบาย</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>ผู้สร้าง</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>เครดิต</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>ค่าต่างกัน</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>ใช้กับ {0} ภาพ ช่องที่มีค่าต่างกันจะไม่เปลี่ยนตราบที่ยังว่างอยู่ คั่นผู้สร้างหลายคนด้วยเครื่องหมายอัฒภาค</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG, PNG และ WebP จะได้รับข้อมูลในไฟล์ ส่วนรูปแบบอื่นทั้งหมดจะอยู่ในไฟล์ข้าง XMP คั่นผู้สร้างหลายคนด้วยเครื่องหมายอัฒภาค</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>บันทึกชื่อเรื่องและคำอธิบายแล้ว: {0} ในไฟล์ {1} ในไฟล์ข้าง</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>บันทึกชื่อเรื่องและคำอธิบายแล้วสำหรับ {0} จาก {1} ภาพ</value>
+  </data>
 </root>

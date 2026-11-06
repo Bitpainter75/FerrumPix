@@ -271,6 +271,14 @@ Namespace Services
         Public Property InfoPanelShowFolderPath As Boolean = True
         Public Property InfoPanelShowPlace As Boolean = True
         Public Property InfoPanelShowCopyright As Boolean = True
+        ' Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe: ab Werk AUS. Sie sind lange
+        ' Texte ueber die ganze Breite, und wer sie nicht pflegt, soll die Leiste nicht laenger
+        ' bekommen; wer sie pflegt, schaltet sie in den Einstellungen ein.
+        Public Property InfoPanelShowTitle As Boolean = False
+        Public Property InfoPanelShowHeadline As Boolean = False
+        Public Property InfoPanelShowDescription As Boolean = False
+        Public Property InfoPanelShowCreator As Boolean = False
+        Public Property InfoPanelShowCredit As Boolean = False
         ' Die drei BEREICHE unter dem Reiter. Ab Werk an, weil sie es bisher immer waren - und weil
         ' sie das einzige in der Leiste sind, mit dem man etwas TUT.
         Public Property InfoPanelShowRating As Boolean = True

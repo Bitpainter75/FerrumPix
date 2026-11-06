@@ -10968,4 +10968,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>Wersaliki</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>Tytuł i opis</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>Tytuł</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>Nagłówek</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>Twórca</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>Uznanie autorstwa</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>Różne wartości</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>Dotyczy {0} zdjęć. Pole z różnymi wartościami pozostaje bez zmian, dopóki jest puste. Kilku twórców oddziel średnikiem.</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG, PNG i WebP otrzymują dane w pliku, wszystkie inne formaty w pliku towarzyszącym XMP. Kilku twórców oddziel średnikiem.</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>Tytuł i opis zapisane: {0} w pliku, {1} w pliku towarzyszącym</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>Tytuł i opis zapisane dla {0} z {1} zdjęć</value>
+  </data>
 </root>

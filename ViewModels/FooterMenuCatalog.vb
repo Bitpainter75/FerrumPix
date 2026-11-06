@@ -188,6 +188,12 @@ Namespace ViewModels
             Return Build("Aufnahmedatum setzen", "calendar", c)
         End Function
 
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe in einem Dialog.
+        ''' Steht beim Urheberrechtshinweis: beide beschreiben das Bild, nicht die Aufnahme.</summary>
+        Public Shared Function SetDescription(c As ICommand) As AppAction
+            Return Build("Titel und Beschreibung", "article", c)
+        End Function
+
         Public Shared Function SetPlace(c As ICommand) As AppAction
             ' Ohne Auslassungspunkte, wie die uebrigen Eintraege, die einen Dialog oeffnen
             ' ("Größe ändern", "Exportieren nach").

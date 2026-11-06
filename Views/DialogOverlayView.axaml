@@ -177,6 +177,54 @@
                             </StackPanel>
                         </StackPanel>
 
+                        <!-- Titel und Beschreibung: die fünf beschreibenden Felder von IPTC Core und
+                             XMP. Beschriftung links, Feld rechts, wie beim Aufnahmedatum. Die
+                             Beschreibung ist mehrzeilig; RETURN macht dort einen Zeilenumbruch,
+                             STRG+RETURN bestätigt (MainWindow.OnWindowKeyDown). Der Platzhalter
+                             sagt bei einer Auswahl, wo die Bilder verschiedene Werte tragen. -->
+                        <Grid Grid.Row="3"
+                              Margin="0,16,0,0"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                              ColumnDefinitions="Auto,*"
+                              RowSpacing="10"
+                              ColumnSpacing="14"
+                              IsVisible="{Binding DialogShowsImageDescription}">
+                            <TextBlock Text="Titel" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBox Grid.Column="1"
+                                     x:Name="DescriptionTitleBox"
+                                     Text="{Binding DialogDescriptionTitle, Mode=TwoWay}"
+                                     PlaceholderText="{Binding DialogDescriptionTitleHint}"
+                                     Classes="no-translate"
+                                     MinHeight="36"/>
+                            <TextBlock Grid.Row="1" Text="Überschrift" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1"
+                                     Text="{Binding DialogDescriptionHeadline, Mode=TwoWay}"
+                                     PlaceholderText="{Binding DialogDescriptionHeadlineHint}"
+                                     Classes="no-translate"
+                                     MinHeight="36"/>
+                            <TextBlock Grid.Row="2" Text="Beschreibung" VerticalAlignment="Top" Margin="0,8,0,0" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1"
+                                     Text="{Binding DialogDescriptionText, Mode=TwoWay}"
+                                     PlaceholderText="{Binding DialogDescriptionTextHint}"
+                                     Classes="no-translate"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="96"
+                                     MaxHeight="200"/>
+                            <TextBlock Grid.Row="3" Text="Urheber" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBox Grid.Row="3" Grid.Column="1"
+                                     Text="{Binding DialogDescriptionCreator, Mode=TwoWay}"
+                                     PlaceholderText="{Binding DialogDescriptionCreatorHint}"
+                                     Classes="no-translate"
+                                     MinHeight="36"/>
+                            <TextBlock Grid.Row="4" Text="Quellenangabe" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <TextBox Grid.Row="4" Grid.Column="1"
+                                     Text="{Binding DialogDescriptionCredit, Mode=TwoWay}"
+                                     PlaceholderText="{Binding DialogDescriptionCreditHint}"
+                                     Classes="no-translate"
+                                     MinHeight="36"/>
+                        </Grid>
+
                         <!-- Speichern unter. Eigene Zeile, weil der Stapel-Filter diesen Block ZUSAMMEN mit
                              seiner eigenen Auswahl (Zeile 3) zeigt - alle anderen Dialoge belegen nur eine der
                              beiden Zeilen, und leere Auto-Zeilen fallen auf null Höhe zusammen. -->

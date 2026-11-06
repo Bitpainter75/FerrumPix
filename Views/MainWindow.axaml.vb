@@ -557,6 +557,7 @@ Namespace Views
                 ' Der Ortsdialog hat genau EIN Feld, und wer ihn oeffnet, will tippen oder einfuegen.
                 Dim setPlaceView = overlay?.FindControl(Of SetPlaceDialogView)("SetPlaceDialog")
                 Dim gpxTrackView = overlay?.FindControl(Of GpxTrackDialogView)("GpxTrackDialog")
+                Dim descriptionTitle = overlay?.FindControl(Of TextBox)("DescriptionTitleBox")
                 If input IsNot Nothing AndAlso vm.DialogShowsInput Then
                     input.Focus()
                     input.SelectAll()
@@ -566,6 +567,9 @@ Namespace Views
                     setPlaceView.FocusQueryField()
                 ElseIf gpxTrackView IsNot Nothing AndAlso vm.DialogShowsGpxTrack Then
                     gpxTrackView.FocusOffsetField()
+                ElseIf descriptionTitle IsNot Nothing AndAlso vm.DialogShowsImageDescription Then
+                    descriptionTitle.Focus()
+                    descriptionTitle.SelectAll()
                 Else
                     Focus()
                 End If
@@ -1042,8 +1046,17 @@ Namespace Views
                             vm.CancelDialog()
                             e.Handled = True
                         Case Key.Return, Key.Enter
-                            vm.ConfirmDialog()
-                            e.Handled = True
+                            ' Ein mehrzeiliges Feld (die Beschreibung) braucht RETURN fuer den
+                            ' Zeilenumbruch. Dort bestaetigt erst STRG+RETURN; der Handler hier
+                            ' laeuft im Tunnel und kaeme dem Feld sonst immer zuvor.
+                            Dim multiline = TryCast(e.Source, TextBox)
+                            If multiline IsNot Nothing AndAlso multiline.AcceptsReturn AndAlso
+                               Not e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
+                                e.Handled = False
+                            Else
+                                vm.ConfirmDialog()
+                                e.Handled = True
+                            End If
                         Case Key.Tab
                             CycleDialogFocus(e.KeyModifiers.HasFlag(KeyModifiers.Shift))
                             e.Handled = True

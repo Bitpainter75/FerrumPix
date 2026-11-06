@@ -3133,6 +3133,11 @@ Namespace ViewModels
                 Case InfoPanelRow.FolderPath : Return LocalizationService.T("Ordner")
                 Case InfoPanelRow.Place : Return LocalizationService.T("Ort")
                 Case InfoPanelRow.Copyright : Return LocalizationService.T("Copyright")
+                Case InfoPanelRow.Title : Return LocalizationService.T("Titel")
+                Case InfoPanelRow.Headline : Return LocalizationService.T("Überschrift")
+                Case InfoPanelRow.Description : Return LocalizationService.T("Beschreibung")
+                Case InfoPanelRow.Creator : Return LocalizationService.T("Urheber")
+                Case InfoPanelRow.Credit : Return LocalizationService.T("Quellenangabe")
                 ' Das Herz sitzt neben den Sternen und in derselben Zeile - ein eigener Haken dafuer
                 ' liesse eine Zeile mit einem einzigen Knopf uebrig.
                 Case InfoPanelRow.Rating : Return LocalizationService.T("Bewertung und Favorit")

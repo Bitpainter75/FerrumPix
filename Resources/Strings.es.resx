@@ -10928,4 +10928,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>Todo en mayúsculas</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>Título y descripción</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>Título</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>Titular</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>Autor</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>Línea de crédito</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>Valores distintos</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>Se aplica a {0} imágenes. Un campo con valores distintos no cambia mientras se deje vacío. Separe varios autores con punto y coma.</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG, PNG y WebP reciben los datos dentro del archivo; los demás formatos, en un archivo adjunto XMP. Separe varios autores con punto y coma.</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>Título y descripción guardados: {0} en el archivo, {1} en un archivo adjunto</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>Título y descripción guardados para {0} de {1} imágenes</value>
+  </data>
 </root>

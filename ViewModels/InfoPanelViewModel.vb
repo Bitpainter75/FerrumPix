@@ -1316,6 +1316,46 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' Die beschreibenden Felder. Wie Ort und Urheberrecht nur mit Wert und nur, wenn der Haken
+        ' gesetzt ist (ab Werk aus, siehe AppSettings). Der Wert kommt aus ExifInfo.Description,
+        ' also aus derselben Rangfolge wie Dialog und Katalog.
+
+        Private ReadOnly Property DescriptionInfo As ImageDescription
+            Get
+                Return If(_exifInfo?.Description, New ImageDescription())
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowTitleRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Title) AndAlso HasText(DescriptionInfo.Title)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowHeadlineRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Headline) AndAlso HasText(DescriptionInfo.Headline)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowDescriptionRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Description) AndAlso HasText(DescriptionInfo.Description)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowCreatorRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Creator) AndAlso HasText(DescriptionInfo.Creator)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowCreditRow As Boolean
+            Get
+                Return InfoPanelRowSettings.IsVisible(InfoPanelRow.Credit) AndAlso HasText(DescriptionInfo.Credit)
+            End Get
+        End Property
+
         ' ── Die drei BEREICHE unter dem Reiter ──────────────────────────────────
         '
         ' Anders als die Zeilen haengen sie NICHT am Bild: Sterne, Etikett und Stichwoerter sind
@@ -1439,6 +1479,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFolderPathRow))
             Me.RaisePropertyChanged(NameOf(ShowPlaceRow))
             Me.RaisePropertyChanged(NameOf(ShowCopyrightRow))
+            Me.RaisePropertyChanged(NameOf(ShowTitleRow))
+            Me.RaisePropertyChanged(NameOf(ShowHeadlineRow))
+            Me.RaisePropertyChanged(NameOf(ShowDescriptionRow))
+            Me.RaisePropertyChanged(NameOf(ShowCreatorRow))
+            Me.RaisePropertyChanged(NameOf(ShowCreditRow))
             Me.RaisePropertyChanged(NameOf(ShowRatingSection))
             Me.RaisePropertyChanged(NameOf(ShowColorLabelSection))
             Me.RaisePropertyChanged(NameOf(ShowTagsSection))

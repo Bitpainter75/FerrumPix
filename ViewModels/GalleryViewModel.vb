@@ -2297,6 +2297,7 @@ Namespace ViewModels
             SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceFromTrackForSelectedAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightForSelectedAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateForSelectedAsync())
+            SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() SetDescriptionForSelectedAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
             RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
             DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
@@ -2427,6 +2428,7 @@ Namespace ViewModels
         Public ReadOnly Property SetPlaceFromTrackCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
+        Public ReadOnly Property SetDescriptionCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property OpenPlaceInOsmCommand As ICommand
 
@@ -2698,6 +2700,79 @@ Namespace ViewModels
             Await SetCopyrightForSelectedAsync(items)
         End Function
 
+        ''' <summary>Der Weg fuer Betrachter und Editor, wie beim Urheberrechtshinweis.</summary>
+        Public Async Function SetDescriptionForImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Await SetDescriptionForSelectedAsync(items)
+        End Function
+
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe fuer die Auswahl.
+        '''
+        ''' Der Dialog zeigt, was gilt: bei einem Bild dessen Werte, bei mehreren je Feld den
+        ''' gemeinsamen Wert oder den Hinweis, dass sie sich unterscheiden. Geschrieben wird beim
+        ''' Bestaetigen und nur, was sich geaendert hat (siehe ShowImageDescriptionAsync); danach
+        ''' zieht der Katalog nach, damit Suche und Suchlisten den neuen Stand sofort finden.
+        ''' Gelesen und geschrieben wird im Hintergrund: bei einer grossen Auswahl auf einer
+        ''' Netzfreigabe sind das viele Dateien.</summary>
+        Private Async Function SetDescriptionForSelectedAsync(Optional preset As IList(Of ImageItem) = Nothing) As Task
+            Try
+                Dim images = GetPlaceTargets(preset)
+                If images.Count = 0 OrElse _mainVm Is Nothing Then Return
+                Dim paths = images.Select(Function(i) i.FilePath).ToList()
+
+                Dim current = Await Task.Run(Function() paths.Select(Function(p) ImageDescriptionService.Read(p)).ToList())
+                Dim common As New ImageDescription()
+                Dim mixed As New List(Of ImageDescriptionField)()
+                For Each field In ImageDescription.AllFields
+                    Dim first = current(0).GetValue(field)
+                    If current.All(Function(d) String.Equals(d.GetValue(field), first, StringComparison.Ordinal)) Then
+                        common.SetValue(field, first)
+                    Else
+                        mixed.Add(field)
+                    End If
+                Next
+
+                Dim changes = Await _mainVm.ShowImageDescriptionAsync(common, mixed, images.Count)
+                If changes Is Nothing OrElse changes.Count = 0 Then Return
+
+                Dim written As New HashSet(Of String)(PathIdentity.Comparer)
+                Dim outcome = Await Task.Run(
+                    Function()
+                        Dim inFile = 0, besideFile = 0, failed = 0
+                        For Each path In paths
+                            Dim result = ImageDescriptionService.Write(path, changes)
+                            If Not result.Success Then
+                                failed += 1
+                                Continue For
+                            End If
+                            written.Add(path)
+                            If result.Target = ImageDescriptionTarget.InFile Then inFile += 1 Else besideFile += 1
+                        Next
+                        Return (InFile:=inFile, BesideFile:=besideFile, Failed:=failed)
+                    End Function)
+
+                ' Katalog und Suchtext nur fuer die Bilder, die wirklich geschrieben wurden: ein
+                ' gescheitertes Bild steht unveraendert da (ImageDescriptionService.Write).
+                Await RefreshCatalogAfterMetadataWriteAsync(images.Where(Function(i) written.Contains(i.FilePath)).ToList())
+
+                If outcome.Failed = 0 Then
+                    StatusText = String.Format(LocalizationService.T("Titel und Beschreibung gespeichert: {0} in der Datei, {1} in einer Beistelldatei"),
+                                               outcome.InFile, outcome.BesideFile)
+                Else
+                    StatusText = String.Format(LocalizationService.T("Titel und Beschreibung gespeichert für {0} von {1} Bildern"),
+                                               outcome.InFile + outcome.BesideFile, images.Count)
+                End If
+
+                ' Refresh MUSS dabei sein: der Pfad hat sich nicht geaendert, nur sein Inhalt (wie
+                ' beim Urheberrechtshinweis).
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.SetDescription", ex)
+            End Try
+        End Function
+
         ''' <summary>Der Weg fuer Betrachter und Editor: dort steht immer genau EIN Bild vorn, die
         ''' Arbeit macht aber dieselbe Stelle wie in der Galerie - eine zweite Fassung hiesse zwei
         ''' Regeln fuer dieselbe Frage.</summary>
@@ -2862,16 +2937,23 @@ Namespace ViewModels
             If text.Length = 0 Then Return
 
             Dim inFile = 0, besideFile = 0, failed = 0
+            Dim written As New List(Of ImageItem)()
             For Each item In images
                 Dim result = CopyrightService.WriteCopyright(item.FilePath, text)
                 If Not result.Success Then
                     failed += 1
-                ElseIf result.Target = CopyrightTarget.EmbeddedExif Then
+                    Continue For
+                End If
+                written.Add(item)
+                If result.Target = CopyrightTarget.EmbeddedExif Then
                     inFile += 1
                 Else
                     besideFile += 1
                 End If
             Next
+            ' Der Hinweis steht im Katalog (Suche, Suchliste "Copyright"); ohne das faende die Suche
+            ' ihn erst nach dem naechsten Einlesen des Ordners.
+            Dim ignored = RefreshCatalogAfterMetadataWriteAsync(written)
 
             If failed = 0 Then
                 StatusText = String.Format(LocalizationService.T("Copyright gesetzt: {0} in der Datei, {1} in einer Beistelldatei"),
@@ -2888,6 +2970,41 @@ Namespace ViewModels
             InfoPanel.Refresh()
             RefreshContextActions()
         End Sub
+
+        ''' <summary>Nach einem Schreibbefehl an Datei oder Beistelldatei (Titel und Beschreibung,
+        ''' Copyright): den Katalog fuer genau diese Bilder neu lesen und den Suchtext der Elemente
+        ''' nachziehen. Die Volltextsuche liest das Element, Suchtext und Suchlisten den Katalog;
+        ''' ohne diesen Schritt faenden beide den neuen Wert erst nach dem naechsten Einlesen.
+        ''' Gelesen wird im Hintergrund, bei einer grossen Auswahl auf einer Freigabe sind das viele
+        ''' Dateien.</summary>
+        Private Async Function RefreshCatalogAfterMetadataWriteAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing OrElse items.Count = 0 Then Return
+            Try
+                Dim paths = items.Select(Function(i) i.FilePath).ToList()
+                Dim texts = Await Task.Run(
+                    Function()
+                        Dim result As New Dictionary(Of String, String)(PathIdentity.Comparer)
+                        For Each path In paths
+                            Try
+                                Dim exif = ExifService.ReadExif(path)
+                                Dim fields = ExifService.ExtractSearchFields(exif, path)
+                                LibraryService.Instance.SyncExifData(path, fields, ExifService.BuildCatalogSummary(exif, fields))
+                                result(path) = fields.CatalogSearchText
+                            Catch ex As Exception
+                                DiagnosticLogService.LogException("Gallery.RefreshCatalogAfterWrite", ex)
+                            End Try
+                        Next
+                        Return result
+                    End Function)
+                For Each item In items
+                    Dim text As String = Nothing
+                    If texts.TryGetValue(item.FilePath, text) Then item.CatalogSearchText = text
+                Next
+                If Not String.IsNullOrEmpty(_searchText) Then FilterAndSort()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RefreshCatalogAfterWrite", ex)
+            End Try
+        End Function
 
         Public Async Function RemovePlaceFromImageItemsAsync(items As IList(Of ImageItem)) As Task
             If items Is Nothing OrElse items.Count = 0 Then Return
@@ -7124,7 +7241,7 @@ Namespace ViewModels
                                                        Optional skipPersonQuery As Boolean = False,
                                                        Optional catalogOnly As Boolean = False) As Task(Of Boolean)
             If meta Is Nothing Then Return False
-            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, textQuery) Then Return False
+            If Not MatchesSavedSearchText(meta.FilePath, meta.Tags, CatalogSearchText(meta), textQuery) Then Return False
             If Not MatchesTagQuery(meta.FilePath, meta.Tags, node.TagQueries) Then Return False
             If Not skipPersonQuery AndAlso Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Return False
             If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Return False
@@ -7521,6 +7638,13 @@ Namespace ViewModels
                 meta.GpsLongitude = fields.GpsLongitude
                 meta.ImageWidth = fields.ImageWidth
                 meta.ImageHeight = fields.ImageHeight
+                If fields.Description IsNot Nothing Then
+                    meta.Title = fields.Description.Title
+                    meta.Headline = fields.Description.Headline
+                    meta.Description = fields.Description.Description
+                    meta.Creator = fields.Description.Creator
+                    meta.Credit = fields.Description.Credit
+                End If
                 meta.ExifSummary = catalogSummary.ExifSummary
                 meta.IptcSummary = catalogSummary.IptcSummary
                 meta.XmpSummary = catalogSummary.XmpSummary
@@ -7554,6 +7678,22 @@ Namespace ViewModels
                            CompareTextCondition(meta.Country, condition.Operator, condition.Value)
                 Case "Person"
                     Return MatchesPersonCondition(meta.FilePath, condition)
+                Case "Title"
+                    Return CompareTextCondition(meta.Title, condition.Operator, condition.Value)
+                Case "Headline"
+                    Return CompareTextCondition(meta.Headline, condition.Operator, condition.Value)
+                Case "Description"
+                    Return CompareTextCondition(meta.Description, condition.Operator, condition.Value)
+                Case "Creator"
+                    ' Mehrere Urheber stehen mit Semikolon in einer Zeile. "=" meint einen von
+                    ' ihnen, nicht die ganze Zeile.
+                    Return CompareTextCondition(meta.Creator, condition.Operator, condition.Value) OrElse
+                           ImageDescriptionService.SplitCreators(meta.Creator).
+                               Any(Function(c) CompareTextCondition(c, condition.Operator, condition.Value))
+                Case "Credit"
+                    Return CompareTextCondition(meta.Credit, condition.Operator, condition.Value)
+                Case "Copyright"
+                    Return CompareTextCondition(meta.Copyright, condition.Operator, condition.Value)
                 Case Else
                     Return True
             End Select
@@ -7905,8 +8045,21 @@ Namespace ViewModels
             _aiTagsByPath = Nothing
         End Sub
 
+        ''' <summary>Was der Suchtext aus dem Katalog über Dateiname und Stichwörter hinaus
+        ''' durchsucht: Titel, Überschrift, Beschreibung, Urheber, Quellenangabe, Copyright
+        ''' (LibraryImageMeta.CatalogSearchText) und den Ort, als Ortsname, Land aus Datei oder Tabelle
+        ''' und übersetzter Landesname. Dieselben Teile wie ImageItem.SearchText in der Volltextsuche.
+        ''' Ein Platzhalter-Muster ("IMG_*") bleibt davon unberührt: es meint den Dateinamen, siehe
+        ''' MatchesSingleSearchTerm.</summary>
+        Private Shared Function CatalogSearchText(meta As LibraryImageMeta) As String
+            If meta Is Nothing Then Return ""
+            Return ImageDescriptionService.JoinForSearch(meta.CatalogSearchText, meta.City, meta.Country,
+                                                         PlaceLookupService.LocalizedCountry(meta.CountryCode, meta.Country))
+        End Function
+
         ''' <summary>Prüft den freien Text einer gespeicherten Suche gegen Dateiname, manuelle und
-        ''' KI-Stichwörter. KI-Tags liegen absichtlich nicht in <c>ImageMeta.Tags</c>, damit ihre
+        ''' KI-Stichwörter und die Katalogtexte (<see cref="CatalogSearchText"/>). KI-Tags liegen
+        ''' absichtlich nicht in <c>ImageMeta.Tags</c>, damit ihre
         ''' Herkunft im Infopanel erhalten bleibt; für die Suche gehören sie aber in denselben
         ''' Wortvorrat. Neben dem kanonischen englischen Modellbegriff kommt die Anzeigeform dazu,
         ''' damit beispielsweise sowohl "dog" als auch "Hund" denselben Treffer finden.
@@ -7915,11 +8068,13 @@ Namespace ViewModels
         ''' egal) trennt Begriffs-GRUPPEN (mind. eine muss zutreffen), innerhalb einer Gruppe müssen
         ''' alle durch Leerzeichen getrennten Begriffe zutreffen (AND) - Anführungszeichen erlauben
         ''' Begriffe mit Leerzeichen. Wildcard (*/?) funktioniert weiterhin pro Einzelbegriff.</summary>
-        Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String), textQuery As String) As Boolean
+        Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String),
+                                                       describingText As String, textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
             Dim fileName = IO.Path.GetFileName(filePath)
             Dim haystack = fileName & " " & String.Join(" ", If(tags, Enumerable.Empty(Of String)())) &
-                           " " & String.Join(" ", AiSearchTermsFor(filePath))
+                           " " & String.Join(" ", AiSearchTermsFor(filePath)) &
+                           " " & If(describingText, "")
 
             Dim wildcardPatterns = GetWildcardPatterns(textQuery)
             If wildcardPatterns.Count > 0 Then
@@ -8974,6 +9129,7 @@ Namespace ViewModels
                 item.ExifFocalLength = meta.FocalLengthMm
                 item.ExifShutterSpeed = meta.ShutterSpeed
                 item.SetCatalogPlace(meta.City, meta.Country, meta.CountryCode)
+                item.CatalogSearchText = meta.CatalogSearchText
                 item.HasExifMetadata = meta.HasExifMetadata
                 item.HasIptcMetadata = meta.HasIptcMetadata
                 item.HasXmpMetadata = meta.HasXmpMetadata
@@ -9093,6 +9249,7 @@ Namespace ViewModels
                                                                Dim city = fields.City
                                                                Dim country = fields.Country
                                                                Dim countryCode = fields.CountryCode
+                                                               Dim catalogText = fields.CatalogSearchText
                                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                                                                           If cancellationToken.IsCancellationRequested Then Return
                                                                                                           item.ImageWidth = width
@@ -9114,6 +9271,7 @@ Namespace ViewModels
                                                                                                           item.ExifFocalLength = focalLength
                                                                                                           item.ExifShutterSpeed = shutterSpeed
                                                                                                           item.SetCatalogPlace(city, country, countryCode)
+                                                                                                          item.CatalogSearchText = catalogText
                                                                                                           item.HasExifMetadata = hasExif
                                                                                                           item.HasIptcMetadata = hasIptc
                                                                                                           item.HasXmpMetadata = hasXmp
@@ -9647,6 +9805,7 @@ Namespace ViewModels
                                 item.ExifFocalLength = m.FocalLengthMm
                                 item.ExifShutterSpeed = m.ShutterSpeed
                                 item.SetCatalogPlace(m.City, m.Country, m.CountryCode)
+                                item.CatalogSearchText = m.CatalogSearchText
                                 item.HasExifMetadata = m.HasExifMetadata
                                 item.HasIptcMetadata = m.HasIptcMetadata
                                 item.HasXmpMetadata = m.HasXmpMetadata

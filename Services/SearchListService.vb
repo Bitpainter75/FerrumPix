@@ -23,8 +23,12 @@ Namespace Services
         ''' UNTERSCHIED ZU DEN UEBRIGEN: Ort steht als Text in ImageMeta und wird wie Kamera
         ''' verglichen. Person NICHT - die Zuordnung liegt in eigenen Tabellen, weil ein Bild mehrere
         ''' Personen traegt. Der Vergleich laeuft deshalb ueber eine vorab geholte Zuordnung
-        ''' (siehe GalleryViewModel.MatchesCondition), nicht ueber ein Feld in der Zeile.</summary>
-        Public Shared ReadOnly ValidFields As String() = {"Width", "Height", "Camera", "Iso", "Aperture", "FocalLength", "DateTaken", "Person", "Place"}
+        ''' (siehe GalleryViewModel.MatchesCondition), nicht ueber ein Feld in der Zeile.
+        '''
+        ''' Titel bis Quellenangabe sind die beschreibenden Felder der Datei (IPTC/XMP), Copyright
+        ''' der Urheberrechtshinweis; alle als Text im Katalog wie der Ort.</summary>
+        Public Shared ReadOnly ValidFields As String() = {"Width", "Height", "Camera", "Iso", "Aperture", "FocalLength", "DateTaken", "Person", "Place",
+                                                           "Title", "Headline", "Description", "Creator", "Credit", "Copyright"}
         Public Shared ReadOnly ValidOperators As String() = {">", "<", ">=", "<=", "=", "Contains"}
 
         ''' <summary>Der Anzeigetext zu einem Feldnamen.
@@ -45,6 +49,12 @@ Namespace Services
                 Case "DateTaken" : Return LocalizationService.T("Aufnahmedatum")
                 Case "Person" : Return LocalizationService.T("Person")
                 Case "Place" : Return LocalizationService.T("Ort")
+                Case "Title" : Return LocalizationService.T("Titel")
+                Case "Headline" : Return LocalizationService.T("Überschrift")
+                Case "Description" : Return LocalizationService.T("Beschreibung")
+                Case "Creator" : Return LocalizationService.T("Urheber")
+                Case "Credit" : Return LocalizationService.T("Quellenangabe")
+                Case "Copyright" : Return LocalizationService.T("Copyright")
                 Case Else : Return If(field, "")
             End Select
         End Function

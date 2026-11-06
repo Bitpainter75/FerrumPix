@@ -19,6 +19,9 @@ Namespace ViewModels
         SetPlace
         GpxTrack
         CaptureDate
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe
+        ''' (ImageDescriptionService).</summary>
+        ImageDescription
         ''' <summary>Modell herunterladen: Frage, Grafikkarte, Fortschritt und Ergebnis in einem
         ''' Dialog (MainWindowViewModelModelDownload.vb).</summary>
         ModelDownload

@@ -10968,4 +10968,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>すべて大文字</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>タイトルと説明</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>見出し</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>説明</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>作成者</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>クレジット</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>異なる値</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>{0} 枚の画像に適用されます。値が異なる欄は、空のままにしておけば変更されません。複数の作成者はセミコロンで区切ってください。</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG、PNG、WebP はファイル内に、その他の形式は XMP 付随ファイルに書き込みます。複数の作成者はセミコロンで区切ってください。</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>タイトルと説明を保存: {0} 件はファイル内、{1} 件は付随ファイル</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>{1} 枚中 {0} 枚のタイトルと説明を保存</value>
+  </data>
 </root>

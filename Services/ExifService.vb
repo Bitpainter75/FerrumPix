@@ -55,6 +55,26 @@ Namespace Services
         ''' <summary>Einzelbild oder Serie laut Kamera; trennt in den Stapeln zwei Einzelbilder
         ''' derselben Sekunde von einer Serie.</summary>
         Public Property CaptureMode As CaptureMode
+
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe, wie sie an der
+        ''' Datei gelten (siehe ImageDescriptionService). Sie stehen im Katalog, damit Suche und
+        ''' Suchlisten sie finden.</summary>
+        Public Property Description As New ImageDescription()
+
+        ''' <summary>Der Urheberrechtshinweis, wie er gilt (Beistelldatei vor EXIF, siehe
+        ''' ExifService.WithSidecarOverrides). Im Katalog nur fuer die Suche; angezeigt und
+        ''' geschrieben wird er weiter aus der Datei.</summary>
+        Public Property Copyright As String = ""
+
+        ''' <summary>Was die Volltextsuche aus den Aufnahmedaten ueber den Ort hinaus durchsucht:
+        ''' die beschreibenden Felder und der Urheberrechtshinweis. EINE Stelle mit
+        ''' LibraryImageMeta.CatalogSearchText, sonst faende die Suche je nach Weg etwas anderes.</summary>
+        Public ReadOnly Property CatalogSearchText As String
+            Get
+                Dim d = If(Description, New ImageDescription())
+                Return ImageDescriptionService.JoinForSearch(d.Title, d.Headline, d.Description, d.Creator, d.Credit, Copyright)
+            End Get
+        End Property
     End Class
 
     Public Class ExifTag
@@ -177,6 +197,12 @@ Namespace Services
         ''' und aus dieser Zeile wäre es nicht mehr herauszutrennen - deshalb die Einzelwerte aus
         ''' IptcDirectory.GetKeywords().</summary>
         Public Property EmbeddedKeywords As New List(Of String)()
+
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe, wie sie gelten
+        ''' (Beistelldatei vor XMP vor IPTC, siehe ImageDescriptionService). Gesetzt in
+        ''' ExifService.WithSidecarOverrides, also erst NACH dem Zwischenspeicher: die Beistelldatei
+        ''' kann sich aendern, ohne dass die Bilddatei es tut. Fuer das Infopanel.</summary>
+        Public Property Description As New ImageDescription()
     End Class
 
     Public Class ExifService
@@ -235,6 +261,10 @@ Namespace Services
             Public Property Copyright As String = ""
             Public Property CaptureDate As String = ""
             Public Property ModifyDate As String = ""
+            ''' <summary>Titel, Beschreibung und die uebrigen beschreibenden Felder (siehe
+            ''' ImageDescriptionService). Liegen hier, damit der Katalog sie beim Einlesen nicht
+            ''' jedes Mal aus der Beistelldatei neu zergliedert.</summary>
+            Public Property Description As New ImageDescription()
         End Class
 
         Private Shared ReadOnly _sidecarOverrideCache As New Concurrent.ConcurrentDictionary(Of String, SidecarOverrideEntry)(PathIdentity.Comparer)
@@ -306,6 +336,13 @@ Namespace Services
         ''' und der Dialog den anderen Wert zeigt, sobald eine Datei beides traegt.</summary>
         Private Shared Function WithSidecarOverrides(imagePath As String, data As ExifData) As ExifData
             If data Is Nothing Then Return data
+            ' Die beschreibenden Felder aus derselben Rangfolge wie Dialog und Katalog; hier, weil
+            ' auch sie aus der Beistelldatei kommen koennen (Grund 1 unten).
+            Try
+                data.Description = ImageDescriptionService.FromExifData(data, imagePath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.Beschreibung", ex)
+            End Try
             Dim fromSidecar = ReadSidecarOverrides(imagePath)
             If fromSidecar Is Nothing Then Return data
             If Not String.IsNullOrWhiteSpace(fromSidecar.Copyright) Then data.Copyright = fromSidecar.Copyright
@@ -815,6 +852,14 @@ Namespace Services
 
             FillPlaceNames(result, data)
 
+            Try
+                result.Description = ImageDescriptionService.FromExifData(data, imagePath)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.Beschreibung", ex)
+            End Try
+            ' Schon mit der Beistelldatei ueberlagert, wenn die Daten aus ReadExif kommen.
+            result.Copyright = CopyrightService.NormalizeText(data.Copyright)
+
             Return result
         End Function
 
@@ -844,9 +889,12 @@ Namespace Services
         ' Pentax); ohne die Erhoehung blieben die Katalogzeilen dieser Gehaeuse ohne Objektiv.
         ' 9 liest die ISO auch dort, wo das gewohnte EXIF-Feld fehlt (ReadFallbackIso, Nikon in
         ' den Hi-Stufen); ohne die Erhoehung blieben solche JPGs im Katalog ohne ISO.
+        ' 10 holt Titel, Ueberschrift, Beschreibung, Urheber, Quellenangabe (ImageDescriptionService)
+        ' und den Urheberrechtshinweis in den Katalog; ohne die Erhoehung faende die Suche sie nur in
+        ' neuen Fotos.
         ' Betrifft eine Aenderung nur EIN Format, gehoert sie nicht hierher, sondern in
         ' ReaderVersions: dann liest der Katalog nur dieses Format neu.
-        Public Const SummaryFormatVersion As Integer = 9
+        Public Const SummaryFormatVersion As Integer = 10
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -1584,6 +1632,23 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Setzt eine Beistelldatei Byte fuer Byte auf einen vorher gesicherten Stand
+        ''' zurueck - atomar und unter derselben Sperre wie jedes andere Schreiben einer
+        ''' Beistelldatei. Fuer Vorgaenge, die Beistelldatei und Bilddatei nacheinander schreiben
+        ''' und beim Scheitern des zweiten Schritts den ersten zuruecknehmen
+        ''' (ImageDescriptionService.Write).</summary>
+        Friend Shared Function RestoreXmpSidecar(sidecarPath As String, content As Byte()) As Boolean
+            If String.IsNullOrWhiteSpace(sidecarPath) OrElse content Is Nothing Then Return False
+            SyncLock _sidecarWriteLock
+                Try
+                    Return ImageProcessor.WriteAllBytesAtomic(sidecarPath, content)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Exif.RestoreXmpSidecar", ex)
+                    Return False
+                End Try
+            End SyncLock
+        End Function
+
         ''' <summary>Schreibt Katalogdaten (Bewertung, Farb-Label, Stichworte) in ein Adobe-XMP-Sidecar -
         ''' die Verallgemeinerung von <see cref="WriteXmpRatingSidecar"/>. Vorhandene fremde Knoten
         ''' bleiben erhalten (nur die betroffenen werden gesetzt/ersetzt). <paramref name="colorLabelWord"/>
@@ -1762,6 +1827,51 @@ Namespace Services
             Return If(fromSidecar Is Nothing, "", fromSidecar.Copyright)
         End Function
 
+        ''' <summary>Titel, Beschreibung und die uebrigen beschreibenden Felder aus der
+        ''' Beistelldatei, ueber denselben Zwischenspeicher wie Hinweis und Zeiten. Immer eine
+        ''' eigene Kopie: der Aufrufer ergaenzt sie um die eingebetteten Werte.</summary>
+        Public Shared Function ReadSidecarDescription(imagePath As String) As ImageDescription
+            Dim result As New ImageDescription()
+            Dim fromSidecar = ReadSidecarOverrides(imagePath)
+            If fromSidecar Is Nothing OrElse fromSidecar.Description Is Nothing Then Return result
+            For Each field In ImageDescription.AllFields
+                result.SetValue(field, fromSidecar.Description.GetValue(field))
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Titel, Beschreibung und die uebrigen beschreibenden Felder in eine
+        ''' XMP-Beistelldatei. Ein leerer Wert entfernt das Feld; fremde Knoten bleiben unangetastet.
+        ''' Wie die Felder im XMP stehen, steht an EINER Stelle: ImageDescriptionService.ApplyToXmp,
+        ''' denselben Weg nimmt das XMP in der Bilddatei.</summary>
+        ''' <returns>Der Pfad der geschriebenen Datei, oder "" wenn nichts geschrieben wurde.</returns>
+        Public Shared Function WriteXmpDescriptionSidecar(imagePath As String,
+                                                          changes As IReadOnlyDictionary(Of ImageDescriptionField, String),
+                                                          createIfMissing As Boolean) As String
+            If String.IsNullOrWhiteSpace(imagePath) OrElse changes Is Nothing OrElse changes.Count = 0 Then Return ""
+
+            Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+            If String.IsNullOrEmpty(sidecarPath) Then
+                If Not createIfMissing Then Return ""
+                sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
+                If String.IsNullOrWhiteSpace(sidecarPath) Then Return ""
+            End If
+
+            Try
+                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                If doc Is Nothing Then Return ""
+                Dim target = GetOrCreateSidecarDescription(doc)
+                If target Is Nothing Then Return ""
+                Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                ImageDescriptionService.ApplyToXmp(doc.Descendants(rdfNamespace + "Description"), target, changes)
+                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
+                Return sidecarPath
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.WriteXmpDescriptionSidecar", ex)
+                Return ""
+            End Try
+        End Function
+
         ''' <summary>Alles, was die Beistelldatei ueber die Bilddatei stellt, in EINEM Zug gelesen:
         ''' Hinweis und Zeiten. Ein zweiter Weg fuer jedes Feld hiesse, dieselbe Datei mehrfach zu
         ''' zergliedern - und zwei Zwischenspeicher, die auseinanderlaufen koennen.</summary>
@@ -1810,7 +1920,9 @@ Namespace Services
             Dim photoshopNamespace As XNamespace = "http://ns.adobe.com/photoshop/1.0/"
             Try
                 Dim doc = XDocument.Load(sidecarPath)
-                For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description")
+                Dim descriptions = doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
+                result.Description = ImageDescriptionService.FromXmpDescriptions(descriptions)
+                For Each description In descriptions
                     If String.IsNullOrEmpty(result.Copyright) Then
                         result.Copyright = ReadSidecarCopyright(description, dcNamespace)
                     End If

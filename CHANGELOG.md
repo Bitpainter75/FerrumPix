@@ -2,6 +2,16 @@
 
 ### Changes
 
+- **Title and description**: a new dialog in the Metadata menu sets title, headline,
+  description, creator and credit line, for one picture or a whole selection. JPEG, PNG and WebP
+  get them inside the file (JPEG also as IPTC), other formats such as RAW in an XMP sidecar. The
+  fields are found by the gallery search and can be used as conditions in saved searches, the info
+  sidebar can show each of them (off by default, switch them on in Settings), and an export from a
+  RAW now carries the title and description from its sidecar into the new file.
+
+- **Search**: the gallery search and the text of saved searches now also find the place a picture
+  was taken and its copyright notice, and saved searches have a new condition for the copyright.
+
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the
   filmstrip, so the strip moves instead of the selection.

@@ -121,6 +121,8 @@ Namespace ViewModels
         Public Property RemovePlace As ICommand
         Public Property SetCopyright As ICommand
         Public Property SetCaptureDate As ICommand
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe.</summary>
+        Public Property SetDescription As ICommand
         Public Property OpenPlaceInOsm As ICommand
 
         ' Wege nach draussen

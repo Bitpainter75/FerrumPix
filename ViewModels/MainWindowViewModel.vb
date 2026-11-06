@@ -3072,6 +3072,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsSetPlace))
                 Me.RaisePropertyChanged(NameOf(DialogShowsGpxTrack))
                 Me.RaisePropertyChanged(NameOf(DialogShowsCaptureDate))
+                Me.RaisePropertyChanged(NameOf(DialogShowsImageDescription))
                 Me.RaisePropertyChanged(NameOf(DialogShowsModelDownload))
                 Me.RaisePropertyChanged(NameOf(DialogShowsImport))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackup))
@@ -3119,6 +3120,7 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.ExportTo AndAlso
                        _dialogKind <> AppDialogKind.SetPlace AndAlso
                        _dialogKind <> AppDialogKind.CaptureDate AndAlso
+                       _dialogKind <> AppDialogKind.ImageDescription AndAlso
                        _dialogKind <> AppDialogKind.ModelDownload AndAlso
                        _dialogKind <> AppDialogKind.Import AndAlso
                        _dialogKind <> AppDialogKind.Backup AndAlso
@@ -4100,6 +4102,9 @@ Namespace ViewModels
                 ' Aufnahmeort in derselben Breite: die beiden Metadaten-Dialoge stehen im selben
                 ' Untermenue nebeneinander und sollen nicht unterschiedlich breit aufgehen.
                 If DialogShowsSetPlace Then Return 570
+                ' Titel und Beschreibung: dasselbe Untermenue, dieselbe Breite. Die Beschreibung
+                ' ist mehrzeilig und braucht die Breite fuer lesbare Zeilen.
+                If DialogShowsImageDescription Then Return 570
                 ' Einlesen: Quelle und Ziel stehen als Pfade da und sollen lesbar bleiben.
                 If DialogShowsImport Then Return 680
                 If DialogShowsBackupOrRestore Then Return 620
@@ -4904,6 +4909,155 @@ Namespace ViewModels
         Public Function ShowInputAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of String)
             Return ShowDialogAsync(kind, titleText, messageText, initialText,
                                    LocalizationService.T(confirmText), LocalizationService.T(cancelText))
+        End Function
+
+        ' ---------------------------------------------------------------- Titel und Beschreibung
+
+        Private ReadOnly _dialogDescriptionValues As New Dictionary(Of ImageDescriptionField, String)()
+        Private ReadOnly _dialogDescriptionInitial As New Dictionary(Of ImageDescriptionField, String)()
+        Private ReadOnly _dialogDescriptionMixed As New HashSet(Of ImageDescriptionField)()
+
+        Public ReadOnly Property DialogShowsImageDescription As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.ImageDescription
+            End Get
+        End Property
+
+        Public Property DialogDescriptionTitle As String
+            Get
+                Return GetDialogDescriptionValue(ImageDescriptionField.Title)
+            End Get
+            Set(value As String)
+                SetDialogDescriptionValue(ImageDescriptionField.Title, value, NameOf(DialogDescriptionTitle))
+            End Set
+        End Property
+
+        Public Property DialogDescriptionHeadline As String
+            Get
+                Return GetDialogDescriptionValue(ImageDescriptionField.Headline)
+            End Get
+            Set(value As String)
+                SetDialogDescriptionValue(ImageDescriptionField.Headline, value, NameOf(DialogDescriptionHeadline))
+            End Set
+        End Property
+
+        Public Property DialogDescriptionText As String
+            Get
+                Return GetDialogDescriptionValue(ImageDescriptionField.Description)
+            End Get
+            Set(value As String)
+                SetDialogDescriptionValue(ImageDescriptionField.Description, value, NameOf(DialogDescriptionText))
+            End Set
+        End Property
+
+        Public Property DialogDescriptionCreator As String
+            Get
+                Return GetDialogDescriptionValue(ImageDescriptionField.Creator)
+            End Get
+            Set(value As String)
+                SetDialogDescriptionValue(ImageDescriptionField.Creator, value, NameOf(DialogDescriptionCreator))
+            End Set
+        End Property
+
+        Public Property DialogDescriptionCredit As String
+            Get
+                Return GetDialogDescriptionValue(ImageDescriptionField.Credit)
+            End Get
+            Set(value As String)
+                SetDialogDescriptionValue(ImageDescriptionField.Credit, value, NameOf(DialogDescriptionCredit))
+            End Set
+        End Property
+
+        ' Der Platzhalter sagt bei einer Auswahl, dass die Bilder hier verschiedene Werte tragen.
+        ' Ein leeres Feld hiesse sonst "steht nichts drin", und das stimmt dann nicht.
+        Public ReadOnly Property DialogDescriptionTitleHint As String
+            Get
+                Return DialogDescriptionHint(ImageDescriptionField.Title)
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogDescriptionHeadlineHint As String
+            Get
+                Return DialogDescriptionHint(ImageDescriptionField.Headline)
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogDescriptionTextHint As String
+            Get
+                Return DialogDescriptionHint(ImageDescriptionField.Description)
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogDescriptionCreatorHint As String
+            Get
+                Return DialogDescriptionHint(ImageDescriptionField.Creator)
+            End Get
+        End Property
+
+        Public ReadOnly Property DialogDescriptionCreditHint As String
+            Get
+                Return DialogDescriptionHint(ImageDescriptionField.Credit)
+            End Get
+        End Property
+
+        Private Function GetDialogDescriptionValue(field As ImageDescriptionField) As String
+            Dim value As String = Nothing
+            Return If(_dialogDescriptionValues.TryGetValue(field, value), value, "")
+        End Function
+
+        Private Sub SetDialogDescriptionValue(field As ImageDescriptionField, value As String, propertyName As String)
+            If String.Equals(GetDialogDescriptionValue(field), If(value, ""), StringComparison.Ordinal) Then Return
+            _dialogDescriptionValues(field) = If(value, "")
+            Me.RaisePropertyChanged(propertyName)
+        End Sub
+
+        Private Function DialogDescriptionHint(field As ImageDescriptionField) As String
+            Return If(_dialogDescriptionMixed.Contains(field), LocalizationService.T("Verschiedene Werte"), "")
+        End Function
+
+        ''' <summary>Der Dialog "Titel und Beschreibung". Die Felder stehen beim Oeffnen so da, wie sie
+        ''' gelten: bei einem Bild seine Werte, bei mehreren der gemeinsame Wert, wo alle denselben
+        ''' tragen, sonst leer mit dem Hinweis "Verschiedene Werte".
+        '''
+        ''' Zurueck kommt NUR, was sich gegenueber diesem Stand geaendert hat. Ein Feld mit
+        ''' verschiedenen Werten, das man nicht anfasst, bleibt deshalb an jedem Bild, wie es war,
+        ''' und ein geleertes Feld, das vorher einen gemeinsamen Wert trug, wird entfernt. Nothing
+        ''' heisst abgebrochen; eine leere Liste heisst bestaetigt ohne Aenderung.</summary>
+        Public Async Function ShowImageDescriptionAsync(common As ImageDescription,
+                                                        mixed As IEnumerable(Of ImageDescriptionField),
+                                                        imageCount As Integer) As Task(Of Dictionary(Of ImageDescriptionField, String))
+            _dialogDescriptionValues.Clear()
+            _dialogDescriptionInitial.Clear()
+            _dialogDescriptionMixed.Clear()
+            If mixed IsNot Nothing Then _dialogDescriptionMixed.UnionWith(mixed)
+            For Each field In ImageDescription.AllFields
+                Dim value = If(common, New ImageDescription()).GetValue(field)
+                _dialogDescriptionValues(field) = value
+                _dialogDescriptionInitial(field) = value
+            Next
+            For Each name In {NameOf(DialogDescriptionTitle), NameOf(DialogDescriptionHeadline), NameOf(DialogDescriptionText),
+                              NameOf(DialogDescriptionCreator), NameOf(DialogDescriptionCredit),
+                              NameOf(DialogDescriptionTitleHint), NameOf(DialogDescriptionHeadlineHint),
+                              NameOf(DialogDescriptionTextHint), NameOf(DialogDescriptionCreatorHint),
+                              NameOf(DialogDescriptionCreditHint)}
+                Me.RaisePropertyChanged(name)
+            Next
+
+            Dim message = If(imageCount > 1,
+                             String.Format(LocalizationService.T("Gilt für {0} Bilder. Ein Feld mit verschiedenen Werten bleibt unverändert, solange es leer bleibt. Mehrere Urheber werden mit Semikolon getrennt."), imageCount),
+                             LocalizationService.T("JPEG, PNG und WebP bekommen die Angaben in die Datei, alle anderen Formate in eine XMP-Beistelldatei. Mehrere Urheber werden mit Semikolon getrennt."))
+            Dim confirmed = Await ShowDialogAsync(AppDialogKind.ImageDescription, "Titel und Beschreibung", message,
+                                                  "", "Speichern", "Abbrechen")
+            If confirmed Is Nothing Then Return Nothing
+
+            Dim changes As New Dictionary(Of ImageDescriptionField, String)()
+            For Each field In ImageDescription.AllFields
+                Dim before = ImageDescriptionService.NormalizeValue(field, _dialogDescriptionInitial(field))
+                Dim after = ImageDescriptionService.NormalizeValue(field, GetDialogDescriptionValue(field))
+                If String.Equals(before, after, StringComparison.Ordinal) Then Continue For
+                changes(field) = after
+            Next
+            Return changes
         End Function
 
         Public Async Function ShowCaptureDateAsync(initial As DateTime?) As Task(Of CaptureDateDialogResult)

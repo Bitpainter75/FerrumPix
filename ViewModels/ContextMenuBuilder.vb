@@ -347,6 +347,7 @@ Namespace ViewModels
                 ' Blick in den Katalog: er steht in der Datei, nicht bei uns. Ein Trenner davor,
                 ' weil er eine andere Angabe meint als der Aufnahmeort darueber.
                 children.Add(FooterMenuCatalog.Divider())
+                AddIfOffered(children, commands.SetDescription, FooterMenuCatalog.SetDescription(commands.SetDescription))
                 AddIfOffered(children, commands.SetCopyright, FooterMenuCatalog.SetCopyright(commands.SetCopyright))
                 AddIfOffered(children, commands.SetCaptureDate, FooterMenuCatalog.SetCaptureDate(commands.SetCaptureDate))
 

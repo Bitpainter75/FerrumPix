@@ -37,7 +37,7 @@ Your originals are never changed behind your back, and nothing at all is written
 
 <img src="Screenshots/Gallery.jpg" />
 
-Folder tree, grid, list, group view, photo wall and map view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken and image size.
+Folder tree, grid, list, group view, photo wall and map view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken, image size, title, description, creator, place and copyright.
 
 The group view puts a heading above each block of pictures, following whatever you sort by: one block per day when sorting by date, or by month or year, and by name, camera, file type or rating just as well. A circle in front of the heading selects a whole block at once.
 
@@ -54,6 +54,8 @@ A map view shows the pictures by where they were taken. It is off until you swit
 Ratings, colour labels, keywords and reject marks are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact. Keywords stored inside the picture itself, in its IPTC or XMP data, are picked up as well and can be searched like any other keyword.
 
 If you like, the keywords you add go into JPEG, PNG and WebP files themselves too, as XMP, IPTC or both, when you add them and when you save or export; keywords found by the AI recognition always stay in FerrumPix.
+
+Title, headline, description, creator and credit line can be set for one picture or a whole selection. JPEG, PNG and WebP carry them inside the file, other formats such as RAW in an XMP sidecar, and an export takes them along. They are read from the pictures as well, so search and saved searches find them, and the info sidebar can show them if you switch them on.
 
 Name the folders your photos live in and they appear at the top of the folder tree, one click away, and FerrumPix reads them in the background, subfolders included, so search and filters cover your whole collection instead of only the folders you happened to open. It runs shortly after startup if you want it to, and it can be stopped at any time. Later runs only look at what has changed, and nothing is ever written next to your photos. Renaming or moving a folder in FerrumPix takes its ratings, labels, keywords, people and thumbnails along; if you moved it outside FerrumPix, you can point the settings at its new location.
 

@@ -10972,4 +10972,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>Semua huruf kapital</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>Judul dan deskripsi</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>Judul</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>Tajuk</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>Deskripsi</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>Pembuat</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>Kredit</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>Nilai berbeda</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>Berlaku untuk {0} foto. Kolom dengan nilai berbeda tetap tidak berubah selama dibiarkan kosong. Pisahkan beberapa pembuat dengan titik koma.</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG, PNG, dan WebP menerima data di dalam berkas, semua format lain di sidecar XMP. Pisahkan beberapa pembuat dengan titik koma.</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>Judul dan deskripsi disimpan: {0} di dalam berkas, {1} di sidecar</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>Judul dan deskripsi disimpan untuk {0} dari {1} foto</value>
+  </data>
 </root>

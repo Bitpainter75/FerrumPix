@@ -10968,4 +10968,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>Alleen hoofdletters</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>Titel en beschrijving</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>Kop</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>Beschrijving</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>Maker</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>Bronvermelding</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>Verschillende waarden</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>Geldt voor {0} foto’s. Een veld met verschillende waarden blijft ongewijzigd zolang het leeg blijft. Meerdere makers scheid je met een puntkomma.</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG, PNG en WebP krijgen de gegevens in het bestand, alle andere formaten in een XMP-sidecar. Meerdere makers scheid je met een puntkomma.</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>Titel en beschrijving opgeslagen: {0} in het bestand, {1} in een sidecar</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>Titel en beschrijving opgeslagen voor {0} van {1} foto’s</value>
+  </data>
 </root>

@@ -986,6 +986,7 @@ Namespace ViewModels
                                                     .SetPlaceFromTrack = SetPlaceFromTrackCommand,
                                                     .SetCopyright = SetCopyrightCommand,
                                                     .SetCaptureDate = SetCaptureDateCommand,
+                                                    .SetDescription = SetDescriptionCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
@@ -1030,6 +1031,7 @@ Namespace ViewModels
         Public ReadOnly Property SetPlaceFromTrackCommand As ICommand
         Public ReadOnly Property SetCopyrightCommand As ICommand
         Public ReadOnly Property SetCaptureDateCommand As ICommand
+        Public ReadOnly Property SetDescriptionCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
@@ -1114,6 +1116,7 @@ Namespace ViewModels
             SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceFromTrackCurrentAsync())
             SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightCurrentAsync())
             SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateCurrentAsync())
+            SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() SetDescriptionCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
@@ -4452,6 +4455,16 @@ Namespace ViewModels
         Private Async Function SetCaptureDateCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.SetCaptureDateForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        ''' <summary>Titel und Beschreibung fuer das angezeigte Bild, auf demselben Weg wie der
+        ''' Urheberrechtshinweis darueber.</summary>
+        Private Async Function SetDescriptionCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.SetDescriptionForImageItemsAsync(i)
                                         End Function)
             InfoPanel.Refresh()
             RefreshContextActions()

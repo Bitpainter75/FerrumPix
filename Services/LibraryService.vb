@@ -83,6 +83,28 @@ Namespace Services
         ''' Bilddatei anzufassen. Ohne diesen Wert bliebe der Schnappschuss "frisch", der Hintergrundscan
         ''' überspränge die Datei, und der Sidecar-Import wäre bei bereits eingelesenen Ordnern wirkungslos.</summary>
         Public Property ScannedSidecarModifiedAt As String = ""
+
+        ''' <summary>Die beschreibenden Felder der Datei (siehe ImageDescriptionService): Titel,
+        ''' Überschrift, Beschreibung, Urheber, Quellenangabe. Sie stehen hier, damit Suchtext und
+        ''' Suchlisten sie finden, ohne die Datei zu öffnen. Quelle ist immer die Datei samt
+        ''' Beistelldatei; der Katalog hält nur eine Abschrift.</summary>
+        Public Property Title As String = ""
+        Public Property Headline As String = ""
+        Public Property Description As String = ""
+        Public Property Creator As String = ""
+        Public Property Credit As String = ""
+
+        ''' <summary>Der Urheberrechtshinweis, wie er an der Datei gilt. Nur fuer die Suche; der
+        ''' Dialog und die Info-Leiste lesen ihn weiter aus der Datei.</summary>
+        Public Property Copyright As String = ""
+
+        ''' <summary>Beschreibende Felder und Urheberrechtshinweis als EIN Suchtext, gleich gebaut
+        ''' wie ExifSearchFields.CatalogSearchText.</summary>
+        Public ReadOnly Property CatalogSearchText As String
+            Get
+                Return ImageDescriptionService.JoinForSearch(Title, Headline, Description, Creator, Credit, Copyright)
+            End Get
+        End Property
     End Class
 
     ''' Der Personen-Teil liegt in LibraryServicePeople.vb - eigene Datei, weil er eine
@@ -494,7 +516,13 @@ Namespace Services
             ("Country", "TEXT"),
             ("CountryCode", "TEXT"),
             ("PickState", "INTEGER NOT NULL DEFAULT 0"),
-            ("CaptureMode", "INTEGER NOT NULL DEFAULT 0")
+            ("CaptureMode", "INTEGER NOT NULL DEFAULT 0"),
+            ("Title", "TEXT"),
+            ("Headline", "TEXT"),
+            ("Description", "TEXT"),
+            ("Creator", "TEXT"),
+            ("Credit", "TEXT"),
+            ("Copyright", "TEXT")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -1252,7 +1280,22 @@ Namespace Services
                    NullableEquals(existing.GpsLatitude, exif.GpsLatitude) AndAlso
                    NullableEquals(existing.GpsLongitude, exif.GpsLongitude) AndAlso
                    NullableEquals(existing.ImageWidth, exif.ImageWidth) AndAlso
-                   NullableEquals(existing.ImageHeight, exif.ImageHeight)
+                   NullableEquals(existing.ImageHeight, exif.ImageHeight) AndAlso
+                   DescriptionMatches(existing, exif.Description) AndAlso
+                   CopyrightMatches(existing, exif)
+        End Function
+
+        Private Shared Function DescriptionMatches(existing As LibraryImageMeta, description As ImageDescription) As Boolean
+            Dim value = If(description, New ImageDescription())
+            Return String.Equals(existing.Title, value.Title, StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.Headline, value.Headline, StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.Description, value.Description, StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.Creator, value.Creator, StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.Credit, value.Credit, StringComparison.Ordinal)
+        End Function
+
+        Private Shared Function CopyrightMatches(existing As LibraryImageMeta, exif As ExifSearchFields) As Boolean
+            Return String.Equals(existing.Copyright, If(exif.Copyright, ""), StringComparison.Ordinal)
         End Function
 
         ''' <summary>Zustand der Begleitdateien als eine Zeichenkette: Änderungsdatum der XMP-Beistelldatei
@@ -1309,8 +1352,8 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode,Title,Headline,Description,Creator,Credit,Copyright) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode,$title,$headline,$description,$creator,$credit,$copyright) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
                         "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
@@ -1323,8 +1366,17 @@ Namespace Services
                         "ExifSummary=excluded.ExifSummary, IptcSummary=excluded.IptcSummary, XmpSummary=excluded.XmpSummary, " &
                         "IccSummary=excluded.IccSummary, SummaryFormat=excluded.SummaryFormat, " &
                         "HasIccProfile=excluded.HasIccProfile, City=excluded.City, Country=excluded.Country, " &
-                        "CountryCode=excluded.CountryCode, CaptureMode=excluded.CaptureMode"
+                        "CountryCode=excluded.CountryCode, CaptureMode=excluded.CaptureMode, " &
+                        "Title=excluded.Title, Headline=excluded.Headline, Description=excluded.Description, " &
+                        "Creator=excluded.Creator, Credit=excluded.Credit, Copyright=excluded.Copyright"
                     cmd.Parameters.AddWithValue("$p", PathKey(filePath))
+                    Dim description = If(exif.Description, New ImageDescription())
+                    cmd.Parameters.AddWithValue("$title", description.Title)
+                    cmd.Parameters.AddWithValue("$headline", description.Headline)
+                    cmd.Parameters.AddWithValue("$description", description.Description)
+                    cmd.Parameters.AddWithValue("$creator", description.Creator)
+                    cmd.Parameters.AddWithValue("$credit", description.Credit)
+                    cmd.Parameters.AddWithValue("$copyright", If(exif.Copyright, ""))
                     cmd.Parameters.AddWithValue("$captureMode", CInt(exif.CaptureMode))
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
@@ -1361,7 +1413,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -1398,7 +1450,13 @@ Namespace Services
                 .Country = If(reader.IsDBNull(30), "", reader.GetString(30)),
                 .CountryCode = If(reader.IsDBNull(31), "", reader.GetString(31)),
                 .PickState = If(reader.IsDBNull(32), 0, NormalizePickState(reader.GetInt32(32))),
-                .CaptureMode = If(reader.IsDBNull(33), CaptureMode.Unknown, CType(reader.GetInt32(33), CaptureMode))
+                .CaptureMode = If(reader.IsDBNull(33), CaptureMode.Unknown, CType(reader.GetInt32(33), CaptureMode)),
+                .Title = If(reader.IsDBNull(34), "", reader.GetString(34)),
+                .Headline = If(reader.IsDBNull(35), "", reader.GetString(35)),
+                .Description = If(reader.IsDBNull(36), "", reader.GetString(36)),
+                .Creator = If(reader.IsDBNull(37), "", reader.GetString(37)),
+                .Credit = If(reader.IsDBNull(38), "", reader.GetString(38)),
+                .Copyright = If(reader.IsDBNull(39), "", reader.GetString(39))
             }
         End Function
 

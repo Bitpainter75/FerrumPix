@@ -10926,4 +10926,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>全部大写</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>标题和描述</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>大标题</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>创作者</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>署名</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>不同的值</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>适用于 {0} 张图片。值各不相同的字段只要保持为空就不会更改。多位创作者请用分号分隔。</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG、PNG 和 WebP 将信息写入文件本身，其他格式写入 XMP 附带文件。多位创作者请用分号分隔。</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>标题和描述已保存：{0} 写入文件，{1} 写入附带文件</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>已为 {1} 张图片中的 {0} 张保存标题和描述</value>
+  </data>
 </root>

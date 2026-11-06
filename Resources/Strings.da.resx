@@ -10968,4 +10968,37 @@
   <data name="Alle_Gro_buchstaben_3afe4f0f" xml:space="preserve">
     <value>Kun store bogstaver</value>
   </data>
+  <data name="Titel_und_Beschreibung_6e5077fa" xml:space="preserve">
+    <value>Titel og beskrivelse</value>
+  </data>
+  <data name="Titel_950701e7" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="berschrift_233be369" xml:space="preserve">
+    <value>Overskrift</value>
+  </data>
+  <data name="Beschreibung_b3c8defc" xml:space="preserve">
+    <value>Beskrivelse</value>
+  </data>
+  <data name="Urheber_ee5d5bea" xml:space="preserve">
+    <value>Ophavsperson</value>
+  </data>
+  <data name="Quellenangabe_51813a06" xml:space="preserve">
+    <value>Kreditering</value>
+  </data>
+  <data name="Verschiedene_Werte_b04fc208" xml:space="preserve">
+    <value>Forskellige værdier</value>
+  </data>
+  <data name="Gilt_f_r_0_Bilder_Ein_Feld_mit_verschiedenen_Wer_804a0d3d" xml:space="preserve">
+    <value>Gælder for {0} billeder. Et felt med forskellige værdier forbliver uændret, så længe det er tomt. Adskil flere ophavspersoner med semikolon.</value>
+  </data>
+  <data name="JPEG_PNG_und_WebP_bekommen_die_Angaben_in_die_Da_33c01683" xml:space="preserve">
+    <value>JPEG, PNG og WebP får oplysningerne i filen, alle andre formater i en XMP-sidefil. Adskil flere ophavspersoner med semikolon.</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_0_in_der_Date_dd36dfa3" xml:space="preserve">
+    <value>Titel og beskrivelse gemt: {0} i filen, {1} i en sidefil</value>
+  </data>
+  <data name="Titel_und_Beschreibung_gespeichert_f_r_0_von_1_B_24b4b3ef" xml:space="preserve">
+    <value>Titel og beskrivelse gemt for {0} af {1} billeder</value>
+  </data>
 </root>
