@@ -11156,4 +11156,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Zeigt oben auf der Kachel einen grünen Daumen nach oben für behaltene und einen roten Daumen nach unten für verworfene Bilder. Ein Klick darauf nimmt die Markierung zurück. Verworfene Bilder bleiben auch ohne das Zeichen gedimmt.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Info-Leiste im Vollbild</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Zeigt die Leiste auch im Vollbild, das Bild rückt dafür zur Seite. Unabhängig von der Leiste im Viewer. Lässt sich im Vollbild auch über das Info-Symbol in der Bedienleiste oder die Taste I umschalten.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filmstreifen im Vollbild</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Zeigt den Filmstreifen im Vollbild dauerhaft, statt erst, wenn die Maus an den Rand fährt. Lässt sich im Vollbild auch über das Filmstreifen-Symbol in der Bedienleiste umschalten.</value>
+  </data>
 </root>

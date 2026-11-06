@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Näyttää ruudun yläreunassa vihreän peukalon ylös säilytetyille ja punaisen peukalon alas hylätyille kuville. Napsautus poistaa merkinnän. Hylätyt kuvat pysyvät himmennettyinä myös ilman merkkiä.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Tietopalkki koko näytöllä</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Näyttää palkin myös koko näytön tilassa, ja kuva siirtyy sivuun sen tieltä. Riippumaton katseluohjelman palkista. Koko näytön tilassa sen voi vaihtaa myös ohjauspalkin info-symbolilla tai I-näppäimellä.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filminauha koko näytöllä</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Näyttää filminauhan koko näytön tilassa jatkuvasti eikä vasta, kun hiiri tulee reunaan. Koko näytön tilassa sen voi vaihtaa myös ohjauspalkin filminauha-symbolilla.</value>
+  </data>
 </root>

@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Toont bovenaan de tegel een groene duim omhoog bij bewaarde en een rode duim omlaag bij afgewezen foto's. Een klik erop haalt de markering weg. Afgewezen foto's blijven ook zonder het teken gedimd.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Infobalk in volledig scherm</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Toont de balk ook in volledig scherm, de foto schuift opzij om plaats te maken. Los van de balk in de viewer. In volledig scherm ook te schakelen met het info-symbool in de bedieningsbalk of de toets I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filmstrip in volledig scherm</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Toont de filmstrip in volledig scherm altijd, in plaats van pas wanneer de muis de rand bereikt. In volledig scherm ook te schakelen met het filmstrip-symbool in de bedieningsbalk.</value>
+  </data>
 </root>

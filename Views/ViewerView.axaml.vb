@@ -1309,11 +1309,12 @@ Namespace Views
                 _fullscreenZoom = 0
                 _fullscreenPan = New Vector(0, 0)
                 _fullscreenPanning = False
-                _fullscreenFilmstripPinned = False
                 If _fullscreenFilmstripEdge IsNot Nothing Then HideFullscreenFilmstrip()
                 ApplyFullscreenImageMode()
                 ApplyVideoLayout()
                 UpdateFullscreenInfoLayout()
+                ' Ein angehefteter Filmstreifen steht gleich wieder da, sobald das Vollbild steht.
+                Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf ApplyFullscreenFilmstripPinned, Avalonia.Threading.DispatcherPriority.Loaded)
                 ' Beim Betreten kurz zeigen, dass es die Leiste gibt; die Ruhezeit nimmt sie wieder.
                 _fullscreenVideoControlsVisible = True
                 ResetFullscreenVideoControlsVisibility()
@@ -1365,6 +1366,10 @@ Namespace Views
 
             If e.PropertyName = NameOf(ViewerViewModel.ShowsFullscreenInfo) Then
                 UpdateFullscreenInfoLayout()
+            End If
+
+            If e.PropertyName = NameOf(ViewerViewModel.FullscreenFilmstripPinned) Then
+                ApplyFullscreenFilmstripPinned()
             End If
         End Sub
 
@@ -1823,10 +1828,28 @@ Namespace Views
         ''' <summary>Wo der Filmstreifen im Vollbild gerade steht: Nothing (nicht da), "Top" oder
         ''' "Bottom".</summary>
         Private _fullscreenFilmstripEdge As String
-        ''' <summary>Der Filmstreifen im Vollbild ist ueber den Knopf der Bedienleiste eingeschaltet
-        ''' und bleibt stehen, bis er dort wieder ausgeschaltet wird; ueber den Rand geholt geht er
-        ''' dagegen, sobald die Maus seinen Bereich verlaesst.</summary>
-        Private _fullscreenFilmstripPinned As Boolean
+        ''' <summary>Der Filmstreifen im Vollbild ist eingeschaltet (Knopf der Bedienleiste oder
+        ''' Einstellung FullscreenFilmstripPinned, gemerkt) und bleibt stehen, bis er wieder
+        ''' ausgeschaltet wird; ueber den Rand geholt geht er dagegen, sobald die Maus seinen
+        ''' Bereich verlaesst.</summary>
+        Private ReadOnly Property IsFullscreenFilmstripPinned As Boolean
+            Get
+                Return If(GetVm()?.FullscreenFilmstripPinned, False)
+            End Get
+        End Property
+
+        ''' <summary>Zeigt den angehefteten Filmstreifen im Vollbild oder nimmt ihn weg, nach dem
+        ''' Betreten des Vollbilds und nach dem Umlegen der Einstellung. Ist der Filmstreifen im
+        ''' Fenster ganz aus, bleibt er auch hier weg; erst der Knopf schaltet ihn dort ein.</summary>
+        Private Sub ApplyFullscreenFilmstripPinned()
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsFullscreenMode Then Return
+            If IsFullscreenFilmstripPinned AndAlso vm.ShowFilmstrip Then
+                If _fullscreenFilmstripEdge Is Nothing Then ShowFullscreenFilmstrip(vm.FullscreenFilmstripPosition)
+            ElseIf _fullscreenFilmstripEdge IsNot Nothing Then
+                HideFullscreenFilmstrip()
+            End If
+        End Sub
         ''' <summary>Pfeil statt des Zeigers, den das Fenster im Vollbild ausblendet
         ''' (MainWindow.ApplyFullscreenState): gesetzt an der Vollbildflaeche, solange Bedienleiste
         ''' oder Filmstreifen zu sehen sind.</summary>
@@ -2012,15 +2035,20 @@ Namespace Views
         Public Sub OnFullscreenFilmstripToggleClick(sender As Object, e As RoutedEventArgs)
             Dim vm = GetVm()
             If vm Is Nothing Then Return
+            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            Dim settings = mainVm?.Settings
             If _fullscreenFilmstripEdge IsNot Nothing Then
-                _fullscreenFilmstripPinned = False
-                HideFullscreenFilmstrip()
+                ' Ein nur ueber den Rand geholter Filmstreifen geht einfach; ein angehefteter
+                ' nimmt die Einstellung mit zurueck.
+                If settings IsNot Nothing AndAlso settings.FullscreenFilmstripPinned Then settings.FullscreenFilmstripPinned = False
+                If _fullscreenFilmstripEdge IsNot Nothing Then HideFullscreenFilmstrip()
                 Return
             End If
-            Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
-            If Not vm.ShowFilmstrip AndAlso mainVm?.Settings IsNot Nothing Then mainVm.Settings.ViewerShowFilmstrip = True
-            _fullscreenFilmstripPinned = True
-            ShowFullscreenFilmstrip(vm.FullscreenFilmstripPosition)
+            If Not vm.ShowFilmstrip AndAlso settings IsNot Nothing Then settings.ViewerShowFilmstrip = True
+            If settings IsNot Nothing Then settings.FullscreenFilmstripPinned = True
+            ' Das Umlegen der Einstellung zeigt ihn meist schon (ApplyFullscreenFilmstripPinned);
+            ' zweimal in die Ueberlagerung verschoben werden darf die Liste nicht.
+            If _fullscreenFilmstripEdge Is Nothing Then ShowFullscreenFilmstrip(vm.FullscreenFilmstripPosition)
         End Sub
 
         ''' <summary>Holt den Filmstreifen ins Vollbild, wenn die Maus den oberen oder unteren Rand
@@ -2034,7 +2062,7 @@ Namespace Views
                 Return
             End If
             ' Ueber den Knopf eingeschaltet bleibt er, bis der Knopf ihn wieder ausschaltet.
-            If _fullscreenFilmstripPinned Then Return
+            If IsFullscreenFilmstripPinned Then Return
             Dim vw = viewport.Bounds.Width
             Dim vh = viewport.Bounds.Height
             If vw <= 0 OrElse vh <= 0 Then Return

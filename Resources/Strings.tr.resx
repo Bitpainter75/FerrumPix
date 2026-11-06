@@ -11182,4 +11182,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Döşemenin üstünde tutulan fotoğraflarda yeşil başparmak yukarı, reddedilenlerde kırmızı başparmak aşağı gösterir. Üzerine tıklamak işareti kaldırır. Reddedilen fotoğraflar işaret olmadan da soluk kalır.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Tam ekranda bilgi paneli</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Paneli tam ekranda da gösterir, fotoğraf ona yer açmak için kenara kayar. Görüntüleyicideki panelden bağımsızdır. Tam ekranda kontrol çubuğundaki bilgi simgesi veya I tuşu ile de açılıp kapatılabilir.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Tam ekranda film şeridi</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Film şeridini yalnızca fare kenara geldiğinde değil, tam ekranda sürekli gösterir. Tam ekranda kontrol çubuğundaki film şeridi simgesiyle de açılıp kapatılabilir.</value>
+  </data>
 </root>

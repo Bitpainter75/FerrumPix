@@ -37,7 +37,8 @@
 
 - Info sidebar: in the editor it now sits on the far right, next to the layers panel. In fullscreen
   a new button in the control bar (or the I key) shows and hides it, and the picture makes room for
-  it.
+  it. Both the info sidebar and the filmstrip can be kept visible in fullscreen with a setting, and
+  the buttons in the control bar remember your choice.
 
 - Filmstrip: two new settings, both off by default. One shows the edited mark of the gallery
   tiles on the filmstrip too, the other keeps the selected picture in the middle of the

@@ -11136,4 +11136,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>在缩略图顶部为保留的照片显示绿色竖拇指，为拒绝的照片显示红色倒拇指。点击它即可取消标记。即使不显示标记，被拒绝的照片仍保持变暗。</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>全屏时的信息面板</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>在全屏时也显示面板，照片会移到一旁为其让出空间。与查看器中的面板相互独立。全屏时也可通过控制栏的信息图标或 I 键切换。</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>全屏时的胶片条</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>在全屏时始终显示胶片条，而不是仅在鼠标到达边缘时显示。全屏时也可通过控制栏的胶片条图标切换。</value>
+  </data>
 </root>

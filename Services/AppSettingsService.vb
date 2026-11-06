@@ -720,6 +720,12 @@ Namespace Services
         ''' hier und nicht im Rezept - dort steht der fertige Wert der Groesse.
         Public Property EditorPerspectiveAutoFill As Boolean = False
         Public Property ViewerInfoSidebarExpanded As Boolean = True
+        ''' <summary>Die Info-Leiste im Vollbild, ab Werk aus: wer im Fenster die Leiste offen hat,
+        ''' will das Vollbild trotzdem frei sehen. Knopf und I im Vollbild legen denselben Wert um.</summary>
+        Public Property FullscreenInfoSidebarExpanded As Boolean = False
+        ''' <summary>Der Filmstreifen im Vollbild steht dauerhaft, ab Werk aus; sein Knopf in der
+        ''' Bedienleiste legt denselben Wert um. Aus, erscheint er nur ueber den Rand.</summary>
+        Public Property FullscreenFilmstripPinned As Boolean = False
         ''' In der Galerie ist die Info-Leiste ab Werk ZU: dort stehen links schon Ordnerbaum und
         ''' Filter, und wer die Galerie oeffnet, sucht ein Bild und liest keine Metadaten.
         Public Property GalleryInfoSidebarExpanded As Boolean = False

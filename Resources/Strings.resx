@@ -11157,4 +11157,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Shows a green thumbs up on kept and a red thumbs down on rejected pictures at the top of the tile. A click on it removes the mark. Rejected pictures stay dimmed even without the mark.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Info sidebar in fullscreen</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Shows the sidebar in fullscreen too, and the picture moves aside to make room. Independent of the sidebar in the viewer. In fullscreen it can also be switched with the info symbol in the control bar or the I key.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filmstrip in fullscreen</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Keeps the filmstrip visible in fullscreen instead of showing it only when the mouse reaches the edge. In fullscreen it can also be switched with the filmstrip symbol in the control bar.</value>
+  </data>
 </root>

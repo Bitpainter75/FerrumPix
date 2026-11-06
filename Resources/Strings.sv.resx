@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Visar överst på rutan en grön tumme upp för behållna och en röd tumme ned för avvisade bilder. Ett klick på den tar bort markeringen. Avvisade bilder förblir nedtonade även utan märket.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Infopanel i helskärm</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Visar panelen även i helskärm, och bilden flyttar åt sidan för att ge plats. Oberoende av panelen i visaren. I helskärm kan den också växlas med info-symbolen i kontrollfältet eller tangenten I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filmremsa i helskärm</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Visar filmremsan hela tiden i helskärm i stället för först när musen når kanten. I helskärm kan den också växlas med filmremsesymbolen i kontrollfältet.</value>
+  </data>
 </root>

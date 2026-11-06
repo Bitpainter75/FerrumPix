@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Zobrazí nahoře na dlaždici zelený palec nahoru u ponechaných a červený palec dolů u zamítnutých snímků. Kliknutím na něj se označení zruší. Zamítnuté snímky zůstanou ztlumené i bez značky.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Informační panel na celé obrazovce</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Zobrazí panel i na celé obrazovce, snímek se kvůli němu posune stranou. Nezávisle na panelu v prohlížeči. Na celé obrazovce jej lze přepnout také symbolem info v ovládací liště nebo klávesou I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filmový pás na celé obrazovce</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Zobrazí filmový pás na celé obrazovce trvale, ne až když myš dojede k okraji. Na celé obrazovce jej lze přepnout také symbolem filmového pásu v ovládací liště.</value>
+  </data>
 </root>

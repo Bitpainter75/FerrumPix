@@ -11182,4 +11182,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>타일 위쪽에 보관한 사진에는 초록색 엄지 위, 거부한 사진에는 빨간색 엄지 아래를 표시합니다. 클릭하면 표시가 해제됩니다. 거부한 사진은 표시가 없어도 어둡게 유지됩니다.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>전체 화면의 정보 패널</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>전체 화면에서도 패널을 표시하며, 사진은 공간을 위해 옆으로 비켜납니다. 뷰어의 패널과는 별개입니다. 전체 화면에서는 컨트롤 바의 정보 아이콘이나 I 키로도 전환할 수 있습니다.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>전체 화면의 필름 스트립</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>마우스가 가장자리에 닿을 때만이 아니라 전체 화면에서 필름 스트립을 항상 표시합니다. 전체 화면에서는 컨트롤 바의 필름 스트립 아이콘으로도 전환할 수 있습니다.</value>
+  </data>
 </root>

@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Viser øverst på flisen en grøn tommelfinger op for beholdte og en rød tommelfinger ned for forkastede billeder. Et klik på den fjerner markeringen. Forkastede billeder forbliver dæmpede, også uden mærket.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Infopanel i fuld skærm</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Viser panelet også i fuld skærm, og billedet rykker til side for at give plads. Uafhængigt af panelet i fremviseren. I fuld skærm kan det også slås til og fra med info-symbolet i kontrollinjen eller tasten I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Filmstrimmel i fuld skærm</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Viser filmstrimlen permanent i fuld skærm i stedet for kun, når musen når kanten. I fuld skærm kan den også slås til og fra med filmstrimmel-symbolet i kontrollinjen.</value>
+  </data>
 </root>

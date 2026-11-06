@@ -11182,4 +11182,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>แสดงนิ้วโป้งชี้ขึ้นสีเขียวบนภาพที่เก็บไว้ และนิ้วโป้งชี้ลงสีแดงบนภาพที่ปฏิเสธที่ด้านบนของไทล์ คลิกที่สัญลักษณ์เพื่อยกเลิกการทำเครื่องหมาย ภาพที่ปฏิเสธยังคงหรี่อยู่แม้ไม่มีสัญลักษณ์</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>แถบข้อมูลในโหมดเต็มจอ</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>แสดงแถบในโหมดเต็มจอด้วย และภาพจะเลื่อนไปด้านข้างเพื่อเว้นที่ ตั้งค่าแยกจากแถบในตัวแสดงภาพ ในโหมดเต็มจอสลับได้ด้วยสัญลักษณ์ข้อมูลบนแถบควบคุมหรือปุ่ม I</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>แถบฟิล์มในโหมดเต็มจอ</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>แสดงแถบฟิล์มในโหมดเต็มจอตลอดเวลา แทนที่จะแสดงเมื่อเมาส์ไปถึงขอบเท่านั้น ในโหมดเต็มจอสลับได้ด้วยสัญลักษณ์แถบฟิล์มบนแถบควบคุม</value>
+  </data>
 </root>

@@ -11138,4 +11138,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Affiche en haut de la vignette un pouce vert levé pour les photos conservées et un pouce rouge baissé pour les photos rejetées. Un clic dessus retire le marquage. Les photos rejetées restent assombries même sans le signe.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Barre d'informations en plein écran</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Affiche la barre aussi en plein écran, la photo se décale pour lui faire place. Indépendant de la barre de la visionneuse. En plein écran, elle s'active aussi avec le symbole info de la barre de commande ou la touche I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Pellicule en plein écran</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Affiche la pellicule en permanence en plein écran, au lieu de seulement quand la souris atteint le bord. En plein écran, elle s'active aussi avec le symbole de pellicule de la barre de commande.</value>
+  </data>
 </root>

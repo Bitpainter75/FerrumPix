@@ -11137,4 +11137,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Mostra no topo da miniatura um polegar verde para cima nas fotos mantidas e um polegar vermelho para baixo nas rejeitadas. Um clique nele retira a marcação. As fotos rejeitadas continuam escurecidas mesmo sem o sinal.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Barra de informações em ecrã inteiro</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Mostra a barra também em ecrã inteiro, e a foto desloca-se para lhe dar espaço. Independente da barra do visualizador. Em ecrã inteiro também se alterna com o símbolo de informação da barra de controlo ou a tecla I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Tira de imagens em ecrã inteiro</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Mostra a tira de imagens sempre em ecrã inteiro, em vez de só quando o rato chega à margem. Em ecrã inteiro também se alterna com o símbolo da tira na barra de controlo.</value>
+  </data>
 </root>

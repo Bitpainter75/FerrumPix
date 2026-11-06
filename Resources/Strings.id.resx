@@ -11182,4 +11182,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Menampilkan jempol hijau ke atas untuk foto yang disimpan dan jempol merah ke bawah untuk foto yang ditolak di bagian atas ubin. Klik padanya untuk menghapus tanda. Foto yang ditolak tetap diredupkan meski tanpa tanda.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Bilah info di layar penuh</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Menampilkan bilah juga di layar penuh, dan foto bergeser ke samping untuk memberi ruang. Terpisah dari bilah di penampil. Di layar penuh juga dapat diubah lewat simbol info di bilah kontrol atau tombol I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Strip film di layar penuh</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Menampilkan strip film terus-menerus di layar penuh, bukan hanya saat tetikus mencapai tepi. Di layar penuh juga dapat diubah lewat simbol strip film di bilah kontrol.</value>
+  </data>
 </root>

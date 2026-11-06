@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>タイルの上部に、採用した写真には緑の親指アップ、不採用の写真には赤の親指ダウンを表示します。クリックすると印が外れます。不採用の写真は印がなくても暗く表示されたままです。</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>全画面での情報パネル</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>全画面でもパネルを表示し、写真はそのぶん横に寄ります。ビューアーのパネルとは別に設定します。全画面では操作バーの情報アイコンまたは I キーでも切り替えられます。</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>全画面でのフィルムストリップ</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>マウスが端に来たときだけでなく、全画面で常にフィルムストリップを表示します。全画面では操作バーのフィルムストリップアイコンでも切り替えられます。</value>
+  </data>
 </root>

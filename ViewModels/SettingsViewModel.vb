@@ -129,6 +129,8 @@ Namespace ViewModels
         Private _editorToolGroupOrder As String = "Adjust,Transform,Tools"
         Private _versteckteAnpassungsgruppen As String = ""
         Private _viewerInfoSidebarExpanded As Boolean = True
+        Private _fullscreenInfoSidebarExpanded As Boolean = False
+        Private _fullscreenFilmstripPinned As Boolean = False
         Private _galleryInfoSidebarExpanded As Boolean = False
         Private _startupImageMode As String = "Viewer"
         Private _startupNoImageMode As String = "Gallery"
@@ -287,6 +289,8 @@ Namespace ViewModels
         Private _savedEditorInfoSidebarExpanded As Boolean = True
         Private _savedEditorLayersPanelExpanded As Boolean = False
         Private _savedViewerInfoSidebarExpanded As Boolean = True
+        Private _savedFullscreenInfoSidebarExpanded As Boolean = False
+        Private _savedFullscreenFilmstripPinned As Boolean = False
         Private _savedGalleryInfoSidebarExpanded As Boolean = False
         Private _savedStartupImageMode As String = "Viewer"
         Private _savedGalleryOpenTarget As String = "Viewer"
@@ -3227,6 +3231,35 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Info-Leiste im Vollbild (ab Werk aus). Derselbe Wert, den der Info-Knopf
+        ''' der Bedienleiste und I im Vollbild umlegen; getrennt von der Leiste im Fenster, damit
+        ''' eine dort offene Leiste das Vollbild nicht zustellt.</summary>
+        Public Property FullscreenInfoSidebarExpanded As Boolean
+            Get
+                Return _fullscreenInfoSidebarExpanded
+            End Get
+            Set(value As Boolean)
+                If _fullscreenInfoSidebarExpanded = value Then Return
+                Me.RaiseAndSetIfChanged(_fullscreenInfoSidebarExpanded, value)
+                _mainVm?.Viewer?.RefreshFullscreenInfo()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        ''' <summary>Der Filmstreifen im Vollbild steht dauerhaft (ab Werk aus). Derselbe Wert, den
+        ''' sein Knopf in der Bedienleiste umlegt. Aus, erscheint er nur ueber den Rand.</summary>
+        Public Property FullscreenFilmstripPinned As Boolean
+            Get
+                Return _fullscreenFilmstripPinned
+            End Get
+            Set(value As Boolean)
+                If _fullscreenFilmstripPinned = value Then Return
+                Me.RaiseAndSetIfChanged(_fullscreenFilmstripPinned, value)
+                _mainVm?.Viewer?.RefreshFullscreenFilmstripPinned()
+                SaveLayoutSettings()
+            End Set
+        End Property
+
         Public Property GalleryInfoSidebarExpanded As Boolean
             Get
                 Return _galleryInfoSidebarExpanded
@@ -4865,6 +4898,8 @@ Namespace ViewModels
             RebuildEditorToolGroupItems()
             _editorSnapMarginPercent = Math.Max(0, Math.Min(20, _appSettings.EditorSnapMarginPercent))
             _viewerInfoSidebarExpanded = _appSettings.ViewerInfoSidebarExpanded
+            _fullscreenInfoSidebarExpanded = _appSettings.FullscreenInfoSidebarExpanded
+            _fullscreenFilmstripPinned = _appSettings.FullscreenFilmstripPinned
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
@@ -5280,6 +5315,8 @@ Namespace ViewModels
             _savedEditorInfoSidebarExpanded = _editorInfoSidebarExpanded
             _savedEditorLayersPanelExpanded = _editorLayersPanelExpanded
             _savedViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
+            _savedFullscreenInfoSidebarExpanded = _fullscreenInfoSidebarExpanded
+            _savedFullscreenFilmstripPinned = _fullscreenFilmstripPinned
             _savedGalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
             _savedStartupImageMode = _startupImageMode
             _savedGalleryOpenTarget = _galleryOpenTarget
@@ -5472,6 +5509,8 @@ Namespace ViewModels
             EditorInfoSidebarExpanded = _savedEditorInfoSidebarExpanded
             EditorLayersPanelExpanded = _savedEditorLayersPanelExpanded
             ViewerInfoSidebarExpanded = _savedViewerInfoSidebarExpanded
+            FullscreenInfoSidebarExpanded = _savedFullscreenInfoSidebarExpanded
+            FullscreenFilmstripPinned = _savedFullscreenFilmstripPinned
             GalleryInfoSidebarExpanded = _savedGalleryInfoSidebarExpanded
             StartupImageMode = _savedStartupImageMode
             GalleryOpenTarget = _savedGalleryOpenTarget
@@ -5630,6 +5669,8 @@ Namespace ViewModels
             HiddenAdjustmentGroups = ""
             BuildAdjustmentGroupItems()
             ViewerInfoSidebarExpanded = True
+            FullscreenInfoSidebarExpanded = False
+            FullscreenFilmstripPinned = False
             GalleryInfoSidebarExpanded = False
             LanguageMode = "System"
             DateFormatMode = "System"
@@ -6036,6 +6077,8 @@ Namespace ViewModels
                                           s.DefaultSaveFormat = _defaultSaveFormat
                                           s.EditorSaveAsNamePattern = _editorSaveAsNamePattern
                                           s.ViewerInfoSidebarExpanded = _viewerInfoSidebarExpanded
+                                          s.FullscreenInfoSidebarExpanded = _fullscreenInfoSidebarExpanded
+                                          s.FullscreenFilmstripPinned = _fullscreenFilmstripPinned
                                           s.GalleryInfoSidebarExpanded = _galleryInfoSidebarExpanded
                                       End Sub)
         End Sub

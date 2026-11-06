@@ -11178,4 +11178,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Pokazuje u góry kafelka zielony kciuk w górę przy zachowanych i czerwony kciuk w dół przy odrzuconych zdjęciach. Kliknięcie usuwa oznaczenie. Odrzucone zdjęcia pozostają przyciemnione także bez znaku.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Panel informacji na pełnym ekranie</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Pokazuje panel także na pełnym ekranie, a zdjęcie przesuwa się, by zrobić mu miejsce. Niezależnie od panelu w przeglądarce. Na pełnym ekranie można go też przełączać symbolem informacji na pasku sterowania lub klawiszem I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Pasek miniatur na pełnym ekranie</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Pokazuje pasek miniatur na pełnym ekranie na stałe, a nie dopiero gdy mysz dotrze do krawędzi. Na pełnym ekranie można go też przełączać symbolem paska miniatur na pasku sterowania.</value>
+  </data>
 </root>

@@ -124,17 +124,39 @@ Namespace ViewModels
         ''' Betrachter ist die Ansicht auf dem Schirm. Der Betrachter besteht die ganze Sitzung ueber
         ''' und merkt sich seinen Ausklappzustand - ohne die zweite Bedingung rechnete er auch dann,
         ''' wenn Galerie oder Editor vorne stehen.</summary>
-        ''' <summary>Das Infopanel im Vollbild: ein eigener Schalter in der Bedienleiste, ab Werk aus
-        ''' und nur fuer die Sitzung. Er ist bewusst NICHT derselbe wie im Fenster: wer dort die
-        ''' Leiste offen hat, will das Vollbild trotzdem frei sehen.</summary>
-        Private _fullscreenInfoRequested As Boolean
+        ''' <summary>Das Infopanel im Vollbild: ein eigener Schalter (Einstellung
+        ''' FullscreenInfoSidebarExpanded, ab Werk aus), umzulegen ueber den Knopf der Bedienleiste,
+        ''' I im Vollbild oder die Einstellungen. Er ist bewusst NICHT derselbe wie im Fenster: wer
+        ''' dort die Leiste offen hat, will das Vollbild trotzdem frei sehen.</summary>
+        Private ReadOnly Property IsFullscreenInfoRequested As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.FullscreenInfoSidebarExpanded
+            End Get
+        End Property
 
         ''' <summary>Steht das Infopanel gerade im Vollbild? Nur im Vollbild und nur mit dem Schalter.</summary>
         Public ReadOnly Property ShowsFullscreenInfo As Boolean
             Get
-                Return IsFullscreenMode AndAlso _fullscreenInfoRequested
+                Return IsFullscreenMode AndAlso IsFullscreenInfoRequested
             End Get
         End Property
+
+        ''' <summary>Steht der Filmstreifen im Vollbild dauerhaft (Einstellung, ab Werk aus)? Die
+        ''' Ansicht zeigt oder verbirgt ihn danach; ueber den Rand geholt geht er wie bisher wieder.</summary>
+        Public ReadOnly Property FullscreenFilmstripPinned As Boolean
+            Get
+                Return _mainVm IsNot Nothing AndAlso _mainVm.Settings IsNot Nothing AndAlso _mainVm.Settings.FullscreenFilmstripPinned
+            End Get
+        End Property
+
+        Public Sub RefreshFullscreenFilmstripPinned()
+            Me.RaisePropertyChanged(NameOf(FullscreenFilmstripPinned))
+        End Sub
+
+        ''' <summary>Die Einstellung wurde von aussen umgelegt (Einstellungsseite).</summary>
+        Public Sub RefreshFullscreenInfo()
+            SyncInfoPanelVisibility()
+        End Sub
 
         ''' <summary>Zeigt irgendeine Stelle das Infopanel: im Fenster die Leiste, im Vollbild der
         ''' eigene Schalter. Das Panel rechnet Histogramm und Analysebild nur dann.</summary>
@@ -147,8 +169,9 @@ Namespace ViewModels
         Public ReadOnly Property ToggleFullscreenInfoCommand As ICommand
 
         Private Sub ToggleFullscreenInfo()
-            _fullscreenInfoRequested = Not _fullscreenInfoRequested
-            SyncInfoPanelVisibility()
+            If _mainVm Is Nothing OrElse _mainVm.Settings Is Nothing Then Return
+            ' Der Setter der Einstellung meldet sich ueber RefreshFullscreenInfo zurueck.
+            _mainVm.Settings.FullscreenInfoSidebarExpanded = Not _mainVm.Settings.FullscreenInfoSidebarExpanded
         End Sub
 
         ''' <summary>Meldet den neuen Stand an View und Panel, nach dem Schalter und beim Wechsel

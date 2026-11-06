@@ -11182,4 +11182,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>टाइल के ऊपर रखी गई तस्वीरों पर हरा अंगूठा ऊपर और अस्वीकृत तस्वीरों पर लाल अंगूठा नीचे दिखाता है। उस पर क्लिक करने से चिह्न हट जाता है। अस्वीकृत तस्वीरें चिह्न के बिना भी धुंधली रहती हैं।</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>फ़ुलस्क्रीन में जानकारी पट्टी</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>पट्टी को फ़ुलस्क्रीन में भी दिखाता है, तस्वीर उसके लिए किनारे खिसक जाती है। व्यूअर की पट्टी से अलग। फ़ुलस्क्रीन में इसे नियंत्रण पट्टी के जानकारी चिह्न या I कुंजी से भी बदला जा सकता है।</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>फ़ुलस्क्रीन में फ़िल्मस्ट्रिप</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>फ़िल्मस्ट्रिप को फ़ुलस्क्रीन में हमेशा दिखाता है, न कि केवल तब जब माउस किनारे पर पहुँचे। फ़ुलस्क्रीन में इसे नियंत्रण पट्टी के फ़िल्मस्ट्रिप चिह्न से भी बदला जा सकता है।</value>
+  </data>
 </root>

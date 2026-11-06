@@ -11138,4 +11138,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Muestra en la parte superior de la miniatura un pulgar verde hacia arriba en las fotos conservadas y uno rojo hacia abajo en las descartadas. Un clic sobre él quita la marca. Las fotos descartadas siguen atenuadas aunque no se muestre la señal.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Barra de información a pantalla completa</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Muestra la barra también a pantalla completa y la foto se desplaza para dejarle sitio. Independiente de la barra del visor. A pantalla completa también se activa con el símbolo de información de la barra de control o la tecla I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Tira de imágenes a pantalla completa</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Muestra la tira de imágenes de forma permanente a pantalla completa, en lugar de solo cuando el ratón llega al borde. A pantalla completa también se activa con el símbolo de la tira en la barra de control.</value>
+  </data>
 </root>

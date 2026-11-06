@@ -11138,4 +11138,16 @@
   <data name="Zeigt_oben_auf_der_Kachel_einen_gr_nen_Daumen_na_94b70d61" xml:space="preserve">
     <value>Mostra in alto sulla miniatura un pollice verde in su per le foto tenute e un pollice rosso in giù per quelle scartate. Un clic sopra toglie il contrassegno. Le foto scartate restano attenuate anche senza il segno.</value>
   </data>
+  <data name="Info_Leiste_im_Vollbild_88539942" xml:space="preserve">
+    <value>Barra informazioni a schermo intero</value>
+  </data>
+  <data name="Zeigt_die_Leiste_auch_im_Vollbild_das_Bild_r_ckt_a0e25975" xml:space="preserve">
+    <value>Mostra la barra anche a schermo intero, la foto si sposta di lato per farle spazio. Indipendente dalla barra del visualizzatore. A schermo intero si attiva anche con il simbolo info della barra di controllo o il tasto I.</value>
+  </data>
+  <data name="Filmstreifen_im_Vollbild_036273f3" xml:space="preserve">
+    <value>Pellicola a schermo intero</value>
+  </data>
+  <data name="Zeigt_den_Filmstreifen_im_Vollbild_dauerhaft_sta_a66816d5" xml:space="preserve">
+    <value>Mostra la pellicola sempre a schermo intero, invece che solo quando il mouse raggiunge il bordo. A schermo intero si attiva anche con il simbolo della pellicola nella barra di controllo.</value>
+  </data>
 </root>
