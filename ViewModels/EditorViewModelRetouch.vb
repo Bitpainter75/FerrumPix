@@ -357,7 +357,7 @@ Namespace ViewModels
                     Await Task.Run(Sub()
                                        target = ImageProcessor.TryCloneBaseCachedBitmap(previewSource, targetAdj)
                                        If target Is Nothing Then target = ImageProcessor.RenderPreviewSkBitmap(previewSource, targetAdj)
-                                       sample = target?.Copy()
+                                       sample = ImageProcessor.CopyBitmap(target)
                                    End Sub)
                 Catch ex As Exception
                     target?.Dispose()
@@ -812,7 +812,7 @@ Namespace ViewModels
                     ' jeder Zugstart die Puffer weg (Log: discardAtStrokeStart hadBuffers=True) und
                     ' der Stempel verlor seine Live-Ansicht ab Zug 2 (alter Nutzertest-24-Befund).
                     If Not strokeHasHeal AndAlso _retouchLiveBitmap IsNot Nothing Then
-                        Dim refreshedSample = _retouchLiveBitmap.Copy()
+                        Dim refreshedSample = ImageProcessor.CopyBitmap(_retouchLiveBitmap)
                         If refreshedSample IsNot Nothing Then
                             _retouchLiveSampleBitmap?.Dispose()
                             _retouchLiveSampleBitmap = refreshedSample

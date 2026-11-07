@@ -322,7 +322,7 @@ Namespace ViewModels
                         liveTarget = BuildAnnotationDisplayBuffer(sourcePath, placement,
                                                                   bufferWidth, bufferHeight,
                                                                   displayWidth, displayHeight)
-                        sample = liveTarget?.Copy()
+                        sample = ImageProcessor.CopyBitmap(liveTarget)
                     Catch ex As Exception
                         DiagnosticLogService.LogException("Editor.ObjectRetouchInit", ex)
                         liveTarget?.Dispose()
@@ -436,7 +436,7 @@ Namespace ViewModels
                 DisposeRetouchLiveBuffers()
                 Return
             End If
-            Dim refreshed = _retouchLiveBitmap.Copy()
+            Dim refreshed = ImageProcessor.CopyBitmap(_retouchLiveBitmap)
             If refreshed Is Nothing Then
                 DisposeRetouchLiveBuffers()
                 Return

@@ -1703,7 +1703,7 @@ Namespace ViewModels
         Friend Shared Function FindOpaqueBounds(bitmap As SKBitmap) As SKRectI
             If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return SKRectI.Empty
             If bitmap.ColorType <> SKColorType.Rgba8888 AndAlso bitmap.ColorType <> SKColorType.Bgra8888 Then
-                Using converted = bitmap.Copy(SKColorType.Rgba8888)
+                Using converted = ImageProcessor.CopyBitmap(bitmap, SKColorType.Rgba8888)
                     If converted Is Nothing Then Return SKRectI.Empty
                     Return FindOpaqueBounds(converted)
                 End Using

@@ -75,7 +75,7 @@ Namespace Services
                       sidecarTime.Ticks.ToString(Globalization.CultureInfo.InvariantCulture) & "|" & decodeKind
             SyncLock _lock
                 Dim held As SKBitmap = Nothing
-                If generation = _generation AndAlso _entries.TryGetValue(key, held) Then Return held.Copy()
+                If generation = _generation AndAlso _entries.TryGetValue(key, held) Then Return ImageProcessor.CopyBitmap(held)
             End SyncLock
 
             ' Ausserhalb der Sperre dekodieren: das dauert, und eine zweite Vorschau soll derweil
@@ -96,7 +96,7 @@ Namespace Services
                 If _entries.TryGetValue(key, held) Then
                     ' Ein paralleler Durchgang war schneller.
                     reduced.Dispose()
-                    Return held.Copy()
+                    Return ImageProcessor.CopyBitmap(held)
                 End If
                 _entries(key) = reduced
                 _order.AddLast(key)
@@ -111,7 +111,7 @@ Namespace Services
                         gone.Dispose()
                     End If
                 End While
-                Return reduced.Copy()
+                Return ImageProcessor.CopyBitmap(reduced)
             End SyncLock
         End Function
 
@@ -139,7 +139,7 @@ Namespace Services
 
         Private Shared Function Reduce(full As SKBitmap) As SKBitmap
             Dim longEdge = Math.Max(full.Width, full.Height)
-            If longEdge <= MaxEdge Then Return full.Copy()
+            If longEdge <= MaxEdge Then Return ImageProcessor.CopyBitmap(full)
             Dim factor = MaxEdge / CDbl(longEdge)
             Dim w = Math.Max(1, CInt(Math.Round(full.Width * factor)))
             Dim h = Math.Max(1, CInt(Math.Round(full.Height * factor)))

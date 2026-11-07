@@ -3118,6 +3118,90 @@ half4 main(float2 p) {
 }
 "
 
+        ' ── Korrekturebene auf der Karte ──────────────────────────────────────────
+
+        ''' <summary>Eine Korrekturebene als EIN Durchgang auf der Karte: die Punktkette der Ebene
+        ''' ueber dem Bild der Sitzung, dann gemischt durch die Maske mit derselben ganzzahligen
+        ''' Formel wie auf dem Prozessor (CompositeSelectionScoped). Laeuft in der Sitzung der
+        ''' Umgebungsstufen, also ohne eigenes Hoch- und Zurueckladen je Ebene; vorher brauchte jede
+        ''' Ebene beides und mischte danach auf dem Prozessor. Nur fuer Ebenen, die aus der
+        ''' Punktkette allein bestehen (LayerRunsAsGpuStage); die Kette ist schon gebaut und braucht
+        ''' weder oertliche Basis noch Fuehrung des Farbmischers. <paramref name="mask"/> ist eine
+        ''' eigene Kopie der Maske (Alpha8) und gehoert ab hier dem Auftrag.</summary>
+        Private Shared Function LayerOnGpu(chain As PointOpChain, mask As SKImage) As Func(Of GRContext, SKImage, SKSurface)
+            Return Function(gr, image)
+                       Dim made As New List(Of IDisposable)()
+                       Try
+                           Dim effect = PointOpEffect()
+                           Dim mix = StageEffect("LayerMix", LayerMixShader)
+                           ' Auf der Karte als Textur, im Pruefmodus (gr Nothing) das Bild im Speicher.
+                           Dim onCard = Function(raster As SKImage) As SKImage
+                                            made.Add(raster)
+                                            If gr Is Nothing Then Return raster
+                                            Dim texture = raster.ToTextureImage(gr)
+                                            If texture Is Nothing Then Throw New InvalidOperationException("Textur auf der Grafikkarte nicht anlegbar.")
+                                            made.Add(texture)
+                                            Return texture
+                                        End Function
+                           Dim table = onCard(BuildShaderTables(chain))
+                           Dim dither = onCard(BuildDitherImage())
+                           Dim baseImage = onCard(BuildLocalBaseImage(Nothing))
+                           Dim cubeA = onCard(BuildCubeImage(chain, 0))
+                           Dim cubeB = onCard(BuildCubeImage(chain, 1))
+                           Dim guide = onCard(BuildGuideImage(image, chain))
+                           made.Add(mask)
+                           Dim maskImage = If(gr Is Nothing, mask, mask.ToTextureImage(gr))
+                           If maskImage Is Nothing Then Throw New InvalidOperationException("Maske auf der Grafikkarte nicht anlegbar.")
+                           If maskImage IsNot mask Then made.Add(maskImage)
+
+                           Dim surface = NewStageSurface(gr, image.Width, image.Height)
+                           If surface Is Nothing Then Return Nothing
+                           Dim sampling = New SKSamplingOptions(SKFilterMode.Nearest)
+                           Using adjusted = PointOpShader(effect, chain, image, table, dither, baseImage, cubeA, cubeB, guide, Nothing, True),
+                                 baseShader = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, sampling),
+                                 maskShader = maskImage.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, sampling)
+                               Dim children = New SKRuntimeEffectChildren(mix)
+                               children("src") = baseShader
+                               children("adjusted") = adjusted
+                               children("mask") = maskShader
+                               Using shader = mix.ToShader(New SKRuntimeEffectUniforms(mix), children),
+                                     paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
+                                   surface.Canvas.DrawRect(0, 0, image.Width, image.Height, paint)
+                               End Using
+                           End Using
+                           Return surface
+                       Finally
+                           For Each item In made
+                               item.Dispose()
+                           Next
+                       End Try
+                   End Function
+        End Function
+
+        ''' <summary>Das Mischen wie CompositeSelectionScoped: je Byte (angepasst * m + vorher *
+        ''' (255 - m)) ganzzahlig durch 255, bei m = 0 das Vorher, bei m = 255 das Angepasste. Der
+        ''' Zaehler ist hoechstens 65025 und in Gleitkomma exakt; der Quotient wird danach ganzzahlig
+        ''' nachgezogen, weil eine Karte die Division nicht exakt runden muss.</summary>
+        Private Const LayerMixShader As String = "
+uniform shader src;
+uniform shader adjusted;
+uniform shader mask;
+half4 main(float2 p) {
+    half4 before = src.eval(p);
+    float m = floor(float(mask.eval(p).a) * 255.0 + 0.5);
+    if (m <= 0.0) return before;
+    half4 after = adjusted.eval(p);
+    if (m >= 255.0) return after;
+    float4 a = toBytes(after);
+    float4 b = toBytes(before);
+    float4 num = a * m + b * (255.0 - m);
+    float4 q = floor(num / 255.0);
+    q += step(q * 255.0 + 255.0, num + 0.25);
+    q -= step(num + 0.25, q * 255.0);
+    return half4(q / 255.0);
+}
+"
+
     End Class
 
 End Namespace

@@ -204,7 +204,7 @@ Namespace Services
             Dim buffer(width * height * 4 - 1) As Byte
             Dim info = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
             If TryReadPixels(bmp, info, buffer) Then Return buffer
-            Using copy = bmp.Copy(SKColorType.Rgba8888)
+            Using copy = ImageProcessor.CopyBitmap(bmp, SKColorType.Rgba8888)
                 If copy IsNot Nothing AndAlso TryReadPixels(copy, info, buffer) Then Return buffer
             End Using
             DiagnosticLogService.LogAlways("PsdWriter.ReadPixels",

@@ -2596,6 +2596,8 @@ Namespace Services
         ''' dieselben Maße haben. Fällt bei ungeeignetem Farbformat auf eine Kopie der BASELINE zurück.</summary>
         Private Shared Function CompositeSelectionScoped(baseline As SKBitmap, adjusted As SKBitmap, mask As SKBitmap) As SKBitmap
             Dim w = adjusted.Width, h = adjusted.Height
+            Dim fast = CompositeSelectionScopedByRows(baseline, adjusted, mask)
+            If fast IsNot Nothing Then Return fast
             Dim aStride As Integer, bStride As Integer
             Dim aBuf As Byte() = Nothing, bBuf As Byte() = Nothing
             If Not TryBorrowBgraBuffer(adjusted, aBuf, aStride) OrElse Not TryBorrowBgraBuffer(baseline, bBuf, bStride) Then
@@ -2636,6 +2638,66 @@ Namespace Services
 
             Dim result = New SKBitmap(w, h, adjusted.ColorType, adjusted.AlphaType)
             CommitBgraBuffer(result, outBuf)
+            Return result
+        End Function
+
+        ''' <summary>Dasselbe Mischen wie <see cref="CompositeSelectionScoped"/>, Zeile fuer Zeile direkt
+        ''' zwischen den Bitmaps statt ueber Felder in Bildgroesse. Der alte Weg kopierte beide Bilder
+        ''' und die Maske je einmal ganz in neue Felder auf dem Large Object Heap, legte ein viertes
+        ''' fuer das Ergebnis an und kopierte es zurueck, alles seriell; nur die Rechnung lief parallel.
+        ''' Hier holt jede Zeile ihre drei Ausschnitte in kleine Felder aus dem Pool, rechnet in das
+        ''' Feld des angepassten Bildes hinein (jeder Wert haengt nur an derselben Stelle) und schreibt
+        ''' die Zeile ins Ergebnis, parallel ueber alle Zeilen. Die Rechnung je Byte ist dieselbe,
+        ''' das Ergebnis bytegleich (Pruefung "Maskenmischen zeilenweise ist bytegleich zum alten
+        ''' Weg"). Nothing, wenn die Formate nicht passen; dann rechnet der alte Weg.</summary>
+        Private Shared Function CompositeSelectionScopedByRows(baseline As SKBitmap, adjusted As SKBitmap, mask As SKBitmap) As SKBitmap
+            If baseline Is Nothing OrElse adjusted Is Nothing OrElse mask Is Nothing Then Return Nothing
+            If adjusted.ColorType <> SKColorType.Bgra8888 OrElse baseline.ColorType <> SKColorType.Bgra8888 Then Return Nothing
+            If mask.ColorType <> SKColorType.Alpha8 Then Return Nothing
+            Dim w = adjusted.Width, h = adjusted.Height
+            If w <= 0 OrElse h <= 0 OrElse baseline.Width < w OrElse baseline.Height < h Then Return Nothing
+
+            Dim result = New SKBitmap(w, h, adjusted.ColorType, adjusted.AlphaType)
+            Dim adjustedPixels = adjusted.GetPixels(), baselinePixels = baseline.GetPixels()
+            Dim maskPixels = mask.GetPixels(), resultPixels = result.GetPixels()
+            Dim adjustedStride = adjusted.RowBytes, baselineStride = baseline.RowBytes
+            Dim maskStride = mask.RowBytes, resultStride = result.RowBytes
+            Dim maskW = mask.Width, maskH = mask.Height
+            Dim rowBytes = w * 4
+            Dim maskBytes = Math.Min(w, maskW)
+            ForEachRow(w, h,
+                Sub(y)
+                    Dim aRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
+                    Dim bRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
+                    Dim mRow = ArrayPool(Of Byte).Shared.Rent(Math.Max(1, w))
+                    Try
+                        Marshal.Copy(IntPtr.Add(adjustedPixels, y * adjustedStride), aRow, 0, rowBytes)
+                        Marshal.Copy(IntPtr.Add(baselinePixels, y * baselineStride), bRow, 0, rowBytes)
+                        ' Ausserhalb der Maske gilt 0, wie im alten Weg.
+                        Dim covered = If(y < maskH, maskBytes, 0)
+                        If covered > 0 Then Marshal.Copy(IntPtr.Add(maskPixels, y * maskStride), mRow, 0, covered)
+                        For x = 0 To w - 1
+                            Dim o = x * 4
+                            Dim m = If(x < covered, CInt(mRow(x)), 0)
+                            If m = 0 Then
+                                aRow(o) = bRow(o) : aRow(o + 1) = bRow(o + 1) : aRow(o + 2) = bRow(o + 2) : aRow(o + 3) = bRow(o + 3)
+                            ElseIf m < 255 Then
+                                Dim inv = 255 - m
+                                aRow(o) = CByte((CInt(aRow(o)) * m + CInt(bRow(o)) * inv) \ 255)
+                                aRow(o + 1) = CByte((CInt(aRow(o + 1)) * m + CInt(bRow(o + 1)) * inv) \ 255)
+                                aRow(o + 2) = CByte((CInt(aRow(o + 2)) * m + CInt(bRow(o + 2)) * inv) \ 255)
+                                aRow(o + 3) = CByte((CInt(aRow(o + 3)) * m + CInt(bRow(o + 3)) * inv) \ 255)
+                            End If
+                            ' m >= 255: der angepasste Wert steht schon im Feld.
+                        Next
+                        Marshal.Copy(aRow, 0, IntPtr.Add(resultPixels, y * resultStride), rowBytes)
+                    Finally
+                        ArrayPool(Of Byte).Shared.Return(aRow)
+                        ArrayPool(Of Byte).Shared.Return(bRow)
+                        ArrayPool(Of Byte).Shared.Return(mRow)
+                    End Try
+                End Sub)
+            result.NotifyPixelsChanged()
             Return result
         End Function
 
@@ -4364,7 +4426,7 @@ RasterTeil:
             If Not anyBand Then Return CropAreaToOccupied(source, area)
 
             ' Das Führungsbild im Rechteck der Rechnung, Kanäle 0 bis 1.
-            Dim guideBgra As SKBitmap = If(guide.ColorType = SKColorType.Bgra8888, guide, guide.Copy(SKColorType.Bgra8888))
+            Dim guideBgra As SKBitmap = If(guide.ColorType = SKColorType.Bgra8888, guide, CopyBitmap(guide, SKColorType.Bgra8888))
             Dim red(w * h - 1) As Single, green(w * h - 1) As Single, blue(w * h - 1) As Single
             Try
                 Dim rowBytes = guideBgra.RowBytes

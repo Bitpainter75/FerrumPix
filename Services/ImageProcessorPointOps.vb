@@ -233,7 +233,8 @@ Namespace Services
         Friend Shared Function ApplyPointOpChain(source As SKBitmap, adj As ImageAdjustments,
                                                  Optional toneReference As ToneReference = Nothing) As SKBitmap
             If source Is Nothing OrElse adj Is Nothing Then Return source
-            Dim chain = BuildPointOpChain(adj, source, toneReference)
+            Dim chain = PerformanceTraceService.Measure("Pixel: build the point chain",
+                                                        Function() BuildPointOpChain(adj, source, toneReference))
             If chain.IsIdentity Then Return source
             Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
             If onGpu IsNot Nothing Then Return onGpu

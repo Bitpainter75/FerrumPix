@@ -11124,7 +11124,7 @@ Namespace ViewModels
             ' schieben".
             InvalidateSelectionLayerLink()
             SetSelectionBoundsFromPixels(neu)
-            SetSelectionMaskData(_selectionMask.Copy(), neu)
+            SetSelectionMaskData(ImageProcessor.CopyBitmap(_selectionMask), neu)
         End Sub
 
         Public Sub EndMaskMove()
@@ -12675,7 +12675,7 @@ Namespace ViewModels
             Using shape = BuildCurrentSelectionMask()
                 If shape Is Nothing Then Return
                 _copiedSelectionShape?.Dispose()
-                _copiedSelectionShape = shape.Copy()
+                _copiedSelectionShape = ImageProcessor.CopyBitmap(shape)
             End Using
             _copiedSelectionShapeRect = rect
             Me.RaisePropertyChanged(NameOf(CanPasteSelectionShape))
@@ -12694,7 +12694,7 @@ Namespace ViewModels
                 Return
             End If
             PushUndo(LocalizationService.T("Auswahlform eingefügt"))
-            Using kopie = _copiedSelectionShape.Copy()
+            Using kopie = ImageProcessor.CopyBitmap(_copiedSelectionShape)
                 ApplySelectionCandidate(kopie, _copiedSelectionShapeRect, "MagicWand", Nothing, Nothing,
                                         isMask:=False, forceNew:=True)
             End Using
@@ -12804,7 +12804,7 @@ Namespace ViewModels
                 ClearSelectionMask()
                 SetSelectionBoundsFromPixels(candidateRect)
                 SetSelectionShape(candidateShapeMode, candidateXsPercent, candidateYsPercent)
-                SetSelectionMaskData(candidateMask.Copy(), candidateRect)
+                SetSelectionMaskData(ImageProcessor.CopyBitmap(candidateMask), candidateRect)
                 HasActiveSelection = True
                 SetActiveSelectionIsMask(isMask)
                 Return
@@ -12819,7 +12819,7 @@ Namespace ViewModels
                         ClearSelectionMask()
                         SetSelectionBoundsFromPixels(candidateRect)
                         SetSelectionShape(candidateShapeMode, candidateXsPercent, candidateYsPercent)
-                        SetSelectionMaskData(candidateMask.Copy(), candidateRect)
+                        SetSelectionMaskData(ImageProcessor.CopyBitmap(candidateMask), candidateRect)
                         HasActiveSelection = True
                         SetActiveSelectionIsMask(isMask)
                     End If
@@ -12864,7 +12864,7 @@ Namespace ViewModels
 
         Private Function BuildCurrentSelectionMask() As SKBitmap
             If Not _hasActiveSelection Then Return Nothing
-            If _selectionMask IsNot Nothing Then Return _selectionMask.Copy()
+            If _selectionMask IsNot Nothing Then Return ImageProcessor.CopyBitmap(_selectionMask)
             Dim rectPx = SelectionRectPixels()
             If rectPx.Width <= 0 OrElse rectPx.Height <= 0 Then Return Nothing
             Return CreateSolidMask(rectPx.Width, rectPx.Height)
@@ -13164,7 +13164,7 @@ Namespace ViewModels
                     ' Eine weiche Kante bleibt weich: nur die unveränderte, gespeicherte Form wird hart.
                     Dim ownsCutMask = False
                     Dim cutMask = SelectionMaskForPixelSource(mask, ownsCutMask)
-                    job.Mask = If(ownsCutMask, cutMask, cutMask.Copy())
+                    job.Mask = If(ownsCutMask, cutMask, ImageProcessor.CopyBitmap(cutMask))
                 End If
             End If
             job.WorkingFull = CloneWorkingFullForRender()
@@ -32393,7 +32393,7 @@ Namespace ViewModels
                     ' ändern können, ohne dass die Szene eine neue Nummer bekommt.
                     Dim composite = BuildSceneWithCompositorObjects()
                     If composite Is Nothing Then
-                        job.ScopeSource = scene.Copy()
+                        job.ScopeSource = ImageProcessor.CopyBitmap(scene)
                         job.ScopeKey = SceneScopeKey()
                     Else
                         job.ScopeSource = composite
@@ -32411,7 +32411,7 @@ Namespace ViewModels
                     If Not PrepareObjectCurveJob(job) Then
                         ' Ohne Kompositor-Objekte ist die Kopie fuers Analysebild schon die Szene.
                         job.CurveSource = If(job.ScopeSource IsNot Nothing AndAlso job.ScopeKey IsNot Nothing,
-                                             Nothing, scene.Copy())
+                                             Nothing, ImageProcessor.CopyBitmap(scene))
                         job.CurveFromScopeSource = job.CurveSource Is Nothing
                     End If
                 End If
@@ -32594,10 +32594,10 @@ Namespace ViewModels
                     ' der sich ein Bildstand erkennen liesse. Das ist der Ladefall und faellt einmal
                     ' an. Eine Kopie, weil die Quelle waehrenddessen getauscht werden kann.
                     If buildScope Then
-                        job.ScopeSource = previewSource.Copy()
+                        job.ScopeSource = ImageProcessor.CopyBitmap(previewSource)
                         job.CurveFromScopeSource = True
                     Else
-                        job.CurveSource = previewSource.Copy()
+                        job.CurveSource = ImageProcessor.CopyBitmap(previewSource)
                     End If
                 Else
                     If buildScope Then job.ScopePath = RenderSourcePath

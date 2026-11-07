@@ -243,7 +243,7 @@ Namespace ViewModels
                 Return Nothing
             End If
             Dim imagePath = _currentImagePath
-            Dim copy = source.Copy()
+            Dim copy = ImageProcessor.CopyBitmap(source)
             Dim measured As ImageProcessor.AutoGeometryResult = Nothing
             _autoGeometryRunning = True
             SetBusyReason(LocalizationService.T("Bild wird vermessen"))

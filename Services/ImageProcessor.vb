@@ -407,7 +407,7 @@ Namespace Services
                 Dim hasStrokes = adj.RasterPaintStrokes IsNot Nothing AndAlso adj.RasterPaintStrokes.Count > 0
                 If hasSpots OrElse hasStrokes Then
                     If Not owned Then
-                        Dim copy = current.Copy()
+                        Dim copy = CopyBitmap(current)
                         If copy IsNot Nothing Then
                             current = copy
                             owned = True
@@ -3385,6 +3385,15 @@ Namespace Services
                 ToDictionary(Function(g) g.Key, Function(g) g.ToList(), StringComparer.Ordinal)
             Dim erledigt As New HashSet(Of String)(StringComparer.Ordinal)
 
+            ' Ebenen, die nur aus der Punktkette bestehen, laufen nacheinander in EINER Sitzung auf
+            ' der Karte (LayerOnGpu); das Bild geht einmal hinauf und einmal zurueck. Alles andere
+            ' rechnet der Prozessor, nachdem das Bild zurueckgeholt ist. Die Masken der Ebenen auf der
+            ' Karte bleiben bis dahin liegen: scheitert das Zurueckholen, rechnet BringDetailSessionHome
+            ' die Ebenen mit ihnen auf dem Prozessor nach.
+            Dim session As GpuDetailSession = Nothing
+            Dim sessionTried = False
+            Dim heldMasks As New List(Of SKBitmap)()
+            Try
             For Each layer In adj.MaskedAdjustmentLayers
                 If Not adj.IsMaskedLayerRenderVisible(layer) Then Continue For
                 Dim stackedAbove = If(layer.StackAboveAnnotationId, "")
@@ -3461,6 +3470,69 @@ Namespace Services
                             ' Besitz voraus - ohne ihn gehoert das Bild dem Aufrufer, und eine
                             ' Kopie waere genau die Vollkopie, die der Weg vermeiden soll.
                             Dim layerPixelAdjustments = layer.Adjustments.ExtractPixelAdjustments()
+
+                            ' Erst die Karte, wenn die Ebene nur aus der Punktkette besteht und nichts
+                            ' danach den Prozessor-Stand braucht.
+                            Dim ranOnGpu = False
+                            If Not hasStroke AndAlso Not hasEffects Then
+                                If Not sessionTried Then
+                                    Dim sessionSource = processed
+                                    session = PerformanceTraceService.Measure("Layers: start the GPU session",
+                                                                              Function() GpuDetailSession.TryCreate(sessionSource))
+                                    sessionTried = True
+                                End If
+                                If session IsNot Nothing Then
+                                    ' Lichter, Tiefen und Weiss messen das Bild selbst; liegt der
+                                    ' neueste Stand auf der Karte, erst zurueckholen.
+                                    If layerPixelAdjustments.ReadsImageStatistics() AndAlso session.OnGpu Then
+                                        processed = BringDetailSessionHome(session, processed, owned)
+                                    End If
+                                    Dim measuredImage = processed
+                                    Dim chain = PerformanceTraceService.Measure("Pixel: build the point chain",
+                                                                                Function() BuildPointOpChain(layerPixelAdjustments, measuredImage, Nothing))
+                                    If LayerRunsAsGpuStage(layerPixelAdjustments, chain, processed) Then
+                                        Dim held As SKBitmap = Nothing
+                                        Dim maskCopy As SKImage = Nothing
+                                        PerformanceTraceService.Measure("Layers: copy the mask for the GPU",
+                                            Sub()
+                                                ' Nicht SKBitmap.Copy: das kostete bei 2048 Punkten
+                                                ' 23 ms je Maske, ReadPixels ist eine Speicherkopie.
+                                                held = New SKBitmap(effectMask.Info)
+                                                Using pixmap = effectMask.PeekPixels()
+                                                    If pixmap Is Nothing OrElse
+                                                       Not pixmap.ReadPixels(held.Info, held.GetPixels(), held.RowBytes, 0, 0) Then
+                                                        held.Dispose()
+                                                        held = Nothing
+                                                        Return
+                                                    End If
+                                                End Using
+                                                held.NotifyPixelsChanged()
+                                                maskCopy = SKImage.FromPixelCopy(effectMask.Info, effectMask.GetPixels(), effectMask.RowBytes)
+                                            End Sub)
+                                        If held IsNot Nothing AndAlso maskCopy IsNot Nothing Then
+                                            Dim current = processed
+                                            ranOnGpu = PerformanceTraceService.Measure("Layers: layer on the GPU",
+                                                                                       Function() session.TryApply(current, LayerOnGpu(chain, maskCopy)))
+                                        End If
+                                        If ranOnGpu Then
+                                            heldMasks.Add(held)
+                                            Dim cpuAdjustments = layerPixelAdjustments
+                                            session.PendingOnGpu.Add(("Layers: layer",
+                                                Function(input As SKBitmap) As SKBitmap
+                                                    Using adjustedOnCpu = ApplyPixelAdjustmentStages(input, cpuAdjustments)
+                                                        Return CompositeSelectionScoped(input, adjustedOnCpu, held)
+                                                    End Using
+                                                End Function))
+                                        Else
+                                            held?.Dispose()
+                                            NoteGpuFallback("Korrekturebene: Lauf auf der Grafikkarte gescheitert, rechnet auf dem Prozessor")
+                                        End If
+                                    End If
+                                End If
+                            End If
+
+                            If Not ranOnGpu Then
+                            processed = BringDetailSessionHome(session, processed, owned)
                             Dim scopeRect As SKRectI? = Nothing
                             If owned AndAlso LayerAdjustmentsAreCropSafe(layerPixelAdjustments) Then
                                 scopeRect = TryGetMaskScopeRect(effectMask, processed.Width, processed.Height)
@@ -3478,9 +3550,15 @@ Namespace Services
                                     processed = ReplaceBitmapOwned(processed, blended, owned)
                                 End Using
                             End If
+                            End If
                         Finally
                             eigene?.Dispose()
                         End Try
+                    End If
+                    ' Alles ab hier rechnet der Prozessor: liegt der neueste Stand auf der Karte,
+                    ' zuerst zurueckholen.
+                    If hasEffects OrElse (hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj) OrElse hasStroke Then
+                        processed = BringDetailSessionHome(session, processed, owned)
                     End If
                     ' Schatten und Glühen liegen UNTER Füllung und Kontur, wie an einem Objekt.
                     If hasEffects AndAlso processed IsNot Nothing Then
@@ -3503,7 +3581,32 @@ Namespace Services
                     End If
                 End Using
             Next
+            processed = BringDetailSessionHome(session, processed, owned)
+            Finally
+                session?.Dispose()
+                For Each held In heldMasks
+                    held.Dispose()
+                Next
+            End Try
             Return processed
+        End Function
+
+        ''' <summary>Darf diese Korrekturebene als Stufe auf der Karte laufen (LayerOnGpu)? Nur wenn
+        ''' sie aus der Punktkette allein besteht: keine raeumliche Stufe (der Ton-Schluessel ist der
+        ''' ganze Schluessel, dieselbe Liste wie beim Tone-Cache), kein Farbrauschen, keine
+        ''' Lichtquellen, kein Filmnegativ (misst das Bild), keine oertlichen Tonzonen und keine
+        ''' Fuehrung des Farbmischers (beide brauchen das Bild auf dem Prozessor), und der Shader kann
+        ''' die Kette. Alles andere bleibt beim Prozessor.</summary>
+        Private Shared Function LayerRunsAsGpuStage(layerAdjustments As ImageAdjustments, chain As PointOpChain,
+                                                    source As SKBitmap) As Boolean
+            If layerAdjustments Is Nothing OrElse chain Is Nothing OrElse chain.IsIdentity Then Return False
+            If layerAdjustments.NegativeEnabled OrElse layerAdjustments.ColorNoiseReduction > 0 OrElse
+               HasActiveLightSources(layerAdjustments) OrElse layerAdjustments.UsesLocalToneZones() Then Return False
+            If chain.Hsl IsNot Nothing OrElse chain.LocalToneZones IsNot Nothing Then Return False
+            If Not String.Equals(ComputeToneCacheKey(layerAdjustments), ComputeBaseKeyBeforeMasks(layerAdjustments),
+                                 StringComparison.Ordinal) Then Return False
+            Dim reason As String = Nothing
+            Return CanRunPointOpChainShader(source, chain, reason)
         End Function
 
         ''' <summary>Schatten und Glühen einer AUSWAHL-Ebene, mit derselben Rechnung wie an einem
@@ -5147,6 +5250,50 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 table(i) = CByte(i)
             Next
             Return table
+        End Function
+
+        ''' <summary>Eine eigene Kopie desselben Bildes, Byte fuer Byte, fuer jeden Farbtyp. Ersatz fuer
+        ''' <c>SKBitmap.Copy()</c>: das kostete gemessen bei 2048 x 1365 rund 22 ms, gleich ob
+        ''' Bgra8888 oder Alpha8, ReadPixels in dasselbe Format 0,15 bis 0,7 ms (Kettenmessung zug,
+        ''' "Nebenkosten"). Dasselbe Format heisst reine Speicherkopie, das Ergebnis ist also
+        ''' dasselbe. Nothing bleibt Nothing; laesst sich das Bild nicht lesen, rechnet Copy().</summary>
+        Friend Shared Function CopyBitmap(source As SKBitmap) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            If source.Width <= 0 OrElse source.Height <= 0 Then Return source.Copy()
+            Dim copy = New SKBitmap(source.Info)
+            Using pixmap = source.PeekPixels()
+                If pixmap IsNot Nothing AndAlso copy.GetPixels() <> IntPtr.Zero AndAlso
+                   pixmap.ReadPixels(copy.Info, copy.GetPixels(), copy.RowBytes, 0, 0) Then
+                    copy.NotifyPixelsChanged()
+                    Return copy
+                End If
+            End Using
+            copy.Dispose()
+            Return source.Copy()
+        End Function
+
+        ''' <summary>Wie <c>SKBitmap.Copy(colorType)</c>, schnell fuer die beiden 8-Bit-Typen: von
+        ''' Bgra8888 oder Rgba8888 (vormultipliziert oder deckend) nach Bgra8888 oder Rgba8888 ist es
+        ''' ein reiner Kanaltausch, ReadPixels liefert gemessen dieselben Bytes wie Copy, auch mit
+        ''' Alphaverlauf (Kettenmessung zug). Jede andere Wandlung rechnet weiter Copy.</summary>
+        Friend Shared Function CopyBitmap(source As SKBitmap, colorType As SKColorType) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            If source.ColorType = colorType Then Return CopyBitmap(source)
+            Dim eightBit = Function(t As SKColorType) t = SKColorType.Bgra8888 OrElse t = SKColorType.Rgba8888
+            If eightBit(source.ColorType) AndAlso eightBit(colorType) AndAlso
+               (source.AlphaType = SKAlphaType.Premul OrElse source.AlphaType = SKAlphaType.Opaque) AndAlso
+               source.Width > 0 AndAlso source.Height > 0 Then
+                Dim copy = New SKBitmap(New SKImageInfo(source.Width, source.Height, colorType, source.AlphaType))
+                Using pixmap = source.PeekPixels()
+                    If pixmap IsNot Nothing AndAlso copy.GetPixels() <> IntPtr.Zero AndAlso
+                       pixmap.ReadPixels(copy.Info, copy.GetPixels(), copy.RowBytes, 0, 0) Then
+                        copy.NotifyPixelsChanged()
+                        Return copy
+                    End If
+                End Using
+                copy.Dispose()
+            End If
+            Return source.Copy(colorType)
         End Function
 
         Private Shared Function CloneBitmap(source As SKBitmap) As SKBitmap

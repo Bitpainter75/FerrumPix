@@ -177,7 +177,7 @@ Namespace Services
             ' Kleines Bild: CreatePreviewWorkingBitmap liefert die QUELLE selbst zurück - Voll und
             ' Vorschau wären dieselbe Instanz und würden doppelt disposed. Dann echte Kopie ziehen.
             If Object.ReferenceEquals(preview, fullBitmap) Then
-                preview = fullBitmap.Copy()
+                preview = ImageProcessor.CopyBitmap(fullBitmap)
                 If preview Is Nothing Then
                     fullBitmap.Dispose()
                     Return Nothing
@@ -323,7 +323,7 @@ Namespace Services
         ''' <summary>Kopie des vollen Arbeitsbilds (für Export/FPX-Speichern). Nothing ohne Init.</summary>
         Public Function CloneFull() As SKBitmap
             SyncLock _lock
-                Return _full?.Copy()
+                Return ImageProcessor.CopyBitmap(_full)
             End SyncLock
         End Function
 
@@ -367,7 +367,7 @@ Namespace Services
             Try
                 Dim scaled = ImageProcessor.CreatePreviewWorkingBitmap(full, maxDimension)
                 If scaled Is Nothing Then Return Nothing
-                If Object.ReferenceEquals(scaled, full) Then Return full.Copy()
+                If Object.ReferenceEquals(scaled, full) Then Return ImageProcessor.CopyBitmap(full)
                 Return scaled
             Finally
                 SyncLock _lock

@@ -852,7 +852,7 @@ Namespace ViewModels
                     ' Zeichnen des Strichs, sonst waere er beim naechsten Mal doppelt drin.
                     If liveStroke AndAlso Not basisTaugt Then
                         DiscardMaskOverlayBase()
-                        _maskOverlayBasis = overlay.Copy()
+                        _maskOverlayBasis = ImageProcessor.CopyBitmap(overlay)
                         _maskOverlayBasisBreite = ow
                         _maskOverlayBasisHoehe = oh
                     End If
@@ -1010,7 +1010,7 @@ Namespace ViewModels
                 _maskOverlayBasisHoehe = oh
             End If
 
-            Using overlay = _maskOverlayBasis.Copy()
+            Using overlay = ImageProcessor.CopyBitmap(_maskOverlayBasis)
                 Using canvas = New SKCanvas(overlay)
                     Dim scaled As New List(Of SKPoint)(livePts.Count)
                     For Each p In livePts

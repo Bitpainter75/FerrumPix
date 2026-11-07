@@ -43,7 +43,7 @@ Namespace Services
             Using work = If(scale < 1.0, source.Resize(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul), New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)), Nothing)
                 Dim pixels = If(work, source)
                 If pixels Is Nothing Then Return Nothing
-                Using readable = If(pixels.ColorType = SKColorType.Bgra8888, Nothing, pixels.Copy(SKColorType.Bgra8888))
+                Using readable = If(pixels.ColorType = SKColorType.Bgra8888, Nothing, ImageProcessor.CopyBitmap(pixels, SKColorType.Bgra8888))
                     Dim bgra = If(readable, pixels)
                     Dim bytes = bgra.Bytes
                     Dim stride = bgra.RowBytes

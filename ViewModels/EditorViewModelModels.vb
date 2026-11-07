@@ -758,8 +758,8 @@ Namespace ViewModels
                 If _bokehVorschauBasis Is Nothing OrElse _depthMap Is Nothing Then Return
                 ' EIGENE Kopien: die gemeinsame Vorschaukopie gehoert der Tiefen-Unschaerfe, und
                 ' deren Aufraeumen wartet nicht auf das Gate.
-                Dim basis = _bokehVorschauBasis.Copy()
-                Dim map = _depthMap.Copy()
+                Dim basis = ImageProcessor.CopyBitmap(_bokehVorschauBasis)
+                Dim map = ImageProcessor.CopyBitmap(_depthMap)
                 Dim density = _fogDensity, near = _fogNear, far = _fogFar, foreground = _fogForeground
                 Dim color = FogSkColor()
 
@@ -1262,7 +1262,7 @@ Namespace ViewModels
                             Dim modus = objekte(i).CombineMode
                             If Not hatStand OrElse String.Equals(modus, "New", StringComparison.Ordinal) Then
                                 combined?.Dispose()
-                                combined = ausschnitt.Copy()
+                                combined = ImageProcessor.CopyBitmap(ausschnitt)
                                 combinedRect = rect
                                 hatStand = True
                                 Continue For
@@ -1272,7 +1272,7 @@ Namespace ViewModels
                                 ' Der Stand ist LEER. Hinzufuegen macht daraus den Gegenstand,
                                 ' abziehen und schneiden aendern an nichts nichts.
                                 If String.Equals(modus, "Add", StringComparison.Ordinal) Then
-                                    combined = ausschnitt.Copy()
+                                    combined = ImageProcessor.CopyBitmap(ausschnitt)
                                     combinedRect = rect
                                 End If
                                 Continue For

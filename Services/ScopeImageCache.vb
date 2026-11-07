@@ -54,7 +54,7 @@ Namespace Services
                 If Not String.Equals(_sourceKey, sourceKey, StringComparison.Ordinal) Then Return Nothing
                 Dim found As SKBitmap = Nothing
                 If _images.TryGetValue(EntryKey(mode, width, height), found) AndAlso found IsNot Nothing Then
-                    Return found.Copy()
+                    Return ImageProcessor.CopyBitmap(found)
                 End If
                 Return Nothing
             End SyncLock

@@ -907,7 +907,7 @@ Namespace Services
         ''' Nothing), sonst eine eigene Kopie der Bitmap.</summary>
         Private Shared Function TakeCached(pixelsOnly As Boolean, ByRef pixels As CachedPixels) As SKBitmap
             pixels = Nothing
-            If Not pixelsOnly Then Return _cachedBitmap.Copy()
+            If Not pixelsOnly Then Return ImageProcessor.CopyBitmap(_cachedBitmap)
             Dim stride = _cachedBitmap.RowBytes
             Dim bytes(stride * _cachedBitmap.Height - 1) As Byte
             Marshal.Copy(_cachedBitmap.GetPixels(), bytes, 0, bytes.Length)
@@ -1048,7 +1048,7 @@ Namespace Services
             End If
             ' ExtractSubset teilt sich die Pixel mit dem Original; eine eigene Kopie, damit das
             ' Original freigegeben werden kann.
-            Dim own = cropped.Copy()
+            Dim own = ImageProcessor.CopyBitmap(cropped)
             cropped.Dispose()
             If own Is Nothing Then Return image
             image.Dispose()
