@@ -7849,8 +7849,12 @@ Namespace ViewModels
                 ' XMP dadurch gar nicht und arbeiten weiter allein auf dem eigenen Rezeptformat.
                 RawSidecarService.TryImportFromXmpSidecar(filePath)
 
+                ' Die .pp3 eines fremden Entwicklers, nur mit eingeschalteter Einstellung (sonst
+                ' Nothing). Sie steht zwischen XMP-Beistelldatei und Bilddatei.
+                Dim pp3 = Pp3SidecarService.Read(filePath)
+
                 ' Die Beistelldatei ist die speziellere Quelle und schlägt eingebettetes XMP.
-                Dim ratingSource = If(fpxmpCatalog?.Rating.HasValue, CType(Nothing, Integer?), If(sidecar?.Rating, embeddedRating))
+                Dim ratingSource = If(fpxmpCatalog?.Rating.HasValue, CType(Nothing, Integer?), If(sidecar?.Rating, If(pp3?.Rating, embeddedRating)))
                 If ratingSource.HasValue AndAlso ratingSource.Value > 0 AndAlso currentRating = 0 Then
                     LibraryService.Instance.SetRating(filePath, ratingSource.Value)
                     result.Rating = ratingSource.Value
@@ -7883,11 +7887,21 @@ Namespace ViewModels
                     End If
                 End If
 
+                ' Das Farbetikett aus der .pp3, wenn weder .fpxmp noch XMP eines gesetzt haben und
+                ' der Katalog keines traegt - dieselbe Regel wie oben.
+                If pp3 IsNot Nothing AndAlso Not String.IsNullOrEmpty(pp3.ColorLabel) AndAlso Not result.HasColorLabel AndAlso
+                   (fpxmpCatalog Is Nothing OrElse fpxmpCatalog.ColorLabel Is Nothing) AndAlso
+                   String.IsNullOrEmpty(currentColorLabel) Then
+                    LibraryService.Instance.SetColorLabelForMany({filePath}, pp3.ColorLabel)
+                    result.ColorLabel = pp3.ColorLabel
+                    result.HasColorLabel = True
+                End If
+
                 ' ZULETZT die Stichworte aus Beistelldatei und Bilddatei, ueber denselben Weg wie im
                 ' Katalogindex. Sie werden VEREINIGT und nicht vom Stichwortblock der .fpxmp
                 ' verdraengt - der entstuende sonst beim ersten Import selbst und sperrte danach
                 ' jedes spaeter extern ergaenzte Stichwort aus (siehe KeywordImportService).
-                Dim withFileKeywords = KeywordImportService.Import(filePath, embeddedKeywords, sidecar?.Keywords)
+                Dim withFileKeywords = KeywordImportService.Import(filePath, embeddedKeywords, sidecar?.Keywords, pp3)
                 If withFileKeywords IsNot Nothing Then result.Tags = withFileKeywords
             Catch
             End Try

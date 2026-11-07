@@ -1528,8 +1528,12 @@ Namespace Services
                 Dim xmpStamp = If(String.IsNullOrEmpty(sidecar), "", File.GetLastWriteTime(sidecar).ToString("o"))
                 Dim fpxmpPath = RawSidecarService.SidecarPathFor(filePath)
                 Dim fpxmpStamp = If(File.Exists(fpxmpPath), File.GetLastWriteTime(fpxmpPath).ToString("o"), "")
-                If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) Then Return ""
-                Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp)
+                ' Die .pp3 nur mit eingeschalteter Einstellung, und nur als Anhang: ohne sie bleibt der
+                ' Stempel Zeichen fuer Zeichen derselbe wie vorher, kein Bestand wird neu eingelesen.
+                Dim pp3Stamp = Pp3SidecarService.StampFor(filePath)
+                If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) AndAlso String.IsNullOrEmpty(pp3Stamp) Then Return ""
+                Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp) &
+                       If(String.IsNullOrEmpty(pp3Stamp), "", "|pp3:" & pp3Stamp)
             Catch
                 Return ""
             End Try

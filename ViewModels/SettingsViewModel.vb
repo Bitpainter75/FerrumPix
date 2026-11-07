@@ -32,6 +32,7 @@ Namespace ViewModels
         Private _jpgSaveQuality As Integer = 90
         Private _preserveMetadataOnSave As Boolean = True
         Private _syncCatalogToXmp As Boolean = False
+        Private _readPp3Sidecars As Boolean = False
         Private _createXmpSidecarIfMissing As Boolean = False
         Private _writeKeywordsToFileXmp As Boolean = False
         Private _writeKeywordsToFileIptc As Boolean = False
@@ -229,6 +230,7 @@ Namespace ViewModels
         Private _savedJpgSaveQuality As Integer = 90
         Private _savedPreserveMetadataOnSave As Boolean = True
         Private _savedSyncCatalogToXmp As Boolean = False
+        Private _savedReadPp3Sidecars As Boolean = False
         Private _savedCreateXmpSidecarIfMissing As Boolean = False
         Private _savedWriteKeywordsToFileXmp As Boolean = False
         Private _savedWriteKeywordsToFileIptc As Boolean = False
@@ -640,6 +642,19 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _thumbnailCacheEnabled = value Then Return
                 Me.RaiseAndSetIfChanged(_thumbnailCacheEnabled, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 neben dem Bild lesen
+        ''' (Standard AUS, siehe Pp3SidecarService).</summary>
+        Public Property ReadPp3Sidecars As Boolean
+            Get
+                Return _readPp3Sidecars
+            End Get
+            Set(value As Boolean)
+                If _readPp3Sidecars = value Then Return
+                Me.RaiseAndSetIfChanged(_readPp3Sidecars, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -4812,6 +4827,7 @@ Namespace ViewModels
             _fontSizeOffset = AppSettingsService.NormalizeFontSizeOffset(_appSettings.FontSizeOffset)
             _runningScaleFactors = ReadRunningScaleFactors()
             _syncCatalogToXmp = _appSettings.SyncCatalogToXmp
+            _readPp3Sidecars = _appSettings.ReadPp3Sidecars
             _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
             _writeKeywordsToFileXmp = _appSettings.WriteKeywordsToFileXmp
             _writeKeywordsToFileIptc = _appSettings.WriteKeywordsToFileIptc
@@ -5260,6 +5276,7 @@ Namespace ViewModels
             _savedJpgSaveQuality = _jpgSaveQuality
             _savedPreserveMetadataOnSave = _preserveMetadataOnSave
             _savedSyncCatalogToXmp = _syncCatalogToXmp
+            _savedReadPp3Sidecars = _readPp3Sidecars
             _savedCreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
             _savedWriteKeywordsToFileXmp = _writeKeywordsToFileXmp
             _savedWriteKeywordsToFileIptc = _writeKeywordsToFileIptc
@@ -5470,6 +5487,7 @@ Namespace ViewModels
             JpgSaveQuality = _savedJpgSaveQuality
             PreserveMetadataOnSave = _savedPreserveMetadataOnSave
             SyncCatalogToXmp = _savedSyncCatalogToXmp
+            ReadPp3Sidecars = _savedReadPp3Sidecars
             CreateXmpSidecarIfMissing = _savedCreateXmpSidecarIfMissing
             WriteKeywordsToFileXmp = _savedWriteKeywordsToFileXmp
             WriteKeywordsToFileIptc = _savedWriteKeywordsToFileIptc
@@ -5630,6 +5648,7 @@ Namespace ViewModels
             GalleryOpenTarget = "Viewer"
             StartupNoImageMode = "Gallery"
             SyncCatalogToXmp = False
+            ReadPp3Sidecars = False
             CreateXmpSidecarIfMissing = False
             WriteKeywordsToFileXmp = False
             WriteKeywordsToFileIptc = False
@@ -6130,6 +6149,7 @@ Namespace ViewModels
                                           s.JpgSaveQuality = _jpgSaveQuality
                                           s.PreserveMetadataOnSave = _preserveMetadataOnSave
                                           s.SyncCatalogToXmp = _syncCatalogToXmp
+                                          s.ReadPp3Sidecars = _readPp3Sidecars
                                           s.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
                                           s.WriteKeywordsToFileXmp = _writeKeywordsToFileXmp
                                           s.WriteKeywordsToFileIptc = _writeKeywordsToFileIptc

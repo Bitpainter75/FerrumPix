@@ -11276,4 +11276,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>La búsqueda y los filtros se aplican a esta carpeta. Haz clic para buscar en todo el catálogo</value>
   </data>
+  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
+    <value>Leer archivos auxiliares de RawTherapee (.pp3)</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
+    <value>Incorpora al catálogo las palabras clave, la valoración y la etiqueta de color del archivo .pp3 junto a la imagen. El archivo solo se lee, nunca se modifica.</value>
+  </data>
 </root>

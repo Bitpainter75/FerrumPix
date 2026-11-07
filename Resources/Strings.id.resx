@@ -11320,4 +11320,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Pencarian dan filter berlaku untuk folder ini. Klik untuk mencari di seluruh katalog</value>
   </data>
+  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
+    <value>Baca file pendamping RawTherapee (.pp3)</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
+    <value>Mengambil kata kunci, peringkat, dan label warna dari file .pp3 di samping gambar ke dalam katalog. File hanya dibaca, tidak pernah diubah.</value>
+  </data>
 </root>

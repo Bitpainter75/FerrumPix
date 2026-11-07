@@ -11316,4 +11316,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Haku ja suodattimet koskevat tätä kansiota. Napsauta, jos haluat hakea koko luettelosta</value>
   </data>
+  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
+    <value>Lue RawTherapeen sivutiedostot (.pp3)</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
+    <value>Tuo avainsanat, arvion ja väritunnisteen kuvan vieressä olevasta .pp3-tiedostosta luetteloon. Tiedostoa vain luetaan, sitä ei koskaan muuteta.</value>
+  </data>
 </root>

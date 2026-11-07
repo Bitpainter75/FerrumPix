@@ -32,6 +32,7 @@ Namespace Services
 
         Private ReadOnly _xmp As New Dictionary(Of String, String)(PathIdentity.Comparer)
         Private ReadOnly _fpxmp As New Dictionary(Of String, String)(PathIdentity.Comparer)
+        Private ReadOnly _pp3 As New Dictionary(Of String, String)(PathIdentity.Comparer)
         Private _listingFailed As Boolean
 
         ''' <summary>Der Ordner, fuer den die Auflistung gilt.</summary>
@@ -64,10 +65,18 @@ Namespace Services
                 For Each rezept In Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension, SearchOptions)
                     result._fpxmp(rezept) = File.GetLastWriteTime(rezept).ToString("o")
                 Next
+                ' Die .pp3 eines fremden Entwicklers nur mit eingeschalteter Einstellung - sonst
+                ' gehoert sie nicht in den Stempel (siehe LibraryService.SidecarStamp).
+                If Pp3SidecarService.IsEnabled Then
+                    For Each pp3 In Directory.EnumerateFiles(folderPath, "*" & Pp3SidecarService.Extension, SearchOptions)
+                        result._pp3(pp3) = File.GetLastWriteTime(pp3).ToString("o")
+                    Next
+                End If
             Catch
                 result._listingFailed = True
                 result._xmp.Clear()
                 result._fpxmp.Clear()
+                result._pp3.Clear()
             End Try
             Return result
         End Function
@@ -88,8 +97,11 @@ Namespace Services
             Next
             Dim fpxmpStamp As String = Nothing
             If Not _fpxmp.TryGetValue(RawSidecarService.SidecarPathFor(imagePath), fpxmpStamp) Then fpxmpStamp = ""
-            If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) Then Return ""
-            Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp)
+            Dim pp3Stamp As String = Nothing
+            If Not _pp3.TryGetValue(Pp3SidecarService.PathFor(imagePath), pp3Stamp) Then pp3Stamp = ""
+            If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) AndAlso String.IsNullOrEmpty(pp3Stamp) Then Return ""
+            Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp) &
+                   If(String.IsNullOrEmpty(pp3Stamp), "", "|pp3:" & pp3Stamp)
         End Function
 
     End Class

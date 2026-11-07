@@ -11320,4 +11320,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Arama ve filtreler bu klasöre uygulanır. Tüm katalogda aramak için tıklayın</value>
   </data>
+  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
+    <value>RawTherapee yan dosyalarını (.pp3) oku</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
+    <value>Görüntünün yanındaki .pp3 dosyasından anahtar kelimeleri, puanı ve renk etiketini kataloğa aktarır. Dosya yalnızca okunur, asla değiştirilmez.</value>
+  </data>
 </root>

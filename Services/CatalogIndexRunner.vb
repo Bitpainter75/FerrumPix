@@ -409,9 +409,18 @@ Namespace Services
             ' Frische-Stempel), der ihre Stichwoerter dann nicht ansah.
             ' Der Import legt NICHTS neben dem Foto an; das ist die Bedingung, unter der er hier
             ' ueberhaupt stehen darf (siehe LibraryService.ImportFileKeywords).
-            KeywordImportService.Import(filePath, data?.EmbeddedKeywords)
+            ' Die .pp3 eines fremden Entwicklers, nur mit eingeschalteter Einstellung (sonst
+            ' Nothing): ihre Stichwoerter gehen in denselben Import, Bewertung und Etikett fuellen
+            ' wie alles hier nur, was im Katalog leer ist.
+            Dim pp3 = Pp3SidecarService.Read(filePath)
+            KeywordImportService.Import(filePath, data?.EmbeddedKeywords, KeywordImportService.ReadSidecarKeywords(filePath), pp3)
+            If pp3 IsNot Nothing AndAlso Not String.IsNullOrEmpty(pp3.ColorLabel) AndAlso
+               (fpxmpCatalog Is Nothing OrElse fpxmpCatalog.ColorLabel Is Nothing) AndAlso
+               String.IsNullOrEmpty(LibraryService.Instance.GetColorLabel(filePath)) Then
+                LibraryService.Instance.SetColorLabelForMany({filePath}, pp3.ColorLabel)
+            End If
 
-            Dim rating = ExifService.GetXmpRating(data)
+            Dim rating = If(pp3?.Rating, ExifService.GetXmpRating(data))
             If rating.HasValue AndAlso rating.Value > 0 AndAlso
                LibraryService.Instance.GetRating(filePath) = 0 Then
                 LibraryService.Instance.SetRating(filePath, rating.Value)

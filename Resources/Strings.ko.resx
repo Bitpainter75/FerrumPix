@@ -11320,4 +11320,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>검색과 필터가 이 폴더에 적용됩니다. 클릭하면 전체 카탈로그에서 검색합니다</value>
   </data>
+  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
+    <value>RawTherapee 사이드카 파일(.pp3) 읽기</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
+    <value>이미지 옆의 .pp3 파일에서 키워드, 등급, 색상 레이블을 카탈로그로 가져옵니다. 파일은 읽기만 하며 절대 변경하지 않습니다.</value>
+  </data>
 </root>

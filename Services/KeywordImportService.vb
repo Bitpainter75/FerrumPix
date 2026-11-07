@@ -39,11 +39,16 @@ Namespace Services
         ''' Ein zweites Lesen je Bild waere ein zweiter Plattenzugriff fuer nichts.</summary>
         Public Shared Function Import(filePath As String,
                                       embeddedKeywords As IEnumerable(Of String),
-                                      sidecarKeywords As IEnumerable(Of String)) As List(Of String)
+                                      sidecarKeywords As IEnumerable(Of String),
+                                      Optional pp3 As Pp3SidecarService.Pp3Data = Nothing) As List(Of String)
             Dim all As New List(Of String)()
             ' Die Beistelldatei zuerst: sie ist die speziellere Angabe, und bei gleicher Schreibweise
             ' behaelt die Vereinigung den ERSTEN Eintrag.
             If sidecarKeywords IsNot Nothing Then all.AddRange(sidecarKeywords)
+            ' Dann die .pp3 des fremden Entwicklers, nur mit eingeschalteter Einstellung (Read gibt
+            ' sonst Nothing). Wer sie schon gelesen hat, reicht sie herein.
+            If pp3 Is Nothing Then pp3 = Pp3SidecarService.Read(filePath)
+            If pp3 IsNot Nothing Then all.AddRange(pp3.Keywords)
             If embeddedKeywords IsNot Nothing Then all.AddRange(embeddedKeywords)
             ' Eigene, optional nach XMP geschriebene KI-Tags bleiben getrennt von Handarbeit
             ' (siehe LibraryService.WithoutOwnAiTags).

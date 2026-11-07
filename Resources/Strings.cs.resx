@@ -11316,4 +11316,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Hledání a filtry platí pro tuto složku. Klepněte pro hledání v celém katalogu</value>
   </data>
+  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
+    <value>Číst doprovodné soubory RawTherapee (.pp3)</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
+    <value>Převezme do katalogu klíčová slova, hodnocení a barevný štítek ze souboru .pp3 vedle obrázku. Soubor se jen čte, nikdy se nemění.</value>
+  </data>
 </root>
