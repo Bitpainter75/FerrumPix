@@ -13,6 +13,8 @@
   picked up from their XMP sidecar files too.
 - With the diagnostic log turned on, a search or a people, places or keyword selection now notes
   which catalogue entries it left out and why, for example because the file is no longer there.
+  A catalogue run also notes how long it took and where the time went, which settings it ran with,
+  and which entries have no file.
 
 ### Fixes
 

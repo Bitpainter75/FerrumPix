@@ -24,10 +24,10 @@ Namespace Services
     ''' zurueck, und der Lauf merkt sich nichts.</summary>
     Public NotInheritable Class SearchDropLog
 
-        Public Const ReasonMissing As String = "Datei fehlt"
-        Public Const ReasonTrash As String = "Papierkorb"
-        Public Const ReasonHidden As String = "versteckter Ordner"
-        Public Const ReasonExtension As String = "Endung wird nicht angezeigt"
+        Public Const ReasonMissing As String = "file missing"
+        Public Const ReasonTrash As String = "trash"
+        Public Const ReasonHidden As String = "hidden folder"
+        Public Const ReasonExtension As String = "file type not shown"
 
         ''' <summary>So viele Pfade je Grund stehen als Beispiel im Protokoll.</summary>
         Public Const MaxSamples As Integer = 10

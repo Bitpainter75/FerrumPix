@@ -7276,13 +7276,13 @@ Namespace ViewModels
                                    ' erkannten Begriffen wieder freigibt - die Pruefung braucht sie.
                                    If dropLog IsNot Nothing Then
                                        DiagnosticLogService.LogAlways("Gallery.Search",
-                                           $"Suche ""{node.Name}"": {foundCount} Treffer, {scannedCount} geprueft, Umfang " &
-                                           If(String.IsNullOrWhiteSpace(rootFolder), "Katalog", "Ordner " & rootFolder))
+                                           $"Search ""{node.Name}"": {foundCount} found, {scannedCount} checked, scope " &
+                                           If(String.IsNullOrWhiteSpace(rootFolder), "catalogue", "folder " & rootFolder))
                                        Dim dropped = Await dropLog.SummarizeAsync(
                                            Function(m) MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings),
                                            token)
                                        If dropped.Length > 0 Then
-                                           DiagnosticLogService.LogAlways("Gallery.SearchDropped", $"Suche ""{node.Name}"": {dropped}")
+                                           DiagnosticLogService.LogAlways("Gallery.SearchDropped", $"Search ""{node.Name}"": {dropped}")
                                        End If
                                    End If
 

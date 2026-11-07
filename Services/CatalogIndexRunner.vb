@@ -228,12 +228,17 @@ Namespace Services
                 Return result
             End If
 
+            ' Die Zeitmessung nur mit eingeschaltetem Protokoll (sonst Nothing, siehe
+            ' CatalogIndexTimings). Sie beantwortet, wohin die Zeit eines langen Laufs gegangen ist.
+            Dim timings = CatalogIndexTimings.StartIfLogging()
+            Dim orphanPaths As List(Of String) = If(timings IsNot Nothing, New List(Of String)(), Nothing)
+
             Try
                 ' Der eigene Abbruchweg und der des Aufrufers zusammengefuehrt: aufgehoert wird,
                 ' sobald EINER von beiden es verlangt.
                 Using linked = CancellationTokenSource.CreateLinkedTokenSource(token, stopSource.Token)
                     Dim runToken = linked.Token
-                    Dim filesSeen = Await Task.Run(Function() IndexLoop(roots, result, progress, runToken, force), runToken).ConfigureAwait(False)
+                    Dim filesSeen = Await Task.Run(Function() IndexLoop(roots, result, progress, runToken, force, timings), runToken).ConfigureAwait(False)
 
                     ' Die Ortsnamen NACH dem Lauf und in einem Rutsch: FillMissingPlaces liest die
                     ' offenen Koordinaten in einer Abfrage und schreibt sie in einer Transaktion
@@ -246,14 +251,14 @@ Namespace Services
                         ' CatalogIndexResult.Orphaned). Nur nach einem vollstaendigen Durchlauf:
                         ' nach einem Abbruch fehlt die halbe Wahrheit, und eine Zahl, die zu hoch
                         ' ist, waere schlimmer als keine.
-                        result.Orphaned = Await Task.Run(Function() LibraryService.Instance.CountOrphanedRecordsUnder(roots, filesSeen),
+                        result.Orphaned = Await Task.Run(Function() LibraryService.Instance.CountOrphanedRecordsUnder(roots, filesSeen, orphanPaths),
                                                          runToken).ConfigureAwait(False)
                     End If
                 End Using
             Catch ex As OperationCanceledException
                 result.Cancelled = True
             Catch ex As Exception
-                DiagnosticLogService.LogException("Katalogindex.Durchlauf", ex)
+                DiagnosticLogService.LogException("CatalogIndex.Run", ex)
             Finally
                 crossProcess.Dispose()
                 SyncLock _runLock
@@ -263,13 +268,40 @@ Namespace Services
                 End SyncLock
             End Try
 
-            DiagnosticLogService.LogAlways("Katalogindex.Durchlauf",
-                $"{result.Indexed} indiziert, {result.Unchanged} unveraendert, " &
-                $"{result.ThumbnailsCreated} Vorschaubilder, {result.Failed} fehlgeschlagen, " &
-                $"{result.PlacesResolved} Orte, {result.Orphaned} ohne Datei" &
-                If(result.Cancelled, ", abgebrochen", ""))
+            DiagnosticLogService.LogAlways("CatalogIndex.Run",
+                $"{result.Indexed} indexed, {result.Unchanged} unchanged, " &
+                $"{result.ThumbnailsCreated} thumbnails, {result.Failed} failed, " &
+                $"{result.PlacesResolved} places, {result.Orphaned} without file, " &
+                $"{result.AiTagged} image recognition" &
+                If(timings IsNot Nothing, ", duration " & CatalogIndexTimings.Duration(timings.Elapsed), "") &
+                If(result.Cancelled, ", cancelled", ""))
+            If timings IsNot Nothing Then
+                timings.LogSummary()
+                LogOrphans(orphanPaths)
+                DiagnosticLogService.LogAlways("CatalogIndex.Settings", CatalogIndexTimings.SettingsText())
+            End If
             Return result
         End Function
+
+        ''' <summary>Wie viele Beispielpfade die Zeile zu den Eintraegen ohne Datei nennt.</summary>
+        Private Const OrphanExampleCount As Integer = 10
+
+        ''' <summary>Die Eintraege ohne Datei fuer das Protokoll: wie viele je Tabelle und einige
+        ''' Pfade. Die Zahl allein in der Zeile des Durchlaufs sagt nicht, wo man suchen soll.</summary>
+        Private Shared Sub LogOrphans(orphanPaths As List(Of String))
+            If orphanPaths Is Nothing OrElse orphanPaths.Count = 0 Then Return
+            Dim perTable = ""
+            Try
+                perTable = String.Join(", ", LibraryService.Instance.CountRowsPerTable(orphanPaths).
+                                                 Select(Function(p) $"{p.Key} {p.Value}"))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("CatalogIndex.WithoutFile", ex)
+            End Try
+            DiagnosticLogService.LogAlways("CatalogIndex.WithoutFile",
+                $"{orphanPaths.Count} entries" &
+                If(perTable.Length > 0, $" ({perTable})", "") &
+                ": " & String.Join(" | ", orphanPaths.Take(OrphanExampleCount)))
+        End Sub
 
         ''' <summary>Der Gang ueber die Ordner. Eigene Methode und keine lange Lambda, damit der
         ''' Rahmen darueber - ein Lauf, Abbruch, Orte nachtragen - auf einen Blick lesbar bleibt.</summary>
@@ -277,7 +309,8 @@ Namespace Services
                                      result As CatalogIndexResult,
                                      progress As IProgress(Of CatalogIndexProgress),
                                      token As CancellationToken,
-                                     force As Boolean) As ISet(Of String)
+                                     force As Boolean,
+                                     timings As CatalogIndexTimings) As ISet(Of String)
             ' ZUERST ZAEHLEN, dann arbeiten. Ohne Gesamtzahl gaebe es keinen Fortschritt, sondern nur
             ' eine Zahl, die hochlaeuft - und bei einem grossen Bestand weiss dann niemand, ob noch
             ' zehn Bilder kommen oder zehntausend. Das Aufzaehlen selbst ist billig gegen das Lesen.
@@ -289,6 +322,13 @@ Namespace Services
             If token.IsCancellationRequested Then
                 result.Cancelled = True
                 Return Nothing
+            End If
+            ' Womit der Lauf beginnt: ohne diese Zeile laesst sich hinterher nicht sagen, ob die
+            ' Bilderkennung mitlief oder welche Ordner er ueberhaupt angesehen hat.
+            If timings IsNot Nothing Then
+                DiagnosticLogService.LogAlways("CatalogIndex.Start",
+                    $"{files.Count} files in {String.Join(" | ", roots)}" &
+                    If(force, ", reading everything again", "") & "; " & CatalogIndexTimings.SettingsText())
             End If
             If files.Count = 0 Then Return New HashSet(Of String)(PathIdentity.Comparer)
 
@@ -324,8 +364,10 @@ Namespace Services
                     Return Nothing
                 End If
                 done += 1
+                timings?.BeginFile(filePath)
 
                 Try
+                    Dim checkStart = CatalogIndexTimings.Mark()
                     Dim info As FileInfo
                     Try
                         info = New FileInfo(filePath)
@@ -346,42 +388,54 @@ Namespace Services
                     ' UNVERAENDERT? Dann gar nicht erst lesen. Genau die drei Angaben, die auch
                     ' SyncExifData vergleicht - nur eben VOR dem teuren Teil. Ohne das liefe ein
                     ' zweiter Lauf ueber denselben Bestand genauso lange wie der erste.
-                    If Not force AndAlso IsUnchanged(stamps, filePath, info, ExifService.CurrentSummaryFormatFor(filePath),
-                                                     SidecarsOf(lastFolder, sidecars)) Then
+                    Dim unchanged = Not force AndAlso IsUnchanged(stamps, filePath, info, ExifService.CurrentSummaryFormatFor(filePath),
+                                                                  SidecarsOf(lastFolder, sidecars))
+                    timings?.AddStep(CatalogIndexStep.Check, checkStart)
+                    If unchanged Then
                         result.Unchanged += 1
                         ' Das Vorschaubild trotzdem sicherstellen: der Katalogeintrag kann von einem
                         ' frueheren Lauf stammen, waehrend die Kachel nie gebraucht wurde.
-                        If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
-                        TagIfNeeded(filePath, info, result, aiStamps, token)
+                        If EnsureThumbnail(filePath, info, token, timings) Then result.ThumbnailsCreated += 1
+                        TagIfNeeded(filePath, info, result, aiStamps, token, timings)
                         Continue For
                     End If
 
-                    IndexOne(filePath, result, token)
-                    TagIfNeeded(filePath, info, result, aiStamps, token)
+                    IndexOne(filePath, result, token, timings)
+                    TagIfNeeded(filePath, info, result, aiStamps, token, timings)
                 Catch ex As OperationCanceledException
                     result.Cancelled = True
                     Return Nothing
                 Catch ex As Exception
-                    DiagnosticLogService.LogException("Katalogindex.Datei", ex)
+                    DiagnosticLogService.LogException("CatalogIndex.File", ex)
                     result.Failed += 1
                 Finally
                     progress?.Report(New CatalogIndexProgress With {
                         .Done = done, .Total = files.Count, .CurrentFolder = lastFolder})
+                    If timings IsNot Nothing Then
+                        timings.EndFile()
+                        timings.ReportProgressIfDue(done, files.Count, lastFolder)
+                    End If
                 End Try
             Next
             Return filesSeen
         End Function
 
         ''' <summary>Eine Datei in den Katalog und ihre Kachel in den Zwischenspeicher.</summary>
-        Private Shared Sub IndexOne(filePath As String, result As CatalogIndexResult, token As CancellationToken)
+        Private Shared Sub IndexOne(filePath As String, result As CatalogIndexResult, token As CancellationToken,
+                                    timings As CatalogIndexTimings)
             Dim info = New FileInfo(filePath)
 
             ' Aufnahmedaten lesen und in den Katalog. Genau der Weg, den auch der Ordnerlauf der
             ' Galerie nimmt - dieselben Felder, dieselbe Zusammenfassung, derselbe Stempel.
+            Dim stepStart = CatalogIndexTimings.Mark()
             Dim data = ExifService.ReadExif(filePath)
             Dim fields = ExifService.ExtractSearchFields(data, filePath)
             Dim summary = ExifService.BuildCatalogSummary(data, fields)
+            timings?.AddStep(CatalogIndexStep.Metadata, stepStart)
+            stepStart = CatalogIndexTimings.Mark()
             LibraryService.Instance.SyncExifData(filePath, fields, summary)
+            timings?.AddStep(CatalogIndexStep.Catalog, stepStart)
+            stepStart = CatalogIndexTimings.Mark()
 
             ' Was in einer .fpxmp neben dem Bild steht, gehoert in den Katalog - das ist die
             ' portable Quelle fuer Bewertung, Etikett und Stichwoerter bei RAW und PSD. NUR LESEN:
@@ -425,9 +479,10 @@ Namespace Services
                LibraryService.Instance.GetRating(filePath) = 0 Then
                 LibraryService.Instance.SetRating(filePath, rating.Value)
             End If
+            timings?.AddStep(CatalogIndexStep.Sidecars, stepStart)
 
             result.Indexed += 1
-            If EnsureThumbnail(filePath, info, token) Then result.ThumbnailsCreated += 1
+            If EnsureThumbnail(filePath, info, token, timings) Then result.ThumbnailsCreated += 1
         End Sub
 
         ''' <summary>Die KI ist ein eigener, bewusst aktivierter Schritt des Katalogs. Er steht
@@ -436,12 +491,18 @@ Namespace Services
         ''' eigenen Stempel ab - erst so wird ein bereits vorhandener Bestand nach Aktivierung der
         ''' Einstellung einmal vollständig ergänzt.</summary>
         Private Shared Sub TagIfNeeded(filePath As String, info As FileInfo, result As CatalogIndexResult,
-                                       aiStamps As AiScanStamps, token As CancellationToken)
+                                       aiStamps As AiScanStamps, token As CancellationToken,
+                                       timings As CatalogIndexTimings)
             If token.IsCancellationRequested OrElse Not ImageTaggingService.Enabled Then Return
             If Not ImageTaggingService.NeedsAnalysis(filePath, info.LastWriteTime, aiStamps.Load()) Then Return
-            ' NOTHING heisst "gar nicht gelaufen" (siehe ImageTaggingService.TagFile). Das mitzu-
-            ' zaehlen meldete am Ende Bilder als verschlagwortet, an denen nichts geschehen ist.
-            If ImageTaggingService.TagFile(filePath, token) IsNot Nothing Then result.AiTagged += 1
+            Dim stepStart = CatalogIndexTimings.Mark()
+            Try
+                ' NOTHING heisst "gar nicht gelaufen" (siehe ImageTaggingService.TagFile). Das mitzu-
+                ' zaehlen meldete am Ende Bilder als verschlagwortet, an denen nichts geschehen ist.
+                If ImageTaggingService.TagFile(filePath, token) IsNot Nothing Then result.AiTagged += 1
+            Finally
+                timings?.AddStep(CatalogIndexStep.AiTagging, stepStart)
+            End Try
         End Sub
 
         ''' <summary>Die Kachel bereitlegen. Das Schreiben geht DURCH DIE DECODE-SCHLEUSE: es laeuft
@@ -450,15 +511,19 @@ Namespace Services
         ''' <see cref="ThumbnailCacheService.EnsureCached"/> selbst, und zwar erst, wenn die Kachel
         ''' fehlt.</summary>
         ''' <returns>True, wenn eine neue Kachel entstanden ist.</returns>
-        Private Shared Function EnsureThumbnail(filePath As String, info As FileInfo, token As CancellationToken) As Boolean
+        Private Shared Function EnsureThumbnail(filePath As String, info As FileInfo, token As CancellationToken,
+                                                timings As CatalogIndexTimings) As Boolean
+            Dim stepStart = CatalogIndexTimings.Mark()
             Try
                 Dim outcome = ThumbnailCacheService.EnsureCached(filePath, info.LastWriteTime, info.Length, token)
                 Return outcome = ThumbnailCacheService.ThumbnailCacheOutcome.Written
             Catch ex As OperationCanceledException
                 Throw
             Catch ex As Exception
-                DiagnosticLogService.LogException("Katalogindex.Vorschaubild", ex)
+                DiagnosticLogService.LogException("CatalogIndex.Thumbnail", ex)
                 Return False
+            Finally
+                timings?.AddStep(CatalogIndexStep.Thumbnail, stepStart)
             End Try
         End Function
 
@@ -557,8 +622,8 @@ Namespace Services
             If token.IsCancellationRequested Then Return
             If FileOperationPolicy.IsTrashFolder(folder) Then Return
             If depth > MaxFolderDepth Then
-                DiagnosticLogService.LogAlways("Katalogindex.Ordner",
-                                               $"Abstieg bei {MaxFolderDepth} Ebenen abgebrochen: {folder}")
+                DiagnosticLogService.LogAlways("CatalogIndex.Folder",
+                                               $"Stopped descending at {MaxFolderDepth} levels: {folder}")
                 Return
             End If
             ' Das kanonische Ziel entscheidet, nicht der Weg dorthin: zwei Verweise auf denselben
@@ -573,7 +638,7 @@ Namespace Services
                     If MediaFileTypes.IsDisplayable(file) Then target.Add(file)
                 Next
             Catch ex As Exception
-                DiagnosticLogService.LogException("Katalogindex.Ordner", ex)
+                DiagnosticLogService.LogException("CatalogIndex.Folder", ex)
                 Return
             End Try
 
@@ -581,7 +646,7 @@ Namespace Services
             Try
                 subFolders = Directory.GetDirectories(folder)
             Catch ex As Exception
-                DiagnosticLogService.LogException("Katalogindex.Ordner", ex)
+                DiagnosticLogService.LogException("CatalogIndex.Folder", ex)
                 Return
             End Try
 
@@ -605,8 +670,8 @@ Namespace Services
                 Dim voll = If(ziel Is Nothing, info.FullName, ziel.FullName)
                 Return Path.TrimEndingDirectorySeparator(Path.GetFullPath(voll))
             Catch ex As Exception
-                DiagnosticLogService.LogAlways("Katalogindex.Ordner",
-                                               $"Verweis nicht aufloesbar, Ordner ausgelassen: {folder} ({ex.GetType().Name})")
+                DiagnosticLogService.LogAlways("CatalogIndex.Folder",
+                                               $"Link cannot be resolved, folder skipped: {folder} ({ex.GetType().Name})")
                 Return ""
             End Try
         End Function

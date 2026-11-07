@@ -287,11 +287,46 @@ Namespace Services
             If adj Is Nothing Then Return Nothing
             Try
                 Dim d, p, e As Long
-                Return ImageProcessor.RenderPngStream(filePath, adj, width, d, p, e,
-                                                      preferReducedRawDecode:=True)
+                Dim developed = ImageProcessor.RenderPngStream(filePath, adj, width, d, p, e,
+                                                               preferReducedRawDecode:=True)
+                If developed IsNot Nothing Then NoteRawSource(RawSourceDevelopedWithRecipe)
+                Return developed
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ' Woher das Bild einer RAW zuletzt kam, je Faden. Nur fuer das Diagnoseprotokoll des
+        ' Katalogindex (siehe CatalogIndexTimings): eine eingebettete Vorschau kostet Millisekunden,
+        ' eine Entwicklung ein Vielfaches, und von aussen sieht man den Unterschied nicht. JE FADEN,
+        ' weil Galerie und Index gleichzeitig Kacheln anlegen koennen; der Index laeuft auf einem
+        ' einzigen Faden, und Schleuse wie Bilderkennung bleiben auf dem des Aufrufers.
+        <ThreadStatic> Private Shared _lastRawSource As String
+
+        Friend Const RawSourceEmbeddedLibRaw As String = "embedded (LibRaw)"
+        Friend Const RawSourceEmbeddedScanner As String = "embedded (scan)"
+        Friend Const RawSourceDevelopedWithRecipe As String = "developed with recipe"
+        Friend Const RawSourceSmallPreview As String = "small preview"
+
+        Private Shared Sub NoteRawSource(source As String)
+            _lastRawSource = source
+        End Sub
+
+        ''' <summary>Warum die dritte Stufe entwickeln musste, aus der groessten Vorschau der beiden
+        ''' ersten Stufen (-1 keine, 0 nicht lesbar). Die zu kleine Vorschau mit ihrer laengeren
+        ''' Kante: die ist je Kameramodell fest, im Protokoll entsteht also eine Gruppe je Modell.</summary>
+        Private Shared Function DevelopedReason(longSide As Integer) As String
+            If longSide < 0 Then Return "developed, no preview"
+            If longSide = 0 Then Return "developed, preview not readable"
+            Return $"developed, preview too small ({longSide} px)"
+        End Function
+
+        ''' <summary>Woher das Bild der letzten RAW auf diesem Faden kam, und vergisst es. Nothing,
+        ''' wenn seit dem letzten Aufruf keine RAW gelesen wurde.</summary>
+        Friend Shared Function TakeLastRawSource() As String
+            Dim source = _lastRawSource
+            _lastRawSource = Nothing
+            Return source
         End Function
 
         ''' <summary>Schreibt einen bereits entwickelten+orientierten PNG-Strom als JPEG-Kachel - OHNE
@@ -847,13 +882,21 @@ Namespace Services
             ' Stufe 1: LibRaws Thumbnail-API - formatkundig und schnell (bei einer 50-MP-.arw
             ' 2 ms gegen 26 ms des Scanners, der bis zu 16 MB nach JPEG-Signaturen durchsucht).
             Dim viaLibRaw = RawDecodeService.TryExtractThumbnail(filePath)
-            If IsBigEnoughForTile(viaLibRaw, width) Then Return viaLibRaw
+            Dim libRawSide As Integer
+            If IsBigEnoughForTile(viaLibRaw, width, libRawSide) Then
+                NoteRawSource(RawSourceEmbeddedLibRaw)
+                Return viaLibRaw
+            End If
             viaLibRaw?.Dispose()
 
             ' Stufe 2: eigener Scanner - er nimmt das GROESSTE eingebettete JPEG und ist damit die
             ' Rettung, wenn die Kamera nur ein Mini-Thumbnail als primaere Vorschau fuehrt.
             Dim scanned = RawPreviewService.ExtractPreview(filePath)
-            If IsBigEnoughForTile(scanned, width) Then Return scanned
+            Dim scannedSide As Integer
+            If IsBigEnoughForTile(scanned, width, scannedSide) Then
+                NoteRawSource(RawSourceEmbeddedScanner)
+                Return scanned
+            End If
             scanned?.Dispose()
 
             ' Stufe 3: wirklich entwickeln. Fuer Dateien ohne jede eingebettete Vorschau (Leica
@@ -861,17 +904,31 @@ Namespace Services
             ' 480er Kachel sichtbar matschig waere). Der Decode laeuft ueber half_size. Einmalig -
             ' danach liegt die Kachel im Thumbnail-Cache.
             Dim developed = RawDecodeService.TryRenderPreviewJpeg(filePath)
-            If developed IsNot Nothing AndAlso developed.Length > 0 Then Return developed
+            If developed IsNot Nothing AndAlso developed.Length > 0 Then
+                NoteRawSource(DevelopedReason(Math.Max(libRawSide, scannedSide)))
+                Return developed
+            End If
             developed?.Dispose()
 
             ' Nichts hat die Zielgroesse erreicht - dann lieber eine kleine Vorschau als gar keine.
+            NoteRawSource(RawSourceSmallPreview)
             Return RawPreviewService.ExtractPreviewWithFallback(filePath)
         End Function
 
         ''' <summary>Taugt diese Vorschau fuer eine Kachel, oder muesste sie hochskaliert (und damit
         ''' unscharf) werden? Liest NUR den Kopf ueber SKCodec - kein voller Decode.</summary>
         Private Shared Function IsBigEnoughForTile(stream As MemoryStream, width As Integer) As Boolean
+            Dim unusedLongSide As Integer
+            Return IsBigEnoughForTile(stream, width, unusedLongSide)
+        End Function
+
+        ''' <summary>Wie oben, nennt dazu die laengere Kante der Vorschau: -1 heisst keine Vorschau,
+        ''' 0 eine, die sich nicht lesen laesst. Fuer den Vermerk der RAW-Quelle (siehe
+        ''' <see cref="TakeLastRawSource"/>).</summary>
+        Private Shared Function IsBigEnoughForTile(stream As MemoryStream, width As Integer, ByRef longSide As Integer) As Boolean
+            longSide = -1
             If stream Is Nothing OrElse stream.Length = 0 Then Return False
+            longSide = 0
             Try
                 ' NICHT SKCodec.Create(Stream): der uebernimmt den Strom und schliesst ihn - der
                 ' Aufrufer braucht ihn danach aber noch zum Dekodieren (dieselbe Falle wie in
@@ -884,7 +941,8 @@ Namespace Services
                         Dim info = codec.Info
                         ' Kachelbreite mit etwas Toleranz: eine 460-px-Vorschau auf 480 zu strecken
                         ' faellt nicht auf, ein 320-px-Bild schon.
-                        Return Math.Max(info.Width, info.Height) >= width * 0.9
+                        longSide = Math.Max(info.Width, info.Height)
+                        Return longSide >= width * 0.9
                     End Using
                 End Using
             Catch

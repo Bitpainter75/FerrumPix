@@ -48,7 +48,7 @@ Namespace ViewModels
                                            Await Task.Delay(StartupDelayMilliseconds).ConfigureAwait(False)
                                            Await StartAsync().ConfigureAwait(False)
                                        Catch ex As Exception
-                                           DiagnosticLogService.LogException("Katalogindex.Start", ex)
+                                           DiagnosticLogService.LogException("CatalogIndex.Start", ex)
                                        End Try
                                    End Function)
         End Sub
@@ -88,7 +88,7 @@ Namespace ViewModels
                         p.Done, p.Total))
                 result = Await CatalogIndexRunner.RunAsync(folders:=folders, progress:=progress).ConfigureAwait(False)
             Catch ex As Exception
-                DiagnosticLogService.LogException("Katalogindex.Lauf", ex)
+                DiagnosticLogService.LogException("CatalogIndex.Run", ex)
             End Try
 
             ' Die Anzeige zurueckstellen, und ERST DANACH den Riegel freigeben (siehe LeaveRun).
@@ -112,7 +112,7 @@ Namespace ViewModels
                     Await SetStatusAsync(SummarizeResult(result), 100, False).ConfigureAwait(False)
                 End If
             Catch ex As Exception
-                DiagnosticLogService.LogException("Katalogindex.Abschluss", ex)
+                DiagnosticLogService.LogException("CatalogIndex.Finish", ex)
             End Try
             LeaveRun()
         End Function

@@ -2455,8 +2455,12 @@ Namespace Services
         '''
         ''' Eintraege auf einem Datentraeger, der gerade nicht erreichbar ist, zaehlen NICHT mit
         ''' (<see cref="VolumePresence"/>): sie fehlen nicht, sie sind nur nicht da.</summary>
+        ''' <param name="orphanPaths">Nimmt, wenn gesetzt, die Pfade der gezaehlten Eintraege auf.
+        ''' Fuer das Diagnoseprotokoll des Katalogindex: die Zahl allein sagt nicht, wo man suchen
+        ''' soll.</param>
         Public Function CountOrphanedRecordsUnder(folders As IReadOnlyList(Of String),
-                                                  Optional filesSeenByIndex As ISet(Of String) = Nothing) As Integer
+                                                  Optional filesSeenByIndex As ISet(Of String) = Nothing,
+                                                  Optional orphanPaths As List(Of String) = Nothing) As Integer
             If folders Is Nothing OrElse folders.Count = 0 Then Return 0
             Dim orphans = 0
             Dim volumes = VolumePresence.Snapshot()
@@ -2489,13 +2493,46 @@ Namespace Services
                                 ' A completed enumeration already proved that this image exists.
                                 ' Avoid a second network metadata roundtrip for every unchanged row.
                                 If filesSeenByIndex IsNot Nothing AndAlso filesSeenByIndex.Contains(p) Then Continue While
-                                If Not File.Exists(p) AndAlso volumes.UnreachableRootOf(p).Length = 0 Then orphans += 1
+                                If Not File.Exists(p) AndAlso volumes.UnreachableRootOf(p).Length = 0 Then
+                                    orphans += 1
+                                    orphanPaths?.Add(p)
+                                End If
                             End While
                         End Using
                     End Using
                 Next
             End Using
             Return orphans
+        End Function
+
+        ''' <summary>In welchen Tabellen die uebergebenen Pfade Zeilen haben, als Anzahl je Tabelle.
+        ''' Dieselben Tabellen wie beim Zaehlen und Aufraeumen der Eintraege ohne Datei. Nur fuer das
+        ''' Diagnoseprotokoll: ein Eintrag nur aus der Gesichtssuche oder nur aus der Bilderkennung
+        ''' hat eine andere Herkunft als eine Zeile des Katalogs.</summary>
+        Public Function CountRowsPerTable(paths As IReadOnlyList(Of String)) As List(Of KeyValuePair(Of String, Integer))
+            Dim result As New List(Of KeyValuePair(Of String, Integer))()
+            If paths Is Nothing OrElse paths.Count = 0 Then Return result
+            Const BlockSize As Integer = 500
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                For Each table In {"ImageMeta", "Face", "ScannedImage", "AiImageTag", "AiTagScan"}
+                    Dim count = 0
+                    For start = 0 To paths.Count - 1 Step BlockSize
+                        Dim block = paths.Skip(start).Take(BlockSize).ToList()
+                        Using cmd = conn.CreateCommand()
+                            Dim names = block.Select(Function(p, i) "$p" & i.ToString(CultureInfo.InvariantCulture)).ToList()
+                            ' Der Tabellenname kommt nur aus der festen Liste oben.
+                            cmd.CommandText = $"SELECT COUNT(DISTINCT FilePath) FROM {table} WHERE FilePath IN ({String.Join(",", names)})"
+                            For i = 0 To block.Count - 1
+                                cmd.Parameters.AddWithValue(names(i), block(i))
+                            Next
+                            count += Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)
+                        End Using
+                    Next
+                    If count > 0 Then result.Add(New KeyValuePair(Of String, Integer)(table, count))
+                Next
+            End Using
+            Return result
         End Function
 
         Private Function PurgeOrphanedRecordsLocked(progress As Action(Of Integer, Integer),
