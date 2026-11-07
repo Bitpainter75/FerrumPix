@@ -1754,7 +1754,9 @@ Namespace Views
         Protected Overrides Sub OnAttachedToVisualTree(e As Avalonia.VisualTreeAttachmentEventArgs)
             MyBase.OnAttachedToVisualTree(e)
             VerbindeEinstellungen()
-            Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
+            ' Beim Vorbereiten (MainWindow.PrepareEditorView, Deckkraft 0) nicht: die Galerie
+            ' behaelt den Fokus, bis der Editor wirklich erscheint; dann holt OnModeEntered ihn.
+            If Opacity > 0 Then Dispatcher.UIThread.Post(Sub() Me.Focus(), DispatcherPriority.Background)
         End Sub
 
         ''' EditorViewModel lebt für die gesamte App-Laufzeit (eine Instanz, wiederverwendet bei

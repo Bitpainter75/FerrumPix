@@ -949,6 +949,10 @@ Namespace ViewModels
                     Dim handed = Viewer.TakeFullSizeSourceForEditor(path)
                     If handed.Bitmap IsNot Nothing Then DecodedImageHandoff.Offer(path, handed.WriteTimeUtc, handed.Bitmap)
                 End If
+                ' Das Fenster haengt die Editor-Ansicht schon jetzt unsichtbar ein: Stile, Bindungen
+                ' und das erste Vermessen laufen dann, waehrend im Hintergrund dekodiert wird, statt
+                ' nach dem Decode auf dem Anzeigefaden (gemessen 0,7 s beim ersten Oeffnen).
+                If CurrentMode <> AppMode.Editor Then RaiseEvent EditorViewWanted(Me, EventArgs.Empty)
                 Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId, nextcloudSource,
                                                         displayFileName:=displayFileName)
                 If Not opened Then Return
@@ -959,8 +963,17 @@ Namespace ViewModels
                 DecodedImageHandoff.Clear()
                 _documentOpenInFlight = False
                 EndDocumentOpenIndicator()
+                If CurrentMode <> AppMode.Editor Then RaiseEvent EditorViewNotNeeded(Me, EventArgs.Empty)
             End Try
         End Function
+
+        ''' <summary>Ein Oeffnen im Editor beginnt: das Fenster darf die Editor-Ansicht schon
+        ''' unsichtbar vorbereiten (MainWindow.PrepareEditorView).</summary>
+        Public Event EditorViewWanted As EventHandler
+
+        ''' <summary>Das Oeffnen endete, ohne in den Editor zu wechseln: eine vorbereitete Ansicht
+        ''' wird wieder ausgeblendet.</summary>
+        Public Event EditorViewNotNeeded As EventHandler
 
         Public Async Sub OpenSettings()
             Try

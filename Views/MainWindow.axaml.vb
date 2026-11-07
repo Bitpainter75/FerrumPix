@@ -185,6 +185,12 @@ Namespace Views
 
             Dim view As Control = Nothing
             Dim freshlyBuilt = False
+            ' Eine vorbereitete Ansicht (PrepareEditorView) ist eingehaengt, uebersetzt und vermessen;
+            ' sie wird nur noch sichtbar geschaltet und betreten wie eine behaltene.
+            If _modeViews.TryGetValue(content, view) AndAlso _preparedViews.Remove(view) Then
+                view.Opacity = 1
+                view.IsHitTestVisible = True
+            End If
             If Not _modeViews.TryGetValue(content, view) Then
                 view = _viewLocator.Build(content)
                 If view Is Nothing Then Return
@@ -217,6 +223,45 @@ Namespace Views
                 ' Beim ERSTEN Mal erledigt das Anhaengen an den Baum dieselbe Arbeit.
                 TryCast(view, IModeView)?.OnModeEntered()
             End If
+        End Sub
+
+        ''' <summary>Ansichten, die eingehaengt, aber noch nicht betreten sind (Deckkraft 0, ohne
+        ''' Eingaben).</summary>
+        Private ReadOnly _preparedViews As New HashSet(Of Control)()
+
+        ''' <summary>Haengt die Editor-Ansicht beim ERSTEN Oeffnen schon ein, waehrend das Bild noch
+        ''' dekodiert wird. Das erste Einhaengen kostete gemessen rund 0,7 s auf dem Anzeigefaden
+        ''' (Stile, Bindungen ueber Reflexion, erstes Vermessen) und kam bisher NACH dem Decode, also
+        ''' obendrauf. Eingehaengt wird sie sichtbar, aber mit Deckkraft 0 und ohne Eingaben: so
+        ''' vermisst sie sich in echter Groesse, und ihr Loaded rechnet mit den richtigen Massen.
+        ''' Unsichtbar (IsVisible False) waere Loaded mit Groesse 0 gelaufen. Der Moduswechsel
+        ''' danach schaltet sie nur noch sichtbar (ShowCurrentContent).</summary>
+        Private Sub PrepareEditorView(sender As Object, e As EventArgs)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            Dim host = Me.FindControl(Of Panel)("MainContentHost")
+            If vm Is Nothing OrElse host Is Nothing OrElse vm.Editor Is Nothing Then Return
+            If _modeViews.ContainsKey(vm.Editor) Then Return
+            Dim view = _viewLocator.Build(vm.Editor)
+            If view Is Nothing Then Return
+            view.DataContext = vm.Editor
+            view.Opacity = 0
+            view.IsHitTestVisible = False
+            _modeViews(vm.Editor) = view
+            _preparedViews.Add(view)
+            host.Children.Add(view)
+            ApplyLocalization()
+        End Sub
+
+        ''' <summary>Das Oeffnen endete ohne Wechsel in den Editor: die vorbereitete Ansicht wird
+        ''' ausgeblendet und ist danach eine behaltene wie nach einem Besuch im Editor.</summary>
+        Private Sub ReleasePreparedEditorView(sender As Object, e As EventArgs)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If vm?.Editor Is Nothing Then Return
+            Dim view As Control = Nothing
+            If Not _modeViews.TryGetValue(vm.Editor, view) OrElse Not _preparedViews.Remove(view) Then Return
+            view.IsVisible = False
+            view.Opacity = 1
+            view.IsHitTestVisible = True
         End Sub
 
         ''' <summary>Baut die Ansicht des Einrichtungsassistenten, sobald er erscheint, und nimmt sie
@@ -255,6 +300,8 @@ Namespace Views
             Dim vm = TryCast(DataContext, MainWindowViewModel)
             If vm IsNot Nothing Then
                 AddHandler vm.PropertyChanged, AddressOf OnVmPropertyChanged
+                AddHandler vm.EditorViewWanted, AddressOf PrepareEditorView
+                AddHandler vm.EditorViewNotNeeded, AddressOf ReleasePreparedEditorView
                 EnsureDialogOverlays(vm)
                 ShowCurrentContent()
                 ApplyFullscreenState()
