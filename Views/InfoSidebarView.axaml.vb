@@ -65,14 +65,6 @@ Namespace Views
             Avalonia.Threading.Dispatcher.UIThread.Post(Sub() CommitPersonName(box))
         End Sub
 
-        ''' <summary>Steht die Vorschlagsliste offen, hat der Rahmen die Eingabetaste schon fuer die
-        ''' Auswahl verbraucht und dieses Ereignis kommt gar nicht erst an - der erste Druck waehlt
-        ''' den Vorschlag, der zweite uebernimmt ihn. Genau so soll es sein: ein versehentlich
-        ''' uebernommener Vorschlag schiebt ein Gesicht zu einer fremden Person.
-        '''
-        ''' ENTER auf einem UNVERAENDERTEN Namen, den die Erkennung vergeben hat, bestaetigt ihn -
-        ''' beim Durchgehen mit der Tastatur der Weg, ohne zur Maus zu greifen. Das blosse Verlassen
-        ''' des Feldes bestaetigt nichts: wer durchtabbt, hat noch nichts entschieden.</summary>
         ''' <summary>ENTER im Stichwortfeld fuegt hinzu wie der Knopf daneben; das Feld leert sich
         ''' (AddTag setzt den Text zurueck) und behaelt den Fokus fuer das naechste Stichwort. Steht
         ''' die Vorschlagsliste offen, verbraucht der Rahmen den ersten Druck fuer die Auswahl, und
@@ -105,6 +97,14 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Steht die Vorschlagsliste offen, hat der Rahmen die Eingabetaste schon fuer die
+        ''' Auswahl verbraucht und dieses Ereignis kommt gar nicht erst an - der erste Druck waehlt
+        ''' den Vorschlag, der zweite uebernimmt ihn. Genau so soll es sein: ein versehentlich
+        ''' uebernommener Vorschlag schiebt ein Gesicht zu einer fremden Person.
+        '''
+        ''' ENTER auf einem UNVERAENDERTEN Namen, den die Erkennung vergeben hat, bestaetigt ihn -
+        ''' beim Durchgehen mit der Tastatur der Weg, ohne zur Maus zu greifen. Das blosse Verlassen
+        ''' des Feldes bestaetigt nichts: wer durchtabbt, hat noch nichts entschieden.</summary>
         Private Sub OnPersonNameKeyDown(sender As Object, e As KeyEventArgs)
             ' Nur TAB und SHIFT+TAB. Mit STRG wechselt der Editor das Werkzeug, das bleibt ihm.
             If e.Key = Key.Tab AndAlso (e.KeyModifiers And (KeyModifiers.Control Or KeyModifiers.Alt Or KeyModifiers.Meta)) = KeyModifiers.None Then

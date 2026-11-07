@@ -6924,6 +6924,9 @@ Namespace ViewModels
             ' NICHT aus dem Ordnerdurchlauf abgeleitet: was dort gesehen wurde, kann bis zum Ende
             ' gelöscht worden sein, und die gemerkte Liste truege den Pfad dann weiter.
             Dim stillExisting As HashSet(Of String) = Nothing
+            ' Nur bei eingeschaltetem Diagnoseprotokoll: was der Katalogdurchlauf verwirft und warum
+            ' (siehe SearchDropLog).
+            Dim dropLog = SearchDropLog.CreateIfEnabled()
 
             IsLoading = True
             Dim runRow = BeginSearchRun()
@@ -7192,7 +7195,7 @@ Namespace ViewModels
                                        End If
                                    Else
                                        Dim pending As New List(Of LibraryImageMeta)()
-                                       For Each meta In EnumerateCatalogSearchMetasLazy("", node.IncludeSubfolders, token, node)
+                                       For Each meta In EnumerateCatalogSearchMetasLazy("", node.IncludeSubfolders, token, node, dropLog)
                                            token.ThrowIfCancellationRequested()
                                            scannedCount += 1
                                            ' Melden am Fortschritt, nicht am Block - siehe oben.
@@ -7267,6 +7270,22 @@ Namespace ViewModels
                                        End If
                                    End If
 
+                                   ' Fuers Diagnoseprotokoll: was dieser Lauf gefunden hat, und was er
+                                   ' verworfen hat, obwohl es gepasst haette. NOCH im Hintergrund und
+                                   ' vor dem Finally, das die Zwischenspeicher von Personen und
+                                   ' erkannten Begriffen wieder freigibt - die Pruefung braucht sie.
+                                   If dropLog IsNot Nothing Then
+                                       DiagnosticLogService.LogAlways("Gallery.Search",
+                                           $"Suche ""{node.Name}"": {foundCount} Treffer, {scannedCount} geprueft, Umfang " &
+                                           If(String.IsNullOrWhiteSpace(rootFolder), "Katalog", "Ordner " & rootFolder))
+                                       Dim dropped = Await dropLog.SummarizeAsync(
+                                           Function(m) MatchesSavedSearchAsync(node, m, textQuery, favoriteMode, ratingMin, selectedRatings),
+                                           token)
+                                       If dropped.Length > 0 Then
+                                           DiagnosticLogService.LogAlways("Gallery.SearchDropped", $"Suche ""{node.Name}"": {dropped}")
+                                       End If
+                                   End If
+
                                    ' Zum Schluss, noch im Hintergrund: welche Treffer es jetzt noch
                                    ' gibt (siehe stillExisting).
                                    Dim existing As New HashSet(Of String)(PathIdentity.Comparer)
@@ -7308,7 +7327,8 @@ Namespace ViewModels
 
         Private Iterator Function EnumerateCatalogSearchMetasLazy(rootFolder As String, includeSubfolders As Boolean,
                                                                  token As CancellationToken,
-                                                                 Optional node As VirtualNavigationNode = Nothing) As IEnumerable(Of LibraryImageMeta)
+                                                                 Optional node As VirtualNavigationNode = Nothing,
+                                                                 Optional dropLog As SearchDropLog = Nothing) As IEnumerable(Of LibraryImageMeta)
             Dim root = If(rootFolder, "").Trim()
             ' Vor dem Durchlauf leeren: eine gerade vergebene Benennung und eine gerade gelaufene
             ' Analyse sollen sofort greifen.
@@ -7333,10 +7353,25 @@ Namespace ViewModels
                 token.ThrowIfCancellationRequested()
                 If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
                 ' Der Papierkorb IMMER nicht - auch mit eingeschalteten versteckten Ordnern.
-                If FileOperationPolicy.IsTrashFolder(meta.FilePath) Then Continue For
-                If Not showHidden AndAlso FileOperationPolicy.IsInHiddenFolder(meta.FilePath) Then Continue For
-                If Not File.Exists(meta.FilePath) Then Continue For
-                If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
+                ' Jeder Grund landet mit der Zeile im Diagnoseprotokoll, wenn es eingeschaltet ist
+                ' (dropLog ist sonst Nothing). Ohne das stand nirgends, warum eine gezaehlte Zeile
+                ' nicht in der Trefferliste erscheint.
+                If FileOperationPolicy.IsTrashFolder(meta.FilePath) Then
+                    dropLog?.Record(SearchDropLog.ReasonTrash, meta)
+                    Continue For
+                End If
+                If Not showHidden AndAlso FileOperationPolicy.IsInHiddenFolder(meta.FilePath) Then
+                    dropLog?.Record(SearchDropLog.ReasonHidden, meta)
+                    Continue For
+                End If
+                If Not File.Exists(meta.FilePath) Then
+                    dropLog?.Record(SearchDropLog.ReasonMissing, meta)
+                    Continue For
+                End If
+                If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then
+                    dropLog?.Record(SearchDropLog.ReasonExtension, meta)
+                    Continue For
+                End If
                 If Not IsPathInSearchRoot(meta.FilePath, root, includeSubfolders) Then Continue For
                 Yield meta
             Next

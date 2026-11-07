@@ -258,7 +258,6 @@ Namespace ViewModels
             Return files.GroupBy(Function(d) d.Key).Select(Function(g) g.First()).ToList()
         End Function
 
-        ''' <summary>Was der Download fuer die angehakten Funktionen umfasst, als ein Text.</summary>
         ''' <summary>Steht etwas zum Laden an? Sonst bleibt die Zeile mit der Groesse ganz weg.</summary>
         Public ReadOnly Property HasModelDownloadSize As Boolean
             Get
@@ -266,6 +265,7 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Was der Download fuer die angehakten Funktionen umfasst, als ein Text.</summary>
         Public ReadOnly Property ModelDownloadSizeText As String
             Get
                 Dim files = SelectedMissingFiles()

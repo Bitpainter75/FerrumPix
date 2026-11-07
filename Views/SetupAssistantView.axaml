@@ -199,7 +199,7 @@
                         <StackPanel Spacing="14" VerticalAlignment="Bottom">
                             <!-- Zwei Saetze, zwei Zeilen: der zweite beginnt immer in einer eigenen. -->
                             <StackPanel Spacing="2" HorizontalAlignment="Center" MaxWidth="680">
-                                <TextBlock Classes="setup-lead welcome-lead" TextAlignment="Center" HorizontalAlignment="Center"
+                                <TextBlock Classes="setup-lead welcome-lead" TextAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap"
                                            Text="Fotos sichten, entwickeln und gestalten, alles an einem Ort und alles auf deinem Rechner."/>
                                 <TextBlock Classes="setup-lead welcome-lead" TextAlignment="Center" HorizontalAlignment="Center"
                                            Text="Ein paar Handgriffe, und FerrumPix fühlt sich an wie deins."/>
@@ -356,7 +356,7 @@
                         <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="setup-title" Text="Zusätzliche Fähigkeiten"/>
-                                <TextBlock Classes="setup-lead" Text="Einige Werkzeuge arbeiten mit Modellen, die auf diesem Rechner laufen. Lade jetzt, was du brauchst, oder später unter Einstellungen, Modelle."/>
+                                <TextBlock Classes="setup-lead" TextWrapping="Wrap" Text="Einige Werkzeuge arbeiten mit Modellen, die auf diesem Rechner laufen. Lade jetzt, was du brauchst, oder später unter Einstellungen, Modelle."/>
                             </StackPanel>
                             <!-- Jede Funktion als Karte mit Symbol, Name, Satz und Schalter, zweispaltig;
                                  vorhandene stehen an und gesperrt. Kartenansicht und Personen schliessen das
@@ -479,7 +479,7 @@
                                                IconBrush="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Classes="setup-title" Text="Alles bereit" HorizontalAlignment="Center" TextAlignment="Center"/>
-                            <TextBlock Classes="setup-lead" TextAlignment="Center"
+                            <TextBlock Classes="setup-lead" TextAlignment="Center" TextWrapping="Wrap"
                                        Text="FerrumPix lässt sich in vielen Einstellungen genau auf deine Arbeitsweise abstimmen: Galerie und Kacheln, Viewer und Diashow, Editor und Werkzeuge, Info-Leiste, RAW-Entwicklung und vieles mehr. Ein Blick in die Einstellungen lohnt sich."/>
                             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" Margin="0,8,0,0">
                                 <Button Classes="ghost" Padding="18,10" Command="{Binding OpenSettingsCommand}">

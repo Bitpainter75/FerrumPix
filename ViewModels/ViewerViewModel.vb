@@ -120,10 +120,6 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Ob das Analysebild ueberhaupt jemand sieht: die Leiste ist ausgeklappt UND der
-        ''' Betrachter ist die Ansicht auf dem Schirm. Der Betrachter besteht die ganze Sitzung ueber
-        ''' und merkt sich seinen Ausklappzustand - ohne die zweite Bedingung rechnete er auch dann,
-        ''' wenn Galerie oder Editor vorne stehen.</summary>
         ''' <summary>Das Infopanel im Vollbild: ein eigener Schalter (Einstellung
         ''' FullscreenInfoSidebarExpanded, ab Werk aus), umzulegen ueber den Knopf der Bedienleiste,
         ''' I im Vollbild oder die Einstellungen. Er ist bewusst NICHT derselbe wie im Fenster: wer
@@ -193,6 +189,11 @@ Namespace ViewModels
             If IsInfoShownAnywhere Then EnsureHistogramLoaded()
         End Sub
 
+        ''' <summary>Ob das Analysebild ueberhaupt jemand sieht: es ist fuer die Leiste eingeschaltet,
+        ''' das Infopanel steht offen (im Fenster oder im Vollbild) UND der Betrachter ist die Ansicht
+        ''' auf dem Schirm. Der Betrachter besteht die ganze Sitzung ueber und merkt sich seinen
+        ''' Ausklappzustand - ohne die letzte Bedingung rechnete er auch dann, wenn Galerie oder
+        ''' Editor vorne stehen.</summary>
         Private ReadOnly Property IsScopeLive As Boolean
             Get
                 Return ScopeSelectionViewModel.ShowInInfoSidebar AndAlso IsInfoShownAnywhere AndAlso
