@@ -3343,6 +3343,56 @@ Namespace Services
                                                    ri As Integer, gi As Integer, bi As Integer, ai As Integer,
                                                    srcPremul As Boolean, chain As PointOpChain,
                                                    referenceEdge As Double) As LocalToneBase
+            Dim grid = BuildLocalToneGrid(srcBuf, stride, width, height, ri, gi, bi, ai, srcPremul, chain, referenceEdge)
+            Return LocalToneBaseFromGrid(grid, allowSmoothing:=True)
+        End Function
+
+        ''' <summary>Die Basis zu einem Raster. Alles hier haengt nur am Raster und an den Radien.
+        ''' Beim Ziehen von Lichtern, Tiefen, Weiss, Schwarz oder Dynamik bleibt das Raster Bit fuer
+        ''' Bit gleich (die Stufen vor den Tonzonen stecken schon darin), und das Glaetten waere
+        ''' dieselbe Rechnung noch einmal: gemessen gut drei Viertel der Basis. Ohne
+        ''' <paramref name="allowSmoothing"/> nur aus dem Zwischenspeicher, sonst Nothing.</summary>
+        Friend Shared Function LocalToneBaseFromGrid(grid As LocalToneGrid, allowSmoothing As Boolean) As LocalToneBase
+            Dim cached = FindLocalToneBase(grid.Gray, grid.Coverage, grid.Width, grid.Height, grid.StepSize,
+                                           grid.OriginX, grid.OriginY, grid.Radius, grid.SmoothRadius)
+            If cached IsNot Nothing OrElse Not allowSmoothing Then Return cached
+            Dim built = SmoothLocalToneBase(grid.Gray, grid.Coverage, grid.Width, grid.Height, grid.StepSize,
+                                            grid.OriginX, grid.OriginY, grid.Radius, grid.SmoothRadius)
+            RememberLocalToneBase(grid.Gray, grid.Coverage, grid.Radius, grid.SmoothRadius, built)
+            Return built
+        End Function
+
+        ''' <summary>Das Raster der Basisschicht vor dem Glaetten: je Feld der Grauwert nach den
+        ''' Stufen vor den Tonzonen, die Deckung, Lage und Radien in Rasterpunkten. Geteilt zwischen
+        ''' dem Glaetten auf dem Prozessor (SmoothLocalToneBase) und auf der Karte
+        ''' (SmoothLocalToneBaseOnGpu).</summary>
+        Friend NotInheritable Class LocalToneGrid
+            Public Gray As Single()
+            Public Coverage As Single()
+            Public Width As Integer
+            Public Height As Integer
+            Public StepSize As Integer
+            Public OriginX As Integer
+            Public OriginY As Integer
+            Public Radius As Double
+            Public SmoothRadius As Double
+
+            ''' <summary>Jedes Feld voll gedeckt? Nur dann rechnet die Karte; mit Durchsichtigkeit
+            ''' mitteln die Kastenmittel nach Deckung gewichtet, das bleibt beim Prozessor.</summary>
+            Public ReadOnly Property IsOpaque As Boolean
+                Get
+                    For Each value In Coverage
+                        If value < 0.999999F Then Return False
+                    Next
+                    Return True
+                End Get
+            End Property
+        End Class
+
+        Private Shared Function BuildLocalToneGrid(srcBuf As Byte(), stride As Integer, width As Integer, height As Integer,
+                                                   ri As Integer, gi As Integer, bi As Integer, ai As Integer,
+                                                   srcPremul As Boolean, chain As PointOpChain,
+                                                   referenceEdge As Double) As LocalToneGrid
             Dim bounds = VisibleBounds(srcBuf, stride, width, height, ai)
             If bounds.Width <= 0 OrElse bounds.Height <= 0 Then bounds = New SKRectI(0, 0, width, height)
             Dim originX = bounds.Left, originY = bounds.Top
@@ -3409,16 +3459,30 @@ Namespace Services
             Dim gridVariance = Math.Max(0.0, (sigmaPixels * sigmaPixels - (CDbl(stepSize) * stepSize - 1.0) / 12.0) /
                                              (CDbl(stepSize) * stepSize))
             Dim smoothRadius = FractionalBoxRadiusForVariance(gridVariance / 3.0)
+            Return New LocalToneGrid With {
+                .Gray = gray, .Coverage = coverage, .Width = gw, .Height = gh, .StepSize = stepSize,
+                .OriginX = originX, .OriginY = originY, .Radius = radius, .SmoothRadius = smoothRadius}
+        End Function
 
-            ' Alles ab hier haengt nur am Raster und an den Radien. Beim Ziehen von Lichtern,
-            ' Tiefen, Weiss, Schwarz oder Dynamik bleibt das Raster Bit fuer Bit gleich (die Stufen
-            ' vor den Tonzonen stecken schon darin), und das Glaetten waere dieselbe Rechnung noch
-            ' einmal: gemessen gut drei Viertel der Basis.
-            Dim cached = FindLocalToneBase(gray, coverage, gw, gh, stepSize, originX, originY, radius, smoothRadius)
-            If cached IsNot Nothing Then Return cached
-            Dim built = SmoothLocalToneBase(gray, coverage, gw, gh, stepSize, originX, originY, radius, smoothRadius)
-            RememberLocalToneBase(gray, coverage, radius, smoothRadius, built)
-            Return built
+        ''' <summary>Dasselbe Raster wie BuildLocalToneBase, fuer den Weg ueber die Karte; Nothing,
+        ''' wenn das Bild kein 8-Bit-Format hat.</summary>
+        Friend Shared Function BuildLocalToneGridFor(source As SKBitmap, chain As PointOpChain, referenceEdge As Double) As LocalToneGrid
+            Dim srcBuf As Byte() = Nothing
+            Dim length, stride, ri, gi, bi, ai As Integer
+            If Not TryRentRgbaLikeBuffer(source, srcBuf, length, stride, ri, gi, bi, ai) Then Return Nothing
+            Try
+                Return BuildLocalToneGrid(srcBuf, stride, source.Width, source.Height, ri, gi, bi, ai,
+                                          source.AlphaType = SKAlphaType.Premul, chain, referenceEdge)
+            Finally
+                ReturnPooledBuffer(srcBuf)
+            End Try
+        End Function
+
+        ''' <summary>Das Glaetten auf dem Prozessor, fuer einen Weg ueber die Karte, der dort nicht
+        ''' rechnen konnte.</summary>
+        Friend Shared Function SmoothLocalToneGrid(grid As LocalToneGrid) As LocalToneBase
+            Return SmoothLocalToneBase(grid.Gray, grid.Coverage, grid.Width, grid.Height, grid.StepSize,
+                                       grid.OriginX, grid.OriginY, grid.Radius, grid.SmoothRadius)
         End Function
 
         ''' <summary>Ein gemerktes Ergebnis der Basisschicht samt dem Raster, aus dem es entstand.</summary>

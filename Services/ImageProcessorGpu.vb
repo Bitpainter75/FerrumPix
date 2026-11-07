@@ -342,7 +342,28 @@ Namespace Services
             End If
             ' Die oertliche Basis auf DIESEM Faden: ihr Bezug (_localToneReferenceEdge) ist je
             ' Faden gesetzt, auf dem GPU-Faden stuende er auf 0.
-            Dim localBase = BuildLocalToneBaseFor(source, chain)
+            ' Das Raster entsteht hier; geglaettet wird aus dem Zwischenspeicher, sonst auf der Karte
+            ' (SmoothLocalToneBaseOnGpu), und nur wo die nicht kann, auf dem Prozessor. Die Basis fuer
+            ' die Karte traegt dann nur Lage und Groesse; ihre Werte entstehen im Auftrag.
+            Dim localBase As LocalToneBase = Nothing
+            Dim gpuGrid As LocalToneGrid = Nothing
+            If chain.LocalToneZones IsNot Nothing Then
+                Dim edge = _localToneReferenceEdge
+                Dim grid = PerformanceTraceService.Measure("Pixel: Punktkette, oertliche Basis",
+                                                           Function() BuildLocalToneGridFor(source, chain, edge))
+                If grid IsNot Nothing Then
+                    localBase = LocalToneBaseFromGrid(grid, allowSmoothing:=False)
+                    If localBase Is Nothing AndAlso LocalBaseFitsGpu(grid) Then
+                        gpuGrid = grid
+                        localBase = New LocalToneBase With {
+                            .Width = grid.Width, .Height = grid.Height, .StepSize = grid.StepSize,
+                            .OriginX = grid.OriginX, .OriginY = grid.OriginY}
+                    ElseIf localBase Is Nothing Then
+                        localBase = PerformanceTraceService.Measure("Pixel: Punktkette, oertliche Basis",
+                                                                    Function() LocalToneBaseFromGrid(grid, allowSmoothing:=True))
+                    End If
+                End If
+            End If
             ReleasePointOpHandover()
             ' Bild und zurueckgehaltene Flaeche kommen ZUSAMMEN als Ergebnis zurueck: kehrt der
             ' Auftrag erst nach Ablauf der Frist zurueck, gibt der Dienst beide auf dem GPU-Faden frei.
@@ -351,7 +372,7 @@ Namespace Services
             If Not PerformanceTraceService.Measure("Pixel: Punktkette (Grafikkarte)",
                     Function() GpuImageService.TryRun(Function(gr)
                                                           Dim surface As SKSurface = Nothing
-                                                          Dim bitmap = RenderPointOpShaderOnGpu(gr, snapshot, chain, localBase, True, surface)
+                                                          Dim bitmap = RenderPointOpShaderOnGpu(gr, snapshot, chain, localBase, True, surface, gpuGrid)
                                                           Return (bitmap, surface)
                                                       End Function, rendered, snapshot,
                                                       Sub(late)
@@ -416,12 +437,243 @@ Namespace Services
             ' Die Wandlung in halbe Gleitkomma kostete gemessen rund 30 ms je Bild (Raster mit 1024
             ' Feldern lange Kante). Die Basis bleibt beim Ziehen vieler Regler dieselbe
             ' (FindLocalToneBase), deshalb liegen die Werte an ihr und werden nur einmal gewandelt.
-            Dim data = If(localBase Is Nothing, EncodeLocalBase(1, 1, Nothing), localBase.ShaderValues(AddressOf EncodeLocalBase))
+            Dim data = If(localBase Is Nothing, EncodeLocalBase(1, 1, Nothing),
+                          PerformanceTraceService.Measure("Pixel: local base as half floats for the GPU",
+                                                          Function() localBase.ShaderValues(AddressOf EncodeLocalBase)))
             Using bitmap = New SKBitmap(New SKImageInfo(w, h * 3, SKColorType.RgbaF16, SKAlphaType.Premul))
                 Marshal.Copy(data, 0, bitmap.GetPixels(), data.Length)
                 Return SKImage.FromBitmap(bitmap)
             End Using
         End Function
+
+        ''' <summary>Laengster ganzer Radius, den die Kastenmittel auf der Karte koennen. Beim Raster
+        ''' mit 1024 Feldern liegt der Radius der Basis bei rund 10, der der Glaettung darunter.</summary>
+        Private Const LocalBaseGpuMaxRadius As Integer = 32
+
+        ''' <summary>Kann die Karte dieses Raster glaetten? Nur deckend (sonst mitteln die
+        ''' Kastenmittel nach Deckung gewichtet) und mit Radien im Rahmen der Shader-Schleife.</summary>
+        Friend Shared Function LocalBaseFitsGpu(grid As LocalToneGrid) As Boolean
+            If grid Is Nothing OrElse grid.Width <= 0 OrElse grid.Height <= 0 Then Return False
+            If Math.Floor(grid.Radius) > LocalBaseGpuMaxRadius OrElse Math.Floor(grid.SmoothRadius) > LocalBaseGpuMaxRadius Then Return False
+            Return grid.IsOpaque
+        End Function
+
+        ''' <summary>Das Glaetten der Basis (SmoothLocalToneBase) auf der Karte, und gleich im Format,
+        ''' das der Shader der Punktkette liest: drei Bloecke untereinander (A, B, geglaettetes Grau),
+        ''' je Wert grob und Rest in Rot und Gruen. Auf dem Prozessor kosteten die sieben Kastenmittel
+        ''' bei 2048 Punkten rund 24 ms, das Wandeln in halbe Gleitkomma 4 ms und das Hochladen der
+        ''' drei Bloecke noch einmal einige; hier geht nur das Raster hinauf.
+        '''
+        ''' Jeder Zwischenwert steht als grob plus Rest in zwei Kanaelen einer Flaeche in halber
+        ''' Gleitkomma: Skia liefert ein Kind als half4, und auf Karten, die half wirklich mit 16 Bit
+        ''' rechnen (Apple), bliebe von einem einzelnen Kanal zu wenig. So traegt jeder Wert rund
+        ''' 21 Bit. Gerechnet wird in Gleitkomma statt Double; die Kastenmittel folgen derselben
+        ''' Randregel (FractionalWindowMean): ueber die vorhandenen Punkte gemittelt, die Bruchteil-
+        ''' Punkte zaehlen nur, wenn sie im Raster liegen. Ohne GRContext (Pruefmodus) dieselben
+        ''' Shader ueber Skia auf dem Prozessor. Nothing, wenn eine Flaeche nicht anlegbar ist; der
+        ''' Aufrufer glaettet dann auf dem Prozessor.</summary>
+        Friend Shared Function SmoothLocalToneBaseOnGpu(gr As GRContext, grid As LocalToneGrid) As SKImage
+            If Not LocalBaseFitsGpu(grid) Then Return Nothing
+            Dim w = grid.Width, h = grid.Height
+            Dim made As New List(Of IDisposable)()
+            Try
+                Dim box = StageEffect("LocalBaseBox", LocalBaseShaderCommon & LocalBaseBoxShader)
+                Dim coef = StageEffect("LocalBaseCoef", LocalBaseShaderCommon & LocalBaseCoefShader)
+
+                ' Das Raster hinauf, als grob plus Rest.
+                Dim encoded = EncodeHalfPairs(grid.Gray)
+                Dim grayImage As SKImage
+                Using upload = New SKBitmap(New SKImageInfo(w, h, SKColorType.RgbaF16, SKAlphaType.Premul))
+                    Marshal.Copy(encoded, 0, upload.GetPixels(), encoded.Length)
+                    grayImage = SKImage.FromBitmap(upload)
+                End Using
+                made.Add(grayImage)
+                If gr IsNot Nothing Then
+                    Dim texture = grayImage.ToTextureImage(gr)
+                    If texture Is Nothing Then Return Nothing
+                    made.Add(texture)
+                    grayImage = texture
+                End If
+
+                Dim draw = Function(effect As SKRuntimeEffect, uniforms As SKRuntimeEffectUniforms, width As Integer, height As Integer,
+                                    children As (Name As String, Image As SKImage)()) As SKImage
+                               Dim surface = NewHalfFloatSurface(gr, width, height)
+                               If surface Is Nothing Then Return Nothing
+                               made.Add(surface)
+                               Dim parts = New List(Of SKShader)()
+                               Try
+                                   Dim childSet = New SKRuntimeEffectChildren(effect)
+                                   For Each child In children
+                                       Dim part = child.Image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
+                                                                       New SKSamplingOptions(SKFilterMode.Nearest))
+                                       parts.Add(part)
+                                       childSet(child.Name) = part
+                                   Next
+                                   Using shader = effect.ToShader(uniforms, childSet),
+                                         paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
+                                       surface.Canvas.DrawRect(0, 0, width, height, paint)
+                                   End Using
+                               Finally
+                                   For Each part In parts
+                                       part.Dispose()
+                                   Next
+                               End Try
+                               Dim snapshot = surface.Snapshot()
+                               made.Add(snapshot)
+                               Return snapshot
+                           End Function
+                Dim boxPass = Function(source As SKImage, horizontal As Boolean, radius As Double, square As Boolean) As SKImage
+                                  If source Is Nothing Then Return Nothing
+                                  Dim whole = Math.Floor(Math.Max(0.0, radius))
+                                  Dim u = New SKRuntimeEffectUniforms(box)
+                                  u("horizontal") = If(horizontal, 1.0F, 0.0F)
+                                  u("whole") = CSng(whole)
+                                  u("part") = CSng(Math.Max(0.0, radius) - whole)
+                                  u("count") = CSng(If(horizontal, w, h))
+                                  u("squareIn") = If(square, 1.0F, 0.0F)
+                                  Return draw(box, u, w, h, {("src", source)})
+                              End Function
+                ' Zeilen, dann Spalten, wie FractionalBoxMean.
+                Dim boxMean = Function(source As SKImage, radius As Double, square As Boolean) As SKImage
+                                  Return boxPass(boxPass(source, True, radius, square), False, radius, False)
+                              End Function
+                Dim coefficient = Function(meanImage As SKImage, meanSquareImage As SKImage, wantB As Boolean) As SKImage
+                                      If meanImage Is Nothing OrElse meanSquareImage Is Nothing Then Return Nothing
+                                      Dim u = New SKRuntimeEffectUniforms(coef)
+                                      u("epsilon") = LocalToneEpsilon
+                                      u("wantB") = If(wantB, 1.0F, 0.0F)
+                                      Return draw(coef, u, w, h, {("meanTex", meanImage), ("meanSqTex", meanSquareImage)})
+                                  End Function
+
+                Dim mean = boxMean(grayImage, grid.Radius, False)
+                Dim meanSquare = boxMean(grayImage, grid.Radius, True)
+                Dim meanA = boxMean(coefficient(mean, meanSquare, False), grid.Radius, False)
+                Dim meanB = boxMean(coefficient(mean, meanSquare, True), grid.Radius, False)
+                Dim smooth = grayImage
+                For pass = 1 To 3
+                    smooth = boxMean(smooth, grid.SmoothRadius, False)
+                Next
+                If meanA Is Nothing OrElse meanB Is Nothing OrElse smooth Is Nothing Then Return Nothing
+
+                ' Die drei Bloecke untereinander, Wert fuer Wert kopiert.
+                Dim result = NewHalfFloatSurface(gr, w, h * 3)
+                If result Is Nothing Then Return Nothing
+                made.Add(result)
+                Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                    result.Canvas.DrawImage(meanA, 0, 0, paint)
+                    result.Canvas.DrawImage(meanB, 0, h, paint)
+                    result.Canvas.DrawImage(smooth, 0, 2 * h, paint)
+                End Using
+                Return result.Snapshot()
+            Finally
+                For Each item In made
+                    item.Dispose()
+                Next
+            End Try
+        End Function
+
+        Private Shared Function NewHalfFloatSurface(gr As GRContext, width As Integer, height As Integer) As SKSurface
+            Dim info = New SKImageInfo(width, height, SKColorType.RgbaF16, SKAlphaType.Premul)
+            Return If(gr Is Nothing, SKSurface.Create(info), SKSurface.Create(gr, False, info))
+        End Function
+
+        ''' <summary>Werte als grob plus Rest in halber Gleitkomma (Rot und Gruen), Alpha 1, auf die
+        ''' naechste halbe Gleitkommazahl gerundet wie EncodeLocalBase (siehe encodeValue).</summary>
+        Private Shared Function EncodeHalfPairs(values As Single()) As Short()
+            Dim data(values.Length * 4 - 1) As Short
+            Dim one = BitConverter.HalfToInt16Bits(CType(1.0F, Half))
+            Parallel.For(0, values.Length \ 4096 + 1,
+                Sub(chunk)
+                    Dim last = Math.Min(values.Length, (chunk + 1) * 4096) - 1
+                    For i = chunk * 4096 To last
+                        Dim v = values(i)
+                        Dim hi = CType(v, Half)
+                        data(i * 4) = BitConverter.HalfToInt16Bits(hi)
+                        data(i * 4 + 1) = BitConverter.HalfToInt16Bits(CType(v - CSng(hi), Half))
+                        data(i * 4 + 3) = one
+                    Next
+                End Sub)
+            Return data
+        End Function
+
+        ''' <summary>Lesen und Schreiben eines Werts als grob plus Rest. Grob wird auf eine Zahl
+        ''' gerundet, die halbe Gleitkomma genau traegt (11 Bit Mantisse), damit der Rest auch dann
+        ''' stimmt, wenn die Karte half wie float rechnet und erst die Flaeche auf 16 Bit rundet.
+        ''' Auf die NAECHSTE Zahl, nicht abgerundet: gemessen wich mit Abrunden das Endbild in 0,13 %
+        ''' der Werte um mehr als eine Stufe ab statt in 0,001 %, bei gleich genauen Basiswerten (der
+        ''' grosse Rest leidet unter dem bilinearen Lesen in halber Gleitkomma im Shader).</summary>
+        Private Const LocalBaseShaderCommon As String = "
+float decodeValue(half4 t) {
+    return float(t.r) + float(t.g);
+}
+half4 encodeValue(float v) {
+    float a = abs(v);
+    float hi = 0.0;
+    if (a > 0.0) {
+        float e = floor(log2(a));
+        if (a / exp2(e) >= 2.0) e += 1.0;
+        if (a / exp2(e) < 1.0) e -= 1.0;
+        float s = max(exp2(e - 10.0), exp2(-24.0));
+        hi = floor(v / s + 0.5) * s;
+    }
+    return half4(half(hi), half(v - hi), 0.0, 1.0);
+}
+"
+
+        ''' <summary>Ein gebrochenes Kastenmittel in einer Richtung, wie FractionalWindowMean.</summary>
+        Private Const LocalBaseBoxShader As String = "
+uniform shader src;
+uniform float horizontal;
+uniform float whole;
+uniform float part;
+uniform float count;
+uniform float squareIn;
+float valueAt(float2 p, float idx) {
+    float2 q = horizontal > 0.5 ? float2(idx + 0.5, p.y) : float2(p.x, idx + 0.5);
+    float v = decodeValue(src.eval(q));
+    return squareIn > 0.5 ? v * v : v;
+}
+half4 main(float2 p) {
+    float c = floor(horizontal > 0.5 ? p.x : p.y);
+    float sum = 0.0;
+    float weight = 0.0;
+    for (int i = -32; i <= 32; i++) {
+        float idx = c + float(i);
+        if (abs(float(i)) <= whole && idx >= 0.0 && idx <= count - 1.0) {
+            sum += valueAt(p, idx);
+            weight += 1.0;
+        }
+    }
+    if (part > 0.0) {
+        float before = c - whole - 1.0;
+        if (before >= 0.0) {
+            sum += part * valueAt(p, before);
+            weight += part;
+        }
+        float after = c + whole + 1.0;
+        if (after <= count - 1.0) {
+            sum += part * valueAt(p, after);
+            weight += part;
+        }
+    }
+    return encodeValue(sum / weight);
+}
+"
+
+        ''' <summary>Die Koeffizienten des Fuehrungsfilters, wie SmoothLocalToneBase.</summary>
+        Private Const LocalBaseCoefShader As String = "
+uniform shader meanTex;
+uniform shader meanSqTex;
+uniform float epsilon;
+uniform float wantB;
+half4 main(float2 p) {
+    float m = decodeValue(meanTex.eval(p));
+    float ms = decodeValue(meanSqTex.eval(p));
+    float variance = max(0.0, ms - m * m);
+    float a = variance / (variance + epsilon);
+    return encodeValue(wantB > 0.5 ? m - a * m : a);
+}
+"
 
         ''' <summary>Die drei Bloecke der Basis (A, B, geglaettetes Grau) als halbe Gleitkomma, je
         ''' Wert zwei Kanaele (grob und Rest). Zeilenweise parallel.</summary>
@@ -639,11 +891,19 @@ Namespace Services
         ''' ist die Kopie aus <see cref="SnapshotForGpu"/>; freigegeben wird sie vom Dienst.</summary>
         Private Shared Function RenderPointOpShaderOnGpu(gr As GRContext, source As SKImage, chain As PointOpChain,
                                                          localBase As LocalToneBase, keepSurface As Boolean,
-                                                         ByRef kept As SKSurface) As SKBitmap
+                                                         ByRef kept As SKSurface,
+                                                         Optional gpuGrid As LocalToneGrid = Nothing) As SKBitmap
             kept = Nothing
             Dim effect = PointOpEffect()
             Dim gpuInfo = New SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
-            Using table = BuildShaderTables(chain), dither = BuildDitherImage(), baseImage = BuildLocalBaseImage(localBase),
+            ' Die Basis von der Karte, wenn ein Raster mitkam; kann sie das nicht, glaettet der
+            ' Prozessor hier dasselbe Raster.
+            Dim smoothedOnGpu = If(gpuGrid Is Nothing, Nothing,
+                                   PerformanceTraceService.Measure("Pixel: local base smoothed on the GPU",
+                                                                   Function() SmoothLocalToneBaseOnGpu(gr, gpuGrid)))
+            If gpuGrid IsNot Nothing AndAlso smoothedOnGpu Is Nothing Then localBase = SmoothLocalToneGrid(gpuGrid)
+            Using table = BuildShaderTables(chain), dither = BuildDitherImage(),
+                  baseImage = If(smoothedOnGpu, BuildLocalBaseImage(localBase)),
                   cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1),
                   guide = BuildGuideImage(source, chain)
                 Using image = source.ToTextureImage(gr),
