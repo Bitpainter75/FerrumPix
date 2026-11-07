@@ -15,6 +15,7 @@
   which catalogue entries it left out and why, for example because the file is no longer there.
   A catalogue run also notes how long it took and where the time went, which settings it ran with,
   and which entries have no file.
+- Sliders in the editor follow your hand more smoothly while you drag them.
 
 ### Fixes
 

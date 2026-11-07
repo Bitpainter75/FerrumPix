@@ -825,7 +825,8 @@ Namespace Services
             ' Bild.
             Dim toneReference As ToneReference = Nothing
             If layerAdjustments.ReadsImageStatistics() Then
-                toneReference = MeasureToneReference(target)
+                toneReference = PerformanceTraceService.Measure("Layers: tone reference of the whole image",
+                                                                Function() MeasureToneReference(target))
             End If
 
             Using crop = CopyBgraRegion(target, rect)
@@ -833,8 +834,10 @@ Namespace Services
                 Threading.Interlocked.Increment(_maskScopeUseCount)
                 Using maskCrop = CopyAlphaRegion(effectMask, rect)
                     If maskCrop Is Nothing Then Return False
-                    Using adjusted = ApplyPixelAdjustmentStages(crop, layerAdjustments, toneReference)
-                        Using composited = CompositeSelectionScoped(crop, adjusted, maskCrop)
+                    Using adjusted = PerformanceTraceService.Measure("Layers: chain of the layer",
+                                                                     Function() ApplyPixelAdjustmentStages(crop, layerAdjustments, toneReference))
+                        Using composited = PerformanceTraceService.Measure("Layers: blend through the mask",
+                                                                           Function() CompositeSelectionScoped(crop, adjusted, maskCrop))
                             If composited Is Nothing Then Return False
                             Return WriteBgraRegion(composited, target, rect)
                         End Using

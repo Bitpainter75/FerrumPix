@@ -3412,9 +3412,11 @@ Namespace Services
                 ' sichtbare Farb-/Verlaufsfläche. (Geometrische Auswahlen kommen als IsMaskLayer=False; ohne
                 ' diese hasAdj-Weiche stufte eine Verlaufsfüllung die Anpassung dort nie ab.)
                 Dim modulateFill = hasFill AndAlso (layer.IsMaskLayer OrElse hasAdj)
-                Using mask = BuildPersistentMaskForOutput(maskData, adj, pipelineInputWidth, pipelineInputHeight,
-                                                          processed.Width, processed.Height, layer.Opacity,
-                                                          If(modulateFill, layer, Nothing))
+                Dim maskSource = processed
+                Using mask = PerformanceTraceService.Measure("Layers: build mask",
+                                                             Function() BuildPersistentMaskForOutput(maskData, adj, pipelineInputWidth, pipelineInputHeight,
+                                                                                                     maskSource.Width, maskSource.Height, layer.Opacity,
+                                                                                                     If(modulateFill, layer, Nothing)))
                     If mask Is Nothing Then Continue For
                     ' SCHNITTMASKE: die Korrektur gilt nur, wo das Objekt deckt, ueber dem sie
                     ' einsortiert ist. Die Deckung kommt aus derselben Quelle wie die Schnittmaske
@@ -3468,8 +3470,12 @@ Namespace Services
                                ApplyLayerAdjustmentsInRect(processed, effectMask, layerPixelAdjustments, scopeRect.Value) Then
                                 ' Fertig: processed traegt die Korrektur bereits.
                             Else
-                                Using adjusted = ApplyPixelAdjustmentStages(processed, layerPixelAdjustments)
-                                    processed = ReplaceBitmapOwned(processed, CompositeSelectionScoped(processed, adjusted, effectMask), owned)
+                                Dim layerInput = processed
+                                Using adjusted = PerformanceTraceService.Measure("Layers: chain of the layer",
+                                                                                 Function() ApplyPixelAdjustmentStages(layerInput, layerPixelAdjustments))
+                                    Dim blended = PerformanceTraceService.Measure("Layers: blend through the mask",
+                                                                                  Function() CompositeSelectionScoped(layerInput, adjusted, effectMask))
+                                    processed = ReplaceBitmapOwned(processed, blended, owned)
                                 End Using
                             End If
                         Finally
@@ -5145,6 +5151,21 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         Private Shared Function CloneBitmap(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+            ' Schneller Weg wie in CloneBitmapForAnnotationComposite: bei 8 Bit mit vormultipliziertem
+            ' oder deckendem Alpha ist DrawBitmap auf die frische (genullte) Flaeche eine reine Kopie,
+            ' ReadPixels liefert dieselben Bytes ohne die Zeichenstrecke (2048 x 1365: 2,9 auf unter
+            ' 1 ms). Nicht bei Unpremul: dort rechnet DrawBitmap ueber Vormultiplizieren und zurueck
+            ' und ist eben KEINE reine Kopie; das Ergebnis bliebe nicht dasselbe.
+            If (source.AlphaType = SKAlphaType.Premul OrElse source.AlphaType = SKAlphaType.Opaque) AndAlso
+               (source.ColorType = SKColorType.Bgra8888 OrElse source.ColorType = SKColorType.Rgba8888) Then
+                Using pixmap = source.PeekPixels()
+                    If pixmap IsNot Nothing AndAlso
+                       pixmap.ReadPixels(clone.Info, clone.GetPixels(), clone.RowBytes, 0, 0) Then
+                        clone.NotifyPixelsChanged()
+                        Return clone
+                    End If
+                End Using
+            End If
             Using canvas = New SKCanvas(clone)
                 canvas.DrawBitmap(source, 0, 0)
             End Using
@@ -5167,6 +5188,21 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         Private Shared Function CloneBitmapForAnnotationComposite(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+            ' Schneller Weg fuer 8-Bit-Quellen mit vormultipliziertem Alpha: ReadPixels tauscht nur
+            ' die Kanaele (eigene Vektorroutine in Skia), statt das Bild durch die Zeichenstrecke zu
+            ' schicken. Gemessen bei 2048 x 1365: 14,6 auf 0,8 ms, Byte fuer Byte gleich, auch mit
+            ' Alphaverlauf (Kettenmessung zug, "Nebenkosten"). Die Kopie laeuft bei JEDEM Zugschritt
+            ' ohne Objekte. Andere Farbtypen nehmen weiter den Weg ueber die Zeichenflaeche.
+            If source.AlphaType = SKAlphaType.Premul AndAlso
+               (source.ColorType = SKColorType.Bgra8888 OrElse source.ColorType = SKColorType.Rgba8888) Then
+                Using pixmap = source.PeekPixels()
+                    If pixmap IsNot Nothing AndAlso
+                       pixmap.ReadPixels(clone.Info, clone.GetPixels(), clone.RowBytes, 0, 0) Then
+                        clone.NotifyPixelsChanged()
+                        Return clone
+                    End If
+                End Using
+            End If
             Using canvas = New SKCanvas(clone)
                 ' Src statt Leeren und Darueberzeichnen: das Ziel wird ohnehin vollstaendig
                 ' beschrieben, ein vorheriges Loeschen ist eine zweite Fahrt ueber dieselben Bytes.
