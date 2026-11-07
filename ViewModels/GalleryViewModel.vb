@@ -644,12 +644,15 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_searchText, value)
+                Me.RaisePropertyChanged(NameOf(IsCatalogScopeFiltering))
                 ' Entprellt: siehe _searchDebounceTimer. Das Leeren des Feldes (Abbrechen-Knopf, Ordnerwechsel)
                 ' filtert sofort - dort wartet niemand auf weitere Tastendrücke, und eine sichtbare
                 ' Verzögerung beim Zurücksetzen wirkt wie ein Hänger.
                 _searchDebounceTimer.Stop()
                 If String.IsNullOrEmpty(_searchText) Then
-                    FilterAndSort()
+                    ' Lief der Text als Katalogsuche, ist das Leeren das Ende dieser Suche: zurueck
+                    ' in den Ordner oder, bei weiterer Knopfauswahl, deren Knoten ohne Text.
+                    If _catalogTextQuery.Length > 0 Then ApplyButtonFilters() Else FilterAndSort()
                 Else
                     _searchDebounceTimer.Start()
                 End If
@@ -2201,6 +2204,7 @@ Namespace ViewModels
             _stacksEnabled = settings.GalleryStacks
             _filterRejected = NormalizeRejectedFilter(settings.GalleryFilterRejected)
             _filterEdited = NormalizeEditedFilter(settings.GalleryFilterEdited)
+            _catalogFilterScope = settings.GalleryFilterScopeCatalog
             _editedBadgeEnabled = settings.GalleryEditedBadge
             _pickBadgeEnabled = settings.GalleryPickBadge
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
@@ -2245,7 +2249,15 @@ Namespace ViewModels
             _searchDebounceTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(150)}
             AddHandler _searchDebounceTimer.Tick, Sub()
                                                        _searchDebounceTimer.Stop()
-                                                       FilterAndSort()
+                                                       ' Im Umfang "ganzer Katalog" ist der Text eine
+                                                       ' Katalogsuche, sonst ein Filter der Liste.
+                                                       If UsesCatalogTextSearch() OrElse _catalogTextQuery.Length > 0 Then
+                                                           If Not String.Equals(If(_searchText, "").Trim(), _catalogTextQuery, StringComparison.Ordinal) Then
+                                                               ApplyButtonFilters()
+                                                           End If
+                                                       Else
+                                                           FilterAndSort()
+                                                       End If
                                                    End Sub
 
             _fillSortTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(FillSortIntervalMs)}
@@ -2288,6 +2300,7 @@ Namespace ViewModels
             ToggleFolderSidebarCommand = ReactiveCommand.Create(Sub() ToggleFolderSidebar())
             ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
             ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
+            ToggleFilterScopeCommand = ReactiveCommand.Create(Sub() IsCatalogFilterScope = Not IsCatalogFilterScope)
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
             ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
@@ -5185,7 +5198,7 @@ Namespace ViewModels
             ' Die allgemeine Filterleiste bleibt dabei stehen, SOLANGE wir im Ordnerbereich sind:
             ' von Ordner zu Ordner ist kein Bereichswechsel. Kommen wir dagegen von einem virtuellen
             ' Ziel (Suche, Immich, Nextcloud), ist es einer, und sie geht mit.
-            ClearButtonFiltersSilently(scopeChanged:=_isVirtualFolder)
+            ClearButtonFiltersSilently(scopeChanged:=_isVirtualFolder AndAlso Not _keepFilterBarOnReturn)
             If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) AndAlso _currentFolder <> folderPath Then
                 _historyBack.Push(_currentFolder)
                 _historyForward.Clear()
@@ -5430,15 +5443,7 @@ Namespace ViewModels
 
             ' Den Ordner merken, aus dem heraus die Auswahl begonnen hat - "Auswahl aufheben"
             ' kehrt dorthin zurueck, statt die Trefferliste stehen zu lassen.
-            If wanted.Count > 0 AndAlso _activeTagFilters.Count = 0 Then
-                If _isVirtualFolder Then
-                    _nodeBeforeTagFilter = If(SelectedImmichNode, If(SelectedNextcloudNode, SelectedSearchNode))
-                    _folderBeforeTagFilter = ""
-                Else
-                    _folderBeforeTagFilter = If(_currentFolder, "")
-                    _nodeBeforeTagFilter = Nothing
-                End If
-            End If
+            If wanted.Count > 0 Then RememberFilterOrigin()
 
             _activeTagFilters = wanted
             _activeNextcloudTagIds = If(nextcloudTagIds, Enumerable.Empty(Of String)()).
@@ -5469,10 +5474,19 @@ Namespace ViewModels
                          Where(Function(o) _activePersonFilters.Contains(o.Id) AndAlso o.IsNamed).
                          Select(Function(o) o.Name).
                          Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-            If tags.Count = 0 AndAlso places.Count = 0 AndAlso people.Count = 0 Then
+            ' Im Umfang "ganzer Katalog" sucht auch das Suchfeld im Katalog und gehoert damit in
+            ' denselben Knoten; im Ordner filtert es weiter nur die sichtbare Liste.
+            Dim text = If(UsesCatalogTextSearch(), If(_searchText, "").Trim(), "")
+            If tags.Count = 0 AndAlso places.Count = 0 AndAlso people.Count = 0 AndAlso text.Length = 0 Then
+                _catalogTextQuery = ""
                 ReturnToFilterOrigin()
                 Return
             End If
+            If text.Length > 0 Then RememberFilterOrigin()
+            ' Im Umfang "Ordner" sucht der Knoten nur im Ordner selbst, ohne Unterordner. Leer heisst
+            ' ganzer Katalog, und so bleibt es auch dort, wo es keinen Ordner gibt.
+            Dim scopeFolder = If(IsFolderFilterScope(), FilterScopeFolder(), "")
+            _catalogTextQuery = text
             ' Favoriten sind keine eigene Datenquelle: dort wird nur die bereits sichtbare
             ' Favoritenliste gefiltert. Alle anderen Bereiche suchen ihren vollständigen Katalog.
             If SelectedFavoriteNode IsNot Nothing AndAlso IsFavoritesTab Then
@@ -5480,16 +5494,19 @@ Namespace ViewModels
                 Return
             End If
             Dim source = ActiveFilterSource()
-            Dim node As New VirtualNavigationNode(String.Join(", ", people.Concat(places).Concat(tags)), "SavedSearch") With {
+            Dim nameParts = people.Concat(places).Concat(tags).ToList()
+            If text.Length > 0 Then nameParts.Add(text)
+            Dim node As New VirtualNavigationNode(String.Join(", ", nameParts), "SavedSearch") With {
                 .Source = source,
+                .TextQuery = text,
                 .TagQueries = tags,
                 .NextcloudTagIds = _activeNextcloudTagIds.ToList(),
                 .NextcloudPersonIds = _activeNextcloudPersonIds.ToList(),
                 .NextcloudPlaceIds = _activeNextcloudPlaceIds.ToList(),
                 .PersonQueries = people,
                 .PlaceQueries = places,
-                .RootFolder = "",
-                .IncludeSubfolders = True,
+                .RootFolder = scopeFolder,
+                .IncludeSubfolders = String.IsNullOrEmpty(scopeFolder),
                 .IsRemovable = False
             }
             SidebarTab = TabForNode(node)
@@ -5544,7 +5561,10 @@ Namespace ViewModels
         ''' filtern (Nutzerbefund, bewusst so entschieden). Beim Wechsel der QUELLE bleibt es
         ''' beim Zuruecksetzen, dort haette sie fuer die neue Ansicht nie jemand gewaehlt.</param>
         Private Sub ClearButtonFiltersSilently(Optional scopeChanged As Boolean = True)
-            ' Der Text im Suchfeld ist ebenfalls ein Filter auf die gerade sichtbare Menge.
+            ' Der Text im Suchfeld ist ebenfalls ein Filter auf die gerade sichtbare Menge. Die
+            ' Katalogsuche daraus zuerst vergessen: sonst sieht das Leeren des Felds sie noch und
+            ' startet mitten in der Navigation den Rueckweg.
+            _catalogTextQuery = ""
             If Not String.IsNullOrEmpty(_searchText) Then SearchText = ""
             _activeTagFilters = New List(Of String)()
             _activeNextcloudTagIds = New List(Of String)()
@@ -5580,7 +5600,16 @@ Namespace ViewModels
             If backNode IsNot Nothing Then
                 Dim ignored = OpenVirtualNavigationNode(backNode)
             ElseIf Not String.IsNullOrEmpty(back) AndAlso Directory.Exists(back) Then
-                NavigateToFolder(back)
+                ' Zurueck in den Ordner, aus dem gefiltert wurde, ist kein Bereichswechsel: die
+                ' allgemeine Filterleiste galt schon fuer die Trefferliste und bleibt stehen.
+                ' Vorher nahm die Rueckkehr sie mit, und mit dem Umschalter fuer den Umfang haette
+                ' jedes Umschalten Sterne und Etiketten geloescht.
+                _keepFilterBarOnReturn = True
+                Try
+                    NavigateToFolder(back)
+                Finally
+                    _keepFilterBarOnReturn = False
+                End Try
             End If
         End Sub
 
@@ -5666,15 +5695,26 @@ Namespace ViewModels
                 ' fasst MergeTagOptionsByLabel danach zu einer Zeile zusammen - eine Zeile hier
                 ' wegzulassen waere das falsche Mittel: in einer uebersetzten Oberflaeche heisst das
                 ' erkannte "dog" naemlich "Hund" und ist gar nicht dieselbe Beschriftung.
-                For Each entry In LibraryService.Instance.GetTagCounts()
+                ' Im Umfang "Ordner" zaehlen nur die Dateien des Ordners, sonst der ganze Katalog.
+                Dim scopePaths = FolderScopePaths()
+                Dim scoped = If(scopePaths Is Nothing, Nothing, LibraryService.Instance.GetFilterCountsForPaths(scopePaths))
+                For Each entry In If(scoped Is Nothing, LibraryService.Instance.GetTagCounts(), scoped.Tags)
                     built.Add(New TagFilterOption(entry.Tag, entry.Count, IsTagFilterSelected(entry.Tag)))
                 Next
-                For Each entry In LibraryService.Instance.GetLocalAiTagCounts()
+                For Each entry In If(scoped Is Nothing, LibraryService.Instance.GetLocalAiTagCounts(), scoped.AiTags)
                     built.Add(New TagFilterOption(entry.Canonical, entry.Count,
                                                   IsTagFilterSelected(entry.Canonical),
                                                   displayTag:=AiTagLocalizationService.Display(entry.Canonical),
                                                   isAiTag:=True))
                 Next
+                ' Ein gewaehltes Stichwort ohne Bild im Ordner bleibt mit null stehen, sonst liesse
+                ' es sich nach dem Umschalten des Umfangs nicht mehr abwaehlen.
+                If scoped IsNot Nothing Then
+                    For Each tag In _activeTagFilters
+                        If built.Any(Function(o) o.FilterTags.Any(Function(t) String.Equals(t, tag, StringComparison.OrdinalIgnoreCase))) Then Continue For
+                        built.Add(New TagFilterOption(tag, 0, True))
+                    Next
+                End If
                 ' Die Stichwoerter des Nextcloud-Servers. Sie tragen ihre CLUSTER-Kennung mit: der
                 ' Server laedt einen Cluster ueber sie, nicht ueber den Namen.
                 For Each serverTag In _nextcloudTags
@@ -5915,8 +5955,20 @@ Namespace ViewModels
             PersonFilterOptions.Clear()
             Try
                 Dim search = If(_personFilterSearch, "").Trim()
+                ' Im Umfang "Ordner" zaehlen nur die Fotos des Ordners; wer dort nicht vorkommt,
+                ' faellt aus der Liste wie eine Person ohne Bild.
+                Dim scopePaths = FolderScopePaths()
+                Dim scopedCounts = If(scopePaths Is Nothing, Nothing,
+                                      LibraryService.Instance.GetFilterCountsForPaths(scopePaths).PersonPhotoCounts)
                 For Each entry In LibraryService.Instance.GetPeople()
-                    If entry.ImageCount <= 0 Then Continue For
+                    If scopedCounts IsNot Nothing Then
+                        Dim inFolder = 0
+                        scopedCounts.TryGetValue(entry.Id, inFolder)
+                        entry.ImageCount = inFolder
+                    End If
+                    ' Eine gewaehlte Person bleibt stehen, auch mit null im Ordner - sonst liesse sie
+                    ' sich nach dem Umschalten des Umfangs nicht mehr abwaehlen.
+                    If entry.ImageCount <= 0 AndAlso Not IsPersonFilterSelected(entry.Id) Then Continue For
                     If Not entry.IsNamed Then Continue For
                     ' Eine ausgewaehlte Person bleibt IMMER sichtbar, auch wenn sie nicht zur Suche
                     ' passt - sonst verschwindet sie beim Tippen und man kann sie nicht abwaehlen.
@@ -5985,15 +6037,7 @@ Namespace ViewModels
 
             ' Den Ausgangspunkt merken, damit "Auswahl aufheben" dorthin zurueckkehrt - dieselbe
             ' Ueberlegung wie bei den Stichwoertern.
-            If wanted.Count > 0 AndAlso _activePersonFilters.Count = 0 Then
-                If _isVirtualFolder Then
-                    _nodeBeforeTagFilter = If(SelectedImmichNode, If(SelectedNextcloudNode, SelectedSearchNode))
-                    _folderBeforeTagFilter = ""
-                Else
-                    _folderBeforeTagFilter = If(_currentFolder, "")
-                    _nodeBeforeTagFilter = Nothing
-                End If
-            End If
+            If wanted.Count > 0 Then RememberFilterOrigin()
 
             _activePersonFilters = wanted
             _activeNextcloudPersonIds = If(nextcloudPersonIds, Enumerable.Empty(Of String)()).
@@ -6081,7 +6125,20 @@ Namespace ViewModels
             PlaceFilterOptions.Clear()
             Try
                 Dim search = If(_placeFilterSearch, "").Trim()
-                For Each entry In LibraryService.Instance.GetPlaceCounts()
+                ' Im Umfang "Ordner" zaehlen nur die Dateien des Ordners. Ein gewaehlter Ort ohne
+                ' Bild dort bleibt mit null stehen, damit er sich abwaehlen laesst.
+                Dim scopePaths = FolderScopePaths()
+                Dim places As List(Of PlaceEntry)
+                If scopePaths Is Nothing Then
+                    places = LibraryService.Instance.GetPlaceCounts()
+                Else
+                    places = LibraryService.Instance.GetFilterCountsForPaths(scopePaths).Places
+                    For Each city In _activePlaceFilters
+                        If places.Any(Function(p) String.Equals(p.City, city, StringComparison.OrdinalIgnoreCase)) Then Continue For
+                        places.Add(New PlaceEntry With {.City = city, .Count = 0})
+                    Next
+                End If
+                For Each entry In places
                     ' Ein ausgewaehlter Ort bleibt sichtbar, auch wenn er nicht zur Suche passt -
                     ' sonst verschwindet er beim Tippen und laesst sich nicht mehr abwaehlen.
                     ' Gesucht wird auch im UEBERSETZTEN Landesnamen: wer "Deutschland" tippt, meint
@@ -6143,15 +6200,7 @@ Namespace ViewModels
                          Select(Function(c) c.Trim()).
                          Distinct(StringComparer.OrdinalIgnoreCase).ToList()
 
-            If wanted.Count > 0 AndAlso _activePlaceFilters.Count = 0 Then
-                If _isVirtualFolder Then
-                    _nodeBeforeTagFilter = If(SelectedImmichNode, If(SelectedNextcloudNode, SelectedSearchNode))
-                    _folderBeforeTagFilter = ""
-                Else
-                    _folderBeforeTagFilter = If(_currentFolder, "")
-                    _nodeBeforeTagFilter = Nothing
-                End If
-            End If
+            If wanted.Count > 0 Then RememberFilterOrigin()
 
             _activePlaceFilters = wanted
             _activeNextcloudPlaceIds = If(nextcloudPlaceIds, Enumerable.Empty(Of String)()).
@@ -10396,7 +10445,9 @@ Namespace ViewModels
                 pairs = ImageStackService.PairPartners(filtered)
             End If
 
-            If Not String.IsNullOrEmpty(_searchText) Then
+            ' Steckt der Text als Katalogsuche im Knoten, hat die schon gesiebt - nach ihren eigenen
+            ' Regeln, die dieser einfache Vergleich nicht kennt (siehe _catalogTextQuery).
+            If Not String.IsNullOrEmpty(_searchText) AndAlso _catalogTextQuery.Length = 0 Then
                 filtered = filtered.Where(Function(i) i.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
             End If
 
@@ -10465,6 +10516,7 @@ Namespace ViewModels
                 RefreshDisplayWindow()
             End If
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
+            RaiseFilterScopeState()
 
             ' Ein Durchlauf für beide Zahlen statt zweier. Gezaehlt wird ueber die gefilterte Liste
             ' und nicht ueber Items: ein zugeklappter Stapel ist EINE Kachel, aber mehrere Bilder.
@@ -15239,6 +15291,7 @@ Namespace ViewModels
                                           s.GalleryStacks = _stacksEnabled
                                           s.GalleryFilterRejected = _filterRejected
                                           s.GalleryFilterEdited = _filterEdited
+                                          s.GalleryFilterScopeCatalog = _catalogFilterScope
                                           s.GalleryEditedBadge = _editedBadgeEnabled
                                           s.GalleryPickBadge = _pickBadgeEnabled
                                       End Sub)

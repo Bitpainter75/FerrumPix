@@ -978,6 +978,122 @@ Namespace Services
                           Select(Function(p) (p.Key, p.Value)).ToList()
         End Function
 
+        ''' <summary>Die Zahlen der drei Filterlisten der Galerie, beschraenkt auf diese Dateien.</summary>
+        Public Class FilterCounts
+            Public ReadOnly Property Tags As New List(Of (Tag As String, Count As Integer))()
+            Public ReadOnly Property AiTags As New List(Of (Canonical As String, Count As Integer))()
+            Public ReadOnly Property Places As New List(Of PlaceEntry)()
+            ''' <summary>Je Person die Zahl der FOTOS, gezaehlt wie in <see cref="GetPeople"/>.</summary>
+            Public ReadOnly Property PersonPhotoCounts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+        End Class
+
+        ''' <summary>Stichwoerter, KI-Begriffe, Orte und Personen mit ihrer Anzahl, gezaehlt NUR
+        ''' ueber diese Dateien.
+        '''
+        ''' Fuer die Filterlisten der Galerie im Umfang "dieser Ordner". Der Aufrufer kennt die
+        ''' Dateien des Ordners, deshalb wird ueber sie gefragt und nicht ueber den Ordnerpfad: das
+        ''' geht ueber den Primaerschluessel statt ueber ein LIKE (siehe <see cref="GetMetaForPaths"/>),
+        ''' und eine Katalogzeile, deren Datei nicht mehr da ist, zaehlt gar nicht erst mit. Im
+        ''' Umfang "ganzer Katalog" zaehlen die Listen weiter jede Zeile.</summary>
+        Public Function GetFilterCountsForPaths(paths As IEnumerable(Of String)) As FilterCounts
+            Dim result As New FilterCounts()
+            Dim list = If(paths, Enumerable.Empty(Of String)()).
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                Distinct(PathIdentity.Comparer).
+                ToList()
+            If list.Count = 0 Then Return result
+            Try
+                ' Stichwoerter und Orte stehen in der Bildzeile.
+                Dim tagCounts As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+                Dim placeCounts As New Dictionary(Of (City As String, Country As String, Code As String), Integer)()
+                For Each meta In GetMetaForPaths(list).Values
+                    For Each tag In If(meta.Tags, New List(Of String)()).
+                                    Where(Function(t) Not String.IsNullOrWhiteSpace(t)).
+                                    Distinct(StringComparer.OrdinalIgnoreCase)
+                        Dim before = 0
+                        tagCounts.TryGetValue(tag, before)
+                        tagCounts(tag) = before + 1
+                    Next
+                    If Not String.IsNullOrEmpty(meta.City) Then
+                        Dim key = (meta.City, If(meta.Country, ""), If(meta.CountryCode, ""))
+                        Dim before = 0
+                        placeCounts.TryGetValue(key, before)
+                        placeCounts(key) = before + 1
+                    End If
+                Next
+                For Each pair In tagCounts.OrderBy(Function(p) p.Key, StringComparer.OrdinalIgnoreCase)
+                    result.Tags.Add((pair.Key, pair.Value))
+                Next
+                For Each pair In placeCounts.OrderBy(Function(p) p.Key.City, StringComparer.OrdinalIgnoreCase)
+                    result.Places.Add(New PlaceEntry With {
+                        .City = pair.Key.City,
+                        .Country = pair.Key.Country,
+                        .CountryCode = pair.Key.Code,
+                        .Count = pair.Value})
+                Next
+
+                ' KI-Begriffe und Gesichter haben eigene Tabellen, gefragt in Bloecken ueber den
+                ' Primaerschluessel wie in GetMetaForPaths. Die Bloecke sind disjunkt, die Zahlen je
+                ' Block lassen sich also einfach addieren.
+                Dim aiCounts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+                Dim filesByPerson As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    For i = 0 To list.Count - 1 Step 500
+                        Dim chunk = list.Skip(i).Take(500).ToList()
+                        Dim parameterNames As New List(Of String)()
+                        For index = 0 To chunk.Count - 1
+                            parameterNames.Add("$p" & index)
+                        Next
+                        Dim inList = String.Join(",", parameterNames)
+                        Using cmd = conn.CreateCommand()
+                            For index = 0 To chunk.Count - 1
+                                cmd.Parameters.AddWithValue(parameterNames(index), PathKey(chunk(index)))
+                            Next
+                            cmd.CommandText = "SELECT Canonical,COUNT(DISTINCT FilePath) FROM AiImageTag " &
+                                              "WHERE FilePath IN (" & inList & ") GROUP BY Canonical"
+                            Using reader = cmd.ExecuteReader()
+                                While reader.Read()
+                                    If reader.IsDBNull(0) Then Continue While
+                                    Dim canonical = reader.GetString(0)
+                                    Dim before = 0
+                                    aiCounts.TryGetValue(canonical, before)
+                                    aiCounts(canonical) = before + reader.GetInt32(1)
+                                End While
+                            End Using
+                        End Using
+                        Using cmd = conn.CreateCommand()
+                            For index = 0 To chunk.Count - 1
+                                cmd.Parameters.AddWithValue(parameterNames(index), PathKey(chunk(index)))
+                            Next
+                            cmd.CommandText = "SELECT DISTINCT PersonId,FilePath FROM Face " &
+                                              "WHERE PersonId IS NOT NULL AND FilePath IN (" & inList & ")"
+                            Using reader = cmd.ExecuteReader()
+                                While reader.Read()
+                                    Dim personId = reader.GetString(0)
+                                    Dim files As List(Of String) = Nothing
+                                    If Not filesByPerson.TryGetValue(personId, files) Then
+                                        files = New List(Of String)()
+                                        filesByPerson(personId) = files
+                                    End If
+                                    files.Add(reader.GetString(1))
+                                End While
+                            End Using
+                        End Using
+                    Next
+                End Using
+                For Each pair In aiCounts.OrderBy(Function(p) p.Key, StringComparer.OrdinalIgnoreCase)
+                    result.AiTags.Add((pair.Key, pair.Value))
+                Next
+                For Each pair In filesByPerson
+                    result.PersonPhotoCounts(pair.Key) = CountPhotos(pair.Value)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.GetFilterCountsForPaths", ex)
+            End Try
+            Return result
+        End Function
+
         ''' <summary>Zu jedem gewünschten Stichwort die Pfade, die es tragen - in EINER Abfrage.
         '''
         ''' Gebraucht dort, wo mehrere Stichwörter EINZELN auseinandergehalten werden müssen und

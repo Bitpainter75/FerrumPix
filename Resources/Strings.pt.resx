@@ -11266,4 +11266,13 @@
   <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
     <value>O FerrumPix pode ser ajustado à sua forma de trabalhar com muitas definições: galeria e miniaturas, visualizador e apresentação, editor e ferramentas, barra de informações, revelação RAW e muito mais. Vale a pena dar uma vista de olhos às definições.</value>
   </data>
+  <data name="Suche_und_Filter_wirken_hier_auf_die_ganze_Quell_132d98ae" xml:space="preserve">
+    <value>Aqui a pesquisa e os filtros aplicam-se a toda a origem</value>
+  </data>
+  <data name="Suche_und_Filter_wirken_auf_den_ganzen_Katalog_K_37efbd1d" xml:space="preserve">
+    <value>A pesquisa e os filtros aplicam-se a todo o catálogo. Clique para pesquisar apenas nesta pasta</value>
+  </data>
+  <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
+    <value>A pesquisa e os filtros aplicam-se a esta pasta. Clique para pesquisar em todo o catálogo</value>
+  </data>
 </root>

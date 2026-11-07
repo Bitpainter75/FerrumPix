@@ -11307,4 +11307,13 @@
   <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
     <value>FerrumPix można w wielu ustawieniach dopasować dokładnie do swojego sposobu pracy: galeria i kafelki, przeglądarka i pokaz slajdów, edytor i narzędzia, panel informacji, wywoływanie RAW i wiele więcej. Warto zajrzeć do ustawień.</value>
   </data>
+  <data name="Suche_und_Filter_wirken_hier_auf_die_ganze_Quell_132d98ae" xml:space="preserve">
+    <value>Wyszukiwanie i filtry obejmują tutaj całe źródło</value>
+  </data>
+  <data name="Suche_und_Filter_wirken_auf_den_ganzen_Katalog_K_37efbd1d" xml:space="preserve">
+    <value>Wyszukiwanie i filtry obejmują cały katalog. Kliknij, aby szukać tylko w tym folderze</value>
+  </data>
+  <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
+    <value>Wyszukiwanie i filtry obejmują ten folder. Kliknij, aby szukać w całym katalogu</value>
+  </data>
 </root>

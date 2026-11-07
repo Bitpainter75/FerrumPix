@@ -310,6 +310,10 @@ Namespace Services
         Public Property GalleryFilterRejected As String = "Show"
         ''' <summary>Bearbeitete Bilder: "All", "Only" (nur bearbeitete), "Hide" (nur unbearbeitete).</summary>
         Public Property GalleryFilterEdited As String = "All"
+        ''' <summary>Umfang von Suchfeld, Filterknopf, Personen, Orten und Stichwoertern in der
+        ''' Galerie: aus heisst der gewaehlte Ordner (ohne Unterordner), an der ganze Katalog. Ab
+        ''' Werk der Ordner: was man im Baum waehlt, soll die Suche auch eingrenzen.</summary>
+        Public Property GalleryFilterScopeCatalog As Boolean = False
         ''' <summary>Abzeichen "bearbeitet" an der Kachel neben dem fuer verworfene Bilder. Ab Werk aus:
         ''' es ist ein weiteres Zeichen auf dem Bild und soll bewusst eingeschaltet werden. In der
         ''' Fotowand erscheint es nur beim Ueberfahren.</summary>

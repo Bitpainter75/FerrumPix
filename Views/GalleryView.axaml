@@ -215,7 +215,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <Grid Grid.Column="2" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" HorizontalAlignment="Stretch" VerticalAlignment="Center">
                     <!-- LAUFENDE VORGÄNGE STATT SUCHFELD. Katalogindex, beide Gesichtssuchen und
                          eine laufende Suchliste melden sich hier, und zwar an der Stelle des
                          Suchfelds statt in der Fußzeile: dort standen Balken, Text und Abbrechen
@@ -324,12 +324,35 @@
                         </Grid>
                     </Border>
 
+                    <!-- UMFANG VON SUCHE UND FILTER: dieser Ordner oder der ganze Katalog. Gilt für
+                         alles rechts davon und für das Suchfeld links, deshalb steht er zwischen
+                         beiden. Den Akzent wie die Filterknöpfe trägt er, wenn der Katalog gilt
+                         UND gesucht oder gefiltert wird. Was gilt, sagt das Symbol,
+                         ausgeschrieben der Tooltip; eine Beschriftung braucht der Knopf nicht.
+                         Ausgegraut, wo es
+                         keinen Ordner gibt (Immich, Nextcloud, Favoriten, gespeicherte Suche). -->
+                    <Button Grid.Column="1" Height="34" Padding="8,5" Margin="0,0,8,0"
+                            Classes="filter-btn"
+                            Classes.active="{Binding IsCatalogScopeFiltering}"
+                            Command="{Binding ToggleFilterScopeCommand}"
+                            IsEnabled="{Binding CanToggleFilterScope}"
+                            ToolTip.Tip="{Binding FilterScopeToolTip}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-simple.svg"
+                                           Classes="filter-glyph" Width="20" Height="20"
+                                           IsVisible="{Binding !IsCatalogFilterScope}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/database.svg"
+                                           Classes="filter-glyph" Width="20" Height="20"
+                                           IsVisible="{Binding IsCatalogFilterScope}"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Personen. Dieselbe Sorte Einschränkung wie die Stichwörter, deshalb daneben
                          und genauso gebaut. Der Knopf ist GANZ WEG, solange die Erkennung nicht
                          eingeschaltet ist oder die Modelle fehlen - nicht ausgegraut, so hält es die
                          Anwendung bei allen Modellfunktionen. Die Erkennung wird unten IM Menü
                          ausgelöst: ohne das wäre der Knopf beim ersten Öffnen leer und tot. -->
-                    <Button Grid.Column="1" Height="34" Padding="8,5" Margin="0,0,8,0"
+                    <Button Grid.Column="2" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasPersonFilter}"
                             IsVisible="{Binding HasPersonFeature}"
@@ -431,7 +454,7 @@
                          fehlt oder nicht eingeschaltet ist - wie bei allen Modellfunktionen.
                          Mehrere Orte wirken als ODER: ein Bild hat genau einen Aufnahmeort, ein UND
                          ergäbe immer eine leere Liste. -->
-                    <Button Grid.Column="2" Height="34" Padding="8,5" Margin="0,0,8,0"
+                    <Button Grid.Column="3" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasPlaceFilter}"
                             IsVisible="{Binding HasPlaceFeature}"
@@ -512,7 +535,7 @@
                     <!-- Stichwörter. Dieselbe Sorte Einschränkung wie Personen, nur über den
                          ganzen Bestand statt über den offenen Ordner. Die Liste entsteht beim
                          Öffnen neu, damit frisch vergebene Stichwörter dabei sind. -->
-                    <Button Grid.Column="3" Height="34" Padding="8,5" Margin="0,0,8,0"
+                    <Button Grid.Column="4" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasTagFilter}"
                             Click="OnTagFilterButtonClick"
@@ -592,7 +615,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="4" Height="34" Padding="8,5" Margin="0,0,8,0"
+                    <Button Grid.Column="5" Height="34" Padding="8,5" Margin="0,0,8,0"
                             Classes="filter-btn"
                             Classes.active="{Binding HasActiveFilter}"
                             Tag="Filter"
@@ -996,7 +1019,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="5"
+                    <Button Grid.Column="6"
                             Height="34" Padding="8,5" Margin="0,0,8,0"
                             Tag="Sort"
                             PointerPressed="OnFilterButtonPointerPressed"
@@ -1228,7 +1251,7 @@
                         </StackPanel>
                     </Button>
 
-                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                    <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
                         <Button Classes="icon-btn" Width="34" Height="34"
                                 Classes.active="{Binding IsListView}"
                                 Command="{Binding SetViewModeCommand}" CommandParameter="List"

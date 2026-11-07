@@ -11311,4 +11311,13 @@
   <data name="FerrumPix_l_sst_sich_in_vielen_Einstellungen_gen_e1c83b41" xml:space="preserve">
     <value>FerrumPix को कई सेटिंग्स से ठीक आपके काम करने के तरीके के अनुसार ढाला जा सकता है: गैलरी और टाइलें, व्यूअर और स्लाइडशो, एडिटर और टूल, जानकारी पट्टी, RAW डेवलपमेंट और बहुत कुछ। सेटिंग्स पर एक नज़र डालना फ़ायदेमंद है।</value>
   </data>
+  <data name="Suche_und_Filter_wirken_hier_auf_die_ganze_Quell_132d98ae" xml:space="preserve">
+    <value>यहाँ खोज और फ़िल्टर पूरे स्रोत पर लागू होते हैं</value>
+  </data>
+  <data name="Suche_und_Filter_wirken_auf_den_ganzen_Katalog_K_37efbd1d" xml:space="preserve">
+    <value>खोज और फ़िल्टर पूरे कैटलॉग पर लागू होते हैं। केवल इस फ़ोल्डर में खोजने के लिए क्लिक करें</value>
+  </data>
+  <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
+    <value>खोज और फ़िल्टर इस फ़ोल्डर पर लागू होते हैं। पूरे कैटलॉग में खोजने के लिए क्लिक करें</value>
+  </data>
 </root>
