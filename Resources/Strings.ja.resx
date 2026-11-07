@@ -11316,10 +11316,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>検索とフィルターはこのフォルダーに適用されます。クリックするとカタログ全体を検索します</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>RawTherapee のサイドカーファイル（.pp3）を読み込む</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>RawTherapee と ART のサイドカーファイル（.pp3、.arp）を読み込む</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>画像の隣にある .pp3 からキーワード、レーティング、カラーラベルをカタログに取り込みます。ファイルは読み込むだけで、変更されません。</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>画像の隣にある .pp3 または .arp からキーワード、レーティング、カラーラベルをカタログに取り込みます。ファイルは読み込むだけで、変更されません。</value>
   </data>
 </root>

@@ -11295,10 +11295,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Search and filters apply to this folder. Click to search the whole catalog</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>Read RawTherapee sidecar files (.pp3)</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>Read RawTherapee and ART sidecar files (.pp3, .arp)</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>Takes keywords, rating and color label from the .pp3 next to the image into the catalog. The file is only read, never changed.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>Takes keywords, rating and color label from the .pp3 or .arp next to the image into the catalog. The files are only read, never changed.</value>
   </data>
 </root>

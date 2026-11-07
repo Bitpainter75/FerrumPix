@@ -11316,10 +11316,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Sökning och filter gäller den här mappen. Klicka för att söka i hela katalogen</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>Läs RawTherapee-sidofiler (.pp3)</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>Läs sidofiler från RawTherapee och ART (.pp3, .arp)</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>Hämtar nyckelord, betyg och färgetikett från .pp3-filen bredvid bilden till katalogen. Filen läses bara och ändras aldrig.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>Hämtar nyckelord, betyg och färgetikett från .pp3- eller .arp-filen bredvid bilden till katalogen. Filerna läses bara och ändras aldrig.</value>
   </data>
 </root>

@@ -500,7 +500,7 @@ Namespace Services
         ''' die übrigen Dialoge fallen dort auf JPG zurück.
         Public Property DefaultSaveFormat As String = "JPG"
         Public Property PreserveMetadataOnSave As Boolean = True
-        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 neben dem Bild in den
+        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den
         ''' Katalog uebernehmen (Standard AUS). Nur lesen; siehe Pp3SidecarService.</summary>
         Public Property ReadPp3Sidecars As Boolean = False
         ''' Optionaler XMP-Katalog-Sync (Standard AUS): schreibt Rating/Farb-Label/Stichworte zusätzlich

@@ -11274,10 +11274,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>搜索和筛选作用于此文件夹。点击后在整个目录中搜索</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>读取 RawTherapee 附属文件（.pp3）</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>读取 RawTherapee 和 ART 附属文件（.pp3、.arp）</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>将图像旁 .pp3 文件中的关键词、评分和颜色标签导入目录。该文件只会被读取，绝不会被修改。</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>将图像旁 .pp3 或 .arp 文件中的关键词、评分和颜色标签导入目录。这些文件只会被读取，绝不会被修改。</value>
   </data>
 </root>

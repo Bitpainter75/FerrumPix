@@ -646,7 +646,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 neben dem Bild lesen
+        ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild lesen
         ''' (Standard AUS, siehe Pp3SidecarService).</summary>
         Public Property ReadPp3Sidecars As Boolean
             Get

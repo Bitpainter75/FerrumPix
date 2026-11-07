@@ -11320,10 +11320,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>खोज और फ़िल्टर इस फ़ोल्डर पर लागू होते हैं। पूरे कैटलॉग में खोजने के लिए क्लिक करें</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>RawTherapee साइडकार फ़ाइलें (.pp3) पढ़ें</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>RawTherapee और ART साइडकार फ़ाइलें (.pp3, .arp) पढ़ें</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>छवि के पास रखी .pp3 फ़ाइल से कीवर्ड, रेटिंग और रंग लेबल कैटलॉग में लेता है। फ़ाइल केवल पढ़ी जाती है, कभी बदली नहीं जाती।</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>छवि के पास रखी .pp3 या .arp फ़ाइल से कीवर्ड, रेटिंग और रंग लेबल कैटलॉग में लेता है। फ़ाइलें केवल पढ़ी जाती हैं, कभी बदली नहीं जातीं।</value>
   </data>
 </root>

@@ -11294,10 +11294,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Suche und Filter wirken auf diesen Ordner. Klicken, um im ganzen Katalog zu suchen</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>RawTherapee-Beistelldateien (.pp3) lesen</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>RawTherapee- und ART-Beistelldateien (.pp3, .arp) lesen</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 neben dem Bild in den Katalog. Die Datei wird nur gelesen, nie geändert.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den Katalog. Die Dateien werden nur gelesen, nie geändert.</value>
   </data>
 </root>

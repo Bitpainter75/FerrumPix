@@ -71,6 +71,9 @@ Namespace Services
                     For Each pp3 In Directory.EnumerateFiles(folderPath, "*" & Pp3SidecarService.Extension, SearchOptions)
                         result._pp3(pp3) = File.GetLastWriteTime(pp3).ToString("o")
                     Next
+                    For Each arp In Directory.EnumerateFiles(folderPath, "*" & Pp3SidecarService.ArpExtension, SearchOptions)
+                        result._pp3(arp) = File.GetLastWriteTime(arp).ToString("o")
+                    Next
                 End If
             Catch
                 result._listingFailed = True
@@ -97,8 +100,11 @@ Namespace Services
             Next
             Dim fpxmpStamp As String = Nothing
             If Not _fpxmp.TryGetValue(RawSidecarService.SidecarPathFor(imagePath), fpxmpStamp) Then fpxmpStamp = ""
-            Dim pp3Stamp As String = Nothing
-            If Not _pp3.TryGetValue(Pp3SidecarService.PathFor(imagePath), pp3Stamp) Then pp3Stamp = ""
+            Dim pp3Only As String = Nothing
+            If Not _pp3.TryGetValue(Pp3SidecarService.PathFor(imagePath), pp3Only) Then pp3Only = ""
+            Dim arpOnly As String = Nothing
+            If Not _pp3.TryGetValue(Pp3SidecarService.ArpPathFor(imagePath), arpOnly) Then arpOnly = ""
+            Dim pp3Stamp = Pp3SidecarService.ComposeStamp(pp3Only, arpOnly)
             If String.IsNullOrEmpty(xmpStamp) AndAlso String.IsNullOrEmpty(fpxmpStamp) AndAlso String.IsNullOrEmpty(pp3Stamp) Then Return ""
             Return xmpStamp & If(String.IsNullOrEmpty(fpxmpStamp), "|-", "|fpxmp:" & fpxmpStamp) &
                    If(String.IsNullOrEmpty(pp3Stamp), "", "|pp3:" & pp3Stamp)

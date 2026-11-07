@@ -23,6 +23,10 @@ Namespace Services
         Private Shared ReadOnly LrNs As XNamespace = "http://ns.adobe.com/lightroom/1.0/"
         Private Shared ReadOnly ExifNs As XNamespace = "http://ns.adobe.com/exif/1.0/"
         Private Shared ReadOnly XmpDmNs As XNamespace = "http://ns.adobe.com/xmp/1.0/DynamicMedia/"
+        ' Die eigenen Felder zweier Fotoprogramme, die ihre Beistelldatei als Standard-XMP schreiben,
+        ' Etikett und Markierung aber (auch) in eigenen Feldern ablegen.
+        Private Shared ReadOnly DarktableNs As XNamespace = "http://darktable.sf.net/"
+        Private Shared ReadOnly DigikamNs As XNamespace = "http://www.digikam.org/ns/1.0/"
 
         Public Class XmpSidecarData
             Public Property Rating As Integer?
@@ -121,12 +125,44 @@ Namespace Services
                         result.PickState = -1
                     End If
 
+                    ' Die eigene Markierung des einen Programms (1 verworfen, 2 offen, 3 angenommen),
+                    ' nur wenn keine Standardangabe vorliegt.
+                    If Not result.PickState.HasValue Then
+                        Select Case ReadValue(description, DigikamNs + "PickLabel")?.Trim()
+                            Case "1" : result.PickState = -1
+                            Case "3" : result.PickState = 1
+                        End Select
+                    End If
+
                     If String.IsNullOrEmpty(result.ColorLabel) Then
                         result.ColorLabel = MapLabel(ReadValue(description, XmpNs + "Label"))
+                    End If
+                    ' Ohne xmp:Label die eigenen Felder: erst die Zahl des einen Programms (1 rot,
+                    ' 2 orange, 3 gelb, 4 gruen, 5 blau, 6 magenta; grau, schwarz und weiss kennt
+                    ' unsere Palette nicht), dann die Liste des anderen (0 rot bis 4 lila, ein Bild kann
+                    ' mehrere tragen, es zaehlt das erste).
+                    If String.IsNullOrEmpty(result.ColorLabel) Then
+                        result.ColorLabel = MapLabel(DigikamColorWord(ReadValue(description, DigikamNs + "ColorLabel")))
+                    End If
+                    If String.IsNullOrEmpty(result.ColorLabel) Then
+                        Dim first = description.Element(DarktableNs + "colorlabels")?.Descendants(RdfNs + "li").FirstOrDefault()
+                        If first IsNot Nothing Then result.ColorLabel = MapLabel(DarktableColorWord(first.Value))
                     End If
 
                     CollectKeywords(description, DcNs + "subject", result.Keywords)
                     CollectKeywords(description, LrNs + "hierarchicalSubject", result.Keywords)
+                    ' Die Stichwortpfade des einen Programms ("Orte/Niederlande/Amsterdam"): meist
+                    ' stehen dieselben Blaetter schon in dc:subject, hier fuer den Fall, dass es nur
+                    ' noch dieses Feld schreibt.
+                    Dim tagsList = description.Element(DigikamNs + "TagsList")
+                    If tagsList IsNot Nothing Then
+                        For Each li In tagsList.Descendants(RdfNs + "li")
+                            Dim leaf = LibraryService.NormalizeKeyword(li.Value.Split("/"c).Last())
+                            If leaf.Length > 0 AndAlso Not result.Keywords.Any(Function(t) String.Equals(t, leaf, StringComparison.OrdinalIgnoreCase)) Then
+                                result.Keywords.Add(leaf)
+                            End If
+                        Next
+                    End If
 
                     ' Koordinaten: fuer RAW, PSD und alles andere, was wir nicht selbst beschreiben,
                     ' ist die Beistelldatei der einzige Ort, an dem sie ueberdauern. Ohne diesen
@@ -196,6 +232,29 @@ Namespace Services
         End Function
 
         ''' Stichworte liegen als rdf:Bag/rdf:Seq aus rdf:li vor, nie als einfacher Text.
+        Private Shared Function DigikamColorWord(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "1" : Return "red"
+                Case "2" : Return "orange"
+                Case "3" : Return "yellow"
+                Case "4" : Return "green"
+                Case "5" : Return "blue"
+                Case "6" : Return "purple"
+                Case Else : Return ""
+            End Select
+        End Function
+
+        Private Shared Function DarktableColorWord(value As String) As String
+            Select Case If(value, "").Trim()
+                Case "0" : Return "red"
+                Case "1" : Return "yellow"
+                Case "2" : Return "green"
+                Case "3" : Return "blue"
+                Case "4" : Return "purple"
+                Case Else : Return ""
+            End Select
+        End Function
+
         Private Shared Sub CollectKeywords(description As XElement, name As XName, target As List(Of String))
             Dim container = description.Element(name)
             If container Is Nothing Then Return

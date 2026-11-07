@@ -11316,10 +11316,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Zoeken en filters gelden voor deze map. Klik om in de hele catalogus te zoeken</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>RawTherapee-sidecarbestanden (.pp3) lezen</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>RawTherapee- en ART-sidecarbestanden (.pp3, .arp) lezen</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>Neemt trefwoorden, waardering en kleurlabel uit het .pp3-bestand naast de afbeelding over in de catalogus. Het bestand wordt alleen gelezen, nooit gewijzigd.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>Neemt trefwoorden, waardering en kleurlabel uit het .pp3- of .arp-bestand naast de afbeelding over in de catalogus. De bestanden worden alleen gelezen, nooit gewijzigd.</value>
   </data>
 </root>

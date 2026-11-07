@@ -7,7 +7,10 @@ Imports System.Text
 Namespace Services
 
     ''' <summary>Liest die Bearbeitungsdatei eines fremden RAW-Entwicklers (".pp3" neben dem Bild,
-    ''' "foto.orf.pp3") fuer den Katalog: Stichwoerter, Bewertung und Farbetikett.
+    ''' "foto.orf.pp3") fuer den Katalog: Stichwoerter, Bewertung und Farbetikett. Dasselbe fuer
+    ''' seinen Ableger, der dieselben Gruppen in eine ".arp" schreibt; Schnappschuesse stehen dort in
+    ''' Gruppen mit vorangestelltem Namen ("Snapshot_1 IPTC") und bleiben aussen vor, es zaehlt der
+    ''' Hauptstand.
     '''
     ''' WARUM: Dieser Entwickler legt die drei ab Werk NUR dort ab. In eine .xmp schreibt er sie erst,
     ''' wenn sein XMP-Abgleich auf Lesen und Schreiben steht, und in die Bilddatei nur beim Export.
@@ -25,6 +28,7 @@ Namespace Services
     Public NotInheritable Class Pp3SidecarService
 
         Public Const Extension As String = ".pp3"
+        Public Const ArpExtension As String = ".arp"
 
         Private Sub New()
         End Sub
@@ -54,11 +58,31 @@ Namespace Services
             Return imagePath & Extension
         End Function
 
-        ''' <summary>Die Daten zur Datei, oder Nothing: Einstellung aus, keine Datei, nicht lesbar.</summary>
+        ''' <summary>Der Pfad der ".arp" des Ablegers, gebildet wie bei der ".pp3".</summary>
+        Public Shared Function ArpPathFor(imagePath As String) As String
+            If String.IsNullOrWhiteSpace(imagePath) Then Return ""
+            Return imagePath & ArpExtension
+        End Function
+
+        ''' <summary>Die Daten zur Datei, oder Nothing: Einstellung aus, keine Datei, nicht lesbar.
+        ''' Liegen beide Dateien da, werden die Stichwoerter vereinigt, Bewertung und Etikett kommen
+        ''' zuerst aus der ".pp3".</summary>
         Public Shared Function Read(imagePath As String) As Pp3Data
             If Not IsEnabled Then Return Nothing
-            Dim path = PathFor(imagePath)
-            If path.Length = 0 Then Return Nothing
+            Dim result = ReadOne(PathFor(imagePath))
+            Dim arp = ReadOne(ArpPathFor(imagePath))
+            If result Is Nothing Then Return arp
+            If arp Is Nothing Then Return result
+            For Each keyword In arp.Keywords
+                If Not result.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase) Then result.Keywords.Add(keyword)
+            Next
+            If Not result.Rating.HasValue Then result.Rating = arp.Rating
+            If String.IsNullOrEmpty(result.ColorLabel) Then result.ColorLabel = arp.ColorLabel
+            Return result
+        End Function
+
+        Private Shared Function ReadOne(path As String) As Pp3Data
+            If String.IsNullOrEmpty(path) Then Return Nothing
             Try
                 If Not File.Exists(path) Then Return Nothing
                 Return Parse(File.ReadAllText(path, Encoding.UTF8))
@@ -68,12 +92,24 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Der Zeitstempel fuer den Frische-Stempel der Beistelldateien, oder leer.</summary>
+        ''' <summary>Der Anteil fuer den Frische-Stempel der Beistelldateien, oder leer. Muss
+        ''' zeichengleich zu dem sein, was <see cref="FolderSidecarStamps"/> aus seiner Auflistung
+        ''' bildet; beide gehen deshalb ueber <see cref="ComposeStamp"/>.</summary>
         Public Shared Function StampFor(imagePath As String) As String
             If Not IsEnabled Then Return ""
+            Return ComposeStamp(FileStamp(PathFor(imagePath)), FileStamp(ArpPathFor(imagePath)))
+        End Function
+
+        ''' <summary>Setzt die Zeitstempel beider Dateien zu EINEM Anteil zusammen; leer, wenn keine
+        ''' von beiden da ist.</summary>
+        Public Shared Function ComposeStamp(pp3Stamp As String, arpStamp As String) As String
+            If String.IsNullOrEmpty(arpStamp) Then Return If(pp3Stamp, "")
+            Return If(pp3Stamp, "") & "+arp:" & arpStamp
+        End Function
+
+        Private Shared Function FileStamp(path As String) As String
             Try
-                Dim path = PathFor(imagePath)
-                If path.Length = 0 OrElse Not File.Exists(path) Then Return ""
+                If String.IsNullOrEmpty(path) OrElse Not File.Exists(path) Then Return ""
                 Return File.GetLastWriteTime(path).ToString("o")
             Catch
                 Return ""

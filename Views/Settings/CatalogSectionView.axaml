@@ -446,12 +446,12 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding CreateXmpSidecarIfMissing}" IsEnabled="{Binding SyncCatalogToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
-                            <!-- Die .pp3 des fremden Entwicklers, nur lesend und ab Werk aus. Der Name
-                                 steht hier ausdruecklich: wer das Programm benutzt, sucht danach. -->
+                            <!-- Die .pp3 und .arp der fremden Entwickler, nur lesend und ab Werk aus. Die Namen
+                                 stehen hier ausdruecklich: wer die Programme benutzt, sucht danach. -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="RawTherapee-Beistelldateien (.pp3) lesen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 neben dem Bild in den Katalog. Die Datei wird nur gelesen, nie geändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="RawTherapee- und ART-Beistelldateien (.pp3, .arp) lesen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den Katalog. Die Dateien werden nur gelesen, nie geändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding ReadPp3Sidecars}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>

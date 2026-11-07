@@ -11316,10 +11316,10 @@
   <data name="Suche_und_Filter_wirken_auf_diesen_Ordner_Klicke_746e189f" xml:space="preserve">
     <value>Wyszukiwanie i filtry obejmują ten folder. Kliknij, aby szukać w całym katalogu</value>
   </data>
-  <data name="RawTherapee_Beistelldateien_pp3_lesen_4ad2c81a" xml:space="preserve">
-    <value>Odczytuj pliki pomocnicze RawTherapee (.pp3)</value>
+  <data name="RawTherapee_und_ART_Beistelldateien_pp3_arp_lese_93be24f7" xml:space="preserve">
+    <value>Odczytuj pliki pomocnicze RawTherapee i ART (.pp3, .arp)</value>
   </data>
-  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7da80ea6" xml:space="preserve">
-    <value>Przenosi do katalogu słowa kluczowe, ocenę i etykietę koloru z pliku .pp3 obok obrazu. Plik jest tylko odczytywany, nigdy zmieniany.</value>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
+    <value>Przenosi do katalogu słowa kluczowe, ocenę i etykietę koloru z pliku .pp3 lub .arp obok obrazu. Pliki są tylko odczytywane, nigdy zmieniane.</value>
   </data>
 </root>
