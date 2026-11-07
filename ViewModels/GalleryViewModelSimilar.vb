@@ -22,7 +22,7 @@ Namespace ViewModels
         ''' Ansicht offen ist; sonst Nothing.</summary>
         Private _similarGroups As Dictionary(Of String, Integer)
         ''' <summary>Die Fingerabdruecke des Ordners; ein Wechsel der Stufe gruppiert nur neu.</summary>
-        Private _similarHashes As Dictionary(Of String, ULong)
+        Private _similarHashes As Dictionary(Of String, Byte())
         Private _similarLevel As SimilarityLevel = SimilarityLevel.Balanced
         Private _similarGroupCount As Integer
         Private _viewModeBeforeSimilar As String
@@ -107,7 +107,7 @@ Namespace ViewModels
 
             Dim run = Interlocked.Increment(_similarRun)
             Dim token = _mainVm.BeginBusyOverlayCancellation()
-            Dim hashes As New Dictionary(Of String, ULong)(PathIdentity.Comparer)
+            Dim hashes As New Dictionary(Of String, Byte())(PathIdentity.Comparer)
             Try
                 _mainVm.BeginBusyOverlay(SimilarProgressText(0, candidates.Count))
                 Dim paths = candidates.Select(Function(i) i.FilePath).ToList()
@@ -116,7 +116,7 @@ Namespace ViewModels
                         For index = 0 To paths.Count - 1
                             If token.IsCancellationRequested Then Exit For
                             Dim hash = SimilarityService.Fingerprint(paths(index))
-                            If hash.HasValue Then hashes(paths(index)) = hash.Value
+                            If hash IsNot Nothing Then hashes(paths(index)) = hash
                             If index Mod 8 = 0 Then
                                 Dim done = index + 1
                                 Dispatcher.UIThread.Post(Sub()

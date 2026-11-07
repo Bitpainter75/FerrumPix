@@ -4,29 +4,34 @@ Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
 Imports System.Linq
-Imports System.Numerics
 Imports SkiaSharp
 
 Namespace Services
 
-    ''' <summary>Wie eng "aehnlich" gefasst wird: die groesste Zahl abweichender Bits zweier
-    ''' Fingerabdruecke, die noch als aehnlich gilt.</summary>
+    ''' <summary>Wie eng "aehnlich" gefasst wird. Die Schwelle dazu nennt
+    ''' <see cref="SimilarityService.MaxDistance"/>.</summary>
     Public Enum SimilarityLevel
         ''' Fast gleiche Aufnahmen: Serienbilder, leicht verschobener Ausschnitt.
-        Strict = 5
+        Strict
         ''' Dasselbe Motiv in einer Serie, die Vorgabe.
-        Balanced = 10
+        Balanced
         ''' Aehnliche Szenen; mehr Treffer, mehr Fehlgriffe.
-        Loose = 16
+        Loose
     End Enum
 
     ''' <summary>
-    ''' Findet aehnliche Bilder ueber einen Fingerabdruck aus 64 Bit (Differenz-Hash), ohne Modell.
+    ''' Findet aehnliche Bilder ueber einen Fingerabdruck aus einem Grauraster, ohne Modell.
     '''
-    ''' DER FINGERABDRUCK: das Bild auf 9 mal 8 Punkte Helligkeit verkleinert; je Zeile acht Bit,
-    ''' gesetzt, wo ein Punkt heller ist als sein rechter Nachbar. Das haelt Helligkeit, Groesse und
-    ''' leichte Unschaerfe aus, also genau das, worin sich die Aufnahmen einer Serie unterscheiden.
-    ''' Zwei Abdruecke vergleicht die Zahl abweichender Bits.
+    ''' DER FINGERABDRUCK: das Bild auf 16 mal 16 Punkte Helligkeit verkleinert, 256 Byte. Zwei
+    ''' Abdruecke vergleicht die mittlere Abweichung der Punkte, nachdem von jedem sein eigener
+    ''' Mittelwert abgezogen ist; so trennt ein Flackern der Belichtung eine Serie nicht. Das Mass
+    ''' ist eine Zahl in Graustufen (0 bis 255).
+    '''
+    ''' WARUM NICHT MEHR DER DIFFERENZ-HASH: 64 Bit auf 9 mal 8 Punkten sahen nur, wo das Bild grob
+    ''' heller oder dunkler wird. Zwei Sonnenuntergaenge ueber einem Feld, Monate auseinander, lagen
+    ''' damit so nah wie zwei Bilder einer Serie, und ein leichter Zoom verschob schon so viele Bits,
+    ''' dass "Streng" die Serie trennte (Nutzerbefund). Das Raster hat viermal so viele Punkte und
+    ''' vergleicht ihre Helligkeit selbst, nicht nur ihre Richtung.
     '''
     ''' WORAUS: zuerst die Kachel aus dem Vorschauspeicher, wenn sie fuer genau diesen Stand der
     ''' Datei schon da ist (klein und schon gedreht). Sonst die Quelle der Kachel
@@ -43,9 +48,19 @@ Namespace Services
     Public NotInheritable Class SimilarityService
 
         ''' Steigt, wenn sich die Rechnung aendert; alte Zeilen treffen dann nicht mehr.
-        Private Const HashVersion As String = "d1"
+        Private Const HashVersion As String = "g1"
 
-        Private Shared ReadOnly _cache As New ConcurrentDictionary(Of String, ULong)(StringComparer.Ordinal)
+        ''' Kantenlaenge des Grauraster.
+        Friend Const GridSize As Integer = 16
+
+        Private Const SignatureLength As Integer = GridSize * GridSize
+
+        ' Die Schwellen der drei Stufen in Graustufen mittlerer Abweichung.
+        Private Const StrictDistance As Double = 8.0
+        Private Const BalancedDistance As Double = 12.0
+        Private Const LooseDistance As Double = 16.0
+
+        Private Shared ReadOnly _cache As New ConcurrentDictionary(Of String, Byte())(StringComparer.Ordinal)
         Private Shared ReadOnly _fileLock As New Object()
         Private Shared _loaded As Boolean
 
@@ -56,9 +71,19 @@ Namespace Services
         Private Sub New()
         End Sub
 
+        ''' <summary>Die groesste mittlere Abweichung in Graustufen, die auf einer Stufe noch als
+        ''' aehnlich gilt.</summary>
+        Public Shared Function MaxDistance(level As SimilarityLevel) As Double
+            Select Case level
+                Case SimilarityLevel.Strict : Return StrictDistance
+                Case SimilarityLevel.Loose : Return LooseDistance
+                Case Else : Return BalancedDistance
+            End Select
+        End Function
+
         ''' <summary>Fingerabdruck der Datei, aus dem Zwischenspeicher oder neu gerechnet. Nothing,
         ''' wenn sich kein Bild lesen liess. Gehoert auf einen Hintergrundfaden.</summary>
-        Public Shared Function Fingerprint(filePath As String) As ULong?
+        Public Shared Function Fingerprint(filePath As String) As Byte()
             Dim info As FileInfo
             Try
                 info = New FileInfo(filePath)
@@ -69,82 +94,104 @@ Namespace Services
             Dim key = String.Concat(HashVersion, "|", info.FullName, "|", info.Length.ToString(CultureInfo.InvariantCulture), "|",
                                     info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture))
             EnsureLoaded()
-            Dim cached As ULong
+            Dim cached As Byte() = Nothing
             If _cache.TryGetValue(key, cached) Then Return cached
 
-            Dim hash As ULong? = Nothing
+            Dim signature As Byte() = Nothing
             Try
                 Using bitmap = LoadSmallBitmap(filePath, info)
-                    If bitmap IsNot Nothing Then hash = DifferenceHash(bitmap)
+                    If bitmap IsNot Nothing Then signature = GreyGrid(bitmap)
                 End Using
             Catch ex As Exception
                 DiagnosticLogService.LogException("Similarity.Fingerprint", ex)
             End Try
-            If hash.HasValue Then Remember(key, hash.Value)
-            Return hash
+            If signature IsNot Nothing Then Remember(key, signature)
+            Return signature
         End Function
 
-        ''' <summary>Zahl der abweichenden Bits, 0 bis 64.</summary>
-        Public Shared Function Distance(a As ULong, b As ULong) As Integer
-            Return BitOperations.PopCount(a Xor b)
+        ''' <summary>Mittlere Abweichung zweier Abdruecke in Graustufen, jeder um seinen eigenen
+        ''' Mittelwert bereinigt. 0 heisst gleich.</summary>
+        Public Shared Function Distance(a As Byte(), b As Byte()) As Double
+            Return CenteredDistance(Centered(a), Centered(b), Double.MaxValue)
         End Function
 
-        ''' <summary>Der Differenz-Hash eines Bildes, siehe Klassenbeschreibung. Friend fuer den
+        ''' <summary>Das Grauraster eines Bildes, siehe Klassenbeschreibung. Friend fuer den
         ''' Pruefstand.</summary>
-        Friend Shared Function DifferenceHash(bitmap As SKBitmap) As ULong
-            Dim info As New SKImageInfo(9, 8, SKColorType.Rgba8888, SKAlphaType.Premul)
+        Friend Shared Function GreyGrid(bitmap As SKBitmap) As Byte()
+            Dim info As New SKImageInfo(GridSize, GridSize, SKColorType.Rgba8888, SKAlphaType.Premul)
             Using small = bitmap.Resize(info, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
-                If small Is Nothing Then Return 0UL
+                If small Is Nothing Then Return Nothing
                 Dim pixels = small.Bytes
                 Dim stride = small.RowBytes
-                Dim luma(71) As Integer
-                For y = 0 To 7
-                    For x = 0 To 8
+                Dim grid(SignatureLength - 1) As Byte
+                For y = 0 To GridSize - 1
+                    For x = 0 To GridSize - 1
                         Dim p = y * stride + x * 4
-                        luma(y * 9 + x) = CInt(pixels(p)) * 299 + CInt(pixels(p + 1)) * 587 + CInt(pixels(p + 2)) * 114
+                        Dim luma = (CInt(pixels(p)) * 299 + CInt(pixels(p + 1)) * 587 + CInt(pixels(p + 2)) * 114 + 500) \ 1000
+                        grid(y * GridSize + x) = CByte(Math.Min(255, luma))
                     Next
                 Next
-                Dim hash As ULong = 0UL
-                For y = 0 To 7
-                    For x = 0 To 7
-                        hash <<= 1
-                        If luma(y * 9 + x) > luma(y * 9 + x + 1) Then hash = hash Or 1UL
-                    Next
-                Next
-                Return hash
+                Return grid
             End Using
         End Function
 
+        ''' <summary>Der Abdruck als Abweichung von seinem Mittelwert.</summary>
+        Private Shared Function Centered(signature As Byte()) As Single()
+            Dim result(SignatureLength - 1) As Single
+            If signature Is Nothing OrElse signature.Length <> SignatureLength Then Return result
+            Dim sum = 0
+            For Each v In signature
+                sum += v
+            Next
+            Dim mean = CSng(sum / SignatureLength)
+            For i = 0 To SignatureLength - 1
+                result(i) = signature(i) - mean
+            Next
+            Return result
+        End Function
+
+        ''' <summary>Mittlere Abweichung zweier bereinigter Abdruecke. Bricht ab, sobald die Summe
+        ''' die Grenze ueberschreitet, und meldet dann einen Wert darueber.</summary>
+        Private Shared Function CenteredDistance(a As Single(), b As Single(), limit As Double) As Double
+            Dim maxSum = If(limit >= Double.MaxValue / SignatureLength, Double.MaxValue, limit * SignatureLength)
+            Dim sum = 0.0
+            For i = 0 To SignatureLength - 1
+                sum += Math.Abs(a(i) - b(i))
+                If sum > maxSum Then Return sum / SignatureLength
+            Next
+            Return sum / SignatureLength
+        End Function
+
         ''' <summary>Fasst aehnliche Bilder zu Gruppen zusammen. Jedes neue Bild muss zu JEDEM
-        ''' Mitglied einer Gruppe hoechstens <paramref name="level"/> Bits Abstand haben. Damit
-        ''' kann eine Gruppe nicht ueber eine Kette wachsen: Sind A und B sowie B und C aehnlich,
-        ''' A und C aber nicht, bleibt C ausserhalb der Gruppe A/B. Zurueck kommen nur Gruppen mit
+        ''' Mitglied einer Gruppe hoechstens <see cref="MaxDistance"/> Abstand haben. Damit kann
+        ''' eine Gruppe nicht ueber eine Kette wachsen: Sind A und B sowie B und C aehnlich, A und C
+        ''' aber nicht, bleibt C ausserhalb der Gruppe A/B. Zurueck kommen nur Gruppen mit
         ''' mindestens zwei Bildern, in der Reihenfolge ihres ersten Mitglieds.</summary>
-        Public Shared Function Cluster(Of T)(items As IList(Of T), hashOf As Func(Of T, ULong),
+        Public Shared Function Cluster(Of T)(items As IList(Of T), signatureOf As Func(Of T, Byte()),
                                               level As SimilarityLevel) As List(Of List(Of T))
             Dim count = If(items Is Nothing, 0, items.Count)
             Dim result As New List(Of List(Of T))()
             If count < 2 Then Return result
-            Dim maxDistance = CInt(level)
-            ' Jeder Abdruck wird genau EINMAL geholt. hashOf ist beim Aufrufer ein Zugriff ueber den
-            ' Dateipfad; im Vergleich unten je Gruppenmitglied aufgerufen, waeren das bei einigen
-            ' tausend Bildern Millionen Zugriffe statt eines Felds.
-            Dim hashes(count - 1) As ULong
+            Dim limit = MaxDistance(level)
+            ' Jeder Abdruck wird genau EINMAL geholt und bereinigt. signatureOf ist beim Aufrufer ein
+            ' Zugriff ueber den Dateipfad; im Vergleich unten je Gruppenmitglied aufgerufen, waeren
+            ' das bei einigen tausend Bildern Millionen Zugriffe statt eines Felds.
+            Dim prepared = New Single(count - 1)() {}
             For i = 0 To count - 1
-                hashes(i) = hashOf(items(i))
+                prepared(i) = Centered(signatureOf(items(i)))
             Next
 
-            ' Die Gruppen fuehren Indizes in hashes, nicht die Elemente selbst.
+            ' Die Gruppen fuehren Indizes, nicht die Elemente selbst.
             Dim groups As New List(Of List(Of Integer))()
             For i = 0 To count - 1
-                Dim itemHash = hashes(i)
+                Dim item = prepared(i)
                 ' Die Eingabereihenfolge ist die Aufnahmezeit. Gibt es mehrere passende Gruppen,
                 ' gewinnt deshalb die aelteste: die Einteilung bleibt bei jedem Lauf gleich.
                 Dim target As List(Of Integer) = Nothing
                 For Each candidate In groups
                     Dim fitsAll = True
                     For Each member In candidate
-                        If BitOperations.PopCount(itemHash Xor hashes(member)) > maxDistance Then
+                        If CenteredDistance(item, prepared(member), limit) > limit Then
                             fitsAll = False
                             Exit For
                         End If
@@ -238,10 +285,17 @@ Namespace Services
                         For Each line In File.ReadLines(CacheFilePath)
                             Dim tab = line.LastIndexOf(ControlChars.Tab)
                             If tab <= 0 Then Continue For
-                            Dim value As ULong
-                            If ULong.TryParse(line.Substring(tab + 1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, value) Then
-                                _cache(line.Substring(0, tab)) = value
-                            End If
+                            ' Zeilen der frueheren Fassung (16 Zeichen) haben die falsche Laenge und
+                            ' werden uebergangen; ihr Schluessel traefe ohnehin nicht mehr.
+                            Dim hex = line.Substring(tab + 1)
+                            If hex.Length <> SignatureLength * 2 Then Continue For
+                            Dim value As Byte()
+                            Try
+                                value = Convert.FromHexString(hex)
+                            Catch
+                                Continue For
+                            End Try
+                            _cache(line.Substring(0, tab)) = value
                         Next
                     End If
                 Catch ex As Exception
@@ -253,13 +307,12 @@ Namespace Services
 
         ''' <summary>Haengt den Wert an die Datei an. Eine veraltete Zeile (Datei geaendert) bleibt
         ''' stehen, ihr Schluessel trifft nur nie mehr.</summary>
-        Private Shared Sub Remember(key As String, value As ULong)
+        Private Shared Sub Remember(key As String, value As Byte())
             _cache(key) = value
             SyncLock _fileLock
                 Try
                     Directory.CreateDirectory(Path.GetDirectoryName(CacheFilePath))
-                    File.AppendAllText(CacheFilePath,
-                                       key & ControlChars.Tab & value.ToString("X16", CultureInfo.InvariantCulture) & Environment.NewLine)
+                    File.AppendAllText(CacheFilePath, key & ControlChars.Tab & Convert.ToHexString(value) & Environment.NewLine)
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Similarity.Remember", ex)
                 End Try

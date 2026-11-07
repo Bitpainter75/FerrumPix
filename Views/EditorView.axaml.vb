@@ -2433,6 +2433,46 @@ Namespace Views
             Next
         End Sub
 
+        ' Zeitpunkt (Environment.TickCount64) und Stelle der letzten beendeten Pipettenaufnahme.
+        ' Long.MinValue heisst: keine, die noch nachwirken koennte.
+        Private _pickEndedAtMs As Long = Long.MinValue
+        Private _pickEndedPoint As Avalonia.Point
+
+        ''' <summary>Merkt sich, dass eine Pipette gerade mit einem Druck auf der Buehne geendet hat,
+        ''' aufgenommen oder abgebrochen.</summary>
+        Private Sub NotePickEnded(point As Avalonia.Point)
+            _pickEndedAtMs = Environment.TickCount64
+            _pickEndedPoint = point
+        End Sub
+
+        ''' <summary>Ob ein Druck noch zur eben beendeten Pipettenaufnahme gehoert und deshalb
+        ''' verschluckt wird.
+        '''
+        ''' <para>DIE PIPETTE ENDET MIT DEM DRUCK, der sie bedient. Kommt gleich danach ein zweiter
+        ''' Druck an derselben Stelle (ein Doppelklick, ein prellender Stifttipp auf dem Tablett, ein
+        ''' Treiber, der Stift und Maus doppelt meldet), traf er bisher das gewoehnliche Werkzeug: in
+        ''' Anpassen, Farbe und den uebrigen Reglerwerkzeugen ist das ein Klick ins Leere, und der
+        ''' schaltet ins Auswahlwerkzeug; ueber einem markierten Objekt begann er ein Verschieben.
+        ''' Zeit und Abstand sind die des Doppelklicks im System, je Zeigerart, denn beim Stift sind
+        ''' beide groesser als bei der Maus.</para></summary>
+        Private Function IsPressRightAfterPick(e As PointerPressedEventArgs, canvas As Visual) As Boolean
+            If _pickEndedAtMs = Long.MinValue OrElse canvas Is Nothing Then Return False
+            Dim settings = Application.Current?.PlatformSettings
+            Dim maxTime = If(settings?.GetDoubleTapTime(e.Pointer.Type), TimeSpan.FromMilliseconds(500))
+            Dim maxSize = If(settings?.GetDoubleTapSize(e.Pointer.Type), New Avalonia.Size(4, 4))
+            Dim now = Environment.TickCount64
+            If now - _pickEndedAtMs > maxTime.TotalMilliseconds Then
+                _pickEndedAtMs = Long.MinValue
+                Return False
+            End If
+            Dim pos = e.GetPosition(canvas)
+            If Math.Abs(pos.X - _pickEndedPoint.X) > Math.Max(2.0, maxSize.Width / 2.0) OrElse
+               Math.Abs(pos.Y - _pickEndedPoint.Y) > Math.Max(2.0, maxSize.Height / 2.0) Then Return False
+            ' Ein dritter Druck derselben Folge gehoert ebenfalls dazu.
+            _pickEndedAtMs = now
+            Return True
+        End Function
+
         Private Sub OnSliderPointerPressed(sender As Object, e As PointerPressedEventArgs)
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             If canvas Is Nothing Then Return
@@ -2453,6 +2493,13 @@ Namespace Views
 
             If Not pointerPoint.Properties.IsLeftButtonPressed Then Return
 
+            ' Der Nachdruck einer eben beendeten Pipette loest kein Werkzeug aus (siehe
+            ' IsPressRightAfterPick).
+            If vm IsNot Nothing AndAlso Not vm.IsPickingColorFromImage AndAlso IsPressRightAfterPick(e, canvas) Then
+                e.Handled = True
+                Return
+            End If
+
             If vm IsNot Nothing AndAlso vm.IsPickingColorFromImage Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 Dim pickPoint = e.GetPosition(canvas)
@@ -2467,6 +2514,7 @@ Namespace Views
                 Else
                     vm.CancelColorPick()
                 End If
+                NotePickEnded(pickPoint)
                 e.Handled = True
                 Return
             End If
@@ -6887,6 +6935,11 @@ Namespace Views
             ' an. Unbehandelt steigt das Ereignis zur Bühne auf (OnSliderPointerPressed), und die
             ' nimmt die Farbe dort auf, wo geklickt wurde.
             If vm.IsPickingColorFromImage Then Return
+            ' Ebenso der Nachdruck einer eben beendeten Pipette: er begaenne sonst ein Verschieben.
+            If IsPressRightAfterPick(e, canvas) Then
+                e.Handled = True
+                Return
+            End If
             Dim pos = e.GetPosition(canvas)
 
             ' Beim Vergleich liegt der TextOverlay-Border (transparent, hit-test-sichtbar) in der
