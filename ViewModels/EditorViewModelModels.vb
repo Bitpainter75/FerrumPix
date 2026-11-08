@@ -256,20 +256,56 @@ Namespace ViewModels
         Private Const BokehPreviewEdge As Integer = 900
 
         Private _bokehVorschauBasis As SKBitmap
+        ''' <summary>Dasselbe Bild wie <see cref="_bokehVorschauBasis"/>, aber in Buehnengroesse. Der
+        ''' Nebel rechnet seine Vorschau darauf (eine Mischung je Punkt, auch in voller Groesse nur
+        ''' wenige Dutzend Millisekunden), die Tiefen-Unschaerfe ihre Nachrechnung nach der Pause.
+        ''' Mit 900 Punkten auf die Buehne gezogen wirkte die Vorschau auf einem grossen Schirm
+        ''' sofort matschig. Haengt am selben Schluessel wie die kleine Kopie.</summary>
+        Private _depthVorschauVoll As SKBitmap
         Private _bokehVorschauSchluessel As String = ""
         Private _bokehVorschauLauf As Integer = 0
+        ''' <summary>Bricht die Nachrechnung der Tiefen-Unschaerfe in voller Groesse ab, sobald der
+        ''' Regler sich wieder bewegt oder die Vorschau verschwindet.</summary>
+        Private _bokehRefineCancel As CancellationTokenSource
+        ''' Wie lange nach der letzten Reglerbewegung die Tiefen-Unschaerfe in voller Groesse
+        ''' nachgerechnet wird. Die kleine Vorschau steht dann schon; die volle kostet am Buehnenbild
+        ''' einige hundert Millisekunden und soll nicht zwischen zwei Reglerschritte fallen.
+        Private Const BokehRefineDelayMs As Integer = 500
 
         Public Sub DisposeBokehPreview()
             If String.Equals(_vorschauQuelle, "Bokeh", StringComparison.Ordinal) Then
                 ToolPreviewImage = Nothing
                 _vorschauQuelle = ""
             End If
+            CancelBokehRefine()
             _bokehVorschauBasis?.Dispose()
             _bokehVorschauBasis = Nothing
+            _depthVorschauVoll?.Dispose()
+            _depthVorschauVoll = Nothing
             _bokehVorschauSchluessel = ""
             ' Ein noch laufender Anlauf darf sein Ergebnis nicht mehr einhaengen.
             _bokehVorschauLauf += 1
         End Sub
+
+        Private Sub CancelBokehRefine()
+            _bokehRefineCancel?.Cancel()
+            _bokehRefineCancel?.Dispose()
+            _bokehRefineCancel = Nothing
+        End Sub
+
+        ''' <summary>Legt die Ebenen ueber eine Vorschau von Nebel oder Tiefen-Unschaerfe. Beide
+        ''' rechnen auf dem Foto OHNE Ebenen (die Tiefe gehoert dem Foto, siehe
+        ''' RecipeWithoutObjects), und beim Anwenden wirken sie auch nur aufs Foto: die Ebenen liegen
+        ''' danach unveraendert darueber. Ohne sie verschwanden Text und Bilder, solange die
+        ''' Vorschau stand. Gibt das Ergebnis zurueck und raeumt <paramref name="photo"/> weg, wenn
+        ''' ein neues Bild entsteht.</summary>
+        Private Shared Function WithObjectsOnTop(photo As SKBitmap, objectRecipe As ImageAdjustments) As SKBitmap
+            If photo Is Nothing OrElse objectRecipe Is Nothing Then Return photo
+            Dim composed = ImageProcessor.ApplyAnnotationsForPreview(photo, objectRecipe)
+            If composed Is Nothing Then Return photo
+            If Not Object.ReferenceEquals(composed, photo) Then photo.Dispose()
+            Return composed
+        End Function
 
         ''' <summary>Nach einer Reglerbewegung eine neue Vorschau anstossen.
         '''
@@ -281,6 +317,7 @@ Namespace ViewModels
                 RequestDepthForPreview(LocalizationService.T("Tiefen-Unschärfe"), AddressOf ResetBokeh, AddressOf ScheduleBokehPreview)
                 Return
             End If
+            CancelBokehRefine()
             _bokehVorschauLauf += 1
             Dim pass = _bokehVorschauLauf
             Dim ignoriert = RedrawBokehPreview(pass)
@@ -308,6 +345,7 @@ Namespace ViewModels
                 Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
                 Dim corners = _bokehBlende, lichter = _bokehLichter
+                Dim objectRecipe = GetCurrentAdjustments()
 
                 SetPreviewBusy(True)
                 Dim blurredPreview As Bitmap
@@ -318,8 +356,10 @@ Namespace ViewModels
                                                                  strength, uebergang, corners, lichter)
                         If unscharf Is Nothing Then Return Nothing
                         ' Nur die Vorschau: direkte Zeilenkopie statt PNG-Rundlauf.
-                        Using norm = NormalizePreviewBase(unscharf)
-                            Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
+                        Using shown = WithObjectsOnTop(unscharf, objectRecipe)
+                            Using norm = NormalizePreviewBase(ImageProcessor.CopyBitmap(shown))
+                                Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
+                            End Using
                         End Using
                     End Function)
                 Finally
@@ -336,6 +376,76 @@ Namespace ViewModels
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("BokehVorschau", ex.Message)
                 DisposeBokehPreview()
+                Return
+            Finally
+                _depthGate.Release()
+            End Try
+            Dim ignoriert = RefineBokehPreview(pass)
+        End Function
+
+        ''' <summary>Die Tiefen-Unschaerfe nach der Pause in Buehnengroesse nachrechnen und die kleine
+        ''' Vorschau damit ersetzen. Die 900-Punkte-Fassung bleibt fuer das Ziehen am Regler, weil
+        ''' die Unschaerfe teuer ist; ohne Nachrechnung blieb sie bis zum Anwenden stehen und wirkte
+        ''' auf einem grossen Schirm matschig. Eine neue Reglerbewegung bricht die Rechnung ab
+        ''' (_bokehRefineCancel) und verwirft ihr Ergebnis (der Lauf ist dann ein anderer).</summary>
+        Private Async Function RefineBokehPreview(pass As Integer) As Task
+            CancelBokehRefine()
+            Dim cts As New CancellationTokenSource()
+            _bokehRefineCancel = cts
+            Dim token = cts.Token
+            Try
+                Await Task.Delay(BokehRefineDelayMs, token)
+            Catch ex As OperationCanceledException
+                Return
+            End Try
+            If pass <> _bokehVorschauLauf OrElse token.IsCancellationRequested Then Return
+
+            Await _depthGate.WaitAsync()
+            Try
+                If pass <> _bokehVorschauLauf OrElse token.IsCancellationRequested Then Return
+                If _depthVorschauVoll Is Nothing OrElse _depthMap Is Nothing Then Return
+                ' Eigene Kopien: ein Aufraeumen der Vorschau wartet nicht auf das Gate.
+                Dim basis = ImageProcessor.CopyBitmap(_depthVorschauVoll)
+                Dim map = ImageProcessor.CopyBitmap(_depthMap)
+                Dim from = _bokehVon, bis = _bokehBis
+                Dim strength = _bokehStaerke, uebergang = _bokehUebergang
+                Dim corners = _bokehBlende, lichter = _bokehLichter
+                Dim objectRecipe = GetCurrentAdjustments()
+
+                SetPreviewBusy(True)
+                Dim fullPreview As Bitmap = Nothing
+                Try
+                    fullPreview = Await Task.Run(
+                    Function() As Bitmap
+                        Try
+                            Dim unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
+                                                                     strength, uebergang, corners, lichter, token)
+                            If unscharf Is Nothing Then Return Nothing
+                            Using shown = WithObjectsOnTop(unscharf, objectRecipe)
+                                Using norm = NormalizePreviewBase(ImageProcessor.CopyBitmap(shown))
+                                    Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
+                                End Using
+                            End Using
+                        Finally
+                            basis.Dispose()
+                            map.Dispose()
+                        End Try
+                    End Function)
+                Catch ex As OperationCanceledException
+                    Return
+                Finally
+                    SetPreviewBusy(False)
+                End Try
+
+                If fullPreview Is Nothing Then Return
+                If pass <> _bokehVorschauLauf OrElse token.IsCancellationRequested OrElse
+                   Not String.Equals(_vorschauQuelle, "Bokeh", StringComparison.Ordinal) Then
+                    fullPreview.Dispose()
+                    Return
+                End If
+                ToolPreviewImage = fullPreview
+            Catch ex As Exception
+                DiagnosticLogService.LogAlways("BokehVorschau", "volle Groesse: " & ex.Message)
             Finally
                 _depthGate.Release()
             End Try
@@ -351,11 +461,14 @@ Namespace ViewModels
             If rezept Is Nothing Then Return False
             Dim key = String.Join("|", _currentImagePath, size.Width, size.Height,
                                          ImageProcessor.ComputeBaseKey(rezept))
-            If _bokehVorschauBasis IsNot Nothing AndAlso _depthMap IsNot Nothing AndAlso
+            If _bokehVorschauBasis IsNot Nothing AndAlso _depthVorschauVoll IsNot Nothing AndAlso _depthMap IsNot Nothing AndAlso
                String.Equals(_bokehVorschauSchluessel, key, StringComparison.Ordinal) AndAlso
                String.Equals(_depthKey, key, StringComparison.Ordinal) Then
                 Return True
             End If
+            ' Die volle Kopie in Buehnengroesse: so gross wie die Szene, die sie auf der Buehne ersetzt.
+            Dim scene = GetCurrentScenePixelSize()
+            Dim fullEdge = Math.Max(BokehPreviewEdge, Math.Max(scene.Width, scene.Height))
 
             _depthRunning = True
             Me.RaisePropertyChanged(NameOf(IsDepthMaskRunning))
@@ -366,17 +479,17 @@ Namespace ViewModels
             Dim workingImage = CloneWorkingFullForRender()
             Dim needsMap = _depthMap Is Nothing OrElse
                                Not String.Equals(_depthKey, key, StringComparison.Ordinal)
-            Dim paar As Tuple(Of SKBitmap, SKBitmap) = Nothing
+            Dim paar As Tuple(Of SKBitmap, SKBitmap, SKBitmap) = Nothing
             Try
                 paar = Await Task.Run(
                     Function()
                         Using fertig = ImageProcessor.RenderDisplayImage(sourcePath, rezept, workingImage)
                             If fertig Is Nothing Then Return Nothing
-                            ' EIN Render fuer beides: die Tiefenkarte und die Vorschaukopie kommen aus
+                            ' EIN Render fuer alles: die Tiefenkarte und die Vorschaukopien kommen aus
                             ' demselben Bild, sonst passten sie im Zweifel nicht zusammen.
                             Dim k As SKBitmap = Nothing
                             If needsMap Then k = DepthMapService.Compute(fertig)
-                            Return Tuple.Create(ScaledDownCopy(fertig, BokehPreviewEdge), k)
+                            Return Tuple.Create(ScaledDownCopy(fertig, BokehPreviewEdge), k, ScaledDownCopy(fertig, fullEdge))
                         End Using
                     End Function)
             Finally
@@ -385,14 +498,17 @@ Namespace ViewModels
                     RefreshBusyState()
             End Try
 
-            If paar Is Nothing OrElse paar.Item1 Is Nothing Then
+            If paar Is Nothing OrElse paar.Item1 Is Nothing OrElse paar.Item3 Is Nothing Then
+                paar?.Item1?.Dispose()
                 paar?.Item2?.Dispose()
+                paar?.Item3?.Dispose()
                 StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
                 Return False
             End If
             If needsMap Then
                 If paar.Item2 Is Nothing Then
                     paar.Item1.Dispose()
+                    paar.Item3.Dispose()
                     StatusText = LocalizationService.T("Tiefe konnte nicht berechnet werden")
                     Return False
                 End If
@@ -402,6 +518,8 @@ Namespace ViewModels
             End If
             _bokehVorschauBasis?.Dispose()
             _bokehVorschauBasis = paar.Item1
+            _depthVorschauVoll?.Dispose()
+            _depthVorschauVoll = paar.Item3
             _bokehVorschauSchluessel = key
             StatusText = ""
             Return True
@@ -755,11 +873,14 @@ Namespace ViewModels
                 If pass <> _fogPreviewPass Then Return
                 If Not Await PrepareBokehBase() Then Return
                 If pass <> _fogPreviewPass Then Return
-                If _bokehVorschauBasis Is Nothing OrElse _depthMap Is Nothing Then Return
-                ' EIGENE Kopien: die gemeinsame Vorschaukopie gehoert der Tiefen-Unschaerfe, und
-                ' deren Aufraeumen wartet nicht auf das Gate.
-                Dim basis = ImageProcessor.CopyBitmap(_bokehVorschauBasis)
+                If _depthVorschauVoll Is Nothing OrElse _depthMap Is Nothing Then Return
+                ' EIGENE Kopien: die gemeinsamen Vorschaukopien gehoeren auch der Tiefen-Unschaerfe,
+                ' und deren Aufraeumen wartet nicht auf das Gate. In BUEHNENGROESSE, nicht die
+                ' 900-Punkte-Kopie der Unschaerfe: der Nebel ist eine Mischung je Punkt und kostet
+                ' auch in voller Groesse nur wenig.
+                Dim basis = ImageProcessor.CopyBitmap(_depthVorschauVoll)
                 Dim map = ImageProcessor.CopyBitmap(_depthMap)
+                Dim objectRecipe = GetCurrentAdjustments()
                 Dim density = _fogDensity, near = _fogNear, far = _fogFar, foreground = _fogForeground
                 Dim color = FogSkColor()
 
@@ -769,10 +890,11 @@ Namespace ViewModels
                     fogPreview = Await Task.Run(
                     Function() As Bitmap
                         Try
-                            Using fog = DepthMapService.DepthFog(basis, map, density, near, far, color,
-                                                                 foregroundPct:=foreground)
-                                If fog Is Nothing Then Return Nothing
-                                Using norm = NormalizePreviewBase(fog)
+                            Dim fog = DepthMapService.DepthFog(basis, map, density, near, far, color,
+                                                               foregroundPct:=foreground)
+                            If fog Is Nothing Then Return Nothing
+                            Using shown = WithObjectsOnTop(fog, objectRecipe)
+                                Using norm = NormalizePreviewBase(ImageProcessor.CopyBitmap(shown))
                                     Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
                                 End Using
                             End Using

@@ -112,6 +112,25 @@
 
   <releases>
 
+    <release version="0.9.78-1" date="2026-11-08">
+      <description>
+        <p>This update gives you more control over searching and makes FerrumPix noticeably faster. You can now choose whether searches and filters apply to the current folder or your entire catalog. The editor, RAW processing and thumbnail generation have also received some significant speed improvements:</p>
+        <p xml:lang="de">Mit diesem Update kannst du gezielter suchen, und FerrumPix wird spürbar schneller. Du entscheidest jetzt selbst, ob Suche und Filter nur den aktuellen Ordner oder den gesamten Katalog berücksichtigen. Auch der Editor, die RAW-Verarbeitung und die Erstellung von Vorschaubildern sind deutlich schneller geworden:</p>
+        <ul>
+          <li>A new button next to the search field lets you choose whether searches, filters, people, places and keywords apply to the current folder or your entire catalog. The counts in the lists update accordingly. FerrumPix can now also read keywords, ratings and color labels from RawTherapee (.pp3) and ART (.arp) sidecar files (Settings, Catalog). It also reads color labels from darktable XMP sidecars, as well as color labels, pick marks and keyword hierarchies from digiKam XMP sidecars.</li>
+          <li xml:lang="de">Mit einem neuen Knopf neben dem Suchfeld legst du fest, ob Suche, Filter, Personen, Orte und Stichwörter nur den aktuellen Ordner oder den gesamten Katalog berücksichtigen. Die angezeigten Trefferzahlen passen sich entsprechend an. FerrumPix kann jetzt auch Stichwörter, Bewertungen und Farbetiketten aus den Beistelldateien von RawTherapee (.pp3) und ART (.arp) einlesen (Einstellungen, Katalog). Aus den XMP-Beistelldateien von darktable werden außerdem Farbetiketten übernommen, aus denen von digiKam zusätzlich Markierungen und Stichworthierarchien.</li>
+
+          <li>The editor is more responsive: sliders move more smoothly, dragging layers with blend modes feels much more fluid, and depth blur, depth map generation, object selection and object removal are noticeably faster on large photos. RAW photos also open faster.</li>
+          <li xml:lang="de">Der Editor reagiert jetzt direkter: Regler lassen sich flüssiger bewegen, das Verschieben von Ebenen mit Mischmodi läuft deutlich geschmeidiger, und Tiefenunschärfe, Tiefenkarten, Objektauswahl und das Entfernen von Objekten sind besonders bei großen Fotos spürbar schneller. Auch RAW-Fotos öffnen sich schneller.</li>
+
+          <li>Thumbnails are generated faster and now fill their tiles properly, so portrait photos from phones no longer appear soft. RAW files without a usable embedded preview also get sharper thumbnails, which image recognition can reuse instead of developing the RAW file again.</li>
+          <li xml:lang="de">Vorschaubilder werden schneller erstellt und füllen ihre Kacheln jetzt vollständig aus. Dadurch wirken besonders Hochkantfotos vom Smartphone nicht mehr so weich. Auch RAW-Dateien ohne brauchbare eingebettete Vorschau erhalten schärfere Vorschaubilder. Die Bilderkennung kann diese direkt verwenden, statt die RAW-Datei erneut entwickeln zu müssen.</li>
+
+          <li>Similar Pictures now uses a more detailed representation of each photo, making it less likely to group different scenes just because they have a similar layout. Clearing a person or place selection takes you back to your original folder without losing your filters. Double-clicking with the eyedropper in the editor no longer switches tools unexpectedly. And with diagnostic logging enabled, searches and catalog scans now record more details to help track down problems.</li>
+          <li xml:lang="de">Die Suche nach ähnlichen Bildern vergleicht Fotos jetzt genauer. Dadurch werden unterschiedliche Motive nicht mehr so leicht zusammengefasst, nur weil ihr Bildaufbau ähnlich ist. Wenn du die Auswahl einer Person oder eines Orts aufhebst, kehrst du zum ursprünglichen Ordner zurück, ohne deine Filter zu verlieren. Ein Doppelklick mit der Pipette im Editor führt außerdem nicht mehr zu einem unbeabsichtigten Werkzeugwechsel. Bei aktiviertem Diagnoseprotokoll werden jetzt auch mehr Details zu Suchvorgängen und Katalogdurchläufen aufgezeichnet, um Probleme leichter eingrenzen zu können.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.77-1" date="2026-11-06">
       <description>
         <p>This update gives you more control over the information stored with your photos. You can now add titles and descriptions, compare metadata in your files with what's stored in the catalogue, and choose exactly which information to remove. Search and import have also been improved, along with several other useful additions:</p>

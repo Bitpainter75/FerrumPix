@@ -35,6 +35,9 @@
 
 ### Fixes
 
+- The previews of fog by depth and depth blur no longer look soft and keep your layers visible.
+  Fog shows at full sharpness right away, depth blur sharpens a moment after you stop dragging.
+
 - Some thumbnails came out narrower than their tile and looked soft, for example portrait photos
   from phones. New thumbnails now always fill the tile.
 

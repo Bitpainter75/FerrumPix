@@ -86,6 +86,15 @@ Namespace Services
             Return PerformanceTraceService.Measure("Objekte: alle zeichnen", Function() ApplyAnnotationsCore(source, adj))
         End Function
 
+        ''' <summary>Dieselben Objekte wie im Bild, ueber ein schon fertig gerechnetes Foto gelegt
+        ''' (Ausgabe der Geometriekette, in beliebiger Groesse). Fuer die Werkzeugvorschauen, die auf
+        ''' dem Foto ohne Objekte rechnen. Das Ergebnis kann <paramref name="source"/> selbst sein,
+        ''' wenn es nichts zu zeichnen gibt.</summary>
+        Friend Shared Function ApplyAnnotationsForPreview(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If source Is Nothing OrElse adj Is Nothing Then Return source
+            Return ApplyAnnotations(source, adj)
+        End Function
+
         Private Shared Function ApplyAnnotationsCore(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             ' ARBEITSBILD-Umbau (Stufe D): Pinsel-/Radiererstriche sind ins Arbeitsbild eingebacken
             ' und laufen nicht mehr hier durch - hier rendern nur noch die Z-Order-Objekte.
