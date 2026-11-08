@@ -575,7 +575,7 @@ Namespace ViewModels
         ''' Mischmodus-Abhaengigkeitsbereich, wird dieser automatisch mitgerendert (das Blend-Ergebnis
         ''' haengt vom Untergrund ab). False bei kaltem/gesperrtem Base-Cache oder fehlender Szene -
         ''' der Aufrufer plant dann den asynchronen Vollrender.</summary>
-        Private Function TryRenderSceneRegionSync(dirtyRect As SKRectI) As Boolean
+        Private Function TryRenderSceneRegionSync(dirtyRect As SKRectI, Optional live As Boolean = False) As Boolean
             Dim previewSource = GetPreviewSource()
             If previewSource Is Nothing OrElse _sceneSk Is Nothing OrElse dirtyRect.IsEmpty Then Return False
 
@@ -593,7 +593,11 @@ Namespace ViewModels
             Dim blendDep = SceneBlendCompositeRequiredRect()
             If blendDep.RequiresComposite AndAlso Not blendDep.Rect.IsEmpty AndAlso
                OverlaySceneRenderer.Intersects(rect, blendDep.Rect) Then
-                rect = ImageProcessor.UnionRects(rect, blendDep.Rect)
+                If live Then
+                    NoteLiveBlendRegion(rect)
+                Else
+                    rect = ImageProcessor.UnionRects(rect, blendDep.Rect)
+                End If
             End If
 
             Dim sw = Diagnostics.Stopwatch.StartNew()
@@ -648,14 +652,23 @@ Namespace ViewModels
         ''' der Effekt-Render (Schatten/Gluehen grosser Objekte: 200-800 ms) im Hintergrund laeuft; das
         ''' Anwenden auf die Szene kostet nur ~20 ms. Ueberholende Anforderungen verschmelzen zur Union;
         ''' ein waehrenddessen ausgetauschtes _sceneSk (Vollrender) verwirft das Ergebnis und rendert neu.</summary>
-        Private Sub RequestSceneRegionRender(dirtyRect As SKRectI)
+        Private Sub RequestSceneRegionRender(dirtyRect As SKRectI, Optional live As Boolean = False)
             If dirtyRect.IsEmpty Then Return
-            ' Nichtnormale Blend-Modi brauchen eine zusammenhängende Komposition über ihren
-            ' Abhängigkeitsbereich. Für sie wäre ein Sichtfenster-Schnitt falsch; der Worker
-            ' erweitert denselben Bereich anschließend nochmals als Sicherheitsnetz.
+            ' Im Bereich nichtnormaler Mischmodi rechnet der Worker die ganze Mischflaeche, sonst
+            ' saehe man an angeschnittenen Objekten die Kantenglaettung des engen Ausschnitts (Skia
+            ' glaettet eine Form, die ueber den Zeichenrand ragt, etwas anders; ein Mischmodus wie
+            ' Farbig abwedeln verstaerkt das). Bei einem LIVE-Schritt (Zug, Reglerbewegung am
+            ' Objekt) waere das je Schritt die ganze Flaeche: gemessen 6 MP und rund eine Sekunde
+            ' statt 0,3 MP und 26 ms (Kettenmessung mischpatch). Live bleibt es deshalb eng, und
+            ' SettleBlendRegion rechnet die Flaeche nach der Ruhepause einmal nach.
             Dim blendDep = SceneBlendCompositeRequiredRect()
             If blendDep.RequiresComposite AndAlso Not blendDep.Rect.IsEmpty AndAlso
                OverlaySceneRenderer.Intersects(dirtyRect, blendDep.Rect) Then
+                If live Then
+                    NoteLiveBlendRegion(dirtyRect)
+                Else
+                    _sceneRegionPendingNeedsBlendExpansion = True
+                End If
                 _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, dirtyRect)
                 If Not _sceneRegionWorkerBusy Then RunSceneRegionWorker()
                 Return
@@ -693,10 +706,19 @@ Namespace ViewModels
 
                     Dim rect = _sceneRegionPendingRect
                     _sceneRegionPendingRect = SKRectI.Empty
+                    Dim expandForBlend = _sceneRegionPendingNeedsBlendExpansion
+                    _sceneRegionPendingNeedsBlendExpansion = False
                     Dim blendDep = SceneBlendCompositeRequiredRect()
                     If blendDep.RequiresComposite AndAlso Not blendDep.Rect.IsEmpty AndAlso
                        OverlaySceneRenderer.Intersects(rect, blendDep.Rect) Then
-                        rect = ImageProcessor.UnionRects(rect, blendDep.Rect)
+                        If expandForBlend Then
+                            rect = ImageProcessor.UnionRects(rect, blendDep.Rect)
+                        Else
+                            ' Nur Live-Schritte in dieser Union: eng rechnen, die Ruhepause holt
+                            ' die Flaeche nach. Ein Mischmodus kann auch erst SEIT der Anforderung
+                            ' hier liegen; dann ist der Bereich jetzt ebenfalls vorgemerkt.
+                            NoteLiveBlendRegion(rect)
+                        End If
                     End If
 
                     Dim adj = GetSceneAdjustments()
@@ -796,6 +818,31 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Ein Live-Schritt hat im Mischbereich eng gerechnet: den Bereich vormerken und die
+        ''' Ruhepause neu beginnen lassen.</summary>
+        Private Sub NoteLiveBlendRegion(rect As SKRectI)
+            If rect.IsEmpty Then Return
+            _blendSettleRect = ImageProcessor.UnionRects(_blendSettleRect, rect)
+            _blendSettleTimer.Stop()
+            _blendSettleTimer.Start()
+        End Sub
+
+        ''' <summary>Nach der Ruhepause: was Live-Schritte im Mischbereich eng gerechnet haben, einmal
+        ''' mit der ganzen Mischflaeche nachrechnen, im Hintergrund wie jede andere Region. Waehrend
+        ''' eines Zuges wird weiter gewartet; ein Vollrender in der Zwischenzeit macht es unnoetig
+        ''' (SchedulePreviewUpdate leert die Vormerkung).</summary>
+        Private Sub SettleBlendRegion()
+            If _blendSettleRect.IsEmpty Then Return
+            If _annotationPlacementEditActive Then
+                _blendSettleTimer.Start()
+                Return
+            End If
+            Dim rect = _blendSettleRect
+            _blendSettleRect = SKRectI.Empty
+            ' Ohne Szene verwirft der Worker die Anforderung selbst (ein Vollrender ist unterwegs).
+            RequestSceneRegionRender(rect)
+        End Sub
+
         ''' <summary>Beim App-Beenden aufrufen (MainWindow.HandleWindowClosing): legt laufende
         ''' Szene-/Zoom-Arbeiten still. Absturzbild (beim Beenden): der Fenster-
         ''' Teardown disposed die Anzeige-Bitmap, waehrend eine Region-Worker-Fortsetzung noch
@@ -807,6 +854,9 @@ Namespace ViewModels
         Public Sub ShutdownSceneWork()
             _sceneContentVersion += 1
             _sceneRegionPendingRect = SKRectI.Empty
+            _sceneRegionPendingNeedsBlendExpansion = False
+            _blendSettleTimer.Stop()
+            _blendSettleRect = SKRectI.Empty
             _deferredSceneRegionRects.Clear()
             _displayPendingRect = SKRectI.Empty
             _sceneDisplay = Nothing
@@ -1281,7 +1331,9 @@ Namespace ViewModels
             ' Stand (z.B. der Text nach dem Aufziehen) wuerde NIE gebacken. Die Pending-Union und
     ' der Versions-/Placement-Guard des Workers stellen die richtige Endfassung sicher.
             _annotationDirtyRect = SKRectI.Empty
-            RequestSceneRegionRender(rect)
+            ' Live: dieser Weg traegt Zugschritte und Reglerbewegungen am Objekt (siehe
+            ' RequestSceneRegionRender, Mischbereich).
+            RequestSceneRegionRender(rect, live:=True)
             Return True
         End Function
 

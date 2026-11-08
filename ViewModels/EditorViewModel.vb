@@ -1165,6 +1165,17 @@ Namespace ViewModels
         ' nur die Union.
         Private _sceneRegionPendingRect As SKRectI = SKRectI.Empty
         Private _sceneRegionWorkerBusy As Boolean = False
+        ' Muss der Worker die anstehende Union auf die Mischflaeche erweitern? Nur, wenn mindestens
+        ' eine Anforderung darin KEIN Live-Schritt war (siehe RequestSceneRegionRender).
+        Private _sceneRegionPendingNeedsBlendExpansion As Boolean = False
+        ' Live-Schritte (Zug, Reglerbewegung am Objekt) rechnen im Mischbereich eng. Was sie dort
+        ' angefasst haben, sammelt sich hier und wird nach einer Ruhepause EINMAL mit der ganzen
+        ' Mischflaeche nachgerechnet (_blendSettleTimer).
+        Private _blendSettleRect As SKRectI = SKRectI.Empty
+        Private ReadOnly _blendSettleTimer As DispatcherTimer
+        ''' Wie lange nach dem letzten Live-Schritt nachgerechnet wird. Kurz genug, dass es beim
+        ''' Loslassen gleich geschieht, lang genug, um nicht zwischen zwei Reglerschritte zu fallen.
+        Private Const BlendSettleDelayMs As Double = 250
         ' Modell-Version der Objekte: jede Eigenschafts- oder Lageaenderung zaehlt hoch. Der Worker
         ' merkt sich den Stand seines Snapshots und LEGT DIE REGION NACH, wenn das Modell sich
         ' waehrend des Renders bewegt hat. Ohne das konnte ein Patch, der noch die alte Lage zeigte,
@@ -17950,6 +17961,11 @@ Namespace ViewModels
                                                _previewTimer.Stop()
                                                OnPreviewTimerTick()
                                            End Sub
+            _blendSettleTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(BlendSettleDelayMs)}
+            AddHandler _blendSettleTimer.Tick, Sub()
+                                                   _blendSettleTimer.Stop()
+                                                   SettleBlendRegion()
+                                               End Sub
 
             _scopeTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(ScopeDebounceMs)}
             AddHandler _scopeTimer.Tick, Sub()
@@ -20488,6 +20504,10 @@ Namespace ViewModels
             DisposeFogPreview()
             DisposeGridPreview()
             DisposeLinePreview()
+            ' Der Vollrender zeichnet die ganze Szene, also auch, was Live-Schritte im Mischbereich
+            ' eng gerechnet haben (SettleBlendRegion).
+            _blendSettleTimer?.Stop()
+            _blendSettleRect = SKRectI.Empty
             ' Aus demselben Grund hier: jede Aenderung kann die Belichtung der RAW-Stufe verschieben
             ' (Regler, Undo, Vorlage, Automatik, Zuruecksetzen, Filmnegativ).
             ScheduleRawExposureRebuild()
@@ -20973,7 +20993,7 @@ Namespace ViewModels
                 ' koalesziert Bursts per Rect-Union von selbst.
                 Dim rect = CandidateAnnotationDirtyRect()
                 _annotationDirtyRect = SKRectI.Empty
-                RequestSceneRegionRender(rect)
+                RequestSceneRegionRender(rect, live:=True)
                 Return
             End If
 
@@ -21126,19 +21146,18 @@ Namespace ViewModels
         ''' Der schnelle SYNCHRONE Region-Render für das Zug-Ende: ein Patch auf dem gewärmten
         ''' Basis-Cache kostet wenige Millisekunden und macht die Szene SOFORT richtig.
         '''
-        ''' Zwei Wächter, aus einem alten Befund heraus: Objekte MIT Mischmodus ziehen über
-        ''' SceneBlendCompositeRequiredRect den halben Bildbereich mit hinein - dort war ein
-        ''' synchroner Render die Ursache für einen sichtbar hängenden Zug-Start. Und eine zu große
-        ''' Region bleibt ebenfalls dem Hintergrund überlassen. Schlägt der Patch fehl (belegter
-        ''' Cache), meldet die Funktion einfach False; der Aufrufer nimmt dann den asynchronen Weg.
+        ''' Er rechnet LIVE, also auch im Mischbereich nur die Region selbst: die ganze Mischflaeche
+        ''' synchron hiess dort beim Loslassen rund eine Sekunde stehendes Fenster. Die Flaeche holt
+        ''' die Ruhepause im Hintergrund nach (SettleBlendRegion). Eine zu große Region bleibt dem
+        ''' Hintergrund überlassen. Schlägt der Patch fehl (belegter Cache), meldet die Funktion
+        ''' einfach False; der Aufrufer nimmt dann den asynchronen Weg.
         ''' </summary>
         Private Function TryFastSyncRegion(rect As SKRectI) As Boolean
             If rect.IsEmpty Then Return False
             If CLng(rect.Width) * CLng(rect.Height) > 4000000L Then Return False
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return False
-            Dim gezogen = _annotations(_selectedAnnotationIndex)
-            If gezogen Is Nothing OrElse OverlaySceneRenderer.IsNonNormalBlend(gezogen) Then Return False
-            Return TryRenderSceneRegionSync(rect)
+            If _annotations(_selectedAnnotationIndex) Is Nothing Then Return False
+            Return TryRenderSceneRegionSync(rect, live:=True)
         End Function
 
         ''' <summary>Holt die während eines Gruppen-Zuges aufgeschobene Masken-Nachführung nach: erst

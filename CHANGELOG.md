@@ -27,6 +27,9 @@
 - Raw photos open in the editor sooner: lens distortion is corrected on the graphics card, and the
   gallery no longer prepares its histogram for the photo while the editor is still opening it.
 
+- Moving a layer in the editor follows the mouse much more smoothly where layers with a blend
+  mode are involved, and letting go no longer freezes the window for a moment.
+
 - Raw photos without a usable built-in preview get sharper thumbnails, made faster, and image
   recognition reads them from the thumbnail instead of developing the photo again.
 
