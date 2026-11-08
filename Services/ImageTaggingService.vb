@@ -156,7 +156,8 @@ Namespace Services
             ' Formate mit eigenem Leser (JPEG XL, HEIF, TIFF, PSD, ICO): das Bild direkt, ohne
             ' PNG-Strom dazwischen. Die Leser liefern es schon aufrecht.
             If ForeignImageDecoder.CanDecode(filePath) Then Return ForeignImageDecoder.TryDecode(filePath)
-            Using stream = ThumbnailCacheService.OpenThumbnailSource(filePath)
+            ' Bei einer RAW ohne brauchbare Vorschau die breite Kachel statt einer neuen Entwicklung.
+            Using stream = ThumbnailCacheService.OpenAnalysisSource(filePath)
                 If stream Is Nothing Then Return Nothing
                 ' Ein einziger Codec fuer Drehung UND Bildpunkte: ein getrenntes Auslesen muesste
                 ' den Strom zurueckspulen, und die ausgepackten Vorschauen sind nicht alle spulbar.

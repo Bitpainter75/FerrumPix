@@ -24,7 +24,16 @@
 - Depth blur, the depth map, object selection and object removal finish noticeably faster on large
   photos, and thumbnails are made more quickly. The results stay exactly the same.
 
+- Raw photos open in the editor sooner: lens distortion is corrected on the graphics card, and the
+  gallery no longer prepares its histogram for the photo while the editor is still opening it.
+
+- Raw photos without a usable built-in preview get sharper thumbnails, made faster, and image
+  recognition reads them from the thumbnail instead of developing the photo again.
+
 ### Fixes
+
+- Some thumbnails came out narrower than their tile and looked soft, for example portrait photos
+  from phones. New thumbnails now always fill the tile.
 
 - **Similar pictures** compare a finer picture of each photo now: different scenes with a similar
   layout, like sunsets on different days, no longer end up in one group, and Strict keeps shots of a

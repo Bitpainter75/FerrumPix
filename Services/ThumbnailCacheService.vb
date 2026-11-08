@@ -66,6 +66,9 @@ Namespace Services
         ''' Mit dem Schalter "hohe Aufloesung": die groesste Kachel ist 640 Punkte breit, bei einer
         ''' Skalierung von 150 Prozent also 960 Pixel.
         Private Const HighResolutionCacheWidth As Integer = 960
+        ''' Mindestbreite der Kachel einer RAW, die dafuer entwickelt werden muss (siehe
+        ''' WriteDevelopedRawTile). Die Bilderkennung liest sie statt neu zu entwickeln.
+        Private Const DevelopedRawTileWidth As Integer = 960
 
         ''' <summary>Die Breite der Vorschaubilder im Zwischenspeicher. Sie steht im Dateinamen
         ''' (<see cref="BuildCacheFileName"/>); ein Umschalten erzeugt die Vorschaubilder also neu, und
@@ -307,6 +310,8 @@ Namespace Services
         Friend Const RawSourceEmbeddedScanner As String = "embedded (scan)"
         Friend Const RawSourceDevelopedWithRecipe As String = "developed with recipe"
         Friend Const RawSourceSmallPreview As String = "small preview"
+        ''' Die Bilderkennung las die schon vorhandene Kachel einer entwickelten RAW.
+        Friend Const RawSourceDevelopedTile As String = "developed tile"
 
         Private Shared Sub NoteRawSource(source As String)
             _lastRawSource = source
@@ -548,19 +553,15 @@ Namespace Services
             Try
                 If File.Exists(cachePath) Then
                     cancellationToken.ThrowIfCancellationRequested()
-                    Using stream = File.OpenRead(cachePath)
-                        isExact = True
-                        Return New Bitmap(stream)
-                    End Using
+                    isExact = True
+                    Return OpenTileBitmap(cachePath, width)
                 End If
 
                 If Not allowStale Then Return Nothing
                 Dim staleCachePath = FindAnyCachedThumbnail(folderId, folderCachePath, imageHash)
                 If Not String.IsNullOrEmpty(staleCachePath) Then
                     cancellationToken.ThrowIfCancellationRequested()
-                    Using stream = File.OpenRead(staleCachePath)
-                        Return New Bitmap(stream)
-                    End Using
+                    Return OpenTileBitmap(staleCachePath, width)
                 End If
             Catch ex As OperationCanceledException
                 Throw
@@ -568,6 +569,93 @@ Namespace Services
             End Try
 
             Return Nothing
+        End Function
+
+        ''' <summary>Eine Kachel von der Platte, hoechstens <paramref name="width"/> breit. Breiter
+        ''' liegen die Kacheln entwickelter RAWs (<see cref="WriteDevelopedRawTile"/>) und alte aus
+        ''' der hohen Aufloesung; voll geladen hielte die Galerie fuer jede davon bis zum Vierfachen
+        ''' an Speicher. Der JPEG-Kodierer verkleinert beim Dekodieren selbst, das kostet nichts.</summary>
+        Private Shared Function OpenTileBitmap(tilePath As String, width As Integer) As Bitmap
+            Dim bytes = File.ReadAllBytes(tilePath)
+            Dim tileWidth = 0
+            Using data = SKData.CreateCopy(bytes)
+                Using codec = SKCodec.Create(data)
+                    If codec IsNot Nothing Then tileWidth = codec.Info.Width
+                End Using
+            End Using
+            Using stream As New MemoryStream(bytes, writable:=False)
+                If tileWidth > width Then Return Bitmap.DecodeToWidth(stream, width, BitmapInterpolationMode.HighQuality)
+                Return New Bitmap(stream)
+            End Using
+        End Function
+
+        ''' <summary>Fuer die Bilderkennung: dieselben Bildpunkte wie <see cref="OpenThumbnailSource"/>,
+        ''' nur bei einer RAW ohne brauchbare Vorschau die Kachel statt einer neuen Entwicklung.
+        '''
+        ''' Diese Kachel ist mindestens <see cref="DevelopedRawTileWidth"/> breit und aufrecht,
+        ''' einschliesslich der Drehung aus der Beistelldatei. Der Katalogindex legt die Kachel vor
+        ''' der Bilderkennung an; fehlt sie trotzdem oder ist sie noch eine alte 480er, wird hier
+        ''' entwickelt wie zuvor und die Kachel dabei gleich geschrieben. Ohne Kachelspeicher oder bei
+        ''' einer Kachel aus dem Rezept (die zeigt die Bearbeitung, nicht das Foto) bleibt es beim
+        ''' Weg ueber die Entwicklung.</summary>
+        Friend Shared Function OpenAnalysisSource(filePath As String) As Stream
+            If Not RawPreviewService.IsSupportedRaw(filePath) Then Return OpenThumbnailSource(filePath)
+            Dim width = CurrentCacheWidth()
+            Dim previewSide As Integer
+            Dim embedded = OpenEmbeddedRawPreview(filePath, width, previewSide)
+            If embedded IsNot Nothing Then Return embedded
+            Dim tile = OpenDevelopedRawTile(filePath, width)
+            If tile IsNot Nothing Then Return tile
+            Return OpenRawThumbnailSource(filePath, width)
+        End Function
+
+        ''' <summary>Die Kachel einer entwickelten RAW als Strom, bei Bedarf erst geschrieben.
+        ''' Nothing, wenn es dafuer keine Kachel gibt (siehe <see cref="OpenAnalysisSource"/>).</summary>
+        Private Shared Function OpenDevelopedRawTile(filePath As String, width As Integer) As Stream
+            Dim enabled As Boolean
+            Dim quality As Integer
+            GetCachedSettings(enabled, quality)
+            If Not enabled OrElse ShouldSkipCache(filePath) Then Return Nothing
+            If DevelopedThumbnailSuffix(filePath).Length > 0 Then Return Nothing
+            Try
+                Dim info As New FileInfo(filePath)
+                If Not info.Exists Then Return Nothing
+                Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
+                Dim folderCachePath = GetFolderCachePathById(folderId)
+                Dim imageHash = HashText(NormalizePath(filePath))
+                Dim cacheFileName = BuildCacheFileName(filePath, imageHash, info.LastWriteTime, info.Length, quality, width)
+                Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
+
+                If Not IsDevelopedRawTile(cachePath, width) Then
+                    Directory.CreateDirectory(folderCachePath)
+                    EnsureFolderRegistered(folderId, ResolveCacheDisplayPath(filePath, Nothing, Nothing))
+                    DeleteStaleCacheFiles(folderId, folderCachePath, imageHash, cacheFileName)
+                    If Not DecodeGate.Run(Function() TryWriteCacheFile(filePath, cachePath, quality, width)) Then Return Nothing
+                    If Not File.Exists(cachePath) Then Return Nothing
+                    GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
+                Else
+                    NoteRawSource(RawSourceDevelopedTile)
+                End If
+                Return New MemoryStream(File.ReadAllBytes(cachePath), writable:=False)
+            Catch ex As OperationCanceledException
+                Throw
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Liegt dort schon die breite Kachel einer entwickelten RAW? Eine Kachel nicht
+        ''' breiter als die eingestellte stammt von vor dem breiten Weg; bei hoher Aufloesung sind
+        ''' beide gleich breit, dort genuegt jede.</summary>
+        Private Shared Function IsDevelopedRawTile(cachePath As String, width As Integer) As Boolean
+            If Not File.Exists(cachePath) Then Return False
+            If width >= DevelopedRawTileWidth Then Return True
+            Using data = SKData.Create(cachePath)
+                If data Is Nothing Then Return False
+                Using codec = SKCodec.Create(data)
+                    Return codec IsNot Nothing AndAlso codec.Info.Width > width
+                End Using
+            End Using
         End Function
 
         ''' <summary>isStillWanted: optionaler günstiger Check, der VOR dem teuren Resize/Encode
@@ -602,9 +690,7 @@ Namespace Services
                 If TryWriteCacheFile(filePath, cachePath, quality, width, isStillWanted) AndAlso File.Exists(cachePath) Then
                     GetFolderFileIndex(folderId).Add(folderCachePath, imageHash, cacheFileName)
                     cancellationToken.ThrowIfCancellationRequested()
-                    Using stream = File.OpenRead(cachePath)
-                        Return New Bitmap(stream)
-                    End Using
+                    Return OpenTileBitmap(cachePath, width)
                 End If
             Catch ex As OperationCanceledException
                 Throw
@@ -780,7 +866,27 @@ Namespace Services
                 End Using
             End If
 
-            Using source = OpenThumbnailSource(filePath, width)
+            ' RAW ohne brauchbare Vorschau: das entwickelte Bild direkt, ohne JPEG-Strom dazwischen.
+            Dim tileSource As Stream
+            If RawPreviewService.IsSupportedRaw(filePath) Then
+                Dim previewSide As Integer
+                tileSource = OpenEmbeddedRawPreview(filePath, width, previewSide)
+                If tileSource Is Nothing Then
+                    Using rawImage = RawDecodeService.TryRenderPreviewBitmap(filePath)
+                        If rawImage IsNot Nothing Then
+                            NoteRawSource(DevelopedReason(previewSide))
+                            Return WriteDevelopedRawTile(filePath, rawImage, cachePath, quality, width, isStillWanted)
+                        End If
+                    End Using
+                    ' Nichts hat die Zielgroesse erreicht - dann lieber eine kleine Vorschau als gar keine.
+                    NoteRawSource(RawSourceSmallPreview)
+                    tileSource = RawPreviewService.ExtractPreviewWithFallback(filePath)
+                End If
+            Else
+                tileSource = OpenThumbnailSource(filePath, width)
+            End If
+
+            Using source = tileSource
                 If source Is Nothing Then Return False
 
                 Using codec = SKCodec.Create(source)
@@ -789,8 +895,9 @@ Namespace Services
                     ' Bei RAW traegt die eingebettete Vorschau oft kein eigenes Orientation-Tag -
                     ' dann gilt das des Containers, sonst steht die Kachel quer zum Editor.
                     Dim origin = PreviewOriginFor(filePath, codec.EncodedOrigin, codec.Info.Width, codec.Info.Height)
+                    Dim sidecarTurn = SidecarRotationFor(filePath)
 
-                    Using original = DecodeScaledOriented(codec, width)
+                    Using original = DecodeScaledOriented(codec, width, SwapsAxes(origin, sidecarTurn))
                         If original Is Nothing Then Return False
 
                         ' Billiger Ausstieg VOR dem teuren Resize/Encode - falls das Element
@@ -801,7 +908,7 @@ Namespace Services
                         ' Eine im Viewer gedrehte RAW-Datei bleibt auf der Platte unveraendert - ihre
                         ' Drehung steht im Sidecar und muss hier oben drauf, sonst zeigt die Kachel
                         ' weiter die ungedrehte eingebettete Vorschau.
-                        Dim oriented = ImageOrientationService.ApplyQuarterRotation(corrected, SidecarRotationFor(filePath))
+                        Dim oriented = ImageOrientationService.ApplyQuarterRotation(corrected, sidecarTurn)
                         Try
                             ' Zieldimensionen aus dem KORRIGIERTEN Bitmap berechnen, nicht aus
                             ' info.Width/Height - sonst bekommt ein gedrehtes Hochkantfoto ein
@@ -849,17 +956,31 @@ Namespace Services
         ''' ist als Volldecode+Resize - das war beim erstmaligen Aufbau des Thumbnail-Caches für
         ''' einen ganzen (noch ungecachten) Ordner der Haupttreiber für minutenlange 100%-CPU-Last.
         ''' Formate ohne Skalierungsunterstützung liefern über GetScaledDimensions einfach die
-        ''' Originalgröße zurück - dort ändert sich am Verhalten nichts.</summary>
-        Private Shared Function DecodeScaledOriented(codec As SKCodec, targetWidth As Integer) As SKBitmap
+        ''' Originalgröße zurück - dort ändert sich am Verhalten nichts.
+        '''
+        ''' NIE KLEINER ALS DIE KACHEL. JPEG kennt nur Achtelstufen, und Skia waehlt die NAECHSTE,
+        ''' auch nach unten: ein Hochformat mit 3024 Punkten Breite kam bei Faktor 0,159 auf ein
+        ''' Achtel und damit auf 378 statt 480 Punkte, ein Bild mit 2736 auf 341. Die Kachel blieb
+        ''' dann so schmal, denn hochgerechnet wird danach nicht. Deshalb die kleinste Stufe, die
+        ''' die Breite noch erreicht. <paramref name="swapsAxes"/>: das Bild wird danach um 90 Grad
+        ''' gedreht, die Kachelbreite liegt also auf der Hoehe der Datei.</summary>
+        Private Shared Function DecodeScaledOriented(codec As SKCodec, targetWidth As Integer, Optional swapsAxes As Boolean = False) As SKBitmap
             Dim info = codec.Info
             If info.Width <= 0 OrElse info.Height <= 0 Then Return Nothing
 
+            Dim sourceEdge = If(swapsAxes, info.Height, info.Width)
             Dim decodeInfo As SKImageInfo
-            If targetWidth >= info.Width Then
+            If targetWidth >= sourceEdge Then
                 decodeInfo = New SKImageInfo(info.Width, info.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
             Else
-                Dim desiredScale = targetWidth / CDbl(info.Width)
+                Dim desiredScale = targetWidth / CDbl(sourceEdge)
                 Dim scaledSize = codec.GetScaledDimensions(CSng(desiredScale))
+                Dim eighths = CInt(Math.Ceiling(desiredScale * 8))
+                While If(swapsAxes, scaledSize.Height, scaledSize.Width) < targetWidth AndAlso eighths <= 8
+                    scaledSize = codec.GetScaledDimensions(eighths / 8.0F)
+                    eighths += 1
+                End While
+                If If(swapsAxes, scaledSize.Height, scaledSize.Width) < targetWidth Then scaledSize = New SKSizeI(info.Width, info.Height)
                 decodeInfo = New SKImageInfo(Math.Max(1, scaledSize.Width), Math.Max(1, scaledSize.Height), SKColorType.Bgra8888, SKAlphaType.Premul)
             End If
 
@@ -879,12 +1000,39 @@ Namespace Services
         ''' JPEG-XL-/H265-Vorschauen neuerer Kameras liefert LibRaw etwas, das SkiaSharp nicht
         ''' dekodieren kann.</summary>
         Private Shared Function OpenRawThumbnailSource(filePath As String, width As Integer) As Stream
+            Dim previewSide As Integer
+            Dim embedded = OpenEmbeddedRawPreview(filePath, width, previewSide)
+            If embedded IsNot Nothing Then Return embedded
+
+            ' Stufe 3: wirklich entwickeln. Fuer Dateien ohne jede eingebettete Vorschau (Leica
+            ' Digilux 2) und fuer zu kleine Vorschauen (Leica M8 fuehrt nur 320x240, was auf einer
+            ' 480er Kachel sichtbar matschig waere). Der Decode laeuft ueber half_size. Die Kachel
+            ' selbst nimmt diesen Strom nicht, sie verkleinert das entwickelte Bild direkt (siehe
+            ' TryWriteCacheFile); hier landen nur noch Wege ohne Kachelspeicher.
+            Dim developed = RawDecodeService.TryRenderPreviewJpeg(filePath)
+            If developed IsNot Nothing AndAlso developed.Length > 0 Then
+                NoteRawSource(DevelopedReason(previewSide))
+                Return developed
+            End If
+            developed?.Dispose()
+
+            ' Nichts hat die Zielgroesse erreicht - dann lieber eine kleine Vorschau als gar keine.
+            NoteRawSource(RawSourceSmallPreview)
+            Return RawPreviewService.ExtractPreviewWithFallback(filePath)
+        End Function
+
+        ''' <summary>Die ersten beiden Stufen von <see cref="OpenRawThumbnailSource"/>: die
+        ''' eingebettete Vorschau, wenn sie fuer eine Kachel dieser Breite taugt, sonst Nothing.
+        ''' <paramref name="previewSide"/> nennt die laengere Kante der groessten gefundenen Vorschau
+        ''' (-1 keine, 0 nicht lesbar), fuer den Vermerk der Quelle.</summary>
+        Private Shared Function OpenEmbeddedRawPreview(filePath As String, width As Integer, ByRef previewSide As Integer) As MemoryStream
             ' Stufe 1: LibRaws Thumbnail-API - formatkundig und schnell (bei einer 50-MP-.arw
             ' 2 ms gegen 26 ms des Scanners, der bis zu 16 MB nach JPEG-Signaturen durchsucht).
             Dim viaLibRaw = RawDecodeService.TryExtractThumbnail(filePath)
             Dim libRawSide As Integer
             If IsBigEnoughForTile(viaLibRaw, width, libRawSide) Then
                 NoteRawSource(RawSourceEmbeddedLibRaw)
+                previewSide = libRawSide
                 Return viaLibRaw
             End If
             viaLibRaw?.Dispose()
@@ -895,24 +1043,41 @@ Namespace Services
             Dim scannedSide As Integer
             If IsBigEnoughForTile(scanned, width, scannedSide) Then
                 NoteRawSource(RawSourceEmbeddedScanner)
+                previewSide = scannedSide
                 Return scanned
             End If
             scanned?.Dispose()
 
-            ' Stufe 3: wirklich entwickeln. Fuer Dateien ohne jede eingebettete Vorschau (Leica
-            ' Digilux 2) und fuer zu kleine Vorschauen (Leica M8 fuehrt nur 320x240, was auf einer
-            ' 480er Kachel sichtbar matschig waere). Der Decode laeuft ueber half_size. Einmalig -
-            ' danach liegt die Kachel im Thumbnail-Cache.
-            Dim developed = RawDecodeService.TryRenderPreviewJpeg(filePath)
-            If developed IsNot Nothing AndAlso developed.Length > 0 Then
-                NoteRawSource(DevelopedReason(Math.Max(libRawSide, scannedSide)))
-                Return developed
-            End If
-            developed?.Dispose()
+            previewSide = Math.Max(libRawSide, scannedSide)
+            Return Nothing
+        End Function
 
-            ' Nichts hat die Zielgroesse erreicht - dann lieber eine kleine Vorschau als gar keine.
-            NoteRawSource(RawSourceSmallPreview)
-            Return RawPreviewService.ExtractPreviewWithFallback(filePath)
+        ''' <summary>Die Kachel einer RAW, die fuer ihre Kachel entwickelt werden musste: das
+        ''' entwickelte Bild direkt verkleinert, ohne JPEG dazwischen, und mindestens
+        ''' <see cref="DevelopedRawTileWidth"/> breit.
+        '''
+        ''' Warum breiter als die uebrigen Kacheln: die Bilderkennung liest bei genau diesen RAWs die
+        ''' Kachel statt neu zu entwickeln (<see cref="OpenAnalysisSource"/>), und aus einer 480er
+        ''' Kachel wichen die Begriffe deutlich staerker von denen aus der Datei ab als aus einer
+        ''' 960er. Die halbe Entwicklung liefert ohnehin weit mehr als 960 Punkte; die groessere
+        ''' Kachel kostet beim Schreiben nur das Verkleinern auf die andere Groesse. Die Galerie
+        ''' laedt sie auf ihre Kachelbreite herunter (<see cref="OpenTileBitmap"/>).</summary>
+        Private Shared Function WriteDevelopedRawTile(filePath As String, developed As SKBitmap, cachePath As String,
+                                                      quality As Integer, width As Integer,
+                                                      isStillWanted As Func(Of Boolean)) As Boolean
+            If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
+            ' Dieselbe Drehung wie bisher ueber den JPEG-Strom: der trug kein eigenes Tag, es galt
+            ' also das des Containers, sofern LibRaw das Bild nicht schon aufgerichtet hat.
+            Dim origin = PreviewOriginFor(filePath, SKEncodedOrigin.TopLeft, developed.Width, developed.Height)
+            Dim corrected = ImageOrientationService.ApplyOrientation(developed, origin)
+            Dim oriented = ImageOrientationService.ApplyQuarterRotation(corrected, SidecarRotationFor(filePath))
+            Try
+                ' Kein Farbprofil: die Entwicklung liefert sRGB-Werte, und der JPEG-Strom trug auch keins.
+                Return WriteCacheBitmap(oriented, Nothing, cachePath, quality, Math.Max(width, DevelopedRawTileWidth))
+            Finally
+                If Not Object.ReferenceEquals(oriented, corrected) Then oriented.Dispose()
+                If Not Object.ReferenceEquals(corrected, developed) Then corrected.Dispose()
+            End Try
         End Function
 
         ''' <summary>Taugt diese Vorschau fuer eine Kachel, oder muesste sie hochskaliert (und damit
@@ -1060,7 +1225,7 @@ Namespace Services
                     Return Bitmap.DecodeToWidth(stream, maxWidth)
                 End If
 
-                Using original = DecodeScaledOriented(codec, maxWidth)
+                Using original = DecodeScaledOriented(codec, maxWidth, SwapsAxes(origin, rotation))
                     If original Is Nothing Then
                         stream.Seek(0, SeekOrigin.Begin)
                         Return Bitmap.DecodeToWidth(stream, maxWidth)
@@ -1098,6 +1263,16 @@ Namespace Services
                                                  width As Integer, height As Integer) As SKEncodedOrigin
             If String.IsNullOrWhiteSpace(filePath) OrElse Not RawPreviewService.IsSupportedRaw(filePath) Then Return codecOrigin
             Return ImageOrientationService.RawPreviewOrigin(filePath, codecOrigin, width, height)
+        End Function
+
+        ''' <summary>Tauschen Orientierung und Vierteldrehung zusammen Breite und Hoehe? Fuer
+        ''' <see cref="DecodeScaledOriented"/>, das die Kachelbreite auf der richtigen Achse der
+        ''' Datei treffen muss.</summary>
+        Private Shared Function SwapsAxes(origin As SKEncodedOrigin, quarterTurnDegrees As Integer) As Boolean
+            Dim byOrigin = origin = SKEncodedOrigin.LeftTop OrElse origin = SKEncodedOrigin.RightTop OrElse
+                           origin = SKEncodedOrigin.RightBottom OrElse origin = SKEncodedOrigin.LeftBottom
+            Dim byTurn = ImageOrientationService.NormalizeQuarterTurn(quarterTurnDegrees) Mod 180 <> 0
+            Return byOrigin Xor byTurn
         End Function
 
         ''' <summary>Drehung aus dem RAW-Sidecar (0 fuer alle anderen Formate). Die Vorschau in der

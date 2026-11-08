@@ -1082,6 +1082,12 @@ Namespace ViewModels
                          ' abgeschaltet hat, bekaeme sonst doch noch ein Bild - und mit ihm den
                          ' Speicher dafuer.
                          Dim scopeGeneration = ScopeSelectionViewModel.Generation
+                         ' Bei einer RAW kostet das eine Entwicklung am Decode-Tor; im Protokoll
+                         ' steht deshalb, dass sie von hier kommt und nicht vom Editor oder einer
+                         ' Kachel.
+                         If RawPreviewService.IsSupportedRaw(path) Then
+                             DiagnosticLogService.LogAlways("InfoPanel.ScopeImage", $"Analysebild der Info-Leiste file={IO.Path.GetFileName(path)}")
+                         End If
                          ' Das Bild, das der Betrachter zeigen wuerde - bei RAW mit Rezept, wie in
                          ' Lightroom (siehe ViewerViewModel.BuildScopeImageAsShown).
                          Dim histogram = ViewerViewModel.BuildScopeImageAsShown(path, 600, 300)

@@ -698,13 +698,7 @@ Namespace Services
         ''' Der halbe Weg beruehrt den MRU-Cache des Editors nicht; ein Oeffnen im Editor
         ''' dekodiert also selbst.</summary>
         Public Shared Function TryRenderPreviewJpeg(path As String) As MemoryStream
-            Dim developed = TryDecodeThumbnail(path)
-            If developed IsNot Nothing AndAlso Math.Max(developed.Width, developed.Height) < MinReducedPreviewEdge Then
-                developed.Dispose()
-                developed = Nothing
-            End If
-            If developed Is Nothing Then developed = TryDecode(path)
-            Using developed
+            Using developed = TryRenderPreviewBitmap(path)
                 If developed Is Nothing Then Return Nothing
                 Using image = SKImage.FromBitmap(developed)
                     Using data = image.Encode(SKEncodedImageFormat.Jpeg, 95)
@@ -716,6 +710,20 @@ Namespace Services
                     End Using
                 End Using
             End Using
+        End Function
+
+        ''' <summary>Dieselbe Entwicklung wie <see cref="TryRenderPreviewJpeg"/>, aber als Bild statt
+        ''' als JPEG: aufrecht, ohne Farbprofil (die Werte sind schon sRGB). Fuer die Kachel, die das
+        ''' Bild ohnehin gleich verkleinert. Der Weg ueber JPEG kodierte rund 5 MP mit Qualitaet 95,
+        ''' nur damit der Kachelweg sie sofort wieder dekodiert.</summary>
+        Public Shared Function TryRenderPreviewBitmap(path As String) As SKBitmap
+            Dim developed = TryDecodeThumbnail(path)
+            If developed IsNot Nothing AndAlso Math.Max(developed.Width, developed.Height) < MinReducedPreviewEdge Then
+                developed.Dispose()
+                developed = Nothing
+            End If
+            If developed Is Nothing Then developed = TryDecode(path)
+            Return developed
         End Function
 
         ' ── Dekodieren mit MRU-1-Cache ───────────────────────────────────────────
@@ -1157,6 +1165,13 @@ Namespace Services
             ' ueblichen Entwicklern. Vorher wurde dort der Rand wiederholt, und an einem
             ' kissenfoermig korrigierenden Objektiv lagen in den Ecken breite Streifen.
             Dim zoom = DistortionFillScale(k, width, height, norm)
+            ' Zuerst die Karte: dieselbe Rechnung als ein Shader-Durchgang (ImageProcessor.
+            ' TryRemoveDistortionOnGpu, dort steht, wie weit sie abweicht). Ohne Karte, bei einer
+            ' Kennlinie, die der Shader nicht kann, oder wenn der Lauf scheitert, wie bisher hier.
+            Dim inset = If(width > 4 * DistortionEdgeInset AndAlso height > 4 * DistortionEdgeInset, DistortionEdgeInset, 0)
+            Dim onGpu = ImageProcessor.TryRemoveDistortionOnGpu(sourcePixels, sourceStride,
+                ImageProcessor.BuildDistortionShaderValues(k, width, height, alphaType, norm, zoom, inset))
+            If onGpu IsNot Nothing Then Return onGpu
             Dim target = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, alphaType))
             Dim targetPointer = target.GetPixels()
             Dim targetStride = target.RowBytes

@@ -3202,6 +3202,255 @@ half4 main(float2 p) {
 }
 "
 
+        ' ── Verzeichnung beim Decode ──────────────────────────────────────────────
+        '
+        ' Dieselbe Rechnung wie RawDecodeService.RemoveDistortionFromPixels, je Zielpunkt: von der
+        ' Mitte rueckwaerts in die Quelle (Kennlinie der Datei, mit Staerke und Vergroesserung),
+        ' dort Lanczos-3 ueber sechs mal sechs Punkte mit den Gewichten auf 1024stel gerundet und auf
+        ' die Summe 1 gebracht, geklemmt wie im Prozessor. Auf dem Prozessor kostete das trotz
+        ' paralleler Zeilen 0,15 bis 0,35 s je Oeffnen einer RAW mit Objektivdaten.
+        '
+        ' NICHT bytegleich: der Prozessor rechnet Lage und Gewichte in doppelter Genauigkeit, der
+        ' Shader in einfacher. Die Lage weicht damit um wenige Zehntausendstel Punkt ab; wo das die
+        ' gerundete Tabellenstufe oder die Rundung des Ergebnisses kippt, liegt ein Kanal eine Stufe
+        ' daneben. Gemessen in der Kettenmessung (verzeichnung) und geprueft im Pruefstand.
+
+        ''' <summary>Laengste Kennlinie aus Stuetzwerten, die der Shader kann. Die Kameradaten
+        ''' liefern bis 65 Werte; laengere bleiben auf dem Prozessor.</summary>
+        Private Const DistortionMaxKnots As Integer = 128
+
+        ''' <summary>Was der Shader zur Verzeichnung braucht, aus Kennlinie, Bildmassen, Normierung,
+        ''' Vergroesserung und Einzug. Nothing, wenn der Shader die Kennlinie nicht kann.</summary>
+        Friend NotInheritable Class DistortionShaderValues
+            Public Width As Integer
+            Public Height As Integer
+            Public AlphaType As SKAlphaType
+            Public Model As Single
+            Public Coefficients As Single()
+            Public Knots As Single()
+            Public KnotCount As Single
+            Public CornerScale As Single
+            Public Strength As Single
+            Public NormScale As Single
+            Public Zoom As Single
+            Public Center As Single()
+            Public SampleBox As Single()
+            Public TapBox As Single()
+        End Class
+
+        Friend Shared Function BuildDistortionShaderValues(k As LensDataService.Korrektur, width As Integer, height As Integer,
+                                                           alphaType As SKAlphaType, norm As Double, zoom As Double,
+                                                           inset As Integer) As DistortionShaderValues
+            If k Is Nothing OrElse width < 2 OrElse height < 2 Then Return Nothing
+            If alphaType <> SKAlphaType.Premul AndAlso alphaType <> SKAlphaType.Opaque Then Return Nothing
+            Dim model As Single
+            Select Case k.DistortionModel
+                Case "poly3" : model = 1
+                Case "poly5" : model = 2
+                Case "ptlens" : model = 3
+                Case "knots" : model = If(k.DistortionKnots Is Nothing, 0, 4)
+                Case Else : model = 0
+            End Select
+            Dim knots(DistortionMaxKnots - 1) As Single
+            Dim knotCount = 0
+            If model = 4 Then
+                If k.DistortionKnots.Length > DistortionMaxKnots Then Return Nothing
+                knotCount = k.DistortionKnots.Length
+                For i = 0 To knotCount - 1
+                    knots(i) = CSng(k.DistortionKnots(i))
+                Next
+            End If
+            Dim ring = If(inset > 0, 1, 0)
+            Return New DistortionShaderValues With {
+                .Width = width, .Height = height, .AlphaType = alphaType,
+                .Model = model,
+                .Coefficients = {CSng(k.Va), CSng(k.Vb), CSng(k.Vc)},
+                .Knots = knots, .KnotCount = knotCount,
+                .CornerScale = CSng(k.CornerScale),
+                .Strength = CSng(k.DistortionStrength),
+                .NormScale = CSng(norm), .Zoom = CSng(zoom),
+                .Center = {CSng((width - 1) / 2.0), CSng((height - 1) / 2.0)},
+                .SampleBox = {CSng(inset), CSng(width - 1.001 - inset), CSng(height - 1.001 - inset)},
+                .TapBox = {CSng(ring), CSng(width - 1 - ring), CSng(height - 1 - ring)}}
+        End Function
+
+        ''' <summary>Die Verzeichnung auf der Karte, aus dem Puffer der Quelle (Bgra8888, Zeilen mit
+        ''' <paramref name="stride"/> Bytes). Nothing, wenn der Weg nicht taugt oder scheitert; der
+        ''' Aufrufer rechnet dann auf dem Prozessor.</summary>
+        Friend Shared Function TryRemoveDistortionOnGpu(pixels As Byte(), stride As Integer,
+                                                        values As DistortionShaderValues) As SKBitmap
+            If values Is Nothing OrElse pixels Is Nothing Then Return Nothing
+            If Not GpuImageService.Enabled OrElse _gpuForcedOffOnThisThread Then Return Nothing
+            If CLng(values.Width) * values.Height < GpuMinimumPixels Then Return Nothing
+            If Not GpuImageService.IsAvailable Then
+                NoteGpuFallback("Verzeichnung, Grafikkarte nicht bereit: " & GpuImageService.FailureReason)
+                Return Nothing
+            End If
+            If LastGpuCheck.State = GpuCheckState.Untested Then CheckGpuImageProcessing()
+            If LastGpuCheck.State <> GpuCheckState.Works Then
+                NoteGpuFallback("Verzeichnung, Selbstpruefung nicht bestanden: " & If(LastGpuCheck.Detail, ""))
+                Return Nothing
+            End If
+            Dim info = New SKImageInfo(values.Width, values.Height, SKColorType.Bgra8888, values.AlphaType)
+            Dim snapshot As SKImage = Nothing
+            Dim sample As GpuResultSample = Nothing
+            ' Das Bild liegt direkt ueber dem Puffer, ohne Kopie (80 MB bei 20 MP). Der Puffer bleibt
+            ' dafuer angeheftet, bis Skia das Bild freigibt; das tut der Dienst, wenn der Auftrag
+            ' endet, auch nach Ablauf seiner Frist.
+            Dim handle = Runtime.InteropServices.GCHandle.Alloc(pixels, Runtime.InteropServices.GCHandleType.Pinned)
+            Try
+                Using view = New SKBitmap()
+                    If view.InstallPixels(info, handle.AddrOfPinnedObject(), stride) Then sample = SampleForGpuResult(view)
+                End Using
+                Dim pinned = handle
+                Using pixmap = New SKPixmap(info, handle.AddrOfPinnedObject(), stride)
+                    snapshot = SKImage.FromPixels(pixmap, Sub(address, context) pinned.Free())
+                End Using
+            Finally
+                If snapshot Is Nothing Then handle.Free()
+            End Try
+            If snapshot Is Nothing Then Return Nothing
+            Dim result As SKBitmap = Nothing
+            If Not PerformanceTraceService.Measure("Decode: Verzeichnung (Grafikkarte)",
+                    Function() GpuImageService.TryRun(Function(gr) RenderDistortionStage(gr, snapshot, values), result, snapshot)) Then
+                NoteGpuFallback("Verzeichnung, Lauf auf der Grafikkarte gescheitert (Fehlerdatei)")
+                Return Nothing
+            End If
+            If Not AcceptGpuResult(JudgeGpuResult(sample, result), "Verzeichnung") Then
+                result?.Dispose()
+                Return Nothing
+            End If
+            Return result
+        End Function
+
+        ''' <summary>Der Shader ueber das ganze Bild. Mit <paramref name="gr"/> Nothing rechnet Skia
+        ''' ihn auf dem Prozessor (nur fuer die Pruefung, die keine Karte braucht).</summary>
+        Friend Shared Function RenderDistortionStage(gr As GRContext, image As SKImage, values As DistortionShaderValues) As SKBitmap
+            Dim effect = StageEffect("Distortion", DistortionShader)
+            Dim u = New SKRuntimeEffectUniforms(effect)
+            u("center") = values.Center
+            u("zoom") = values.Zoom
+            u("normScale") = values.NormScale
+            u("strength") = values.Strength
+            u("model") = values.Model
+            u("coef") = values.Coefficients
+            u("cornerScale") = values.CornerScale
+            u("knotCount") = values.KnotCount
+            u("knots") = values.Knots
+            u("sampleBox") = values.SampleBox
+            u("tapBox") = values.TapBox
+            Dim source = If(gr Is Nothing, image, image.ToTextureImage(gr))
+            If source Is Nothing Then Throw New InvalidOperationException("Textur auf der Grafikkarte nicht anlegbar.")
+            Try
+                Using surface = DrawStage(gr, values.Width, values.Height, effect, u, ("src", source))
+                    If surface Is Nothing Then Throw New InvalidOperationException("Zielflaeche nicht anlegbar.")
+                    If gr IsNot Nothing Then
+                        gr.Flush()
+                        gr.Submit(True)
+                    End If
+                    Dim result = New SKBitmap(New SKImageInfo(values.Width, values.Height, SKColorType.Bgra8888, values.AlphaType))
+                    If Not surface.ReadPixels(result.Info, result.GetPixels(), result.RowBytes, 0, 0) Then
+                        result.Dispose()
+                        Throw New InvalidOperationException("Zuruecklesen gescheitert.")
+                    End If
+                    Return result
+                End Using
+            Finally
+                If Not Object.ReferenceEquals(source, image) Then source.Dispose()
+            End Try
+        End Function
+
+        Private Const DistortionShader As String = "
+uniform shader src;
+uniform float2 center;
+uniform float zoom;
+uniform float normScale;
+uniform float strength;
+uniform float model;
+uniform float3 coef;
+uniform float cornerScale;
+uniform float knotCount;
+uniform float knots[128];
+uniform float3 sampleBox;
+uniform float3 tapBox;
+// LensDataService.InterpolateKnots: linear, ausserhalb der Randwert.
+float knotValue(float position) {
+    if (knotCount < 0.5) return 1.0;
+    if (knotCount < 1.5) return knots[0];
+    float p = clamp(position, 0.0, 1.0) * (knotCount - 1.0);
+    float i = min(floor(p), knotCount - 2.0);
+    float t = p - i;
+    float a = knots[0];
+    float b = knots[1];
+    for (int k = 0; k < 127; k++) {
+        if (float(k) == i) { a = knots[k]; b = knots[k + 1]; break; }
+    }
+    return a + t * (b - a);
+}
+// LensDataService.DistortionRadiusFull
+float radiusFull(float ru) {
+    if (model == 1.0) return ru * (1.0 - coef.x + coef.x * ru * ru);
+    if (model == 2.0) { float r2 = ru * ru; return ru * (1.0 + coef.x * r2 + coef.y * r2 * r2); }
+    if (model == 3.0) return ru * (coef.x * ru * ru * ru + coef.y * ru * ru + coef.z * ru + 1.0 - coef.x - coef.y - coef.z);
+    if (model == 4.0) return ru * knotValue(ru * cornerScale);
+    return ru;
+}
+// RawDecodeService.BuildLanczosWeights, vor dem Teilen durch die Summe.
+float lanczos(float d) {
+    d = abs(d);
+    if (d < 0.000001) return 1.0;
+    if (d >= 3.0) return 0.0;
+    float px = 3.14159265358979 * d;
+    return 3.0 * sin(px) * sin(px / 3.0) / (px * px);
+}
+half4 main(float2 p) {
+    float x = floor(p.x);
+    float y = floor(p.y);
+    float dx = (x - center.x) / zoom;
+    float dy = (y - center.y) / zoom;
+    float rPix = sqrt(dx * dx + dy * dy);
+    float sx = center.x;
+    float sy = center.y;
+    if (rPix > 0.0) {
+        float ru = rPix * normScale;
+        float rd = radiusFull(ru);
+        float f = (ru + (rd - ru) * strength) / ru;
+        sx = center.x + dx * f;
+        sy = center.y + dy * f;
+    }
+    // RawDecodeService.SampleLanczos3
+    sx = clamp(sx, sampleBox.x, sampleBox.y);
+    sy = clamp(sy, sampleBox.x, sampleBox.z);
+    float x0 = floor(sx);
+    float y0 = floor(sy);
+    float tx = roundHalfEven((sx - x0) * 1024.0) / 1024.0;
+    float ty = roundHalfEven((sy - y0) * 1024.0) / 1024.0;
+    float wx[6];
+    float wy[6];
+    float sumX = 0.0;
+    float sumY = 0.0;
+    for (int i = 0; i < 6; i++) {
+        wx[i] = lanczos(tx - float(i - 2));
+        wy[i] = lanczos(ty - float(i - 2));
+        sumX += wx[i];
+        sumY += wy[i];
+    }
+    float4 acc = float4(0.0);
+    for (int j = 0; j < 6; j++) {
+        float yy = clamp(y0 - 2.0 + float(j), tapBox.x, tapBox.z);
+        float wyj = wy[j] / sumY;
+        for (int i = 0; i < 6; i++) {
+            float xx = clamp(x0 - 2.0 + float(i), tapBox.x, tapBox.y);
+            acc += toBytes(src.eval(float2(xx + 0.5, yy + 0.5))) * (wyj * (wx[i] / sumX));
+        }
+    }
+    float a = clamp(acc.a, 0.0, 255.0);
+    float3 rgb = min(float3(a), max(float3(0.0), acc.rgb));
+    rgb = float3(roundHalfEven(rgb.r), roundHalfEven(rgb.g), roundHalfEven(rgb.b));
+    return half4(half3(rgb / 255.0), half(roundHalfEven(a) / 255.0));
+}
+"
+
     End Class
 
 End Namespace
