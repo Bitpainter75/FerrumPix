@@ -9455,8 +9455,8 @@ Namespace ViewModels
         ''' (Malen, Radieren, Masken- und Auswahlpinsel, Retusche). Dieselbe Zahl steht als Maximum in
         ''' den Reglern von DrawPanel, MaskPanel und SelectionPanel. Bis 0.9.55 war es 500: bei einem
         ''' Bild mit 8000 Punkten Breite deckte der groesste Pinsel so nur gut sechs Prozent davon ab,
-        ''' zu wenig fuer weiches Auslaufen grosser Flaechen (Nutzerbefund).</summary>
-        Public Const MaxToolSize As Double = 2000
+        ''' zu wenig fuer weiches Auslaufen grosser Flaechen (Nutzerbefund). Danach 2000, auch das reichte fuer grosse Flaechen nicht (Nutzerbefund).</summary>
+        Public Const MaxToolSize As Double = 3000
 
         Public Property RetouchRadius As Double
             Get
@@ -12116,12 +12116,12 @@ Namespace ViewModels
                     Case FileConflictChoice.Rename
                         Dim newName = If(result.NewName, "").Trim()
                         If String.IsNullOrWhiteSpace(newName) Then Return ""
-                        If HasInvalidFileNameChars(IO.Path.GetFileNameWithoutExtension(newName)) Then
+                        If HasInvalidFileNameChars(MediaFileTypes.WithoutKnownExtension(newName)) Then
                             Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"),
                                                            LocalizationService.T("Der Dateiname enthält ungültige Zeichen."))
                             Continue Do
                         End If
-                        If String.IsNullOrEmpty(IO.Path.GetExtension(newName)) Then newName &= extension
+                        If String.IsNullOrEmpty(MediaFileTypes.KnownExtension(newName)) Then newName &= extension
                         newName = MediaFileTypes.WithLowerCaseExtension(newName)
                         Dim folder = IO.Path.GetDirectoryName(targetPath)
                         If String.IsNullOrEmpty(folder) Then Return ""
@@ -22916,7 +22916,8 @@ Namespace ViewModels
                                                              LocalizationService.T("Abbrechen"))
                 If saveAsResult Is Nothing OrElse String.IsNullOrWhiteSpace(saveAsResult.BaseName) Then Return False
 
-                Dim cleanBaseName = IO.Path.GetFileNameWithoutExtension(saveAsResult.BaseName.Trim())
+                ' Nur eine bekannte Endung faellt weg: "f1.4" im Namen ist keine.
+                Dim cleanBaseName = MediaFileTypes.WithoutKnownExtension(saveAsResult.BaseName.Trim())
                 If HasInvalidFileNameChars(cleanBaseName) Then
                     Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), LocalizationService.T("Der Dateiname enthält ungültige Zeichen."))
                     Return False

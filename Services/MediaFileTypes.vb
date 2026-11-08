@@ -53,9 +53,38 @@ Namespace Services
         ''' Kopie oder ein Verschieben, das ist dieselbe Datei an anderer Stelle.</summary>
         Public Shared Function WithLowerCaseExtension(fileName As String) As String
             If String.IsNullOrEmpty(fileName) Then Return fileName
-            Dim extension = Path.GetExtension(fileName)
+            ' Nur eine bekannte Endung: in "foto-f3.5_MG" ist ".5_MG" Teil des Namens.
+            Dim extension = KnownExtension(fileName)
             If extension.Length = 0 OrElse String.Equals(extension, extension.ToLowerInvariant(), StringComparison.Ordinal) Then Return fileName
             Return fileName.Substring(0, fileName.Length - extension.Length) & extension.ToLowerInvariant()
+        End Function
+
+        ''' <summary>Was ausser den Medien noch als Endung eines vergebenen Namens gilt: PDF ist ein
+        ''' Ziel von Speichern unter, wird aber nicht angezeigt.</summary>
+        Private Shared ReadOnly ExtraTargetExtensions As String() = {".pdf"}
+
+        ''' <summary>Die Endung des Namens, wenn sie ein Format ist, das die Anwendung kennt
+        ''' (<see cref="Displayable"/> oder ein Ziel wie PDF); sonst leer.
+        '''
+        ''' <c>Path.GetExtension</c> haelt alles nach dem letzten Punkt fuer eine Endung. Fuer einen
+        ''' Namen, den ein Nutzer tippt oder ein Muster bildet, ist das falsch: Blende und Brennweite
+        ''' stehen oft mit Punkt darin ("Nikkor_5.8cm-f1.4"). Wer dort am Punkt abschnitt, kuerzte
+        ''' den Namen; wer dort keine Endung anhaengte, weil schon eine "da" war, schrieb eine Datei
+        ''' ohne ihre Endung.</summary>
+        Public Shared Function KnownExtension(fileName As String) As String
+            If String.IsNullOrEmpty(fileName) Then Return ""
+            Dim extension = Path.GetExtension(fileName)
+            If extension.Length = 0 Then Return ""
+            Dim lower = extension.ToLowerInvariant()
+            Return If(Displayable.Contains(lower) OrElse ExtraTargetExtensions.Contains(lower), extension, "")
+        End Function
+
+        ''' <summary>Der Name ohne seine Endung, aber nur, wenn es eine bekannte ist (siehe
+        ''' <see cref="KnownExtension"/>). Ein Punkt mitten im Namen bleibt stehen.</summary>
+        Public Shared Function WithoutKnownExtension(fileName As String) As String
+            If String.IsNullOrEmpty(fileName) Then Return If(fileName, "")
+            Dim extension = KnownExtension(fileName)
+            Return fileName.Substring(0, fileName.Length - extension.Length)
         End Function
 
     End Class

@@ -6380,7 +6380,7 @@ Namespace ViewModels
             End If
 
             If appendSourceExtension AndAlso
-               String.IsNullOrEmpty(IO.Path.GetExtension(result)) AndAlso Not String.IsNullOrEmpty(extension) Then
+               String.IsNullOrEmpty(MediaFileTypes.KnownExtension(result)) AndAlso Not String.IsNullOrEmpty(extension) Then
                 result &= extension
             End If
             ' Ein Dateiname, nicht nur ein Stamm: die Endung kleinschreiben, egal ob sie von der

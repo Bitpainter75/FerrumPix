@@ -1,3 +1,14 @@
+## Unreleased
+
+### Changes
+
+- Brushes, masks, selection brushes and retouching in the editor now go up to a size of 3000.
+
+### Fixes
+
+- A file name with a dot in it, such as an aperture like "f1.4", is no longer cut short when saving
+  or renaming, and the file keeps its extension.
+
 ## 0.9.78
 
 ### Changes
