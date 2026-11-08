@@ -359,7 +359,7 @@ Namespace Services
 
                     Using scaled = New SKBitmap(New SKImageInfo(target.Width, target.Height,
                                                                SKColorType.Alpha8, SKAlphaType.Premul))
-                        If Not sourceAlpha.ScalePixels(
+                        If Not ImageProcessor.ScalePixelsFast(sourceAlpha,
                             scaled, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
                             DiagnosticLogService.LogAlways("Hochskalieren", "Alphakanal liess sich nicht skalieren")
                             Return

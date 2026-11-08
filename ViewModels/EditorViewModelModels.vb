@@ -441,7 +441,7 @@ Namespace ViewModels
             Dim w = Math.Max(1, CInt(Math.Round(source.Width * f)))
             Dim h = Math.Max(1, CInt(Math.Round(source.Height * f)))
             Dim target = New SKBitmap(w, h, source.ColorType, source.AlphaType)
-            If Not source.ScalePixels(target, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
+            If Not ImageProcessor.ScalePixelsFast(source, target, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
                 target.Dispose()
                 Return Nothing
             End If

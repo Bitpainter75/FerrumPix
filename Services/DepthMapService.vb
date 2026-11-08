@@ -64,7 +64,7 @@ Namespace Services
                 ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
                 Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
                 Using small = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                    If Not image.ScalePixels(small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    If Not ImageProcessor.ScalePixelsFast(image, small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                     ' Normierung aus dem Training des Modells - nicht geraten.
                     Dim average = New Single() {0.485F, 0.456F, 0.406F}
                     Dim spread = New Single() {0.229F, 0.224F, 0.225F}
@@ -126,7 +126,7 @@ Namespace Services
                 Runtime.InteropServices.Marshal.Copy(buffer, 0, small.GetPixels(), buffer.Length)
 
                 Dim large = New SKBitmap(New SKImageInfo(targetWidth, targetHeight, SKColorType.Alpha8, SKAlphaType.Premul))
-                If Not small.ScalePixels(large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
+                If Not ImageProcessor.ScalePixelsFast(small, large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
                     large.Dispose()
                     Return Nothing
                 End If
@@ -257,7 +257,8 @@ Namespace Services
         ''' Zeilengrenzen aus. Ein Abbruch darf nie eine halbe Fassung ins Arbeitsbild schreiben.</summary>
         Private Shared Function BlurWithDisc(source As SKBitmap, radius As Double,
                                               corners As Integer, highlightsPct As Double,
-                                              cancel As CancellationToken) As SKBitmap
+                                              cancel As CancellationToken,
+                                              Optional sourceImage As SKImage = Nothing) As SKBitmap
             If source Is Nothing OrElse radius < 0.5 Then Return Nothing
             cancel.ThrowIfCancellationRequested()
             Dim scale = 1.0
@@ -289,13 +290,21 @@ Namespace Services
                 high(i) = CSng(Math.Pow(i / 255.0, exponentHigh))
             Next
             Dim exponentDown = 1.0 / exponentHigh
+            Dim backThresholds = BackFromLightThresholds(exponentDown)
 
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using small = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                 Dim sampling = If(scale < 1.0,
                                    New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
                                    New SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None))
-                If Not source.ScalePixels(small, sampling) Then
+                ' Aus dem behaltenen Bild, wenn wirklich skaliert wird (gleich gross kopiert
+                ' ScalePixels nur) und nicht beide Seiten unvormultipliziert sind (dafuer hat
+                ' ScalePixels einen eigenen Weg).
+                Dim scaledFromImage = sourceImage IsNot Nothing AndAlso
+                                      (aw <> source.Width OrElse ah <> source.Height) AndAlso
+                                      source.AlphaType <> SKAlphaType.Unpremul AndAlso
+                                      ImageProcessor.ScaleIntoFromImage(sourceImage, small, sampling)
+                If Not scaledFromImage AndAlso Not source.ScalePixels(small, sampling) Then
                     result.Dispose()
                     Return Nothing
                 End If
@@ -410,9 +419,9 @@ Namespace Services
                             Next
                             ' Bgra8888: Blau, Gruen, Rot, Alpha.
                             Dim o = bRow + x * 4
-                            bBuf(o) = BackFromLight(s2 * divisor, exponentDown)
-                            bBuf(o + 1) = BackFromLight(s1 * divisor, exponentDown)
-                            bBuf(o + 2) = BackFromLight(s0 * divisor, exponentDown)
+                            bBuf(o) = BackFromLightByThresholds(s2 * divisor, backThresholds)
+                            bBuf(o + 1) = BackFromLightByThresholds(s1 * divisor, backThresholds)
+                            bBuf(o + 2) = BackFromLightByThresholds(s0 * divisor, backThresholds)
                             bBuf(o + 3) = 255
                         Next
                         End Sub)
@@ -422,7 +431,15 @@ Namespace Services
                                      New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear),
                                      New SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None))
                     cancel.ThrowIfCancellationRequested()
-                    If Not blurred.ScalePixels(result, back) Then
+                    ' Zurueck auf volle Groesse ebenfalls in Baendern, aus einem Bild der kleinen
+                    ' Fassung (sie ist unvormultipliziert; nur wenn das Ziel es nicht auch ist).
+                    Dim backFromImage = False
+                    If (aw <> result.Width OrElse ah <> result.Height) AndAlso result.AlphaType <> SKAlphaType.Unpremul Then
+                        Using blurredImage = SKImage.FromBitmap(blurred)
+                            backFromImage = ImageProcessor.ScaleIntoFromImage(blurredImage, result, back)
+                        End Using
+                    End If
+                    If Not backFromImage AndAlso Not blurred.ScalePixels(result, back) Then
                         result.Dispose()
                         Return Nothing
                     End If
@@ -436,6 +453,56 @@ Namespace Services
             If Single.IsNaN(v) OrElse v <= 0 Then Return 0
             Dim z = Math.Pow(Math.Min(1.0, v), exponent) * 255.0
             Return CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(z)))))
+        End Function
+
+        ''' <summary>Die Schwellen von <see cref="BackFromLight"/> fuer einen Exponenten: Eintrag k ist
+        ''' die kleinste Gleitkommazahl, fuer die BackFromLight mindestens k liefert. Mit ihnen findet
+        ''' <see cref="BackFromLightByThresholds"/> dasselbe Byte ueber acht Vergleiche statt einer
+        ''' Potenz. Die Potenz lief je Bildpunkt, Kanal und Stufe - bei acht Stufen in der Vorschau
+        ''' rund 67 Millionen Mal, gemessen der groesste Teil der Tiefen-Unschaerfe (1,9 s in der
+        ''' Vorschau, 13 s am 20-MP-Bild).
+        '''
+        ''' Die Schwellen kommen aus BackFromLight SELBST, nicht aus einer Umkehrformel: die
+        ''' Kennlinie ist monoton (Potenz und Runden sind es), und auf den Bitmustern positiver
+        ''' Gleitkommazahlen ist die Ordnung dieselbe wie auf den Zahlen. Eine Bisektion ueber die
+        ''' Bitmuster trifft so die Grenze genau, auch dort, wo Math.Round eine Haelfte zur geraden
+        ''' Zahl rundet. Das Ergebnis ist dasselbe Byte wie vorher, fuer jede Eingabe.</summary>
+        Private Shared Function BackFromLightThresholds(exponent As Double) As Single()
+            Dim thresholds(255) As Single
+            ' Unterhalb des kleinsten positiven Werts (und fuer 0) liefert BackFromLight 0.
+            Dim lowBits = BitConverter.SingleToInt32Bits(Single.Epsilon)
+            Dim highBits = BitConverter.SingleToInt32Bits(1.0F)
+            For k = 1 To 255
+                If BackFromLight(1.0F, exponent) < k Then
+                    thresholds(k) = Single.PositiveInfinity
+                    Continue For
+                End If
+                Dim lo = lowBits, hi = highBits
+                ' Kleinstes Bitmuster in [lo, hi] mit BackFromLight >= k.
+                While lo < hi
+                    Dim middle = lo + (hi - lo) \ 2
+                    If BackFromLight(BitConverter.Int32BitsToSingle(middle), exponent) >= k Then
+                        hi = middle
+                    Else
+                        lo = middle + 1
+                    End If
+                End While
+                thresholds(k) = BitConverter.Int32BitsToSingle(lo)
+            Next
+            Return thresholds
+        End Function
+
+        ''' <summary>Dasselbe Byte wie <see cref="BackFromLight"/>, ueber die Schwellen aus
+        ''' <see cref="BackFromLightThresholds"/>.</summary>
+        Private Shared Function BackFromLightByThresholds(v As Single, thresholds As Single()) As Byte
+            If Single.IsNaN(v) OrElse v <= 0 Then Return 0
+            ' Groesstes k mit thresholds(k) <= v; thresholds(0) gilt als 0.
+            Dim lo = 0, hi = 255
+            While lo < hi
+                Dim middle = (lo + hi + 1) \ 2
+                If thresholds(middle) <= v Then lo = middle Else hi = middle - 1
+            End While
+            Return CByte(lo)
         End Function
 
         ''' <summary>Eine Kennlinie als Tabelle: Wert hoch <paramref name="exponent"/>. Kleiner 1
@@ -502,7 +569,7 @@ Namespace Services
                 If depth.Width <> source.Width OrElse depth.Height <> source.Height Then
                     ownMap = New SKBitmap(New SKImageInfo(source.Width, source.Height,
                                                                SKColorType.Alpha8, SKAlphaType.Premul))
-                    If Not depth.ScalePixels(ownMap, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    If Not ImageProcessor.ScalePixelsFast(depth, ownMap, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                     map = ownMap
                 End If
 
@@ -511,7 +578,10 @@ Namespace Services
                 ' nebeneinander sieht man. Deshalb mehr Stufen als bei der ersten Fassung.
                 Const Steps As Integer = 8
                 Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-                Using canvas = New SKCanvas(result)
+                ' EIN Bild der Quelle fuer alle Stufen: Skia merkt sich seine Mipmaps, und jede Stufe
+                ' verkleinert daraus (ScaleIntoFromImage).
+                Using sourceImage = SKImage.FromBitmap(source),
+                      canvas = New SKCanvas(result)
                     canvas.Clear(SKColors.Transparent)
                     ' Stufe 0 ist das scharfe Bild, darueber jede weitere Stufe staerker verwischt.
                     canvas.DrawBitmap(source, 0, 0)
@@ -523,14 +593,28 @@ Namespace Services
                         Using mask = StepMask(map, from, bis, uebergang, share, 1.0 / Steps, cancel)
                             If mask Is Nothing Then Continue For
                             Using blurred = BlurWithDisc(source, maxRadius * share,
-                                                                  cornerCount, highlightsPct, cancel)
+                                                                  cornerCount, highlightsPct, cancel, sourceImage)
                                 If blurred Is Nothing Then Continue For
-                                ' Die verwischte Fassung mit der Stufenmaske daruebermischen.
-                                Using p3 = New SKPaint()
-                                    Using shader = SKShader.CreateBitmap(blurred, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
-                                        p3.Shader = shader
-                                        canvas.DrawBitmap(mask, 0, 0, p3)
-                                    End Using
+                                ' Die verwischte Fassung mit der Stufenmaske daruebermischen, in
+                                ' parallelen Baendern: je Band eine eigene Zeichenflaeche ueber dem
+                                ' Ergebnis mit Ausschnitt, dieselbe Zeichnung wie vorher auf einer
+                                ' Flaeche. Auf einem Faden waren das am 20-MP-Bild 5,6 s fuer acht
+                                ' Stufen. Das scharfe Bild darunter steht schon (canvas.DrawBitmap
+                                ' oben), die Baender kommen erst danach; vorher wird geleert.
+                                canvas.Flush()
+                                Using shader = SKShader.CreateBitmap(blurred, SKShaderTileMode.Clamp, SKShaderTileMode.Clamp)
+                                    Const BandRows As Integer = 128
+                                    Dim bandCount = (result.Height + BandRows - 1) \ BandRows
+                                    Dim stageMask = mask
+                                    Parallel.For(0, bandCount,
+                                        Sub(band)
+                                            Using bandCanvas = New SKCanvas(result),
+                                                  p3 = New SKPaint With {.Shader = shader}
+                                                Dim top = band * BandRows
+                                                bandCanvas.ClipRect(New SKRect(0, top, result.Width, Math.Min(result.Height, top + BandRows)))
+                                                bandCanvas.DrawBitmap(stageMask, 0, 0, p3)
+                                            End Using
+                                        End Sub)
                                 End Using
                             End Using
                         End Using
@@ -604,7 +688,7 @@ Namespace Services
                 If depth.Width <> source.Width OrElse depth.Height <> source.Height Then
                     ownMap = New SKBitmap(New SKImageInfo(source.Width, source.Height,
                                                           SKColorType.Alpha8, SKAlphaType.Premul))
-                    If Not depth.ScalePixels(ownMap, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    If Not ImageProcessor.ScalePixelsFast(depth, ownMap, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                     map = ownMap
                 End If
                 Dim depthStride As Integer

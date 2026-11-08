@@ -5272,6 +5272,73 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return source.Copy()
         End Function
 
+        ''' <summary>Dasselbe wie <c>SKBitmap.ScalePixels</c>, in parallelen Baendern. Ersatz fuer
+        ''' ScalePixels in der ganzen Anwendung.
+        '''
+        ''' ScalePixels zeichnet intern einen Bild-Shader mit der Skalierungsmatrix und Src auf eine
+        ''' Flaeche ueber dem Ziel, auf EINEM Faden, und legt dafuer bei jedem Aufruf ein neues Bild
+        ''' ueber die Quellpixel an. Hier derselbe Weg in Baendern mit je eigener Flaeche und
+        ''' Ausschnitt (ein Ausschnitt aendert die Rechnung je Bildpunkt nicht), das Bild der Quelle
+        ''' ohne Kopie ueber ihren Pixeln. Byte fuer Byte dasselbe (Kettenmessung modelle, masken;
+        ''' Pruefung "Skalieren: der schnelle Weg ist bytegleich zu ScalePixels").
+        '''
+        ''' Bei gleicher Groesse kopiert ScalePixels nur (readPixels), und sind beide Seiten
+        ''' unvormultipliziert, rechnet es einen eigenen Weg ohne Vormultiplizieren; beides bleibt
+        ''' bei ScalePixels, ebenso jeder Fall, in dem keine Flaeche ueber dem Ziel entsteht.</summary>
+        Friend Shared Function ScalePixelsFast(source As SKBitmap, destination As SKBitmap,
+                                               sampling As SKSamplingOptions) As Boolean
+            If source Is Nothing OrElse destination Is Nothing Then Return False
+            If source.Width = destination.Width AndAlso source.Height = destination.Height Then Return source.ScalePixels(destination, sampling)
+            If source.AlphaType = SKAlphaType.Unpremul AndAlso destination.AlphaType = SKAlphaType.Unpremul Then Return source.ScalePixels(destination, sampling)
+            Using pixmap = source.PeekPixels()
+                If pixmap IsNot Nothing Then
+                    Using image = SKImage.FromPixels(pixmap)
+                        If image IsNot Nothing AndAlso ScaleIntoFromImage(image, destination, sampling) Then Return True
+                    End Using
+                End If
+            End Using
+            Return source.ScalePixels(destination, sampling)
+        End Function
+
+        ''' <summary>Der Kern von <see cref="ScalePixelsFast"/>, aus einem Bild, das der Aufrufer
+        ''' behalten kann: wird dieselbe Quelle mehrfach verkleinert (die Stufen der
+        ''' Tiefen-Unschaerfe), baut Skia ihre Mipmaps nur einmal, weil es sie je Bildkennung merkt.
+        ''' ScalePixels baute sie mit jedem neuen Bild neu; gemessen steckten so 24 von 31 Sekunden
+        ''' der Tiefen-Unschaerfe am 20-MP-Bild in ScalePixels. Die Regeln fuer gleiche Groesse und
+        ''' zwei unvormultiplizierte Seiten stehen beim Aufrufer (ScalePixelsFast). False, wenn keine
+        ''' Flaeche ueber dem Ziel entsteht.</summary>
+        Friend Shared Function ScaleIntoFromImage(image As SKImage, destination As SKBitmap,
+                                                  sampling As SKSamplingOptions) As Boolean
+            If image Is Nothing OrElse destination Is Nothing Then Return False
+            If destination.Width <= 0 OrElse destination.Height <= 0 Then Return False
+            Dim matrix = SKMatrix.CreateScale(destination.Width / CSng(image.Width), destination.Height / CSng(image.Height))
+            Dim info = destination.Info
+            Dim pixels = destination.GetPixels()
+            Dim rowBytes = destination.RowBytes
+            Const BandRows As Integer = 128
+            Dim bands = (destination.Height + BandRows - 1) \ BandRows
+            Dim failed = 0
+            Using shader = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp, sampling, matrix)
+                Parallel.For(0, bands,
+                    Sub(band)
+                        Using surface = SKSurface.Create(info, pixels, rowBytes)
+                            If surface Is Nothing Then
+                                Threading.Interlocked.Exchange(failed, 1)
+                                Return
+                            End If
+                            Dim top = band * BandRows
+                            surface.Canvas.ClipRect(New SKRect(0, top, destination.Width, Math.Min(destination.Height, top + BandRows)))
+                            Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
+                                surface.Canvas.DrawPaint(paint)
+                            End Using
+                        End Using
+                    End Sub)
+            End Using
+            If failed <> 0 Then Return False
+            destination.NotifyPixelsChanged()
+            Return True
+        End Function
+
         ''' <summary>Wie <c>SKBitmap.Copy(colorType)</c>, schnell fuer die beiden 8-Bit-Typen: von
         ''' Bgra8888 oder Rgba8888 (vormultipliziert oder deckend) nach Bgra8888 oder Rgba8888 ist es
         ''' ein reiner Kanaltausch, ReadPixels liefert gemessen dieselben Bytes wie Copy, auch mit

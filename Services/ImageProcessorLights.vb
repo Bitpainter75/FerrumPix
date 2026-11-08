@@ -51,7 +51,7 @@ Namespace Services
                 w = Math.Max(1, CInt(Math.Round(depth.Width * scale)))
                 h = Math.Max(1, CInt(Math.Round(depth.Height * scale)))
                 Using small = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
-                    If depth.ScalePixels(small, New SKSamplingOptions(SKFilterMode.Linear)) Then
+                    If ImageProcessor.ScalePixelsFast(depth, small, New SKSamplingOptions(SKFilterMode.Linear)) Then
                         bytes = small.Bytes
                     End If
                 End Using

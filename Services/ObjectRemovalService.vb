@@ -390,7 +390,7 @@ Namespace Services
                 If mask.Width <> image.Width OrElse mask.Height <> image.Height Then
                     ownMask = New SKBitmap(New SKImageInfo(image.Width, image.Height,
                                                                SKColorType.Alpha8, SKAlphaType.Premul))
-                    If Not mask.ScalePixels(ownMask, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                    If Not ImageProcessor.ScalePixelsFast(mask, ownMask, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                     m = ownMask
                 End If
 
@@ -729,7 +729,7 @@ Namespace Services
                 ' unschaerfer. Die Schwelle gilt weiter fuer das umschliessende Rechteck und fuer
                 ' das, was das Modell als Luecke sieht; hier zaehlt der Verlauf.
                 Using large = New SKBitmap(window.Width, window.Height, image.ColorType, image.AlphaType)
-                    If Not filled.ScalePixels(large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
+                    If Not ImageProcessor.ScalePixelsFast(filled, large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)) Then
                         result.Dispose()
                         Return Nothing
                     End If

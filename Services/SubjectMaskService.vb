@@ -70,7 +70,7 @@ Namespace Services
 
             Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
             Using small = New SKBitmap(nb, nh, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                If Not image.ScalePixels(small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                If Not ImageProcessor.ScalePixelsFast(image, small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
                 ' Die Normierung stammt aus dem Training des Modells und darf nicht geraten werden.
                 Dim average = New Single() {123.675F, 116.28F, 103.53F}
                 Dim spread = New Single() {58.395F, 57.12F, 57.375F}
@@ -299,8 +299,14 @@ Namespace Services
             ' SCHRITT 1: innen oder aussen. Der Rohwert wird dafuer weiterhin bilinear zwischen den
             ' Rasterfeldern interpoliert - so liegt die Grenze dort, wo sie wirklich verlaeuft, und
             ' nicht auf dem naechsten Rasterpunkt.
+            ' Die Schritte, die je Zeile fuer sich stehen (dieser, der Kern, die Grenze und die
+            ' Kennlinie am Ende), laufen zeilenweise parallel; jede Zeile schreibt nur ihre eigenen
+            ' Punkte, das Ergebnis ist dasselbe. Seriell waren es am 20-MP-Bild gut 2 s je Klick
+            ' neben 75 ms Modell. Das Fuellen ab dem Klickpunkt und die beiden Durchgaenge der
+            ' Abstandsrechnung haengen an der Zeile davor und bleiben seriell.
             Dim inside(targetB * zielH - 1) As Byte
-            For y = 0 To zielH - 1
+            ImageProcessor.ForEachRow(targetB, zielH,
+                Sub(y)
                 Dim fy = (y + 0.5) * sy - 0.5
                 Dim y0 = CInt(Math.Floor(fy))
                 Dim ty = CSng(fy - y0)
@@ -319,7 +325,7 @@ Namespace Services
                     Dim bottom = source(rowB + xa) * (1.0F - tx) + source(rowB + xb) * tx
                     If top * (1.0F - ty) + bottom * ty >= 0.0F Then inside(targetRow + x) = 1
                 Next
-            Next
+                End Sub)
 
             ' SCHRITT 1b: NUR DIE FLAECHE, IN DIE GEKLICKT WURDE.
             '
@@ -381,20 +387,22 @@ Namespace Services
             ' Kern und traegt damit keinen Hof mehr. Der Kern liegt einen Punkt weiter innen als der
             ' Rand, und genau dieser eine Punkt kommt beim Umfang wieder dazu.
             Dim core(inside.Length - 1) As Byte
-            For y = 0 To zielH - 1
+            Dim insideForCore = inside
+            ImageProcessor.ForEachRow(targetB, zielH,
+                Sub(y)
                 Dim row = y * targetB
                 For x = 0 To targetB - 1
-                    If inside(row + x) = 0 Then Continue For
+                    If insideForCore(row + x) = 0 Then Continue For
                     If x = 0 OrElse y = 0 OrElse x = targetB - 1 OrElse y = zielH - 1 Then
                         core(row + x) = 1
                         Continue For
                     End If
-                    If inside(row + x - 1) <> 0 AndAlso inside(row + x + 1) <> 0 AndAlso
-                       inside(row - targetB + x) <> 0 AndAlso inside(row + targetB + x) <> 0 Then
+                    If insideForCore(row + x - 1) <> 0 AndAlso insideForCore(row + x + 1) <> 0 AndAlso
+                       insideForCore(row - targetB + x) <> 0 AndAlso insideForCore(row + targetB + x) <> 0 Then
                         core(row + x) = 1
                     End If
                 Next
-            Next
+                End Sub)
             ' Faellt dabei alles weg - eine Maske aus lauter Einzelpunkten -, bleibt es beim
             ' Rohbefund; eine leere Maske waere schlechter als eine unsaubere.
             Dim coreCount = 0
@@ -414,21 +422,21 @@ Namespace Services
             ' statt einer Suche je Punkt.
             Dim reach = CSng(MaxEdgePixels + MaxExtentPixels) + 2.0F
             Dim dist(targetB * zielH - 1) As Single
-            For i = 0 To dist.Length - 1
-                dist(i) = reach
-            Next
-            ' Die Grenze selbst: jeder Punkt, der einen Nachbarn der anderen Art hat, liegt auf ihr.
-            For y = 0 To zielH - 1
+            ' Die Grenze selbst: jeder Punkt, der einen Nachbarn der anderen Art hat, liegt auf ihr;
+            ' alle anderen beginnen bei der Reichweite.
+            Dim insideForBorder = inside
+            ImageProcessor.ForEachRow(targetB, zielH,
+                Sub(y)
                 Dim row = y * targetB
                 For x = 0 To targetB - 1
-                    Dim self = inside(row + x)
-                    Dim onBorder = (x > 0 AndAlso inside(row + x - 1) <> self) OrElse
-                                   (x < targetB - 1 AndAlso inside(row + x + 1) <> self) OrElse
-                                   (y > 0 AndAlso inside(row - targetB + x) <> self) OrElse
-                                   (y < zielH - 1 AndAlso inside(row + targetB + x) <> self)
-                    If onBorder Then dist(row + x) = 0.0F
+                    Dim self = insideForBorder(row + x)
+                    Dim onBorder = (x > 0 AndAlso insideForBorder(row + x - 1) <> self) OrElse
+                                   (x < targetB - 1 AndAlso insideForBorder(row + x + 1) <> self) OrElse
+                                   (y > 0 AndAlso insideForBorder(row - targetB + x) <> self) OrElse
+                                   (y < zielH - 1 AndAlso insideForBorder(row + targetB + x) <> self)
+                    dist(row + x) = If(onBorder, 0.0F, reach)
                 Next
-            Next
+                End Sub)
             Const Diagonal As Single = 1.41421356F
             For y = 0 To zielH - 1
                 Dim row = y * targetB
@@ -467,11 +475,15 @@ Namespace Services
             ' ueber die eingestellte Breite auf null. Frueher sass die Kurve mittig auf der Grenze
             ' und fraß dieselbe Strecke nach innen weg - wer eine weiche Kante wollte, verlor dafuer
             ' Motiv.
-            For i = 0 To buffer.Length - 1
+            Dim insideForCurve = inside
+            Dim grow = GrowPixels
+            ImageProcessor.ForEachRow(targetB, zielH,
+                Sub(y)
+                For i = y * targetB To y * targetB + targetB - 1
                 ' Vorzeichen aus der Zugehoerigkeit, Betrag aus der Abstandsrechnung. Der halbe
                 ' Punkt Versatz ruecke die Null auf die Kante zwischen den Bildpunkten statt auf den
                 ' Bildpunkt selbst.
-                Dim signed = If(inside(i) <> 0, dist(i) + 0.5F, -(dist(i) + 0.5F)) + GrowPixels
+                Dim signed = If(insideForCurve(i) <> 0, dist(i) + 0.5F, -(dist(i) + 0.5F)) + grow
                 Dim sValue As Single
                 If signed >= 0.0F Then
                     sValue = 1.0F
@@ -488,7 +500,8 @@ Namespace Services
                     End If
                 End If
                 buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(sValue * 255.0F)))))
-            Next
+                Next
+                End Sub)
             Runtime.InteropServices.Marshal.Copy(buffer, 0, large.GetPixels(), buffer.Length)
             Return large
         End Function
