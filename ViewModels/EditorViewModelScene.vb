@@ -803,8 +803,16 @@ Namespace ViewModels
                     EnsureSceneDisplay()
                     BlitSceneRegionToDisplay(clamped)
                     ' Das Modell hat sich waehrend des Renders geaendert: dieser Patch zeigt einen
-                    ' ueberholten Stand. Region nachlegen, damit nicht der alte Stand stehen bleibt.
-                    If _annotationModelVersion <> modelAtStart Then
+                    ' ueberholten Stand. Region nachlegen, damit nicht der alte Stand stehen bleibt -
+                    ' aber NUR, wenn keine neuere Anforderung wartet. Jede Aenderung fordert alte und
+                    ' neue Lage an, und die erste nach dem Start des Renders traegt als alte Lage
+                    ' genau die, die dieser Patch zeigt. Wartet also schon etwas, deckt es den alten
+                    ' Stand ab. Immer nachzulegen schaukelte sich beim Ziehen auf: das Modell aendert
+                    ' sich dann bei jedem Schritt, das Rechteck wurde nie kleiner und wuchs um die
+                    ' ganze Zugbahn (Protokoll: von 776x777 in zwei Sekunden auf 3492x1666, je
+                    ' Schritt von 60 auf 750 ms).
+                    If _annotationModelVersion <> modelAtStart AndAlso
+                       _sceneRegionPendingRect.IsEmpty AndAlso _annotationDirtyRect.IsEmpty Then
                         _sceneRegionPendingRect = ImageProcessor.UnionRects(_sceneRegionPendingRect, rect)
                     End If
                     _previewPending = False
