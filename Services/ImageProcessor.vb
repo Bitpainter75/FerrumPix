@@ -5300,6 +5300,19 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return source.ScalePixels(destination, sampling)
         End Function
 
+        ''' <summary>Dasselbe wie <c>SKBitmap.Resize</c>: ein neues Bitmap mit <paramref name="info"/>,
+        ''' gefuellt ueber <see cref="ScalePixelsFast"/>. Resize ist in SkiaSharp genau das mit
+        ''' ScalePixels (neues Bitmap, ScalePixels, bei Fehlschlag Nothing), also Byte fuer Byte
+        ''' dasselbe Ergebnis, nur in parallelen Baendern statt auf einem Faden.</summary>
+        Friend Shared Function ResizeFast(source As SKBitmap, info As SKImageInfo,
+                                          sampling As SKSamplingOptions) As SKBitmap
+            If source Is Nothing OrElse info.IsEmpty Then Return Nothing
+            Dim result = New SKBitmap(info)
+            If ScalePixelsFast(source, result, sampling) Then Return result
+            result.Dispose()
+            Return Nothing
+        End Function
+
         ''' <summary>Der Kern von <see cref="ScalePixelsFast"/>, aus einem Bild, das der Aufrufer
         ''' behalten kann: wird dieselbe Quelle mehrfach verkleinert (die Stufen der
         ''' Tiefen-Unschaerfe), baut Skia ihre Mipmaps nur einmal, weil es sie je Bildkennung merkt.
@@ -5363,7 +5376,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Return source.Copy(colorType)
         End Function
 
-        Private Shared Function CloneBitmap(source As SKBitmap) As SKBitmap
+        Friend Shared Function CloneBitmap(source As SKBitmap) As SKBitmap
             Dim clone = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             ' Schneller Weg wie in CloneBitmapForAnnotationComposite: bei 8 Bit mit vormultipliziertem
             ' oder deckendem Alpha ist DrawBitmap auf die frische (genullte) Flaeche eine reine Kopie,
@@ -5730,7 +5743,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim resampled = ImageResampler.Resize(source, targetWidth, targetHeight, ImageResampler.Kernel.CatmullRom)
                 If resampled IsNot Nothing Then Return resampled
             End If
-            Return source.Resize(New SKImageInfo(targetWidth, targetHeight), SamplingHigh)
+            Return ResizeFast(source, New SKImageInfo(targetWidth, targetHeight), SamplingHigh)
         End Function
 
         Private Shared Function ToSampling(mode As ResizeInterpolationMode) As SKSamplingOptions

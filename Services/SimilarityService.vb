@@ -119,7 +119,7 @@ Namespace Services
         ''' Pruefstand.</summary>
         Friend Shared Function GreyGrid(bitmap As SKBitmap) As Byte()
             Dim info As New SKImageInfo(GridSize, GridSize, SKColorType.Rgba8888, SKAlphaType.Premul)
-            Using small = bitmap.Resize(info, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
+            Using small = ImageProcessor.ResizeFast(bitmap, info, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
                 If small Is Nothing Then Return Nothing
                 Dim pixels = small.Bytes
                 Dim stride = small.RowBytes

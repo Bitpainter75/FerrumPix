@@ -347,7 +347,7 @@ Namespace Services
             Dim targetWidth = Math.Min(width, bmp.Width)
             Dim scale = targetWidth / CDbl(bmp.Width)
             Dim targetHeight = Math.Max(1, CInt(Math.Round(bmp.Height * scale)))
-            Using resized = bmp.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
+            Using resized = ImageProcessor.ResizeFast(bmp, New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
                 If resized Is Nothing Then Return False
                 ' Die verkleinerte Fassung traegt kein Profil mehr, deshalb wird es mitgegeben.
                 Dim managed = ColorManagementService.ToSrgb(resized, sourceProfile)
@@ -810,7 +810,7 @@ Namespace Services
                             Dim scale = targetWidth / CDbl(oriented.Width)
                             Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
 
-                            Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
+                            Using resized = ImageProcessor.ResizeFast(oriented, New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul), SamplingMedium)
                                 If resized Is Nothing Then Return False
                                 ' Die Kachel wird auf die Platte geschrieben und dort wiedergefunden.
                                 ' Bliebe sie unverwaltet, waere der Farbfehler nicht nur sichtbar,
@@ -1033,7 +1033,7 @@ Namespace Services
                 Dim scale = targetWidth / CDbl(oriented.Width)
                 Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
                 If targetWidth = oriented.Width Then Return ImageOrientationService.ToAvaloniaBitmapFast(oriented)
-                Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
+                Using resized = ImageProcessor.ResizeFast(oriented, New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
                     Return ImageOrientationService.ToAvaloniaBitmapFast(If(resized, oriented))
                 End Using
             Finally
@@ -1072,7 +1072,7 @@ Namespace Services
                         Dim targetWidth = Math.Min(maxWidth, oriented.Width)
                         Dim scale = targetWidth / CDbl(oriented.Width)
                         Dim targetHeight = Math.Max(1, CInt(Math.Round(oriented.Height * scale)))
-                        Using resized = oriented.Resize(New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
+                        Using resized = ImageProcessor.ResizeFast(oriented, New SKImageInfo(targetWidth, targetHeight, oriented.ColorType, oriented.AlphaType), SamplingMedium)
                             ' Erst verkleinern, dann wandeln: die Wandlung laeuft damit ueber die
                             ' Kachelgroesse statt ueber das volle Bild.
                             Dim scaled = If(resized, oriented)

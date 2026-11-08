@@ -149,8 +149,8 @@ Namespace Services
                 Dim resized = ImageResampler.Resize(full, w, h, ImageResampler.Kernel.CatmullRom)
                 If resized IsNot Nothing Then Return resized
             End If
-            Return full.Resize(New SKImageInfo(w, h, full.ColorType, full.AlphaType, full.ColorSpace),
-                               New SKSamplingOptions(SKCubicResampler.Mitchell))
+            Return ImageProcessor.ResizeFast(full, New SKImageInfo(w, h, full.ColorType, full.AlphaType, full.ColorSpace),
+                                             New SKSamplingOptions(SKCubicResampler.Mitchell))
         End Function
 
     End Class

@@ -305,6 +305,19 @@ Namespace Services
             ' neben 75 ms Modell. Das Fuellen ab dem Klickpunkt und die beiden Durchgaenge der
             ' Abstandsrechnung haengen an der Zeile davor und bleiben seriell.
             Dim inside(targetB * zielH - 1) As Byte
+            ' Rasterspalte und Gewicht haengen nur an x, nicht an der Zeile: einmal je Spalte
+            ' gerechnet statt je Bildpunkt (dieselben Ausdruecke, also dieselben Werte).
+            Dim columnA(targetB - 1) As Integer, columnB(targetB - 1) As Integer
+            Dim weightB(targetB - 1) As Single, weightA(targetB - 1) As Single
+            For x = 0 To targetB - 1
+                Dim fx = (x + 0.5) * sx - 0.5
+                Dim x0 = CInt(Math.Floor(fx))
+                Dim tx = CSng(fx - x0)
+                columnA(x) = Math.Max(0, Math.Min(gb - 1, x0))
+                columnB(x) = Math.Max(0, Math.Min(gb - 1, x0 + 1))
+                weightB(x) = tx
+                weightA(x) = 1.0F - tx
+            Next
             ImageProcessor.ForEachRow(targetB, zielH,
                 Sub(y)
                 Dim fy = (y + 0.5) * sy - 0.5
@@ -316,13 +329,10 @@ Namespace Services
                 Dim rowB = offset + yb * mw
                 Dim targetRow = y * targetB
                 For x = 0 To targetB - 1
-                    Dim fx = (x + 0.5) * sx - 0.5
-                    Dim x0 = CInt(Math.Floor(fx))
-                    Dim tx = CSng(fx - x0)
-                    Dim xa = Math.Max(0, Math.Min(gb - 1, x0))
-                    Dim xb = Math.Max(0, Math.Min(gb - 1, x0 + 1))
-                    Dim top = source(rowA + xa) * (1.0F - tx) + source(rowA + xb) * tx
-                    Dim bottom = source(rowB + xa) * (1.0F - tx) + source(rowB + xb) * tx
+                    Dim xa = columnA(x), xb = columnB(x)
+                    Dim tx = weightB(x), ux = weightA(x)
+                    Dim top = source(rowA + xa) * ux + source(rowA + xb) * tx
+                    Dim bottom = source(rowB + xa) * ux + source(rowB + xb) * tx
                     If top * (1.0F - ty) + bottom * ty >= 0.0F Then inside(targetRow + x) = 1
                 Next
                 End Sub)
@@ -348,26 +358,41 @@ Namespace Services
                     Dim px = CInt(Math.Round(p.XPixel)), py = CInt(Math.Round(p.YPixel))
                     If px < 0 OrElse py < 0 OrElse px >= targetB OrElse py >= zielH Then Continue For
                     Dim idx = py * targetB + px
-                    If inside(idx) = 0 OrElse keep(idx) <> 0 Then Continue For
-                    keep(idx) = 1
+                    If inside(idx) = 0 Then Continue For
                     stack.Push(idx)
                 Next
                 If stack.Count > 0 Then
+                    ' Zeilenweise fuellen: je Abschnitt die ganze zusammenhaengende Strecke der
+                    ' Zeile auf einmal, und aus den Zeilen darueber und darunter nur je einen
+                    ' Startpunkt pro Strecke. Dieselbe Flaeche (alles, was ueber die vier
+                    ' Nachbarn mit einem Klickpunkt zusammenhaengt) wie Punkt fuer Punkt, aber
+                    ' ohne einen Stapeleintrag je Bildpunkt; bei einem grossen Motiv am 20-MP-Bild
+                    ' waren das Millionen.
                     While stack.Count > 0
                         Dim idx = stack.Pop()
-                        Dim ix = idx Mod targetB, iy = idx \ targetB
-                        If ix > 0 AndAlso inside(idx - 1) <> 0 AndAlso keep(idx - 1) = 0 Then
-                            keep(idx - 1) = 1 : stack.Push(idx - 1)
-                        End If
-                        If ix < targetB - 1 AndAlso inside(idx + 1) <> 0 AndAlso keep(idx + 1) = 0 Then
-                            keep(idx + 1) = 1 : stack.Push(idx + 1)
-                        End If
-                        If iy > 0 AndAlso inside(idx - targetB) <> 0 AndAlso keep(idx - targetB) = 0 Then
-                            keep(idx - targetB) = 1 : stack.Push(idx - targetB)
-                        End If
-                        If iy < zielH - 1 AndAlso inside(idx + targetB) <> 0 AndAlso keep(idx + targetB) = 0 Then
-                            keep(idx + targetB) = 1 : stack.Push(idx + targetB)
-                        End If
+                        If keep(idx) <> 0 Then Continue While
+                        Dim iy = idx \ targetB
+                        Dim row = iy * targetB
+                        Dim left = idx - row, right = idx - row
+                        While left > 0 AndAlso inside(row + left - 1) <> 0 AndAlso keep(row + left - 1) = 0
+                            left -= 1
+                        End While
+                        While right < targetB - 1 AndAlso inside(row + right + 1) <> 0 AndAlso keep(row + right + 1) = 0
+                            right += 1
+                        End While
+                        For x = left To right
+                            keep(row + x) = 1
+                        Next
+                        For Each neighbourRow In {iy - 1, iy + 1}
+                            If neighbourRow < 0 OrElse neighbourRow >= zielH Then Continue For
+                            Dim nRow = neighbourRow * targetB
+                            Dim inRun = False
+                            For x = left To right
+                                Dim open = inside(nRow + x) <> 0 AndAlso keep(nRow + x) = 0
+                                If open AndAlso Not inRun Then stack.Push(nRow + x)
+                                inRun = open
+                            Next
+                        Next
                     End While
                     inside = keep
                 End If
@@ -425,9 +450,11 @@ Namespace Services
             ' Die Grenze selbst: jeder Punkt, der einen Nachbarn der anderen Art hat, liegt auf ihr;
             ' alle anderen beginnen bei der Reichweite.
             Dim insideForBorder = inside
+            Dim borderFirst(zielH - 1) As Integer, borderLast(zielH - 1) As Integer
             ImageProcessor.ForEachRow(targetB, zielH,
                 Sub(y)
                 Dim row = y * targetB
+                Dim first = -1, last = -1
                 For x = 0 To targetB - 1
                     Dim self = insideForBorder(row + x)
                     Dim onBorder = (x > 0 AndAlso insideForBorder(row + x - 1) <> self) OrElse
@@ -435,13 +462,40 @@ Namespace Services
                                    (y > 0 AndAlso insideForBorder(row - targetB + x) <> self) OrElse
                                    (y < zielH - 1 AndAlso insideForBorder(row + targetB + x) <> self)
                     dist(row + x) = If(onBorder, 0.0F, reach)
+                    If onBorder Then
+                        If first < 0 Then first = x
+                        last = x
+                    End If
                 Next
+                borderFirst(y) = first
+                borderLast(y) = last
                 End Sub)
-            Const Diagonal As Single = 1.41421356F
+            ' Die beiden Durchlaeufe haengen an der Zeile davor und laufen deshalb seriell; sie
+            ' muessen aber nur ueber das Rechteck der Grenze, erweitert um die Reichweite. Jeder
+            ' Schritt kostet mindestens 1, ein Punkt, der weiter als die Reichweite von jeder Grenze
+            ' weg liegt, behaelt also in beiden Laeufen genau seinen Startwert. Dasselbe Ergebnis
+            ' wie ueber das ganze Bild, nur ohne die Millionen Punkte, an denen nichts geschieht.
+            Dim boxLeft = Integer.MaxValue, boxRight = -1, boxTop = -1, boxBottom = -1
             For y = 0 To zielH - 1
+                If borderFirst(y) < 0 Then Continue For
+                If boxTop < 0 Then boxTop = y
+                boxBottom = y
+                boxLeft = Math.Min(boxLeft, borderFirst(y))
+                boxRight = Math.Max(boxRight, borderLast(y))
+            Next
+            Dim margin = CInt(Math.Ceiling(reach)) + 1
+            Dim passLeft = 0, passRight = -1, passTop = 0, passBottom = -1
+            If boxTop >= 0 Then
+                passLeft = Math.Max(0, boxLeft - margin)
+                passRight = Math.Min(targetB - 1, boxRight + margin)
+                passTop = Math.Max(0, boxTop - margin)
+                passBottom = Math.Min(zielH - 1, boxBottom + margin)
+            End If
+            Const Diagonal As Single = 1.41421356F
+            For y = passTop To passBottom
                 Dim row = y * targetB
                 Dim above = row - targetB
-                For x = 0 To targetB - 1
+                For x = passLeft To passRight
                     Dim best = dist(row + x)
                     If best <= 0.0F Then Continue For
                     If x > 0 Then best = Math.Min(best, dist(row + x - 1) + 1.0F)
@@ -453,10 +507,10 @@ Namespace Services
                     dist(row + x) = best
                 Next
             Next
-            For y = zielH - 1 To 0 Step -1
+            For y = passBottom To passTop Step -1
                 Dim row = y * targetB
                 Dim below = row + targetB
-                For x = targetB - 1 To 0 Step -1
+                For x = passRight To passLeft Step -1
                     Dim best = dist(row + x)
                     If best <= 0.0F Then Continue For
                     If x < targetB - 1 Then best = Math.Min(best, dist(row + x + 1) + 1.0F)

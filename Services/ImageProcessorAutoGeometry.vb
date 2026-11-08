@@ -254,8 +254,8 @@ Namespace Services
                 If targetWidth = source.Width AndAlso targetHeight = source.Height Then
                     working = source
                 Else
-                    working = source.Resize(New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul),
-                                            New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
+                    working = ResizeFast(source, New SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul),
+                                         New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear))
                     ownsWorking = True
                 End If
                 If working Is Nothing Then Return Nothing

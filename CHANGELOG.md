@@ -21,6 +21,9 @@
 
 - Sliders in the editor follow your hand more smoothly while you drag them.
 
+- Depth blur, the depth map, object selection and object removal finish noticeably faster on large
+  photos, and thumbnails are made more quickly. The results stay exactly the same.
+
 ### Fixes
 
 - **Similar pictures** compare a finer picture of each photo now: different scenes with a similar

@@ -426,10 +426,15 @@ Namespace Services
                 Using small = New SKBitmap(aw, ah, SKColorType.Bgra8888, SKAlphaType.Unpremul)
                     Using c = New SKCanvas(small)
                         c.Clear(SKColors.Black)
-                        Using img = SKImage.FromBitmap(image)
-                            c.DrawImage(img, New SKRect(window.Left, window.Top, window.Right, window.Bottom),
-                                        New SKRect(0, 0, aw, ah),
-                                        New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), Nothing)
+                        ' Das Bild ueber seinen eigenen Pixeln, ohne Kopie: SKImage.FromBitmap
+                        ' kopiert ein veraenderliches Bitmap erst ganz (20 Megapixel), bevor
+                        ' gezeichnet wird. Dieselben Pixel, also dasselbe Ergebnis.
+                        Using pixmap = image.PeekPixels()
+                            Using img = If(pixmap IsNot Nothing, SKImage.FromPixels(pixmap), SKImage.FromBitmap(image))
+                                c.DrawImage(img, New SKRect(window.Left, window.Top, window.Right, window.Bottom),
+                                            New SKRect(0, 0, aw, ah),
+                                            New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), Nothing)
+                            End Using
                         End Using
                     End Using
 
@@ -443,13 +448,22 @@ Namespace Services
                             End Using
                         End Using
 
-                        Dim threshold = ThresholdFor(smallMask)
+                        ' Schwelle und Zaehlung aus EINEM gelesenen Puffer statt je Punkt ueber
+                        ' GetPixel (eine Million Aufrufe bei 1024 x 1024).
+                        Dim smallAlpha = TryReadMaskAlpha(smallMask)
+                        Dim threshold = If(smallAlpha IsNot Nothing, ThresholdFrom(smallAlpha, aw, ah), ThresholdFor(smallMask))
                         Dim setPixels As Long = 0
-                        For y = 0 To ah - 1
-                            For x = 0 To aw - 1
-                                If smallMask.GetPixel(x, y).Alpha >= threshold Then setPixels += 1
+                        If smallAlpha IsNot Nothing Then
+                            For Each a In smallAlpha
+                                If a >= threshold Then setPixels += 1
                             Next
-                        Next
+                        Else
+                            For y = 0 To ah - 1
+                                For x = 0 To aw - 1
+                                    If smallMask.GetPixel(x, y).Alpha >= threshold Then setPixels += 1
+                                Next
+                            Next
+                        End If
                         timing.ScalingAndMaskMs = runTimer.ElapsedMilliseconds - timing.MaskAndRegionMs
                         Dim report = $"Bild {image.Width}x{image.Height}, Lücke {gap.Width}x{gap.Height}, " &
                                       $"Ausschnitt {window.Width}x{window.Height}, gerechnet auf {pw}x{ph}, " &
@@ -479,7 +493,11 @@ Namespace Services
                                 Return Nothing
                             End If
                             Dim compositeStart = runTimer.ElapsedMilliseconds
-                            Dim output = InsertInto(image, m, filled, window)
+                            ' Die gewachsene Maske ist hart (0 oder 255), ihr Lueckenrechteck also
+                            ' genau das Rechteck ihrer gesetzten Punkte. Die ungewachsene kann
+                            ' unter der Schwelle noch Deckung tragen; sie geht ohne Ausschnitt.
+                            Dim output = InsertInto(image, m, filled, window,
+                                                    If(grown IsNot Nothing, gap, CType(Nothing, SKRectI?)))
                             timing.CompositeMs = runTimer.ElapsedMilliseconds - compositeStart
                             LastReport &= $", Zeiten Maske/Ausschnitt {timing.MaskAndRegionMs} ms, " &
                                           $"Skalierung {timing.ScalingAndMaskMs} ms, Tensor {timing.TensorMs} ms, " &
@@ -519,17 +537,46 @@ Namespace Services
                                                         SKColorType.Alpha8, SKAlphaType.Premul))
                 Using hard = New SKBitmap(New SKImageInfo(mask.Width, mask.Height,
                                                           SKColorType.Alpha8, SKAlphaType.Premul))
-                    For i = 0 To buffer.Length - 1
-                        buffer(i) = If(buffer(i) >= threshold, CByte(255), CByte(0))
+                    Dim width = mask.Width
+                    Dim l = Integer.MaxValue, t = Integer.MaxValue, r = Integer.MinValue, b = Integer.MinValue
+                    For y = 0 To mask.Height - 1
+                        Dim row = y * width
+                        Dim rowSet = False
+                        For x = 0 To width - 1
+                            If buffer(row + x) >= threshold Then
+                                buffer(row + x) = 255
+                                If x < l Then l = x
+                                If x > r Then r = x
+                                rowSet = True
+                            Else
+                                buffer(row + x) = 0
+                            End If
+                        Next
+                        If rowSet Then
+                            If y < t Then t = y
+                            b = y
+                        End If
                     Next
                     WriteMaskAlpha(hard, buffer)
 
                     Using canvas = New SKCanvas(target)
                         canvas.Clear(SKColors.Transparent)
-                        Using paint = New SKPaint()
-                            paint.ImageFilter = SKImageFilter.CreateBlur(radius * 0.6F, radius * 0.6F)
-                            canvas.DrawBitmap(hard, 0, 0, paint)
-                        End Using
+                        ' Die Unschaerfe nur dort rechnen, wo sie etwas ergeben kann: um die
+                        ' gesetzten Punkte, erweitert um mehr als die Reichweite des Weichzeichners
+                        ' (Skia reicht bei Sigma s hoechstens rund 3 s weit). Weiter draussen ist
+                        ' ihr Ergebnis ohnehin null, und ein Ausschnitt aendert die Rechnung je
+                        ' Bildpunkt nicht; Byte fuer Byte dasselbe wie ueber die ganze Flaeche
+                        ' (Kettenmessung modelle masken). Ueber die ganze Flaeche kostete das bei
+                        ' 20 Megapixeln den groessten Teil der Maskenzeit vor dem Modell.
+                        If r >= l Then
+                            Dim sigma = radius * 0.6F
+                            Dim reach = CInt(Math.Ceiling(sigma * 4)) + 4
+                            canvas.ClipRect(New SKRect(l - reach, t - reach, r + 1 + reach, b + 1 + reach))
+                            Using paint = New SKPaint()
+                                paint.ImageFilter = SKImageFilter.CreateBlur(sigma, sigma)
+                                canvas.DrawBitmap(hard, 0, 0, paint)
+                            End Using
+                        End If
                     End Using
 
                     ' Niedrig schwellen: aus dem weichen Rand der Unschaerfe wird wieder eine volle
@@ -714,13 +761,18 @@ Namespace Services
         ''' Skalierung und trifft die Helligkeit der Nachbarschaft nie auf den Punkt genau. Ohne
         ''' Ueberblendung steht an der Maskenkante eine sichtbare Naht.</summary>
         Private Shared Function InsertInto(image As SKBitmap, mask As SKBitmap,
-                                         filled As SKBitmap, window As SKRectI) As SKBitmap
-            Dim result = New SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType)
+                                         filled As SKBitmap, window As SKRectI,
+                                         maskBounds As SKRectI?) As SKBitmap
+            ' Die Kopie des Bildes ueber ImageProcessor.CloneBitmap: bei 8 Bit vormultipliziert eine
+            ' reine Pixelkopie statt der Zeichenstrecke, sonst dasselbe Zeichnen auf die genullte
+            ' Flaeche wie bisher hier.
+            Dim result = ImageProcessor.CloneBitmap(image)
             Using canvas = New SKCanvas(result)
-                canvas.Clear(SKColors.Transparent)
-                Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                    canvas.DrawBitmap(image, 0, 0, paint)
-                End Using
+                ' Die Maske traegt nur in ihrem umschliessenden Rechteck etwas; ausserhalb laesst
+                ' das Zeichnen mit Deckung null das Bild ohnehin unangetastet. Ohne den Ausschnitt
+                ' lief die Mischung ueber alle Bildpunkte.
+                If maskBounds.HasValue Then canvas.ClipRect(SKRect.Create(maskBounds.Value.Left, maskBounds.Value.Top,
+                                                                          maskBounds.Value.Width, maskBounds.Value.Height))
 
                 ' Die Maske mit weicher Kante als Schablone. Sie wird ueber einen Weichzeichner
                 ' erzeugt, damit der Uebergang wirklich ausleuchtet und nicht nur eine Stufe hat.

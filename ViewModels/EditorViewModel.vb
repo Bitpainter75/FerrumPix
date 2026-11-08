@@ -22222,8 +22222,8 @@ Namespace ViewModels
                 Dim ratio = maxDimension / CDbl(longest)
                 Dim width = Math.Max(1, CInt(Math.Round(source.Width * ratio)))
                 Dim height = Math.Max(1, CInt(Math.Round(source.Height * ratio)))
-                Using scaled = source.Resize(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
-                                             ImageProcessor.SamplingHigh)
+                Using scaled = ImageProcessor.ResizeFast(source, New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul),
+                                                         ImageProcessor.SamplingHigh)
                     If scaled Is Nothing Then Return Nothing
                     Return PngEncoder.EncodeToStream(scaled, PngPurpose.Stored)
                 End Using

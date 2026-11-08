@@ -149,7 +149,7 @@ Namespace Services
                     Dim scale = maxDimension / CDbl(longest)
                     Dim width = Math.Max(1, CInt(Math.Round(source.Width * scale)))
                     Dim height = Math.Max(1, CInt(Math.Round(source.Height * scale)))
-                    Using resized = source.Resize(New SkiaSharp.SKImageInfo(width, height), SkiaSharp.SKSamplingOptions.Default)
+                    Using resized = ImageProcessor.ResizeFast(source, New SkiaSharp.SKImageInfo(width, height), SkiaSharp.SKSamplingOptions.Default)
                         If resized Is Nothing Then Return New MemoryStream(pngBytes)
                         Return If(PngEncoder.EncodeToStream(resized, PngPurpose.Transient), New MemoryStream(pngBytes))
                     End Using
