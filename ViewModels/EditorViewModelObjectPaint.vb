@@ -1267,7 +1267,7 @@ Namespace ViewModels
                         Dim strokeCoverage = ImageProcessor.BuildStrokeCoverage(renderAnnotation, dirty, copy.Width, copy.Height)
                         If strokeCoverage Is Nothing OrElse
                            Not ImageProcessor.ApplyToneBrush(copy, dirty, strokeCoverage, tone.Kind, tone.Range,
-                                                             tone.Saturate, tone.Color) Then
+                                                             tone.Saturate, tone.Color, tone.ProtectTones) Then
                             copy.Dispose()
                             Return Nothing
                         End If

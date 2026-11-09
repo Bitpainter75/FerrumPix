@@ -11368,4 +11368,10 @@
   <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
     <value>Lightroom 카탈로그</value>
   </data>
+  <data name="T_ne_sch_tzen_0b17de23" xml:space="preserve">
+    <value>톤 보호</value>
+  </data>
+  <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
+    <value>밝기에 작용하며 색상, 검정, 흰색은 그대로 둡니다</value>
+  </data>
 </root>

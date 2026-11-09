@@ -11364,4 +11364,10 @@
   <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
     <value>Lightroom-luettelo</value>
   </data>
+  <data name="T_ne_sch_tzen_0b17de23" xml:space="preserve">
+    <value>Suojaa sävyt</value>
+  </data>
+  <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
+    <value>Vaikuttaa vaaleuteen ja jättää värin, mustan ja valkoisen ennalleen</value>
+  </data>
 </root>

@@ -885,11 +885,77 @@ Namespace Services
         ' liefert nur die DECKUNG (BuildStrokeCoverage, mit Groesse, Haerte, Deckkraft und Fluss wie
         ' beim Pinsel); je Bildpunkt wird dann gerechnet und mit dieser Deckung ueberblendet.
 
-        ''' <summary>Hoechste Wirkung eines Zugs bei voller Deckung: Abwedeln und Nachbelichten
-        ''' verschieben einen Wert um hoechstens die Haelfte des Wegs zu Weiss bzw. Schwarz, der
-        ''' Schwamm aendert die Saettigung um hoechstens die Haelfte. Wie Photoshops Vorgabe von 50
-        ''' Prozent Belichtung: ein Zug ist deutlich, mehrere bauen auf.</summary>
+        ''' <summary>Hoechste Wirkung eines Zugs des Schwamms bei voller Deckung: er aendert die
+        ''' Saettigung um hoechstens die Haelfte. Ein Zug ist deutlich, mehrere bauen auf.</summary>
         Private Const ToneBrushMaxEffect As Double = 0.5
+
+        ''' <summary>Abwedeln und Nachbelichten: die Tonaenderung, die ein Zug mit voller Staerke
+        ''' einem Ton <paramref name="t"/> (0 bis 1) gibt, in Anteilen des ganzen Bereichs.
+        '''
+        ''' Die Formen treffen die Eckwerte, die am Referenzprogramm an einem Graukeil gemessen
+        ''' wurden (Wo wirkt ein Bereich am staerksten, wie stark, wo hoert er auf); die Kurven selbst
+        ''' sind eigene. Mit „Toene schuetzen" (<paramref name="protect"/>) ist t die Helligkeit und
+        ''' die Aenderung gilt fuer alle Kanaele gleich; Schwarz und Weiss bleiben dann stehen, ausser
+        ''' beim Nachbelichten der Lichter, das Weiss bis etwa 204 zieht:
+        ''' - Mitten: Glocke mit Spitze 35 Stufen bei 55 Prozent Grau, Abwedeln wie Nachbelichten.
+        ''' - Tiefen: Spitze bei 28 Prozent Grau, Abwedeln 18,5, Nachbelichten 37 Stufen, bei 80
+        '''   Prozent vorbei.
+        ''' - Lichter: Abwedeln steigt ab 20 Prozent und erreicht bei 82 Prozent 100 Stufen (helle
+        '''   Toene laufen dann nach Weiss), Nachbelichten steigt ab 20 Prozent bis 50 Stufen bei Weiss.
+        ''' Ohne „Toene schuetzen" ist t der einzelne Kanal und die Wirkung viel kraeftiger: Tiefen
+        ''' abwedeln hebt Schwarz um 108 Stufen, Lichter nachbelichten zieht Weiss um 108 herunter,
+        ''' die Mitten bauchen um gut 54 Stufen aus.
+        '''
+        ''' Vorher rueckte jeder Kanal um bis zur Haelfte seines Wegs zu Weiss bzw. Schwarz; Mittelgrau
+        ''' ging in einem Zug von 128 auf 191, beim Referenzprogramm mit derselben Vorgabe um rund 33,
+        ''' und die Farbe verschob sich.</summary>
+        Friend Shared Function DodgeBurnShift(dodge As Boolean, range As String, protect As Boolean, t As Double) As Double
+            t = Math.Max(0.0, Math.Min(1.0, t))
+            If protect Then
+                Select Case range
+                    Case "Shadows"
+                        Dim shape = ToneBump(t, 0.28, 1.3)
+                        Return If(dodge, 0.0725 * shape, -0.145 * shape)
+                    Case "Highlights"
+                        Return If(dodge, 0.392 * SmoothStep(0.2, 0.82, t), -0.198 * SmoothStep(0.2, 1.0, t))
+                    Case Else
+                        Dim shape = ToneBump(t, 0.55, 2.2)
+                        Return If(dodge, 0.137 * shape, -0.137 * shape)
+                End Select
+            End If
+            Select Case range
+                Case "Shadows"
+                    If dodge Then Return 0.425 * (1.0 - t)
+                    Return -Math.Min(171.0 * (1.0 - t), 86.0 + 51.0 * (0.5 - t)) / 255.0
+                Case "Highlights"
+                    If Not dodge Then Return -0.425 * t
+                    Return Math.Min(171.0 * t, 86.0 + 51.0 * (t - 0.5)) / 255.0
+                Case Else
+                    If Not dodge Then Return -0.2125 * 4.0 * t * (1.0 - t)
+                    ' Steil hinauf bis ein Viertel, dann flacher hinunter bis Weiss.
+                    Dim shape = If(t < 0.25, 1.0 - Math.Pow(1.0 - t / 0.25, 2.3), 1.0 - Math.Pow((t - 0.25) / 0.75, 1.6))
+                    Return 0.214 * shape
+            End Select
+        End Function
+
+        ''' <summary>Glocke auf 0 bis 1 mit dem Hoechstwert 1 bei <paramref name="peak"/>, null an
+        ''' beiden Enden; <paramref name="rise"/> bestimmt, wie spaet sie vom Schwarz ansteigt, der
+        ''' Abfall zum Weiss folgt so, dass die Spitze an ihrem Platz bleibt.</summary>
+        Private Shared Function ToneBump(t As Double, peak As Double, rise As Double) As Double
+            If t <= 0.0 OrElse t >= 1.0 Then Return 0.0
+            Dim fall = rise * (1.0 - peak) / peak
+            Return Math.Pow(t / peak, rise) * Math.Pow((1.0 - t) / (1.0 - peak), fall)
+        End Function
+
+        ''' <summary>Wie viel der Kurve ein Zug mit der Staerke <paramref name="strength"/> (0 bis 1,
+        ''' Regler mal Deckung des Strichs) gibt. Beim Referenzprogramm baut die Belichtung sich ueber
+        ''' die ueberlappenden Tupfer eines Zugs auf; gemessen ist das mit „Toene schuetzen" wie
+        ''' 1 - (1 - s)^4 und ohne wie 1 - (1 - s)^1,75. Die halbe Staerke gibt so schon fast die
+        ''' ganze Kurve, ein weicher Rand laeuft trotzdem sanft aus.</summary>
+        Friend Shared Function DodgeBurnAmount(strength As Double, protect As Boolean) As Double
+            Dim rest = 1.0 - Math.Max(0.0, Math.Min(1.0, strength))
+            Return 1.0 - Math.Pow(rest, If(protect, 4.0, 1.75))
+        End Function
 
         ''' <summary>Die Deckung eines Strichs im Rechteck <paramref name="region"/>, 0 bis 255 je
         ''' Bildpunkt. Gezeichnet wird der Strich in deckendem Weiss auf leerem Grund, mit genau dem
@@ -921,10 +987,11 @@ Namespace Services
         ''' <summary>Wendet eine Art des Bildpinsels im Rechteck <paramref name="region"/> an.
         ''' <paramref name="coverage"/> hat die Groesse des Rechtecks.
         '''
-        ''' - "Dodge" (Abwedeln) hellt auf: jeder Kanal ruckt um einen Anteil seines Wegs zu Weiss.
-        ''' - "Burn" (Nachbelichten) dunkelt ab: jeder Kanal ruckt um einen Anteil zu Schwarz.
-        '''   Beide wirken gewichtet nach <paramref name="toneRange"/> ("Shadows", "Midtones",
-        '''   "Highlights") auf die Helligkeit des Punktes, damit man etwa nur die Lichter abwedelt.
+        ''' - "Dodge" (Abwedeln) hellt auf, "Burn" (Nachbelichten) dunkelt ab, je nach
+        '''   <paramref name="toneRange"/> ("Shadows", "Midtones", "Highlights") vor allem in diesem
+        '''   Tonbereich (Kurven in <see cref="DodgeBurnShift"/>). Mit
+        '''   <paramref name="protectTones"/> nach der Helligkeit des Punktes und fuer alle Kanaele
+        '''   gleich, sodass die Farbe bleibt; sonst je Kanal.
         ''' - "Sponge" (Schwamm) saettigt oder entsaettigt um die Helligkeit des Punktes herum.
         ''' - "ReplaceColor" (Farbe ersetzen) nimmt Farbton und Saettigung von
         '''   <paramref name="color"/> und behaelt die Helligkeit des Punktes - Struktur und
@@ -934,7 +1001,7 @@ Namespace Services
         ''' geraden Farben; ein voll durchsichtiger Punkt bleibt, wie er ist.</summary>
         Friend Shared Function ApplyToneBrush(full As SKBitmap, region As SKRectI, coverage As Byte(),
                                               kind As String, toneRange As String, saturate As Boolean,
-                                              color As SKColor) As Boolean
+                                              color As SKColor, Optional protectTones As Boolean = True) As Boolean
             If full Is Nothing OrElse coverage Is Nothing Then Return False
             If full.ColorType <> SKColorType.Bgra8888 AndAlso full.ColorType <> SKColorType.Rgba8888 Then Return False
             Dim rect = SKRectI.Intersect(region, New SKRectI(0, 0, full.Width, full.Height))
@@ -972,17 +1039,17 @@ Namespace Services
 
                     Select Case kind
                         Case "Dodge", "Burn"
-                            Dim weight As Double
-                            Select Case toneRange
-                                Case "Shadows" : weight = (1.0 - luma) * (1.0 - luma)
-                                Case "Highlights" : weight = luma * luma
-                                Case Else : weight = 4.0 * luma * (1.0 - luma)
-                            End Select
-                            Dim amount = strength * ToneBrushMaxEffect * weight
-                            If kind = "Dodge" Then
-                                nr = r + (1.0 - r) * amount : ng = g + (1.0 - g) * amount : nb = b + (1.0 - b) * amount
+                            Dim dodge = kind = "Dodge"
+                            Dim amount = DodgeBurnAmount(strength, protectTones)
+                            If protectTones Then
+                                ' Helligkeit nach Rec. 709, wie am Graukeil gemessen.
+                                Dim lightness = 0.2126 * r + 0.7152 * g + 0.0722 * b
+                                Dim shift = DodgeBurnShift(dodge, toneRange, True, lightness) * amount
+                                nr = r + shift : ng = g + shift : nb = b + shift
                             Else
-                                nr = r * (1.0 - amount) : ng = g * (1.0 - amount) : nb = b * (1.0 - amount)
+                                nr = r + DodgeBurnShift(dodge, toneRange, False, r) * amount
+                                ng = g + DodgeBurnShift(dodge, toneRange, False, g) * amount
+                                nb = b + DodgeBurnShift(dodge, toneRange, False, b) * amount
                             End If
                         Case "Sponge"
                             Dim factor = If(saturate, 1.0 + strength * ToneBrushMaxEffect * 2.0, 1.0 - strength * ToneBrushMaxEffect)

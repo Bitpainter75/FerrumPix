@@ -457,6 +457,11 @@ Namespace Views
                 Case Key.Right, Key.PageDown
                     vm.NextCommand.Execute(Nothing)
                     e.Handled = True
+                Case Key.Home, Key.End
+                    If e.KeyModifiers = KeyModifiers.None Then
+                        vm.NavigateToEdge(e.Key = Key.End)
+                        e.Handled = True
+                    End If
                 Case Key.Add, Key.OemPlus
                     vm.ZoomIn()
                     e.Handled = True

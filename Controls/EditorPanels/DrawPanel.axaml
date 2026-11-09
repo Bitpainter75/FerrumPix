@@ -297,6 +297,9 @@
                                          FontSize="{DynamicResource FP.Font.Small}" />
                         </StackPanel>
                     </Grid>
+                    <CheckBox Content="Töne schützen" IsChecked="{Binding ToneProtect}" IsVisible="{Binding IsDodgeBurnMode}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Wirkt auf die Helligkeit und lässt Farbe, Schwarz und Weiß stehen" />
                     <!-- Schwamm: Farbe wegnehmen oder verstaerken. -->
                     <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" IsVisible="{Binding IsSpongeMode}">
                         <TextBlock Text="Wirkung" Foreground="{DynamicResource FP.Text.Secondary}"

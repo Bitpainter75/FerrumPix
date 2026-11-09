@@ -25,6 +25,9 @@ Namespace ViewModels
         Private _lastImageBrushMode As String = "Eraser"
         Private _toneRange As String = "Midtones"
         Private _spongeSaturate As Boolean = False
+        ''' <summary>Abwedeln und Nachbelichten nach der Helligkeit und fuer alle Kanaele gleich, sodass
+        ''' Farbe, Schwarz und Weiss bleiben. Ab Werk an, wie beim Referenzprogramm.</summary>
+        Private _protectTones As Boolean = True
         Private _replaceColor As String = "#FF3A7BD5"
 
         ''' <summary>Die Arten neben dem Radierer. "RedEye" ist dabei, rechnet aber nicht mit einem Zug:
@@ -40,13 +43,15 @@ Namespace ViewModels
             Public Property Range As String
             Public Property Saturate As Boolean
             Public Property Color As SKColor
+            Public Property ProtectTones As Boolean = True
         End Class
 
         Private Function CurrentToneBrushSettings() As ToneBrushSettings
             Dim replaceWith As SKColor
             If Not SKColor.TryParse(_replaceColor, replaceWith) Then replaceWith = New SKColor(58, 123, 213)
             Return New ToneBrushSettings With {.Kind = _toneMode, .Range = _toneRange,
-                                               .Saturate = _spongeSaturate, .Color = replaceWith}
+                                               .Saturate = _spongeSaturate, .Color = replaceWith,
+                                               .ProtectTones = _protectTones}
         End Function
 
         ''' <summary>Die Art, wenn der Bildpinsel aktiv ist ("Eraser" oder eine der vier), sonst leer.</summary>
@@ -133,6 +138,18 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ToneRangeMidtones))
             Me.RaisePropertyChanged(NameOf(ToneRangeHighlights))
         End Sub
+
+        ''' <summary>„Toene schuetzen" fuer Abwedeln und Nachbelichten (ImageProcessor.DodgeBurnShift).</summary>
+        Public Property ToneProtect As Boolean
+            Get
+                Return _protectTones
+            End Get
+            Set(value As Boolean)
+                If _protectTones = value Then Return
+                _protectTones = value
+                Me.RaisePropertyChanged(NameOf(ToneProtect))
+            End Set
+        End Property
 
         ''' <summary>Schwamm: saettigen statt entsaettigen. Ab Werk entsaettigt er, wie meist gemeint.</summary>
         Public Property SpongeSaturate As Boolean
@@ -287,7 +304,7 @@ Namespace ViewModels
                                     Dim coverage = ImageProcessor.BuildStrokeCoverage(renderAnn, dirtyFull, full.Width, full.Height)
                                     If coverage Is Nothing OrElse
                                        Not ImageProcessor.ApplyToneBrush(full, dirtyFull, coverage, tone.Kind, tone.Range,
-                                                                         tone.Saturate, tone.Color) Then
+                                                                         tone.Saturate, tone.Color, tone.ProtectTones) Then
                                         Throw New InvalidOperationException("Bildpinsel konnte nicht angewendet werden")
                                     End If
                                     If selectionCoverage IsNot Nothing AndAlso

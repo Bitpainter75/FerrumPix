@@ -11322,4 +11322,10 @@
   <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
     <value>Lightroom 目录</value>
   </data>
+  <data name="T_ne_sch_tzen_0b17de23" xml:space="preserve">
+    <value>保护色调</value>
+  </data>
+  <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
+    <value>作用于亮度，保持颜色、黑色和白色不变</value>
+  </data>
 </root>

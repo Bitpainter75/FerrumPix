@@ -2,6 +2,13 @@
 
 ### Changes
 
+- In the viewer and in fullscreen, HOME jumps to the first picture of the folder and END to the
+  last.
+
+- Dodge and burn work more gently and stay in their tone range: shadows, midtones and highlights
+  each have their own curve, and the new "Protect tones" option (on by default) keeps colors,
+  black and white as they are.
+
 - Brushes, masks, selection brushes and retouching in the editor now go up to a size of 3000.
 
 - A Lightroom Classic catalog can now be read alongside the RawTherapee and ART files (Settings,

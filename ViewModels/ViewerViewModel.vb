@@ -4219,6 +4219,26 @@ Namespace ViewModels
             Return -1
         End Function
 
+        ''' <summary>POS1 und ENDE: zum ersten bzw. letzten Bild des Ordners, in Betrachter und
+        ''' Vollbild. Immer in der Reihenfolge des Ordners, auch in einer gemischten Diashow: der
+        ''' Rand einer Zufallsfolge waere kein festes Bild. Im Vergleich wird das angeheftete Bild
+        ''' uebersprungen, wie beim Blaettern.</summary>
+        Public Async Sub NavigateToEdge(toLast As Boolean)
+            Try
+                Dim count = _folderPaths.Count
+                If count = 0 Then Return
+                Dim direction = If(toLast, -1, 1)
+                Dim idx = If(toLast, count - 1, 0)
+                While idx >= 0 AndAlso idx < count AndAlso IsCompareAnchorPath(_folderPaths(idx))
+                    idx += direction
+                End While
+                If idx < 0 OrElse idx >= count OrElse idx = _currentIndex Then Return
+                Await CommitNavigateAsync(idx)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ViewerViewModel.NavigateToEdge", ex)
+            End Try
+        End Sub
+
         Public Async Sub NavigateToItem(item As ImageItem)
             Try
                 If item Is Nothing Then Return

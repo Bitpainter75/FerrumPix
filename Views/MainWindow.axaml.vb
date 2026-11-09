@@ -1408,6 +1408,11 @@ Namespace Views
                         Case Key.Right, Key.PageDown
                             vm.Viewer.NextCommand.Execute(Nothing)
                             e.Handled = True
+                        Case Key.Home, Key.End
+                            If e.KeyModifiers = KeyModifiers.None Then
+                                vm.Viewer.NavigateToEdge(e.Key = Key.End)
+                                e.Handled = True
+                            End If
                         Case Key.Delete
                             vm.Viewer.DeleteCurrentCommand.Execute(Nothing)
                             e.Handled = True
