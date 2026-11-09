@@ -296,14 +296,16 @@ Namespace Services
                 Using conn = Open(path)
                     Dim byId As New Dictionary(Of Long, CatalogEntry)()
                     Using cmd = conn.CreateCommand()
-                        ' Nur die Originale: eine virtuelle Kopie traegt masterImage.
+                        ' Nur die Originale: eine virtuelle Kopie traegt in masterImage die Kennung
+                        ' ihres Originals. Ein Original hat dort NULL ODER 0, je nach Katalog; mit nur
+                        ' "IS NULL" fand sich in einem Katalog mit 0 kein einziges Foto.
                         cmd.CommandText =
                             "SELECT i.id_local, i.rating, i.pick, i.colorLabels, r.absolutePath, fo.pathFromRoot, f.baseName, f.extension " &
                             "FROM Adobe_images i " &
                             "JOIN AgLibraryFile f ON f.id_local = i.rootFile " &
                             "JOIN AgLibraryFolder fo ON fo.id_local = f.folder " &
                             "JOIN AgLibraryRootFolder r ON r.id_local = fo.rootFolder " &
-                            "WHERE i.masterImage IS NULL"
+                            "WHERE i.masterImage IS NULL OR i.masterImage = 0"
                         Using reader = cmd.ExecuteReader()
                             While reader.Read()
                                 Dim baseName = TextAt(reader, 6)
