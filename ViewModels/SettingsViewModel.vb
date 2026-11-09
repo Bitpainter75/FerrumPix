@@ -4299,7 +4299,7 @@ Namespace ViewModels
                         If photo IsNot Nothing AndAlso seen.Add(photo.FileId) Then photos.Add(photo)
                     Next
                 Next
-                Dim done = 0, written = 0
+                Dim done = 0, written = 0, failed = 0, conflicts = 0
                 For Each photo In photos
                     token.ThrowIfCancellationRequested()
                     done += 1
@@ -4315,14 +4315,29 @@ Namespace ViewModels
                         localPath = Await NextcloudService.DownloadOriginalToWorkTempAsync(photo.FileId.ToString(CultureInfo.InvariantCulture), photo.DisplayName, token)
                         If String.IsNullOrWhiteSpace(localPath) Then Continue For
                         Dim localXmp = localPath & ".xmp"
-                        Dim hadXmp = Await NextcloudService.TryDownloadXmpSidecarAsync(remotePath, localXmp, token)
-                        Dim appendXmpExtension = hadXmp AndAlso Await NextcloudService.XmpSidecarUsesAppendedNameAsync(remotePath, token)
+                        ' Gefunden, nicht gefunden und Fehler getrennt (NextcloudService.FetchXmpSidecarAsync).
+                        ' Nach einem Fehler wird NICHTS geschrieben: ein vorhandenes XMP, das gerade
+                        ' nicht zu lesen war, ginge sonst mit seinen fremden Feldern verloren.
+                        Dim fetched = Await NextcloudService.FetchXmpSidecarAsync(remotePath, localXmp, token)
+                        If fetched.State = NextcloudService.SidecarFetchState.Failed Then
+                            failed += 1
+                            Continue For
+                        End If
                         Dim createIfMissing = AppSettingsService.Load().CreateXmpSidecarIfMissing
                         If Not ExifService.WriteXmpCatalogSidecar(localPath, LibraryService.Instance.GetRating(pseudoPath), XmpSidecarService.LabelToXmpWord(LibraryService.Instance.GetColorLabel(pseudoPath)), keywords, createIfMissing:=createIfMissing) Then Continue For
                         Dim xmpPath = XmpSidecarService.FindSidecar(localPath)
-                        If Not String.IsNullOrWhiteSpace(xmpPath) AndAlso Await NextcloudService.UploadXmpSidecarAsync(xmpPath, remotePath, token, appendExtension:=appendXmpExtension) Then
+                        If String.IsNullOrWhiteSpace(xmpPath) Then Continue For
+                        ' Zurück nur mit Bedingung: unter dem gefundenen Namen auf denselben Stand,
+                        ' neu nur, wo inzwischen nichts liegt. Ein Konflikt zählt nicht als
+                        ' abgeglichen, der nächste Lauf versucht es mit frischem Stand.
+                        Dim put = Await NextcloudService.PutXmpSidecarAsync(xmpPath, remotePath, fetched, token)
+                        If put.Ok Then
                             NextcloudIndexService.Instance.MarkXmpSidecarSynced(NextcloudService.ServerKey, photo.FileId.ToString(CultureInfo.InvariantCulture), sourceSignature)
                             written += 1
+                        ElseIf put.Conflict Then
+                            conflicts += 1
+                        Else
+                            failed += 1
                         End If
                     Finally
                         Try
@@ -4334,7 +4349,10 @@ Namespace ViewModels
                         End Try
                     End Try
                 Next
-                ServerScanMessage = String.Format(LocalizationService.T("{0} XMP-Sidecars synchronisiert"), written)
+                ServerScanMessage = If(failed + conflicts = 0,
+                    String.Format(LocalizationService.T("{0} XMP-Sidecars synchronisiert"), written),
+                    String.Format(LocalizationService.T("{0} XMP-Sidecars synchronisiert, {1} nicht lesbar oder nicht schreibbar, {2} inzwischen auf dem Server geändert"),
+                                  written, failed, conflicts))
             Catch ex As OperationCanceledException
                 ServerScanMessage = LocalizationService.T("Abgebrochen")
             Catch ex As Exception

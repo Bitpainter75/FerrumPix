@@ -11329,4 +11329,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Atua na luminosidade e mantém a cor, o preto e o branco</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} camadas de preenchimento ou de forma não têm píxeis no ficheiro e faltam.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>Edição ilegível</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>Não foi possível ler a edição guardada de {0}. A imagem abre sem ela; o ficheiro com a edição é mantido e não será substituído.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} ficheiros XMP sincronizados, {1} não puderam ser lidos ou escritos, {2} foram alterados no servidor entretanto</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Edição alterada no servidor</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>Entretanto, a edição desta imagem foi guardada ou criada no servidor. Pretende substituí-la?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>Não foi possível ler a edição no servidor ao abrir a imagem, por isso não será substituída. Abra a imagem novamente.</value>
+  </data>
 </root>

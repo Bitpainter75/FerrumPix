@@ -20,6 +20,10 @@ Namespace Models
         Public Property PathInTree As String = ""
         Public Property ETag As String = ""
         Public Property PseudoPath As String = ""
+        ''' <summary>Stand und ETag der Rezeptdatei (.fpxmp) beim Holen, für das bedingte
+        ''' Zurückschreiben (NextcloudService.PutSidecarAsync). Nothing: nie geholt.</summary>
+        Public Property SidecarState As Services.NextcloudService.SidecarFetchState?
+        Public Property SidecarETag As String = ""
 
         ''' <summary>Ist die Herkunft ueberhaupt bekannt? Ohne den Pfad gibt es keinen Rueckweg, und
         ''' der Editor bleibt bei "Speichern unter".</summary>
@@ -36,7 +40,9 @@ Namespace Models
             Return New NextcloudOrigin With {
                 .PathInTree = If(item.NextcloudPath, ""),
                 .ETag = If(item.NextcloudETag, ""),
-                .PseudoPath = If(item.FilePath, "")
+                .PseudoPath = If(item.FilePath, ""),
+                .SidecarState = item.NextcloudSidecarState,
+                .SidecarETag = If(item.NextcloudSidecarETag, "")
             }
         End Function
 

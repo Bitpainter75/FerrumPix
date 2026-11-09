@@ -11330,4 +11330,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Actúa sobre la luminosidad y deja intactos el color, el negro y el blanco</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} capas de relleno o de forma no tienen píxeles en el archivo y faltan.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>No se puede leer la edición</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>No se pudo leer la edición guardada de {0}. La imagen se abre sin ella; el archivo con la edición se conserva y no se sobrescribe.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} archivos XMP sincronizados, {1} no se pudieron leer o escribir, {2} cambiaron en el servidor mientras tanto</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Edición cambiada en el servidor</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>La edición de esta imagen se ha guardado o creado entretanto en el servidor. ¿Quiere sobrescribirla?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>La edición del servidor no se pudo leer al abrir la imagen, por eso no se sobrescribe. Vuelva a abrir la imagen.</value>
+  </data>
 </root>

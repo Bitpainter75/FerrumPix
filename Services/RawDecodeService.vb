@@ -4414,43 +4414,7 @@ Namespace Services
                     Return True
                 End If
 
-                Dim mainArea As Long = -1
-                Dim mainInterpretation = -1
-                Dim largestArea As Long = -1
-                Dim largestInterpretation = -1
-
-                For Each d In directories.OfType(Of MetadataExtractor.Formats.Exif.ExifDirectoryBase)()
-                    ' Ausgeschrieben, weil MetadataExtractor das als Erweiterungsmethode anbietet
-                    ' und diese Datei den Namensraum nicht importiert.
-                    Dim interpretation As Integer
-                    If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(
-                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation,
-                           interpretation) Then Continue For
-
-                    Dim width, height As Integer
-                    Dim area As Long = 0
-                    If MetadataExtractor.DirectoryExtensions.TryGetInt32(
-                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth, width) AndAlso
-                       MetadataExtractor.DirectoryExtensions.TryGetInt32(
-                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageHeight, height) Then
-                        area = CLng(width) * height
-                    End If
-
-                    Dim subfileType As Integer
-                    If MetadataExtractor.DirectoryExtensions.TryGetInt32(
-                           d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagNewSubfileType, subfileType) AndAlso
-                       subfileType = 0 AndAlso area > mainArea Then
-                        mainArea = area
-                        mainInterpretation = interpretation
-                    End If
-
-                    If area > largestArea Then
-                        largestArea = area
-                        largestInterpretation = interpretation
-                    End If
-                Next
-
-                Dim decisive = If(mainInterpretation >= 0, mainInterpretation, largestInterpretation)
+                Dim decisive = MainImageInterpretation(directories)
                 If decisive < 0 Then Return False
                 ' Sensormuster heisst roh; alles andere behaelt LibRaws Gammaausgabe.
                 If decisive = ColorFilterArrayInterpretation Then Return False
@@ -4485,6 +4449,51 @@ Namespace Services
 
         ''' <summary>PhotometricInterpretation eines Sensormusters (CFA) im DNG-Standard.</summary>
         Private Const ColorFilterArrayInterpretation As Integer = 32803
+
+        ''' <summary>PhotometricInterpretation LinearRaw: demosaikierte, lineare Daten (DNG).</summary>
+        Private Const LinearRawInterpretation As Integer = 34892
+
+        ''' <summary>PhotometricInterpretation des Vollbilds einer DNG: das groesste Verzeichnis mit
+        ''' NewSubFileType 0, ersatzweise das groesste ueberhaupt; -1, wenn keines es angibt.</summary>
+        Private Shared Function MainImageInterpretation(directories As IEnumerable(Of MetadataExtractor.Directory)) As Integer
+            Dim mainArea As Long = -1
+            Dim mainInterpretation = -1
+            Dim largestArea As Long = -1
+            Dim largestInterpretation = -1
+
+            For Each d In directories.OfType(Of MetadataExtractor.Formats.Exif.ExifDirectoryBase)()
+                ' Ausgeschrieben, weil MetadataExtractor das als Erweiterungsmethode anbietet
+                ' und diese Datei den Namensraum nicht importiert.
+                Dim interpretation As Integer
+                If Not MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                       d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagPhotometricInterpretation,
+                       interpretation) Then Continue For
+
+                Dim width, height As Integer
+                Dim area As Long = 0
+                If MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                       d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageWidth, width) AndAlso
+                   MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                       d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagImageHeight, height) Then
+                    area = CLng(width) * height
+                End If
+
+                Dim subfileType As Integer
+                If MetadataExtractor.DirectoryExtensions.TryGetInt32(
+                       d, MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagNewSubfileType, subfileType) AndAlso
+                   subfileType = 0 AndAlso area > mainArea Then
+                    mainArea = area
+                    mainInterpretation = interpretation
+                End If
+
+                If area > largestArea Then
+                    largestArea = area
+                    largestInterpretation = interpretation
+                End If
+            Next
+
+            Return If(mainInterpretation >= 0, mainInterpretation, largestInterpretation)
+        End Function
 
         Private Shared ReadOnly _rampBlackShareByPath As New Concurrent.ConcurrentDictionary(Of String, Double)(StringComparer.Ordinal)
 
@@ -4627,7 +4636,17 @@ Namespace Services
                 ' Grundbelichtung der Datei ein zweites Mal daraufzulegen macht sie schlicht
                 ' dunkler, als die Kamera sie gemeint hat. Gemessen an CRW_2101: ohne diese Regel
                 ' 92,9 statt der 110,0, die bis 0.9.47 herauskamen.
-                If IsFinishedRgb(path) Then
+                '
+                ' AUSGENOMMEN IST LINEARRAW. Dort schreibt die Kamera selbst die lineare Szene und
+                ' sagt mit dem Feld, wie hell sie gemeint ist; ein Telefon zieht dafuer die Belichtung
+                ' bewusst um 2 bis 3 Stufen herunter, um die Lichter zu schonen. Ohne das Feld kamen
+                ' Samsung-DNGs mit +2 und +3 rund 2 bis 4 Stufen (im sRGB-Wert) dunkler heraus als
+                ' ihre Vorschau, mit ihm 1,5 bis 2,4 Stufen bzw. bis auf 0,1 Stufen heran; den Rest
+                ' traegt ihre ProfileGainTableMap, die nicht ausgewertet wird. Die Monochrome der
+                ' Pentax K-3 III (-0,5) rueckt von +0,33 auf +0,10 Stufen. Gemessen am 2026-11-09 mit
+                ' Diagnostics/DngJxlProbe --messen --grundbelichtung.
+                If IsFinishedRgb(path) AndAlso
+                   MainImageInterpretation(verzeichnisse) <> LinearRawInterpretation Then
                     SyncLock BaselineExposuresLock
                         BaselineExposures(path) = 0.0
                     End SyncLock

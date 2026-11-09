@@ -39,6 +39,23 @@
   over the picture when part of the circle reaches past the edge, also on a rotated or cropped
   photo.
 
+- Raw files from Samsung phones in Expert RAW or Pro mode no longer open several stops too dark:
+  the brightness the phone notes in the file is now used. Some of them still come out a little
+  darker than on the phone.
+
+- A Photoshop file whose fill or shape layers carry no pixels, as Photoshop saves them in 16 and
+  32 bit, no longer opens as a blank white picture: FerrumPix says so and offers the flat picture
+  instead, and shows the flat picture when you browse to it.
+
+- If the saved edit of a raw or Photoshop file cannot be read, FerrumPix now says so when you
+  open the picture instead of quietly opening it unedited. The file with the edit is left as it
+  is.
+
+- Nextcloud: saving an edit no longer quietly replaces one that another computer saved in the
+  meantime; FerrumPix asks first. If the edit on the server could not be read when the picture was
+  opened, it is not overwritten. Writing ratings, labels and keywords into XMP files on the server
+  no longer replaces an existing XMP file after a failed download, and keeps its name.
+
 - A file name with a dot in it, such as an aperture like "f1.4", is no longer cut short when saving,
   renaming, renaming several files at once or naming a collage, and the file keeps its extension.
 

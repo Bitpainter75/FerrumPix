@@ -11374,4 +11374,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>밝기에 작용하며 색상, 검정, 흰색은 그대로 둡니다</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0}개의 칠 또는 모양 레이어는 파일에 픽셀이 없어 누락됩니다.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>편집을 읽을 수 없음</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>{0}의 저장된 편집을 읽을 수 없습니다. 이미지는 편집 없이 열립니다. 편집이 담긴 파일은 그대로 유지되며 덮어쓰지 않습니다.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>XMP 사이드카 {0}개 동기화, {1}개 읽기 또는 쓰기 불가, {2}개는 그사이 서버에서 변경됨</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>서버의 편집이 변경됨</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>이 이미지의 편집이 그사이 서버에 저장되거나 생성되었습니다. 덮어쓰시겠습니까?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>이미지를 열 때 서버의 편집을 읽을 수 없어 덮어쓰지 않습니다. 이미지를 다시 여세요.</value>
+  </data>
 </root>

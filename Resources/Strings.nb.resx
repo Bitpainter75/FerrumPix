@@ -11370,4 +11370,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Virker på lysheten og lar farge, svart og hvitt være</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} fyll- eller formlag har ingen piksler i filen og mangler.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>Redigeringen kan ikke leses</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>Den lagrede redigeringen av {0} kunne ikke leses. Bildet åpnes uten den; filen med redigeringen beholdes og overskrives ikke.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} XMP-sidefiler synkronisert, {1} kunne ikke leses eller skrives, {2} er endret på serveren i mellomtiden</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Redigeringen endret på serveren</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>Redigeringen av dette bildet er i mellomtiden lagret eller opprettet på serveren. Vil du overskrive den?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>Redigeringen på serveren kunne ikke leses da bildet ble åpnet, og overskrives derfor ikke. Åpne bildet på nytt.</value>
+  </data>
 </root>

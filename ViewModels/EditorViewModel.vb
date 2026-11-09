@@ -135,6 +135,12 @@ Namespace ViewModels
         ''' der Server ab, statt die fremde Aenderung lautlos zu ueberschreiben.</summary>
         Private _nextcloudSourceETag As String = ""
 
+        ''' <summary>Stand und ETag der Rezeptdatei (.fpxmp) neben dem Original, wie beim Holen
+        ''' festgestellt (NextcloudOrigin.SidecarState). Gespeichert wird nur mit passender Bedingung
+        ''' (NextcloudService.PutSidecarAsync); der ETag ist ein anderer als der des Bildes.</summary>
+        Private _nextcloudSidecarState As NextcloudService.SidecarFetchState?
+        Private _nextcloudSidecarETag As String = ""
+
         ''' <summary>Die Identitaet des Bildes im lokalen Katalog: der Pseudo-Pfad, unter dem auch die
         ''' Galerie es fuehrt. Bewertung und Farbetikett kennt der Server nicht und bleiben lokal -
         ''' aber unter DIESEM Schluessel, nicht unter dem Pfad der Temp-Kopie, den das naechste
@@ -19539,8 +19545,13 @@ Namespace ViewModels
             ElseIf RawSidecarService.IsSidecarFormat(path) AndAlso
                    RawSidecarService.Exists(path) Then
                 ' Rezept-Begleitdatei (.fpxmp): die zuletzt gespeicherten Regler kommen wie beim
-                ' .fpx-Laden wieder an - ein defekter Sidecar wird still ignoriert.
-                fpxAdjustments = RawSidecarService.TryRead(path)
+                ' .fpx-Laden wieder an. Beim Blättern meldet eine unlesbare Datei sich in der
+                ' Statuszeile statt mit einem Fenster mitten in der Pfeiltaste.
+                Dim readState = RawSidecarService.ReadRecipe(path, fpxAdjustments)
+                If readState = RawSidecarService.SidecarReadResult.Unreadable Then
+                    fpxAdjustments = Nothing
+                    StatusText = UnreadableSidecarNotice(path)
+                End If
             End If
             ' Eine RAW ohne Rezept beginnt mit den Startwerten einer unbearbeiteten RAW, genau wie im
             ' Betrachter. Sie laufen durch denselben Weg wie ein geladenes Rezept und gelten damit
@@ -19581,6 +19592,8 @@ Namespace ViewModels
             ' Oeffnen, und LoadImageContent laeuft nur bei der Navigation IM Streifen.
             _nextcloudSourcePath = ""
             _nextcloudSourceETag = ""
+            _nextcloudSidecarState = Nothing
+            _nextcloudSidecarETag = ""
             _nextcloudSourcePseudoPath = ""
             ' Der Anzeigename gehoert ebenso zum ALTEN Bild. Was die Arbeitskopie selbst verraet,
             ' steht sofort da; den Namen eines Immich-Assets zieht LoadImmichMetaAsync unten nach.
@@ -19721,7 +19734,9 @@ Namespace ViewModels
                 herkunft = New Models.NextcloudOrigin With {
                     .PathInTree = _nextcloudSourcePath,
                     .ETag = _nextcloudSourceETag,
-                    .PseudoPath = _nextcloudSourcePseudoPath}
+                    .PseudoPath = _nextcloudSourcePseudoPath,
+                    .SidecarState = _nextcloudSidecarState,
+                    .SidecarETag = _nextcloudSidecarETag}
             End If
             ' Aus demselben Grund den Anzeigenamen: bei Immich steht er in keinem Pfad, und ohne ihn
             ' hiesse das Bild nach der Rueckkehr aus den Einstellungen wieder nach seiner Kennung.
@@ -19745,6 +19760,13 @@ Namespace ViewModels
                 End Get
             End Property
         End Class
+
+        ''' <summary>Der Hinweis, wenn die Begleitdatei eines Bildes vorhanden, aber nicht lesbar ist
+        ''' (defekt, neuere Formatversion, Lesefehler auf dem Netzlaufwerk).</summary>
+        Private Shared Function UnreadableSidecarNotice(imagePath As String) As String
+            Return String.Format(LocalizationService.T("Die gespeicherte Bearbeitung zu {0} ließ sich nicht lesen. Das Bild öffnet ohne sie; die Datei mit der Bearbeitung bleibt erhalten und wird nicht überschrieben."),
+                                 IO.Path.GetFileName(imagePath))
+        End Function
 
         ''' <summary>Öffnet eine Photoshop-Datei als Ebenenstapel und legt die gespeicherte
         ''' Bearbeitung darüber.
@@ -19780,7 +19802,18 @@ Namespace ViewModels
             ' Die gespeicherte Bearbeitung, falls es eine gibt. Sie kommt ÜBER den Stapel und
             ' ersetzt ihn nicht; ohne Ebenen in der Datei bleibt sie allein übrig, genau wie bei
             ' einer RAW.
-            Dim sidecar = If(RawSidecarService.Exists(psdSource), RawSidecarService.TryRead(psdSource), Nothing)
+            Dim sidecar As ImageAdjustments = Nothing
+            If RawSidecarService.Exists(psdSource) AndAlso
+               RawSidecarService.ReadRecipe(psdSource, sidecar) = RawSidecarService.SidecarReadResult.Unreadable Then
+                ' Wie bei der RAW: gemeldet statt still übergangen, beim Blättern in der Statuszeile.
+                sidecar = Nothing
+                If mayAskAboutText Then
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Bearbeitung nicht lesbar"),
+                        UnreadableSidecarNotice(psdSource))
+                Else
+                    StatusText = UnreadableSidecarNotice(psdSource)
+                End If
+            End If
 
             ' Textebenen einer FREMDEN Datei: der Wortlaut lässt sich herausholen, Schrift und
             ' Grad nicht verlässlich. Als Text ist er weiter tippbar, sieht aber womöglich anders
@@ -19828,7 +19861,7 @@ Namespace ViewModels
                                   (takeTextAsText OrElse (textLayers = 0 AndAlso String.Equals(textImportMode, "Ask", StringComparison.Ordinal)))
             If mayAskAboutText AndAlso (importResult.EffectLayers > 0 OrElse importResult.BrokenLayers > 0 OrElse
                                         importResult.AdjustmentLayers > 0 OrElse importResult.DroppedTextLayers > 0 OrElse
-                                        stretchedNotice) Then
+                                        importResult.MissingContentLayers > 0 OrElse stretchedNotice) Then
                 Dim parts As New List(Of String)()
                 If importResult.EffectLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Ebenen tragen Ebeneneffekte wie Schatten oder Kontur. FerrumPix zeigt diese Ebenen ohne ihre Effekte."), importResult.EffectLayers))
@@ -19838,6 +19871,9 @@ Namespace ViewModels
                 End If
                 If importResult.AdjustmentLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Anpassungsebenen werden nicht übernommen."), importResult.AdjustmentLayers))
+                End If
+                If importResult.MissingContentLayers > 0 Then
+                    parts.Add(String.Format(LocalizationService.T("{0} Füll- oder Formebenen tragen in der Datei keine Bildpunkte und fehlen."), importResult.MissingContentLayers))
                 End If
                 If stretchedNotice Then
                     parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind gestreckt, geschert oder gespiegelt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
@@ -19871,6 +19907,18 @@ Namespace ViewModels
                     End Try
                     Return New PsdDocumentLoad With {.Adjustments = sidecar}
                 End If
+            ElseIf Not mayAskAboutText AndAlso importResult.MissingContentLayers > 0 AndAlso
+                   Await Task.Run(Function() PsdPreviewService.HasFullComposite(psdSource)) Then
+                ' BEIM BLÄTTERN, und nur für fehlenden Inhalt: Effekte, Anpassungsebenen und
+                ' unlesbare Ebenen lassen den Stapel unvollständig, aber erkennbar. Fehlt dagegen
+                ' eine Füll- oder Formebene ganz, steht ein falsches Bild da (eine 16-Bit-Datei mit
+                ' Füllebene kam als weiße Fläche). Dann gilt hier das Gesamtbild; wer die Ebenen
+                ' will, öffnet die Datei und wird gefragt.
+                Try
+                    Directory.Delete(importResult.TempDir, True)
+                Catch
+                End Try
+                Return New PsdDocumentLoad With {.Adjustments = sidecar}
             End If
 
             Return New PsdDocumentLoad With {
@@ -19969,8 +20017,16 @@ Namespace ViewModels
             ElseIf RawSidecarService.IsSidecarFormat(imagePath) AndAlso
                    RawSidecarService.Exists(imagePath) Then
                 ' Bleibt nach dem Zweig darüber die RAW: die zuletzt gespeicherten Regler kommen
-                ' wie beim .fpx-Laden wieder an, ein defekter Sidecar wird still ignoriert.
-                fpxAdjustments = RawSidecarService.TryRead(imagePath)
+                ' wie beim .fpx-Laden wieder an. Eine vorhandene, aber nicht lesbare Begleitdatei
+                ' wird GEMELDET, nicht still übergangen: das Bild öffnet dann ohne seine Bearbeitung,
+                ' und ohne Hinweis hielte man die Bearbeitung für verloren. Überschrieben wird sie
+                ' nicht, das Speichern lässt eine unlesbare Datei stehen und meldet den Fehler.
+                Dim readState = RawSidecarService.ReadRecipe(imagePath, fpxAdjustments)
+                If readState = RawSidecarService.SidecarReadResult.Unreadable Then
+                    fpxAdjustments = Nothing
+                    Await _mainVm.ShowMessageAsync(LocalizationService.T("Bearbeitung nicht lesbar"),
+                        UnreadableSidecarNotice(imagePath))
+                End If
             End If
             ' Ohne Rezept die Startwerte einer unbearbeiteten RAW - derselbe Weg wie beim Blaettern.
             If fpxAdjustments Is Nothing AndAlso RawPreviewService.IsSupportedRaw(imagePath) Then
@@ -20014,6 +20070,8 @@ Namespace ViewModels
             ' Foto - derselbe Fehler, den es beim Immich-Album schon einmal gab.
             _nextcloudSourcePath = If(nextcloudSource?.PathInTree, "")
             _nextcloudSourceETag = If(nextcloudSource?.ETag, "")
+            _nextcloudSidecarState = nextcloudSource?.SidecarState
+            _nextcloudSidecarETag = If(nextcloudSource?.SidecarETag, "")
             _nextcloudSourcePseudoPath = If(nextcloudSource?.PseudoPath, "")
             ' VOR dem Setzen des Pfades: dessen PropertyChanged meldet den Dateinamen an Fußzeile
             ' und Fenstertitel, und der soll gleich der richtige sein.
@@ -23485,7 +23543,9 @@ Namespace ViewModels
                 Dim herkunftDanach = New Models.NextcloudOrigin With {
                     .PathInTree = targetPathInTree,
                     .ETag = _nextcloudSourceETag,
-                    .PseudoPath = _nextcloudSourcePseudoPath}
+                    .PseudoPath = _nextcloudSourcePseudoPath,
+                    .SidecarState = _nextcloudSidecarState,
+                    .SidecarETag = _nextcloudSidecarETag}
                 Await OpenImageAsync(_currentImagePath, filmstripPaths, _thumbCacheScopeId, _thumbCacheScopeName,
                                      nextcloudSource:=herkunftDanach,
                                      displayFileName:=_sourceDisplayFileName)
@@ -23523,13 +23583,35 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Begleitdatei konnte nicht geschrieben werden")
                 Return False
             End If
-            If Not Await NextcloudService.UploadSidecarAsync(lokal, _nextcloudSourcePath) Then
+            ' MIT BEDINGUNG nach dem Stand beim Öffnen: lag ein Rezept vor, nur auf genau diesen
+            ' Stand; lag keins vor, nur wenn weiterhin keins da ist. War der Stand nicht zu
+            ' ermitteln, wird nicht geschrieben. Vorher ging das Rezept ohne Bedingung hinauf und
+            ' ersetzte still eins, das ein anderer Rechner inzwischen gespeichert hatte.
+            Dim put = Await NextcloudService.PutSidecarAsync(lokal, _nextcloudSourcePath, _nextcloudSidecarState, _nextcloudSidecarETag)
+            If put.Conflict AndAlso _mainVm IsNot Nothing Then
+                Dim replace = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Bearbeitung auf dem Server geändert"),
+                    LocalizationService.T("Auf dem Server wurde die Bearbeitung zu diesem Bild inzwischen anderweitig gespeichert oder angelegt. Soll sie überschrieben werden?"),
+                    LocalizationService.T("Überschreiben"),
+                    LocalizationService.T("Abbrechen"))
+                If replace Then put = Await NextcloudService.PutSidecarAsync(lokal, _nextcloudSourcePath, _nextcloudSidecarState, _nextcloudSidecarETag, overwrite:=True)
+            End If
+            If Not put.Ok Then
                 _hasChanges = True
                 Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
-                StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
-                                LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), NextcloudService.LastError)
+                If put.Conflict Then
+                    StatusText = LocalizationService.T("Bearbeitung auf dem Server geändert")
+                ElseIf Not _nextcloudSidecarState.HasValue OrElse _nextcloudSidecarState.Value = NextcloudService.SidecarFetchState.Failed Then
+                    StatusText = LocalizationService.T("Die Bearbeitung auf dem Server ließ sich beim Öffnen nicht lesen und wird deshalb nicht überschrieben. Das Bild bitte erneut öffnen.")
+                Else
+                    StatusText = If(String.IsNullOrEmpty(NextcloudService.LastError),
+                                    LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"), NextcloudService.LastError)
+                End If
                 Return False
             End If
+            ' Der neue Stand gilt fürs nächste Speichern, sonst wiese die eigene Bedingung es ab.
+            _nextcloudSidecarState = NextcloudService.SidecarFetchState.Found
+            _nextcloudSidecarETag = put.ETag
             StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
             Return True
         End Function

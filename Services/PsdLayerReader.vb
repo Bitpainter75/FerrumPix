@@ -165,6 +165,12 @@ Namespace Services
             Public Property BrokenLayers As Integer
             ''' Sichtbare Anpassungsebenen, deren Wirkung beim Ebenenimport fehlt.
             Public Property AdjustmentLayers As Integer
+            ''' <summary>Sichtbare Füll-, Form- oder Smartobjekt-Ebenen, für die die Datei keine
+            ''' Bildpunkte trägt. Wir rechnen solche Ebenen nicht selbst, sondern nehmen die
+            ''' Bildpunkte, die Photoshop dazu schreibt; fehlen sie, fehlt die Ebene. Gesehen an
+            ''' 16- und 32-Bit-Dateien mit Füllebene (psd-tools, `4x4_16bit_rgb.psd`, `300dpi.psd`):
+            ''' ohne diese Zählung öffneten sie still als weiße Fläche.</summary>
+            Public Property MissingContentLayers As Integer
             ''' <summary>Ob die Bildressourcen den eigenen Rezeptblock tragen, und beim vollen Lesen
             ''' sein Inhalt (siehe <see cref="PsdRecipeService.FindPayload"/>). Mitgelesen, weil der
             ''' Leser die Sektion ohnehin durchläuft; sonst öffnete der Import die Datei dafür eigens.</summary>
@@ -396,7 +402,10 @@ Namespace Services
                     ' ohne Inhalt: sie kommt als leere Malebene zurück (IsEmptyLayer).
                     Dim emptyText = Not rec.HasPixels AndAlso Not String.IsNullOrWhiteSpace(rec.TextContent)
                     Dim emptyLayer = Not rec.HasPixels AndAlso rec.IsPlainEmpty
-                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly AndAlso Not emptyText AndAlso Not emptyLayer Then Continue For
+                    If bmp Is Nothing AndAlso rec.SectionType = 0 AndAlso Not metadataOnly AndAlso Not emptyText AndAlso Not emptyLayer Then
+                        If rec.IsContentWithoutOwnPixels AndAlso (rec.Flags And 2) = 0 Then doc.MissingContentLayers += 1
+                        Continue For
+                    End If
                     If metadataOnly AndAlso Not rec.HasPixels AndAlso rec.SectionType = 0 AndAlso Not emptyText AndAlso Not emptyLayer Then Continue For
 
                     layers.Add(New PsdLayerInfo With {
@@ -594,6 +603,9 @@ Namespace Services
             ''' <summary>Eine gewöhnliche Bildebene, nur ohne Inhalt. Zählt erst, wenn
             ''' <see cref="HasPixels"/> falsch ist.</summary>
             Public Property IsPlainEmpty As Boolean
+            ''' <summary>Füllung, Form, Kontur oder Smartobjekt: Inhalt, den Photoshop aus etwas
+            ''' anderem rechnet und dessen Bildpunkte wir nur übernehmen, nie selbst rechnen.</summary>
+            Public Property IsContentWithoutOwnPixels As Boolean
         End Class
 
         Private Shared Function ReadLayerRecord(fs As FileStream, isPsb As Boolean) As LayerRecord
@@ -764,6 +776,8 @@ Namespace Services
             ' Namen, Platz im Stapel und Maske.
             rec.IsPlainEmpty = rec.SectionType = 0 AndAlso Not rec.IsAdjustment AndAlso
                                Not (hasText OrElse hasSmart OrElse hasShapeContent OrElse hasFill OrElse hasStroke)
+            rec.IsContentWithoutOwnPixels = rec.SectionType = 0 AndAlso
+                                            (hasSmart OrElse hasShapeContent OrElse hasFill OrElse hasStroke)
             If effectsBlock IsNot Nothing Then
                 rec.HasEffects = EffectsAreActive(effectsBlock)
             ElseIf hasLegacyEffects AndAlso rec.SectionType = 0 Then

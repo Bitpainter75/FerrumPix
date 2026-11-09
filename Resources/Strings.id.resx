@@ -11374,4 +11374,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Bekerja pada kecerahan dan membiarkan warna, hitam, dan putih tetap</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} lapisan isian atau bentuk tidak memiliki piksel di dalam berkas dan hilang.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>Suntingan tidak dapat dibaca</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>Suntingan tersimpan untuk {0} tidak dapat dibaca. Gambar dibuka tanpanya; berkas suntingan tetap disimpan dan tidak akan ditimpa.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} sidecar XMP disinkronkan, {1} tidak dapat dibaca atau ditulis, {2} telah berubah di server sementara itu</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Suntingan berubah di server</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>Suntingan untuk gambar ini telah disimpan atau dibuat di server sementara itu. Timpa?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>Suntingan di server tidak dapat dibaca saat gambar dibuka, jadi tidak akan ditimpa. Silakan buka gambar lagi.</value>
+  </data>
 </root>

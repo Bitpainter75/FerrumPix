@@ -907,67 +907,108 @@ Namespace Services
             Return (Await PutFileAsync(localPath, targetPathInTree, cancellationToken).ConfigureAwait(False)).Ok
         End Function
 
-        ''' <summary>Holt die Begleitdatei zu einem Foto, wenn es eine gibt, und legt sie unter
-        ''' <paramref name="localTargetPath"/> ab. False heisst "keine da" ODER "Fehler" - der
-        ''' Unterschied steht in <see cref="LastError"/> und ist fuer den Aufrufer folgenlos: ohne
-        ''' Begleitdatei wird eben nichts angewendet.</summary>
-        Public Shared Async Function TryDownloadSidecarAsync(filePathInTree As String, localTargetPath As String,
-                                                             Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+        ''' <summary>Holt die Rezeptdatei (.fpxmp) zu einem Foto nach <paramref name="localTargetPath"/>,
+        ''' mit Stand: gefunden samt ETag, sicher nicht vorhanden (404) oder gescheitert.
+        '''
+        ''' Vorher hieß jeder Fehler „keine da": der Editor öffnete dann ohne das Rezept vom Server
+        ''' und schrieb beim Speichern ohne Bedingung darüber. Den Stand braucht der Rückweg
+        ''' (<see cref="PutSidecarAsync"/>); ein Abbruch läuft als Abbruch durch.
+        ''' <paramref name="keepExistingLocal"/>: eine schon vorhandene lokale Datei nicht ersetzen
+        ''' (Nachholen nach einem gescheiterten ersten Abruf), nur den Stand des Servers merken.</summary>
+        Public Shared Async Function FetchSidecarAsync(filePathInTree As String, localTargetPath As String,
+                                                       Optional cancellationToken As CancellationToken = Nothing,
+                                                       Optional keepExistingLocal As Boolean = False) As Task(Of SidecarFetchResult)
             LastError = ""
-            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return False
+            Dim result = New SidecarFetchResult()
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return result
+            Dim remote = filePathInTree & RawSidecarService.Extension
             Try
-                Dim response = Await GetClient().GetAsync(FileUrl(filePathInTree & RawSidecarService.Extension),
-                                                          cancellationToken).ConfigureAwait(False)
-                If response.StatusCode = HttpStatusCode.NotFound Then Return False
-                If Not response.IsSuccessStatusCode Then
-                    Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
-                    Return False
-                End If
-                Dim bytes = Await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(False)
-                If bytes Is Nothing OrElse bytes.Length = 0 Then Return False
-                Await File.WriteAllBytesAsync(localTargetPath, bytes, cancellationToken).ConfigureAwait(False)
-                Return True
+                Using response = Await GetClient().GetAsync(FileUrl(remote), cancellationToken).ConfigureAwait(False)
+                    If response.StatusCode = HttpStatusCode.NotFound Then
+                        result.State = SidecarFetchState.NotFound
+                        Return result
+                    End If
+                    If Not response.IsSuccessStatusCode Then
+                        Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
+                        Return result
+                    End If
+                    Dim bytes = Await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(False)
+                    If bytes Is Nothing OrElse bytes.Length = 0 Then Return result
+                    If Not (keepExistingLocal AndAlso File.Exists(localTargetPath)) Then
+                        Await File.WriteAllBytesAsync(localTargetPath, bytes, cancellationToken).ConfigureAwait(False)
+                    End If
+                    result.State = SidecarFetchState.Found
+                    result.RemotePath = remote
+                    result.ETag = If(response.Headers.ETag?.Tag, "").Trim(""""c)
+                    Return result
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
             Catch ex As Exception
                 LastError = ex.Message
-                Return False
+                DiagnosticLogService.LogException("Nextcloud.Rezeptabruf", ex)
+                Return result
             End Try
         End Function
 
-        ''' <summary>Lädt ein Adobe-XMP-Sidecar neben einer Serverdatei. Das ist bewusst nicht der
-        ''' .fpxmp-Weg: XMP trägt austauschbare Katalogdaten, .fpxmp das FerrumPix-Rezept.</summary>
-        Public Shared Async Function TryDownloadXmpSidecarAsync(filePathInTree As String, localTargetPath As String,
-                                                                Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
-            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return False
+        ''' <summary>Was der Abruf eines XMP neben einer Serverdatei ergab.</summary>
+        Public Enum SidecarFetchState
+            ''' Beide Namensformen mit 404 beantwortet: es gibt sicher keins.
+            NotFound
+            ''' Gefunden und lokal abgelegt; Pfad und ETag stehen dabei.
+            Found
+            ''' Ein anderer Status, eine leere Antwort oder eine Ausnahme: ob es eins gibt, ist
+            ''' unbekannt. Dann darf nichts geschrieben werden.
+            Failed
+        End Enum
+
+        Public NotInheritable Class SidecarFetchResult
+            Public Property State As SidecarFetchState = SidecarFetchState.Failed
+            ''' Der Pfad im Dateibaum, unter dem es lag (foto.jpg.xmp oder foto.xmp).
+            Public Property RemotePath As String = ""
+            ''' Der ETag aus DERSELBEN Antwort, für ein bedingtes Zurückschreiben.
+            Public Property ETag As String = ""
+        End Class
+
+        ''' <summary>Holt ein Adobe-XMP neben einer Serverdatei nach <paramref name="localTargetPath"/>.
+        ''' Das ist bewusst nicht der .fpxmp-Weg: XMP trägt austauschbare Katalogdaten, .fpxmp das
+        ''' FerrumPix-Rezept.
+        '''
+        ''' GEFUNDEN, NICHT GEFUNDEN UND FEHLER BLEIBEN GETRENNT. Vorher hieß jeder Fehler „keins
+        ''' da": ein vorübergehender 500 auf ein vorhandenes `foto.xmp` führte zu einem neu gebauten
+        ''' XMP, das per unbedingtem PUT darüberging, und die fremden Felder darin waren weg. Ein
+        ''' Abbruch läuft als Abbruch durch.</summary>
+        Public Shared Async Function FetchXmpSidecarAsync(filePathInTree As String, localTargetPath As String,
+                                                          Optional cancellationToken As CancellationToken = Nothing) As Task(Of SidecarFetchResult)
+            Dim result = New SidecarFetchResult()
+            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return result
             Try
                 ' Beide XMP-Konventionen sind im Umlauf: foto.jpg.xmp und foto.xmp. Die zuerst
-                ' gefundene Form wird lokal unter dem gewünschten Zielnamen abgelegt.
+                ' gefundene Form gilt, und unter ihrem Namen wird später auch geschrieben.
                 For Each candidate In {filePathInTree & ".xmp", IO.Path.ChangeExtension(filePathInTree, ".xmp")}.Distinct(StringComparer.OrdinalIgnoreCase)
                     Using response = Await GetClient().GetAsync(FileUrl(candidate), cancellationToken).ConfigureAwait(False)
                         If response.StatusCode = HttpStatusCode.NotFound Then Continue For
-                        If Not response.IsSuccessStatusCode Then Return False
+                        If Not response.IsSuccessStatusCode Then
+                            Await SetErrorFromResponse(response, cancellationToken).ConfigureAwait(False)
+                            Return result
+                        End If
                         Dim bytes = Await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(False)
-                        If bytes Is Nothing OrElse bytes.Length = 0 Then Return False
+                        If bytes Is Nothing OrElse bytes.Length = 0 Then Return result
                         Await File.WriteAllBytesAsync(localTargetPath, bytes, cancellationToken).ConfigureAwait(False)
-                        Return True
+                        result.State = SidecarFetchState.Found
+                        result.RemotePath = candidate
+                        result.ETag = If(response.Headers.ETag?.Tag, "").Trim(""""c)
+                        Return result
                     End Using
                 Next
-                Return False
-            Catch
-                Return False
-            End Try
-        End Function
-
-        ''' <summary>Prüft, ob das vorhandene XMP die angehängte Namensform nutzt. Diese Information
-        ''' bewahrt der Synchronisationsweg, damit nicht zwei konkurrierende Sidecars entstehen.</summary>
-        Public Shared Async Function XmpSidecarUsesAppendedNameAsync(filePathInTree As String,
-                                                                      Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
-            If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return False
-            Try
-                Using response = Await GetClient().SendAsync(New HttpRequestMessage(HttpMethod.Head, FileUrl(filePathInTree & ".xmp")), cancellationToken).ConfigureAwait(False)
-                    Return response.IsSuccessStatusCode
-                End Using
-            Catch
-                Return False
+                result.State = SidecarFetchState.NotFound
+                Return result
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                LastError = ex.Message
+                DiagnosticLogService.LogException("Nextcloud.XmpAbruf", ex)
+                Return result
             End Try
         End Function
 
@@ -1038,18 +1079,53 @@ Namespace Services
             Return SendDavAsync("DELETE", FileUrl(filePathInTree & RawSidecarService.Extension), cancellationToken:=cancellationToken)
         End Function
 
-        ''' <summary>Legt die Begleitdatei neben das Original auf dem Server.</summary>
-        Public Shared Function UploadSidecarAsync(localSidecarPath As String, filePathInTree As String,
-                                                  Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
-            If String.IsNullOrWhiteSpace(filePathInTree) Then Return Task.FromResult(False)
-            Return UploadFileAsync(localSidecarPath, filePathInTree & RawSidecarService.Extension, cancellationToken)
+        ''' <summary>Legt die Rezeptdatei neben das Original auf dem Server, mit Bedingung nach dem
+        ''' Stand beim Öffnen (<see cref="FetchSidecarAsync"/>): lag eine vor, nur auf denselben Stand
+        ''' (If-Match <paramref name="knownETag"/>); lag sicher keine vor, nur wenn dort weiterhin
+        ''' keine liegt (If-None-Match). Ist der Stand unbekannt (Abruf gescheitert), wird nicht
+        ''' geschrieben. <paramref name="overwrite"/> schreibt ohne Bedingung, nur nach ausdrücklicher
+        ''' Rückfrage beim Nutzer.</summary>
+        Public Shared Async Function PutSidecarAsync(localSidecarPath As String, filePathInTree As String,
+                                                     knownState As SidecarFetchState?, knownETag As String,
+                                                     Optional overwrite As Boolean = False,
+                                                     Optional cancellationToken As CancellationToken = Nothing) As Task(Of NextcloudPutResult)
+            If String.IsNullOrWhiteSpace(filePathInTree) Then Return New NextcloudPutResult()
+            Dim remote = filePathInTree & RawSidecarService.Extension
+            If overwrite Then Return Await PutFileAsync(localSidecarPath, remote, cancellationToken).ConfigureAwait(False)
+            Select Case knownState
+                Case SidecarFetchState.Found
+                    If String.IsNullOrEmpty(knownETag) Then Return New NextcloudPutResult()
+                    Return Await PutFileAsync(localSidecarPath, remote, cancellationToken, ifMatchETag:=knownETag).ConfigureAwait(False)
+                Case SidecarFetchState.NotFound
+                    Return Await PutFileAsync(localSidecarPath, remote, cancellationToken, onlyIfAbsent:=True).ConfigureAwait(False)
+                Case Else
+                    ' Die Meldung dazu baut der Aufrufer (übersetzt); hier bleibt nichts stehen.
+                    LastError = ""
+                    Return New NextcloudPutResult()
+            End Select
         End Function
 
-        Public Shared Function UploadXmpSidecarAsync(localXmpPath As String, filePathInTree As String,
-                                                     Optional cancellationToken As CancellationToken = Nothing,
-                                                     Optional appendExtension As Boolean = False) As Task(Of Boolean)
-            If String.IsNullOrWhiteSpace(filePathInTree) Then Return Task.FromResult(False)
-            Return UploadFileAsync(localXmpPath, If(appendExtension, filePathInTree & ".xmp", IO.Path.ChangeExtension(filePathInTree, ".xmp")), cancellationToken)
+        ''' <summary>Schreibt ein XMP zurück, und zwar NUR mit Bedingung: lag beim Abruf eines vor
+        ''' (<paramref name="fetched"/> Found), unter seinem Pfad und nur, wenn dort noch derselbe
+        ''' Stand liegt (If-Match); lag keins vor, als <c>foto.xmp</c> und nur, wenn dort inzwischen
+        ''' nichts entstanden ist (If-None-Match). Nach einem gescheiterten Abruf schreibt es nicht.
+        ''' Ein Abruf ohne ETag bietet keine Bedingung und wird deshalb ebenfalls nicht
+        ''' überschrieben.</summary>
+        Public Shared Async Function PutXmpSidecarAsync(localXmpPath As String, filePathInTree As String,
+                                                        fetched As SidecarFetchResult,
+                                                        Optional cancellationToken As CancellationToken = Nothing) As Task(Of NextcloudPutResult)
+            If fetched Is Nothing OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return New NextcloudPutResult()
+            Select Case fetched.State
+                Case SidecarFetchState.Found
+                    If String.IsNullOrEmpty(fetched.ETag) OrElse String.IsNullOrEmpty(fetched.RemotePath) Then Return New NextcloudPutResult()
+                    Return Await PutFileAsync(localXmpPath, fetched.RemotePath, cancellationToken,
+                                              ifMatchETag:=fetched.ETag).ConfigureAwait(False)
+                Case SidecarFetchState.NotFound
+                    Return Await PutFileAsync(localXmpPath, IO.Path.ChangeExtension(filePathInTree, ".xmp"), cancellationToken,
+                                              onlyIfAbsent:=True).ConfigureAwait(False)
+                Case Else
+                    Return New NextcloudPutResult()
+            End Select
         End Function
 
         ' ── Favorit ─────────────────────────────────────────────────────────────

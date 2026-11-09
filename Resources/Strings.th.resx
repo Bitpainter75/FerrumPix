@@ -11374,4 +11374,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>มีผลต่อความสว่าง และคงสี สีดำ และสีขาวไว้ตามเดิม</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>เลเยอร์เติมสีหรือรูปทรง {0} เลเยอร์ไม่มีพิกเซลในไฟล์และหายไป</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>อ่านการแก้ไขไม่ได้</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>อ่านการแก้ไขที่บันทึกไว้ของ {0} ไม่ได้ ภาพจะเปิดโดยไม่มีการแก้ไขนั้น ไฟล์การแก้ไขจะยังอยู่และจะไม่ถูกเขียนทับ</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>ซิงค์ไฟล์ XMP แล้ว {0} ไฟล์ อ่านหรือเขียนไม่ได้ {1} ไฟล์ และมีการเปลี่ยนบนเซิร์ฟเวอร์ในระหว่างนั้น {2} ไฟล์</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>การแก้ไขบนเซิร์ฟเวอร์เปลี่ยนไป</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>การแก้ไขของภาพนี้ถูกบันทึกหรือสร้างบนเซิร์ฟเวอร์ในระหว่างนั้น ต้องการเขียนทับหรือไม่</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>อ่านการแก้ไขบนเซิร์ฟเวอร์ไม่ได้ตอนเปิดภาพ จึงจะไม่เขียนทับ โปรดเปิดภาพอีกครั้ง</value>
+  </data>
 </root>

@@ -46,6 +46,10 @@ Namespace Services
             ''' <summary>Ebenen, deren Bildpunkte sich nicht lesen ließen. Sie fehlen im Stapel.</summary>
             Public Property BrokenLayers As Integer
             Public Property AdjustmentLayers As Integer
+            ''' <summary>Sichtbare Füll-, Form- oder Smartobjekt-Ebenen ohne Bildpunkte in der Datei
+            ''' (<see cref="PsdLayerReader.PsdDocumentInfo.MissingContentLayers"/>). Sie fehlen im
+            ''' Stapel; das Gesamtbild der Datei zeigt sie.</summary>
+            Public Property MissingContentLayers As Integer
             ''' <summary>Textebenen ohne sichtbaren Punkt, die nicht als Text kamen (Wahl "als
             ''' Bild", oder verzerrt) und deshalb fehlen; als Bild gäbe es von ihnen nichts.</summary>
             Public Property DroppedTextLayers As Integer
@@ -384,6 +388,7 @@ Namespace Services
                     .EffectLayers = effectLayers,
                     .BrokenLayers = doc.BrokenLayers,
                     .AdjustmentLayers = doc.AdjustmentLayers,
+                    .MissingContentLayers = doc.MissingContentLayers,
                     .DroppedTextLayers = droppedTextLayers,
                     .StretchedTextLayers = stretchedTextLayers
                 }

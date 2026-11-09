@@ -11328,4 +11328,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>作用于亮度，保持颜色、黑色和白色不变</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} 个填充或形状图层在文件中没有像素，因此缺失。</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>无法读取编辑</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>无法读取 {0} 已保存的编辑。图片将在不含该编辑的情况下打开；包含编辑的文件会保留，不会被覆盖。</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>已同步 {0} 个 XMP 附属文件，{1} 个无法读取或写入，{2} 个在此期间已在服务器上更改</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>服务器上的编辑已更改</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>此图片的编辑在此期间已在服务器上保存或创建。要覆盖吗？</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>打开图片时无法读取服务器上的编辑，因此不会覆盖它。请重新打开图片。</value>
+  </data>
 </root>

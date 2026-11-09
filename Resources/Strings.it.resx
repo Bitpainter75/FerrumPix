@@ -11330,4 +11330,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Agisce sulla luminosità e lascia invariati colore, nero e bianco</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} livelli di riempimento o forma non hanno pixel nel file e mancano.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>Modifica non leggibile</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>Non è stato possibile leggere la modifica salvata per {0}. L'immagine si apre senza; il file con la modifica viene conservato e non sovrascritto.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} file XMP sincronizzati, {1} non leggibili o non scrivibili, {2} modificati nel frattempo sul server</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Modifica cambiata sul server</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>Nel frattempo la modifica di questa immagine è stata salvata o creata sul server. Sovrascriverla?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>Non è stato possibile leggere la modifica sul server all'apertura dell'immagine, quindi non verrà sovrascritta. Riapri l'immagine.</value>
+  </data>
 </root>

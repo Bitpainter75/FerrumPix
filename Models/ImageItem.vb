@@ -260,6 +260,14 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>Was beim Holen der Rezeptdatei (.fpxmp) vom Server herauskam; Nothing, solange
+        ''' nicht geholt wurde. Der Editor schreibt danach nur mit passender Bedingung zurück
+        ''' (NextcloudService.PutSidecarAsync), und ein gescheiterter Abruf wird beim nächsten
+        ''' EnsureLocalOriginalAsync nachgeholt.</summary>
+        Public Property NextcloudSidecarState As NextcloudService.SidecarFetchState?
+        ''' <summary>ETag der Rezeptdatei auf dem Server, aus derselben Antwort. Nicht der des Bildes.</summary>
+        Public Property NextcloudSidecarETag As String = ""
+
         ''' <summary>Der Stand der Datei auf dem Server, wie er beim Laden der Kachel galt. Er
         ''' entwertet nicht nur die zwischengespeicherte Kachel: wer das Original ersetzt, schickt ihn
         ''' als Bedingung mit, damit eine zwischenzeitliche Aenderung von woanders nicht lautlos
@@ -297,7 +305,16 @@ Namespace Models
         Public Async Function EnsureLocalOriginalAsync() As Task(Of String)
             If Not IsRemoteAsset Then Return FilePath
             Dim vorhanden = RemoteLocalPath
-            If Not String.IsNullOrEmpty(vorhanden) AndAlso IO.File.Exists(vorhanden) Then Return vorhanden
+            If Not String.IsNullOrEmpty(vorhanden) AndAlso IO.File.Exists(vorhanden) Then
+                ' Das Original ist schon da. Ist die Rezeptdatei beim ersten Mal nicht zu holen
+                ' gewesen, jetzt nachholen: sonst bliebe der Stand für immer unbekannt, und der
+                ' Editor könnte das Rezept nie speichern.
+                If IsNextcloudAsset AndAlso NextcloudSidecarState.HasValue AndAlso
+                   NextcloudSidecarState.Value = NextcloudService.SidecarFetchState.Failed Then
+                    Await FetchNextcloudSidecarAsync(vorhanden, keepExistingLocal:=True).ConfigureAwait(False)
+                End If
+                Return vorhanden
+            End If
 
             ' ConfigureAwait(False) ist hier PFLICHT: ohne es haengt die Fortsetzung am aufrufenden
             ' Kontext. Wer die Funktion von einem Faden mit Avalonia-Kontext aus abwartet, statt sie
@@ -320,22 +337,36 @@ Namespace Models
             ' vorhandene Kette sie von selbst - es braucht keinen eigenen Zweig fuer "Rezept vom
             ' Server". Ohne das waere ein gespeichertes Rezept beim naechsten Oeffnen unsichtbar,
             ' und Speichern haette keinen Sinn.
-            If IsNextcloudAsset AndAlso Not String.IsNullOrEmpty(geholt) AndAlso RawSidecarService.IsSidecarFormat(geholt) Then
-                Try
-                    ' Der Pfad im Dateibaum kommt erst mit den Einzelheiten; hier wird er gebraucht,
-                    ' also notfalls jetzt geholt.
-                    If String.IsNullOrEmpty(_nextcloudPath) Then
-                        Dim info = Await NextcloudService.GetInfoAsync(_nextcloudFileId).ConfigureAwait(False)
-                        If info IsNot Nothing AndAlso Not String.IsNullOrEmpty(info.FileName) Then _nextcloudPath = info.FileName
-                    End If
-                    If Not String.IsNullOrEmpty(_nextcloudPath) Then
-                        Await NextcloudService.TryDownloadSidecarAsync(_nextcloudPath,
-                                                                       RawSidecarService.SidecarPathFor(geholt)).ConfigureAwait(False)
-                    End If
-                Catch
-                End Try
+            If IsNextcloudAsset AndAlso Not String.IsNullOrEmpty(geholt) Then
+                Await FetchNextcloudSidecarAsync(geholt, keepExistingLocal:=False).ConfigureAwait(False)
             End If
             Return geholt
+        End Function
+
+        ''' <summary>Holt die Rezeptdatei neben die Temp-Kopie <paramref name="localCopy"/> und merkt
+        ''' sich Stand und ETag (<see cref="NextcloudSidecarState"/>). Nur für Formate mit
+        ''' Begleitdatei (RAW, PSD).</summary>
+        Private Async Function FetchNextcloudSidecarAsync(localCopy As String, keepExistingLocal As Boolean) As Task
+            If Not RawSidecarService.IsSidecarFormat(localCopy) Then Return
+            Try
+                ' Der Pfad im Dateibaum kommt erst mit den Einzelheiten; hier wird er gebraucht,
+                ' also notfalls jetzt geholt.
+                If String.IsNullOrEmpty(_nextcloudPath) Then
+                    Dim info = Await NextcloudService.GetInfoAsync(_nextcloudFileId).ConfigureAwait(False)
+                    If info IsNot Nothing AndAlso Not String.IsNullOrEmpty(info.FileName) Then _nextcloudPath = info.FileName
+                End If
+                If String.IsNullOrEmpty(_nextcloudPath) Then
+                    NextcloudSidecarState = NextcloudService.SidecarFetchState.Failed
+                    Return
+                End If
+                Dim fetched = Await NextcloudService.FetchSidecarAsync(_nextcloudPath, RawSidecarService.SidecarPathFor(localCopy),
+                                                                       keepExistingLocal:=keepExistingLocal).ConfigureAwait(False)
+                NextcloudSidecarState = fetched.State
+                NextcloudSidecarETag = fetched.ETag
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageItem.NextcloudRezept", ex)
+                NextcloudSidecarState = NextcloudService.SidecarFetchState.Failed
+            End Try
         End Function
 
         ''' <summary>True, wenn dieses Element im Papierkorb seines Servers liegt. Es ist damit KEIN

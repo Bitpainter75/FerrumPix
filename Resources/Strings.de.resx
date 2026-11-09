@@ -11348,4 +11348,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Wirkt auf die Helligkeit und lässt Farbe, Schwarz und Weiß stehen</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} Füll- oder Formebenen tragen in der Datei keine Bildpunkte und fehlen.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>Bearbeitung nicht lesbar</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>Die gespeicherte Bearbeitung zu {0} ließ sich nicht lesen. Das Bild öffnet ohne sie; die Datei mit der Bearbeitung bleibt erhalten und wird nicht überschrieben.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} XMP-Sidecars synchronisiert, {1} nicht lesbar oder nicht schreibbar, {2} inzwischen auf dem Server geändert</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Bearbeitung auf dem Server geändert</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>Auf dem Server wurde die Bearbeitung zu diesem Bild inzwischen anderweitig gespeichert oder angelegt. Soll sie überschrieben werden?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>Die Bearbeitung auf dem Server ließ sich beim Öffnen nicht lesen und wird deshalb nicht überschrieben. Das Bild bitte erneut öffnen.</value>
+  </data>
 </root>

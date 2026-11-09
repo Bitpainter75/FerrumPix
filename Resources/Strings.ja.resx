@@ -11370,4 +11370,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>明るさに作用し、色・黒・白はそのまま残します</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} 個の塗りつぶしまたはシェイプレイヤーはファイル内にピクセルがなく、欠落しています。</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>編集を読み込めません</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>{0} の保存済みの編集を読み込めませんでした。画像は編集なしで開きます。編集を含むファイルは保持され、上書きされません。</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} 件の XMP サイドカーを同期、{1} 件は読み書きできず、{2} 件はその間にサーバー上で変更されました</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>サーバー上の編集が変更されました</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>この画像の編集はその間にサーバー上で保存または作成されました。上書きしますか？</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>画像を開いたときにサーバー上の編集を読み込めなかったため、上書きしません。画像を開き直してください。</value>
+  </data>
 </root>

@@ -11330,4 +11330,25 @@
   <data name="Wirkt_auf_die_Helligkeit_und_l_sst_Farbe_Schwarz_6fd146f6" xml:space="preserve">
     <value>Agit sur la luminosité et laisse la couleur, le noir et le blanc intacts</value>
   </data>
+  <data name="0_F_ll_oder_Formebenen_tragen_in_der_Datei_keine_9563e7fd" xml:space="preserve">
+    <value>{0} calques de remplissage ou de forme n'ont pas de pixels dans le fichier et manquent.</value>
+  </data>
+  <data name="Bearbeitung_nicht_lesbar_ff8bf3cb" xml:space="preserve">
+    <value>Retouche illisible</value>
+  </data>
+  <data name="Die_gespeicherte_Bearbeitung_zu_0_lie_sich_nicht_06bb457b" xml:space="preserve">
+    <value>La retouche enregistrée pour {0} n'a pas pu être lue. L'image s'ouvre sans elle ; le fichier de la retouche est conservé et ne sera pas écrasé.</value>
+  </data>
+  <data name="0_XMP_Sidecars_synchronisiert_1_nicht_lesbar_ode_344550e5" xml:space="preserve">
+    <value>{0} fichiers XMP synchronisés, {1} illisibles ou impossibles à écrire, {2} modifiés entre-temps sur le serveur</value>
+  </data>
+  <data name="Bearbeitung_auf_dem_Server_ge_ndert_21ce7ceb" xml:space="preserve">
+    <value>Retouche modifiée sur le serveur</value>
+  </data>
+  <data name="Auf_dem_Server_wurde_die_Bearbeitung_zu_diesem_B_7042af9a" xml:space="preserve">
+    <value>La retouche de cette image a entre-temps été enregistrée ou créée sur le serveur. Voulez-vous l'écraser ?</value>
+  </data>
+  <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
+    <value>La retouche du serveur n'a pas pu être lue à l'ouverture de l'image ; elle ne sera donc pas écrasée. Rouvrez l'image.</value>
+  </data>
 </root>
