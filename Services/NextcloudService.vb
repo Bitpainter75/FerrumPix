@@ -1091,18 +1091,48 @@ Namespace Services
                                                      Optional cancellationToken As CancellationToken = Nothing) As Task(Of NextcloudPutResult)
             If String.IsNullOrWhiteSpace(filePathInTree) Then Return New NextcloudPutResult()
             Dim remote = filePathInTree & RawSidecarService.Extension
-            If overwrite Then Return Await PutFileAsync(localSidecarPath, remote, cancellationToken).ConfigureAwait(False)
-            Select Case knownState
-                Case SidecarFetchState.Found
-                    If String.IsNullOrEmpty(knownETag) Then Return New NextcloudPutResult()
-                    Return Await PutFileAsync(localSidecarPath, remote, cancellationToken, ifMatchETag:=knownETag).ConfigureAwait(False)
-                Case SidecarFetchState.NotFound
-                    Return Await PutFileAsync(localSidecarPath, remote, cancellationToken, onlyIfAbsent:=True).ConfigureAwait(False)
-                Case Else
-                    ' Die Meldung dazu baut der Aufrufer (übersetzt); hier bleibt nichts stehen.
-                    LastError = ""
-                    Return New NextcloudPutResult()
-            End Select
+            Dim result As NextcloudPutResult
+            If overwrite Then
+                result = Await PutFileAsync(localSidecarPath, remote, cancellationToken).ConfigureAwait(False)
+            Else
+                Select Case knownState
+                    Case SidecarFetchState.Found
+                        If String.IsNullOrEmpty(knownETag) Then Return New NextcloudPutResult()
+                        result = Await PutFileAsync(localSidecarPath, remote, cancellationToken, ifMatchETag:=knownETag).ConfigureAwait(False)
+                    Case SidecarFetchState.NotFound
+                        result = Await PutFileAsync(localSidecarPath, remote, cancellationToken, onlyIfAbsent:=True).ConfigureAwait(False)
+                    Case Else
+                        ' Die Meldung dazu baut der Aufrufer (übersetzt); hier bleibt nichts stehen.
+                        LastError = ""
+                        Return New NextcloudPutResult()
+                End Select
+            End If
+            ' EIN ETAG IM ERGEBNIS DES PUT IST NICHT ZUGESAGT. Ohne ihn hätte das nächste Speichern
+            ' derselben Sitzung keine Bedingung und würde abgewiesen; also gleich nachfragen. Bleibt
+            ' er aus, steht er leer im Ergebnis, und der Aufrufer darf den Stand nicht als bekannt
+            ' führen.
+            If result.Ok AndAlso String.IsNullOrEmpty(result.ETag) Then
+                result.ETag = Await HeadETagAsync(remote, cancellationToken).ConfigureAwait(False)
+            End If
+            Return result
+        End Function
+
+        ''' <summary>Der ETag einer Datei per HEAD, oder leer, wenn der Server keinen nennt oder die
+        ''' Anfrage scheitert. Ein Abbruch läuft als Abbruch durch.</summary>
+        Private Shared Async Function HeadETagAsync(pathInTree As String, cancellationToken As CancellationToken) As Task(Of String)
+            Try
+                Using request = New HttpRequestMessage(HttpMethod.Head, FileUrl(pathInTree))
+                    Using response = Await GetClient().SendAsync(request, cancellationToken).ConfigureAwait(False)
+                        If Not response.IsSuccessStatusCode Then Return ""
+                        Return If(response.Headers.ETag?.Tag, "").Trim(""""c)
+                    End Using
+                End Using
+            Catch ex As OperationCanceledException
+                Throw
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Nextcloud.ETagNachfrage", ex)
+                Return ""
+            End Try
         End Function
 
         ''' <summary>Schreibt ein XMP zurück, und zwar NUR mit Bedingung: lag beim Abruf eines vor

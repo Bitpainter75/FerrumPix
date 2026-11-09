@@ -25,8 +25,9 @@ Namespace ViewModels
         Private _lastImageBrushMode As String = "Eraser"
         Private _toneRange As String = "Midtones"
         Private _spongeSaturate As Boolean = False
-        ''' <summary>Abwedeln und Nachbelichten nach der Helligkeit und fuer alle Kanaele gleich, sodass
-        ''' Farbe, Schwarz und Weiss bleiben. Ab Werk an, wie beim Referenzprogramm.</summary>
+        ''' <summary>Abwedeln und Nachbelichten nach der Helligkeit, mit gleichem Faktor fuer alle
+        ''' Kanaele, sodass Farbton, Saettigung, Schwarz und Weiss bleiben. Ab Werk an, wie beim
+        ''' Referenzprogramm.</summary>
         Private _protectTones As Boolean = True
         Private _replaceColor As String = "#FF3A7BD5"
 

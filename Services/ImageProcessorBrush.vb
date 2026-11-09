@@ -894,8 +894,9 @@ Namespace Services
         '''
         ''' Die Formen treffen die Eckwerte, die am Referenzprogramm an einem Graukeil gemessen
         ''' wurden (Wo wirkt ein Bereich am staerksten, wie stark, wo hoert er auf); die Kurven selbst
-        ''' sind eigene. Mit „Toene schuetzen" (<paramref name="protect"/>) ist t die Helligkeit und
-        ''' die Aenderung gilt fuer alle Kanaele gleich; Schwarz und Weiss bleiben dann stehen, ausser
+        ''' sind eigene. Mit „Toene schuetzen" (<paramref name="protect"/>) ist t die Helligkeit, und
+        ''' die Aenderung trifft die Helligkeit bei gleichem Farbton und gleicher Saettigung
+        ''' (<see cref="SetLightnessKeepingColor"/>); Schwarz und Weiss bleiben dann stehen, ausser
         ''' beim Nachbelichten der Lichter, das Weiss bis etwa 204 zieht:
         ''' - Mitten: Glocke mit Spitze 35 Stufen bei 55 Prozent Grau, Abwedeln wie Nachbelichten.
         ''' - Tiefen: Spitze bei 28 Prozent Grau, Abwedeln 18,5, Nachbelichten 37 Stufen, bei 80
@@ -946,6 +947,36 @@ Namespace Services
             Dim fall = rise * (1.0 - peak) / peak
             Return Math.Pow(t / peak, rise) * Math.Pow((1.0 - t) / (1.0 - peak), fall)
         End Function
+
+        ''' <summary>Bringt einen Punkt auf die Helligkeit <paramref name="target"/> (Rec. 709) und
+        ''' haelt dabei Farbton und Saettigung: alle drei Kanaele werden mit DEMSELBEN Faktor
+        ''' skaliert, das Verhaeltnis der Kanaele bleibt. Ein gleicher Zusatz auf R, G und B hielte die
+        ''' Farbe nicht, er zoege sie Richtung Grau ((0,5; 0; 0) plus 0,1 wird (0,6; 0,1; 0,1)).
+        ''' Wuerde ein Kanal dabei ueber 1 laufen, wird nur bis dorthin skaliert und der Rest zu Weiss
+        ''' gemischt: der Farbton bleibt, nur die Saettigung gibt nach, wo es anders nicht geht. Ein
+        ''' schwarzer Punkt hat kein Verhaeltnis und wird gleichmaessig grau angehoben.</summary>
+        Private Shared Sub SetLightnessKeepingColor(r As Double, g As Double, b As Double,
+                                                    lightness As Double, target As Double,
+                                                    ByRef nr As Double, ByRef ng As Double, ByRef nb As Double)
+            target = Math.Max(0.0, Math.Min(1.0, target))
+            If lightness <= 0.000001 Then
+                nr = target : ng = target : nb = target
+                Return
+            End If
+            Dim factor = target / lightness
+            Dim peak = Math.Max(r, Math.Max(g, b))
+            If peak * factor <= 1.0 Then
+                nr = r * factor : ng = g * factor : nb = b * factor
+                Return
+            End If
+            ' Bis der hellste Kanal 1 erreicht, dann zu Weiss mischen, bis die Helligkeit stimmt.
+            Dim scale = 1.0 / peak
+            Dim sr = r * scale, sg = g * scale, sb = b * scale
+            Dim scaledLightness = lightness * scale
+            Dim mix = If(scaledLightness >= 1.0, 1.0, (target - scaledLightness) / (1.0 - scaledLightness))
+            mix = Math.Max(0.0, Math.Min(1.0, mix))
+            nr = sr + (1.0 - sr) * mix : ng = sg + (1.0 - sg) * mix : nb = sb + (1.0 - sb) * mix
+        End Sub
 
         ''' <summary>Wie viel der Kurve ein Zug mit der Staerke <paramref name="strength"/> (0 bis 1,
         ''' Regler mal Deckung des Strichs) gibt. Beim Referenzprogramm baut die Belichtung sich ueber
@@ -1045,7 +1076,7 @@ Namespace Services
                                 ' Helligkeit nach Rec. 709, wie am Graukeil gemessen.
                                 Dim lightness = 0.2126 * r + 0.7152 * g + 0.0722 * b
                                 Dim shift = DodgeBurnShift(dodge, toneRange, True, lightness) * amount
-                                nr = r + shift : ng = g + shift : nb = b + shift
+                                SetLightnessKeepingColor(r, g, b, lightness, lightness + shift, nr, ng, nb)
                             Else
                                 nr = r + DodgeBurnShift(dodge, toneRange, False, r) * amount
                                 ng = g + DodgeBurnShift(dodge, toneRange, False, g) * amount

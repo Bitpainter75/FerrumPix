@@ -23610,8 +23610,16 @@ Namespace ViewModels
                 Return False
             End If
             ' Der neue Stand gilt fürs nächste Speichern, sonst wiese die eigene Bedingung es ab.
-            _nextcloudSidecarState = NextcloudService.SidecarFetchState.Found
-            _nextcloudSidecarETag = put.ETag
+            ' PutSidecarAsync fragt einen fehlenden ETag per HEAD nach. Kommt trotzdem keiner, ist
+            ' der Stand unbekannt: dann NICHT als gefunden führen, das nächste Speichern meldet sich
+            ' und schreibt nicht ohne Bedingung.
+            If String.IsNullOrEmpty(put.ETag) Then
+                _nextcloudSidecarState = Nothing
+                _nextcloudSidecarETag = ""
+            Else
+                _nextcloudSidecarState = NextcloudService.SidecarFetchState.Found
+                _nextcloudSidecarETag = put.ETag
+            End If
             StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
             Return True
         End Function
@@ -27822,8 +27830,9 @@ Namespace ViewModels
         ''' liegen außerhalb des Bildinhalts (Canvas-Rand) und werden übersprungen - dort gibt es
         ''' keinen Source-Pixel, in den sich backen ließe.
         ''' Der Druck geht Punkt für Punkt mit: gefiltert wird über das PAAR, sonst verrutschte er
-        ''' hinter jedem übersprungenen Punkt auf den falschen.</summary>
-        ''' <summary>Die Punkte eines Zugs in Pixel des Arbeitsbildes. Punkte NEBEN dem Bild bleiben
+        ''' hinter jedem übersprungenen Punkt auf den falschen.
+        '''
+        ''' Punkte NEBEN dem Bild bleiben
         ''' erhalten und werden weitergerechnet (allowOutside): die Ansicht laesst den Mittelpunkt bis
         ''' einen Pinselradius ausserhalb zu, damit der Teil des Kreises ueber dem Bild wirkt. Mit
         ''' angewendeter Geometrie (Drehung, Beschnitt) fielen sie vorher hier heraus, und am Rand
