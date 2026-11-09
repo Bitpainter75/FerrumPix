@@ -41,10 +41,10 @@
          id="stop35" /></linearGradient><linearGradient
        id="linearGradient33"
        inkscape:collect="always"><stop
-         style="stop-color:#ededed;stop-opacity:1;"
+         style="stop-color:#eef0f3;stop-opacity:1;"
          offset="0"
          id="stop32" /><stop
-         style="stop-color:#a4a4a4;stop-opacity:1;"
+         style="stop-color:#5c626a;stop-opacity:1;"
          offset="1"
          id="stop33" /></linearGradient><linearGradient
        id="linearGradient28"
@@ -57,21 +57,21 @@
          id="stop29" /></linearGradient><linearGradient
        id="linearGradient19"
        inkscape:collect="always"><stop
-         style="stop-color:#a1cbcb;stop-opacity:1;"
+         style="stop-color:#9fd2ee;stop-opacity:1;"
          offset="0"
          id="stop30" /><stop
-         style="stop-color:#6688a7;stop-opacity:1;"
+         style="stop-color:#2c5378;stop-opacity:1;"
          offset="0.08933832"
          id="stop19" /><stop
-         style="stop-color:#19222c;stop-opacity:1;"
+         style="stop-color:#070b10;stop-opacity:1;"
          offset="1"
          id="stop18" /></linearGradient><linearGradient
        id="linearGradient16"
        inkscape:collect="always"><stop
-         style="stop-color:#3d4756;stop-opacity:1;"
+         style="stop-color:#262d37;stop-opacity:1;"
          offset="0.71807128"
          id="stop17" /><stop
-         style="stop-color:#1b2127;stop-opacity:1;"
+         style="stop-color:#0c0f13;stop-opacity:1;"
          offset="1"
          id="stop16" /></linearGradient><linearGradient
        id="linearGradient14"
@@ -92,10 +92,10 @@
          id="stop12" /></linearGradient><linearGradient
        id="linearGradient9"
        inkscape:collect="always"><stop
-         style="stop-color:#a4acb8;stop-opacity:1;"
+         style="stop-color:#d5dae1;stop-opacity:1;"
          offset="0"
          id="stop9" /><stop
-         style="stop-color:#939aa7;stop-opacity:1;"
+         style="stop-color:#8b929d;stop-opacity:1;"
          offset="1"
          id="stop10" /></linearGradient><linearGradient
        id="linearGradient7"
@@ -122,11 +122,11 @@
          offset="0"
          stop-color="#9C948E"
          id="stop1"
-         style="stop-color:#3a3f45;stop-opacity:0.98823529;" /><stop
+         style="stop-color:#2c3036;stop-opacity:1;" /><stop
          offset="1"
          stop-color="#7B7068"
          id="stop2"
-         style="stop-color:#1e2327;stop-opacity:0.98823529;" /></linearGradient><filter
+         style="stop-color:#121518;stop-opacity:1;" /></linearGradient><filter
        id="shadow"
        x="-0.048"
        y="-0.048"
@@ -290,7 +290,7 @@
        y1="8"
        x2="64"
        y2="120"
-       gradientUnits="userSpaceOnUse" /></defs><rect
+       gradientUnits="userSpaceOnUse" /><linearGradient id="bergGrossFlaeche" x1="0" y1="300" x2="0" y2="414" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:#4b5662;stop-opacity:1" id="bergGrossFlaecheA" /><stop offset="1" style="stop-color:#2a323b;stop-opacity:1" id="bergGrossFlaecheB" /></linearGradient><linearGradient id="bergKleinFlaeche" x1="0" y1="345" x2="0" y2="414" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:#56616b;stop-opacity:1" id="bergKleinFlaecheA" /><stop offset="1" style="stop-color:#38434d;stop-opacity:1" id="bergKleinFlaecheB" /></linearGradient><linearGradient id="bergGrossSchnee" x1="0" y1="241" x2="0" y2="318" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:#f6f8fa;stop-opacity:1" id="bergGrossSchneeA" /><stop offset="1" style="stop-color:#cfd5dd;stop-opacity:1" id="bergGrossSchneeB" /></linearGradient><linearGradient id="bergKleinSchnee" x1="0" y1="310" x2="0" y2="366" gradientUnits="userSpaceOnUse"><stop offset="0" style="stop-color:#f8f9fb;stop-opacity:1" id="bergKleinSchneeA" /><stop offset="1" style="stop-color:#d3d9e0;stop-opacity:1" id="bergKleinSchneeB" /></linearGradient><clipPath id="clipInnenfeld"><rect x="19" y="17" width="89" height="89" rx="17" ry="17" id="rectInnenfeld" /></clipPath><linearGradient id="schattenKleinerBerg" gradientUnits="userSpaceOnUse" x1="307.16" y1="362.00" x2="292.31" y2="345.77"><stop offset="0" style="stop-color:#000000;stop-opacity:0.55" id="schattenKleinerBergA" /><stop offset="0.45" style="stop-color:#000000;stop-opacity:0.22" id="schattenKleinerBergM" /><stop offset="1" style="stop-color:#000000;stop-opacity:0" id="schattenKleinerBergB" /></linearGradient><clipPath id="clipGrosserBerg"><polygon points="285.00,241.00 91.51,414.00 450.89,414.00" id="clipGrosserBergForm" /></clipPath></defs><g id="gesamt" transform="translate(64,64) scale(1.09) translate(-64,-64)"><rect
      x="8"
      y="10.624"
      width="112"
@@ -318,20 +318,38 @@
      ry="25.290089"
      fill="url(#bg)"
      id="rect4"
-     style="display:none;opacity:1;fill:url(#linearGradient6);fill-opacity:1;stroke-width:0.971283" /><g
-     id="g3"
-     transform="matrix(0.94487794,0,0,0.94487794,6.6020581,0.94063012)"><path
-       style="opacity:0.443197;fill:url(#linearGradient36);fill-opacity:1;stroke:none;stroke-width:0.62;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:0.419066"
-       d="M 73.457209,64.115106 33.82785,104.84426 68.92217,106.53142 92.472947,81.928365 Z"
-       id="path33-6"
-       sodipodi:nodetypes="ccccc" /><g
-       id="g2"><path
-         style="opacity:0.443197;fill:url(#linearGradient35);fill-opacity:1;stroke:none;stroke-width:0.62;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:0.419066"
-         d="M 93.623489,82.127807 68.531952,107.77202 105.89292,107.66149 106.7772,93.84456 Z"
-         id="path33" /><path
-         style="fill:url(#linearGradient32);stroke-width:1.05593"
-         d="m 100.81501,90.372649 c -4.644575,-2.817368 -4.752985,-2.840712 -6.892494,-1.484073 -1.553986,0.985363 -2.320295,1.116262 -2.687884,0.459135 -0.362672,-0.648332 -1.427475,-0.404405 -3.613653,0.827823 -1.70471,0.96085 -3.235967,1.596199 -3.402791,1.411886 -0.166824,-0.184312 1.531409,-2.25223 3.773849,-4.595372 2.24244,-2.343141 3.950445,-4.400261 3.795565,-4.571378 -0.15488,-0.171116 -2.562625,-1.93346 -5.350546,-3.916322 l -5.068944,-3.605201 -2.322861,2.484855 -2.322863,2.484855 -1.90016,-4.142892 c -1.045088,-2.27859 -2.157623,-4.142891 -2.4723,-4.142891 -0.314677,0 -4.340343,2.706379 -8.945924,6.014175 -4.60558,3.307797 -8.508055,5.865827 -8.672168,5.684508 -0.164113,-0.181317 2.796126,-3.544642 6.578307,-7.474057 10.807735,-11.228456 13.58247,-13.933386 14.292964,-13.933386 0.364017,0 4.577091,4.336997 9.362388,9.637773 4.785296,5.300774 9.067036,9.48239 9.514974,9.292479 0.447938,-0.189909 3.439985,2.572621 6.648991,6.138962 3.20901,3.566337 5.51275,6.440884 5.11944,6.38788 -0.3933,-0.05299 -2.83857,-1.384443 -5.43389,-2.958759 z"
-         id="path25" /></g></g><path
+     style="display:none;opacity:1;fill:url(#linearGradient6);fill-opacity:1;stroke-width:0.971283" /><g id="bergeRahmen" clip-path="url(#clipInnenfeld)"><g id="bergeGroesse" transform="translate(75,102.5) scale(1.12) translate(-75,-102.5)"><g id="bergeAlt" transform="matrix(0.244000,0,0,0.244000,1.760000,5.144000)"><polygon points="285.00,241.00 91.51,414.00 450.89,414.00" style="fill:url(#bergGrossFlaeche);stroke:none" id="bergGross" /><g transform="scale(0.25)"><g transform="translate(0.000000,2048.000000) scale(0.100000,-0.100000)"><path d="M11364 10778 c-16 -13 -51 -45 -78 -71 -27 -26 -66 -57 -87 -67 -21
+-11 -101 -83 -179 -160 -78 -77 -159 -149 -180 -160 -21 -11 -102 -83 -180
+-160 -78 -77 -159 -149 -180 -160 -21 -11 -102 -83 -180 -160 -78 -77 -159
+-149 -180 -160 -22 -11 -111 -92 -200 -180 -89 -88 -178 -169 -200 -180 -21
+-11 -102 -83 -180 -160 -78 -77 -159 -149 -180 -160 -38 -20 -253 -224 -297
+-284 -22 -28 -23 -39 -23 -190 0 -89 4 -167 9 -175 14 -22 86 10 146 65 28 25
+64 53 80 61 17 9 46 28 65 43 19 15 67 43 105 63 39 19 90 54 115 77 25 23 79
+60 120 81 41 22 98 55 125 74 57 40 124 85 175 119 121 79 177 117 255 171 28
+19 66 44 85 55 19 11 58 36 85 55 28 19 70 48 95 65 25 17 68 46 95 65 28 19
+81 51 120 71 38 20 89 52 114 70 48 37 90 44 112 18 8 -9 154 -294 324 -633
+286 -568 312 -616 337 -619 23 -3 71 42 372 342 215 215 353 346 365 346 11 0
+32 -11 48 -24 15 -13 42 -31 58 -40 17 -9 53 -32 80 -51 28 -19 70 -48 95 -65
+25 -17 68 -46 95 -65 28 -19 66 -44 85 -55 19 -11 58 -36 85 -55 28 -19 70
+-48 95 -65 25 -17 68 -46 95 -65 28 -19 66 -44 85 -55 19 -11 58 -36 85 -55
+28 -19 70 -48 95 -65 25 -17 68 -46 95 -65 28 -19 66 -44 85 -55 19 -11 58
+-36 85 -55 28 -19 70 -48 95 -65 25 -17 68 -46 95 -65 28 -19 82 -51 120 -71
+39 -20 88 -51 109 -68 34 -26 51 -32 115 -37 88 -8 101 -1 101 50 0 51 -3 55
+-372 424 -194 194 -336 343 -348 367 -12 24 -179 199 -420 440 -240 241 -408
+416 -420 440 -12 24 -180 199 -420 440 -239 239 -408 416 -420 440 -19 38
+-301 331 -364 378 -16 12 -42 22 -56 22 -14 0 -39 -10 -56 -22z" style="fill:url(#bergGrossSchnee);stroke:none" /></g></g><polygon points="364.00,310.00 250.33,414.00 235.48,397.77 349.15,293.77" style="fill:url(#schattenKleinerBerg);stroke:none" clip-path="url(#clipGrosserBerg)" id="schattenKleinerBergFlaeche" /><polygon points="364.00,310.00 250.33,414.00 472.64,414.00" style="fill:url(#bergKleinFlaeche);stroke:none" id="bergKlein" /><g transform="scale(0.25)"><g transform="translate(0.000000,2048.000000) scale(0.100000,-0.100000)"><path d="M14524 8018 c-16 -13 -60 -54 -98 -91 -37 -37 -85 -76 -107 -87 -21
+-11 -120 -101 -219 -200 -99 -99 -198 -189 -220 -200 -22 -11 -130 -110 -240
+-220 -110 -110 -218 -209 -240 -220 -22 -11 -121 -101 -220 -200 -99 -99 -195
+-187 -213 -196 -69 -36 -166 -139 -148 -157 14 -14 725 337 804 396 29 21 62
+37 77 37 15 0 47 15 71 34 58 44 142 86 172 86 35 0 57 -30 57 -79 0 -23 9
+-59 20 -81 11 -22 20 -59 20 -83 0 -74 34 -86 103 -37 82 60 142 100 177 119
+19 10 55 38 80 61 25 23 61 50 80 60 19 10 55 37 80 60 49 45 147 100 180 100
+26 0 274 -124 320 -160 19 -15 118 -69 220 -120 102 -51 201 -105 220 -120 19
+-15 82 -51 140 -80 58 -29 121 -65 140 -80 19 -15 64 -42 100 -60 36 -18 81
+-45 100 -60 19 -15 64 -42 100 -60 36 -18 81 -45 100 -60 19 -15 64 -42 100
+-60 36 -18 81 -45 100 -60 19 -15 51 -35 70 -45 19 -9 46 -28 60 -40 30 -27
+66 -40 75 -26 9 15 -53 79 -752 778 -395 395 -648 640 -673 653 -23 12 -138
+119 -267 248 -252 251 -275 272 -313 272 -14 0 -39 -10 -56 -22z" style="fill:url(#bergKleinSchnee);stroke:none" /></g></g></g></g></g><path
      id="path8"
      style="baseline-shift:baseline;display:inline;overflow:visible;opacity:0.5;vector-effect:none;fill:#000000;fill-opacity:1;stroke-linecap:round;stroke-linejoin:round;filter:url(#filter39);enable-background:accumulate;stop-color:#000000;stop-opacity:1"
      d="M 82.394531,14.287109 77,23.628906 h 14.986328 c 8.050442,0 14.384762,6.334324 14.384762,14.384766 v 55.972656 c 0,8.050442 -6.33432,14.384762 -14.384762,14.384762 H 57.664062 a 26.5,26.5 0 0 1 -8.71289,9.3418 h 43.035156 c 13.064252,0 23.726562,-10.66231 23.726562,-23.726562 V 38.013672 c 0,-13.064255 -10.66231,-23.726563 -23.726562,-23.726563 z"
@@ -377,4 +395,4 @@
      style="mix-blend-mode:normal;fill:url(#linearGradient29);fill-opacity:1;filter:url(#filter30)"
      d="m 25.10517,90.199442 c 0,-3.596925 3.44961,-6.845501 7.26913,-6.845501 3.136271,0 3.012984,2.251944 -0.30119,5.501339 -3.45971,3.392095 -6.96794,4.068855 -6.96794,1.344162 z"
      id="path22"
-     transform="matrix(1.0309805,0,0,1.0309805,-2.9297012,-5.8714897)" /></svg>
+     transform="matrix(1.0309805,0,0,1.0309805,-2.9297012,-5.8714897)" /></g></svg>
