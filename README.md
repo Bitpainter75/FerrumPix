@@ -238,20 +238,30 @@ The AppImage carries update information, so tools that manage AppImages find new
 
 The ARM64 and macOS builds are untested. If you try one, please let me know whether it works.
 
-The macOS builds are unsigned, so Gatekeeper may say the app is "damaged" or "can't be
-opened". That does not mean the ZIP is broken. Please try this:
+The macOS builds are unsigned, so macOS blocks them the first time with "FerrumPix" Not Opened.
+That does not mean the ZIP is broken. You only have to allow it once:
 
 1. Download the right build: arm64 for Apple Silicon (M1, M2, M3, M4), x64 for Intel Macs.
-2. Unzip it.
-3. Move FerrumPix to Applications.
-4. Open Terminal and run:
+2. Unzip it and move FerrumPix to Applications.
+3. Open FerrumPix. macOS says it could not verify the app; click *Done*.
 
-       xattr -dr com.apple.quarantine /Applications/FerrumPix.app
-       codesign --force --deep --sign - /Applications/FerrumPix.app
+   <img src="Screenshots/macOS_Not_Opened.png" width="240" />
 
-5. Then start it with:
+4. Open *System Settings*, go to *Privacy & Security* and scroll down to *Security*. Next to
+   "FerrumPix" was blocked to protect your Mac, click *Open Anyway*.
 
-       open /Applications/FerrumPix.app
+   <img src="Screenshots/macOS_Privacy_Security.png" width="560" />
+
+5. Open FerrumPix again and click *Open Anyway* in the question that follows, then confirm with
+   your password or Touch ID.
+
+   <img src="Screenshots/macOS_Open_Anyway.png" width="240" />
+
+From then on FerrumPix starts like any other app.
+
+If macOS instead says the app is "damaged", open Terminal and run:
+
+    xattr -dr com.apple.quarantine /Applications/FerrumPix.app
 
 ### macOS signing
 
