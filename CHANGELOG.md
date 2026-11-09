@@ -1,6 +1,9 @@
-## Unreleased
+## 0.9.79
 
 ### Changes
+
+- A new, crisp app icon, redrawn by Mibea. Many thanks for the careful work! On macOS the icon now
+  also comes at full Retina size.
 
 - In the viewer and in fullscreen, HOME jumps to the first picture of the folder and END to the
   last.
