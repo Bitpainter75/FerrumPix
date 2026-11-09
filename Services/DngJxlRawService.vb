@@ -112,6 +112,22 @@ Namespace Services
             Public ActiveTop, ActiveLeft, ActiveBottom, ActiveRight As Integer
         End Class
 
+        ''' <summary>Tragen die Rohdaten dieses DNG JPEG XL? Liest nur die Verzeichnisse, nicht die
+        ''' Bilddaten. Fuer RawDecodeService.IsFinishedRgb: solche Rohdaten sind lineares
+        ''' Kameralicht, nicht ein schon fertig abgestimmtes Bild.</summary>
+        Public Shared Function HasJxlRawData(path As String) As Boolean
+            If Not IsDngPath(path) Then Return False
+            Try
+                Using fs As New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+                    Dim little As Boolean
+                    Dim raw = FindRawIfd(fs, little)
+                    Return raw IsNot Nothing AndAlso FirstValue(fs, raw, TagCompression, little, 0) = CompressionJpegXl
+                End Using
+            Catch
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Das DNG mit unkomprimierten Rohdaten, im Speicher, oder Nothing, wenn die Datei
         ''' keine JPEG-XL-Rohdaten traegt oder sie sich nach den Regeln oben nicht umbauen laesst.
         ''' Fuer jedes andere DNG endet der Weg nach den Verzeichnissen.</summary>

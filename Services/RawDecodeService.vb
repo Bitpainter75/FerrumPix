@@ -4455,6 +4455,19 @@ Namespace Services
                 ' Sensormuster heisst roh; alles andere behaelt LibRaws Gammaausgabe.
                 If decisive = ColorFilterArrayInterpretation Then Return False
 
+                ' AUSNAHME FUER JPEG-XL-ROHDATEN (DNG 1.7, Kompression 52546). Sie sind sicher
+                ' lineares Kameralicht und kein vorab abgestimmtes Bild: der verlustbehaftete Export
+                ' des Referenzprogramms traegt dafuer eigens ein MapPolynomial, das die Kurve vor der
+                ' Kompression zuruecknimmt (DngJxlRawService), und das Telefon schreibt sie mit
+                ' linearer Kennlinie. Entwickelt wurden solche Dateien bis 2026-11-09 gar nicht, ein
+                ' bestehender Look aendert sich also nicht. An der Gammaausgabe kamen sie gemessen
+                ' 0,6 bis 0,8 Stufen (im sRGB-Wert) dunkler heraus als die eingebettete Vorschau.
+                If DngJxlRawService.HasJxlRawData(path) Then
+                    DiagnosticLogService.LogAlways("RawDecodeService.IsFinishedRgb",
+                        $"{IO.Path.GetFileName(path)}: LinearRaw mit JPEG XL, laeuft als lineare Rohdaten durch die Basisstufe")
+                    Return False
+                End If
+
                 ' PROTOKOLLIERT, weil es eine VORSICHT ist und keine Erkenntnis. LinearRaw (34892)
                 ' kann ein bereits tonwertkorrigiertes Bild sein - gemessen ist genau das der Fall
                 ' gewesen - oder ein echtes lineares DNG, das hier zu flau herauskommt. Wer eine
