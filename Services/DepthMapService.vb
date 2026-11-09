@@ -55,41 +55,18 @@ Namespace Services
             ' nicht mehr an seinen Aufraeumweg, und das Abbruchkreuz blieb auf einem Vorgang
             ' stehen, den es nicht mehr gab.
             Try
-                cancel.ThrowIfCancellationRequested()
-                Dim session = AiModelService.SessionFor(ModelFile)
-                If session Is Nothing Then Return Nothing
+                Using small = ComputeModelMap(image, cancel)
+                    If small Is Nothing Then Return Nothing
+                    Dim aligned = AlignToImage(image, small, cancel:=cancel)
+                    If aligned IsNot Nothing Then Return aligned
 
-                ' Das Modell rechnet auf einem festen Quadrat. Das Bild wird darauf VERZERRT, nicht
-                ' eingepasst: eine Auffuellung mit Schwarz haette das Netz als sehr weit entfernte
-                ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
-                Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
-                Using small = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
-                    If Not ImageProcessor.ScalePixelsFast(image, small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
-                    ' Normierung aus dem Training des Modells - nicht geraten.
-                    Dim average = New Single() {0.485F, 0.456F, 0.406F}
-                    Dim spread = New Single() {0.229F, 0.224F, 0.225F}
-                    Dim target = tensor.Buffer.Span
-                    Dim layer = ModelEdge * ModelEdge
-                    For y = 0 To ModelEdge - 1
-                        If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
-                        For x = 0 To ModelEdge - 1
-                            Dim p = small.GetPixel(x, y)
-                            Dim i = y * ModelEdge + x
-                            target(i) = (p.Red / 255.0F - average(0)) / spread(0)
-                            target(layer + i) = (p.Green / 255.0F - average(1)) / spread(1)
-                            target(layer * 2 + i) = (p.Blue / 255.0F - average(2)) / spread(2)
-                        Next
-                    Next
-                End Using
-
-                cancel.ThrowIfCancellationRequested()
-                Dim input = New List(Of NamedOnnxValue) From {
-                    NamedOnnxValue.CreateFromTensor("image", tensor)}
-                Using result = session.Run(input)
-                    Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
-                    If output Is Nothing Then Return Nothing
-                    cancel.ThrowIfCancellationRequested()
-                    Return AsGrayscale(output.Buffer.ToArray(), image.Width, image.Height, cancel)
+                    ' Ersatzweg fuer ein Farbformat, das die Ausrichtung nicht liest: nur hochziehen.
+                    Dim large = New SKBitmap(New SKImageInfo(image.Width, image.Height, SKColorType.Alpha8, SKAlphaType.Premul))
+                    If Not ImageProcessor.ScalePixelsFast(small, large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
+                        large.Dispose()
+                        Return Nothing
+                    End If
+                    Return large
                 End Using
             Catch ex As OperationCanceledException
                 Return Nothing
@@ -99,8 +76,49 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function AsGrayscale(values As Single(), targetWidth As Integer, targetHeight As Integer,
-                                            cancel As CancellationToken) As SKBitmap
+        ''' <summary>Die Karte, wie das Modell sie liefert: Alpha8 mit <see cref="ModelEdge"/> Punkten
+        ''' Kantenlaenge, gespreizt auf 0 bis 255, noch nicht auf das Bild ausgerichtet. Wirft bei
+        ''' Abbruch und Fehler; <see cref="Compute"/> faengt beides.</summary>
+        Friend Shared Function ComputeModelMap(image As SKBitmap, cancel As CancellationToken) As SKBitmap
+            cancel.ThrowIfCancellationRequested()
+            Dim session = AiModelService.SessionFor(ModelFile)
+            If session Is Nothing Then Return Nothing
+
+            ' Das Modell rechnet auf einem festen Quadrat. Das Bild wird darauf VERZERRT, nicht
+            ' eingepasst: eine Auffuellung mit Schwarz haette das Netz als sehr weit entfernte
+            ' Flaeche gelesen und die Spreizung der echten Tiefen zusammengedrueckt.
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, ModelEdge, ModelEdge})
+            Using small = New SKBitmap(ModelEdge, ModelEdge, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                If Not ImageProcessor.ScalePixelsFast(image, small, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                ' Normierung aus dem Training des Modells - nicht geraten.
+                Dim average = New Single() {0.485F, 0.456F, 0.406F}
+                Dim spread = New Single() {0.229F, 0.224F, 0.225F}
+                Dim target = tensor.Buffer.Span
+                Dim layer = ModelEdge * ModelEdge
+                For y = 0 To ModelEdge - 1
+                    If y Mod 16 = 0 Then cancel.ThrowIfCancellationRequested()
+                    For x = 0 To ModelEdge - 1
+                        Dim p = small.GetPixel(x, y)
+                        Dim i = y * ModelEdge + x
+                        target(i) = (p.Red / 255.0F - average(0)) / spread(0)
+                        target(layer + i) = (p.Green / 255.0F - average(1)) / spread(1)
+                        target(layer * 2 + i) = (p.Blue / 255.0F - average(2)) / spread(2)
+                    Next
+                Next
+            End Using
+
+            cancel.ThrowIfCancellationRequested()
+            Dim input = New List(Of NamedOnnxValue) From {
+                NamedOnnxValue.CreateFromTensor("image", tensor)}
+            Using result = session.Run(input)
+                Dim output = TryCast(result.First().Value, DenseTensor(Of Single))
+                If output Is Nothing Then Return Nothing
+                cancel.ThrowIfCancellationRequested()
+                Return AsGrayscale(output.Buffer.ToArray(), cancel)
+            End Using
+        End Function
+
+        Private Shared Function AsGrayscale(values As Single(), cancel As CancellationToken) As SKBitmap
             If values Is Nothing OrElse values.Length < ModelEdge * ModelEdge Then Return Nothing
             Dim offset = values.Length - ModelEdge * ModelEdge
 
@@ -116,22 +134,330 @@ Namespace Services
             ' Ein voellig flaches Ergebnis ist keine Tiefenkarte, sondern ein Fehlschlag.
             If span <= 0.0001F Then Return Nothing
 
-            Using small = New SKBitmap(New SKImageInfo(ModelEdge, ModelEdge, SKColorType.Alpha8, SKAlphaType.Premul))
-                Dim buffer(ModelEdge * ModelEdge - 1) As Byte
-                For i = 0 To buffer.Length - 1
-                    If i Mod (ModelEdge * 16) = 0 Then cancel.ThrowIfCancellationRequested()
-                    Dim v = (values(offset + i) - min) / span
-                    buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
-                Next
-                Runtime.InteropServices.Marshal.Copy(buffer, 0, small.GetPixels(), buffer.Length)
+            Dim small = New SKBitmap(New SKImageInfo(ModelEdge, ModelEdge, SKColorType.Alpha8, SKAlphaType.Premul))
+            Dim buffer(ModelEdge * ModelEdge - 1) As Byte
+            For i = 0 To buffer.Length - 1
+                Dim v = (values(offset + i) - min) / span
+                buffer(i) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(v * 255.0F)))))
+            Next
+            Runtime.InteropServices.Marshal.Copy(buffer, 0, small.GetPixels(), buffer.Length)
+            Return small
+        End Function
 
-                Dim large = New SKBitmap(New SKImageInfo(targetWidth, targetHeight, SKColorType.Alpha8, SKAlphaType.Premul))
-                If Not ImageProcessor.ScalePixelsFast(small, large, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then
-                    large.Dispose()
-                    Return Nothing
-                End If
-                Return large
+        ''' <summary>Kantenlaenge, auf der <see cref="AlignToImage"/> seine Koeffizienten rechnet.
+        ''' Das Vierfache des Modells: fein genug, dass die Kanten des Fotos darin noch scharf
+        ''' liegen, und klein genug fuer gut 13 Kastenfilter in einem Bruchteil einer Sekunde.</summary>
+        Private Const AlignEdge As Integer = 1024
+
+        ''' <summary>Durchgaenge des gefuehrten Filters in <see cref="AlignToImage"/>. Einer setzt
+        ''' die Kante auf die Farbkante, laesst aber auf einer Strecke vom Filterradius eine Schulter
+        ''' der weichen Modellkarte stehen (an einer Stufe 0 auf 255 bis zu 67 direkt vor der
+        ''' Kante); der zweite nimmt das Ergebnis des ersten als Karte und baut sie weitgehend ab.
+        ''' Die Statistik der Farbe wird dafuer nicht neu gerechnet.</summary>
+        Private Const AlignPasses As Integer = 2
+
+        ''' <summary>Zieht die Tiefenkarte des Modells (<paramref name="small"/>, 256 x 256) auf die
+        ''' Groesse von <paramref name="image"/> und legt dabei ihre Kanten auf die Kanten des Fotos.
+        '''
+        ''' Das Modell sieht das Bild nur mit 256 Punkten Kantenlaenge, und seine Karte ist auch
+        ''' dort an Umrissen weich. Bilinear hochgezogen wurde daraus bei 20 MP ein Uebergang von
+        ''' mehreren Dutzend Bildpunkten: der Himmel neben einem Kopf bekam die Naehe des Kopfes,
+        ''' und Nebel nach Tiefe liess dort einen klaren Saum stehen.
+        '''
+        ''' Verfahren: gefuehrter Filter mit dem Farbbild als Fuehrung (He, Sun, Tang 2013), in der
+        ''' schnellen Form (He, Sun 2015). Je Umgebung wird die Tiefe als lineare Funktion der
+        ''' Farbe angesetzt, q = a . I + b, mit der kleinsten Abweichung von der Karte des Modells.
+        ''' Wo die Farbe innerhalb der Umgebung springt, springt damit auch die Tiefe, und zwar
+        ''' genau an der Stelle des Fotos; wo die Farbe gleichmaessig ist, bleibt die Karte, wie sie
+        ''' war. a und b werden auf hoechstens <see cref="AlignEdge"/> Punkten gerechnet, gemittelt,
+        ''' bilinear hochgezogen und dann mit der Farbe jedes einzelnen Bildpunkts angewendet: die
+        ''' Kante kommt so in voller Aufloesung aus dem Foto, nicht aus der Rechenstufe.
+        '''
+        ''' <paramref name="radiusModelPixels"/> ist der Radius in Punkten des Modells, damit er
+        ''' unabhaengig von der Bildgroesse dieselbe Unschaerfe der Modellkarte ueberbrueckt.
+        ''' <paramref name="epsilon"/> ist die Varianz der Farbe (Kanaele 0 bis 1), unter der eine
+        ''' Farbschwankung nicht mehr als Kante gilt.</summary>
+        ''' <returns>Alpha8 in Bildgroesse, Nothing bei einem Farbformat ausser BGRA und RGBA.</returns>
+        Friend Shared Function AlignToImage(image As SKBitmap, small As SKBitmap,
+                                            Optional radiusModelPixels As Double = 3.0,
+                                            Optional epsilon As Double = 0.001,
+                                            Optional cancel As CancellationToken = Nothing) As SKBitmap
+            If image Is Nothing OrElse small Is Nothing Then Return Nothing
+            Dim ri, gi, bi As Integer
+            Select Case image.ColorType
+                Case SKColorType.Bgra8888 : ri = 2 : gi = 1 : bi = 0
+                Case SKColorType.Rgba8888 : ri = 0 : gi = 1 : bi = 2
+                Case Else : Return Nothing
+            End Select
+            Dim w = image.Width, h = image.Height
+            If w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim scale = Math.Min(1.0, AlignEdge / CDbl(Math.Max(w, h)))
+            Dim lw = Math.Max(1, CInt(Math.Round(w * scale)))
+            Dim lh = Math.Max(1, CInt(Math.Round(h * scale)))
+            Dim n = lw * lh
+            Dim radius = Math.Max(1, CInt(Math.Round(radiusModelPixels * Math.Max(lw, lh) / ModelEdge)))
+
+            ' Fuehrung und Karte in der Rechenstufe, Werte 0 bis 1.
+            Dim gR(n - 1), gG(n - 1), gB(n - 1), p(n - 1) As Single
+            Using guide = New SKBitmap(lw, lh, SKColorType.Bgra8888, SKAlphaType.Unpremul)
+                If Not ImageProcessor.ScalePixelsFast(image, guide, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                Dim stride = guide.RowBytes
+                Dim bytes(stride * lh - 1) As Byte
+                Marshal.Copy(guide.GetPixels(), bytes, 0, bytes.Length)
+                For y = 0 To lh - 1
+                    For x = 0 To lw - 1
+                        Dim o = y * stride + x * 4
+                        Dim i = y * lw + x
+                        gB(i) = bytes(o) / 255.0F
+                        gG(i) = bytes(o + 1) / 255.0F
+                        gR(i) = bytes(o + 2) / 255.0F
+                    Next
+                Next
             End Using
+            Using lowDepth = New SKBitmap(New SKImageInfo(lw, lh, SKColorType.Alpha8, SKAlphaType.Premul))
+                If Not ImageProcessor.ScalePixelsFast(small, lowDepth, New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) Then Return Nothing
+                Dim depthStride As Integer
+                Dim depthBytes = ImageProcessor.TryReadAlpha8(lowDepth, depthStride)
+                If depthBytes Is Nothing Then Return Nothing
+                For y = 0 To lh - 1
+                    For x = 0 To lw - 1
+                        p(y * lw + x) = depthBytes(y * depthStride + x) / 255.0F
+                    Next
+                Next
+            End Using
+            cancel.ThrowIfCancellationRequested()
+
+            Dim Product = Function(u As Single(), v As Single()) As Single()
+                              Dim r(n - 1) As Single
+                              For i = 0 To n - 1
+                                  r(i) = u(i) * v(i)
+                              Next
+                              Return r
+                          End Function
+            Dim Mean = Function(u As Single()) BoxMean(u, lw, lh, radius)
+
+            Dim eps = CSng(Math.Max(0.000001, epsilon))
+            Dim modelScale = Math.Max(lw, lh) / CDbl(ModelEdge)
+
+            Dim maR As Single() = Nothing, maG As Single() = Nothing, maB As Single() = Nothing
+            Dim mOffset As Single() = Nothing
+            For pass = 1 To AlignPasses
+                If pass > 1 Then
+                    ' Karte dieses Durchgangs ist das Ergebnis des vorigen auf der Rechenstufe.
+                    Dim nextP(n - 1) As Single
+                    For i = 0 To n - 1
+                        nextP(i) = Math.Max(0.0F, Math.Min(1.0F, maR(i) * gR(i) + maG(i) * gG(i) + maB(i) * gB(i) + mOffset(i)))
+                    Next
+                    p = nextP
+                End If
+
+                ' GEWICHTET: jeder Punkt zaehlt mit dem Vertrauen in seine Tiefe. Ungewichtet
+                ' lernte die Anpassung auch aus der weichen Rampe, die das Modell an jedem Umriss
+                ' hat, und liess sie vor der Farbkante als Schulter stehen (an einer Stufe 0 auf 255
+                ' bis 67 direkt vor der Kante). Mit wenig Gewicht auf der Rampe kommt der Zusammenhang
+                ' von Farbe und Tiefe aus den flachen Stuecken beiderseits, und die Stufe faellt an
+                ' die Farbkante.
+                Dim confidence = RampConfidence(p, lw, lh, modelScale)
+                Dim confidenceMean = Mean(confidence)
+                Dim WeightedMean = Function(u As Single()) As Single()
+                                       Dim m = Mean(Product(confidence, u))
+                                       For i = 0 To n - 1
+                                           m(i) /= confidenceMean(i)
+                                       Next
+                                       Return m
+                                   End Function
+                Dim mR = WeightedMean(gR), mG = WeightedMean(gG), mB = WeightedMean(gB)
+                Dim mRR = WeightedMean(Product(gR, gR)), mRG = WeightedMean(Product(gR, gG)), mRB = WeightedMean(Product(gR, gB))
+                Dim mGG = WeightedMean(Product(gG, gG)), mGB = WeightedMean(Product(gG, gB)), mBB = WeightedMean(Product(gB, gB))
+                cancel.ThrowIfCancellationRequested()
+                Dim mP = WeightedMean(p)
+                Dim mRP = WeightedMean(Product(gR, p)), mGP = WeightedMean(Product(gG, p)), mBP = WeightedMean(Product(gB, p))
+                cancel.ThrowIfCancellationRequested()
+
+                ' Je Punkt das lineare Modell: (Kovarianz der Farbe + epsilon) a = Kovarianz Farbe/Karte.
+                Dim aR(n - 1), aG(n - 1), aB(n - 1), b(n - 1) As Single
+                Parallel.For(0, lh, Sub(y)
+                                        For x = 0 To lw - 1
+                                            Dim i = y * lw + x
+                                            Dim cR = mRP(i) - mR(i) * mP(i)
+                                            Dim cG = mGP(i) - mG(i) * mP(i)
+                                            Dim cB = mBP(i) - mB(i) * mP(i)
+                                            Dim s11 = mRR(i) - mR(i) * mR(i) + eps
+                                            Dim s12 = mRG(i) - mR(i) * mG(i)
+                                            Dim s13 = mRB(i) - mR(i) * mB(i)
+                                            Dim s22 = mGG(i) - mG(i) * mG(i) + eps
+                                            Dim s23 = mGB(i) - mG(i) * mB(i)
+                                            Dim s33 = mBB(i) - mB(i) * mB(i) + eps
+                                            ' Inverse der symmetrischen 3x3-Matrix ueber die Adjunkte.
+                                            Dim i11 = s22 * s33 - s23 * s23
+                                            Dim i12 = s13 * s23 - s12 * s33
+                                            Dim i13 = s12 * s23 - s13 * s22
+                                            Dim i22 = s11 * s33 - s13 * s13
+                                            Dim i23 = s12 * s13 - s11 * s23
+                                            Dim i33 = s11 * s22 - s12 * s12
+                                            Dim det = s11 * i11 + s12 * i12 + s13 * i13
+                                            If Math.Abs(det) < 1.0E-20F Then
+                                                aR(i) = 0 : aG(i) = 0 : aB(i) = 0
+                                                b(i) = mP(i)
+                                                Continue For
+                                            End If
+                                            Dim kR = (i11 * cR + i12 * cG + i13 * cB) / det
+                                            Dim kG = (i12 * cR + i22 * cG + i23 * cB) / det
+                                            Dim kB = (i13 * cR + i23 * cG + i33 * cB) / det
+                                            aR(i) = kR : aG(i) = kG : aB(i) = kB
+                                            b(i) = mP(i) - kR * mR(i) - kG * mG(i) - kB * mB(i)
+                                        Next
+                                    End Sub)
+                cancel.ThrowIfCancellationRequested()
+                maR = Mean(aR) : maG = Mean(aG) : maB = Mean(aB) : mOffset = Mean(b)
+                cancel.ThrowIfCancellationRequested()
+            Next
+
+            ' Anwenden in voller Aufloesung: Koeffizienten bilinear aus der Rechenstufe, Farbe aus
+            ' dem Bildpunkt selbst. Spaltenlage und Gewichte einmal je Spalte.
+            Dim x0(w - 1), x1(w - 1) As Integer
+            Dim xf(w - 1) As Single
+            For x = 0 To w - 1
+                Dim fx = Math.Max(0.0, Math.Min(lw - 1.0, (x + 0.5) * lw / w - 0.5))
+                x0(x) = CInt(Math.Floor(fx))
+                x1(x) = Math.Min(lw - 1, x0(x) + 1)
+                xf(x) = CSng(fx - x0(x))
+            Next
+            Dim premul = image.AlphaType = SKAlphaType.Premul
+            Dim srcStride = image.RowBytes
+            Dim source = image.GetPixels()
+            Dim result = New SKBitmap(New SKImageInfo(w, h, SKColorType.Alpha8, SKAlphaType.Premul))
+            Dim outStride = result.RowBytes
+            Dim target = result.GetPixels()
+            Parallel.For(0, h, Sub(y, state)
+                                   If cancel.IsCancellationRequested Then
+                                       state.Stop()
+                                       Return
+                                   End If
+                                   Dim fy = Math.Max(0.0, Math.Min(lh - 1.0, (y + 0.5) * lh / h - 0.5))
+                                   Dim r0 = CInt(Math.Floor(fy)) * lw
+                                   Dim r1 = Math.Min(lh - 1, CInt(Math.Floor(fy)) + 1) * lw
+                                   Dim wy = CSng(fy - Math.Floor(fy))
+                                   Dim row(srcStride - 1) As Byte
+                                   Marshal.Copy(IntPtr.Add(source, y * srcStride), row, 0, srcStride)
+                                   Dim line(w - 1) As Byte
+                                   For x = 0 To w - 1
+                                       Dim i00 = r0 + x0(x), i01 = r0 + x1(x), i10 = r1 + x0(x), i11 = r1 + x1(x)
+                                       Dim wx = xf(x)
+                                       Dim o = x * 4
+                                       Dim alpha = row(o + 3)
+                                       Dim unit = 1.0F / 255.0F
+                                       If premul AndAlso alpha > 0 AndAlso alpha < 255 Then unit = 1.0F / alpha
+                                       Dim q = Bilinear(maR, i00, i01, i10, i11, wx, wy) * row(o + ri) * unit +
+                                               Bilinear(maG, i00, i01, i10, i11, wx, wy) * row(o + gi) * unit +
+                                               Bilinear(maB, i00, i01, i10, i11, wx, wy) * row(o + bi) * unit +
+                                               Bilinear(mOffset, i00, i01, i10, i11, wx, wy)
+                                       line(x) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(q * 255.0F)))))
+                                   Next
+                                   Marshal.Copy(line, 0, IntPtr.Add(target, y * outStride), w)
+                               End Sub)
+            If cancel.IsCancellationRequested Then
+                result.Dispose()
+                cancel.ThrowIfCancellationRequested()
+            End If
+            StretchToFullRange(result)
+            Return result
+        End Function
+
+        ''' <summary>Spreizt eine Alpha8-Karte wieder auf 0 bis 255. Die Karte des Modells ist
+        ''' gespreizt (siehe Klassenkommentar), der gefuehrte Filter glaettet aber ihre Spitzen: der
+        ''' naechste Punkt stand danach etwa bei 224 statt 255, und Grenzen wie "100 = am naechsten"
+        ''' der Maske nach Tiefe trafen ihn nicht mehr.</summary>
+        Private Shared Sub StretchToFullRange(map As SKBitmap)
+            Dim stride As Integer
+            Dim bytes = ImageProcessor.TryReadAlpha8(map, stride)
+            If bytes Is Nothing Then Return
+            Dim w = map.Width, h = map.Height
+            Dim lo = 255, hi = 0
+            For y = 0 To h - 1
+                Dim row = y * stride
+                For x = 0 To w - 1
+                    Dim v = bytes(row + x)
+                    If v < lo Then lo = v
+                    If v > hi Then hi = v
+                Next
+            Next
+            If hi <= lo OrElse (lo = 0 AndAlso hi = 255) Then Return
+            Dim table(255) As Byte
+            For v = 0 To 255
+                table(v) = CByte(Math.Max(0, Math.Min(255, CInt(Math.Round((v - lo) * 255.0 / (hi - lo))))))
+            Next
+            For i = 0 To bytes.Length - 1
+                bytes(i) = table(bytes(i))
+            Next
+            Marshal.Copy(bytes, 0, map.GetPixels(), Math.Min(bytes.Length, stride * h))
+        End Sub
+
+        ''' <summary>Steigung der Karte, ab der ihr Wert als unsicher gilt, in Anteilen des ganzen
+        ''' Bereichs je Punkt des Modells. Ein Umriss laeuft im Modell ueber rund vier Punkte von 0 auf
+        ''' 1 (Steigung 0,25) und bekommt damit ein Gewicht um 0,04; ein Boden, der gleichmaessig nach
+        ''' hinten laeuft, steigt eher um 0,01 bis 0,02 und behaelt fast das volle Gewicht.</summary>
+        Private Const RampSlope As Double = 0.05
+
+        ''' <summary>Vertrauen in die Tiefe jedes Punkts, 1 auf flacher Karte, gegen 0 auf einer
+        ''' steilen Rampe: 1 / (1 + (Steigung / <see cref="RampSlope"/>)^2), nach unten auf 0,001
+        ''' begrenzt, damit ein Fenster ganz auf einer Rampe noch einen Mittelwert hat.</summary>
+        Private Shared Function RampConfidence(p As Single(), width As Integer, height As Integer, modelScale As Double) As Single()
+            Dim result(p.Length - 1) As Single
+            Dim scale = CSng(modelScale / RampSlope)
+            Parallel.For(0, height, Sub(y)
+                                        Dim up = Math.Max(0, y - 1) * width, down = Math.Min(height - 1, y + 1) * width
+                                        Dim rowSpan = If(y = 0 OrElse y = height - 1, 1.0F, 2.0F)
+                                        For x = 0 To width - 1
+                                            Dim left = Math.Max(0, x - 1), right = Math.Min(width - 1, x + 1)
+                                            Dim gx = (p(y * width + right) - p(y * width + left)) / CSng(Math.Max(1, right - left))
+                                            Dim gy = (p(down + x) - p(up + x)) / rowSpan
+                                            Dim s = (gx * gx + gy * gy) * scale * scale
+                                            result(y * width + x) = Math.Max(0.001F, 1.0F / (1.0F + s))
+                                        Next
+                                    End Sub)
+            Return result
+        End Function
+
+        Private Shared Function Bilinear(c As Single(), i00 As Integer, i01 As Integer, i10 As Integer, i11 As Integer,
+                                         wx As Single, wy As Single) As Single
+            Dim top = c(i00) + (c(i01) - c(i00)) * wx
+            Dim bottom = c(i10) + (c(i11) - c(i10)) * wx
+            Return top + (bottom - top) * wy
+        End Function
+
+        ''' <summary>Mittelwert ueber das Quadrat mit Radius <paramref name="radius"/> um jeden Punkt,
+        ''' getrennt nach Zeilen und Spalten mit laufender Summe. Am Rand zaehlt nur, was im Bild
+        ''' liegt, geteilt wird durch genau diese Anzahl.</summary>
+        Private Shared Function BoxMean(values As Single(), width As Integer, height As Integer, radius As Integer) As Single()
+            Dim rows(values.Length - 1) As Single
+            Parallel.For(0, height, Sub(y)
+                                        Dim start = y * width
+                                        Dim sum = 0.0
+                                        For x = 0 To Math.Min(radius, width - 1)
+                                            sum += values(start + x)
+                                        Next
+                                        For x = 0 To width - 1
+                                            Dim lo = Math.Max(0, x - radius), hi = Math.Min(width - 1, x + radius)
+                                            rows(start + x) = CSng(sum / (hi - lo + 1))
+                                            If x + radius + 1 < width Then sum += values(start + x + radius + 1)
+                                            If x - radius >= 0 Then sum -= values(start + x - radius)
+                                        Next
+                                    End Sub)
+            Dim result(values.Length - 1) As Single
+            Parallel.For(0, width, Sub(x)
+                                       Dim sum = 0.0
+                                       For y = 0 To Math.Min(radius, height - 1)
+                                           sum += rows(y * width + x)
+                                       Next
+                                       For y = 0 To height - 1
+                                           Dim lo = Math.Max(0, y - radius), hi = Math.Min(height - 1, y + radius)
+                                           result(y * width + x) = CSng(sum / (hi - lo + 1))
+                                           If y + radius + 1 < height Then sum += rows((y + radius + 1) * width + x)
+                                           If y - radius >= 0 Then sum -= rows((y - radius) * width + x)
+                                       Next
+                                   End Sub)
+            Return result
         End Function
 
         ''' <summary>Aus einer Tiefenkarte eine Maske: alles, dessen Tiefe zwischen den beiden
