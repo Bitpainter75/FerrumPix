@@ -112,6 +112,23 @@
 
   <releases>
 
+
+    <release version="0.9.79-1" date="2026-11-09">
+      <description>
+        <p>This update brings a fresh app icon, support for Lightroom Classic catalogs and JPEG XL-compressed DNG files, and more natural-looking depth fog and dodge and burn effects:</p>
+        <p xml:lang="de">Dieses Update bringt ein neues Programmsymbol, Unterstützung für Lightroom-Classic-Kataloge und JPEG-XL-komprimierte DNG-Dateien sowie natürlichere Ergebnisse bei tiefenabhängigem Nebel und beim Abwedeln und Nachbelichten:</p>
+        <ul>
+          <li>FerrumPix has a new, sharper app icon, beautifully redrawn by Mibea. Many thanks! You can now import ratings, pick flags, color labels and keywords from Lightroom Classic catalogs, alongside RawTherapee and ART sidecar files (Settings, Catalog). RAW photos edited in Lightroom also open with their edits applied, including their titles and captions. DNG files compressed with JPEG XL can now be opened using their full RAW image data.</li>
+          <li xml:lang="de">FerrumPix hat ein neues, schärferes Programmsymbol, das Mibea neu gezeichnet hat. Vielen Dank dafür! Neben den Beistelldateien von RawTherapee und ART lassen sich jetzt auch Bewertungen, Markierungen, Farbetiketten und Stichwörter aus Lightroom-Classic-Katalogen übernehmen (Einstellungen, Katalog). In Lightroom bearbeitete RAW-Fotos öffnen sich außerdem mit ihren Bearbeitungen sowie den zugehörigen Titeln und Beschreibungen. Auch JPEG-XL-komprimierte DNG-Dateien lassen sich jetzt mit ihren vollständigen RAW-Bilddaten öffnen.</li>
+
+          <li>Depth-based fog now builds up naturally with distance, just like real haze. Fog, depth blur and depth masks also follow the outlines of people and objects more accurately. Dodge and burn are gentler, stay within their intended tonal ranges and preserve colors with the new "Protect tones" option. Brushes can now be up to 3000 pixels wide and paint all the way to the image edges. In the viewer, HOME and END take you straight to the first or last photo.</li>
+          <li xml:lang="de">Tiefenabhängiger Nebel nimmt jetzt mit der Entfernung natürlich zu, ganz wie echter Dunst. Nebel, Tiefenunschärfe und tiefenabhängige Masken folgen außerdem den Konturen von Personen und Objekten genauer. Abwedeln und Nachbelichten wirken sanfter, bleiben im gewünschten Tonwertbereich und bewahren mit der neuen Option „Töne schützen“ die Farben. Pinsel können jetzt bis zu 3000 Pixel groß sein und bis direkt an den Bildrand malen. Im Bildbetrachter springst du mit POS1 und ENDE direkt zum ersten oder letzten Foto.</li>
+
+          <li>RAW files from Samsung phones no longer open several stops too dark, and Photoshop files with fill layers that contain no pixel data no longer appear blank. If a saved edit can't be read, FerrumPix now shows a warning instead of silently ignoring it. When using Nextcloud, saving an edit no longer overwrites changes made on another computer in the meantime. Filenames containing a dot are preserved correctly, and memory usage no longer keeps growing during long sessions in the viewer.</li>
+          <li xml:lang="de">RAW-Dateien von Samsung-Smartphones öffnen sich nicht mehr um mehrere Blendenstufen zu dunkel, und Photoshop-Dateien mit Füllebenen ohne eigene Pixeldaten erscheinen nicht mehr leer. Kann FerrumPix eine gespeicherte Bearbeitung nicht lesen, erscheint jetzt eine Warnung, statt sie stillschweigend zu ignorieren. Bei der Verwendung von Nextcloud überschreibt das Speichern außerdem keine Änderungen mehr, die zwischenzeitlich auf einem anderen Rechner vorgenommen wurden. Dateinamen mit einem Punkt bleiben vollständig erhalten, und bei längerer Nutzung des Bildbetrachters steigt der Speicherverbrauch nicht mehr kontinuierlich an.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.78-1" date="2026-11-08">
       <description>
         <p>This update gives you more control over searching and makes FerrumPix noticeably faster. You can now choose whether searches and filters apply to the current folder or your entire catalog. The editor, RAW processing and thumbnail generation have also received some significant speed improvements:</p>
