@@ -62,7 +62,8 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Rote Augen lassen sich nur im Foto entfernen, nicht auf einer Ebene")
                 Return
             End If
-            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent)
+            ' Auch neben dem Bild, wie beim Pinsel: der Kreis darf ueber den Rand ragen.
+            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent, allowOutside:=True)
             If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return
             Dim cx = CSng(PercentXToPixels(wip.X))
             Dim cy = CSng(PercentYToPixels(wip.Y))
@@ -111,9 +112,10 @@ Namespace ViewModels
             ' Markierung ändert. Der Weg selbst steht in EditorViewModelObjectRetouch.vb.
             If TryAddObjectRetouchSpot(xPercent, yPercent, captureUndo) Then Return
             ' Klick liegt im Anzeigebild (nach Crop/Drehung/Resize/Canvas) - vollständig ins
-            ' Arbeitsbild zurückrechnen. NaN = außerhalb des Bildinhalts (Canvas-Rand): dort gibt
-            ' es keinen Source-Pixel, der Punkt wird verworfen.
-            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent)
+            ' Arbeitsbild zurückrechnen, AUCH neben dem Bild: die Ansicht laesst den Mittelpunkt bis
+            ' einen Radius ausserhalb zu, damit der Teil des Kreises ueber dem Bild wirkt. Mit
+            ' angewendeter Geometrie fiel ein solcher Punkt sonst hier heraus.
+            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent, allowOutside:=True)
             If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return
             xPercent = wip.X
             yPercent = wip.Y

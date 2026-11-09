@@ -11326,4 +11326,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>นำคำสำคัญ คะแนน และป้ายสีจากไฟล์ .pp3 หรือ .arp ข้างรูปภาพเข้าสู่แคตตาล็อก ไฟล์จะถูกอ่านเท่านั้น ไม่มีการแก้ไข</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>อ่านข้อมูลจาก RawTherapee, ART และ Lightroom</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>นำคำสำคัญ คะแนน และป้ายสีจากไฟล์ .pp3 หรือ .arp ข้างรูปภาพ และจากแคตตาล็อก Lightroom ด้านล่างเข้าสู่แคตตาล็อก ข้อมูลจะถูกอ่านเท่านั้น ไม่มีการแก้ไขใดๆ ที่นั่น</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>แคตตาล็อก Lightroom Classic</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>จากไฟล์ .lrcat จะได้เครื่องหมายเลือก และสำหรับไฟล์ RAW ที่ยังไม่มีการแก้ไขของตัวเอง จะได้การตั้งค่าล้างภาพด้วย รูปภาพจะจับคู่ตามชื่อไฟล์และโฟลเดอร์ ดังนั้นแคตตาล็อกจากคอมพิวเตอร์เครื่องอื่นก็ใช้ได้ ตราบใดที่โฟลเดอร์ยังใช้ชื่อเดิม</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>ยังไม่ได้เลือกแคตตาล็อก</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>จะอ่านเมื่อเปิดสวิตช์ด้านบนเท่านั้น</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>กำลังอ่านแคตตาล็อก…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>มีรูปภาพ {0} รูปในแคตตาล็อก</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom กำลังเปิดแคตตาล็อกนี้อยู่ จนกว่าจะปิด จะใช้สถานะที่อ่านล่าสุดซึ่งมีรูปภาพ {0} รูป</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom กำลังเปิดแคตตาล็อกนี้อยู่ จะอ่านทันทีที่ปิด Lightroom</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>นี่ไม่ใช่แคตตาล็อก Lightroom</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>ไม่สามารถอ่านแคตตาล็อกได้: {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>เลือกแคตตาล็อก Lightroom</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>แคตตาล็อก Lightroom</value>
+  </data>
 </root>

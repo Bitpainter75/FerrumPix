@@ -55,7 +55,7 @@
                       ToolTip.Tip="Ab dieser Entfernung beginnt der Nebel. 100 ist am nächsten">
                     <TextBlock Text="Beginn" Foreground="{DynamicResource FP.Text.Secondary}"
                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="60"
+                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="100"
                                        Value="{Binding FogNear}" Margin="0,0" />
                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                              Value="{Binding FogNear, Mode=TwoWay}" Minimum="0" Maximum="100" />

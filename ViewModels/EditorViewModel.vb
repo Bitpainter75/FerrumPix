@@ -27741,9 +27741,14 @@ Namespace ViewModels
         ''' keinen Source-Pixel, in den sich backen ließe.
         ''' Der Druck geht Punkt für Punkt mit: gefiltert wird über das PAAR, sonst verrutschte er
         ''' hinter jedem übersprungenen Punkt auf den falschen.</summary>
+        ''' <summary>Die Punkte eines Zugs in Pixel des Arbeitsbildes. Punkte NEBEN dem Bild bleiben
+        ''' erhalten und werden weitergerechnet (allowOutside): die Ansicht laesst den Mittelpunkt bis
+        ''' einen Pinselradius ausserhalb zu, damit der Teil des Kreises ueber dem Bild wirkt. Mit
+        ''' angewendeter Geometrie (Drehung, Beschnitt) fielen sie vorher hier heraus, und am Rand
+        ''' entstand gar kein oder ein abgeschnittener Strich.</summary>
         Private Function MapStrokeToWorkingPixels(normalized As List(Of Avalonia.Point)) As (Points As List(Of Avalonia.Point), Pressures As List(Of Single))
             Dim mapped = normalized.Select(Function(p, i)
-                                               Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y)
+                                               Dim w = DisplayPercentToWorkingImagePercent(p.X, p.Y, allowOutside:=True)
                                                Return (Point:=New Avalonia.Point(PercentXToPixels(w.X), PercentYToPixels(w.Y)),
                                                        Pressure:=If(_brushStrokePressures Is Nothing, 1.0F, _brushStrokePressures(i)))
                                            End Function).
@@ -30364,7 +30369,8 @@ Namespace ViewModels
         ''' Koordinaten die Drehung vorher herausrechnen, sonst landet der gebackene Strich beim Anzeigen
         ''' gedreht (bei 180° gespiegelt, bei 90°/270° zusätzlich durch den Breite/Höhe-Tausch versetzt).
         ''' Uhrzeigersinn wie ImageProcessor.ApplyGeometryTransforms. Bei 0° (Normalfall) unverändert.</summary>
-        Private Function DisplayPercentToWorkingImagePercent(xPercent As Double, yPercent As Double) As (X As Double, Y As Double)
+        Private Function DisplayPercentToWorkingImagePercent(xPercent As Double, yPercent As Double,
+                                                             Optional allowOutside As Boolean = False) As (X As Double, Y As Double)
             Dim baseWidth = GetBaseWidth()
             Dim baseHeight = GetBaseHeight()
             Dim displaySize = GetAnnotationDisplayPixelSize()
@@ -30379,7 +30385,8 @@ Namespace ViewModels
             Dim source As SKPoint
             If Not ImageProcessor.TryGeometryOutputToSourcePoint(displayX, displayY,
                                                                  baseWidth, baseHeight,
-                                                                 BuildAppliedGeometryAdjustments(), source) Then
+                                                                 BuildAppliedGeometryAdjustments(), source,
+                                                                 allowOutside) Then
                 Return (Double.NaN, Double.NaN)
             End If
             Return (source.X / baseWidth * 100.0, source.Y / baseHeight * 100.0)

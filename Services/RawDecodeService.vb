@@ -51,6 +51,7 @@ Namespace Services
 
         Private Delegate Function InitFn(flags As UInteger) As IntPtr
         Private Delegate Function OpenFileFn(handle As IntPtr, path As IntPtr) As Integer
+        Private Delegate Function OpenBufferFn(handle As IntPtr, buffer As IntPtr, size As UIntPtr) As Integer
         Private Delegate Function IntFn(handle As IntPtr) As Integer
         Private Delegate Sub SetIntFn(handle As IntPtr, value As Integer)
         Private Delegate Function GetCamMulFn(handle As IntPtr, index As Integer) As Single
@@ -104,6 +105,8 @@ Namespace Services
 
         Private Shared _init As InitFn
         Private Shared _openFile As OpenFileFn
+        ''' OPTIONAL: ohne ihn bleibt ein DNG mit JPEG-XL-Rohdaten bei der Vorschau (DngJxlRawService).
+        Private Shared _openBuffer As OpenBufferFn
         Private Shared _unpack As IntFn
         Private Shared _setOutputBps As SetIntFn
         Private Shared _setOutputColor As SetIntFn
@@ -498,6 +501,11 @@ Namespace Services
                         _setDataErrorHandler = Nothing
                         _getDecoderInfo = Nothing
                         _dataErrorCallbackPointer = IntPtr.Zero
+                    End Try
+                    Try
+                        _openBuffer = GetExport(Of OpenBufferFn)(handle, "libraw_open_buffer")
+                    Catch
+                        _openBuffer = Nothing
                     End Try
                     ' OPTIONAL: ohne ihn laeuft ein ueberholter Decode zu Ende (siehe RunWhileWanted).
                     Try
@@ -3175,18 +3183,29 @@ Namespace Services
                 End Try
             End If
 
+            ' Rohdaten in JPEG XL (DNG 1.7) kann LibRaw nicht dekodieren. Dann bekommt sie dieselbe
+            ' Datei mit unkomprimierten Rohdaten aus dem Speicher (DngJxlRawService); fuer jedes
+            ' andere DNG endet das nach den Verzeichnissen und es bleibt bei open_file.
+            Dim plainDng = If(_openBuffer IsNot Nothing, DngJxlRawService.TryBuildUncompressed(path), Nothing)
             Dim handle = _init(0UI)
             If handle = IntPtr.Zero Then Return Nothing
             Dim pathPtr As IntPtr = IntPtr.Zero
+            ' LibRaw liest aus dem Puffer bis zum Schliessen; so lange bleibt er angeheftet.
+            Dim plainPin As GCHandle
             Dim image As IntPtr = IntPtr.Zero
             ' Bei einem einkanaligen Bild die auf drei Kanaele aufgefaecherte Kopie (siehe unten).
             Dim expanded As IntPtr = IntPtr.Zero
             Dim abortable = BeginAbortable(handle)
             Try
-                ' UTF-8-Pfad: korrekt auf Linux/macOS; unter Windows scheitern Nicht-ASCII-Pfade
-                ' im ANSI-Marshalling der C-API - dort greift dann der Vorschau-Rückfall.
-                pathPtr = StringToUtf8(path)
-                If _openFile(handle, pathPtr) <> 0 Then Return Nothing
+                If plainDng IsNot Nothing Then
+                    plainPin = GCHandle.Alloc(plainDng, GCHandleType.Pinned)
+                    If _openBuffer(handle, plainPin.AddrOfPinnedObject(), CType(CULng(plainDng.Length), UIntPtr)) <> 0 Then Return Nothing
+                Else
+                    ' UTF-8-Pfad: korrekt auf Linux/macOS; unter Windows scheitern Nicht-ASCII-Pfade
+                    ' im ANSI-Marshalling der C-API - dort greift dann der Vorschau-Rückfall.
+                    pathPtr = StringToUtf8(path)
+                    If _openFile(handle, pathPtr) <> 0 Then Return Nothing
+                End If
                 ' Gemessen nur mit eingeschaltetem Diagnoseprotokoll: Auspacken und Entwickeln in
                 ' LibRaw sind die beiden Schritte, deren Dauer an der Einzelkernleistung haengt.
                 ' Mit Datenfehler-Pruefung: beschaedigte Rohdaten gelten als gescheitert, und der
@@ -3531,6 +3550,7 @@ Namespace Services
                 If abortable Then EndAbortable(handle)
                 _close(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+                If plainPin.IsAllocated Then plainPin.Free()
             End Try
         End Function
 

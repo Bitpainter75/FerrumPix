@@ -11326,4 +11326,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>छवि के पास रखी .pp3 या .arp फ़ाइल से कीवर्ड, रेटिंग और रंग लेबल कैटलॉग में लेता है। फ़ाइलें केवल पढ़ी जाती हैं, कभी बदली नहीं जातीं।</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>RawTherapee, ART और Lightroom से डेटा पढ़ें</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>छवि के पास रखी .pp3 या .arp फ़ाइल और नीचे दिए Lightroom कैटलॉग से कीवर्ड, रेटिंग और रंग लेबल कैटलॉग में लेता है। इन्हें केवल पढ़ा जाता है, वहाँ कुछ भी नहीं बदला जाता।</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>Lightroom Classic कैटलॉग</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>.lrcat से इसके अलावा पिक फ़्लैग और, जिन RAW फ़ाइलों में अपना कोई संपादन नहीं है, उनका डेवलपमेंट भी आता है। फ़ोटो फ़ाइल नाम और फ़ोल्डर से मिलाई जाती हैं, इसलिए दूसरे कंप्यूटर का कैटलॉग भी तब तक काम करता है जब तक फ़ोल्डरों के नाम वही हैं।</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>कोई कैटलॉग नहीं चुना गया</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>केवल ऊपर का स्विच चालू होने पर पढ़ा जाता है।</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>कैटलॉग पढ़ा जा रहा है…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>कैटलॉग में {0} फ़ोटो।</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom ने अभी कैटलॉग खोल रखा है। इसके बंद होने तक, {0} फ़ोटो वाली आख़िरी पढ़ी गई स्थिति लागू रहती है।</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom ने अभी कैटलॉग खोल रखा है। Lightroom बंद होते ही इसे पढ़ा जाएगा।</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>यह Lightroom कैटलॉग नहीं है।</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>कैटलॉग पढ़ा नहीं जा सकता: {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>Lightroom कैटलॉग चुनें</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>Lightroom कैटलॉग</value>
+  </data>
 </root>

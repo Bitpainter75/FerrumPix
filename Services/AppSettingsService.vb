@@ -503,6 +503,10 @@ Namespace Services
         ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den
         ''' Katalog uebernehmen (Standard AUS). Nur lesen; siehe Pp3SidecarService.</summary>
         Public Property ReadPp3Sidecars As Boolean = False
+        ''' <summary>Ein Katalog des Referenzprogramms (.lrcat), aus dem mit <see cref="ReadPp3Sidecars"/>
+        ''' dieselben Angaben kommen, dazu die Markierung und bei RAW ohne eigene Bearbeitung die
+        ''' Entwicklung. Leer heisst keiner. Nur lesen; siehe ForeignCatalogService.</summary>
+        Public Property ForeignCatalogPath As String = ""
         ''' Optionaler XMP-Katalog-Sync (Standard AUS): schreibt Rating/Farb-Label/Stichworte zusätzlich
         ''' zum .fpxmp-Rezept in ein Adobe-XMP-Sidecar, damit andere Programme sie sehen. .fpxmp bleibt
         ''' die primäre Bearbeitungsquelle. Erst per Einstellung aktivierbar.
@@ -1273,7 +1277,7 @@ Namespace Services
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.DateFormatMode = LocalizationService.NormalizeDateFormatMode(settings.DateFormatMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
-                settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
+                settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity, settings.ThumbnailHighResolution)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
@@ -1522,7 +1526,7 @@ Namespace Services
                 settings.LanguageMode = LocalizationService.NormalizeLanguageMode(settings.LanguageMode)
                 settings.DateFormatMode = LocalizationService.NormalizeDateFormatMode(settings.DateFormatMode)
                 settings.ThumbnailQuality = NormalizeThumbnailQuality(settings.ThumbnailQuality)
-                settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity)
+                settings.GalleryThumbnailMemoryCacheCapacity = NormalizeGalleryThumbnailMemoryCacheCapacity(settings.GalleryThumbnailMemoryCacheCapacity, settings.ThumbnailHighResolution)
                 settings.JpgSaveQuality = NormalizeJpgSaveQuality(settings.JpgSaveQuality)
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
@@ -1689,9 +1693,19 @@ Namespace Services
         ''' Untergrenze 1000 statt frueher 50: bei 500 meldeten Nutzer in grossen Ordnern Kacheln, die
         ''' dunkel blieben, und mit einem groesseren Speicher verschwand das. Ein kleinerer Wert spart
         ''' Arbeitsspeicher, den das Vorladen des ganzen Ordners ohnehin wieder umwaelzt. Ein
-        ''' gemerkter kleinerer Wert wird beim Laden angehoben.</summary>
-        Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer) As Integer
-            Return Math.Max(1000, Math.Min(10000, value))
+        ''' gemerkter kleinerer Wert wird beim Laden angehoben.
+        '''
+        ''' OBERGRENZE 5000 BEI HOCHAUFLOESENDEN VORSCHAUBILDERN statt 10 000: die sind 960 statt 480
+        ''' Punkte breit, bei 3:2 rund 2,5 MB je Bild statt 0,6 MB. Zehntausend davon belegten bis zu
+        ''' 25 GB, und ein Nutzer stand nach einer langen Sitzung damit tatsaechlich dort
+        ''' (Nutzerbefund aus dem Forum). Mit 5000 bleiben es bis zu 12,5 GB.</summary>
+        Public Shared Function NormalizeGalleryThumbnailMemoryCacheCapacity(value As Integer, highResolution As Boolean) As Integer
+            Return Math.Max(1000, Math.Min(GalleryThumbnailMemoryCacheMaximum(highResolution), value))
+        End Function
+
+        ''' <summary>Obergrenze des Vorschau-Speichers, abhaengig von der Breite der Vorschaubilder.</summary>
+        Public Shared Function GalleryThumbnailMemoryCacheMaximum(highResolution As Boolean) As Integer
+            Return If(highResolution, 5000, 10000)
         End Function
 
         ''' <summary>Die Vorgabe der Modellfaeden: die Haelfte der logischen Kerne, mindestens einer.</summary>

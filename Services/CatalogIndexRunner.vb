@@ -466,8 +466,15 @@ Namespace Services
             ' Die .pp3 eines fremden Entwicklers, nur mit eingeschalteter Einstellung (sonst
             ' Nothing): ihre Stichwoerter gehen in denselben Import, Bewertung und Etikett fuellen
             ' wie alles hier nur, was im Katalog leer ist.
+            ' Darin steckt auch, was ein eingestellter Katalog des Referenzprogramms zum Foto sagt, samt
+            ' Markierung; die geht wie die der Beistelldatei nur in die Katalogspalte.
             Dim pp3 = Pp3SidecarService.Read(filePath)
             KeywordImportService.Import(filePath, data?.EmbeddedKeywords, KeywordImportService.ReadSidecarKeywords(filePath), pp3)
+            If pp3 IsNot Nothing AndAlso pp3.PickState.HasValue AndAlso
+               (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) AndAlso
+               LibraryService.Instance.GetPickState(filePath) = 0 Then
+                LibraryService.Instance.SetPickStateForMany({filePath}, pp3.PickState.Value, catalogOnly:=True)
+            End If
             If pp3 IsNot Nothing AndAlso Not String.IsNullOrEmpty(pp3.ColorLabel) AndAlso
                (fpxmpCatalog Is Nothing OrElse fpxmpCatalog.ColorLabel Is Nothing) AndAlso
                String.IsNullOrEmpty(LibraryService.Instance.GetColorLabel(filePath)) Then

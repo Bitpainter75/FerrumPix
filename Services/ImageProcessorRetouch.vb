@@ -172,17 +172,21 @@ Namespace Services
                 scaleY = source.Height / CSng(sourceHeightPixels)
             End If
             Dim radiusScale = CSng(Math.Sqrt(Math.Max(0.0001F, scaleX * scaleY)))
-            Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
-            Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
             Dim radius = Clamp(spot.RadiusPixels * radiusScale, 1, Math.Max(source.Width, source.Height))
+            ' Der Mittelpunkt darf bis einen Radius neben dem Bild liegen, wie beim Pinsel: auf den
+            ' Rand geklemmt wirkte ein Tupfer daneben mit vollem Radius auf der Kante und reichte
+            ' tiefer ins Bild als sein Kreis (ImageProcessor.StrokeCanvasPoint).
+            Dim cx = Clamp(spot.XPixels * scaleX, -radius, source.Width + radius)
+            Dim cy = Clamp(spot.YPixels * scaleY, -radius, source.Height + radius)
             Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F
             Dim opacity = Clamp(spot.OpacityPercent, 0, 100) / 100.0F
             Dim strength = Clamp(spot.StrengthPercent, 0, 100) / 100.0F
             Dim alphaFactor = flow * opacity * strength
 
             If spot.HasCloneSource Then
-                Dim sx = Clamp(spot.SourceXPixels * scaleX, 0, source.Width)
-                Dim sy = Clamp(spot.SourceYPixels * scaleY, 0, source.Height)
+                ' Die Quelle ebenso, sonst verschoebe sich der Versatz zwischen Quelle und Ziel.
+                Dim sx = Clamp(spot.SourceXPixels * scaleX, -radius, source.Width + radius)
+                Dim sy = Clamp(spot.SourceYPixels * scaleY, -radius, source.Height + radius)
                 ' Der Stempel soll denselben bereits bearbeiteten Stand sehen wie Reparatur und
                 ' Verwischen. Sonst kopiert er nach nachfolgenden Retuschen wieder Textur aus einem
                 ' älteren, retuschefreien Zwischenstand zurück.
@@ -460,8 +464,9 @@ Namespace Services
             For Each spot In spots
                 If spot Is Nothing Then Continue For
                 Dim radius = Clamp(spot.RadiusPixels * radiusScale + 2.0F, 1, Math.Max(source.Width, source.Height))
-                Dim cx = Clamp(spot.XPixels * scaleX, 0, source.Width)
-                Dim cy = Clamp(spot.YPixels * scaleY, 0, source.Height)
+                ' Bis einen Radius neben dem Bild, wie in DrawRetouchSpot.
+                Dim cx = Clamp(spot.XPixels * scaleX, -radius, source.Width + radius)
+                Dim cy = Clamp(spot.YPixels * scaleY, -radius, source.Height + radius)
                 Dim flow = Clamp(spot.FlowPercent, 0, 100) / 100.0F
                 Dim effectCeiling = Clamp(spot.OpacityPercent, 0, 100) / 100.0F *
                                     Clamp(spot.StrengthPercent, 0, 100) / 100.0F

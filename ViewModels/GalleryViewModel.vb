@@ -7820,7 +7820,8 @@ Namespace ViewModels
                                                         embeddedKeywords As List(Of String),
                                                         currentRating As Integer,
                                                         currentColorLabel As String,
-                                                        currentTags As List(Of String)) _
+                                                        currentTags As List(Of String),
+                                                        Optional fields As ExifSearchFields = Nothing) _
                                                         As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String), Pick As Integer?)
             Dim result As (Rating As Integer?, Favorite As Boolean?, ColorLabel As String, HasColorLabel As Boolean, Tags As List(Of String), Pick As Integer?) =
                 (Nothing, Nothing, "", False, Nothing, Nothing)
@@ -7848,9 +7849,21 @@ Namespace ViewModels
                 ' in eine .fpxmp übersetzt - der EINE Ort, an dem das passiert. Editor und Viewer kennen
                 ' XMP dadurch gar nicht und arbeiten weiter allein auf dem eigenen Rezeptformat.
                 RawSidecarService.TryImportFromXmpSidecar(filePath)
+                ' Danach die Entwicklung aus einem Katalog des Referenzprogramms, wenn eingestellt. Sie muss VOR
+                ' der Bewertung unten stehen: die legt fuer RAW und PSD eine .fpxmp an, und dann
+                ' gaebe es keinen freien Platz mehr fuer das Rezept.
+                RawSidecarService.TryImportFromForeignCatalog(filePath)
+                ' Titel und Co. aus dem Katalog, nur RAW und PSD, nur in leere Felder der .fpxmp.
+                ' Die Felder hat der Aufrufer VOR dem Import gelesen und schreibt sie gleich mit dem
+                ' neuen Frische-Stempel in den Katalog: ohne Nachziehen stuende dort der leere Stand,
+                ' und der Stempel gaelte als aktuell.
+                If RawSidecarService.TryImportDescriptionFromForeignCatalog(filePath) AndAlso fields IsNot Nothing Then
+                    fields.Description = ImageDescriptionService.Read(filePath)
+                End If
 
                 ' Die .pp3 eines fremden Entwicklers, nur mit eingeschalteter Einstellung (sonst
-                ' Nothing). Sie steht zwischen XMP-Beistelldatei und Bilddatei.
+                ' Nothing). Sie steht zwischen XMP-Beistelldatei und Bilddatei. Darin steckt auch,
+                ' was ein eingestellter Katalog des Referenzprogramms zu diesem Foto sagt.
                 Dim pp3 = Pp3SidecarService.Read(filePath)
 
                 ' Die Beistelldatei ist die speziellere Quelle und schlägt eingebettetes XMP.
@@ -7887,6 +7900,15 @@ Namespace ViewModels
                     End If
                 End If
 
+                ' Die Markierung aus dem Katalog des Referenzprogramms (ueber die .pp3-Daten), nach derselben
+                ' Regel wie die der Beistelldatei: die .fpxmp geht vor, gefuellt wird nur, was leer ist.
+                If pp3 IsNot Nothing AndAlso pp3.PickState.HasValue AndAlso
+                   (fpxmpCatalog Is Nothing OrElse Not fpxmpCatalog.PickState.HasValue) AndAlso
+                   LibraryService.Instance.GetPickState(filePath) = 0 Then
+                    LibraryService.Instance.SetPickStateForMany({filePath}, pp3.PickState.Value)
+                    result.Pick = pp3.PickState.Value
+                End If
+
                 ' Das Farbetikett aus der .pp3, wenn weder .fpxmp noch XMP eines gesetzt haben und
                 ' der Katalog keines traegt - dieselbe Regel wie oben.
                 If pp3 IsNot Nothing AndAlso Not String.IsNullOrEmpty(pp3.ColorLabel) AndAlso Not result.HasColorLabel AndAlso
@@ -7921,7 +7943,7 @@ Namespace ViewModels
                 Dim catalogSummary = ExifService.BuildCatalogSummary(data, fields)
                 ' Erst importieren, dann den Schnappschuss schreiben - siehe QueueBackgroundMetaRefresh.
                 Dim imported = ImportSidecarCatalogData(meta.FilePath, xmpRating, data?.EmbeddedKeywords,
-                                                       meta.Rating, meta.ColorLabel, meta.Tags)
+                                                       meta.Rating, meta.ColorLabel, meta.Tags, fields)
                 LibraryService.Instance.SyncExifData(meta.FilePath, fields, catalogSummary)
                 If imported.Rating.HasValue Then meta.Rating = imported.Rating.Value
                 If imported.Favorite.HasValue Then meta.IsFavorite = imported.Favorite.Value
@@ -9567,7 +9589,7 @@ Namespace ViewModels
                                                                ' erneut als veraltet.
                                                                Dim imported = ImportSidecarCatalogData(item.FilePath, xmpRating,
                                                                                                        data?.EmbeddedKeywords,
-                                                                                                       item.Rating, item.ColorLabel, item.Tags)
+                                                                                                       item.Rating, item.ColorLabel, item.Tags, fields)
                                                                LibraryService.Instance.SyncExifData(item.FilePath, fields, catalogSummary)
                                                                Dim width = If(fields.ImageWidth, 0)
                                                                Dim height = If(fields.ImageHeight, 0)
@@ -12936,7 +12958,9 @@ Namespace ViewModels
                 End If
                 If String.IsNullOrWhiteSpace(CurrentFolder) OrElse Not Directory.Exists(CurrentFolder) Then Return
 
-                Dim baseName = IO.Path.GetFileNameWithoutExtension(If(String.IsNullOrWhiteSpace(CollageBaseName), "Collage", CollageBaseName.Trim()))
+                ' Nur eine BEKANNTE Endung abschneiden: aus "Urlaub f1.4" machte GetFileNameWithoutExtension
+                ' sonst "Urlaub f1". GetFileName bleibt davor und nimmt einen eingetippten Ordneranteil weg.
+                Dim baseName = MediaFileTypes.WithoutKnownExtension(IO.Path.GetFileName(If(String.IsNullOrWhiteSpace(CollageBaseName), "Collage", CollageBaseName.Trim())))
                 If String.IsNullOrWhiteSpace(baseName) Then baseName = "Collage"
                 Dim ext = If(String.Equals(CollageFormat, "PNG", StringComparison.OrdinalIgnoreCase), ".png",
                           If(String.Equals(CollageFormat, "WEBP", StringComparison.OrdinalIgnoreCase), ".webp",

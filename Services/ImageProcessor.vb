@@ -4160,12 +4160,20 @@ Namespace Services
         ''' Bildinhalts (Canvas-Rand, leere Begradigungs-Ecke) oder des Crop-Ausschnitts - dort gibt
         ''' es keinen Source-Pixel, ein Backen (Pinsel/Retusche) muss den Punkt überspringen.
         ''' Randtoleranz: bis 0,5 px außerhalb wird auf die Kante geklemmt (Rundungsrauschen der
-        ''' Anzeige), erst darüber hinaus ist der Punkt wirklich "neben dem Bild".</summary>
+        ''' Anzeige), erst darüber hinaus ist der Punkt wirklich "neben dem Bild".
+        '''
+        ''' <paramref name="allowOutside"/> rechnet einen Punkt neben dem Bild WEITER, statt ihn
+        ''' abzulehnen: Beschnitt, Vierteldrehung, Spiegeln, Begradigen, Verzerren und Groesse sind
+        ''' lineare Abbildungen, der Punkt landet also an der richtigen Stelle neben dem Quellbild. Fuer
+        ''' Pinsel und Radierer, deren Kreis ueber den Bildrand ragt: ihr Mittelpunkt darf daneben
+        ''' liegen, gemalt wird ohnehin nur, was auf das Bild faellt. Die Rasterverzerrung kennt
+        ''' ausserhalb keine Umkehrung; dort bleibt der Punkt unverzerrt.</summary>
         Public Shared Function TryGeometryOutputToSourcePoint(outputX As Double, outputY As Double,
                                                               sourceWidth As Integer, sourceHeight As Integer,
-                                                              adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
+                                                              adj As ImageAdjustments, ByRef source As SKPoint,
+                                                              Optional allowOutside As Boolean = False) As Boolean
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
-            Return TryGeometryOutputToSourcePoint(outputX, outputY, PrepareGeometryInverse(sourceWidth, sourceHeight, adj), source)
+            Return TryGeometryOutputToSourcePoint(outputX, outputY, PrepareGeometryInverse(sourceWidth, sourceHeight, adj), source, allowOutside)
         End Function
 
         ''' <summary>Was die Rueckabbildung je Aufruf vorbereitet: die Schrittfolge, die Masse vor
@@ -4197,14 +4205,15 @@ Namespace Services
         End Function
 
         Friend Shared Function TryGeometryOutputToSourcePoint(outputX As Double, outputY As Double,
-                                                              prepared As GeometryInverse, ByRef source As SKPoint) As Boolean
+                                                              prepared As GeometryInverse, ByRef source As SKPoint,
+                                                              Optional allowOutside As Boolean = False) As Boolean
             Dim operationX = outputX, operationY = outputY
             For index = prepared.Steps.Count - 1 To 0 Step -1
                 Dim stepItem = prepared.Steps(index)
                 If stepItem?.Adjustments Is Nothing Then Continue For
                 Dim before = prepared.Sizes(index), mapped As SKPoint
                 If Not TryStepOutputToSourcePoint(operationX, operationY, before.Width, before.Height,
-                                                  prepared.Mappings(index), mapped) Then Return False
+                                                  prepared.Mappings(index), mapped, allowOutside) Then Return False
                 operationX = mapped.X : operationY = mapped.Y
             Next
             source = New SKPoint(CSng(operationX), CSng(operationY))
@@ -4215,7 +4224,8 @@ Namespace Services
         ''' Gegenstueck zu <see cref="TryStepPointToOutput"/>.</summary>
         Private Shared Function TryStepOutputToSourcePoint(outputX As Double, outputY As Double,
                                                            sourceWidth As Integer, sourceHeight As Integer,
-                                                           adj As ImageAdjustments, ByRef source As SKPoint) As Boolean
+                                                           adj As ImageAdjustments, ByRef source As SKPoint,
+                                                           Optional allowOutside As Boolean = False) As Boolean
             If sourceWidth <= 0 OrElse sourceHeight <= 0 OrElse adj Is Nothing Then Return False
             Dim crop = ComputeGeometryCropRect(sourceWidth, sourceHeight, adj)
             Dim w As Double = crop.Width, h As Double = crop.Height
@@ -4258,7 +4268,7 @@ Namespace Services
                 End Select
                 x -= offsetX : y -= offsetY
             End If
-            If Not TryClampToRange(x, afterResizeW) OrElse Not TryClampToRange(y, afterResizeH) Then Return False
+            If Not allowOutside AndAlso (Not TryClampToRange(x, afterResizeW) OrElse Not TryClampToRange(y, afterResizeH)) Then Return False
 
             ' --- Resize zurück ---
             If resized Then
@@ -4290,20 +4300,23 @@ Namespace Services
                 Dim uy = (-sinA * dx + cosA * dy) / scale
                 x = rotW / 2.0 + ux
                 y = rotH / 2.0 + uy
-                If Not TryClampToRange(x, rotW) OrElse Not TryClampToRange(y, rotH) Then Return False
+                If Not allowOutside AndAlso (Not TryClampToRange(x, rotW) OrElse Not TryClampToRange(y, rotH)) Then Return False
             End If
 
             ' --- Vierteldrehung/Flip zurück (auf den beschnittenen Ausschnitt bezogen) ---
             Dim p = ImageGeometryMapper.DisplayPointToSource(x, y, w, h, adj.RotationDegrees,
                                                              adj.FlipHorizontal, adj.FlipVertical)
             Dim sx As Double = p.X, sy As Double = p.Y
-            If Not TryClampToRange(sx, w) OrElse Not TryClampToRange(sy, h) Then Return False
+            If Not allowOutside AndAlso (Not TryClampToRange(sx, w) OrElse Not TryClampToRange(sy, h)) Then Return False
 
             ' --- Verzerren (Knotenraster) zurueck --- als LETZTES, weil es in der Kette das ERSTE
             ' war. False heisst hier: an dieser Stelle liegt nach der Verzerrung kein Bildinhalt
             ' mehr, es gibt also keinen Quellpunkt - genau wie neben dem Beschnitt.
             Dim beforeWarp As SKPoint = Nothing
-            If Not TryUnwarpSourcePoint(sx + crop.Left, sy + crop.Top, sourceWidth, sourceHeight, adj, beforeWarp) Then Return False
+            If Not TryUnwarpSourcePoint(sx + crop.Left, sy + crop.Top, sourceWidth, sourceHeight, adj, beforeWarp) Then
+                If Not allowOutside Then Return False
+                beforeWarp = New SKPoint(CSng(sx + crop.Left), CSng(sy + crop.Top))
+            End If
             source = beforeWarp
             Return True
         End Function

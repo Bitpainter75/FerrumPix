@@ -121,7 +121,15 @@ Namespace Services
         Public Shared Function LoadLook(xmpPath As String, Optional baseLook As ImageAdjustments = Nothing,
                                         Optional imagePath As String = "") As ImageAdjustments
             If String.IsNullOrWhiteSpace(xmpPath) OrElse Not File.Exists(xmpPath) Then Return Nothing
-            Dim rawText = File.ReadAllText(xmpPath)
+            Return LoadLookFromText(File.ReadAllText(xmpPath), baseLook, imagePath)
+        End Function
+
+        ''' <summary>Wie <see cref="LoadLook"/>, aber aus dem Text eines XMP statt aus einer Datei.
+        ''' Fuer Quellen, die dieselben crs:-Schluessel anders ablegen und vorher in diese Form
+        ''' gebracht werden (ForeignCatalogService), damit es bei EINER Abbildung bleibt.</summary>
+        Friend Shared Function LoadLookFromText(rawText As String, Optional baseLook As ImageAdjustments = Nothing,
+                                                Optional imagePath As String = "") As ImageAdjustments
+            If String.IsNullOrWhiteSpace(rawText) Then Return Nothing
             ' Das Profil MUSS aus dem ungekuerzten Text gelesen werden - gleich danach faellt sein Block
             ' weg, damit seine Attribute (crs:Name, crs:Amount, crs:Copyright ...) nicht in die flache
             ' Wertetabelle sickern und dort gleichnamige Regler des Kopf-Blocks ueberschreiben.

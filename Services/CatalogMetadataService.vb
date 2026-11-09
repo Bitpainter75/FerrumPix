@@ -375,9 +375,20 @@ Namespace Services
         End Function
 
         ''' <summary>Entfernt die genannten Angaben aus der Beistelldatei. Keine Beistelldatei heisst:
-        ''' nichts zu tun, und das ist Erfolg.</summary>
+        ''' nichts zu tun, und das ist Erfolg.
+        '''
+        ''' Titel und Co. stehen bei RAW und PSD auch in der .fpxmp und werden dort zuerst gelesen
+        ''' (ImageDescriptionService.FromExifData); sie gehen deshalb dort mit weg. Sterne, Etikett und
+        ''' Stichwoerter der .fpxmp sind Katalog und gehen ueber RemoveFromCatalog.</summary>
         Public Shared Function RemoveFromSidecar(imagePath As String, what As MetadataRemovalFields) As Boolean
-            If what = MetadataRemovalFields.None OrElse String.IsNullOrEmpty(XmpSidecarService.FindSidecar(imagePath)) Then Return True
+            If what = MetadataRemovalFields.None Then Return True
+            If (what And (MetadataRemovalFields.Description Or MetadataRemovalFields.Everything)) <> 0 AndAlso
+               RawSidecarService.TryReadDescription(imagePath) IsNot Nothing Then
+                Dim clear = ImageDescription.AllFields.ToDictionary(Function(f) f, Function(f) "")
+                If Not RawSidecarService.TryWriteDescription(imagePath, clear) Then Return False
+                ExifService.Invalidate(imagePath)
+            End If
+            If String.IsNullOrEmpty(XmpSidecarService.FindSidecar(imagePath)) Then Return True
             Return Not String.IsNullOrEmpty(ExifService.EditXmpSidecar(imagePath, createIfMissing:=False,
                 edit:=Function(descriptions, target) RemoveFromXmp(descriptions, what)))
         End Function

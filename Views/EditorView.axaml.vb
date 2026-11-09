@@ -3080,12 +3080,14 @@ Namespace Views
                         _maskBrushPoints.Clear()
                         _maskBrushPressures.Clear()
                         BeginBrushInput(e)
-                        ' Der erste Punkt ist der Zeiger selbst; das Glätten setzt hier nur an.
+                        ' Der erste Punkt ist der Zeiger selbst; das Glätten setzt hier nur an. Nicht
+                        ' auf den Bildrand geklemmt, sondern bis einen Radius hinaus (ClampToBrushReach).
                         SmoothBrushPosition(rawPos, vm)
-                        _maskBrushPoints.Add(New Avalonia.Point((pos.X - imageRect.Left) / imageRect.Width * 100.0,
-                                                                (pos.Y - imageRect.Top) / imageRect.Height * 100.0))
+                        Dim brushPos = ClampToBrushReach(rawPos, imageRect, vm)
+                        _maskBrushPoints.Add(New Avalonia.Point((brushPos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                                                (brushPos.Y - imageRect.Top) / imageRect.Height * 100.0))
                         _maskBrushPressures.Add(ReadBrushPressure(e, canvas))
-                        _maskBrushLastScreenPoint = pos
+                        _maskBrushLastScreenPoint = brushPos
                         BeginBrushLineConstraint(rawPos)
                         _isMaskBrushDrawing = True
                         e.Pointer.Capture(canvas)
@@ -3492,7 +3494,8 @@ Namespace Views
                 If Not vm.IsCloneMode OrElse e.KeyModifiers.HasFlag(KeyModifiers.Control) Then
                     rawPos = ConstrainBrushLinePoint(rawPos, e.KeyModifiers, allowAxisLocks:=Not vm.IsCloneMode)
                 End If
-                Dim pos = ClampPointToRect(rawPos, imageRect)
+                ' Wie beim Ansetzen nicht auf den Bildrand: der Kreis darf darueber ragen.
+                Dim pos = ClampToBrushReach(rawPos, imageRect, vm)
                 Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
                 Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
                 Dim dxPixels = (xPct - _lastRetouchPoint.X) / 100.0 * Math.Max(1, vm.DisplayImageWidthPixels)
@@ -3527,8 +3530,11 @@ Namespace Views
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 Dim raw = e.GetPosition(canvas)
                 ' Der Ring bleibt am Zeiger, der Strich folgt geglättet - so sieht man, wohin er zieht.
-                UpdateBrushCursorPreview(ClampPointToRect(ConstrainBrushLinePoint(raw, e.KeyModifiers), imageRect), imageRect, vm)
-                Dim point = ClampPointToRect(ConstrainBrushLinePoint(SmoothBrushPosition(raw, vm), e.KeyModifiers), imageRect)
+                ' Beide bis einen Radius ueber den Bildrand hinaus: auf den Rand geklemmt sprang der
+                ' Ring dorthin, und der Strich malte einen vollen Kreis um den Randpunkt statt den
+                ' Teil des Kreises, der wirklich ueber dem Bild liegt.
+                UpdateBrushCursorPreview(ClampToBrushReach(ConstrainBrushLinePoint(raw, e.KeyModifiers), imageRect, vm), imageRect, vm)
+                Dim point = ClampToBrushReach(ConstrainBrushLinePoint(SmoothBrushPosition(raw, vm), e.KeyModifiers), imageRect, vm)
                 ' Abstands-Gate: Punkte erst ab ~1/4 Pinseldurchmesser auf dem Schirm sammeln (wie Retusche).
                 Dim spacing = Math.Max(2.0, BrushDiameterOnScreen(imageRect, vm) * 0.25)
                 Dim dxb = point.X - _maskBrushLastScreenPoint.X
@@ -3994,7 +4000,7 @@ Namespace Views
                 Dim pressure = If(_brushPressures.Count > 0, _brushPressures(_brushPressures.Count - 1), 1.0F)
                 AddBrushPoint(target, imageRect, pressure)
             ElseIf _isMaskBrushDrawing Then
-                Dim point = ClampPointToRect(target, imageRect)
+                Dim point = ClampToBrushReach(target, imageRect, vm)
                 Dim dx = point.X - _maskBrushLastScreenPoint.X
                 Dim dy = point.Y - _maskBrushLastScreenPoint.Y
                 If dx * dx + dy * dy < 1.0 Then Return
@@ -4041,13 +4047,21 @@ Namespace Views
             Return pressures.ToArray()
         End Function
 
+        ''' <summary>Ein Pinselpunkt, begrenzt auf das Bild plus einen Pinselradius. Weiter draussen
+        ''' beruehrt der Kreis das Bild nicht mehr; naeher daran darf der Mittelpunkt neben dem Bild
+        ''' liegen, damit der Teil des Kreises wirkt, der ueber dem Bild liegt. Fuer Pinsel, Radierer,
+        ''' Retusche, Masken- und Auswahlpinsel, und fuer den Ring, der den Kreis zeigt.</summary>
+        Private Function ClampToBrushReach(position As Avalonia.Point, imageRect As Avalonia.Rect, vm As EditorViewModel) As Avalonia.Point
+            Dim reach = BrushDiameterOnScreen(imageRect, vm) / 2.0
+            Return ClampPointToRect(position, imageRect.Inflate(reach))
+        End Function
+
         Private Sub AddBrushPoint(position As Avalonia.Point, imageRect As Avalonia.Rect,
                                   Optional pressure As Single = 1.0F)
             If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
             ' Wie bei der Retusche: bis zu einem Pinselradius ausserhalb zulassen, damit am Bildrand
             ' der sichtbare Teilkreis wirkt statt eines auf den Rand gezogenen Vollkreises.
-            Dim reach = BrushDiameterOnScreen(imageRect, TryCast(DataContext, EditorViewModel)) / 2.0
-            Dim pos = ClampPointToRect(position, imageRect.Inflate(reach))
+            Dim pos = ClampToBrushReach(position, imageRect, TryCast(DataContext, EditorViewModel))
             Dim xPct = (pos.X - imageRect.Left) / imageRect.Width * 100.0
             Dim yPct = (pos.Y - imageRect.Top) / imageRect.Height * 100.0
             If _brushPoints.Count > 0 Then

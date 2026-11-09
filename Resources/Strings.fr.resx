@@ -11282,4 +11282,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Reprend dans le catalogue les mots-clés, la note et l'étiquette de couleur du fichier .pp3 ou .arp placé à côté de l'image. Les fichiers sont seulement lus, jamais modifiés.</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>Lire les données de RawTherapee, ART et Lightroom</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>Reprend dans le catalogue les mots-clés, la note et l'étiquette de couleur du fichier .pp3 ou .arp placé à côté de l'image et du catalogue Lightroom ci-dessous. Ils sont seulement lus, rien n'y est modifié.</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>Catalogue Lightroom Classic</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>Le fichier .lrcat fournit en plus le marquage et, pour les fichiers RAW sans retouche propre, le développement. Les photos sont associées par nom de fichier et dossier : un catalogue provenant d'un autre ordinateur convient donc tant que les dossiers ont gardé leur nom.</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>Aucun catalogue choisi</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>Lu seulement lorsque l'interrupteur ci-dessus est activé.</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>Lecture du catalogue…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>{0} photos dans le catalogue.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom a ouvert le catalogue en ce moment. Jusqu'à sa fermeture, le dernier état lu s'applique, avec {0} photos.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom a ouvert le catalogue en ce moment. Il sera lu dès que Lightroom sera fermé.</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>Ce n'est pas un catalogue Lightroom.</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>Impossible de lire le catalogue : {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>Choisir un catalogue Lightroom</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>Catalogue Lightroom</value>
+  </data>
 </root>

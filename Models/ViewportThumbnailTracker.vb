@@ -12,8 +12,6 @@ Namespace Models
     Public NotInheritable Class ViewportThumbnailTracker
         Private _keepFirst As Integer = -1
         Private _keepLast As Integer = -1
-        Private _pinnedFirst As Integer = -1
-        Private _pinnedLast As Integer = -1
         Private ReadOnly _pinnedItems As New HashSet(Of ImageItem)()
 
         ''' <summary>Wie viele Elemente über den sichtbaren Bereich hinaus "warmgehalten" werden,
@@ -59,25 +57,27 @@ Namespace Models
 
             ' Nur den tatsächlich sichtbaren Bereich (nicht den größeren Keep-Alive-Puffer) gegen
             ' Verdrängung durch die globale LRU-Cap pinnen - siehe ImageItem.SetPinnedVisible/
-            ' TouchResident. Alten Bereich zuerst entpinnen, dann den neuen pinnen.
-            If _pinnedFirst >= 0 Then
-                For i = _pinnedFirst To _pinnedLast
-                    If i < firstVisible OrElse i > lastVisible Then
-                        If i < items.Count Then
-                            Dim oldItem = items(i)
-                            oldItem?.SetPinnedVisible(False)
-                            If oldItem IsNot Nothing Then _pinnedItems.Remove(oldItem)
-                        End If
-                    End If
-                Next
-            End If
+            ' TouchResident.
+            '
+            ' ENTPINNT WIRD NACH OBJEKT, NICHT NACH POSITION. Frueher loeste der alte Bereich die
+            ' Elemente, die JETZT an seinen Positionen stehen. Nach einem Loeschen oder einem neu
+            ' aufgebauten Filmstreifen stehen dort andere Objekte, und die vorher sichtbaren blieben
+            ' fuer immer angeheftet: die LRU verdraengt sie nie, ihre Vorschaubilder blieben im
+            ' Speicher. Gemessen (Diagnostics/Speichermessung): je Loeschen im Betrachter rund zwoelf
+            ' Kacheln mehr, die niemand mehr freigab.
+            Dim nowPinned As New HashSet(Of ImageItem)()
             For i = firstVisible To lastVisible
                 Dim item = items(i)
-                item?.SetPinnedVisible(True)
-                If item IsNot Nothing Then _pinnedItems.Add(item)
+                If item IsNot Nothing Then nowPinned.Add(item)
             Next
-            _pinnedFirst = firstVisible
-            _pinnedLast = lastVisible
+            For Each oldItem In _pinnedItems
+                If Not nowPinned.Contains(oldItem) Then oldItem?.SetPinnedVisible(False)
+            Next
+            _pinnedItems.Clear()
+            For Each item In nowPinned
+                item.SetPinnedVisible(True)
+                _pinnedItems.Add(item)
+            Next
 
             ' In umgekehrter Reihenfolge aufbauen, damit die LIFO-Warteschlange oben zuerst befüllt
             Dim viewportItems As New List(Of ImageItem)()
@@ -97,8 +97,6 @@ Namespace Models
             _pinnedItems.Clear()
             _keepFirst = -1
             _keepLast = -1
-            _pinnedFirst = -1
-            _pinnedLast = -1
         End Sub
     End Class
 

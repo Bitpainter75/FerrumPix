@@ -7,9 +7,10 @@ Namespace Services
 
     ''' <summary>Die JPEG-XL-Vorschau eines DNG 1.7.
     '''
-    ''' Ein DNG mit JPEG-XL-Kompression (52546) entwickelt LibRaw 0.22 nicht, FerrumPix faellt dann
-    ''' auf die eingebettete Vorschau zurueck (RawPreviewService.ExtractPreviewWithFallback). In
-    ''' solchen Dateien ist aber oft auch die grosse Vorschau JPEG XL, und die kommt ueber keinen der
+    ''' Die Rohdaten eines DNG mit JPEG-XL-Kompression (52546) entwickelt FerrumPix ueber
+    ''' DngJxlRawService, fuer Betrachter und Kacheln reicht aber die eingebettete Vorschau
+    ''' (RawPreviewService.ExtractPreviewWithFallback), und sie kostet keine Entwicklung. In
+    ''' solchen Dateien ist oft auch die grosse Vorschau JPEG XL, und die kommt ueber keinen der
     ''' beiden bisherigen Wege an: der eigene Scanner sucht JPEG, und LibRaws Vorschau-API meldet nur
     ''' das JPEG-Miniaturbild. Beim Sony-DNG aus Issue 83 blieben so 256 x 171 Punkte, waehrend die
     ''' Datei eine Vorschau von 1024 x 683 traegt.

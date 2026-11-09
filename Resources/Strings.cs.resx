@@ -11322,4 +11322,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Převezme do katalogu klíčová slova, hodnocení a barevný štítek ze souboru .pp3 nebo .arp vedle obrázku. Soubory se jen čtou, nikdy se nemění.</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>Číst data z RawTherapee, ART a Lightroom</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>Převezme do katalogu klíčová slova, hodnocení a barevný štítek ze souboru .pp3 nebo .arp vedle obrázku a z katalogu Lightroom níže. Pouze se čtou, nic se v nich nemění.</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>Katalog Lightroom Classic</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>Ze souboru .lrcat navíc pochází označení a u souborů RAW bez vlastní úpravy i vyvolání. Fotografie se přiřazují podle názvu souboru a složky, takže katalog z jiného počítače funguje, dokud si složky ponechaly své názvy.</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>Není vybrán žádný katalog</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>Čte se až se zapnutým přepínačem výše.</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>Katalog se čte…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>{0} fotografií v katalogu.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom má katalog právě otevřený. Do jeho ukončení platí naposledy přečtený stav s {0} fotografiemi.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom má katalog právě otevřený. Přečte se, jakmile bude Lightroom ukončen.</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>Toto není katalog Lightroom.</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>Katalog nelze přečíst: {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>Vybrat katalog Lightroom</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>Katalog Lightroom</value>
+  </data>
 </root>

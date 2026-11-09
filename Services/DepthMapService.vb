@@ -626,20 +626,71 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>So viel ferner als der naechste Punkt liegt der fernste, wenn aus der Tiefenkarte
+        ''' eine Entfernung wird (<see cref="FogDistance"/>). Die Karte sagt das nicht: sie ist je Bild
+        ''' auf 0 bis 255 gestreckt und kennt weder Massstab noch Versatz. Ein fester Wert ist deshalb
+        ''' eine Annahme, keine Messung; zehn entspricht einer Landschaft mit Vordergrund, dem
+        ''' haeufigsten Fall fuer Nebel.</summary>
+        Friend Const FogDistanceRatio As Double = 10.0
+
+        ''' <summary>Strecke, auf der die Dichte des Nebels am Beginn und an der vollen Dichte weich
+        ''' ein- und wieder auslaeuft, als Anteil der Entfernung des fernsten Punkts
+        ''' (<see cref="FogOpticalLength"/>).</summary>
+        Private Const FogOnsetDistance As Double = 0.05
+
+        ''' <summary>Aus einem Byte der Tiefenkarte (255 nah, 0 fern) die Entfernung von der Kamera,
+        ''' 1 am fernsten Punkt, 1/R am naechsten (R = <see cref="FogDistanceRatio"/>).
+        '''
+        ''' Das Tiefenmodell liefert umgekehrte Entfernung (Disparitaet). Auf ihr draengen sich die
+        ''' fernen Bereiche bei 0, die nahen nehmen den groessten Teil der Skala ein. Ein Nebel, der
+        ''' auf diesen Werten ansteigt, waere vorn zu breit und hinten zu schmal verteilt. Daher
+        ''' D(i) = 1 / ((R - 1) i + 1). Gezaehlt wird ab der KAMERA, nicht ab dem naechsten Punkt:
+        ''' auch zwischen Kamera und Motiv liegt Nebel, und so bekommt der naechste Punkt den Anteil,
+        ''' der seiner Entfernung entspricht.</summary>
+        Friend Shared Function FogDistance(depthByte As Integer) As Double
+            Dim i = Math.Max(0, Math.Min(255, depthByte)) / 255.0
+            Return 1.0 / ((FogDistanceRatio - 1.0) * i + 1.0)
+        End Function
+
+        ''' <summary>Optische Laenge von 0 bis 1 ueber die Strecke <paramref name="x"/> (0 am Beginn, 1
+        ''' bei voller Dichte), bei einer Dichte des Nebels, die auf dem Anteil
+        ''' <paramref name="onsetShare"/> am Anfang und am Ende der Strecke als Smoothstep ein- und
+        ''' auslaeuft und dazwischen gleich bleibt.
+        '''
+        ''' Ohne das Ein- und Auslaufen knickte die Kennlinie am Beginn und an der vollen Dichte, und
+        ''' auf einer stetigen Tiefenkarte saehe man den Knick als Linie quer durchs Bild, etwa
+        ''' entlang eines Hangs. Das Integral des Smoothstep 3t^2 - 2t^3 ist t^3 - t^4/2.</summary>
+        Friend Shared Function FogOpticalLength(x As Double, onsetShare As Double) As Double
+            If x <= 0.0 Then Return 0.0
+            If x >= 1.0 Then Return 1.0
+            Dim w = Math.Max(0.0, Math.Min(0.5, onsetShare))
+            Dim ramp = Function(t As Double) t * t * t - t * t * t * t / 2.0
+            Dim length As Double
+            If x <= w Then
+                length = w * ramp(x / w)
+            ElseIf x <= 1.0 - w Then
+                length = w / 2.0 + (x - w)
+            Else
+                length = 1.0 - w - w * ramp((1.0 - x) / w)
+            End If
+            Return length / (1.0 - w)
+        End Function
+
         ''' <summary>Nebel nach Tiefe: je ferner ein Punkt, desto mehr Nebelfarbe liegt ueber ihm.
         '''
-        ''' Zwischen <paramref name="nearPct"/> und <paramref name="farPct"/> steigt der Nebel weich
-        ''' an, naeher bleibt das Bild klar, ferner liegt die volle <paramref name="densityPct"/>.
-        ''' Die Grenzen zaehlen wie ueberall in der Tiefenkarte: 100 ist nah, 0 ist fern.
-        '''
-        ''' DER ANSTIEG IST EIN SMOOTHSTEP, keine Gerade. Eine Gerade knickt an beiden Grenzen, und
-        ''' auf einer stetigen Tiefenkarte sieht man diesen Knick als Linie quer durchs Bild, etwa
-        ''' entlang eines Hangs.
+        ''' Gerechnet wird wie ein gleichmaessiges Medium: der Durchlass faellt mit der optischen
+        ''' Laenge exponentiell (Beer-Lambert), Anteil der Nebelfarbe f = 1 - (1 - Dichte)^L. Die
+        ''' optische Laenge L waechst mit der ENTFERNUNG (<see cref="FogDistance"/>), nicht mit dem
+        ''' Wert der Tiefenkarte, und zwar ab <paramref name="nearPct"/> bis
+        ''' <paramref name="farPct"/>; dort liegt die volle <paramref name="densityPct"/>, ferner
+        ''' bleibt sie. Beide Grenzen zaehlen gleichmaessig ueber die Entfernung, 100 an der Kamera,
+        ''' 0 am fernsten Punkt. Mit Beginn 100 bekommt also schon der naechste Punkt etwas Nebel,
+        ''' bei der vorgegebenen Annahme ein Zehntel der optischen Laenge des fernsten.
         '''
         ''' Gemischt wird auf den vormultiplizierten Bytes, die Nebelfarbe wird dafuer mit dem Alpha
         ''' des Punktes multipliziert. Ein durchsichtiger Punkt bleibt so durchsichtig.
         '''
-        ''' <paramref name="foregroundPct"/> legt fest, wie viel Nebel schon vor "Nah" liegt, als
+        ''' <paramref name="foregroundPct"/> legt fest, wie viel Nebel schon vor dem Beginn liegt, als
         ''' Anteil der Dichte; der Anstieg laeuft darueber bis zur vollen Dichte. Die Tiefenkarte
         ''' ist je Bild gestreckt, der naechste Punkt ist immer 100: ohne diesen Anteil blieb das
         ''' Motiv im Vordergrund bei jeder Einstellung klar, waehrend echter Nebel auch zwischen
@@ -664,22 +715,28 @@ Namespace Services
             Dim near = Math.Max(0.0, Math.Min(100.0, Math.Max(nearPct, farPct)))
             Dim far = Math.Max(0.0, Math.Min(100.0, Math.Min(nearPct, farPct)))
             Dim foreground = Math.Max(0.0, Math.Min(100.0, foregroundPct)) / 100.0
+            ' Grenzen als Entfernung: 0 an der Kamera, 1 am fernsten Punkt.
+            Dim startShare = (100.0 - near) / 100.0
+            Dim fullShare = (100.0 - far) / 100.0
+            Dim onsetShare = If(fullShare - startShare < 0.0001, 0.0, FogOnsetDistance / (fullShare - startShare))
+            ' Bei voller Dichte waere der Durchlass null und der Exponent unbestimmt; 0,999 laesst
+            ' den fernsten Punkt bis auf ein Tausendstel in der Nebelfarbe stehen.
+            Dim transmissionBase = 1.0 - Math.Min(density, 0.999)
 
             ' Wie bei den Masken: der Anteil haengt nur am Tiefenbyte.
             Dim table(255) As Single
             For value = 0 To 255
-                Dim t = value / 255.0 * 100.0
-                Dim f As Double
-                If t >= near Then
-                    f = 0.0
-                ElseIf t <= far OrElse near - far < 0.0001 Then
-                    f = 1.0
+                Dim d = FogDistance(value)
+                Dim length As Double
+                If d <= startShare Then
+                    length = 0.0
+                ElseIf d >= fullShare OrElse fullShare - startShare < 0.0001 Then
+                    length = 1.0
                 Else
-                    f = (near - t) / (near - far)
-                    f = f * f * (3.0 - 2.0 * f)
+                    length = FogOpticalLength((d - startShare) / (fullShare - startShare), onsetShare)
                 End If
-                f = foreground + (1.0 - foreground) * f
-                table(value) = CSng(f * density)
+                Dim medium = 1.0 - Math.Pow(transmissionBase, length)
+                table(value) = CSng(foreground * density + (1.0 - foreground) * medium)
             Next
 
             Dim map = depth

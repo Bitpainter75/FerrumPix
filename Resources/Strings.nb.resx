@@ -11322,4 +11322,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Henter nøkkelord, vurdering og fargeetikett fra .pp3- eller .arp-filen ved siden av bildet inn i katalogen. Filene blir bare lest, aldri endret.</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>Les data fra RawTherapee, ART og Lightroom</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>Henter nøkkelord, vurdering og fargeetikett fra .pp3- eller .arp-filen ved siden av bildet og fra Lightroom-katalogen nedenfor inn i katalogen. De leses bare, ingenting endres der.</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>Lightroom Classic-katalog</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>Fra .lrcat-filen kommer i tillegg markeringen og, for RAW-filer uten egen redigering, fremkallingen. Bildene matches via filnavn og mappe, så en katalog fra en annen datamaskin fungerer så lenge mappene har beholdt navnene sine.</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>Ingen katalog valgt</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>Leses først når bryteren over er på.</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>Katalogen leses…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>{0} bilder i katalogen.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom har katalogen åpen akkurat nå. Til det lukkes, gjelder den sist leste tilstanden med {0} bilder.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom har katalogen åpen akkurat nå. Den leses så snart Lightroom er lukket.</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>Dette er ikke en Lightroom-katalog.</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>Katalogen kan ikke leses: {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>Velg Lightroom-katalog</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>Lightroom-katalog</value>
+  </data>
 </root>

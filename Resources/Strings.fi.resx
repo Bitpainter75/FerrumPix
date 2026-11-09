@@ -11322,4 +11322,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>Tuo avainsanat, arvion ja väritunnisteen kuvan vieressä olevasta .pp3- tai .arp-tiedostosta luetteloon. Tiedostoja vain luetaan, niitä ei koskaan muuteta.</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>Lue tiedot RawTherapeesta, ARTista ja Lightroomista</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>Tuo luetteloon avainsanat, arvion ja väritunnisteen kuvan vieressä olevasta .pp3- tai .arp-tiedostosta sekä alla olevasta Lightroom-luettelosta. Niitä vain luetaan, niihin ei muuteta mitään.</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>Lightroom Classic -luettelo</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>.lrcat-tiedostosta tulevat lisäksi merkintä ja, RAW-tiedostoille ilman omaa muokkausta, kehitys. Kuvat yhdistetään tiedostonimen ja kansion perusteella, joten toisen tietokoneen luettelo toimii, kunhan kansiot ovat säilyttäneet nimensä.</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>Luetteloa ei ole valittu</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>Luetaan vasta, kun yllä oleva kytkin on päällä.</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>Luetteloa luetaan…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>{0} kuvaa luettelossa.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom on parhaillaan avannut luettelon. Kunnes se suljetaan, voimassa on viimeksi luettu tila, jossa on {0} kuvaa.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom on parhaillaan avannut luettelon. Se luetaan heti, kun Lightroom on suljettu.</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>Tämä ei ole Lightroom-luettelo.</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>Luetteloa ei voi lukea: {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>Valitse Lightroom-luettelo</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>Lightroom-luettelo</value>
+  </data>
 </root>

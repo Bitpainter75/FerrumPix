@@ -39,6 +39,9 @@ Namespace Services
             Public Property Rating As Integer?
             ''' <summary>Der Hex-Wert unserer Palette, oder leer.</summary>
             Public Property ColorLabel As String = ""
+            ''' <summary>1 behalten, -1 verworfen, oder Nothing. Kommt nur aus dem Katalog des Referenzprogramms;
+            ''' die .pp3 und die .arp kennen keine Markierung.</summary>
+            Public Property PickState As Integer?
         End Class
 
         ''' <summary>Ist das Einlesen eingeschaltet?</summary>
@@ -66,19 +69,39 @@ Namespace Services
 
         ''' <summary>Die Daten zur Datei, oder Nothing: Einstellung aus, keine Datei, nicht lesbar.
         ''' Liegen beide Dateien da, werden die Stichwoerter vereinigt, Bewertung und Etikett kommen
-        ''' zuerst aus der ".pp3".</summary>
+        ''' zuerst aus der ".pp3".
+        '''
+        ''' DER LIGHTROOM-KATALOG haengt an derselben Einstellung (ForeignCatalogService): kennt er
+        ''' das Foto, kommen seine Angaben dazu, nach denen der Dateien neben dem Bild, die die
+        ''' speziellere Quelle sind. So gehen sie ueber dieselben Wege und Regeln in den Katalog.</summary>
         Public Shared Function Read(imagePath As String) As Pp3Data
             If Not IsEnabled Then Return Nothing
-            Dim result = ReadOne(PathFor(imagePath))
-            Dim arp = ReadOne(ArpPathFor(imagePath))
-            If result Is Nothing Then Return arp
-            If arp Is Nothing Then Return result
-            For Each keyword In arp.Keywords
-                If Not result.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase) Then result.Keywords.Add(keyword)
+            Dim result = Merge(ReadOne(PathFor(imagePath)), ReadOne(ArpPathFor(imagePath)))
+            Return Merge(result, FromForeignCatalog(imagePath))
+        End Function
+
+        ''' <summary>Vereinigt zwei Ergebnisse; das erste geht bei Bewertung, Etikett und Markierung vor.</summary>
+        Private Shared Function Merge(first As Pp3Data, second As Pp3Data) As Pp3Data
+            If first Is Nothing Then Return second
+            If second Is Nothing Then Return first
+            For Each keyword In second.Keywords
+                If Not first.Keywords.Contains(keyword, StringComparer.OrdinalIgnoreCase) Then first.Keywords.Add(keyword)
             Next
-            If Not result.Rating.HasValue Then result.Rating = arp.Rating
-            If String.IsNullOrEmpty(result.ColorLabel) Then result.ColorLabel = arp.ColorLabel
-            Return result
+            If Not first.Rating.HasValue Then first.Rating = second.Rating
+            If String.IsNullOrEmpty(first.ColorLabel) Then first.ColorLabel = second.ColorLabel
+            If Not first.PickState.HasValue Then first.PickState = second.PickState
+            Return first
+        End Function
+
+        Private Shared Function FromForeignCatalog(imagePath As String) As Pp3Data
+            Dim entry = ForeignCatalogService.Lookup(imagePath)
+            If entry Is Nothing Then Return Nothing
+            Dim data As New Pp3Data With {
+                .Rating = entry.Rating,
+                .ColorLabel = If(entry.ColorLabel, ""),
+                .PickState = entry.PickState}
+            data.Keywords.AddRange(entry.Keywords)
+            Return data
         End Function
 
         Private Shared Function ReadOne(path As String) As Pp3Data
@@ -101,10 +124,14 @@ Namespace Services
         End Function
 
         ''' <summary>Setzt die Zeitstempel beider Dateien zu EINEM Anteil zusammen; leer, wenn keine
-        ''' von beiden da ist.</summary>
+        ''' von beiden da ist. Mit einem eingestellten Katalog des Referenzprogramms kommt dessen Stempel dazu,
+        ''' fuer jedes Bild derselbe (ForeignCatalogService.StampForAll): aendert sich der Katalog,
+        ''' wird neu eingelesen.</summary>
         Public Shared Function ComposeStamp(pp3Stamp As String, arpStamp As String) As String
-            If String.IsNullOrEmpty(arpStamp) Then Return If(pp3Stamp, "")
-            Return If(pp3Stamp, "") & "+arp:" & arpStamp
+            Dim stamp = If(String.IsNullOrEmpty(arpStamp), If(pp3Stamp, ""), If(pp3Stamp, "") & "+arp:" & arpStamp)
+            Dim catalog = ForeignCatalogService.StampForAll()
+            If catalog.Length = 0 Then Return stamp
+            Return stamp & "+" & catalog
         End Function
 
         Private Shared Function FileStamp(path As String) As String

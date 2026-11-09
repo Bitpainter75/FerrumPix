@@ -163,9 +163,20 @@ Namespace Services
         End Function
 
         ''' <summary>Die Felder aus schon gelesenen Daten plus der Beistelldatei daneben. Der Weg des
-        ''' Katalogs: er hat die Daten bereits und soll die Bilddatei kein zweites Mal oeffnen.</summary>
+        ''' Katalogs: er hat die Daten bereits und soll die Bilddatei kein zweites Mal oeffnen.
+        '''
+        ''' Bei RAW und PSD kommt die eigene .fpxmp VOR der XMP-Beistelldatei: dort stehen auch Werte,
+        ''' die aus einem Katalog des Referenzprogramms kamen und fuer die keine XMP angelegt wird. Je Feld gewinnt
+        ''' der erste belegte Wert.</summary>
         Public Shared Function FromExifData(data As ExifData, imagePath As String) As ImageDescription
-            Dim result = If(String.IsNullOrWhiteSpace(imagePath), New ImageDescription(), ExifService.ReadSidecarDescription(imagePath))
+            Dim result = If(String.IsNullOrWhiteSpace(imagePath), New ImageDescription(),
+                            If(RawSidecarService.TryReadDescription(imagePath), New ImageDescription()))
+            If Not String.IsNullOrWhiteSpace(imagePath) Then
+                Dim sidecar = ExifService.ReadSidecarDescription(imagePath)
+                For Each field In ImageDescription.AllFields
+                    If result.GetValue(field).Length = 0 Then result.SetValue(field, sidecar.GetValue(field))
+                Next
+            End If
             If data Is Nothing Then Return result
             Dim embedded = FromEmbeddedTags(data)
             For Each field In ImageDescription.AllFields
@@ -249,17 +260,32 @@ Namespace Services
         ''' zeigt, was gilt, und uebergibt nur, was sich daran geaendert hat.
         '''
         ''' Wohin und in welcher Reihenfolge (Beistelldatei zuerst, Zuruecksetzen beim Scheitern
-        ''' der Bilddatei), steht an EINER Stelle: <see cref="MetadataFileWriter.Write"/>.</summary>
+        ''' der Bilddatei), steht an EINER Stelle: <see cref="MetadataFileWriter.Write"/>.
+        '''
+        ''' BEI RAW UND PSD zusaetzlich in die .fpxmp, wie bei den Sternen: sie wird beim Lesen zuerst
+        ''' gefragt (FromExifData), und ein Wert, der dort aus einem Katalog des Referenzprogramms steht, verdeckte
+        ''' sonst jede Aenderung im Dialog. Die XMP-Beistelldatei bleibt dabei, damit andere Programme
+        ''' sehen, was hier eingegeben wurde. Scheitert die .fpxmp, gilt das Schreiben als gescheitert:
+        ''' sonst zeigte FerrumPix weiter den alten Wert.</summary>
         Public Shared Function Write(imagePath As String,
                                      changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As MetadataWriteResult
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then Return New MetadataWriteResult()
             Dim cleaned = CleanChanges(changes)
             If cleaned.Count = 0 Then Return New MetadataWriteResult With {.Success = True}
-            Return MetadataFileWriter.Write(imagePath,
-                                            Function() ImageProcessor.WriteDescriptionIntoFile(imagePath, cleaned),
-                                            Function(descriptions, target) ApplyToXmp(descriptions, target, cleaned),
-                                            createsValues:=cleaned.Values.Any(Function(v) v.Length > 0),
-                                            logName:="Description")
+            Dim result = MetadataFileWriter.Write(imagePath,
+                                                  Function() ImageProcessor.WriteDescriptionIntoFile(imagePath, cleaned),
+                                                  Function(descriptions, target) ApplyToXmp(descriptions, target, cleaned),
+                                                  createsValues:=cleaned.Values.Any(Function(v) v.Length > 0),
+                                                  logName:="Description")
+            If result.Success AndAlso RawSidecarService.IsSidecarFormat(imagePath) Then
+                If RawSidecarService.TryWriteDescription(imagePath, cleaned) Then
+                    ExifService.Invalidate(imagePath)
+                Else
+                    DiagnosticLogService.LogAlways("Description", "nicht in die .fpxmp geschrieben: " & IO.Path.GetFileName(imagePath))
+                    result.Success = False
+                End If
+            End If
+            Return result
         End Function
 
         Private Shared Function CleanChanges(changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Dictionary(Of ImageDescriptionField, String)

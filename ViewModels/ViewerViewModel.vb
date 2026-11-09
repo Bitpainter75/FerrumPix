@@ -2361,7 +2361,7 @@ Namespace ViewModels
             ' genau das, was danach an dieser Stelle steht.
             Dim stelle = _folderPaths.FindIndex(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison))
             _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison))
-            LoadFilmstrip()
+            LoadFilmstrip(reuseItems:=True)
 
             ' Beide Flaechen zeigten dasselbe Bild (direkt nach dem Anheften) - dann ist nach dem
             ' Loeschen nichts mehr zu vergleichen.
@@ -3554,13 +3554,42 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub LoadFilmstrip()
-            For Each filmItem In FilmstripItems
-                filmItem?.EvictThumbnail()
+        ''' <summary>Baut den Filmstreifen aus <see cref="_folderPaths"/>.
+        '''
+        ''' Kacheln, die danach nicht mehr im Streifen stehen, geben ihr Vorschaubild SOFORT frei
+        ''' (ClearThumbnail). Vorher wurden sie nur aus der Liste genommen und blieben in der
+        ''' globalen Vorschau-LRU stehen, bis sie verdraengt wurden, die zuletzt sichtbaren gar nicht.
+        '''
+        ''' <paramref name="reuseItems"/> behaelt die Kacheln der Pfade, die schon im Streifen
+        ''' stehen, samt fertigem Vorschaubild. Fuer das Loeschen im selben Ordner: dort aendert sich
+        ''' nur ein Pfad, und ein Neuaufbau lud jedes Mal die Vorschaubilder des ganzen Ordners neu
+        ''' (im Log einer Nutzermeldung 450 bis 890 Kacheln je geloeschtem Bild, dazu der Speicher,
+        ''' den die alten Kacheln weiter hielten). Ohne den Schalter entsteht der Streifen neu, damit
+        ''' ein Oeffnen auch Dateien neu liest, die sich ausserhalb geaendert haben.</summary>
+        Private Sub LoadFilmstrip(Optional reuseItems As Boolean = False)
+            Dim previous = FilmstripItems.ToList()
+            Dim reusable As New Dictionary(Of String, ImageItem)(StringComparer.Ordinal)
+            If reuseItems Then
+                For Each filmItem In previous
+                    If filmItem IsNot Nothing AndAlso Not String.IsNullOrEmpty(filmItem.FilePath) Then reusable.TryAdd(filmItem.FilePath, filmItem)
+                Next
+            End If
+            Dim kept As New HashSet(Of ImageItem)()
+            Dim fresh As New List(Of ImageItem)()
+            For Each p In _folderPaths
+                If String.IsNullOrEmpty(p) Then Continue For
+                Dim existing As ImageItem = Nothing
+                If reusable.Remove(p, existing) Then
+                    kept.Add(existing)
+                    fresh.Add(existing)
+                Else
+                    fresh.Add(CreateFilmstripItem(p))
+                End If
             Next
-            FilmstripItems.ReplaceAll(_folderPaths.
-                Where(Function(p) Not String.IsNullOrEmpty(p)).
-                Select(AddressOf CreateFilmstripItem))
+            FilmstripItems.ReplaceAll(fresh)
+            For Each filmItem In previous
+                If filmItem IsNot Nothing AndAlso Not kept.Contains(filmItem) Then filmItem.ClearThumbnail()
+            Next
             RefreshFilmstripItemBadges()
             ' Neue Kacheln kennen die Heftung noch nicht.
             SetPinnedPath(_pinnedPath)
@@ -4251,7 +4280,7 @@ Namespace ViewModels
                                                            _folderPaths.Remove(deletedPath)
                                                            If _currentIndex >= _folderPaths.Count Then _currentIndex = _folderPaths.Count - 1
                                                            If _currentIndex >= 0 Then
-                                                               LoadFilmstrip()
+                                                               LoadFilmstrip(reuseItems:=True)
                                                                LoadPathAt(_currentIndex)
                                                            Else
                                                                InvalidatePendingBitmapLoad() : CurrentImage = Nothing

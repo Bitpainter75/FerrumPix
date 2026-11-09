@@ -6248,8 +6248,10 @@ Namespace ViewModels
                     ' aus Datum und Uhrzeit, bei denen eine Serie dieselbe Sekunde traegt. Konflikt
                     ' ist ein Name, den schon eine Datei dieses Laufs bekommt, oder eine fremde Datei
                     ' im Ordner; die Quelldatei selbst zaehlt nicht, sie wird ja umbenannt.
-                    Dim stem = IO.Path.GetFileNameWithoutExtension(newName)
-                    Dim extension = IO.Path.GetExtension(newName)
+                    ' Nur eine BEKANNTE Endung abtrennen: ohne angehaengte Endung wurde aus "f1.4"
+                    ' sonst "f1_1.4".
+                    Dim extension = MediaFileTypes.KnownExtension(newName)
+                    Dim stem = newName.Substring(0, newName.Length - extension.Length)
                     Dim suffix = 0
                     Do While usedTargets.Contains(NormalizePath(targetPath)) OrElse
                              (Not String.Equals(NormalizePath(sourcePath), NormalizePath(targetPath), PathIdentity.Comparison) AndAlso

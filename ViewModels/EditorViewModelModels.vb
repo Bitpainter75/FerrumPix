@@ -261,7 +261,7 @@ Namespace ViewModels
         ''' wenige Dutzend Millisekunden), die Tiefen-Unschaerfe ihre Nachrechnung nach der Pause.
         ''' Mit 900 Punkten auf die Buehne gezogen wirkte die Vorschau auf einem grossen Schirm
         ''' sofort matschig. Haengt am selben Schluessel wie die kleine Kopie.</summary>
-        Private _depthVorschauVoll As SKBitmap
+        Private _depthPreviewFull As SKBitmap
         Private _bokehVorschauSchluessel As String = ""
         Private _bokehVorschauLauf As Integer = 0
         ''' <summary>Bricht die Nachrechnung der Tiefen-Unschaerfe in voller Groesse ab, sobald der
@@ -280,8 +280,8 @@ Namespace ViewModels
             CancelBokehRefine()
             _bokehVorschauBasis?.Dispose()
             _bokehVorschauBasis = Nothing
-            _depthVorschauVoll?.Dispose()
-            _depthVorschauVoll = Nothing
+            _depthPreviewFull?.Dispose()
+            _depthPreviewFull = Nothing
             _bokehVorschauSchluessel = ""
             ' Ein noch laufender Anlauf darf sein Ergebnis nicht mehr einhaengen.
             _bokehVorschauLauf += 1
@@ -356,10 +356,10 @@ Namespace ViewModels
                                                                  strength, uebergang, corners, lichter)
                         If unscharf Is Nothing Then Return Nothing
                         ' Nur die Vorschau: direkte Zeilenkopie statt PNG-Rundlauf.
-                        Using shown = WithObjectsOnTop(unscharf, objectRecipe)
-                            Using norm = NormalizePreviewBase(ImageProcessor.CopyBitmap(shown))
-                                Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
-                            End Using
+                        ' Ohne Kopie: WithObjectsOnTop und NormalizePreviewBase geben ihr Eingangsbild
+                        ' selbst frei, wenn sie ein neues liefern; der eine Using gibt das letzte frei.
+                        Using norm = NormalizePreviewBase(WithObjectsOnTop(unscharf, objectRecipe))
+                            Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
                         End Using
                     End Function)
                 Finally
@@ -403,9 +403,9 @@ Namespace ViewModels
             Await _depthGate.WaitAsync()
             Try
                 If pass <> _bokehVorschauLauf OrElse token.IsCancellationRequested Then Return
-                If _depthVorschauVoll Is Nothing OrElse _depthMap Is Nothing Then Return
+                If _depthPreviewFull Is Nothing OrElse _depthMap Is Nothing Then Return
                 ' Eigene Kopien: ein Aufraeumen der Vorschau wartet nicht auf das Gate.
-                Dim basis = ImageProcessor.CopyBitmap(_depthVorschauVoll)
+                Dim basis = ImageProcessor.CopyBitmap(_depthPreviewFull)
                 Dim map = ImageProcessor.CopyBitmap(_depthMap)
                 Dim from = _bokehVon, bis = _bokehBis
                 Dim strength = _bokehStaerke, uebergang = _bokehUebergang
@@ -421,10 +421,8 @@ Namespace ViewModels
                             Dim unscharf = DepthMapService.DepthBlur(basis, map, from, bis,
                                                                      strength, uebergang, corners, lichter, token)
                             If unscharf Is Nothing Then Return Nothing
-                            Using shown = WithObjectsOnTop(unscharf, objectRecipe)
-                                Using norm = NormalizePreviewBase(ImageProcessor.CopyBitmap(shown))
-                                    Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
-                                End Using
+                            Using norm = NormalizePreviewBase(WithObjectsOnTop(unscharf, objectRecipe))
+                                Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
                             End Using
                         Finally
                             basis.Dispose()
@@ -461,7 +459,7 @@ Namespace ViewModels
             If rezept Is Nothing Then Return False
             Dim key = String.Join("|", _currentImagePath, size.Width, size.Height,
                                          ImageProcessor.ComputeBaseKey(rezept))
-            If _bokehVorschauBasis IsNot Nothing AndAlso _depthVorschauVoll IsNot Nothing AndAlso _depthMap IsNot Nothing AndAlso
+            If _bokehVorschauBasis IsNot Nothing AndAlso _depthPreviewFull IsNot Nothing AndAlso _depthMap IsNot Nothing AndAlso
                String.Equals(_bokehVorschauSchluessel, key, StringComparison.Ordinal) AndAlso
                String.Equals(_depthKey, key, StringComparison.Ordinal) Then
                 Return True
@@ -518,8 +516,8 @@ Namespace ViewModels
             End If
             _bokehVorschauBasis?.Dispose()
             _bokehVorschauBasis = paar.Item1
-            _depthVorschauVoll?.Dispose()
-            _depthVorschauVoll = paar.Item3
+            _depthPreviewFull?.Dispose()
+            _depthPreviewFull = paar.Item3
             _bokehVorschauSchluessel = key
             StatusText = ""
             Return True
@@ -707,7 +705,7 @@ Namespace ViewModels
 
         Private Const FogDefaultColor As String = "#FFD5DCE3"
         Private _fogDensity As Double = 0.0
-        Private _fogNear As Double = 60.0
+        Private _fogNear As Double = 100.0
         Private _fogFar As Double = 0.0
         Private _fogForeground As Double = 0.0
         Private _fogColor As String = FogDefaultColor
@@ -746,7 +744,9 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Ab dieser Tiefe beginnt der Nebel. Naeher bleibt das Bild klar; 100 ist nah.</summary>
+        ''' <summary>Ab dieser Entfernung beginnt der Nebel, gezaehlt zwischen Kamera (100) und
+        ''' fernstem Punkt (0). Ab Werk 100: der Nebel waechst von der Kamera an mit der Entfernung,
+        ''' auch der naechste Punkt bekommt etwas (DepthMapService.DepthFog).</summary>
         Public Property FogNear As Double
             Get
                 Return _fogNear
@@ -765,7 +765,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Ab dieser Tiefe liegt die volle Dichte. 0 ist am weitesten weg.</summary>
+        ''' <summary>Ab dieser Entfernung liegt die volle Dichte. 0 ist am weitesten weg.</summary>
         Public Property FogFar As Double
             Get
                 Return _fogFar
@@ -831,7 +831,7 @@ Namespace ViewModels
         ''' Schritt zurueck da.</summary>
         Public Sub ResetFog()
             _fogDensity = 0.0
-            _fogNear = 60.0
+            _fogNear = 100.0
             _fogFar = 0.0
             _fogForeground = 0.0
             _fogColor = FogDefaultColor
@@ -873,12 +873,12 @@ Namespace ViewModels
                 If pass <> _fogPreviewPass Then Return
                 If Not Await PrepareBokehBase() Then Return
                 If pass <> _fogPreviewPass Then Return
-                If _depthVorschauVoll Is Nothing OrElse _depthMap Is Nothing Then Return
+                If _depthPreviewFull Is Nothing OrElse _depthMap Is Nothing Then Return
                 ' EIGENE Kopien: die gemeinsamen Vorschaukopien gehoeren auch der Tiefen-Unschaerfe,
                 ' und deren Aufraeumen wartet nicht auf das Gate. In BUEHNENGROESSE, nicht die
                 ' 900-Punkte-Kopie der Unschaerfe: der Nebel ist eine Mischung je Punkt und kostet
                 ' auch in voller Groesse nur wenig.
-                Dim basis = ImageProcessor.CopyBitmap(_depthVorschauVoll)
+                Dim basis = ImageProcessor.CopyBitmap(_depthPreviewFull)
                 Dim map = ImageProcessor.CopyBitmap(_depthMap)
                 Dim objectRecipe = GetCurrentAdjustments()
                 Dim density = _fogDensity, near = _fogNear, far = _fogFar, foreground = _fogForeground
@@ -893,10 +893,8 @@ Namespace ViewModels
                             Dim fog = DepthMapService.DepthFog(basis, map, density, near, far, color,
                                                                foregroundPct:=foreground)
                             If fog Is Nothing Then Return Nothing
-                            Using shown = WithObjectsOnTop(fog, objectRecipe)
-                                Using norm = NormalizePreviewBase(ImageProcessor.CopyBitmap(shown))
-                                    Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
-                                End Using
+                            Using norm = NormalizePreviewBase(WithObjectsOnTop(fog, objectRecipe))
+                                Return ImageOrientationService.ToAvaloniaBitmapFast(norm)
                             End Using
                         Finally
                             basis.Dispose()

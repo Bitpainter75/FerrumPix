@@ -217,16 +217,21 @@ Namespace Services
             End Try
         End Function
 
+        ''' <param name="description">Titel und die uebrigen beschreibenden Felder. Nothing laesst den
+        ''' Block der vorhandenen Datei stehen: jeder andere Schreiber (Rezept, Sterne, Stichwoerter)
+        ''' kennt ihn nicht, und er stammt nicht aus der Datenbank wie der Katalogblock.</param>
         Private Shared Function TryWriteCore(rawPath As String, adjustments As ImageAdjustments,
                                              catalog As RawSidecarCatalogData,
                                              developedThumbnail As Boolean?,
                                              edited As Boolean?,
-                                             Optional requireAbsent As Boolean = False) As Boolean
+                                             Optional requireAbsent As Boolean = False,
+                                             Optional description As ImageDescription = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Dim temp As String = Nothing
                 Dim target As String = Nothing
                 Try
+                    Dim keepDescription = If(description, TryReadDescription(rawPath))
                     Dim keepDevelopedThumbnail = If(developedThumbnail.HasValue, developedThumbnail.Value,
                                                     ReadDevelopedThumbnail(rawPath))
                     ' Der Vermerk "bearbeitet" bleibt, wie er war, wenn der Schreiber ihn nicht nennt
@@ -266,6 +271,7 @@ Namespace Services
                                 New XAttribute("fileName", Path.GetFileName(rawPath))),
                             New XElement(Ns + "savedUtc", DateTime.UtcNow.ToString("O")),
                             catalogNode,
+                            DescriptionNode(keepDescription),
                             New XElement(Ns + "adjustments",
                                 New XAttribute("format", "fpx-json"),
                                 New XCData(json))))
@@ -1076,6 +1082,30 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Dasselbe fuer die Entwicklung aus einem Katalog des Referenzprogramms (ForeignCatalogService):
+        ''' EINMALIG in eine neue .fpxmp, nur fuer RAW und PSD ohne eigene, und nur fuer ein Foto, das
+        ''' das Referenzprogramm selbst als bearbeitet fuehrt. Ohne die letzte Bedingung bekaeme jedes Foto des
+        ''' Katalogs eine .fpxmp, denn auch eine unbearbeitete Entwicklung traegt dort Werte (die
+        ''' Vorgaben fuer Schaerfe und Rauschminderung). Die Lua-Tabelle wird vorher in ein XMP mit
+        ''' denselben Schluesseln gebracht, uebersetzt wird sie dann vom selben Leser wie eine
+        ''' XMP-Beistelldatei. Steht beides da, gewinnt die Beistelldatei: sie wird vorher gefragt.</summary>
+        Public Shared Function TryImportFromForeignCatalog(rawPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If Exists(rawPath) Then Return False
+            Try
+                Dim entry = ForeignCatalogService.Lookup(rawPath)
+                If entry Is Nothing OrElse Not entry.Edited Then Return False
+                Dim xmp = ForeignCatalogService.DevelopAsXmp(entry)
+                If String.IsNullOrEmpty(xmp) Then Return False
+                Dim look = XmpPresetService.LoadLookFromText(xmp, imagePath:=rawPath)
+                If look Is Nothing OrElse Not HasAnyAdjustment(look) Then Return False
+                Return TryWrite(rawPath, look, requireAbsent:=True, edited:=True)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ForeignCatalog.Entwicklung", ex)
+                Return False
+            End Try
+        End Function
+
         ''' Vergleicht gegen ein frisches ImageAdjustments statt gegen eine handgepflegte Feldliste -
         ''' ein neuer Regler ist damit automatisch dabei und kann nicht vergessen werden.
         Private Shared Function HasAnyAdjustment(look As ImageAdjustments) As Boolean
@@ -1183,6 +1213,118 @@ Namespace Services
             Catch
                 adjustments = Nothing
                 Return SidecarReadResult.Unreadable
+            End Try
+        End Function
+
+        ' ---------------------------------------------------------------- Titel und Beschreibung
+
+        ''' <summary>Die Elementnamen der beschreibenden Felder im Block "description". Eigene Namen,
+        ''' nicht die von XMP: die Datei ist unser Format, und die Felder stehen flach.</summary>
+        Private Shared Function DescriptionElementName(field As ImageDescriptionField) As String
+            Select Case field
+                Case ImageDescriptionField.Title : Return "title"
+                Case ImageDescriptionField.Headline : Return "headline"
+                Case ImageDescriptionField.Description : Return "text"
+                Case ImageDescriptionField.Creator : Return "creator"
+                Case Else : Return "credit"
+            End Select
+        End Function
+
+        ''' <summary>Der Block "description" mit den belegten Feldern; Nothing, wenn keines belegt
+        ''' ist, dann fehlt der Block ganz. Ohne neue Formatversion: aeltere Fassungen lesen ihn nicht
+        ''' und schreiben ihn beim naechsten Speichern nicht mit, lehnen die Datei aber nicht ab.</summary>
+        Private Shared Function DescriptionNode(description As ImageDescription) As XElement
+            If description Is Nothing OrElse description.IsEmpty Then Return Nothing
+            Dim node = New XElement(Ns + "description")
+            For Each field In ImageDescription.AllFields
+                Dim value = description.GetValue(field)
+                If value.Length > 0 Then node.Add(New XElement(Ns + DescriptionElementName(field), value))
+            Next
+            Return node
+        End Function
+
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe aus der .fpxmp;
+        ''' Nothing ohne Datei, ohne Block oder bei einer unlesbaren Datei.
+        '''
+        ''' WARUM HIER: bei RAW und PSD ist die .fpxmp der eigene, dauerhafte Ort neben dem Bild, wie
+        ''' fuer Sterne und Stichwoerter. Ein Titel, der nur in der Katalogspalte stuende, waere beim
+        ''' naechsten Einlesen weg, denn dort steht nur die Abschrift der Datei. Gelesen wird sie vor der
+        ''' XMP-Beistelldatei (ImageDescriptionService.FromExifData); der Dialog schreibt in beide.</summary>
+        Public Shared Function TryReadDescription(rawPath As String) As ImageDescription
+            Try
+                If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return Nothing
+                Dim sidecar = SidecarPathFor(rawPath)
+                If Not File.Exists(sidecar) Then Return Nothing
+                Dim root = XDocument.Load(sidecar).Root
+                If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return Nothing
+                Dim node = root.Element(Ns + "description")
+                If node Is Nothing Then Return Nothing
+                Dim result As New ImageDescription()
+                For Each field In ImageDescription.AllFields
+                    Dim element = node.Element(Ns + DescriptionElementName(field))
+                    If element IsNot Nothing Then result.SetValue(field, ImageDescriptionService.NormalizeValue(field, element.Value))
+                Next
+                Return result
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Setzt die genannten Felder in der .fpxmp, die uebrigen bleiben; ein leerer Wert
+        ''' entfernt das Feld. Rezept und Katalogblock bleiben, wie sie sind. Fehlt die Datei, entsteht
+        ''' sie wie bei einer Katalogaenderung mit neutralem Rezept; eine unlesbare bleibt unangetastet
+        ''' (False).</summary>
+        Public Shared Function TryWriteDescription(rawPath As String,
+                                                   changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Boolean
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) OrElse changes Is Nothing Then Return False
+            Try
+                SyncLock _writeLock
+                    Dim adjustments As ImageAdjustments = Nothing
+                    Dim state = ReadRecipe(rawPath, adjustments)
+                    If state = SidecarReadResult.Unreadable Then Return False
+                    If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
+                    Dim merged = If(TryReadDescription(rawPath), New ImageDescription())
+                    For Each pair In changes
+                        merged.SetValue(pair.Key, ImageDescriptionService.NormalizeValue(pair.Key, pair.Value))
+                    Next
+                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                    ' Ein leerer Block muss ausdruecklich als leer hinein, sonst behielte TryWriteCore
+                    ' den alten aus der Datei.
+                    Return TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
+                                        requireAbsent:=state = SidecarReadResult.Missing,
+                                        description:=merged)
+                End SyncLock
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.WriteDescription", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Titel und Co. aus einem Katalog des Referenzprogramms (ForeignCatalogService.DescriptionFor)
+        ''' in die .fpxmp, nur fuer RAW und PSD und nur in Felder, die an der Datei noch leer sind
+        ''' (.fpxmp, XMP-Beistelldatei und Eingebettetes zusammen). Andere Formate bekommen nichts:
+        ''' ein Katalogimport schreibt keine Bilddatei um und legt keine XMP an.</summary>
+        Public Shared Function TryImportDescriptionFromForeignCatalog(rawPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            Try
+                Dim entry = ForeignCatalogService.Lookup(rawPath)
+                If entry Is Nothing Then Return False
+                Dim incoming = ForeignCatalogService.DescriptionFor(entry)
+                If incoming Is Nothing OrElse incoming.IsEmpty Then Return False
+                Dim current = ImageDescriptionService.Read(rawPath)
+                Dim changes As New Dictionary(Of ImageDescriptionField, String)()
+                For Each field In ImageDescription.AllFields
+                    If current.GetValue(field).Length = 0 AndAlso incoming.GetValue(field).Length > 0 Then
+                        changes(field) = incoming.GetValue(field)
+                    End If
+                Next
+                If changes.Count = 0 Then Return False
+                If Not TryWriteDescription(rawPath, changes) Then Return False
+                ExifService.Invalidate(rawPath)
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ForeignCatalog.Beschreibung", ex)
+                Return False
             End Try
         End Function
 

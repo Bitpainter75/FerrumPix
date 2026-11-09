@@ -28,6 +28,8 @@ Namespace Services
     ''' Einzelbild, bei 16 Bit oder HDR schneidet libjxl auf 8 Bit ab, weil die Pipeline 8 Bit
     ''' rechnet. Die Drehung aus dem Codestream legt libjxl selbst auf (JxlDecoderSetKeepOrientation
     ''' bleibt auf seiner Vorgabe), es braucht also KEINE zweite Orientierungskorrektur.
+    ''' Ein zweiter Weg, <see cref="TryDecodeFloat"/>, liefert Gleitkomma ohne Farbmanagement fuer
+    ''' die Rohdaten eines DNG 1.7.
     '''
     ''' GESCHRIEBEN wird in <see cref="JxlEncodeService"/>. Der teilt sich mit diesem Dienst die
     ''' geladene Bibliothek und die Faden-Funktionen (die Friend-Einstiege unten) und laedt nur seine
@@ -91,6 +93,7 @@ Namespace Services
         Private Const StatusJpegReconstruction As Integer = &H2000
         Private Const StatusBox As Integer = &H4000
 
+        Private Const TypeFloat As Integer = 0
         Private Const TypeUint8 As Integer = 2
         Private Const NativeEndian As Integer = 0
         Private Const ProfileTargetData As Integer = 1
@@ -415,6 +418,95 @@ Namespace Services
                                           Return DecodeBytesCore(bytes)
                                       End SyncLock
                                   End Function)
+        End Function
+
+        ''' <summary>Dekodiert einen JPEG-XL-Datenstrom aus einem Ausschnitt von
+        ''' <paramref name="bytes"/> als Gleitkommawerte, Kanal fuer Kanal je Punkt, Zeile fuer Zeile,
+        ''' oder Nothing. Fuer die Rohdaten eines DNG 1.7 (DngJxlRawService).
+        '''
+        ''' ANDERS ALS <see cref="TryDecodeBytes"/>: kein Farbmanagement und keine Umrechnung auf
+        ''' 8 Bit. Die Werte kommen in der Kodierung heraus, die der Datenstrom selbst nennt (libjxl
+        ''' rechnet ein verlustbehaftetes Bild ohne eigenes Farbmanagement in diese zurueck, solange
+        ''' sie sich als Aufzaehlung beschreiben laesst), 0 bis 1 ueber den Wertebereich der
+        ''' gespeicherten Bittiefe. Was diese Werte bedeuten, sagt das DNG, nicht der Datenstrom: bei
+        ''' Rohdaten sind sie keine Farben fuer den Schirm.
+        '''
+        ''' Verlangt eine Ausrichtung ohne Drehung; ein gedrehtes Teilstueck passte nicht mehr in die
+        ''' Kachel, an der es steht.</summary>
+        Friend Shared Function TryDecodeFloat(bytes As Byte(), offset As Integer, count As Integer, channels As Integer,
+                                              ByRef width As Integer, ByRef height As Integer) As Single()
+            width = 0
+            height = 0
+            If bytes Is Nothing OrElse offset < 0 OrElse count <= 0 OrElse offset + CLng(count) > bytes.Length Then Return Nothing
+            If channels < 1 OrElse channels > 4 OrElse Not IsAvailable Then Return Nothing
+            Dim w = 0, h = 0
+            Dim result = DecodeGate.Run(Function()
+                                            SyncLock _nativeLock
+                                                Return DecodeFloatCore(bytes, offset, count, channels, w, h)
+                                            End SyncLock
+                                        End Function)
+            width = w
+            height = h
+            Return result
+        End Function
+
+        Private Shared Function DecodeFloatCore(bytes As Byte(), offset As Integer, count As Integer, channels As Integer,
+                                                ByRef width As Integer, ByRef height As Integer) As Single()
+            Dim dec As IntPtr = IntPtr.Zero
+            Dim runner As IntPtr = IntPtr.Zero
+            Dim info As IntPtr = IntPtr.Zero
+            Dim pin As GCHandle
+            Dim outPin As GCHandle
+            Dim pixels As Single() = Nothing
+            Try
+                dec = _create(IntPtr.Zero)
+                If dec = IntPtr.Zero Then Return Nothing
+                If RunnerReady Then
+                    runner = _runnerCreate(IntPtr.Zero, _defaultWorkers())
+                    If runner <> IntPtr.Zero Then _setParallelRunner(dec, _runnerFunction, runner)
+                End If
+                If _subscribeEvents(dec, StatusBasicInfo Or StatusFullImage) <> StatusSuccess Then Return Nothing
+
+                pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
+                If _setInput(dec, pin.AddrOfPinnedObject() + offset, CType(CULng(count), UIntPtr)) <> StatusSuccess Then Return Nothing
+                _closeInput?.Invoke(dec)
+
+                info = Marshal.AllocHGlobal(BasicInfoBufferSize)
+                Dim format = New JxlPixelFormat With {.NumChannels = CUInt(channels), .DataType = TypeFloat, .Endianness = NativeEndian, .Align = UIntPtr.Zero}
+                Do
+                    Select Case _processInput(dec)
+                        Case StatusBasicInfo
+                            If _getBasicInfo(dec, info) <> StatusSuccess Then Return Nothing
+                            If Marshal.ReadInt32(info, BasicInfoOrientationOffset) <> 1 Then Return Nothing
+                            width = Marshal.ReadInt32(info, BasicInfoXsizeOffset)
+                            height = Marshal.ReadInt32(info, BasicInfoYsizeOffset)
+                            If width <= 0 OrElse height <= 0 Then Return Nothing
+                            If CLng(width) * height * channels > Integer.MaxValue \ 4 Then Return Nothing
+                        Case StatusNeedImageOutBuffer
+                            If width <= 0 OrElse height <= 0 Then Return Nothing
+                            Dim needed As UIntPtr
+                            If _outBufferSize(dec, format, needed) <> StatusSuccess Then Return Nothing
+                            If needed.ToUInt64() <> CULng(width) * CULng(height) * CULng(channels) * 4UL Then Return Nothing
+                            pixels = New Single(width * height * channels - 1) {}
+                            outPin = GCHandle.Alloc(pixels, GCHandleType.Pinned)
+                            If _setOutBuffer(dec, format, outPin.AddrOfPinnedObject(), needed) <> StatusSuccess Then Return Nothing
+                        Case StatusFullImage, StatusSuccess
+                            Return pixels
+                        Case Else
+                            Return Nothing
+                    End Select
+                Loop
+            Catch ex As Exception
+                DiagnosticLogService.LogException("JXL.DecodeFloatCore", ex)
+                Return Nothing
+            Finally
+                ' Der Dekoder zuerst: er haelt Zeiger auf Ein- und Ausgabe.
+                If dec <> IntPtr.Zero Then _destroy(dec)
+                If runner <> IntPtr.Zero Then _runnerDestroy(runner)
+                If info <> IntPtr.Zero Then Marshal.FreeHGlobal(info)
+                If pin.IsAllocated Then pin.Free()
+                If outPin.IsAllocated Then outPin.Free()
+            End Try
         End Function
 
         Private Shared Function DecodeCore(path As String) As SKBitmap

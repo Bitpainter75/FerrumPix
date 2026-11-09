@@ -629,6 +629,14 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _thumbnailHighResolution = value Then Return
                 Me.RaiseAndSetIfChanged(_thumbnailHighResolution, value)
+                Me.RaisePropertyChanged(NameOf(ThumbnailMemoryCacheMaximum))
+                ' Ein Vorschau-Speicher über der neuen Obergrenze wird gleich mit herabgesetzt (und
+                ' gespeichert), sonst hielte er bis zum nächsten Start viermal so große Bilder.
+                Dim capacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_thumbnailMemoryCacheCapacity, value)
+                If capacity <> _thumbnailMemoryCacheCapacity Then
+                    Me.RaiseAndSetIfChanged(_thumbnailMemoryCacheCapacity, capacity, NameOf(ThumbnailMemoryCacheCapacity))
+                    ImageItem.MaxResidentThumbnails = capacity
+                End If
                 SavePerformanceSettings()
                 ThumbnailCacheService.InvalidateSettingsCache()
                 ImageItem.ReloadAllResidentThumbnails()
@@ -656,8 +664,93 @@ Namespace ViewModels
                 If _readPp3Sidecars = value Then Return
                 Me.RaiseAndSetIfChanged(_readPp3Sidecars, value)
                 SavePerformanceSettings()
+                RefreshForeignCatalogStatus()
             End Set
         End Property
+
+        ''' <summary>Der Katalog des Referenzprogramms, der mit dem Schalter darueber mitgelesen wird
+        ''' (ForeignCatalogService). Gespeichert wird sofort, wie beim Pfad von gmic_qt.</summary>
+        Public Property ForeignCatalogPath As String
+            Get
+                Return ForeignCatalogService.ConfiguredPath
+            End Get
+            Set(value As String)
+                Dim cleaned = If(value, "").Trim()
+                If cleaned = ForeignCatalogPath Then Return
+                AppSettingsService.Update(Sub(s) s.ForeignCatalogPath = cleaned)
+                Me.RaisePropertyChanged(NameOf(ForeignCatalogPath))
+                Me.RaisePropertyChanged(NameOf(HasForeignCatalog))
+                RefreshForeignCatalogStatus()
+            End Set
+        End Property
+
+        Public ReadOnly Property HasForeignCatalog As Boolean
+            Get
+                Return ForeignCatalogPath.Length > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property ClearForeignCatalogCommand As ICommand = ReactiveCommand.Create(
+            Sub() ForeignCatalogPath = "")
+
+        Private _foreignCatalogStatus As String = ""
+        Private _foreignCatalogStatusRequested As Boolean
+
+        ''' <summary>Was mit dem Katalog los ist. Beim ersten Lesen wird er im Hintergrund
+        ''' eingelesen, das kann bei grossen Katalogen einige Sekunden dauern; bis dahin steht hier
+        ''' nichts.</summary>
+        Public ReadOnly Property ForeignCatalogStatus As String
+            Get
+                If Not _foreignCatalogStatusRequested Then RefreshForeignCatalogStatus()
+                Return _foreignCatalogStatus
+            End Get
+        End Property
+
+        Private Sub RefreshForeignCatalogStatus()
+            _foreignCatalogStatusRequested = True
+            Dim path = ForeignCatalogPath
+            If path.Length = 0 Then
+                SetForeignCatalogStatus("")
+                Return
+            End If
+            If Not _readPp3Sidecars Then
+                SetForeignCatalogStatus(LocalizationService.T("Wird erst mit dem Schalter darüber gelesen."))
+                Return
+            End If
+            SetForeignCatalogStatus(LocalizationService.T("Katalog wird gelesen…"))
+            Task.Run(Sub()
+                         Dim count = 0
+                         Dim problem = ""
+                         Dim state = ForeignCatalogService.Describe(count, problem)
+                         Dim text As String
+                         Select Case state
+                             Case ForeignCatalogService.CatalogState.Read
+                                 text = String.Format(LocalizationService.T("{0} Fotos im Katalog."), count.ToString("N0", Globalization.CultureInfo.CurrentCulture))
+                             Case ForeignCatalogService.CatalogState.Locked
+                                 text = If(count > 0,
+                                           String.Format(LocalizationService.T("Lightroom hat den Katalog gerade geöffnet. Bis es beendet ist, gilt der zuletzt gelesene Stand mit {0} Fotos."), count.ToString("N0", Globalization.CultureInfo.CurrentCulture)),
+                                           LocalizationService.T("Lightroom hat den Katalog gerade geöffnet. Gelesen wird, sobald es beendet ist."))
+                             Case ForeignCatalogService.CatalogState.Missing
+                                 text = LocalizationService.T("Die Datei gibt es nicht.")
+                             Case ForeignCatalogService.CatalogState.NotACatalog
+                                 text = LocalizationService.T("Das ist kein Lightroom-Katalog.")
+                             Case ForeignCatalogService.CatalogState.Unreadable
+                                 text = String.Format(LocalizationService.T("Der Katalog lässt sich nicht lesen: {0}"), problem)
+                             Case Else
+                                 text = ""
+                         End Select
+                         Avalonia.Threading.Dispatcher.UIThread.Post(Sub()
+                                                                         ' Nur, wenn inzwischen kein anderer Katalog gewaehlt ist.
+                                                                         If String.Equals(ForeignCatalogPath, path, StringComparison.Ordinal) Then SetForeignCatalogStatus(text)
+                                                                     End Sub)
+                     End Sub)
+        End Sub
+
+        Private Sub SetForeignCatalogStatus(text As String)
+            If String.Equals(_foreignCatalogStatus, text, StringComparison.Ordinal) Then Return
+            _foreignCatalogStatus = text
+            Me.RaisePropertyChanged(NameOf(ForeignCatalogStatus))
+        End Sub
 
         ''' <summary>Rating/Farb-Label/Stichworte zusätzlich in ein XMP-Sidecar schreiben (Standard AUS).</summary>
         Public Property SyncCatalogToXmp As Boolean
@@ -1134,12 +1227,20 @@ Namespace ViewModels
                 Return _thumbnailMemoryCacheCapacity
             End Get
             Set(value As Integer)
-                value = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(value)
+                value = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(value, _thumbnailHighResolution)
                 If _thumbnailMemoryCacheCapacity = value Then Return
                 Me.RaiseAndSetIfChanged(_thumbnailMemoryCacheCapacity, value)
                 ImageItem.MaxResidentThumbnails = value
                 SavePerformanceSettings()
             End Set
+        End Property
+
+        ''' <summary>Obergrenze des Reglers: 5000 bei hochauflösenden Vorschaubildern, sonst 10 000
+        ''' (AppSettingsService.GalleryThumbnailMemoryCacheMaximum).</summary>
+        Public ReadOnly Property ThumbnailMemoryCacheMaximum As Integer
+            Get
+                Return AppSettingsService.GalleryThumbnailMemoryCacheMaximum(_thumbnailHighResolution)
+            End Get
         End Property
 
         Public Property JpgSaveQuality As Integer
@@ -4849,7 +4950,7 @@ Namespace ViewModels
             _thumbnailCacheEnabled = _appSettings.ThumbnailCacheEnabled
             _thumbnailQuality = _appSettings.ThumbnailQuality
             _thumbnailHighResolution = _appSettings.ThumbnailHighResolution
-            _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity)
+            _thumbnailMemoryCacheCapacity = AppSettingsService.NormalizeGalleryThumbnailMemoryCacheCapacity(_appSettings.GalleryThumbnailMemoryCacheCapacity, _thumbnailHighResolution)
             ImageItem.MaxResidentThumbnails = _thumbnailMemoryCacheCapacity
             _jpgSaveQuality = _appSettings.JpgSaveQuality
             _preserveMetadataOnSave = _appSettings.PreserveMetadataOnSave

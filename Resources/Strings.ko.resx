@@ -11326,4 +11326,46 @@
   <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_12bbf0e7" xml:space="preserve">
     <value>이미지 옆의 .pp3 또는 .arp 파일에서 키워드, 등급, 색상 레이블을 카탈로그로 가져옵니다. 파일은 읽기만 하며 절대 변경하지 않습니다.</value>
   </data>
+  <data name="Daten_aus_RawTherapee_ART_und_Lightroom_lesen_daa38c70" xml:space="preserve">
+    <value>RawTherapee, ART 및 Lightroom 데이터 읽기</value>
+  </data>
+  <data name="bernimmt_Stichw_rter_Bewertung_und_Farbetikett_a_7a90dbbf" xml:space="preserve">
+    <value>이미지 옆의 .pp3 또는 .arp 파일과 아래 Lightroom 카탈로그에서 키워드, 별점, 색상 레이블을 카탈로그로 가져옵니다. 읽기만 하며 그곳에서는 아무것도 변경하지 않습니다.</value>
+  </data>
+  <data name="Lightroom_Classic_Katalog_941f2bc5" xml:space="preserve">
+    <value>Lightroom Classic 카탈로그</value>
+  </data>
+  <data name="Aus_der_lrcat_kommen_dazu_die_Markierung_und_bei_998ad59c" xml:space="preserve">
+    <value>.lrcat에서는 플래그와, 자체 편집이 없는 RAW 파일의 현상 설정도 가져옵니다. 사진은 파일 이름과 폴더로 연결되므로, 폴더 이름이 그대로라면 다른 컴퓨터의 카탈로그도 사용할 수 있습니다.</value>
+  </data>
+  <data name="Kein_Katalog_gew_hlt_3826a624" xml:space="preserve">
+    <value>선택한 카탈로그 없음</value>
+  </data>
+  <data name="Wird_erst_mit_dem_Schalter_dar_ber_gelesen_22deb9ac" xml:space="preserve">
+    <value>위의 스위치가 켜져 있을 때만 읽습니다.</value>
+  </data>
+  <data name="Katalog_wird_gelesen_f53fb63d" xml:space="preserve">
+    <value>카탈로그를 읽는 중…</value>
+  </data>
+  <data name="0_Fotos_im_Katalog_1ff4985b" xml:space="preserve">
+    <value>카탈로그의 사진 {0}장</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Bis_es_f4beb556" xml:space="preserve">
+    <value>Lightroom이 지금 카탈로그를 열고 있습니다. 닫힐 때까지는 마지막으로 읽은 상태(사진 {0}장)가 적용됩니다.</value>
+  </data>
+  <data name="Lightroom_hat_den_Katalog_gerade_ge_ffnet_Gelese_cf6da8f4" xml:space="preserve">
+    <value>Lightroom이 지금 카탈로그를 열고 있습니다. Lightroom이 종료되면 읽습니다.</value>
+  </data>
+  <data name="Das_ist_kein_Lightroom_Katalog_8538099e" xml:space="preserve">
+    <value>Lightroom 카탈로그가 아닙니다.</value>
+  </data>
+  <data name="Der_Katalog_l_sst_sich_nicht_lesen_0_e9a4838e" xml:space="preserve">
+    <value>카탈로그를 읽을 수 없습니다: {0}</value>
+  </data>
+  <data name="Lightroom_Katalog_w_hlen_3c0ee8fc" xml:space="preserve">
+    <value>Lightroom 카탈로그 선택</value>
+  </data>
+  <data name="Lightroom_Katalog_d5f30788" xml:space="preserve">
+    <value>Lightroom 카탈로그</value>
+  </data>
 </root>

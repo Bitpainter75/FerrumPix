@@ -446,15 +446,36 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding CreateXmpSidecarIfMissing}" IsEnabled="{Binding SyncCatalogToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
-                            <!-- Die .pp3 und .arp der fremden Entwickler, nur lesend und ab Werk aus. Die Namen
-                                 stehen hier ausdruecklich: wer die Programme benutzt, sucht danach. -->
+                            <!-- Die .pp3 und .arp der fremden Entwickler und ein Katalog des Referenzprogramms, nur
+                                 lesend und ab Werk aus. Die Namen stehen hier ausdruecklich: wer die
+                                 Programme benutzt, sucht danach. Der Katalog haengt am selben Schalter
+                                 (ForeignCatalogService), sein Pfad steht darunter. -->
                             <Grid ColumnDefinitions="*,Auto">
                                 <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
-                                    <TextBlock Text="RawTherapee- und ART-Beistelldateien (.pp3, .arp) lesen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                    <TextBlock Text="Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den Katalog. Die Dateien werden nur gelesen, nie geändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Daten aus RawTherapee, ART und Lightroom lesen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Übernimmt Stichwörter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild und aus dem Lightroom-Katalog darunter in den Katalog. Gelesen wird nur, geändert wird dort nichts." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding ReadPp3Sidecars}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
+                            <StackPanel Spacing="6" Margin="0,0,0,4">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660">
+                                    <TextBlock Text="Lightroom-Classic-Katalog" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Aus der .lrcat kommen dazu die Markierung und bei RAW-Dateien ohne eigene Bearbeitung die Entwicklung. Zugeordnet wird über Dateiname und Ordner, ein Katalog von einem anderen Rechner passt also, solange die Ordner ihre Namen behalten haben." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                    <TextBox Text="{Binding ForeignCatalogPath, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                             PlaceholderText="Kein Katalog gewählt"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="10,6"
+                                            Click="OnBrowseForeignCatalogClick">Auswählen</Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="10,6"
+                                            IsVisible="{Binding HasForeignCatalog}"
+                                            Command="{Binding ClearForeignCatalogCommand}">Entfernen</Button>
+                                </Grid>
+                                <TextBlock Classes="no-translate" Text="{Binding ForeignCatalogStatus}"
+                                           IsVisible="{Binding HasForeignCatalog}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"
+                                           FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
                             <!-- Stichwoerter IN die Bilddatei: zwei Schalter, weil XMP und IPTC
                                  verschiedene Programme bedienen. KI-Stichwoerter gehen nie mit. -->
                             <Grid ColumnDefinitions="*,Auto">

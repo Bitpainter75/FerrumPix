@@ -76,6 +76,22 @@ Namespace Services
             Return path
         End Function
 
+        ''' <summary>Ein Strichpunkt auf der Zeichenflaeche. Punkte NEBEN dem Bild bleiben, wo sie
+        ''' sind: Pinsel und Radierer duerfen mit dem Mittelpunkt bis einen Radius ueber den Rand,
+        ''' damit genau der Teil des Kreises wirkt, der ueber dem Bild liegt; gezeichnet wird ohnehin
+        ''' nur auf der Flaeche. Bis zum 2026-11-09 wurde hier auf den Bildrand geklemmt, und ein
+        ''' Abdruck neben dem Rand wurde mit vollem Radius auf der Kante gezeichnet: er reichte tiefer
+        ''' ins Bild als sein Kreis (Nutzerbefund, Radierer am Rand eines stark vergroesserten PNG).
+        ''' Begrenzt wird erst zwei Strichbreiten draussen; so weit weg beruehrt der Abdruck samt
+        ''' weicher Kante das Bild nicht mehr, und ein kaputter Wert wird nicht zu einer Riesenzahl.</summary>
+        Friend Shared Function StrokeCanvasPoint(x As Single, y As Single, width As Integer, height As Integer,
+                                                 strokeWidth As Single) As SKPoint
+            Dim margin = Math.Max(1.0F, strokeWidth) * 2.0F
+            Dim px = If(Single.IsNaN(x), 0.0F, Clamp(x, -margin, width + margin))
+            Dim py = If(Single.IsNaN(y), 0.0F, Clamp(y, -margin, height + margin))
+            Return New SKPoint(px, py)
+        End Function
+
         ''' <summary>Die Radien eines Strichs mit Druck: halbe Breite mal Druckfaktor je Punkt.</summary>
         Friend Shared Function PressureRadii(stroke As BrushStroke, strokeWidth As Single) As Single()
             Dim radii(stroke.Points.Count - 1) As Single
@@ -153,7 +169,7 @@ Namespace Services
                     ' Umriss mit wechselnder Breite. Der Marker verliert dabei seine eckige Kappe -
                     ' ein Strich, der unter dem Stift dünner wird, hat keine gerade Kante mehr.
                     If brushStroke.HasPressure Then
-                        Dim pts = brushStroke.Points.Select(Function(p) New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))).ToList()
+                        Dim pts = brushStroke.Points.Select(Function(p) StrokeCanvasPoint(p.X, p.Y, width, height, resolvedStrokeWidth)).ToList()
                         Using outline = BuildVariableWidthStrokePath(pts, PressureRadii(brushStroke, resolvedStrokeWidth))
                             paint.Style = SKPaintStyle.Fill
                             canvas.DrawPath(outline, paint)
@@ -165,7 +181,7 @@ Namespace Services
                     Using path = New SKPath()
                         For i As Integer = 0 To brushStroke.Points.Count - 1
                             Dim p = brushStroke.Points(i)
-                            Dim target = New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))
+                            Dim target = StrokeCanvasPoint(p.X, p.Y, width, height, resolvedStrokeWidth)
                             If i = 0 Then
                                 path.MoveTo(target)
                             Else
@@ -379,7 +395,7 @@ Namespace Services
                             If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
                             ' Stiftdruck: dieselbe Form wie beim weichen Pinsel, das Korn kommt danach.
                             If brushStroke.HasPressure Then
-                                Dim pts = brushStroke.Points.Select(Function(p) New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))).ToList()
+                                Dim pts = brushStroke.Points.Select(Function(p) StrokeCanvasPoint(p.X, p.Y, width, height, strokeWidth)).ToList()
                                 Using outline = BuildVariableWidthStrokePath(pts, PressureRadii(brushStroke, strokeWidth))
                                     shapePaint.Style = SKPaintStyle.Fill
                                     lc.DrawPath(outline, shapePaint)
@@ -390,7 +406,7 @@ Namespace Services
                             Using path = New SKPath()
                                 For i As Integer = 0 To brushStroke.Points.Count - 1
                                     Dim p = brushStroke.Points(i)
-                                    Dim target = New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height))
+                                    Dim target = StrokeCanvasPoint(p.X, p.Y, width, height, strokeWidth)
                                     If i = 0 Then path.MoveTo(target) Else path.LineTo(target)
                                 Next
                                 lc.DrawPath(path, shapePaint)
@@ -471,7 +487,7 @@ Namespace Services
                         If brushStroke Is Nothing OrElse brushStroke.Points.Count < 2 Then Continue For
                         Dim pts As New List(Of SKPoint)(brushStroke.Points.Count)
                         For Each p In brushStroke.Points
-                            pts.Add(New SKPoint(Clamp(p.X, 0, width), Clamp(p.Y, 0, height)))
+                            pts.Add(StrokeCanvasPoint(p.X, p.Y, width, height, strokeWidth))
                         Next
                         Dim seedBase = 4242 + strokeOrdinal * 131
                         Select Case key

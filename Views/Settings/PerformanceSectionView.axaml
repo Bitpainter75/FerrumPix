@@ -63,7 +63,7 @@
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                 <icons:RoundSlider Width="150"
                                                    Minimum="1000"
-                                                   Maximum="10000"
+                                                   Maximum="{Binding ThumbnailMemoryCacheMaximum}"
                                                    DefaultValue="1000"
                                                    Value="{Binding ThumbnailMemoryCacheCapacity}"/>
                                 <!-- Fuenf Stellen brauchen Platz: bei 34 Punkten stand die

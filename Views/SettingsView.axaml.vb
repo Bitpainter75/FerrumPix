@@ -430,6 +430,26 @@ Namespace Views
             End Try
         End Sub
 
+        ''' <summary>Den Katalog des Referenzprogramms waehlen, der mit den .pp3 und .arp mitgelesen wird.</summary>
+        Friend Async Sub OnBrowseForeignCatalogClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                    .Title = LocalizationService.T("Lightroom-Katalog wählen"),
+                    .AllowMultiple = False,
+                    .FileTypeFilter = {New FilePickerFileType(LocalizationService.T("Lightroom-Katalog")) With {.Patterns = {"*.lrcat"}}}
+                })
+                Dim path = files?.FirstOrDefault()?.Path?.LocalPath
+                If Not String.IsNullOrWhiteSpace(path) Then vm.ForeignCatalogPath = path
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.BrowseForeignCatalog", ex)
+            End Try
+            e.Handled = True
+        End Sub
+
         ''' <summary>Der Dateiwaehler haengt am TopLevel und ist nur von der View aus erreichbar.</summary>
         Private Async Function PickProgramFileAsync(title As String) As Task(Of String)
             Try
