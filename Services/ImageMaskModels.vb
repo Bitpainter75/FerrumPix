@@ -709,6 +709,14 @@ Namespace Services
         ''' Editor als rotes Overlay). Steuert Symbol/Name im Ebenen-Panel und die Overlay-Darstellung.</summary>
         Public Property IsMaskLayer As Boolean = False
 
+        ''' <summary>PROTOKOLLEBENE (GitHub #106): statt einer Anpassung mischt sie unter ihrer Maske
+        ''' das URSPRUNGSBILD ein, durch dieselbe Geometrie gerechnet, aber ohne einen Regler und ohne
+        ''' Eingebackenes. Damit nimmt sie an der bemalten Stelle alles zurück, was im Stapel UNTER ihr
+        ''' liegt: Retusche und Pinsel im Arbeitsbild, die globalen Regler und tiefer liegende
+        ''' Korrekturen. Das Ursprungsbild ist die Datei selbst, beim .fpx das Basisbild im Bündel
+        ''' (ImageProcessor.RegisterRestoreOrigin). Wirkt nur im Basisbild, nicht im Objektstapel.</summary>
+        Public Property RestoresOriginal As Boolean = False
+
         ''' <summary>Zugehörigkeit zu einer Gruppe (leer = keine). Dieselben Gruppen wie bei den
         ''' Objekt-Ebenen (<see cref="AnnotationGroup"/>), aber eine Gruppe fasst entweder Objekte ODER
         ''' Korrekturebenen zusammen: beide sind getrennte Rendergruppen (lokale Korrekturen laufen VOR
@@ -787,6 +795,7 @@ Namespace Services
             Return New MaskedAdjustmentLayer With {
                 .Id = Id, .Name = Name, .MaskId = MaskId,
                 .IsVisible = IsVisible, .IsLocked = IsLocked, .Opacity = Opacity, .FromPreset = FromPreset, .IsMaskLayer = IsMaskLayer,
+                .RestoresOriginal = RestoresOriginal,
                 .GroupId = GroupId,
                 .StackAboveAnnotationId = StackAboveAnnotationId,
                 .ClipToLayerBelow = ClipToLayerBelow,

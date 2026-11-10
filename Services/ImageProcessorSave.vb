@@ -1079,6 +1079,11 @@ Namespace Services
                         renderAdj = recipe.Clone()
                         renderAdj.ExposureInSource = recipe.WorkingImageExposure
                     End If
+                    ' Das Arbeitsbild traegt die eingebackene Retusche; das Ursprungsbild einer
+                    ' Protokollebene ist das Basisbild daneben im Buendel, ohne Belichtung.
+                    If baseBitmap IsNot Nothing AndAlso HasVisibleRestoreLayer(recipe) Then
+                        RegisterRestoreOrigin(baseBitmap, DecodeRestoreOrigin(loaded.BaseImagePath, recipe))
+                    End If
                 Else
                     baseBitmap = DecodeForRender(inputPath, recipe, renderAdj)
                 End If

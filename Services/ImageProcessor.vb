@@ -795,7 +795,24 @@ Namespace Services
                                                      If(adj Is Nothing, 0.0, adj.RawExposureEv()), applied,
                                                      knee:=If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
             renderAdj = WithExposureInSource(adj, applied)
+            ' Steckt die Belichtung schon in der RAW-Stufe, traegt die Quelle einen Regler, den eine
+            ' Protokollebene zuruecknehmen soll. Dann den Ursprung ohne Belichtung dazu, ein zweiter
+            ' Decode NACH dem ersten (nie zwei gleichzeitig) und nur, wenn eine solche Ebene wirkt.
+            If decoded IsNot Nothing AndAlso applied <> 0.0 AndAlso HasVisibleRestoreLayer(adj) Then
+                RegisterRestoreOrigin(decoded, DecodeRestoreOrigin(path, adj, developRaw))
+            End If
             Return decoded
+        End Function
+
+        ''' <summary>Das Ursprungsbild einer Datei fuer die Protokollebene: derselbe Decode wie fuer das
+        ''' Rendern (Objektiv, Lichterrettung, Grundentwicklung), aber ohne Belichtung in der RAW-Stufe,
+        ''' denn die Belichtung ist ein Regler.</summary>
+        Friend Shared Function DecodeRestoreOrigin(path As String, adj As ImageAdjustments,
+                                                   Optional developRaw As Boolean = True) As SKBitmap
+            Dim applied = 0.0
+            Return DecodeOrientedWithExposure(path, developRaw, LensChoiceFrom(adj),
+                                              adj IsNot Nothing AndAlso adj.RawHighlightRecovery, 0.0, applied,
+                                              knee:=If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
         End Function
 
         ''' <summary>Der halbgrosse RAW-Decode fuer Kacheln, mit derselben Belichtung in der RAW-Stufe
@@ -807,8 +824,14 @@ Namespace Services
             Dim decoded = RawDecodeService.TryDecodeThumbnail(path, LensChoiceFrom(adj),
                                                               adj IsNot Nothing AndAlso adj.RawHighlightRecovery, exposureEv,
                                                               If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()))
-            renderAdj = WithExposureInSource(adj, If(decoded IsNot Nothing AndAlso RawDecodeService.DevelopsThroughRawStage(path),
-                                                     exposureEv, 0.0))
+            Dim inSource = If(decoded IsNot Nothing AndAlso RawDecodeService.DevelopsThroughRawStage(path), exposureEv, 0.0)
+            renderAdj = WithExposureInSource(adj, inSource)
+            ' Wie beim vollen Decode: mit Protokollebene der Ursprung ohne Belichtung dazu.
+            If decoded IsNot Nothing AndAlso inSource <> 0.0 AndAlso HasVisibleRestoreLayer(adj) Then
+                RegisterRestoreOrigin(decoded, RawDecodeService.TryDecodeThumbnail(path, LensChoiceFrom(adj),
+                                                                                   adj.RawHighlightRecovery, 0.0,
+                                                                                   adj.RawHighlightKnee()))
+            End If
             Return decoded
         End Function
 
@@ -2634,7 +2657,8 @@ Namespace Services
             ' (ReplaceBitmapOwned mit owned = True); liefert sie Nothing, steht das Ergebnis darin
             ' und er wird zurueckgegeben. Ein Dispose an dieser Stelle traf also immer entweder ein
             ' bereits entsorgtes oder das gerade zurueckgegebene Bild.
-            Dim withLayers = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=True)
+            Dim withLayers = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=True,
+                                                       geometrySource:=source)
             Return If(withLayers, preMask)
         End Function
 
@@ -2745,14 +2769,18 @@ Namespace Services
         ''' durch die Whitelist").</param>
         ''' <returns>Ein NEUES Bild, oder Nothing - dann steht das Ergebnis bereits im
         ''' uebergebenen Zwischenstand (direkt hineingeschrieben oder unveraendert).</returns>
+        ''' <param name="geometrySource">Die Renderquelle vor der Geometrie. Nur eine Protokollebene
+        ''' braucht sie: sie rechnet daraus das Ursprungsbild (RestoreOriginFor) durch dieselbe
+        ''' Geometrie. Ohne sie bleibt eine Protokollebene wirkungslos.</param>
         Private Shared Function ProcessBitmapMaskedLayers(preMask As SKBitmap, adj As ImageAdjustments,
                                                           sourceWidth As Integer, sourceHeight As Integer,
-                                                          ownsInput As Boolean) As SKBitmap
+                                                          ownsInput As Boolean,
+                                                          Optional geometrySource As SKBitmap = Nothing) As SKBitmap
             Dim owned = ownsInput
             ' Messpunkt: jede Ebene laeuft durch die Pixelkette und laedt auf der Grafikkarte ihr
             ' Bild einzeln hoch und zurueck. Ob sich eine gemeinsame Sitzung lohnt, sagt diese Zahl.
             Dim processed = PerformanceTraceService.Measure("Ebenen: Maskenebenen anwenden",
-                Function() ApplyMaskedAdjustmentLayersCore(preMask, adj, sourceWidth, sourceHeight, Nothing, owned))
+                Function() ApplyMaskedAdjustmentLayersCore(preMask, adj, sourceWidth, sourceHeight, Nothing, owned, geometrySource))
             If Object.ReferenceEquals(processed, preMask) Then Return Nothing
             Return TakeOwnership(processed, owned)
         End Function
@@ -3352,11 +3380,88 @@ Namespace Services
             Marshal.Copy(buffer, 0, mask.GetPixels(), buffer.Length)
         End Sub
 
+        ' --- Protokollebene: das Ursprungsbild (GitHub #106) ---------------------------------------
+
+        ''' <summary>Je Renderquelle ihr Ursprungsbild, wenn es nicht die Quelle selbst ist: im Editor das
+        ''' Bild ohne eingebackene Retusche (die Vorher-Seite), beim .fpx das Basisbild des Bündels.
+        ''' Schwache Verweise: die Eintraege verschwinden mit ihrer Quelle, niemand muss aufraeumen.
+        ''' Ohne Eintrag ist die Quelle selbst das Ursprungsbild; so ist es bei JPEG, PNG und RAW mit
+        ''' Begleitdatei immer, denn eingebackene Bildpunkte kann eine Begleitdatei nicht tragen.</summary>
+        Private Shared ReadOnly _restoreOrigins As New System.Runtime.CompilerServices.ConditionalWeakTable(Of SKBitmap, SKBitmap)()
+        Private Shared _restoreOriginGeneration As Long
+
+        ''' <summary>Legt fest, welches Ursprungsbild eine Protokollebene zur Renderquelle
+        ''' <paramref name="source"/> einmischt. Gleiche Maße wie die Quelle, gleicher Raum (SourceSpace);
+        ''' sonst wird es nicht benutzt. Nothing nimmt die Zuordnung zurueck.</summary>
+        Public Shared Sub RegisterRestoreOrigin(source As SKBitmap, origin As SKBitmap)
+            If source Is Nothing Then Return
+            SyncLock _restoreOrigins
+                _restoreOrigins.Remove(source)
+                If origin IsNot Nothing AndAlso Not ReferenceEquals(origin, source) Then _restoreOrigins.Add(source, origin)
+            End SyncLock
+            Interlocked.Increment(_restoreOriginGeneration)
+        End Sub
+
+        ''' <summary>Das Ursprungsbild zu einer Quelle: das eingetragene, wenn es zu ihr passt, sonst die
+        ''' Quelle selbst.</summary>
+        Friend Shared Function RestoreOriginFor(source As SKBitmap) As SKBitmap
+            If source Is Nothing Then Return Nothing
+            Dim origin As SKBitmap = Nothing
+            SyncLock _restoreOrigins
+                If Not _restoreOrigins.TryGetValue(source, origin) Then origin = Nothing
+            End SyncLock
+            If origin Is Nothing OrElse origin.Handle = IntPtr.Zero OrElse
+               origin.Width <> source.Width OrElse origin.Height <> source.Height Then Return source
+            Return origin
+        End Function
+
+        ''' <summary>Der Anteil des Ursprungsbilds am Basisschluessel: nur wenn eine Protokollebene
+        ''' wirkt, dann die Zahl der Eintragungen. Eine neue Zuordnung zu derselben Quelle ergibt so
+        ''' einen neuen Schluessel, statt das alte Ergebnis aus dem Zwischenspeicher zu holen.</summary>
+        Private Shared Function RestoreOriginKeyPart(adj As ImageAdjustments) As String
+            If Not HasVisibleRestoreLayer(adj) Then Return "-"
+            Return "o" & Interlocked.Read(_restoreOriginGeneration).ToString(Globalization.CultureInfo.InvariantCulture)
+        End Function
+
+        Friend Shared Function HasVisibleRestoreLayer(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.MaskedAdjustmentLayers Is Nothing Then Return False
+            For Each layer In adj.MaskedAdjustmentLayers
+                If layer IsNot Nothing AndAlso layer.RestoresOriginal AndAlso
+                   String.IsNullOrEmpty(layer.StackAboveAnnotationId) AndAlso
+                   adj.IsMaskedLayerRenderVisible(layer) Then Return True
+            Next
+            Return False
+        End Function
+
+        ''' <summary>Das Ursprungsbild durch dieselbe Geometrie wie das Foto, ohne jeden Regler: genau
+        ''' der Stand, den die Pixelkette sonst als Eingang bekommt, nur aus dem Ursprung statt aus dem
+        ''' Arbeitsbild. Nothing, wenn er nicht zu den Maßen des Zwischenstands passt.</summary>
+        Private Shared Function BuildRestoreBaseline(geometrySource As SKBitmap, adj As ImageAdjustments,
+                                                     target As SKBitmap) As SKBitmap
+            Dim origin = RestoreOriginFor(geometrySource)
+            If origin Is Nothing Then Return Nothing
+            Dim result As SKBitmap = origin
+            Dim resultOwned = False
+            result = ApplyGeometryPipelineOwned(result, adj, resultOwned)
+            result = ReplaceBitmapOwned(result, ApplyDocumentBackground(result, adj), resultOwned)
+            If result.Width <> target.Width OrElse result.Height <> target.Height Then
+                If resultOwned Then result.Dispose()
+                Return Nothing
+            End If
+            If result.ColorType <> target.ColorType Then
+                Dim converted = result.Copy(target.ColorType)
+                If resultOwned Then result.Dispose()
+                Return converted
+            End If
+            Return If(resultOwned, result, CloneBitmap(result))
+        End Function
+
         Private Shared Function ApplyMaskedAdjustmentLayersCore(source As SKBitmap, adj As ImageAdjustments,
                                                                 pipelineInputWidth As Integer,
                                                                 pipelineInputHeight As Integer,
                                                                 onlyStackedAboveId As String,
-                                                                ByRef owned As Boolean) As SKBitmap
+                                                                ByRef owned As Boolean,
+                                                                Optional geometrySource As SKBitmap = Nothing) As SKBitmap
             Dim processed = source
             If adj Is Nothing OrElse adj.MaskedAdjustmentLayers Is Nothing OrElse adj.Masks Is Nothing Then Return processed
 
@@ -3393,6 +3498,8 @@ Namespace Services
             Dim session As GpuDetailSession = Nothing
             Dim sessionTried = False
             Dim heldMasks As New List(Of SKBitmap)()
+            Dim restoreBaseline As SKBitmap = Nothing
+            Dim restoreBaselineTried = False
             Try
             For Each layer In adj.MaskedAdjustmentLayers
                 If Not adj.IsMaskedLayerRenderVisible(layer) Then Continue For
@@ -3402,6 +3509,37 @@ Namespace Services
                 ElseIf Not String.Equals(stackedAbove, onlyStackedAboveId, StringComparison.Ordinal) Then
                     Continue For
                 End If
+
+                ' PROTOKOLLEBENE: unter ihrer Maske das Ursprungsbild durch dieselbe Geometrie, an
+                ' ihrer Stelle im Stapel; alles unter ihr ist dort zurueckgenommen, alles ueber ihr
+                ' wirkt weiter. Nur im Basisbild: im Objektstapel fehlt die Quelle, und ein Ursprung
+                ' unter Objekten waere eine Frage, die niemand gestellt hat.
+                If layer.RestoresOriginal Then
+                    If onlyStackedAboveId IsNot Nothing OrElse geometrySource Is Nothing Then Continue For
+                    Dim restoreMaskData As ImageMask = Nothing
+                    If Not masksById.TryGetValue(If(layer.MaskId, ""), restoreMaskData) Then Continue For
+                    If Not restoreBaselineTried Then
+                        restoreBaselineTried = True
+                        Dim target = processed
+                        restoreBaseline = PerformanceTraceService.Measure("Layers: restore baseline",
+                                                                          Function() BuildRestoreBaseline(geometrySource, adj, target))
+                    End If
+                    If restoreBaseline Is Nothing Then Continue For
+                    ' Der neueste Stand muss im Speicher sein, nicht auf der Karte.
+                    If session IsNot Nothing AndAlso session.OnGpu Then processed = BringDetailSessionHome(session, processed, owned)
+                    Dim restoreTarget = processed
+                    Using restoreMask = BuildPersistentMaskForOutput(restoreMaskData, adj, pipelineInputWidth, pipelineInputHeight,
+                                                                     restoreTarget.Width, restoreTarget.Height, layer.Opacity, Nothing)
+                        If restoreMask Is Nothing Then Continue For
+                        Dim baselineForMix = restoreBaseline
+                        processed = ReplaceBitmapOwned(processed,
+                                                       PerformanceTraceService.Measure("Layers: restore original",
+                                                           Function() CompositeSelectionScoped(restoreTarget, baselineForMix, restoreMask)),
+                                                       owned)
+                    End Using
+                    Continue For
+                End If
+
                 Dim hasAdj = layer.Adjustments IsNot Nothing AndAlso layer.Adjustments.HasPixelAdjustments()
                 Dim hasFill = layer.HasFill()
                 ' Eine Kontur gibt es nur an einer AUSWAHL-Ebene; an einer Maskenebene stuft das Weiss
@@ -3587,6 +3725,7 @@ Namespace Services
                 For Each held In heldMasks
                     held.Dispose()
                 Next
+                restoreBaseline?.Dispose()
             End Try
             Return processed
         End Function
@@ -4487,10 +4626,12 @@ Namespace Services
             Dim computed As SKBitmap = Nothing
             If HasBaseMaskedLayers(adj) Then
                 Dim arbeit = CloneBitmap(preMask)
-                computed = ProcessBitmapMaskedLayers(arbeit, adj, source.Width, source.Height, ownsInput:=True)
+                computed = ProcessBitmapMaskedLayers(arbeit, adj, source.Width, source.Height, ownsInput:=True,
+                                                     geometrySource:=source)
                 If computed Is Nothing Then computed = arbeit
             Else
-                computed = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=False)
+                computed = ProcessBitmapMaskedLayers(preMask, adj, source.Width, source.Height, ownsInput:=False,
+                                                     geometrySource:=source)
             End If
             If computed Is Nothing Then
                 ' Keine Ebene hat gewirkt: der Zwischenstand IST das Ergebnis. Dann gibt es nichts
@@ -4825,6 +4966,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.SelectionScopeEnabled, selectionScopeKey,
                 adj.GlobalAdjustmentsHidden,
                 If(includeMasks, PersistentMasksFingerprint(adj), "-"),
+                If(includeMasks, RestoreOriginKeyPart(adj), "-"),
                 adj.WorkingImageVersion
             }.Select(AddressOf KeyPart))
         End Function
@@ -4999,7 +5141,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                            Dim groupVisible = adj.IsMaskedLayerRenderVisible(l)
                            Return String.Join(":", l.Id, l.MaskId, l.IsVisible, groupVisible, l.Opacity, l.GroupId,
                                               l.StackAboveAnnotationId,
-                                              l.IsMaskLayer, l.FillKind, l.FillColor, l.FillColor2,
+                                              l.IsMaskLayer, l.RestoresOriginal, l.FillKind, l.FillColor, l.FillColor2,
                                               KeyPart(l.FillAngle), l.FillInverted,
                                               l.FillStops, KeyPart(l.FillScale), KeyPart(l.FillOffsetX),
                                               KeyPart(l.FillOffsetY), l.FillRepeat,
