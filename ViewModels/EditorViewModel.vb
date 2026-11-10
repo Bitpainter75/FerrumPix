@@ -2296,7 +2296,77 @@ Namespace ViewModels
             RaiseExtendedAdjustmentProperties()
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
+            _builtInLookApplied = BuildAdjustmentsFromFields()
         End Sub
+
+        ''' Die Regler, wie der zuletzt aufgelegte eingebaute Look sie hinterlassen hat. Daran erkennt
+        ''' der Zurücksetzer der Filtergruppe, welche Felder seither unberührt sind.
+        Private _builtInLookApplied As ImageAdjustments
+
+        ''' <summary>Der Zurücksetzer der Filtergruppe bei einem eingebauten Look. Der Look steht nicht
+        ''' nur im Filterplatz, er hat Licht, Farbe, Details, Farbmischer, Farbgradierung, Kalibrierung und
+        ''' Kurven gesetzt; den Filterplatz allein zu leeren ließ das Bild fast unverändert. Wie bei der
+        ''' Automatik (RevertAutoAdjustInternal) geht zurück, was noch auf dem Wert des Looks steht, und
+        ''' zwar auf den Startwert, den auch der Klick auf einen Filter setzt (FilterResetValues). Was
+        ''' seither von Hand verstellt wurde, bleibt.</summary>
+        Private Sub RevertBuiltInLookInternal()
+            Dim applied = _builtInLookApplied
+            _builtInLookApplied = Nothing
+            Dim current = BuildAdjustmentsFromFields()
+            ' Ohne Merker (ein gespeichertes Rezept, neu geöffnet, oder ein Stand aus dem Verlauf)
+            ' wird der Stand nach dem Klick aus dem Rezept nachgerechnet, wie für die Kacheln, bei
+            ' der gespeicherten Stärke. Sonst leerte der Pfeil nur den Namen.
+            If applied Is Nothing OrElse Not String.Equals(applied.FilterPreset, current.FilterPreset, StringComparison.Ordinal) Then
+                applied = FilterPreviewAdjustments(current, current.FilterPreset, current.FilterStrength)
+            End If
+            Dim target = current.Clone()
+            If applied IsNot Nothing AndAlso String.Equals(applied.FilterPreset, current.FilterPreset, StringComparison.Ordinal) Then
+                Dim start = FilterResetValues()
+                Dim type = GetType(ImageAdjustments)
+                Dim untouched = Function(name As String) As Boolean
+                                    Dim p = type.GetProperty(name)
+                                    Return p IsNot Nothing AndAlso SameRecipeValue(p.GetValue(current), p.GetValue(applied))
+                                End Function
+                For Each name In LookPropertyNames
+                    If untouched(name) Then CopyProperties(target, start, {name})
+                Next
+                ' Der Weißabgleich als Ganzes: ein Teil davon zurück, ein anderer nicht, ergäbe einen
+                ' Stand, den es nie gab.
+                Dim whiteBalance = {"Temperature", "Tint", "WhiteBalanceKelvin", "WhiteBalanceKelvinTint"}
+                If whiteBalance.All(untouched) Then CopyProperties(target, start, whiteBalance)
+            End If
+            ' ApplyLookAdjustments liest die Tönung bei einem Bild mit Aufnahme-Weißpunkt und ohne
+            ' Kelvinzahl aus dem relativen Feld (siehe dort); damit sie stehen bleibt, gehört sie dorthin.
+            If HasAbsoluteWhiteBalance AndAlso target.WhiteBalanceKelvin < WhiteBalanceAdaptation.MinKelvin Then
+                target.Temperature = 0
+                target.Tint = CSng(target.WhiteBalanceKelvinTint)
+            End If
+            target.FilterPreset = "Keine"
+            target.FilterStrength = 50
+            _suppressUndoCapture = True
+            Try
+                ApplyLookAdjustments(target)
+            Finally
+                _suppressUndoCapture = False
+            End Try
+            _filterPreset = "Keine"
+            _filterStrength = 50
+            Me.RaisePropertyChanged(NameOf(FilterPreset))
+            Me.RaisePropertyChanged(NameOf(FilterStrength))
+            SetLastAppliedFilterPreset("Keine")
+            RaiseExtendedAdjustmentProperties()
+            RaiseResetButtonStateChanged()
+            SchedulePreviewForCurrentTarget()
+        End Sub
+
+        Private Shared Function SameRecipeValue(a As Object, b As Object) As Boolean
+            If TypeOf a Is Single AndAlso TypeOf b Is Single Then Return Math.Abs(CSng(a) - CSng(b)) < 0.0001F
+            If TypeOf a Is Double AndAlso TypeOf b Is Double Then Return Math.Abs(CDbl(a) - CDbl(b)) < 0.0001
+            If TypeOf a Is String OrElse TypeOf b Is String Then
+                Return String.Equals(If(TryCast(a, String), ""), If(TryCast(b, String), ""), StringComparison.Ordinal)
+            End If
+            Return Equals(a, b)
+        End Function
 
         ''' <summary>„Auto" im Filter-Werkzeug: misst das Bild und schiebt die Grundregler dorthin, wo
         ''' das Bild nach seiner eigenen Charakteristik am besten steht (ImageProcessor.AnalyzeAutoAdjustments).
@@ -18456,6 +18526,9 @@ Namespace ViewModels
                                                                              ApplyBuiltInLook(id)
                                                                              BeginLookRenderWait()
                                                                          End Sub)
+            ToggleFilterPreviewTilesCommand = CreateToggleFilterPreviewTilesCommand()
+            ApplyFilterTileCommand = CreateApplyFilterTileCommand()
+            InitializeFilterPreviews()
             AutoAdjustCommand = ReactiveCommand.Create(AddressOf ApplyAutoAdjustments)
             AutoStraightenCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoStraightenAsync)
             AutoPerspectiveCommand = ReactiveCommand.CreateFromTask(AddressOf ApplyAutoPerspectiveAsync)
@@ -19567,6 +19640,7 @@ Namespace ViewModels
             _sourceDisplayFileName = ResolveSourceDisplayFileName(path, Nothing, Nothing)
             CurrentImagePath = path
             _currentImagePath = path
+            ReleaseFilterPreviewHold()
             ' Der Reiter der Infoleiste bleibt stehen - wer sich EXIF ansieht und das naechste Bild
             ' oeffnet, will wieder EXIF sehen. Zurueck faellt er nur, wenn es ihn nicht mehr gibt
             ' (der Personen-Reiter, siehe LoadPeople).
@@ -20045,6 +20119,7 @@ Namespace ViewModels
             _sourceDisplayFileName = ResolveSourceDisplayFileName(imagePath, displayFileName, nextcloudSource)
             CurrentImagePath = imagePath
             _currentImagePath = imagePath
+            ReleaseFilterPreviewHold()
             ' Wie oben: der gewaehlte Reiter ueberlebt den Bildwechsel.
             ResetAdjustmentsInternal(resetEditorUi:=True)
             ' Direkt danach, weil das Ruecksetzen den Hintergrund auf durchsichtig stellt: nur ein
@@ -22378,7 +22453,12 @@ Namespace ViewModels
                 ' RestartPreviewTimer nichts, solange ein Render laeuft - sonst braeche der naechste
                 ' den laufenden ab. Ist er durch und liegt eine Aenderung an, geht es sofort weiter.
                 If _sliderDragActive AndAlso _previewPending Then RestartPreviewTimer(1.0)
-                If Not _previewPending Then EndLookRenderWait()
+                If Not _previewPending Then
+                    EndLookRenderWait()
+                    ' Die Filterkacheln rechnen erst, wenn das große Bild steht
+                    ' (EditorViewModelFilterPreview.vb).
+                    NoteMainPreviewSettledForFilterTiles()
+                End If
             End If
         End Sub
 
@@ -23773,6 +23853,8 @@ Namespace ViewModels
                 ' Änderungen verwerfen. Ohne dies bliebe _hasChanges fälschlich True, und ein späteres
                 ' Öffnen eines ANDEREN Bildes würde diesen bereits abgelehnten Speichern-Dialog ein
                 ' zweites Mal spurious anzeigen (OpenImageAsync macht denselben Check erneut).
+                ' Die Kacheln rechneten nach dem Zuruecksetzen sonst noch einmal das Bild, das gleich geht.
+                HoldFilterPreviewsUntilNextImage()
                 ResetAdjustmentsInternal()
                 ClearUndoHistory()
                 Return True
@@ -30847,6 +30929,11 @@ Namespace ViewModels
         ''' (Symmetrie Setzen/Zurücksetzen). Zurückgenommen wird nur, was seither unangetastet blieb.</summary>
         Private Sub ResetFilterGroupInternal()
             RevertAutoAdjustInternal()
+            If IsBuiltInLook(_filterPreset) Then
+                RevertBuiltInLookInternal()
+                Return
+            End If
+            _builtInLookApplied = Nothing
             _filterPreset = "Keine"
             _filterStrength = 50
             SetLastAppliedFilterPreset("Keine")
@@ -31772,7 +31859,7 @@ Namespace ViewModels
             Dim geometryAfter = If(after.GeometryOperations?.Count, 0)
             ' JEDES Preset bekommt die Staerke, nicht nur eines mit crs:SupportsAmount="True" wie beim
             ' Referenzprogramm (entschieden 2026-10-25): viele Presets tragen die Angabe nicht,
-            ' Cool Glow etwa. Ausgenommen bleibt, was sich nicht zwischen zwei Staenden rechnen laesst.
+            ' ein Kanalkurven-Preset etwa. Ausgenommen bleibt, was sich nicht zwischen zwei Staenden rechnen laesst.
             If layersBefore <> layersAfter OrElse geometryBefore <> geometryAfter Then
                 EndPresetAmount()
                 Return

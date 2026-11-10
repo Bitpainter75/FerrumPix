@@ -2,18 +2,35 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.FilterPanel">
-    <Expander Header="Filter" icons:ExpanderState.Key="filter"
+    <Expander x:Name="FilterExpander" Header="Filter" icons:ExpanderState.Key="filter"
         IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=filter}">
         <Expander.HeaderTemplate>
             <DataTemplate>
-                <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <icons:SvgIcon
                             Source="avares://FerrumPix/Assets/Icons/phosphor/regular/funnel.svg"
                             Width="18" Height="18" />
                         <TextBlock Text="{Binding}" FontWeight="SemiBold" />
                     </StackPanel>
+                    <!-- Umschalter zwischen Knöpfen und Kacheln mit Vorschau
+                         (EditorViewModelFilterPreview.vb). "group-action", sonst blendet ihn die
+                         Regel für Symbolknöpfe in Anpassungsgruppen aus. -->
                     <Button Grid.Column="1"
+                            Classes="icon-btn group-action"
+                            IsVisible="{Binding DataContext.IsFilterToolActive, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Classes.active="{Binding DataContext.ShowFilterPreviewTiles, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Margin="0,0,4,0"
+                            Command="{Binding DataContext.ToggleFilterPreviewTilesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Filter mit Vorschaubild zeigen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/squares-four.svg"
+                            Width="16" Height="16" />
+                    </Button>
+                    <Button Grid.Column="2"
                             Classes="icon-btn group-reset"
                             Width="28"
                             Height="28"
@@ -35,12 +52,42 @@
                  Knopf „Keine" steht nicht mehr in der Liste - er war kein Filter, sondern ein
                  Zurücksetzer und damit doppelt zum Pfeil in der Kopfzeile (ResetFilterCommand).
                  Der Wert „Keine" bleibt intern der neutrale Zustand (SetFilterPresetCommand). -->
-            <WrapPanel>
+            <!-- Die Kacheln: je Filter eine kleine Vorschau des Bildes mit dem Rezept, das der Klick
+                 setzt. Die Namen kommen übersetzt aus dem ViewModel (FilterPreviewTile.DisplayName),
+                 deshalb no-translate. -->
+            <ItemsControl ItemsSource="{Binding FilterPreviewTiles}"
+                          IsVisible="{Binding FilterPreviewTilesVisible}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="2" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Classes="ghost" Classes.active="{Binding IsActive}"
+                                Padding="3" Margin="0,0,4,4"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                Command="{Binding DataContext.ApplyFilterTileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}">
+                            <StackPanel Spacing="3">
+                                <Border Height="96" CornerRadius="4" ClipToBounds="True"
+                                        Background="{DynamicResource FP.Bg.Input}">
+                                    <Image Source="{Binding Image}" Stretch="UniformToFill"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                                </Border>
+                                <TextBlock Classes="no-translate" Text="{Binding DisplayName}"
+                                           FontSize="{DynamicResource FP.Font.Small}"
+                                           HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <WrapPanel IsVisible="{Binding !FilterPreviewTilesVisible}">
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eisglanz}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Eisglanz"><TextBlock Text="Eisglanz" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Bonbon}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Bonbon"><TextBlock Text="Bonbon" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Sommerstaub}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Sommerstaub"><TextBlock Text="Sommerstaub" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Mondsilber}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Mondsilber"><TextBlock Text="Mondsilber" FontSize="{DynamicResource FP.Font.Small}" /></Button>
-                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Farbknall}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Farbknall"><TextBlock Text="Farbknall" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kaffeehaus}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Kaffeehaus"><TextBlock Text="Kaffeehaus" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Cremeweiß}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Cremeweiß"><TextBlock Text="Cremeweiß" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Jahrmarkt}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Jahrmarkt"><TextBlock Text="Jahrmarkt" FontSize="{DynamicResource FP.Font.Small}" /></Button>
@@ -48,6 +95,17 @@
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Wüstenlicht}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Wüstenlicht"><TextBlock Text="Wüstenlicht" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kornfilm}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Kornfilm"><TextBlock Text="Kornfilm" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Zeitlos}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Zeitlos"><TextBlock Text="Zeitlos" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Asphalt}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Asphalt"><TextBlock Text="Asphalt" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Laufsteg}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Laufsteg"><TextBlock Text="Laufsteg" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Fernweh}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Fernweh"><TextBlock Text="Fernweh" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Jeansblau}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Jeansblau"><TextBlock Text="Jeansblau" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Flüsterkneipe}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Flüsterkneipe"><TextBlock Text="Flüsterkneipe" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kohle}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Kohle"><TextBlock Text="Kohle" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Herbstlaub}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Herbstlaub"><TextBlock Text="Herbstlaub" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kraftvoll}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Kraftvoll"><TextBlock Text="Kraftvoll" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kaminfeuer}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Kaminfeuer"><TextBlock Text="Kaminfeuer" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Hochsommer}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Hochsommer"><TextBlock Text="Hochsommer" FontSize="{DynamicResource FP.Font.Small}" /></Button>
+                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6" Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Tiefsee}" Command="{Binding SetBuiltInLookCommand}" CommandParameter="Tiefsee"><TextBlock Text="Tiefsee" FontSize="{DynamicResource FP.Font.Small}" /></Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=S/W}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="S/W">
@@ -62,11 +120,6 @@
                         Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Kühl}"
                         Command="{Binding SetFilterPresetCommand}" CommandParameter="Kühl">
                     <TextBlock Text="Kühl" FontSize="{DynamicResource FP.Font.Small}" />
-                </Button>
-                <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
-                        Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Fade}"
-                        Command="{Binding SetFilterPresetCommand}" CommandParameter="Fade">
-                    <TextBlock Text="Fade" FontSize="{DynamicResource FP.Font.Small}" />
                 </Button>
                 <Button Classes="ghost" Padding="8,5" Margin="0,0,6,6"
                         Classes.active="{Binding LastAppliedFilterPresetName, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Sepia}"

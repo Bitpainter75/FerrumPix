@@ -561,9 +561,6 @@
   <data name="F_r_private_Nutzung_frei_be3eeedc" xml:space="preserve">
     <value>Free for private use</value>
   </data>
-  <data name="Fade_5298d08b" xml:space="preserve">
-    <value>Fade</value>
-  </data>
   <data name="Farbe_89b7957d" xml:space="preserve">
     <value>Color</value>
   </data>
@@ -11409,9 +11406,6 @@
   <data name="Mondsilber_e7c425a2" xml:space="preserve">
     <value>Moon Silver</value>
   </data>
-  <data name="Farbknall_e0d8a296" xml:space="preserve">
-    <value>Color Burst</value>
-  </data>
   <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
     <value>Café</value>
   </data>
@@ -11423,5 +11417,38 @@
   </data>
   <data name="Lagune_2e30f214" xml:space="preserve">
     <value>Lagoon</value>
+  </data>
+  <data name="Filter_mit_Vorschaubild_zeigen_1f518257" xml:space="preserve">
+    <value>Show filters with preview images</value>
+  </data>
+  <data name="Asphalt_b226dc5a" xml:space="preserve">
+    <value>Asphalt</value>
+  </data>
+  <data name="Laufsteg_57b91d91" xml:space="preserve">
+    <value>Runway</value>
+  </data>
+  <data name="Fernweh_7303eb29" xml:space="preserve">
+    <value>Wanderlust</value>
+  </data>
+  <data name="Jeansblau_08f26ed1" xml:space="preserve">
+    <value>Denim</value>
+  </data>
+  <data name="Fl_sterkneipe_091092f5" xml:space="preserve">
+    <value>Speakeasy</value>
+  </data>
+  <data name="Herbstlaub_fb133ffc" xml:space="preserve">
+    <value>Autumn Leaves</value>
+  </data>
+  <data name="Kraftvoll_367b4820" xml:space="preserve">
+    <value>Bold</value>
+  </data>
+  <data name="Kaminfeuer_9f49c6b8" xml:space="preserve">
+    <value>Fireside</value>
+  </data>
+  <data name="Hochsommer_6421f86a" xml:space="preserve">
+    <value>Midsummer</value>
+  </data>
+  <data name="Tiefsee_9226edc0" xml:space="preserve">
+    <value>Deep Sea</value>
   </data>
 </root>

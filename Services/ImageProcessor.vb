@@ -2835,7 +2835,7 @@ Namespace Services
 
             ' FARBRAUSCHEN VOR ALLEN FARB- UND TONSTUFEN, wie beim Referenzprogramm am Kamerabild.
             ' Lief es zuletzt, sah der Farbmischer noch das volle Farbrauschen: an der Grenze zweier
-            ' Baender, die ein Preset verschieden behandelt (Cool Glow: Lila entsaettigt und
+            ' Baender, die ein Preset verschieden behandelt (etwa ein Kanalkurven-Preset: Lila entsaettigt und
             ' aufgehellt, Blau satt und dunkel), entschied das Rauschen je Bildpunkt, welches Band
             ' griff, und auf einer ruhigen Flaeche standen dunkelblaue Sprenkel.
             '

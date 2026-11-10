@@ -112,7 +112,22 @@
 
   <releases>
 
+    <release version="0.9.80-1" date="2026-11-10">
+      <description>
+        <p>This update brings lots of new creative looks with live previews of your own photos, a history brush that lets you paint back the original image, and more flexibility when saving and exporting:</p>
+        <p xml:lang="de">Dieses Update bringt viele neue kreative Looks mit Vorschauen direkt aus deinen eigenen Fotos, einen Protokollpinsel, mit dem du das Originalbild stellenweise zurückholen kannst, und mehr Möglichkeiten beim Speichern und Exportieren:</p>
+        <ul>
+          <li>There are 19 new looks in the Filter tool, ranging from Frost Sheen and Candy to Denim, Charcoal, Midsummer and Deep Sea. Some older filters that looked too similar have been removed. You can now browse filters using small previews of your own photo, making it easier to find the right look. The reset arrow in the filter section now removes the selected look completely without undoing any adjustments you've made yourself.</li>
+          <li xml:lang="de">Im Filter-Werkzeug gibt es 19 neue Looks, von Eisglanz und Bonbon über Jeansblau und Kohle bis hin zu Hochsommer und Tiefsee. Dafür wurden einige ältere Filter entfernt, die sich zu ähnlich sahen. Du kannst dir die Filter jetzt als kleine Vorschauen mit deinem eigenen Foto anzeigen lassen und so leichter den passenden Look finden. Der Zurücksetzen-Pfeil im Filterbereich entfernt einen angewendeten Look jetzt vollständig, ohne deine eigenen Anpassungen rückgängig zu machen.</li>
 
+          <li>The new history brush in the Image Brush tool lets you paint the original image back into selected areas. It works on its own layer, so you can hide it, reduce its strength or remove it entirely at any time. Save As, Export and other batch operations now offer the current folder, the last used folder and custom folder and filename templates. The editor can also save your changes automatically when you switch to another photo.</li>
+          <li xml:lang="de">Mit dem neuen Protokollpinsel im Bildpinsel-Werkzeug kannst du das Originalbild an ausgewählten Stellen wiederherstellen. Die Änderungen liegen auf einer eigenen Ebene, die du jederzeit ausblenden, in ihrer Stärke reduzieren oder ganz löschen kannst. Bei Speichern unter, Exportieren und anderen Stapelverarbeitungen kannst du jetzt zwischen dem aktuellen Ordner, dem zuletzt verwendeten Ordner und eigenen Vorlagen für Ordner und Dateinamen wählen. Außerdem kann der Editor deine Änderungen automatisch speichern, wenn du zu einem anderen Foto wechselst.</li>
+
+          <li>Lightroom Classic catalog import now brings over even more metadata, including corrected capture times, copyright information, GPS coordinates, city and country. Photos taken in another time zone now display their capture time in your local time zone by default, with an option to show the original camera time instead.</li>
+          <li xml:lang="de">Beim Import aus Lightroom-Classic-Katalogen werden jetzt noch mehr Metadaten übernommen, darunter korrigierte Aufnahmezeiten, Copyright-Angaben, GPS-Koordinaten sowie Stadt und Land. Bei Fotos, die in einer anderen Zeitzone aufgenommen wurden, wird die Aufnahmezeit jetzt standardmäßig in deiner lokalen Zeitzone angezeigt. Auf Wunsch kannst du stattdessen die ursprüngliche Kamerazeit anzeigen lassen.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.79-1" date="2026-11-09">
       <description>
         <p>This update brings a fresh app icon, support for Lightroom Classic catalogs and JPEG XL-compressed DNG files, and more natural-looking depth fog and dodge and burn effects:</p>

@@ -561,9 +561,6 @@
   <data name="F_r_private_Nutzung_frei_be3eeedc" xml:space="preserve">
     <value>Kişisel kullanım için ücretsiz</value>
   </data>
-  <data name="Fade_5298d08b" xml:space="preserve">
-    <value>Solma</value>
-  </data>
   <data name="Farbe_89b7957d" xml:space="preserve">
     <value>Renk</value>
   </data>
@@ -11434,9 +11431,6 @@
   <data name="Mondsilber_e7c425a2" xml:space="preserve">
     <value>Ay Gümüşü</value>
   </data>
-  <data name="Farbknall_e0d8a296" xml:space="preserve">
-    <value>Renk Patlaması</value>
-  </data>
   <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
     <value>Kahvehane</value>
   </data>
@@ -11448,5 +11442,38 @@
   </data>
   <data name="Lagune_2e30f214" xml:space="preserve">
     <value>Lagün</value>
+  </data>
+  <data name="Filter_mit_Vorschaubild_zeigen_1f518257" xml:space="preserve">
+    <value>Filtreleri önizleme görüntüsüyle göster</value>
+  </data>
+  <data name="Asphalt_b226dc5a" xml:space="preserve">
+    <value>Asfalt</value>
+  </data>
+  <data name="Laufsteg_57b91d91" xml:space="preserve">
+    <value>Podyum</value>
+  </data>
+  <data name="Fernweh_7303eb29" xml:space="preserve">
+    <value>Gezme tutkusu</value>
+  </data>
+  <data name="Jeansblau_08f26ed1" xml:space="preserve">
+    <value>Kot</value>
+  </data>
+  <data name="Fl_sterkneipe_091092f5" xml:space="preserve">
+    <value>Gizli bar</value>
+  </data>
+  <data name="Herbstlaub_fb133ffc" xml:space="preserve">
+    <value>Sonbahar yaprakları</value>
+  </data>
+  <data name="Kraftvoll_367b4820" xml:space="preserve">
+    <value>Güçlü</value>
+  </data>
+  <data name="Kaminfeuer_9f49c6b8" xml:space="preserve">
+    <value>Şömine</value>
+  </data>
+  <data name="Hochsommer_6421f86a" xml:space="preserve">
+    <value>Yaz ortası</value>
+  </data>
+  <data name="Tiefsee_9226edc0" xml:space="preserve">
+    <value>Derin deniz</value>
   </data>
 </root>

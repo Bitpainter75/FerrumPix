@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.80
 
 ### Changes
 
@@ -12,16 +12,25 @@
   when the file says where it was taken. Pictures are still sorted by the time the camera showed.
   A switch in Settings, Catalog, shows the camera time instead.
 
-- New looks in the filter area: Frost Sheen, Candy, Summer Dust, Moon Silver, Color Burst, Café,
-  Ivory, Fairground and Lagoon. Moon Silver and Ivory are black and white. Desert Light, Film
-  Grain and Timeless got new settings. Base Light, Color Harmony, Luminous Curve, Color Haze and
-  Clear View are gone; their character lives on in Frost Sheen and Candy. Pictures you already
-  edited keep their look.
+- New looks in the filter area: Frost Sheen, Candy, Summer Dust, Moon Silver, Café, Ivory,
+  Fairground, Lagoon, Asphalt, Runway, Wanderlust, Denim, Speakeasy, Charcoal, Autumn Leaves, Bold,
+  Fireside, Midsummer and Deep Sea. Moon Silver and Ivory are black and white. Desert Light, Film
+  Grain and Timeless got new settings.
 
 - Fewer filters that look alike: Contrast is now part of a stronger Dramatic, which also darkens
-  and calms the colors a little, and the instant photo filter is gone, it looked almost like Warm. Aged looks like
-  a yellowed print now. Pictures saved with one of the two removed filters stay as they were; pictures
-  saved with Dramatic or Aged show the new version.
+  and calms the colors a little. The instant photo filter is gone, it looked almost like Warm, and
+  so is Fade, which looked almost like Matte. Aged looks like a yellowed print now. Base Light,
+  Color Harmony, Luminous Curve, Color Haze and Clear View are gone; their character lives on
+  in Frost Sheen and Candy.
+
+- The Filter tool can show its filters as small previews of your picture instead of plain
+  buttons. The new button next to the reset arrow switches between the two. Each preview shows
+  exactly what a click on it does, and a click applies the filter as before. The previews are only
+  made while the Filter tool is open, so they never slow down other work.
+
+- The reset arrow of the filter area now takes a look out completely. Before, it only cleared
+  the name, and the look's light, color and curve settings stayed, so the picture hardly changed.
+  Changes you made by hand after choosing the look stay as they are.
 
 - **History brush**: a new kind in the image brush paints the original picture back, without the
   retouching, brush strokes and adjustments on that spot. The strokes collect in a History layer,
@@ -36,4 +45,3 @@
   asking (Settings, Editor; off by default). Raw files keep their edits next to the picture,
   JPEG, PNG and WebP are overwritten. Where a picture can only be saved under a new name, it still
   asks.
-

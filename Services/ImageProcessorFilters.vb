@@ -2957,7 +2957,7 @@ Namespace Services
         ''' <summary>Die Kurvenform der Referenz fuer Punkt- und Kanalkurven: natuerlicher kubischer Spline
         ''' durch die Punkte (zweite Ableitung an den Enden null), auf 0 bis 255 geklemmt.
         '''
-        ''' Gemessen an Cool Glow (Diagnostics/Reglereichung): dieselben drei Kanalkurven im Raum der
+        ''' Gemessen an einem Kanalkurven-Preset (Diagnostics/Reglereichung): dieselben drei Kanalkurven im Raum der
         ''' Referenz trafen deren Bild mit diesem Spline auf dE 3,2, mit PCHIP auf 6,9. PCHIP hob die
         ''' Gruenkurve (0,11 79,82 ...) in den Tiefen staerker an (bei 10 auf 19,5 statt 15,9), und im
         ''' ProPhoto-Raum wurde daraus ein Gruenstich in dunklen Haaren und Vorhaengen. Der Preis ist
@@ -3148,7 +3148,7 @@ Namespace Services
             ' Bilder, alle 40 Stellungen hsl-*+-60) trifft die glatte Ueberblendung besser: im
             ' Mittel 39,6 statt 37,3 Prozent, 28 Stellungen besser, 11 schlechter (Aqua, Magenta
             ' Saettigung -60, Blau Farbton). Und der steile Uebergang verstaerkte Rauschen: liegen
-            ' zwei Nachbarbaender weit auseinander (Cool Glow: Blau -7, Lila +60 Farbton, Saettigung
+            ' zwei Nachbarbaender weit auseinander (ein Kanalkurven-Preset: Blau -7, Lila +60 Farbton, Saettigung
             ' 0 gegen -63), sprangen einzelne Bildpunkte, deren Farbton um die Grenze schwankt;
             ' eine halbe 8-Bit-Stufe am Eingang aenderte bei 0,118 Prozent der Bildpunkte die Farbe
             ' um mehr als 3 dE, glatt bei 0,036 Prozent (TEL_0674, Schriftzug im Hintergrund).
@@ -3172,9 +3172,9 @@ Namespace Services
         ''' "weich" (das ist ein Weichzeichner, kein Farbfilter).
         ''' Skia liest die 5. Matrixspalte (Offset) in der Skala 0..1, NICHT 0..255 - gemessen:
         ''' Offset 0.1 auf Grau 100 ergibt 126, also +25.5 Tonwerte. Die Offsets unten
-        ''' sind aber als TONWERTE gemeint. Ohne die Division waren fuenf Presets unbrauchbar:
-        ''' "Fade"/"Vintage" lieferten reines Weiss, "Kontrast" reines Schwarz, "Warm"/"Kuehl"
-        ''' knallorange bzw. knallblau. Die Zahlen bleiben in Tonwerten lesbar, geteilt wird hier.
+        ''' sind aber als TONWERTE gemeint. Ohne die Division waren mehrere Presets unbrauchbar:
+        ''' "Vintage" lieferte reines Weiss, "Warm"/"Kuehl" knallorange bzw. knallblau. Die Zahlen
+        ''' bleiben in Tonwerten lesbar, geteilt wird hier.
         ''' </summary>
         Friend Shared Function BuildFilterPresetMatrix(preset As String) As Single()
             Dim matrix As Single() = Nothing
@@ -3202,22 +3202,6 @@ Namespace Services
                         0, 0, 1.1F, 0, 8.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
-                Case "fade"
-                    ' Werte angezogen (vorher Kanalshift 10, unsichtbar): ein "Fade"
-                    ' lebt vom angehobenen Schwarzpunkt - Koeffizienten runter, Offset deutlich rauf.
-                    matrix = New Single() {
-                        0.80F, 0.04F, 0.04F, 0, 30.0F / 255.0F,
-                        0.04F, 0.80F, 0.04F, 0, 30.0F / 255.0F,
-                        0.04F, 0.04F, 0.82F, 0, 34.0F / 255.0F,
-                        0, 0, 0, 1, 0
-                    }
-                Case "kontrast"
-                    matrix = New Single() {
-                        1.16F, 0, 0, 0, -18.0F / 255.0F,
-                        0, 1.16F, 0, 0, -18.0F / 255.0F,
-                        0, 0, 1.16F, 0, -18.0F / 255.0F,
-                        0, 0, 0, 1, 0
-                    }
                 Case "sepia"
                     matrix = New Single() {
                         0.393F, 0.769F, 0.189F, 0, 0,
@@ -3227,7 +3211,7 @@ Namespace Services
                     }
                 Case "matt"
                     ' Werte angezogen (vorher Kanalshift 15). Matt = flacher Kontrast mit
-                    ' leicht warmem Grundton, deutlicher abgesetzt von "Fade" (neutral).
+                    ' leicht warmem Grundton.
                     matrix = New Single() {
                         0.84F, 0.06F, 0.04F, 0, 26.0F / 255.0F,
                         0.04F, 0.84F, 0.04F, 0, 24.0F / 255.0F,
@@ -3244,11 +3228,9 @@ Namespace Services
                         0, 0, 0, 1, 0
                     }
                 Case "dramatisch"
-                    ' Vereint das frühere "Kontrast" (reine Spreizung) und "Dramatisch" (Spreizung mit
-                    ' warmem Stich), die gemessen kaum zu unterscheiden waren. Jetzt deutlich mehr
-                    ' Kontrast (Faktor 1,4), ein Viertel zur Luminanz entsättigt, damit die Spreizung
-                    ' die Farben nicht aufbläht, und das Mittelgrau leicht abgedunkelt (128 auf 120).
-                    ' Damit setzt es sich von "Farbknall" ab, der aufhellt und Farbe dazugibt.
+                    ' Kräftiger Kontrast (Faktor 1,4), ein Viertel zur Luminanz entsättigt, damit die
+                    ' Spreizung die Farben nicht aufbläht, und das Mittelgrau leicht abgedunkelt
+                    ' (128 auf 120).
                     matrix = New Single() {
                         1.155F, 0.206F, 0.04F, 0, -58.0F / 255.0F,
                         0.105F, 1.256F, 0.04F, 0, -59.0F / 255.0F,
@@ -3277,15 +3259,6 @@ Namespace Services
                         -0.0235F, -0.0460F, -0.0089F, 0, 60.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
-                Case "polaroid"
-                    ' Kräftiger warmer Gelbstich mit moderat angehobenen Schwarzwerten (Sofortbild-Charakter),
-                    ' Kontrast bleibt weitgehend erhalten statt komplett verwaschen wie bei "Fade".
-                    matrix = New Single() {
-                        0.95F, 0.15F, -0.05F, 0, 10.0F / 255.0F,
-                        0.05F, 0.90F, 0.05F, 0, 6.0F / 255.0F,
-                        -0.05F, 0.05F, 0.75F, 0, 2.0F / 255.0F,
-                        0, 0, 0, 1, 0
-                    }
                 Case "vhs"
                     ' Deutlich kühlerer Cyan-/Blaustich mit sichtbarem Kanal-Bluten, typisch für Analogvideo.
                     matrix = New Single() {
@@ -3297,7 +3270,7 @@ Namespace Services
                 Case "bild auf alt", "alt", "antik", "vintage"
                     ' Ein vergilbter Abzug: zu zwei Dritteln entsättigt (Rec.601), gelbbraun getönt,
                     ' Schwarz angehoben (30/24/14) und Weiß abgesenkt (249/223/167). Lag vorher als
-                    ' blosser Warmton gemessen dicht bei "Warm" und "Polaroid".
+                    ' blosser Warmton gemessen dicht bei "Warm".
                     matrix = New Single() {
                         0.468F, 0.329F, 0.064F, 0, 30.0F / 255.0F,
                         0.151F, 0.571F, 0.058F, 0, 24.0F / 255.0F,

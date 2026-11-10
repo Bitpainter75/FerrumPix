@@ -268,19 +268,20 @@ Namespace Services
         ''' der Galerie angeboten. Die Mehrregler-Looks werden dort als normale Reglerwerte erzeugt,
         ''' nicht als Farbmatrix.</summary>
         Public Shared ReadOnly FilterPresetNames As String() = {
-            "Keine", "Eisglanz", "Bonbon", "Sommerstaub", "Mondsilber", "Farbknall", "Kaffeehaus",
+            "Keine", "Eisglanz", "Bonbon", "Sommerstaub", "Mondsilber", "Kaffeehaus",
             "Cremeweiß", "Jahrmarkt", "Lagune", "Wüstenlicht", "Kornfilm", "Zeitlos",
-            "S/W", "Warm", "Kühl", "Fade", "Sepia", "Matt", "Cross", "Dramatisch",
+            "Asphalt", "Laufsteg", "Fernweh", "Jeansblau", "Flüsterkneipe", "Kohle",
+            "Herbstlaub", "Kraftvoll", "Kaminfeuer", "Hochsommer", "Tiefsee",
+            "S/W", "Warm", "Kühl", "Sepia", "Matt", "Cross", "Dramatisch",
             "Weich", "Noir", "Duoton", "VHS", "Alt"
         }
-        ' "Kontrast" ist in "Dramatisch" aufgegangen, "Polaroid" lag gemessen fast auf "Warm"; beide
-        ' stehen nicht mehr in der Liste. Ihre Matrizen bleiben (ImageProcessor.BuildFilterPresetMatrix):
-        ' ein Rezept, das einen davon trägt, sieht weiter so aus wie beim Speichern.
 
         ''' <summary>Die eingebauten Mehrregler-Looks, in der Reihenfolge der Filterliste.</summary>
         Public Shared ReadOnly BuiltInLookNames As String() = {
-            "Eisglanz", "Bonbon", "Sommerstaub", "Mondsilber", "Farbknall", "Kaffeehaus",
-            "Cremeweiß", "Jahrmarkt", "Lagune", "Wüstenlicht", "Kornfilm", "Zeitlos"
+            "Eisglanz", "Bonbon", "Sommerstaub", "Mondsilber", "Kaffeehaus",
+            "Cremeweiß", "Jahrmarkt", "Lagune", "Wüstenlicht", "Kornfilm", "Zeitlos",
+            "Asphalt", "Laufsteg", "Fernweh", "Jeansblau", "Flüsterkneipe", "Kohle",
+            "Herbstlaub", "Kraftvoll", "Kaminfeuer", "Hochsommer", "Tiefsee"
         }
 
         ''' <summary>True für einen der eingebauten Mehrregler-Looks.</summary>
@@ -375,12 +376,6 @@ Namespace Services
                         .ColorGradeShadowHue = 228, .ColorGradeShadowSaturation = 38,
                         .ColorGradeHighlightHue = 56, .ColorGradeHighlightSaturation = 24, .ColorGradeBlending = 100,
                         .CurveRgbPoints = "0,8;32,15;56,46;128,141;200,218;255,255"}
-                Case "Farbknall"
-                    ' Viel Kontrast und Klarheit, offene Tiefen, leicht mehr Farbe.
-                    Return New ImageAdjustments With {
-                        .Contrast = 58, .Highlights = 5, .ShadowsLevel = 27, .Whites = 11, .Blacks = -10, .Clarity = 20,
-                        .Vibrance = 8,
-                        .CurveRgbPoints = "0,0;40,32;128,128;200,205;255,255"}
                 Case "Kaffeehaus"
                     ' Warm gedämpft: Lichter weit zurück, Violett fast grau, runde Vignette.
                     Return New ImageAdjustments With {
@@ -456,6 +451,160 @@ Namespace Services
                         .ColorGradeHighlightHue = 36, .ColorGradeHighlightSaturation = 23,
                         .ColorGradeBalance = -33, .ColorGradeBlending = 100,
                         .CurveRgbPoints = "0,33;48,55;128,111;192,174;255,240"}
+                Case "Asphalt"
+                    ' Flach und gedeckt: Lichter weit zurück, Tiefen ganz offen, Schwarz matt, Grün,
+                    ' Blau und Violett fast grau, Haut hell.
+                    Return New ImageAdjustments With {
+                        .Contrast = -60, .Saturation = -12, .Highlights = -95, .ShadowsLevel = 95, .Whites = 45,
+                        .Blacks = -60, .Haze = -12, .Vibrance = -25, .Clarity = 4, .Vignette = 16,
+                        .CalibrationRedHue = 32, .CalibrationRedSaturation = -8,
+                        .RedHue = 10, .OrangeSaturation = -25, .OrangeLuminance = 44, .YellowHue = -28,
+                        .YellowSaturation = 14, .YellowLuminance = -6,
+                        .GreenHue = -48, .GreenSaturation = -74, .AquaHue = 44, .BlueHue = -12, .BlueSaturation = -76,
+                        .BlueLuminance = -20, .PurpleHue = 12, .PurpleSaturation = -90, .PurpleLuminance = -8,
+                        .ColorGradeShadowHue = 192, .ColorGradeShadowSaturation = 7,
+                        .ColorGradeMidtoneHue = 42, .ColorGradeMidtoneSaturation = 6,
+                        .ColorGradeHighlightHue = 57, .ColorGradeHighlightSaturation = 8,
+                        .ColorGradeBalance = -9, .ColorGradeBlending = 45,
+                        .CurveRgbPoints = "0,30;32,33;64,52;96,79;128,123;160,162;192,196;224,216;255,225",
+                        .CurveRedPoints = "0,0;40,17;94,78;128,128;192,204;255,255",
+                        .CurveGreenPoints = "0,0;37,23;94,78;128,128;192,204;255,255",
+                        .CurveBluePoints = "0,0;37,23;94,78;128,128;192,204;255,255"}
+                Case "Laufsteg"
+                    ' Verblasst und kühl in den Tiefen: Schwarz angehoben, Gelb fast weg, Grün gedämpft.
+                    Return New ImageAdjustments With {
+                        .Contrast = 3, .Saturation = -26, .Highlights = -17, .ShadowsLevel = 26, .Whites = -12,
+                        .Blacks = 22, .Haze = -3, .Vibrance = 32, .Clarity = -14,
+                        .CalibrationRedHue = 6, .CalibrationGreenHue = 30, .CalibrationGreenSaturation = 12,
+                        .CalibrationBlueHue = -10, .CalibrationShadowTint = -60,
+                        .YellowHue = -16, .YellowSaturation = -60, .GreenHue = 5, .GreenSaturation = -40,
+                        .GreenLuminance = 8, .AquaHue = 8, .AquaSaturation = -16, .BlueHue = -6, .BlueSaturation = -12,
+                        .BlueLuminance = -22, .PurpleSaturation = -20, .MagentaSaturation = -22,
+                        .ColorGradeShadowHue = 288, .ColorGradeShadowSaturation = 5,
+                        .ColorGradeMidtoneHue = 35, .ColorGradeMidtoneSaturation = 16,
+                        .ColorGradeHighlightHue = 112, .ColorGradeHighlightSaturation = 10,
+                        .ColorGradeGlobalHue = 209, .ColorGradeGlobalSaturation = 4,
+                        .ColorGradeBalance = -7, .ColorGradeBlending = 62,
+                        .CurveRgbPoints = "0,37;32,47;64,62;96,99;128,133;160,168;192,201;224,224;255,243",
+                        .CurveRedPoints = "0,0;50,32;128,128;214,228;255,255",
+                        .CurveGreenPoints = "0,0;50,32;128,128;214,228;255,255",
+                        .CurveBluePoints = "0,0;50,32;128,128;214,228;255,255"}
+                Case "Fernweh"
+                    ' Warm getönt bei leicht kühlem Weiß, Blau kräftig, Gelb und Grün zurück. Ohne feste
+                    ' Kelvinzahl, wie bei Sommerstaub.
+                    Return New ImageAdjustments With {
+                        .Contrast = -20, .Saturation = -12, .Highlights = -16, .ShadowsLevel = 18, .Blacks = -12,
+                        .Temperature = -40, .Tint = -12, .Vibrance = 30, .Clarity = -6,
+                        .CalibrationRedHue = 45, .CalibrationRedSaturation = 30, .CalibrationGreenSaturation = -24,
+                        .CalibrationBlueHue = -18, .CalibrationBlueSaturation = -50, .CalibrationShadowTint = 32,
+                        .YellowSaturation = -45, .YellowLuminance = 24, .GreenHue = 22, .GreenSaturation = -54,
+                        .AquaSaturation = -44, .BlueSaturation = 60, .BlueLuminance = 20,
+                        .ColorGradeShadowHue = 25, .ColorGradeShadowSaturation = 12,
+                        .ColorGradeHighlightHue = 45, .ColorGradeHighlightSaturation = 25,
+                        .ColorGradeBalance = 18, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,12;64,60;128,136;192,206;255,242"}
+                Case "Jeansblau"
+                    ' Verwaschen: Lichter zurück, Schwarz hoch, Grün und Gelb fast grau, Tiefen blau.
+                    ' Die Kanalkurven drücken die Tiefen in Rot und Grün und heben sie in Blau, das
+                    ' gibt den Jeansstich; die Kalibrierung macht Blau satter.
+                    Return New ImageAdjustments With {
+                        .Contrast = -40, .Saturation = 25, .Highlights = -50, .ShadowsLevel = 45, .Whites = -28,
+                        .Blacks = 32, .Vibrance = -28, .Clarity = -15,
+                        .CalibrationRedHue = 22, .CalibrationRedSaturation = -10, .CalibrationGreenHue = -60,
+                        .CalibrationGreenSaturation = 8, .CalibrationBlueHue = -10, .CalibrationBlueSaturation = 42,
+                        .CalibrationShadowTint = 10,
+                        .RedHue = -8, .RedSaturation = -12, .OrangeHue = -6, .OrangeSaturation = -35,
+                        .OrangeLuminance = 5, .YellowHue = -6, .YellowSaturation = -65, .GreenHue = 10,
+                        .GreenSaturation = -92, .GreenLuminance = 20, .AquaSaturation = -20, .BlueSaturation = -12,
+                        .BlueLuminance = -8, .PurpleSaturation = -25, .MagentaSaturation = -20,
+                        .ColorGradeShadowHue = 210, .ColorGradeShadowSaturation = 13,
+                        .ColorGradeMidtoneHue = 36, .ColorGradeMidtoneSaturation = 9,
+                        .ColorGradeHighlightHue = 38, .ColorGradeHighlightSaturation = 16,
+                        .ColorGradeBalance = -18, .ColorGradeBlending = 80,
+                        .CurveRgbPoints = "0,24;56,48;104,105;152,174;200,223;255,238",
+                        .CurveRedPoints = "0,0;50,36;128,128;212,222;255,255",
+                        .CurveGreenPoints = "0,0;50,32;128,128;214,228;255,255",
+                        .CurveBluePoints = "0,12;56,34;128,128;204,226;255,255"}
+                Case "Flüsterkneipe"
+                    ' Fast schwarzweiß, nur Haut und Rot behalten etwas Farbe; weich, Tiefen offen.
+                    Return New ImageAdjustments With {
+                        .Contrast = -32, .Saturation = 10, .Highlights = -28, .ShadowsLevel = 58, .Whites = 12,
+                        .Blacks = -16, .Haze = -12, .Vibrance = -30, .Clarity = -14,
+                        .CalibrationShadowTint = 14,
+                        .RedSaturation = -12, .OrangeSaturation = -30, .YellowSaturation = -70, .GreenSaturation = -85,
+                        .AquaSaturation = -78, .BlueSaturation = -74, .PurpleSaturation = -80, .MagentaSaturation = -30,
+                        .ColorGradeMidtoneHue = 40, .ColorGradeMidtoneSaturation = 9,
+                        .ColorGradeHighlightHue = 45, .ColorGradeHighlightSaturation = 6, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,0;64,46;128,126;192,198;255,236"}
+                Case "Kohle"
+                    ' Dunkel und hart: Tiefen zu, Schwarz angehoben, alles außer Rot und Haut grau,
+                    ' Tiefen blau getönt.
+                    Return New ImageAdjustments With {
+                        .Exposure = -4, .Contrast = 34, .Saturation = 15, .Highlights = -18, .ShadowsLevel = -42,
+                        .Whites = -26, .Blacks = 42, .Temperature = 10, .Vibrance = 18, .Vignette = 20,
+                        .RedSaturation = -22, .OrangeSaturation = -28, .YellowSaturation = -88,
+                        .GreenSaturation = -90, .GreenLuminance = -20, .AquaSaturation = -90, .BlueSaturation = -90,
+                        .PurpleSaturation = -88, .MagentaSaturation = -86,
+                        .ColorGradeShadowHue = 228, .ColorGradeShadowSaturation = 15,
+                        .ColorGradeHighlightHue = 85, .ColorGradeHighlightSaturation = 8,
+                        .ColorGradeBalance = -60, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,0;80,66;160,158;255,255"}
+                Case "Herbstlaub"
+                    ' Orange und Gelb kräftig und zum Rot gedreht, Blau dunkler, Lichter zurück.
+                    Return New ImageAdjustments With {
+                        .Contrast = 12, .Highlights = -52, .ShadowsLevel = 18, .Blacks = 25, .Clarity = 6,
+                        .CalibrationRedSaturation = -10, .CalibrationGreenHue = -12, .CalibrationBlueHue = -32,
+                        .CalibrationBlueSaturation = 40,
+                        .OrangeHue = -12, .OrangeSaturation = 20, .OrangeLuminance = 15,
+                        .YellowHue = -20, .YellowSaturation = 14, .YellowLuminance = 20,
+                        .GreenHue = -26, .GreenSaturation = -14, .AquaSaturation = -18, .BlueLuminance = -28,
+                        .CurveRgbPoints = "0,6;48,34;128,130;200,208;255,255"}
+                Case "Kraftvoll"
+                    ' Viel Kontrast bei weit zurückgenommenen Lichtern, warme Töne heller, Blau gedämpft,
+                    ' weiche Vignette.
+                    Return New ImageAdjustments With {
+                        .Contrast = 52, .Saturation = 18, .Highlights = -78, .ShadowsLevel = 22, .Whites = -28,
+                        .Blacks = 10, .Vibrance = 12, .Vignette = 14, .VignetteTransition = 10, .VignetteFeather = 80,
+                        .CalibrationGreenHue = -10, .CalibrationBlueHue = -15, .CalibrationBlueSaturation = -12,
+                        .RedLuminance = 20, .OrangeSaturation = 10, .OrangeLuminance = 30,
+                        .YellowSaturation = 12, .YellowLuminance = 36, .GreenSaturation = 20, .BlueSaturation = -30,
+                        .CurveRgbPoints = "0,5;40,30;128,134;210,226;255,255"}
+                Case "Kaminfeuer"
+                    ' Warm über alles: Gelb und Grün zum Orange, warme Tönung, Lichter zurück.
+                    Return New ImageAdjustments With {
+                        .Contrast = 8, .Highlights = -50, .ShadowsLevel = 22, .Blacks = 26,
+                        .CalibrationRedHue = 12, .CalibrationGreenHue = 15, .CalibrationBlueHue = -12,
+                        .CalibrationBlueSaturation = 9,
+                        .RedHue = -10, .OrangeHue = -15, .OrangeLuminance = 22, .YellowHue = -25, .YellowLuminance = 28,
+                        .GreenHue = -25, .GreenLuminance = 24, .BlueLuminance = -28,
+                        .ColorGradeShadowHue = 35, .ColorGradeShadowSaturation = 12,
+                        .ColorGradeHighlightHue = 28, .ColorGradeHighlightSaturation = 28, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,6;48,36;128,128;200,210;255,255"}
+                Case "Hochsommer"
+                    ' Offene Tiefen, Weiß zurück, Grün dunkler und gedämpft, ein Hauch Grün in den Tiefen.
+                    Return New ImageAdjustments With {
+                        .Saturation = 5, .Highlights = -24, .ShadowsLevel = 35, .Whites = -28, .Blacks = 14, .Vibrance = 5,
+                        .Vignette = 8,
+                        .CalibrationRedHue = 6, .CalibrationRedSaturation = 6,
+                        .CalibrationGreenHue = -12, .CalibrationGreenSaturation = 22, .CalibrationBlueHue = -12,
+                        .CalibrationBlueSaturation = 10, .CalibrationShadowTint = 12,
+                        .RedLuminance = 16, .OrangeSaturation = 12, .OrangeLuminance = -4, .YellowSaturation = -6,
+                        .YellowLuminance = 10, .GreenHue = 12, .GreenSaturation = -38, .GreenLuminance = -34,
+                        .ColorGradeShadowHue = 75, .ColorGradeShadowSaturation = 4,
+                        .ColorGradeHighlightHue = 115, .ColorGradeHighlightSaturation = 4, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,3;29,25;61,59;188,203;255,255",
+                        .CurveGreenPoints = "0,12;71,69;139,136;255,255",
+                        .CurveBluePoints = "0,0;128,133;255,255"}
+                Case "Tiefsee"
+                    ' Klar und kühl: viel Kontrast, Sättigung weit zurück bei kräftiger Dynamik, Lichter
+                    ' angehoben, Grün zum Gelb gedreht und satter, Blau satter.
+                    Return New ImageAdjustments With {
+                        .Contrast = 40, .Saturation = -48, .Highlights = 36, .ShadowsLevel = 30, .Whites = 26,
+                        .Vibrance = 28, .Clarity = 12,
+                        .YellowHue = -20, .YellowLuminance = -20, .GreenHue = -34, .GreenSaturation = 28,
+                        .GreenLuminance = -12, .AquaSaturation = -14, .BlueSaturation = 20, .BlueLuminance = -14,
+                        .MagentaLuminance = -22,
+                        .CurveRgbPoints = "0,10;48,30;96,72;176,184;255,255"}
             End Select
             Return Nothing
         End Function

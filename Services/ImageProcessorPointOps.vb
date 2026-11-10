@@ -280,14 +280,14 @@ Namespace Services
                              adj.Brightness <> 0
             ' Kalibrierung wirkt auf die Primaerfarben des ABGEGLICHENEN Bildes, also NACH dem
             ' Weissabgleich und vor der Saettigung. Davor gerechnet traf sie mit einem kraeftigen
-            ' Weissabgleich nicht: an 20 Bildern mit Sandlot (2850 K, Toenung -66) und dessen
+            ' Weissabgleich nicht: an 20 Bildern mit einem warmen Preset (2850 K, Toenung -66) und dessen
             ' Kalibrierung, die Matrix direkt auf die Referenz mit Weissabgleich allein gelegt, lag
             ' die Vorhersage danach bei 7,5 dE, davor bei 17,1, ohne Kalibrierung bei 20,5
             ' (kalreihenfolge.py). Ohne Weissabgleich ist die Reihenfolge gleichgueltig.
             '
             ' SIE RECHNET LINEAR, in derselben Matrix wie der Weissabgleich (3x3 ohne Versatz), der
             ' Pixeldurchlauf bleibt also unveraendert schnell. Als Matrix auf gammakodierten Werten
-            ' schaukelte sie sich mit den Kurven eines Presets auf: an TEL_0674 mit Cool Glow Rot
+            ' schaukelte sie sich mit den Kurven eines Presets auf: an TEL_0674 mit einem Kanalkurven-Preset Rot
             ' 1,34 statt 1,20 der Buntheit der Referenz, der Farbton 6 statt 3 Grad daneben. Linear
             ' und neu geeicht trifft auch jeder Regler fuer sich besser (BuildCalibrationMatrix).
             Dim kalibrierung = BuildCalibrationMatrix(adj)
@@ -702,7 +702,7 @@ Namespace Services
         ''' <summary>Dieselben Zahlen fuer die Matrix auf der Rampe vor der ACR3-Kurve (Weissabgleich ab
         ''' Modell 4 bei RAW, WhiteBalanceOnRamp), ebenso angepasst (kalmodell.py mit
         ''' KALMODELL_RAMPE=1). Rot und Gruen saettigen dort nach oben staerker, Blau schwaecher; die
-        ''' Sandlot-Kalibrierung ohne Schattentoenung trifft damit 5,20 statt 5,72 dE.</summary>
+        ''' Kalibrierung eines warmen Presets ohne Schattentoenung trifft damit 5,20 statt 5,72 dE.</summary>
         Friend Shared CalibrationGainsOnRamp As Single() = {29.0F, 1.48F, 1.03F, 28.0F, 1.45F, 1.03F, 30.0F, 1.13F, 0.97F}
 
         ''' <summary>Die Kalibrierung als EINE lineare Matrix auf sRGB, oder Nothing.
@@ -715,7 +715,7 @@ Namespace Services
         '''
         ''' Vorher drehte und saettigte jede Primaerfarbe in linearem sRGB mit eigener, zeilennormierter
         ''' Matrix, nacheinander. Einzeln trafen die Regler damit leidlich, zusammen gar nicht: die
-        ''' Kalibrierung von Sandlot (Rot +100/+45, Gruen -62/-33, Blau -62/-100) lag 17,1 dE neben der
+        ''' Kalibrierung eines warmen Presets (Rot +100/+45, Gruen -62/-33, Blau -62/-100) lag 17,1 dE neben der
         ''' Referenz bei 16,7 Wirkung, die Blau-Saettigung wirkte nur auf Blau statt vor allem Gelb und
         ''' Gruen zu entfaerben. Mit diesem Modell 5,7; die Einzelregler bei +-100 im Mittel 3,3 statt
         ''' 5,0 (alles in der Naeherung von kalmodell.py, ohne Tonkurve).</summary>
@@ -820,7 +820,7 @@ Namespace Services
         '''
         ''' WARUM: das Referenzprogramm gleicht vor seiner Tonkurve ab. Hinter der Kurve verfaerbten
         ''' sich bei einem kraeftigen Weissabgleich die Lichter voll, bei der Referenz laufen sie
-        ''' gegen Weiss aus; an 10 Bildern mit Sandlot (2850 K, Toenung -66) trafen frei gesuchte
+        ''' gegen Weiss aus; an 10 Bildern mit einem warmen Preset (2850 K, Toenung -66) trafen frei gesuchte
         ''' Kanalgewinne die Referenz vor der Kurve mit 3,67 dE, dahinter mit 5,08, jedes Bild
         ''' besser (wbreihenfolge.py). Oeffentlich, weil die Pipette dieselbe Entscheidung braucht.</summary>
         Public Shared Function WhiteBalanceOnRamp(adj As ImageAdjustments) As Boolean
@@ -1206,7 +1206,7 @@ Namespace Services
         ''' der beiden beim Referenzprogramm einen Teil seiner Wirkung, um so mehr, je groesser der
         ''' andere Betrag gegen den eigenen ist. Gemessen mit Diagnostics/Reglereichung/daempfung.py
         ''' an 57 Bildern (Lichter/Tiefen -50/+50, -100/+100, -100/+50, -50/+100, +50/-50) und den
-        ''' Werten von Cool Glow an 27 Bildern: Lichter verlieren 10 bis 42 %, Tiefen 6 bis 34 %, wir
+        ''' Werten eines Kanalkurven-Presets an 27 Bildern: Lichter verlieren 10 bis 42 %, Tiefen 6 bis 34 %, wir
         ''' vorher 1 bis 6 %. Angepasst als Anteil je Verhaeltnis der Betraege, gedeckelt.</summary>
         Private Const HighlightsDampingPerRatio As Double = 0.24
         Private Const ShadowsDampingPerRatio As Double = 0.19
@@ -2108,7 +2108,7 @@ Namespace Services
             If MixerProPhotoChromaGate Then
                 ' Dazu das Tor des alten Wegs: die echte Buntheit der Fuehrung in sRGB (max - min),
                 ' voll ab 0,2. Die HSV-Saettigung im linearen Raum ist gerade in tiefen Schatten auch bei
-                ' Rauschen gross; ohne dieses Tor faerbte Cool Glow die dunklen Flaechen der
+                ' Rauschen gross; ohne dieses Tor faerbte ein Kanalkurven-Preset die dunklen Flaechen der
                 ' Konzertbilder rot (Tiefen R +8 statt +4 gegen den Export).
                 Dim chroma = Math.Max(guideR, Math.Max(guideG, guideB)) - Math.Min(guideR, Math.Min(guideG, guideB))
                 Dim cg = Math.Min(1.0, Math.Max(0.0, chroma) / MixerProPhotoChromaGateFull)
@@ -2209,7 +2209,7 @@ Namespace Services
         Friend Shared MixerBandsInProPhoto As Boolean = True
 
         ''' <summary>DIE KURVEN LAUFEN HINTER DEM FARBMISCHER, sobald beide im Rezept stehen, wie bei
-        ''' der Referenz. Gemessen an TEL_0674 mit Cool Glow gegen den DNG-Konverter (2026-10-27,
+        ''' der Referenz. Gemessen an TEL_0674 mit einem Kanalkurven-Preset gegen den DNG-Konverter (2026-10-27,
         ''' Teil-Presets "ohne HSL" gegen "alle"): das Teal, das die Kurven des Presets in die Tiefen
         ''' legen, laesst der Farbmischer der Referenz trotz Aqua -36 und Gruen -62 stehen (Buntheit
         ''' danach 0,96 bis 1,01), weil er das Bild VOR den Kurven sieht; unser Mischer hinter den
@@ -4004,7 +4004,7 @@ Namespace Services
         ''' Bildpunkt selbst. Ohne sie entschied das Rauschen jedes Bildpunkts, welches Band und
         ''' wie viel davon greift: zwischen zwei weit auseinanderliegenden Baendern oder im steilen
         ''' Teil eines Tors wechselten Nachbarn die Behandlung, und eine Flaeche wurde fleckig
-        ''' (TEL_0674 mit Cool Glow, Schriftzug im Hintergrund).</summary>
+        ''' (TEL_0674 mit einem Kanalkurven-Preset, Schriftzug im Hintergrund).</summary>
         Friend Shared MixerGuideSigma As Single = 1.5F
 
         ''' <summary>Das geglaettete Bild, aus dem der Farbmischer seine Fuehrungsfarbe nimmt, im
@@ -4343,7 +4343,7 @@ Namespace Services
                                 ' In den Tiefen zusaetzlich ein schwaches C-Tor (voll ab C 0,04): ein
                                 ' dunkles Teal (C 0,06) bleibt voll im Band, ein fast neutraler, nur
                                 ' verrauschter Punkt nicht. Ohne das sprang am Rand eines roten
-                                ' Scheinwerfers unter Cool Glow jeder dunkle Punkt zwischen Aqua -43,
+                                ' Scheinwerfers unter einem Kanalkurven-Preset jeder dunkle Punkt zwischen Aqua -43,
                                 ' Blau -38, Lila +24 und Magenta +28 und zog eine zackige Kante.
                                 Dim chromaW = Math.Min(1.0, If(gateLum > 0.5, chromaC, gateSat) / 0.1)
                                 chromaW = chromaW * chromaW * (3.0 - 2.0 * chromaW)

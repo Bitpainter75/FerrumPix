@@ -561,9 +561,6 @@
   <data name="F_r_private_Nutzung_frei_be3eeedc" xml:space="preserve">
     <value>个人使用免费</value>
   </data>
-  <data name="Fade_5298d08b" xml:space="preserve">
-    <value>褪色</value>
-  </data>
   <data name="Farbe_89b7957d" xml:space="preserve">
     <value>颜色</value>
   </data>
@@ -11388,9 +11385,6 @@
   <data name="Mondsilber_e7c425a2" xml:space="preserve">
     <value>月银</value>
   </data>
-  <data name="Farbknall_e0d8a296" xml:space="preserve">
-    <value>色彩爆发</value>
-  </data>
   <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
     <value>咖啡馆</value>
   </data>
@@ -11402,5 +11396,38 @@
   </data>
   <data name="Lagune_2e30f214" xml:space="preserve">
     <value>泻湖</value>
+  </data>
+  <data name="Filter_mit_Vorschaubild_zeigen_1f518257" xml:space="preserve">
+    <value>以预览图显示滤镜</value>
+  </data>
+  <data name="Asphalt_b226dc5a" xml:space="preserve">
+    <value>柏油</value>
+  </data>
+  <data name="Laufsteg_57b91d91" xml:space="preserve">
+    <value>秀场</value>
+  </data>
+  <data name="Fernweh_7303eb29" xml:space="preserve">
+    <value>远方</value>
+  </data>
+  <data name="Jeansblau_08f26ed1" xml:space="preserve">
+    <value>丹宁</value>
+  </data>
+  <data name="Fl_sterkneipe_091092f5" xml:space="preserve">
+    <value>地下酒吧</value>
+  </data>
+  <data name="Herbstlaub_fb133ffc" xml:space="preserve">
+    <value>秋叶</value>
+  </data>
+  <data name="Kraftvoll_367b4820" xml:space="preserve">
+    <value>强劲</value>
+  </data>
+  <data name="Kaminfeuer_9f49c6b8" xml:space="preserve">
+    <value>炉火</value>
+  </data>
+  <data name="Hochsommer_6421f86a" xml:space="preserve">
+    <value>盛夏</value>
+  </data>
+  <data name="Tiefsee_9226edc0" xml:space="preserve">
+    <value>深海</value>
   </data>
 </root>

@@ -141,7 +141,7 @@ Namespace Services
             Dim adj As ImageAdjustments = If(baseLook Is Nothing, New ImageAdjustments(), baseLook.Clone())
             Dim d As Double
             ' EIN PRESET KOMMT VOLLSTAENDIG AN (seit 2026-10-25). Bis dahin liess ein PV2012-Preset mit
-            ' allen drei Kanalkurven und einer Masterkurve (der "Kanalkurven-Look", etwa Cool Glow)
+            ' allen drei Kanalkurven und einer Masterkurve (der "Kanalkurven-Look")
             ' Tonregler, Masterkurve, Kalibrierung, Farbmischer, Schaerfe und Rauschminderung weg,
             ' weil die Kombination auf dem alten sRGB-Weg milchig bzw. gruen wurde. Das betraf rund ein
             ' Drittel aller Presets; heute rechnen Kurven im Raum und mit dem Spline der Referenz, und
@@ -183,7 +183,7 @@ Namespace Services
             If TryGetXmpDouble(values, "Saturation", d) Then adj.Saturation = Clamp100(d)
             ' Schaerfe und Rauschminderung gelten AUCH im Kanalkurven-Look: sie haben mit dem
             ' milchigen bzw. gruenen Ergebnis, gegen das er gebaut ist, nichts zu tun. Bis zum
-            ' 2026-10-25 fielen sie dort mit weg, Cool Glow kam ohne seine Schaerfe 25 und sein
+            ' 2026-10-25 fielen sie dort mit weg, ein solches Preset kam ohne seine Schaerfe 25 und sein
             ' Farbrauschen 25 an.
             If TryGetXmpDouble(values, "Sharpness", d) Then adj.Sharpness = Clamp(d, 0, 150)   ' Adobe-Bereich 0..150
             ' Schärfen-Feinregler. crs:SharpenRadius ist 0.5..3.0 (Adobe-Standard 1.0 = neutral),
@@ -437,7 +437,7 @@ Namespace Services
             ''' SCHWARZWEISS-MISCHER (crs:GrayMixer*). Im S/W-Modus ersetzt das Schema das ganze HSL-Panel
             ''' durch diese acht Regler - sie bestimmen, wie hell jeder Farbbereich im Grau landet, und
             ''' sind damit der eigentliche Charakter eines S/W-Presets (gemessen an einer echten Sammlung:
-            ''' Silvertide zieht Aqua +32, Blau +39, Purpur +27, Magenta +26 hoch). Ohne sie kam JEDES
+            ''' ein S/W-Preset zieht Aqua +32, Blau +39, Purpur +27, Magenta +26 hoch). Ohne sie kam JEDES
             ''' S/W-Preset als dieselbe flache Entsättigung an.
             ''' Abgebildet auf die vorhandenen HSL-LUMINANZ-Bänder - es sind dieselben acht Farbbereiche,
             ''' und die HSL-Stufe läuft in der Punktoperationskette VOR der S/W-Matrix (siehe
@@ -586,7 +586,7 @@ Namespace Services
             ' Zonen zu weit in die Mitte (Dunkel +50 hob die Tiefen um 2,3 statt 6,9 L). Andere
             ' Teilungen verschieben die Kurve stueckweise linear auf die Standardteilung.
             ' Die Parametrik wirkt VOR der Punktkurve, die Punktkurve liest also ihr Ergebnis. Gemessen
-            ' an 79 Aufnahmen mit Cool Glow (Punktkurve und Parametrik): Treffer 58 auf 62 Prozent,
+            ' an 79 Aufnahmen mit einem Kanalkurven-Preset (Punktkurve und Parametrik): Treffer 58 auf 62 Prozent,
             ' die Tiefen +2,7 statt +1,0 L gegen +2,5 der Referenz; beide addiert lagen die Tiefen zu
             ' dunkel, Punktkurve zuerst traf 61 Prozent.
             If ToneSliderCurves.Has("ParametricShadows") Then

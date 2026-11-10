@@ -232,6 +232,10 @@ Namespace Services
         ''' <summary>Die Darstellung im Anpassungspanel - EIGENE Wahl neben ScopeMode. Wer das Bild
         ''' an zwei Orten sieht, will dort meist zwei verschiedene Fragen beantwortet haben.</summary>
         Public Property ScopePanelMode As String = "Parade"
+        ''' <summary>Zeigt das Werkzeug Filter seine Filter als Kacheln mit einer kleinen Vorschau
+        ''' des Bildes statt als Knöpfe mit Namen. Ab Werk aus: die Kacheln kosten je Änderung
+        ''' einen Durchlauf pro Filter auf einer kleinen Fassung des Bildes.</summary>
+        Public Property FilterPreviewTiles As Boolean = False
 
         ''' <summary>Die Darstellung JE ANPASSUNGSWERKZEUG. Wer die Regler fuer Licht zieht, will
         ''' meist die Verteilung sehen, wer an der Farbe arbeitet die Kanaltrennung - und beim
