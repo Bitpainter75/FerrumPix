@@ -83,6 +83,7 @@ Namespace Services
                     .FolderPath = If(IO.Path.GetDirectoryName(imagePath), ""),
                     .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant(),
                     .DateTaken = If(meta.DateTaken, ""),
+                    .DateTakenOffset = If(meta.DateTakenOffset, ""),
                     .DateModifiedExif = If(meta.DateModifiedExif, ""),
                     .Camera = If(meta.Camera, ""),
                     .Lens = If(meta.Lens, ""),

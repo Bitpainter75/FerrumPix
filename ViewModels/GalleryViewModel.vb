@@ -2864,6 +2864,7 @@ Namespace ViewModels
                         ' Kachel bei "Geaendert (Datei)" oder "Geaendert (EXIF)" weiter den alten
                         ' Wert - bis der Ordner irgendwann neu gelesen wird.
                         images(index).ExifDateTaken = value
+                        images(index).ExifDateTakenOffset = exif.DateTakenOffset
                         images(index).ExifDateModified = ExifService.ParseExifDateTime(exif.DateModifiedExif)
                         ' Das Dateidatum vom DATEISYSTEM holen statt es anzunehmen. Das Nachziehen
                         ' darf scheitern (schreibgeschuetzte Freigabe, Netzlaufwerk), und
@@ -7860,10 +7861,11 @@ Namespace ViewModels
                 If RawSidecarService.TryImportDescriptionFromForeignCatalog(filePath) AndAlso fields IsNot Nothing Then
                     fields.Description = ImageDescriptionService.Read(filePath)
                 End If
-                ' Copyright und Ort aus dem Katalog als Abschrift in die .fpxmp, nur RAW und PSD,
-                ' damit sie auch ohne den Katalog erhalten bleiben. Nachzuziehen ist nichts: die
+                ' Copyright, Ort und eine dort geaenderte Aufnahmezeit aus dem Katalog als Abschrift
+                ' in die .fpxmp, nur RAW und PSD, damit sie auch ohne den Katalog erhalten bleiben.
+                ' Nachzuziehen ist nichts: die
                 ' Felder oben kamen schon mit denselben Werten, nur noch aus dem Katalog selbst.
-                RawSidecarService.TryImportPlaceAndRightsFromForeignCatalog(filePath)
+                RawSidecarService.TryImportMetadataFromForeignCatalog(filePath)
 
                 ' Die .pp3 eines fremden Entwicklers, nur mit eingeschalteter Einstellung (sonst
                 ' Nothing). Sie steht zwischen XMP-Beistelldatei und Bilddatei. Darin steckt auch,
@@ -7955,6 +7957,7 @@ Namespace ViewModels
                 If imported.Tags IsNot Nothing Then meta.Tags = imported.Tags
                 If imported.Pick.HasValue Then meta.PickState = imported.Pick.Value
                 meta.DateTaken = fields.DateTaken
+                meta.DateTakenOffset = fields.DateTakenOffset
                 meta.DateModifiedExif = fields.DateModifiedExif
                 meta.Camera = fields.Camera
                 meta.Lens = fields.Lens
@@ -9480,6 +9483,7 @@ Namespace ViewModels
                 item.ImageWidth = meta.ImageWidth.GetValueOrDefault()
                 item.ImageHeight = meta.ImageHeight.GetValueOrDefault()
                 item.ExifDateTaken = ExifService.ParseExifDateTime(meta.DateTaken)
+                item.ExifDateTakenOffset = meta.DateTakenOffset
                 item.ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
                 item.ExifCamera = meta.Camera
                 item.CaptureMode = meta.CaptureMode
@@ -9598,6 +9602,7 @@ Namespace ViewModels
                                                                Dim width = If(fields.ImageWidth, 0)
                                                                Dim height = If(fields.ImageHeight, 0)
                                                                Dim exifTaken = ExifService.ParseExifDateTime(fields.DateTaken)
+                                                               Dim exifTakenOffset = fields.DateTakenOffset
                                                                Dim exifModified = ExifService.ParseExifDateTime(fields.DateModifiedExif)
                                                                Dim camera = fields.Camera
                                                                Dim shotMode = fields.CaptureMode
@@ -9622,6 +9627,7 @@ Namespace ViewModels
                                                                                                           ' importierten Stichworte sind also sofort auffindbar.
                                                                                                           If imported.Tags IsNot Nothing Then item.Tags = imported.Tags
                                                                                                           item.ExifDateTaken = exifTaken
+                                                                                                          item.ExifDateTakenOffset = exifTakenOffset
                                                                                                           item.ExifDateModified = exifModified
                                                                                                           item.ExifCamera = camera
                                                                                                           item.CaptureMode = shotMode
@@ -10156,6 +10162,7 @@ Namespace ViewModels
                                 item.ImageWidth = m.ImageWidth.Value
                                 item.ImageHeight = m.ImageHeight.Value
                                 item.ExifDateTaken = ExifService.ParseExifDateTime(m.DateTaken)
+                                item.ExifDateTakenOffset = m.DateTakenOffset
                                 item.ExifDateModified = ExifService.ParseExifDateTime(m.DateModifiedExif)
                                 item.ExifCamera = m.Camera
                                 item.CaptureMode = m.CaptureMode

@@ -446,6 +446,15 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding CreateXmpSidecarIfMissing}" IsEnabled="{Binding SyncCatalogToXmp}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
+                            <!-- Nur die Anzeige: gespeichert und sortiert wird immer die Uhrzeit vor Ort
+                                 (ExifService.ToDisplayTime). -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Aufnahmezeit in meiner Zeitzone anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Kennt ein Bild die Zeitzone seiner Aufnahme, wird die Zeit in die Zeitzone dieses Rechners umgerechnet. Ausgeschaltet steht dort die Uhrzeit, die die Kamera am Aufnahmeort hatte. Sortiert wird immer nach dieser Uhrzeit." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowCaptureTimeInLocalZone}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
                             <!-- Die .pp3 und .arp der fremden Entwickler und ein Katalog des Referenzprogramms, nur
                                  lesend und ab Werk aus. Die Namen stehen hier ausdruecklich: wer die
                                  Programme benutzt, sucht danach. Der Katalog haengt am selben Schalter

@@ -479,6 +479,18 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Beim Verlassen automatisch speichern" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Statt nachzufragen, speichert der Editor ungespeicherte Änderungen, wenn du ein anderes Bild öffnest oder den Editor verlässt. RAW und PSD behalten die Bearbeitung in der Begleitdatei, JPEG, PNG und WebP werden dabei überschrieben. Wo das Bild nur unter neuem Namen gespeichert werden kann, wird weiter gefragt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding EditorAutoSaveOnLeave}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Nach „Speichern unter“ die neue Datei öffnen" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Ausgeschaltet bleibt das bisherige Bild im Editor und die gespeicherte Datei liegt nur auf der Platte. Eingeschaltet wechselt der Editor auf die neue Datei und arbeitet dort weiter." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

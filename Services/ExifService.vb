@@ -32,6 +32,8 @@ Namespace Services
     ' bereits von ReadExif erzeugten formatierten Anzeige-Strings (kein zweites Einlesen der Datei).
     Public Class ExifSearchFields
         Public Property DateTaken As String = ""       ' EXIF-Rohformat "YYYY:MM:DD HH:MM:SS" - sortiert korrekt als Text
+        ''' <summary>Die Zone der Aufnahmezeit, leer ohne (siehe ExifData.DateTakenOffset).</summary>
+        Public Property DateTakenOffset As String = ""
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         Public Property Lens As String = ""
@@ -124,6 +126,17 @@ Namespace Services
         ''' IFD0, weil die Datei keine traegt (etwa ein Scan). Dann gilt eine im Katalog des
         ''' Referenzprogramms gesetzte Zeit (siehe ForeignCatalogService.EditedCaptureTime).</summary>
         Public Property DateTakenIsFallback As Boolean
+        ''' <summary>Die Zone der Aufnahmezeit ("+02:00", "-04:00", "+00:00"), leer, wenn keine bekannt
+        ''' ist. DateTaken bleibt die Uhrzeit vor Ort; umgerechnet wird nur fuer die Anzeige
+        ''' (<see cref="DateTakenDisplay"/>, ExifService.ToDisplayTime).</summary>
+        Public Property DateTakenOffset As String = ""
+        ''' <summary>Die Aufnahmezeit, wie sie angezeigt wird, im selben Rohformat wie DateTaken: je
+        ''' nach Einstellung in die Zone des Rechners umgerechnet oder die Uhrzeit vor Ort.</summary>
+        Public ReadOnly Property DateTakenDisplay As String
+            Get
+                Return ExifService.ToDisplayTime(DateTaken, DateTakenOffset)
+            End Get
+        End Property
         ''' <summary>Ort und Land aus dem Katalog des Referenzprogramms (.fpxmp-Block oder der
         ''' Katalog selbst). Sie fuellen die Ortsfelder nach der Datei und vor der Ortstabelle
         ''' (ExifService.FillPlaceNames).</summary>
@@ -269,6 +282,8 @@ Namespace Services
             Public Property Size As Long
             Public Property Copyright As String = ""
             Public Property CaptureDate As String = ""
+            ''' <summary>Die Zone der Aufnahmezeit, wenn die Beistelldatei eine nennt, sonst leer.</summary>
+            Public Property CaptureOffset As String = ""
             Public Property ModifyDate As String = ""
             ''' <summary>Titel, Beschreibung und die uebrigen beschreibenden Felder (siehe
             ''' ImageDescriptionService). Liegen hier, damit der Katalog sie beim Einlesen nicht
@@ -358,33 +373,50 @@ Namespace Services
                 If Not String.IsNullOrWhiteSpace(fromSidecar.CaptureDate) Then
                     data.DateTaken = fromSidecar.CaptureDate
                     data.DateTakenIsFallback = False
+                    ' Ohne eigene Zone behaelt die Zeit die der Datei: so schreibt FerrumPix eine
+                    ' korrigierte Zeit (ohne Zone), und das Referenzprogramm behaelt sie ebenso bei.
+                    If fromSidecar.CaptureOffset.Length > 0 Then data.DateTakenOffset = fromSidecar.CaptureOffset
                 End If
                 If Not String.IsNullOrWhiteSpace(fromSidecar.ModifyDate) Then data.DateModifiedExif = fromSidecar.ModifyDate
             End If
-            ApplyForeignCatalogCaptureTime(imagePath, data)
-            ApplyImportedPlaceAndRights(imagePath, data)
+            ApplyImportedMetadata(imagePath, data)
             Return data
         End Function
 
-        ''' <summary>Copyright, Koordinate, Ort und Land aus dem Katalog des Referenzprogramms, NUR wo
-        ''' Datei und XMP-Beistelldatei schweigen: was dort steht, hat jemand an der Datei selbst
-        ''' gesetzt, auch in FerrumPix. Quelle ist bei RAW und PSD der Block in der .fpxmp (bleibt,
-        ''' auch wenn der Katalog weg ist), sonst und solange es keinen Block gibt der Katalog
-        ''' selbst, nur bei eingeschaltetem Schalter. Geschrieben wird hier nichts.
+        ''' <summary>Was aus dem Katalog des Referenzprogramms uebernommen wird
+        ''' (ForeignCatalogService.ImportedMetadata), NACH der Beistelldatei und aus demselben Grund
+        ''' hinter dem Zwischenspeicher: der Katalog aendert sich, ohne dass die Bilddatei es tut.
+        ''' Quelle ist bei RAW und PSD der Block in der .fpxmp (bleibt, auch wenn der Katalog weg ist),
+        ''' sonst und solange es keinen Block gibt der Katalog selbst, nur bei eingeschaltetem Schalter.
+        ''' Geschrieben wird hier nichts.
         '''
-        ''' Die Koordinate geht nach data.GPS, aber nur, wenn auch die Beistelldatei keine traegt:
-        ''' ExtractSearchFields nimmt data.GPS vor der Beistelldatei, eine dort von Hand gesetzte
-        ''' Koordinate verloere sonst gegen die fremde.</summary>
-        Private Shared Sub ApplyImportedPlaceAndRights(imagePath As String, data As ExifData)
+        ''' - Die AUFNAHMEZEIT gilt nach ForeignCatalogService.EditedCaptureTime: solange die Datei
+        '''   noch die Zeit von vor der Aenderung traegt oder gar keine. Ihre Zone nur, wenn der
+        '''   Katalog eine kennt, sonst bleibt die der Datei.
+        ''' - COPYRIGHT, KOORDINATE, ORT UND LAND nur, wo Datei und XMP-Beistelldatei schweigen: was
+        '''   dort steht, hat jemand an der Datei selbst gesetzt, auch in FerrumPix. Die Koordinate
+        '''   geht nach data.GPS, aber nur, wenn auch die Beistelldatei keine traegt: ExtractSearchFields
+        '''   nimmt data.GPS vor der Beistelldatei, eine dort von Hand gesetzte Koordinate verloere
+        '''   sonst gegen die fremde.
+        '''
+        ''' AUF DEM OBERFLAECHENFADEN NUR DER SCHON GELESENE STAND. Das erste Einlesen eines grossen
+        ''' Katalogs dauert Sekunden; Ordnerlauf und Katalogindex laufen im Hintergrund und warten es ab.</summary>
+        Private Shared Sub ApplyImportedMetadata(imagePath As String, data As ExifData)
             Try
                 Dim imported = RawSidecarService.TryReadImported(imagePath)
                 If imported Is Nothing AndAlso ForeignCatalogService.IsEnabled Then
                     Dim entry = If(Avalonia.Threading.Dispatcher.UIThread.CheckAccess(),
                                    ForeignCatalogService.LookupIfLoaded(imagePath),
                                    ForeignCatalogService.Lookup(imagePath))
-                    imported = ForeignCatalogService.PlaceAndRightsFor(entry)
+                    imported = ForeignCatalogService.ImportedMetadataFor(entry)
                 End If
                 If imported Is Nothing Then Return
+                Dim edited = ForeignCatalogService.EditedCaptureTime(imported, data.DateTaken, data.DateTakenIsFallback)
+                If edited.Length > 0 Then
+                    data.DateTaken = edited
+                    data.DateTakenIsFallback = False
+                    If imported.CaptureOffset.Length > 0 Then data.DateTakenOffset = imported.CaptureOffset
+                End If
                 If String.IsNullOrWhiteSpace(data.Copyright) AndAlso imported.Copyright.Length > 0 Then data.Copyright = imported.Copyright
                 If String.IsNullOrWhiteSpace(data.GPS) AndAlso imported.HasCoordinates Then
                     Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
@@ -396,44 +428,21 @@ Namespace Services
                 data.ImportedCity = imported.City
                 data.ImportedCountry = imported.Country
             Catch ex As Exception
-                DiagnosticLogService.LogException("Exif.ImportedPlaceAndRights", ex)
+                DiagnosticLogService.LogException("Exif.ImportedMetadata", ex)
             End Try
         End Sub
 
-        ''' <summary>Eine im Katalog des Referenzprogramms geaenderte Aufnahmezeit, NACH der
-        ''' Beistelldatei und aus demselben Grund hinter dem Zwischenspeicher: der Katalog aendert sich,
-        ''' ohne dass die Bilddatei es tut. Wann sie gilt, entscheidet
-        ''' ForeignCatalogService.EditedCaptureTime; kurz: solange die Datei noch die Zeit von vor der
-        ''' Aenderung traegt oder gar keine.
+        ''' <summary>Die Aufnahmezeit aus dem XMP-Paket IN der Datei, im EXIF-Rohformat, und ihre Zone,
+        ''' beides leer, wenn keine dasteht. exif:DateTimeOriginal immer; photoshop:DateCreated (die
+        ''' IPTC-Entsprechung, oft nur ein Datum) nur, wenn die Datei sonst keine Aufnahmezeit traegt.
         '''
-        ''' AUF DEM OBERFLAECHENFADEN NUR DER SCHON GELESENE STAND. Das erste Einlesen eines grossen
-        ''' Katalogs dauert Sekunden; Ordnerlauf und Katalogindex laufen im Hintergrund und warten es ab.</summary>
-        Private Shared Sub ApplyForeignCatalogCaptureTime(imagePath As String, data As ExifData)
-            Try
-                If Not ForeignCatalogService.IsEnabled Then Return
-                Dim entry = If(Avalonia.Threading.Dispatcher.UIThread.CheckAccess(),
-                               ForeignCatalogService.LookupIfLoaded(imagePath),
-                               ForeignCatalogService.Lookup(imagePath))
-                Dim edited = ForeignCatalogService.EditedCaptureTime(entry, data.DateTaken, data.DateTakenIsFallback)
-                If edited.Length = 0 Then Return
-                data.DateTaken = edited
-                data.DateTakenIsFallback = False
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Exif.ForeignCatalogCaptureTime", ex)
-            End Try
-        End Sub
-
-        ''' <summary>Die Aufnahmezeit aus dem XMP-Paket IN der Datei, im EXIF-Rohformat, oder leer.
-        ''' exif:DateTimeOriginal immer; photoshop:DateCreated (die IPTC-Entsprechung, oft nur ein
-        ''' Datum) nur, wenn die Datei sonst keine Aufnahmezeit traegt.
-        '''
-        ''' DIE UHRZEIT, NICHT IN ORTSZEIT UMGERECHNET. Konverter schreiben die Zone der Kamera dazu
-        ''' ("2018-06-24T12:14:49-04:00"), und im EXIF daneben steht 12:14:49 ohne Zone. Umgerechnet
-        ''' stuende das Foto aus New York in Berlin um 18:14 und damit sechs Stunden neben seiner
-        ''' eigenen EXIF-Zeit; das Referenzprogramm zeigt und sortiert ebenfalls die Uhrzeit.</summary>
+        ''' GESPEICHERT WIRD DIE UHRZEIT VOR ORT, die Zone daneben (ParseXmpClock). Konverter schreiben
+        ''' die Zone der Kamera dazu ("2018-06-24T12:14:49-04:00"), und im EXIF daneben steht 12:14:49
+        ''' ohne Zone. Umgerechnet in die Zone des Rechners wird erst fuer die Anzeige
+        ''' (ToDisplayTime); Sortierung und Suche bleiben bei der Uhrzeit, wie im Referenzprogramm.</summary>
         Private Shared Function EmbeddedXmpCaptureDate(directories As IReadOnlyList(Of MetadataExtractor.Directory),
-                                                       includeDateCreated As Boolean) As String
-            If directories Is Nothing Then Return ""
+                                                       includeDateCreated As Boolean) As (Clock As String, Offset As String)
+            If directories Is Nothing Then Return ("", "")
             For Each xmpDirectory In directories.OfType(Of MetadataExtractor.Formats.Xmp.XmpDirectory)()
                 Dim meta = xmpDirectory.XmpMeta
                 If meta Is Nothing Then Continue For
@@ -449,14 +458,13 @@ Namespace Services
                     Catch
                         ' Ein kaputter Eintrag ist wie keiner.
                     End Try
-                    If String.IsNullOrWhiteSpace(raw) Then Continue For
-                    Dim parsed As DateTimeOffset
-                    If DateTimeOffset.TryParse(raw.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, parsed) Then
-                        Return parsed.DateTime.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+                    Dim parsed = ParseXmpClock(raw)
+                    If parsed.Clock.HasValue Then
+                        Return (parsed.Clock.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture), parsed.Offset)
                     End If
                 Next
             Next
-            Return ""
+            Return ("", "")
         End Function
 
         Public Shared Sub Invalidate(imagePath As String)
@@ -515,6 +523,7 @@ Namespace Services
                 .FileModified = source.FileModified,
                 .DateTaken = source.DateTaken,
                 .DateTakenIsFallback = source.DateTakenIsFallback,
+                .DateTakenOffset = source.DateTakenOffset,
                 .ImportedCity = source.ImportedCity,
                 .ImportedCountry = source.ImportedCountry,
                 .DateModifiedExif = source.DateModifiedExif,
@@ -580,6 +589,11 @@ Namespace Services
                 End If
 
                 data.DateTaken = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagDateTimeOriginal)
+                ' Die Zone der Aufnahmezeit (OffsetTimeOriginal, 0x9011, seit EXIF 2.31), nur mit einer
+                ' Aufnahmezeit: sie gehoert zu genau diesem Feld.
+                If data.DateTaken.Length > 0 Then
+                    data.DateTakenOffset = NormalizeOffset(GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, &H9011))
+                End If
                 data.FocalLength = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFocalLength)
                 data.FocalLength35mm = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
                 data.Aperture = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFNumber)
@@ -640,9 +654,10 @@ Namespace Services
                 ' sofort zurueck. Das Referenzprogramm schreibt die Zeit in ein JPEG ohnehin ins EXIF.
                 If Not isFpx AndAlso Not GeotagService.IsJpegPath(imagePath) Then
                     Dim fromXmp = EmbeddedXmpCaptureDate(metaDirectories, data.DateTaken.Length = 0 OrElse data.DateTakenIsFallback)
-                    If fromXmp.Length > 0 Then
-                        data.DateTaken = fromXmp
+                    If fromXmp.Clock.Length > 0 Then
+                        data.DateTaken = fromXmp.Clock
                         data.DateTakenIsFallback = False
+                        If fromXmp.Offset.Length > 0 Then data.DateTakenOffset = fromXmp.Offset
                     End If
                 End If
 
@@ -931,6 +946,7 @@ Namespace Services
             If data Is Nothing Then Return result
 
             result.DateTaken = data.DateTaken
+            result.DateTakenOffset = data.DateTakenOffset
             result.DateModifiedExif = data.DateModifiedExif
             result.Camera = data.Camera
             result.Lens = data.Lens
@@ -1017,9 +1033,12 @@ Namespace Services
         ' 10 holt Titel, Ueberschrift, Beschreibung, Urheber, Quellenangabe (ImageDescriptionService)
         ' und den Urheberrechtshinweis in den Katalog; ohne die Erhoehung faende die Suche sie nur in
         ' neuen Fotos.
+        ' 11 fuehrt die Zone der Aufnahmezeit mit (Spalte DateTakenOffset) und speichert eine Zeit
+        ' mit Zone aus der Beistelldatei als Uhrzeit vor Ort statt umgerechnet; ohne die Erhoehung
+        ' blieben bestehende Zeilen ohne Zone und solche Zeiten verschoben.
         ' Betrifft eine Aenderung nur EIN Format, gehoert sie nicht hierher, sondern in
         ' ReaderVersions: dann liest der Katalog nur dieses Format neu.
-        Public Const SummaryFormatVersion As Integer = 10
+        Public Const SummaryFormatVersion As Integer = 11
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -1113,7 +1132,7 @@ Namespace Services
             AppendSummaryLine(lines, LocalizationService.T("Belichtungszeit"), data.ShutterSpeed)
             AppendSummaryLine(lines, "ISO", data.ISO)
             AppendSummaryLine(lines, LocalizationService.T("Belichtungskorrektur"), data.ExposureCompensation)
-            AppendSummaryLine(lines, LocalizationService.T("Aufnahmedatum"), FormatExifDate(data.DateTaken))
+            AppendSummaryLine(lines, LocalizationService.T("Aufnahmedatum"), FormatExifDate(data.DateTakenDisplay))
             AppendSummaryLine(lines, LocalizationService.T("Abmessungen"), FormatDimensions(data, fields))
             AppendSummaryLine(lines, "GPS", data.GPS)
             AppendSummaryLine(lines, LocalizationService.T("Software"), data.Software)
@@ -2076,13 +2095,15 @@ Namespace Services
                     ' meint dasselbe und steht in aelteren Dateien allein da, photoshop:DateCreated ist
                     ' die IPTC-Entsprechung. Der erste belegte Wert gewinnt.
                     If String.IsNullOrEmpty(result.CaptureDate) Then
-                        result.CaptureDate = FirstSidecarDate(description,
-                                                              exifNamespace + "DateTimeOriginal",
-                                                              xmpNamespace + "CreateDate",
-                                                              photoshopNamespace + "DateCreated")
+                        Dim captured = FirstSidecarDate(description,
+                                                        exifNamespace + "DateTimeOriginal",
+                                                        xmpNamespace + "CreateDate",
+                                                        photoshopNamespace + "DateCreated")
+                        result.CaptureDate = captured.Clock
+                        result.CaptureOffset = captured.Offset
                     End If
                     If String.IsNullOrEmpty(result.ModifyDate) Then
-                        result.ModifyDate = FirstSidecarDate(description, xmpNamespace + "ModifyDate")
+                        result.ModifyDate = FirstSidecarDate(description, xmpNamespace + "ModifyDate").Clock
                     End If
                 Next
                 Return result
@@ -2113,13 +2134,12 @@ Namespace Services
         End Function
 
         ''' <summary>Die erste lesbare Zeit aus den genannten Feldern, im EXIF-Rohformat.</summary>
-        Private Shared Function FirstSidecarDate(description As XElement, ParamArray names As XName()) As String
+        Private Shared Function FirstSidecarDate(description As XElement, ParamArray names As XName()) As (Clock As String, Offset As String)
             For Each name In names
-                Dim raw = ReadSidecarValue(description, name)
-                Dim parsed = ParseXmpDateTime(raw)
-                If parsed.HasValue Then Return parsed.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+                Dim parsed = ParseXmpClock(ReadSidecarValue(description, name))
+                If parsed.Clock.HasValue Then Return (parsed.Clock.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture), parsed.Offset)
             Next
-            Return ""
+            Return ("", "")
         End Function
 
         ''' <summary>Attribut ODER Kindelement - derselbe Wert steht je nach Erzeuger in der einen oder
@@ -2133,26 +2153,96 @@ Namespace Services
             Return If(item IsNot Nothing, item.Value.Trim(), child.Value.Trim())
         End Function
 
-        ''' <summary>Eine XMP-Zeit als ORTSZEIT ohne Zone.
+        Private Shared ReadOnly XmpZonePattern As New Regex("(Z|[+-]\d{2}:?\d{2})$", RegexOptions.CultureInvariant)
+
+        ''' <summary>Eine XMP-Zeit als UHRZEIT VOR ORT und ihre Zone getrennt.
         '''
-        ''' Das Schema laesst die Zone weg, wo die Kamera keine kennt - und genau so schreibt
-        ''' FerrumPix sie auch. Steht doch eine dabei (fremde Programme setzen sie), wird sie in die
-        ''' Ortszeit umgerechnet: die EXIF-Felder daneben tragen keine, und zwei Zeiten in derselben
-        ''' Datei, die verschiedene Zonen meinen, waeren fuer jede Sortierung eine Falle.
-        ''' Auch die Kurzformen sind zugelassen ("2019", "2019-07", "2019-07-14").</summary>
-        Public Shared Function ParseXmpDateTime(raw As String) As DateTime?
-            If String.IsNullOrWhiteSpace(raw) Then Return Nothing
+        ''' Das Schema laesst die Zone weg, wo die Kamera keine kennt, und genau so schreibt FerrumPix
+        ''' sie auch; Konverter und Telefone schreiben sie dazu ("2019-07-04T21:03:47+02:00").
+        ''' Gespeichert, sortiert und gesucht wird die Uhrzeit, wie sie in der Kamera stand: die
+        ''' EXIF-Felder daneben tragen sie ebenso, und zwei Zeiten derselben Datei liefen sonst um die
+        ''' Zone auseinander. Die Zone kommt getrennt zurueck ("+02:00", "Z" als "+00:00", leer ohne)
+        ''' und dient nur der Anzeige (ToDisplayTime). Zugelassen sind auch die Kurzformen ("2019",
+        ''' "2019-07", "2019-07-14"); eine Zone gibt es nur hinter einer Uhrzeit.</summary>
+        Public Shared Function ParseXmpClock(raw As String) As (Clock As DateTime?, Offset As String)
+            If String.IsNullOrWhiteSpace(raw) Then Return (Nothing, "")
             Dim text = raw.Trim()
-            Dim withZone As DateTimeOffset
-            If DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture,
-                                       DateTimeStyles.None, withZone) Then
-                Return withZone.LocalDateTime
+            Dim offset = ""
+            If text.Contains("T"c) Then
+                Dim zone = XmpZonePattern.Match(text)
+                If zone.Success Then
+                    offset = NormalizeOffset(zone.Value)
+                    text = text.Substring(0, zone.Index)
+                End If
             End If
             Dim plain As DateTime
-            If DateTime.TryParse(text, CultureInfo.InvariantCulture,
-                                 DateTimeStyles.None, plain) Then Return plain
-            Return Nothing
+            If DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, plain) Then Return (plain, offset)
+            Return (Nothing, "")
         End Function
+
+        ''' <summary>Eine Zone in der einen Schreibweise "+hh:mm"; leer bei allem, was keine ist oder
+        ''' ausserhalb von -12:00 bis +14:00 liegt. "Z" ist "+00:00", "+0200" wird "+02:00".</summary>
+        Public Shared Function NormalizeOffset(raw As String) As String
+            If String.IsNullOrWhiteSpace(raw) Then Return ""
+            Dim text = raw.Trim()
+            If String.Equals(text, "Z", StringComparison.OrdinalIgnoreCase) Then Return "+00:00"
+            Dim m = Regex.Match(text, "^([+-])(\d{2}):?(\d{2})$")
+            If Not m.Success Then Return ""
+            Dim hours = Integer.Parse(m.Groups(2).Value, CultureInfo.InvariantCulture)
+            Dim minutes = Integer.Parse(m.Groups(3).Value, CultureInfo.InvariantCulture)
+            If minutes > 59 Then Return ""
+            Dim total = (hours * 60 + minutes) * If(m.Groups(1).Value = "-", -1, 1)
+            If total < -12 * 60 OrElse total > 14 * 60 Then Return ""
+            Return $"{m.Groups(1).Value}{hours:00}:{minutes:00}"
+        End Function
+
+        ''' <summary>Die Aufnahmezeit fuer die Anzeige, im EXIF-Rohformat. Gespeichert ist die Uhrzeit
+        ''' vor Ort; ist ihre Zone bekannt und die Einstellung "in meiner Zeitzone"
+        ''' (AppSettings.ShowCaptureTimeInLocalZone) an, kommt die Zeit in der Zone dieses Rechners
+        ''' zurueck, sonst die Uhrzeit, wie sie ist. Umgerechnet wird mit der Regel, die am
+        ''' Aufnahmetag galt: ein Sommerfoto mit +02:00 zeigt in Berlin auch im Winter seine Uhrzeit.
+        ''' Wer in derselben Zone fotografiert und betrachtet, sieht also keinen Unterschied.</summary>
+        Public Shared Function ToDisplayTime(raw As String, offset As String) As String
+            If String.IsNullOrWhiteSpace(raw) OrElse String.IsNullOrWhiteSpace(offset) Then Return If(raw, "")
+            If Not ShowCaptureTimeInLocalZone Then Return raw
+            Dim clock = ParseExifDateTime(raw)
+            If Not clock.HasValue Then Return raw
+            Dim converted = ToLocalZone(clock.Value, offset)
+            Return If(converted.HasValue, converted.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture), raw)
+        End Function
+
+        ''' <summary>Wie <see cref="ToDisplayTime"/>, fuer eine schon gelesene Zeit (Kacheln, Vergleich).</summary>
+        Public Shared Function ToDisplayTime(clock As DateTime, offset As String) As DateTime
+            If String.IsNullOrWhiteSpace(offset) OrElse Not ShowCaptureTimeInLocalZone Then Return clock
+            Return If(ToLocalZone(clock, offset), clock)
+        End Function
+
+        ''' <summary>Eine Uhrzeit mit Zone in der Zone dieses Rechners; Nothing, wenn die Zone keine ist
+        ''' oder das Ergebnis ausserhalb des darstellbaren Bereichs laege.</summary>
+        Public Shared Function ToLocalZone(clock As DateTime, offset As String) As DateTime?
+            Dim normalized = NormalizeOffset(offset)
+            If normalized.Length = 0 Then Return Nothing
+            Dim minutes = CInt(normalized.Substring(1, 2)) * 60 + CInt(normalized.Substring(4, 2))
+            If normalized(0) = "-"c Then minutes = -minutes
+            Try
+                Dim moment = New DateTimeOffset(DateTime.SpecifyKind(clock, DateTimeKind.Unspecified), TimeSpan.FromMinutes(minutes))
+                Return moment.ToLocalTime().DateTime
+            Catch ex As ArgumentOutOfRangeException
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Die Einstellung "Aufnahmezeit in meiner Zeitzone anzeigen"; an, wenn sie sich nicht
+        ''' lesen laesst.</summary>
+        Private Shared ReadOnly Property ShowCaptureTimeInLocalZone As Boolean
+            Get
+                Try
+                    Return AppSettingsService.Load().ShowCaptureTimeInLocalZone
+                Catch
+                    Return True
+                End Try
+            End Get
+        End Property
 
         ''' <summary>Nimmt den Urheberrechtshinweis aus einer vorhandenen Beistelldatei - als
         ''' Element wie als Attribut. Eine NEUE Datei wird dafuer nie angelegt.</summary>

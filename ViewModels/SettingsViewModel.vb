@@ -33,6 +33,7 @@ Namespace ViewModels
         Private _preserveMetadataOnSave As Boolean = True
         Private _syncCatalogToXmp As Boolean = False
         Private _readPp3Sidecars As Boolean = False
+        Private _showCaptureTimeInLocalZone As Boolean = True
         Private _createXmpSidecarIfMissing As Boolean = False
         Private _writeKeywordsToFileXmp As Boolean = False
         Private _writeKeywordsToFileIptc As Boolean = False
@@ -83,6 +84,7 @@ Namespace ViewModels
         Private _galleryTileGap As Integer = 10
         Private _filmstripTileGap As Integer = 10
         Private _editorSaveAsOpensTarget As Boolean = False
+        Private _editorAutoSaveOnLeave As Boolean = False
         Private _galleryShowFooter As Boolean = True
         Private _viewerShowFooter As Boolean = True
         Private _editorShowFooter As Boolean = True
@@ -231,6 +233,7 @@ Namespace ViewModels
         Private _savedPreserveMetadataOnSave As Boolean = True
         Private _savedSyncCatalogToXmp As Boolean = False
         Private _savedReadPp3Sidecars As Boolean = False
+        Private _savedShowCaptureTimeInLocalZone As Boolean = True
         Private _savedCreateXmpSidecarIfMissing As Boolean = False
         Private _savedWriteKeywordsToFileXmp As Boolean = False
         Private _savedWriteKeywordsToFileIptc As Boolean = False
@@ -279,6 +282,7 @@ Namespace ViewModels
         Private _savedGalleryTileGap As Integer = 10
         Private _savedFilmstripTileGap As Integer = 10
         Private _savedEditorSaveAsOpensTarget As Boolean = False
+        Private _savedEditorAutoSaveOnLeave As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
         Private _savedViewerShowFooter As Boolean = True
         Private _savedEditorShowFooter As Boolean = True
@@ -665,6 +669,22 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_readPp3Sidecars, value)
                 SavePerformanceSettings()
                 RefreshForeignCatalogStatus()
+            End Set
+        End Property
+
+        ''' <summary>Die Aufnahmezeit eines Bildes mit bekannter Zeitzone in der Zone dieses Rechners
+        ''' anzeigen (Standard AN, siehe ExifService.ToDisplayTime). Wirkt beim naechsten Anzeigen
+        ''' eines Bildes; Sortierung und Katalog bleiben bei der Uhrzeit vor Ort.</summary>
+        Public Property ShowCaptureTimeInLocalZone As Boolean
+            Get
+                Return _showCaptureTimeInLocalZone
+            End Get
+            Set(value As Boolean)
+                If _showCaptureTimeInLocalZone = value Then Return
+                Me.RaiseAndSetIfChanged(_showCaptureTimeInLocalZone, value)
+                SavePerformanceSettings()
+                ' Die Zeiten unter den Kacheln sofort neu, nicht erst beim naechsten Ordnerwechsel.
+                TileCaptionSettings.NotifyValuesChanged()
             End Set
         End Property
 
@@ -2472,6 +2492,20 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _editorSaveAsOpensTarget = value Then Return
                 Me.RaiseAndSetIfChanged(_editorSaveAsOpensTarget, value)
+                SaveEditorBehaviourSettings()
+            End Set
+        End Property
+
+        ''' <summary>Beim Verlassen eines Bildes ohne Rueckfrage speichern. Ab Werk aus: ein Regler ist
+        ''' schnell versehentlich bewegt, und ohne Frage merkte man das erst an der gespeicherten
+        ''' Datei.</summary>
+        Public Property EditorAutoSaveOnLeave As Boolean
+            Get
+                Return _editorAutoSaveOnLeave
+            End Get
+            Set(value As Boolean)
+                If _editorAutoSaveOnLeave = value Then Return
+                Me.RaiseAndSetIfChanged(_editorAutoSaveOnLeave, value)
                 SaveEditorBehaviourSettings()
             End Set
         End Property
@@ -4947,6 +4981,7 @@ Namespace ViewModels
             _runningScaleFactors = ReadRunningScaleFactors()
             _syncCatalogToXmp = _appSettings.SyncCatalogToXmp
             _readPp3Sidecars = _appSettings.ReadPp3Sidecars
+            _showCaptureTimeInLocalZone = _appSettings.ShowCaptureTimeInLocalZone
             _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
             _writeKeywordsToFileXmp = _appSettings.WriteKeywordsToFileXmp
             _writeKeywordsToFileIptc = _appSettings.WriteKeywordsToFileIptc
@@ -5006,6 +5041,7 @@ Namespace ViewModels
             _galleryTileGap = AppSettingsService.NormalizeGalleryTileGap(_appSettings.GalleryTileGap)
             _filmstripTileGap = AppSettingsService.NormalizeFilmstripTileGap(_appSettings.FilmstripTileGap)
             _editorSaveAsOpensTarget = _appSettings.EditorSaveAsOpensTarget
+            _editorAutoSaveOnLeave = _appSettings.EditorAutoSaveOnLeave
             _galleryShowFooter = _appSettings.GalleryShowFooter
             _viewerShowFooter = _appSettings.ViewerShowFooter
             _editorShowFooter = _appSettings.EditorShowFooter
@@ -5396,6 +5432,7 @@ Namespace ViewModels
             _savedPreserveMetadataOnSave = _preserveMetadataOnSave
             _savedSyncCatalogToXmp = _syncCatalogToXmp
             _savedReadPp3Sidecars = _readPp3Sidecars
+            _savedShowCaptureTimeInLocalZone = _showCaptureTimeInLocalZone
             _savedCreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
             _savedWriteKeywordsToFileXmp = _writeKeywordsToFileXmp
             _savedWriteKeywordsToFileIptc = _writeKeywordsToFileIptc
@@ -5456,6 +5493,7 @@ Namespace ViewModels
             _savedGalleryTileGap = _galleryTileGap
             _savedFilmstripTileGap = _filmstripTileGap
             _savedEditorSaveAsOpensTarget = _editorSaveAsOpensTarget
+            _savedEditorAutoSaveOnLeave = _editorAutoSaveOnLeave
             _savedGalleryShowFooter = _galleryShowFooter
             _savedViewerShowFooter = _viewerShowFooter
             _savedEditorShowFooter = _editorShowFooter
@@ -5607,6 +5645,7 @@ Namespace ViewModels
             PreserveMetadataOnSave = _savedPreserveMetadataOnSave
             SyncCatalogToXmp = _savedSyncCatalogToXmp
             ReadPp3Sidecars = _savedReadPp3Sidecars
+            ShowCaptureTimeInLocalZone = _savedShowCaptureTimeInLocalZone
             CreateXmpSidecarIfMissing = _savedCreateXmpSidecarIfMissing
             WriteKeywordsToFileXmp = _savedWriteKeywordsToFileXmp
             WriteKeywordsToFileIptc = _savedWriteKeywordsToFileIptc
@@ -5668,6 +5707,7 @@ Namespace ViewModels
             GalleryTileGap = _savedGalleryTileGap
             FilmstripTileGap = _savedFilmstripTileGap
             EditorSaveAsOpensTarget = _savedEditorSaveAsOpensTarget
+            EditorAutoSaveOnLeave = _savedEditorAutoSaveOnLeave
             GalleryShowFooter = _savedGalleryShowFooter
             ViewerShowFooter = _savedViewerShowFooter
             EditorShowFooter = _savedEditorShowFooter
@@ -5768,6 +5808,7 @@ Namespace ViewModels
             StartupNoImageMode = "Gallery"
             SyncCatalogToXmp = False
             ReadPp3Sidecars = False
+            ShowCaptureTimeInLocalZone = True
             CreateXmpSidecarIfMissing = False
             WriteKeywordsToFileXmp = False
             WriteKeywordsToFileIptc = False
@@ -5823,6 +5864,7 @@ Namespace ViewModels
             GalleryTileGap = 10
             FilmstripTileGap = 10
             EditorSaveAsOpensTarget = False
+            EditorAutoSaveOnLeave = False
             GalleryShowFooter = True
             ViewerShowFooter = True
             EditorShowFooter = True
@@ -6143,6 +6185,7 @@ Namespace ViewModels
         Private Sub SaveEditorBehaviourSettings()
             AppSettingsService.Update(Sub(s)
                                           s.EditorSaveAsOpensTarget = _editorSaveAsOpensTarget
+                                          s.EditorAutoSaveOnLeave = _editorAutoSaveOnLeave
                                       End Sub)
         End Sub
 
@@ -6269,6 +6312,7 @@ Namespace ViewModels
                                           s.PreserveMetadataOnSave = _preserveMetadataOnSave
                                           s.SyncCatalogToXmp = _syncCatalogToXmp
                                           s.ReadPp3Sidecars = _readPp3Sidecars
+                                          s.ShowCaptureTimeInLocalZone = _showCaptureTimeInLocalZone
                                           s.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
                                           s.WriteKeywordsToFileXmp = _writeKeywordsToFileXmp
                                           s.WriteKeywordsToFileIptc = _writeKeywordsToFileIptc

@@ -34,6 +34,9 @@ Namespace Services
         Public Property PickState As Integer
         Public Property Tags As New List(Of String)()
         Public Property DateTaken As String = ""
+        ''' <summary>Die Zone der Aufnahmezeit ("+02:00"), leer ohne; DateTaken ist die Uhrzeit vor Ort
+        ''' (siehe ExifData.DateTakenOffset).</summary>
+        Public Property DateTakenOffset As String = ""
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         Public Property Lens As String = ""
@@ -527,7 +530,8 @@ Namespace Services
             ("Creator", "TEXT"),
             ("Credit", "TEXT"),
             ("Copyright", "TEXT"),
-            ("ClearedCopies", "TEXT")
+            ("ClearedCopies", "TEXT"),
+            ("DateTakenOffset", "TEXT")
         }
 
         ''' <summary>Spalten, die spaeter zur Gesichtstabelle dazugekommen sind. Bestehende
@@ -1462,6 +1466,7 @@ Namespace Services
                    String.Equals(existing.IccSummary, If(summary.IccSummary, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.SummaryFormat, If(summary.SummaryFormat, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.DateTaken, If(exif.DateTaken, ""), StringComparison.Ordinal) AndAlso
+                   String.Equals(existing.DateTakenOffset, If(exif.DateTakenOffset, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.DateModifiedExif, If(exif.DateModifiedExif, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.Camera, If(exif.Camera, ""), StringComparison.Ordinal) AndAlso
                    String.Equals(existing.Lens, If(exif.Lens, ""), StringComparison.Ordinal) AndAlso
@@ -1571,10 +1576,10 @@ Namespace Services
                 conn.Open()
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText =
-                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode,Title,Headline,Description,Creator,Credit,Copyright) " &
-                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode,$title,$headline,$description,$creator,$credit,$copyright) " &
+                        "INSERT INTO ImageMeta(FilePath,DateTaken,DateModifiedExif,Camera,Lens,Aperture,FocalLengthMm,Iso,ShutterSpeed,GpsLatitude,GpsLongitude,ImageWidth,ImageHeight,FileCreatedAt,HasExifMetadata,HasIptcMetadata,HasXmpMetadata,ScannedSourceModifiedAt,ScannedSidecarModifiedAt,ExifSummary,IptcSummary,XmpSummary,IccSummary,SummaryFormat,HasIccProfile,City,Country,CountryCode,CaptureMode,Title,Headline,Description,Creator,Credit,Copyright,DateTakenOffset) " &
+                        "VALUES($p,$dateTaken,$dateModifiedExif,$camera,$lens,$aperture,$focalLength,$iso,$shutterSpeed,$gpsLat,$gpsLon,$width,$height,$fileCreatedAt,$hasExifMetadata,$hasIptcMetadata,$hasXmpMetadata,$scannedSourceModifiedAt,$scannedSidecarModifiedAt,$exifSummary,$iptcSummary,$xmpSummary,$iccSummary,$summaryFormat,$hasIccProfile,$city,$country,$countryCode,$captureMode,$title,$headline,$description,$creator,$credit,$copyright,$dateTakenOffset) " &
                         "ON CONFLICT(FilePath) DO UPDATE SET " &
-                        "DateTaken=excluded.DateTaken, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
+                        "DateTaken=excluded.DateTaken, DateTakenOffset=excluded.DateTakenOffset, DateModifiedExif=excluded.DateModifiedExif, Camera=excluded.Camera, Lens=excluded.Lens, " &
                         "Aperture=excluded.Aperture, FocalLengthMm=excluded.FocalLengthMm, Iso=excluded.Iso, " &
                         "ShutterSpeed=excluded.ShutterSpeed, " &
                         MaskedAssignment("GpsLatitude", "Place", "NULL") & ", " & MaskedAssignment("GpsLongitude", "Place", "NULL") & ", " &
@@ -1601,6 +1606,7 @@ Namespace Services
                     cmd.Parameters.AddWithValue("$copyright", If(exif.Copyright, ""))
                     cmd.Parameters.AddWithValue("$captureMode", CInt(exif.CaptureMode))
                     cmd.Parameters.AddWithValue("$dateTaken", If(exif.DateTaken, ""))
+                    cmd.Parameters.AddWithValue("$dateTakenOffset", If(exif.DateTakenOffset, ""))
                     cmd.Parameters.AddWithValue("$dateModifiedExif", If(exif.DateModifiedExif, ""))
                     cmd.Parameters.AddWithValue("$camera", If(exif.Camera, ""))
                     cmd.Parameters.AddWithValue("$lens", If(exif.Lens, ""))
@@ -1635,7 +1641,7 @@ Namespace Services
         ''' ACHTUNG: ReadMetaRow greift über SPALTENNUMMERN zu - neue Spalten gehören ans Ende, sonst
         ''' verschieben sich alle folgenden Indizes stillschweigend auf die falschen Werte.
         Private Const MetaColumnList As String =
-            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright, ClearedCopies"
+            "FilePath, IsFavorite, Rating, Tags, DateTaken, Camera, Lens, Aperture, FocalLengthMm, Iso, ShutterSpeed, GpsLatitude, GpsLongitude, ImageWidth, ImageHeight, DateModifiedExif, FileCreatedAt, HasExifMetadata, HasIptcMetadata, HasXmpMetadata, ScannedSourceModifiedAt, ExifSummary, IptcSummary, XmpSummary, HasIccProfile, IccSummary, SummaryFormat, ColorLabel, ScannedSidecarModifiedAt, City, Country, CountryCode, PickState, CaptureMode, Title, Headline, Description, Creator, Credit, Copyright, ClearedCopies, DateTakenOffset"
 
         Private Shared Function ReadMetaRow(reader As SqliteDataReader) As LibraryImageMeta
             Return New LibraryImageMeta With {
@@ -1679,7 +1685,8 @@ Namespace Services
                 .Creator = If(reader.IsDBNull(37), "", reader.GetString(37)),
                 .Credit = If(reader.IsDBNull(38), "", reader.GetString(38)),
                 .Copyright = If(reader.IsDBNull(39), "", reader.GetString(39)),
-                .ClearedCopies = If(reader.IsDBNull(40), "", reader.GetString(40))
+                .ClearedCopies = If(reader.IsDBNull(40), "", reader.GetString(40)),
+                .DateTakenOffset = If(reader.IsDBNull(41), "", reader.GetString(41))
             }
         End Function
 

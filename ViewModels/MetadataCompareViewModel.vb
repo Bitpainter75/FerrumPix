@@ -344,7 +344,7 @@ Namespace ViewModels
             _descriptionSidecar = ExifService.ReadSidecarDescription(imagePath)
             _copyright = CopyrightService.NormalizeText(exif.Copyright)
             _camera = If(exif.DisplayCamera, "")
-            _dateTaken = ExifService.FormatExifDate(exif.DateTaken)
+            _dateTaken = ExifService.FormatExifDate(exif.DateTakenDisplay)
             Dim fields = ExifService.ExtractSearchFields(exif, imagePath)
             _hasCoordinates = fields.GpsLatitude.HasValue AndAlso fields.GpsLongitude.HasValue
             _filePlace = PlacePanelService.Compose(fields.City, fields.Country)
@@ -511,7 +511,7 @@ Namespace ViewModels
             Rows.Add(New MetadataCompareRow With {.Label = LocalizationService.T("Kamera"), .FileText = _camera, .CatalogText = If(_catalogMeta.Camera, "")})
             Rows.Add(New MetadataCompareRow With {
                 .Label = LocalizationService.T("Aufnahmedatum"), .FileText = _dateTaken,
-                .CatalogText = ExifService.FormatExifDate(_catalogMeta.DateTaken)})
+                .CatalogText = ExifService.FormatExifDate(ExifService.ToDisplayTime(_catalogMeta.DateTaken, _catalogMeta.DateTakenOffset))})
             Dim catalogPlace = PlacePanelService.Compose(_catalogMeta.City,
                                    PlaceLookupService.LocalizedCountry(_catalogMeta.CountryCode, _catalogMeta.Country))
             If catalogPlace.Length = 0 AndAlso _catalogMeta.GpsLatitude.HasValue AndAlso _catalogMeta.GpsLongitude.HasValue Then

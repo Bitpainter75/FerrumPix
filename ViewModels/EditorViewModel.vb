@@ -23741,6 +23741,15 @@ Namespace ViewModels
             If Not _hasChanges Then Return True
             If _mainVm Is Nothing Then Return True
 
+            ' Automatisch speichern, wenn eingestellt (ab Werk aus), aber NUR, wo "Speichern" ohne
+            ' Dialog geht: RAW und PSD in die Begleitdatei, ein .fpx in sich selbst, JPEG, PNG und
+            ' WebP an Ort und Stelle. Wo nur "Speichern unter" bleibt, oeffnete sonst unvermittelt ein
+            ' Dateidialog; dort und nach einem Fehlschlag kommt die gewohnte Frage.
+            If AppSettingsService.Load().EditorAutoSaveOnLeave AndAlso CanSaveInPlace Then
+                DiagnosticLogService.LogAlways("Editor.Save", $"autoSave action={actionDescription}")
+                If Await SaveImageAsync(False) Then Return True
+            End If
+
             Dim message As String
             If String.IsNullOrWhiteSpace(actionDescription) Then
                 message = LocalizationService.T("Es gibt ungespeicherte Änderungen. Möchtest du sie speichern?")

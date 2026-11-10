@@ -226,7 +226,7 @@ Namespace Services
                                              edited As Boolean?,
                                              Optional requireAbsent As Boolean = False,
                                              Optional description As ImageDescription = Nothing,
-                                             Optional imported As ForeignCatalogService.ImportedPlaceAndRights = Nothing) As Boolean
+                                             Optional imported As ForeignCatalogService.ImportedMetadata = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Dim temp As String = Nothing
@@ -1331,11 +1331,14 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Der Block mit Copyright und Ort aus dem Katalog des Referenzprogramms, oder Nothing
-        ''' ohne Werte. Eine ABSCHRIFT jenes Katalogs, keine eigene Angabe: gelesen wird er nach Datei
-        ''' und XMP-Beistelldatei (ExifService.ApplyImportedPlaceAndRights), der Dialog schreibt nie
-        ''' hinein.</summary>
-        Private Shared Function ImportedNode(value As ForeignCatalogService.ImportedPlaceAndRights) As XElement
+        ''' <summary>Das Format der Zeiten im Block: Uhrzeit vor Ort, ohne Zone (die steht daneben).</summary>
+        Private Const ImportedTimeFormat As String = "yyyy-MM-ddTHH:mm:ss"
+
+        ''' <summary>Der Block mit dem, was aus dem Katalog des Referenzprogramms uebernommen wurde
+        ''' (Copyright, Ort, eine dort geaenderte Aufnahmezeit), oder Nothing ohne Werte. Eine ABSCHRIFT
+        ''' jenes Katalogs, keine eigene Angabe: gelesen wird er nach Datei und XMP-Beistelldatei
+        ''' (ExifService.ApplyImportedMetadata), der Dialog schreibt nie hinein.</summary>
+        Private Shared Function ImportedNode(value As ForeignCatalogService.ImportedMetadata) As XElement
             If value Is Nothing OrElse value.IsEmpty Then Return Nothing
             Dim invariant = Globalization.CultureInfo.InvariantCulture
             Dim node = New XElement(Ns + "imported", New XAttribute("source", "lrcat"))
@@ -1346,16 +1349,21 @@ Namespace Services
             End If
             If value.City.Length > 0 Then node.Add(New XElement(Ns + "city", value.City))
             If value.Country.Length > 0 Then node.Add(New XElement(Ns + "country", value.Country))
+            If value.HasEditedCaptureTime Then
+                node.Add(New XElement(Ns + "captureTime", value.CaptureTime.Value.ToString(ImportedTimeFormat, invariant)))
+                node.Add(New XElement(Ns + "originalCaptureTime", value.OriginalCaptureTime.Value.ToString(ImportedTimeFormat, invariant)))
+                If value.CaptureOffset.Length > 0 Then node.Add(New XElement(Ns + "captureOffset", value.CaptureOffset))
+            End If
             Return node
         End Function
 
-        ''' <summary>Copyright und Ort aus der .fpxmp, wie sie aus dem Katalog des Referenzprogramms
-        ''' uebernommen wurden; Nothing ohne Datei, ohne Block oder bei einer unlesbaren Datei.
+        ''' <summary>Was aus dem Katalog des Referenzprogramms uebernommen wurde, aus der .fpxmp; Nothing
+        ''' ohne Datei, ohne Block oder bei einer unlesbaren Datei.
         '''
-        ''' WARUM HIER: bei RAW und PSD bleiben sie so erhalten, auch wenn der fremde Katalog spaeter
+        ''' WARUM HIER: bei RAW und PSD bleibt es so erhalten, auch wenn der fremde Katalog spaeter
         ''' nicht mehr eingestellt ist oder fehlt. Andere Formate bekommen keinen Block; dort legt
         ''' ExifService die Werte beim Lesen aus dem Katalog selbst dazu.</summary>
-        Public Shared Function TryReadImported(rawPath As String) As ForeignCatalogService.ImportedPlaceAndRights
+        Public Shared Function TryReadImported(rawPath As String) As ForeignCatalogService.ImportedMetadata
             Try
                 If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return Nothing
                 Dim sidecar = SidecarPathFor(rawPath)
@@ -1365,10 +1373,17 @@ Namespace Services
                 Dim node = root.Element(Ns + "imported")
                 If node Is Nothing Then Return Nothing
                 Dim invariant = Globalization.CultureInfo.InvariantCulture
-                Dim result As New ForeignCatalogService.ImportedPlaceAndRights With {
+                Dim result As New ForeignCatalogService.ImportedMetadata With {
                     .Copyright = If(node.Element(Ns + "copyright")?.Value, "").Trim(),
                     .City = If(node.Element(Ns + "city")?.Value, "").Trim(),
                     .Country = If(node.Element(Ns + "country")?.Value, "").Trim()}
+                Dim captured, original As DateTime
+                If DateTime.TryParseExact(node.Element(Ns + "captureTime")?.Value, ImportedTimeFormat, invariant, Globalization.DateTimeStyles.None, captured) AndAlso
+                   DateTime.TryParseExact(node.Element(Ns + "originalCaptureTime")?.Value, ImportedTimeFormat, invariant, Globalization.DateTimeStyles.None, original) Then
+                    result.CaptureTime = captured
+                    result.OriginalCaptureTime = original
+                    result.CaptureOffset = ExifService.NormalizeOffset(node.Element(Ns + "captureOffset")?.Value)
+                End If
                 Dim latitude, longitude As Double
                 If Double.TryParse(node.Element(Ns + "latitude")?.Value, Globalization.NumberStyles.Float, invariant, latitude) AndAlso
                    Double.TryParse(node.Element(Ns + "longitude")?.Value, Globalization.NumberStyles.Float, invariant, longitude) AndAlso
@@ -1382,18 +1397,19 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Copyright und Ort aus dem Katalog des Referenzprogramms in die .fpxmp, nur fuer RAW
-        ''' und PSD. Der Block ist eine Abschrift: er wird ERSETZT, sobald der Katalog etwas anderes
-        ''' sagt, damit eine spaetere Aenderung dort ankommt. Ob ein Wert gilt, entscheidet erst das
-        ''' Lesen (Datei und XMP-Beistelldatei gehen vor), deshalb wird hier nichts gegen die Datei
+        ''' <summary>Copyright, Ort und eine geaenderte Aufnahmezeit aus dem Katalog des
+        ''' Referenzprogramms in die .fpxmp, nur fuer RAW und PSD. Der Block ist eine Abschrift: er wird
+        ''' ERSETZT, sobald der Katalog etwas anderes sagt, damit eine spaetere Aenderung dort ankommt.
+        ''' Ob ein Wert gilt, entscheidet erst das Lesen (Datei und XMP-Beistelldatei gehen vor, die
+        ''' Zeit nach ForeignCatalogService.EditedCaptureTime), deshalb wird hier nichts gegen die Datei
         ''' abgeglichen. Sagt der Katalog nichts (mehr), bleibt ein vorhandener Block stehen.
         ''' Fehlt die .fpxmp, entsteht sie wie beim Titel mit neutralem Rezept.</summary>
-        Public Shared Function TryImportPlaceAndRightsFromForeignCatalog(rawPath As String) As Boolean
+        Public Shared Function TryImportMetadataFromForeignCatalog(rawPath As String) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
             Try
                 Dim entry = ForeignCatalogService.Lookup(rawPath)
                 If entry Is Nothing Then Return False
-                Dim incoming = ForeignCatalogService.PlaceAndRightsFor(entry)
+                Dim incoming = ForeignCatalogService.ImportedMetadataFor(entry)
                 If incoming Is Nothing OrElse incoming.IsEmpty Then Return False
                 If incoming.SameAs(TryReadImported(rawPath)) Then Return False
                 SyncLock _writeLock

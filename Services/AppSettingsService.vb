@@ -371,6 +371,10 @@ Namespace Services
         ''' immer neu geladen: dabei wandern die Regler in die Bildpunkte, und ohne das Neuladen
         ''' legte das naechste Speichern denselben Zuschnitt ein zweites Mal darauf.
         Public Property EditorSaveAsOpensTarget As Boolean = False
+        ''' <summary>Ungespeicherte Aenderungen beim Verlassen eines Bildes ohne Rueckfrage speichern
+        ''' (Standard AUS). Nur dort, wo "Speichern" ohne Dialog geht; sonst und bei einem Fehler kommt
+        ''' die gewohnte Frage (EditorViewModel.ConfirmSaveBeforeLeavingAsync).</summary>
+        Public Property EditorAutoSaveOnLeave As Boolean = False
         ''' Abstand zwischen zwei Kacheln der Galerie in Bildpunkten, in ALLEN Kachelansichten. Ab
         ''' Werk 10, der Aussenrand der Kachel (zweimal 5). Die Zahl geht
         ''' NICHT nur in die Optik: aus ihr und dem Kachelmass rechnen Spaltenzahl, Zeilenhoehe und
@@ -503,6 +507,10 @@ Namespace Services
         ''' <summary>Stichwoerter, Bewertung und Farbetikett aus der .pp3 oder .arp neben dem Bild in den
         ''' Katalog uebernehmen (Standard AUS). Nur lesen; siehe Pp3SidecarService.</summary>
         Public Property ReadPp3Sidecars As Boolean = False
+        ''' <summary>Die Aufnahmezeit eines Bildes mit bekannter Zeitzone in der Zone dieses Rechners
+        ''' anzeigen (Standard AN); aus zeigt die Uhrzeit vor Ort. Gespeichert und sortiert wird immer
+        ''' die Uhrzeit vor Ort; siehe ExifService.ToDisplayTime.</summary>
+        Public Property ShowCaptureTimeInLocalZone As Boolean = True
         ''' <summary>Ein Katalog des Referenzprogramms (.lrcat), aus dem mit <see cref="ReadPp3Sidecars"/>
         ''' dieselben Angaben kommen, dazu die Markierung und bei RAW ohne eigene Bearbeitung die
         ''' Entwicklung. Leer heisst keiner. Nur lesen; siehe ForeignCatalogService.</summary>

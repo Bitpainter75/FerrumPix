@@ -13,7 +13,7 @@ Namespace Services
     ''' <summary>Liest einen Katalog des Referenzprogramms (.lrcat) fuer den Katalog von FerrumPix:
     ''' Bewertung, Farbetikett, Markierung, Stichwoerter und die Entwicklung je Foto, dazu eine dort
     ''' geaenderte Aufnahmezeit (ueber ExifService.ReadExif, siehe <see cref="EditedCaptureTime"/>) sowie
-    ''' Copyright, Koordinate, Ort und Land (<see cref="PlaceAndRightsFor"/>).
+    ''' Copyright, Koordinate, Ort und Land (<see cref="ImportedMetadataFor"/>).
     '''
     ''' GLEICHER WEG WIE DIE .pp3: dieselbe Einstellung schaltet ihn ein
     ''' (<see cref="AppSettings.ReadPp3Sidecars"/>), dazu der Pfad des Katalogs
@@ -66,20 +66,31 @@ Namespace Services
             ''' <summary>Die Aufnahmezeit vor der ersten Aenderung dort (originalCaptureTime); Nothing,
             ''' wenn sie nie geaendert wurde.</summary>
             Public Property OriginalCaptureTime As DateTime?
-            ''' <summary>Copyright und Ort, beim ersten Bedarf je Foto aus der Datenbank gelesen
-            ''' (<see cref="PlaceAndRightsFor"/>); gilt, solange dieser Stand des Katalogs gilt.</summary>
-            Friend PlaceAndRights As ImportedPlaceAndRights
-            Friend PlaceAndRightsRead As Boolean
+            ''' <summary>Was aus der Datenbank je Foto dazukommt (Copyright, Ort, Zone), beim ersten
+            ''' Bedarf gelesen (<see cref="ImportedMetadataFor"/>); gilt, solange dieser Stand des
+            ''' Katalogs gilt.</summary>
+            Friend Imported As ImportedMetadata
+            Friend ImportedRead As Boolean
         End Class
 
-        ''' <summary>Copyright, Koordinate und Ortsnamen eines Fotos, wie das Referenzprogramm sie
-        ''' fuehrt. Leere Felder heissen: steht dort nicht.</summary>
-        Public NotInheritable Class ImportedPlaceAndRights
+        ''' <summary>Was aus dem Katalog des Referenzprogramms an die Datei uebernommen wird: Copyright,
+        ''' Koordinate, Ortsnamen und eine dort GEAENDERTE Aufnahmezeit samt der Zeit vor der Aenderung
+        ''' und der Zone. Leere Felder heissen: steht dort nicht. Bei RAW und PSD steht es als
+        ''' Abschrift in der .fpxmp (RawSidecarService.TryReadImported), sonst kommt es beim Lesen
+        ''' aus dem Katalog.</summary>
+        Public NotInheritable Class ImportedMetadata
             Public Property Copyright As String = ""
             Public Property Latitude As Double?
             Public Property Longitude As Double?
             Public Property City As String = ""
             Public Property Country As String = ""
+            ''' <summary>Die geaenderte Aufnahmezeit als Uhrzeit vor Ort; nur belegt, wenn sie dort
+            ''' wirklich geaendert wurde, dann immer zusammen mit <see cref="OriginalCaptureTime"/>.</summary>
+            Public Property CaptureTime As DateTime?
+            Public Property OriginalCaptureTime As DateTime?
+            ''' <summary>Die Zone der Aufnahmezeit ("+02:00"), wie das Referenzprogramm sie im XMP-Paket
+            ''' fuehrt; leer, wenn keine bekannt ist.</summary>
+            Public Property CaptureOffset As String = ""
 
             Public ReadOnly Property HasCoordinates As Boolean
                 Get
@@ -87,18 +98,28 @@ Namespace Services
                 End Get
             End Property
 
-            Public ReadOnly Property IsEmpty As Boolean
+            Public ReadOnly Property HasEditedCaptureTime As Boolean
                 Get
-                    Return Copyright.Length = 0 AndAlso Not HasCoordinates AndAlso City.Length = 0 AndAlso Country.Length = 0
+                    Return CaptureTime.HasValue AndAlso OriginalCaptureTime.HasValue
                 End Get
             End Property
 
-            Public Function SameAs(other As ImportedPlaceAndRights) As Boolean
+            Public ReadOnly Property IsEmpty As Boolean
+                Get
+                    Return Copyright.Length = 0 AndAlso Not HasCoordinates AndAlso City.Length = 0 AndAlso
+                           Country.Length = 0 AndAlso Not HasEditedCaptureTime
+                End Get
+            End Property
+
+            Public Function SameAs(other As ImportedMetadata) As Boolean
                 If other Is Nothing Then Return IsEmpty
                 Return String.Equals(Copyright, other.Copyright, StringComparison.Ordinal) AndAlso
                        Nullable.Equals(Latitude, other.Latitude) AndAlso Nullable.Equals(Longitude, other.Longitude) AndAlso
                        String.Equals(City, other.City, StringComparison.Ordinal) AndAlso
-                       String.Equals(Country, other.Country, StringComparison.Ordinal)
+                       String.Equals(Country, other.Country, StringComparison.Ordinal) AndAlso
+                       Nullable.Equals(CaptureTime, other.CaptureTime) AndAlso
+                       Nullable.Equals(OriginalCaptureTime, other.OriginalCaptureTime) AndAlso
+                       String.Equals(CaptureOffset, other.CaptureOffset, StringComparison.Ordinal)
             End Function
         End Class
 
@@ -287,25 +308,38 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Copyright, Koordinate, Ort und Land eines Fotos, oder Nothing, wenn der Katalog
-        ''' nichts davon traegt. Gelesen beim ersten Bedarf und am Eintrag gemerkt: der Weg laeuft bei
-        ''' jedem Lesen der Aufnahmedaten mit (ExifService.ReadExif), und ein neuer Stand des Katalogs
-        ''' bringt ohnehin neue Eintraege.
+        ''' <summary>Was der Katalog an ein Foto uebergibt (<see cref="ImportedMetadata"/>), oder Nothing,
+        ''' wenn er nichts davon traegt. Gelesen beim ersten Bedarf und am Eintrag gemerkt: der Weg
+        ''' laeuft bei jedem Lesen der Aufnahmedaten mit (ExifService.ReadExif), und ein neuer Stand
+        ''' des Katalogs bringt ohnehin neue Eintraege.
         '''
-        ''' QUELLE ist zuerst das XMP-Paket in Adobe_AdditionalMetadata.xmp, dasselbe wie fuer den
-        ''' Titel: dc:rights, exif:GPSLatitude und exif:GPSLongitude, photoshop:City und
+        ''' DIE AUFNAHMEZEIT kommt aus dem Eintrag (captureTime neben originalCaptureTime) und nur,
+        ''' wenn sie dort geaendert wurde; ihre Zone aus dem XMP-Paket (exif:DateTimeOriginal,
+        ''' ersatzweise photoshop:DateCreated und xmp:CreateDate), denn nur dort fuehrt das
+        ''' Referenzprogramm sie, und eine Aenderung behaelt sie bei.
+        '''
+        ''' COPYRIGHT UND ORT kommen zuerst aus dem XMP-Paket in Adobe_AdditionalMetadata.xmp, dasselbe
+        ''' wie fuer den Titel: dc:rights, exif:GPSLatitude und exif:GPSLongitude, photoshop:City und
         ''' photoshop:Country, gelesen wie in einer Beistelldatei. Was dort fehlt, kommt aus den
         ''' Tabellen, in denen das Referenzprogramm dieselben Werte fuer seine Filter fuehrt:
         ''' AgLibraryIPTC.copyright, AgHarvestedExifMetadata.gpsLatitude/gpsLongitude und die
         ''' Ortsnamen ueber AgHarvestedIptcMetadata (cityRef, countryRef) aus AgInternedIptcCity und
         ''' AgInternedIptcCountry. Jede Abfrage fuer sich: fehlt einem Katalog eine Tabelle, bleibt es
-        ''' bei den uebrigen. Die Tabellen folgen fremden Lesern, ein echter Katalog lag nicht vor.</summary>
-        Public Shared Function PlaceAndRightsFor(entry As CatalogEntry) As ImportedPlaceAndRights
+        ''' bei den uebrigen. Die Tabellen folgen fremden Lesern, ein echter Katalog lag nicht vor.
+        '''
+        ''' Hat das Referenzprogramm den Katalog offen (".lock"), gilt der gemerkte Stand; fehlt der,
+        ''' kommt nur die Aufnahmezeit aus dem Speicher, ohne Zone und ungemerkt.</summary>
+        Public Shared Function ImportedMetadataFor(entry As CatalogEntry) As ImportedMetadata
             If entry Is Nothing OrElse Not IsEnabled Then Return Nothing
-            If entry.PlaceAndRightsRead Then Return entry.PlaceAndRights
+            If entry.ImportedRead Then Return entry.Imported
+            Dim result As New ImportedMetadata()
+            If entry.CaptureTime.HasValue AndAlso entry.OriginalCaptureTime.HasValue AndAlso
+               entry.CaptureTime.Value <> entry.OriginalCaptureTime.Value Then
+                result.CaptureTime = entry.CaptureTime
+                result.OriginalCaptureTime = entry.OriginalCaptureTime
+            End If
             Dim path = ConfiguredPath
-            If File.Exists(path & ".lock") Then Return Nothing
-            Dim result As New ImportedPlaceAndRights()
+            If File.Exists(path & ".lock") Then Return If(result.IsEmpty, Nothing, result)
             Try
                 Using conn = Open(path)
                     Dim packet = ""
@@ -329,6 +363,17 @@ Namespace Services
                             End If
                             result.City = PacketValue(descriptions, XName.Get("City", "http://ns.adobe.com/photoshop/1.0/"))
                             result.Country = PacketValue(descriptions, XName.Get("Country", "http://ns.adobe.com/photoshop/1.0/"))
+                            If result.HasEditedCaptureTime Then
+                                For Each name In {XName.Get("DateTimeOriginal", "http://ns.adobe.com/exif/1.0/"),
+                                                  XName.Get("DateCreated", "http://ns.adobe.com/photoshop/1.0/"),
+                                                  XName.Get("CreateDate", "http://ns.adobe.com/xap/1.0/")}
+                                    Dim clock = ExifService.ParseXmpClock(PacketValue(descriptions, name))
+                                    If clock.Clock.HasValue Then
+                                        result.CaptureOffset = clock.Offset
+                                        Exit For
+                                    End If
+                                Next
+                            End If
                         Catch ex As Exception
                             DiagnosticLogService.LogException("ForeignCatalog.Ort", ex)
                         End Try
@@ -370,8 +415,8 @@ Namespace Services
                 Return Nothing
             End Try
             Dim value = If(result.IsEmpty, Nothing, result)
-            entry.PlaceAndRights = value
-            entry.PlaceAndRightsRead = True
+            entry.Imported = value
+            entry.ImportedRead = True
             Return value
         End Function
 
@@ -640,12 +685,12 @@ Namespace Services
         '''   Zeit aus dem fremden Katalog zurueck, und die eigene Korrektur waere wirkungslos.</summary>
         ''' <param name="fileTime">Die geltende Zeit der Datei samt Beistelldatei, EXIF-Rohformat.</param>
         ''' <param name="fileTimeIsFallback">Die Datei traegt keine Aufnahmezeit, nur ein Aenderungsdatum.</param>
-        Public Shared Function EditedCaptureTime(entry As CatalogEntry, fileTime As String, fileTimeIsFallback As Boolean) As String
-            If entry Is Nothing OrElse Not entry.CaptureTime.HasValue OrElse Not entry.OriginalCaptureTime.HasValue Then Return ""
-            If entry.CaptureTime.Value = entry.OriginalCaptureTime.Value Then Return ""
-            Dim edited = entry.CaptureTime.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+        Public Shared Function EditedCaptureTime(imported As ImportedMetadata, fileTime As String, fileTimeIsFallback As Boolean) As String
+            If imported Is Nothing OrElse Not imported.HasEditedCaptureTime Then Return ""
+            If imported.CaptureTime.Value = imported.OriginalCaptureTime.Value Then Return ""
+            Dim edited = imported.CaptureTime.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
             If String.IsNullOrWhiteSpace(fileTime) OrElse fileTimeIsFallback Then Return edited
-            Dim original = entry.OriginalCaptureTime.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+            Dim original = imported.OriginalCaptureTime.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
             Return If(String.Equals(fileTime.Trim(), original, StringComparison.Ordinal), edited, "")
         End Function
 

@@ -11351,4 +11351,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>La edición del servidor no se pudo leer al abrir la imagen, por eso no se sobrescribe. Vuelva a abrir la imagen.</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>Mostrar la hora de captura en mi zona horaria</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>Si una foto conoce la zona horaria en la que se tomó, la hora se convierte a la zona horaria de este equipo. Desactivado, se muestra la hora que tenía la cámara en el lugar de la toma. Siempre se ordena por esa hora.</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>Guardar automáticamente al salir</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>En lugar de preguntar, el editor guarda los cambios sin guardar cuando abres otra foto o sales del editor. RAW y PSD conservan la edición en el archivo complementario, JPEG, PNG y WebP se sobrescriben. Si la foto solo puede guardarse con un nombre nuevo, se sigue preguntando.</value>
+  </data>
 </root>

@@ -11391,4 +11391,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>Redigeringen på serveren kunne ikke læses, da billedet blev åbnet, og overskrives derfor ikke. Åbn billedet igen.</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>Vis optagelsestidspunkt i min tidszone</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>Kender et billede tidszonen for optagelsen, omregnes tiden til denne computers tidszone. Slået fra vises det klokkeslæt, kameraet havde på optagelsesstedet. Der sorteres altid efter dette klokkeslæt.</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>Gem automatisk ved forlad</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>I stedet for at spørge gemmer editoren ikke-gemte ændringer, når du åbner et andet billede eller forlader editoren. RAW og PSD beholder redigeringen i sidefilen, JPEG, PNG og WebP overskrives. Hvor billedet kun kan gemmes under et nyt navn, bliver du stadig spurgt.</value>
+  </data>
 </root>

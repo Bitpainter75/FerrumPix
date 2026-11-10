@@ -11350,4 +11350,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>Não foi possível ler a edição no servidor ao abrir a imagem, por isso não será substituída. Abra a imagem novamente.</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>Mostrar a hora da captura no meu fuso horário</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>Se uma foto conhece o fuso horário em que foi tirada, a hora é convertida para o fuso horário deste computador. Desligado, mostra a hora que a câmara tinha no local da captura. A ordenação usa sempre essa hora.</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>Guardar automaticamente ao sair</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>Em vez de perguntar, o editor guarda as alterações não guardadas quando abre outra foto ou sai do editor. RAW e PSD mantêm a edição no ficheiro auxiliar, JPEG, PNG e WebP são substituídos. Quando a foto só pode ser guardada com um novo nome, continua a ser perguntado.</value>
+  </data>
 </root>

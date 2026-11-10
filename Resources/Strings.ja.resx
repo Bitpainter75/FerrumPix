@@ -11391,4 +11391,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>画像を開いたときにサーバー上の編集を読み込めなかったため、上書きしません。画像を開き直してください。</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>撮影日時を自分のタイムゾーンで表示</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>画像に撮影時のタイムゾーンが記録されている場合、時刻をこのコンピューターのタイムゾーンに換算します。オフにすると、撮影地でのカメラの時刻を表示します。並べ替えは常にこの時刻で行います。</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>離れるときに自動保存</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>確認する代わりに、別の画像を開いたりエディターを離れたりするときに未保存の変更を保存します。RAW と PSD は編集内容をサイドカーファイルに保持し、JPEG、PNG、WebP は上書きされます。新しい名前でしか保存できない画像では、引き続き確認します。</value>
+  </data>
 </root>

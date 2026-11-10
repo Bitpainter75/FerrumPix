@@ -11391,4 +11391,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>De bewerking op de server kon bij het openen niet worden gelezen en wordt daarom niet overschreven. Open de afbeelding opnieuw.</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>Opnametijd in mijn tijdzone tonen</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>Als een foto de tijdzone van de opname kent, wordt de tijd omgerekend naar de tijdzone van deze computer. Uitgeschakeld staat er de kloktijd die de camera op de opnamelocatie had. Er wordt altijd op deze kloktijd gesorteerd.</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>Automatisch opslaan bij verlaten</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>In plaats van te vragen slaat de editor niet-opgeslagen wijzigingen op wanneer je een andere foto opent of de editor verlaat. RAW en PSD bewaren de bewerking in het begeleidende bestand, JPEG, PNG en WebP worden overschreven. Waar de foto alleen onder een nieuwe naam kan worden opgeslagen, wordt nog steeds gevraagd.</value>
+  </data>
 </root>

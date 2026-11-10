@@ -11370,4 +11370,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>The edit on the server could not be read when the picture was opened, so it will not be overwritten. Please open the picture again.</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>Show capture time in my time zone</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>If a picture knows the time zone it was taken in, the time is converted to the time zone of this computer. When off, it shows the clock time the camera had where the picture was taken. Sorting always uses that clock time.</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>Save automatically when leaving</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>Instead of asking, the editor saves unsaved changes when you open another picture or leave the editor. RAW and PSD keep the edit in the sidecar file, JPEG, PNG and WebP are overwritten. Where the picture can only be saved under a new name, you are still asked.</value>
+  </data>
 </root>

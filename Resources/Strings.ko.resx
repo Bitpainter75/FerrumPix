@@ -11395,4 +11395,16 @@
   <data name="Die_Bearbeitung_auf_dem_Server_lie_sich_beim_ffn_a8a8a770" xml:space="preserve">
     <value>이미지를 열 때 서버의 편집을 읽을 수 없어 덮어쓰지 않습니다. 이미지를 다시 여세요.</value>
   </data>
+  <data name="Aufnahmezeit_in_meiner_Zeitzone_anzeigen_b4d09dcd" xml:space="preserve">
+    <value>촬영 시간을 내 시간대로 표시</value>
+  </data>
+  <data name="Kennt_ein_Bild_die_Zeitzone_seiner_Aufnahme_wird_01ae62b0" xml:space="preserve">
+    <value>사진에 촬영 시 시간대가 기록되어 있으면 이 컴퓨터의 시간대로 환산합니다. 끄면 촬영 장소에서 카메라가 가리킨 시각을 표시합니다. 정렬은 항상 이 시각을 기준으로 합니다.</value>
+  </data>
+  <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
+    <value>나갈 때 자동 저장</value>
+  </data>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
+    <value>묻는 대신 다른 사진을 열거나 편집기를 나갈 때 저장하지 않은 변경 사항을 저장합니다. RAW와 PSD는 편집 내용을 보조 파일에 보관하고, JPEG, PNG, WebP는 덮어씁니다. 새 이름으로만 저장할 수 있는 사진은 계속 묻습니다.</value>
+  </data>
 </root>

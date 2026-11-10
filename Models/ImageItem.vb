@@ -1009,6 +1009,7 @@ Namespace Models
             ImageWidth = scanned.ImageWidth
             ImageHeight = scanned.ImageHeight
             ExifDateTaken = scanned.ExifDateTaken
+            ExifDateTakenOffset = scanned.ExifDateTakenOffset
             ExifDateModified = scanned.ExifDateModified
             ExifCamera = scanned.ExifCamera
             CaptureMode = scanned.CaptureMode
@@ -1051,6 +1052,23 @@ Namespace Models
             Set(value As DateTime?)
                 If Nullable.Equals(_exifDateTaken, value) Then Return
                 _exifDateTaken = value
+                RaisePropertyChanged()
+                RaisePropertyChanged(NameOf(DateExifTakenText))
+            End Set
+        End Property
+
+        ''' <summary>Die Zone der Aufnahmezeit ("+02:00"), leer ohne. ExifDateTaken bleibt die Uhrzeit
+        ''' vor Ort und ordnet die Galerie; nur der angezeigte Text rechnet um
+        ''' (ExifService.ToDisplayTime).</summary>
+        Private _exifDateTakenOffset As String = ""
+        Public Property ExifDateTakenOffset As String
+            Get
+                Return _exifDateTakenOffset
+            End Get
+            Set(value As String)
+                Dim normalized = If(value, "")
+                If String.Equals(_exifDateTakenOffset, normalized, StringComparison.Ordinal) Then Return
+                _exifDateTakenOffset = normalized
                 RaisePropertyChanged()
                 RaisePropertyChanged(NameOf(DateExifTakenText))
             End Set
@@ -1903,7 +1921,7 @@ Namespace Models
         Public ReadOnly Property DateExifTakenText As String
             Get
                 If Not _exifDateTaken.HasValue Then Return ""
-                Return LocalizationService.FormatDateTime(_exifDateTaken.Value)
+                Return LocalizationService.FormatDateTime(ExifService.ToDisplayTime(_exifDateTaken.Value, _exifDateTakenOffset))
             End Get
         End Property
 
@@ -1977,7 +1995,7 @@ Namespace Models
             Dim invariant = Globalization.CultureInfo.InvariantCulture
             Select Case field
                 Case TileCaptionField.DateTaken
-                    If _exifDateTaken.HasValue Then Return LocalizationService.FormatDateTime(_exifDateTaken.Value)
+                    If _exifDateTaken.HasValue Then Return LocalizationService.FormatDateTime(ExifService.ToDisplayTime(_exifDateTaken.Value, _exifDateTakenOffset))
                     EnsureFileInfoLoaded()
                     Return FileDateText(DateModified)
                 Case TileCaptionField.FileModified
@@ -2068,6 +2086,7 @@ Namespace Models
             ImageWidth = meta.ImageWidth.GetValueOrDefault()
             ImageHeight = meta.ImageHeight.GetValueOrDefault()
             ExifDateTaken = ExifService.ParseExifDateTime(meta.DateTaken)
+            ExifDateTakenOffset = meta.DateTakenOffset
             ExifDateModified = ExifService.ParseExifDateTime(meta.DateModifiedExif)
             ExifCamera = meta.Camera
             CaptureMode = meta.CaptureMode

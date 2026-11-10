@@ -1294,7 +1294,7 @@ Namespace ViewModels
                 ' Blendet jemand das Aufnahmedatum aus, bleibt das Dateidatum natuerlich stehen.
                 Return Not (ShowDateTakenRow AndAlso
                             String.Equals(ExifService.FormatExifDate(_exifInfo.FileCreated),
-                                          ExifService.FormatExifDate(_exifInfo.DateTaken), StringComparison.Ordinal))
+                                          ExifService.FormatExifDate(_exifInfo.DateTakenDisplay), StringComparison.Ordinal))
             End Get
         End Property
 

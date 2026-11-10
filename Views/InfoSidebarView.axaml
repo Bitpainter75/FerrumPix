@@ -170,7 +170,7 @@
                                 <!-- Das EXIF-Aufnahmedatum, nicht das Dateidatum weiter unten. -->
                                 <icons:LabelValuePanel IsVisible="{Binding ShowDateTakenRow}">
                                     <TextBlock Text="Aufnahmedatum"/>
-                                    <TextBlock Text="{Binding ExifInfo.DateTaken, Converter={StaticResource ExifDateConverter}}"/>
+                                    <TextBlock Text="{Binding ExifInfo.DateTakenDisplay, Converter={StaticResource ExifDateConverter}}"/>
                                 </icons:LabelValuePanel>
                                 <icons:LabelValuePanel IsVisible="{Binding ShowCameraRow}">
                                     <TextBlock Text="Kamera"/>

@@ -102,6 +102,13 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>Laesst die Kacheln ihre Angaben neu fragen, ohne dass sich die Wahl geaendert hat:
+        ''' fuer Einstellungen, die nur den angezeigten Wert aendern (die Aufnahmezeit in der eigenen
+        ''' Zeitzone, ExifService.ToDisplayTime).</summary>
+        Public Shared Sub NotifyValuesChanged()
+            RaiseEvent Changed()
+        End Sub
+
         ''' <summary>Uebernimmt eine Wahl aus dem Einstellungsdialog. Gespeichert wird dort; hier
         ''' steht nur der Stand, nach dem Kacheln und Liste zeichnen.</summary>
         Public Shared Sub Apply(left As String, right As String)
