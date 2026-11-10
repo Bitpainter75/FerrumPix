@@ -40,22 +40,14 @@
                                                       Margin="0,18,0,0"
                                                       IsVisible="{Binding DialogShowsFileConflict}"/>
 
-                        <!-- Einfache Texteingabe. Bei Speichern unter steht darueber die Auswahl der
-                             Namensvorlagen (GitHub #102): die Wahl schreibt ins Feld, aufgeloest
-                             wird beim Speichern. -->
-                        <StackPanel Grid.Row="2"
-                                    Spacing="6"
-                                    Margin="0,18,0,0"
-                                    IsVisible="{Binding DialogShowsInput}">
-                            <ComboBox ItemsSource="{Binding DialogSaveAsNameChoices}"
-                                      SelectedItem="{Binding DialogSaveAsSelectedNameChoice, Mode=TwoWay}"
-                                      IsVisible="{Binding IsDialogSaveAsNameChoiceVisible}"
-                                      HorizontalAlignment="Stretch"
-                                      Classes="no-translate"/>
-                            <TextBox x:Name="DialogInputBox"
-                                     Text="{Binding DialogInputText, Mode=TwoWay}"
-                                     MinHeight="36"/>
-                        </StackPanel>
+                        <!-- Einfache Texteingabe. Speichern unter nutzt sie nicht mehr: sein Name steht
+                             wie beim Exportieren im Block Dateiname unter dem Ordner. -->
+                        <TextBox x:Name="DialogInputBox"
+                                 Grid.Row="2"
+                                 Text="{Binding DialogInputText, Mode=TwoWay}"
+                                 IsVisible="{Binding DialogShowsInput}"
+                                 Margin="0,18,0,0"
+                                 MinHeight="36"/>
 
                         <views:SearchDialogView Grid.Row="3"
                                                 Margin="0,16,0,0"

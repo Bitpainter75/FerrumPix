@@ -22972,12 +22972,15 @@ Namespace ViewModels
                                                              SaveQuality,
                                                              LocalizationService.T("Speichern"),
                                                              LocalizationService.T("Abbrechen"))
-                If saveAsResult Is Nothing OrElse String.IsNullOrWhiteSpace(saveAsResult.BaseName) Then Return False
+                If saveAsResult Is Nothing Then Return False
 
                 ' Eine Namensvorlage aus der Auswahl des Dialogs (GitHub #102) wird hier fuer dieses
                 ' Bild aufgeloest; ein getippter Name ohne Platzhalter bleibt, wie er ist, auch mit "#".
+                ' Leer heisst wie beim Exportieren: der Name der Quelle (die Endung kann eine andere
+                ' sein, eine vorhandene Datei fragt nach).
                 Dim templateSource = If(fromFpx, _currentFpxPath, _currentImagePath)
-                Dim chosenName = saveAsResult.BaseName.Trim()
+                Dim chosenName = If(saveAsResult.BaseName, "").Trim()
+                If chosenName.Length = 0 Then chosenName = name
                 If chosenName.Contains("{"c) Then
                     chosenName = _mainVm.ExpandTargetNamePattern(chosenName, templateSource, 1, baseNameOverride:=name).Trim()
                     If chosenName.Length = 0 Then chosenName = name

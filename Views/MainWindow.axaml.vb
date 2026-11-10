@@ -640,9 +640,15 @@ Namespace Views
                 Dim setPlaceView = overlay?.FindControl(Of SetPlaceDialogView)("SetPlaceDialog")
                 Dim gpxTrackView = overlay?.FindControl(Of GpxTrackDialogView)("GpxTrackDialog")
                 Dim descriptionTitle = overlay?.FindControl(Of TextBox)("DescriptionTitleBox")
+                ' Speichern unter fuehrt den Namen im Block Dateiname (wie beim Exportieren); wer den
+                ' Dialog oeffnet, will meist gleich den Namen tippen.
+                Dim namePattern = overlay?.FindControl(Of TextBox)("TargetNamePatternTextBox")
                 If input IsNot Nothing AndAlso vm.DialogShowsInput Then
                     input.Focus()
                     input.SelectAll()
+                ElseIf namePattern IsNot Nothing AndAlso vm.DialogFocusesNamePattern Then
+                    namePattern.Focus()
+                    namePattern.SelectAll()
                 ElseIf batchResizeView IsNot Nothing AndAlso vm.DialogShowsBatchResize Then
                     batchResizeView.FocusWidthField()
                 ElseIf setPlaceView IsNot Nothing AndAlso vm.DialogShowsSetPlace Then

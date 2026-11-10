@@ -1695,11 +1695,7 @@ Namespace ViewModels
                 If ReferenceEquals(_dialogSaveAsSelectedNameChoice, value) Then Return
                 Me.RaiseAndSetIfChanged(_dialogSaveAsSelectedNameChoice, value)
                 If value Is Nothing Then Return
-                If _dialogKind = AppDialogKind.SaveAs Then
-                    DialogInputText = value.Pattern
-                Else
-                    DialogTargetNamePattern = value.Pattern
-                End If
+                DialogTargetNamePattern = value.Pattern
             End Set
         End Property
 
@@ -3288,7 +3284,6 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
-                Me.RaisePropertyChanged(NameOf(IsDialogSaveAsNameChoiceVisible))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
@@ -3336,7 +3331,8 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.Import AndAlso
                        _dialogKind <> AppDialogKind.Backup AndAlso
                        _dialogKind <> AppDialogKind.Restore AndAlso
-                       _dialogKind <> AppDialogKind.Shortcuts
+                       _dialogKind <> AppDialogKind.Shortcuts AndAlso
+                       _dialogKind <> AppDialogKind.SaveAs
             End Get
         End Property
 
@@ -4258,18 +4254,19 @@ Namespace ViewModels
             Return String.Join(", ", parts)
         End Function
 
-        ''' Das Zieldateinamen-Muster gibt es nur bei Stapel-Zielen mit NEUEN Dateien - der
-        ''' Einzel-Speichern-Dialog hat sein eigenes Namensfeld, beim Ueberschreiben behaelt
-        ''' jede Datei ihren Namen (dann ist der SaveAs-Block ohnehin ausgeblendet).
+        ''' Das Zieldateinamen-Muster ueberall, wo NEUE Dateien entstehen, auch bei Speichern unter:
+        ''' dort fuehrt dieses Feld den Namen (vorbelegt mit dem Vorschlag), mit derselben Auswahl,
+        ''' denselben Platzhaltern und an derselben Stelle unter dem Ordner wie beim Exportieren.
+        ''' Beim Ueberschreiben behaelt jede Datei ihren Namen (dann ist der Block ohnehin aus).
         Public ReadOnly Property IsDialogNamePatternVisible As Boolean
             Get
-                Return DialogShowsSaveAsOptions AndAlso _dialogKind <> AppDialogKind.SaveAs
+                Return DialogShowsSaveAsOptions
             End Get
         End Property
 
-        ''' <summary>Die Namensauswahl ueber dem Eingabefeld, nur bei Speichern unter; die
-        ''' Stapeldialoge zeigen sie ueber ihrem Namensmuster (IsDialogNamePatternVisible).</summary>
-        Public ReadOnly Property IsDialogSaveAsNameChoiceVisible As Boolean
+        ''' <summary>Bekommt das Namensfeld beim Oeffnen den Fokus? Bei Speichern unter, denn dort
+        ''' steht der Name in diesem Feld statt im allgemeinen Eingabefeld.</summary>
+        Public ReadOnly Property DialogFocusesNamePattern As Boolean
             Get
                 Return _dialogKind = AppDialogKind.SaveAs
             End Get
@@ -6098,17 +6095,19 @@ Namespace ViewModels
             InitDialogTargetFolder("")
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
-            ' Erster Eintrag ist der Vorschlag selbst; eine Vorlage im Namensfeld loest der Editor
-            ' beim Speichern auf (SaveImageAsync).
+            ' Der Name steht im selben Feld wie das Muster der Stapel (DialogTargetNamePattern), unter
+            ' dem Ordner. Erster Eintrag der Auswahl ist der Vorschlag selbst; eine Vorlage im Feld
+            ' loest der Editor beim Speichern auf, leer bleibt der Name der Quelle (SaveImageAsync).
+            DialogTargetNamePattern = If(initialBaseName, "")
             FillDialogSaveAsNameChoices(initialBaseName, String.Format(LocalizationService.T("Vorschlag: {0}"), initialBaseName))
 
-            Dim result = Await ShowDialogAsync(AppDialogKind.SaveAs, titleText, messageText, initialBaseName, confirmText, cancelText)
+            Dim result = Await ShowDialogAsync(AppDialogKind.SaveAs, titleText, messageText, "", confirmText, cancelText)
             If result Is Nothing Then Return Nothing
 
+            ' Das gemerkte Muster der Stapel bleibt unberuehrt: hier steht meist ein konkreter Name.
             PersistDialogTargetFolderIfLocal()
-            PersistDialogTargetNamePattern()
             Return New SaveAsDialogResult With {
-                .BaseName = result.Trim(),
+                .BaseName = If(DialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
                 .Target = DialogSaveAsTarget,
