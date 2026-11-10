@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>चलाएँ/रोकें</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>पोलेरॉइड</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>स्थिति</value>
   </data>
@@ -9463,26 +9460,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>किनारे से दूरी</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>आधार प्रकाश</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>रंग सामंजस्य</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>चमकदार वक्र</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>रेगिस्तानी प्रकाश</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>फिल्म ग्रेन</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>रंगीन धुंध</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>स्पष्ट दृश्य</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>कालातीत</value>
@@ -11436,5 +11418,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>उस जगह मूल छवि को रीटच, ब्रश स्ट्रोक और समायोजन के बिना वापस पेंट करता है। स्ट्रोक इतिहास परत में जाते हैं, जहाँ उन्हें छिपाया, हल्का किया या हटाया जा सकता है।</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>इतिहास परत में कोई समायोजन नहीं है: उसके मास्क के नीचे मूल छवि दिखती है। छवि ब्रश में इतिहास ब्रश से उस पर पेंट करते रहें; समायोजन के लिए कोई दूसरी परत या पूरी छवि चुनें।</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>पाला</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>टॉफ़ी</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>गर्मी की धूल</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>चाँदी चाँदनी</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>रंग विस्फोट</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>कैफ़े</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>हाथीदांत</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>मेला</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>लैगून</value>
   </data>
 </root>

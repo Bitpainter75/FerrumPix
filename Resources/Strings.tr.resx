@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Oynat/Duraklat</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Konum</value>
   </data>
@@ -9463,26 +9460,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Kenar boşluğu</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Temel ışık</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Renk uyumu</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Parlak eğri</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Çöl ışığı</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Film gren</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Renk sisi</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Net görünüm</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Zamansız</value>
@@ -11436,5 +11418,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>O noktada özgün görüntüyü rötuş, fırça darbeleri ve ayarlar olmadan geri boyar. Darbeler Geçmiş katmanına gider; orada gizlenebilir, zayıflatılabilir veya silinebilir.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Geçmiş katmanında ayar yoktur: maskesinin altında özgün görüntü görünür. Görüntü fırçasındaki geçmiş fırçasıyla üzerinde boyamaya devam edin; ayarlar için başka bir katman veya görüntünün tamamını seçin.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Kırağı</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Şeker</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Yaz Tozu</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Ay Gümüşü</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Renk Patlaması</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Kahvehane</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Fildişi</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Lunapark</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Lagün</value>
   </data>
 </root>

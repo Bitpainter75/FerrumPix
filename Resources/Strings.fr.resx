@@ -1954,9 +1954,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Lecture/Pause</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Position</value>
   </data>
@@ -9419,26 +9416,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Marge</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Lumière de base</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Harmonie des couleurs</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Courbe lumineuse</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Lumière du désert</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Grain de film</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Brume colorée</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Vue claire</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Intemporel</value>
@@ -11392,5 +11374,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Repeint l'image d'origine à cet endroit, sans retouche, coups de pinceau ni réglages. Les coups vont dans le calque Historique, où ils peuvent être masqués, atténués ou supprimés.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Le calque Historique ne porte aucun réglage : sous son masque apparaît l'image d'origine. Continuez à peindre dessus avec le pinceau d'historique du pinceau d'image ; pour les réglages, sélectionnez un autre calque ou l'image entière.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Givre</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Bonbon</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Poussière d'été</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Argent lunaire</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Éclat de couleur</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Café</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Ivoire</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Fête foraine</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Lagon</value>
   </data>
 </root>

@@ -1386,10 +1386,18 @@
                         <!-- GESPERRT, solange etwas rechnet. Was das Ergebnis verdirbt, soll man
                              gar nicht erst anfassen koennen - vorher nahm der Regler die Eingabe
                              an und der spaeter eintreffende Vorgang ueberschrieb sie wieder. -->
+                        <!-- Auch gesperrt, wenn in einem Anpassungswerkzeug die Protokollebene angewaehlt
+                             ist: sie traegt keine Anpassung, ein Regler wirkte dort auf nichts
+                             (IsRestoreLayerAdjustBlocked). Der Hinweis darunter sagt warum. -->
                         <StackPanel x:Name="AdjustmentsStackPanel"
                                     Margin="10,2,10,10"
-                                    IsEnabled="{Binding IsInteractionAllowed}"
+                                    IsEnabled="{Binding AreAdjustmentsInteractive}"
                                     HorizontalAlignment="Stretch">
+                            <TextBlock Text="Die Ebene Protokoll trägt keine Regler: unter ihrer Maske steht das Ursprungsbild. Mit dem Protokollpinsel im Bildpinsel malst du dort weiter; für Regler eine andere Ebene oder das gesamte Bild anwählen."
+                                       IsVisible="{Binding IsRestoreLayerAdjustBlocked}"
+                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap" Margin="0,4,0,8" />
                             <!-- Das Analysebild steht GANZ OBEN, wenn es hierher gestellt wurde
                                  (Einstellungen, Ansicht): es ist die Antwort auf die Regler
                                  darunter, und wer sie zieht, sieht beim Scrollen nach unten immer

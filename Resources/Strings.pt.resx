@@ -1954,9 +1954,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Reproduzir/Pausar</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Posição</value>
   </data>
@@ -9418,26 +9415,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Margem</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Luz base</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Harmonia de cores</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Curva luminosa</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Luz do deserto</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Grão de filme</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Névoa de cor</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Vista nítida</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Atemporal</value>
@@ -11391,5 +11373,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Repinta nesse ponto a imagem original, sem retoque, pinceladas nem ajustes. As pinceladas vão para a camada Histórico, onde podem ser ocultadas, atenuadas ou apagadas.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>A camada Histórico não tem ajustes: sob a sua máscara está a imagem original. Continue a pintar nela com o pincel de histórico do pincel de imagem; para ajustes, escolha outra camada ou a imagem inteira.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Geada</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Rebuçado</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Poeira de verão</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Prata lunar</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Explosão de cor</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Café</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Marfim</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Feira</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Lagoa</value>
   </data>
 </root>

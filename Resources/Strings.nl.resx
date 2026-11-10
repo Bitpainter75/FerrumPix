@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Afspelen/pauzeren</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Positie</value>
   </data>
@@ -9459,26 +9456,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Randafstand</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Basislicht</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Kleurharmonie</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Lichtgevende curve</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Woestijnlicht</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Filmkorrel</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Kleurwaas</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Helder beeld</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Tijdloos</value>
@@ -11432,5 +11414,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Schildert op die plek de oorspronkelijke afbeelding terug, zonder retouche, penseelstreken en aanpassingen. De streken komen in de laag Historie, waar ze verborgen, verzwakt of verwijderd kunnen worden.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>De laag Historie heeft geen aanpassingen: onder haar masker staat de oorspronkelijke afbeelding. Schilder er verder op met het historiepenseel in het afbeeldingspenseel; kies voor aanpassingen een andere laag of de hele afbeelding.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>IJsglans</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Snoepje</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Zomerstof</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Maanzilver</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Kleurknal</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Koffiehuis</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Ivoor</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Kermis</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Lagune</value>
   </data>
 </root>

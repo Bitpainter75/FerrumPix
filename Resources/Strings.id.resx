@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Putar/Jeda</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Posisi</value>
   </data>
@@ -9463,26 +9460,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Jarak tepi</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Cahaya dasar</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Harmoni warna</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Kurva bercahaya</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Cahaya gurun</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Butiran film</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Kabut warna</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Tampilan jernih</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Abadi</value>
@@ -11436,5 +11418,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Melukis kembali gambar asli di tempat itu, tanpa retus, goresan kuas, dan penyesuaian. Goresan masuk ke lapisan Riwayat, tempat goresan dapat disembunyikan, dilemahkan, atau dihapus.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Lapisan Riwayat tidak punya penyesuaian: di bawah maskernya tampil gambar asli. Lanjutkan melukis di atasnya dengan kuas riwayat pada kuas gambar; untuk penyesuaian, pilih lapisan lain atau seluruh gambar.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Kilau Beku</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Permen</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Debu Musim Panas</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Perak Bulan</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Ledakan Warna</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Kafe</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Gading</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Pasar Malam</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Laguna</value>
   </data>
 </root>

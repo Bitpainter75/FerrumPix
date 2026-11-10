@@ -1068,6 +1068,7 @@ Namespace ViewModels
                     _showsBusy = False
                     Me.RaisePropertyChanged(NameOf(ShowsBusy))
                     Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
+                    Me.RaisePropertyChanged(NameOf(AreAdjustmentsInteractive))
                     Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
                     Me.RaisePropertyChanged(NameOf(ShowsLookRenderBusy))
                 End If
@@ -1085,6 +1086,7 @@ Namespace ViewModels
             _showsBusy = True
             Me.RaisePropertyChanged(NameOf(ShowsBusy))
             Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
+            Me.RaisePropertyChanged(NameOf(AreAdjustmentsInteractive))
             Me.RaisePropertyChanged(NameOf(ShowsPreviewBusy))
             Me.RaisePropertyChanged(NameOf(ShowsLookRenderBusy))
         End Function
@@ -2259,83 +2261,21 @@ Namespace ViewModels
 
         ''' <summary>Eingebaute Mehrregler-Looks. Sie sind eigenstaendige FerrumPix-Rezepte:
         ''' keine XMP-Dateien, Adobe-Profile, Masken oder lokalen Korrekturen werden mitgeliefert.
-        ''' Die Werte sind nach dem Anwenden ganz normale, einzeln editierbare Regler.</summary>
+        ''' Die Werte sind nach dem Anwenden ganz normale, einzeln editierbare Regler. Die Werte selbst
+        ''' stehen nur in ImageAdjustments.CreateBuiltInLook, das auch Stapel und Export benutzen.</summary>
         Private Shared Function IsBuiltInLook(id As String) As Boolean
-            Select Case If(id, "").Trim()
-                Case "Grundlicht", "Farbklang", "Leuchtkurve", "Wüstenlicht", "Kornfilm", "Farbdunst", "Klarblick", "Zeitlos"
-                    Return True
-            End Select
-            Return False
-        End Function
-
-        ''' <summary>Mischt eine Tonwertkurve gegen ihre neutrale Diagonale. Damit bedeutet Stärke 0
-        ''' wirklich "kein Look", auch für den Kurven-Look.</summary>
-        Private Shared Function ScaleLookCurve(points As String, strength As Single) As String
-            If String.IsNullOrWhiteSpace(points) Then Return points
-            Dim scaled As New List(Of String)()
-            For Each point In points.Split(";"c)
-                Dim pair = point.Split(","c)
-                If pair.Length <> 2 Then Return points
-                Dim x As Integer
-                Dim y As Integer
-                If Not Integer.TryParse(pair(0), NumberStyles.Integer, CultureInfo.InvariantCulture, x) OrElse
-                   Not Integer.TryParse(pair(1), NumberStyles.Integer, CultureInfo.InvariantCulture, y) Then Return points
-                Dim mixedY = CInt(Math.Round(x + (y - x) * strength, MidpointRounding.AwayFromZero))
-                scaled.Add(x.ToString(CultureInfo.InvariantCulture) & "," & mixedY.ToString(CultureInfo.InvariantCulture))
-            Next
-            Return String.Join(";", scaled)
-        End Function
-
-        ''' <summary>Alle Lookwerte werden gegen ihre neutrale Stellung gemischt. Die Werte bleiben
-        ''' dabei echte Editor-Regler statt einer nachgelagerten Bildkopie.</summary>
-        Private Shared Function ScaleBuiltInLook(look As ImageAdjustments, strengthPercent As Double) As ImageAdjustments
-            Dim strength = CSng(Math.Max(0, Math.Min(100, strengthPercent)) / 100.0)
-            look.Contrast *= strength : look.Highlights *= strength : look.ShadowsLevel *= strength
-            look.Whites *= strength : look.Blacks *= strength : look.Clarity *= strength : look.Haze *= strength
-            look.Vibrance *= strength : look.Saturation *= strength : look.Grain *= strength : look.Vignette *= strength
-            look.RedHue *= strength : look.RedSaturation *= strength : look.RedLuminance *= strength
-            look.OrangeHue *= strength : look.OrangeSaturation *= strength : look.OrangeLuminance *= strength
-            look.YellowHue *= strength : look.YellowSaturation *= strength : look.YellowLuminance *= strength
-            look.GreenHue *= strength : look.GreenSaturation *= strength : look.GreenLuminance *= strength
-            look.AquaHue *= strength : look.AquaSaturation *= strength : look.AquaLuminance *= strength
-            look.BlueHue *= strength : look.BlueSaturation *= strength : look.BlueLuminance *= strength
-            look.PurpleHue *= strength : look.PurpleSaturation *= strength : look.PurpleLuminance *= strength
-            look.MagentaHue *= strength : look.MagentaSaturation *= strength : look.MagentaLuminance *= strength
-            look.CurveRgbPoints = ScaleLookCurve(look.CurveRgbPoints, strength)
-            look.CurveRedPoints = ScaleLookCurve(look.CurveRedPoints, strength)
-            look.CurveGreenPoints = ScaleLookCurve(look.CurveGreenPoints, strength)
-            look.CurveBluePoints = ScaleLookCurve(look.CurveBluePoints, strength)
-            Return look
+            Return ImageAdjustments.IsBuiltInLook(id)
         End Function
 
         Private Sub ApplyBuiltInLook(id As String, Optional strengthPercent As Double = 50)
-            Dim look As ImageAdjustments = Nothing
-            Select Case If(id, "").Trim()
-                Case "Grundlicht"
-                    look = New ImageAdjustments With {.Contrast = 7, .Highlights = -36, .ShadowsLevel = 43,
-                        .Whites = -10, .Blacks = 25, .Clarity = -8}
-                Case "Farbklang"
-                    look = New ImageAdjustments With {
-                        .RedHue = 5.4F, .RedSaturation = -22, .OrangeHue = 0.6F, .OrangeSaturation = -8, .OrangeLuminance = -6,
-                        .YellowHue = 2.7F, .YellowSaturation = -7, .GreenHue = 5.4F, .GreenSaturation = -62, .GreenLuminance = -15,
-                        .AquaHue = 8.4F, .AquaSaturation = -36, .AquaLuminance = -43, .BlueHue = -2.1F, .BlueLuminance = -38,
-                        .PurpleHue = 18, .PurpleSaturation = -63, .PurpleLuminance = 24,
-                        .MagentaHue = 13.8F, .MagentaSaturation = -27, .MagentaLuminance = 28}
-                Case "Leuchtkurve"
-                    look = New ImageAdjustments With {
-                        .CurveRgbPoints = "0,19;42,61;104,106;141,132;205,209;255,253",
-                        .CurveRedPoints = "0,0;47,30;108,140;210,227;255,255",
-                        .CurveGreenPoints = "0,11;79,82;99,119;172,195;255,247",
-                        .CurveBluePoints = "0,0;33,26;75,81;97,117;144,168;228,217;255,244"}
-                Case "Wüstenlicht" : look = New ImageAdjustments With {.Contrast = 31, .Highlights = -29, .ShadowsLevel = 69, .Whites = -78, .Blacks = 45, .Clarity = 51, .Haze = -6, .Vibrance = -31, .Saturation = 36}
-                Case "Kornfilm" : look = New ImageAdjustments With {.Contrast = -19, .Highlights = -9, .ShadowsLevel = -3, .Whites = -6, .Blacks = -12, .Clarity = 31, .Haze = -4, .Vibrance = -15, .Saturation = 11, .Grain = 6, .GrainSize = 19, .GrainFrequency = 75, .Vignette = -2}
-                Case "Farbdunst" : look = New ImageAdjustments With {.Contrast = 30, .Highlights = -100, .ShadowsLevel = 74, .Whites = 38, .Blacks = -20, .Clarity = 15, .Haze = -30, .Vibrance = 40, .Saturation = -5}
-                Case "Klarblick" : look = New ImageAdjustments With {.Contrast = 3, .Highlights = -23, .ShadowsLevel = 26, .Whites = 4, .Blacks = -9, .Clarity = 9, .Haze = -3, .Vibrance = 53, .Saturation = -14, .Vignette = -3}
-                Case "Zeitlos" : look = New ImageAdjustments With {.Contrast = 22, .Highlights = -17, .ShadowsLevel = 9, .Whites = 43, .Blacks = 9, .Clarity = 21, .Haze = -12, .Vibrance = -44, .Saturation = -13, .Grain = 24, .GrainSize = 9, .GrainFrequency = 83}
-            End Select
-            If look Is Nothing Then Return
             Dim normalizedStrength = Math.Max(0, Math.Min(100, strengthPercent))
-            look = ScaleBuiltInLook(look, normalizedStrength)
+            Dim look = ImageAdjustments.CreateBuiltInLook(id, normalizedStrength)
+            If look Is Nothing Then Return
+            ' Der Filterplatz wird unten direkt gesetzt. Über ApplyLookAdjustments liefe er durch
+            ' die Eigenschaft, deren Stärke-Setter den Look erneut anwenden würde.
+            Dim neutral As New ImageAdjustments()
+            look.FilterPreset = neutral.FilterPreset
+            look.FilterStrength = neutral.FilterStrength
 
             ResetFilterInternal()
             _suppressUndoCapture = True
@@ -5515,6 +5455,7 @@ Namespace ViewModels
             If _isDocumentLoading = value Then Return
             _isDocumentLoading = value
             Me.RaisePropertyChanged(NameOf(IsInteractionAllowed))
+            Me.RaisePropertyChanged(NameOf(AreAdjustmentsInteractive))
             Me.RaisePropertyChanged(NameOf(IsDocumentLoading))
             Me.RaisePropertyChanged(NameOf(ShowEditorDocument))
             Me.RaisePropertyChanged(NameOf(ShowNoImagePlaceholder))
@@ -5702,6 +5643,9 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_currentTool, value)
                 If previousTool <> value Then
                     RaiseToolSwitcherChanged()
+                    ' Die Sperre fuer die Protokollebene haengt am Werkzeug (IsRestoreLayerAdjustBlocked).
+                    Me.RaisePropertyChanged(NameOf(IsRestoreLayerAdjustBlocked))
+                    Me.RaisePropertyChanged(NameOf(AreAdjustmentsInteractive))
                     ' Das Linienziehen gehoert zum Transformieren und endet mit ihm.
                     IsStraightenLineActive = False
                     ' Das Messbild der Bereichsmaske (rund 100 MB bei 24 MP) gehoert zum Maskenwerkzeug.
@@ -6008,7 +5952,29 @@ Namespace ViewModels
         Private Sub RaiseCurrentTargetChanged()
             Me.RaisePropertyChanged(NameOf(CurrentTargetLabel))
             Me.RaisePropertyChanged(NameOf(CurrentTargetText))
+            Me.RaisePropertyChanged(NameOf(IsRestoreLayerAdjustBlocked))
+            Me.RaisePropertyChanged(NameOf(AreAdjustmentsInteractive))
         End Sub
+
+        ''' <summary>Ist die Protokollebene angewaehlt, waehrend ein Anpassungswerkzeug offen ist? Sie
+        ''' traegt keine Anpassung (unter ihrer Maske steht das Ursprungsbild), ein Regler wirkte dort
+        ''' also auf nichts. Dann sind die Anpassungen gesperrt und ein Hinweis sagt warum. Im
+        ''' Bildpinsel bleibt alles bedienbar: dort malt man auf dieser Ebene weiter.</summary>
+        Public ReadOnly Property IsRestoreLayerAdjustBlocked As Boolean
+            Get
+                If Not IsObjectAdjustTool(_currentTool) OrElse String.IsNullOrEmpty(_selectedMaskedAdjustmentLayerId) Then Return False
+                Dim layer = _maskedAdjustmentLayers.FirstOrDefault(Function(l) l IsNot Nothing AndAlso l.Id = _selectedMaskedAdjustmentLayerId)
+                Return layer IsNot Nothing AndAlso layer.RestoresOriginal
+            End Get
+        End Property
+
+        ''' <summary>Das Anpassungspanel ist bedienbar: nichts rechnet (IsInteractionAllowed) und keine
+        ''' Protokollebene ist das Ziel der Regler.</summary>
+        Public ReadOnly Property AreAdjustmentsInteractive As Boolean
+            Get
+                Return IsInteractionAllowed AndAlso Not IsRestoreLayerAdjustBlocked
+            End Get
+        End Property
 
         ''' <summary>Das Symbol des aktiven Werkzeugs, damit die Gruppenüberschrift im rechten Panel
         ''' dasselbe zeigt wie sein Eintrag in der Werkzeugleiste.</summary>

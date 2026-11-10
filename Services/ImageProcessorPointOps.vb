@@ -522,12 +522,16 @@ Namespace Services
             Dim presetStrength = Clamp(adj.FilterStrength / 100.0F, 0, 1)
             If presetStrength > 0 AndAlso Not String.IsNullOrWhiteSpace(adj.FilterPreset) AndAlso
                Not String.Equals(adj.FilterPreset, "Keine", StringComparison.OrdinalIgnoreCase) Then
-                Dim m = BuildFilterPresetMatrix(adj.FilterPreset)
+                ' Ein Schwarzweiß-Look traegt seinen eigenen Namen im Filterplatz, rechnet aber die
+                ' Matrix von S/W, und zwar immer voll: seine Staerke mischt nur die Regler, die der
+                ' Look gesetzt hat. Halb umgewandelt waere er bloss ein blasses Farbbild.
+                Dim monochromeLook = ImageAdjustments.IsMonochromeLook(adj.FilterPreset)
+                Dim m = BuildFilterPresetMatrix(If(monochromeLook, "S/W", adj.FilterPreset))
                 If m IsNot Nothing Then
                     chain.PresetMatrix = m
                     ' Die Altstufe blendet mit einem BYTE-Alpha ueber - der Wert wird hier genauso
                     ' quantisiert, sonst weicht die Staerke um bis zu 1/255 ab.
-                    chain.PresetStrength = ClampToByte(255 * presetStrength) / 255.0F
+                    chain.PresetStrength = If(monochromeLook, 1.0F, ClampToByte(255 * presetStrength) / 255.0F)
                     chain.IsIdentity = False
                     ' Ein S/W-Look rechnet jede Farbe auf Grau, auch die der Farbgradierung davor.
                     ' Die Tonung wandert deshalb hinter die Matrix; alles andere zwischen beiden

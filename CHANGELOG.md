@@ -12,6 +12,17 @@
   when the file says where it was taken. Pictures are still sorted by the time the camera showed.
   A switch in Settings, Catalog, shows the camera time instead.
 
+- New looks in the filter area: Frost Sheen, Candy, Summer Dust, Moon Silver, Color Burst, Café,
+  Ivory, Fairground and Lagoon. Moon Silver and Ivory are black and white. Desert Light, Film
+  Grain and Timeless got new settings. Base Light, Color Harmony, Luminous Curve, Color Haze and
+  Clear View are gone; their character lives on in Frost Sheen and Candy. Pictures you already
+  edited keep their look.
+
+- Fewer filters that look alike: Contrast is now part of a stronger Dramatic, which also darkens
+  and calms the colors a little, and the instant photo filter is gone, it looked almost like Warm. Aged looks like
+  a yellowed print now. Pictures saved with one of the two removed filters stay as they were; pictures
+  saved with Dramatic or Aged show the new version.
+
 - **History brush**: a new kind in the image brush paints the original picture back, without the
   retouching, brush strokes and adjustments on that spot. The strokes collect in a History layer,
   so they can be hidden, weakened or deleted later, and they are saved with your edit.

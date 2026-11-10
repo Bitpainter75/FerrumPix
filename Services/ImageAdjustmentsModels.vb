@@ -268,15 +268,33 @@ Namespace Services
         ''' der Galerie angeboten. Die Mehrregler-Looks werden dort als normale Reglerwerte erzeugt,
         ''' nicht als Farbmatrix.</summary>
         Public Shared ReadOnly FilterPresetNames As String() = {
-            "Keine", "Grundlicht", "Farbklang", "Leuchtkurve", "Wüstenlicht", "Kornfilm", "Farbdunst", "Klarblick", "Zeitlos",
-            "S/W", "Warm", "Kühl", "Fade", "Kontrast", "Sepia", "Matt", "Cross", "Dramatisch",
-            "Weich", "Noir", "Duoton", "Polaroid", "VHS", "Alt"
+            "Keine", "Eisglanz", "Bonbon", "Sommerstaub", "Mondsilber", "Farbknall", "Kaffeehaus",
+            "Cremeweiß", "Jahrmarkt", "Lagune", "Wüstenlicht", "Kornfilm", "Zeitlos",
+            "S/W", "Warm", "Kühl", "Fade", "Sepia", "Matt", "Cross", "Dramatisch",
+            "Weich", "Noir", "Duoton", "VHS", "Alt"
+        }
+        ' "Kontrast" ist in "Dramatisch" aufgegangen, "Polaroid" lag gemessen fast auf "Warm"; beide
+        ' stehen nicht mehr in der Liste. Ihre Matrizen bleiben (ImageProcessor.BuildFilterPresetMatrix):
+        ' ein Rezept, das einen davon trägt, sieht weiter so aus wie beim Speichern.
+
+        ''' <summary>Die eingebauten Mehrregler-Looks, in der Reihenfolge der Filterliste.</summary>
+        Public Shared ReadOnly BuiltInLookNames As String() = {
+            "Eisglanz", "Bonbon", "Sommerstaub", "Mondsilber", "Farbknall", "Kaffeehaus",
+            "Cremeweiß", "Jahrmarkt", "Lagune", "Wüstenlicht", "Kornfilm", "Zeitlos"
         }
 
         ''' <summary>True für einen der eingebauten Mehrregler-Looks.</summary>
         Public Shared Function IsBuiltInLook(name As String) As Boolean
+            Return Array.IndexOf(BuiltInLookNames, If(name, "").Trim()) >= 0
+        End Function
+
+        ''' <summary>Die Looks, die das Bild in Graustufen umwandeln. Ihr Name steht im Filterplatz,
+        ''' die Punktkette rechnet dafür dieselbe Matrix wie beim Filter S/W, und zwar immer voll:
+        ''' die Stärke mischt nur die Regler des Looks. Die Luminanz der Farbbänder ist hier die
+        ''' Graumischung, sie läuft vor der Matrix und greift deshalb noch am farbigen Pixel.</summary>
+        Public Shared Function IsMonochromeLook(name As String) As Boolean
             Select Case If(name, "").Trim()
-                Case "Grundlicht", "Farbklang", "Leuchtkurve", "Wüstenlicht", "Kornfilm", "Farbdunst", "Klarblick", "Zeitlos"
+                Case "Mondsilber", "Cremeweiß"
                     Return True
             End Select
             Return False
@@ -298,29 +316,169 @@ Namespace Services
             Return String.Join(";", scaled)
         End Function
 
-        ''' <summary>Erzeugt den editierbaren Mehrregler-Look für Stapel und Export.
-        ''' Die Stärke mischt jede Einstellung gegen ihre neutrale Stellung.</summary>
-        Public Shared Function CreateBuiltInLook(name As String, strengthPercent As Double) As ImageAdjustments
-            Dim look As ImageAdjustments = Nothing
+        ''' <summary>Die Reglerstellungen der eingebauten Looks bei voller Stärke. Eigene Stellungen:
+        ''' angelehnt an verbreitete Bildstile, aber gerundet, verschoben, mit weniger Farbbändern und
+        ''' eigenen, einfacheren Kurven statt übernommener Werte. Wie nah sie ihrem Vorbild kommen,
+        ''' misst packaging/Diagnostics/Lookmessung.
+        ''' Einheiten wie im Rezept: Belichtung in 1/25 Blende, Farbton der Bänder in Grad, Vignette
+        ''' positiv = dunklerer Rand, Dunst negativ = mehr Klarheit in der Ferne.</summary>
+        Private Shared Function BuiltInLookValues(name As String) As ImageAdjustments
             Select Case If(name, "").Trim()
-                Case "Grundlicht"
-                    look = New ImageAdjustments With {.Contrast = 7, .Highlights = -36, .ShadowsLevel = 43, .Whites = -10, .Blacks = 25, .Clarity = -8}
-                Case "Farbklang"
-                    look = New ImageAdjustments With {.RedHue = 5.4F, .RedSaturation = -22, .OrangeHue = 0.6F, .OrangeSaturation = -8, .OrangeLuminance = -6, .YellowHue = 2.7F, .YellowSaturation = -7, .GreenHue = 5.4F, .GreenSaturation = -62, .GreenLuminance = -15, .AquaHue = 8.4F, .AquaSaturation = -36, .AquaLuminance = -43, .BlueHue = -2.1F, .BlueLuminance = -38, .PurpleHue = 18, .PurpleSaturation = -63, .PurpleLuminance = 24, .MagentaHue = 13.8F, .MagentaSaturation = -27, .MagentaLuminance = 28}
-                Case "Leuchtkurve"
-                    look = New ImageAdjustments With {.CurveRgbPoints = "0,19;42,61;104,106;141,132;205,209;255,253", .CurveRedPoints = "0,0;47,30;108,140;210,227;255,255", .CurveGreenPoints = "0,11;79,82;99,119;172,195;255,247", .CurveBluePoints = "0,0;33,26;75,81;97,117;144,168;228,217;255,244"}
-                Case "Wüstenlicht" : look = New ImageAdjustments With {.Contrast = 31, .Highlights = -29, .ShadowsLevel = 69, .Whites = -78, .Blacks = 45, .Clarity = 51, .Haze = -6, .Vibrance = -31, .Saturation = 36}
-                Case "Kornfilm" : look = New ImageAdjustments With {.Contrast = -19, .Highlights = -9, .ShadowsLevel = -3, .Whites = -6, .Blacks = -12, .Clarity = 31, .Haze = -4, .Vibrance = -15, .Saturation = 11, .Grain = 6, .GrainSize = 19, .GrainFrequency = 75, .Vignette = -2}
-                Case "Farbdunst" : look = New ImageAdjustments With {.Contrast = 30, .Highlights = -100, .ShadowsLevel = 74, .Whites = 38, .Blacks = -20, .Clarity = 15, .Haze = -30, .Vibrance = 40, .Saturation = -5}
-                Case "Klarblick" : look = New ImageAdjustments With {.Contrast = 3, .Highlights = -23, .ShadowsLevel = 26, .Whites = 4, .Blacks = -9, .Clarity = 9, .Haze = -3, .Vibrance = 53, .Saturation = -14, .Vignette = -3}
-                Case "Zeitlos" : look = New ImageAdjustments With {.Contrast = 22, .Highlights = -17, .ShadowsLevel = 9, .Whites = 43, .Blacks = 9, .Clarity = 21, .Haze = -12, .Vibrance = -44, .Saturation = -13, .Grain = 24, .GrainSize = 9, .GrainFrequency = 83}
+                Case "Eisglanz"
+                    ' Matt und kühl: offene Tiefen, angehobenes Schwarz, Grün und Violett stark zurück.
+                    Return New ImageAdjustments With {
+                        .Contrast = 8, .Highlights = -32, .ShadowsLevel = 38, .Whites = -12, .Blacks = 22, .Clarity = -6,
+                        .CalibrationRedHue = 18, .CalibrationRedSaturation = -12, .CalibrationBlueHue = -12,
+                        .CalibrationBlueSaturation = 10, .CalibrationShadowTint = -6,
+                        .RedSaturation = -18, .GreenHue = 8, .GreenSaturation = -55, .GreenLuminance = -12,
+                        .AquaHue = 14, .AquaSaturation = -32, .AquaLuminance = -38, .BlueLuminance = -32,
+                        .PurpleHue = 20, .PurpleSaturation = -55, .PurpleLuminance = 20,
+                        .MagentaHue = 12, .MagentaSaturation = -24, .MagentaLuminance = 24,
+                        .CurveRgbPoints = "0,16;40,33;96,94;136,130;200,210;255,252",
+                        .CurveRedPoints = "0,0;50,34;110,138;210,224;255,255",
+                        .CurveGreenPoints = "0,10;78,82;104,122;174,194;255,248",
+                        .CurveBluePoints = "0,0;40,34;100,116;150,170;228,218;255,246"}
+                Case "Bonbon"
+                    ' Bunt und hell: Lichter weit zurück, Tiefen offen, Türkis und Magenta gedämpft.
+                    Return New ImageAdjustments With {
+                        .Contrast = 26, .Saturation = -4, .Highlights = -88, .ShadowsLevel = 66, .Whites = 32, .Blacks = -18,
+                        .Haze = -26, .Vibrance = 36, .Clarity = 12,
+                        .RedSaturation = 8, .YellowSaturation = 9, .YellowLuminance = -8, .GreenSaturation = 10,
+                        .AquaHue = 26, .AquaSaturation = -52, .AquaLuminance = -13, .BlueSaturation = -20,
+                        .PurpleHue = -8, .PurpleSaturation = -14, .PurpleLuminance = 10,
+                        .MagentaSaturation = -45, .MagentaLuminance = 5,
+                        .CurveRgbPoints = "0,0;32,33;128,138;224,234;255,255"}
+                Case "Sommerstaub"
+                    ' Staubig warm: Gelb, Grün und Türkis fast grau, warme Tönung über Tiefen und Lichtern.
+                    ' Ohne festen Weißabgleich: eine Kelvinzahl im Look zog jedes Bild, das nicht unter
+                    ' Kunstlicht entstand, ins Violette.
+                    Return New ImageAdjustments With {
+                        .Exposure = 7.5F, .Contrast = 15, .Saturation = 6, .Highlights = -56, .ShadowsLevel = -6,
+                        .Whites = 5, .Blacks = -14, .Temperature = 4, .Tint = 4, .Haze = -3, .Vibrance = 40,
+                        .CalibrationRedHue = 30, .CalibrationRedSaturation = 15, .CalibrationBlueSaturation = -35,
+                        .CalibrationShadowTint = 15, .Vignette = 3, .Clarity = 22,
+                        .OrangeHue = -5, .OrangeSaturation = -10, .OrangeLuminance = -8,
+                        .YellowHue = -5, .YellowSaturation = -66, .YellowLuminance = 17,
+                        .GreenHue = -19, .GreenSaturation = -58, .AquaSaturation = -74, .AquaLuminance = -17,
+                        .BlueLuminance = -7, .PurpleSaturation = -38, .PurpleLuminance = 22,
+                        .ColorGradeShadowHue = 22, .ColorGradeShadowSaturation = 34,
+                        .ColorGradeHighlightHue = 43, .ColorGradeHighlightSaturation = 36,
+                        .ColorGradeBalance = 35, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,0;32,30;128,136;224,231;255,255"}
+                Case "Mondsilber"
+                    ' Schwarzweiß, kräftig: Blau und Türkis hell, Tiefen bläulich, Lichter warm.
+                    Return New ImageAdjustments With {
+                        .Contrast = 44, .Highlights = -50, .ShadowsLevel = 46, .Whites = 3, .Blacks = -28, .Haze = -15,
+                        .Vignette = 14, .Clarity = 26,
+                        .OrangeLuminance = 5, .GreenLuminance = -8, .AquaLuminance = 28, .BlueLuminance = 34,
+                        .PurpleLuminance = 24, .MagentaLuminance = 23,
+                        .ColorGradeShadowHue = 228, .ColorGradeShadowSaturation = 38,
+                        .ColorGradeHighlightHue = 56, .ColorGradeHighlightSaturation = 24, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,8;32,15;56,46;128,141;200,218;255,255"}
+                Case "Farbknall"
+                    ' Viel Kontrast und Klarheit, offene Tiefen, leicht mehr Farbe.
+                    Return New ImageAdjustments With {
+                        .Contrast = 58, .Highlights = 5, .ShadowsLevel = 27, .Whites = 11, .Blacks = -10, .Clarity = 20,
+                        .Vibrance = 8,
+                        .CurveRgbPoints = "0,0;40,32;128,128;200,205;255,255"}
+                Case "Kaffeehaus"
+                    ' Warm gedämpft: Lichter weit zurück, Violett fast grau, runde Vignette.
+                    Return New ImageAdjustments With {
+                        .Exposure = 2, .Contrast = 36, .Saturation = -18, .Highlights = -88, .ShadowsLevel = 51,
+                        .Whites = 6, .Blacks = -15, .Haze = -6, .Vibrance = 33, .Clarity = 10,
+                        .Vignette = 18, .VignetteTransition = 20, .VignetteRoundness = -25, .VignetteFeather = 72,
+                        .RedSaturation = 4, .OrangeSaturation = -6, .AquaHue = 37, .AquaSaturation = 9, .BlueHue = 4,
+                        .PurpleSaturation = -62, .PurpleLuminance = -7, .MagentaHue = 20, .MagentaSaturation = -15,
+                        .ColorGradeShadowHue = 150, .ColorGradeShadowSaturation = 7,
+                        .ColorGradeHighlightHue = 38, .ColorGradeHighlightSaturation = 15, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,0;32,22;128,135;224,233;255,255"}
+                Case "Cremeweiß"
+                    ' Schwarzweiß, hart und warm getönt, mit Korn.
+                    Return New ImageAdjustments With {
+                        .Contrast = 56, .Highlights = -34, .ShadowsLevel = 29, .Whites = -12, .Blacks = -8, .Haze = -6,
+                        .Clarity = 27, .Grain = 29, .GrainSize = 18, .GrainFrequency = 65,
+                        .RedLuminance = 5, .OrangeLuminance = -9, .YellowLuminance = -9, .GreenLuminance = -27,
+                        .AquaLuminance = -9, .BlueLuminance = -18, .MagentaLuminance = 27,
+                        .ColorGradeHighlightHue = 52, .ColorGradeHighlightSaturation = 32, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,0;24,4;64,52;128,136;192,216;224,252;255,255"}
+                Case "Jahrmarkt"
+                    ' Rot und Orange satter, Tiefen offen, helle Weißtöne, weite Vignette.
+                    Return New ImageAdjustments With {
+                        .Contrast = 20, .Highlights = -20, .ShadowsLevel = 48, .Whites = 32, .Blacks = 13,
+                        .Temperature = -24, .Tint = 9, .Vibrance = 10,
+                        .Vignette = 18, .VignetteTransition = 5, .VignetteFeather = 95,
+                        .RedSaturation = 20, .OrangeSaturation = 16, .BlueSaturation = -6, .BlueLuminance = -5}
+                Case "Lagune"
+                    ' Grün zum Türkis gedreht, Weiß weich abgefangen, kräftige Klarheit.
+                    Return New ImageAdjustments With {
+                        .Contrast = 32, .Saturation = 38, .Highlights = -29, .ShadowsLevel = 62, .Whites = -88, .Blacks = 40,
+                        .Temperature = -64, .Tint = 12, .Haze = -4, .Vibrance = -30, .Clarity = 43,
+                        .CalibrationGreenHue = 52, .CalibrationBlueSaturation = 6,
+                        .RedLuminance = 10, .OrangeSaturation = -21, .GreenHue = -30, .GreenSaturation = -21,
+                        .AquaHue = -20, .AquaSaturation = 14, .BlueSaturation = -8, .BlueLuminance = 8,
+                        .PurpleHue = -10, .PurpleSaturation = -14, .MagentaSaturation = -10,
+                        .ColorGradeHighlightHue = 50, .ColorGradeHighlightSaturation = 33, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,25;32,34;128,130;176,186;224,226;255,255"}
+                Case "Wüstenlicht"
+                    ' Wie Lagune gebaut, aber Gelb kräftig und Türkis zum Blau gedreht.
+                    Return New ImageAdjustments With {
+                        .Contrast = 28, .Saturation = 32, .Highlights = -26, .ShadowsLevel = 62, .Whites = -70, .Blacks = 40,
+                        .Temperature = -64, .Tint = 12, .Haze = -5, .Vibrance = -28, .Clarity = 45,
+                        .CalibrationGreenHue = 52, .CalibrationBlueHue = -58,
+                        .RedSaturation = -11, .OrangeHue = 3, .OrangeSaturation = -29, .YellowHue = -14, .YellowSaturation = 88,
+                        .GreenHue = -30, .GreenSaturation = -21, .AquaHue = 52, .AquaSaturation = 14,
+                        .BlueSaturation = -17, .BlueLuminance = 10, .PurpleHue = -10, .PurpleSaturation = -14,
+                        .ColorGradeShadowHue = 145, .ColorGradeShadowSaturation = 8,
+                        .ColorGradeHighlightHue = 52, .ColorGradeHighlightSaturation = 30, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,25;32,34;128,131;176,190;224,228;255,255"}
+                Case "Kornfilm"
+                    ' Flach und verblasst: Schwarz angehoben, Lichter gedeckelt, feines Korn.
+                    Return New ImageAdjustments With {
+                        .Exposure = 3, .Contrast = -17, .Saturation = 10, .Highlights = -8, .ShadowsLevel = -3,
+                        .Whites = -5, .Blacks = -11, .Haze = -4, .Vibrance = -13, .Clarity = 27,
+                        .CalibrationRedHue = 4, .CalibrationRedSaturation = 15, .CalibrationGreenHue = 28,
+                        .CalibrationGreenSaturation = -17, .CalibrationBlueHue = 20, .CalibrationShadowTint = 20,
+                        .Vignette = 2, .Grain = 6, .GrainSize = 19, .GrainFrequency = 75,
+                        .OrangeSaturation = -8, .GreenHue = 11, .GreenSaturation = -23, .BlueHue = -6,
+                        .BlueSaturation = -10, .MagentaSaturation = -7,
+                        .CurveRgbPoints = "0,30;32,42;80,76;128,134;192,192;240,224;255,255"}
+                Case "Zeitlos"
+                    ' Alter Abzug: Schwarz und Weiß gedeckelt, Grün entsättigt, warme Lichter, Vignette, Korn.
+                    Return New ImageAdjustments With {
+                        .Exposure = 1, .Contrast = 20, .Saturation = -12, .Highlights = -15, .ShadowsLevel = 8,
+                        .Whites = 38, .Blacks = 8, .Haze = -10, .Vibrance = -40, .Vignette = 38, .Clarity = 19,
+                        .Grain = 22, .GrainSize = 9, .GrainFrequency = 80,
+                        .RedHue = -8, .RedSaturation = 20, .RedLuminance = 5, .OrangeLuminance = 5,
+                        .YellowHue = -10, .YellowSaturation = 8, .GreenHue = 20, .GreenSaturation = -33,
+                        .GreenLuminance = -5, .AquaSaturation = -13, .BlueSaturation = -9, .BlueLuminance = -9,
+                        .PurpleSaturation = -18,
+                        .ColorGradeShadowHue = 38, .ColorGradeShadowSaturation = 5,
+                        .ColorGradeHighlightHue = 36, .ColorGradeHighlightSaturation = 23,
+                        .ColorGradeBalance = -33, .ColorGradeBlending = 100,
+                        .CurveRgbPoints = "0,33;48,55;128,111;192,174;255,240"}
             End Select
+            Return Nothing
+        End Function
+
+        ''' <summary>Erzeugt den editierbaren Mehrregler-Look für Editor, Stapel und Export.
+        ''' Die Stärke mischt jede Einstellung gegen ihre neutrale Stellung; Farbtöne von Tönung und
+        ''' Graumischung bleiben stehen, es mischt ihre Sättigung.</summary>
+        Public Shared Function CreateBuiltInLook(name As String, strengthPercent As Double) As ImageAdjustments
+            Dim look = BuiltInLookValues(name)
             If look Is Nothing Then Return Nothing
 
             Dim strength = CSng(Math.Max(0, Math.Min(100, strengthPercent)) / 100.0)
+            look.Exposure *= strength : look.Temperature *= strength : look.Tint *= strength
             look.Contrast *= strength : look.Highlights *= strength : look.ShadowsLevel *= strength
             look.Whites *= strength : look.Blacks *= strength : look.Clarity *= strength : look.Haze *= strength
             look.Vibrance *= strength : look.Saturation *= strength : look.Grain *= strength : look.Vignette *= strength
+            look.CalibrationRedHue *= strength : look.CalibrationRedSaturation *= strength
+            look.CalibrationGreenHue *= strength : look.CalibrationGreenSaturation *= strength
+            look.CalibrationBlueHue *= strength : look.CalibrationBlueSaturation *= strength
+            look.CalibrationShadowTint *= strength
+            look.ColorGradeShadowSaturation *= strength : look.ColorGradeHighlightSaturation *= strength
+            look.ColorGradeMidtoneSaturation *= strength : look.ColorGradeGlobalSaturation *= strength
+            look.ColorGradeBalance *= strength
             look.RedHue *= strength : look.RedSaturation *= strength : look.RedLuminance *= strength
             look.OrangeHue *= strength : look.OrangeSaturation *= strength : look.OrangeLuminance *= strength
             look.YellowHue *= strength : look.YellowSaturation *= strength : look.YellowLuminance *= strength

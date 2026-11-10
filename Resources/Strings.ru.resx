@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Воспроизведение/пауза</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Полароид</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Положение</value>
   </data>
@@ -9459,26 +9456,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Отступ от края</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Базовый свет</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Цветовая гармония</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Светящаяся кривая</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Свет пустыни</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Зерно плёнки</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Цветная дымка</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Ясный вид</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Вневременной</value>
@@ -11432,5 +11414,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Возвращает в этом месте исходное изображение, без ретуши, мазков кистью и настроек. Мазки попадают в слой «История», где их можно скрыть, ослабить или удалить.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>У слоя «История» нет настроек: под его маской видно исходное изображение. Продолжайте рисовать на нём архивной кистью в кисти изображения; для настроек выберите другой слой или всё изображение.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Иней</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Леденец</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Летняя пыль</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Лунное серебро</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Взрыв цвета</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Кофейня</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Слоновая кость</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Ярмарка</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Лагуна</value>
   </data>
 </root>

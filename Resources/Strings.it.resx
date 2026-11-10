@@ -1954,9 +1954,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Riproduci/Pausa</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Posizione</value>
   </data>
@@ -9419,26 +9416,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Margine</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Luce di base</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Armonia di colori</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Curva luminosa</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Luce del deserto</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Grana cinematografica</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Foschia di colore</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Vista nitida</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Senza tempo</value>
@@ -11392,5 +11374,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Ridipinge in quel punto l'immagine originale, senza ritocchi, pennellate e regolazioni. Le pennellate finiscono nel livello Cronologia, dove si possono nascondere, attenuare o eliminare.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Il livello Cronologia non ha regolazioni: sotto la sua maschera c'è l'immagine originale. Continua a dipingerci con il pennello cronologia del pennello immagine; per le regolazioni scegli un altro livello o l'intera immagine.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Brina</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Caramella</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Polvere d'estate</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Argento lunare</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Esplosione di colore</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Caffè</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Avorio</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Luna park</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Laguna</value>
   </data>
 </root>

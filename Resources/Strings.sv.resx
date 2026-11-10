@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Spela upp/pausa</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Position</value>
   </data>
@@ -9459,26 +9456,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Kantavstånd</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Grundljus</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Färgharmoni</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Lysande kurva</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Ökenljus</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Filmkorn</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Färgad dis</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Klar vy</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Tidlös</value>
@@ -11432,5 +11414,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Målar tillbaka originalbilden på stället, utan retusch, penseldrag och justeringar. Dragen hamnar i lagret Historik, där de kan döljas, försvagas eller tas bort.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Lagret Historik har inga justeringar: under dess mask syns originalbilden. Måla vidare på det med historikpenseln i bildpenseln; välj ett annat lager eller hela bilden för justeringar.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Isglans</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Karamell</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Sommardamm</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Månsilver</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Färgsmäll</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Kafé</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Elfenben</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Tivoli</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Lagun</value>
   </data>
 </root>

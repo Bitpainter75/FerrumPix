@@ -3244,10 +3244,15 @@ Namespace Services
                         0, 0, 0, 1, 0
                     }
                 Case "dramatisch"
+                    ' Vereint das frühere "Kontrast" (reine Spreizung) und "Dramatisch" (Spreizung mit
+                    ' warmem Stich), die gemessen kaum zu unterscheiden waren. Jetzt deutlich mehr
+                    ' Kontrast (Faktor 1,4), ein Viertel zur Luminanz entsättigt, damit die Spreizung
+                    ' die Farben nicht aufbläht, und das Mittelgrau leicht abgedunkelt (128 auf 120).
+                    ' Damit setzt es sich von "Farbknall" ab, der aufhellt und Farbe dazugibt.
                     matrix = New Single() {
-                        1.24F, 0, 0, 0, -28.0F / 255.0F,
-                        0, 1.18F, 0, 0, -24.0F / 255.0F,
-                        0, 0, 1.12F, 0, -18.0F / 255.0F,
+                        1.155F, 0.206F, 0.04F, 0, -58.0F / 255.0F,
+                        0.105F, 1.256F, 0.04F, 0, -59.0F / 255.0F,
+                        0.105F, 0.206F, 1.09F, 0, -60.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case "weich"
@@ -3290,10 +3295,13 @@ Namespace Services
                         0, 0, 0, 1, 0
                     }
                 Case "bild auf alt", "alt", "antik", "vintage"
+                    ' Ein vergilbter Abzug: zu zwei Dritteln entsättigt (Rec.601), gelbbraun getönt,
+                    ' Schwarz angehoben (30/24/14) und Weiß abgesenkt (249/223/167). Lag vorher als
+                    ' blosser Warmton gemessen dicht bei "Warm" und "Polaroid".
                     matrix = New Single() {
-                        0.78F, 0.26F, 0.08F, 0, 18.0F / 255.0F,
-                        0.18F, 0.74F, 0.10F, 0, 10.0F / 255.0F,
-                        0.06F, 0.18F, 0.62F, 0, 2.0F / 255.0F,
+                        0.468F, 0.329F, 0.064F, 0, 30.0F / 255.0F,
+                        0.151F, 0.571F, 0.058F, 0, 24.0F / 255.0F,
+                        0.116F, 0.229F, 0.254F, 0, 14.0F / 255.0F,
                         0, 0, 0, 1, 0
                     }
                 Case Else

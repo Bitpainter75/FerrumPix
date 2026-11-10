@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Přehrát/pozastavit</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Poloha</value>
   </data>
@@ -9459,26 +9456,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Okraj</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Základní světlo</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Barevná harmonie</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Světelná křivka</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Pouštní světlo</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Filmové zrno</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Barevný opar</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Jasný pohled</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Nadčasový</value>
@@ -11432,5 +11414,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Na tom místě domaluje původní obraz zpět, bez retuše, tahů štětcem a úprav. Tahy se ukládají do vrstvy Historie, kde je lze skrýt, zeslabit nebo smazat.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Vrstva Historie nemá žádné úpravy: pod její maskou je původní obraz. Malujte na ni dál štětcem historie v obrazovém štětci; pro úpravy vyberte jinou vrstvu nebo celý obraz.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Jinovatka</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Bonbon</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Letní prach</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Měsíční stříbro</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Výbuch barev</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Kavárna</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Slonovina</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Pouť</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Laguna</value>
   </data>
 </root>

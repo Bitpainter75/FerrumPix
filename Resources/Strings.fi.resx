@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>Toista/keskeytä</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>Polaroid</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>Sijainti</value>
   </data>
@@ -9459,26 +9456,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>Reunaväli</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>Perusvalo</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>Värien harmonia</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>Hohtava käyrä</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>Aavikkovalo</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>Filmirae</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>Värisumu</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>Kirkas näkymä</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>Ajaton</value>
@@ -11432,5 +11414,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>Maalaa kohtaan alkuperäisen kuvan takaisin ilman retusointia, sivellinvetoja ja säätöjä. Vedot menevät Historia-tasolle, jossa ne voi piilottaa, heikentää tai poistaa.</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>Historia-tasolla ei ole säätöjä: sen maskin alla näkyy alkuperäinen kuva. Jatka maalaamista historiasiveltimellä kuvasiveltimessä; valitse säätöjä varten toinen taso tai koko kuva.</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>Jäähohde</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>Karamelli</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>Kesäpöly</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>Kuunhopea</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>Väripamaus</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>Kahvila</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>Norsunluu</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>Tivoli</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>Laguuni</value>
   </data>
 </root>

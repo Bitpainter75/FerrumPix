@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>再生/一時停止</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>ポラロイド</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>位置</value>
   </data>
@@ -9459,26 +9456,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>余白</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>基本光</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>色彩調和</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>発光カーブ</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>砂漠の光</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>フィルム粒子</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>色の霞</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>クリアビュー</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>時代を超えた</value>
@@ -11432,5 +11414,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>その場所に元の画像を描き戻します。レタッチ、ブラシの線、調整は含みません。線は「ヒストリー」レイヤーに入り、そこで非表示にしたり、弱めたり、削除したりできます。</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>「ヒストリー」レイヤーには調整がありません。マスクの下には元の画像が表示されます。画像ブラシのヒストリーブラシで引き続き描けます。調整を使うには、別のレイヤーか画像全体を選択してください。</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>霜の輝き</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>キャンディ</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>夏の砂ぼこり</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>月の銀</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>カラーバースト</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>カフェ</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>アイボリー</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>縁日</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>ラグーン</value>
   </data>
 </root>

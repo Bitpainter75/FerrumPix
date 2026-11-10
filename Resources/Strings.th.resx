@@ -1953,9 +1953,6 @@
   <data name="Play_Pause_ebb1e1e8" xml:space="preserve">
     <value>เล่น/หยุดชั่วคราว</value>
   </data>
-  <data name="Polaroid_31795d24" xml:space="preserve">
-    <value>โพลารอยด์</value>
-  </data>
   <data name="Position_cf1c85ad" xml:space="preserve">
     <value>ตำแหน่ง</value>
   </data>
@@ -9463,26 +9460,11 @@
   <data name="Randabstand_a68c50d0" xml:space="preserve">
     <value>ระยะขอบ</value>
   </data>
-  <data name="Grundlicht_3a3e8b48" xml:space="preserve">
-    <value>แสงพื้นฐาน</value>
-  </data>
-  <data name="Farbklang_d003f5f7" xml:space="preserve">
-    <value>ความกลมกลืนของสี</value>
-  </data>
-  <data name="Leuchtkurve_ca71ff05" xml:space="preserve">
-    <value>เส้นโค้งเรืองแสง</value>
-  </data>
   <data name="W_stenlicht_7f839fb7" xml:space="preserve">
     <value>แสงทะเลทราย</value>
   </data>
   <data name="Kornfilm_e738e176" xml:space="preserve">
     <value>เกรนฟิล์ม</value>
-  </data>
-  <data name="Farbdunst_bd7da7da" xml:space="preserve">
-    <value>หมอกสี</value>
-  </data>
-  <data name="Klarblick_9368e451" xml:space="preserve">
-    <value>มุมมองชัดเจน</value>
   </data>
   <data name="Zeitlos_e1bb3248" xml:space="preserve">
     <value>เหนือกาลเวลา</value>
@@ -11436,5 +11418,35 @@
   </data>
   <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
     <value>ระบายภาพต้นฉบับกลับคืนตรงจุดนั้น โดยไม่มีการรีทัช รอยแปรง และการปรับ รอยแปรงจะอยู่ในเลเยอร์ประวัติ ซึ่งซ่อน ลดความแรง หรือลบได้</value>
+  </data>
+  <data name="Die_Ebene_Protokoll_tr_gt_keine_Regler_unter_ihr_e096d847" xml:space="preserve">
+    <value>เลเยอร์ประวัติไม่มีการปรับ ใต้มาสก์จะแสดงภาพต้นฉบับ ระบายต่อได้ด้วยแปรงประวัติในแปรงภาพ หากต้องการปรับ ให้เลือกเลเยอร์อื่นหรือทั้งภาพ</value>
+  </data>
+  <data name="Eisglanz_4541f347" xml:space="preserve">
+    <value>ประกายน้ำแข็ง</value>
+  </data>
+  <data name="Bonbon_359ea79f" xml:space="preserve">
+    <value>ลูกกวาด</value>
+  </data>
+  <data name="Sommerstaub_f852aed5" xml:space="preserve">
+    <value>ฝุ่นฤดูร้อน</value>
+  </data>
+  <data name="Mondsilber_e7c425a2" xml:space="preserve">
+    <value>เงินจันทร์</value>
+  </data>
+  <data name="Farbknall_e0d8a296" xml:space="preserve">
+    <value>สีระเบิด</value>
+  </data>
+  <data name="Kaffeehaus_87f87c3a" xml:space="preserve">
+    <value>คาเฟ่</value>
+  </data>
+  <data name="Cremewei_2a8bc5b6" xml:space="preserve">
+    <value>งาช้าง</value>
+  </data>
+  <data name="Jahrmarkt_5d79b117" xml:space="preserve">
+    <value>งานวัด</value>
+  </data>
+  <data name="Lagune_2e30f214" xml:space="preserve">
+    <value>ลากูน</value>
   </data>
 </root>
