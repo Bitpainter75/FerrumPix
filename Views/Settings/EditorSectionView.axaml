@@ -457,6 +457,104 @@
                                      ToolTip.Tip="{}{name}_fx erzeugt etwa Foto_fx; ### ist ein Zähler."/>
                         </Grid>
 
+                        <!-- ZIELORDNER FUER SPEICHERN UNTER UND EXPORTIEREN (GitHub #102): wie die Ziele
+                             des Imports; die Dialoge bieten sie neben dem aktuellen und dem zuletzt
+                             benutzten Ordner an und loesen sie je Bild auf. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Zielordner für Speichern unter und Exportieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Ordner, die Speichern unter, Exportieren und die übrigen Stapelfunktionen neben dem aktuellen und dem zuletzt benutzten Ordner anbieten. Platzhalter: {folder} Ordner des Bildes, {foldername} sein Name, {pictures} Bilder-Ordner, {home} persönlicher Ordner, dazu die des Dateinamens wie {datetaken:yyyy}. Beispiel: {folder}/export legt neben jedem Bild einen Unterordner an."
+                                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding AddSaveAsFolderCommand}">Ziel hinzufügen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding SaveAsFolderRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" Margin="0,0,0,6"
+                                                    AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <Grid ColumnDefinitions="170,*,Auto,Auto" ColumnSpacing="6">
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Name"/>
+                                                <TextBox Grid.Column="1"
+                                                         Classes="no-translate"
+                                                         Text="{Binding Template, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Zielordner"/>
+                                                <Button Grid.Column="2" Classes="ghost" Padding="10,6"
+                                                        Click="OnBrowseSaveAsFolderClick">Auswählen</Button>
+                                                <Button Grid.Column="3" Classes="ghost"
+                                                        Width="30" Height="30" Padding="0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip.Tip="Entfernen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                   Width="18" Height="18"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{Binding PreviewText}"
+                                                       Classes="no-translate"
+                                                       Margin="176,0,0,0"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- DATEINAMEN FUER SPEICHERN UNTER UND EXPORTIEREN: wie die Zielordner. -->
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Dateinamen für Speichern unter und Exportieren" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Muster, die dieselben Dialoge zur Auswahl anbieten, mit den Platzhaltern der Namensvorlage darüber. Aufgelöst wird beim Speichern, für jedes Bild."
+                                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="ghost" Padding="12,7"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding AddSaveAsNameCommand}">Muster hinzufügen</Button>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding SaveAsNameRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Spacing="2" Margin="0,0,0,6"
+                                                    AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                            <Grid ColumnDefinitions="170,*,Auto" ColumnSpacing="6">
+                                                <TextBox Grid.Column="0"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Name"/>
+                                                <TextBox Grid.Column="1"
+                                                         Classes="no-translate"
+                                                         Text="{Binding Template, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                         PlaceholderText="Dateiname"/>
+                                                <Button Grid.Column="2" Classes="ghost"
+                                                        Width="30" Height="30" Padding="0"
+                                                        VerticalAlignment="Center"
+                                                        Command="{Binding RemoveCommand}"
+                                                        ToolTip.Tip="Entfernen">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                   Width="18" Height="18"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </Grid>
+                                            <TextBlock Text="{Binding PreviewText}"
+                                                       Classes="no-translate"
+                                                       Margin="176,0,0,0"
+                                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                                       FontSize="{DynamicResource FP.Font.Small}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="JPG-Qualität" FontSize="{DynamicResource FP.Font.Body}"/>

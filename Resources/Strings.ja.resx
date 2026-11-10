@@ -11403,4 +11403,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>確認する代わりに、別の画像を開いたりエディターを離れたりするときに未保存の変更を保存します。RAW と PSD は編集内容をサイドカーファイルに保持し、JPEG、PNG、WebP は上書きされます。新しい名前でしか保存できない画像では、引き続き確認します。</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>候補：{0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>プレースホルダー：{folder} 画像のフォルダー、{foldername} その名前、{pictures} ピクチャフォルダー、{home} ホームフォルダー、さらに {datetaken:yyyy} などファイル名用のもの。例：{folder}/export は各画像の隣にサブフォルダーを作成します。</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>名前を付けて保存とエクスポートの保存先フォルダー</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>名前を付けて保存、エクスポート、その他の一括処理が、現在のフォルダーと最後に使ったフォルダーに加えて提示するフォルダー。プレースホルダー：{folder} 画像のフォルダー、{foldername} その名前、{pictures} ピクチャフォルダー、{home} ホームフォルダー、さらに {datetaken:yyyy} などファイル名用のもの。例：{folder}/export は各画像の隣にサブフォルダーを作成します。</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>名前を付けて保存とエクスポートのファイル名</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>同じダイアログで選択できるパターンで、上の名前テンプレートのプレースホルダーを使います。保存時に画像ごとに展開されます。</value>
+  </data>
 </root>

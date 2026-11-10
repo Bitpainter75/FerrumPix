@@ -22974,8 +22974,16 @@ Namespace ViewModels
                                                              LocalizationService.T("Abbrechen"))
                 If saveAsResult Is Nothing OrElse String.IsNullOrWhiteSpace(saveAsResult.BaseName) Then Return False
 
+                ' Eine Namensvorlage aus der Auswahl des Dialogs (GitHub #102) wird hier fuer dieses
+                ' Bild aufgeloest; ein getippter Name ohne Platzhalter bleibt, wie er ist, auch mit "#".
+                Dim templateSource = If(fromFpx, _currentFpxPath, _currentImagePath)
+                Dim chosenName = saveAsResult.BaseName.Trim()
+                If chosenName.Contains("{"c) Then
+                    chosenName = _mainVm.ExpandTargetNamePattern(chosenName, templateSource, 1, baseNameOverride:=name).Trim()
+                    If chosenName.Length = 0 Then chosenName = name
+                End If
                 ' Nur eine bekannte Endung faellt weg: "f1.4" im Namen ist keine.
-                Dim cleanBaseName = MediaFileTypes.WithoutKnownExtension(saveAsResult.BaseName.Trim())
+                Dim cleanBaseName = MediaFileTypes.WithoutKnownExtension(chosenName)
                 If HasInvalidFileNameChars(cleanBaseName) Then
                     Await _mainVm.ShowMessageAsync(LocalizationService.T("Speichern fehlgeschlagen"), LocalizationService.T("Der Dateiname enthält ungültige Zeichen."))
                     Return False
@@ -22995,7 +23003,13 @@ Namespace ViewModels
                     IO.Directory.CreateDirectory(uploadTempDir)
                     targetPath = IO.Path.Combine(uploadTempDir, cleanBaseName & saveAsResult.Extension)
                 Else
-                    If Not String.IsNullOrWhiteSpace(saveAsResult.TargetFolder) Then dir = saveAsResult.TargetFolder
+                    ' Eine Ordnervorlage ({folder}/export ...) gilt fuer dieses Bild; {folder} ist der
+                    ' Ordner, den der Dialog ohnehin vorschlug (bei einer Arbeitskopie vom Server der
+                    ' Bilder-Ordner, nie der Temp-Ordner). Ein relativer Ordner liegt in ihm.
+                    If Not String.IsNullOrWhiteSpace(saveAsResult.TargetFolder) Then
+                        dir = MainWindowViewModel.AnchorTargetFolder(
+                                  _mainVm.ExpandTargetFolderTemplate(saveAsResult.TargetFolder, templateSource, sourceFolder:=dir), dir)
+                    End If
                     If Not IO.Directory.Exists(dir) Then IO.Directory.CreateDirectory(dir)
                     targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
                     ' EINE vorhandene Datei war bis hierher wortlos ueberschrieben worden. Wer einen

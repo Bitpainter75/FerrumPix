@@ -11362,4 +11362,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>Em vez de perguntar, o editor guarda as alterações não guardadas quando abre outra foto ou sai do editor. RAW e PSD mantêm a edição no ficheiro auxiliar, JPEG, PNG e WebP são substituídos. Quando a foto só pode ser guardada com um novo nome, continua a ser perguntado.</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>Sugestão: {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>Marcadores: {folder} pasta da foto, {foldername} o seu nome, {pictures} pasta Imagens, {home} pasta pessoal, além dos do nome do ficheiro como {datetaken:yyyy}. Exemplo: {folder}/export cria uma subpasta junto a cada foto.</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>Pastas de destino para Guardar como e Exportar</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>Pastas que Guardar como, Exportar e as outras funções em lote oferecem junto à pasta atual e à última usada. Marcadores: {folder} pasta da foto, {foldername} o seu nome, {pictures} pasta Imagens, {home} pasta pessoal, além dos do nome do ficheiro como {datetaken:yyyy}. Exemplo: {folder}/export cria uma subpasta junto a cada foto.</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>Nomes de ficheiro para Guardar como e Exportar</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>Padrões que as mesmas caixas de diálogo oferecem para escolher, com os marcadores do modelo de nome acima. São resolvidos ao guardar, para cada foto.</value>
+  </data>
 </root>

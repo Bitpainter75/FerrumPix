@@ -13643,7 +13643,7 @@ Namespace ViewModels
             End If
             Dim createFolderError As String = Nothing
             Try
-                Directory.CreateDirectory(targetFolder)
+                CreateTargetRoot(targetFolder)
             Catch ex As Exception
                 createFolderError = ex.Message
             End Try
@@ -13827,7 +13827,7 @@ Namespace ViewModels
             End If
             Dim createFolderError As String = Nothing
             Try
-                Directory.CreateDirectory(targetFolder)
+                CreateTargetRoot(targetFolder)
             Catch ex As Exception
                 createFolderError = ex.Message
             End Try
@@ -14222,7 +14222,7 @@ Namespace ViewModels
             End If
             Dim createFolderError As String = Nothing
             Try
-                Directory.CreateDirectory(targetFolder)
+                CreateTargetRoot(targetFolder)
             Catch ex As Exception
                 createFolderError = ex.Message
             End Try
@@ -14570,6 +14570,15 @@ Namespace ViewModels
             Return If(makeUnique, MakeUniqueFilePath(combined), combined)
         End Function
 
+        ''' <summary>Vor einem Stapel den Zielordner anlegen. Bei einer Vorlage nur ihren festen
+        ''' Anfang ("{folder}/export" hat keinen, jedes Ziel liegt neben seinem Bild); die Ordner je
+        ''' Bild entstehen in ResolveBatchTargetsAsync. Ein relativer Ordner gilt je Bild ab dessen
+        ''' Ordner und wird hier nicht angelegt, sonst entstuende er im Arbeitsverzeichnis.</summary>
+        Private Shared Sub CreateTargetRoot(targetFolder As String)
+            Dim root = TargetFolderTemplate.FixedRoot(targetFolder)
+            If root.Length > 0 AndAlso Path.IsPathRooted(root) Then Directory.CreateDirectory(root)
+        End Sub
+
         ''' <summary>Die Ziele eines Stapels VOR dem Schreiben festlegen und dabei jeden Konflikt
         ''' klären.
         '''
@@ -14581,20 +14590,31 @@ Namespace ViewModels
         ''' Zurück kommen nur die Paare, die wirklich geschrieben werden sollen: was der Nutzer
         ''' übersprungen hat, fehlt hier. „Alle überschreiben" und „Alle überspringen" gelten für
         ''' den Rest des Laufs, deshalb wird die Merkentscheidung am Anfang zurückgesetzt.</summary>
+        ''' <param name="remoteSources">Die Quellen sind Arbeitskopien vom Server im Temp-Ordner: dann
+        ''' steht {folder} fuer den Bilder-Ordner, nicht fuer den Temp-Ordner.</param>
         Private Async Function ResolveBatchTargetsAsync(sources As IEnumerable(Of String),
                                                         targetFolder As String,
                                                         outputExtension As Func(Of String, String),
                                                         nameSuffix As String,
-                                                        nameBuilder As Func(Of String, String)) As Task(Of List(Of KeyValuePair(Of String, String)))
+                                                        nameBuilder As Func(Of String, String),
+                                                        Optional remoteSources As Boolean = False) As Task(Of List(Of KeyValuePair(Of String, String)))
             Dim pairs As New List(Of KeyValuePair(Of String, String))()
             _conflictBatchDecision = Nothing
             ' Zwei Quellen können auf denselben Namen fallen (gleicher Stamm, verschiedene Ordner).
             ' Ohne dieses Gedächtnis wäre der zweite kein Konflikt - die Datei liegt ja noch nicht -
             ' und überschriebe still das Ergebnis des ersten.
             Dim claimed As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
             For Each source In If(sources, Enumerable.Empty(Of String)())
                 If String.IsNullOrEmpty(source) Then Continue For
-                Dim target = CreateBatchTargetFolderPath(source, targetFolder, outputExtension(source),
+                ' Eine Ordnervorlage (GitHub #102) gilt je Bild: "{folder}/export" legt den Unterordner
+                ' neben JEDEM Bild an, auch wenn die Auswahl aus mehreren Ordnern stammt. Ohne
+                ' Platzhalter und absolut ist es der Ordner selbst, wie bisher.
+                Dim sourceFolder = If(remoteSources, pictures, If(Path.GetDirectoryName(source), ""))
+                Dim folderForSource = MainWindowViewModel.AnchorTargetFolder(
+                    _mainVm.ExpandTargetFolderTemplate(targetFolder, source, sourceFolder), sourceFolder)
+                If Not Directory.Exists(folderForSource) Then Directory.CreateDirectory(folderForSource)
+                Dim target = CreateBatchTargetFolderPath(source, folderForSource, outputExtension(source),
                                                          nameSuffix, nameBuilder, makeUnique:=False)
                 If File.Exists(target) OrElse claimed.Contains(target) Then
                     target = Await ResolveConflictTargetAsync(target, source)
@@ -14707,7 +14727,8 @@ Namespace ViewModels
                     If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then Continue For
                     sources.Add(source)
                 Next
-                Dim pairs = Await ResolveBatchTargetsAsync(sources, targetFolder, outputExtension, nameSuffix, nameBuilder)
+                Dim pairs = Await ResolveBatchTargetsAsync(sources, targetFolder, outputExtension, nameSuffix, nameBuilder,
+                                                           remoteSources:=True)
                 ' Erst JETZT die Anzeige: bis hierher standen die Rueckfragen zu vorhandenen
                 ' Dateien an, und eine Warteanzeige dahinter waere eine Falschaussage gewesen.
                 _mainVm.BeginBusyOverlay(BatchProgressText())
@@ -15121,7 +15142,7 @@ Namespace ViewModels
                 End If
                 Dim createFolderError As String = Nothing
                 Try
-                    Directory.CreateDirectory(targetFolder)
+                    CreateTargetRoot(targetFolder)
                 Catch ex As Exception
                     createFolderError = ex.Message
                 End Try
@@ -15261,7 +15282,7 @@ Namespace ViewModels
                 End If
                 Dim createFolderError As String = Nothing
                 Try
-                    Directory.CreateDirectory(targetFolder)
+                    CreateTargetRoot(targetFolder)
                 Catch ex As Exception
                     createFolderError = ex.Message
                 End Try

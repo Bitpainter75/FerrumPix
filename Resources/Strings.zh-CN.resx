@@ -11361,4 +11361,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>编辑器不再询问，而是在你打开其他图片或离开编辑器时保存未保存的更改。RAW 和 PSD 将编辑保存在附属文件中，JPEG、PNG 和 WebP 会被覆盖。如果图片只能以新名称保存，仍会询问。</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>建议：{0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>占位符：{folder} 图片所在文件夹，{foldername} 其名称，{pictures} 图片文件夹，{home} 个人文件夹，另有文件名的占位符，如 {datetaken:yyyy}。示例：{folder}/export 会在每张图片旁边创建一个子文件夹。</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>另存为和导出的目标文件夹</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>另存为、导出及其他批处理功能在当前文件夹和上次使用的文件夹之外提供的文件夹。占位符：{folder} 图片所在文件夹，{foldername} 其名称，{pictures} 图片文件夹，{home} 个人文件夹，另有文件名的占位符，如 {datetaken:yyyy}。示例：{folder}/export 会在每张图片旁边创建一个子文件夹。</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>另存为和导出的文件名</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>相同对话框中可供选择的模式，使用上方名称模板的占位符。保存时为每张图片分别解析。</value>
+  </data>
 </root>

@@ -11407,4 +11407,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>묻는 대신 다른 사진을 열거나 편집기를 나갈 때 저장하지 않은 변경 사항을 저장합니다. RAW와 PSD는 편집 내용을 보조 파일에 보관하고, JPEG, PNG, WebP는 덮어씁니다. 새 이름으로만 저장할 수 있는 사진은 계속 묻습니다.</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>제안: {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>자리 표시자: {folder} 사진의 폴더, {foldername} 그 이름, {pictures} 사진 폴더, {home} 홈 폴더, 그리고 {datetaken:yyyy} 같은 파일 이름의 자리 표시자. 예: {folder}/export 는 각 사진 옆에 하위 폴더를 만듭니다.</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>다른 이름으로 저장 및 내보내기 대상 폴더</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>다른 이름으로 저장, 내보내기 및 기타 일괄 기능이 현재 폴더와 마지막으로 사용한 폴더 외에 제공하는 폴더입니다. 자리 표시자: {folder} 사진의 폴더, {foldername} 그 이름, {pictures} 사진 폴더, {home} 홈 폴더, 그리고 {datetaken:yyyy} 같은 파일 이름의 자리 표시자. 예: {folder}/export 는 각 사진 옆에 하위 폴더를 만듭니다.</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>다른 이름으로 저장 및 내보내기 파일 이름</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>같은 대화 상자에서 고를 수 있는 패턴으로, 위의 이름 템플릿 자리 표시자를 사용합니다. 저장할 때 사진마다 풀어 씁니다.</value>
+  </data>
 </root>

@@ -11363,4 +11363,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>En lugar de preguntar, el editor guarda los cambios sin guardar cuando abres otra foto o sales del editor. RAW y PSD conservan la edición en el archivo complementario, JPEG, PNG y WebP se sobrescriben. Si la foto solo puede guardarse con un nombre nuevo, se sigue preguntando.</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>Sugerencia: {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>Marcadores: {folder} carpeta de la foto, {foldername} su nombre, {pictures} carpeta Imágenes, {home} carpeta personal, además de los del nombre de archivo como {datetaken:yyyy}. Ejemplo: {folder}/export crea una subcarpeta junto a cada foto.</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>Carpetas de destino para Guardar como y Exportar</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>Carpetas que Guardar como, Exportar y las demás funciones por lotes ofrecen junto a la carpeta actual y la última usada. Marcadores: {folder} carpeta de la foto, {foldername} su nombre, {pictures} carpeta Imágenes, {home} carpeta personal, además de los del nombre de archivo como {datetaken:yyyy}. Ejemplo: {folder}/export crea una subcarpeta junto a cada foto.</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>Nombres de archivo para Guardar como y Exportar</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>Patrones que los mismos diálogos ofrecen para elegir, con los marcadores de la plantilla de nombre de arriba. Se resuelven al guardar, para cada foto.</value>
+  </data>
 </root>

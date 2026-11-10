@@ -11381,4 +11381,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>Statt nachzufragen, speichert der Editor ungespeicherte Änderungen, wenn du ein anderes Bild öffnest oder den Editor verlässt. RAW und PSD behalten die Bearbeitung in der Begleitdatei, JPEG, PNG und WebP werden dabei überschrieben. Wo das Bild nur unter neuem Namen gespeichert werden kann, wird weiter gefragt.</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>Vorschlag: {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>Platzhalter: {folder} Ordner des Bildes, {foldername} sein Name, {pictures} Bilder-Ordner, {home} persönlicher Ordner, dazu die des Dateinamens wie {datetaken:yyyy}. Beispiel: {folder}/export legt neben jedem Bild einen Unterordner an.</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>Zielordner für Speichern unter und Exportieren</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>Ordner, die Speichern unter, Exportieren und die übrigen Stapelfunktionen neben dem aktuellen und dem zuletzt benutzten Ordner anbieten. Platzhalter: {folder} Ordner des Bildes, {foldername} sein Name, {pictures} Bilder-Ordner, {home} persönlicher Ordner, dazu die des Dateinamens wie {datetaken:yyyy}. Beispiel: {folder}/export legt neben jedem Bild einen Unterordner an.</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>Dateinamen für Speichern unter und Exportieren</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>Muster, die dieselben Dialoge zur Auswahl anbieten, mit den Platzhaltern der Namensvorlage darüber. Aufgelöst wird beim Speichern, für jedes Bild.</value>
+  </data>
 </root>

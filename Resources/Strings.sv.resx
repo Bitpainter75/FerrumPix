@@ -11403,4 +11403,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>I stället för att fråga sparar redigeraren osparade ändringar när du öppnar en annan bild eller lämnar redigeraren. RAW och PSD behåller redigeringen i sidofilen, JPEG, PNG och WebP skrivs över. Där bilden bara kan sparas under ett nytt namn får du fortfarande frågan.</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>Förslag: {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>Platshållare: {folder} bildens mapp, {foldername} dess namn, {pictures} mappen Bilder, {home} hemmappen, plus filnamnets platshållare som {datetaken:yyyy}. Exempel: {folder}/export skapar en undermapp bredvid varje bild.</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>Målmappar för Spara som och Exportera</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>Mappar som Spara som, Exportera och övriga batchfunktioner erbjuder bredvid den aktuella och den senast använda mappen. Platshållare: {folder} bildens mapp, {foldername} dess namn, {pictures} mappen Bilder, {home} hemmappen, plus filnamnets platshållare som {datetaken:yyyy}. Exempel: {folder}/export skapar en undermapp bredvid varje bild.</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>Filnamn för Spara som och Exportera</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>Mönster som samma dialoger erbjuder att välja bland, med platshållarna från namnmallen ovan. De fylls i när du sparar, för varje bild.</value>
+  </data>
 </root>

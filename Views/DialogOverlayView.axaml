@@ -40,13 +40,22 @@
                                                       Margin="0,18,0,0"
                                                       IsVisible="{Binding DialogShowsFileConflict}"/>
 
-                        <!-- Einfache Texteingabe -->
-                        <TextBox x:Name="DialogInputBox"
-                                 Grid.Row="2"
-                                 Text="{Binding DialogInputText, Mode=TwoWay}"
-                                 IsVisible="{Binding DialogShowsInput}"
-                                 Margin="0,18,0,0"
-                                 MinHeight="36"/>
+                        <!-- Einfache Texteingabe. Bei Speichern unter steht darueber die Auswahl der
+                             Namensvorlagen (GitHub #102): die Wahl schreibt ins Feld, aufgeloest
+                             wird beim Speichern. -->
+                        <StackPanel Grid.Row="2"
+                                    Spacing="6"
+                                    Margin="0,18,0,0"
+                                    IsVisible="{Binding DialogShowsInput}">
+                            <ComboBox ItemsSource="{Binding DialogSaveAsNameChoices}"
+                                      SelectedItem="{Binding DialogSaveAsSelectedNameChoice, Mode=TwoWay}"
+                                      IsVisible="{Binding IsDialogSaveAsNameChoiceVisible}"
+                                      HorizontalAlignment="Stretch"
+                                      Classes="no-translate"/>
+                            <TextBox x:Name="DialogInputBox"
+                                     Text="{Binding DialogInputText, Mode=TwoWay}"
+                                     MinHeight="36"/>
+                        </StackPanel>
 
                         <views:SearchDialogView Grid.Row="3"
                                                 Margin="0,16,0,0"
@@ -439,18 +448,12 @@
                                     <!-- Immer sichtbar, ohne Ordner nur ausgegraut: Knoepfe, die je
                                          nach Aufrufweg auftauchen und verschwinden, machen die Zeile
                                          unlesbar. -->
+                                    <!-- Welcher Ordner, steht in der Auswahl darunter (aktueller,
+                                         zuletzt benutzter und die Vorlagen der Einstellungen). -->
                                     <Button Classes="segmented"
-                                            Classes.active="{Binding IsDialogFolderChoiceCurrentActive}"
-                                            IsEnabled="{Binding IsDialogFolderChoiceCurrentEnabled}"
+                                            Classes.active="{Binding IsSaveAsTargetLocal}"
                                             Click="OnDialogSaveTargetClick"
-                                            ToolTip.Tip="{Binding DialogFolderChoiceCurrent}"
-                                            Tag="Current">Aktueller Ordner</Button>
-                                    <Button Classes="segmented"
-                                            Classes.active="{Binding IsDialogFolderChoiceLastSavedActive}"
-                                            IsEnabled="{Binding IsDialogFolderChoiceLastSavedEnabled}"
-                                            Click="OnDialogSaveTargetClick"
-                                            ToolTip.Tip="{Binding DialogFolderChoiceLastSaved}"
-                                            Tag="LastSaved">Letzter Ordner</Button>
+                                            Tag="Local">Ordner</Button>
                                     <Button Classes="segmented"
                                             Classes.active="{Binding IsSaveAsTargetImmich}"
                                             IsVisible="{Binding IsSaveAsImmichAvailable}"
@@ -468,24 +471,37 @@
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsSaveAsTargetFolderVisible}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                <Grid Grid.Row="3"
-                                      Grid.Column="1"
-                                      ColumnDefinitions="*,Auto"
-                                      ColumnSpacing="8"
-                                      IsVisible="{Binding IsSaveAsTargetFolderVisible}">
-                                    <TextBox Text="{Binding DialogSaveAsTargetFolder, Mode=TwoWay}"
-                                             MinHeight="36"/>
-                                    <Button Grid.Column="1"
-                                            Classes="icon-btn"
-                                            Width="38"
-                                            Height="36"
-                                            Click="OnBrowseSaveTargetFolderClick"
-                                            ToolTip.Tip="Ordner wählen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg"
-                                                       Width="18"
-                                                       Height="18"/>
-                                    </Button>
-                                </Grid>
+                                <!-- Wie beim Import (GitHub #102): eine Auswahl ueber dem Feld, das Feld
+                                     bleibt frei aenderbar, auch mit Platzhaltern; aufgeloest je Bild. -->
+                                <StackPanel Grid.Row="3"
+                                            Grid.Column="1"
+                                            Spacing="6"
+                                            IsVisible="{Binding IsSaveAsTargetFolderVisible}">
+                                    <ComboBox ItemsSource="{Binding DialogSaveAsFolderChoices}"
+                                              SelectedItem="{Binding DialogSaveAsSelectedFolderChoice, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              Classes="no-translate"/>
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="8">
+                                        <TextBox Text="{Binding DialogSaveAsTargetFolder, Mode=TwoWay}"
+                                                 Classes="no-translate"
+                                                 MinHeight="36"/>
+                                        <Button Grid.Column="1"
+                                                Classes="icon-btn"
+                                                Width="38"
+                                                Height="36"
+                                                Click="OnBrowseSaveTargetFolderClick"
+                                                ToolTip.Tip="Ordner wählen">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-open.svg"
+                                                           Width="18"
+                                                           Height="18"/>
+                                        </Button>
+                                    </Grid>
+                                    <TextBlock Text="Platzhalter: {folder} Ordner des Bildes, {foldername} sein Name, {pictures} Bilder-Ordner, {home} persönlicher Ordner, dazu die des Dateinamens wie {datetaken:yyyy}. Beispiel: {folder}/export legt neben jedem Bild einen Unterordner an."
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
                                 <!-- Zieldateinamen-Muster (nur Stapel-Dialoge): dieselben Platzhalter wie
                                      beim Stapel-Umbenennen; leer = Originalname bleibt. Die Platzhalter
                                      stehen wie dort als Klick-Auswahl darunter; die Beschriftung sitzt
@@ -500,6 +516,10 @@
                                             Grid.Column="1"
                                             Spacing="7"
                                             IsVisible="{Binding IsDialogNamePatternVisible}">
+                                    <ComboBox ItemsSource="{Binding DialogSaveAsNameChoices}"
+                                              SelectedItem="{Binding DialogSaveAsSelectedNameChoice, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              Classes="no-translate"/>
                                     <TextBox Name="TargetNamePatternTextBox"
                                              Text="{Binding DialogTargetNamePattern, Mode=TwoWay}"
                                              PlaceholderText="{}{name} (leer = Originalname behalten)"

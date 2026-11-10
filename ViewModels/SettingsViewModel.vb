@@ -1527,6 +1527,88 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s) s.ImportNameTemplates = templates)
         End Sub
 
+        ' --- Zielordner und Dateinamen fuer Speichern unter und Exportieren (GitHub #102) --------
+
+        ''' <summary>Der Ordner, den das Beispiel unter einer Zeile fuer {folder} einsetzt.</summary>
+        Private Shared ReadOnly Property SaveAsSampleFolder As String
+            Get
+                Return IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "2026-05-17")
+            End Get
+        End Property
+
+        Private _saveAsFolderRows As ObservableCollection(Of ImportTargetRow)
+
+        ''' <summary>Die Zielordner, die Speichern unter und die Stapelfunktionen neben dem aktuellen
+        ''' und dem zuletzt benutzten Ordner anbieten (MainWindowViewModel.FillDialogSaveAsFolderChoices),
+        ''' mit Platzhaltern, aufgeloest je Bild (ExpandTargetFolderTemplate).</summary>
+        Public ReadOnly Property SaveAsFolderRows As ObservableCollection(Of ImportTargetRow)
+            Get
+                If _saveAsFolderRows Is Nothing Then
+                    _saveAsFolderRows = New ObservableCollection(Of ImportTargetRow)()
+                    For Each target In If(AppSettingsService.Load().SaveAsFolderTemplates, New List(Of ImportTargetSettings)())
+                        If target Is Nothing Then Continue For
+                        _saveAsFolderRows.Add(New ImportTargetRow(target, AddressOf SaveSaveAsFolders, AddressOf RemoveSaveAsFolderRow,
+                                                                  sampleFolder:=SaveAsSampleFolder))
+                    Next
+                End If
+                Return _saveAsFolderRows
+            End Get
+        End Property
+
+        Public ReadOnly Property AddSaveAsFolderCommand As ICommand = ReactiveCommand.Create(
+            Sub()
+                SaveAsFolderRows.Add(New ImportTargetRow(
+                    New ImportTargetSettings With {.Template = "{folder}/export"},
+                    AddressOf SaveSaveAsFolders, AddressOf RemoveSaveAsFolderRow, sampleFolder:=SaveAsSampleFolder))
+                SaveSaveAsFolders()
+            End Sub)
+
+        Private Sub RemoveSaveAsFolderRow(row As ImportTargetRow)
+            If row Is Nothing OrElse Not SaveAsFolderRows.Remove(row) Then Return
+            SaveSaveAsFolders()
+        End Sub
+
+        Private Sub SaveSaveAsFolders()
+            Dim targets = SaveAsFolderRows.Select(Function(r) r.ToSettings()).ToList()
+            AppSettingsService.Update(Sub(s) s.SaveAsFolderTemplates = targets)
+        End Sub
+
+        Private _saveAsNameRows As ObservableCollection(Of ImportTargetRow)
+
+        ''' <summary>Die Dateinamen, die dieselben Dialoge zur Auswahl anbieten, mit den Platzhaltern
+        ''' des Stapel-Umbenennens.</summary>
+        Public ReadOnly Property SaveAsNameRows As ObservableCollection(Of ImportTargetRow)
+            Get
+                If _saveAsNameRows Is Nothing Then
+                    _saveAsNameRows = New ObservableCollection(Of ImportTargetRow)()
+                    For Each template In If(AppSettingsService.Load().SaveAsNameTemplates, New List(Of ImportTargetSettings)())
+                        If template Is Nothing Then Continue For
+                        _saveAsNameRows.Add(New ImportTargetRow(template, AddressOf SaveSaveAsNames, AddressOf RemoveSaveAsNameRow,
+                                                                isFileName:=True, sampleFolder:=SaveAsSampleFolder))
+                    Next
+                End If
+                Return _saveAsNameRows
+            End Get
+        End Property
+
+        Public ReadOnly Property AddSaveAsNameCommand As ICommand = ReactiveCommand.Create(
+            Sub()
+                SaveAsNameRows.Add(New ImportTargetRow(
+                    New ImportTargetSettings With {.Template = "{name}_{datetaken:yyyy-MM-dd}"},
+                    AddressOf SaveSaveAsNames, AddressOf RemoveSaveAsNameRow, isFileName:=True, sampleFolder:=SaveAsSampleFolder))
+                SaveSaveAsNames()
+            End Sub)
+
+        Private Sub RemoveSaveAsNameRow(row As ImportTargetRow)
+            If row Is Nothing OrElse Not SaveAsNameRows.Remove(row) Then Return
+            SaveSaveAsNames()
+        End Sub
+
+        Private Sub SaveSaveAsNames()
+            Dim templates = SaveAsNameRows.Select(Function(r) r.ToSettings()).ToList()
+            AppSettingsService.Update(Sub(s) s.SaveAsNameTemplates = templates)
+        End Sub
+
         ''' <summary>Wo gmic_qt liegt. Leer heisst: im Suchpfad suchen.</summary>
         Public Property GmicQtPath As String
             Get

@@ -71,6 +71,10 @@ Namespace ViewModels
         Function ExpandTargetNamePattern(pattern As String, sourcePath As String, counter As Integer,
                                          Optional appendSourceExtension As Boolean = False,
                                          Optional baseNameOverride As String = Nothing) As String
+        ''' <summary>Löst eine Ordnervorlage für ein Bild auf ({folder}, {pictures}, Aufnahmedatum ...;
+        ''' siehe TargetFolderTemplate). Ein Ordner ohne Platzhalter kommt unverändert zurück.</summary>
+        Function ExpandTargetFolderTemplate(template As String, sourcePath As String,
+                                            Optional sourceFolder As String = Nothing) As String
 
         Sub RequestDeletePaths(paths As IEnumerable(Of String),
                                Optional afterDelete As Action = Nothing,

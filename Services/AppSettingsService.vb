@@ -887,6 +887,17 @@ Namespace Services
         ''' <summary>Namensvorlage fuer „Speichern unter" im Editor. Sie spricht dieselben
         ''' Platzhalter wie das Stapel-Umbenennen; die Vorgabe markiert bearbeitete Kopien klar.</summary>
         Public Property EditorSaveAsNamePattern As String = "{name}_fx"
+        ''' <summary>Zielordner zur Auswahl in Speichern unter und den Stapelfunktionen (Exportieren,
+        ''' Konvertieren und die uebrigen), wie die Ziele des Imports: Name und Vorlage, aufgeloest je
+        ''' Bild (TargetFolderTemplate). Die Vorgabe legt neben jedem Bild einen Unterordner an.</summary>
+        Public Property SaveAsFolderTemplates As New List(Of ImportTargetSettings) From {
+            New ImportTargetSettings With {.Name = "", .Template = "{folder}/export"}
+        }
+        ''' <summary>Dateinamen zur Auswahl in denselben Dialogen, mit den Platzhaltern des
+        ''' Stapel-Umbenennens; aufgeloest beim Speichern, je Bild.</summary>
+        Public Property SaveAsNameTemplates As New List(Of ImportTargetSettings) From {
+            New ImportTargetSettings With {.Name = "", .Template = "{name}_{datetaken:yyyy-MM-dd}"}
+        }
         ''' Kopierte Bildanpassungen als Rezept-JSON (nur die Pixel-Anpassungen, keine Geometrie
         ''' und keine Objekte). Liegt in den Einstellungen statt im Arbeitsspeicher, damit
         ''' "Kopieren" in der einen Sitzung und "Einfuegen" in der naechsten funktioniert - genau

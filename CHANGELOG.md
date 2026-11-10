@@ -12,6 +12,11 @@
   when the file says where it was taken. Pictures are still sorted by the time the camera showed.
   A switch in Settings, Catalog, shows the camera time instead.
 
+- Save as, Export and the other batch functions offer a choice of target folders and file names,
+  like the import: the current and the last used folder, plus your own folder and name templates
+  from Settings, Editor. Templates can use placeholders such as `{folder}/export`, which puts the
+  result into a subfolder next to each picture, even when the pictures come from several folders.
+
 - The editor can save automatically when you move on to another picture or leave it, instead of
   asking (Settings, Editor; off by default). Raw files keep their edits next to the picture,
   JPEG, PNG and WebP are overwritten. Where a picture can only be saved under a new name, it still

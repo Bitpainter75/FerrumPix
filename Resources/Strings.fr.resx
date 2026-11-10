@@ -11363,4 +11363,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>Au lieu de demander, l'éditeur enregistre les modifications non enregistrées lorsque vous ouvrez une autre photo ou quittez l'éditeur. RAW et PSD conservent la retouche dans le fichier annexe, JPEG, PNG et WebP sont écrasés. Si la photo ne peut être enregistrée que sous un nouveau nom, la question reste posée.</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>Suggestion : {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>Variables : {folder} dossier de la photo, {foldername} son nom, {pictures} dossier Images, {home} dossier personnel, ainsi que celles du nom de fichier comme {datetaken:yyyy}. Exemple : {folder}/export crée un sous-dossier à côté de chaque photo.</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>Dossiers de destination pour Enregistrer sous et Exporter</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>Dossiers qu'Enregistrer sous, Exporter et les autres fonctions par lot proposent à côté du dossier actuel et du dernier utilisé. Variables : {folder} dossier de la photo, {foldername} son nom, {pictures} dossier Images, {home} dossier personnel, ainsi que celles du nom de fichier comme {datetaken:yyyy}. Exemple : {folder}/export crée un sous-dossier à côté de chaque photo.</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>Noms de fichier pour Enregistrer sous et Exporter</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>Modèles que les mêmes boîtes de dialogue proposent au choix, avec les variables du modèle de nom ci-dessus. Ils sont résolus à l'enregistrement, pour chaque photo.</value>
+  </data>
 </root>

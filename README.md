@@ -75,6 +75,7 @@ If you had a GPS track running - on a phone, a watch, a logger - the whole selec
 The time a picture was taken can be corrected the same way. Set a date and time outright, or shift what is already there by days, hours, minutes and seconds - for the trip where the camera clock was wrong and every photo is off by the same amount. Whole selections at once, and the file's own date follows along.
 
 Batch work runs over a whole selection: rename, convert, resize, watermark, adjustments, metadata removal, and *Export to* for putting a name pattern, a look, a size and a target format into one run, locally or straight to Immich. Converting JPEG files to JPEG XL can repack them without any loss, so the original JPEG can be restored exactly. Converting can also turn RAW files into DNG, keeping them raw instead of rendering them out; that one needs [dnglab](https://github.com/dnglab/dnglab) installed, and says so if it is missing. Photos can also be printed, laid out as contact sheets or combined into a collage, each showing your edits.
+Target folders and file names can come from your own templates, in batch work as in *Save as*: `{folder}/export` puts every result into a subfolder next to its picture.
 
 ## Viewer
 

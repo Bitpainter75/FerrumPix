@@ -1653,6 +1653,112 @@ Namespace ViewModels
             Return ordner
         End Function
 
+        ''' <summary>Die Auswahl ueber dem Zielordner, wie beim Import (GitHub #102): der aktuelle Ordner,
+        ''' der zuletzt benutzte und die Ordnervorlagen aus den Einstellungen
+        ''' (AppSettings.SaveAsFolderTemplates). Eine Wahl schreibt ihren Ordner oder ihre Vorlage
+        ''' ins Feld, dort bleibt sie aenderbar; aufgeloest wird eine Vorlage erst beim Speichern, je
+        ''' Bild (ExpandTargetFolderTemplate). Die beiden Ordner gehen ueber dieselbe Umschaltung wie
+        ''' frueher ihre Knoepfe (SetDialogSaveAsTarget).</summary>
+        Public ReadOnly Property DialogSaveAsFolderChoices As New ObservableCollection(Of ImportTargetChoice)()
+
+        Private _dialogSaveAsSelectedFolderChoice As ImportTargetChoice
+        Public Property DialogSaveAsSelectedFolderChoice As ImportTargetChoice
+            Get
+                Return _dialogSaveAsSelectedFolderChoice
+            End Get
+            Set(value As ImportTargetChoice)
+                If ReferenceEquals(_dialogSaveAsSelectedFolderChoice, value) Then Return
+                Me.RaiseAndSetIfChanged(_dialogSaveAsSelectedFolderChoice, value)
+                If value Is Nothing Then Return
+                If value.Kind = "Current" OrElse value.Kind = "LastSaved" Then
+                    SetDialogSaveAsTarget(value.Kind)
+                Else
+                    DialogSaveAsTarget = "Local"
+                    _dialogFolderChoiceSelected = "Template"
+                    DialogSaveAsTargetFolder = value.Pattern
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Die Auswahl ueber dem Dateinamen: bei Speichern unter zuerst der Vorschlag, bei den
+        ''' Stapelfunktionen der Name der Quelle, danach die Namensvorlagen aus den Einstellungen
+        ''' (AppSettings.SaveAsNameTemplates). Die Wahl schreibt ins Namensfeld; aufgeloest wird beim
+        ''' Speichern, je Bild.</summary>
+        Public ReadOnly Property DialogSaveAsNameChoices As New ObservableCollection(Of ImportTargetChoice)()
+
+        Private _dialogSaveAsSelectedNameChoice As ImportTargetChoice
+        Public Property DialogSaveAsSelectedNameChoice As ImportTargetChoice
+            Get
+                Return _dialogSaveAsSelectedNameChoice
+            End Get
+            Set(value As ImportTargetChoice)
+                If ReferenceEquals(_dialogSaveAsSelectedNameChoice, value) Then Return
+                Me.RaiseAndSetIfChanged(_dialogSaveAsSelectedNameChoice, value)
+                If value Is Nothing Then Return
+                If _dialogKind = AppDialogKind.SaveAs Then
+                    DialogInputText = value.Pattern
+                Else
+                    DialogTargetNamePattern = value.Pattern
+                End If
+            End Set
+        End Property
+
+        ''' <summary>Die Namensauswahl neu fuellen. Der erste Eintrag ist der Grundfall: bei Speichern
+        ''' unter der Vorschlag, sonst der Name der Quelle (leeres Muster). Steht im Feld schon ein
+        ''' anderes Muster (das zuletzt benutzte), ist sein Eintrag gewaehlt, notfalls ein eigener
+        ''' "Zuletzt benutzt".</summary>
+        Private Sub FillDialogSaveAsNameChoices(firstPattern As String, firstLabel As String,
+                                                Optional currentPattern As String = Nothing)
+            DialogSaveAsNameChoices.Clear()
+            Dim first = New ImportTargetChoice With {.Pattern = If(firstPattern, ""), .Label = firstLabel}
+            DialogSaveAsNameChoices.Add(first)
+            For Each defined In If(AppSettingsService.Load().SaveAsNameTemplates, New List(Of ImportTargetSettings)())
+                If defined Is Nothing OrElse String.IsNullOrWhiteSpace(defined.Template) Then Continue For
+                DialogSaveAsNameChoices.Add(New ImportTargetChoice With {
+                    .Pattern = defined.Template.Trim(),
+                    .Label = If(String.IsNullOrWhiteSpace(defined.Name), defined.Template.Trim(), defined.Name & ": " & defined.Template.Trim())})
+            Next
+            Dim current = If(currentPattern, If(firstPattern, "")).Trim()
+            Dim selected = DialogSaveAsNameChoices.FirstOrDefault(Function(c) c.Pattern = current)
+            If selected Is Nothing Then
+                selected = New ImportTargetChoice With {.Pattern = current,
+                                                        .Label = String.Format(LocalizationService.T("Zuletzt benutzt: {0}"), current)}
+                DialogSaveAsNameChoices.Insert(1, selected)
+            End If
+            _dialogSaveAsSelectedNameChoice = selected
+            Me.RaisePropertyChanged(NameOf(DialogSaveAsSelectedNameChoice))
+        End Sub
+
+        ''' <summary>Die Ordnerauswahl neu fuellen, nachdem InitDialogTargetFolder die beiden Ordner
+        ''' bestimmt hat; gewaehlt ist der Eintrag, der zum vorbelegten Feld passt.</summary>
+        Private Sub FillDialogSaveAsFolderChoices()
+            DialogSaveAsFolderChoices.Clear()
+            If _dialogFolderChoiceCurrent <> "" Then
+                DialogSaveAsFolderChoices.Add(New ImportTargetChoice With {
+                    .Kind = "Current", .Pattern = _dialogFolderChoiceCurrent,
+                    .Label = String.Format(LocalizationService.T("Aktueller Ordner: {0}"), _dialogFolderChoiceCurrent)})
+            End If
+            If _dialogFolderChoiceLastSaved <> "" AndAlso
+               Not (_dialogFolderChoiceCurrent <> "" AndAlso PathIdentity.AreSame(_dialogFolderChoiceLastSaved, _dialogFolderChoiceCurrent)) Then
+                DialogSaveAsFolderChoices.Add(New ImportTargetChoice With {
+                    .Kind = "LastSaved", .Pattern = _dialogFolderChoiceLastSaved,
+                    .Label = String.Format(LocalizationService.T("Zuletzt benutzt: {0}"), _dialogFolderChoiceLastSaved)})
+            End If
+            For Each defined In If(AppSettingsService.Load().SaveAsFolderTemplates, New List(Of ImportTargetSettings)())
+                If defined Is Nothing OrElse String.IsNullOrWhiteSpace(defined.Template) Then Continue For
+                Dim template = defined.Template.Trim()
+                If DialogSaveAsFolderChoices.Any(Function(c) c.Pattern = template) Then Continue For
+                DialogSaveAsFolderChoices.Add(New ImportTargetChoice With {
+                    .Pattern = template,
+                    .Label = If(String.IsNullOrWhiteSpace(defined.Name), template, defined.Name & ": " & template)})
+            Next
+            ' Die Liste traegt jeden Ordner nur einmal (der zuletzt benutzte faellt weg, wenn er der
+            ' aktuelle ist, doppelte Vorlagen ebenso), der passende Eintrag ist also eindeutig.
+            Dim vorbelegt = _dialogSaveAsTargetFolder
+            _dialogSaveAsSelectedFolderChoice = DialogSaveAsFolderChoices.FirstOrDefault(Function(c) c.Pattern = vorbelegt)
+            Me.RaisePropertyChanged(NameOf(DialogSaveAsSelectedFolderChoice))
+        End Sub
+
         ''' <summary>Belegt den Zielordner vor und merkt sich beide Wahlmoeglichkeiten. Alle
         ''' Dialoge, die einen Zielordner zeigen, gehen hier durch - sonst haetten die einen die
         ''' Schnellwahl und die anderen nicht.</summary>
@@ -1677,7 +1783,10 @@ Namespace ViewModels
             End If
             _dialogFolderChoiceCurrent = If(Not String.IsNullOrWhiteSpace(folder) AndAlso Directory.Exists(folder),
                                             folder, "")
-            _dialogFolderChoiceLastSaved = If(Not String.IsNullOrWhiteSpace(zuletzt) AndAlso Directory.Exists(zuletzt),
+            ' Eine zuletzt benutzte VORLAGE existiert als Ordner nicht und bleibt trotzdem: ein Muster
+            ' tippt niemand bei jedem Export neu (wie beim Import).
+            _dialogFolderChoiceLastSaved = If(Not String.IsNullOrWhiteSpace(zuletzt) AndAlso
+                                              (Directory.Exists(zuletzt) OrElse TargetFolderTemplate.HasPlaceholders(zuletzt)),
                                               zuletzt, "")
             ' Beim ersten Mal gibt es noch keinen zuletzt benutzten Ordner. Dann traegt der Knopf
             ' denselben wie der aktuelle, statt zu fehlen: eine Zeile mit wechselnder Knopfzahl ist
@@ -1699,6 +1808,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentEnabled))
             Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedEnabled))
             Me.RaisePropertyChanged(NameOf(IsSaveAsTargetRowVisible))
+            FillDialogSaveAsFolderChoices()
         End Sub
 
         Public Sub SetDialogTargetFolderChoice(welche As String)
@@ -1714,6 +1824,13 @@ Namespace ViewModels
             ' Bei gleichem Ordner aendert sich das Ziel nicht, die Hervorhebung aber schon.
             Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceCurrentActive))
             Me.RaisePropertyChanged(NameOf(IsDialogFolderChoiceLastSavedActive))
+            ' Die Auswahlliste zeigt denselben Ordner. Meinen beide denselben, steht dort nur einer.
+            Dim passend = DialogSaveAsFolderChoices.FirstOrDefault(Function(c) c.Kind = _dialogFolderChoiceSelected)
+            If passend Is Nothing Then passend = DialogSaveAsFolderChoices.FirstOrDefault(Function(c) c.Kind <> "" AndAlso c.Pattern = _dialogSaveAsTargetFolder)
+            If passend IsNot Nothing AndAlso Not ReferenceEquals(passend, _dialogSaveAsSelectedFolderChoice) Then
+                _dialogSaveAsSelectedFolderChoice = passend
+                Me.RaisePropertyChanged(NameOf(DialogSaveAsSelectedFolderChoice))
+            End If
         End Sub
 
         ''' <summary>Ein Klick in der Ziel-Zeile. "Immich" schaltet das Ziel um, die beiden
@@ -2313,6 +2430,7 @@ Namespace ViewModels
             DialogExportUseResize = settings.ExportToUseResize
             DialogWatermarkKeepSize = settings.ExportToWatermarkKeepSize
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
+            FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             ' Aufnahmedaten fuer die Muster-Platzhalter nicht ueber Dialogoeffnungen hinweg
             ' mitschleppen: sonst stehen geaenderte Dateien mit alten Werten im Namen.
             _dialogBatchRenameExifCache.Clear()
@@ -2705,6 +2823,7 @@ Namespace ViewModels
             RaiseDialogBatchDenoiseChanged()
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
+            FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = If(_dialogBatchFilterOverwrite, 95, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
@@ -3169,6 +3288,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogSaveAsNameChoiceVisible))
                 Me.RaisePropertyChanged(NameOf(DialogUsesWideLayout))
                 Me.RaisePropertyChanged(NameOf(DialogWidth))
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
@@ -4144,6 +4264,14 @@ Namespace ViewModels
         Public ReadOnly Property IsDialogNamePatternVisible As Boolean
             Get
                 Return DialogShowsSaveAsOptions AndAlso _dialogKind <> AppDialogKind.SaveAs
+            End Get
+        End Property
+
+        ''' <summary>Die Namensauswahl ueber dem Eingabefeld, nur bei Speichern unter; die
+        ''' Stapeldialoge zeigen sie ueber ihrem Namensmuster (IsDialogNamePatternVisible).</summary>
+        Public ReadOnly Property IsDialogSaveAsNameChoiceVisible As Boolean
+            Get
+                Return _dialogKind = AppDialogKind.SaveAs
             End Get
         End Property
 
@@ -5584,6 +5712,7 @@ Namespace ViewModels
             ResetDialogUpscaleModel()
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
+            FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = If(_dialogBatchResizeOverwrite, 95, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
@@ -5969,6 +6098,9 @@ Namespace ViewModels
             InitDialogTargetFolder("")
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
+            ' Erster Eintrag ist der Vorschlag selbst; eine Vorlage im Namensfeld loest der Editor
+            ' beim Speichern auf (SaveImageAsync).
+            FillDialogSaveAsNameChoices(initialBaseName, String.Format(LocalizationService.T("Vorschlag: {0}"), initialBaseName))
 
             Dim result = Await ShowDialogAsync(AppDialogKind.SaveAs, titleText, messageText, initialBaseName, confirmText, cancelText)
             If result Is Nothing Then Return Nothing
@@ -5999,6 +6131,7 @@ Namespace ViewModels
             DialogJpgQuality = If(initialJpgQuality > 0, initialJpgQuality, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
+            FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             InitDialogTargetFolder(currentFolder)
             ResetDialogSaveAsMetaOptions()
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
@@ -6071,7 +6204,8 @@ Namespace ViewModels
             ' Merken, welcher Ordnerknopf aktiv war, bevor der letzte Ordner gleich auf diesen
             ' wechselt. Auch bei gleichem Ordner unter beiden leuchtet nur der gewaehlte (siehe
             ' _dialogFolderChoiceSelected). Ist es keiner (eigener Ordner), bleibt die bisherige Wahl.
-            If IsDialogFolderChoiceLastSavedActive Then
+            ' Eine Vorlage kommt beim naechsten Mal als "Zuletzt benutzt" wieder und ist dann gewaehlt.
+            If IsDialogFolderChoiceLastSavedActive OrElse TargetFolderTemplate.HasPlaceholders(folder) Then
                 AppSettingsService.SaveSaveAsFolderChoice("LastSaved")
             ElseIf IsDialogFolderChoiceCurrentActive Then
                 AppSettingsService.SaveSaveAsFolderChoice("Current")
@@ -6389,6 +6523,56 @@ Namespace ViewModels
             ' Quelle kommt (IMG_0001.JPG) oder im Muster steht.
             If appendSourceExtension Then result = MediaFileTypes.WithLowerCaseExtension(result)
             Return result
+        End Function
+
+        ''' <summary>Eine Ordnervorlage fuer ein Bild aufgeloest (TargetFolderTemplate). Stueck fuer
+        ''' Stueck: {folder}, {pictures} und {home} setzen einen ganzen Pfad ein und werden nicht
+        ''' entschaerft (ein Laufwerksbuchstabe "C:" ginge sonst verloren), {foldername} den Namen des
+        ''' Bildordners, alles Uebrige geht durch ExpandTargetNamePattern und damit durch dieselben
+        ''' Platzhalter und dieselbe Entschaerfung wie ein Dateiname, sodass kein Wert eine
+        ''' Ordnerebene erfindet. Ein Stueck, das leer ausgeht (ein fehlendes Aufnahmedatum), faellt
+        ''' weg. Ohne Platzhalter kommt der Text unveraendert zurueck.</summary>
+        ''' <param name="sourceFolder">Der Ordner fuer {folder}, wenn er nicht der des Pfads ist
+        ''' (eine Arbeitskopie vom Server liegt im Temp-Ordner).</param>
+        Public Function ExpandTargetFolderTemplate(template As String, sourcePath As String,
+                                                   Optional sourceFolder As String = Nothing) As String Implements IEditorHost.ExpandTargetFolderTemplate
+            Dim text = If(template, "").Trim()
+            If Not TargetFolderTemplate.HasPlaceholders(text) Then Return text
+            Dim folder = If(sourceFolder, "")
+            If folder.Length = 0 AndAlso Not String.IsNullOrEmpty(sourcePath) Then
+                folder = If(IO.Path.GetDirectoryName(sourcePath), "")
+            End If
+            Dim folderName = SanitizeForFileName(IO.Path.GetFileName(folder.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)))
+            Dim parts As New List(Of String)()
+            Dim first = True
+            For Each segment In TargetFolderTemplate.Segments(text)
+                Dim value As String
+                Select Case segment
+                    Case "{folder}" : value = folder.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
+                    Case "{pictures}" : value = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+                    Case "{home}" : value = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+                    Case Else
+                        If segment.Contains("{"c) OrElse segment.Contains("#"c) Then
+                            value = ExpandTargetNamePattern(segment.Replace("{foldername}", folderName), sourcePath, 1).Trim()
+                        Else
+                            value = segment
+                        End If
+                End Select
+                ' Das erste leere Stueck ist die Wurzel eines absoluten Pfads ("/home/..."), jedes
+                ' spaetere ein Platzhalter ohne Wert.
+                If value.Length > 0 OrElse first Then parts.Add(value)
+                first = False
+            Next
+            Return String.Join(IO.Path.DirectorySeparatorChar, parts)
+        End Function
+
+        ''' <summary>Ein relativer Zielordner liegt im Ordner des Bildes ("export" heisst der
+        ''' Unterordner daneben), nicht im Arbeitsverzeichnis des Prozesses, das niemand kennt. Ein
+        ''' absoluter bleibt, wie er ist.</summary>
+        Public Shared Function AnchorTargetFolder(folder As String, sourceFolder As String) As String
+            Dim text = If(folder, "").Trim()
+            If text.Length = 0 OrElse IO.Path.IsPathRooted(text) OrElse String.IsNullOrWhiteSpace(sourceFolder) Then Return text
+            Return IO.Path.Combine(sourceFolder, text)
         End Function
 
         Private Shared Function NormalizePath(path As String) As String

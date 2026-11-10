@@ -11407,4 +11407,22 @@
   <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
     <value>पूछने के बजाय, जब आप कोई दूसरी फ़ोटो खोलते हैं या संपादक छोड़ते हैं, तो संपादक बिना सहेजे बदलाव सहेज लेता है। RAW और PSD संपादन को साथ वाली फ़ाइल में रखते हैं, JPEG, PNG और WebP पर दोबारा लिखा जाता है। जहाँ फ़ोटो केवल नए नाम से सहेजी जा सकती है, वहाँ अब भी पूछा जाता है।</value>
   </data>
+  <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
+    <value>सुझाव: {0}</value>
+  </data>
+  <data name="Platzhalter_folder_Ordner_des_Bildes_foldername__b3a327ad" xml:space="preserve">
+    <value>प्लेसहोल्डर: {folder} फ़ोटो का फ़ोल्डर, {foldername} उसका नाम, {pictures} चित्र फ़ोल्डर, {home} निजी फ़ोल्डर, और फ़ाइल नाम वाले जैसे {datetaken:yyyy}। उदाहरण: {folder}/export हर फ़ोटो के पास एक उप-फ़ोल्डर बनाता है।</value>
+  </data>
+  <data name="Zielordner_f_r_Speichern_unter_und_Exportieren_94bc39fe" xml:space="preserve">
+    <value>इस रूप में सहेजें और निर्यात के लिए लक्ष्य फ़ोल्डर</value>
+  </data>
+  <data name="Ordner_die_Speichern_unter_Exportieren_und_die_b_c69ab5d0" xml:space="preserve">
+    <value>वे फ़ोल्डर जिन्हें इस रूप में सहेजें, निर्यात और अन्य बैच फ़ंक्शन मौजूदा और पिछली बार इस्तेमाल हुए फ़ोल्डर के साथ पेश करते हैं। प्लेसहोल्डर: {folder} फ़ोटो का फ़ोल्डर, {foldername} उसका नाम, {pictures} चित्र फ़ोल्डर, {home} निजी फ़ोल्डर, और फ़ाइल नाम वाले जैसे {datetaken:yyyy}। उदाहरण: {folder}/export हर फ़ोटो के पास एक उप-फ़ोल्डर बनाता है।</value>
+  </data>
+  <data name="Dateinamen_f_r_Speichern_unter_und_Exportieren_550e9720" xml:space="preserve">
+    <value>इस रूप में सहेजें और निर्यात के लिए फ़ाइल नाम</value>
+  </data>
+  <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
+    <value>वे पैटर्न जिन्हें यही संवाद चुनने के लिए देते हैं, ऊपर के नाम टेम्पलेट के प्लेसहोल्डर के साथ। सहेजते समय हर फ़ोटो के लिए भरे जाते हैं।</value>
+  </data>
 </root>

@@ -15,16 +15,20 @@ Namespace ViewModels
         Private ReadOnly _id As String
         Private ReadOnly _save As Action
         Private ReadOnly _isFileName As Boolean
+        Private ReadOnly _sampleFolder As String
         Private _name As String
         Private _template As String
 
+        ''' <param name="sampleFolder">Fuer die Listen von Speichern unter: der Ordner, den das
+        ''' Beispiel fuer {folder} und {foldername} einsetzt. Nothing bei den Listen des Imports.</param>
         Public Sub New(target As ImportTargetSettings, save As Action, remove As Action(Of ImportTargetRow),
-                       Optional isFileName As Boolean = False)
+                       Optional isFileName As Boolean = False, Optional sampleFolder As String = Nothing)
             _id = If(String.IsNullOrWhiteSpace(target?.Id), Guid.NewGuid().ToString("N"), target.Id)
             _name = If(target?.Name, "")
             _template = If(target?.Template, "")
             _save = save
             _isFileName = isFileName
+            _sampleFolder = sampleFolder
             RemoveCommand = ReactiveCommand.Create(Sub() remove?.Invoke(Me))
         End Sub
 
@@ -63,11 +67,16 @@ Namespace ViewModels
                 Dim sample As New ImportCandidate With {.CapturedAt = DateTime.Now, .ModifiedAt = DateTime.Now, .Camera = make & " " & model,
                                                         .CameraMake = make, .CameraModel = model,
                                                         .SourcePath = "IMG_0001.CR3"}
+                Dim template = _template
+                If _sampleFolder IsNot Nothing Then
+                    template = template.Replace("{folder}", _sampleFolder).
+                                        Replace("{foldername}", IO.Path.GetFileName(_sampleFolder.TrimEnd("/"c, "\"c)))
+                End If
                 If _isFileName Then
                     Return String.Format(LocalizationService.T("Beispiel: {0}"),
-                                         CardImportService.TargetFileNameFor(_template, sample, LocalizationService.T("Auftrag"), 1))
+                                         CardImportService.TargetFileNameFor(template, sample, LocalizationService.T("Auftrag"), 1))
                 End If
-                Return String.Format(LocalizationService.T("Beispiel: {0}"), CardImportService.ExpandTargetTemplate(_template, sample))
+                Return String.Format(LocalizationService.T("Beispiel: {0}"), CardImportService.ExpandTargetTemplate(template, sample))
             End Get
         End Property
 

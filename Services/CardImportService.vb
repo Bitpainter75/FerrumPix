@@ -114,6 +114,9 @@ Namespace Services
     Public Class ImportTargetChoice
         Public Property Pattern As String = ""
         Public Property Label As String = ""
+        ''' <summary>Leer fuer eine Vorlage; "Current" und "LastSaved" fuer die beiden Ordner, die
+        ''' Speichern unter und die Stapelfunktionen schon vorher als Knoepfe kannten.</summary>
+        Public Property Kind As String = ""
 
         Public Overrides Function ToString() As String
             Return Label
