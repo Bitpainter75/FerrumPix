@@ -11380,4 +11380,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Padrões que as mesmas caixas de diálogo oferecem para escolher, com os marcadores do modelo de nome acima. São resolvidos ao guardar, para cada foto.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Histórico</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Pincel de histórico</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Pincel de histórico: repinta a imagem original</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Repinta nesse ponto a imagem original, sem retoque, pinceladas nem ajustes. As pinceladas vão para a camada Histórico, onde podem ser ocultadas, atenuadas ou apagadas.</value>
+  </data>
 </root>

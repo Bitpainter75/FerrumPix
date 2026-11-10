@@ -202,6 +202,14 @@
                                 ToolTip.Tip="Rote Augen entfernen">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18" />
                         </Button>
+                        <!-- PROTOKOLLPINSEL (GitHub #106): malt in die Maske einer Protokollebene, unter
+                             der das Ursprungsbild steht (EditorViewModel.AddRestoreStroke). -->
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="Restore"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Restore}"
+                                ToolTip.Tip="Protokollpinsel: malt das Ursprungsbild zurück">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clock-counter-clockwise.svg" Width="18" Height="18" />
+                        </Button>
                     </StackPanel>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -216,6 +224,11 @@
                     </Grid>
                     <TextBlock Text="Mit dem Pinselkreis auf die Pupille klicken. Er sollte das Rot ganz umfassen, aber nicht viel mehr: stark gerötete Haut im Kreis würde mit entfärbt."
                                IsVisible="{Binding IsRedEyeMode}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}"
+                               TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <TextBlock Text="Malt an der Stelle das Ursprungsbild zurück, ohne Retusche, Pinsel und Regler. Die Striche landen in der Ebene Protokoll; dort lassen sie sich ausblenden, abschwächen oder löschen."
+                               IsVisible="{Binding IsRestoreBrushMode}"
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}"
                                TextWrapping="Wrap" Margin="0,2,0,0" />

@@ -11421,4 +11421,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Wzorce, które te same okna dialogowe oferują do wyboru, z symbolami zastępczymi szablonu nazwy powyżej. Są rozwijane przy zapisie, dla każdego zdjęcia.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Historia</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Pędzel historii</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Pędzel historii: przywraca malowaniem oryginalny obraz</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Przywraca w tym miejscu oryginalny obraz, bez retuszu, pociągnięć pędzla i korekt. Pociągnięcia trafiają do warstwy Historia, gdzie można je ukryć, osłabić lub usunąć.</value>
+  </data>
 </root>

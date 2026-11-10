@@ -11381,4 +11381,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Modèles que les mêmes boîtes de dialogue proposent au choix, avec les variables du modèle de nom ci-dessus. Ils sont résolus à l'enregistrement, pour chaque photo.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Historique</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Pinceau d'historique</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Pinceau d'historique : repeint l'image d'origine</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Repeint l'image d'origine à cet endroit, sans retouche, coups de pinceau ni réglages. Les coups vont dans le calque Historique, où ils peuvent être masqués, atténués ou supprimés.</value>
+  </data>
 </root>

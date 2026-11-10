@@ -11400,4 +11400,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Patterns the same dialogs offer to choose from, with the placeholders of the name template above. They are resolved when saving, for each picture.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>History brush</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>History brush: paints the original image back</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Paints the original image back in that spot, without retouching, brush strokes and adjustments. The strokes go into the History layer, where they can be hidden, weakened or deleted.</value>
+  </data>
 </root>

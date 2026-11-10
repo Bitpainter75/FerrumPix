@@ -11381,4 +11381,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Modelli che le stesse finestre offrono da scegliere, con i segnaposto del modello di nome qui sopra. Vengono risolti al salvataggio, per ogni foto.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Cronologia</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Pennello cronologia</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Pennello cronologia: ridipinge l'immagine originale</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Ridipinge in quel punto l'immagine originale, senza ritocchi, pennellate e regolazioni. Le pennellate finiscono nel livello Cronologia, dove si possono nascondere, attenuare o eliminare.</value>
+  </data>
 </root>

@@ -227,6 +227,9 @@ Namespace ViewModels
                 ' = Laufameisen-Rechteck (Ameisen im Bild). So sind die beiden im Panel unterscheidbar - und
                 ' von der globalen Bildanpassungen-Zeile (Regler-Symbol) und Objekt-Ebenen.
                 If AdjustmentLayer IsNot Nothing Then
+                    ' Die Protokollebene zeigt das Symbol des Protokollpinsels: sie traegt keine
+                    ' Anpassung, unter ihrer Maske steht das Ursprungsbild.
+                    If AdjustmentLayer.RestoresOriginal Then Return "avares://FerrumPix/Assets/Icons/phosphor/regular/clock-counter-clockwise.svg"
                     Return If(AdjustmentLayer.IsMaskLayer,
                               "avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg",
                               "avares://FerrumPix/Assets/Icons/phosphor/regular/selection.svg")

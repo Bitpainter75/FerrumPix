@@ -12,6 +12,10 @@
   when the file says where it was taken. Pictures are still sorted by the time the camera showed.
   A switch in Settings, Catalog, shows the camera time instead.
 
+- **History brush**: a new kind in the image brush paints the original picture back, without the
+  retouching, brush strokes and adjustments on that spot. The strokes collect in a History layer,
+  so they can be hidden, weakened or deleted later, and they are saved with your edit.
+
 - Save as, Export and the other batch functions offer a choice of target folders and file names,
   like the import: the current and the last used folder, plus your own folder and name templates
   from Settings, Editor. Templates can use placeholders such as `{folder}/export`, which puts the

@@ -696,6 +696,11 @@ Namespace Services
                 ' meldet sie ueber DecodeForRender. Gespeichert wird weiter adj.
                 Dim renderAdj = adj
                 Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForRender(sourcePath, adj, renderAdj, developRaw)))
+                ' Ein hereingereichtes Arbeitsbild traegt Retusche (und bei RAW die Belichtung); das
+                ' Ursprungsbild einer Protokollebene ist die Datei dahinter, ohne Belichtung.
+                If workingFull IsNot Nothing AndAlso Not isFpxSource AndAlso HasVisibleRestoreLayer(adj) Then
+                    RegisterRestoreOrigin(decoded, DecodeRestoreOrigin(sourcePath, adj, developRaw))
+                End If
                 ' Nur auf dem SELBST dekodierten Bild: ein hereingereichtes Arbeitsbild traegt die
                 ' Vorgaenge schon, und ein zweites Entrauschen sieht man erst, wenn man die Bilder
                 ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht

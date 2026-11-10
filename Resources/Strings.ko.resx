@@ -11425,4 +11425,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>같은 대화 상자에서 고를 수 있는 패턴으로, 위의 이름 템플릿 자리 표시자를 사용합니다. 저장할 때 사진마다 풀어 씁니다.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>작업 내역</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>작업 내역 브러시</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>작업 내역 브러시: 원본 이미지를 다시 칠합니다</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>그 자리에 원본 이미지를 다시 칠합니다. 리터칭, 브러시 획, 조정은 포함되지 않습니다. 획은 '작업 내역' 레이어에 들어가며, 거기서 숨기거나 약하게 하거나 지울 수 있습니다.</value>
+  </data>
 </root>

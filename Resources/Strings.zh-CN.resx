@@ -11379,4 +11379,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>相同对话框中可供选择的模式，使用上方名称模板的占位符。保存时为每张图片分别解析。</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>历史记录</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>历史记录画笔</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>历史记录画笔：画回原始图像</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>在该处画回原始图像，不含修饰、画笔笔触和调整。笔触会放入“历史记录”图层，可在那里隐藏、减弱或删除。</value>
+  </data>
 </root>

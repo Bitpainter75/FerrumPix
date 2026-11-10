@@ -3395,9 +3395,16 @@ Namespace Services
         ''' sonst wird es nicht benutzt. Nothing nimmt die Zuordnung zurueck.</summary>
         Public Shared Sub RegisterRestoreOrigin(source As SKBitmap, origin As SKBitmap)
             If source Is Nothing Then Return
+            If ReferenceEquals(origin, source) Then origin = Nothing
             SyncLock _restoreOrigins
+                ' Gleichbleibend: dieselbe Zuordnung noch einmal einzutragen aendert nichts, auch nicht
+                ' den Schluessel. Der Editor traegt bei jedem Render ein; zaehlte das hoch, fiele der
+                ' Basis-Zwischenspeicher bei jedem Bild durch.
+                Dim existing As SKBitmap = Nothing
+                Dim had = _restoreOrigins.TryGetValue(source, existing)
+                If (had AndAlso ReferenceEquals(existing, origin)) OrElse (Not had AndAlso origin Is Nothing) Then Return
                 _restoreOrigins.Remove(source)
-                If origin IsNot Nothing AndAlso Not ReferenceEquals(origin, source) Then _restoreOrigins.Add(source, origin)
+                If origin IsNot Nothing Then _restoreOrigins.Add(source, origin)
             End SyncLock
             Interlocked.Increment(_restoreOriginGeneration)
         End Sub

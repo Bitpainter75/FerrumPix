@@ -11421,4 +11421,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Mallit, joita samat valintaikkunat tarjoavat valittaviksi, yllä olevan nimimallin paikkamerkeillä. Ne täytetään tallennettaessa jokaiselle kuvalle.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Historia</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Historiasivellin</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Historiasivellin: maalaa alkuperäisen kuvan takaisin</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Maalaa kohtaan alkuperäisen kuvan takaisin ilman retusointia, sivellinvetoja ja säätöjä. Vedot menevät Historia-tasolle, jossa ne voi piilottaa, heikentää tai poistaa.</value>
+  </data>
 </root>

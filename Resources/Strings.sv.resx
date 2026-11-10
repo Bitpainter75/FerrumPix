@@ -11421,4 +11421,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Mönster som samma dialoger erbjuder att välja bland, med platshållarna från namnmallen ovan. De fylls i när du sparar, för varje bild.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Historik</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Historikpensel</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Historikpensel: målar tillbaka originalbilden</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Målar tillbaka originalbilden på stället, utan retusch, penseldrag och justeringar. Dragen hamnar i lagret Historik, där de kan döljas, försvagas eller tas bort.</value>
+  </data>
 </root>

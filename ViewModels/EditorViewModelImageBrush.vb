@@ -34,7 +34,7 @@ Namespace ViewModels
         ''' <summary>Die Arten neben dem Radierer. "RedEye" ist dabei, rechnet aber nicht mit einem Zug:
         ''' ein Klick entfernt rote Augen im Pinselkreis (RemoveRedEyeAt). Frueher war das ein Schalter
         ''' im Retusche-Werkzeug; hier steht es bei den Arten, die das vorhandene Bild aendern.</summary>
-        Private Shared ReadOnly ToneModes As String() = {"Dodge", "Burn", "Sponge", "ReplaceColor", "RedEye"}
+        Private Shared ReadOnly ToneModes As String() = {"Dodge", "Burn", "Sponge", "ReplaceColor", "RedEye", "Restore"}
 
         ''' <summary>Was ein Zug des Bildpinsels zum Umrechnen braucht, auf dem UI-Faden
         ''' eingefroren: der Hintergrund darf die Felder des Werkzeugs nicht lesen, und wer mitten im
@@ -83,6 +83,13 @@ Namespace ViewModels
         Public ReadOnly Property IsRedEyeMode As Boolean
             Get
                 Return _currentTool = EditorTool.Draw AndAlso _toneMode = "RedEye"
+            End Get
+        End Property
+
+        ''' <summary>Der Protokollpinsel: malt in die Maske einer Protokollebene (AddRestoreStroke).</summary>
+        Public ReadOnly Property IsRestoreBrushMode As Boolean
+            Get
+                Return IsToneBrushMode AndAlso _toneMode = "Restore"
             End Get
         End Property
 
@@ -205,6 +212,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsDodgeBurnMode))
             Me.RaisePropertyChanged(NameOf(IsSpongeMode))
             Me.RaisePropertyChanged(NameOf(IsReplaceColorMode))
+            Me.RaisePropertyChanged(NameOf(IsRestoreBrushMode))
             Me.RaisePropertyChanged(NameOf(IsRedEyeMode))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
@@ -223,6 +231,7 @@ Namespace ViewModels
                 Case "Sponge" : Return LocalizationService.T("Schwamm")
                 Case "ReplaceColor" : Return LocalizationService.T("Farbe ersetzen")
                 Case "RedEye" : Return LocalizationService.T("Rote Augen entfernen")
+                Case "Restore" : Return LocalizationService.T("Protokollpinsel")
                 Case Else : Return ""
             End Select
         End Function
@@ -234,6 +243,7 @@ Namespace ViewModels
                 Case "Sponge" : Return "drop-half.svg"
                 Case "ReplaceColor" : Return "swap.svg"
                 Case "RedEye" : Return "eye.svg"
+                Case "Restore" : Return "clock-counter-clockwise.svg"
                 Case Else : Return "eraser.svg"
             End Select
         End Function
@@ -250,6 +260,10 @@ Namespace ViewModels
         Private Sub AddToneStroke(normalized As List(Of Avalonia.Point))
             ' Rote Augen kennen keinen Zug; der Klick geht in der Ansicht an RemoveRedEyeAt.
             If _toneMode = "RedEye" Then Return
+            If _toneMode = "Restore" Then
+                AddRestoreStroke(normalized)
+                Return
+            End If
             Dim imageObject = FindStrokeTargetImageAnnotation()
             If imageObject IsNot Nothing Then
                 If Not TryPaintStrokeIntoImageAnnotation(imageObject, normalized, isEraser:=False,
@@ -329,6 +343,143 @@ Namespace ViewModels
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
                     SchedulePreviewUpdate()
                 End Sub)
+        End Sub
+
+        ' ===================== Protokollpinsel (GitHub #106) =====================
+        '
+        ' Er malt das URSPRUNGSBILD zurueck: Retusche, Pinsel und Regler sind an der bemalten Stelle
+        ' wieder weg. Gemalt wird nicht ins Arbeitsbild, sondern in die Maske einer Protokollebene
+        ' (MaskedAdjustmentLayer.RestoresOriginal); der Renderer mischt darunter das Ursprungsbild
+        ' durch dieselbe Geometrie ein (ImageProcessor, ApplyMaskedAdjustmentLayersCore). Damit
+        ' bleibt alles zerstoerungsfrei, wird mit dem Rezept gespeichert und laesst sich als Ebene
+        ' ausblenden, in der Deckkraft aendern oder loeschen.
+
+        ''' <summary>Ein Zug des Protokollpinsels: seine Deckung (Groesse, Haerte, Deckkraft, Fluss
+        ''' wie beim Bildpinsel, an der Auswahl begrenzt) geht als Maximum in die Maske der obersten
+        ''' Protokollebene; fehlt eine, entsteht sie oben im Basisbild. EIN Rueckgaengig-Schritt, der
+        ''' Maske und Ebene zusammen zuruecknimmt.</summary>
+        Private Sub AddRestoreStroke(normalized As List(Of Avalonia.Point))
+            Dim baseW = GetBaseWidth()
+            Dim baseH = GetBaseHeight()
+            If baseW <= 0 OrElse baseH <= 0 Then Return
+            Dim mapped = MapStrokeToWorkingPixels(normalized)
+            If mapped.Points.Count < 2 Then Return
+
+            Dim options = BuildPixelPaintOptions(False)
+            options.StrokeColor = "#FFFFFFFF"
+            options.BrushPreset = "soft"
+            options.ShadowEnabled = False
+            options.GlowEnabled = False
+            Dim dirtyFull As SKRectI
+            Dim stroke = PixelEditLayer.CreateTransientStroke(mapped.Points, options, baseW, baseH, dirtyFull, mapped.Pressures)
+            If stroke Is Nothing Then Return
+            dirtyFull = ClampRectToBitmap(dirtyFull, baseW, baseH)
+            If dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
+
+            ' Zuerst die Auswahl: sie kann das Rechteck verkleinern, und die Deckung entsteht dann
+            ' fuer das verbliebene.
+            Dim anyCoverage = False
+            Dim selectionCoverage = BuildSelectionCoverageForWorkingRect(dirtyFull, anyCoverage)
+            Try
+                If selectionCoverage IsNot Nothing AndAlso Not anyCoverage Then Return
+                If dirtyFull.Width <= 0 OrElse dirtyFull.Height <= 0 Then Return
+                Dim coverage = ImageProcessor.BuildStrokeCoverage(stroke.ToRenderAnnotation(), dirtyFull, baseW, baseH)
+                If coverage Is Nothing Then Return
+                If selectionCoverage IsNot Nothing Then MultiplyCoverageBySelection(coverage, dirtyFull, selectionCoverage)
+                If Not coverage.Any(Function(b) b <> 0) Then Return
+
+                PushUndo(LocalizationService.T("Protokollpinsel"))
+                Dim mask = EnsureRestoreLayerMask(baseW, baseH)
+                MergeCoverageIntoMask(mask, coverage, dirtyFull)
+            Finally
+                selectionCoverage?.Dispose()
+            End Try
+
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            RebuildLayerRows()
+            SchedulePreviewUpdate()
+        End Sub
+
+        ''' <summary>Die Maske der obersten Protokollebene im Basisbild; fehlt eine, entsteht sie OBEN
+        ''' im Stapel, damit sie alles darunter zuruecknimmt. Nicht ueber PlaceNewCorrectionLayer: eine
+        ''' markierte Ebene ist hier kein Ziel, das Ursprungsbild gehoert ins Basisbild.</summary>
+        Private Function EnsureRestoreLayerMask(baseW As Integer, baseH As Integer) As ImageMask
+            Dim layer = _maskedAdjustmentLayers.LastOrDefault(
+                Function(l) l IsNot Nothing AndAlso l.RestoresOriginal AndAlso String.IsNullOrEmpty(l.StackAboveAnnotationId))
+            If layer IsNot Nothing Then
+                Dim existing = _imageMasks.FirstOrDefault(Function(m) m IsNot Nothing AndAlso String.Equals(m.Id, layer.MaskId, StringComparison.Ordinal))
+                If existing IsNot Nothing Then Return existing
+            End If
+            Dim mask As New ImageMask With {
+                .Name = GeneratedLayerNames.HistoryLayer,
+                .SourceWidthPixels = baseW,
+                .SourceHeightPixels = baseH
+            }
+            _imageMasks.Add(mask)
+            If layer Is Nothing Then
+                layer = New MaskedAdjustmentLayer With {
+                    .Name = GeneratedLayerNames.HistoryLayer,
+                    .MaskId = mask.Id,
+                    .Adjustments = New ImageAdjustments(),
+                    .IsMaskLayer = True,
+                    .RestoresOriginal = True
+                }
+                _maskedAdjustmentLayers.Add(layer)
+            Else
+                layer.MaskId = mask.Id
+            End If
+            Return mask
+        End Function
+
+        ''' <summary>Die Deckung eines Strichs (ein Byte je Punkt in <paramref name="rect"/>) mit der
+        ''' Auswahl im selben Rechteck multiplizieren.</summary>
+        Private Shared Sub MultiplyCoverageBySelection(coverage As Byte(), rect As SKRectI, selection As SKBitmap)
+            If selection Is Nothing OrElse selection.ColorType <> SKColorType.Alpha8 Then Return
+            Dim w = rect.Width, h = rect.Height
+            If selection.Width < w OrElse selection.Height < h Then Return
+            Dim stride = selection.RowBytes
+            Dim buffer = New Byte(stride * selection.Height - 1) {}
+            Runtime.InteropServices.Marshal.Copy(selection.GetPixels(), buffer, 0, buffer.Length)
+            For y = 0 To h - 1
+                For x = 0 To w - 1
+                    Dim i = y * w + x
+                    coverage(i) = CByte((CInt(coverage(i)) * CInt(buffer(y * stride + x)) + 127) \ 255)
+                Next
+            Next
+        End Sub
+
+        ''' <summary>Die Deckung als MAXIMUM in die Maske: ein zweiter Zug ueber dieselbe Stelle
+        ''' deckt nicht doppelt, ein schwacher Zug nimmt einen starken nicht zurueck. Das Rechteck der
+        ''' Maske waechst auf die Vereinigung; das Raster wird ersetzt, nie veraendert (es ist
+        ''' unveraenderlich und wird zwischen Rueckgaengig-Staenden geteilt).</summary>
+        Private Shared Sub MergeCoverageIntoMask(mask As ImageMask, coverage As Byte(), rect As SKRectI)
+            Dim oldRaster = mask.Raster
+            Dim hasOld = oldRaster IsNot Nothing AndAlso mask.Right > mask.Left AndAlso mask.Bottom > mask.Top AndAlso
+                         oldRaster.Width = mask.Right - mask.Left AndAlso oldRaster.Height = mask.Bottom - mask.Top
+            Dim left = If(hasOld, Math.Min(mask.Left, rect.Left), rect.Left)
+            Dim top = If(hasOld, Math.Min(mask.Top, rect.Top), rect.Top)
+            Dim right = If(hasOld, Math.Max(mask.Right, rect.Right), rect.Right)
+            Dim bottom = If(hasOld, Math.Max(mask.Bottom, rect.Bottom), rect.Bottom)
+            Dim w = right - left, h = bottom - top
+            Dim pixels = New Byte(w * h - 1) {}
+            If hasOld Then
+                Dim oldPixels = oldRaster.Pixels
+                Dim ow = oldRaster.Width
+                For y = 0 To oldRaster.Height - 1
+                    Buffer.BlockCopy(oldPixels, y * ow, pixels, (y + mask.Top - top) * w + (mask.Left - left), ow)
+                Next
+            End If
+            Dim rw = rect.Width
+            For y = 0 To rect.Height - 1
+                Dim target = (y + rect.Top - top) * w + (rect.Left - left)
+                For x = 0 To rw - 1
+                    Dim value = coverage(y * rw + x)
+                    If value > pixels(target + x) Then pixels(target + x) = value
+                Next
+            Next
+            mask.Left = left : mask.Top = top : mask.Right = right : mask.Bottom = bottom
+            mask.Raster = New AlphaRaster(w, h, pixels)
         End Sub
 
     End Class

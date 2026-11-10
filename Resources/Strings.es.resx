@@ -11381,4 +11381,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Patrones que los mismos diálogos ofrecen para elegir, con los marcadores de la plantilla de nombre de arriba. Se resuelven al guardar, para cada foto.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Historial</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Pincel de historial</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Pincel de historial: devuelve la imagen original pintando</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Devuelve en ese punto la imagen original, sin retoques, trazos de pincel ni ajustes. Los trazos van a la capa Historial, donde se pueden ocultar, atenuar o eliminar.</value>
+  </data>
 </root>

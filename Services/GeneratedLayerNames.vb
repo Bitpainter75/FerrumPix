@@ -24,6 +24,8 @@ Namespace Services
         Public Const LinearGradient As String = "Linearer Verlauf"
         Public Const MigratedMaskLayer As String = "Übernommene Maskenebene"
         Public Const PastedImage As String = "Eingefügtes Bild"
+        ''' <summary>Die Protokollebene des Protokollpinsels (MaskedAdjustmentLayer.RestoresOriginal).</summary>
+        Public Const HistoryLayer As String = "Protokoll"
         Private Const CopySuffix As String = " Kopie"
 
         Private Shared ReadOnly NumberedName As New Regex("^(.*\S) (\d+)$", RegexOptions.CultureInvariant)
@@ -67,6 +69,7 @@ Namespace Services
                 Case LinearGradient : Return LocalizationService.T("Linearer Verlauf")
                 Case MigratedMaskLayer : Return LocalizationService.T("Übernommene Maskenebene")
                 Case PastedImage : Return LocalizationService.T("Eingefügtes Bild")
+                Case HistoryLayer : Return LocalizationService.T("Protokoll")
                 Case Else : Return Nothing
             End Select
         End Function

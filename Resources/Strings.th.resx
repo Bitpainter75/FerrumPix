@@ -11425,4 +11425,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>รูปแบบที่กล่องโต้ตอบเดียวกันเสนอให้เลือก โดยใช้ตัวแทนของแม่แบบชื่อด้านบน ระบบจะแทนค่าเมื่อบันทึก สำหรับภาพแต่ละภาพ</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>ประวัติ</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>แปรงประวัติ</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>แปรงประวัติ: ระบายภาพต้นฉบับกลับคืน</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>ระบายภาพต้นฉบับกลับคืนตรงจุดนั้น โดยไม่มีการรีทัช รอยแปรง และการปรับ รอยแปรงจะอยู่ในเลเยอร์ประวัติ ซึ่งซ่อน ลดความแรง หรือลบได้</value>
+  </data>
 </root>

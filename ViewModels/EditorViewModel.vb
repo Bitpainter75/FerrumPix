@@ -455,6 +455,7 @@ Namespace ViewModels
                 {"Sponge", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"ReplaceColor", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"RedEye", New PaintToolState With {.Size = 40}},
+                {"Restore", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"Blur", New PaintToolState()},
                 {"Repair", New PaintToolState()},
                 {"Clone", New PaintToolState()}
@@ -18014,7 +18015,7 @@ Namespace ViewModels
                                                                    End If
 
                                                                    Select Case normalizedToolName
-                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "redeye", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
+                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "redeye", "restore", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
                                                                            SetPaintMode(toolName)
                                                                            Return
                                                                        Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
@@ -21988,10 +21989,32 @@ Namespace ViewModels
                 Dim unbaked = GetComparisonOriginalSource()
                 If unbaked IsNot Nothing Then Return unbaked
             End If
+            Dim source As SKBitmap
             SyncLock _previewSync
-                Return _previewSource
+                source = _previewSource
             End SyncLock
+            RegisterRestoreOriginForPreview(source)
+            Return source
         End Function
+
+        ''' <summary>Das Ursprungsbild der Protokollebene zur Vorschauquelle: die Vorher-Seite, ein
+        ''' Decode der Originaldatei in derselben Groesse. Die Vorschauquelle traegt frische Retusche
+        ''' und Pinselstriche, bei RAW auch die Belichtung; die Protokollebene soll dort die Datei
+        ''' zeigen. Nur mit einer Protokollebene, sonst kostet es keinen Decode. Gleichbleibend
+        ''' eingetragen, der Basis-Zwischenspeicher bleibt also gueltig (RegisterRestoreOrigin).</summary>
+        Private Sub RegisterRestoreOriginForPreview(source As SKBitmap)
+            If source Is Nothing Then Return
+            Dim hasRestoreLayer As Boolean
+            Try
+                hasRestoreLayer = _maskedAdjustmentLayers.ToArray().Any(Function(l) l IsNot Nothing AndAlso l.RestoresOriginal)
+            Catch ex As InvalidOperationException
+                ' Die Liste aendert sich gerade auf dem UI-Faden; der naechste Render traegt ein.
+                Return
+            End Try
+            If Not hasRestoreLayer Then Return
+            Dim origin = GetComparisonOriginalSource()
+            If origin IsNot Nothing Then ImageProcessor.RegisterRestoreOrigin(source, origin)
+        End Sub
 
         ''' <summary>Ist im REZEPT eine Stufe aktiv, deren Ergebnis am Bildmassstab haengt?
         '''
@@ -31501,8 +31524,9 @@ Namespace ViewModels
                     Case "eraser", "radiergummi"
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = True
-                    Case "dodge", "burn", "sponge", "replacecolor", "redeye"
-                        ' Die Arten des Bildpinsels neben dem Radierer: vier mit Zug, Rote Augen mit Klick.
+                    Case "dodge", "burn", "sponge", "replacecolor", "redeye", "restore"
+                        ' Die Arten des Bildpinsels neben dem Radierer: vier mit Zug, Rote Augen mit
+                        ' Klick, der Protokollpinsel malt in die Maske einer Protokollebene.
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = False
                         SetToneMode(ToneModes.First(Function(m) m.ToLowerInvariant() = normalized))
@@ -31598,7 +31622,7 @@ Namespace ViewModels
                     state.Opacity = _brushOpacity
                     state.Flow = _brushFlow
                     state.EraserFillColor = _eraserFillColor
-                Case "Dodge", "Burn", "Sponge", "ReplaceColor"
+                Case "Dodge", "Burn", "Sponge", "ReplaceColor", "Restore"
                     state.Size = _brushSize
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
@@ -31640,7 +31664,7 @@ Namespace ViewModels
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
                     EraserFillColor = state.EraserFillColor
-                Case "Dodge", "Burn", "Sponge", "ReplaceColor"
+                Case "Dodge", "Burn", "Sponge", "ReplaceColor", "Restore"
                     BrushSize = state.Size
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity

@@ -11421,4 +11421,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Шаблоны, которые те же диалоги предлагают на выбор, с подстановками шаблона имени выше. Они раскрываются при сохранении, для каждого снимка.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>История</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Архивная кисть</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Архивная кисть: возвращает исходное изображение</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Возвращает в этом месте исходное изображение, без ретуши, мазков кистью и настроек. Мазки попадают в слой «История», где их можно скрыть, ослабить или удалить.</value>
+  </data>
 </root>

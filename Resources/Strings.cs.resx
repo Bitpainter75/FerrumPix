@@ -11421,4 +11421,16 @@
   <data name="Muster_die_dieselben_Dialoge_zur_Auswahl_anbiete_18aa88eb" xml:space="preserve">
     <value>Vzory, které stejné dialogy nabízejí k výběru, se zástupnými symboly šablony názvu výše. Doplní se při ukládání, pro každý snímek.</value>
   </data>
+  <data name="Protokoll_440c156b" xml:space="preserve">
+    <value>Historie</value>
+  </data>
+  <data name="Protokollpinsel_2abfc1e8" xml:space="preserve">
+    <value>Štětec historie</value>
+  </data>
+  <data name="Protokollpinsel_malt_das_Ursprungsbild_zur_ck_e22c30cc" xml:space="preserve">
+    <value>Štětec historie: domaluje původní obraz zpět</value>
+  </data>
+  <data name="Malt_an_der_Stelle_das_Ursprungsbild_zur_ck_ohne_268c14d5" xml:space="preserve">
+    <value>Na tom místě domaluje původní obraz zpět, bez retuše, tahů štětcem a úprav. Tahy se ukládají do vrstvy Historie, kde je lze skrýt, zeslabit nebo smazat.</value>
+  </data>
 </root>
