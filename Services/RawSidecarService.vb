@@ -225,13 +225,15 @@ Namespace Services
                                              developedThumbnail As Boolean?,
                                              edited As Boolean?,
                                              Optional requireAbsent As Boolean = False,
-                                             Optional description As ImageDescription = Nothing) As Boolean
+                                             Optional description As ImageDescription = Nothing,
+                                             Optional imported As ForeignCatalogService.ImportedPlaceAndRights = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Dim temp As String = Nothing
                 Dim target As String = Nothing
                 Try
                     Dim keepDescription = If(description, TryReadDescription(rawPath))
+                    Dim keepImported = If(imported, TryReadImported(rawPath))
                     Dim keepDevelopedThumbnail = If(developedThumbnail.HasValue, developedThumbnail.Value,
                                                     ReadDevelopedThumbnail(rawPath))
                     ' Der Vermerk "bearbeitet" bleibt, wie er war, wenn der Schreiber ihn nicht nennt
@@ -272,6 +274,7 @@ Namespace Services
                             New XElement(Ns + "savedUtc", DateTime.UtcNow.ToString("O")),
                             catalogNode,
                             DescriptionNode(keepDescription),
+                            ImportedNode(keepImported),
                             New XElement(Ns + "adjustments",
                                 New XAttribute("format", "fpx-json"),
                                 New XCData(json))))
@@ -1324,6 +1327,89 @@ Namespace Services
                 Return True
             Catch ex As Exception
                 DiagnosticLogService.LogException("ForeignCatalog.Beschreibung", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Der Block mit Copyright und Ort aus dem Katalog des Referenzprogramms, oder Nothing
+        ''' ohne Werte. Eine ABSCHRIFT jenes Katalogs, keine eigene Angabe: gelesen wird er nach Datei
+        ''' und XMP-Beistelldatei (ExifService.ApplyImportedPlaceAndRights), der Dialog schreibt nie
+        ''' hinein.</summary>
+        Private Shared Function ImportedNode(value As ForeignCatalogService.ImportedPlaceAndRights) As XElement
+            If value Is Nothing OrElse value.IsEmpty Then Return Nothing
+            Dim invariant = Globalization.CultureInfo.InvariantCulture
+            Dim node = New XElement(Ns + "imported", New XAttribute("source", "lrcat"))
+            If value.Copyright.Length > 0 Then node.Add(New XElement(Ns + "copyright", value.Copyright))
+            If value.HasCoordinates Then
+                node.Add(New XElement(Ns + "latitude", value.Latitude.Value.ToString("R", invariant)))
+                node.Add(New XElement(Ns + "longitude", value.Longitude.Value.ToString("R", invariant)))
+            End If
+            If value.City.Length > 0 Then node.Add(New XElement(Ns + "city", value.City))
+            If value.Country.Length > 0 Then node.Add(New XElement(Ns + "country", value.Country))
+            Return node
+        End Function
+
+        ''' <summary>Copyright und Ort aus der .fpxmp, wie sie aus dem Katalog des Referenzprogramms
+        ''' uebernommen wurden; Nothing ohne Datei, ohne Block oder bei einer unlesbaren Datei.
+        '''
+        ''' WARUM HIER: bei RAW und PSD bleiben sie so erhalten, auch wenn der fremde Katalog spaeter
+        ''' nicht mehr eingestellt ist oder fehlt. Andere Formate bekommen keinen Block; dort legt
+        ''' ExifService die Werte beim Lesen aus dem Katalog selbst dazu.</summary>
+        Public Shared Function TryReadImported(rawPath As String) As ForeignCatalogService.ImportedPlaceAndRights
+            Try
+                If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return Nothing
+                Dim sidecar = SidecarPathFor(rawPath)
+                If Not File.Exists(sidecar) Then Return Nothing
+                Dim root = XDocument.Load(sidecar).Root
+                If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return Nothing
+                Dim node = root.Element(Ns + "imported")
+                If node Is Nothing Then Return Nothing
+                Dim invariant = Globalization.CultureInfo.InvariantCulture
+                Dim result As New ForeignCatalogService.ImportedPlaceAndRights With {
+                    .Copyright = If(node.Element(Ns + "copyright")?.Value, "").Trim(),
+                    .City = If(node.Element(Ns + "city")?.Value, "").Trim(),
+                    .Country = If(node.Element(Ns + "country")?.Value, "").Trim()}
+                Dim latitude, longitude As Double
+                If Double.TryParse(node.Element(Ns + "latitude")?.Value, Globalization.NumberStyles.Float, invariant, latitude) AndAlso
+                   Double.TryParse(node.Element(Ns + "longitude")?.Value, Globalization.NumberStyles.Float, invariant, longitude) AndAlso
+                   Math.Abs(latitude) <= 90 AndAlso Math.Abs(longitude) <= 180 Then
+                    result.Latitude = latitude
+                    result.Longitude = longitude
+                End If
+                Return If(result.IsEmpty, Nothing, result)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Copyright und Ort aus dem Katalog des Referenzprogramms in die .fpxmp, nur fuer RAW
+        ''' und PSD. Der Block ist eine Abschrift: er wird ERSETZT, sobald der Katalog etwas anderes
+        ''' sagt, damit eine spaetere Aenderung dort ankommt. Ob ein Wert gilt, entscheidet erst das
+        ''' Lesen (Datei und XMP-Beistelldatei gehen vor), deshalb wird hier nichts gegen die Datei
+        ''' abgeglichen. Sagt der Katalog nichts (mehr), bleibt ein vorhandener Block stehen.
+        ''' Fehlt die .fpxmp, entsteht sie wie beim Titel mit neutralem Rezept.</summary>
+        Public Shared Function TryImportPlaceAndRightsFromForeignCatalog(rawPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            Try
+                Dim entry = ForeignCatalogService.Lookup(rawPath)
+                If entry Is Nothing Then Return False
+                Dim incoming = ForeignCatalogService.PlaceAndRightsFor(entry)
+                If incoming Is Nothing OrElse incoming.IsEmpty Then Return False
+                If incoming.SameAs(TryReadImported(rawPath)) Then Return False
+                SyncLock _writeLock
+                    Dim adjustments As ImageAdjustments = Nothing
+                    Dim state = ReadRecipe(rawPath, adjustments)
+                    If state = SidecarReadResult.Unreadable Then Return False
+                    If state = SidecarReadResult.Missing Then adjustments = New ImageAdjustments()
+                    Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
+                    If Not TryWriteCore(rawPath, adjustments, catalog, Nothing, Nothing,
+                                        requireAbsent:=state = SidecarReadResult.Missing,
+                                        imported:=incoming) Then Return False
+                End SyncLock
+                ExifService.Invalidate(rawPath)
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ForeignCatalog.Ort", ex)
                 Return False
             End Try
         End Function

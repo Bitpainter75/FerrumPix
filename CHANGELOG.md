@@ -1,3 +1,13 @@
+## Unreleased
+
+### Changes
+
+- More comes along from a Lightroom Classic catalog: capture times you corrected there (a fixed
+  camera clock, the date you gave a film scan), copyright, GPS position, city and country. They
+  only fill what the picture itself does not say, and anything you set later in FerrumPix wins.
+  For raw files the copyright and location are kept next to the picture, so they stay even
+  without the catalog. DNG and TIFF files also use a capture time saved into the file itself.
+
 ## 0.9.79
 
 ### Changes

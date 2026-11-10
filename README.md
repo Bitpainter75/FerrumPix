@@ -52,6 +52,7 @@ The photo wall lays the pictures out edge to edge in their own proportions, with
 A map view shows the pictures by where they were taken. It is off until you switch it on in Settings, because the map itself comes from a tile server on the internet, which learns which area you are looking at. The photos themselves never leave your machine, and map tiles you have seen are kept there until you clear them.
 
 Ratings, colour labels, keywords and reject marks are read from the sidecars Lightroom, darktable or digiKam write, so a collection you tagged elsewhere arrives with its work intact. Point FerrumPix at a Lightroom Classic catalog and it reads that too, including titles, captions and the edits of your RAW files; the catalog itself is never changed. Keywords stored inside the picture itself, in its IPTC or XMP data, are picked up as well and can be searched like any other keyword.
+From the catalog FerrumPix also takes copyright, location and capture times you corrected there, wherever the picture itself does not say otherwise.
 
 If you like, the keywords you add go into JPEG, PNG and WebP files themselves too, as XMP, IPTC or both, when you add them and when you save or export; keywords found by the AI recognition always stay in FerrumPix.
 

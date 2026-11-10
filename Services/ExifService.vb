@@ -120,6 +120,15 @@ Namespace Services
         Public Property FileCreated As String = ""
         Public Property FileModified As String = ""
         Public Property DateTaken As String = ""
+        ''' <summary>DateTaken ist keine Aufnahmezeit, sondern ersatzweise das Aenderungsdatum aus
+        ''' IFD0, weil die Datei keine traegt (etwa ein Scan). Dann gilt eine im Katalog des
+        ''' Referenzprogramms gesetzte Zeit (siehe ForeignCatalogService.EditedCaptureTime).</summary>
+        Public Property DateTakenIsFallback As Boolean
+        ''' <summary>Ort und Land aus dem Katalog des Referenzprogramms (.fpxmp-Block oder der
+        ''' Katalog selbst). Sie fuellen die Ortsfelder nach der Datei und vor der Ortstabelle
+        ''' (ExifService.FillPlaceNames).</summary>
+        Public Property ImportedCity As String = ""
+        Public Property ImportedCountry As String = ""
         Public Property DateModifiedExif As String = ""
         Public Property Camera As String = ""
         ''' <summary>Hersteller und Modell einzeln, wie die Datei sie fuehrt (IFD0 Make und Model,
@@ -344,11 +353,110 @@ Namespace Services
                 DiagnosticLogService.LogException("Exif.Beschreibung", ex)
             End Try
             Dim fromSidecar = ReadSidecarOverrides(imagePath)
-            If fromSidecar Is Nothing Then Return data
-            If Not String.IsNullOrWhiteSpace(fromSidecar.Copyright) Then data.Copyright = fromSidecar.Copyright
-            If Not String.IsNullOrWhiteSpace(fromSidecar.CaptureDate) Then data.DateTaken = fromSidecar.CaptureDate
-            If Not String.IsNullOrWhiteSpace(fromSidecar.ModifyDate) Then data.DateModifiedExif = fromSidecar.ModifyDate
+            If fromSidecar IsNot Nothing Then
+                If Not String.IsNullOrWhiteSpace(fromSidecar.Copyright) Then data.Copyright = fromSidecar.Copyright
+                If Not String.IsNullOrWhiteSpace(fromSidecar.CaptureDate) Then
+                    data.DateTaken = fromSidecar.CaptureDate
+                    data.DateTakenIsFallback = False
+                End If
+                If Not String.IsNullOrWhiteSpace(fromSidecar.ModifyDate) Then data.DateModifiedExif = fromSidecar.ModifyDate
+            End If
+            ApplyForeignCatalogCaptureTime(imagePath, data)
+            ApplyImportedPlaceAndRights(imagePath, data)
             Return data
+        End Function
+
+        ''' <summary>Copyright, Koordinate, Ort und Land aus dem Katalog des Referenzprogramms, NUR wo
+        ''' Datei und XMP-Beistelldatei schweigen: was dort steht, hat jemand an der Datei selbst
+        ''' gesetzt, auch in FerrumPix. Quelle ist bei RAW und PSD der Block in der .fpxmp (bleibt,
+        ''' auch wenn der Katalog weg ist), sonst und solange es keinen Block gibt der Katalog
+        ''' selbst, nur bei eingeschaltetem Schalter. Geschrieben wird hier nichts.
+        '''
+        ''' Die Koordinate geht nach data.GPS, aber nur, wenn auch die Beistelldatei keine traegt:
+        ''' ExtractSearchFields nimmt data.GPS vor der Beistelldatei, eine dort von Hand gesetzte
+        ''' Koordinate verloere sonst gegen die fremde.</summary>
+        Private Shared Sub ApplyImportedPlaceAndRights(imagePath As String, data As ExifData)
+            Try
+                Dim imported = RawSidecarService.TryReadImported(imagePath)
+                If imported Is Nothing AndAlso ForeignCatalogService.IsEnabled Then
+                    Dim entry = If(Avalonia.Threading.Dispatcher.UIThread.CheckAccess(),
+                                   ForeignCatalogService.LookupIfLoaded(imagePath),
+                                   ForeignCatalogService.Lookup(imagePath))
+                    imported = ForeignCatalogService.PlaceAndRightsFor(entry)
+                End If
+                If imported Is Nothing Then Return
+                If String.IsNullOrWhiteSpace(data.Copyright) AndAlso imported.Copyright.Length > 0 Then data.Copyright = imported.Copyright
+                If String.IsNullOrWhiteSpace(data.GPS) AndAlso imported.HasCoordinates Then
+                    Dim sidecarPath = XmpSidecarService.FindSidecar(imagePath)
+                    Dim sidecar = If(String.IsNullOrEmpty(sidecarPath), Nothing, XmpSidecarService.ReadSidecar(sidecarPath))
+                    If sidecar Is Nothing OrElse Not sidecar.GpsLatitude.HasValue Then
+                        data.GPS = $"{imported.Latitude.Value.ToString("F5", CultureInfo.InvariantCulture)}°, {imported.Longitude.Value.ToString("F5", CultureInfo.InvariantCulture)}°"
+                    End If
+                End If
+                data.ImportedCity = imported.City
+                data.ImportedCountry = imported.Country
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.ImportedPlaceAndRights", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Eine im Katalog des Referenzprogramms geaenderte Aufnahmezeit, NACH der
+        ''' Beistelldatei und aus demselben Grund hinter dem Zwischenspeicher: der Katalog aendert sich,
+        ''' ohne dass die Bilddatei es tut. Wann sie gilt, entscheidet
+        ''' ForeignCatalogService.EditedCaptureTime; kurz: solange die Datei noch die Zeit von vor der
+        ''' Aenderung traegt oder gar keine.
+        '''
+        ''' AUF DEM OBERFLAECHENFADEN NUR DER SCHON GELESENE STAND. Das erste Einlesen eines grossen
+        ''' Katalogs dauert Sekunden; Ordnerlauf und Katalogindex laufen im Hintergrund und warten es ab.</summary>
+        Private Shared Sub ApplyForeignCatalogCaptureTime(imagePath As String, data As ExifData)
+            Try
+                If Not ForeignCatalogService.IsEnabled Then Return
+                Dim entry = If(Avalonia.Threading.Dispatcher.UIThread.CheckAccess(),
+                               ForeignCatalogService.LookupIfLoaded(imagePath),
+                               ForeignCatalogService.Lookup(imagePath))
+                Dim edited = ForeignCatalogService.EditedCaptureTime(entry, data.DateTaken, data.DateTakenIsFallback)
+                If edited.Length = 0 Then Return
+                data.DateTaken = edited
+                data.DateTakenIsFallback = False
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Exif.ForeignCatalogCaptureTime", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Die Aufnahmezeit aus dem XMP-Paket IN der Datei, im EXIF-Rohformat, oder leer.
+        ''' exif:DateTimeOriginal immer; photoshop:DateCreated (die IPTC-Entsprechung, oft nur ein
+        ''' Datum) nur, wenn die Datei sonst keine Aufnahmezeit traegt.
+        '''
+        ''' DIE UHRZEIT, NICHT IN ORTSZEIT UMGERECHNET. Konverter schreiben die Zone der Kamera dazu
+        ''' ("2018-06-24T12:14:49-04:00"), und im EXIF daneben steht 12:14:49 ohne Zone. Umgerechnet
+        ''' stuende das Foto aus New York in Berlin um 18:14 und damit sechs Stunden neben seiner
+        ''' eigenen EXIF-Zeit; das Referenzprogramm zeigt und sortiert ebenfalls die Uhrzeit.</summary>
+        Private Shared Function EmbeddedXmpCaptureDate(directories As IReadOnlyList(Of MetadataExtractor.Directory),
+                                                       includeDateCreated As Boolean) As String
+            If directories Is Nothing Then Return ""
+            For Each xmpDirectory In directories.OfType(Of MetadataExtractor.Formats.Xmp.XmpDirectory)()
+                Dim meta = xmpDirectory.XmpMeta
+                If meta Is Nothing Then Continue For
+                Dim fields As New List(Of (Ns As String, Name As String)) From {("http://ns.adobe.com/exif/1.0/", "DateTimeOriginal")}
+                If includeDateCreated Then fields.Add(("http://ns.adobe.com/photoshop/1.0/", "DateCreated"))
+                For Each field In fields
+                    Dim raw As String = Nothing
+                    Try
+                        ' Der Rohwert: GetPropertyString liest eine Zeit als Datum und gibt sie in
+                        ' der Zone dieses Rechners zurueck, also genau die Umrechnung, die hier nicht
+                        ' sein soll.
+                        raw = meta.GetProperty(field.Ns, field.Name)?.Value
+                    Catch
+                        ' Ein kaputter Eintrag ist wie keiner.
+                    End Try
+                    If String.IsNullOrWhiteSpace(raw) Then Continue For
+                    Dim parsed As DateTimeOffset
+                    If DateTimeOffset.TryParse(raw.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, parsed) Then
+                        Return parsed.DateTime.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+                    End If
+                Next
+            Next
+            Return ""
         End Function
 
         Public Shared Sub Invalidate(imagePath As String)
@@ -406,6 +514,9 @@ Namespace Services
                 .FileCreated = source.FileCreated,
                 .FileModified = source.FileModified,
                 .DateTaken = source.DateTaken,
+                .DateTakenIsFallback = source.DateTakenIsFallback,
+                .ImportedCity = source.ImportedCity,
+                .ImportedCountry = source.ImportedCountry,
                 .DateModifiedExif = source.DateModifiedExif,
                 .Camera = source.Camera,
                 .CameraMake = source.CameraMake,
@@ -519,6 +630,20 @@ Namespace Services
                 data.DateModifiedExif = GetTagDescAcross(Of ExifIfd0Directory)(captureDirectories, ExifIfd0Directory.TagDateTime)
                 If String.IsNullOrEmpty(data.DateTaken) Then
                     data.DateTaken = data.DateModifiedExif
+                    data.DateTakenIsFallback = data.DateTaken.Length > 0
+                End If
+                ' Die Zeit im EINGEBETTETEN XMP geht der im EXIF vor, wie bei der Beistelldatei und
+                ' wie beim Referenzprogramm, das bei Widerspruch die XMP-Zeit nimmt. In DNG und TIFF
+                ' schreibt es eine dort geaenderte Aufnahmezeit nur ins XMP der Datei.
+                ' NICHT BEI JPEG: dort schreibt FerrumPix eine korrigierte Zeit ins EXIF und laesst
+                ' das XMP stehen (CaptureDateService.Write); eine alte XMP-Zeit nahme die Korrektur
+                ' sofort zurueck. Das Referenzprogramm schreibt die Zeit in ein JPEG ohnehin ins EXIF.
+                If Not isFpx AndAlso Not GeotagService.IsJpegPath(imagePath) Then
+                    Dim fromXmp = EmbeddedXmpCaptureDate(metaDirectories, data.DateTaken.Length = 0 OrElse data.DateTakenIsFallback)
+                    If fromXmp.Length > 0 Then
+                        data.DateTaken = fromXmp
+                        data.DateTakenIsFallback = False
+                    End If
                 End If
 
                 For Each gpsDir In captureDirectories.OfType(Of GpsDirectory)()
@@ -2243,6 +2368,10 @@ Namespace Services
                 If result.Country.Length = 0 Then
                     result.Country = ReadPlaceFieldFromFile(data, "Country/Primary Location Name", "photoshop:Country")
                 End If
+                ' Danach, was im Katalog des Referenzprogramms steht: auch das hat jemand bewusst
+                ' gesetzt und geht der Ortstabelle vor.
+                If result.City.Length = 0 Then result.City = If(data.ImportedCity, "").Trim()
+                If result.Country.Length = 0 Then result.Country = If(data.ImportedCountry, "").Trim()
 
                 ' Steht der Ort in der Datei, ist die Tabelle nicht mehr gefragt. Das Laenderkuerzel
                 ' bleibt dann leer: es gehoert zur Tabelle, und aus einem frei geschriebenen

@@ -7860,6 +7860,10 @@ Namespace ViewModels
                 If RawSidecarService.TryImportDescriptionFromForeignCatalog(filePath) AndAlso fields IsNot Nothing Then
                     fields.Description = ImageDescriptionService.Read(filePath)
                 End If
+                ' Copyright und Ort aus dem Katalog als Abschrift in die .fpxmp, nur RAW und PSD,
+                ' damit sie auch ohne den Katalog erhalten bleiben. Nachzuziehen ist nichts: die
+                ' Felder oben kamen schon mit denselben Werten, nur noch aus dem Katalog selbst.
+                RawSidecarService.TryImportPlaceAndRightsFromForeignCatalog(filePath)
 
                 ' Die .pp3 eines fremden Entwicklers, nur mit eingeschalteter Einstellung (sonst
                 ' Nothing). Sie steht zwischen XMP-Beistelldatei und Bilddatei. Darin steckt auch,

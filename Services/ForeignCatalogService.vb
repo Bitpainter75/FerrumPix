@@ -4,13 +4,16 @@ Imports System.Globalization
 Imports System.IO
 Imports System.Linq
 Imports System.Text
+Imports System.Text.RegularExpressions
 Imports System.Xml.Linq
 Imports Microsoft.Data.Sqlite
 
 Namespace Services
 
     ''' <summary>Liest einen Katalog des Referenzprogramms (.lrcat) fuer den Katalog von FerrumPix:
-    ''' Bewertung, Farbetikett, Markierung, Stichwoerter und die Entwicklung je Foto.
+    ''' Bewertung, Farbetikett, Markierung, Stichwoerter und die Entwicklung je Foto, dazu eine dort
+    ''' geaenderte Aufnahmezeit (ueber ExifService.ReadExif, siehe <see cref="EditedCaptureTime"/>) sowie
+    ''' Copyright, Koordinate, Ort und Land (<see cref="PlaceAndRightsFor"/>).
     '''
     ''' GLEICHER WEG WIE DIE .pp3: dieselbe Einstellung schaltet ihn ein
     ''' (<see cref="AppSettings.ReadPp3Sidecars"/>), dazu der Pfad des Katalogs
@@ -34,7 +37,8 @@ Namespace Services
     ''' Virtuelle Kopien bleiben aussen vor: sie haben bei uns kein Gegenstueck.
     '''
     ''' DAS SCHEMA (Tabellen und Spalten, so wie das Referenzprogramm sie seit Jahren fuehrt):
-    ''' Adobe_images (rating, pick, colorLabels, rootFile, masterImage), AgLibraryFile (baseName,
+    ''' Adobe_images (rating, pick, colorLabels, rootFile, masterImage, captureTime,
+    ''' originalCaptureTime), AgLibraryFile (baseName,
     ''' extension, folder), AgLibraryFolder (pathFromRoot, rootFolder), AgLibraryRootFolder
     ''' (absolutePath), AgLibraryKeywordImage und AgLibraryKeyword (name), und
     ''' Adobe_imageDevelopSettings (text, eine Lua-Tabelle mit den crs:-Schluesseln ohne Vorsilbe, und
@@ -56,6 +60,46 @@ Namespace Services
             ''' <summary>Im Referenzprogramm bearbeitet (hasDevelopAdjustmentsEx groesser 0, ohne die Spalte
             ''' mehr als ein Schritt im Verlauf).</summary>
             Public Property Edited As Boolean
+            ''' <summary>Die Aufnahmezeit, wie das Referenzprogramm sie fuehrt (Adobe_images.captureTime),
+            ''' als Uhrzeit ohne Zone und ohne Sekundenbruchteile; Nothing ohne lesbaren Wert.</summary>
+            Public Property CaptureTime As DateTime?
+            ''' <summary>Die Aufnahmezeit vor der ersten Aenderung dort (originalCaptureTime); Nothing,
+            ''' wenn sie nie geaendert wurde.</summary>
+            Public Property OriginalCaptureTime As DateTime?
+            ''' <summary>Copyright und Ort, beim ersten Bedarf je Foto aus der Datenbank gelesen
+            ''' (<see cref="PlaceAndRightsFor"/>); gilt, solange dieser Stand des Katalogs gilt.</summary>
+            Friend PlaceAndRights As ImportedPlaceAndRights
+            Friend PlaceAndRightsRead As Boolean
+        End Class
+
+        ''' <summary>Copyright, Koordinate und Ortsnamen eines Fotos, wie das Referenzprogramm sie
+        ''' fuehrt. Leere Felder heissen: steht dort nicht.</summary>
+        Public NotInheritable Class ImportedPlaceAndRights
+            Public Property Copyright As String = ""
+            Public Property Latitude As Double?
+            Public Property Longitude As Double?
+            Public Property City As String = ""
+            Public Property Country As String = ""
+
+            Public ReadOnly Property HasCoordinates As Boolean
+                Get
+                    Return Latitude.HasValue AndAlso Longitude.HasValue
+                End Get
+            End Property
+
+            Public ReadOnly Property IsEmpty As Boolean
+                Get
+                    Return Copyright.Length = 0 AndAlso Not HasCoordinates AndAlso City.Length = 0 AndAlso Country.Length = 0
+                End Get
+            End Property
+
+            Public Function SameAs(other As ImportedPlaceAndRights) As Boolean
+                If other Is Nothing Then Return IsEmpty
+                Return String.Equals(Copyright, other.Copyright, StringComparison.Ordinal) AndAlso
+                       Nullable.Equals(Latitude, other.Latitude) AndAlso Nullable.Equals(Longitude, other.Longitude) AndAlso
+                       String.Equals(City, other.City, StringComparison.Ordinal) AndAlso
+                       String.Equals(Country, other.Country, StringComparison.Ordinal)
+            End Function
         End Class
 
         ''' <summary>Was beim Lesen herauskam.</summary>
@@ -121,7 +165,10 @@ Namespace Services
         ''' Hintergrundweg.</summary>
         Public Shared Function Lookup(imagePath As String) As CatalogEntry
             If String.IsNullOrWhiteSpace(imagePath) OrElse Not IsEnabled Then Return Nothing
-            Dim index = CurrentIndex()
+            Return LookupIn(CurrentIndex(), imagePath)
+        End Function
+
+        Private Shared Function LookupIn(index As CatalogIndex, imagePath As String) As CatalogEntry
             If index Is Nothing OrElse index.ByName Is Nothing Then Return Nothing
             Dim parts = SplitPath(imagePath)
             If parts.Length = 0 Then Return Nothing
@@ -240,6 +287,128 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Copyright, Koordinate, Ort und Land eines Fotos, oder Nothing, wenn der Katalog
+        ''' nichts davon traegt. Gelesen beim ersten Bedarf und am Eintrag gemerkt: der Weg laeuft bei
+        ''' jedem Lesen der Aufnahmedaten mit (ExifService.ReadExif), und ein neuer Stand des Katalogs
+        ''' bringt ohnehin neue Eintraege.
+        '''
+        ''' QUELLE ist zuerst das XMP-Paket in Adobe_AdditionalMetadata.xmp, dasselbe wie fuer den
+        ''' Titel: dc:rights, exif:GPSLatitude und exif:GPSLongitude, photoshop:City und
+        ''' photoshop:Country, gelesen wie in einer Beistelldatei. Was dort fehlt, kommt aus den
+        ''' Tabellen, in denen das Referenzprogramm dieselben Werte fuer seine Filter fuehrt:
+        ''' AgLibraryIPTC.copyright, AgHarvestedExifMetadata.gpsLatitude/gpsLongitude und die
+        ''' Ortsnamen ueber AgHarvestedIptcMetadata (cityRef, countryRef) aus AgInternedIptcCity und
+        ''' AgInternedIptcCountry. Jede Abfrage fuer sich: fehlt einem Katalog eine Tabelle, bleibt es
+        ''' bei den uebrigen. Die Tabellen folgen fremden Lesern, ein echter Katalog lag nicht vor.</summary>
+        Public Shared Function PlaceAndRightsFor(entry As CatalogEntry) As ImportedPlaceAndRights
+            If entry Is Nothing OrElse Not IsEnabled Then Return Nothing
+            If entry.PlaceAndRightsRead Then Return entry.PlaceAndRights
+            Dim path = ConfiguredPath
+            If File.Exists(path & ".lock") Then Return Nothing
+            Dim result As New ImportedPlaceAndRights()
+            Try
+                Using conn = Open(path)
+                    Dim packet = ""
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT xmp FROM Adobe_AdditionalMetadata WHERE image = $id"
+                        cmd.Parameters.AddWithValue("$id", entry.Id)
+                        Try
+                            packet = PacketText(cmd.ExecuteScalar())
+                        Catch ex As SqliteException
+                        End Try
+                    End Using
+                    If packet.Length > 0 Then
+                        Try
+                            Dim descriptions = XDocument.Parse(packet).Descendants(XName.Get("Description", RdfNamespace)).ToList()
+                            result.Copyright = CopyrightService.NormalizeText(PacketValue(descriptions, XName.Get("rights", "http://purl.org/dc/elements/1.1/")))
+                            Dim latitude = XmpSidecarService.ParseCoordinate(PacketValue(descriptions, XName.Get("GPSLatitude", "http://ns.adobe.com/exif/1.0/")))
+                            Dim longitude = XmpSidecarService.ParseCoordinate(PacketValue(descriptions, XName.Get("GPSLongitude", "http://ns.adobe.com/exif/1.0/")))
+                            If latitude.HasValue AndAlso longitude.HasValue Then
+                                result.Latitude = latitude
+                                result.Longitude = longitude
+                            End If
+                            result.City = PacketValue(descriptions, XName.Get("City", "http://ns.adobe.com/photoshop/1.0/"))
+                            result.Country = PacketValue(descriptions, XName.Get("Country", "http://ns.adobe.com/photoshop/1.0/"))
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("ForeignCatalog.Ort", ex)
+                        End Try
+                    End If
+                    If result.Copyright.Length = 0 Then
+                        result.Copyright = CopyrightService.NormalizeText(ScalarText(conn, "SELECT copyright FROM AgLibraryIPTC WHERE image = $id", entry.Id))
+                    End If
+                    If Not result.HasCoordinates Then
+                        Try
+                            Using cmd = conn.CreateCommand()
+                                cmd.CommandText = "SELECT gpsLatitude, gpsLongitude FROM AgHarvestedExifMetadata WHERE image = $id"
+                                cmd.Parameters.AddWithValue("$id", entry.Id)
+                                Using reader = cmd.ExecuteReader()
+                                    If reader.Read() Then
+                                        Dim latitude = NumberAt(reader, 0)
+                                        Dim longitude = NumberAt(reader, 1)
+                                        ' 0/0 ist der Leerwert der Tabelle, kein Ort im Golf von Guinea.
+                                        If latitude.HasValue AndAlso longitude.HasValue AndAlso
+                                           Math.Abs(latitude.Value) <= 90 AndAlso Math.Abs(longitude.Value) <= 180 AndAlso
+                                           Not (latitude.Value = 0 AndAlso longitude.Value = 0) Then
+                                            result.Latitude = latitude
+                                            result.Longitude = longitude
+                                        End If
+                                    End If
+                                End Using
+                            End Using
+                        Catch ex As SqliteException
+                        End Try
+                    End If
+                    If result.City.Length = 0 Then
+                        result.City = ScalarText(conn, "SELECT c.value FROM AgHarvestedIptcMetadata h JOIN AgInternedIptcCity c ON c.id_local = h.cityRef WHERE h.image = $id", entry.Id)
+                    End If
+                    If result.Country.Length = 0 Then
+                        result.Country = ScalarText(conn, "SELECT c.value FROM AgHarvestedIptcMetadata h JOIN AgInternedIptcCountry c ON c.id_local = h.countryRef WHERE h.image = $id", entry.Id)
+                    End If
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ForeignCatalog.Ort", ex)
+                Return Nothing
+            End Try
+            Dim value = If(result.IsEmpty, Nothing, result)
+            entry.PlaceAndRights = value
+            entry.PlaceAndRightsRead = True
+            Return value
+        End Function
+
+        Private Const RdfNamespace As String = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+
+        ''' <summary>Der erste belegte Wert aus den rdf:Description des Pakets: als Attribut oder als
+        ''' Kindelement, bei einer Sprachalternative der Eintrag x-default, sonst der erste.</summary>
+        Private Shared Function PacketValue(descriptions As List(Of XElement), name As XName) As String
+            For Each description In descriptions
+                Dim attribute = description.Attribute(name)
+                If attribute IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(attribute.Value) Then Return attribute.Value.Trim()
+                Dim element = description.Element(name)
+                If element Is Nothing Then Continue For
+                Dim items = element.Descendants(XName.Get("li", RdfNamespace)).ToList()
+                Dim chosen = items.FirstOrDefault(Function(e) e.Attributes().Any(Function(a) a.Name.LocalName = "lang" AndAlso a.Value = "x-default"))
+                If chosen Is Nothing Then chosen = items.FirstOrDefault()
+                Dim text = If(chosen IsNot Nothing, chosen.Value, element.Value)
+                If Not String.IsNullOrWhiteSpace(text) Then Return text.Trim()
+            Next
+            Return ""
+        End Function
+
+        ''' <summary>Ein Textwert zu einem Foto, leer bei fehlender Tabelle, Spalte oder Zeile.</summary>
+        Private Shared Function ScalarText(conn As SqliteConnection, sql As String, id As Long) As String
+            Try
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = sql
+                    cmd.Parameters.AddWithValue("$id", id)
+                    Dim value = cmd.ExecuteScalar()
+                    If value Is Nothing OrElse TypeOf value Is DBNull Then Return ""
+                    Return Convert.ToString(value, CultureInfo.InvariantCulture).Trim()
+                End Using
+            Catch ex As SqliteException
+                Return ""
+            End Try
+        End Function
+
         ''' <summary>Das XMP-Paket als Text: so, wie es steht, wenn es mit "&lt;" beginnt, sonst
         ''' nach vier Byte Laenge (Big Endian) mit zlib gepackt. Leer, wenn nichts Lesbares da ist.</summary>
         Private Shared Function PacketText(value As Object) As String
@@ -341,6 +510,7 @@ Namespace Services
                     End Using
 
                     ReadEdited(conn, byId)
+                    ReadCaptureTimes(conn, byId)
 
                     result.ByName = New Dictionary(Of String, List(Of CatalogEntry))(StringComparer.Ordinal)
                     For Each entry In byId.Values
@@ -410,6 +580,93 @@ Namespace Services
                 DiagnosticLogService.LogAlways("ForeignCatalog", "ohne Entwicklungsverlauf: " & ex.Message)
             End Try
         End Sub
+
+        ''' <summary>Aufnahmezeit und Aufnahmezeit vor der ersten Aenderung je Foto. Eigene Abfrage und
+        ''' nicht in der Hauptabfrage: fehlt einem Katalog eine der beiden Spalten, bleibt es bei
+        ''' Bewertung, Stichwoertern und Entwicklung, statt dass der ganze Katalog als unlesbar gilt.</summary>
+        Private Shared Sub ReadCaptureTimes(conn As SqliteConnection, byId As Dictionary(Of Long, CatalogEntry))
+            Try
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT id_local, captureTime, originalCaptureTime FROM Adobe_images"
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim entry As CatalogEntry = Nothing
+                            If Not byId.TryGetValue(reader.GetInt64(0), entry) Then Continue While
+                            entry.CaptureTime = ParseCatalogTime(TextAt(reader, 1))
+                            entry.OriginalCaptureTime = ParseCatalogTime(TextAt(reader, 2))
+                        End While
+                    End Using
+                End Using
+            Catch ex As SqliteException
+                DiagnosticLogService.LogAlways("ForeignCatalog", "ohne Aufnahmezeiten: " & ex.Message)
+            End Try
+        End Sub
+
+        Private Shared ReadOnly CatalogTimePattern As New Regex(
+            "^\s*(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?", RegexOptions.CultureInvariant)
+
+        ''' <summary>Eine Zeit aus dem Katalog als Uhrzeit, wie das Referenzprogramm sie zeigt und
+        ''' sortiert: der Teil vor einer Zone, ohne Sekundenbruchteile. Die Spalte ist freier Text und
+        ''' kommt in vielen Schreibweisen vor ("2024-07-01T14:00:00.000", mit Zone "+02:00", ohne
+        ''' Sekunden, als blosses Datum); eine Zone steht dort nur bei Ersatzwerten (Aenderungs- oder
+        ''' Importzeit) und wird wie dort nicht angewendet. Nothing, wenn nichts Lesbares dasteht.</summary>
+        Public Shared Function ParseCatalogTime(text As String) As DateTime?
+            If String.IsNullOrWhiteSpace(text) Then Return Nothing
+            Dim m = CatalogTimePattern.Match(text)
+            If Not m.Success Then Return Nothing
+            Dim number = Function(index As Integer) As Integer
+                             If Not m.Groups(index).Success Then Return 0
+                             Return Integer.Parse(m.Groups(index).Value, CultureInfo.InvariantCulture)
+                         End Function
+            Try
+                Return New DateTime(number(1), number(2), number(3), number(4), number(5), number(6))
+            Catch ex As ArgumentOutOfRangeException
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Die im Referenzprogramm geaenderte Aufnahmezeit, im EXIF-Rohformat, wenn sie fuer die
+        ''' Datei gelten soll, sonst leer.
+        '''
+        ''' NUR EINE GEAENDERTE ZEIT. Ohne Aenderung fuehrt der Katalog die Zeit der Datei, oder fuer eine
+        ''' Datei ohne Datum ihr Aenderungsdatum in UTC; beides weiss die Datei selbst besser.
+        '''
+        ''' DIE DATEI GEHT VOR, SOBALD SIE SELBST EINE NEUERE ZEIT TRAEGT. Gilt die Katalogzeit nur, solange
+        ''' die Datei noch die Zeit von VOR der Aenderung traegt (oder gar keine echte), dann:
+        ''' - hat das Referenzprogramm die Zeit schon in die Datei geschrieben, steht dort die neue, und
+        '''   es aendert sich nichts;
+        ''' - hat jemand die Zeit danach in FerrumPix korrigiert (JPEG im Bild, sonst Beistelldatei),
+        '''   steht dort eine dritte, und die gewinnt. Ohne diese Regel holte jeder Kataloglauf die
+        '''   Zeit aus dem fremden Katalog zurueck, und die eigene Korrektur waere wirkungslos.</summary>
+        ''' <param name="fileTime">Die geltende Zeit der Datei samt Beistelldatei, EXIF-Rohformat.</param>
+        ''' <param name="fileTimeIsFallback">Die Datei traegt keine Aufnahmezeit, nur ein Aenderungsdatum.</param>
+        Public Shared Function EditedCaptureTime(entry As CatalogEntry, fileTime As String, fileTimeIsFallback As Boolean) As String
+            If entry Is Nothing OrElse Not entry.CaptureTime.HasValue OrElse Not entry.OriginalCaptureTime.HasValue Then Return ""
+            If entry.CaptureTime.Value = entry.OriginalCaptureTime.Value Then Return ""
+            Dim edited = entry.CaptureTime.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+            If String.IsNullOrWhiteSpace(fileTime) OrElse fileTimeIsFallback Then Return edited
+            Dim original = entry.OriginalCaptureTime.Value.ToString("yyyy:MM:dd HH:mm:ss", CultureInfo.InvariantCulture)
+            Return If(String.Equals(fileTime.Trim(), original, StringComparison.Ordinal), edited, "")
+        End Function
+
+        ''' <summary>Wie <see cref="Lookup"/>, liest den Katalog aber nie selbst ein, auch nicht nach
+        ''' einer Aenderung: fuer Aufrufer auf dem Oberflaechenfaden, die das Einlesen eines grossen
+        ''' Katalogs (einige Sekunden) nicht abwarten duerfen. Es gilt der zuletzt gelesene Stand; ist
+        ''' noch keiner da, wird das Einlesen im Hintergrund angestossen und Nothing geliefert.
+        ''' Ordnerlauf und Katalogindex laufen im Hintergrund ueber <see cref="Lookup"/> und bekommen
+        ''' den neuesten Stand.</summary>
+        Public Shared Function LookupIfLoaded(imagePath As String) As CatalogEntry
+            If String.IsNullOrWhiteSpace(imagePath) OrElse Not IsEnabled Then Return Nothing
+            Dim index As CatalogIndex
+            SyncLock _lock
+                index = _index
+            End SyncLock
+            If index Is Nothing OrElse Not String.Equals(index.CatalogPath, ConfiguredPath, StringComparison.Ordinal) Then
+                Threading.Tasks.Task.Run(Sub() CurrentIndex())
+                Return Nothing
+            End If
+            Return LookupIn(index, imagePath)
+        End Function
 
         ''' <summary>Schreibgeschuetzt und ohne Pool (der hielte die Datei offen). Ohne
         ''' Schreibprotokoll mit Inhalt als unveraenderlich: dann legt SQLite nichts neben die Datei
