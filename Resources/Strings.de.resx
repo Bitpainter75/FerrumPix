@@ -11543,4 +11543,10 @@
   <data name="Eine_SVG_Grafik_wird_nicht_als_Bild_ge_ffnet_Auf_98fd9794" xml:space="preserve">
     <value>Eine SVG-Grafik wird nicht als Bild geöffnet. Auf das Bild ziehen, dann wird sie als Ebene eingesetzt.</value>
   </data>
+  <data name="Nextcloud_Upload_fehlgeschlagen_c92d5283" xml:space="preserve">
+    <value>Nextcloud-Upload fehlgeschlagen</value>
+  </data>
+  <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
+    <value>{0} Datei(en) kamen nicht auf die Nextcloud.</value>
+  </data>
 </root>

@@ -11569,4 +11569,10 @@
   <data name="Eine_SVG_Grafik_wird_nicht_als_Bild_ge_ffnet_Auf_98fd9794" xml:space="preserve">
     <value>SVG 그래픽은 이미지로 열리지 않습니다. 이미지 위로 끌어다 놓으면 레이어로 삽입됩니다.</value>
   </data>
+  <data name="Nextcloud_Upload_fehlgeschlagen_c92d5283" xml:space="preserve">
+    <value>Nextcloud 업로드 실패</value>
+  </data>
+  <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
+    <value>{0}개 파일이 Nextcloud에 올라가지 않았습니다.</value>
+  </data>
 </root>

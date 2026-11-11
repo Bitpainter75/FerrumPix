@@ -1284,6 +1284,15 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Liegt unter diesem Pfad im Dateibaum schon etwas? Fuer den Zaehler im
+        ''' Dateinamen, der die erste freie Nummer sucht. Im Zweifel "da", wie
+        ''' <see cref="ExistsAsync"/>: ein unbeantwortetes HEAD darf keinen belegten Namen freigeben.</summary>
+        Public Shared Async Function FileExistsAsync(pathInTree As String,
+                                                     Optional cancellationToken As CancellationToken = Nothing) As Task(Of Boolean)
+            If Not IsConfigured Then Return True
+            Return Await ExistsAsync(pathInTree, cancellationToken).ConfigureAwait(False)
+        End Function
+
         ''' <summary>Legt den Zielordner an, falls er fehlt - Segment fuer Segment, denn MKCOL legt
         ''' keine Zwischenstufen an. Ein 405 heisst "gibt es schon" und gilt deshalb als Erfolg.</summary>
         Public Shared Async Function EnsureFolderAsync(folderPathInTree As String,

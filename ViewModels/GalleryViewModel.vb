@@ -13663,6 +13663,13 @@ Namespace ViewModels
 
             ' Als Kopie mit Formatauswahl - gleicher Ablauf wie beim
             ' Stapel-Filter: neue Dateien in den Zielordner oder als neues Asset nach Immich.
+            ' Ziel Nextcloud: neue Dateien in den Dateibaum (ProcessBatchItemsToNextcloudAsync).
+            If String.Equals(resize.Target, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso NextcloudService.IsConfigured Then
+                changedCount = Await ProcessBatchItemsToNextcloudAsync(targetItems, writer, Function(source) resize.Extension,
+                                                                       nameBuilder:=CreateNameBuilder(resize.NamePattern)).ConfigureAwait(True)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) geändert"), changedCount, targetItems.Count)
+                Return
+            End If
             If String.Equals(resize.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
                 changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
                                                                          Function(source) resize.Extension,
@@ -13857,6 +13864,13 @@ Namespace ViewModels
             End If
 
             Dim suffix = result.FileNameSuffix
+            ' Ziel Nextcloud: neue Dateien in den Dateibaum (ProcessBatchItemsToNextcloudAsync).
+            If String.Equals(result.Target, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso NextcloudService.IsConfigured Then
+                changedCount = Await ProcessBatchItemsToNextcloudAsync(targetItems, writer, Function(source) result.Extension,
+                                                                       suffix, CreateNameBuilder(result.NamePattern)).ConfigureAwait(True)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount, targetItems.Count)
+                Return
+            End If
             If String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
                 changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
                                                                          Function(source) result.Extension,
@@ -14251,6 +14265,13 @@ Namespace ViewModels
                 Return
             End If
 
+            ' Ziel Nextcloud: neue Dateien in den Dateibaum (ProcessBatchItemsToNextcloudAsync).
+            If String.Equals(result.Target, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso NextcloudService.IsConfigured Then
+                changedCount = Await ProcessBatchItemsToNextcloudAsync(targetItems, writer, Function(source) result.Extension,
+                                                                       nameBuilder:=nameBuilder).ConfigureAwait(True)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) mit Wasserzeichen versehen"), changedCount, targetItems.Count)
+                Return
+            End If
             If String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured Then
                 changedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
                                                                          Function(source) result.Extension,
@@ -14912,6 +14933,117 @@ Namespace ViewModels
             Return uploadedCount
         End Function
 
+        ''' <summary>Ein Stapel mit dem Ziel NEXTCLOUD: jedes Bild wird gerechnet und als neue Datei in
+        ''' den Dateibaum gelegt, wie bei Speichern unter. Wohin, ist abgeleitet und nicht erfragt:
+        ''' neben das Original, wenn das Bild von der Nextcloud kommt, sonst in den Zielordner fuer
+        ''' Uploads aus den Einstellungen. Ueberschrieben wird nichts; ein belegter Name wird
+        ''' nummeriert (NextcloudService.UploadNewFileAsync).
+        '''
+        ''' Vorher stand der Knopf Nextcloud in der Ziel-Zeile aller Stapel-Dialoge, die Stapel kannten
+        ''' aber nur Immich und einen Ordner: die Dateien landeten still im Ordner, der noch im Feld
+        ''' stand.
+        '''
+        ''' Bilder von einem Server (Immich, Nextcloud) werden dafuer geholt, wie beim Export in einen
+        ''' Ordner. <paramref name="remoteWriter"/> rechnet sie, wenn ein Stapel fuer Serverquellen
+        ''' einen eigenen Schreiber hat (Konvertieren), sonst <paramref name="writer"/>.</summary>
+        Private Async Function ProcessBatchItemsToNextcloudAsync(items As IEnumerable(Of ImageItem),
+                                                                 writer As Func(Of String, String, Boolean),
+                                                                 outputExtension As Func(Of String, String),
+                                                                 Optional nameSuffix As String = "",
+                                                                 Optional nameBuilder As Func(Of String, String) = Nothing,
+                                                                 Optional skipSameExtension As Boolean = False,
+                                                                 Optional remoteWriter As Func(Of String, String, Boolean) = Nothing) As Task(Of Integer)
+            Dim uploadedCount = 0
+            Dim errorMessage As String = Nothing
+            Dim failed As New List(Of String)()
+            Try
+                _mainVm.BeginBusyOverlay(BatchProgressText())
+                For Each item In If(items, Enumerable.Empty(Of ImageItem)())
+                    If BatchWasCancelled() Then Exit For
+                    If item Is Nothing Then Continue For
+                    Dim source = If(item.IsRemoteAsset, Await EnsureLocalPathForBatchAsync(item), item.FilePath)
+                    If String.IsNullOrEmpty(source) OrElse Not File.Exists(source) Then
+                        failed.Add(item.FileName)
+                        ReportBatchFileDone()
+                        Continue For
+                    End If
+                    Dim targetExt = outputExtension(source)
+                    If skipSameExtension AndAlso String.Equals(IO.Path.GetExtension(source), targetExt, StringComparison.OrdinalIgnoreCase) Then
+                        ReportBatchFileDone()
+                        Continue For
+                    End If
+                    Dim outputPath = NextcloudBatchOutputPath(item, source, targetExt, nameSuffix, nameBuilder)
+                    Try
+                        Dim schreiber = If(item.IsRemoteAsset AndAlso remoteWriter IsNot Nothing, remoteWriter, writer)
+                        Dim ok = Await Task.Run(Function() schreiber(source, outputPath))
+                        If Not ok OrElse Not File.Exists(outputPath) Then
+                            failed.Add(item.FileName)
+                            Continue For
+                        End If
+                        Dim uploaded = Await NextcloudService.UploadNewFileAsync(outputPath, NextcloudBatchFolderFor(item))
+                        If String.IsNullOrEmpty(uploaded) Then
+                            failed.Add(item.FileName)
+                        Else
+                            uploadedCount += 1
+                        End If
+                    Finally
+                        Try
+                            If File.Exists(outputPath) Then File.Delete(outputPath)
+                            DeleteEmptyTempFolder(IO.Path.GetDirectoryName(outputPath))
+                        Catch
+                        End Try
+                        ReportBatchFileDone()
+                    End Try
+                Next
+            Catch ex As Exception
+                errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
+            End Try
+
+            If errorMessage IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Nextcloud-Upload fehlgeschlagen"), errorMessage)
+            ElseIf failed.Count > 0 Then
+                _mainVm.ReportFileWarning(String.Join(ControlChars.Lf,
+                    {String.Format(LocalizationService.T("{0} Datei(en) kamen nicht auf die Nextcloud."), failed.Count) &
+                     If(String.IsNullOrEmpty(NextcloudService.LastError), "", " " & NextcloudService.LastError)}.
+                    Concat(failed.Take(10))))
+            End If
+            If uploadedCount > 0 Then Await RefreshNextcloudViewAsync()
+            Return uploadedCount
+        End Function
+
+        ''' <summary>Der Ordner im Dateibaum fuer ein Bild aus einem Stapel nach Nextcloud: neben dem
+        ''' Original, wenn es von dort kommt, sonst der Zielordner fuer Uploads.</summary>
+        Private Shared Function NextcloudBatchFolderFor(item As ImageItem) As String
+            If item IsNot Nothing AndAlso item.IsNextcloudAsset AndAlso Not String.IsNullOrEmpty(item.NextcloudPath) Then
+                Dim separator = item.NextcloudPath.LastIndexOf("/"c)
+                If separator > 0 Then Return item.NextcloudPath.Substring(0, separator)
+            End If
+            Return NextcloudService.UploadFolder
+        End Function
+
+        ''' <summary>Die Zwischendatei fuer den Upload, unter genau dem Namen, den die Datei auf der
+        ''' Nextcloud tragen soll (der Upload nimmt ihn): das Namensmuster, sonst der Name, unter dem
+        ''' der Nutzer das Bild kennt, mit Anhang. Eindeutig wird sie ueber einen eigenen
+        ''' Unterordner, nicht ueber einen Zusatz im Namen.</summary>
+        Private Shared Function NextcloudBatchOutputPath(item As ImageItem, source As String, requestedExtension As String,
+                                                         nameSuffix As String, nameBuilder As Func(Of String, String)) As String
+            Dim ext = If(String.IsNullOrWhiteSpace(requestedExtension), IO.Path.GetExtension(source), requestedExtension)
+            If String.IsNullOrWhiteSpace(ext) Then ext = ".jpg"
+            If Not ext.StartsWith(".", StringComparison.Ordinal) Then ext = "." & ext
+            ext = ext.ToLowerInvariant()
+            Dim stem = If(nameBuilder IsNot Nothing, nameBuilder(source), Nothing)
+            If String.IsNullOrWhiteSpace(stem) Then
+                Dim known = If(String.IsNullOrWhiteSpace(item?.FileName), IO.Path.GetFileName(source), item.FileName)
+                stem = IO.Path.GetFileNameWithoutExtension(known) & If(nameSuffix, "")
+            End If
+            If String.IsNullOrWhiteSpace(stem) Then stem = "ferrumpix-export"
+            Dim ownFolder = IO.Path.Combine(IO.Path.GetTempPath(), "FerrumPix", "ImmichBatch", Guid.NewGuid().ToString("N"))
+            Directory.CreateDirectory(ownFolder)
+            Return IO.Path.Combine(ownFolder, stem & ext)
+        End Function
+
         ''' <summary>Lädt die gerade offene Immich-Ansicht neu (z.B. nachdem der Editor ein Asset ersetzt
         ''' hat - die Kachel zeigt sonst das Bild von vorher oder ein Asset, das es nicht mehr gibt).</summary>
         Public Async Function RefreshImmichViewAsync() As Task
@@ -15176,6 +15308,14 @@ Namespace ViewModels
             ' Dokumente (dieselbe Regel wie beim Speichern unter).
             Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso
                                ImmichService.IsConfigured AndAlso Not result.IsFpx
+            ' Ziel Nextcloud: neue Dateien in den Dateibaum (ProcessBatchItemsToNextcloudAsync). Anders
+            ' als bei Immich darf es auch ein Projektbuendel sein, Nextcloud fuehrt Dateien.
+            If String.Equals(result.Target, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso NextcloudService.IsConfigured Then
+                exportedCount = Await ProcessBatchItemsToNextcloudAsync(targetItems, writer, Function(source) result.Extension,
+                                                                        nameBuilder:=nameBuilder).ConfigureAwait(True)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) exportiert"), exportedCount, targetItems.Count)
+                Return
+            End If
 
             If saveToImmich Then
                 exportedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems, writer,
@@ -15312,6 +15452,14 @@ Namespace ViewModels
             Dim immichItems = targetItems.Where(Function(i) i.IsRemoteAsset).ToList()
             Dim saveToImmich = String.Equals(result.Target, "Immich", StringComparison.OrdinalIgnoreCase) AndAlso ImmichService.IsConfigured
             Dim uploadedAssetIds As New List(Of String)()
+            ' Ziel Nextcloud: neue Dateien in den Dateibaum (ProcessBatchItemsToNextcloudAsync); wie
+            ' bei den anderen Zielen nichts, was schon im Zielformat vorliegt.
+            If String.Equals(result.Target, "Nextcloud", StringComparison.OrdinalIgnoreCase) AndAlso NextcloudService.IsConfigured Then
+                convertedCount = Await ProcessBatchItemsToNextcloudAsync(targetItems, writer, Function(source) result.Extension,
+                                                                         skipSameExtension:=True, remoteWriter:=serverWriter).ConfigureAwait(True)
+                StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) konvertiert"), convertedCount, targetItems.Count)
+                Return
+            End If
 
             If saveToImmich Then
                 convertedCount = Await ProcessLocalBatchItemsToImmichAsync(localItems,

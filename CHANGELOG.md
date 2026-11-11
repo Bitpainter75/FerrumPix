@@ -25,7 +25,15 @@
   and Zf) now open as raw files on Windows, macOS and in the Flatpak. Before, only their embedded
   preview was shown.
 
+- Export, convert, resize, apply adjustments and apply watermark can upload to Nextcloud: each
+  picture goes up as a new file next to its original, or into the upload folder from the settings.
+
 ### Fixes
+
+- Choosing Nextcloud as the target in a batch dialog saved the files into the local folder instead.
+
+- Save as to Nextcloud with a # counter takes the next free number on the server, and uses the
+  upload folder from the settings instead of always /Photos.
 
 - Apply watermark took over the file name pattern left behind by the previous dialog.
 

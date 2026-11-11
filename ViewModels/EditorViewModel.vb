@@ -23320,6 +23320,9 @@ Namespace ViewModels
             Dim targetQuality = SaveQuality
             Dim saveToImmich As Boolean = False
             Dim saveToNextcloud As Boolean = False
+            ' Der Name zu einer Nummer, wenn der Name einen Zaehler (#) traegt; sonst Nothing. Lokal
+            ' wie auf der Nextcloud sucht der Zaehler damit die erste freie Nummer im Ziel.
+            Dim nameForCounter As Func(Of Integer, String) = Nothing
             Dim isFpxSave As Boolean = FpxService.IsFpx(targetPath)
             Dim isPsdSave As Boolean = False
             ' Außerhalb des If-Blocks: die Einzeloptionen (Metadaten-Übernahme) werden erst nach
@@ -23377,6 +23380,10 @@ Namespace ViewModels
                 ' Mit Zaehler wird das Muster behalten: die Nummer steht erst fest, wenn der Zielordner
                 ' bekannt ist (die erste freie, siehe unten).
                 Dim counterPattern = If(chosenName.Contains("#"c), chosenName, Nothing)
+                If counterPattern IsNot Nothing Then
+                    nameForCounter = Function(n) MediaFileTypes.WithoutKnownExtension(
+                        _mainVm.ExpandTargetNamePattern(counterPattern, templateSource, n, baseNameOverride:=name).Trim())
+                End If
                 If chosenName.Contains("{"c) OrElse chosenName.Contains("#"c) Then
                     chosenName = _mainVm.ExpandTargetNamePattern(chosenName, templateSource, 1, baseNameOverride:=name).Trim()
                     If chosenName.Length = 0 Then chosenName = name
@@ -23590,12 +23597,37 @@ Namespace ViewModels
                     ' erfragt, sondern abgeleitet: neben das Original, wenn das Bild von dort kommt,
                     ' sonst in den Fotoordner. Ein zusaetzlicher Ordnerdialog fuer den Server waere
                     ' eine zweite Ordnerauswahl im selben Dialog gewesen.
-                    Dim targetFolder = "/Photos"
+                    ' Der Fotoordner ist der aus den Einstellungen (Zielordner fuer Uploads); hier
+                    ' stand fest "/Photos", und eine geaenderte Einstellung galt nur fuer andere Wege.
+                    Dim targetFolder = NextcloudService.UploadFolder
                     If Not String.IsNullOrEmpty(_nextcloudSourcePath) Then
                         Dim separator = _nextcloudSourcePath.LastIndexOf("/"c)
                         If separator > 0 Then targetFolder = _nextcloudSourcePath.Substring(0, separator)
                     End If
                     StatusText = LocalizationService.T("Wird gespeichert…")
+                    ' Mit Zaehler die erste Nummer, die im Zielordner auf dem Server noch frei ist,
+                    ' wie lokal; sonst wiche der Upload einem belegten Namen mit einem Anhang aus
+                    ' ("foto_001_2" statt "foto_002"). Die Datei wird dafuer nur umbenannt.
+                    If nameForCounter IsNot Nothing Then
+                        Dim ext = IO.Path.GetExtension(targetPath)
+                        Dim previous As String = Nothing
+                        ' Hoechstens 200 Anfragen: ein Server, der nicht antwortet, meldet jeden Namen
+                        ' als belegt, und dann nummeriert der Upload selbst.
+                        For counter = 1 To 200
+                            Dim candidate = nameForCounter(counter)
+                            If candidate.Length = 0 OrElse HasInvalidFileNameChars(candidate) OrElse
+                               String.Equals(candidate, previous, StringComparison.Ordinal) Then Exit For
+                            previous = candidate
+                            If Not Await NextcloudService.FileExistsAsync(targetFolder.TrimEnd("/"c) & "/" & candidate & ext) Then
+                                Dim renamed = IO.Path.Combine(IO.Path.GetDirectoryName(targetPath), candidate & ext)
+                                If Not String.Equals(renamed, targetPath, StringComparison.Ordinal) Then
+                                    IO.File.Move(targetPath, renamed, overwrite:=True)
+                                    targetPath = renamed
+                                End If
+                                Exit For
+                            End If
+                        Next
+                    End If
                     ' NICHT ueberschreiben, sondern nummerieren: lokal fragt der Dialog bei einem
                     ' belegten Namen nach, fuer das Serverziel gibt es diese Frage nicht - und ein
                     ' getippter Name trifft dort schnell eine fremde Datei.
