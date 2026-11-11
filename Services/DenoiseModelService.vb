@@ -152,12 +152,15 @@ Namespace Services
         ' Eine feste Staerke bedeutet bei jedem Bild etwas anderes. Die Automatik fragt deshalb nicht
         ' "wie stark", sondern "wie viel Rauschen soll uebrig bleiben", und rechnet die Staerke daraus.
         '
-        ' DAS GEHT, WEIL DIE STAERKE EINE MISCHUNG IST (RawDecodeService, Mischung der linearen
-        ' Daten): die Helligkeit des Ergebnisses liegt zwischen der des Modells und der des Originals,
-        ' bei Staerke s bleibt also (1 - s) des Rauschens stehen. Dazu kommt, was das Modell selbst
-        ' uebrig laesst:
+        ' DAS GEHT, WEIL DIE STAERKE EINE MISCHUNG IST: das Ergebnis liegt zwischen dem des Modells
+        ' und dem Original, bei Staerke s bleibt also (1 - s) des Rauschens stehen. Dazu kommt, was
+        ' das Modell selbst uebrig laesst, und das ist je Modell anders geeicht:
         '
-        '   Rest^2 = Modellrest^2 + (Aufschlag * (1 - s) * Rauschen)^2
+        '   Bildmodell (fertige Bilder):  Rest^2 = Modellrest^2 + (Aufschlag * (1 - s) * Rauschen)^2
+        '   TreeNet (RAW-Stufe):          Rest   = Rauschen * ((1 - s) + s * Anteil)
+        '
+        ' Bei TreeNet ist der Rest ein ANTEIL des Rauschens und kein fester Wert, und die Mischung
+        ' (RawDecodeService.BlendDenoised, in den linearen Daten) verlaeuft dazwischen gerade.
         '
         ' Gemessen wird mit ImageProcessor.EstimateNoiseLevel am entwickelten, noch nicht
         ' entrauschten Bild.
@@ -166,11 +169,18 @@ Namespace Services
         ''' in Grauwerten. Am Bild beurteilt; ein Bild unter rund 2,7 gilt als sauber.</summary>
         Public Const AutoTargetNoise As Single = 2.4F
 
-        ''' <summary>Was das Modell bei voller Staerke selbst an Streuung stehen laesst, in
-        ''' Grauwerten. GEMESSEN AM FRUEHEREN SCHNELLEN MODELL (0,3 bis 0,9 an neun Aufnahmen);
-        ''' TreeNet laesst nach der Reihe in TreeNetMessung etwas mehr stehen. Nachmessen steht in
-        ''' OFFENE_PUNKTE.md.</summary>
+        ''' <summary>Was das BILDMODELL (NAFNet, fertige Bilder) bei voller Staerke selbst an
+        ''' Streuung stehen laesst, in Grauwerten (0,3 bis 0,9 an neun Aufnahmen).</summary>
         Friend Const ModelResidualNoise As Single = 0.5F
+
+        ''' <summary>Welcher ANTEIL des Rauschens bei TreeNet in der RAW-Stufe nach voller Staerke
+        ''' noch gemessen wird. Kein fester Rest wie beim Bildmodell: TreeNet laesst je Bild einen
+        ''' Anteil stehen, gemessen 0,09 bis 0,47 (Mittel um 0,25), und die Mischung verlaeuft
+        ''' dazwischen gerade. 0,22 trifft die Staerke, bei der das Ziel erreicht wird, am besten:
+        ''' an 23 RAWs von ISO 125 bis 204800 im Mittel auf 6 Punkte (die Rechnung des Bildmodells
+        ''' lag dort im Mittel 12 daneben und bei hoher ISO durchweg zu schwach, 76 bis 86, wo 100
+        ''' noetig waren). Messung: Diagnostics/TreeNetMessung/Staerke.</summary>
+        Friend Const RawModelResidualShare As Single = 0.22F
 
         ''' <summary>Um so viel liegt das Restrauschen einer Mischung ueber der Rechnung
         ''' (1 - Staerke) mal Rauschen (gemessen das 1,0- bis 1,4-Fache, meist 1,1 bis 1,2).</summary>
@@ -207,26 +217,35 @@ Namespace Services
 
         ''' <summary>Die Staerke fuer ein gemessenes Rauschen. Reine Rechnung, damit sie sich ohne
         ''' Bild pruefen laesst.</summary>
-        Public Shared Function SuggestFor(noiseLevel As Single, Optional grain As Double = 50.0) As DenoiseSuggestion
+        Public Shared Function SuggestFor(noiseLevel As Single, Optional grain As Double = 50.0,
+                                          Optional rawStage As Boolean = False) As DenoiseSuggestion
             Dim suggestion As New DenoiseSuggestion With {.NoiseLevel = noiseLevel}
             If Single.IsNaN(noiseLevel) OrElse noiseLevel <= 0 Then Return suggestion
             Dim target = TargetNoiseFor(grain)
-            Dim allowed = Math.Sqrt(Math.Max(0.0, CDbl(target) * target - CDbl(ModelResidualNoise) * ModelResidualNoise)) /
-                          MixResidualFactor
-            Dim strength = 1.0 - allowed / noiseLevel
+            Dim strength As Double
+            If rawStage Then
+                ' TreeNet in der RAW-Stufe: Rest(s) = Rauschen * ((1 - s) + s * Anteil), aufgeloest
+                ' nach s fuer Rest = Ziel. Erreicht auch die volle Staerke das Ziel nicht, gilt sie.
+                strength = (1.0 - target / noiseLevel) / (1.0 - RawModelResidualShare)
+            Else
+                Dim allowed = Math.Sqrt(Math.Max(0.0, CDbl(target) * target - CDbl(ModelResidualNoise) * ModelResidualNoise)) /
+                              MixResidualFactor
+                strength = 1.0 - allowed / noiseLevel
+            End If
             suggestion.Strength = Math.Round(Math.Max(0.0, Math.Min(1.0, strength)) * 100.0)
             suggestion.Worthwhile = suggestion.Strength >= AutoMinimumStrength
             Return suggestion
         End Function
 
         ''' <summary>Das Bild messen und die Staerke vorschlagen. Das Bild wird nur gelesen.</summary>
-        Public Shared Function Suggest(image As SKBitmap, Optional grain As Double = 50.0) As DenoiseSuggestion
+        Public Shared Function Suggest(image As SKBitmap, Optional grain As Double = 50.0,
+                                       Optional rawStage As Boolean = False) As DenoiseSuggestion
             If image IsNot Nothing AndAlso CLng(image.Width) * image.Height < AutoMinimumPixels Then
-                Dim tooSmall = SuggestFor(Single.NaN, grain)
+                Dim tooSmall = SuggestFor(Single.NaN, grain, rawStage)
                 tooSmall.TooSmall = True
                 Return tooSmall
             End If
-            Return SuggestFor(ImageProcessor.EstimateNoiseLevel(image), grain)
+            Return SuggestFor(ImageProcessor.EstimateNoiseLevel(image), grain, rawStage)
         End Function
 
         ''' <summary>Ein Entrausch-Auftrag fuer den Stapel: wie die Staerke entsteht. Er geht an
@@ -246,10 +265,11 @@ Namespace Services
         ''' <summary>Die Staerke, mit der ein Auftrag dieses Bild entrauscht, oder Nothing, wenn es
         ''' so bleibt (Automatik haelt den Lauf fuer unnoetig, Bild zu klein). Gemessen wird am
         ''' noch nicht entrauschten, entwickelten Bild.</summary>
-        Friend Shared Function StrengthForRequest(developed As SKBitmap, request As DenoiseRequest, sourceName As String) As Double?
+        Friend Shared Function StrengthForRequest(developed As SKBitmap, request As DenoiseRequest, sourceName As String,
+                                                  Optional rawStage As Boolean = False) As Double?
             If request Is Nothing Then Return Nothing
             If Not request.Automatic Then Return Math.Max(0.0, Math.Min(100.0, request.Strength))
-            Dim suggestion = Suggest(developed, request.Grain)
+            Dim suggestion = Suggest(developed, request.Grain, rawStage)
             If suggestion.TooSmall Then
                 DiagnosticLogService.LogAlways("Entrauschen",
                     $"{sourceName}: zu klein, um Rauschen von Zeichnung zu trennen - ausgelassen")

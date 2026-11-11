@@ -13437,7 +13437,7 @@ Namespace ViewModels
             Dim ignored As ImageAdjustments = Nothing
             Using developed = ImageProcessor.DecodeForRender(source, recipe, ignored, True)
                 If developed Is Nothing Then Return Nothing
-                Return DenoiseModelService.StrengthForRequest(developed, denoise, name)
+                Return DenoiseModelService.StrengthForRequest(developed, denoise, name, rawStage:=True)
             End Using
         End Function
 

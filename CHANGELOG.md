@@ -8,7 +8,8 @@
   X-Trans files, and takes seconds on a graphics card. Changing the strength afterwards needs no
   new run. When a picture with saved denoising is opened, you are asked before it is computed.
   Applying adjustments in a batch with overwriting now also denoises raw files, by saving it with
-  their edits.
+  their edits. The automatic strength is tuned for raw files separately, so very noisy shots get
+  the full strength they need.
 
 - Finished pictures such as JPEG, PNG or PSD are denoised into the pixels as before, with the
   faster of the two former options. The slower one is gone. Edits saved with it are switched

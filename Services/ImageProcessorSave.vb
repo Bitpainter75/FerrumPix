@@ -757,7 +757,7 @@ Namespace Services
                     ElseIf adj IsNot Nothing AndAlso adj.RawModelDenoise Then
                         DiagnosticLogService.LogAlways("Entrauschen", $"{sourceName}: Rezept traegt schon ein Entrauschen - es gilt")
                     Else
-                        Dim strength = DenoiseModelService.StrengthForRequest(decoded, denoise, sourceName)
+                        Dim strength = DenoiseModelService.StrengthForRequest(decoded, denoise, sourceName, rawStage:=True)
                         If strength.HasValue Then
                             Dim withDenoise = If(adj, New ImageAdjustments()).Clone()
                             withDenoise.RawModelDenoise = True

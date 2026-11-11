@@ -12021,11 +12021,14 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("RAW wird entwickelt …")
                 Return
             End If
+            ' Bei einer RAW mit TreeNet gilt dessen Eichung (RawModelResidualShare), sonst die des
+            ' Bildmodells.
+            Dim rawStage = ModelDenoiseUsesRawStage
             Try
                 Dim result = Await Task.Run(
                     Function()
                         Return _workingImage.WithFull(
-                            Function(full) (Suggestion:=DenoiseModelService.Suggest(full),
+                            Function(full) (Suggestion:=DenoiseModelService.Suggest(full, rawStage:=rawStage),
                                             Stamp:=(Init:=_workingImage.InitStamp, Version:=_workingImage.Version)))
                     End Function)
                 If result.Suggestion Is Nothing Then Return
