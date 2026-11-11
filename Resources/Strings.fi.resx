@@ -11571,4 +11571,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0} tiedosto(a) ei päätynyt Nextcloudiin.</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>Toiminto epäonnistui. Vanha tiedosto on palautettu, mutta sen sivutiedostoa ei voitu palauttaa. Se on kohteessa {0}</value>
+  </data>
 </root>

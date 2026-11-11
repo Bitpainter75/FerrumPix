@@ -11571,4 +11571,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0} soubor(ů) se do Nextcloudu nedostalo.</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>Operace se nezdařila. Starý soubor je zpět, jeho doprovodný soubor se však nepodařilo obnovit. Nachází se v {0}</value>
+  </data>
 </root>

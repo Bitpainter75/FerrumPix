@@ -1892,6 +1892,91 @@ Namespace Services
             Return moved
         End Function
 
+        ''' <summary>Die Katalogzeilen einer Quelle auf ein Ziel KOPIEREN, nachdem eine Kopie ein
+        ''' vorhandenes Ziel überschrieben hat: Bewertung, Favorit, Etikett, Stichwörter, Personen
+        ''' und KI-Stichwörter des Ziels werden die der Quelle. Für eine Datei oder einen ganzen
+        ''' Ordner, in denselben fünf Tabellen wie <see cref="MoveCatalogEntries"/>.
+        '''
+        ''' WARUM: beim Überschreiben gilt für das Ziel alles, was zur Quelle gehört, auch Katalog und
+        ''' Beistelldateien. Ohne diesen Schritt blieben die Zeilen des
+        ''' überschriebenen Bildes am Pfad stehen, und die neue Datei erbte dessen Sterne und
+        ''' Personen. Das Verschieben macht es über MoveCatalogEntries schon so.
+        '''
+        ''' Erst das Ziel freiräumen, dann kopieren, in EINER Transaktion. Gesichter bekommen eine
+        ''' neue Kennung, die der Quelle bleiben an der Quelle. Die Spalten kommen aus der Tabelle
+        ''' selbst (PRAGMA table_info): ImageMeta wächst mit jeder Version um Spalten.</summary>
+        ''' <returns>Kopierte Zeilen über alle Tabellen.</returns>
+        Public Function CopyCatalogEntries(sourcePath As String, targetPath As String) As Integer
+            If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return 0
+            If PathIdentity.IsFilesystemRoot(sourcePath) OrElse PathIdentity.IsFilesystemRoot(targetPath) Then Return 0
+            Dim source = sourcePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            Dim target = targetPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            If source.Length = 0 OrElse target.Length = 0 Then Return 0
+            If IsServerPseudoPath(source) OrElse IsServerPseudoPath(target) Then Return 0
+            source = PathKey(source)
+            target = PathKey(target)
+            If String.Equals(source, target, StringComparison.Ordinal) Then Return 0
+            Dim separator = Path.DirectorySeparatorChar
+            Dim upperChar = ChrW(AscW(separator) + 1)
+            Dim copied = 0
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each table In {"ImageMeta", "Face", "ScannedImage", "AiImageTag", "AiTagScan"}
+                            Using del = conn.CreateCommand()
+                                del.Transaction = tx
+                                del.CommandText =
+                                    $"DELETE FROM {table} WHERE FilePath = $exact " &
+                                    "OR (FilePath >= $prefix AND FilePath < $upper)"
+                                del.Parameters.AddWithValue("$exact", target)
+                                del.Parameters.AddWithValue("$prefix", target & separator)
+                                del.Parameters.AddWithValue("$upper", target & upperChar)
+                                del.ExecuteNonQuery()
+                            End Using
+                            Dim columns As New List(Of String)()
+                            Using info = conn.CreateCommand()
+                                info.Transaction = tx
+                                info.CommandText = $"PRAGMA table_info({table})"
+                                Using reader = info.ExecuteReader()
+                                    While reader.Read()
+                                        columns.Add(reader.GetString(1))
+                                    End While
+                                End Using
+                            End Using
+                            If columns.Count = 0 OrElse Not columns.Contains("FilePath") Then Continue For
+                            Dim selected = columns.Select(Function(c)
+                                                              If c = "FilePath" Then
+                                                                  Return "CASE WHEN FilePath = $source THEN $target ELSE $target || substr(FilePath, $cut) END"
+                                                              End If
+                                                              If table = "Face" AndAlso c = "Id" Then Return "lower(hex(randomblob(16)))"
+                                                              Return """" & c & """"
+                                                          End Function)
+                            Using ins = conn.CreateCommand()
+                                ins.Transaction = tx
+                                ins.CommandText =
+                                    $"INSERT INTO {table} ({String.Join(", ", columns.Select(Function(c) """" & c & """"))}) " &
+                                    $"SELECT {String.Join(", ", selected)} FROM {table} " &
+                                    "WHERE FilePath = $source OR (FilePath >= $sprefix AND FilePath < $supper)"
+                                ins.Parameters.AddWithValue("$source", source)
+                                ins.Parameters.AddWithValue("$target", target)
+                                ins.Parameters.AddWithValue("$cut", source.Length + 1)
+                                ins.Parameters.AddWithValue("$sprefix", source & separator)
+                                ins.Parameters.AddWithValue("$supper", source & upperChar)
+                                copied += ins.ExecuteNonQuery()
+                            End Using
+                        Next
+                        tx.Commit()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.CopyCatalogEntries", ex)
+                Return 0
+            End Try
+            InvalidateAiTagPresence()
+            Return copied
+        End Function
+
         ''' <summary>Entfernt die Katalogzeilen ALLER Bilder EINES Servers - Bewertung, Favorit,
         ''' Farbetikett und Stichwörter, die lokal unter dem Pseudo-Pfad liegen. Gibt die Zahl der
         ''' entfernten Zeilen zurück.

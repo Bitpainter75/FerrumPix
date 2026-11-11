@@ -11575,4 +11575,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0}개 파일이 Nextcloud에 올라가지 않았습니다.</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>작업에 실패했습니다. 이전 파일은 복원되었지만 함께 쓰는 파일을 복원하지 못했습니다. 그 파일은 {0}에 있습니다</value>
+  </data>
 </root>

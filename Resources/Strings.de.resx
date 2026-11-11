@@ -11549,4 +11549,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0} Datei(en) kamen nicht auf die Nextcloud.</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>Der Vorgang ist gescheitert. Die alte Datei ist zurück, ihre Begleitdatei ließ sich aber nicht zurückholen. Sie liegt unter {0}</value>
+  </data>
 </root>

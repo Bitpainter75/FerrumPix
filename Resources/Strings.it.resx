@@ -11531,4 +11531,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0} file non sono arrivati su Nextcloud.</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>L'operazione non è riuscita. Il file precedente è tornato, ma non è stato possibile ripristinare il suo file associato. Si trova in {0}</value>
+  </data>
 </root>

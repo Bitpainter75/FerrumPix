@@ -11571,4 +11571,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0} fil(er) kom ikke opp på Nextcloud.</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>Handlingen mislyktes. Den gamle filen er tilbake, men følgefilen kunne ikke gjenopprettes. Den ligger på {0}</value>
+  </data>
 </root>

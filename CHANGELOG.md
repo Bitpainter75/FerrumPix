@@ -39,4 +39,10 @@
 
 - On Windows, the JPEG XL support is updated with the latest security fixes.
 
+- Copying a picture or folder over an existing one with Overwrite kept the rating, label, keywords
+  and people of the replaced picture. The copy now carries those of the original.
+
+- If overwriting fails and a companion file of the old picture cannot be put back, the message now
+  says that the picture itself is back and where the companion file is.
+
 

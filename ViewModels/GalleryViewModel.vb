@@ -15645,10 +15645,16 @@ Namespace ViewModels
             ' ein vorhandenes Ziel ersetzt es nur, wenn es zum Überschreiben freigegeben ist.
             Dim outcome = Await Task.Run(Function()
                                Dim result = TransferPath(source, target, movePath, resolved.ReplaceConfirmed)
-                               ' NUR beim Verschieben. Eine Kopie ist ein NEUES Bild: sie bekommt
-                               ' ihre eigenen Katalogzeilen und ihre eigene Kachel, und die des
-                               ' Originals müssen dort bleiben, wo sie sind.
-                               If movePath Then LibraryService.Instance.MoveEverythingForPath(source, target)
+                               ' Beim Verschieben ziehen Katalogzeilen und Kacheln mit. Eine Kopie ist
+                               ' ein NEUES Bild, die Zeilen des Originals bleiben, wo sie sind. Hat sie
+                               ' aber ein vorhandenes Ziel ÜBERSCHRIEBEN, gilt dort alles der Quelle,
+                               ' auch im Katalog: sonst erbte die neue Datei Sterne, Etikett,
+                               ' Stichwörter und Personen der überschriebenen (CopyCatalogEntries).
+                               If movePath Then
+                                   LibraryService.Instance.MoveEverythingForPath(source, target)
+                               ElseIf resolved.ReplaceConfirmed Then
+                                   LibraryService.Instance.CopyCatalogEntries(source, target)
+                               End If
                                Return result
                            End Function)
             ' Ein Rest des ersetzten Ziels in die Warnung des Fensters: der Vorgang ist gelungen und
@@ -15816,19 +15822,34 @@ Namespace ViewModels
                     ' liegt, ist inzwischen von woanders entstanden und gehört jemand anderem. Dann
                     ' scheitert eben das Zurückbenennen, und die Meldung nennt den Ort der alten Fassung.
                     MoveFileOrFolder(aside, target)
-                    ' Ebenso bei den Begleitern: eine inzwischen entstandene fremde Datei bleibt.
-                    For Each companion In setAside
-                        File.Move(companion.Aside, companion.Original)
-                    Next
                 Catch restoreEx As Exception
                     ' Die alte Fassung liegt dann noch unter dem Beiseite-Namen und ist nicht verloren.
                     ' Das muss der Nutzer erfahren, nicht nur das Protokoll: sonst sucht er sie am
-                    ' alten Namen und hält sie für weg.
+                    ' alten Namen und hält sie für weg. Die Begleiter bleiben BEWUSST bei ihr: ihre
+                    ' Beiseite-Namen hängen am Beiseite-Namen des Bildes, das Rezept findet sie dort
+                    ' also weiter. Zurück an den alten Namen gehörten sie zu dem, was dort jetzt liegt.
                     DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.Restore", restoreEx)
                     Throw New IOException(String.Format(
                         LocalizationService.T("Der Vorgang ist gescheitert, und die alte Fassung ließ sich nicht zurückholen. Sie liegt unter {0}"),
                         aside), ex)
                 End Try
+                ' Das Bild ist zurück. Jeder Begleiter für sich: einer, der nicht zurückkommt (eine
+                ' inzwischen entstandene fremde Datei bleibt), hält die übrigen nicht auf. Die Meldung
+                ' nennt dann DIESEN Ort und nicht den des Bildes, das ja wieder am alten Namen liegt.
+                Dim stuck As New List(Of String)()
+                For Each companion In setAside
+                    Try
+                        File.Move(companion.Aside, companion.Original)
+                    Catch companionEx As Exception
+                        DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.RestoreCompanion", companionEx)
+                        stuck.Add(companion.Aside)
+                    End Try
+                Next
+                If stuck.Count > 0 Then
+                    Throw New IOException(String.Format(
+                        LocalizationService.T("Der Vorgang ist gescheitert. Die alte Datei ist zurück, ihre Begleitdatei ließ sich aber nicht zurückholen. Sie liegt unter {0}"),
+                        String.Join(", ", stuck)), ex)
+                End If
                 Throw
             End Try
 

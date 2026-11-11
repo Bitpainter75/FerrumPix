@@ -11529,4 +11529,7 @@
   <data name="0_Datei_en_kamen_nicht_auf_die_Nextcloud_20dc52fd" xml:space="preserve">
     <value>{0} 个文件未能上传到 Nextcloud。</value>
   </data>
+  <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
+    <value>操作失败。旧文件已恢复，但其附属文件无法恢复。它位于 {0}</value>
+  </data>
 </root>
