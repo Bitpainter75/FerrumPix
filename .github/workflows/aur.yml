@@ -9,7 +9,7 @@ permissions:
 jobs:
   aur:
     name: AUR veroeffentlichen
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Nicht Docker Hub: dessen anonyme Pull-Quote trifft auf GitHub-Runnern regelmaessig.
     # GHCR beherbergt dieselben offiziellen, taeglich gebauten Arch-Images.
     container: ghcr.io/archlinux/archlinux:base-devel

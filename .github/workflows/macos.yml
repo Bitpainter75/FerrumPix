@@ -86,7 +86,7 @@ jobs:
 
   pakete:
     name: macOS-ZIPs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [libraw]
     # Uebersprungenes LibRaw (Schalter aus) haelt nichts auf, ein gescheitertes schon: dann
     # entstuenden Pakete mit der alten Bibliothek, obwohl eine neue verlangt war.

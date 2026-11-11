@@ -95,7 +95,11 @@ jobs:
 
   pakete:
     name: Pakete
-    runs-on: ubuntu-latest
+    # FEST auf 24.04, nicht ubuntu-latest: seit dem Wechsel von ubuntu-latest auf 26.04 (ab
+    # 2026-10-19) scheiterte "Werkzeuge" zweimal an der Namensaufloesung von security.ubuntu.com.
+    # Und fuer AppImage, deb und rpm ist die aeltere Basis ohnehin besser: was dort gebaut wird,
+    # verlangt auf dem Zielrechner hoechstens deren glibc (2.39). Gilt fuer alle Ubuntu-Jobs.
+    runs-on: ubuntu-24.04
     if: ${{ inputs.pakete != 'msix' }}
 
     steps:
@@ -210,7 +214,7 @@ jobs:
 
   msix-nutzlast:
     name: MSIX - Nutzlast (Linux)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Bei "msix" und "alle" laeuft der Job IMMER; ohne Paketversion bildet package.sh sie aus
     # VERSION (0.9.56-2 ergibt 1.0.9562.0). Frueher baute "alle" sie nur mit eingetragener Nummer,
     # und die musste man bei jedem Lauf von Hand ausrechnen.
@@ -330,7 +334,7 @@ jobs:
 
   veroeffentlichen:
     name: Ins Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [pakete]
     # Laeuft, wenn der Bau-Job gebaut hat und nicht gescheitert ist. Uebersprungen (bei "msix")
     # zaehlt nicht als Fehler, veroeffentlicht dann aber auch nichts.
@@ -383,7 +387,7 @@ jobs:
   # "actions: write"; ein Lauf, der sich nicht loeschen laesst, haelt nichts auf.
   aufraeumen:
     name: Alte Laeufe loeschen
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: write
 
