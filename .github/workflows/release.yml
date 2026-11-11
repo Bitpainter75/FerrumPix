@@ -153,6 +153,16 @@ jobs:
           # Bis zu drei Versuche. Scheitert einer, kommt vor dem naechsten die urspruengliche
           # Spiegelliste samt Azure zurueck: lieber ein Spiegel, der manchmal klemmt (dagegen helfen
           # die Zeitschranken oben), als keiner, dessen Name sich aufloesen laesst.
+          # Loest die Maschine die Ubuntu-Server gar nicht auf (2026-11-11 vier Laeufe lang, auch den
+          # Azure-Spiegel nicht), geht der naechste Versuch ueber oeffentliche Namensserver. Nur im
+          # Fehlerfall: ein gesunder Lauf bleibt beim Namensdienst des Laeufers.
+          oeffentliches_dns() {
+            sudo mkdir -p /etc/systemd/resolved.conf.d
+            printf '[Resolve]\nDNS=1.1.1.1 8.8.8.8\nFallbackDNS=9.9.9.9\nDomains=~.\n' \
+              | sudo tee /etc/systemd/resolved.conf.d/99-release-dns.conf >/dev/null
+            sudo systemctl restart systemd-resolved || true
+            echo "Namensaufloesung jetzt ueber 1.1.1.1 und 8.8.8.8:"; getent hosts archive.ubuntu.com || true
+          }
           apt_mit_wiederholung() {
             for versuch in 1 2 3; do
               if sudo apt-get update && sudo apt-get install -y "$@"; then return 0; fi
@@ -161,6 +171,7 @@ jobs:
                 sudo cp /tmp/apt-mirrors.orig /etc/apt/apt-mirrors.txt
                 echo "Spiegelliste wieder mit Azure"
               fi
+              oeffentliches_dns
               sleep 20
             done
             return 1
@@ -278,10 +289,21 @@ jobs:
             | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
           # Bis zu drei Versuche wie im Job "Pakete": am 2026-11-11 loesten die Laeufer die
           # Ubuntu-Server mehrmals nicht auf.
+          # Loest die Maschine die Ubuntu-Server gar nicht auf (2026-11-11 vier Laeufe lang, auch den
+          # Azure-Spiegel nicht), geht der naechste Versuch ueber oeffentliche Namensserver. Nur im
+          # Fehlerfall: ein gesunder Lauf bleibt beim Namensdienst des Laeufers.
+          oeffentliches_dns() {
+            sudo mkdir -p /etc/systemd/resolved.conf.d
+            printf '[Resolve]\nDNS=1.1.1.1 8.8.8.8\nFallbackDNS=9.9.9.9\nDomains=~.\n' \
+              | sudo tee /etc/systemd/resolved.conf.d/99-release-dns.conf >/dev/null
+            sudo systemctl restart systemd-resolved || true
+            echo "Namensaufloesung jetzt ueber 1.1.1.1 und 8.8.8.8:"; getent hosts archive.ubuntu.com || true
+          }
           for versuch in 1 2 3; do
             if sudo apt-get update && sudo apt-get install -y imagemagick xz-utils; then break; fi
             echo "apt: Versuch $versuch gescheitert"
             [ "$versuch" = 3 ] && exit 1
+            oeffentliches_dns
             sleep 20
           done
 
