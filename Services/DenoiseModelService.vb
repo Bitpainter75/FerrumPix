@@ -414,6 +414,7 @@ Namespace Services
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
                 Return Nothing
             End Try
+            If RestoreCoarseLevelsEnabled Then RestoreCoarseLevels(samples, result, width, height, CoarseLevelCell)
             clock.Stop()
             LastReport = String.Format(
                 LocalizationService.T("Bild {0}x{1}, {2} Kacheln, {3} s"),
@@ -421,6 +422,90 @@ Namespace Services
             DiagnosticLogService.LogAlways("Entrauschen", LastReport)
             Return result
         End Function
+
+        ''' <summary>Kantenlaenge der Bloecke, ueber die RestoreCoarseLevels Pegel und Farbe
+        ''' zurueckholt, in Bildpunkten der RAW-Stufe.</summary>
+        Private Const CoarseLevelCell As Integer = 16
+
+        ''' <summary>Holt Pegel und Farbe der groben Flaechen nach dem Modell zurueck. Nur fuer
+        ''' Messungen abschaltbar (TreeNetMessung/Tiefen, ueber Reflexion).</summary>
+        Friend Shared RestoreCoarseLevelsEnabled As Boolean = True
+
+        ''' <summary>TreeNet soll das RAUSCHEN nehmen, nicht Pegel und Farbe der Flaechen. Gemessen
+        ''' hat es in angehobenen Tiefen beides verschoben: im Mittel 1,6 L* dunkler und ein
+        ''' kraeftigerer Stich, bei ISO 32000 und mehr bis 5 L* und 15 Delta E
+        ''' (Diagnostics/TreeNetMessung, "Tiefen"). Vermutlich nimmt es mit dem Rauschen auch die
+        ''' Anhebung weg, die das Abschneiden negativer Werte nach dem Schwarzabzug im Rauschen der
+        ''' tiefsten Schatten erzeugt.
+        '''
+        ''' Deshalb hier: je Block von <paramref name="cell"/> Punkten der Mittelwert von Eingang und
+        ''' Ergebnis je Kanal, der Unterschied zwischen den Blockmitten bilinear verteilt und auf das
+        ''' Ergebnis gelegt. Was feiner ist als ein Block (das Rauschen, die Zeichnung), bleibt, wie
+        ''' das Modell es gemacht hat; was groeber ist, kommt vom Sensor. Ueber Weiss aendert sich
+        ''' nichts: dort ist das Ergebnis ohnehin der Eingang. Kostet zwei Durchgaenge ueber das Bild
+        ''' und einige hundert Kilobyte, keine Gleitkomma-Kopie des Bildes.
+        '''
+        ''' Gemessen an 13 RAWs von ISO 1600 bis 204800, angehobene Tiefen: die Helligkeit weicht im
+        ''' Mittel um 0,5 statt 1,6 L* ab (schlimmster Fall 1,2 statt 5,3), das Restrauschen bleibt
+        ''' gleich niedrig. Angeglichen wird in den LINEAREN Daten: in einem Potenzraum naeher am
+        ''' Sehen (Gamma 2,2 und 3,0) wurde die Helligkeit schlechter getroffen (1,7 und 2,1 L*). Den
+        ''' kraeftigeren Farbstich in den Tiefen behebt keine Fassung; er ist wohl echt, das Rauschen
+        ''' liess die Farbe dort vorher grauer wirken.</summary>
+        Private Shared Sub RestoreCoarseLevels(noisy As Byte(), result As Byte(), width As Integer, height As Integer,
+                                               cell As Integer)
+            Dim gw = (width + cell - 1) \ cell
+            Dim gh = (height + cell - 1) \ cell
+            Dim diff(gw * gh * 3 - 1) As Single
+            Threading.Tasks.Parallel.For(0, gh,
+                Sub(by)
+                    Dim sumN(gw * 3 - 1) As Double, sumR(gw * 3 - 1) As Double, count(gw - 1) As Integer
+                    Dim yEnd = Math.Min(height, (by + 1) * cell)
+                    For y = by * cell To yEnd - 1
+                        Dim rowStart = CLng(y) * width * 6
+                        For x = 0 To width - 1
+                            Dim bx = x \ cell
+                            Dim p = CInt(rowStart + CLng(x) * 6)
+                            For c = 0 To 2
+                                Dim q = p + c * 2
+                                sumN(bx * 3 + c) += CInt(noisy(q)) Or (CInt(noisy(q + 1)) << 8)
+                                sumR(bx * 3 + c) += CInt(result(q)) Or (CInt(result(q + 1)) << 8)
+                            Next
+                            count(bx) += 1
+                        Next
+                    Next
+                    For bx = 0 To gw - 1
+                        If count(bx) = 0 Then Continue For
+                        For c = 0 To 2
+                            diff((by * gw + bx) * 3 + c) = CSng((sumN(bx * 3 + c) - sumR(bx * 3 + c)) / count(bx))
+                        Next
+                    Next
+                End Sub)
+            Threading.Tasks.Parallel.For(0, height,
+                Sub(y)
+                    Dim fy = (y + 0.5) / cell - 0.5
+                    Dim y0 = Math.Max(0, Math.Min(gh - 1, CInt(Math.Floor(fy))))
+                    Dim y1 = Math.Min(gh - 1, y0 + 1)
+                    Dim ty = CSng(Math.Max(0.0, Math.Min(1.0, fy - y0)))
+                    Dim rowStart = CLng(y) * width * 6
+                    For x = 0 To width - 1
+                        Dim fx = (x + 0.5) / cell - 0.5
+                        Dim x0 = Math.Max(0, Math.Min(gw - 1, CInt(Math.Floor(fx))))
+                        Dim x1 = Math.Min(gw - 1, x0 + 1)
+                        Dim tx = CSng(Math.Max(0.0, Math.Min(1.0, fx - x0)))
+                        Dim p = CInt(rowStart + CLng(x) * 6)
+                        For c = 0 To 2
+                            Dim d00 = diff((y0 * gw + x0) * 3 + c), d01 = diff((y0 * gw + x1) * 3 + c)
+                            Dim d10 = diff((y1 * gw + x0) * 3 + c), d11 = diff((y1 * gw + x1) * 3 + c)
+                            Dim d = (d00 * (1 - tx) + d01 * tx) * (1 - ty) + (d10 * (1 - tx) + d11 * tx) * ty
+                            Dim q = p + c * 2
+                            Dim v = (CInt(result(q)) Or (CInt(result(q + 1)) << 8)) + d
+                            Dim s = If(v <= 0.0F, 0, If(v >= 65535.0F, 65535, CInt(Math.Round(v))))
+                            result(q) = CByte(s And &HFF)
+                            result(q + 1) = CByte(s >> 8)
+                        Next
+                    Next
+                End Sub)
+        End Sub
 
         ''' <summary>Die Sammelstelle fuer eine Kachelzeile: Summe der gewichteten Ergebnisse und
         ''' der Gewichte je Bildpunkt, fuer die Zeilen ab <see cref="Top"/>.</summary>
