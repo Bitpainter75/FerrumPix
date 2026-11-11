@@ -7112,8 +7112,13 @@ Namespace ViewModels
             ''' zu aktualisieren - und bis dahin arbeitet alles weiter.</summary>
             Public ReadOnly Property IsUpdatable As Boolean
                 Get
-                    Return IsComplete AndAlso
-                           Files.Any(Function(d) AiModelService.IsUpdatable(d.Key))
+                    If IsComplete Then Return Files.Any(Function(d) AiModelService.IsUpdatable(d.Key))
+                    ' Eine Datei kam der Gruppe NEU hinzu, und der Nutzer hat die Funktion schon
+                    ' (eine andere Datei der Gruppe oder eine, die die neue abloest): das ist fuer
+                    ' ihn eine Aktualisierung, kein Teilstand (ModelEntry.NewInGroup).
+                    Dim missing = Files.Where(Function(d) String.IsNullOrEmpty(AiModelService.BestFile(d.Key))).ToList()
+                    If missing.Count = 0 OrElse Not missing.All(Function(d) d.NewInGroup) Then Return False
+                    Return PresentCount > 0 OrElse missing.Any(Function(d) AiModelService.HasReplacedFile(d.Key))
                 End Get
             End Property
 

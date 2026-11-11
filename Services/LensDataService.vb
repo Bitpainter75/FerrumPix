@@ -901,6 +901,11 @@ Namespace Services
             ''' Wahl, weil sie schon durch jeden Decode-Weg gereicht wird; mit dem Objektiv hat
             ''' er sonst nichts zu tun. Nothing als Wahl heisst: kein Beschnitt.
             Public Property CropSensorEdge As Boolean
+            ''' Entrauschen mit Modell in der RAW-Stufe (ImageAdjustments.RawModelDenoise), Staerke 0
+            ''' bis 100, kleiner null fuer aus. Haengt aus demselben Grund an der Wahl wie der
+            ''' Sensorrand. Der Decode nimmt es nur, wenn das Ergebnis des Modells schon bereitliegt
+            ''' (RawDecodeService.PrepareModelDenoise).
+            Public Property ModelDenoiseStrength As Double = -1
         End Class
 
         ''' <summary>Der Faktor einer Feinkorrektur: 100 auf dem Regler heisst, der Kanal wird bei

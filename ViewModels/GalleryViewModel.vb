@@ -13354,7 +13354,8 @@ Namespace ViewModels
         ''' dazwischen geaendert, wird dort neu gemessen. Das ist selten und dann richtig.</summary>
         Private Shared Function WriteRecipeInPlace(source As String, template As ImageAdjustments,
                                                    isAutoEnhance As Boolean,
-                                                   Optional replacePixelAdjustments As Boolean = False) As RawSidecarService.ModifyRecipeResult
+                                                   Optional replacePixelAdjustments As Boolean = False,
+                                                   Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As RawSidecarService.ModifyRecipeResult
             RawSidecarService.TryImportFromXmpSidecar(source)
             Dim isRaw = RawPreviewService.IsSupportedRaw(source)
             Dim makeStartValues = Function() If(isRaw, ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
@@ -13379,6 +13380,12 @@ Namespace ViewModels
                 ImageProcessor.ApplyAutoAdjustmentsTo(measured, source)
             End If
 
+            ' Das Entrauschen als Einstellung der RAW-Stufe, wie der Knopf im Editor: ins Rezept
+            ' kommen Schalter und Staerke, das Modell laeuft erst, wenn das Bild geoeffnet oder
+            ' ausgegeben wird. Traegt das Rezept schon ein Entrauschen, gilt es, wie im Speicherweg.
+            ' Eine DNG mit fertigem Bild kann es nicht aufnehmen (dort waere es gebacken) und bleibt.
+            Dim denoiseStrength = BatchRecipeDenoiseStrength(source, If(existing, startValues), denoise)
+
             Return RawSidecarService.TryModifyRecipeDetailed(
                 source,
                 Function() If(startValues, makeStartValues()),
@@ -13388,19 +13395,50 @@ Namespace ViewModels
                     If measured IsNot Nothing AndAlso
                        String.Equals(FpxService.SerializeAdjustments(adj), measuredBase, StringComparison.Ordinal) Then
                         adj.CopyPixelAdjustmentsFrom(measured)
-                        Return
-                    End If
-                    ' Eingefuegte Anpassungen ERSETZEN die Bildanpassungen, wie "Anpassungen
-                    ' einfuegen" im Editor; eine Vorlage legt nur ihre gesetzten Regler auf.
-                    If replacePixelAdjustments Then
-                        adj.CopyPixelAdjustmentsFrom(template)
                     Else
-                        adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                        ' Eingefuegte Anpassungen ERSETZEN die Bildanpassungen, wie "Anpassungen
+                        ' einfuegen" im Editor; eine Vorlage legt nur ihre gesetzten Regler auf.
+                        If replacePixelAdjustments Then
+                            adj.CopyPixelAdjustmentsFrom(template)
+                        Else
+                            adj.MergeNonDefaultPixelAdjustmentsFrom(template)
+                        End If
+                        If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                     End If
-                    If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
+                    ' Erst danach, sonst passte der Stand oben nie zur Messung.
+                    If denoiseStrength.HasValue AndAlso Not adj.RawModelDenoise Then
+                        adj.RawModelDenoise = True
+                        adj.RawModelDenoiseStrength = CSng(denoiseStrength.Value)
+                    End If
                 End Sub,
                 developedThumbnail:=True,
                 decideEdited:=Function(adj) wasEdited OrElse adj.IsEditedComparedTo(reference))
+        End Function
+
+        ''' <summary>Die Staerke, mit der das Ueberschreiben im Stapel ein Entrauschen ins Rezept
+        ''' dieser Datei schreibt, oder Nothing, wenn es nichts schreibt: kein Auftrag, eine Datei
+        ''' DNG mit fertigem Bild, die an der RAW-Stufe vorbeilaeuft (dort waere es gebacken), ein Rezept mit schon gesetztem Entrauschen (es
+        ''' gilt, wie im Speicherweg), oder die Automatik haelt es fuer unnoetig. Die Automatik
+        ''' misst wie dort am entwickelten Bild vor den Reglern; das kostet einen Decode je Datei,
+        ''' das Modell selbst laeuft hier nicht.</summary>
+        Private Shared Function BatchRecipeDenoiseStrength(source As String, recipe As ImageAdjustments,
+                                                           denoise As DenoiseModelService.DenoiseRequest) As Double?
+            If denoise Is Nothing Then Return Nothing
+            Dim name = IO.Path.GetFileName(source)
+            If Not DenoiseModelService.UsesRawStage(source) Then
+                DiagnosticLogService.LogAlways("Entrauschen", $"{name}: fertiges Bild ohne RAW-Stufe, das Rezept nimmt kein Entrauschen auf - ausgelassen")
+                Return Nothing
+            End If
+            If recipe IsNot Nothing AndAlso recipe.RawModelDenoise Then
+                DiagnosticLogService.LogAlways("Entrauschen", $"{name}: Rezept traegt schon ein Entrauschen - es gilt")
+                Return Nothing
+            End If
+            If Not denoise.Automatic Then Return DenoiseModelService.StrengthForRequest(Nothing, denoise, name)
+            Dim ignored As ImageAdjustments = Nothing
+            Using developed = ImageProcessor.DecodeForRender(source, recipe, ignored, True)
+                If developed Is Nothing Then Return Nothing
+                Return DenoiseModelService.StrengthForRequest(developed, denoise, name)
+            End Using
         End Function
 
         ''' <summary>"Anpassungen anwenden" mit Ueberschreiben fuer RAW und PSD: die Vorlage kommt
@@ -13416,7 +13454,8 @@ Namespace ViewModels
         ''' und es gibt nur einen Decode gleichzeitig.</summary>
         Private Async Function WriteRecipesInPlaceAsync(targets As List(Of String), template As ImageAdjustments,
                                                         isAutoEnhance As Boolean,
-                                                        Optional replacePixelAdjustments As Boolean = False) As Task(Of Integer)
+                                                        Optional replacePixelAdjustments As Boolean = False,
+                                                        Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As Task(Of Integer)
             If targets Is Nothing OrElse targets.Count = 0 Then Return 0
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
@@ -13429,7 +13468,7 @@ Namespace ViewModels
                 Await Task.Run(Sub()
                     For Each source In targets
                         If BatchWasCancelled() Then Exit For
-                        Select Case WriteRecipeInPlace(source, template, isAutoEnhance, replacePixelAdjustments)
+                        Select Case WriteRecipeInPlace(source, template, isAutoEnhance, replacePixelAdjustments, denoise)
                             Case RawSidecarService.ModifyRecipeResult.Written
                                 changedCount += 1
                             Case RawSidecarService.ModifyRecipeResult.Unreadable
@@ -13737,10 +13776,19 @@ Namespace ViewModels
             ' RAW und PSD sind ueberschreibbar, indem sie ihr Rezept bekommen (IsBatchRecipeWritable).
             Dim ueberschreibbar = targetItems.All(Function(i) IsBatchImageEditWritable(i.FilePath) OrElse IsBatchRecipeWritable(i))
             Dim recipeCount = targetItems.Where(Function(i) IsBatchRecipeWritable(i)).Count()
+            ' Beim Ueberschreiben nimmt jede RAW, die LibRaw in die RAW-Stufe entwickelt, das
+            ' Entrauschen ins Rezept; eine Photoshop-Datei und eine DNG-Huelle um ein fertiges Bild
+            ' koennen das nicht und sperren es (MainWindowViewModel.IsDialogBatchDenoiseLockedByRecipes), statt
+            ' spaeter still ausgelassen zu werden. UsesRawStage liest dafuer den Kopf jeder RAW ueber
+            ' LibRaw (kein Decode); im Hintergrund, damit eine grosse Auswahl die Oberflaeche nicht
+            ' anhaelt.
+            Dim recipeTargets = targetItems.Where(Function(i) IsBatchRecipeWritable(i)).Select(Function(i) i.FilePath).ToList()
+            Dim denoiseBlockedCount = Await Task.Run(Function() recipeTargets.Where(Function(p) Not DenoiseModelService.UsesRawStage(p)).Count())
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
                                                             sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
-                                                            recipeCount:=recipeCount)
+                                                            recipeCount:=recipeCount,
+                                                            denoiseBlockedCount:=denoiseBlockedCount)
             If result Is Nothing Then Return
             Dim applyPendingBaked = result.ApplyPendingBaked
 
@@ -13795,7 +13843,8 @@ Namespace ViewModels
                 Dim recipePaths = localPaths.Where(AddressOf RawSidecarService.IsSidecarFormat).ToList()
                 Dim pixelPaths = localPaths.Where(Function(p) Not RawSidecarService.IsSidecarFormat(p)).ToList()
                 changedCount = Await RewriteImagesInPlaceAsync(pixelPaths, writer)
-                changedCount += Await WriteRecipesInPlaceAsync(recipePaths, adjustmentsTemplate, isAutoEnhance)
+                changedCount += Await WriteRecipesInPlaceAsync(recipePaths, adjustmentsTemplate, isAutoEnhance,
+                                                               denoise:=result.Denoise)
                 ' In Immich gibt es kein Überschreiben an Ort und Stelle - dort entsteht wie bei den
                 ' übrigen Stapelaktionen ein neues Asset.
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,

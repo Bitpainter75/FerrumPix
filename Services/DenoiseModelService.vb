@@ -7,161 +7,60 @@ Imports SkiaSharp
 
 Namespace Services
 
-    ''' <summary>Rauschen mit einem gelernten Modell entfernen.
+    ''' <summary>Rauschen mit einem gelernten Modell entfernen, NUR FUER RAW-DATEIEN.
     '''
-    ''' Der Unterschied zu den vorhandenen Reglern ist die Art der Entscheidung: ein Weichzeichner
-    ''' muss zwischen Rauschen und feiner Struktur abwaegen und verliert dabei immer etwas, weil er
-    ''' beides nur an der Groesse unterscheiden kann. Das Modell hat gelernt, wie Korn aussieht und
-    ''' wie ein Haar - es nimmt das eine weg und laesst das andere stehen.
+    ''' Der Unterschied zu den Reglern ist die Art der Entscheidung: ein Weichzeichner muss zwischen
+    ''' Rauschen und feiner Struktur abwaegen und verliert dabei immer etwas, weil er beides nur an
+    ''' der Groesse unterscheiden kann. Das Modell hat gelernt, wie Sensorrauschen aussieht und wie
+    ''' ein Haar - es nimmt das eine weg und laesst das andere stehen.
     '''
-    ''' ACHTUNG, das ist der Grund fuer jede Vorsicht hier: Entrauschen laeuft ueber JEDEN Bildpunkt,
-    ''' nicht ueber einen Fleck wie das Objektentfernen. Gemessen kostet das rund siebzehn Sekunden
-    ''' je Megapixel auf der CPU, ein Foto mit 12 Megapixeln also gut dreieinhalb Minuten. Das ist
-    ''' keine Groesse, die sich durch besseren Code aendert - sie steckt im Modell.</summary>
-    Public NotInheritable Class DenoiseModelService
+    ''' DAS MODELL IST TREENET (RawForge, MIT; trainiert auf RawNIND, CC BY-SA 4.0), und es rechnet
+    ''' auf den LINEAREN Daten der RAW-Stufe, vor Belichtungsrampe und Tonkurve. Dort sieht es das
+    ''' Rauschen so, wie der Sensor es geliefert hat, und bekommt die ISO als zweiten Eingang. Die
+    ''' frueheren Modelle (SCUNet, NAFNet) rechneten fuer alle Bilder am fertigen 8-Bit-Bild; fuer RAWs
+    ''' sind sie ersetzt, SCUNet ganz:
+    ''' gemessen an zwoelf RAWs von ISO 100 bis 204800 verschiebt TreeNet die Farben am wenigsten
+    ''' und behaelt die meiste Zeichnung, bei der Zeit des frueheren schnellen Modells (Zahlen in
+    ''' OFFENE_PUNKTE.md, "Entrauschen mit Modell", und in Diagnostics/TreeNetMessung).
+    '''
+    ''' WARUM NUR RAW: das Modell ist auf Sensordaten trainiert. Ein JPEG hat Tonkurve, Schaerfung
+    ''' und Kompression hinter sich, sein Rauschen sieht anders aus. Fertige Bilder bekommen das
+    ''' fruehere schnelle Modell (NAFNet, an Handyfotos gelernt) am 8-Bit-Bild, eingebacken
+    ''' (DenoiseModelServiceImage.vb). Derselbe Knopf waehlt den Weg nach der Datei.
+    '''
+    ''' AUCH X-TRANS, mit demselben Modell. Es bekommt die Daten NACH dem Demosaic, und dort hielt
+    ''' es an sechs Fuji-RAWs (ISO 1600 bis 8000, Diagnostics/TreeNetMessung) mit: kleinster
+    ''' Farbabstand und meiste Zeichnung in allen sechs, keine Labyrinthmuster. RawForges eigenes
+    ''' X-Trans-Modell (nur als PyTorch-Datei) braucht es deshalb nicht.</summary>
+    Partial Public NotInheritable Class DenoiseModelService
 
         Private Sub New()
         End Sub
 
-        ''' <summary>Welches der beiden Modelle rechnet.
-        '''
-        ''' Die beiden unterscheiden sich nicht in der Aufgabe, sondern im Handel zwischen Zeit und
-        ''' Zeichnung, und der ist gemessen (Zahlen in FALLEN_UND_ENTSCHEIDUNGEN.md):
-        '''
-        ''' QUALITAET nimmt an einer nachtlichen Fassade 79 Prozent des Rauschens und laesst dabei
-        ''' 75 Prozent der mittleren Zeichnung und 92 Prozent der starken Kanten stehen. Es kostet
-        ''' rund siebzehn Sekunden je Megapixel, ein Zwoelf-Megapixel-Foto also gut dreieinhalb
-        ''' Minuten.
-        '''
-        ''' SCHNELL nimmt genauso viel Rauschen, laesst aber nur 56 beziehungsweise 81 Prozent
-        ''' stehen - sichtbar glatter. Dafuer rechnet es rund sechsmal schneller, dasselbe Foto also
-        ''' in gut einer halben Minute.
-        '''
-        ''' Keines ist allgemein besser. Wer die Wartezeit hat, nimmt das erste.
-        '''
-        ''' ZWEI weitere Wege waren eingebaut und sind wieder heraus, beide nach einem Test am
-        ''' echten Foto: DRUNet (Rauschstaerke als vierter Eingangskanal, schlechter als der
-        ''' schnelle Weg bei dreifacher Rechenzeit) und ein auf das Wiederherstellen von Fotos
-        ''' trainiertes Modell (das teuerste der drei, ohne dass sich das im Bild gezeigt haette).
-        ''' Die Zahlen und die Begruendung stehen in FALLEN_UND_ENTSCHEIDUNGEN.md - nicht erneut
-        ''' vorschlagen.</summary>
-        Public Enum DenoiseKind
-            Quality = 0
-            Fast = 1
-        End Enum
+        ''' <summary>Der Schluessel des Modells im Register (AiModelService.KnownEntries).</summary>
+        Public Const ModelFile As String = "treenet"
 
-        ''' <summary>Das Modell fuer Qualitaet. Heisst ModelFile, weil es das voreingestellte ist -
-        ''' die Diagnose und die Verfuegbarkeitspruefung fragen danach.</summary>
-        Public Const ModelFile As String = "scunet"
-
-        ''' <summary>Und das schnelle.</summary>
-        Public Const FastModelFile As String = "nafnet"
-
-        Private Shared Function KeyFor(kind As DenoiseKind) As String
-            Select Case kind
-                Case DenoiseKind.Fast : Return FastModelFile
-                Case Else : Return ModelFile
-            End Select
-        End Function
-
-        ''' <summary>Der Name, unter dem ein Durchlauf im REZEPT vermerkt wird (BakedOperation).
-        '''
-        ''' EINE Stelle fuer beide Richtungen, zusammen mit <see cref="KindFromRecipeName"/>. Vorher
-        ''' stand die Zuordnung im Editor und im Nachziehweg getrennt, und beide fielen bei allem,
-        ''' was nicht "fast" hiess, auf "gruendlich" zurueck: ein dritter Weg wuerde damit still als
-        ''' gruendlich vermerkt und beim Oeffnen mit dem falschen Modell nachgezogen. Wer die
-        ''' Aufzaehlung erweitert, muss hier vorbei - Unbekanntes wird abgewiesen statt geraten.</summary>
-        Public Shared Function RecipeNameFor(kind As DenoiseKind) As String
-            Select Case kind
-                Case DenoiseKind.Fast : Return "fast"
-                Case DenoiseKind.Quality : Return "quality"
-                Case Else
-                    DiagnosticLogService.LogAlways("Entrauschen", $"unbekannte Modellart {CInt(kind)} - Vermerk bleibt leer")
-                    Return ""
-            End Select
-        End Function
-
-        ''' <summary>Die Gegenrichtung: aus dem Vermerk im Rezept die Modellart. NOTHING heisst
-        ''' "kenne ich nicht" - der Aufrufer laesst den Vorgang dann liegen, statt ihn mit einem
-        ''' anderen Modell nachzuziehen. Ein leerer Vermerk stammt aus der Zeit vor dem Feld und
-        ''' meint die Vorgabe.</summary>
-        Public Shared Function KindFromRecipeName(name As String) As DenoiseKind?
-            If String.IsNullOrWhiteSpace(name) Then Return DenoiseKind.Quality
-            If String.Equals(name, "fast", StringComparison.OrdinalIgnoreCase) Then Return DenoiseKind.Fast
-            If String.Equals(name, "quality", StringComparison.OrdinalIgnoreCase) Then Return DenoiseKind.Quality
-            Return Nothing
-        End Function
-
-        ''' <summary>Der Name des Weges fuer den Bericht. NICHT "NameOf" nennen - das ist in VB ein
-        ''' Schluesselwort, und der Name waere still ueberdeckt.</summary>
-        Private Shared Function KindName(kind As DenoiseKind) As String
-            Select Case kind
-                Case DenoiseKind.Fast : Return "schnell"
-                Case Else : Return "Qualität"
-            End Select
-        End Function
-
-        ''' <summary>Kantenlaenge einer Kachel, im Regelfall.
-        '''
-        ''' Das Modell nimmt freie Groessen, also waere auch das ganze Bild moeglich - aber der
-        ''' Speicher waechst mit der Flaeche, und ein 40-Megapixel-Bild als ein Tensor sind mehrere
-        ''' Gigabyte. Die Rechenzeit haengt ohnehin nur an der Gesamtflaeche und nicht an der
-        ''' Kachelgroesse; gemessen sind 256er und 512er Kacheln gleich schnell.
-        '''
-        ''' Nach oben ist damit auch nichts zu holen: 1024 ist nicht schneller, sondern nur groesser
-        ''' im Bedarf, und faellt schon auf einer Karte mit acht Gigabyte um. Die Kachelgroesse ist
-        ''' hier deshalb kein Regler fuer Tempo, sondern nur ein Schutz nach unten.
-        '''
-        ''' Jede Kantenlaenge muss durch 64 teilbar sein - siehe die Begruendung an der
-        ''' Ausschnittsberechnung in <see cref="Denoise"/>.</summary>
+        ''' <summary>Kantenlaenge einer Kachel, im Regelfall. Das Modell nimmt freie Groessen, aber
+        ''' der Speicher waechst mit der Flaeche. Durch 64 teilbar, wie bei allen Modellen hier.</summary>
         Private Const LargeTileEdge As Integer = 512
 
-        ''' <summary>Die kleine Kachel fuer Karten mit wenig eigenem Speicher.
-        '''
-        ''' GEMESSEN (Qualitaetsmodell, NVIDIA, WebGPU): die 512er Kachel belegt in der Spitze rund
-        ''' 2300 MiB, die 256er zwischen 630 und 870. Auf einer Karte mit zwei Gigabyte scheitert die
-        ''' grosse also zwangslaeufig - und nicht mit einer Meldung, sondern mit dem Ende des ganzen
-        ''' Prozesses aus nativem Code heraus.</summary>
+        ''' <summary>Die kleine Kachel fuer Karten mit wenig eigenem Speicher.</summary>
         Private Const SmallTileEdge As Integer = 256
 
         ''' <summary>Ab wieviel eigenem Kartenspeicher die grosse Kachel gefahren wird, in Mebibyte.
-        '''
-        ''' Vier Gigabyte, nicht zweieinhalb: die 2300 MiB der Kachel sind nicht alles, was auf der
-        ''' Karte liegt. Dort stehen auch die Gewichte des Modells, der Bildschirminhalt und alles,
-        ''' was sonst noch laeuft - ein Browser nimmt sich ohne weiteres ein Gigabyte. Wer knapp
-        ''' rechnet, hat den Abbruch beim zweiten Fenster.</summary>
+        ''' Vier Gigabyte, weil auf der Karte neben der Kachel auch die Gewichte, der Bildschirminhalt
+        ''' und alles andere liegt, was gerade laeuft.</summary>
         Private Const LargeTileMinimumMiB As Integer = 4096
 
-        ''' <summary>Die Entscheidung selbst, nur an der Zahl.
-        '''
-        ''' Sie steht getrennt, damit sie sich MESSEN laesst: mit welchem Speicher welche Kachel
-        ''' herauskommt, ist sonst nur auf der Karte pruefbar, die gerade im Rechner steckt - und
-        ''' die hat immer genug. Die Grenzfaelle (unbekannt, knapp darunter, genau die Schwelle)
-        ''' faellt sonst niemand auf, bis sie bei einem Nutzer auffallen.
-        '''
-        ''' Unbekannt (0) heisst GROSS und nicht klein: eine Vermutung waere hier schlechter als die
-        ''' Erfahrung, dass es auf den allermeisten Karten passt. Wer eine kleine Karte hat und kein
-        ''' Vulkan, hat ohnehin keine Beschleunigung.</summary>
+        ''' <summary>Die Entscheidung selbst, nur an der Zahl, damit sie sich ohne die Karte pruefen
+        ''' laesst. Unbekannt (0) heisst GROSS: die allermeisten Karten haben genug.</summary>
         Friend Shared Function TileEdgeForMemory(memoryMiB As Integer) As Integer
             If memoryMiB <= 0 OrElse memoryMiB >= LargeTileMinimumMiB Then Return LargeTileEdge
             Return SmallTileEdge
         End Function
 
-        ''' <summary>Wie gross die Kachel in DIESEM Durchlauf sein darf.
-        '''
-        ''' Auf dem Prozessor ist die Frage keine: dort liegt alles im Arbeitsspeicher, und der ist
-        ''' um Groessenordnungen reichlicher. Nur wenn wirklich auf der Karte gerechnet wird, zaehlt
-        ''' deren Speicher.
-        '''
-        ''' Entschieden wird an der SITZUNG, die dieser Lauf benutzt, und nicht an der Einstellung.
-        ''' Der Unterschied ist kein feiner: nimmt die Karte das Modell nicht an, baut
-        ''' <see cref="AiModelService.Session"/> es still auf dem Prozessor, und dort waere die
-        ''' kleine Kachel reine Mehrarbeit an einer Grenze, die es gar nicht gibt.
-        '''
-        ''' Uebergeben wird deshalb der Schluessel der Karte, unter dem die Sitzung GEBAUT wurde
-        ''' (leer heisst Prozessor) - nicht die gerade aktive Karte. Beides kann auseinanderlaufen,
-        ''' waehrend gerechnet wird, und dann gehoerte die Speichergroesse zur falschen Karte oder
-        ''' der Schutz fiele ganz aus.</summary>
+        ''' <summary>Wie gross die Kachel in DIESEM Durchlauf sein darf. Entschieden an der Karte,
+        ''' auf der die Sitzung GEBAUT wurde (leer heisst Prozessor), nicht an der Einstellung.</summary>
         Private Shared Function TileEdgeForRun(accelerator As String) As Integer
             If String.IsNullOrEmpty(accelerator) Then Return LargeTileEdge
             Dim memory = GpuAccelerationService.DeviceMemoryMiBFor(accelerator)
@@ -173,26 +72,31 @@ Namespace Services
             Return edge
         End Function
 
-        ''' <summary>Wie weit sich zwei Kacheln ueberlappen.
-        '''
-        ''' Am Kachelrand hat das Modell auf einer Seite keinen Zusammenhang, und was es dort
-        ''' entscheidet, weicht von der Nachbarkachel ab. Ohne Ueberlappung stuende ein Gitter im
-        ''' Bild. Uebernommen wird nur der innere Teil, der Rand dient als Anlauf.
-        '''
-        ''' Die Ueberlappung ist reine Mehrarbeit: sie wird gerechnet und dann verworfen. Bei 32
-        ''' Punkten waren das rund dreissig Prozent, bei 16 sind es noch knapp vierzehn. Gemessen an
-        ''' einem echten RAW: der Sprung an der Kachelgrenze steigt dabei von 0,47 auf 0,61 Stufen
-        ''' und bleibt damit unter dem, was im Bild ohnehin von Spalte zu Spalte passiert (0,38) -
-        ''' auch bei achtfach ueberhoehtem Kontrast steht dort keine Linie. Bei 8 Punkten wird es
-        ''' messbar schlechter, deshalb ist hier die Grenze und nicht tiefer.</summary>
-        Private Const TileOverlap As Integer = 16
+        ''' <summary>Wie weit sich zwei Kacheln ueberlappen, in Bildpunkten. Im Ueberlapp werden die
+        ''' beiden Ergebnisse WEICH ueberblendet (linear ueber die ganze Breite), nicht hart
+        ''' geschnitten: TreeNet ist ein U-Netz mit grossem Blickfeld, und am Kachelrand fehlt ihm
+        ''' auf einer Seite der Zusammenhang. RawForge selbst ueberlappt um ein Viertel der Kachel;
+        ''' bei 512er Kacheln waeren das 128 Punkte und gut die Haelfte Mehrarbeit. 32 Punkte mit
+        ''' Ueberblendung kosten rund 14 Prozent.</summary>
+        Private Const TileOverlap As Integer = 32
+        ''' <summary>Jede Kachel beginnt auf einem Vielfachen davon. TreeNet ist ein U-Netz, das die
+        ''' Aufloesung mehrfach halbiert; um ungerade Punkte verschoben rechnet es merklich anders.
+        ''' Gemessen an der Pruef-RAW (M50, ISO 12800): gleich verteilte Kacheln an beliebigen
+        ''' Punkten liessen oben links ein Restrauschen von 0,46, auf Vielfachen von 32 0,32; der
+        ''' frueher feste Schritt von 480 lag bei 0,37.</summary>
+        Private Const TileAlign As Integer = 32
+
+        ''' <summary>Rec.2020 ist der Raum, in dem TreeNet trainiert ist; von linearem sRGB (D65)
+        ''' dorthin.</summary>
+        Private Shared ReadOnly SrgbToRec2020 As Single() = {
+            0.6274F, 0.3293F, 0.0433F,
+            0.0691F, 0.9195F, 0.0114F,
+            0.0164F, 0.088F, 0.8956F}
 
         ''' <summary>Was der letzte Durchlauf gerechnet hat. Wird nach dem Entrauschen angezeigt.</summary>
         Public Shared Property LastReport As String = ""
 
-        ''' <summary>Wird nach jeder Kachel gerufen, mit erledigten und gesamten Kacheln. Bei
-        ''' Minuten an Rechenzeit ist eine Rueckmeldung keine Hoeflichkeit, sondern der Unterschied
-        ''' zwischen "es arbeitet" und "es haengt".</summary>
+        ''' <summary>Wird nach jeder Kachel gerufen, mit erledigten und gesamten Kacheln.</summary>
         Public Shared Property Progress As Action(Of Integer, Integer)
 
         Public Shared ReadOnly Property Available As Boolean
@@ -202,86 +106,84 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Steht der schnelle Weg zur Verfuegung? Eigene Frage, weil seine Modelldatei
-        ''' getrennt geholt wird - wer nur die eine hat, soll den einen Weg trotzdem benutzen
-        ''' koennen statt vor einem toten Knopf zu stehen.</summary>
-        Public Shared ReadOnly Property FastAvailable As Boolean
-            Get
-                Return AiModelService.RuntimeAvailable AndAlso
-                       Not String.IsNullOrEmpty(AiModelService.BestFile(FastModelFile))
-            End Get
-        End Property
+        ' ── Welche Dateien ─────────────────────────────────────────────────────────────────────
+
+        Private Shared ReadOnly _supportLock As New Object()
+        Private Shared _supportPath As String = ""
+        Private Shared _supportWriteTime As DateTime
+        Private Shared _supportResult As Boolean
+
+        ''' <summary>Kann das Modell diese Datei entrauschen? Jede RAW, die LibRaw selbst in die
+        ''' RAW-Stufe entwickelt: mit Bayer- oder X-Trans-Muster und ebenso ohne (verkleinerte RAW,
+        ''' lineare DNG, Schwarzweiss). TreeNet rechnet auf dem entwickelten linearen RGB, und an
+        ''' den Dateien ohne Muster verschob es die Farbe wenig und behielt die Zeichnung
+        ''' (Diagnostics/TreeNetMessung, "RAWs ohne Farbmuster"). Nicht: eine DNG-Huelle um ein
+        ''' fertiges Bild (sie laeuft an der RAW-Stufe vorbei) und eine Datei, die LibRaw nicht
+        ''' lesen kann; die gehen an das Bildmodell.
+        '''
+        ''' Kostet ein open_file (unter einer Millisekunde); das Ergebnis der letzten Datei wird
+        ''' gemerkt, weil die Oberflaeche oft fragt.</summary>
+        Public Shared Function SupportsFile(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse Not RawPreviewService.IsSupportedRaw(path) Then Return False
+            Dim writeTime As DateTime
+            Try
+                writeTime = IO.File.GetLastWriteTimeUtc(path)
+            Catch
+                Return False
+            End Try
+            SyncLock _supportLock
+                If String.Equals(_supportPath, path, StringComparison.Ordinal) AndAlso _supportWriteTime = writeTime Then
+                    Return _supportResult
+                End If
+            End SyncLock
+            Dim pattern = RawDecodeService.ReadSensorPattern(path)
+            Dim result = pattern <> RawDecodeService.SensorPattern.Unknown AndAlso pattern <> RawDecodeService.SensorPattern.Finished
+            DiagnosticLogService.LogAlways("Entrauschen", $"{IO.Path.GetFileName(path)}: Sensormuster {pattern}")
+            SyncLock _supportLock
+                _supportPath = path
+                _supportWriteTime = writeTime
+                _supportResult = result
+            End SyncLock
+            Return result
+        End Function
 
         ' ── Staerke aus dem Bild ─────────────────────────────────────────────────────────────
         '
-        ' Eine feste Staerke bedeutet bei jedem Bild etwas anderes: 70 nimmt einem Bild mit ISO 100
-        ' die letzte feine Zeichnung und laesst bei ISO 12800 sichtbar Korn stehen. Die Automatik
-        ' fragt deshalb nicht "wie stark", sondern "wie viel Rauschen soll uebrig bleiben", und
-        ' rechnet die Staerke daraus.
+        ' Eine feste Staerke bedeutet bei jedem Bild etwas anderes. Die Automatik fragt deshalb nicht
+        ' "wie stark", sondern "wie viel Rauschen soll uebrig bleiben", und rechnet die Staerke daraus.
         '
-        ' DAS GEHT, WEIL DIE STAERKE EINE MISCHUNG IST (DenoiseTile): die Helligkeit des Ergebnisses
-        ' liegt zwischen der des Modells und der des Originals, bei Staerke s bleibt also (1 - s) des
-        ' Rauschens stehen. Dazu kommt, was das Modell selbst uebrig laesst - beides zusammen ist
-        ' das Restrauschen:
+        ' DAS GEHT, WEIL DIE STAERKE EINE MISCHUNG IST (RawDecodeService, Mischung der linearen
+        ' Daten): die Helligkeit des Ergebnisses liegt zwischen der des Modells und der des Originals,
+        ' bei Staerke s bleibt also (1 - s) des Rauschens stehen. Dazu kommt, was das Modell selbst
+        ' uebrig laesst:
         '
         '   Rest^2 = Modellrest^2 + (Aufschlag * (1 - s) * Rauschen)^2
         '
-        ' Den Aufschlag und den Modellrest hat die Messung geliefert (Entrauschmessung, Aufruf
-        ' "automatik"); beide stehen unten mit ihren Zahlen.
-        '
-        ' Gemessen wird mit ImageProcessor.EstimateNoiseLevel, derselben Schaetzung wie beim
-        ' angepassten Rauschregler. Sie kostet auf 24 Megapixeln rund 20 Millisekunden - neben
-        ' Minuten fuer das Modell faellt sie nicht ins Gewicht.
+        ' Gemessen wird mit ImageProcessor.EstimateNoiseLevel am entwickelten, noch nicht
+        ' entrauschten Bild.
 
-        ''' <summary>So viel Helligkeitsrauschen soll nach der Automatik uebrig bleiben, als
-        ''' Streuung in Grauwerten.
-        '''
-        ''' AM BILD BEURTEILT, nicht nur gemessen. Zuerst stand hier 1,5, die Hoehe einer sauberen
-        ''' Aufnahme mit ISO 100 bis 200 (an den Testbildern 0,75 bis 2,2). Im Bild wirkte das
-        ''' weichgezeichnet: an einer Aufnahme, fuer die die Automatik 85 vorschlug, war 75 besser.
-        ''' Weil die Staerke 1 - erlaubt / Rauschen ist, heisst das zwei Drittel mehr erlaubtes
-        ''' Restrauschen, und zwar bei jedem Bild gleich. Daraus die 2,4. Folge: ein Bild, das unter
-        ''' rund 2,7 misst, gilt als sauber (Staerke unter 25) und wird im Stapel ausgelassen.</summary>
+        ''' <summary>So viel Helligkeitsrauschen soll nach der Automatik uebrig bleiben, als Streuung
+        ''' in Grauwerten. Am Bild beurteilt; ein Bild unter rund 2,7 gilt als sauber.</summary>
         Public Const AutoTargetNoise As Single = 2.4F
 
         ''' <summary>Was das Modell bei voller Staerke selbst an Streuung stehen laesst, in
-        ''' Grauwerten. Gemessen am schnellen Modell an mittigen Ausschnitten von neun Aufnahmen
-        ''' zwischen ISO 100 und 25600: 0,3 bis 0,9 an Bildern ohne feine Textur. Wo mehr stehen
-        ''' blieb (bis 2,2), war es Zeichnung, die das Modell zu Recht behaelt und die Schaetzung
-        ''' nicht vom Rauschen trennen kann.</summary>
+        ''' Grauwerten. GEMESSEN AM FRUEHEREN SCHNELLEN MODELL (0,3 bis 0,9 an neun Aufnahmen);
+        ''' TreeNet laesst nach der Reihe in TreeNetMessung etwas mehr stehen. Nachmessen steht in
+        ''' OFFENE_PUNKTE.md.</summary>
         Friend Const ModelResidualNoise As Single = 0.5F
 
         ''' <summary>Um so viel liegt das Restrauschen einer Mischung ueber der Rechnung
-        ''' (1 - Staerke) mal Rauschen. Dieselben Messungen bei Staerke 50 und 75 ergaben das 1,0- bis
-        ''' 1,4-Fache, meist 1,1 bis 1,2: die Schaetzung nimmt ein Perzentil der Blockstreuungen, und
-        ''' das waechst nicht linear mit der Beimischung. Ohne den Faktor bliebe gut ein Siebtel mehr
-        ''' Korn stehen als verlangt.</summary>
+        ''' (1 - Staerke) mal Rauschen (gemessen das 1,0- bis 1,4-Fache, meist 1,1 bis 1,2).</summary>
         Friend Const MixResidualFactor As Single = 1.15F
 
-        ''' <summary>Unterhalb dieser Staerke lohnt der Lauf nicht: er kostet Minuten und nimmt
-        ''' weniger als ein Viertel des Rauschens. Der Stapel laesst solche Bilder aus, der Editor
-        ''' sagt es dazu.</summary>
+        ''' <summary>Unterhalb dieser Staerke lohnt der Lauf nicht. Der Stapel laesst solche Bilder
+        ''' aus, der Editor sagt es dazu.</summary>
         Public Const AutoMinimumStrength As Double = 25.0
 
         ''' <summary>Unterhalb dieser Bildgroesse misst die Automatik nicht, in Bildpunkten (drei
-        ''' Megapixel).
-        '''
-        ''' DIE SCHAETZUNG TRENNT RAUSCHEN VON ZEICHNUNG DARUEBER, WIE BEIDE BEIM VERKLEINERN WACHSEN
-        ''' (EstimateNoiseLevel). Das setzt voraus, dass das Bild in der Aufloesung vorliegt, in der es
-        ''' aufgenommen wurde. Ein verkleinertes Bild hat die Zeichnung bereits auf den einzelnen
-        ''' Bildpunkt gedraengt, und dort ist sie von Rauschen nicht mehr zu unterscheiden. Gemessen
-        ''' an 29 JPEGs (Handy, Kamera, Exporte), jedes zusaetzlich auf 1600 und 800 Punkte lange Kante
-        ''' verkleinert: die Automatik schlug bei den Originalen 3-mal an, bei 1600 Punkten 11-mal, bei
-        ''' 800 Punkten 15-mal. Verkleinern mittelt Rauschen weg, jeder Anstieg war also ein
-        ''' Fehlalarm - am deutlichsten ein Bild, das im Original 0,0 mass und auf 800 Punkte 14,6
-        ''' und Staerke 86 bekam. Die Grenze liegt ueber allen verkleinerten Fassungen (hoechstens
-        ''' 2,6 Megapixel) und unter jedem Original einer heutigen Kamera oder eines Handys.
-        '''
-        ''' KEINE ISO-GRENZE DANEBEN. Sie laege nahe, traefe aber das Falsche: ein Handyfoto mit ISO
-        ''' 112 trug sichtbares Korn auf der Haut, weil ein kleiner Sensor bei derselben Zahl viel
-        ''' staerker rauscht als ein grosser.
-        '''
-        ''' Wer ein kleines Bild entrauschen will, stellt die Staerke von Hand ein.</summary>
+        ''' Megapixel). Die Schaetzung trennt Rauschen von Zeichnung darueber, wie beides beim
+        ''' Verkleinern waechst; ein schon verkleinertes Bild taeuscht sie (gemessen an 29 JPEGs).
+        ''' Fuer eine RAW greift die Grenze kaum, sie bleibt als Schutz.</summary>
         Public Const AutoMinimumPixels As Long = 3000000
 
         ''' <summary>Was die Automatik fuer ein Bild vorschlaegt.</summary>
@@ -290,18 +192,14 @@ Namespace Services
             Public Property NoiseLevel As Single = Single.NaN
             ''' <summary>Die Staerke, 0 bis 100.</summary>
             Public Property Strength As Double
-            ''' <summary>Lohnt der Lauf? Falsch heisst: das Bild ist schon so sauber, dass das Modell
-            ''' kaum etwas zu tun haette - oder, mit <see cref="TooSmall"/>, dass es sich nicht sagen
-            ''' laesst.</summary>
+            ''' <summary>Lohnt der Lauf?</summary>
             Public Property Worthwhile As Boolean
-            ''' <summary>Das Bild liegt unter <see cref="AutoMinimumPixels"/>; gemessen wurde nicht,
-            ''' <see cref="NoiseLevel"/> ist NaN.</summary>
+            ''' <summary>Das Bild liegt unter <see cref="AutoMinimumPixels"/>; gemessen wurde nicht.</summary>
             Public Property TooSmall As Boolean
         End Class
 
         ''' <summary>Das Rauschziel fuer einen Restkorn-Wert von 0 bis 100. Bei 50 gilt
-        ''' <see cref="AutoTargetNoise"/>, jede 50 Schritte halbieren oder verdoppeln es: das Auge
-        ''' sieht Rauschen im Verhaeltnis, nicht im Abstand.</summary>
+        ''' <see cref="AutoTargetNoise"/>, jede 50 Schritte halbieren oder verdoppeln es.</summary>
         Public Shared Function TargetNoiseFor(grain As Double) As Single
             Dim g = If(Double.IsNaN(grain), 50.0, Math.Max(0.0, Math.Min(100.0, grain)))
             Return CSng(AutoTargetNoise * Math.Pow(2.0, (g - 50.0) / 50.0))
@@ -313,8 +211,6 @@ Namespace Services
             Dim suggestion As New DenoiseSuggestion With {.NoiseLevel = noiseLevel}
             If Single.IsNaN(noiseLevel) OrElse noiseLevel <= 0 Then Return suggestion
             Dim target = TargetNoiseFor(grain)
-            ' Was vom Original stehen bleiben darf, nachdem der Modellrest abgezogen ist. Liegt das
-            ' Ziel unter dem Modellrest, gibt es nichts mehr abzuziehen: volle Staerke.
             Dim allowed = Math.Sqrt(Math.Max(0.0, CDbl(target) * target - CDbl(ModelResidualNoise) * ModelResidualNoise)) /
                           MixResidualFactor
             Dim strength = 1.0 - allowed / noiseLevel
@@ -323,9 +219,7 @@ Namespace Services
             Return suggestion
         End Function
 
-        ''' <summary>Das Bild messen und die Staerke vorschlagen. Das Bild wird nur gelesen. Ein Bild
-        ''' unter <see cref="AutoMinimumPixels"/> wird nicht gemessen: der Vorschlag lautet dann
-        ''' "keine Messung", genau wie bei einem Bild, an dem sich nichts schaetzen laesst.</summary>
+        ''' <summary>Das Bild messen und die Staerke vorschlagen. Das Bild wird nur gelesen.</summary>
         Public Shared Function Suggest(image As SKBitmap, Optional grain As Double = 50.0) As DenoiseSuggestion
             If image IsNot Nothing AndAlso CLng(image.Width) * image.Height < AutoMinimumPixels Then
                 Dim tooSmall = SuggestFor(Single.NaN, grain)
@@ -335,12 +229,11 @@ Namespace Services
             Return SuggestFor(ImageProcessor.EstimateNoiseLevel(image), grain)
         End Function
 
-        ''' <summary>Ein Entrausch-Auftrag fuer den Stapel: welches Modell und wie die Staerke
-        ''' entsteht. Er geht an <see cref="ImageProcessor.SaveImage"/> und wird dort auf das frisch
-        ''' entwickelte Bild angewandt, vor der Reglerkette - an derselben Stelle wie das
-        ''' Hochskalieren und aus demselben Grund.</summary>
+        ''' <summary>Ein Entrausch-Auftrag fuer den Stapel: wie die Staerke entsteht. Er geht an
+        ''' <see cref="ImageProcessor.SaveImage"/>; dort wird er bei einer RAW in ihr Rezept
+        ''' geschrieben (ImageAdjustments.RawModelDenoise) und wirkt in der RAW-Stufe. Bilder, die
+        ''' keine RAW sind, laesst er aus.</summary>
         Public NotInheritable Class DenoiseRequest
-            Public Property Kind As DenoiseKind = DenoiseKind.Quality
             ''' <summary>Wahr: die Staerke wird je Bild gemessen, <see cref="Grain"/> gilt.
             ''' Falsch: <see cref="Strength"/> gilt fuer jedes Bild.</summary>
             Public Property Automatic As Boolean = True
@@ -350,247 +243,398 @@ Namespace Services
             Public Property Grain As Double = 50.0
         End Class
 
-        ''' <summary>Einen Auftrag auf ein Bild anwenden. Zurueck kommt ein NEUES Bitmap, oder
-        ''' Nothing, wenn das Bild so bleibt: Modell fehlt, die Automatik haelt den Lauf fuer
-        ''' unnoetig, abgebrochen oder fehlgeschlagen. Was davon, sagt das Protokoll; ob
-        ''' abgebrochen wurde, fragt der Aufrufer an seiner Marke nach.</summary>
-        Friend Shared Function ApplyRequest(image As SKBitmap, request As DenoiseRequest, sourceName As String,
-                                            cancel As Threading.CancellationToken) As SKBitmap
-            If image Is Nothing OrElse request Is Nothing Then Return Nothing
-            If request.Kind = DenoiseKind.Fast Then
-                If Not FastAvailable Then Return Nothing
-            ElseIf Not Available Then
+        ''' <summary>Die Staerke, mit der ein Auftrag dieses Bild entrauscht, oder Nothing, wenn es
+        ''' so bleibt (Automatik haelt den Lauf fuer unnoetig, Bild zu klein). Gemessen wird am
+        ''' noch nicht entrauschten, entwickelten Bild.</summary>
+        Friend Shared Function StrengthForRequest(developed As SKBitmap, request As DenoiseRequest, sourceName As String) As Double?
+            If request Is Nothing Then Return Nothing
+            If Not request.Automatic Then Return Math.Max(0.0, Math.Min(100.0, request.Strength))
+            Dim suggestion = Suggest(developed, request.Grain)
+            If suggestion.TooSmall Then
+                DiagnosticLogService.LogAlways("Entrauschen",
+                    $"{sourceName}: zu klein, um Rauschen von Zeichnung zu trennen - ausgelassen")
                 Return Nothing
             End If
-            Dim strength = Math.Max(0.0, Math.Min(100.0, request.Strength))
-            If request.Automatic Then
-                Dim suggestion = Suggest(image, request.Grain)
-                If suggestion.TooSmall Then
-                    DiagnosticLogService.LogAlways("Entrauschen",
-                        $"{sourceName}: {image.Width}x{image.Height} ist zu klein, um Rauschen von Zeichnung zu trennen - ausgelassen")
-                    Return Nothing
-                End If
-                If Not suggestion.Worthwhile Then
-                    DiagnosticLogService.LogAlways("Entrauschen",
-                        $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke waere {suggestion.Strength:F0} - ausgelassen")
-                    Return Nothing
-                End If
-                strength = suggestion.Strength
+            If Not suggestion.Worthwhile Then
                 DiagnosticLogService.LogAlways("Entrauschen",
-                    $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke {strength:F0}")
+                    $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke waere {suggestion.Strength:F0} - ausgelassen")
+                Return Nothing
             End If
-            Return Denoise(image, request.Kind, CSng(strength / 100.0), cancel)
+            DiagnosticLogService.LogAlways("Entrauschen",
+                $"{sourceName}: Rauschen {suggestion.NoiseLevel:F2}, Staerke {suggestion.Strength:F0}")
+            Return suggestion.Strength
         End Function
 
+        ' ── Alte Rezepte ─────────────────────────────────────────────────────────────────────
 
-        ''' <summary>Das Bild entrauschen. Zurueck kommt eine KOPIE, oder Nothing bei jedem
-        ''' Fehlschlag.
+        ''' <summary>Ein Rezept aus der Zeit der beiden 8-Bit-Modelle auf das neue Entrauschen
+        ''' umstellen. Dort stand ein Entrauschen als gebackener Vorgang ("quality" oder "fast",
+        ''' mit Staerke); die Modelle gibt es nicht mehr.
         '''
-        ''' <paramref name="strength"/> geht von 0 bis 1 und gilt NUR fuer die HELLIGKEIT; die Farbe
-        ''' kommt immer voll aus dem Modell. Das ist keine Vereinfachung, sondern gemessen:
+        ''' BEI EINER RAW wird der Vermerk zur Einstellung der RAW-Stufe mit derselben Staerke, und
+        ''' der Vorgang verschwindet aus der Liste. Das Bild sieht danach etwas anders aus als beim
+        ''' Speichern, meist besser; so entschieden, statt die alten Modelle nur dafuer zu behalten.
         '''
-        ''' Bei der Helligkeit ist die Staerke ein echter Handel. An einer naechtlichen Fassade nimmt
-        ''' das Modell bei voller Staerke 79 Prozent des Rauschens, laesst von der SCHWACHEN Zeichnung
-        ''' aber nur 49 Prozent stehen - Fensterrahmen werden waechsern. Bei 60 Prozent sind es 49
-        ''' Prozent Rauschen gegen 60 Prozent Zeichnung. Welche Seite man will, haengt am Bild: an
-        ''' einem Innenraum war die volle Staerke die bessere Wahl, an der Fassade nicht.
+        ''' NUR, WENN DER VORGANG NICHT IN DEN PIXELN STECKT (BakedOperationsApplied falsch). Bei
+        ''' einer .fpx mit angewandtem Vorgang liegt das alte Entrauschen schon im Arbeitsbild des
+        ''' Buendels; ein zweites in der RAW-Stufe waere doppelt.
         '''
-        ''' Bei der Farbe gibt es diesen Handel nicht. Farbrauschen sind grossflaechige Flecken ohne
-        ''' Entsprechung im Motiv; gemessen verschwinden 89 Prozent davon, ohne dass die Helligkeit
-        ''' angefasst wird. Es gibt also nichts zu sparen, und ein Regler dafuer waere ein Regler,
-        ''' den man immer aufdreht.
+        ''' BEI ALLEM ANDEREN (PSD, RAWs ohne passendes Muster) bleibt der Vermerk stehen und wird mit
+        ''' dem Bildmodell nachgezogen (DenoiseModelServiceImage.vb); ein alter Vermerk "quality"
+        ''' ebenso, das fruehere gruendliche Modell gibt es nicht mehr.</summary>
+        Public Shared Sub MigrateLegacyRecipe(adj As ImageAdjustments, sourcePath As String)
+            If adj Is Nothing OrElse adj.BakedOperations Is Nothing OrElse adj.BakedOperationsApplied Then Return
+            ' ERST der Vermerk, DANN die Datei: das Sensormuster kostet ein open_file in LibRaw, und
+            ' das Lesen der Begleitdatei laeuft beim Blaettern fuer jedes Bild.
+            Dim legacy = adj.BakedOperations.LastOrDefault(Function(o) o IsNot Nothing AndAlso
+                String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+            If legacy Is Nothing Then Return
+            If Not UsesRawStage(sourcePath) Then Return
+            adj.BakedOperations.RemoveAll(Function(o) o IsNot Nothing AndAlso
+                String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+            adj.RawModelDenoise = True
+            adj.RawModelDenoiseStrength = Math.Max(0.0F, Math.Min(100.0F, legacy.DenoiseStrength))
+            DiagnosticLogService.LogAlways("Entrauschen",
+                $"{IO.Path.GetFileName(sourcePath)}: altes Entrauschen ({legacy.DenoiseModel}, Staerke {legacy.DenoiseStrength:F0}) auf die RAW-Stufe umgestellt")
+        End Sub
+
+        ' ── Das Rechnen ──────────────────────────────────────────────────────────────────────
+
+        ''' <summary>Lineare 16-Bit-Daten der RAW-Stufe entrauschen. Zurueck kommt ein NEUER Puffer
+        ''' im selben Aufbau (RGB, 16 Bit je Kanal, Zeile an Zeile), oder Nothing bei Fehlschlag oder
+        ''' Abbruch.
         '''
-        ''' Deshalb ist Staerke 0 auch KEIN Nichtstun: die Farbe wird dann trotzdem entrauscht und
-        ''' die Helligkeit unangetastet gelassen. Das ist ein sinnvoller Fall und faellt nicht
-        ''' durch.</summary>
-        ''' <param name="cancel">Abbruch durch den Nutzer. Gewartet wird bis zur naechsten
-        ''' KACHELGRENZE - ein laufender Modelldurchlauf laesst sich nicht mittendrin anhalten, und
-        ''' eine Kachel dauert Sekunden, nicht Minuten. Wird abgebrochen, kommt NOTHING zurueck: der
-        ''' Aufrufer soll ein halb entrauschtes Bild gar nicht erst in die Finger bekommen.</param>
-        Public Shared Function Denoise(image As SKBitmap,
-                                       Optional kind As DenoiseKind = DenoiseKind.Quality,
-                                       Optional strength As Single = 1.0F,
-                                       Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
-            If image Is Nothing OrElse image.Width <= 0 OrElse image.Height <= 0 Then
-                DiagnosticLogService.LogAlways("Entrauschen", "kein Bild uebergeben")
-                Return Nothing
-            End If
-            ' Sitzung und Rechenwerk in EINEM Stueck: die Kachelgroesse haengt daran, und zweimal
-            ' zu fragen hiesse, die zweite Antwort koennte schon zu einer anderen Sitzung gehoeren.
-            Dim loaded = AiModelService.SessionAndDeviceFor(KeyFor(kind))
-            ' DIESE BEIDEN AUSSTIEGE WAREN STUMM, und das ist die schlechteste Sorte Fehler: der
-            ' Lauf endet ohne Wirkung und ohne Spur, und in der Anwendung sieht es aus, als habe das
-            ' Entrauschen nichts getan. Genau so kam es aus einer Nutzermeldung zurueck.
+        ''' DIE DATEN, wie RawDecodeService sie ablegt: entweder schon in linearem sRGB
+        ''' (<paramref name="toneMatrix"/> Nothing) oder im Kameraraum nach dem Weissabgleich, dann
+        ''' fuehrt die Matrix nach linearem sRGB. Weiss liegt bei 65535 / <paramref name="normalization"/>
+        ''' (beim Entklemmen liegen die Daten um diesen Faktor tiefer, damit die Lichter Platz haben).
+        '''
+        ''' DAS MODELL BEKOMMT, was RawForge ihm gibt: lineares Rec.2020, Weiss bei 1, auf 0 bis 1
+        ''' beschnitten, dazu ISO / 6400. Was ueber Weiss liegt (geretteter Lichter), geht nicht
+        ''' verloren: zurueck kommt der Eingang plus die Aenderung des Modells, und die ist dort, wo
+        ''' das Modell nur Weiss sah, null.</summary>
+        Friend Shared Function DenoiseLinear(data As Byte(), width As Integer, height As Integer,
+                                             normalization As Double, toneMatrix As Single(),
+                                             iso As Double,
+                                             cancel As Threading.CancellationToken) As Byte()
+            If data Is Nothing OrElse width <= 0 OrElse height <= 0 Then Return Nothing
+            If CLng(data.Length) < CLng(width) * height * 6 Then Return Nothing
+            Dim loaded = AiModelService.SessionAndDeviceFor(ModelFile)
             If loaded Is Nothing OrElse loaded.Session Is Nothing Then
                 DiagnosticLogService.LogAlways("Entrauschen",
-                    $"Modell {KeyFor(kind)} steht nicht bereit - keine Sitzung. Fehlt die Datei, oder hat die Karte sie abgelehnt?")
+                    $"Modell {ModelFile} steht nicht bereit - keine Sitzung. Fehlt die Datei, oder hat die Karte sie abgelehnt?")
                 Return Nothing
             End If
             Dim session = loaded.Session
-            ' EIN ANDERS BELEGTES BILD WIRD UMGELEGT, statt den Lauf ausfallen zu lassen. Die
-            ' Kachelschleife liest die Bytes fest als BGRA; welchen Farbtyp ein Bild hat, entscheidet
-            ' aber nicht diese Funktion:
-            '
-            '   - Ein Arbeitsbild mit Objekt-Ebenen liegt als Rgba8888 vor.
-            '   - Skia nimmt auf Apple-Geraeten Rgba8888 als bevorzugten Typ, dort ist JEDES
-            '     Arbeitsbild so belegt. Auf dem Mac liess sich deshalb gar nicht entrauschen, und
-            '     zu sehen war nur "Entrauschen fehlgeschlagen" (Nutzermeldung).
-            '
-            ' Der Aufrufer bekommt das Ergebnis als Bgra8888 zurueck - alle Wege hier zeichnen es
-            ' ueber eine Leinwand weiter oder uebernehmen es als neues Arbeitsbild, und beides legt
-            ' den Farbtyp selbst wieder zurecht.
-            Dim converted As SKBitmap = Nothing
-            If image.ColorType <> SKColorType.Bgra8888 Then
-                converted = AsBgra8888(image)
-                If converted Is Nothing Then
-                    DiagnosticLogService.LogAlways("Entrauschen",
-                        $"Bild liegt als {image.ColorType} vor und liess sich nicht auf Bgra8888 umlegen - Lauf faellt aus")
-                    Return Nothing
-                End If
-                image = converted
+
+            ' Vom Speicherwert nach Rec.2020 (Weiss = 1) und zurueck.
+            Dim toSrgb = If(toneMatrix, New Single() {1, 0, 0, 0, 1, 0, 0, 0, 1})
+            Dim forward = Multiply3(SrgbToRec2020, toSrgb)
+            Dim inverse = Invert3(forward)
+            If inverse Is Nothing Then
+                DiagnosticLogService.LogAlways("Entrauschen", "Farbmatrix nicht umkehrbar - Lauf faellt aus")
+                Return Nothing
             End If
+            Dim scale = CSng(Math.Max(1.0, normalization) / 65535.0)
+            Dim cond = CSng(Math.Max(50.0, Math.Min(65535.0, If(iso > 0, iso, 800.0))) / 6400.0)
 
-            Dim amount = Math.Max(0.0F, Math.Min(1.0F, strength))
             Dim edge = TileEdgeForRun(loaded.Accelerator)
-
-            ' DIE ZEILE VOR DEM RECHNEN, und sie ist der eigentliche Grund fuer dieses Protokoll:
-            ' geht dem Modell auf der Karte der Speicher aus, endet nicht der Lauf, sondern der
-            ' ganze PROZESS - aus nativem Code heraus, ohne Ausnahme, die sich fangen liesse. Der
-            ' Abschlussbericht weiter unten kommt dann nie. Was hier steht, ist danach die letzte
-            ' Zeile im Protokoll und sagt, WOMIT es passiert ist: Modell, Bildgroesse, Kachelkante,
-            ' Rechenwerk und der Speicher, den die Karte gemeldet hat.
-            ' Der KLARNAME der Karte und nicht ihr Schluessel: diese Zeile geht in Fehlerberichte,
-            ' und "10de:1287:0000:01:00.0" sagt dort niemandem etwas.
             Dim wo = GpuAccelerationService.DeviceLabelFor(loaded.Accelerator)
-            Dim speicher = If(String.IsNullOrEmpty(loaded.Accelerator), 0,
-                              GpuAccelerationService.DeviceMemoryMiBFor(loaded.Accelerator))
             DiagnosticLogService.LogAlways("Entrauschen",
-                $"Start: {KeyFor(kind)}, Bild {image.Width}x{image.Height}, Kachel {edge}, " &
-                $"Staerke {CInt(amount * 100)} %, auf {wo}, Kartenspeicher {speicher} MiB")
+                $"Start: {ModelFile}, Bild {width}x{height}, Kachel {edge}, ISO {iso:F0}, auf {wo}")
 
-            Dim result As SKBitmap = Nothing
-            Dim padded As SKBitmap = Nothing
+            ' DAS ERGEBNIS ENTSTEHT IN EINEM BAND, das eine Kachelzeile hoch ist, nicht im ganzen
+            ' Bild. Jeder Bildpunkt sammelt die gewichteten Ergebnisse der Kacheln, die ihn decken;
+            ' sobald die naechste Kachelzeile ihn nicht mehr erreicht, ist er fertig und geht in den
+            ' Ausgang. Den Eingang rechnet jede Kachel selbst aus den 16-Bit-Daten. Als Ganzbild in
+            ' Gleitkomma waeren das bei 45 Megapixeln weit ueber ein Gigabyte gewesen.
+            Dim tileW = Math.Min(edge, RoundUp64(width))
+            Dim tileH = Math.Min(edge, RoundUp64(height))
+            Dim xs = TileStarts(width, tileW)
+            Dim ys = TileStarts(height, tileH)
+            Dim tileCount = xs.Count * ys.Count
+            Dim inputName = session.InputMetadata.Keys.First(Function(k) Not String.Equals(k, "cond", StringComparison.Ordinal))
+            Dim condName = session.InputMetadata.Keys.FirstOrDefault(Function(k) String.Equals(k, "cond", StringComparison.Ordinal))
+            If condName Is Nothing Then
+                DiagnosticLogService.LogAlways("Entrauschen", "Modell ohne Eingang cond - nicht das erwartete Modell")
+                Return Nothing
+            End If
+            Dim condTensor = New DenseTensor(Of Single)(New Single() {cond}, New Integer() {1, 1})
+            ' Je Kachel eine eigene Rampe, ueber die TATSAECHLICHE Ueberlappung mit ihren Nachbarn.
+            Dim rampsX = Enumerable.Range(0, xs.Count).Select(Function(i) TileRamp(xs, i, tileW)).ToList()
+            Dim rampsY = Enumerable.Range(0, ys.Count).Select(Function(i) TileRamp(ys, i, tileH)).ToList()
+            Dim band As New TileBand With {
+                .Width = width, .Rows = tileH,
+                .Sum = New Single(width * tileH * 3 - 1) {},
+                .Weights = New Single(width * tileH - 1) {}}
+            Dim samples = data
+            Dim result(data.Length - 1) As Byte
+            Dim clock = Diagnostics.Stopwatch.StartNew()
+            Dim done = 0
             Try
-                ' Ist das Bild in einer Achse kuerzer als eine Kachel, gibt es keinen Ausschnitt, der
-                ' sich nach innen schieben liesse: JEDE Kachel faellt aus, und zurueck kaeme eine
-                ' unveraenderte Kopie samt Erfolgsmeldung. Das trifft nicht nur Briefmarken, sondern
-                ' auch flache Zuschnitte wie 3000 mal 400. Deshalb wird vorher auf Kachelgroesse
-                ' GESPIEGELT padded - gespiegelt und nicht mit einer Farbe gefuellt, weil eine
-                ' harte Kunstkante am Bildrand das Modell dort etwas erfinden liesse, was es dann in
-                ' die letzten Bildpunkte hineinrechnet.
-                Dim tiledSource = image
-                If image.Width < edge OrElse image.Height < edge Then
-                    padded = New SKBitmap(Math.Max(image.Width, edge),
-                                              Math.Max(image.Height, edge),
-                                              image.ColorType, image.AlphaType)
-                    Using canvas = New SKCanvas(padded)
-                        Using shader = SKShader.CreateBitmap(image, SKShaderTileMode.Mirror, SKShaderTileMode.Mirror)
-                            Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
-                                canvas.DrawRect(New SKRect(0, 0, padded.Width, padded.Height), paint)
-                            End Using
-                        End Using
-                    End Using
-                    tiledSource = padded
-                End If
-
-                result = New SKBitmap(tiledSource.Width, tiledSource.Height, tiledSource.ColorType, tiledSource.AlphaType)
-                Using canvas = New SKCanvas(result)
-                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        canvas.DrawBitmap(tiledSource, 0, 0, paint)
-                    End Using
-                End Using
-
-                Dim stride = Math.Max(1, edge - 2 * TileOverlap)
-                Dim tileCount = ((tiledSource.Width + stride - 1) \ stride) * ((tiledSource.Height + stride - 1) \ stride)
-                Dim name = session.InputMetadata.Keys.First()
-                Dim clock = Diagnostics.Stopwatch.StartNew()
-                Dim done = 0
-
-                Dim y = 0
-                While y < tiledSource.Height
-                    Dim x = 0
-                    While x < tiledSource.Width
-                        ' ABBRUCH an der Kachelgrenze - die einzige Stelle, an der es sauber geht.
-                        ' Zurueck kommt Nothing, nicht das halbe Ergebnis: ein Bild, das oben
-                        ' entrauscht ist und unten nicht, waere das schlechteste aller Enden.
+                For j = 0 To ys.Count - 1
+                    Dim y0 = ys(j)
+                    For i = 0 To xs.Count - 1
+                        Dim x0 = xs(i)
                         If cancel.IsCancellationRequested Then
-                            DiagnosticLogService.LogAlways("Entrauschen",
-                                $"abgebrochen nach {done} von {tileCount} Kacheln")
+                            DiagnosticLogService.LogAlways("Entrauschen", $"abgebrochen nach {done} von {tileCount} Kacheln")
                             Return Nothing
                         End If
-                        ' Der Ausschnitt ist IMMER genau eine Kachel gross und wird am Bildrand nach
-                        ' innen geschoben, statt beschnitten zu werden.
-                        '
-                        ' Das ist keine Bequemlichkeit: das Modell zerlegt seine Eingabe in Fenster
-                        ' und halbiert sie mehrfach, also muss die Kantenlaenge durch 64 teilbar
-                        ' sein. Ein beschnittener Randstreifen von 480 Punkten bricht mitten im
-                        ' Modell ab, mit einer Meldung ueber eine Umformung, die die Ursache nicht
-                        ' erkennen laesst.
-                        Dim l = Math.Max(0, Math.Min(x - TileOverlap, tiledSource.Width - edge))
-                        Dim t = Math.Max(0, Math.Min(y - TileOverlap, tiledSource.Height - edge))
-                        Dim r = Math.Min(tiledSource.Width, l + edge)
-                        Dim b = Math.Min(tiledSource.Height, t + edge)
-                        ' Und der Teil davon, der wirklich uebernommen wird.
-                        Dim keepL = x, keepT = y
-                        Dim keepR = Math.Min(tiledSource.Width, x + stride)
-                        Dim keepB = Math.Min(tiledSource.Height, y + stride)
-                        If r - l = edge AndAlso b - t = edge AndAlso
-                           keepR > keepL AndAlso keepB > keepT Then
-                            DenoiseTile(session, name, tiledSource, result,
-                                        New SKRectI(l, t, r, b), New SKRectI(keepL, keepT, keepR, keepB), amount,
-                                        kind = DenoiseKind.Fast)
-                            done += 1
-                            Progress?.Invoke(done, tileCount)
-                        End If
-                        x += stride
-                    End While
-                    y += stride
-                End While
-
-                ' Vom paddeden Ergebnis bleibt nur der Bereich des echten Bildes; die gespiegelten
-                ' Raender waren Anlauf fuer das Modell und haben in der Ausgabe nichts zu suchen.
-                If padded IsNot Nothing Then
-                    Dim cropped = New SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType)
-                    Using canvas = New SKCanvas(cropped)
-                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                            canvas.DrawBitmap(result, 0, 0, paint)
-                        End Using
-                    End Using
-                    result.Dispose()
-                    result = cropped
-                End If
-
-                clock.Stop()
-                ' Welches Modell gerechnet hat, gehoert in den Bericht: bei zwei Wegen ist die Frage
-                ' "warum sieht das anders aus als beim letzten Mal" sonst nicht zu beantworten.
-                '
-                ' Eine SCHABLONE mit Platzhaltern statt einer Verkettung: der Bericht landet in der
-                ' Statuszeile und im Verlauf, und zusammengesetzte Texte lassen sich nicht
-                ' uebersetzen. Der Name des Weges wird EINZELN uebersetzt und danach eingesetzt.
-                LastReport = String.Format(
-                    LocalizationService.T("Bild {0}x{1}, {2} Kacheln, {3} s, Stärke {4} %, {5}"),
-                    image.Width, image.Height, done,
-                    clock.Elapsed.TotalSeconds.ToString("F0"),
-                    (amount * 100).ToString("F0"),
-                    LocalizationService.T(KindName(kind)))
-                DiagnosticLogService.LogAlways("Entrauschen", LastReport)
-                Dim finished = result
-                result = Nothing
-                Return finished
+                        RunTile(session, inputName, condName, condTensor, samples, forward, scale, band,
+                                width, height, x0, y0, tileW, tileH, rampsX(i), rampsY(j))
+                        done += 1
+                        Progress?.Invoke(done, tileCount)
+                    Next
+                    ' Fertig sind alle Zeilen, die die naechste Kachelzeile nicht mehr erreicht.
+                    Dim finishedTo = If(j + 1 < ys.Count, ys(j + 1), height)
+                    FlushRows(band, samples, result, forward, inverse, scale, band.Top, finishedTo)
+                    band.ShiftTo(finishedTo)
+                Next
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
-                result?.Dispose()
                 Return Nothing
-            Finally
-                padded?.Dispose()
-                ' Nur die eigene Umlegung, nie das Bild des Aufrufers: <converted> ist Nothing,
-                ' wenn das Bild schon als Bgra8888 kam, und <image> zeigt dann auf sein Bitmap.
-                converted?.Dispose()
             End Try
+            clock.Stop()
+            LastReport = String.Format(
+                LocalizationService.T("Bild {0}x{1}, {2} Kacheln, {3} s"),
+                width, height, done, clock.Elapsed.TotalSeconds.ToString("F0"))
+            DiagnosticLogService.LogAlways("Entrauschen", LastReport)
+            Return result
+        End Function
+
+        ''' <summary>Die Sammelstelle fuer eine Kachelzeile: Summe der gewichteten Ergebnisse und
+        ''' der Gewichte je Bildpunkt, fuer die Zeilen ab <see cref="Top"/>.</summary>
+        Private NotInheritable Class TileBand
+            Public Width As Integer
+            Public Rows As Integer
+            Public Top As Integer
+            Public Sum As Single()
+            Public Weights As Single()
+
+            ''' <summary>Das Band nach unten schieben: was ab <paramref name="newTop"/> schon
+            ''' gesammelt ist, wandert nach oben, der Rest wird geleert.</summary>
+            Public Sub ShiftTo(newTop As Integer)
+                Dim shift = newTop - Top
+                If shift <= 0 Then Return
+                If shift < Rows Then
+                    Array.Copy(Sum, shift * Width * 3, Sum, 0, (Rows - shift) * Width * 3)
+                    Array.Copy(Weights, shift * Width, Weights, 0, (Rows - shift) * Width)
+                    Array.Clear(Sum, (Rows - shift) * Width * 3, shift * Width * 3)
+                    Array.Clear(Weights, (Rows - shift) * Width, shift * Width)
+                Else
+                    Array.Clear(Sum, 0, Sum.Length)
+                    Array.Clear(Weights, 0, Weights.Length)
+                End If
+                Top = newTop
+            End Sub
+        End Class
+
+        ''' <summary>Ein Bildpunkt der 16-Bit-Daten in Rec.2020, Weiss bei 1, ungeklemmt.</summary>
+        Private Shared Sub ReadRec2020(samples As Byte(), index As Long, forward As Single(), scale As Single,
+                                       ByRef r As Single, ByRef g As Single, ByRef b As Single)
+            Dim p = CInt(index * 6)
+            Dim sr = (CInt(samples(p)) Or (CInt(samples(p + 1)) << 8)) * scale
+            Dim sg = (CInt(samples(p + 2)) Or (CInt(samples(p + 3)) << 8)) * scale
+            Dim sb = (CInt(samples(p + 4)) Or (CInt(samples(p + 5)) << 8)) * scale
+            r = forward(0) * sr + forward(1) * sg + forward(2) * sb
+            g = forward(3) * sr + forward(4) * sg + forward(5) * sb
+            b = forward(6) * sr + forward(7) * sg + forward(8) * sb
+        End Sub
+
+        ''' <summary>Fertige Zeilen in den Ausgang: Eingang plus die Aenderung des Modells, zurueck
+        ''' in den Speicheraufbau. Ein Bildpunkt ohne Gewicht (nur moeglich, wenn eine Kachel dort
+        ''' Unsinn lieferte) bleibt, wie er war.</summary>
+        Private Shared Sub FlushRows(band As TileBand, samples As Byte(), result As Byte(),
+                                     forward As Single(), inverse As Single(), scale As Single,
+                                     fromRow As Integer, toRow As Integer)
+            Dim width = band.Width
+            Dim back = 1.0F / scale
+            Threading.Tasks.Parallel.For(fromRow, toRow,
+                Sub(y)
+                    Dim bandRow = (y - band.Top) * width
+                    For x = 0 To width - 1
+                        Dim pixel = CLng(y) * width + x
+                        Dim r, g, b As Single
+                        ReadRec2020(samples, pixel, forward, scale, r, g, b)
+                        Dim bi = bandRow + x
+                        Dim w = band.Weights(bi)
+                        If w > 0 Then
+                            r += band.Sum(bi * 3) / w - Clamp01(r)
+                            g += band.Sum(bi * 3 + 1) / w - Clamp01(g)
+                            b += band.Sum(bi * 3 + 2) / w - Clamp01(b)
+                        End If
+                        Dim p = CInt(pixel * 6)
+                        WriteSample(result, p, (inverse(0) * r + inverse(1) * g + inverse(2) * b) * back)
+                        WriteSample(result, p + 2, (inverse(3) * r + inverse(4) * g + inverse(5) * b) * back)
+                        WriteSample(result, p + 4, (inverse(6) * r + inverse(7) * g + inverse(8) * b) * back)
+                    Next
+                End Sub)
+        End Sub
+
+        Private Shared Sub WriteSample(target As Byte(), offset As Integer, value As Single)
+            Dim s = ToSample(value)
+            target(offset) = CByte(s And &HFFUS)
+            target(offset + 1) = CByte(s >> 8)
+        End Sub
+
+        ''' <summary>Eine Kachel durch das Modell und gewichtet ins Band.</summary>
+        Private Shared Sub RunTile(session As InferenceSession, inputName As String, condName As String,
+                                   condTensor As DenseTensor(Of Single),
+                                   samples As Byte(), forward As Single(), scale As Single, band As TileBand,
+                                   width As Integer, height As Integer,
+                                   x0 As Integer, y0 As Integer, tileW As Integer, tileH As Integer,
+                                   rampX As Single(), rampY As Single())
+            Dim layer = tileW * tileH
+            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, tileH, tileW})
+            Dim z = tensor.Buffer
+            Threading.Tasks.Parallel.For(0, tileH,
+                Sub(yy)
+                    ' Ein Bild, das kleiner ist als die Kachel, wird am Rand gespiegelt.
+                    Dim sy = Mirror(y0 + yy, height)
+                    Dim span = z.Span
+                    For xx = 0 To tileW - 1
+                        Dim sx = Mirror(x0 + xx, width)
+                        Dim r, g, b As Single
+                        ReadRec2020(samples, CLng(sy) * width + sx, forward, scale, r, g, b)
+                        Dim i = yy * tileW + xx
+                        span(i) = Clamp01(r)
+                        span(layer + i) = Clamp01(g)
+                        span(layer * 2 + i) = Clamp01(b)
+                    Next
+                End Sub)
+            Using run = session.Run(New List(Of NamedOnnxValue) From {
+                    NamedOnnxValue.CreateFromTensor(inputName, tensor),
+                    NamedOnnxValue.CreateFromTensor(condName, condTensor)})
+                Dim output = TryCast(run.First().Value, DenseTensor(Of Single))
+                If output Is Nothing Then Return
+                Dim values = output.Buffer.Span
+                If values.Length < layer * 3 Then Return
+                For yy = 0 To tileH - 1
+                    Dim ty = y0 + yy
+                    If ty >= height Then Exit For
+                    Dim bandRow = (ty - band.Top) * width
+                    For xx = 0 To tileW - 1
+                        Dim tx = x0 + xx
+                        If tx >= width Then Exit For
+                        Dim i = yy * tileW + xx
+                        Dim r = values(i), g = values(layer + i), b = values(layer * 2 + i)
+                        ' Ein unsinniger Wert verdirbt nicht den Bildpunkt: dann zaehlt die Kachel
+                        ' dort nicht, und eine Nachbarkachel oder der Eingang bleibt stehen.
+                        If Single.IsNaN(r) OrElse Single.IsNaN(g) OrElse Single.IsNaN(b) Then Continue For
+                        Dim w = rampX(xx) * rampY(yy)
+                        Dim bi = bandRow + tx
+                        band.Sum(bi * 3) += r * w
+                        band.Sum(bi * 3 + 1) += g * w
+                        band.Sum(bi * 3 + 2) += b * w
+                        band.Weights(bi) += w
+                    Next
+                Next
+            End Using
+        End Sub
+
+        ''' <summary>Die Anfaenge der Kacheln in einer Achse: so wenige Kacheln, dass jede ihre
+        ''' Nachbarn um mindestens TileOverlap ueberlappt, GLEICHMAESSIG verteilt, die erste am
+        ''' Anfang, die letzte buendig mit dem Rand.
+        '''
+        ''' Die Anfaenge liegen auf Vielfachen von TileAlign, auch der letzte (die Kachel ragt dann
+        ''' etwas ueber den Rand); ergibt das irgendwo weniger als TileOverlap, kommt eine Kachel dazu.
+        '''
+        ''' Vorher ging der Schritt fest um Kachel minus Ueberlapp weiter, und die letzte wurde an
+        ''' den Rand gesetzt. Bei 1024 Punkten und 512er Kacheln gab das 0, 480 und 512: die beiden
+        ''' letzten deckten sich auf 480 Punkten, und dort mischten sich zwei Modellergebnisse zu
+        ''' gleichen Teilen (Review-Befund). Gleich verteilt ueberlappen alle Nachbarn gleich weit, und
+        ''' TileRamp blendet ueber genau diese Strecke.</summary>
+        Private Shared Function TileStarts(length As Integer, tile As Integer) As List(Of Integer)
+            Dim starts As New List(Of Integer)
+            If length <= tile Then
+                starts.Add(0)
+                Return starts
+            End If
+            Dim stepSize = Math.Max(1, tile - TileOverlap)
+            Dim count = Math.Max(2, CInt(Math.Ceiling((length - TileOverlap) / CDbl(stepSize))))
+            Do
+                starts.Clear()
+                For i = 0 To count - 2
+                    starts.Add(TileAlign * CInt(Math.Round(i * (length - tile) / CDbl(count - 1) / TileAlign)))
+                Next
+                ' Auch die letzte auf dem Raster: sie ragt dann um weniger als TileAlign ueber den
+                ' Rand hinaus, und RunTile spiegelt dort wie bei einem Bild, das kleiner ist als die
+                ' Kachel. Was jenseits des Randes herauskommt, wird verworfen.
+                starts.Add(TileAlign * CInt(Math.Ceiling((length - tile) / CDbl(TileAlign))))
+                Dim ok = True
+                For i = 1 To starts.Count - 1
+                    If starts(i - 1) + tile - starts(i) < TileOverlap Then ok = False
+                Next
+                If ok Then Return starts
+                count += 1
+            Loop
+        End Function
+
+        ''' <summary>Gewicht je Spalte oder Zeile der Kachel <paramref name="index"/>: zu jedem
+        ''' Nachbarn hin linear von fast null auf eins ueber die TATSAECHLICHE Ueberlappung mit ihm,
+        ''' innen eins, am Bildrand (kein Nachbar) eins. Genommen wird das Kleinere beider Seiten,
+        ''' damit das Gewicht stetig bleibt, auch wenn sich zwei Rampen in einer schmalen Kachel
+        ''' treffen. Zwei Nachbarn ergaenzen sich in ihrer Ueberlappung zu eins; geteilt wird
+        ''' ohnehin durch die Summe der Gewichte.</summary>
+        Private Shared Function TileRamp(starts As List(Of Integer), index As Integer, tile As Integer) As Single()
+            Dim leftOverlap = If(index > 0, starts(index - 1) + tile - starts(index), 0)
+            Dim rightOverlap = If(index < starts.Count - 1, starts(index) + tile - starts(index + 1), 0)
+            Dim r(tile - 1) As Single
+            For k = 0 To tile - 1
+                Dim v = 1.0F
+                If leftOverlap > 0 Then v = Math.Min(v, (k + 0.5F) / leftOverlap)
+                If rightOverlap > 0 Then v = Math.Min(v, (tile - k - 0.5F) / rightOverlap)
+                r(k) = v
+            Next
+            Return r
+        End Function
+
+        Private Shared Function RoundUp64(value As Integer) As Integer
+            Return ((value + 63) \ 64) * 64
+        End Function
+
+        Private Shared Function Mirror(i As Integer, length As Integer) As Integer
+            If length <= 1 Then Return 0
+            Dim period = 2 * (length - 1)
+            Dim m = i Mod period
+            If m < 0 Then m += period
+            Return If(m < length, m, period - m)
+        End Function
+
+        Private Shared Function Clamp01(v As Single) As Single
+            Return If(v < 0.0F, 0.0F, If(v > 1.0F, 1.0F, v))
+        End Function
+
+        Private Shared Function ToSample(v As Single) As UShort
+            If Single.IsNaN(v) OrElse v <= 0.0F Then Return 0US
+            If v >= 65535.0F Then Return 65535US
+            Return CUShort(Math.Round(v))
+        End Function
+
+        Private Shared Function Multiply3(a As Single(), b As Single()) As Single()
+            Dim m(8) As Single
+            For r = 0 To 2
+                For c = 0 To 2
+                    m(r * 3 + c) = a(r * 3) * b(c) + a(r * 3 + 1) * b(3 + c) + a(r * 3 + 2) * b(6 + c)
+                Next
+            Next
+            Return m
+        End Function
+
+        Friend Shared Function Invert3(m As Single()) As Single()
+            Dim a = CDbl(m(0)), b = CDbl(m(1)), c = CDbl(m(2))
+            Dim d = CDbl(m(3)), e = CDbl(m(4)), f = CDbl(m(5))
+            Dim g = CDbl(m(6)), h = CDbl(m(7)), k = CDbl(m(8))
+            Dim det = a * (e * k - f * h) - b * (d * k - f * g) + c * (d * h - e * g)
+            If Math.Abs(det) < 0.000000000001 Then Return Nothing
+            Return New Single() {
+                CSng((e * k - f * h) / det), CSng((c * h - b * k) / det), CSng((b * f - c * e) / det),
+                CSng((f * g - d * k) / det), CSng((a * k - c * g) / det), CSng((c * d - a * f) / det),
+                CSng((d * h - e * g) / det), CSng((b * g - a * h) / det), CSng((a * e - b * d) / det)}
         End Function
 
         ''' <summary>Legt ein Bild auf Bgra8888 um. Nothing, wenn das nicht gelingt; das
-        ''' uebergebene Bitmap bleibt in jedem Fall dem Aufrufer.</summary>
+        ''' uebergebene Bitmap bleibt in jedem Fall dem Aufrufer. Gebraucht vom Hochskalieren.</summary>
         Friend Shared Function AsBgra8888(bitmap As SKBitmap) As SKBitmap
             If bitmap Is Nothing Then Return Nothing
             Dim converted As SKBitmap = Nothing
@@ -608,158 +652,6 @@ Namespace Services
                 Return Nothing
             End Try
             Return converted
-        End Function
-
-        ''' <summary>Unterhalb dieses mittleren Tonwerts wird eine Kachel fuer das schnelle Modell
-        ''' angehoben, siehe <see cref="DenoiseTile"/>.</summary>
-        Friend Const DarkTileLevel As Single = 48.0F
-
-        ''' <summary>Eine Kachel durch das Modell und nur ihren INNEREN Teil zurueckschreiben.</summary>
-        ''' <param name="liftDark">DAS SCHNELLE MODELL ZERSTOERT SEHR DUNKLE KACHELN. Liegt der
-        ''' mittlere Tonwert einer Kachel unter rund 20 und traegt sie wenig Rauschen, gibt NAFNet ein
-        ''' buntes Gitter zurueck statt eines Bildes - am Konzertfoto im Pruefbestand ein ganzer
-        ''' Vorhang. SCUNet tut das nicht. Eine solche Kachel wird deshalb vor dem Modell um einen
-        ''' VERSATZ angehoben und danach um denselben Betrag abgesenkt. Ein Versatz und keine
-        ''' Verstaerkung, weil er das Rauschen unveraendert laesst: das Modell soll genau das Rauschen
-        ''' sehen, das im Bild steht. Beschnitten wird dabei nichts, der Eingang ist Fliesskomma und
-        ''' darf ueber 1 gehen.</param>
-        Private Shared Sub DenoiseTile(session As InferenceSession, name As String,
-                                       source As SKBitmap, target As SKBitmap,
-                                       window As SKRectI, keep As SKRectI, amount As Single,
-                                       liftDark As Boolean)
-            Dim w = window.Width, h = window.Height
-            Dim layer = w * h
-            Dim tensor = New DenseTensor(Of Single)(New Integer() {1, 3, h, w})
-            Dim z = tensor.Buffer.Span
-
-            ' Zeilenweise ueber den Speicher, nicht ueber GetPixel - bei einem ganzen Foto ist das
-            ' der Unterschied zwischen Sekunden und Minuten allein fuer das Einlesen.
-            Dim srcStride = source.RowBytes
-            Dim row(srcStride - 1) As Byte
-            Dim srcPixels = source.GetPixels()
-            Dim lumaSum = 0.0
-            For yy = 0 To h - 1
-                Runtime.InteropServices.Marshal.Copy(
-                    RowStart(srcPixels, window.Top + yy, srcStride), row, 0, srcStride)
-                Dim line = yy * w
-                For xx = 0 To w - 1
-                    Dim p = (window.Left + xx) * 4
-                    Dim i = line + xx
-                    ' BGRA im Speicher, das Modell erwartet RGB in 0 bis 1.
-                    z(i) = row(p + 2) / 255.0F
-                    z(layer + i) = row(p + 1) / 255.0F
-                    z(layer * 2 + i) = row(p) / 255.0F
-                    lumaSum += 0.2126 * row(p + 2) + 0.7152 * row(p + 1) + 0.0722 * row(p)
-                Next
-            Next
-
-            ' Der Versatz in Tonwerten; null fuer jede Kachel, die hell genug ist.
-            Dim lift = 0.0F
-            If liftDark Then
-                Dim mean = CSng(lumaSum / Math.Max(1, layer))
-                If mean < DarkTileLevel Then
-                    lift = DarkTileLevel - mean
-                    Dim offset = lift / 255.0F
-                    For i = 0 To layer * 3 - 1
-                        z(i) += offset
-                    Next
-                End If
-            End If
-
-            Using run = session.Run(New List(Of NamedOnnxValue) From {
-                    NamedOnnxValue.CreateFromTensor(name, tensor)})
-                Dim output = TryCast(run.First().Value, DenseTensor(Of Single))
-                If output Is Nothing Then Return
-                Dim dims = output.Dimensions.ToArray()
-                Dim rh = dims(dims.Length - 2), rw = dims(dims.Length - 1)
-                Dim rLayer = rw * rh
-                Dim values = output.Buffer.Span
-                If values.Length < rLayer * 3 Then Return
-
-                Dim dstStride = target.RowBytes
-                Dim targetPixels = target.GetPixels()
-                Dim targetRow(dstStride - 1) As Byte
-                Dim premultiplied = target.AlphaType = SKAlphaType.Premul
-                For yy = keep.Top To keep.Bottom - 1
-                    Runtime.InteropServices.Marshal.Copy(
-                        RowStart(targetPixels, yy, dstStride), targetRow, 0, dstStride)
-                    Dim sy = Math.Min(yy - window.Top, rh - 1)
-                    For xx = keep.Left To keep.Right - 1
-                        Dim sx = Math.Min(xx - window.Left, rw - 1)
-                        Dim i = sy * rw + sx
-                        Dim p = xx * 4
-                        Dim newRed = values(i) * 255.0F - lift
-                        Dim newGreen = values(rLayer + i) * 255.0F - lift
-                        Dim newBlue = values(rLayer * 2 + i) * 255.0F - lift
-                        ' Ein einzelner unsinniger Wert darf nicht den Bildpunkt verderben - dann
-                        ' bleibt eben das Original stehen.
-                        If Single.IsNaN(newRed) OrElse Single.IsNaN(newGreen) OrElse Single.IsNaN(newBlue) Then
-                            Continue For
-                        End If
-
-                        ' HIER wird die Staerke wirksam, und zwar getrennt nach Helligkeit und Farbe
-                        ' (die Begruendung steht bei Denoise). Der Weg dahin ist eine Verschiebung
-                        ' und keine zweite Ueberblendung: die Modellausgabe wird als Ganzes so weit
-                        ' heller oder dunkler geschoben, dass ihre Helligkeit den gewuenschten Wert
-                        ' trifft. Weil alle drei Kanaele dieselbe Verschiebung bekommen, bleiben ihre
-                        ' ABSTAENDE zueinander unveraendert - und genau die sind die Farbe. So kommt
-                        ' die Farbe voll aus dem Modell, waehrend die Helligkeit dosiert wird.
-                        '
-                        ' Bei Staerke 1 ist die Verschiebung null und es steht Bildpunkt fuer
-                        ' Bildpunkt dasselbe da wie vorher, als noch alle drei Kanaele gleich
-                        ' gemischt wurden.
-                        Dim oldLuma = 0.2126F * targetRow(p + 2) + 0.7152F * targetRow(p + 1) + 0.0722F * targetRow(p)
-                        Dim newLuma = 0.2126F * newRed + 0.7152F * newGreen + 0.0722F * newBlue
-                        Dim shift = (oldLuma - newLuma) * (1.0F - amount)
-                        ' MIT DITHER GERUNDET. Das Modell nimmt genau das Rauschen weg, das vorher
-                        ' selbst als Dither wirkte; hart gerundet kommt ein glatter dunkler Verlauf
-                        ' als Treppe zurueck, und das Anheben der Tiefen in der Reglerkette dahinter
-                        ' spreizt sie (gemessen: Treppe 0,39 statt 0,14 Tonwerte bei Tiefen +100).
-                        ' Dieselbe Schwelle fuer alle drei Kanaele, sonst faerbt sich Grau ein, und
-                        ' dieselbe Matrix wie die Punktoperationskette.
-                        Dim dither = ImageProcessor.DitherMatrix(((yy And 7) << 3) Or (xx And 7))
-                        targetRow(p) = ToByte(newBlue + shift + dither)
-                        targetRow(p + 1) = ToByte(newGreen + shift + dither)
-                        targetRow(p + 2) = ToByte(newRed + shift + dither)
-                        ' VORMULTIPLIZIERT heisst: kein Kanal darf ueber der Deckung liegen. Das
-                        ' Modell weiss davon nichts - es bekommt an einem halbdurchsichtigen Rand
-                        ' die bereits gedaempften Werte und kann sie anheben. Ein Bildpunkt mit mehr
-                        ' Farbe als Deckung bricht die Zusage des Formats, und was daraus wird,
-                        ' haengt dann am Zeichenweg. Der Alphakanal selbst bleibt unangetastet.
-                        If premultiplied Then
-                            Dim alpha = targetRow(p + 3)
-                            If targetRow(p) > alpha Then targetRow(p) = alpha
-                            If targetRow(p + 1) > alpha Then targetRow(p + 1) = alpha
-                            If targetRow(p + 2) > alpha Then targetRow(p + 2) = alpha
-                        End If
-                    Next
-                    Runtime.InteropServices.Marshal.Copy(targetRow, 0, RowStart(targetPixels, yy, dstStride), dstStride)
-                Next
-            End Using
-        End Sub
-
-        ''' <summary>Der Anfang einer Bildzeile im Speicher.
-        '''
-        ''' Der Versatz wird in 64 Bit gerechnet. Hier reicht es fuer gewoehnliche Fotos zwar auch
-        ''' in 32 Bit, aber ab rund 537 Megapixeln - Panoramen aus vielen Aufnahmen erreichen das -
-        ''' ueberschreitet Zeilennummer mal Zeilenlaenge den Bereich einer 32-Bit-Zahl, und in VB
-        ''' WIRFT die Multiplikation dann, statt still umzulaufen. Derselbe Weg wie beim
-        ''' Hochskalieren, wo die Grenze schon bei gewoehnlichen Kameragroessen faellt.</summary>
-        Private Shared Function RowStart(basePointer As IntPtr, row As Integer, stride As Integer) As IntPtr
-            Return New IntPtr(basePointer.ToInt64() + CLng(row) * CLng(stride))
-        End Function
-
-        ''' <summary>Einen gerechneten Kanalwert in eine Stufe zurueckholen.
-        '''
-        ''' Das Beschneiden am Rand ist die einzige Stelle, an der die Verschiebung die Farbe doch
-        ''' antastet: ein Kanal, der oben oder unten anstoesst, kann der Verschiebung nicht mehr
-        ''' folgen. Das trifft nur ausgefressene Lichter und abgesoffene Tiefen, wo ohnehin keine
-        ''' Farbe mehr steht.</summary>
-        ''' <remarks>Beschnitten wird in Fliesskomma und ERST DANN gerundet: ein Modellwert weit
-        ''' jenseits des Wertebereichs wuerde beim Umwandeln in eine Ganzzahl sonst eine Ausnahme
-        ''' werfen, und die risse den ganzen Lauf ab.</remarks>
-        Private Shared Function ToByte(value As Single) As Byte
-            Return CByte(Math.Round(Math.Max(0.0F, Math.Min(255.0F, value))))
         End Function
 
     End Class

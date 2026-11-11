@@ -207,7 +207,9 @@ Namespace Services
 
 
     ''' <summary>Ein Vorgang, der in die PIXEL gerechnet wurde und sich nicht als Regler ausdruecken
-    ''' laesst: das Entrauschen mit Modell und das Objektentfernen.
+    ''' laesst: das Objektentfernen und das Hochskalieren. Ein Entrauschen ("denoise") steht hier nur
+    ''' noch in Rezepten aus der Zeit der 8-Bit-Modelle; es laeuft nicht mehr und wird bei einer RAW
+    ''' beim Lesen zur Einstellung der RAW-Stufe (DenoiseModelService.MigrateLegacyRecipe).
     '''
     ''' WOZU: bei einer .fpx stecken solche Pixel im Buendel und ueberleben. Bei einem RAW oder PSD
     ''' liegt daneben nur das Rezept, und die Pixel entstehen bei jedem Oeffnen neu aus den
@@ -234,12 +236,12 @@ Namespace Services
         ''' Groesse - lieber unveraendert als in einer anderen Groesse als beim ersten Mal.</summary>
         Public Property UpscaleModel As String = ""
 
-        ''' <summary>Nur beim Entrauschen: "quality" oder "fast". Welches Modell gerechnet hat,
-        ''' gehoert dazu - die beiden liefern sichtbar Verschiedenes.</summary>
+        ''' <summary>Nur beim alten Entrauschen: "quality" oder "fast". Wird nur noch gelesen, fuer
+        ''' die Umstellung alter Rezepte.</summary>
         Public Property DenoiseModel As String = ""
 
-        ''' <summary>Nur beim Entrauschen: die Staerke, mit der die HELLIGKEIT entrauscht wurde,
-        ''' 0 bis 100. Ohne sie kaeme beim Nachziehen etwas anderes heraus als beim ersten Mal.</summary>
+        ''' <summary>Nur beim alten Entrauschen: die Staerke, 0 bis 100. Sie geht bei der Umstellung
+        ''' in ImageAdjustments.RawModelDenoiseStrength ueber.</summary>
         Public Property DenoiseStrength As Single = 100
 
         ''' <summary>Nur beim Objektentfernen: WAS entfernt wurde. Ohne die Maske ist der Vorgang
@@ -1023,6 +1025,26 @@ Namespace Services
         ''' Messungen, die ausdruecklich ohne Rettung entwickeln (RAW-Anker, Messprogramme).</summary>
         Public Property RawHighlightRecovery As Boolean = True
 
+        ''' <summary>Mit einem gelernten Modell entrauschen, in der RAW-Stufe auf den linearen Daten
+        ''' (DenoiseModelService). Wie die Lichterrettung eine Angabe, die den DECODE aendert: die
+        ''' Pixel entstehen bei jedem Oeffnen neu aus den Sensordaten, im Rezept steht nur, DASS und
+        ''' wie stark entrauscht wird. Nur fuer RAWs mit Bayer-Muster wirksam.
+        '''
+        ''' Frueher stand ein Entrauschen als gebackener Vorgang in <see cref="BakedOperations"/>;
+        ''' ein solches Rezept wird beim Lesen hierher umgestellt
+        ''' (DenoiseModelService.MigrateLegacyRecipe).</summary>
+        Public Property RawModelDenoise As Boolean = False
+
+        ''' <summary>Die Staerke dazu, 0 bis 100. Sie gilt fuer die HELLIGKEIT, die Farbe wird immer
+        ''' voll entrauscht (RawDecodeServiceModelDenoise.vb).</summary>
+        Public Property RawModelDenoiseStrength As Single = 70
+
+        ''' <summary>Die Staerke fuer den Decode, kleiner null fuer aus.</summary>
+        Public Function ModelDenoiseStrengthForDecode() As Double
+            If Not RawModelDenoise Then Return -1
+            Return Math.Max(0.0, Math.Min(100.0, CDbl(RawModelDenoiseStrength)))
+        End Function
+
         ''' <summary>Den Sensorrand einer RAW abschneiden, so wie Adobe es tut: die aeussersten
         ''' Spalten und Zeilen, die das Demosaic ohne Nachbarn nicht sauber rechnen kann und die
         ''' als farbige Streifen am Rand stehen. Wie breit der Rand ist, steht je Kamera und
@@ -1303,8 +1325,8 @@ Namespace Services
         ''' Arbeitsbild im Buendel bedeutungslos: dann wird die Basis frisch entwickelt.</summary>
         Public Property WorkingImageExposure As Single = 0.0F
 
-        ''' <summary>Vorgänge, die in die PIXEL gerechnet wurden: Entrauschen mit Modell und
-        ''' Objektentfernen (siehe <see cref="BakedOperation"/>). In der REIHENFOLGE ihrer Anwendung -
+        ''' <summary>Vorgänge, die in die PIXEL gerechnet wurden: Objektentfernen und Hochskalieren
+        ''' (siehe <see cref="BakedOperation"/>). In der REIHENFOLGE ihrer Anwendung -
         ''' beim Nachziehen wird sie eingehalten, sonst käme etwas anderes heraus.</summary>
         Public Property BakedOperations As New System.Collections.Generic.List(Of BakedOperation)()
 
@@ -1494,7 +1516,7 @@ Namespace Services
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceCamera", "WhiteBalanceModel", "WhiteBalanceMode",
             "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
-            "RampBlackShareInSource", "ShadowSaturationInSource",
+            "RampBlackShareInSource", "ShadowSaturationInSource", "RawModelDenoise", "RawModelDenoiseStrength",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
@@ -1856,6 +1878,8 @@ Namespace Services
                 .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
                 .RawHighlightRecovery = RawHighlightRecovery,
                 .RawSensorEdgeCrop = RawSensorEdgeCrop,
+                .RawModelDenoise = RawModelDenoise,
+                .RawModelDenoiseStrength = RawModelDenoiseStrength,
                 .LensDistortion = LensDistortion,
                 .LensTca = LensTca,
                 .LensVignetting = LensVignetting,

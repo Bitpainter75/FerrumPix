@@ -19,7 +19,7 @@
                   IsChecked="{Binding DialogBatchFilterOverwrite, Mode=TwoWay}"
                   ToolTip.Tip="Schreibt die Anpassungen direkt in die Bilddateien, bei RAW- und Photoshop-Dateien in ihre Beistelldatei. Ohne Haken entstehen neue Dateien und die Originale bleiben unangetastet."/>
         <!-- Nur beim Ueberschreiben mit RAW- oder Photoshop-Dateien in der Auswahl: dort wird keine
-             Bilddatei geschrieben, sondern das Rezept daneben (IsDialogBatchDenoiseLockedByRecipes). -->
+             Bilddatei geschrieben, sondern das Rezept daneben (IsDialogBatchRecipeHintVisible). -->
         <TextBlock Text="RAW- und Photoshop-Dateien bleiben unverändert. Ihre Anpassungen kommen in die Beistelldatei daneben, und die Galerie zeigt diese Bilder ab dann entwickelt."
                    IsVisible="{Binding IsDialogBatchRecipeHintVisible}"
                    Foreground="{DynamicResource FP.Text.Secondary}"

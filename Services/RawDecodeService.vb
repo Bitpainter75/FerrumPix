@@ -760,6 +760,10 @@ Namespace Services
         ''' aus demselben Grund im Schluessel wie der Schalter selbst - die Messung faehrt sie
         ''' durch, und ohne sie laege beim zweiten Wert das Bild des ersten im Speicher.</summary>
         Private Shared _cachedHighlightKnee As Double = Double.NaN
+        ''' <summary>Mit welcher Staerke das Entrauschen mit Modell im zwischengespeicherten Decode
+        ''' steckt, -1 fuer keines. Gilt, was WIRKLICH darin steckt: ein Decode, fuer den das Ergebnis
+        ''' des Modells noch fehlte, traegt -1, auch wenn es verlangt war.</summary>
+        Private Shared _cachedModelDenoise As Double = -1
         Private Shared _cachedBitmap As SKBitmap
 
         ''' <summary>Entwickelt ein RAW: voll aufgelöster, fertig entwickelter Decode (Besitz beim
@@ -857,6 +861,10 @@ Namespace Services
                 ' Vollbildkopie, gemessen rund 300 ms bei 33 Megapixeln.
                 Dim directDistortion = lens IsNot Nothing AndAlso lens.HasDistortion AndAlso
                                        Not (lensChoice IsNot Nothing AndAlso lensChoice.CropSensorEdge)
+                ' Das Entrauschen mit Modell zaehlt nur, wenn sein Ergebnis bereitliegt; der Decode
+                ' rechnet es nie selbst (RawDecodeServiceModelDenoise.vb).
+                Dim modelDenoise = If(lensChoice IsNot Nothing AndAlso lensChoice.ModelDenoiseStrength >= 0 AndAlso
+                                      HasModelDenoised(path), lensChoice.ModelDenoiseStrength, -1.0)
                 Dim hit As SKBitmap = Nothing
                 Dim pixels As CachedPixels = Nothing
                 SyncLock _cacheLock
@@ -868,6 +876,7 @@ Namespace Services
                        _cachedUnclip = unclip AndAlso
                        _cachedHighlightRecovery = recoverHighlights AndAlso
                        _cachedHighlightKnee = knee AndAlso
+                       _cachedModelDenoise = modelDenoise AndAlso
                        String.Equals(_cachedObjektiv, objKey, StringComparison.Ordinal) Then
                         hit = TakeCached(directDistortion, pixels)
                     End If
@@ -880,10 +889,12 @@ Namespace Services
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
                 Dim decoded As SKBitmap
                 If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
+                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                         modelDenoise:=modelDenoise)
                 Else
                     SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
+                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                             modelDenoise:=modelDenoise)
                     End SyncLock
                 End If
                 If decoded Is Nothing Then Return Nothing
@@ -899,6 +910,7 @@ Namespace Services
                     _cachedUnclip = unclip
                     _cachedHighlightRecovery = recoverHighlights
                     _cachedHighlightKnee = knee
+                    _cachedModelDenoise = modelDenoise
                     _cachedWriteTimeUtc = writeTime
                     hit = TakeCached(directDistortion, pixels)
                 End SyncLock
@@ -2263,6 +2275,7 @@ Namespace Services
                 _cachedGrundbelichtung = Double.NaN
                 _rampBlackShareByPath.Clear()
                 DropRawBits()
+                DropModelDenoised()
             End SyncLock
         End Sub
 
@@ -2466,7 +2479,8 @@ Namespace Services
         Private Shared Function TryBuildFromCachedRaw(path As String, writeTime As DateTime, demosaic As Integer,
                                                       lens As LensDataService.Korrektur,
                                                       baseEv As Double, knee As Double, sliderEv As Double,
-                                                      halfSize As Boolean) As SKBitmap
+                                                      halfSize As Boolean,
+                                                      Optional modelDenoise As Double = -1) As SKBitmap
             Dim bytes As Byte() = Nothing
             Dim width = 0, height = 0
             Dim normalization = 1.0
@@ -2490,6 +2504,17 @@ Namespace Services
 
             Dim pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
             Try
+                ' Mit Entrauschen aus dessen Ergebnis (RawDecodeServiceModelDenoise.vb).
+                Dim denoisedSource = ModelDenoisedSource(path, pin.AddrOfPinnedObject(), width, height, modelDenoise, toneMatrix)
+                If denoisedSource IsNot Nothing Then
+                    Dim denoisedPin = GCHandle.Alloc(denoisedSource, GCHandleType.Pinned)
+                    Try
+                        Return BuildFrom16Bit(denoisedPin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization,
+                                              knee, sliderEv, ShadowSaturationForFile(path), toneMatrix)
+                    Finally
+                        denoisedPin.Free()
+                    End Try
+                End If
                 Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
                                       ShadowSaturationForFile(path), toneMatrix)
             Finally
@@ -3155,7 +3180,8 @@ Namespace Services
                                            Optional recoverHighlights As Boolean = False,
                                            Optional knee As Double = HighlightRecoveryKnee,
                                            Optional sliderEv As Double = 0.0,
-                                           Optional warmOnly As Boolean = False) As SKBitmap
+                                           Optional warmOnly As Boolean = False,
+                                           Optional modelDenoise As Double = -1) As SKBitmap
             ' ZUERST DER 16-BIT-ZWISCHENSPEICHER. Alles, was die Rampe steuert, wird erst in
             ' Convert16 angewandt; liegen die linearen Daten noch da, ist ein LibRaw-Lauf
             ' vergeudet. Die halbe Kantenlaenge bleibt aussen vor: sie hat eine andere Groesse
@@ -3171,7 +3197,8 @@ Namespace Services
             If keepRaw Then
                 Try
                     writeTime = File.GetLastWriteTimeUtc(path)
-                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, sliderEv, useHalfSize)
+                    Dim reused = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, sliderEv, useHalfSize,
+                                                       If(useHalfSize, -1.0, modelDenoise))
                     If reused IsNot Nothing Then
                         Threading.Interlocked.Increment(RawCacheHits)
                         DiagnosticLogService.LogAlways("RawDecodeService.RawCache", "Treffer, LibRaw uebersprungen")
@@ -3490,6 +3517,18 @@ Namespace Services
                         DiagnosticLogService.LogAlways("RawDecodeService.Cancelled",
                             $"Aufbau aus 16 Bit ausgelassen, Ergebnis nicht mehr gebraucht: {IO.Path.GetFileName(path)}")
                         Return Nothing
+                    End If
+                    ' Mit Entrauschen aus dessen Ergebnis statt aus den verrauschten Daten.
+                    Dim denoisedSource = If(keepRaw AndAlso Not useHalfSize,
+                                            ModelDenoisedSource(path, pixels, width, height, modelDenoise, toneMatrix), Nothing)
+                    If denoisedSource IsNot Nothing Then
+                        Dim denoisedPin = GCHandle.Alloc(denoisedSource, GCHandleType.Pinned)
+                        Try
+                            Return BuildFrom16Bit(denoisedPin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization,
+                                                  wantedKnee, sliderEv, ShadowSaturationForFile(path), toneMatrix)
+                        Finally
+                            denoisedPin.Free()
+                        End Try
                     End If
                     Return BuildFrom16Bit(pixels, width, height, lens, baseEv, normalization, wantedKnee, sliderEv,
                                           ShadowSaturationForFile(path), toneMatrix)

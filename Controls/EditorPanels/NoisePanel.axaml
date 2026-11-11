@@ -87,79 +87,68 @@
                                              Value="{Binding ColorNoiseReduction, Mode=TwoWay}" Minimum="0" Maximum="100" />
                 </Grid>
 
-                <!-- ENTRAUSCHEN MIT MODELL: kein Regler, sondern ein Zug in die Pixel - bei
-                     mehreren Minuten Rechenzeit kann das nicht an einer Vorschau haengen.
-                     Deshalb steht es abgesetzt unter den Reglern und nicht zwischen ihnen. -->
-                <!-- Misst das Rauschen und stellt nur den Regler darunter ein. Gerechnet wird
-                     erst mit einem der beiden Knoepfe darunter: so steht der Vorschlag da, bevor
-                     die Minuten laufen, und laesst sich noch aendern. Der Knopf steht ueber dem
-                     Regler, weil man in dieser Reihenfolge vorgeht: messen, nachstellen, rechnen. -->
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        Margin="0,10,0,0"
-                        IsEnabled="{Binding CanRequestModels}"
-                        Command="{Binding MeasureDenoiseStrengthCommand}"
-                        ToolTip.ShowOnDisabled="True"
-                        ToolTip.Tip="Misst das Rauschen im Bild und stellt die Stärke so ein, dass etwa so viel Korn bleibt wie bei einer sauberen Aufnahme mit niedrigem ISO. Entrauscht wird erst mit einem der Knöpfe darunter.">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magic-wand.svg"
-                                       Width="18" Height="18" />
-                        <TextBlock Text="Stärke aus dem Bild messen" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-                <TextBlock IsVisible="{Binding HasDenoiseMeasurement}"
-                           Text="{Binding DenoiseMeasurementText}"
-                           Margin="2,0,2,4" TextWrapping="Wrap"
+                <!-- ENTRAUSCHEN MIT MODELL: nur fuer RAW-Dateien mit Bayer-Muster. Es rechnet in
+                     der RAW-Stufe auf den Sensordaten, vor allem anderen, und steht deshalb
+                     abgesetzt unter den Reglern. Fuer alles andere sagt eine Zeile, warum nicht. -->
+                <StackPanel Spacing="6" IsVisible="{Binding IsModelDenoiseOffered}">
+                    <!-- Misst das Rauschen und stellt nur den Regler darunter ein. Gerechnet wird
+                         erst mit dem Knopf darunter: messen, nachstellen, rechnen. -->
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                            Margin="0,10,0,0"
+                            Command="{Binding MeasureDenoiseStrengthCommand}"
+                            ToolTip.ShowOnDisabled="True"
+                            ToolTip.Tip="Misst das Rauschen im Bild und stellt die Stärke so ein, dass etwa so viel Korn bleibt wie bei einer sauberen Aufnahme mit niedrigem ISO. Entrauscht wird erst mit dem Knopf darunter.">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magic-wand.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Stärke aus dem Bild messen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock IsVisible="{Binding HasDenoiseMeasurement}"
+                               Text="{Binding DenoiseMeasurementText}"
+                               Margin="2,0,2,4" TextWrapping="Wrap"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               Classes="no-translate" />
+                    <!-- Die Staerke wirkt nur auf die Helligkeit; die Farbe kommt immer voll aus dem
+                         Modell. Sie gilt beim naechsten Druck auf den Knopf. -->
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                        <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
+                                   ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht. Gilt beim nächsten Druck auf den Knopf darunter." />
+                        <!-- Der Rueckfallwert des Doppelklicks ist der Startwert aus dem ViewModel
+                             (DenoiseStrength). Wer den einen Wert aendert, aendert den anderen mit. -->
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="70"
+                                           Value="{Binding DenoiseStrength}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                    </Grid>
+                    <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                            Command="{Binding DenoiseWithModelCommand}"
+                            ToolTip.Tip="{Binding DenoiseWithModelHint}" ToolTip.ShowOnDisabled="True">
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Mit Modell entrauschen" FontSize="{DynamicResource FP.Font.Small}" />
+                        </StackPanel>
+                    </Button>
+                    <!-- Was im Rezept steht. Ohne diese Zeile zeigt der Zuruecksetzer der Gruppe auf
+                         etwas Unsichtbares: das Entrauschen steckt NICHT in der Datei. -->
+                    <TextBlock IsVisible="{Binding HasStoredDenoise}"
+                               Text="{Binding StoredDenoiseText}"
+                               Margin="2,4,2,0" TextWrapping="Wrap"
+                               Foreground="{DynamicResource FP.Text.Secondary}"
+                               FontSize="{DynamicResource FP.Font.Small}"
+                               Classes="no-translate"
+                               ToolTip.Tip="Steht im Rezept und wird beim Öffnen neu gerechnet. Das Zurücksetzen dieser Gruppe nimmt es heraus." />
+                </StackPanel>
+                <TextBlock IsVisible="{Binding ModelDenoiseUnavailableText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Text="{Binding ModelDenoiseUnavailableText}"
+                           Margin="2,10,2,0" TextWrapping="Wrap"
                            Foreground="{DynamicResource FP.Text.Secondary}"
                            FontSize="{DynamicResource FP.Font.Small}"
                            Classes="no-translate" />
-                <!-- Die Staerke steht UEBER den Knoepfen zum Entrauschen, weil sie fuer beide gilt
-                     und vor dem Druck eingestellt wird - danach laeuft die Rechnung minutenlang. Sie
-                     wirkt nur auf die Helligkeit; die Farbe kommt immer voll aus dem Modell. -->
-                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
-                      IsEnabled="{Binding CanRequestModels}">
-                    <TextBlock Text="Stärke" Foreground="{DynamicResource FP.Text.Secondary}"
-                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"
-                               ToolTip.Tip="Wie stark die Helligkeit entrauscht wird. Niedriger lässt mehr feine Zeichnung stehen, höher nimmt mehr Korn. Die Farbe wird immer voll entrauscht, das kostet keine Zeichnung. Gilt für den nächsten Druck auf einen der beiden Knöpfe." />
-                    <!-- Der Rueckfallwert des Doppelklicks ist der Startwert aus dem ViewModel
-                         (DenoiseStrength). Die beiden liefen schon einmal auseinander, und der Doppelklick
-                         hob die Staerke dann an, statt sie zurueckzusetzen. Wer den einen Wert
-                         aendert, aendert den anderen mit. -->
-                    <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                       DefaultValue="70"
-                                       Value="{Binding DenoiseStrength}" Margin="0,0" />
-                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                             Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
-                </Grid>
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding CanRequestModels}"
-                        Command="{Binding DenoiseWithModelCommand}"
-                        ToolTip.Tip="{Binding DenoiseWithModelHint}" ToolTip.ShowOnDisabled="True">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
-                                       Width="18" Height="18" />
-                        <TextBlock Text="Entrauschen: gründlich" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-                <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
-                        IsEnabled="{Binding CanRequestModels}"
-                        Command="{Binding DenoiseFastCommand}"
-                        ToolTip.Tip="{Binding DenoiseFastHint}" ToolTip.ShowOnDisabled="True">
-                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg"
-                                       Width="18" Height="18" />
-                        <TextBlock Text="Entrauschen: zügig" FontSize="{DynamicResource FP.Font.Small}" />
-                    </StackPanel>
-                </Button>
-                <!-- Was an diesem Bild gespeichert ist. Ohne diese Zeile zeigt der Zuruecksetzer der
-                     Gruppe auf etwas Unsichtbares: bei einem RAW steckt das Entrauschen NICHT in der
-                     Datei, sondern nur als Vermerk daneben. -->
-                <TextBlock IsVisible="{Binding HasStoredDenoise}"
-                           Text="{Binding StoredDenoiseText}"
-                           Margin="2,4,2,0" TextWrapping="Wrap"
-                           Foreground="{DynamicResource FP.Text.Secondary}"
-                           FontSize="{DynamicResource FP.Font.Small}"
-                           Classes="no-translate"
-                           ToolTip.Tip="Wird beim Speichern in der Begleitdatei vermerkt und beim nächsten Öffnen angeboten. Das Zurücksetzen dieser Gruppe entfernt den Vermerk." />
 
             </StackPanel>
         </Expander>

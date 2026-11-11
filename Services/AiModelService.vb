@@ -227,7 +227,8 @@ Namespace Services
             ''' und Vergleichen). Dort gilt "erst wenn alle vorliegen, gibt es die Funktion" - ein
             ''' halbes Modell ist keins.
             '''
-            ''' WAHLMOEGLICHKEITEN derselben Funktion (Entrauschen: zwei, Hochskalieren: fuenf).
+            ''' WAHLMOEGLICHKEITEN derselben Funktion (Entrauschen: RAW und fertige Bilder,
+            ''' Hochskalieren: fuenf).
             ''' Dort ist jede Datei fuer sich benutzbar, und die Dienste fragen auch einzeln nach
             ''' ihr. Zusammen stehen sie, weil ein Dialog mit fuenf Zeilen fuer eine Funktion den
             ''' Blick auf die anderen verstellt.
@@ -294,6 +295,19 @@ Namespace Services
             ''' eine Bedingung ohne Namen und Quelle sagt nichts.</summary>
             Public Property NonCommercialOnly As Boolean = False
 
+            ''' <summary>Kam diese Datei einer Gruppe nachtraeglich hinzu, als neue Fassung der
+            ''' Funktion? Dann zeigt die Gruppe bei wem, der schon etwas von ihr hat, nicht nur
+            ''' "1 von 2 vorhanden", sondern "Eine neuere Fassung liegt bereit" mit Aktualisieren.
+            ''' Bei Wahlmoeglichkeiten wie beim Hochskalieren ist ein Teilstand dagegen der
+            ''' Normalfall; deshalb ist es ein Merkmal des Eintrags und keine Regel fuer alle.</summary>
+            Public Property NewInGroup As Boolean = False
+
+            ''' <summary>Fruehere Dateien, deren Aufgabe diese uebernommen hat, OHNE dass sie
+            ''' Vorgaenger waeren (anderer Vertrag, also kein Rueckfall wie bei
+            ''' <see cref="Predecessors"/>). Liegt eine davon im Modellordner, hat der Nutzer die
+            ''' Funktion schon einmal geholt, und die neue Datei gilt als Aktualisierung.</summary>
+            Public Property ReplacesFiles As String() = New String() {}
+
             ''' <summary>Die Adresse, von der diese Datei geholt wird.</summary>
             Public ReadOnly Property Address As String
                 Get
@@ -355,13 +369,14 @@ Namespace Services
                                         .FileName = "lama-v1.onnx", .Group = "Objekt entfernen",
                                         .Purpose = "Lücken füllen", .Bytes = 110513159, .GpuAllowed = True,
                                         .Sha256 = "11ba60a0e23344f7d42d2aba31cf9a599e9d1b3bb265b41b68595e2a2d72df16"},
-                New ModelEntry With {.Key = "scunet",
-                                        .FileName = "scunet-v1.onnx", .Group = "Entrauschen",
-                                        .Purpose = "Rauschen entfernen", .Bytes = 76890542, .GpuAllowed = True,
-                                        .Sha256 = "cae2172b8d2f2c08e5904a46b84b50ff26035c0fafdf8a86d5e52bd4e9cdba2d"},
+                New ModelEntry With {.Key = "treenet",
+                                        .FileName = "treenet-v1.onnx", .Group = "Entrauschen",
+                                        .Purpose = "Rauschen in RAW-Dateien entfernen", .Bytes = 43346864, .GpuAllowed = True,
+                                        .NewInGroup = True, .ReplacesFiles = New String() {"scunet-v1.onnx"},
+                                        .Sha256 = "8e689c4c0f9d21c4730d719c0bbdb6432368559e0707bd01ba74ddf3a90d1f5c"},
                 New ModelEntry With {.Key = "nafnet",
                                         .FileName = "nafnet-v1.onnx", .Group = "Entrauschen",
-                                        .Purpose = "Rauschen entfernen, deutlich schneller", .Bytes = 118995025, .GpuAllowed = True,
+                                        .Purpose = "Rauschen in fertigen Bildern entfernen", .Bytes = 118995025, .GpuAllowed = True,
                                         .Sha256 = "052c9238b420e8f232c4030e583426a9ce2bff36d2305fb2484509361cbe395d"},
                 New ModelEntry With {.Key = "realesrgan-x4",
                                         .FileName = "realesrgan-x4-v1.onnx", .Group = "Hochskalieren",
@@ -497,7 +512,8 @@ Namespace Services
         Private Shared ReadOnly Property KnownFiles As String()
             Get
                 Return KnownEntries.
-                    SelectMany(Function(e) New String() {e.FileName}.Concat(If(e.Predecessors, New String() {}))).
+                    SelectMany(Function(e) New String() {e.FileName}.Concat(If(e.Predecessors, New String() {})).
+                                                     Concat(If(e.ReplacesFiles, New String() {}))).
                     Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
             End Get
         End Property
@@ -576,6 +592,14 @@ Namespace Services
         ''' <summary>Liegt dieses Modell irgendwo vor?</summary>
         Public Shared Function ModelPresent(fileName As String) As Boolean
             Return Not String.IsNullOrEmpty(ModelPath(fileName))
+        End Function
+
+        ''' <summary>Liegt eine der Dateien, die dieser Eintrag abgeloest hat, noch im Modellordner
+        ''' (<see cref="ModelEntry.ReplacesFiles"/>)?</summary>
+        Public Shared Function HasReplacedFile(key As String) As Boolean
+            Dim e = EntryFor(key)
+            If e Is Nothing OrElse e.ReplacesFiles Is Nothing Then Return False
+            Return e.ReplacesFiles.Any(Function(f) ModelPresent(f))
         End Function
 
         ''' <summary>Liegt fuer diesen Baustein wenigstens eine bekannte Fassung im eigenen

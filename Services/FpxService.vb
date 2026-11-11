@@ -483,6 +483,9 @@ Namespace Services
                     End Using
                     If recipe?.Adjustments Is Nothing Then Return Nothing
                     recipe.Adjustments = NormalizeLoadedAdjustments(recipe.Adjustments)
+                    ' Ein Entrauschen aus der Zeit der 8-Bit-Modelle geht bei einer RAW als Basis in die
+                    ' RAW-Stufe, sofern es nicht schon im Arbeitsbild des Buendels steckt.
+                    DenoiseModelService.MigrateLegacyRecipe(recipe.Adjustments, basePath)
 
                     ' Objekt-Bildpfade von bündel-relativ auf die entpackten Temp-Dateien umschreiben.
                     If recipe.Adjustments.Annotations IsNot Nothing Then

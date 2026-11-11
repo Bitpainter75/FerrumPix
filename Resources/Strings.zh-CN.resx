@@ -8916,9 +8916,6 @@
   <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
     <value>RAW 和 Photoshop 文件保持不变。它们的调整写入旁边的附属文件，此后图库会以冲洗后的效果显示这些图片。</value>
   </data>
-  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
-    <value>覆盖时，RAW 和 Photoshop 文件只会得到新的调整，而降噪需要新的图像数据。如需降噪，请改为写入新文件。</value>
-  </data>
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>正在复制选区...</value>
   </data>
@@ -11429,5 +11426,101 @@
   </data>
   <data name="Tiefsee_9226edc0" xml:space="preserve">
     <value>深海</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_7f839a15" xml:space="preserve">
+    <value>图像 {0}x{1}，{2} 个分块，{3} 秒</value>
+  </data>
+  <data name="Das_gespeicherte_Entrauschen_mit_Modell_gibt_es__d32d92d8" xml:space="preserve">
+    <value>已保存的模型降噪现在只适用于 RAW 文件，在这里不再生效。</value>
+  </data>
+  <data name="Entrauschen_mit_Modell_gibt_es_nur_f_r_RAW_Datei_49ee2ff0" xml:space="preserve">
+    <value>模型降噪只适用于 RAW 文件。成品图像请使用上方的滑块。</value>
+  </data>
+  <data name="Mit_Modell_wird_vor_allem_anderen_entrauscht_Das_87a37711" xml:space="preserve">
+    <value>模型降噪在所有其他处理之前进行。这里已无法使用，因为像素中已经计算进了其他内容，例如修饰。</value>
+  </data>
+  <data name="F_r_diesen_Sensor_gibt_es_noch_kein_Modell_zum_E_c5d9e7c0" xml:space="preserve">
+    <value>此传感器尚无降噪模型。</value>
+  </data>
+  <data name="Entrauscht_die_RAW_Datei_mit_einem_gelernten_Mod_da691c09" xml:space="preserve">
+    <value>在计算曝光和颜色之前，用训练好的模型为 RAW 文件降噪。在显卡上需要几秒，在处理器上约一分钟。之后更改强度无需重新计算。</value>
+  </data>
+  <data name="Mit_Modell_entrauscht_St_rke_0_72a3ccb0" xml:space="preserve">
+    <value>已用模型降噪，强度 {0}</value>
+  </data>
+  <data name="Entrauschen_mit_Modell_entfernt_5fc5e8af" xml:space="preserve">
+    <value>已移除模型降噪</value>
+  </data>
+  <data name="Entrauscht_jede_RAW_Datei_mit_einem_gelernten_Mo_9557abd3" xml:space="preserve">
+    <value>用训练好的模型为每个 RAW 文件降噪，使用固定强度或逐张测量。其他图像保持不变。</value>
+  </data>
+  <data name="Entrauscht_werden_nur_RAW_Dateien_andere_Bilder__f3ecaa14" xml:space="preserve">
+    <value>只对 RAW 文件降噪，其他图像保持不变。</value>
+  </data>
+  <data name="Braucht_je_Bild_auf_der_Grafikkarte_einige_Sekun_38a7d963" xml:space="preserve">
+    <value>每张图像在显卡上需要几秒，在处理器上约一分钟。已在编辑器中降噪的图像保留其强度。</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_8512ecf2" xml:space="preserve">
+    <value>测量图像中的噪点并设置强度，使保留的颗粒大致与低 ISO 的干净照片相当。点击下方按钮后才开始降噪。</value>
+  </data>
+  <data name="Wie_stark_die_Helligkeit_entrauscht_wird_Niedrig_c13f31d0" xml:space="preserve">
+    <value>亮度降噪的强度。较低保留更多细节，较高去除更多颗粒。颜色始终完全降噪。在下次点击下方按钮时生效。</value>
+  </data>
+  <data name="Mit_Modell_entrauschen_45bb57ab" xml:space="preserve">
+    <value>使用模型降噪</value>
+  </data>
+  <data name="Steht_im_Rezept_und_wird_beim_ffnen_neu_gerechne_9d583b95" xml:space="preserve">
+    <value>保存在配方中，打开时重新计算。重置此组会将其移除。</value>
+  </data>
+  <data name="Entrauschen_von_RAW_Dateien_18a7dbaa" xml:space="preserve">
+    <value>RAW 文件降噪</value>
+  </data>
+  <data name="Trainingsdaten_des_Entrauschens_7a285b7a" xml:space="preserve">
+    <value>降噪训练数据</value>
+  </data>
+  <data name="Rauschen_in_RAW_Dateien_entfernen_5df5ad85" xml:space="preserve">
+    <value>去除 RAW 文件中的噪点</value>
+  </data>
+  <data name="RawForge_ef42f126" xml:space="preserve">
+    <value>RawForge</value>
+  </data>
+  <data name="RawNIND_09110976" xml:space="preserve">
+    <value>RawNIND</value>
+  </data>
+  <data name="CC_BY_SA_4_0_99a2eea7" xml:space="preserve">
+    <value>CC BY-SA 4.0</value>
+  </data>
+  <data name="Entrauscht_das_fertige_Bild_mit_einem_gelernten__ad4542f0" xml:space="preserve">
+    <value>用训练好的模型为成品图像降噪，并写入像素。在显卡上需要几秒，在处理器上约一分钟。</value>
+  </data>
+  <data name="Mit_Modell_ins_Bild_gerechnet_St_rke_0_b0aaf1b2" xml:space="preserve">
+    <value>已用模型写入图像，强度 {0}</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_7e960dfd" xml:space="preserve">
+    <value>用训练好的模型为每张图像降噪，使用固定强度或逐张测量。RAW 文件在曝光和颜色之前处理，成品图像直接写入像素。</value>
+  </data>
+  <data name="RAW_Dateien_werden_vor_Belichtung_und_Farbe_entr_33d344f0" xml:space="preserve">
+    <value>RAW 文件在曝光和颜色之前降噪，JPEG 等成品图像直接写入像素。</value>
+  </data>
+  <data name="Rauschen_in_fertigen_Bildern_entfernen_206ea337" xml:space="preserve">
+    <value>去除成品图像中的噪点</value>
+  </data>
+  <data name="Das_Bild_wird_ohne_das_gespeicherte_Entrauschen__cee0245d" xml:space="preserve">
+    <value>图像显示时未应用已保存的降噪，缺少模型。</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_Photoshop_Dateien_nur_1470341e" xml:space="preserve">
+    <value>覆盖时，Photoshop 文件只获得新的调整，去噪需要新的图像数据。要去噪，请改为写入新文件。</value>
+  </data>
+  <data name="Gespeichertes_Entrauschen_anwenden_92b9ca60" xml:space="preserve">
+    <value>应用已保存的去噪？</value>
+  </data>
+  <data name="Zu_diesem_Bild_ist_ein_Entrauschen_mit_Modell_ge_8ddc37bd" xml:space="preserve">
+    <value>此图片保存了使用模型的去噪。需要计算一次，在显卡上需要几秒，在处理器上最多需要几分钟。</value>
+  </data>
+  <data name="Das_Bild_wird_ohne_das_gespeicherte_Entrauschen__8807812c" xml:space="preserve">
+    <value>图片正在不含已保存去噪的状态下显示。</value>
+  </data>
+  <data name="Eine_SVG_Grafik_wird_nicht_als_Bild_ge_ffnet_Auf_98fd9794" xml:space="preserve">
+    <value>SVG 图形不会作为图片打开。将其拖到图片上即可作为图层插入。</value>
   </data>
 </root>

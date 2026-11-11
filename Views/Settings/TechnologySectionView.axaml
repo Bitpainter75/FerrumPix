@@ -374,26 +374,26 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="SCUNet" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="Entrauschen, gründlich" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="RawForge" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Entrauschen von RAW-Dateien" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/cszn/SCUNet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/rymuelle/RawForge" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
                                     </Button>
-                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/cszn/SCUNet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                        <TextBlock Text="Apache-2.0" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/rymuelle/RawForge/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="NAFNet" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="Entrauschen, zügig" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="RawNIND" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="Trainingsdaten des Entrauschens" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/megvii-research/NAFNet" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://doi.org/10.14428/DVN/DEQCIM" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/globe.svg" Width="18" Height="18"/>
                                     </Button>
-                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/megvii-research/NAFNet/blob/main/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
-                                        <TextBlock Text="MIT" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://creativecommons.org/licenses/by-sa/4.0/" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="CC BY-SA 4.0" FontSize="{DynamicResource FP.Font.Small}"/>
                                     </Button>
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">

@@ -534,6 +534,9 @@ Namespace Services
         ''' Importieren: die zuletzt bestaetigte Wahl (CardImportService). Der Zielordner
         ''' ist nur noch ein Rueckfall: vorbelegt wird im Dialog der aktuelle Ordner der Galerie.
         Public Property ImportTargetFolder As String = ""
+        ''' War das zuletzt bestaetigte Ziel der aktuelle Ordner ("Current") oder ein anderes
+        ''' ("Last")? Nur dann kommt ein schlichter Ordner beim naechsten Import wieder.
+        Public Property ImportTargetChoice As String = "Current"
         ''' Die in den Einstellungen definierten Zielordner, im Dialog zur Auswahl.
         Public Property ImportTargets As New List(Of ImportTargetSettings) From {
             New ImportTargetSettings With {.Name = "", .Template = "{pictures}/{datetaken:yyyy}/{datetaken:yyyy-MM-dd}"}
@@ -691,12 +694,11 @@ Namespace Services
         ''' „Originale überschreiben" im Filter-anwenden-Dialog - bleibt über Sitzungen erhalten
         '''.
         Public Property BatchFilterOverwriteOriginals As Boolean = False
-        ''' <summary>Entrauschen im Filter-anwenden-Dialog: welches Modell ("quality" oder "fast",
-        ''' wie im Rezept), die feste Staerke und das Restkorn der Automatik. Gemerkt wird nur WIE,
-        ''' nicht OB: das Entrauschen selbst steht bei jedem Oeffnen auf aus, weil es Minuten je
-        ''' Bild kostet und ein vergessener Haken aus einem schnellen Stapel einen stundenlangen
-        ''' macht.</summary>
-        Public Property BatchDenoiseModel As String = "quality"
+        ''' <summary>Entrauschen im Filter-anwenden-Dialog: die feste Staerke und das Restkorn der
+        ''' Automatik. Gemerkt wird nur WIE, nicht OB: das Entrauschen selbst steht bei jedem Oeffnen
+        ''' auf aus, weil es je RAW Zeit kostet und ein vergessener Haken aus einem schnellen Stapel
+        ''' einen langen macht. Ein Feld BatchDenoiseModel aus der Zeit der beiden Modelle wird beim
+        ''' Lesen uebergangen.</summary>
         Public Property BatchDenoiseStrength As Double = 70
         Public Property BatchDenoiseGrain As Double = 50
         ''' „Originale überschreiben" im Wasserzeichen-anwenden-Dialog - bleibt über Sitzungen erhalten
@@ -888,6 +890,12 @@ Namespace Services
         ''' Wird ueber Dialogoeffnungen hinweg gemerkt: wer einmal ein Muster festgelegt hat, will
         ''' es beim naechsten Stapel meist wieder.
         Public Property LastTargetNamePattern As String = ""
+        ''' <summary>Das zuletzt in "Speichern unter" benutzte Namensmuster, wenn es eines war (mit
+        ''' Platzhalter oder Zaehler). Es kommt beim naechsten Mal als "Zuletzt benutzt" wieder und
+        ''' ist gewaehlt. Ein fester Name wird nicht gemerkt, er gehoert zu genau einem Bild; dann
+        ''' bleibt es leer, und der Vorschlag aus EditorSaveAsNamePattern gilt. Getrennt von
+        ''' LastTargetNamePattern: dort heisst leer "Name der Quelle".</summary>
+        Public Property LastSaveAsNamePattern As String = ""
         ''' <summary>Namensvorlage fuer „Speichern unter" im Editor. Sie spricht dieselben
         ''' Platzhalter wie das Stapel-Umbenennen; die Vorgabe markiert bearbeitete Kopien klar.</summary>
         Public Property EditorSaveAsNamePattern As String = "{name}_fx"
@@ -2838,6 +2846,10 @@ Namespace Services
             Update(Sub(s) s.LastTargetNamePattern = NormalizeTargetNamePattern(pattern))
         End Sub
 
+        Public Shared Sub SaveLastSaveAsNamePattern(pattern As String)
+            Update(Sub(s) s.LastSaveAsNamePattern = NormalizeTargetNamePattern(pattern))
+        End Sub
+
         Public Shared Function NormalizeTargetNamePattern(value As String) As String
             Return If(value, "").Trim()
         End Function
@@ -2899,9 +2911,8 @@ Namespace Services
             Update(Sub(s) s.BatchFilterOverwriteOriginals = value)
         End Sub
 
-        Public Shared Sub SaveBatchDenoise(model As String, strength As Double, grain As Double)
+        Public Shared Sub SaveBatchDenoise(strength As Double, grain As Double)
             Update(Sub(s)
-                       s.BatchDenoiseModel = model
                        s.BatchDenoiseStrength = strength
                        s.BatchDenoiseGrain = grain
                    End Sub)

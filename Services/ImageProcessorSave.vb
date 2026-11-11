@@ -616,7 +616,7 @@ Namespace Services
         ''' ersetzt es den Datei-Decode als Pipeline-Eingang (Besitz wechselt hierher, wird
         ''' disposed). Aufrufer übergeben einen Klon (WorkingImageService.CloneFull).</param>
         ''' <param name="applyPendingBaked">Vermerkte, aber noch nicht in den Pixeln steckende
-        ''' Vorgaenge mitrechnen (Entrauschen, Objektentfernen, Retusche, Striche)? Wirkt NUR, wenn
+        ''' Vorgaenge mitrechnen (Objektentfernen, Retusche, Striche, Entrauschen mit Modell)? Wirkt NUR, wenn
         ''' hier selbst dekodiert wird - also im Stapel. Kommt ein fertiges Arbeitsbild herein
         ''' (<paramref name="workingFull"/>), stecken die Vorgaenge bereits darin, und ein zweiter
         ''' Durchlauf wuerde sie doppelt anwenden.</param>
@@ -695,6 +695,12 @@ Namespace Services
                 ' seine Belichtung im Rezept mit (ExposureInSource), ein selbst entwickeltes RAW
                 ' meldet sie ueber DecodeForRender. Gespeichert wird weiter adj.
                 Dim renderAdj = adj
+                ' Ein Entrauschen mit Modell im Rezept einer RAW rechnet der Decode nicht selbst: wer
+                ' den Vorgaengen zugestimmt hat, laesst das Modell vorher laufen. Ohne Zustimmung
+                ' nimmt der Decode das Ergebnis nur, wenn es aus dem Editor schon bereitliegt.
+                If workingFull Is Nothing AndAlso Not isFpxSource AndAlso applyPendingBaked Then
+                    PrepareRecipeModelDenoise(sourcePath, adj, cancel)
+                End If
                 Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForRender(sourcePath, adj, renderAdj, developRaw)))
                 ' Ein hereingereichtes Arbeitsbild traegt Retusche (und bei RAW die Belichtung); das
                 ' Ursprungsbild einer Protokollebene ist die Datei dahinter, ohne Belichtung.
@@ -702,12 +708,11 @@ Namespace Services
                     RegisterRestoreOrigin(decoded, DecodeRestoreOrigin(sourcePath, adj, developRaw))
                 End If
                 ' Nur auf dem SELBST dekodierten Bild: ein hereingereichtes Arbeitsbild traegt die
-                ' Vorgaenge schon, und ein zweites Entrauschen sieht man erst, wenn man die Bilder
+                ' Vorgaenge schon, und ein zweites Entfernen sieht man erst, wenn man die Bilder
                 ' nebeneinanderlegt. Und VOR der Reglerkette, weil sie zum Bild gehoeren und nicht
                 ' zu den Reglern.
-                ' Ob ein vermerktes Entrauschen dabei WIRKLICH nachgezogen wurde. Der Haken allein sagt
-                ' das nicht: fehlt das Modell oder scheitert der Lauf, kommt Nothing zurueck, oder ein
-                ' Bild, das nur Retusche und Striche traegt.
+                ' Ob ein vermerktes Entrauschen am Bild dabei WIRKLICH nachgezogen wurde: fehlt das
+                ' Bildmodell, kommt das Nachziehen ohne Entrauschen zurueck.
                 Dim pendingDenoiseApplied = False
                 If workingFull Is Nothing AndAlso applyPendingBaked AndAlso decoded IsNot Nothing Then
                     Dim reapplied = ApplyPendingBakedOperations(decoded, adj, cancel)
@@ -718,41 +723,54 @@ Namespace Services
                     End If
                 End If
 
-                ' ENTRAUSCHEN AUS DEM STAPEL, nach den vermerkten Vorgaengen und vor der Reglerkette:
-                ' es gehoert zum Bild wie ein im Editor gerechnetes Entrauschen, und die Automatik
-                ' soll das Rauschen messen, das der Sensor geliefert hat, nicht das, was Belichtung
-                ' und Kurve daraus machen.
+                ' ENTRAUSCHEN AUS DEM STAPEL, je nach Datei auf einem von zwei Wegen:
                 '
-                ' NIE ZWEIMAL. Steckt ein im Editor gerechnetes Entrauschen schon in diesen Pixeln,
-                ' laesst die feste Staerke das Bild aus - ein zweiter Lauf nimmt die Zeichnung mit,
-                ' die der erste stehen gelassen hat. Die Automatik braucht die Regel nicht: sie misst
-                ' das bereits entrauschte Bild als sauber und laesst es von selbst aus.
+                ' - Eine RAW, die TreeNet kann (DenoiseModelService.UsesRawStage): der Auftrag geht
+                '   in eine Kopie des Rezepts (RawModelDenoise), das Modell laeuft, und das Bild wird
+                '   aus den entrauschten linearen Daten neu umgesetzt. Die Automatik misst dafuer am
+                '   eben entwickelten, noch verrauschten Bild. Traegt das Rezept schon ein
+                '   Entrauschen, gilt dessen Staerke.
+                ' - Alles andere: das Bildmodell am entwickelten Bild, vor der Reglerkette. Steckt
+                '   ein vermerktes Entrauschen schon in den Pixeln, laesst die FESTE Staerke das Bild
+                '   aus; die Automatik misst ein entrauschtes Bild ohnehin als sauber.
                 '
-                ' NICHT BEI EINEM PROJEKTBUENDEL. Dessen Bild ist hier schon die fertige Szene samt
-                ' Reglerkette, Texten und Objekten (RenderFpxFullResolution): gemessen wuerde die
-                ' bearbeitete Fassung, und das Modell weichte die Schrift mit auf.
-                '
-                ' Auch nicht bei einem Projektbuendel als ZIEL: das speichert Original und Rezept,
-                ' nicht die gerechneten Pixel. Minuten Rechenzeit kaemen dort nicht an.
+                ' NICHT BEI EINEM PROJEKTBUENDEL als Quelle oder Ziel: dessen Bild ist hier schon die
+                ' fertige Szene, und ein Buendel als Ziel speichert Original und Rezept, nicht Pixel.
                 Dim fpxTarget = String.Equals(IO.Path.GetExtension(targetPath), ".fpx", StringComparison.OrdinalIgnoreCase)
-                If decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing AndAlso
-                   (isFpxSource OrElse fpxTarget) Then
-                    DiagnosticLogService.LogAlways("Entrauschen",
-                        $"{IO.Path.GetFileName(sourcePath)}: Projektbuendel als Quelle oder Ziel - im Stapel nicht entrauscht")
-                ElseIf decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing Then
-                    Dim hasDenoiseNote = adj.BakedOperations IsNot Nothing AndAlso
-                        adj.BakedOperations.Any(Function(o) o IsNot Nothing AndAlso
-                            String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
-                    Dim alreadyDenoised = Not denoise.Automatic AndAlso hasDenoiseNote AndAlso
-                        (adj.BakedOperationsApplied OrElse pendingDenoiseApplied)
-                    If alreadyDenoised Then
-                        DiagnosticLogService.LogAlways("Entrauschen",
-                            $"{IO.Path.GetFileName(sourcePath)}: schon im Editor entrauscht - ausgelassen")
+                Dim sourceName = IO.Path.GetFileName(sourcePath)
+                If decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing Then
+                    If isFpxSource OrElse fpxTarget Then
+                        DiagnosticLogService.LogAlways("Entrauschen", $"{sourceName}: Projektbuendel als Quelle oder Ziel - im Stapel nicht entrauscht")
+                    ElseIf Not DenoiseModelService.UsesRawStage(sourcePath) Then
+                        Dim alreadyDenoised = Not denoise.Automatic AndAlso adj IsNot Nothing AndAlso
+                            adj.BakedOperations IsNot Nothing AndAlso adj.BakedOperations.Any(Function(o) IsDenoiseOperation(o)) AndAlso
+                            (adj.BakedOperationsApplied OrElse pendingDenoiseApplied)
+                        If alreadyDenoised Then
+                            DiagnosticLogService.LogAlways("Entrauschen", $"{sourceName}: schon im Editor entrauscht - ausgelassen")
+                        Else
+                            Dim denoised = DenoiseModelService.ApplyImageRequest(decoded, denoise, sourceName, cancel)
+                            If denoised IsNot Nothing Then
+                                decoded.Dispose()
+                                decoded = denoised
+                            End If
+                        End If
+                    ElseIf adj IsNot Nothing AndAlso adj.RawModelDenoise Then
+                        DiagnosticLogService.LogAlways("Entrauschen", $"{sourceName}: Rezept traegt schon ein Entrauschen - es gilt")
                     Else
-                        Dim denoised = DenoiseModelService.ApplyRequest(decoded, denoise, IO.Path.GetFileName(sourcePath), cancel)
-                        If denoised IsNot Nothing Then
-                            decoded.Dispose()
-                            decoded = denoised
+                        Dim strength = DenoiseModelService.StrengthForRequest(decoded, denoise, sourceName)
+                        If strength.HasValue Then
+                            Dim withDenoise = If(adj, New ImageAdjustments()).Clone()
+                            withDenoise.RawModelDenoise = True
+                            withDenoise.RawModelDenoiseStrength = CSng(strength.Value)
+                            If RawDecodeService.PrepareModelDenoise(sourcePath, cancel) Then
+                                ' Dieselbe Belichtung in der RAW-Stufe wie eben, renderAdj bleibt gueltig.
+                                Dim ignoredAdj As ImageAdjustments = Nothing
+                                Dim redecoded = DecodeForRender(sourcePath, withDenoise, ignoredAdj, developRaw)
+                                If redecoded IsNot Nothing Then
+                                    decoded.Dispose()
+                                    decoded = redecoded
+                                End If
+                            End If
                         End If
                     End If
                 End If

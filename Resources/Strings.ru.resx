@@ -8958,9 +8958,6 @@
   <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
     <value>Файлы RAW и Photoshop остаются без изменений. Их коррекции попадают в сопроводительный файл рядом, и с этого момента галерея показывает эти снимки проявленными.</value>
   </data>
-  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
-    <value>При перезаписи файлы RAW и Photoshop получают только новые коррекции, а шумоподавлению нужны новые данные изображения. Чтобы убрать шум, запишите новые файлы.</value>
-  </data>
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>Копирование выделения...</value>
   </data>
@@ -11471,5 +11468,101 @@
   </data>
   <data name="Tiefsee_9226edc0" xml:space="preserve">
     <value>Глубина</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_7f839a15" xml:space="preserve">
+    <value>Изображение {0}x{1}, {2} фрагментов, {3} с</value>
+  </data>
+  <data name="Das_gespeicherte_Entrauschen_mit_Modell_gibt_es__d32d92d8" xml:space="preserve">
+    <value>Сохранённое шумоподавление моделью теперь доступно только для RAW-файлов и здесь больше не действует.</value>
+  </data>
+  <data name="Entrauschen_mit_Modell_gibt_es_nur_f_r_RAW_Datei_49ee2ff0" xml:space="preserve">
+    <value>Шумоподавление моделью доступно только для RAW-файлов. Для готовых изображений используйте ползунки выше.</value>
+  </data>
+  <data name="Mit_Modell_wird_vor_allem_anderen_entrauscht_Das_87a37711" xml:space="preserve">
+    <value>Модель подавляет шум раньше всего остального. Здесь это больше невозможно, потому что в пиксели уже что-то внесено, например ретушь.</value>
+  </data>
+  <data name="F_r_diesen_Sensor_gibt_es_noch_kein_Modell_zum_E_c5d9e7c0" xml:space="preserve">
+    <value>Для этой матрицы пока нет модели шумоподавления.</value>
+  </data>
+  <data name="Entrauscht_die_RAW_Datei_mit_einem_gelernten_Mod_da691c09" xml:space="preserve">
+    <value>Подавляет шум в RAW-файле обученной моделью до расчёта экспозиции и цвета. На видеокарте это занимает секунды, на процессоре около минуты. После этого другая сила не требует нового расчёта.</value>
+  </data>
+  <data name="Mit_Modell_entrauscht_St_rke_0_72a3ccb0" xml:space="preserve">
+    <value>Шум подавлен моделью, сила {0}</value>
+  </data>
+  <data name="Entrauschen_mit_Modell_entfernt_5fc5e8af" xml:space="preserve">
+    <value>Шумоподавление моделью удалено</value>
+  </data>
+  <data name="Entrauscht_jede_RAW_Datei_mit_einem_gelernten_Mo_9557abd3" xml:space="preserve">
+    <value>Подавляет шум в каждом RAW-файле обученной моделью, с постоянной силой или с измерением для каждого изображения. Остальные изображения остаются как есть.</value>
+  </data>
+  <data name="Entrauscht_werden_nur_RAW_Dateien_andere_Bilder__f3ecaa14" xml:space="preserve">
+    <value>Шум подавляется только в RAW-файлах, остальные изображения остаются как есть.</value>
+  </data>
+  <data name="Braucht_je_Bild_auf_der_Grafikkarte_einige_Sekun_38a7d963" xml:space="preserve">
+    <value>На изображение уходит несколько секунд на видеокарте и около минуты на процессоре. Изображения, уже обработанные в редакторе, сохраняют свою силу.</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_8512ecf2" xml:space="preserve">
+    <value>Измеряет шум на изображении и задаёт силу так, чтобы осталось примерно столько зерна, сколько в чистом снимке с низким ISO. Шумоподавление начинается только кнопкой ниже.</value>
+  </data>
+  <data name="Wie_stark_die_Helligkeit_entrauscht_wird_Niedrig_c13f31d0" xml:space="preserve">
+    <value>Насколько сильно подавляется шум яркости. Меньше сохраняет больше мелких деталей, больше убирает больше зерна. Цвет всегда обрабатывается полностью. Действует при следующем нажатии кнопки ниже.</value>
+  </data>
+  <data name="Mit_Modell_entrauschen_45bb57ab" xml:space="preserve">
+    <value>Подавить шум моделью</value>
+  </data>
+  <data name="Steht_im_Rezept_und_wird_beim_ffnen_neu_gerechne_9d583b95" xml:space="preserve">
+    <value>Хранится в рецепте и пересчитывается при открытии. Сброс этой группы удаляет его.</value>
+  </data>
+  <data name="Entrauschen_von_RAW_Dateien_18a7dbaa" xml:space="preserve">
+    <value>Шумоподавление RAW-файлов</value>
+  </data>
+  <data name="Trainingsdaten_des_Entrauschens_7a285b7a" xml:space="preserve">
+    <value>Обучающие данные шумоподавления</value>
+  </data>
+  <data name="Rauschen_in_RAW_Dateien_entfernen_5df5ad85" xml:space="preserve">
+    <value>Удаление шума из RAW-файлов</value>
+  </data>
+  <data name="RawForge_ef42f126" xml:space="preserve">
+    <value>RawForge</value>
+  </data>
+  <data name="RawNIND_09110976" xml:space="preserve">
+    <value>RawNIND</value>
+  </data>
+  <data name="CC_BY_SA_4_0_99a2eea7" xml:space="preserve">
+    <value>CC BY-SA 4.0</value>
+  </data>
+  <data name="Entrauscht_das_fertige_Bild_mit_einem_gelernten__ad4542f0" xml:space="preserve">
+    <value>Подавляет шум в готовом изображении обученной моделью и вносит результат в пиксели. На видеокарте это занимает секунды, на процессоре около минуты.</value>
+  </data>
+  <data name="Mit_Modell_ins_Bild_gerechnet_St_rke_0_b0aaf1b2" xml:space="preserve">
+    <value>Внесено в изображение моделью, сила {0}</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_7e960dfd" xml:space="preserve">
+    <value>Подавляет шум в каждом изображении обученной моделью, с постоянной силой или с измерением для каждого изображения. RAW-файлы до экспозиции и цвета, готовые изображения в пиксели.</value>
+  </data>
+  <data name="RAW_Dateien_werden_vor_Belichtung_und_Farbe_entr_33d344f0" xml:space="preserve">
+    <value>RAW-файлы обрабатываются до экспозиции и цвета, готовые изображения, такие как JPEG, в пиксели.</value>
+  </data>
+  <data name="Rauschen_in_fertigen_Bildern_entfernen_206ea337" xml:space="preserve">
+    <value>Удаление шума из готовых изображений</value>
+  </data>
+  <data name="Das_Bild_wird_ohne_das_gespeicherte_Entrauschen__cee0245d" xml:space="preserve">
+    <value>Изображение показано без сохранённого шумоподавления, модель отсутствует.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_Photoshop_Dateien_nur_1470341e" xml:space="preserve">
+    <value>При перезаписи файлы Photoshop получают только новые настройки, а для шумоподавления в них нужны новые данные изображения. Чтобы убрать шум, сохраните новые файлы.</value>
+  </data>
+  <data name="Gespeichertes_Entrauschen_anwenden_92b9ca60" xml:space="preserve">
+    <value>Применить сохранённое шумоподавление?</value>
+  </data>
+  <data name="Zu_diesem_Bild_ist_ein_Entrauschen_mit_Modell_ge_8ddc37bd" xml:space="preserve">
+    <value>Для этого снимка сохранено шумоподавление моделью. Его нужно один раз рассчитать: на видеокарте это занимает секунды, на процессоре до нескольких минут.</value>
+  </data>
+  <data name="Das_Bild_wird_ohne_das_gespeicherte_Entrauschen__8807812c" xml:space="preserve">
+    <value>Снимок показан без сохранённого шумоподавления.</value>
+  </data>
+  <data name="Eine_SVG_Grafik_wird_nicht_als_Bild_ge_ffnet_Auf_98fd9794" xml:space="preserve">
+    <value>Графика SVG не открывается как снимок. Перетащите её на снимок, и она будет вставлена как слой.</value>
   </data>
 </root>

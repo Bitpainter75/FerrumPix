@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Views.DenoiseFormView">
-    <!-- ENTRAUSCHEN MIT MODELL im Stapel: aus, feste Staerke oder je Bild gemessen, dazu das
-         Modell. Eingebettet in "Filter anwenden" und als eigene Gruppe in "Exportieren nach", wie
+    <!-- ENTRAUSCHEN MIT MODELL im Stapel: aus, feste Staerke oder je Bild gemessen, nur fuer
+         RAW-Dateien in der RAW-Stufe, fertige Bilder mit dem Bildmodell. Eingebettet in "Filter anwenden" und als eigene Gruppe in "Exportieren nach", wie
          FilterFormView und ResizeFormView - beide binden dieselben DialogBatchDenoise*-Eigenschaften
          des MainWindowViewModel, damit die Optionen nicht auseinanderlaufen. Den Knopf "Aus" gibt es
          nur in "Filter anwenden"; im Export schaltet der Haken der Gruppe.
@@ -42,27 +42,13 @@
                    Foreground="{DynamicResource FP.Text.Secondary}"
                    FontSize="{DynamicResource FP.Font.Small}"/>
 
-        <TextBlock Grid.Row="1"
-                   Text="Modell"
-                   VerticalAlignment="Center"
+        <!-- Zwei Wege, je nach Datei: RAWs in der RAW-Stufe, alles andere am fertigen Bild. -->
+        <TextBlock Grid.Row="1" Grid.Column="1"
+                   Text="RAW-Dateien werden vor Belichtung und Farbe entrauscht, fertige Bilder wie JPEG in die Bildpunkte."
                    IsVisible="{Binding IsDialogBatchDenoiseModelVisible}"
-                   Foreground="{DynamicResource FP.Text.Secondary}"/>
-        <WrapPanel Grid.Row="1" Grid.Column="1" IsVisible="{Binding IsDialogBatchDenoiseModelVisible}">
-            <Button Classes="segmented" Margin="0,0,8,6"
-                    Classes.active="{Binding IsDialogBatchDenoiseQuality}"
-                    IsEnabled="{Binding IsDialogBatchDenoiseQualityAvailable}"
-                    ToolTip.ShowOnDisabled="True"
-                    Click="OnDenoiseModelClick"
-                    ToolTip.Tip="Hält mehr feine Zeichnung, braucht aber ein Vielfaches der Zeit."
-                    Tag="quality">Gründlich</Button>
-            <Button Classes="segmented" Margin="0,0,8,6"
-                    Classes.active="{Binding IsDialogBatchDenoiseFast}"
-                    IsEnabled="{Binding IsDialogBatchDenoiseFastAvailable}"
-                    ToolTip.ShowOnDisabled="True"
-                    Click="OnDenoiseModelClick"
-                    ToolTip.Tip="In einem Sechstel der Zeit, dafür etwas glatter. Für lange Serien."
-                    Tag="fast">Zügig</Button>
-        </WrapPanel>
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource FP.Text.Secondary}"
+                   FontSize="{DynamicResource FP.Font.Small}"/>
 
         <TextBlock Grid.Row="2"
                    Text="Stärke"
@@ -124,7 +110,7 @@
                    Foreground="{DynamicResource FP.Text.Secondary}"
                    FontSize="{DynamicResource FP.Font.Small}"/>
         <TextBlock Grid.Row="4" Grid.Column="1"
-                   Text="Braucht je entrauschtem Bild mehrere Minuten. Bilder, die im Editor schon entrauscht wurden, werden nicht ein zweites Mal entrauscht."
+                   Text="Braucht je Bild auf der Grafikkarte einige Sekunden, auf dem Prozessor etwa eine Minute. Bilder, die im Editor schon entrauscht wurden, behalten ihre Stärke."
                    IsVisible="{Binding IsDialogBatchDenoiseModelVisible}"
                    TextWrapping="Wrap"
                    Foreground="{DynamicResource FP.Text.Secondary}"

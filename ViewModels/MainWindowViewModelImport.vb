@@ -639,8 +639,14 @@ Namespace ViewModels
             ' bisher dem aktuellen Ordner der Galerie. Steht die Vorlage nicht unter den Zielen der
             ' Einstellungen, bekommt sie einen eigenen Eintrag und bleibt so nach einem Wechsel
             ' wieder waehlbar.
+            ' Ein schlichter Ordner kommt ebenso wieder, wenn er beim letzten Mal das Ziel war und
+            ' nicht der aktuelle Ordner (ImportTargetChoice "Last"), wie bei Speichern unter: die
+            ' letzte Wahl der Liste gilt wieder.
             Dim lastTarget = If(settings.ImportTargetFolder, "").Trim()
-            If CardImportService.HasPlaceholders(lastTarget) Then
+            Dim lastPlainFolder = String.Equals(settings.ImportTargetChoice, "Last", StringComparison.Ordinal) AndAlso
+                                  lastTarget.Length > 0 AndAlso Directory.Exists(lastTarget) AndAlso
+                                  Not PathIdentity.AreSame(lastTarget, _dialogImportTargetFolder)
+            If CardImportService.HasPlaceholders(lastTarget) OrElse lastPlainFolder Then
                 Dim known = DialogImportTargetChoices.FirstOrDefault(Function(c) c.Pattern = lastTarget)
                 If known Is Nothing Then
                     known = New ImportTargetChoice With {.Pattern = lastTarget,
@@ -665,9 +671,16 @@ Namespace ViewModels
                 Dim name = If(String.IsNullOrWhiteSpace(defined.Name), defined.Template, defined.Name & ": " & defined.Template)
                 DialogImportNameChoices.Add(New ImportTargetChoice With {.Pattern = defined.Template.Trim(), .Label = name})
             Next
-            ' Steht das zuletzt benutzte Muster in der Liste, ist es gewaehlt; ein frei
-            ' geschriebenes steht nur im Feld.
-            _dialogImportSelectedNameChoice = DialogImportNameChoices.FirstOrDefault(Function(c) c.Pattern = _dialogImportNameTemplate.Trim())
+            ' Das zuletzt benutzte Muster ist gewaehlt. Ein frei geschriebenes, das nicht in der Liste
+            ' steht, bekommt wie bei Speichern unter einen Eintrag "Zuletzt benutzt" und bleibt so
+            ' nach einem Wechsel wieder waehlbar.
+            Dim lastName = _dialogImportNameTemplate.Trim()
+            _dialogImportSelectedNameChoice = DialogImportNameChoices.FirstOrDefault(Function(c) c.Pattern = lastName)
+            If _dialogImportSelectedNameChoice Is Nothing AndAlso lastName.Length > 0 Then
+                _dialogImportSelectedNameChoice = New ImportTargetChoice With {.Pattern = lastName,
+                    .Label = String.Format(LocalizationService.T("Zuletzt benutzt: {0}"), lastName)}
+                DialogImportNameChoices.Insert(1, _dialogImportSelectedNameChoice)
+            End If
             Me.RaisePropertyChanged(NameOf(DialogImportSelectedNameChoice))
             Me.RaisePropertyChanged(NameOf(DialogImportJobName))
             Me.RaisePropertyChanged(NameOf(DialogImportNameTemplate))
@@ -698,8 +711,12 @@ Namespace ViewModels
             ' der Einstellungen, ein schlichter Ordner wird direkt beschrieben.
             Dim pattern = ""
             Dim backup = If(_dialogImportUseBackup, _dialogImportBackupFolder, "")
+            ' War das Ziel der aktuelle Ordner, folgt das naechste Mal wieder der Galerie; sonst
+            ' kommt dieses Ziel wieder (siehe oben).
+            Dim targetWasCurrent = PathIdentity.AreSame(_dialogImportTargetFolder, current.Pattern)
             AppSettingsService.Update(Sub(s)
                                           s.ImportTargetFolder = _dialogImportTargetFolder
+                                          s.ImportTargetChoice = If(targetWasCurrent, "Current", "Last")
                                           s.ImportIncludeRawPartners = _dialogImportIncludeRawPartners
                                           s.ImportIncludeSubfolders = _dialogImportIncludeSubfolders
                                           s.ImportUseBackup = _dialogImportUseBackup

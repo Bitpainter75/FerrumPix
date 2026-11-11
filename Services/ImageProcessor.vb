@@ -232,7 +232,7 @@ Namespace Services
         ''' <param name="developRaw">Nur wirksam, solange KEIN Rezept vorliegt. Mit Rezept wird immer
         ''' entwickelt - die eingebettete Vorschau wäre dort schlicht das falsche Bild.</param>
         ''' <param name="applyPendingBaked">Sollen vermerkte, aber noch nicht in den Pixeln
-        ''' steckende Vorgaenge (Entrauschen, Objektentfernen, Retusche, Striche) mitgerechnet
+        ''' steckende Vorgaenge (Objektentfernen, Retusche, Striche, Entrauschen mit Modell) mitgerechnet
         ''' werden? Vorgabe NEIN, und das mit Absicht: es kostet Minuten je Bild, und wer eine
         ''' Vorschau aufbaut, wartet nicht minutenlang. Die Ausgabewege fragen den Nutzer und geben
         ''' seine Antwort hier herein.</param>
@@ -248,11 +248,14 @@ Namespace Services
             ' Ohne Rezept die rohe Quelle, mit Rezept der Decode fuer die Kette (mit der Belichtung
             ' in der RAW-Stufe).
             If rezept Is Nothing Then Return DecodeForAdjustments(path, Nothing, developRaw)
+            ' Ein Entrauschen mit Modell kostet wie die gebackenen Vorgaenge Zeit und laeuft deshalb
+            ' nur mit derselben Zustimmung (CountPathsWithPendingBakedOperations zaehlt es mit).
+            If applyPendingBaked Then PrepareRecipeModelDenoise(path, rezept)
             Dim decoded = DecodeForRender(path, rezept, rezept, True)
             If decoded Is Nothing Then Return Nothing
             Using decoded
                 ' Die gebackenen Vorgaenge gehoeren VOR die Reglerkette - sie sind Teil des Bildes,
-                ' nicht eine Stufe darauf. Das Entrauschen etwa arbeitet auf dem entwickelten Bild
+                ' nicht eine Stufe darauf. Das Entfernen etwa arbeitet auf dem entwickelten Bild
                 ' und nicht auf einem, dem schon Kontrast und Klarheit angetan wurden.
                 Dim input = decoded
                 Dim reapplied As SKBitmap = Nothing
@@ -278,7 +281,8 @@ Namespace Services
                 If String.IsNullOrWhiteSpace(path) Then Continue For
                 If Not RawSidecarService.IsSidecarFormat(path) Then Continue For
                 If Not RawSidecarService.Exists(path) Then Continue For
-                If HasPendingBakedOperations(RawSidecarService.TryRead(path)) Then count += 1
+                Dim recipe = RawSidecarService.TryRead(path)
+                If HasPendingBakedOperations(recipe) OrElse NeedsModelDenoiseRun(path, recipe) Then count += 1
             Next
             Return count
         End Function
@@ -286,12 +290,14 @@ Namespace Services
         ''' <summary>Liegt in diesem Rezept ein Vorgang, der in die PIXEL gehoert, aber in den Pixeln
         ''' daneben NICHT steckt?
         '''
-        ''' Vier Vorgaenge fallen darunter, und alle vier haben dasselbe Problem: sie lassen sich
+        ''' Mehrere Vorgaenge fallen darunter, und alle haben dasselbe Problem: sie lassen sich
         ''' nicht als Regler ausdruecken, sondern nur rechnen. Bei einer .fpx liegen ihre Pixel im
         ''' Buendel und ueberleben; neben einem RAW oder PSD liegt nur das Rezept, und die Pixel
         ''' entstehen bei jedem Oeffnen neu aus den Sensordaten.
         '''
-        ''' Entrauschen und Objektentfernen stehen dafuer in <see cref="ImageAdjustments.BakedOperations"/>.
+        ''' Entrauschen am fertigen Bild, Objektentfernen und Hochskalieren stehen dafuer in
+        ''' <see cref="ImageAdjustments.BakedOperations"/>. Das Entrauschen einer RAW gehoert nicht
+        ''' dazu, es ist eine Einstellung der RAW-Stufe (ImageAdjustments.RawModelDenoise).
         ''' Retusche und Pinselstriche standen schon immer im Rezept - sie wurden nur nirgends wieder
         ''' angewandt, womit sie neben einem RAW genauso still verlorengingen. Deshalb zaehlen sie
         ''' hier mit.</summary>
@@ -312,7 +318,7 @@ Namespace Services
             If adj.BakedOperations IsNot Nothing Then
                 For Each op In adj.BakedOperations
                     If op Is Nothing Then Continue For
-                    If String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then
+                    If IsDenoiseOperation(op) Then
                         denoiseCount += 1
                     ElseIf String.Equals(op.Kind, BakedOperation.KindObjectRemoval, StringComparison.OrdinalIgnoreCase) Then
                         removalCount += 1
@@ -349,22 +355,18 @@ Namespace Services
         ''' nichts gelungen ist; dann behaelt der Aufrufer sein eigenes.
         '''
         ''' DIE EINZIGE STELLE, die das tut. Nicht aus Ordnungsliebe: waeren es zwei, koennte ein
-        ''' Bild durch beide laufen, und ein zweimal entrauschtes oder zweimal gefuelltes Bild sieht
+        ''' Bild durch beide laufen, und ein zweimal gefuelltes Bild sieht
         ''' man erst, wenn man es nebeneinanderlegt.
         '''
-        ''' REIHENFOLGE. Zuerst das Entrauschen und das Entfernen in der Reihenfolge, in der sie
+        ''' REIHENFOLGE. Zuerst Entrauschen, Entfernen und Hochskalieren in der Reihenfolge, in der sie
         ''' gemacht wurden, danach Retusche und Striche. Das Entrauschen gehoert nach vorn, weil es
-        ''' das ganze Bild anfasst: eine retuschierte Stelle wuerde sonst mitentrauscht und saehe
-        ''' anders aus als in der Sitzung, in der sie entstanden ist. Ganz deckungsgleich wird es
-        ''' nicht - wer in der Sitzung erst retuschiert und dann entrauscht hat, bekommt hier die
-        ''' andere Reihenfolge. Der Unterschied ist kleiner als der Aufwand, die tatsaechliche
-        ''' Reihenfolge mitzuschreiben.
+        ''' das ganze Bild anfasst. Das Entrauschen einer RAW steckt schon im Decode davor.
         '''
         ''' FEHLT EIN MODELL, wird der Vorgang UEBERSPRUNGEN und der Rest trotzdem gemacht. Alles
         ''' abzubrechen hiesse, wegen eines fehlenden Modells auch die Retusche zu verlieren.</summary>
         ''' <param name="cancel">Abbruch durch den Nutzer. Hier laufen dieselben Modelle wie beim
         ''' ersten Mal, also dauert es genauso lange - und ein Abbruch muss genauso gehen. Bricht
-        ''' einer der Vorgaenge ab, wird der GANZE Nachzug verworfen: ein Bild mit dem Entrauschen,
+        ''' einer der Vorgaenge ab, wird der GANZE Nachzug verworfen: ein Bild mit dem Entfernen,
         ''' aber ohne die Retusche waere ein Zustand, den niemand bestellt hat.</param>
         Friend Shared Function ApplyPendingBakedOperations(source As SKBitmap, adj As ImageAdjustments,
                                                            Optional cancel As Threading.CancellationToken = Nothing) As SKBitmap
@@ -380,7 +382,7 @@ Namespace Services
                             If owned Then current.Dispose()
                             Return Nothing
                         End If
-                        If String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then
+                        If IsDenoiseOperation(op) Then
                             current = ReplaceBitmapOwned(current, RunBakedDenoise(current, op, cancel), owned)
                         ElseIf String.Equals(op.Kind, BakedOperation.KindObjectRemoval, StringComparison.OrdinalIgnoreCase) Then
                             current = ReplaceBitmapOwned(current, RunBakedObjectRemoval(current, op, cancel), owned)
@@ -486,65 +488,58 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Traegt das Rezept ein Entrauschen, das <see cref="ApplyPendingBakedOperations"/>
-        ''' auch nachziehen KANN - bekannte Modellart und Modelldatei vorhanden? Dieselben Bedingungen
-        ''' wie in <see cref="RunBakedDenoise"/>; der Stapel fragt danach, ob ein Entrauschen schon in
-        ''' den Pixeln steckt.</summary>
-        Friend Shared Function HasRunnableDenoiseOperation(adj As ImageAdjustments) As Boolean
-            If adj Is Nothing OrElse adj.BakedOperations Is Nothing Then Return False
-            For Each op In adj.BakedOperations
-                If op Is Nothing OrElse Not String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase) Then Continue For
-                Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)
-                If Not known.HasValue Then Continue For
-                If known.Value = DenoiseModelService.DenoiseKind.Fast Then
-                    If DenoiseModelService.FastAvailable Then Return True
-                ElseIf DenoiseModelService.Available Then
-                    Return True
-                End If
-            Next
-            Return False
+        ''' <summary>Ein Entrauschen am fertigen Bild als gebackener Vorgang (Bildmodell). Bei einer
+        ''' RAW, die TreeNet kann, steht es nach dem Lesen nicht mehr hier, sondern in der RAW-Stufe
+        ''' (DenoiseModelService.MigrateLegacyRecipe).</summary>
+        Friend Shared Function IsDenoiseOperation(op As BakedOperation) As Boolean
+            Return op IsNot Nothing AndAlso
+                   String.Equals(op.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase)
         End Function
 
-        ''' <summary>Ein vermerkter Entrausch-Durchlauf. Nothing, wenn seine Modelldatei fehlt oder
-        ''' der Vermerk eine Modellart nennt, die diese Fassung nicht kennt - dann bleibt der
-        ''' Vorgang liegen, statt mit einem ANDEREN Modell nachgezogen zu werden. Ein Bild, das
-        ''' anders aussieht als beim letzten Mal, ist schlechter als eines, dem etwas fehlt und das
-        ''' es sagt.</summary>
+        ''' <summary>Traegt das Rezept ein Entrauschen am Bild, das <see cref="ApplyPendingBakedOperations"/>
+        ''' auch nachziehen KANN (Bildmodell vorhanden)? Der Stapel fragt danach, ob ein Entrauschen
+        ''' schon in den Pixeln steckt.</summary>
+        Friend Shared Function HasRunnableDenoiseOperation(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing OrElse adj.BakedOperations Is Nothing Then Return False
+            Return DenoiseModelService.ImageAvailable AndAlso adj.BakedOperations.Any(Function(o) IsDenoiseOperation(o))
+        End Function
+
+        ''' <summary>Ein vermerktes Entrauschen am Bild nachziehen, mit dem Bildmodell. Jeder Vermerk
+        ''' ("fast", ein alter "quality" oder leer) rechnet mit ihm: das fruehere gruendliche Modell
+        ''' gibt es nicht mehr. Nothing, wenn die Modelldatei fehlt - dann bleibt der Vorgang liegen.</summary>
         Private Shared Function RunBakedDenoise(source As SKBitmap, op As BakedOperation,
                                                 cancel As Threading.CancellationToken) As SKBitmap
-            Dim known = DenoiseModelService.KindFromRecipeName(op.DenoiseModel)
-            If Not known.HasValue Then
-                DiagnosticLogService.LogAlways("Entrauschen",
-                    $"Vermerk nennt die unbekannte Modellart '{op.DenoiseModel}' - der Vorgang wird nicht nachgezogen")
+            If Not DenoiseModelService.ImageAvailable Then
+                DiagnosticLogService.LogAlways("Entrauschen", "Bildmodell fehlt - vermerktes Entrauschen wird nicht nachgezogen")
                 Return Nothing
             End If
-            Dim kind = known.Value
-            If kind = DenoiseModelService.DenoiseKind.Fast Then
-                If Not DenoiseModelService.FastAvailable Then Return Nothing
-            ElseIf Not DenoiseModelService.Available Then
-                Return Nothing
-            End If
-            ' Das Modell nimmt nur Bgra8888. Ein anders belegtes Bild wird einmal umgelegt, statt den
-            ' Vorgang wortlos ausfallen zu lassen.
-            Dim converted As SKBitmap = Nothing
-            Try
-                Dim input = source
-                If source.ColorType <> SKColorType.Bgra8888 Then
-                    converted = New SKBitmap(New SKImageInfo(source.Width, source.Height,
-                                                             SKColorType.Bgra8888, source.AlphaType))
-                    Using canvas = New SKCanvas(converted)
-                        Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                            canvas.DrawBitmap(source, 0, 0, paint)
-                        End Using
-                    End Using
-                    input = converted
-                End If
-                Return DenoiseModelService.Denoise(input, kind,
-                                                   CSng(Math.Max(0.0, Math.Min(100.0, op.DenoiseStrength)) / 100.0), cancel)
-            Finally
-                converted?.Dispose()
-            End Try
+            Return DenoiseModelService.DenoiseImage(source,
+                CSng(Math.Max(0.0, Math.Min(100.0, op.DenoiseStrength)) / 100.0), cancel)
         End Function
+
+        ''' <summary>Muesste fuer diese Datei das Modell erst laufen, damit ihr Rezept vollstaendig
+        ''' herauskommt? Fuer die Frage vor Druck, Collage und Stapel.</summary>
+        Friend Shared Function NeedsModelDenoiseRun(path As String, adj As ImageAdjustments) As Boolean
+            Return adj IsNot Nothing AndAlso adj.RawModelDenoise AndAlso DenoiseModelService.Available AndAlso
+                   DenoiseModelService.SupportsFile(path) AndAlso Not RawDecodeService.HasModelDenoised(path)
+        End Function
+
+        ''' <summary>Fuer einen Ausgabeweg, der auf das Ergebnis warten darf (Speichern, Stapel,
+        ''' Druck, Collage): traegt das Rezept ein Entrauschen mit Modell, das Modell ueber diese
+        ''' Datei laufen lassen, damit der folgende Decode es enthaelt. Der Decode selbst rechnet es
+        ''' nie (RawDecodeServiceModelDenoise.vb). Fehlt das Modell, passt die Datei nicht oder wird
+        ''' abgebrochen, bleibt sie unentrauscht; das Protokoll sagt, warum.</summary>
+        Friend Shared Sub PrepareRecipeModelDenoise(path As String, adj As ImageAdjustments,
+                                                    Optional cancel As Threading.CancellationToken = Nothing)
+            If adj Is Nothing OrElse Not adj.RawModelDenoise Then Return
+            If Not RawPreviewService.IsSupportedRaw(path) Then Return
+            If RawDecodeService.HasModelDenoised(path) Then Return
+            If Not DenoiseModelService.Available Then
+                DiagnosticLogService.LogAlways("Entrauschen", $"{IO.Path.GetFileName(path)}: Modell fehlt - ohne Entrauschen")
+                Return
+            End If
+            RawDecodeService.PrepareModelDenoise(path, cancel)
+        End Sub
 
         ''' <summary>Ein vermerktes Objektentfernen. Ohne Maske gibt es nichts nachzuziehen - sie IST
         ''' der Auftrag.</summary>
@@ -1030,7 +1025,8 @@ Namespace Services
                 .LensModel = adj.LensModel,
                 .ChromaticAberrationRed = adj.LensTcaRed,
                 .ChromaticAberrationBlue = adj.LensTcaBlue,
-                .CropSensorEdge = adj.RawSensorEdgeCrop}
+                .CropSensorEdge = adj.RawSensorEdgeCrop,
+                .ModelDenoiseStrength = adj.ModelDenoiseStrengthForDecode()}
         End Function
 
         Public Shared Function ApplyAdjustments(source As SKBitmap, adj As ImageAdjustments) As Bitmap

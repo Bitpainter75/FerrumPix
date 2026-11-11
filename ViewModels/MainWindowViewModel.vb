@@ -2085,7 +2085,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogFilterAppendNameVisible))
-                ' Trifft das Ueberschreiben RAW- oder Photoshop-Dateien, faellt das Entrauschen weg
+                ' Trifft das Ueberschreiben Photoshop-Dateien, faellt das Entrauschen weg
                 ' und mit ihm "Ohne Filter", das allein aus dem Entrauschen besteht.
                 If IsDialogBatchDenoiseLockedByRecipes AndAlso IsDialogFilterSourceNone Then
                     DialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
@@ -2562,21 +2562,20 @@ Namespace ViewModels
         ' ── Entrauschen im Stapel ──────────────────────────────────────────────────────────────
         '
         ' Zusaetzlich zum Look und unabhaengig von dessen Quelle. Drei Stellungen: aus, eine feste
-        ' Staerke fuer alle Bilder, oder je Bild gemessen (DenoiseModelService.SuggestFor). Die
-        ' Stellung steht bei jedem Oeffnen auf aus, Modell, Staerke und Restkorn werden gemerkt -
-        ' Begruendung bei AppSettings.BatchDenoiseModel.
+        ' Staerke fuer alle Bilder, oder je Bild gemessen (DenoiseModelService.SuggestFor). RAWs in
+        ' der RAW-Stufe, alles andere mit dem Bildmodell. Die Stellung steht bei jedem Oeffnen auf aus, Staerke und
+        ' Restkorn werden gemerkt - Begruendung bei AppSettings.BatchDenoiseStrength.
 
         Public Const BatchDenoiseOff As String = "Off"
         Public Const BatchDenoiseFixed As String = "Fixed"
         Public Const BatchDenoiseAuto As String = "Auto"
 
         Private _dialogBatchDenoiseMode As String = BatchDenoiseOff
-        Private _dialogBatchDenoiseFast As Boolean = False
         Private _dialogBatchDenoiseStrength As Integer = 70
         Private _dialogBatchDenoiseGrain As Integer = 50
 
         ''' <summary>Gibt es ueberhaupt ein Modell? Sonst steht statt der Knoepfe ein Hinweis da.
-        ''' Ebenso, wenn das Ueberschreiben RAW- oder Photoshop-Dateien trifft (siehe
+        ''' Ebenso, wenn das Ueberschreiben Photoshop-Dateien trifft (siehe
         ''' <see cref="IsDialogBatchDenoiseLockedByRecipes"/>).</summary>
         Public ReadOnly Property IsDialogBatchDenoiseAvailable As Boolean
             Get
@@ -2589,7 +2588,7 @@ Namespace ViewModels
         Public ReadOnly Property DialogBatchDenoiseMissingHint As String
             Get
                 If IsDialogBatchDenoiseLockedByRecipes Then
-                    Return LocalizationService.T("Beim Überschreiben bekommen RAW- und Photoshop-Dateien nur neue Anpassungen, Entrauschen braucht neue Bilddaten. Zum Entrauschen neue Dateien schreiben lassen.")
+                    Return LocalizationService.T("Beim Überschreiben bekommen Photoshop-Dateien nur neue Anpassungen, Entrauschen braucht dort neue Bilddaten. Zum Entrauschen neue Dateien schreiben lassen.")
                 End If
                 Return EditorViewModel.MissingModelHint
             End Get
@@ -2601,14 +2600,22 @@ Namespace ViewModels
         ''' ein stehengebliebener Wert den Export nicht sperrt.</summary>
         Private _dialogBatchRecipeCount As Integer = 0
 
-        ''' <summary>Entrauschen mit Modell ist GEBACKEN: es rechnet neue Bilddaten, und die haben in
-        ''' einem Rezept keinen Platz. Trifft das Ueberschreiben RAW- oder Photoshop-Dateien, gibt es
-        ''' deshalb kein Entrauschen, auch nicht fuer die JPEGs daneben: ein Lauf, der die Haelfte der
-        ''' Auswahl entrauscht und die andere nicht, waere nicht zu erklaeren. Die automatische
-        ''' Bildverbesserung dagegen setzt nur Reglerwerte und laeuft mit.</summary>
+        ''' <summary>Wie viele dieser Dateien beim Ueberschreiben kein Entrauschen aufnehmen koennen:
+        ''' die Photoshop-Dateien und die DNGs mit fertigem Bild (DenoiseModelService.UsesRawStage). Eine
+        ''' RAW mit Muster nimmt es als Einstellung der RAW-Stufe ins Rezept, die anderen braeuchten
+        ''' neue Bilddaten. Gesetzt und zurueckgesetzt wie _dialogBatchRecipeCount.</summary>
+        Private _dialogBatchDenoiseBlockedCount As Integer = 0
+
+        ''' <summary>Beim Ueberschreiben bekommen RAWs das Entrauschen als Rezeptwert (RawModelDenoise),
+        ''' JPEGs und PNGs neue Bilddaten. Eine PHOTOSHOP-Datei oder eine DNG mit fertigem Bild kann es
+        ''' nicht aufnehmen: dort waere es gebacken, und neue Bilddaten haben im Rezept keinen Platz.
+        ''' Trifft das Ueberschreiben eine solche Datei, gibt es deshalb kein Entrauschen, auch nicht
+        ''' fuer die Dateien daneben: ein Lauf, der
+        ''' die Haelfte der Auswahl entrauscht und die andere nicht, waere nicht zu erklaeren. Die
+        ''' automatische Bildverbesserung dagegen setzt nur Reglerwerte und laeuft mit.</summary>
         Public ReadOnly Property IsDialogBatchDenoiseLockedByRecipes As Boolean
             Get
-                Return _dialogBatchFilterOverwrite AndAlso _dialogBatchRecipeCount > 0
+                Return _dialogBatchFilterOverwrite AndAlso _dialogBatchDenoiseBlockedCount > 0
             End Get
         End Property
 
@@ -2616,19 +2623,7 @@ Namespace ViewModels
         ''' fragt man sich, wie eine RAW-Datei ueberschrieben werden soll.</summary>
         Public ReadOnly Property IsDialogBatchRecipeHintVisible As Boolean
             Get
-                Return IsDialogBatchDenoiseLockedByRecipes
-            End Get
-        End Property
-
-        Public ReadOnly Property IsDialogBatchDenoiseQualityAvailable As Boolean
-            Get
-                Return AiModelService.RuntimeAvailable
-            End Get
-        End Property
-
-        Public ReadOnly Property IsDialogBatchDenoiseFastAvailable As Boolean
-            Get
-                Return AiModelService.RuntimeAvailable
+                Return _dialogBatchFilterOverwrite AndAlso _dialogBatchRecipeCount > 0
             End Get
         End Property
 
@@ -2680,7 +2675,7 @@ Namespace ViewModels
         Public ReadOnly Property DialogExportDenoiseHint As String
             Get
                 If Not IsDialogBatchDenoiseAvailable Then Return EditorViewModel.MissingModelHint
-                Return LocalizationService.T("Entrauscht jedes Bild mit einem gelernten Modell, mit fester Stärke oder je Bild gemessen. Braucht mehrere Minuten je Bild.")
+                Return LocalizationService.T("Entrauscht jedes Bild mit einem gelernten Modell, mit fester Stärke oder je Bild gemessen. RAW-Dateien vor Belichtung und Farbe, fertige Bilder in die Bildpunkte.")
             End Get
         End Property
 
@@ -2702,33 +2697,12 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Modellwahl, Staerke und Restkorn stehen nur da, wenn entrauscht wird.</summary>
+        ''' <summary>Der Hinweis "nur RAW", Staerke und Restkorn stehen nur da, wenn entrauscht wird.</summary>
         Public ReadOnly Property IsDialogBatchDenoiseModelVisible As Boolean
             Get
                 Return _dialogBatchDenoiseMode <> BatchDenoiseOff AndAlso IsDialogBatchDenoiseAvailable
             End Get
         End Property
-
-        Public ReadOnly Property IsDialogBatchDenoiseFast As Boolean
-            Get
-                Return _dialogBatchDenoiseFast
-            End Get
-        End Property
-
-        Public ReadOnly Property IsDialogBatchDenoiseQuality As Boolean
-            Get
-                Return Not _dialogBatchDenoiseFast
-            End Get
-        End Property
-
-        ''' <summary>"quality" oder "fast", wie im Rezept. Ein Modell, das fehlt, laesst sich nicht
-        ''' waehlen; dann bleibt das andere stehen.</summary>
-        Public Sub SetDialogBatchDenoiseModel(model As String)
-            Dim fast = String.Equals(model, "fast", StringComparison.OrdinalIgnoreCase)
-            If Not AiModelService.RuntimeAvailable Then Return
-            _dialogBatchDenoiseFast = fast
-            RaiseDialogBatchDenoiseChanged()
-        End Sub
 
         Public Property DialogBatchDenoiseStrength As Integer
             Get
@@ -2753,9 +2727,7 @@ Namespace ViewModels
         Private Sub RaiseDialogBatchDenoiseChanged()
             For Each name In {NameOf(DialogBatchDenoiseMode), NameOf(IsDialogBatchDenoiseOff),
                               NameOf(IsDialogBatchDenoiseFixed), NameOf(IsDialogBatchDenoiseAuto),
-                              NameOf(IsDialogBatchDenoiseModelVisible), NameOf(IsDialogBatchDenoiseFast),
-                              NameOf(IsDialogBatchDenoiseQuality), NameOf(IsDialogBatchDenoiseAvailable),
-                              NameOf(IsDialogBatchDenoiseQualityAvailable), NameOf(IsDialogBatchDenoiseFastAvailable),
+                              NameOf(IsDialogBatchDenoiseModelVisible), NameOf(IsDialogBatchDenoiseAvailable),
                               NameOf(DialogBatchDenoiseStrength), NameOf(DialogBatchDenoiseGrain),
                               NameOf(IsDialogFilterNoneHintVisible), NameOf(IsDialogPrimaryEnabled),
                               NameOf(IsDialogBatchDenoiseOffVisible), NameOf(DialogExportUseDenoise),
@@ -2766,18 +2738,14 @@ Namespace ViewModels
             Next
         End Sub
 
-        ''' <summary>Vor dem Oeffnen: Stellung aus, der Rest aus den Einstellungen. Fehlt das
-        ''' gemerkte Modell inzwischen, steht das andere da.</summary>
+        ''' <summary>Vor dem Oeffnen: Stellung aus, der Rest aus den Einstellungen.</summary>
         Private Sub ResetDialogBatchDenoise()
             Dim settings = AppSettingsService.Load()
             _dialogBatchDenoiseMode = BatchDenoiseOff
             _dialogBatchRecipeCount = 0
+            _dialogBatchDenoiseBlockedCount = 0
             _dialogDenoiseOffAllowed = True
             _dialogExportUseDenoise = False
-            _dialogBatchDenoiseFast = String.Equals(settings.BatchDenoiseModel, "fast", StringComparison.OrdinalIgnoreCase)
-            If _dialogBatchDenoiseFast AndAlso Not DenoiseModelService.FastAvailable Then _dialogBatchDenoiseFast = False
-            If Not _dialogBatchDenoiseFast AndAlso Not DenoiseModelService.Available AndAlso
-               DenoiseModelService.FastAvailable Then _dialogBatchDenoiseFast = True
             _dialogBatchDenoiseStrength = CInt(Math.Round(EditorViewModel.ClampDenoiseStrength(settings.BatchDenoiseStrength)))
             _dialogBatchDenoiseGrain = CInt(Math.Round(Math.Max(0.0, Math.Min(100.0,
                 If(Double.IsNaN(settings.BatchDenoiseGrain), 50.0, settings.BatchDenoiseGrain)))))
@@ -2786,14 +2754,11 @@ Namespace ViewModels
 
         ''' <summary>Der Auftrag aus der Dialogstellung, Nothing bei aus. Die Stellung wird dabei
         ''' gemerkt - nur, wenn wirklich entrauscht wird: wer den Dialog mit aus bestaetigt, hat an
-        ''' Modell und Staerke nichts gemeint.</summary>
+        ''' der Staerke nichts gemeint.</summary>
         Private Function TakeDialogBatchDenoiseRequest() As DenoiseModelService.DenoiseRequest
             If _dialogBatchDenoiseMode = BatchDenoiseOff OrElse Not IsDialogBatchDenoiseAvailable Then Return Nothing
-            Dim kind = If(_dialogBatchDenoiseFast, DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.DenoiseKind.Quality)
-            AppSettingsService.SaveBatchDenoise(DenoiseModelService.RecipeNameFor(kind),
-                                                _dialogBatchDenoiseStrength, _dialogBatchDenoiseGrain)
+            AppSettingsService.SaveBatchDenoise(_dialogBatchDenoiseStrength, _dialogBatchDenoiseGrain)
             Return New DenoiseModelService.DenoiseRequest With {
-                .Kind = kind,
                 .Automatic = _dialogBatchDenoiseMode = BatchDenoiseAuto,
                 .Strength = _dialogBatchDenoiseStrength,
                 .Grain = _dialogBatchDenoiseGrain
@@ -2806,7 +2771,8 @@ Namespace ViewModels
         Public Async Function ShowBatchFilterAsync(fileCount As Integer, Optional currentFolder As String = "",
                                                    Optional allowOverwrite As Boolean = True,
                                                    Optional sourcesIncludeJpg As Boolean = False,
-                                                   Optional recipeCount As Integer = 0) As Task(Of BatchFilterDialogResult)
+                                                   Optional recipeCount As Integer = 0,
+                                                   Optional denoiseBlockedCount As Integer = 0) As Task(Of BatchFilterDialogResult)
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
             _dialogFilterNoneAllowed = True
             _dialogBatchOverwriteAvailable = allowOverwrite
@@ -2816,6 +2782,7 @@ Namespace ViewModels
             ResetDialogBatchDenoise()
             ' NACH dem Zuruecksetzen: das raeumt den Wert fuer alle anderen Dialoge weg.
             _dialogBatchRecipeCount = Math.Max(0, recipeCount)
+            _dialogBatchDenoiseBlockedCount = Math.Max(0, denoiseBlockedCount)
             RaiseDialogBatchDenoiseChanged()
             ResetDialogSaveAsMetaOptions()
             DialogTargetNamePattern = AppSettingsService.Load().LastTargetNamePattern
@@ -4486,10 +4453,9 @@ Namespace ViewModels
         ''' gespeicherte Bearbeitungen etwa), und kein Ende eines fremden Laufs. Ohne Weiterlaufen
         ''' muesste man den Dialog neu oeffnen, und der setzt Modellwahl und Entrauschen zurueck.</summary>
         Private Async Function EnsureBatchModelsAsync(denoise As DenoiseModelService.DenoiseRequest, upscaleKey As String) As Task(Of Boolean)
-            If denoise IsNot Nothing Then
-                Dim key = If(denoise.Kind = DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.FastModelFile, DenoiseModelService.ModelFile)
-                If Not Await Settings.RequestModelsAsync(LocalizationService.T("Entrauschen"), {key}) Then Return False
-            End If
+            If denoise IsNot Nothing AndAlso
+               Not Await Settings.RequestModelsAsync(LocalizationService.T("Entrauschen"),
+                                                     {DenoiseModelService.ModelFile, DenoiseModelService.ImageModelFile}) Then Return False
             If Not String.IsNullOrEmpty(upscaleKey) AndAlso
                Not Await Settings.RequestModelsAsync(LocalizationService.T("Hochskalieren"), {upscaleKey}) Then Return False
             Return True
@@ -5821,6 +5787,10 @@ Namespace ViewModels
             _dialogBatchWatermarkOverwrite = allowOverwrite AndAlso settings.BatchWatermarkOverwriteOriginals
             _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
             ResetDialogSaveAsMetaOptions()
+            ' Das gemerkte Muster vorbelegen wie in den uebrigen Stapeln. Ohne diese Zeilen stand im
+            ' Feld, was der vorige Dialog dort liess, und genau das wurde beim Bestaetigen gemerkt.
+            DialogTargetNamePattern = settings.LastTargetNamePattern
+            FillDialogSaveAsNameChoices("", LocalizationService.T("Name der Quelle"), DialogTargetNamePattern)
             DialogSelectedFormat = NormalizeSaveAsFormat(DefaultSaveFormat())
             DialogJpgQuality = If(_dialogBatchWatermarkOverwrite, 95, DefaultJpgQuality())
             DialogSaveAsTarget = "Local"
@@ -6098,13 +6068,23 @@ Namespace ViewModels
             ' Der Name steht im selben Feld wie das Muster der Stapel (DialogTargetNamePattern), unter
             ' dem Ordner. Erster Eintrag der Auswahl ist der Vorschlag selbst; eine Vorlage im Feld
             ' loest der Editor beim Speichern auf, leer bleibt der Name der Quelle (SaveImageAsync).
-            DialogTargetNamePattern = If(initialBaseName, "")
-            FillDialogSaveAsNameChoices(initialBaseName, String.Format(LocalizationService.T("Vorschlag: {0}"), initialBaseName))
+            ' Ein zuletzt benutztes MUSTER kommt wieder und ist gewaehlt, wie der Ordner darueber;
+            ' ohne eines gilt der Vorschlag.
+            Dim lastPattern = AppSettingsService.Load().LastSaveAsNamePattern
+            Dim usesLast = Not String.IsNullOrWhiteSpace(lastPattern)
+            DialogTargetNamePattern = If(usesLast, lastPattern, If(initialBaseName, ""))
+            FillDialogSaveAsNameChoices(initialBaseName, String.Format(LocalizationService.T("Vorschlag: {0}"), initialBaseName),
+                                        If(usesLast, lastPattern, Nothing))
 
             Dim result = Await ShowDialogAsync(AppDialogKind.SaveAs, titleText, messageText, "", confirmText, cancelText)
             If result Is Nothing Then Return Nothing
 
-            ' Das gemerkte Muster der Stapel bleibt unberuehrt: hier steht meist ein konkreter Name.
+            ' Gemerkt wird ein Muster (Platzhalter oder Zaehler), kein fester Name: der gehoert zu
+            ' genau diesem Bild. Ein fester Name oder der Vorschlag raeumen das Gemerkte, dann kommt
+            ' beim naechsten Mal wieder der Vorschlag. Das Muster der Stapel bleibt unberuehrt.
+            Dim typed = If(DialogTargetNamePattern, "").Trim()
+            AppSettingsService.SaveLastSaveAsNamePattern(
+                If(typed.Contains("{"c) OrElse typed.Contains("#"c), typed, ""))
             PersistDialogTargetFolderIfLocal()
             Return New SaveAsDialogResult With {
                 .BaseName = If(DialogTargetNamePattern, "").Trim(),
@@ -6508,11 +6488,9 @@ Namespace ViewModels
             ''' der Nutzer kann bewusst ein rein datums-/EXIF-basiertes Muster ohne Zähler verwenden
             ''' (z.B. {datetaken:yyyyMMdd_HHmmss}), das pro Bild schon eindeutig genug ist. Echte
             ''' Namenskollisionen fängt die Duplikat-Prüfung in RebuildBatchRenamePreview ohnehin ab.
-            Dim numberMatch = Regex.Match(result, "#+")
-            If numberMatch.Success Then
-                result = result.Remove(numberMatch.Index, numberMatch.Length).
-                                Insert(numberMatch.Index, counter.ToString(New String("0"c, numberMatch.Length)))
-            End If
+            ' JEDE Folge von # wird zur Zahl, so viele Stellen wie Zeichen ("#" 1, "###" 001). Ein
+            ' "#" im Namen ist immer der Zaehler, nie ein Zeichen, das stehen bleibt.
+            result = Regex.Replace(result, "#+", Function(m) counter.ToString(New String("0"c, m.Length)))
 
             If appendSourceExtension AndAlso
                String.IsNullOrEmpty(MediaFileTypes.KnownExtension(result)) AndAlso Not String.IsNullOrEmpty(extension) Then

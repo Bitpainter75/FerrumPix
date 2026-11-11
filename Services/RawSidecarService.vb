@@ -1212,6 +1212,8 @@ Namespace Services
                 Dim adjustmentsNode = root.Element(Ns + "adjustments")
                 If adjustmentsNode Is Nothing Then Return SidecarReadResult.Unreadable
                 adjustments = FpxService.DeserializeAdjustments(adjustmentsNode.Value)
+                ' Ein Entrauschen aus der Zeit der 8-Bit-Modelle geht bei einer RAW in die RAW-Stufe.
+                DenoiseModelService.MigrateLegacyRecipe(adjustments, rawPath)
                 Return If(adjustments Is Nothing, SidecarReadResult.Unreadable, SidecarReadResult.Read)
             Catch
                 adjustments = Nothing

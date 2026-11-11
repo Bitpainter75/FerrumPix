@@ -110,10 +110,13 @@ Namespace ViewModels
             ApplyObjectRemoval()
         End Function
 
-        Private Async Function DenoiseWithModelAsync(kind As DenoiseModelService.DenoiseKind) As Task
-            Dim key = If(kind = DenoiseModelService.DenoiseKind.Fast, DenoiseModelService.FastModelFile, DenoiseModelService.ModelFile)
-            If Not Await EnsureModelsAsync(LocalizationService.T("Entrauschen"), key) Then Return
-            ApplyModelDenoise(kind)
+        Private Async Function DenoiseWithModelAsync() As Task
+            If Not IsModelDenoiseOffered Then Return
+            ' Die beiden Entrausch-Modelle kommen immer zusammen, als Paket: wer eines holt, hat
+            ' danach beide Wege, fuer RAWs und fuer fertige Bilder.
+            If Not Await EnsureModelsAsync(LocalizationService.T("Entrauschen"),
+                                           DenoiseModelService.ModelFile, DenoiseModelService.ImageModelFile) Then Return
+            ApplyModelDenoise()
         End Function
 
         Private Async Function UpscaleWithModelAsync() As Task

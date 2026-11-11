@@ -8962,9 +8962,6 @@
   <data name="RAW_und_Photoshop_Dateien_bleiben_unver_ndert_Ih_5a6a43fd" xml:space="preserve">
     <value>RAW와 Photoshop 파일은 바뀌지 않습니다. 조정은 옆의 사이드카 파일에 들어가고, 그 뒤로 갤러리는 이 사진들을 현상된 상태로 보여 줍니다.</value>
   </data>
-  <data name="Beim_berschreiben_bekommen_RAW_und_Photoshop_Dat_93364658" xml:space="preserve">
-    <value>덮어쓸 때 RAW와 Photoshop 파일은 새 조정만 받지만, 노이즈 제거에는 새 이미지 데이터가 필요합니다. 노이즈를 제거하려면 새 파일을 쓰도록 하세요.</value>
-  </data>
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>선택 영역을 복사하는 중...</value>
   </data>
@@ -11475,5 +11472,101 @@
   </data>
   <data name="Tiefsee_9226edc0" xml:space="preserve">
     <value>심해</value>
+  </data>
+  <data name="Bild_0_x_1_2_Kacheln_3_s_7f839a15" xml:space="preserve">
+    <value>이미지 {0}x{1}, 타일 {2}개, {3}초</value>
+  </data>
+  <data name="Das_gespeicherte_Entrauschen_mit_Modell_gibt_es__d32d92d8" xml:space="preserve">
+    <value>저장된 모델 노이즈 제거는 이제 RAW 파일에서만 사용할 수 있으며 여기서는 더 이상 적용되지 않습니다.</value>
+  </data>
+  <data name="Entrauschen_mit_Modell_gibt_es_nur_f_r_RAW_Datei_49ee2ff0" xml:space="preserve">
+    <value>모델 노이즈 제거는 RAW 파일에서만 사용할 수 있습니다. 완성된 이미지에는 위의 슬라이더를 사용하세요.</value>
+  </data>
+  <data name="Mit_Modell_wird_vor_allem_anderen_entrauscht_Das_87a37711" xml:space="preserve">
+    <value>모델 노이즈 제거는 다른 모든 처리보다 먼저 실행됩니다. 리터치처럼 이미 픽셀에 반영된 작업이 있어 여기서는 더 이상 사용할 수 없습니다.</value>
+  </data>
+  <data name="F_r_diesen_Sensor_gibt_es_noch_kein_Modell_zum_E_c5d9e7c0" xml:space="preserve">
+    <value>이 센서용 노이즈 제거 모델은 아직 없습니다.</value>
+  </data>
+  <data name="Entrauscht_die_RAW_Datei_mit_einem_gelernten_Mod_da691c09" xml:space="preserve">
+    <value>노출과 색상을 계산하기 전에 학습된 모델로 RAW 파일의 노이즈를 제거합니다. 그래픽 카드에서는 몇 초, 프로세서에서는 약 1분 걸립니다. 이후 강도를 바꿔도 다시 계산하지 않습니다.</value>
+  </data>
+  <data name="Mit_Modell_entrauscht_St_rke_0_72a3ccb0" xml:space="preserve">
+    <value>모델로 노이즈 제거됨, 강도 {0}</value>
+  </data>
+  <data name="Entrauschen_mit_Modell_entfernt_5fc5e8af" xml:space="preserve">
+    <value>모델 노이즈 제거를 삭제했습니다</value>
+  </data>
+  <data name="Entrauscht_jede_RAW_Datei_mit_einem_gelernten_Mo_9557abd3" xml:space="preserve">
+    <value>학습된 모델로 모든 RAW 파일의 노이즈를 제거합니다. 강도는 고정하거나 이미지마다 측정합니다. 다른 이미지는 그대로 둡니다.</value>
+  </data>
+  <data name="Entrauscht_werden_nur_RAW_Dateien_andere_Bilder__f3ecaa14" xml:space="preserve">
+    <value>RAW 파일만 노이즈를 제거하며 다른 이미지는 그대로 둡니다.</value>
+  </data>
+  <data name="Braucht_je_Bild_auf_der_Grafikkarte_einige_Sekun_38a7d963" xml:space="preserve">
+    <value>이미지당 그래픽 카드에서 몇 초, 프로세서에서 약 1분 걸립니다. 편집기에서 이미 노이즈를 제거한 이미지는 강도를 유지합니다.</value>
+  </data>
+  <data name="Misst_das_Rauschen_im_Bild_und_stellt_die_St_rke_8512ecf2" xml:space="preserve">
+    <value>이미지의 노이즈를 측정하고 낮은 ISO의 깨끗한 사진과 비슷한 정도의 입자가 남도록 강도를 설정합니다. 노이즈 제거는 아래 버튼을 눌러야 시작됩니다.</value>
+  </data>
+  <data name="Wie_stark_die_Helligkeit_entrauscht_wird_Niedrig_c13f31d0" xml:space="preserve">
+    <value>밝기 노이즈를 얼마나 강하게 제거할지 정합니다. 낮으면 미세한 디테일이 더 남고, 높으면 입자가 더 많이 제거됩니다. 색상은 항상 완전히 노이즈 제거됩니다. 다음에 아래 버튼을 누를 때 적용됩니다.</value>
+  </data>
+  <data name="Mit_Modell_entrauschen_45bb57ab" xml:space="preserve">
+    <value>모델로 노이즈 제거</value>
+  </data>
+  <data name="Steht_im_Rezept_und_wird_beim_ffnen_neu_gerechne_9d583b95" xml:space="preserve">
+    <value>레시피에 저장되며 열 때 다시 계산됩니다. 이 그룹을 재설정하면 제거됩니다.</value>
+  </data>
+  <data name="Entrauschen_von_RAW_Dateien_18a7dbaa" xml:space="preserve">
+    <value>RAW 파일 노이즈 제거</value>
+  </data>
+  <data name="Trainingsdaten_des_Entrauschens_7a285b7a" xml:space="preserve">
+    <value>노이즈 제거 학습 데이터</value>
+  </data>
+  <data name="Rauschen_in_RAW_Dateien_entfernen_5df5ad85" xml:space="preserve">
+    <value>RAW 파일의 노이즈 제거</value>
+  </data>
+  <data name="RawForge_ef42f126" xml:space="preserve">
+    <value>RawForge</value>
+  </data>
+  <data name="RawNIND_09110976" xml:space="preserve">
+    <value>RawNIND</value>
+  </data>
+  <data name="CC_BY_SA_4_0_99a2eea7" xml:space="preserve">
+    <value>CC BY-SA 4.0</value>
+  </data>
+  <data name="Entrauscht_das_fertige_Bild_mit_einem_gelernten__ad4542f0" xml:space="preserve">
+    <value>학습된 모델로 완성된 이미지의 노이즈를 제거하고 픽셀에 반영합니다. 그래픽 카드에서는 몇 초, 프로세서에서는 약 1분 걸립니다.</value>
+  </data>
+  <data name="Mit_Modell_ins_Bild_gerechnet_St_rke_0_b0aaf1b2" xml:space="preserve">
+    <value>모델로 이미지에 반영됨, 강도 {0}</value>
+  </data>
+  <data name="Entrauscht_jedes_Bild_mit_einem_gelernten_Modell_7e960dfd" xml:space="preserve">
+    <value>학습된 모델로 모든 이미지의 노이즈를 제거합니다. 강도는 고정하거나 이미지마다 측정합니다. RAW 파일은 노출과 색상 전에, 완성된 이미지는 픽셀에 반영합니다.</value>
+  </data>
+  <data name="RAW_Dateien_werden_vor_Belichtung_und_Farbe_entr_33d344f0" xml:space="preserve">
+    <value>RAW 파일은 노출과 색상 전에, JPEG 같은 완성된 이미지는 픽셀에 반영해 노이즈를 제거합니다.</value>
+  </data>
+  <data name="Rauschen_in_fertigen_Bildern_entfernen_206ea337" xml:space="preserve">
+    <value>완성된 이미지의 노이즈 제거</value>
+  </data>
+  <data name="Das_Bild_wird_ohne_das_gespeicherte_Entrauschen__cee0245d" xml:space="preserve">
+    <value>저장된 노이즈 제거 없이 이미지를 표시합니다. 모델이 없습니다.</value>
+  </data>
+  <data name="Beim_berschreiben_bekommen_Photoshop_Dateien_nur_1470341e" xml:space="preserve">
+    <value>덮어쓸 때 Photoshop 파일에는 새 조정만 들어가며, 노이즈 제거에는 새 이미지 데이터가 필요합니다. 노이즈를 제거하려면 새 파일로 저장하세요.</value>
+  </data>
+  <data name="Gespeichertes_Entrauschen_anwenden_92b9ca60" xml:space="preserve">
+    <value>저장된 노이즈 제거를 적용할까요?</value>
+  </data>
+  <data name="Zu_diesem_Bild_ist_ein_Entrauschen_mit_Modell_ge_8ddc37bd" xml:space="preserve">
+    <value>이 이미지에는 모델을 사용한 노이즈 제거가 저장되어 있습니다. 한 번 계산해야 하며, 그래픽 카드에서는 몇 초, 프로세서에서는 최대 몇 분이 걸립니다.</value>
+  </data>
+  <data name="Das_Bild_wird_ohne_das_gespeicherte_Entrauschen__8807812c" xml:space="preserve">
+    <value>저장된 노이즈 제거 없이 이미지를 표시합니다.</value>
+  </data>
+  <data name="Eine_SVG_Grafik_wird_nicht_als_Bild_ge_ffnet_Auf_98fd9794" xml:space="preserve">
+    <value>SVG 그래픽은 이미지로 열리지 않습니다. 이미지 위로 끌어다 놓으면 레이어로 삽입됩니다.</value>
   </data>
 </root>

@@ -1,6 +1,6 @@
 # Canon-Objektivnummern aus LensType der CameraSettings, MIT allen Varianten einer Nummer.
-# Quelle: ExifTool 13.61, lib/Image/ExifTool/Canon.pm, Tabelle %canonLensTypes
-# SHA-256 der Quelldatei: e6a4ceec68161978173e909b7954d353a397e64836869950d09b41e246cf5983
+# Quelle: ExifTool 13.63, lib/Image/ExifTool/Canon.pm, Tabelle %canonLensTypes
+# SHA-256 der Quelldatei: f85a01893283c61348d8ef161e45cfe7770d809ac374a0b2a74a922f8eacc1e4
 # ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
 # (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.
 # 541 Eintraege, Varianten als Nummer.n; die Auswahl trifft die Laufzeit an Brennweite und Blende.

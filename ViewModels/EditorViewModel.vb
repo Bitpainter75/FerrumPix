@@ -811,7 +811,7 @@ Namespace ViewModels
                        _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
                        _autoGeometryRunning OrElse _layerImportRunning OrElse _presetImportRunning OrElse
-                       _edgeBackgroundRunning
+                       _edgeBackgroundRunning OrElse _modelDenoiseRunning OrElse _modelDenoiseRebuilding
             End Get
         End Property
 
@@ -5351,6 +5351,9 @@ Namespace ViewModels
             End Get
             Set(value As Bitmap)
                 Dim previous = _currentImage
+                If DateTime.UtcNow < _modelDenoiseTraceUntil AndAlso Not Object.ReferenceEquals(previous, value) Then
+                    TraceModelDenoise($"Anzeige: CurrentImage (Bild OHNE Regler) gesetzt, PreviewImage {(If(_previewImage Is Nothing, "leer - es ist SICHTBAR", "da - unsichtbar"))}")
+                End If
                 Me.RaiseAndSetIfChanged(_currentImage, value)
                 Me.RaisePropertyChanged(NameOf(DisplayImage))
                 Me.RaisePropertyChanged(NameOf(BeforeDisplayImage))
@@ -5382,6 +5385,9 @@ Namespace ViewModels
             End Get
             Set(value As Bitmap)
                 Dim previous = _previewImage
+                If DateTime.UtcNow < _modelDenoiseTraceUntil AndAlso Not Object.ReferenceEquals(previous, value) Then
+                    TraceModelDenoise($"Anzeige: PreviewImage (Bild MIT Reglern) {(If(value Is Nothing, "geleert", "gesetzt"))}")
+                End If
                 ' Zeigt PreviewImage kuenftig NICHT mehr auf die Szene-Anzeige (z.B. Nothing beim
                 ' Bildwechsel, FPX-Vorschau), wird die alte Instanz unten disposed - das Feld
                 ' _sceneDisplay MUSS dann mit, sonst greift der naechste Region-Apply auf ein
@@ -7392,6 +7398,10 @@ Namespace ViewModels
         Private ReadOnly _rawHighlightRecovery As Boolean = True
         ''' Den Sensorrand abschneiden (ImageAdjustments.RawSensorEdgeCrop). Ebenfalls im Decode.
         Private _rawSensorEdgeCrop As Boolean = False
+        ''' Mit Modell entrauschen (ImageAdjustments.RawModelDenoise) und wie stark. Ebenfalls im
+        ''' Decode, siehe RawDecodeServiceModelDenoise.vb.
+        Private _rawModelDenoise As Boolean = False
+        Private _rawModelDenoiseStrength As Single = 70
 
         Private _lensDistortion As Boolean? = Nothing
         Private _lensTca As Boolean? = Nothing
@@ -8030,7 +8040,8 @@ Namespace ViewModels
                 .LensModel = _lensModel,
                 .ChromaticAberrationRed = _lensTcaRed,
                 .ChromaticAberrationBlue = _lensTcaBlue,
-                .CropSensorEdge = _rawSensorEdgeCrop}
+                .CropSensorEdge = _rawSensorEdgeCrop,
+                .ModelDenoiseStrength = If(_rawModelDenoise, CDbl(_rawModelDenoiseStrength), -1.0)}
         End Function
 
         Private Shared Function ReleaseLensSwitch(feld As Boolean?) As Boolean
@@ -8146,6 +8157,10 @@ Namespace ViewModels
                 $"rebuild requested; enabled={_rawHighlightRecovery}; source={RenderSourcePath}")
             PreparePreviewSource(RenderSourcePath)
             If warEingepasst Then ActiveZoomPreset = ZoomPresetMode.Fit
+            ' Ein Entrauschen mit Modell, dessen Ergebnis noch fehlt (Rueckgaengig ueber einen
+            ' Bildwechsel hinweg, geladenes Rezept): erst das Bild ohne, dann der Lauf, der danach
+            ' noch einmal neu aufbaut.
+            StartModelDenoiseIfNeeded()
         End Sub
 
         ''' <summary>Kamera, Objektiv und die gefundenen Kennlinien fuer das aktuelle Bild neu
@@ -11771,49 +11786,50 @@ Namespace ViewModels
                 End Sub)
         End Sub
 
+        ''' <summary>Rechnet das Entrauschen fuer DIESES Bild in der RAW-Stufe (TreeNet)? Sonst am
+        ''' fertigen Bild mit dem Bildmodell, eingebacken. Entscheidet allein die Datei
+        ''' (DenoiseModelService.UsesRawStage).</summary>
+        Private ReadOnly Property ModelDenoiseUsesRawStage As Boolean
+            Get
+                Return DenoiseModelService.UsesRawStage(RenderSourcePath)
+            End Get
+        End Property
+
+        ''' <summary>Wird der Knopf angeboten? Am fertigen Bild immer, sobald Modelle sich holen
+        ''' lassen. Bei einer RAW fuer die RAW-Stufe nur, solange noch nichts in die Bildpunkte
+        ''' gerechnet ist: das Modell sitzt dort vor allem anderen (IsRawSourceEditable).</summary>
+        Public ReadOnly Property IsModelDenoiseOffered As Boolean
+            Get
+                If Not CanRequestModels OrElse Not HasDocument Then Return False
+                If Not ModelDenoiseUsesRawStage Then Return True
+                Return IsRawSourceEditable
+            End Get
+        End Property
+
+        ''' <summary>Und wenn nicht, warum - in Worten fuer den Rauschen-Bereich. Leer, wenn es
+        ''' angeboten wird oder ohne Bild.</summary>
+        Public ReadOnly Property ModelDenoiseUnavailableText As String
+            Get
+                If Not HasDocument OrElse IsModelDenoiseOffered OrElse Not CanRequestModels Then Return ""
+                Return LocalizationService.T("Mit Modell wird vor allem anderen entrauscht. Das geht hier nicht mehr, weil schon etwas in die Bildpunkte gerechnet ist, etwa eine Retusche.")
+            End Get
+        End Property
+
         Public ReadOnly Property CanDenoiseWithModel As Boolean
             Get
-                Return DenoiseModelService.Available
+                If Not IsModelDenoiseOffered Then Return False
+                Return If(ModelDenoiseUsesRawStage, DenoiseModelService.Available, DenoiseModelService.ImageAvailable)
             End Get
         End Property
 
         Public ReadOnly Property DenoiseWithModelHint As String
             Get
-                If Not DenoiseModelService.Available Then Return MissingModelHint
-                Return LocalizationService.T("Entrauscht das ganze Bild mit einem gelernten Modell und hält dabei mehr Zeichnung. Braucht mehrere Minuten und wird in die Pixel gerechnet.")
-            End Get
-        End Property
-
-        ''' <summary>Der schnelle Weg hat eine EIGENE Modelldatei, und die kann fehlen, waehrend die
-        ''' andere da ist. Ein Knopf, der dann ins Leere fuehrt, waere schlimmer als keiner.</summary>
-        Public ReadOnly Property CanDenoiseFast As Boolean
-            Get
-                Return DenoiseModelService.FastAvailable
-            End Get
-        End Property
-
-        Public ReadOnly Property DenoiseFastHint As String
-            Get
-                If Not DenoiseModelService.FastAvailable Then Return MissingModelHint
-                Return LocalizationService.T("Dasselbe in einem Sechstel der Zeit, dafür etwas glatter. Für lange Serien oder wenn die Wartezeit nicht passt.")
-            End Get
-        End Property
-
-        ''' <summary>Wie der Weg im REZEPT heisst. Die Namen stehen in gespeicherten Rezepten und in
-        ''' Begleitdateien - sie bleiben, wie sie sind, sonst liest eine aeltere Aufnahme ins Leere.
-        '''
-        ''' Die Zuordnung selbst gehoert dem Dienst (<see cref="DenoiseModelService.RecipeNameFor"/>):
-        ''' sie stand hier und im Nachziehweg getrennt, und beide rieten bei einem unbekannten Namen
-        ''' auf "gruendlich".</summary>
-        Private Shared Function DenoiseRecipeName(kind As DenoiseModelService.DenoiseKind) As String
-            Return DenoiseModelService.RecipeNameFor(kind)
-        End Function
-
-        ''' <summary>Ob ueberhaupt einer der Wege da ist. Der Staerke-Regler gehoert zu beiden, also
-        ''' darf er nicht an einem einzelnen haengen.</summary>
-        Public ReadOnly Property CanDenoiseWithAnyModel As Boolean
-            Get
-                Return DenoiseModelService.Available OrElse DenoiseModelService.FastAvailable
+                If ModelDenoiseUsesRawStage Then
+                    If Not DenoiseModelService.Available Then Return MissingModelHint
+                    Return LocalizationService.T("Entrauscht die RAW-Datei mit einem gelernten Modell, bevor Belichtung und Farbe gerechnet werden. Auf der Grafikkarte dauert das Sekunden, auf dem Prozessor etwa eine Minute. Danach kostet eine andere Stärke keine neue Rechnung.")
+                End If
+                If Not DenoiseModelService.ImageAvailable Then Return MissingModelHint
+                Return LocalizationService.T("Entrauscht das fertige Bild mit einem gelernten Modell und rechnet es in die Bildpunkte. Auf der Grafikkarte dauert das Sekunden, auf dem Prozessor etwa eine Minute.")
             End Get
         End Property
 
@@ -11845,9 +11861,10 @@ Namespace ViewModels
         ''' Startwert, behauptet eine Vorgabe, die es nicht gibt. Die Diagnose haelt die beiden
         ''' Zahlen zusammen.
         '''
-        ''' KEIN Rezeptwert: das Entrauschen ist ein Zug in die Pixel, kein Regler an der Vorschau.
-        ''' Was hier steht, gilt fuer den NAECHSTEN Druck auf den Knopf und aendert an einem bereits
-        ''' entrauschten Bild nichts.</summary>
+        ''' NICHT der Rezeptwert selbst: der steht in _rawModelDenoiseStrength und wird erst mit dem
+        ''' Druck auf den Knopf gesetzt. Was hier steht, gilt fuer den NAECHSTEN Druck und aendert an
+        ''' einem schon entrauschten Bild nichts, bis der Knopf es uebernimmt (dann nur Mischen,
+        ''' kein neuer Modelllauf).</summary>
         Public Property DenoiseStrength As Double
             Get
                 Return _denoiseStrength
@@ -11910,26 +11927,27 @@ Namespace ViewModels
         ''' Blaettern durch eine Serie bei jedem Hin und Her dieselbe Frage.</summary>
         Private ReadOnly _bakedOperationsAsked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
 
-        ''' <summary>Ein gespeicherter Entrausch-Durchlauf haengt an diesem Bild - fuer die Anzeige
-        ''' im Rauschen-Bereich, damit der Zuruecksetzer nicht ins Leere zeigt.</summary>
+        ''' <summary>Haengt ein Entrauschen mit Modell an diesem Bild? In der RAW-Stufe als
+        ''' Einstellung, am fertigen Bild als gebackener Vorgang. Fuer die Anzeige im
+        ''' Rauschen-Bereich, damit der Zuruecksetzer nicht ins Leere zeigt.</summary>
         Public ReadOnly Property HasStoredDenoise As Boolean
             Get
-                Return _bakedOperations.Any(Function(o) o IsNot Nothing AndAlso
-                    String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+                Return _rawModelDenoise OrElse _bakedOperations.Any(Function(o) ImageProcessor.IsDenoiseOperation(o))
             End Get
         End Property
 
-        ''' <summary>Was da haengt, in Worten: Modell und Staerke. Ohne die Zahlen kann niemand
-        ''' entscheiden, ob er es behalten will.</summary>
+        ''' <summary>Was da haengt, in Worten: die Staerke. Ohne die Zahl kann niemand entscheiden,
+        ''' ob er es behalten will.</summary>
         Public ReadOnly Property StoredDenoiseText As String
             Get
-                Dim op = _bakedOperations.LastOrDefault(Function(o) o IsNot Nothing AndAlso
-                    String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase))
+                If _rawModelDenoise Then
+                    Return String.Format(LocalizationService.T("Mit Modell entrauscht, Stärke {0}"),
+                                         CInt(Math.Round(_rawModelDenoiseStrength)))
+                End If
+                Dim op = _bakedOperations.LastOrDefault(Function(o) ImageProcessor.IsDenoiseOperation(o))
                 If op Is Nothing Then Return ""
-                Dim modelName = If(String.Equals(op.DenoiseModel, "fast", StringComparison.OrdinalIgnoreCase),
-                                   LocalizationService.T("zügig"), LocalizationService.T("gründlich"))
-                Return String.Format(LocalizationService.T("Gespeichert: {0}, Stärke {1}"),
-                                     modelName, CInt(Math.Round(op.DenoiseStrength)))
+                Return String.Format(LocalizationService.T("Mit Modell ins Bild gerechnet, Stärke {0}"),
+                                     CInt(Math.Round(op.DenoiseStrength)))
             End Get
         End Property
 
@@ -11938,6 +11956,14 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(StoredDenoiseText))
             Me.RaisePropertyChanged(NameOf(HasDenoiseMeasurement))
             Me.RaisePropertyChanged(NameOf(DenoiseMeasurementText))
+            RaiseModelDenoiseOfferChanged()
+        End Sub
+
+        Private Sub RaiseModelDenoiseOfferChanged()
+            Me.RaisePropertyChanged(NameOf(IsModelDenoiseOffered))
+            Me.RaisePropertyChanged(NameOf(ModelDenoiseUnavailableText))
+            Me.RaisePropertyChanged(NameOf(CanDenoiseWithModel))
+            Me.RaisePropertyChanged(NameOf(DenoiseWithModelHint))
         End Sub
 
         ' ── Staerke aus dem Bild ─────────────────────────────────────────────────────────────
@@ -12041,19 +12067,69 @@ Namespace ViewModels
             Return ImageProcessor.MaskAsSourceBitmap(m, width, height)
         End Function
 
-        ''' <summary>Das ganze Bild mit dem Modell entrauschen. <paramref name="kind"/> waehlt
-        ''' zwischen den beiden Modellen - Zeit gegen Zeichnung, die Zahlen stehen beim Dienst.
+        ''' <summary>Das Bild mit dem Modell entrauschen: Entrauschen und Staerke gehen ins Rezept
+        ''' (RAW-Stufe), das Modell laeuft, falls sein Ergebnis fuer diese Datei noch fehlt, und das
+        ''' Arbeitsbild wird aus den entrauschten linearen Daten neu aufgebaut.
         '''
-        ''' Anders als die Regler ist das KEINE Vorschau, sondern ein Zug in die Pixel - wie
-        ''' Retusche oder Objektentfernen. Der Grund ist die Rechenzeit: bei Minuten je Bild kann
-        ''' das nicht bei jeder Reglerbewegung neu laufen.</summary>
-        Public Sub ApplyModelDenoise(
-                Optional kind As DenoiseModelService.DenoiseKind = DenoiseModelService.DenoiseKind.Quality)
-            If kind = DenoiseModelService.DenoiseKind.Fast Then
-                If Not CanDenoiseFast Then Return
-            ElseIf Not CanDenoiseWithModel Then
+        ''' Wie der Sensorrand ein Rezeptwert und kein Zug in die Pixel: Rueckgaengig nimmt ihn
+        ''' zurueck, das Zuruecksetzen der Gruppe ebenso, und beim naechsten Oeffnen rechnet das
+        ''' Modell neu. Eine andere Staerke kostet danach keinen Modelllauf, nur das Mischen.</summary>
+        Public Sub ApplyModelDenoise()
+            TraceModelDenoise($"Knopf: offered={IsModelDenoiseOffered}, can={CanDenoiseWithModel}, rawStage={ModelDenoiseUsesRawStage}, " &
+                              $"staerke={_denoiseStrength:F0}, rezept={_rawModelDenoise}/{_rawModelDenoiseStrength:F0}, " &
+                              $"ergebnisDa={RawDecodeService.HasModelDenoised(RenderSourcePath)}, datei={IO.Path.GetFileName(RenderSourcePath)}")
+            If Not CanDenoiseWithModel Then Return
+            If Not ModelDenoiseUsesRawStage Then
+                ApplyImageModelDenoise()
                 Return
             End If
+            ' Die Staerke wird gemerkt, wer sie einmal eingestellt hat, findet sie beim naechsten
+            ' Start wieder. Hier und nicht am Regler - siehe RememberDenoiseStrength.
+            RememberDenoiseStrength()
+            Dim strength = CSng(_denoiseStrength)
+            If _rawModelDenoise AndAlso _rawModelDenoiseStrength = strength AndAlso
+               RawDecodeService.HasModelDenoised(RenderSourcePath) Then Return
+            Dim before = (Enabled:=_rawModelDenoise, Strength:=_rawModelDenoiseStrength)
+            ' Der Schritt wird JETZT vorbereitet (er sichert das Vorher), abgelegt aber erst, wenn
+            ' das Entrauschen wirklich im Bild steht. Ein abgebrochener oder gescheiterter Lauf
+            ' hinterlaesst so weder einen wirkungslosen Rueckgaengig-Schritt noch eine Aenderung,
+            ' und der Wiederholen-Zweig bleibt stehen (PrepareUndo).
+            Dim undoEntry = PrepareUndo(LocalizationService.T("Bild entrauscht"))
+            Dim commit = Sub()
+                             CommitPreparedUndo(undoEntry)
+                             _hasChanges = True
+                             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
+                         End Sub
+            _rawModelDenoise = True
+            _rawModelDenoiseStrength = strength
+            RaiseStoredDenoiseChanged()
+            RaiseResetButtonStateChanged()
+            If RawDecodeService.HasModelDenoised(RenderSourcePath) Then
+                commit()
+                Dim ignoriert = RebuildForModelDenoiseAsync()
+                StatusText = LocalizationService.T("Bild entrauscht")
+                Return
+            End If
+            ' Bricht der Nutzer den ersten Lauf ab ODER scheitert er, war der Druck auf den Knopf
+            ' nichts: der vorige Stand kommt zurueck, statt ein Entrauschen im Rezept stehen zu
+            ' lassen, das im Bild fehlt.
+            StartModelDenoiseIfNeeded(
+                Sub()
+                    _rawModelDenoise = before.Enabled
+                    _rawModelDenoiseStrength = before.Strength
+                    RaiseStoredDenoiseChanged()
+                    RaiseResetButtonStateChanged()
+                End Sub,
+                commit,
+                approvedByUser:=True)
+        End Sub
+
+        ''' <summary>Am fertigen Bild mit dem Bildmodell entrauschen (JPEG, PNG, PSD und RAWs, die
+        ''' TreeNet nicht kann). Anders als in der RAW-Stufe ein Zug in die PIXEL wie Retusche oder
+        ''' Objektentfernen, mit Undo-Flicken und einem Vermerk fuers Rezept.</summary>
+        Private Sub ApplyImageModelDenoise()
+            TraceModelDenoise("Weg: Bildmodell am fertigen Bild")
+            If Not DenoiseModelService.ImageAvailable Then Return
             If _workingImage Is Nothing OrElse Not _workingImage.IsInitialized Then Return
 
             PushUndo(LocalizationService.T("Bild entrauscht"))
@@ -12084,7 +12160,7 @@ Namespace ViewModels
                                             schritt, gesamt)))
                                 End Sub
                             Try
-                                Using entrauscht = DenoiseModelService.Denoise(full, kind, strength, cancel)
+                                Using entrauscht = DenoiseModelService.DenoiseImage(full, strength, cancel)
                                     If entrauscht Is Nothing Then
                                         reason = "Modell"
                                         Return
@@ -12120,7 +12196,7 @@ Namespace ViewModels
                     ' diesen Eintrag waere die Wartezeit von eben spurlos weg.
                     _bakedOperations.Add(New BakedOperation With {
                         .Kind = BakedOperation.KindDenoise,
-                        .DenoiseModel = DenoiseRecipeName(kind),
+                        .DenoiseModel = "fast",
                         .DenoiseStrength = CSng(strength * 100.0)})
                     MarkBakedIntoWorkingImage()
                     RaiseStoredDenoiseChanged()
@@ -12132,6 +12208,207 @@ Namespace ViewModels
                                     If(String.IsNullOrEmpty(report), "", " - " & report))
                     SchedulePreviewUpdate()
                 End Sub)
+        End Sub
+
+        ''' <summary>Fuer welche Bilder das Entrauschen aus dem Rezept in dieser Sitzung laufen darf:
+        ''' Knopf gedrueckt, beim Oeffnen "Anwenden" gewaehlt oder das Modell eben geholt. Danach
+        ''' rechnet ein Rueckgaengig oder ein Neuaufbau ohne zweite Frage.</summary>
+        Private ReadOnly _modelDenoiseApproved As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Fuer welche Bilder die Frage in dieser Sitzung schon kam. Ein "Spaeter" gilt wie
+        ''' bei den gespeicherten Vorgaengen einmal je Bild und Sitzung, sonst kaeme die Frage bei
+        ''' jedem Blaettern durch eine Serie wieder.</summary>
+        Private ReadOnly _modelDenoiseQuestionAsked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Das Rezept traegt ein Entrauschen, dessen Ergebnis fuer diese Datei noch fehlt:
+        ''' fragen, ob es jetzt gerechnet werden soll. Wie bei den gespeicherten Vorgaengen NACH dem
+        ''' Anzeigen, damit die Frage nicht ueber einem leeren Editor steht. Ohne Zustimmung bleibt
+        ''' das Bild ohne Entrauschen sichtbar, das Rezept behaelt es.
+        '''
+        ''' WARUM GEFRAGT: auf dem Prozessor kostet der Lauf Minuten, und wer durch eine Serie
+        ''' blaettert, will nicht bei jedem Bild warten.</summary>
+        Private Sub ScheduleModelDenoiseQuestion(path As String)
+            If _mainVm Is Nothing Then Return
+            If Not _modelDenoiseQuestionAsked.Add(path) Then Return
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Async Sub()
+                    Try
+                        If Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) Then
+                            _modelDenoiseQuestionAsked.Remove(path)
+                            Return
+                        End If
+                        Dim confirmed = Await _mainVm.ShowConfirmAsync(
+                            LocalizationService.T("Gespeichertes Entrauschen anwenden?"),
+                            LocalizationService.T("Zu diesem Bild ist ein Entrauschen mit Modell gespeichert. Es muss einmal gerechnet werden, auf der Grafikkarte dauert das Sekunden, auf dem Prozessor bis zu einigen Minuten."),
+                            LocalizationService.T("Anwenden"), LocalizationService.T("Später"))
+                        TraceModelDenoise($"Frage beim Oeffnen: anwenden={confirmed}")
+                        If Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) Then Return
+                        If Not confirmed Then
+                            StatusText = LocalizationService.T("Das Bild wird ohne das gespeicherte Entrauschen gezeigt.")
+                            Return
+                        End If
+                        StartModelDenoiseIfNeeded(approvedByUser:=True)
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Editor.ModelDenoise", ex)
+                    End Try
+                End Sub, Avalonia.Threading.DispatcherPriority.Background)
+        End Sub
+
+        ''' <summary>Fuer welche Bilder in dieser Sitzung schon nach dem fehlenden Modell gefragt
+        ''' wurde. Sonst kaeme die Frage bei jedem Blaettern durch eine Serie wieder.</summary>
+        Private ReadOnly _modelDenoiseAsked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Das Rezept verlangt ein Entrauschen in der RAW-Stufe, aber das Modell fehlt
+        ''' (typisch nach dem Update: ein altes Rezept wurde umgestellt, die neue Datei ist noch nicht
+        ''' geholt). Ohne diese Frage stuende das Bild still unentrauscht da. Gefragt wird wie beim
+        ''' Knopf; nach dem Download rechnet es sofort, ohne sagt die Statuszeile, warum das Bild ohne
+        ''' Entrauschen dasteht.</summary>
+        Private Async Sub AskForMissingDenoiseModel(path As String)
+            If _mainVm Is Nothing OrElse Not _modelDenoiseAsked.Add(path) Then Return
+            Try
+                Dim ok = Await EnsureModelsAsync(LocalizationService.T("Entrauschen"), DenoiseModelService.ModelFile, DenoiseModelService.ImageModelFile)
+                If Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) Then Return
+                If ok Then
+                    StartModelDenoiseIfNeeded(approvedByUser:=True)
+                Else
+                    StatusText = LocalizationService.T("Das Bild wird ohne das gespeicherte Entrauschen gezeigt, das Modell fehlt.")
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModelDenoise", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Das Arbeitsbild nach einem Entrauschen in der RAW-Stufe neu aufbauen, MIT
+        ''' Warte-Anzeige und im Hintergrund. RebuildWorkingImageForLens baut synchron auf dem
+        ''' Oberflaechenfaden auf; bei 24 Megapixeln stand die Oberflaeche dann rund drei Sekunden,
+        ''' ohne dass etwas gezeichnet wurde, und es sah aus, als fehle der Spinner (Nutzerbefund).
+        ''' Die Anzeige bleibt stehen, bis das neue Bild da ist.</summary>
+        Private Async Function RebuildForModelDenoiseAsync() As Task
+            If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Keine Aenderungsmarke hier: der Neuaufbau laeuft auch beim Oeffnen eines Rezepts, und
+            ' dort ist nichts geaendert. Die Marke setzt der Knopf, wenn er seinen Schritt ablegt.
+            If _workingImage.HasBakedContent Then
+                _modelDenoiseRebuilding = False
+                RefreshBusyState()
+                SchedulePreviewUpdate()
+                Return
+            End If
+            Dim warEingepasst = _activeZoomPreset = ZoomPresetMode.Fit
+            _modelDenoiseRebuilding = True
+            SetBusyReason(LocalizationService.T("RAW wird entwickelt …"))
+            RefreshBusyState()
+            TraceModelDenoise("Neuaufbau startet")
+            Try
+                Await PreparePreviewSourceAsync(RenderSourcePath, showRawQuickPreview:=False)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModelDenoise", ex)
+            Finally
+                _modelDenoiseRebuilding = False
+                RefreshBusyState()
+                TraceModelDenoise("Neuaufbau fertig")
+            End Try
+            If warEingepasst Then ActiveZoomPreset = ZoomPresetMode.Fit
+        End Function
+
+        ''' <summary>Laeuft der Neuaufbau nach einem Entrauschen? Zaehlt in IsBusy.</summary>
+        Private _modelDenoiseRebuilding As Boolean
+
+        ''' <summary>Bis wann die Anzeigewechsel mitgeschrieben werden: eine Minute nach jedem
+        ''' Ereignis des Entrauschens. Fuer die Frage, was waehrend Lauf und Neuaufbau zu sehen ist.</summary>
+        Private _modelDenoiseTraceUntil As DateTime = DateTime.MinValue
+
+        ''' <summary>Eine Zeile "Editor.ModelDenoise" im Protokoll, mit Zeitstempel in
+        ''' Millisekunden und dem Stand von Lauf, Neuaufbau und Warte-Anzeige.</summary>
+        Private Sub TraceModelDenoise(text As String)
+            _modelDenoiseTraceUntil = DateTime.UtcNow.AddMinutes(1)
+            DiagnosticLogService.LogAlways("Editor.ModelDenoise",
+                $"{DateTime.Now:HH:mm:ss.fff} {text} | lauf={_modelDenoiseRunning} neuaufbau={_modelDenoiseRebuilding} busy={IsBusy} spinner={_showsBusy}")
+        End Sub
+
+        ''' <summary>Laeuft gerade ein Modelllauf fuer das Entrauschen? Dann startet kein zweiter.</summary>
+        Private _modelDenoiseRunning As Boolean
+
+        ''' <summary>Das Modell ueber die aktuelle Datei laufen lassen, wenn das Rezept ein
+        ''' Entrauschen verlangt und sein Ergebnis fehlt; danach das Arbeitsbild neu aufbauen.
+        '''
+        ''' Im Hintergrund, mit Fortschritt je Kachel und dem X zum Abbrechen. Das Bild steht
+        ''' derweil ohne Entrauschen da; aufgebaut wird nur, wenn danach noch dieselbe Datei offen
+        ''' ist. <paramref name="onCancelled"/> sagt, was ein Abbruch am Rezept aendert: beim Knopf
+        ''' den vorigen Stand zurueck, beim Oeffnen nichts (das Rezept bleibt, das Bild ist dann
+        ''' eben unentrauscht, und die Statuszeile sagt es).</summary>
+        Private Sub StartModelDenoiseIfNeeded(Optional onCancelled As Action = Nothing,
+                                              Optional onSucceeded As Action = Nothing,
+                                              Optional approvedByUser As Boolean = False)
+            If Not _rawModelDenoise OrElse _modelDenoiseRunning Then Return
+            If _workingImage Is Nothing OrElse _workingImage.HasBakedContent Then Return
+            Dim path = RenderSourcePath
+            If Not DenoiseModelService.SupportsFile(path) Then Return
+            If Not DenoiseModelService.Available Then
+                AskForMissingDenoiseModel(path)
+                Return
+            End If
+            If RawDecodeService.HasModelDenoised(path) Then Return
+            ' Ein Entrauschen aus dem Rezept laeuft erst nach einer Zustimmung: dem Knopf, der Frage
+            ' beim Oeffnen oder dem Download. Ohne sie wird gefragt (ScheduleModelDenoiseQuestion).
+            If approvedByUser Then _modelDenoiseApproved.Add(path)
+            If Not _modelDenoiseApproved.Contains(path) Then
+                ScheduleModelDenoiseQuestion(path)
+                Return
+            End If
+            _modelDenoiseRunning = True
+            TraceModelDenoise($"Lauf startet: datei={IO.Path.GetFileName(path)}")
+            SetBusyReason(LocalizationService.T("Bild wird entrauscht"))
+            StatusText = LocalizationService.T("Bild wird entrauscht…")
+            Dim cancel = BeginCancellableBusy()
+            ' Zaehlt in IsBusy: die Warte-Anzeige mit dem X geht an, und das Bild ist gesperrt,
+            ' solange das Modell rechnet. Ohne das war der Lauf unsichtbar (Nutzerbefund).
+            RefreshBusyState()
+            ' Der Fortschritt muss ueber den UI-Faden: gerechnet wird im Hintergrund.
+            DenoiseModelService.Progress =
+                Sub(schritt, gesamt)
+                    Dispatcher.UIThread.Post(
+                        Sub() SetBusyReason(String.Format(
+                            LocalizationService.T("Bild wird entrauscht ({0} von {1})"), schritt, gesamt)))
+                End Sub
+            Dim run = Task.Run(Function() RawDecodeService.PrepareModelDenoise(path, cancel))
+            run.ContinueWith(
+                Sub(finished)
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            DenoiseModelService.Progress = Nothing
+                            Dim cancelled = BusyWasCancelled()
+                            EndCancellableBusy()
+                            Dim ok = finished.Status = TaskStatus.RanToCompletion AndAlso finished.Result
+                            TraceModelDenoise($"Lauf fertig: ok={ok}, abgebrochen={cancelled}, rezept={_rawModelDenoise}")
+                            ' EIN Spinner fuer Lauf und Neuaufbau: der Neuaufbau uebernimmt die
+                            ' Anzeige, BEVOR der Lauf sie abgibt. Sonst ging sie kurz aus und wieder
+                            ' an, und es sah aus wie zwei Entrauschungen hintereinander (Nutzerbefund).
+                            Dim willRebuild = ok AndAlso Not cancelled AndAlso _rawModelDenoise AndAlso
+                                              String.Equals(path, RenderSourcePath, StringComparison.Ordinal)
+                            If willRebuild Then _modelDenoiseRebuilding = True
+                            _modelDenoiseRunning = False
+                            RefreshBusyState()
+                            If Not String.Equals(path, RenderSourcePath, StringComparison.Ordinal) Then Return
+                            If cancelled Then
+                                onCancelled?.Invoke()
+                                StatusText = LocalizationService.T("Entrauschen abgebrochen - das Bild ist unverändert")
+                                Return
+                            End If
+                            If Not ok Then
+                                onCancelled?.Invoke()
+                                StatusText = LocalizationService.T("Entrauschen fehlgeschlagen")
+                                Return
+                            End If
+                            ' Inzwischen ausgeschaltet (Rueckgaengig, Zuruecksetzen): das Ergebnis
+                            ' liegt bereit, aufgebaut wird ohne.
+                            If Not _rawModelDenoise Then Return
+                            onSucceeded?.Invoke()
+                            Dim ignoriert = RebuildForModelDenoiseAsync()
+                            Dim report = DenoiseModelService.LastReport
+                            StatusText = LocalizationService.T("Bild entrauscht") &
+                                         If(String.IsNullOrEmpty(report), "", " - " & report)
+                        End Sub)
+                End Sub, TaskScheduler.Default)
         End Sub
 
         ''' <summary>Vor dem Speichern klaeren, was mit einer gleichnamigen Datei geschehen soll.
@@ -16629,6 +16906,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(LensCorrectionSupported))
             Me.RaisePropertyChanged(NameOf(LensCorrectionBlockedByBakedContent))
+            RaiseModelDenoiseOfferChanged()
             _mainVm?.RefreshWindowTitle()
         End Sub
 
@@ -17826,7 +18104,6 @@ Namespace ViewModels
         ''' <summary>Das X in der Warte-Anzeige. Dieselbe Wirkung wie Esc.</summary>
         Public ReadOnly Property CancelBusyCommand As ICommand
         Public ReadOnly Property DenoiseWithModelCommand As ICommand
-        Public ReadOnly Property DenoiseFastCommand As ICommand
         Public ReadOnly Property MeasureDenoiseStrengthCommand As ICommand
         ''' <summary>Aus dem Kontextmenue einer NICHT geoeffneten Kachel des Filmstreifens
         ''' (MenuSite.EditorFilmstripOther): sie oeffnen bzw. als Ebene in die Mitte setzen.</summary>
@@ -18349,11 +18626,7 @@ Namespace ViewModels
             CancelBusyCommand = ReactiveCommand.Create(Sub() RequestBusyCancel())
             DenoiseWithModelCommand = ReactiveCommand.Create(
                 Sub()
-                    Dim ignoriert = DenoiseWithModelAsync(DenoiseModelService.DenoiseKind.Quality)
-                End Sub)
-            DenoiseFastCommand = ReactiveCommand.Create(
-                Sub()
-                    Dim ignoriert = DenoiseWithModelAsync(DenoiseModelService.DenoiseKind.Fast)
+                    Dim ignoriert = DenoiseWithModelAsync()
                 End Sub)
             MeasureDenoiseStrengthCommand = ReactiveCommand.CreateFromTask(Function() MeasureDenoiseStrengthAsync())
             OpenContextItemCommand = ReactiveCommand.Create(
@@ -19420,6 +19693,10 @@ Namespace ViewModels
 
         Public Async Function NavigateToFilmstripItemAsync(item As ImageItem) As Task
             If item Is Nothing OrElse IsDocumentLoadRunning Then Return
+            If IsFilmstripInsertOnly(item.FilePath) Then
+                StatusText = LocalizationService.T("Eine SVG-Grafik wird nicht als Bild geöffnet. Auf das Bild ziehen, dann wird sie als Ebene eingesetzt.")
+                Return
+            End If
             Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, PathIdentity.Comparison))
             If idx < 0 Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("dieses Bild öffnest") Then Return
@@ -19463,6 +19740,10 @@ Namespace ViewModels
             ' halbes Dokument.
             If IsDocumentLoadRunning Then Return
             If idx < 0 OrElse idx >= _folderPaths.Count OrElse idx = _currentIndex Then Return
+            ' Eine SVG-Grafik im Streifen wird beim Blaettern uebersprungen, in der Richtung des
+            ' Schritts; steht keine andere Datei mehr da, bleibt es beim aktuellen Bild.
+            idx = SkipInsertOnly(idx, If(StepsForward(idx), 1, -1))
+            If idx < 0 OrElse idx = _currentIndex Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("das nächste Bild öffnest") Then Return
             _currentIndex = idx
             ' DIE MARKIERUNG FOLGT SOFORT, nicht erst nach dem Laden. Die Auswahl der Liste
@@ -19473,6 +19754,31 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             MarkCurrentFilmstripItem()
             Await LoadImageContent(_folderPaths(_currentIndex))
+        End Function
+
+        ''' <summary>Steht eine Datei nur im Streifen, um sie auf das Bild zu ziehen, und oeffnet sie
+        ''' nicht als Dokument? Das gilt fuer SVG-Grafiken.</summary>
+        Friend Shared Function IsFilmstripInsertOnly(path As String) As Boolean
+            Return SvgPreviewService.IsSupportedSvg(path)
+        End Function
+
+        ''' <summary>Liegt das Ziel vom aktuellen Bild aus gesehen vorwaerts (auf dem kuerzeren Weg
+        ''' im Kreis)? Fuer die Richtung, in der eine SVG-Grafik uebersprungen wird.</summary>
+        Private Function StepsForward(idx As Integer) As Boolean
+            Dim n = _folderPaths.Count
+            If n = 0 OrElse _currentIndex < 0 Then Return True
+            Return ((idx - _currentIndex) Mod n + n) Mod n <= n \ 2
+        End Function
+
+        ''' <summary>Vom Index aus in der Richtung die erste Datei, die sich oeffnen laesst, im Kreis;
+        ''' -1, wenn es keine gibt.</summary>
+        Private Function SkipInsertOnly(idx As Integer, direction As Integer) As Integer
+            Dim n = _folderPaths.Count
+            For i = 0 To n - 1
+                Dim candidate = ((idx + i * direction) Mod n + n) Mod n
+                If Not IsFilmstripInsertOnly(_folderPaths(candidate)) Then Return candidate
+            Next
+            Return -1
         End Function
 
         Public Async Function NavigateNextAsync() As Task
@@ -19526,7 +19832,12 @@ Namespace ViewModels
                     Return
                 End If
 
-                Dim fallbackIndex = Math.Max(0, Math.Min(_currentIndex, _folderPaths.Count - 1))
+                Dim fallbackIndex = SkipInsertOnly(Math.Max(0, Math.Min(_currentIndex, _folderPaths.Count - 1)), 1)
+                If fallbackIndex < 0 Then
+                    _folderPaths.Clear()
+                    Await LoadImageContent("")
+                    Return
+                End If
                 Await LoadImageContent(_folderPaths(fallbackIndex))
                 Return
             End If
@@ -19674,6 +19985,9 @@ Namespace ViewModels
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                     SchedulePendingBakedOperationsQuestion()
+                    ' Ein Entrauschen mit Modell im Rezept rechnet erst nach einer Rueckfrage
+                    ' (ScheduleModelDenoiseQuestion); das Bild steht derweil ohne es da.
+                    StartModelDenoiseIfNeeded()
                 End If
                 ' Der Aufnahme-Weißpunkt der Datei, falls sie einen hat. Kein Bildpunkt ändert sich
                 ' dadurch: solange kein Weißabgleichsregler steht, baut die Kette keine Stufe.
@@ -20158,6 +20472,9 @@ Namespace ViewModels
                     _hasChanges = False
                     Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
                     SchedulePendingBakedOperationsQuestion()
+                    ' Ein Entrauschen mit Modell im Rezept rechnet erst nach einer Rueckfrage
+                    ' (ScheduleModelDenoiseQuestion); das Bild steht derweil ohne es da.
+                    StartModelDenoiseIfNeeded()
                 End If
                 ' Der Aufnahme-Weißpunkt der Datei, falls sie einen hat. Kein Bildpunkt ändert sich
                 ' dadurch: solange kein Weißabgleichsregler steht, baut die Kette keine Stufe.
@@ -20580,7 +20897,9 @@ Namespace ViewModels
         Private Shared Function CanParticipateInEditorFilmstrip(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             If VideoPreviewService.IsSupportedVideo(path) Then Return False
-            If SvgPreviewService.IsSupportedSvg(path) Then Return False
+            ' Eine SVG-Grafik steht im Streifen, damit sie sich als Ebene auf das Bild ziehen laesst;
+            ' als Dokument oeffnet der Editor sie nicht (IsFilmstripInsertOnly).
+            If SvgPreviewService.IsSupportedSvg(path) Then Return True
 
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
             Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp",
@@ -23044,13 +23363,18 @@ Namespace ViewModels
                 If saveAsResult Is Nothing Then Return False
 
                 ' Eine Namensvorlage aus der Auswahl des Dialogs (GitHub #102) wird hier fuer dieses
-                ' Bild aufgeloest; ein getippter Name ohne Platzhalter bleibt, wie er ist, auch mit "#".
+                ' Bild aufgeloest; ein getippter Name ohne Platzhalter bleibt, wie er ist. Ein "#" ist
+                ' dabei immer der Zaehler, auch ohne geschweifte Klammer: der Dialog bietet "###" selbst
+                ' als Baustein an, und wer ihn waehlt, erwartet eine Zahl.
                 ' Leer heisst wie beim Exportieren: der Name der Quelle (die Endung kann eine andere
                 ' sein, eine vorhandene Datei fragt nach).
                 Dim templateSource = If(fromFpx, _currentFpxPath, _currentImagePath)
                 Dim chosenName = If(saveAsResult.BaseName, "").Trim()
                 If chosenName.Length = 0 Then chosenName = name
-                If chosenName.Contains("{"c) Then
+                ' Mit Zaehler wird das Muster behalten: die Nummer steht erst fest, wenn der Zielordner
+                ' bekannt ist (die erste freie, siehe unten).
+                Dim counterPattern = If(chosenName.Contains("#"c), chosenName, Nothing)
+                If chosenName.Contains("{"c) OrElse chosenName.Contains("#"c) Then
                     chosenName = _mainVm.ExpandTargetNamePattern(chosenName, templateSource, 1, baseNameOverride:=name).Trim()
                     If chosenName.Length = 0 Then chosenName = name
                 End If
@@ -23083,6 +23407,21 @@ Namespace ViewModels
                                   _mainVm.ExpandTargetFolderTemplate(saveAsResult.TargetFolder, templateSource, sourceFolder:=dir), dir)
                     End If
                     If Not IO.Directory.Exists(dir) Then IO.Directory.CreateDirectory(dir)
+                    ' Der Zaehler nimmt die erste Nummer, unter der es im Zielordner noch keine Datei
+                    ' gibt: "{name}_###" speichert so nacheinander _001, _002 und so weiter. Er
+                    ' begann vorher bei jedem Speichern mit 1, und schon das zweite fragte nach der
+                    ' vorhandenen Datei.
+                    If counterPattern IsNot Nothing Then
+                        For counter = 1 To 99999
+                            Dim candidate = MediaFileTypes.WithoutKnownExtension(
+                                _mainVm.ExpandTargetNamePattern(counterPattern, templateSource, counter, baseNameOverride:=name).Trim())
+                            ' Bringt eine neue Nummer keinen neuen Namen, hilft auch keine weitere.
+                            If candidate.Length = 0 OrElse HasInvalidFileNameChars(candidate) OrElse
+                               (counter > 1 AndAlso String.Equals(candidate, cleanBaseName, StringComparison.Ordinal)) Then Exit For
+                            cleanBaseName = candidate
+                            If Not IO.File.Exists(IO.Path.Combine(dir, candidate & saveAsResult.Extension)) Then Exit For
+                        Next
+                    End If
                     targetPath = IO.Path.Combine(dir, cleanBaseName & saveAsResult.Extension)
                     ' EINE vorhandene Datei war bis hierher wortlos ueberschrieben worden. Wer einen
                     ' Namen tippt, den es schon gibt, meint fast nie "die andere darf weg" - und
@@ -23922,6 +24261,8 @@ Namespace ViewModels
             Dim adj = New ImageAdjustments With {
                 .RawHighlightRecovery = _rawHighlightRecovery,
                 .RawSensorEdgeCrop = _rawSensorEdgeCrop,
+                .RawModelDenoise = _rawModelDenoise,
+                .RawModelDenoiseStrength = _rawModelDenoiseStrength,
                 .LensDistortion = _lensDistortion,
                 .LensTca = _lensTca,
                 .LensVignetting = _lensVignetting,
@@ -25460,6 +25801,10 @@ Namespace ViewModels
             If _lensTcaBlue <> adj.LensTcaBlue Then note("LensTcaBlue", _lensTcaBlue, adj.LensTcaBlue)
             If _lensVignettingAmount <> adj.LensVignettingAmount Then note("LensVignettingAmount", _lensVignettingAmount, adj.LensVignettingAmount)
             If _rawSensorEdgeCrop <> adj.RawSensorEdgeCrop Then note("RawSensorEdgeCrop", _rawSensorEdgeCrop, adj.RawSensorEdgeCrop)
+            If _rawModelDenoise <> adj.RawModelDenoise Then note("RawModelDenoise", _rawModelDenoise, adj.RawModelDenoise)
+            If adj.RawModelDenoise AndAlso _rawModelDenoiseStrength <> adj.RawModelDenoiseStrength Then
+                note("RawModelDenoiseStrength", _rawModelDenoiseStrength, adj.RawModelDenoiseStrength)
+            End If
             If Not String.Equals(_lensModel, If(adj.LensModel, ""), StringComparison.Ordinal) Then note("LensModel", _lensModel, adj.LensModel)
             Return result
         End Function
@@ -25473,6 +25818,8 @@ Namespace ViewModels
         Private Sub TakeDecodeFieldsFrom(adj As ImageAdjustments)
             If adj Is Nothing Then Return
             _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
+            _rawModelDenoise = adj.RawModelDenoise
+            _rawModelDenoiseStrength = adj.RawModelDenoiseStrength
             _lensDistortion = adj.LensDistortion
             _lensTca = adj.LensTca
             _lensVignetting = adj.LensVignetting
@@ -25535,6 +25882,8 @@ Namespace ViewModels
             _tint = adj.Tint
             _whiteBalance = If(String.IsNullOrWhiteSpace(adj.WhiteBalanceMode), "Wie Aufnahme", adj.WhiteBalanceMode)
             _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
+            _rawModelDenoise = adj.RawModelDenoise
+            _rawModelDenoiseStrength = adj.RawModelDenoiseStrength
             _lensDistortion = adj.LensDistortion
             _lensTca = adj.LensTca
             _lensVignetting = adj.LensVignetting
@@ -26054,10 +26403,12 @@ Namespace ViewModels
 
             PushUndo(LocalizationService.T("Alle Bearbeitungen zurückgesetzt"))
             Dim sensorEdgeBefore = _rawSensorEdgeCrop
+            Dim modelDenoiseBefore = _rawModelDenoise
             ResetAdjustmentsInternal()
             ' Der Sensorrand sitzt im Decode: war er abgeschaltet, muss neu entwickelt werden, sonst
-            ' steht der Haken wieder an und das Bild bleibt unbeschnitten.
-            If sensorEdgeBefore <> _rawSensorEdgeCrop Then
+            ' steht der Haken wieder an und das Bild bleibt unbeschnitten. Dasselbe fuer das
+            ' Entrauschen mit Modell.
+            If sensorEdgeBefore <> _rawSensorEdgeCrop OrElse modelDenoiseBefore <> _rawModelDenoise Then
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropEnabled))
                 RebuildWorkingImageForLens()
             End If
@@ -26210,6 +26561,8 @@ Namespace ViewModels
             ' etwas. Der Sensorrand geht auf seinen Startwert; beim Oeffnen setzt ihn danach das
             ' Rezept oder ForUneditedRaw.
             _rawSensorEdgeCrop = SensorEdgeCropStart
+            _rawModelDenoise = False
+            _rawModelDenoiseStrength = 70
             _lensDistortion = Nothing
             _lensTca = Nothing
             _lensVignetting = Nothing
@@ -30963,17 +31316,19 @@ Namespace ViewModels
         ''' gehoert NICHT dazu - es steht in den Details, und ein Zuruecksetzer, der ueber die
         ''' Gruppengrenze hinaus greift, ueberrascht nur.</summary>
         Private Sub ResetNoiseGroupInternal()
-            ' Auch das gespeicherte Entrauschen mit Modell gehoert hierher: es steht in derselben
-            ' Gruppe, und ohne diesen Weg gaebe es keinen, es wieder loszuwerden.
-            '
-            ' WAS ES TUT UND WAS NICHT: der Vermerk verschwindet, damit beim naechsten Oeffnen nichts
-            ' mehr nachgezogen wird. Die PIXEL der laufenden Sitzung bleiben entrauscht - das
-            ' zurueckzurechnen gibt es nicht, der Rueckweg dorthin ist der Schritt zurueck.
-            If _bakedOperations.RemoveAll(Function(o) o Is Nothing OrElse
-                    String.Equals(o.Kind, BakedOperation.KindDenoise, StringComparison.OrdinalIgnoreCase)) > 0 Then
-                RaiseStoredDenoiseChanged()
+            ' Auch das Entrauschen mit Modell gehoert hierher: es steht in derselben Gruppe, und ohne
+            ' diesen Weg gaebe es keinen, es wieder loszuwerden. In der RAW-Stufe wird ohne es neu
+            ' aufgebaut. Am fertigen Bild verschwindet nur der Vermerk, die PIXEL der laufenden
+            ' Sitzung bleiben entrauscht - der Rueckweg dorthin ist der Schritt zurueck.
+            If _bakedOperations.RemoveAll(Function(o) o Is Nothing OrElse ImageProcessor.IsDenoiseOperation(o)) > 0 Then
                 StatusText = LocalizationService.T("Gespeichertes Entrauschen entfernt - die Bildpunkte bleiben, wie sie sind")
             End If
+            If _rawModelDenoise Then
+                _rawModelDenoise = False
+                RebuildWorkingImageForLens()
+                StatusText = LocalizationService.T("Entrauschen mit Modell entfernt")
+            End If
+            RaiseStoredDenoiseChanged()
             ResetNoiseSlidersInternal()
         End Sub
 
