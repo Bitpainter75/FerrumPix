@@ -21,8 +21,14 @@
 - Save as remembers the last name pattern and selects it again next time, like the target folder.
   The import also brings back the last target folder and a name pattern you wrote yourself.
 
+- Nikon raw files in the High Efficiency format (HE and HE*, for example from the Z6 III, Z8, Z9
+  and Zf) now open as raw files on Windows, macOS and in the Flatpak. Before, only their embedded
+  preview was shown.
+
 ### Fixes
 
 - Apply watermark took over the file name pattern left behind by the previous dialog.
+
+- On Windows, the JPEG XL support is updated with the latest security fixes.
 
 

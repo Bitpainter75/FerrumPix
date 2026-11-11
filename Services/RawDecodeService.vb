@@ -398,21 +398,23 @@ Namespace Services
                 If OperatingSystem.IsWindows() Then
                     candidates = {"libraw.dll", "raw.dll", "libraw-23.dll"}
                 ElseIf OperatingSystem.IsMacOS() Then
-                    ' Sonamen wie unter Linux (25 = LibRaw 0.22, 23 = 0.21); der nackte Name
-                    ' existiert nur mit Entwicklungspaket. Die 25 fehlte hier, waehrend die
-                    ' Linux-Liste sie laengst fuehrt.
-                    candidates = {"libraw.dylib", "libraw.25.dylib", "libraw.24.dylib",
+                    ' Sonamen wie unter Linux (27 = Snapshot 202611, 25 = LibRaw 0.22, 23 = 0.21); der
+                    ' nackte Name existiert nur mit Entwicklungspaket. Die 25 fehlte hier, waehrend
+                    ' die Linux-Liste sie laengst fuehrt.
+                    candidates = {"libraw.dylib", "libraw.27.dylib", "libraw.26.dylib", "libraw.25.dylib", "libraw.24.dylib",
                                   "libraw.23.dylib", "libraw.22.dylib"}
                 Else
-                    ' Sonamen der verbreiteten Versionen (25 = LibRaw 0.22, 23 = 0.21); das nackte
-                    ' libraw.so existiert nur mit Dev-Paket.
+                    ' Sonamen der verbreiteten Versionen (27 = Snapshot 202611, wie ihn das Flatpak
+                    ' mitbringt, 25 = LibRaw 0.22, 23 = 0.21); das nackte libraw.so existiert nur
+                    ' mit Dev-Paket. Die neueste zuerst: eine Distribution mit beiden haelt die
+                    ' neuere fuer die richtige.
                     ' Die _r-Varianten stehen ZUERST: das ist die reentrant gebaute Bibliothek, und
                     ' die Thumbnail-Erzeugung ruft hier aus ProcessorCount\2 Threads gleichzeitig
                     ' hinein (GalleryViewModel, Parallel.For). Vorher stand libraw.so vorn und wurde
                     ' auf einem Standard-Arch-System auch tatsächlich geladen - parallele native
                     ' Aufrufe in die nicht-reentrante Variante sind eine Absturzquelle.
-                    candidates = {"libraw_r.so.25", "libraw_r.so.24", "libraw_r.so.23", "libraw_r.so.22", "libraw_r.so",
-                                  "libraw.so.25", "libraw.so.24", "libraw.so.23", "libraw.so.22", "libraw.so"}
+                    candidates = {"libraw_r.so.27", "libraw_r.so.26", "libraw_r.so.25", "libraw_r.so.24", "libraw_r.so.23", "libraw_r.so.22", "libraw_r.so",
+                                  "libraw.so.27", "libraw.so.26", "libraw.so.25", "libraw.so.24", "libraw.so.23", "libraw.so.22", "libraw.so"}
                 End If
 
                 Dim handle As IntPtr

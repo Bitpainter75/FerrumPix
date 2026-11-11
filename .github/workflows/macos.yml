@@ -72,6 +72,11 @@ jobs:
           path: packaging
           ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
 
+      # Ein LibRaw-Snapshot (git:<commit>) kommt ohne fertiges configure; build-macos.sh ruft
+      # dann autoreconf, und das braucht autoconf, automake und libtool.
+      - name: Autotools
+        run: brew list autoconf automake libtool >/dev/null 2>&1 || brew install autoconf automake libtool
+
       - name: Bauen und pruefen
         run: packaging/libraw/build-macos.sh ${{ matrix.arch }} ${{ inputs.libraw_version }}
 
