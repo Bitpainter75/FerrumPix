@@ -125,8 +125,12 @@ jobs:
       # Die Zeitschranke macht daraus im Wiederholungsfall einen schnellen Fehlschlag statt einer
       # Haengepartie mitten im Release.
       - name: Werkzeuge
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
+          # Die Liste mit Azure bleibt als Rueckfall aufgehoben: am 2026-11-11 loesten die Laeufer
+          # archive.ubuntu.com und security.ubuntu.com mehrmals nicht auf, und ohne Azure stand apt
+          # dann ohne erreichbaren Spiegel da (siehe apt_mit_wiederholung unten).
+          [ -f /etc/apt/apt-mirrors.txt ] && sudo cp /etc/apt/apt-mirrors.txt /tmp/apt-mirrors.orig
           # Herausgeloescht, nicht neu geschrieben: die Datei hat ein eigenes Format (ein Spiegel je
           # Zeile, dahinter Angaben wie "priority:2"), und das bleibt so unangetastet. Gezaehlt wird
           # vorher, damit nicht der letzte Spiegel verschwindet - dann stuende apt ganz ohne da.
@@ -146,8 +150,22 @@ jobs:
           # dann keine Daten fliessen, und apt merkt das von sich aus nicht.
           printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
-          sudo apt-get update
-          sudo apt-get install -y nsis xz-utils jq rpm zsync desktop-file-utils zip
+          # Bis zu drei Versuche. Scheitert einer, kommt vor dem naechsten die urspruengliche
+          # Spiegelliste samt Azure zurueck: lieber ein Spiegel, der manchmal klemmt (dagegen helfen
+          # die Zeitschranken oben), als keiner, dessen Name sich aufloesen laesst.
+          apt_mit_wiederholung() {
+            for versuch in 1 2 3; do
+              if sudo apt-get update && sudo apt-get install -y "$@"; then return 0; fi
+              echo "apt: Versuch $versuch gescheitert"
+              if [ -f /tmp/apt-mirrors.orig ]; then
+                sudo cp /tmp/apt-mirrors.orig /etc/apt/apt-mirrors.txt
+                echo "Spiegelliste wieder mit Azure"
+              fi
+              sleep 20
+            done
+            return 1
+          }
+          apt_mit_wiederholung nsis xz-utils jq rpm zsync desktop-file-utils zip
 
       - name: Fremdbinaerdateien bereitlegen
         run: packaging/ci/ensure-binaries.sh
@@ -254,12 +272,18 @@ jobs:
 
       # ImageMagick verkleinert das Anwendungssymbol auf die vier Groessen, die der Store verlangt.
       - name: Werkzeuge
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           printf 'Acquire::Retries "2";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\nAcquire::ForceIPv4 "true";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-release-timeouts >/dev/null
-          sudo apt-get update
-          sudo apt-get install -y imagemagick xz-utils
+          # Bis zu drei Versuche wie im Job "Pakete": am 2026-11-11 loesten die Laeufer die
+          # Ubuntu-Server mehrmals nicht auf.
+          for versuch in 1 2 3; do
+            if sudo apt-get update && sudo apt-get install -y imagemagick xz-utils; then break; fi
+            echo "apt: Versuch $versuch gescheitert"
+            [ "$versuch" = 3 ] && exit 1
+            sleep 20
+          done
 
       - name: Fremdbinaerdateien bereitlegen
         run: packaging/ci/ensure-binaries.sh
