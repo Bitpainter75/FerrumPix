@@ -4431,7 +4431,14 @@ Namespace Services
                 ' Dasselbe bei Olympus ORF (Graustufen 1), Sony SRF, Kodak KDC und Leaf MOS.
                 ' Nur bei DNG steht im Vollbild verlaesslich, was es ist.
                 If Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return False
-                Dim directories = ExifService.ReadMetadataDirectories(path)
+                ' OHNE den Rueckweg fuer leere XMP-Eintraege: eine solche Datei warf hier bisher, galt
+                ' damit als roh und lief durch die Basisstufe. So ist sie veroeffentlicht und so soll
+                ' sie aussehen. Die Leica M Monochrom (Typ 246) traegt ein LinearRaw-Vollbild mit
+                ' einem Kanal und galt so als RAW; ueber den Rueckweg gelesen waere sie ein fertiges
+                ' Bild wie die Pentax K-3 III Monochrome, mit LibRaws Gammaausgabe und dem Bildmodell
+                ' statt TreeNet. Welche Einordnung fuer einkanalige LinearRaw die richtige ist, steht
+                ' in OFFENE_PUNKTE.md.
+                Dim directories = ExifService.ReadMetadataDirectories(path, retryWithoutEmptyXmp:=False)
 
                 ' AUSNAHME FUER CHDK, und zwar eine bewusst enge.
                 '

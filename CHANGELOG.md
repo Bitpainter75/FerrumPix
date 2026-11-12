@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.81
 
 ### Changes
 
@@ -8,8 +8,8 @@
   X-Trans files, and takes seconds on a graphics card. Changing the strength afterwards needs no
   new run. When a picture with saved denoising is opened, you are asked before it is computed.
   Applying adjustments in a batch with overwriting now also denoises raw files, by saving it with
-  their edits. The automatic strength is tuned for raw files separately, so very noisy shots get
-  the full strength they need.
+  their edits. The automatic strength is tuned for raw files separately and leaves less grain:
+  noisy shots get full strength, and moderate ones are denoised noticeably too.
 
 - Denoising raw files takes away more of the remaining noise at high ISO, and dark areas keep
   their brightness without coarse color blotches. This comes with a new model file; the settings

@@ -169,6 +169,14 @@ Namespace Services
         ''' in Grauwerten. Am Bild beurteilt; ein Bild unter rund 2,7 gilt als sauber.</summary>
         Public Const AutoTargetNoise As Single = 2.4F
 
+        ''' <summary>Dasselbe Ziel fuer TreeNet in der RAW-Stufe, halb so viel wie bei fertigen
+        ''' Bildern. Mit 2,4 blieb bei ISO 12800 sichtbares Helligkeitskorn stehen: die R6 bekam 84 und
+        ''' behielt mehr als doppelt so viel Feinrauschen wie bei 100 (0,76 gegen 0,32 L*). Das
+        ''' Modell kostet in der RAW-Stufe kaum Zeichnung, das Ziel darf deshalb tiefer liegen; ab
+        ''' etwa ISO 6400 heisst das volle oder fast volle Staerke, bei ISO 400 bis 800 rund 60 bis 70
+        ''' statt 10 bis 30. Messung: Diagnostics/TreeNetMessung/Kombi und Staerke.</summary>
+        Public Const RawAutoTargetNoise As Single = 1.2F
+
         ''' <summary>Was das BILDMODELL (NAFNet, fertige Bilder) bei voller Staerke selbst an
         ''' Streuung stehen laesst, in Grauwerten (0,3 bis 0,9 an neun Aufnahmen).</summary>
         Friend Const ModelResidualNoise As Single = 0.5F
@@ -210,10 +218,11 @@ Namespace Services
         End Class
 
         ''' <summary>Das Rauschziel fuer einen Restkorn-Wert von 0 bis 100. Bei 50 gilt
-        ''' <see cref="AutoTargetNoise"/>, jede 50 Schritte halbieren oder verdoppeln es.</summary>
-        Public Shared Function TargetNoiseFor(grain As Double) As Single
+        ''' <see cref="AutoTargetNoise"/> (in der RAW-Stufe <see cref="RawAutoTargetNoise"/>), jede
+        ''' 50 Schritte halbieren oder verdoppeln es.</summary>
+        Public Shared Function TargetNoiseFor(grain As Double, Optional rawStage As Boolean = False) As Single
             Dim g = If(Double.IsNaN(grain), 50.0, Math.Max(0.0, Math.Min(100.0, grain)))
-            Return CSng(AutoTargetNoise * Math.Pow(2.0, (g - 50.0) / 50.0))
+            Return CSng(If(rawStage, RawAutoTargetNoise, AutoTargetNoise) * Math.Pow(2.0, (g - 50.0) / 50.0))
         End Function
 
         ''' <summary>Die Staerke fuer ein gemessenes Rauschen. Reine Rechnung, damit sie sich ohne
@@ -222,7 +231,7 @@ Namespace Services
                                           Optional rawStage As Boolean = False) As DenoiseSuggestion
             Dim suggestion As New DenoiseSuggestion With {.NoiseLevel = noiseLevel}
             If Single.IsNaN(noiseLevel) OrElse noiseLevel <= 0 Then Return suggestion
-            Dim target = TargetNoiseFor(grain)
+            Dim target = TargetNoiseFor(grain, rawStage)
             Dim strength As Double
             If rawStage Then
                 ' TreeNet in der RAW-Stufe: Rest(s) = Rauschen * ((1 - s) + s * Anteil), aufgeloest

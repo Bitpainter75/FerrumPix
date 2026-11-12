@@ -112,6 +112,22 @@
 
   <releases>
 
+    <release version="0.9.81-1" date="2026-11-12">
+      <description>
+        <p>This update brings RAW denoising directly on the sensor data, Nextcloud uploads for batch operations, and support for Nikon High Efficiency RAW files across all platforms:</p>
+        <p xml:lang="de">Dieses Update bringt RAW-Entrauschung direkt auf den Sensordaten, Nextcloud-Uploads bei der Stapelverarbeitung und Unterstützung für Nikons High-Efficiency-RAW-Dateien auf allen Plattformen:</p>
+        <ul>
+          <li>Model-based denoising now works directly on the RAW sensor data, before exposure and color adjustments are applied. Nothing gets baked into the image, so all your editing controls remain fully adjustable. More fine detail is preserved, colors stay more accurate, and with a GPU the process takes just seconds. Automatic denoising now leaves less grain behind, and an updated model, available through Settings, removes more noise at high ISO without making dark areas darker.</li>
+          <li xml:lang="de">Die modellbasierte Entrauschung arbeitet jetzt direkt auf den RAW-Sensordaten, noch bevor Belichtung und Farben angepasst werden. Dabei wird nichts fest ins Bild eingerechnet, sodass alle Bearbeitungsregler weiterhin frei einstellbar bleiben. Feine Details bleiben besser erhalten, die Farben verändern sich weniger, und mit einer Grafikkarte dauert die Verarbeitung nur wenige Sekunden. Die automatische Entrauschung lässt jetzt weniger Körnung zurück. Ein verbessertes Modell, das in den Einstellungen als Update angeboten wird, entfernt besonders bei hohen ISO-Werten mehr Rauschen, ohne dunkle Bildbereiche zusätzlich abzudunkeln.</li>
+
+          <li>Export, Convert, Resize, Apply Adjustments and Apply Watermark can now upload their results directly to Nextcloud. You can save them alongside the original photo or in the upload folder configured in Settings. A # in a filename pattern now always acts as a counter, and Save As remembers the last filename pattern you used.</li>
+          <li xml:lang="de">Exportieren, Umwandeln, Größe ändern, Anpassungen anwenden und Wasserzeichen anwenden können ihre Ergebnisse jetzt direkt in die Nextcloud hochladen. Du kannst sie entweder neben dem Originalfoto oder im Upload-Ordner speichern, den du in den Einstellungen festgelegt hast. Ein # in einer Dateinamensvorlage dient jetzt immer als fortlaufender Zähler, und Speichern unter merkt sich das zuletzt verwendete Namensmuster.</li>
+
+          <li>Nikon High Efficiency RAW files can now be opened and processed as RAW files on Windows, macOS and in the Flatpak version. When copying a photo over an existing file, FerrumPix preserves the original photo's rating, keywords and people assignments. RAW files with an empty metadata entry also display their camera information correctly again.</li>
+          <li xml:lang="de">Nikons High-Efficiency-RAW-Dateien lassen sich jetzt auch unter Windows, macOS und in der Flatpak-Version als RAW-Dateien öffnen und bearbeiten. Wenn du ein Foto über eine bereits vorhandene Datei kopierst, bleiben die Bewertung, Stichwörter und Personenzuordnungen des ursprünglichen Fotos erhalten. RAW-Dateien mit einem leeren Metadateneintrag zeigen außerdem ihre Kamerainformationen wieder korrekt an.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.80-1" date="2026-11-10">
       <description>
         <p>This update brings lots of new creative looks with live previews of your own photos, a history brush that lets you paint back the original image, and more flexibility when saving and exporting:</p>

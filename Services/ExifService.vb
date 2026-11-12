@@ -1368,8 +1368,13 @@ Namespace Services
         '''
         ''' Das Ergebnis ist dasselbe, Verzeichnis fuer Verzeichnis und in derselben Reihenfolge:
         ''' dieselbe Typerkennung, derselbe TIFF-Leser, dazu wie im Original "File Type" und "File".
-        ''' Jeder Weg, der Metadaten aus einem Pfad liest, geht hierueber.</summary>
-        Public Shared Function ReadMetadataDirectories(path As String) As IReadOnlyList(Of MetadataExtractor.Directory)
+        ''' Jeder Weg, der Metadaten aus einem Pfad liest, geht hierueber.
+        '''
+        ''' <paramref name="retryWithoutEmptyXmp"/> falsch laesst den zweiten Versuch ueber
+        ''' <see cref="EmptyXmpTolerantTiffReader"/> weg; die Datei wirft dann wie vor dem Rueckweg.
+        ''' Das braucht nur eine Entscheidung, die das Aussehen bestimmt und bisher am Wurf hing
+        ''' (RawDecodeService.IsFinishedRgb).</summary>
+        Public Shared Function ReadMetadataDirectories(path As String, Optional retryWithoutEmptyXmp As Boolean = True) As IReadOnlyList(Of MetadataExtractor.Directory)
             Dim fileType As MetadataExtractor.Util.FileType
             Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
                 fileType = MetadataExtractor.Util.FileTypeDetector.DetectFileType(stream, path)
@@ -1386,7 +1391,7 @@ Namespace Services
             Dim tiffDirectories As IReadOnlyList(Of MetadataExtractor.Directory)
             Try
                 tiffDirectories = MetadataExtractor.Formats.Tiff.TiffMetadataReader.ReadMetadata(path)
-            Catch
+            Catch When retryWithoutEmptyXmp
                 tiffDirectories = EmptyXmpTolerantTiffReader.TryReadMetadata(path)
                 If tiffDirectories Is Nothing Then Throw
             End Try
