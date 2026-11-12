@@ -175,12 +175,13 @@ Namespace Services
 
         ''' <summary>Welcher ANTEIL des Rauschens bei TreeNet in der RAW-Stufe nach voller Staerke
         ''' noch gemessen wird. Kein fester Rest wie beim Bildmodell: TreeNet laesst je Bild einen
-        ''' Anteil stehen, gemessen 0,09 bis 0,47 (Mittel um 0,25), und die Mischung verlaeuft
-        ''' dazwischen gerade. 0,22 trifft die Staerke, bei der das Ziel erreicht wird, am besten:
-        ''' an 23 RAWs von ISO 125 bis 204800 im Mittel auf 6 Punkte (die Rechnung des Bildmodells
-        ''' lag dort im Mittel 12 daneben und bei hoher ISO durchweg zu schwach, 76 bis 86, wo 100
-        ''' noetig waren). Messung: Diagnostics/TreeNetMessung/Staerke.</summary>
-        Friend Const RawModelResidualShare As Single = 0.22F
+        ''' Anteil stehen, und die Mischung verlaeuft dazwischen gerade. Mit treenet-v2 (Heavy, dann
+        ''' SuperLight) gemessen 0,03 bis 0,33, im Mittel 0,14, wo die Schaetzung bei voller Staerke
+        ''' ueberhaupt noch etwas fand. 0,10 trifft die Staerke, bei der das Ziel erreicht wird, an
+        ''' 26 RAWs von ISO 125 bis 204800 im Mittel auf 5 Punkte; der alte Wert 0,22 (Heavy allein)
+        ''' laege mit v2 im Mittel 9 daneben. Wer noch treenet-v1 hat, bekommt eine um einige Punkte
+        ''' zu kleine Staerke. Messung: Diagnostics/TreeNetMessung/Staerke.</summary>
+        Friend Const RawModelResidualShare As Single = 0.1F
 
         ''' <summary>Um so viel liegt das Restrauschen einer Mischung ueber der Rechnung
         ''' (1 - Staerke) mal Rauschen (gemessen das 1,0- bis 1,4-Fache, meist 1,1 bis 1,2).</summary>
@@ -414,7 +415,7 @@ Namespace Services
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
                 Return Nothing
             End Try
-            If RestoreCoarseLevelsEnabled Then RestoreCoarseLevels(samples, result, width, height, CoarseLevelCell)
+            If RestoreCoarseLevelsEnabled Then RestoreCoarseLevels(samples, result, width, height, CoarseLevelCell, CoarseLevelLuminanceOnly)
             clock.Stop()
             LastReport = String.Format(
                 LocalizationService.T("Bild {0}x{1}, {2} Kacheln, {3} s"),
@@ -424,19 +425,25 @@ Namespace Services
         End Function
 
         ''' <summary>Kantenlaenge der Bloecke, ueber die RestoreCoarseLevels Pegel und Farbe
-        ''' zurueckholt, in Bildpunkten der RAW-Stufe.</summary>
-        Private Const CoarseLevelCell As Integer = 16
+        ''' zurueckholt, in Bildpunkten der RAW-Stufe.
+        ''' Fuer Messungen veraenderbar (TreeNetMessung/Tiefen, ueber Reflexion).</summary>
+        Friend Shared CoarseLevelCell As Integer = 16
 
-        ''' <summary>Holt Pegel und Farbe der groben Flaechen nach dem Modell zurueck. Nur fuer
+        ''' <summary>Gleicht RestoreCoarseLevels nur die Helligkeit an und laesst die Farbe, wie das
+        ''' Modell sie gemacht hat (Vorgabe, Begruendung dort)? Fuer Messungen veraenderbar
+        ''' (TreeNetMessung/Tiefen, ueber Reflexion).</summary>
+        Friend Shared CoarseLevelLuminanceOnly As Boolean = True
+
+        ''' <summary>Holt den Pegel der groben Flaechen nach dem Modell zurueck. Nur fuer
         ''' Messungen abschaltbar (TreeNetMessung/Tiefen, ueber Reflexion).</summary>
         Friend Shared RestoreCoarseLevelsEnabled As Boolean = True
 
-        ''' <summary>TreeNet soll das RAUSCHEN nehmen, nicht Pegel und Farbe der Flaechen. Gemessen
-        ''' hat es in angehobenen Tiefen beides verschoben: im Mittel 1,6 L* dunkler und ein
-        ''' kraeftigerer Stich, bei ISO 32000 und mehr bis 5 L* und 15 Delta E
-        ''' (Diagnostics/TreeNetMessung, "Tiefen"). Vermutlich nimmt es mit dem Rauschen auch die
-        ''' Anhebung weg, die das Abschneiden negativer Werte nach dem Schwarzabzug im Rauschen der
-        ''' tiefsten Schatten erzeugt.
+        ''' <summary>TreeNet soll das RAUSCHEN nehmen, nicht den Pegel der Flaechen. Gemessen hat es
+        ''' in angehobenen Tiefen beides verschoben: im Mittel 1,6 L* dunkler und ein kraeftigerer
+        ''' Stich, bei ISO 32000 und mehr bis 5 L* und 15 Delta E (Diagnostics/TreeNetMessung,
+        ''' "Tiefen"). Vermutlich nimmt es mit dem Rauschen auch die Anhebung weg, die das
+        ''' Abschneiden negativer Werte nach dem Schwarzabzug im Rauschen der tiefsten Schatten
+        ''' erzeugt.
         '''
         ''' Deshalb hier: je Block von <paramref name="cell"/> Punkten der Mittelwert von Eingang und
         ''' Ergebnis je Kanal, der Unterschied zwischen den Blockmitten bilinear verteilt und auf das
@@ -445,14 +452,20 @@ Namespace Services
         ''' nichts: dort ist das Ergebnis ohnehin der Eingang. Kostet zwei Durchgaenge ueber das Bild
         ''' und einige hundert Kilobyte, keine Gleitkomma-Kopie des Bildes.
         '''
-        ''' Gemessen an 13 RAWs von ISO 1600 bis 204800, angehobene Tiefen: die Helligkeit weicht im
-        ''' Mittel um 0,5 statt 1,6 L* ab (schlimmster Fall 1,2 statt 5,3), das Restrauschen bleibt
-        ''' gleich niedrig. Angeglichen wird in den LINEAREN Daten: in einem Potenzraum naeher am
-        ''' Sehen (Gamma 2,2 und 3,0) wurde die Helligkeit schlechter getroffen (1,7 und 2,1 L*). Den
-        ''' kraeftigeren Farbstich in den Tiefen behebt keine Fassung; er ist wohl echt, das Rauschen
-        ''' liess die Farbe dort vorher grauer wirken.</summary>
+        ''' NUR DIE HELLIGKEIT (<paramref name="luminanceOnly"/>): der Unterschied der drei Kanaele
+        ''' wird zu einem Helligkeitswert und gleich auf alle gelegt. Die Farbe der Blockmittel ist bei
+        ''' hoher ISO selbst noch verrauscht; je Kanal angeglichen kam sie als grobe Farbflecken
+        ''' zurueck, sichtbar an einer R6 bei ISO 12800.
+        '''
+        ''' Gemessen an 13 RAWs von ISO 1600 bis 204800, angehobene Tiefen, gegen das Bild ohne
+        ''' Entrauschen: die Helligkeit weicht im Mittel um 0,6 statt 1,6 L* ab (schlimmster Fall 1,3
+        ''' statt 5,3), die Buntheit steigt um 1,2 statt 2,3 (je Kanal angeglichen 3,0), die Flecken in
+        ''' der Farbe liegen bei 4,9 (ohne Abgleich 5,2, je Kanal 6,7). Angeglichen wird in den
+        ''' LINEAREN Daten: in einem Potenzraum naeher am Sehen (Gamma 2,2 und 3,0) wurde die
+        ''' Helligkeit schlechter getroffen (1,7 und 2,1 L*). Groessere Bloecke (32, 64) nahmen die
+        ''' Farbflecken je Kanal auch weg, liessen aber den kraeftigeren Stich stehen.</summary>
         Private Shared Sub RestoreCoarseLevels(noisy As Byte(), result As Byte(), width As Integer, height As Integer,
-                                               cell As Integer)
+                                               cell As Integer, luminanceOnly As Boolean)
             Dim gw = (width + cell - 1) \ cell
             Dim gh = (height + cell - 1) \ cell
             Dim diff(gw * gh * 3 - 1) As Single
@@ -493,10 +506,21 @@ Namespace Services
                         Dim x1 = Math.Min(gw - 1, x0 + 1)
                         Dim tx = CSng(Math.Max(0.0, Math.Min(1.0, fx - x0)))
                         Dim p = CInt(rowStart + CLng(x) * 6)
+                        Dim shift(2) As Single
                         For c = 0 To 2
                             Dim d00 = diff((y0 * gw + x0) * 3 + c), d01 = diff((y0 * gw + x1) * 3 + c)
                             Dim d10 = diff((y1 * gw + x0) * 3 + c), d11 = diff((y1 * gw + x1) * 3 + c)
-                            Dim d = (d00 * (1 - tx) + d01 * tx) * (1 - ty) + (d10 * (1 - tx) + d11 * tx) * ty
+                            shift(c) = (d00 * (1 - tx) + d01 * tx) * (1 - ty) + (d10 * (1 - tx) + d11 * tx) * ty
+                        Next
+                        If luminanceOnly Then
+                            ' Nur die Helligkeit des Unterschieds, gleich auf alle drei Kanaele: die
+                            ' Farbe der Blockmittel ist bei hoher ISO selbst noch verrauscht und kaeme
+                            ' sonst als grobe Farbflecken zurueck.
+                            Dim l = 0.2126F * shift(0) + 0.7152F * shift(1) + 0.0722F * shift(2)
+                            shift(0) = l : shift(1) = l : shift(2) = l
+                        End If
+                        For c = 0 To 2
+                            Dim d = shift(c)
                             Dim q = p + c * 2
                             Dim v = (CInt(result(q)) Or (CInt(result(q + 1)) << 8)) + d
                             Dim s = If(v <= 0.0F, 0, If(v >= 65535.0F, 65535, CInt(Math.Round(v))))

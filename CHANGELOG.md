@@ -11,6 +11,10 @@
   their edits. The automatic strength is tuned for raw files separately, so very noisy shots get
   the full strength they need.
 
+- Denoising raw files takes away more of the remaining noise at high ISO, and dark areas keep
+  their brightness without coarse color blotches. This comes with a new model file; the settings
+  offer it as an update, and the previous one keeps working until then.
+
 - Finished pictures such as JPEG, PNG or PSD are denoised into the pixels as before, with the
   faster of the two former options. The slower one is gone. Edits saved with it are switched
   over when you open the picture, so a raw file may look slightly different than before.
