@@ -3548,18 +3548,32 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
                 ' Beim Einschalten gleich wirklich nachsehen. Gefunden zu werden heißt nicht, dass
                 ' ein Modell darauf anläuft - und wer den Schalter umlegt, will genau das wissen,
-                ' und nicht erst beim nächsten Entrauschen.
-                If value AndAlso GpuAccelerationService.Available AndAlso
-                   GpuAccelerationService.ProbeState = GpuAccelerationService.ProbeResult.Untested Then
+                ' und nicht erst beim nächsten Entrauschen. Hier wird die Grafikkarte zum ersten
+                ' Mal abgefragt, falls das noch niemand getan hat: im Hintergrund, die Probe tut es.
+                If value AndAlso Not _restoringSnapshot AndAlso (Not GpuAccelerationService.IsChecked OrElse
+                                  (GpuAccelerationService.Available AndAlso
+                                   GpuAccelerationService.ProbeState = GpuAccelerationService.ProbeResult.Untested)) Then
                     Dim ignored = CheckGpuAccelerationAsync()
                 End If
             End Set
         End Property
 
+        ''' <summary>Die Karten wurden abgefragt (GpuAccelerationService.Checked): Liste bauen und
+        ''' alles neu melden, was daran hängt. Auf dem Anzeigefaden.</summary>
+        Private Sub OnGpuDevicesChecked()
+            BuildGpuDeviceOptions()
+            For Each n In {NameOf(GpuAccelerationAvailable), NameOf(HasMultipleGpuDevices), NameOf(GpuAccelerationStatusText)}
+                Me.RaisePropertyChanged(n)
+            Next
+        End Sub
+
         ''' <summary>Gibt es überhaupt eine Karte, die die Laufzeit ansprechen kann? Ohne sie bleibt
-        ''' der Schalter unbedienbar - ein Schalter, der nichts tut, ist schlechter als keiner.</summary>
+        ''' der Schalter unbedienbar - ein Schalter, der nichts tut, ist schlechter als keiner.
+        ''' Solange die Karten nicht abgefragt sind, entscheidet die Laufzeit allein: der Schalter
+        ''' und der Knopf Prüfen sind genau der Weg, auf dem sie abgefragt werden.</summary>
         Public ReadOnly Property GpuAccelerationAvailable As Boolean
             Get
+                If Not GpuAccelerationService.IsChecked Then Return AiModelService.RuntimeAvailable
                 Return GpuAccelerationService.Available
             End Get
         End Property
@@ -3569,6 +3583,7 @@ Namespace ViewModels
         ''' welche Karte es ist, steht ohnehin im Statustext darunter.</summary>
         Public ReadOnly Property HasMultipleGpuDevices As Boolean
             Get
+                If Not GpuAccelerationService.IsChecked Then Return False
                 Return GpuAccelerationService.Devices.Count > 1
             End Get
         End Property
@@ -3635,16 +3650,21 @@ Namespace ViewModels
         Public ReadOnly Property GpuAccelerationStatusText As String
             Get
                 If _gpuAccelerationBusy Then Return LocalizationService.T("Die Grafikkarte wird geprüft")
+                ' Der Startschutz (NativeStartGuard): das soll man lesen koennen, sonst sucht niemand
+                ' nach dem Grund. HasCrashMarker ist ein Dateiblick und laedt nichts.
+                If NativeStartGuard.HasCrashMarker(NativeStartGuard.ModelRuntime) Then
+                    Return LocalizationService.T("Die Laufzeit für gelernte Modelle ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; alles andere arbeitet wie gewohnt.")
+                End If
                 If Not AiModelService.RuntimeAvailable Then
-                    ' Der Startschutz hat sie ausgelassen (NativeStartGuard): das soll man lesen
-                    ' koennen, sonst sucht niemand nach dem Grund.
-                    If NativeStartGuard.IsBlocked(NativeStartGuard.ModelRuntime) Then
-                        Return LocalizationService.T("Die Laufzeit für gelernte Modelle ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; alles andere arbeitet wie gewohnt.")
-                    End If
                     Return LocalizationService.T("Die Laufzeit für gelernte Modelle steht auf diesem Gerät nicht zur Verfügung.")
                 End If
-                If NativeStartGuard.IsBlocked(NativeStartGuard.GpuDevices) Then
+                If NativeStartGuard.HasCrashMarker(NativeStartGuard.GpuDevices) Then
                     Return LocalizationService.T("Die Grafikbeschleunigung ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; die Modelle rechnen auf dem Prozessor.")
+                End If
+                ' Das Anzeigen darf die Karten nicht abfragen: das laedt Laufzeit und Grafiktreiber.
+                ' Alles darunter fragt sie ab, deshalb steht diese Zeile davor.
+                If Not GpuAccelerationService.IsChecked Then
+                    Return LocalizationService.T("Die Grafikkarte ist noch nicht geprüft. Das geschieht beim Einschalten, mit Prüfen oder wenn ein Modell auf ihr rechnen soll.")
                 End If
                 If GpuAccelerationService.LibraryMissing Then
                     Return LocalizationService.T("Für diese Programmfassung ist keine Grafikbeschleunigung dabei. Die Modelle rechnen auf dem Prozessor.")
@@ -3710,6 +3730,13 @@ Namespace ViewModels
                 _gpuAccelerationRecheck = True
                 Return
             End If
+            ' Die Pruefung ist eine KI-Funktion wie jede andere: erst die Laufzeit, und geht die
+            ' nicht, Meldung, Schalter aus, keine Probe.
+            Dim featureName = LocalizationService.T("Grafikkarte für gelernte Modelle nutzen")
+            If Not Await EnsureModelRuntimeAsync(featureName) Then
+                If _gpuAccelerationEnabled Then GpuAccelerationEnabled = False
+                Return
+            End If
             _gpuAccelerationBusy = True
             Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
             Try
@@ -3723,6 +3750,15 @@ Namespace ViewModels
                 _gpuAccelerationBusy = False
                 Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
             End Try
+            ' Ist das Abfragen der Karten beim letzten Start abgestuerzt, bleibt es aus: sagen und
+            ' den Schalter wieder umlegen, statt still auf dem Prozessor zu rechnen.
+            If NativeStartGuard.IsBlocked(NativeStartGuard.GpuDevices) Then
+                If _gpuAccelerationEnabled Then GpuAccelerationEnabled = False
+                If _mainVm IsNot Nothing Then
+                    Await _mainVm.ShowMessageAsync(featureName,
+                        LocalizationService.T("Die Grafikbeschleunigung ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; die Modelle rechnen auf dem Prozessor."))
+                End If
+            End If
         End Function
 
         ''' <summary>Farbe und Tonwerte auf der Grafikkarte rechnen (Vorschau, Export, Stapel).
@@ -4905,6 +4941,12 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_aiTaggingEnabled, value)
                 Me.RaisePropertyChanged(NameOf(CanRunAiTagging))
                 SaveCatalogIndexSettings()
+                ' Beim Einschalten die Laufzeit laden und melden, wenn sie nicht geht; dann geht der
+                ' Schalter wieder aus. Nicht beim Zuruecknehmen der Einstellungen.
+                If value AndAlso Not _restoringSnapshot Then
+                    Dim ignoriert = SwitchOffUnlessRuntimeAsync(LocalizationService.T("Automatische KI-Stichwörter"),
+                                                                Sub() AiTaggingEnabled = False)
+                End If
             End Set
         End Property
 
@@ -5229,7 +5271,11 @@ Namespace ViewModels
             BuildInfoPanelRowItems()
             BuildTileCaptionSlots()
             BuildLanguageOptions()
-            BuildGpuDeviceOptions()
+            ' DIE KARTENLISTE NICHT BEIM START: die Abfrage laedt Laufzeit und Grafiktreiber (siehe
+            ' GpuAccelerationService.IsChecked). Sie entsteht, sobald jemand die Karten abfragt.
+            If GpuAccelerationService.IsChecked Then BuildGpuDeviceOptions()
+            AddHandler GpuAccelerationService.Checked,
+                Sub(sender, e) Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf OnGpuDevicesChecked)
             FetchModelCommand = ReactiveCommand.Create(Of ModelGroup)(
                 Sub(g)
                     Dim ignored = FetchModelGroupAsync(g)
@@ -5662,13 +5708,21 @@ Namespace ViewModels
 
         Private _restoringSnapshot As Boolean
 
+        ''' <summary>Ein Schalter, der eine KI-Funktion einschaltet, ohne selbst ein Modell zu
+        ''' verlangen: die Laufzeit laden, und geht sie nicht, Meldung und Schalter wieder aus.</summary>
+        Private Async Function SwitchOffUnlessRuntimeAsync(featureName As String, switchOff As Action) As Task
+            If _mainVm Is Nothing Then Return
+            If Not Await EnsureModelRuntimeAsync(featureName) Then switchOff()
+        End Function
+
         ''' <summary>Ein Schalter, dessen Funktion ein Modell braucht: beim Einschalten nach dem
         ''' Download fragen, wenn es fehlt. Ein Nein legt den Schalter wieder um, denn ohne Modell
         ''' taete er nichts. Beim Zuruecknehmen der Einstellungen wird nicht gefragt: dort kommt nur
         ''' ein frueherer Stand zurueck, eingeschaltet hat niemand etwas.</summary>
         Private Async Function OfferModelsForSwitchAsync(featureName As String, keys As String(), switchOff As Action) As Task
             If _restoringSnapshot OrElse _mainVm Is Nothing Then Return
-            If keys.All(Function(k) Not String.IsNullOrEmpty(AiModelService.BestFile(k))) Then Return
+            ' Auch wenn alle Dateien da sind: RequestModelsAsync laedt dabei die Laufzeit und meldet,
+            ' wenn sie nicht geht. Das Einschalten ist der Moment, in dem sich das zeigen soll.
             If Not Await RequestModelsAsync(featureName, keys) Then
                 switchOff()
                 Return
@@ -6762,8 +6816,8 @@ Namespace ViewModels
             BuildLanguageOptions()
             BuildDateFormatOptions()
             ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
-            ' einem Sprachwechsel sonst in der alten Sprache da.
-            BuildGpuDeviceOptions()
+            ' einem Sprachwechsel sonst in der alten Sprache da. Nur, wenn schon abgefragt.
+            If GpuAccelerationService.IsChecked Then BuildGpuDeviceOptions()
             For Each n In {NameOf(FolderSummaryText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
                            NameOf(InfoPanelRowItems), NameOf(InfoPanelSectionItems),
@@ -7427,6 +7481,28 @@ Namespace ViewModels
 
         Private _modelRequestRunning As Boolean
 
+        ''' <summary>Die Laufzeit fuer gelernte Modelle laden, falls noch nicht geschehen, und
+        ''' melden, wenn sie nicht geht. Der Weg fuer alles, was eine KI-Funktion startet oder
+        ''' einschaltet. False heisst: abbrechen, die Meldung ist schon gezeigt.
+        '''
+        ''' Ist sie wegen eines frueheren Absturzes gesperrt (NativeStartGuard), sagt die Meldung
+        ''' genau das; sonst die allgemeine, dass sie auf diesem Geraet nicht bereitsteht.</summary>
+        ''' <param name="featureName">Die Funktion, schon uebersetzt, als Titel der Meldung.</param>
+        Friend Async Function EnsureModelRuntimeAsync(featureName As String) As Task(Of Boolean)
+            Dim ready = AiModelService.RuntimeReady
+            If Not ready Then ready = Await Task.Run(Function() AiModelService.EnsureRuntime())
+            Me.RaisePropertyChanged(NameOf(ModelRuntimeAvailable))
+            Me.RaisePropertyChanged(NameOf(GpuAccelerationStatusText))
+            If ready Then Return True
+            If _mainVm IsNot Nothing Then
+                Dim text = If(NativeStartGuard.IsBlocked(NativeStartGuard.ModelRuntime),
+                              LocalizationService.T("Die Laufzeit für gelernte Modelle ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; alles andere arbeitet wie gewohnt."),
+                              LocalizationService.T("Die Laufzeit für die Modelle steht auf diesem Gerät nicht bereit. Die Funktion lässt sich deshalb nicht verwenden."))
+                Await _mainVm.ShowMessageAsync(featureName, text)
+            End If
+            Return False
+        End Function
+
         ''' <summary>Der zweite Weg zum Herunterladen: aus der Funktion heraus, die das Modell
         ''' braucht. Fehlt eine der Dateien, wird GEFRAGT, und nur auf ein Ja hin geholt. Es gilt
         ''' dieselbe Zusage wie beim Knopf in den Einstellungen: nichts kommt von selbst aus dem Netz.
@@ -7449,10 +7525,14 @@ Namespace ViewModels
         ''' <param name="keys">Die Schluessel der benoetigten Dateien (AiModelService.KnownEntries).</param>
         ''' <returns>True, wenn danach alle Dateien vorliegen.</returns>
         Public Async Function RequestModelsAsync(featureName As String, keys As IEnumerable(Of String)) As Task(Of Boolean)
+            ' ERST DIE LAUFZEIT. Hier will jemand eine KI-Funktion, also wird sie hier geladen,
+            ' falls noch nicht geschehen; beim Start laedt sie nicht (AiModelService.RuntimeAvailable).
+            ' Geht es nicht, kommt eine Meldung und die Funktion startet nicht, auch kein Download.
+            If Not Await EnsureModelRuntimeAsync(featureName) Then Return False
             Dim missing = keys.Distinct().
                 Where(Function(k) String.IsNullOrEmpty(AiModelService.BestFile(k))).
                 Select(Function(k) AiModelService.EntryFor(k)).ToList()
-            If missing.Count = 0 Then Return AiModelService.RuntimeAvailable
+            If missing.Count = 0 Then Return True
             If _mainVm Is Nothing Then Return False
             ' Kann nicht vorkommen, solange Frage und Download modal sind; die Sperre bleibt als Netz.
             If _modelRequestRunning Then Return False
@@ -7461,8 +7541,8 @@ Namespace ViewModels
                 Await _mainVm.ShowMessageAsync(featureName, LocalizationService.T("Diese Datei wird gerade schon heruntergeladen"))
                 Return False
             End If
-            ' Ohne Laufzeit liesse sich die Datei holen, aber nichts koennte sie ausfuehren.
-            If Not AiModelService.RuntimeAvailable OrElse missing.Any(Function(e) e Is Nothing) Then
+            ' Eine unbekannte Datei laesst sich nicht holen.
+            If missing.Any(Function(e) e Is Nothing) Then
                 Await _mainVm.ShowMessageAsync(featureName,
                     LocalizationService.T("Die Laufzeit für die Modelle steht auf diesem Gerät nicht bereit. Die Funktion lässt sich deshalb nicht verwenden."))
                 Return False

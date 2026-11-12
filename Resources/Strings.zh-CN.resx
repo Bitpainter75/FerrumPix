@@ -11538,4 +11538,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>图形加速在上次启动时崩溃。在安装新版本程序之前，它将保持关闭；模型在处理器上计算。</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>尚未检查显卡。开启此项、点击检查或模型需要在其上计算时才会检查。</value>
+  </data>
 </root>

@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Grafikkakselerasjonen krasjet ved forrige oppstart. Den forblir av til en ny programversjon er installert; modellene regner på prosessoren.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Skjermkortet er ikke kontrollert ennå. Det skjer når du slår dette på, med Kontroller eller når en modell skal regne på det.</value>
+  </data>
 </root>

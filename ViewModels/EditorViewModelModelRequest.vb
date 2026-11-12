@@ -40,7 +40,9 @@ Namespace ViewModels
         ''' danach alles da ist.</summary>
         ''' <param name="featureName">Die Funktion, schon uebersetzt.</param>
         Private Async Function EnsureModelsAsync(featureName As String, ParamArray keys As String()) As Task(Of Boolean)
-            If AiModelService.RuntimeAvailable AndAlso
+            ' RuntimeReady: nur eine geladene, laufende Laufzeit ueberspringt die Rueckfrage; sie
+            ' laedt sonst und meldet, wenn es nicht geht (SettingsViewModel.RequestModelsAsync).
+            If AiModelService.RuntimeReady AndAlso
                keys.All(Function(k) Not String.IsNullOrEmpty(AiModelService.BestFile(k))) Then Return True
             Dim settings = _mainVm?.Settings
             If settings Is Nothing Then Return False

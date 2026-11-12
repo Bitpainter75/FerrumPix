@@ -11540,4 +11540,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>L'accélération graphique a planté lors du dernier démarrage. Elle reste désactivée jusqu'à l'installation d'une nouvelle version du programme ; les modèles calculent sur le processeur.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>La carte graphique n'a pas encore été vérifiée. Cela se fait à l'activation, avec Vérifier ou lorsqu'un modèle doit calculer dessus.</value>
+  </data>
 </root>

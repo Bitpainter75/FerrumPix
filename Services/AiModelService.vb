@@ -47,6 +47,8 @@ Namespace Services
         ''' <summary>Ein Schloss JE MODELLDATEI - siehe <see cref="BuildLockFor"/>.</summary>
         Private Shared ReadOnly _buildLocks As New Dictionary(Of String, Object)(StringComparer.OrdinalIgnoreCase)
         Private Shared _runtimeChecked As Boolean = False
+        ''' <summary>Das Laden ist durch, mit welchem Ausgang auch immer. Erst dann gilt _runtimeReady.</summary>
+        Private Shared _runtimeSettled As Boolean = False
         Private Shared _runtimeReady As Boolean = False
         Private Shared _runtimeError As String = ""
         Private Shared _telemetryOff As Boolean = False
@@ -85,23 +87,77 @@ Namespace Services
             End Get
         End Property
 
-        ''' <summary>Laeuft die Laufzeit auf diesem Rechner ueberhaupt? Einmal geprueft und gemerkt.
+        ''' <summary>Laeuft die Laufzeit auf diesem Rechner, soweit man das OHNE LADEN sagen kann?
+        ''' Fuer Knoepfe, Menues und Schalter, die gefragt werden, lange bevor jemand eine
+        ''' KI-Funktion benutzt.
         '''
-        ''' Die native Bibliothek der Laufzeit kann fehlen oder zur Plattform nicht passen. Das darf
-        ''' die Anwendung NICHT mitreissen - ohne sie fehlt eine Funktion, alles andere geht weiter.
-        ''' Deshalb wird hier einmal wirklich etwas gebaut statt nur eine Datei gesucht.</summary>
+        ''' DIE LAUFZEIT WIRD ERST GELADEN, WENN ES DARAUF ANKOMMT (<see cref="EnsureRuntime"/>): beim
+        ''' Rechnen eines Modells, beim Einschalten einer KI-Funktion oder beim Pruefen der
+        ''' Grafikkarte. Ab Werk ist keine davon an, beim Start wird also nichts geladen. Frueher lud
+        ''' schon diese Frage die Laufzeit, und sie kam aus dem Aufbau des Hauptfensters; unter
+        ''' Windows 10 22H2 stuerzte sie dabei ab, und die Anwendung startete gar nicht mehr.
+        '''
+        ''' Vor dem Laden heisst die Antwort: die Bibliothek liegt da. Danach gilt, was das Laden
+        ''' ergab. AUSNAHME: ist die Laufzeit wegen eines frueheren Absturzes gesperrt
+        ''' (NativeStartGuard), bleiben die Funktionen angeboten. Wer eine waehlt, bekommt beim Start
+        ''' eine Meldung und die Funktion bricht ab (SettingsViewModel.RequestModelsAsync); ein grauer
+        ''' Knopf ohne Grund waere schlechter.</summary>
         Public Shared ReadOnly Property RuntimeAvailable As Boolean
             Get
-                CheckRuntime()
-                Return _runtimeReady
+                If Threading.Volatile.Read(_runtimeSettled) Then
+                    Return _runtimeReady OrElse NativeStartGuard.IsBlocked(NativeStartGuard.ModelRuntime)
+                End If
+                Return RuntimeLibraryPresent
             End Get
         End Property
 
-        ''' <summary>Warum die Laufzeit nicht laeuft, sonst leer. Fuer die Technologie-Anzeige.</summary>
+        ''' <summary>Ist die Laufzeit geladen und laeuft? Laedt nichts. Wer eine KI-Funktion starten
+        ''' will und hier kein Ja bekommt, geht ueber die Rueckfrage (SettingsViewModel.RequestModelsAsync):
+        ''' die laedt, und sie meldet, wenn es nicht geht.</summary>
+        Public Shared ReadOnly Property RuntimeReady As Boolean
+            Get
+                Return Threading.Volatile.Read(_runtimeSettled) AndAlso _runtimeReady
+            End Get
+        End Property
+
+        ''' <summary>Die Laufzeit laden, falls noch nicht geschehen, und sagen, ob sie laeuft. Nur
+        ''' dort rufen, wo der Benutzer eine KI-Funktion will; siehe <see cref="RuntimeAvailable"/>.</summary>
+        Public Shared Function EnsureRuntime() As Boolean
+            CheckRuntime()
+            Return _runtimeReady
+        End Function
+
+        ''' <summary>Warum die Laufzeit nicht laeuft, sonst leer. Laedt nichts; vor dem Laden leer.</summary>
         Public Shared ReadOnly Property RuntimeError As String
             Get
-                CheckRuntime()
                 Return _runtimeError
+            End Get
+        End Property
+
+        Private Shared _libraryPresent As Boolean?
+
+        ''' <summary>Liegt die native Bibliothek der Laufzeit dort, wo .NET sie sucht? Ein reiner
+        ''' Dateiblick in die Suchordner des Programms (NATIVE_DLL_SEARCH_DIRECTORIES, dazu der
+        ''' Programmordner), einmal erhoben.</summary>
+        Private Shared ReadOnly Property RuntimeLibraryPresent As Boolean
+            Get
+                If _libraryPresent.HasValue Then Return _libraryPresent.Value
+                Dim name = If(OperatingSystem.IsWindows(), "onnxruntime.dll",
+                              If(OperatingSystem.IsMacOS(), "libonnxruntime.dylib", "libonnxruntime.so"))
+                Dim found = False
+                Try
+                    Dim folders As New List(Of String) From {AppContext.BaseDirectory}
+                    Dim searched = TryCast(AppContext.GetData("NATIVE_DLL_SEARCH_DIRECTORIES"), String)
+                    If Not String.IsNullOrEmpty(searched) Then
+                        folders.AddRange(searched.Split(IO.Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                    End If
+                    found = folders.Any(Function(f) File.Exists(Path.Combine(f, name)))
+                Catch
+                    found = False
+                End Try
+                If Not found Then DiagnosticLogService.LogAlways("KiModell", $"{name} nicht in den Suchordnern des Programms")
+                _libraryPresent = found
+                Return found
             End Get
         End Property
 
@@ -154,6 +210,7 @@ Namespace Services
                 If Not NativeStartGuard.TryEnter(NativeStartGuard.ModelRuntime) Then
                     _runtimeReady = False
                     _runtimeError = "crashed during the previous start"
+                    Threading.Volatile.Write(_runtimeSettled, True)
                     Return
                 End If
                 Try
@@ -176,6 +233,7 @@ Namespace Services
                     _runtimeError = ex.GetType().Name & ": " & ex.Message
                 Finally
                     NativeStartGuard.Leave(NativeStartGuard.ModelRuntime)
+                    Threading.Volatile.Write(_runtimeSettled, True)
                 End Try
             End SyncLock
         End Sub
@@ -835,7 +893,8 @@ Namespace Services
         ''' vorhandenen zurueckgeben. Der Ablauf steht bei <see cref="Session"/>, das ist die
         ''' oeffentliche Tuer dazu.</summary>
         Private Shared Function LoadSession(fileName As String) As LoadedSession
-            If Not RuntimeAvailable Then Return Nothing
+            ' Hier wird gerechnet, also hier wird die Laufzeit geladen (und nicht schon beim Fragen).
+            If Not EnsureRuntime() Then Return Nothing
             Dim filePath = ModelPath(fileName)
             If String.IsNullOrEmpty(filePath) Then Return Nothing
             ' Die Frage nach der Karte steht bewusst VOR jedem Schloss: sie fuehrt in die

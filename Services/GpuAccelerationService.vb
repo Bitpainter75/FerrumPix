@@ -674,18 +674,42 @@ Namespace Services
             End SyncLock
         End Sub
 
+        ''' <summary>Sind die Karten schon abgefragt? Die Abfrage laedt Laufzeit und Grafiktreiber und
+        ''' geschieht deshalb erst, wenn jemand die Grafikkarte will: beim Einschalten der
+        ''' Beschleunigung, beim Pruefen oder wenn ein Modell mit eingeschalteter Beschleunigung
+        ''' rechnet. Wer nur anzeigen will, fragt das hier und laedt nichts.</summary>
+        Public Shared ReadOnly Property IsChecked As Boolean
+            Get
+                Return Threading.Volatile.Read(_checked)
+            End Get
+        End Property
+
+        ''' <summary>Die Karten wurden gerade abgefragt (aus irgendeinem Faden). Die Einstellungen
+        ''' bauen daraufhin ihre Kartenliste.</summary>
+        Public Shared Event Checked As EventHandler
+
         ''' <summary>Einmal nachsehen, was es an Karten gibt. Kostet wenige Millisekunden - die
         ''' Bibliothek wird dabei angemeldet und die Geraeteliste gelesen, aber noch keine Karte
-        ''' angefordert.</summary>
+        ''' angefordert. Danach geht <see cref="Checked"/>.</summary>
         Private Shared Sub CheckOnce()
+            Dim ranNow = False
+            Try
+                CheckOnceCore(ranNow)
+            Finally
+                If ranNow Then RaiseEvent Checked(Nothing, EventArgs.Empty)
+            End Try
+        End Sub
+
+        Private Shared Sub CheckOnceCore(ByRef ranNow As Boolean)
             SyncLock _lock
                 If _checked Then Return
                 _checked = True
+                ranNow = True
                 Dim guarded = False
                 Try
                     ' Erst die Laufzeit selbst. Sie schaltet dabei ihre Telemetrie ab, und das soll
                     ' geschehen sein, bevor hier irgendetwas anderes sie benutzt.
-                    If Not AiModelService.RuntimeAvailable Then
+                    If Not AiModelService.EnsureRuntime() Then
                         _setupError = AiModelService.RuntimeError
                         Return
                     End If

@@ -431,14 +431,14 @@
                         </Grid>
                     </Panel>
 
-                    <!-- 4 GRAFIKKARTE: nur, wenn eine erkannt wird (SetupAssistantViewModel.HasGpu). -->
+                    <!-- 4 GRAFIKKARTE: wenn es eine geben kann (SetupAssistantViewModel.HasGpu); die Kartennamen erst, wenn abgefragt. -->
                     <Panel Classes="setup-page" Classes.current="{Binding IsGpuPage}">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="setup-title" Text="Deine Grafikkarte mitarbeiten lassen"/>
                                 <TextBlock Classes="setup-lead" Text="FerrumPix kann rechenintensive Arbeit an die Grafikkarte geben."/>
                             </StackPanel>
-                            <Border Classes="setup-card">
+                            <Border Classes="setup-card" IsVisible="{Binding HasGpuNames}">
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <icons:SvgIcon Classes="setup-accent" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/graphics-card.svg" Width="26" Height="26" VerticalAlignment="Center"/>
                                     <TextBlock Classes="no-translate" Text="{Binding GpuNames}" VerticalAlignment="Center" TextWrapping="Wrap" FontWeight="SemiBold"/>

@@ -11539,4 +11539,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>A aceleração gráfica falhou no último arranque. Fica desligada até ser instalada uma nova versão do programa; os modelos calculam no processador.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>A placa gráfica ainda não foi verificada. Isso acontece ao ativar esta opção, com Verificar ou quando um modelo deve calcular nela.</value>
+  </data>
 </root>

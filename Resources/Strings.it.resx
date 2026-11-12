@@ -11540,4 +11540,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>L'accelerazione grafica si è bloccata all'ultimo avvio. Resta disattivata finché non viene installata una nuova versione del programma; i modelli calcolano sul processore.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>La scheda grafica non è ancora stata verificata. Avviene all'attivazione, con Verifica o quando un modello deve calcolare su di essa.</value>
+  </data>
 </root>

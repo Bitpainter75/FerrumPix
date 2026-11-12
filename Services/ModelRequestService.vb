@@ -23,7 +23,9 @@ Namespace Services
         ''' <param name="featureName">Die Funktion, schon uebersetzt.</param>
         Public Shared Async Function RequestAsync(featureName As String, keys As IEnumerable(Of String)) As Task(Of Boolean)
             Dim list = keys.ToList()
-            If AiModelService.RuntimeAvailable AndAlso
+            ' RuntimeReady und nicht RuntimeAvailable: nur eine geladene, laufende Laufzeit darf die
+            ' Rueckfrage ueberspringen. Sonst laedt die Rueckfrage sie und meldet, wenn es nicht geht.
+            If AiModelService.RuntimeReady AndAlso
                list.All(Function(k) Not String.IsNullOrEmpty(AiModelService.BestFile(k))) Then Return True
             Dim ask = Handler
             If ask Is Nothing Then Return False

@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Grafická akcelerace při posledním spuštění spadla. Zůstane vypnutá, dokud nebude nainstalována nová verze programu; modely počítají na procesoru.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Grafická karta ještě nebyla ověřena. Stane se tak při zapnutí, tlačítkem Ověřit nebo když na ní má počítat model.</value>
+  </data>
 </root>

@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Grafikaccelerationen gik ned ved sidste start. Den forbliver slået fra, indtil en ny programversion er installeret; modellerne regner på processoren.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Grafikkortet er endnu ikke kontrolleret. Det sker, når du slår dette til, med Kontroller, eller når en model skal regne på det.</value>
+  </data>
 </root>

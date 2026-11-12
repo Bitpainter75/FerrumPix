@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>グラフィックアクセラレーションが前回の起動時にクラッシュしました。新しいバージョンのプログラムをインストールするまでオフのままです。モデルはプロセッサで計算します。</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>グラフィックカードはまだ確認されていません。オンにしたとき、確認を押したとき、またはモデルがその上で計算するときに確認されます。</value>
+  </data>
 </root>

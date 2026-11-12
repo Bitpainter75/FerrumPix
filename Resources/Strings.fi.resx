@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Grafiikkakiihdytys kaatui edellisellä käynnistyskerralla. Se pysyy pois päältä, kunnes ohjelmasta asennetaan uusi versio; mallit laskevat suorittimella.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Näytönohjainta ei ole vielä tarkistettu. Se tehdään, kun otat tämän käyttöön, Tarkista-painikkeella tai kun malli laskee sillä.</value>
+  </data>
 </root>

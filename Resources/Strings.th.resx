@@ -11584,4 +11584,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>การเร่งความเร็วด้วยกราฟิกขัดข้องเมื่อเริ่มโปรแกรมครั้งล่าสุด จะปิดไว้จนกว่าจะติดตั้งโปรแกรมเวอร์ชันใหม่ โมเดลจะคำนวณบนโปรเซสเซอร์</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>ยังไม่ได้ตรวจสอบการ์ดกราฟิก จะตรวจเมื่อเปิดใช้งาน เมื่อกดตรวจสอบ หรือเมื่อโมเดลจะคำนวณบนการ์ด</value>
+  </data>
 </root>

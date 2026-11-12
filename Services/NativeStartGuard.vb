@@ -20,8 +20,12 @@ Namespace Services
     '''
     ''' WIEDER VERSUCHT wird mit einer anderen Programmfassung: die Merkdatei traegt die Fassung
     ''' und die Aenderungszeit der Programmdatei, jede Aktualisierung oder Neuinstallation gibt dem
-    ''' Teil also eine neue Chance. Eine Merkdatei, die ein GLEICHZEITIG laufender zweiter Prozess
-    ''' gerade angelegt hat, ist kein Absturz und sperrt nichts.</summary>
+    ''' Teil also eine neue Chance. JEDER PROZESS HAT SEINE EIGENE MERKDATEI und loescht nur sie;
+    ''' die eines gleichzeitig laufenden zweiten FerrumPix ist kein Absturz und sperrt nichts.
+    '''
+    ''' GELADEN WIRD ERST BEI BEDARF (AiModelService.RuntimeAvailable): beim Start fasst FerrumPix
+    ''' keinen der beiden Teile an. Der Schutz greift deshalb beim ersten echten Gebrauch, und eine
+    ''' gesperrte KI-Funktion meldet sich beim naechsten Versuch, statt erneut abzustuerzen.</summary>
     Public NotInheritable Class NativeStartGuard
         Private Sub New()
         End Sub
@@ -45,8 +49,12 @@ Namespace Services
             End Get
         End Property
 
-        Private Shared Function MarkerPath(name As String) As String
-            Return Path.Combine(GuardDirectory, name & ".marke")
+        ''' <summary>Die Marke DIESES Prozesses: <c>teil.pid.marke</c>. Je Prozess eine eigene Datei,
+        ''' denn zwei gleichzeitig startende FerrumPix teilten sich sonst eine: der zuerst fertige
+        ''' loeschte sie, und stuerzte der andere danach ab, blieb keine Spur.</summary>
+        Private Shared Function OwnMarkerPath(name As String) As String
+            Return Path.Combine(GuardDirectory,
+                                name & "." & Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture) & ".marke")
         End Function
 
         ''' <summary>Fassung und Aenderungszeit der Programmdatei. Aendert sich eines davon, wird
@@ -76,36 +84,64 @@ Namespace Services
         ''' <see cref="Leave"/> rufen. Kann die Merkdatei nicht geschrieben werden, wird trotzdem
         ''' weitergemacht; der Schutz fehlt dann, die Funktion nicht.</summary>
         Public Shared Function TryEnter(name As String) As Boolean
-            Dim stamp = CurrentStamp()
+            If HasCrashMarker(name) Then Return False
             Try
-                Dim marker = MarkerPath(name)
-                If File.Exists(marker) Then
-                    Dim lines = File.ReadAllLines(marker)
-                    Dim markedStamp = If(lines.Length > 0, lines(0), "")
-                    Dim markedPid = -1
-                    If lines.Length > 1 Then Integer.TryParse(lines(1), markedPid)
-                    If markedStamp = stamp AndAlso Not IsOtherRunningInstance(markedPid) Then
-                        SyncLock _blocked
-                            _blocked.Add(name)
-                        End SyncLock
-                        DiagnosticLogService.LogAlways("Startschutz",
-                            $"{name}: beim letzten Start abgestuerzt, bleibt bis zur naechsten Programmfassung aus")
-                        Return False
-                    End If
-                End If
                 Directory.CreateDirectory(GuardDirectory)
-                File.WriteAllLines(marker, {stamp, Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture)})
+                File.WriteAllLines(OwnMarkerPath(name),
+                                   {CurrentStamp(), Environment.ProcessId.ToString(Globalization.CultureInfo.InvariantCulture)})
             Catch ex As Exception
                 DiagnosticLogService.LogAlways("Startschutz", $"{name}: Merkdatei nicht nutzbar - {ex.Message}")
             End Try
             Return True
         End Function
 
+        ''' <summary>Nur nachsehen, ohne etwas anzulegen: liegt fuer diesen Teil die Marke eines
+        ''' Absturzes dieser Programmfassung? Dann gilt er ab sofort als gesperrt. Fuer Fragen wie
+        ''' "Knopf zeigen?", die die Bibliothek nicht laden duerfen.
+        '''
+        ''' Durchgesehen werden ALLE Marken des Teils, je eine je Prozess. Ein Absturz ist eine Marke
+        ''' dieser Programmfassung, deren Prozess nicht mehr laeuft. Nicht dazu zaehlen die eigene
+        ''' (dieser Prozess steckt gerade selbst im Aufruf, ein anderer Faden fragt) und die eines
+        ''' noch laufenden zweiten FerrumPix. Marken einer anderen Fassung sind erledigt und werden
+        ''' weggeraeumt.</summary>
+        Public Shared Function HasCrashMarker(name As String) As Boolean
+            If IsBlocked(name) Then Return True
+            Dim crashed = False
+            Try
+                If Not Directory.Exists(GuardDirectory) Then Return False
+                Dim stamp = CurrentStamp()
+                For Each marker In Directory.GetFiles(GuardDirectory, name & ".*.marke")
+                    Dim lines = File.ReadAllLines(marker)
+                    Dim markedStamp = If(lines.Length > 0, lines(0), "")
+                    Dim markedPid = -1
+                    If lines.Length > 1 Then Integer.TryParse(lines(1), markedPid)
+                    If markedPid = Environment.ProcessId OrElse IsOtherRunningInstance(markedPid) Then Continue For
+                    If markedStamp <> stamp Then
+                        Try
+                            File.Delete(marker)
+                        Catch
+                        End Try
+                        Continue For
+                    End If
+                    crashed = True
+                Next
+            Catch
+                Return False
+            End Try
+            If Not crashed Then Return False
+            SyncLock _blocked
+                _blocked.Add(name)
+            End SyncLock
+            DiagnosticLogService.LogAlways("Startschutz",
+                $"{name}: beim letzten Start abgestuerzt, bleibt bis zur naechsten Programmfassung aus")
+            Return True
+        End Function
+
         ''' <summary>Nach dem heiklen Aufruf, ob er gelang oder mit einer Ausnahme scheiterte: der
-        ''' Prozess lebt, also war es kein Absturz.</summary>
+        ''' Prozess lebt, also war es kein Absturz. Geloescht wird nur die EIGENE Marke.</summary>
         Public Shared Sub Leave(name As String)
             Try
-                File.Delete(MarkerPath(name))
+                File.Delete(OwnMarkerPath(name))
             Catch
             End Try
         End Sub

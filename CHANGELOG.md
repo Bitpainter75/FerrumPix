@@ -3,8 +3,9 @@
 ### Fixes
 
 - On some Windows computers FerrumPix closed right away at every start, because the part that
-  runs the AI models crashed while loading. FerrumPix now remembers such a crash and starts
-  without that part the next time; the settings say so, and a new version tries it again.
+  runs the AI models crashed while loading. That part now loads only when you use, switch on or
+  check an AI function, so FerrumPix starts in any case. If it crashes there, FerrumPix remembers
+  it and shows a message the next time instead of crashing again; a new version tries it again.
 
 ## 0.9.81
 

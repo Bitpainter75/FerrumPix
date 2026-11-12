@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Графическое ускорение аварийно завершилось при последнем запуске. Оно останется выключенным до установки новой версии программы; модели вычисляются на процессоре.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Видеокарта ещё не проверена. Это произойдёт при включении, по кнопке «Проверить» или когда на ней должна считать модель.</value>
+  </data>
 </root>

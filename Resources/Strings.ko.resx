@@ -11584,4 +11584,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>그래픽 가속이 지난번 시작할 때 충돌했습니다. 새 버전의 프로그램을 설치할 때까지 꺼진 상태로 유지되며, 모델은 프로세서에서 계산합니다.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>그래픽 카드를 아직 확인하지 않았습니다. 이 항목을 켜거나 확인을 누르거나 모델이 그 위에서 계산할 때 확인합니다.</value>
+  </data>
 </root>

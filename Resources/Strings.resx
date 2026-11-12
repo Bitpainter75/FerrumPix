@@ -11559,4 +11559,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Graphics acceleration crashed during the last start. It stays off until a new version of the program is installed; the models compute on the processor.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>The graphics card has not been checked yet. That happens when you switch this on, with Check, or when a model is to compute on it.</value>
+  </data>
 </root>

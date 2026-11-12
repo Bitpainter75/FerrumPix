@@ -11580,4 +11580,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>De grafische versnelling is bij de laatste start vastgelopen. Deze blijft uit tot er een nieuwe programmaversie is geïnstalleerd; de modellen rekenen op de processor.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>De grafische kaart is nog niet gecontroleerd. Dat gebeurt bij het inschakelen, met Controleren of wanneer een model erop moet rekenen.</value>
+  </data>
 </root>

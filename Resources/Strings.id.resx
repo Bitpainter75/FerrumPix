@@ -11584,4 +11584,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Akselerasi grafis mogok saat terakhir dijalankan. Akselerasi tetap nonaktif sampai versi program yang baru dipasang; model menghitung di prosesor.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Kartu grafis belum diperiksa. Pemeriksaan dilakukan saat Anda mengaktifkannya, dengan Periksa, atau saat model akan menghitung di atasnya.</value>
+  </data>
 </root>

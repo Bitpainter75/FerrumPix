@@ -11584,4 +11584,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Grafik hızlandırma son başlatmada çöktü. Programın yeni bir sürümü kurulana kadar kapalı kalır; modeller işlemcide hesaplanır.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Ekran kartı henüz denetlenmedi. Bu, açtığınızda, Denetle ile veya bir model üzerinde hesaplama yapacağı zaman gerçekleşir.</value>
+  </data>
 </root>

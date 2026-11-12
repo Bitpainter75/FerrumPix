@@ -11558,4 +11558,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>Die Grafikbeschleunigung ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; die Modelle rechnen auf dem Prozessor.</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>Die Grafikkarte ist noch nicht geprüft. Das geschieht beim Einschalten, mit Prüfen oder wenn ein Modell auf ihr rechnen soll.</value>
+  </data>
 </root>

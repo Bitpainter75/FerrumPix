@@ -11584,4 +11584,7 @@
   <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
     <value>ग्राफ़िक्स त्वरण पिछली बार शुरू होते समय क्रैश हो गया। प्रोग्राम का नया संस्करण इंस्टॉल होने तक यह बंद रहेगा; मॉडल प्रोसेसर पर गणना करते हैं।</value>
   </data>
+  <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
+    <value>ग्राफ़िक्स कार्ड की अभी जाँच नहीं हुई है। यह चालू करने पर, जाँचें दबाने पर या जब कोई मॉडल उस पर गणना करेगा तब होगी।</value>
+  </data>
 </root>

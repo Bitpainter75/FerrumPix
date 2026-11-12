@@ -67,8 +67,8 @@ Namespace ViewModels
         Public Sub New(main As MainWindowViewModel)
             _main = main
             _pages = New List(Of String) From {PageWelcome, PageAppearance, PageModels}
-            ' Die Seite zur Grafikkarte nur, wenn es eine gibt: ohne erkannte Karte stuenden dort
-            ' zwei Schalter, die nichts bewirken.
+            ' Die Seite zur Grafikkarte nur, wenn es eine geben kann: ohne Karte stuenden dort zwei
+            ' Schalter, die nichts bewirken. Abgefragt wird hier aber nichts (HasGpu).
             If HasGpu Then _pages.Add(PageGpu)
             _pages.Add(PageDone)
             For i = 0 To _pages.Count - 1
@@ -99,17 +99,29 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Kann es eine Karte geben? Der Assistent laeuft beim ersten Start, und die
+        ''' Kartenabfrage laedt Laufzeit und Grafiktreiber; genau dort stuerzte FerrumPix unter
+        ''' Windows 10 22H2 ab. Sind die Karten schon abgefragt, zaehlt das Ergebnis; sonst wird die
+        ''' Seite gezeigt, und erst ihre Schalter fragen die Karte ab (beim Einschalten).</summary>
         Public ReadOnly Property HasGpu As Boolean
             Get
-                Return GpuAccelerationService.Devices.Count > 0
+                If GpuAccelerationService.IsChecked Then Return GpuAccelerationService.Devices.Count > 0
+                Return True
             End Get
         End Property
 
-        ''' <summary>Die erkannten Karten in einer Zeile, fuer die Seite zur Grafikkarte.</summary>
+        ''' <summary>Die erkannten Karten in einer Zeile, fuer die Seite zur Grafikkarte. Leer, solange
+        ''' sie nicht abgefragt sind; dann bleibt die Zeile weg (HasGpuNames).</summary>
         Public ReadOnly Property GpuNames As String
             Get
                 If _main.Settings Is Nothing Then Return ""
                 Return String.Join(", ", _main.Settings.GpuDeviceOptions.Where(Function(o) Not String.IsNullOrEmpty(o.Key)).Select(Function(o) o.Name))
+            End Get
+        End Property
+
+        Public ReadOnly Property HasGpuNames As Boolean
+            Get
+                Return GpuNames.Length > 0
             End Get
         End Property
 
@@ -176,7 +188,7 @@ Namespace ViewModels
             UpdateSteps()
             For Each name In {NameOf(IsWelcomePage), NameOf(IsAppearancePage), NameOf(IsModelsPage),
                               NameOf(IsGpuPage), NameOf(IsDonePage), NameOf(CanGoBack), NameOf(ShowsNext),
-                              NameOf(NextText), NameOf(GpuNames)}
+                              NameOf(NextText), NameOf(GpuNames), NameOf(HasGpuNames)}
                 Me.RaisePropertyChanged(name)
             Next
         End Sub
