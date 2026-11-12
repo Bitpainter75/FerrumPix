@@ -17,6 +17,9 @@
 
 - Save as in the editor ignored the EXIF switch and the copyright notice entered in the dialog.
 
+- In the Flatpak, videos did not play and showed no thumbnails; the viewer said mpv was not
+  installed, although it is part of the Flatpak.
+
 - On some Windows computers FerrumPix closed right away at every start, because the part that
   runs the AI models crashed while loading. That part now loads only when you use, switch on or
   check an AI function, so FerrumPix starts in any case. If it crashes there, FerrumPix remembers

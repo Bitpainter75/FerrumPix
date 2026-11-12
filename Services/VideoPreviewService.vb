@@ -49,7 +49,8 @@ Namespace Services
                 SetOption(handle, "msg-level", "all=no")
                 SetOption(handle, "config", "no")
                 SetOption(handle, "input-default-bindings", "no")
-                SetOption(handle, "osc", "no")
+                ' Nur mit Lua vorhanden, siehe MpvInterop.SetOptionIfSupported.
+                MpvInterop.SetOptionIfSupported(handle, "osc", "no")
                 SetOption(handle, "audio", "no")
                 ' Ohne Untertitel, sonst landete eine eingeblendete Zeile im Standbild der Kachel.
                 SetOption(handle, "sid", "no")

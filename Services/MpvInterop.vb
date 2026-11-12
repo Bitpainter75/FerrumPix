@@ -191,6 +191,32 @@ Namespace Services
         Friend Shared Function SetOptionString(handle As IntPtr, name As IntPtr, value As IntPtr) As Integer
         End Function
 
+        ''' <summary>MPV_ERROR_OPTION_NOT_FOUND: diese libmpv kennt die Option nicht.</summary>
+        Friend Const ErrorOptionNotFound As Integer = -5
+
+        ''' <summary>Setzt eine Option, die nicht jede libmpv kennt. False, wenn diese Fassung sie nicht
+        ''' hat; jeder andere Fehler wirft wie beim gewoehnlichen Setzen.
+        '''
+        ''' WOFUER: "osc" (die Bedienleiste im Bild) gibt es nur in einer libmpv MIT Lua, denn die
+        ''' Leiste ist ein Lua-Skript. Der Flatpak baut mpv ohne Lua, dort antwortet mpv auf
+        ''' "osc=no" mit -5. Das Setzen warf, der Spieler galt als gescheitert, und der Betrachter
+        ''' meldete "mpv ist nicht installiert", obwohl libmpv geladen war; die Kachelvorschau
+        ''' scheiterte genauso. Eine libmpv ohne Lua hat aber auch keine Leiste, die stoeren
+        ''' koennte, das Fehlen der Option ist also schon das gewuenschte Ergebnis.</summary>
+        Friend Shared Function SetOptionIfSupported(handle As IntPtr, name As String, value As String) As Boolean
+            Dim namePtr = Marshal.StringToCoTaskMemUTF8(If(name, String.Empty))
+            Dim valuePtr = Marshal.StringToCoTaskMemUTF8(If(value, String.Empty))
+            Try
+                Dim result = SetOptionString(handle, namePtr, valuePtr)
+                If result = ErrorOptionNotFound Then Return False
+                If result < 0 Then Throw New InvalidOperationException($"libmpv option {name} fehlgeschlagen ({result}).")
+                Return True
+            Finally
+                Marshal.FreeCoTaskMem(namePtr)
+                Marshal.FreeCoTaskMem(valuePtr)
+            End Try
+        End Function
+
         <DllImport("libmpv", EntryPoint:="mpv_set_property_string", CallingConvention:=CallingConvention.Cdecl)>
         Friend Shared Function SetPropertyString(handle As IntPtr, name As IntPtr, value As IntPtr) As Integer
         End Function

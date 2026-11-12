@@ -534,7 +534,8 @@ Namespace Services
                 SetOptionStringRaw("msg-level", "all=no")
                 SetOptionStringRaw("config", "no")
                 SetOptionStringRaw("input-default-bindings", "no")
-                SetOptionStringRaw("osc", "no")
+                ' Nur mit Lua vorhanden, siehe MpvInterop.SetOptionIfSupported.
+                MpvInterop.SetOptionIfSupported(_handle, "osc", "no")
                 SetOptionStringRaw("keep-open", "no")
                 ' Untertitel unterstuetzt die Anwendung nicht. Ohne diese beiden Zeilen blendete mpv
                 ' eine als Standard markierte Spur oder eine .srt neben dem Video von sich aus ein.
