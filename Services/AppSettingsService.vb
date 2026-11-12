@@ -890,6 +890,16 @@ Namespace Services
         ''' Wird ueber Dialogoeffnungen hinweg gemerkt: wer einmal ein Muster festgelegt hat, will
         ''' es beim naechsten Stapel meist wieder.
         Public Property LastTargetNamePattern As String = ""
+        ''' <summary>Die letzte Stellung der Schalter "Uebernehmen" in Speichern unter, Export und
+        ''' den Stapeldialogen, gemerkt beim Bestaetigen. EXIF steht nicht dabei: das folgt
+        ''' PreserveMetadataOnSave, der Einstellung genau dafuer.</summary>
+        Public Property LastTakeOverRating As Boolean = True
+        Public Property LastTakeOverFavorite As Boolean = True
+        Public Property LastTakeOverColorLabel As Boolean = True
+        Public Property LastTakeOverKeywords As Boolean = True
+        Public Property LastTakeOverDescription As Boolean = True
+        Public Property LastTakeOverCopyright As Boolean = True
+        Public Property LastTakeOverPlace As Boolean = True
         ''' <summary>Das zuletzt in "Speichern unter" benutzte Namensmuster, wenn es eines war (mit
         ''' Platzhalter oder Zaehler). Es kommt beim naechsten Mal als "Zuletzt benutzt" wieder und
         ''' ist gewaehlt. Ein fester Name wird nicht gemerkt, er gehoert zu genau einem Bild; dann
@@ -2844,6 +2854,21 @@ Namespace Services
         ''' Stapel-Umbenennen, wo ohne Muster gar nichts passieren wuerde.</summary>
         Public Shared Sub SaveLastTargetNamePattern(pattern As String)
             Update(Sub(s) s.LastTargetNamePattern = NormalizeTargetNamePattern(pattern))
+        End Sub
+
+        ''' <summary>Merkt die Stellung der Schalter "Uebernehmen" (ohne EXIF, siehe
+        ''' LastTakeOverRating).</summary>
+        Public Shared Sub SaveLastTakeOver(rating As Boolean, favorite As Boolean, colorLabel As Boolean, keywords As Boolean,
+                                           description As Boolean, copyright As Boolean, place As Boolean)
+            Update(Sub(s)
+                       s.LastTakeOverRating = rating
+                       s.LastTakeOverFavorite = favorite
+                       s.LastTakeOverColorLabel = colorLabel
+                       s.LastTakeOverKeywords = keywords
+                       s.LastTakeOverDescription = description
+                       s.LastTakeOverCopyright = copyright
+                       s.LastTakeOverPlace = place
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveLastSaveAsNamePattern(pattern As String)

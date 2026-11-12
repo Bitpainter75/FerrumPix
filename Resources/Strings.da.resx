@@ -11583,4 +11583,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Grafikkortet er endnu ikke kontrolleret. Det sker, når du slår dette til, med Kontroller, eller når en model skal regne på det.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Skriv titel, overskrift, beskrivelse, ophavsperson og kildeangivelse i målfilen, også fra følgefilen</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Skriv kildens copyrightmeddelelse i målfilen, også fra følgefilen. En meddelelse indtastet nedenfor gælder altid</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Skriv kildens optagelsessted i målfilen, også fra følgefilen. Fra betyder: intet optagelsessted i målfilen</value>
+  </data>
 </root>

@@ -11587,4 +11587,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Ekran kartı henüz denetlenmedi. Bu, açtığınızda, Denetle ile veya bir model üzerinde hesaplama yapacağı zaman gerçekleşir.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Başlık, manşet, açıklama, oluşturan ve kaynak bilgisini hedef dosyaya yaz, yan dosyadan da</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Kaynağın telif hakkı bildirimini hedef dosyaya yaz, yan dosyadan da. Aşağıya girilen bildirim her durumda geçerlidir</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Kaynağın çekim yerini hedef dosyaya yaz, yan dosyadan da. Kapalı şu anlama gelir: hedef dosyada çekim yeri yok</value>
+  </data>
 </root>

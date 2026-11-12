@@ -11587,4 +11587,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Kartu grafis belum diperiksa. Pemeriksaan dilakukan saat Anda mengaktifkannya, dengan Periksa, atau saat model akan menghitung di atasnya.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Tulis judul, tajuk, deskripsi, pembuat, dan kredit ke berkas tujuan, juga dari berkas sidecar</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Tulis pemberitahuan hak cipta sumber ke berkas tujuan, juga dari berkas sidecar. Pemberitahuan yang diisi di bawah selalu berlaku</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Tulis lokasi pemotretan sumber ke berkas tujuan, juga dari berkas sidecar. Mati berarti: tidak ada lokasi di berkas tujuan</value>
+  </data>
 </root>

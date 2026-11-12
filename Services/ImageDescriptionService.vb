@@ -384,24 +384,27 @@ Namespace Services
 
         ' ---------------------------------------------------------------- Speichern unter
 
-        ''' <summary>Nach dem Speichern einer NEUEN Datei: die Felder der Beistelldatei der Quelle in
-        ''' die Zieldatei. Eingebettete Felder reisen schon mit den kopierten Metadaten; was eine RAW
-        ''' traegt, steht dagegen in ihrer Beistelldatei, und die liest das Kopieren nicht. Ohne
-        ''' diesen Schritt kaeme ein Titel, den ein anderes Programm vergeben hat, nie im
-        ''' exportierten JPEG an.
+        ''' <summary>Nach dem Speichern einer NEUEN Datei: die beschreibenden Felder, wie die Quelle sie
+        ''' zeigt (<paramref name="shown"/>, Rangfolge von FromExifData: .fpxmp, XMP-Beistelldatei,
+        ''' eingebettet), in die Zieldatei. Eingebettete reisen schon mit den kopierten Metadaten;
+        ''' was daneben steht, liest das Kopieren nicht. Ohne diesen Schritt kaeme ein Titel, den
+        ''' ein anderes Programm einer RAW gegeben hat, nie im exportierten JPEG an.
         '''
-        ''' Nur Felder MIT Wert; ein leeres Feld der Beistelldatei raeumt nichts in der Zieldatei.</summary>
-        Friend Shared Sub CarrySidecarIntoSavedFile(sourcePath As String, targetPath As String)
+        ''' Nur Felder MIT Wert, die in der Zieldatei (<paramref name="embeddedInTarget"/>) noch
+        ''' anders stehen; ein leeres Feld der Quelle raeumt nichts. Der Aufrufer ist
+        ''' ImageProcessor.CarryShownMetadataIntoSavedFile.</summary>
+        Friend Shared Sub CarryDescriptionIntoSavedFile(shown As ImageDescription,
+                                                         embeddedInTarget As ImageDescription,
+                                                         targetPath As String)
             Try
-                If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
-                If PathIdentity.AreSame(sourcePath, targetPath) Then Return
+                If shown Is Nothing OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
                 If Not CanWriteIntoFile(targetPath) Then Return
-                Dim fromSidecar = ExifService.ReadSidecarDescription(sourcePath)
-                If fromSidecar.IsEmpty Then Return
                 Dim changes As New Dictionary(Of ImageDescriptionField, String)()
                 For Each field In ImageDescription.AllFields
-                    Dim value = NormalizeValue(field, fromSidecar.GetValue(field))
-                    If value.Length > 0 Then changes(field) = value
+                    Dim value = NormalizeValue(field, shown.GetValue(field))
+                    If value.Length = 0 Then Continue For
+                    Dim existing = If(embeddedInTarget Is Nothing, "", NormalizeValue(field, embeddedInTarget.GetValue(field)))
+                    If value <> existing Then changes(field) = value
                 Next
                 If changes.Count = 0 Then Return
                 ' Wirft, wenn die Zieldatei sich nicht sicher beschreiben laesst; dann bleibt sie,

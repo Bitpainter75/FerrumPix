@@ -11541,4 +11541,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>尚未检查显卡。开启此项、点击检查或模型需要在其上计算时才会检查。</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>将标题、大标题、描述、作者和来源写入目标文件，也包括附属文件中的内容</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>将源文件的版权声明写入目标文件，也包括附属文件中的内容。下方填写的声明始终生效</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>将源文件的拍摄地点写入目标文件，也包括附属文件中的内容。关闭表示：目标文件中不含拍摄地点</value>
+  </data>
 </root>

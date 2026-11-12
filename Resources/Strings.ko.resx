@@ -11587,4 +11587,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>그래픽 카드를 아직 확인하지 않았습니다. 이 항목을 켜거나 확인을 누르거나 모델이 그 위에서 계산할 때 확인합니다.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>제목, 헤드라인, 설명, 작성자, 출처를 대상 파일에 기록합니다. 사이드카 파일의 내용도 포함합니다</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>원본의 저작권 표시를 대상 파일에 기록합니다. 사이드카 파일의 내용도 포함합니다. 아래에 입력한 표시는 항상 적용됩니다</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>원본의 촬영 장소를 대상 파일에 기록합니다. 사이드카 파일의 내용도 포함합니다. 끄면 대상 파일에 촬영 장소가 들어가지 않습니다</value>
+  </data>
 </root>

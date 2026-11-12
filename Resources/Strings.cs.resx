@@ -11583,4 +11583,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Grafická karta ještě nebyla ověřena. Stane se tak při zapnutí, tlačítkem Ověřit nebo když na ní má počítat model.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Zapsat do cílového souboru název, nadpis, popis, autora a uvedení zdroje, i z doprovodného souboru</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Zapsat do cílového souboru upozornění na autorská práva zdroje, i z doprovodného souboru. Upozornění zadané níže platí vždy</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Zapsat do cílového souboru místo pořízení zdroje, i z doprovodného souboru. Vypnuto znamená: v cílovém souboru nebude žádné místo pořízení</value>
+  </data>
 </root>

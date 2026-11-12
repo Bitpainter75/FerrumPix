@@ -11583,4 +11583,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Видеокарта ещё не проверена. Это произойдёт при включении, по кнопке «Проверить» или когда на ней должна считать модель.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Записать в целевой файл название, заголовок, описание, автора и источник, в том числе из сопроводительного файла</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Записать в целевой файл уведомление об авторских правах источника, в том числе из сопроводительного файла. Уведомление, введённое ниже, действует всегда</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Записать в целевой файл место съёмки источника, в том числе из сопроводительного файла. Выключено означает: в целевом файле нет места съёмки</value>
+  </data>
 </root>

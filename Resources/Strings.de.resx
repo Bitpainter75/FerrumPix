@@ -11561,4 +11561,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Die Grafikkarte ist noch nicht geprüft. Das geschieht beim Einschalten, mit Prüfen oder wenn ein Modell auf ihr rechnen soll.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Titel, Überschrift, Beschreibung, Urheber und Quellenangabe in die Zieldatei schreiben, auch aus der Beistelldatei</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Den Urheberrechtshinweis der Quelle in die Zieldatei schreiben, auch aus der Beistelldatei. Ein unten eingetragener Hinweis gilt in jedem Fall</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Den Aufnahmeort der Quelle in die Zieldatei schreiben, auch aus der Beistelldatei. Aus heißt: kein Aufnahmeort in der Zieldatei</value>
+  </data>
 </root>

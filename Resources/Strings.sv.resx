@@ -11583,4 +11583,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Grafikkortet är inte kontrollerat ännu. Det sker när du slår på detta, med Kontrollera eller när en modell ska räkna på det.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Skriv titel, rubrik, beskrivning, upphovsperson och källa i målfilen, även från följefilen</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Skriv källans upphovsrättsmeddelande i målfilen, även från följefilen. Ett meddelande som anges nedan gäller alltid</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Skriv källans fotoplats i målfilen, även från följefilen. Av betyder: ingen fotoplats i målfilen</value>
+  </data>
 </root>

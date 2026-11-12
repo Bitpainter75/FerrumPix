@@ -593,6 +593,28 @@ Namespace Services
             Return tags IsNot Nothing AndAlso (Array.IndexOf(tags, cffTag) >= 0 OrElse Array.IndexOf(tags, cff2Tag) >= 0)
         End Function
 
+        ''' <summary>Welche Angaben eine NEU geschriebene Datei traegt: die Schalter der Zeile
+        ''' "Uebernehmen" in Speichern unter, Export und den Stapeldialogen. Ein gesetztes Bit heisst:
+        ''' die Angabe, wie die Quelle sie in der Anwendung zeigt, steht in der Zieldatei, auch wenn
+        ''' sie nur in Beistelldatei, .fpxmp oder Katalog stand. Ein fehlendes Bit heisst: sie steht
+        ''' NICHT darin, auch wenn sie mit den kopierten Aufnahmedaten mitgekommen waere.
+        '''
+        ''' Unabhaengig vom Schalter EXIF: der entscheidet nur ueber die Aufnahmedaten selbst
+        ''' (Kamera, Zeit, Objektiv). Siehe CarryShownMetadataIntoSavedFile.</summary>
+        <Flags>
+        Public Enum SavedMetadataParts
+            None = 0
+            Rating = 1
+            ColorLabel = 2
+            Keywords = 4
+            ''' Titel, Ueberschrift, Beschreibung, Urheber, Quellenangabe.
+            Description = 8
+            Copyright = 16
+            ''' Koordinate.
+            Place = 32
+            All = 63
+        End Enum
+
         ''' <summary>Was SaveImage tut, wenn die Aufnahmedaten mitgenommen werden sollen, die Quelle
         ''' dafuer aber nicht mehr da ist (geloescht oder von aussen umbenannt, waehrend der Editor sie
         ''' offen hatte, oder zwischen Dekodieren und Lesen der Aufnahmedaten verschwunden).
@@ -628,7 +650,10 @@ Namespace Services
                                          Optional copyrightText As String = "",
                                          Optional cancel As Threading.CancellationToken = Nothing,
                                          Optional denoise As DenoiseModelService.DenoiseRequest = Nothing,
-                                         Optional missingSource As MissingSourceMetadata = MissingSourceMetadata.FailWhenSameFile) As Boolean
+                                         Optional missingSource As MissingSourceMetadata = MissingSourceMetadata.FailWhenSameFile,
+                                         Optional metadataParts As SavedMetadataParts? = Nothing) As Boolean
+            ' <metadataParts>: die Schalter "Uebernehmen" des Dialogs. Ohne Angabe gilt, was vorher
+            ' galt: mit Aufnahmedaten alles, ohne nichts.
             ' <denoise>: Entrauschen mit Modell aus dem Stapel, siehe weiter unten beim Anwenden.
             ' <missingSource>: siehe MissingSourceMetadata und ProbeMetadataSource.
             '
@@ -997,15 +1022,19 @@ Namespace Services
                     ' TIFF traegt ihn schon: TiffWriterService hat ihn in IFD0 geschrieben, und der Weg
                     ' hier legte fuer alles ausser JPEG eine Beistelldatei an.
                     If Not isPdf AndAlso Not isFpxTarget AndAlso Not isTiff AndAlso Not isJxl Then ApplyCopyright(targetPath, copyrightText)
+                    ' Die Schalter "Uebernehmen" des Dialogs. Ohne sie (Speichern ueber das Original,
+                    ' Ueberschreiben im Stapel, Wege ohne Dialog) wie vorher: mit den Aufnahmedaten
+                    ' Stichwoerter und Beschreibung, sonst nichts, und nichts wird entfernt.
+                    Dim parts = If(metadataParts, If(preserveMetadata, SavedMetadataParts.Keywords Or SavedMetadataParts.Description,
+                                                     SavedMetadataParts.None))
                     ' Die manuellen Stichwoerter aus dem Katalog, ebenfalls NACH dem Kopieren der
-                    ' Metadaten. Nur mit Uebernahme der Metadaten: wer sie abschaltet, will eine
-                    ' saubere Datei. Ob und wohin, sagt die Einstellung (ApplyCatalogKeywords).
-                    If preserveMetadata AndAlso Not isPdf AndAlso Not isFpxTarget Then ApplyCatalogKeywords(sourcePath, targetPath)
-                    ' Titel, Beschreibung und Co. aus der Beistelldatei der Quelle. Eingebettete
-                    ' reisen schon mit den kopierten Metadaten; die einer RAW stehen daneben und
-                    ' kaemen sonst nie im exportierten Bild an. Nur in eine NEUE Datei.
-                    If preserveMetadata AndAlso Not isPdf AndAlso Not isFpxTarget Then
-                        ImageDescriptionService.CarrySidecarIntoSavedFile(sourcePath, targetPath)
+                    ' Metadaten. Ob und wohin, sagt die Einstellung (ApplyCatalogKeywords).
+                    If (parts And SavedMetadataParts.Keywords) <> 0 AndAlso Not isPdf AndAlso Not isFpxTarget Then ApplyCatalogKeywords(sourcePath, targetPath)
+                    ' Was die Quelle in der Anwendung zeigt, aber nicht in ihrer Datei traegt, und
+                    ' was abgewaehlt ist, heraus. Nur in eine NEUE Datei.
+                    If Not isPdf AndAlso Not isFpxTarget Then
+                        CarryShownMetadataIntoSavedFile(sourcePath, targetPath, copyrightText, parts,
+                                                        removeUnselected:=metadataParts.HasValue AndAlso preserveMetadata)
                     End If
                     Return True
                 End Using
@@ -1036,9 +1065,17 @@ Namespace Services
         '''
         ''' Eine gespeicherte Bearbeitung gibt es fuer JPEG nicht als Beistelldatei - Aenderungen
         ''' stehen nach dem Speichern in den Bildpunkten. Das Umpacken nimmt die Datei also so, wie
-        ''' sie in der Galerie zu sehen ist.</summary>
+        ''' sie in der Galerie zu sehen ist.
+        '''
+        ''' DIE SCHALTER "UEBERNEHMEN" (<paramref name="metadataParts"/>) gelten auch hier. Umgepackt
+        ''' werden die Segmente des JPEG unveraendert mit; deshalb laufen die Schalter vorher ueber
+        ''' eine Kopie des JPEG (WithMetadataParts), mit demselben Schritt wie beim Speichern eines
+        ''' JPEG, und erst die Kopie wird umgepackt. Die Bildpunkte bleiben dabei unangetastet;
+        ''' zurueckholen laesst sich das JPEG mit genau den gewaehlten Angaben. Ohne die Schalter
+        ''' (Nothing) wird die Quelle so umgepackt, wie sie ist.</summary>
         Public Shared Function TryTranscodeJpegToJxl(sourcePath As String, targetPath As String,
-                                                     preserveMetadata As Boolean, copyrightText As String) As Boolean
+                                                     preserveMetadata As Boolean, copyrightText As String,
+                                                     Optional metadataParts As SavedMetadataParts? = Nothing) As Boolean
             If Not IsJpegPath(sourcePath) OrElse Not JxlDecodeService.IsSupportedJxl(targetPath) Then Return False
             If Not preserveMetadata OrElse CopyrightService.NormalizeText(copyrightText).Length > 0 Then Return False
             If Not JxlEncodeService.CanTranscodeJpeg OrElse Not File.Exists(sourcePath) Then Return False
@@ -1046,6 +1083,10 @@ Namespace Services
             If Not JxlDecodeService.CanReplaceExisting(targetPath) Then Return False
             Try
                 Dim jpeg = File.ReadAllBytes(sourcePath)
+                If metadataParts.HasValue Then
+                    jpeg = WithMetadataParts(sourcePath, jpeg, metadataParts.Value)
+                    If jpeg Is Nothing Then Return False
+                End If
                 Using packed As New MemoryStream()
                     If Not JxlEncodeService.TryTranscodeJpeg(jpeg, packed) Then
                         DiagnosticLogService.LogAlways("ImageProcessor.Save",
@@ -1062,6 +1103,32 @@ Namespace Services
 
         ''' <summary>Weißer Untergrund für Formate ohne Alphakanal (JPEG). Liefert das Original
         ''' zurück, wenn nichts zu tun ist; sonst ein NEUES Bitmap (Aufrufer disposed es).</summary>
+        ''' <summary>Die Bytes eines JPEG, nachdem die Schalter "Uebernehmen" darauf angewendet sind:
+        ''' Stichwoerter aus dem Katalog (ApplyCatalogKeywords), dann CarryShownMetadataIntoSavedFile,
+        ''' beides wie nach SaveImage. Gerechnet an einer Kopie im temporaeren Ordner, die danach
+        ''' wieder verschwindet; die Quelle bleibt unberuehrt. Nothing, wenn das nicht ging - dann
+        ''' wird nicht umgepackt, sondern neu kodiert.</summary>
+        Private Shared Function WithMetadataParts(sourcePath As String, jpeg As Byte(), parts As SavedMetadataParts) As Byte()
+            Dim folder = Path.Combine(Path.GetTempPath(), "FerrumPix", "transcode")
+            Dim copy = Path.Combine(folder, $"{Guid.NewGuid():N}.jpg")
+            Try
+                Directory.CreateDirectory(folder)
+                File.WriteAllBytes(copy, jpeg)
+                If (parts And SavedMetadataParts.Keywords) <> 0 Then ApplyCatalogKeywords(sourcePath, copy)
+                CarryShownMetadataIntoSavedFile(sourcePath, copy, "", parts, removeUnselected:=True)
+                Return File.ReadAllBytes(copy)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.WithMetadataParts", ex)
+                Return Nothing
+            Finally
+                Try
+                    If File.Exists(copy) Then File.Delete(copy)
+                Catch
+                End Try
+                ExifService.Invalidate(copy)
+            End Try
+        End Function
+
         Private Shared Function FlattenAlphaToWhite(source As SKBitmap) As SKBitmap
             If source Is Nothing Then Return source
             Dim flattened = New SKBitmap(source.Width, source.Height, source.ColorType, SKAlphaType.Premul)
@@ -1137,6 +1204,120 @@ Namespace Services
         ''' Ein Fehlschlag darf das Speichern NICHT scheitern lassen: das Bild steht dann bereits auf
         ''' der Platte, und eine Rueckmeldung "nicht gespeichert" waere schlicht falsch. Er wandert
         ''' ins Diagnoselog.</summary>
+        ''' <summary>Nach dem Speichern in eine NEUE Datei: die Angaben, die die Quelle in Infopanel und
+        ''' Katalog zeigt, in die Zieldatei. Was in der Quelldatei selbst steht, reist schon mit den
+        ''' kopierten Segmenten; was DANEBEN steht, kaeme ohne diesen Schritt nie an. Das ist bei
+        ''' einer RAW fast alles: der in der Anwendung gesetzte Aufnahmeort, Titel und Copyright in
+        ''' der XMP-Beistelldatei, Werte aus dem Katalog des Referenzprogramms in der .fpxmp.
+        '''
+        ''' GEZEIGT HEISST: ueber ExifService.ReadExif und ExtractSearchFields, also nach genau der
+        ''' Rangfolge, nach der Infopanel und Katalog entscheiden. Eine zweite Regel hier hiesse, dass
+        ''' das exportierte Bild etwas anderes traegt, als die Anwendung an der Quelle zeigt.
+        '''
+        ''' ERST HERAUS, DANN HINEIN. Abgewaehlte Angaben werden aus dem Ziel entfernt (ueber
+        ''' CatalogMetadataService.RemoveFromFile, denselben Weg wie "Metadaten entfernen"), aber nur
+        ''' mit <paramref name="removeUnselected"/>: der Dialog hat ausdruecklich gewaehlt, und die
+        ''' Aufnahmedaten wurden kopiert (sonst steht ohnehin nichts von der Quelle darin).
+        ''' Ein Copyright aus dem Dialog bleibt stehen, auch wenn der Schalter aus ist: dort hat es
+        ''' jemand ausdruecklich eingetragen.
+        '''
+        ''' Dann je gewaehlter Angabe:
+        ''' - Beschreibende Felder in JPEG, PNG und WebP, nur Felder mit Wert, die im Ziel noch anders
+        '''   stehen.
+        ''' - Bewertung und Etikett aus dem Katalog in JPEG, PNG und WebP, nur mit Wert.
+        ''' - Copyright nur ins JPEG und nur, wenn der Dialog keinen eigenen Hinweis vorgibt (der
+        '''   steht dann schon drin, ApplyCopyright).
+        ''' - Aufnahmeort nur ins JPEG und nur, wenn das Ziel keinen traegt: trug die Quelldatei
+        '''   einen, ist er mitgekommen und gilt auch in der Anwendung vor der Beistelldatei.
+        ''' Die Stichwoerter macht ApplyCatalogKeywords davor.
+        '''
+        ''' FEHLT: In TIFF und JPEG XL wird nichts entfernt und nichts ergaenzt, ausser was der
+        ''' Schreiber dort selbst mitnimmt. In PNG und WebP entfernt der Weg nur XMP und IPTC, eine
+        ''' Koordinate oder ein Copyright im kopierten EXIF bleibt dort stehen.
+        '''
+        ''' Legt nie eine Beistelldatei neben dem Ziel an. Ein Fehlschlag laesst das Speichern nicht
+        ''' scheitern, das Bild steht dann schon auf der Platte.</summary>
+        Friend Shared Sub CarryShownMetadataIntoSavedFile(sourcePath As String, targetPath As String, dialogCopyright As String,
+                                                          parts As SavedMetadataParts, removeUnselected As Boolean)
+            Try
+                If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return
+                If PathIdentity.AreSame(sourcePath, targetPath) Then Return
+                If LibraryService.IsServerPseudoPath(sourcePath) OrElse Not File.Exists(targetPath) Then Return
+                Dim hasDialogCopyright = CopyrightService.NormalizeText(dialogCopyright).Length > 0
+
+                If removeUnselected Then
+                    Dim removal = MetadataRemovalFields.None
+                    If (parts And SavedMetadataParts.Rating) = 0 Then removal = removal Or MetadataRemovalFields.Rating
+                    If (parts And SavedMetadataParts.ColorLabel) = 0 Then removal = removal Or MetadataRemovalFields.ColorLabel
+                    If (parts And SavedMetadataParts.Keywords) = 0 Then removal = removal Or MetadataRemovalFields.Keywords
+                    If (parts And SavedMetadataParts.Description) = 0 Then removal = removal Or MetadataRemovalFields.Description
+                    If (parts And SavedMetadataParts.Copyright) = 0 AndAlso Not hasDialogCopyright Then removal = removal Or MetadataRemovalFields.Copyright
+                    If (parts And SavedMetadataParts.Place) = 0 Then removal = removal Or MetadataRemovalFields.Place
+                    If removal <> MetadataRemovalFields.None AndAlso Not CatalogMetadataService.RemoveFromFile(targetPath, removal) Then
+                        DiagnosticLogService.LogAlways("Save.RemoveMetadata", "nicht vollstaendig entfernt: " & targetPath)
+                    End If
+                End If
+
+                Dim carried = parts And (SavedMetadataParts.Rating Or SavedMetadataParts.ColorLabel Or SavedMetadataParts.Description Or
+                                         SavedMetadataParts.Copyright Or SavedMetadataParts.Place)
+                If carried = SavedMetadataParts.None Then Return
+                Dim shown = ExifService.ReadExif(sourcePath)
+                If shown Is Nothing Then Return
+                ' Das Ziel EINMAL vor allen Schreibschritten lesen: jeder fasst einen anderen Teil an.
+                ExifService.Invalidate(targetPath)
+                Dim target = ExifService.ReadExif(targetPath)
+
+                If (parts And SavedMetadataParts.Description) <> 0 Then
+                    ImageDescriptionService.CarryDescriptionIntoSavedFile(
+                        shown.Description,
+                        If(target Is Nothing, Nothing, ImageDescriptionService.FromEmbeddedTags(target)),
+                        targetPath)
+                End If
+
+                CarryCatalogRatingAndLabel(sourcePath, targetPath, parts)
+
+                If Not GeotagService.IsJpegPath(targetPath) Then Return
+
+                Dim copyright = CopyrightService.NormalizeText(shown.Copyright)
+                If (parts And SavedMetadataParts.Copyright) <> 0 AndAlso Not hasDialogCopyright AndAlso copyright.Length > 0 AndAlso
+                   copyright <> CopyrightService.NormalizeText(If(target?.Copyright, "")) Then
+                    Dim written = CopyrightService.WriteCopyright(targetPath, copyright, createSidecarIfMissing:=False)
+                    If Not written.Success Then DiagnosticLogService.LogAlways("Save.CarryCopyright", "nicht gesetzt: " & written.FailureReason)
+                End If
+
+                If (parts And SavedMetadataParts.Place) <> 0 Then
+                    Dim fields = ExifService.ExtractSearchFields(shown, sourcePath)
+                    If fields.GpsLatitude.HasValue AndAlso fields.GpsLongitude.HasValue AndAlso
+                       String.IsNullOrWhiteSpace(If(target?.GPS, "")) Then
+                        Dim written = GeotagService.WriteCoordinates(targetPath, fields.GpsLatitude.Value, fields.GpsLongitude.Value,
+                                                                     createSidecarIfMissing:=False)
+                        If Not written.Success Then DiagnosticLogService.LogAlways("Save.CarryPlace", "nicht gesetzt: " & written.FailureReason)
+                    End If
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Save.CarryMetadata", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Bewertung und Etikett, wie der Katalog sie fuer die Quelle fuehrt, in das XMP der
+        ''' Zieldatei. Nur mit Wert: eine Bewertung 0 im Katalog raeumt im Ziel nichts. Nur in Formate
+        ''' mit eigenem XMP-Weg (JPEG, PNG, WebP), nie in eine neue Beistelldatei.</summary>
+        Private Shared Sub CarryCatalogRatingAndLabel(sourcePath As String, targetPath As String, parts As SavedMetadataParts)
+            If Not CanWriteKeywordsInto(targetPath) Then Return
+            Dim values = CatalogMetadataService.ReadCatalog(sourcePath)
+            Dim fields = CatalogField.None
+            If (parts And SavedMetadataParts.Rating) <> 0 AndAlso values.Rating <> 0 Then fields = fields Or CatalogField.Rating
+            If (parts And SavedMetadataParts.ColorLabel) <> 0 AndAlso XmpSidecarService.LabelToXmpWord(values.ColorLabel).Length > 0 Then
+                fields = fields Or CatalogField.ColorLabel
+            End If
+            If fields = CatalogField.None Then Return
+            If EditXmpInFile(targetPath, createPacket:=True,
+                             edit:=Function(descriptions, target) CatalogMetadataService.ApplyToXmp(descriptions, target, values, fields),
+                             iptcReplacements:=Nothing) Then
+                ExifService.Invalidate(targetPath)
+            End If
+        End Sub
+
         Private Shared Sub ApplyCopyright(targetPath As String, copyrightText As String)
             If String.IsNullOrWhiteSpace(copyrightText) Then Return
             Try

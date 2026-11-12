@@ -13575,6 +13575,15 @@ Namespace ViewModels
             End Try
         End Function
 
+        ''' <summary>Die Schalter "Uebernehmen" fuer SaveImage, aber nur, wenn neue Dateien entstehen.
+        ''' Beim Ueberschreiben ist die Zeile im Dialog ausgeblendet; SaveImage bleibt dann bei seinem
+        ''' Verhalten ohne Dialog, statt dem Original still Angaben aus der Beistelldatei einzubetten.</summary>
+        Private Shared Function PartsForNewFiles(overwrite As Boolean,
+                                                 parts As ImageProcessor.SavedMetadataParts) As ImageProcessor.SavedMetadataParts?
+            If overwrite Then Return Nothing
+            Return parts
+        End Function
+
         Private Async Function ResizeImageItemsCoreAsync(items As IList(Of ImageItem)) As Task
             Dim targetItems = If(items, New List(Of ImageItem)()).Where(Function(i) i IsNot Nothing).ToList()
             If targetItems.Count = 0 Then Return
@@ -13633,7 +13642,8 @@ Namespace ViewModels
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=resize.Copyright,
                                                              cancel:=cancel,
-                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
+                                                             metadataParts:=PartsForNewFiles(resize.Overwrite, resize.MetadataParts))
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -13830,7 +13840,8 @@ Namespace ViewModels
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              denoise:=result.Denoise,
-                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
+                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts))
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14240,7 +14251,8 @@ Namespace ViewModels
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
-                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
+                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts))
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
@@ -15290,7 +15302,8 @@ Namespace ViewModels
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              denoise:=result.Denoise,
-                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
+                                                             metadataParts:=result.MetadataParts)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -15426,7 +15439,8 @@ Namespace ViewModels
                              ' Geht das nicht (siehe TryTranscodeJpegToJxl), faellt der Weg auf das
                              ' gewoehnliche Rendern darunter zurueck.
                              If losslessJpegToJxl AndAlso Not cancel.IsCancellationRequested AndAlso
-                                ImageProcessor.TryTranscodeJpegToJxl(source, target, preserveMetadata, result.Copyright) Then Return True
+                                ImageProcessor.TryTranscodeJpegToJxl(source, target, preserveMetadata, result.Copyright,
+                                                                     result.MetadataParts) Then Return True
                              Dim adj = BatchBaseAdjustments(source)
                              ' Konvertieren schreibt immer neue Dateien: fehlt die Quelle beim Lesen
                              ' der Aufnahmedaten, entsteht die Datei ohne sie.
@@ -15435,7 +15449,8 @@ Namespace ViewModels
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
-                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata)
+                                                             missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
+                                                             metadataParts:=result.MetadataParts)
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
             ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.

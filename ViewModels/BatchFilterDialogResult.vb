@@ -11,6 +11,8 @@ Namespace ViewModels
         ''' <summary>Datei-Metadaten (EXIF/XMP) der Quelle in die Zieldatei uebernehmen -
         ''' der Knopf "EXIF" im Uebernehmen-Bereich des Dialogs.</summary>
         Public Property PreserveMetadata As Boolean = True
+        ''' <summary>Was die Zieldatei selbst traegt, aus der Zeile "Uebernehmen" (SaveImage).</summary>
+        Public Property MetadataParts As Services.ImageProcessor.SavedMetadataParts = Services.ImageProcessor.SavedMetadataParts.All
         ''' <summary>Urheberrechtshinweis fuer die geschriebenen Dateien. LEER heisst: das
         ''' Feld bleibt unangetastet - genau so ist es im Formular gemeint.</summary>
         Public Property Copyright As String = ""

@@ -2452,6 +2452,7 @@ Namespace ViewModels
 
             PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
+            PersistDialogTakeOverOptions()
             AppSettingsService.SaveExportToSections(_dialogExportUseFilter, _dialogExportUseWatermark, _dialogExportUseResize,
                                                     _dialogWatermarkKeepSize)
 
@@ -2528,6 +2529,7 @@ Namespace ViewModels
                 .UpscaleModel = upscaleModel,
                 .Denoise = exportDenoise,
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .MetadataParts = DialogSaveAsMetadataParts(),
                 .Copyright = _dialogCopyright,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
@@ -2825,6 +2827,7 @@ Namespace ViewModels
 
             If Not _dialogBatchFilterOverwrite Then PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
+            PersistDialogTakeOverOptions()
 
             Dim path As String = Nothing
             _dialogFilterChoicePaths.TryGetValue(_dialogSelectedFilterChoice, path)
@@ -2849,6 +2852,7 @@ Namespace ViewModels
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .MetadataParts = DialogSaveAsMetadataParts(),
                 .Copyright = _dialogCopyright,
                 .Denoise = filterDenoise
             }
@@ -3343,6 +3347,54 @@ Namespace ViewModels
         Private _dialogSaveAsCopyFavorite As Boolean = True
         Private _dialogSaveAsCopyColorLabel As Boolean = True
         Private _dialogSaveAsCopyKeywords As Boolean = True
+        Private _dialogSaveAsCopyDescription As Boolean = True
+        Private _dialogSaveAsCopyCopyright As Boolean = True
+        Private _dialogSaveAsCopyPlace As Boolean = True
+
+        ''' <summary>Titel, Ueberschrift, Beschreibung, Urheber und Quellenangabe in der Zieldatei.</summary>
+        Public Property DialogSaveAsCopyDescription As Boolean
+            Get
+                Return _dialogSaveAsCopyDescription
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyDescription, value)
+            End Set
+        End Property
+
+        ''' <summary>Der Urheberrechtshinweis der Quelle in der Zieldatei. Ein im Dialog eingetragener
+        ''' Hinweis gilt unabhaengig davon.</summary>
+        Public Property DialogSaveAsCopyCopyright As Boolean
+            Get
+                Return _dialogSaveAsCopyCopyright
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyCopyright, value)
+            End Set
+        End Property
+
+        ''' <summary>Der Aufnahmeort der Quelle in der Zieldatei.</summary>
+        Public Property DialogSaveAsCopyPlace As Boolean
+            Get
+                Return _dialogSaveAsCopyPlace
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_dialogSaveAsCopyPlace, value)
+            End Set
+        End Property
+
+        ''' <summary>Die Schalter der Zeile "Uebernehmen" als Auftrag an SaveImage: was die neue
+        ''' Datei selbst traegt. Bewertung, Etikett und Stichworte gelten zugleich fuer den
+        ''' Katalogeintrag (MetaCopy), der Favorit nur dort.</summary>
+        Friend Function DialogSaveAsMetadataParts() As ImageProcessor.SavedMetadataParts
+            Dim parts = ImageProcessor.SavedMetadataParts.None
+            If _dialogSaveAsCopyRating Then parts = parts Or ImageProcessor.SavedMetadataParts.Rating
+            If _dialogSaveAsCopyColorLabel Then parts = parts Or ImageProcessor.SavedMetadataParts.ColorLabel
+            If _dialogSaveAsCopyKeywords Then parts = parts Or ImageProcessor.SavedMetadataParts.Keywords
+            If _dialogSaveAsCopyDescription Then parts = parts Or ImageProcessor.SavedMetadataParts.Description
+            If _dialogSaveAsCopyCopyright Then parts = parts Or ImageProcessor.SavedMetadataParts.Copyright
+            If _dialogSaveAsCopyPlace Then parts = parts Or ImageProcessor.SavedMetadataParts.Place
+            Return parts
+        End Function
 
         Public Property DialogSaveAsCopyRating As Boolean
             Get
@@ -3393,6 +3445,12 @@ Namespace ViewModels
                     DialogSaveAsCopyKeywords = Not DialogSaveAsCopyKeywords
                 Case "Exif"
                     DialogSaveAsPreserveExif = Not DialogSaveAsPreserveExif
+                Case "Description"
+                    DialogSaveAsCopyDescription = Not DialogSaveAsCopyDescription
+                Case "Copyright"
+                    DialogSaveAsCopyCopyright = Not DialogSaveAsCopyCopyright
+                Case "Place"
+                    DialogSaveAsCopyPlace = Not DialogSaveAsCopyPlace
             End Select
         End Sub
 
@@ -3442,14 +3500,20 @@ Namespace ViewModels
             _dialogCopyright = ""
             Me.RaisePropertyChanged(NameOf(DialogCopyright))
             Me.RaisePropertyChanged(NameOf(DialogShowsCopyright))
-            _dialogSaveAsCopyRating = True
-            _dialogSaveAsCopyFavorite = True
-            _dialogSaveAsCopyColorLabel = True
-            _dialogSaveAsCopyKeywords = True
-            _dialogSaveAsPreserveExif = AppSettingsService.Load().PreserveMetadataOnSave
+            ' Die letzte Stellung (AppSettings.LastTakeOver*); EXIF aus der Einstellung dafuer.
+            Dim settings = AppSettingsService.Load()
+            _dialogSaveAsCopyRating = settings.LastTakeOverRating
+            _dialogSaveAsCopyFavorite = settings.LastTakeOverFavorite
+            _dialogSaveAsCopyColorLabel = settings.LastTakeOverColorLabel
+            _dialogSaveAsCopyKeywords = settings.LastTakeOverKeywords
+            _dialogSaveAsCopyDescription = settings.LastTakeOverDescription
+            _dialogSaveAsCopyCopyright = settings.LastTakeOverCopyright
+            _dialogSaveAsCopyPlace = settings.LastTakeOverPlace
+            _dialogSaveAsPreserveExif = settings.PreserveMetadataOnSave
             For Each name In {NameOf(DialogSaveAsCopyRating), NameOf(DialogSaveAsCopyFavorite),
                               NameOf(DialogSaveAsCopyColorLabel), NameOf(DialogSaveAsCopyKeywords),
-                              NameOf(DialogSaveAsPreserveExif),
+                              NameOf(DialogSaveAsCopyDescription), NameOf(DialogSaveAsCopyCopyright),
+                              NameOf(DialogSaveAsCopyPlace), NameOf(DialogSaveAsPreserveExif),
                               NameOf(DialogShowsSaveAsMetaOptions)}
                 Me.RaisePropertyChanged(name)
             Next
@@ -4279,15 +4343,16 @@ Namespace ViewModels
                 ' Bildpunkte zu wenig, und die letzte („32") rutschte allein in eine zweite Zeile
                 ' (Nutzerbefund mit Bildschirmaufnahme). Eine Vorgabenreihe, die
                 ' umbricht, liest sich wie zwei Gruppen, die es nicht gibt.
+                '
+                ' Speichern unter in DERSELBEN Breite: es teilt sich mit diesen Dialogen den
+                ' Speichern-unter-Block, und die Zeile "Uebernehmen" hat acht Schalter. Bei 570 fiel
+                ' im Englischen mit groesserer Schrift EXIF schon bei fuenf Schaltern aus der Zeile
+                ' (Forumsbefund mit Bildschirmaufnahme), danach stand es auf 700.
                 If DialogShowsBatchResize OrElse DialogShowsExportTo OrElse
                    _dialogKind = AppDialogKind.BatchConvert OrElse
                    _dialogKind = AppDialogKind.BatchFilter OrElse
-                   _dialogKind = AppDialogKind.WatermarkPreset Then Return 840
-                ' Speichern unter: 700 UND NICHT 570. Bei 570 fiel im Englischen mit groesserer
-                ' Schrift EXIF ganz und "Keywords" halb aus der Zeile "Uebernehmen", und der
-                ' Zielordner war kaum zu lesen (Forumsbefund mit Bildschirmaufnahme). Die fuenf
-                ' Schalter brauchen dort samt Beschriftungsspalte rund 620 px.
-                If _dialogKind = AppDialogKind.SaveAs Then Return 700
+                   _dialogKind = AppDialogKind.WatermarkPreset OrElse
+                   _dialogKind = AppDialogKind.SaveAs Then Return 840
                 ' Aufnahmedatum: die beiden Wege stehen als Optionen nebeneinander, und bei 440
                 ' wurde "Um eine Zeitspanne verschieben" abgeschnitten (Nutzerbefund).
                 If DialogShowsCaptureDate Then Return 570
@@ -5735,6 +5800,7 @@ Namespace ViewModels
                                                            _dialogBatchResizeLongEdge)
             If Not _dialogBatchResizeOverwrite Then PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
+            PersistDialogTakeOverOptions()
 
             ' Beim Hochskalieren bestimmt das Modell die Groesse allein: die Felder sind dann gar
             ' nicht zu sehen, und was in ihnen vom letzten Mal stehen geblieben ist, darf auch nicht
@@ -5767,6 +5833,7 @@ Namespace ViewModels
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .MetadataParts = DialogSaveAsMetadataParts(),
                 .Copyright = _dialogCopyright
             }
             ' ERST der Auftrag, DANN die Rueckfrage: waehrend des Downloads bleibt die Anwendung
@@ -5831,8 +5898,10 @@ Namespace ViewModels
             AppSettingsService.SaveLastWatermarkPresetName(selectedPreset.Name)
             If Not _dialogBatchWatermarkOverwrite Then PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
+            PersistDialogTakeOverOptions()
             Return New WatermarkPresetDialogResult With {
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .MetadataParts = DialogSaveAsMetadataParts(),
                 .Copyright = _dialogCopyright,
                 .Preset = BuildWatermarkPresetForRun(selectedPreset),
                 .Overwrite = _dialogBatchWatermarkOverwrite,
@@ -6086,6 +6155,9 @@ Namespace ViewModels
             AppSettingsService.SaveLastSaveAsNamePattern(
                 If(typed.Contains("{"c) OrElse typed.Contains("#"c), typed, ""))
             PersistDialogTargetFolderIfLocal()
+            PersistDialogTakeOverOptions()
+            ' EXIF und Urheberrechtshinweis gehoeren mit hinein: ohne sie blieb der Schalter EXIF
+            ' im Editor wirkungslos (Vorgabe True) und der eingetragene Hinweis kam nie an.
             Return New SaveAsDialogResult With {
                 .BaseName = If(DialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
@@ -6095,7 +6167,10 @@ Namespace ViewModels
                 .CopyRating = _dialogSaveAsCopyRating,
                 .CopyFavorite = _dialogSaveAsCopyFavorite,
                 .CopyColorLabel = _dialogSaveAsCopyColorLabel,
-                .CopyKeywords = _dialogSaveAsCopyKeywords
+                .CopyKeywords = _dialogSaveAsCopyKeywords,
+                .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .MetadataParts = DialogSaveAsMetadataParts(),
+                .Copyright = _dialogCopyright
             }
         End Function
 
@@ -6127,6 +6202,7 @@ Namespace ViewModels
 
             PersistDialogTargetFolderIfLocal()
             PersistDialogTargetNamePattern()
+            PersistDialogTakeOverOptions()
             Return New SaveAsDialogResult With {
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
@@ -6139,6 +6215,7 @@ Namespace ViewModels
                 .CopyKeywords = _dialogSaveAsCopyKeywords,
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .PreserveMetadata = _dialogSaveAsPreserveExif,
+                .MetadataParts = DialogSaveAsMetadataParts(),
                 .Copyright = _dialogCopyright
             }
         End Function
@@ -6174,6 +6251,15 @@ Namespace ViewModels
         ''' Einstellungsdatei.</summary>
         Private Sub PersistDialogTargetNamePattern()
             AppSettingsService.SaveLastTargetNamePattern(DialogTargetNamePattern)
+        End Sub
+
+        ''' <summary>Die Stellung der Schalter "Uebernehmen" fuer das naechste Oeffnen, beim
+        ''' Bestaetigen. Beim Ueberschreiben im Stapel ist die Zeile ausgeblendet; dann steht hier
+        ''' unveraendert, was beim Oeffnen geladen wurde.</summary>
+        Private Sub PersistDialogTakeOverOptions()
+            AppSettingsService.SaveLastTakeOver(_dialogSaveAsCopyRating, _dialogSaveAsCopyFavorite, _dialogSaveAsCopyColorLabel,
+                                                _dialogSaveAsCopyKeywords, _dialogSaveAsCopyDescription,
+                                                _dialogSaveAsCopyCopyright, _dialogSaveAsCopyPlace)
         End Sub
 
         Private Sub PersistDialogTargetFolderIfLocal()

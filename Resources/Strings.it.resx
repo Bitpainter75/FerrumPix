@@ -11543,4 +11543,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>La scheda grafica non è ancora stata verificata. Avviene all'attivazione, con Verifica o quando un modello deve calcolare su di essa.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Scrivi titolo, intestazione, descrizione, autore e credito nel file di destinazione, anche dal file collegato</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Scrivi l'avviso di copyright della sorgente nel file di destinazione, anche dal file collegato. Un avviso inserito sotto vale sempre</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Scrivi il luogo di scatto della sorgente nel file di destinazione, anche dal file collegato. Disattivato significa: nessun luogo nel file di destinazione</value>
+  </data>
 </root>

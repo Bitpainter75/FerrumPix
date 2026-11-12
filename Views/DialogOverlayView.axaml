@@ -553,7 +553,9 @@
                                         Padding="8,6"
                                         HorizontalAlignment="Left"
                                         IsVisible="{Binding DialogShowsSaveAsMetaOptions}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <!-- UMBRECHEND: acht Knoepfe passen in manchen Sprachen nicht
+                                         mehr in eine Zeile des Dialogs. -->
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8">
                                         <Button Classes="segmented"
                                                 Classes.active="{Binding DialogSaveAsCopyRating}"
                                                 Click="OnDialogMetaCopyToggleClick"
@@ -571,11 +573,26 @@
                                                 Click="OnDialogMetaCopyToggleClick"
                                                 Tag="Keywords">Stichworte</Button>
                                         <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyDescription}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                ToolTip.Tip="Titel, Überschrift, Beschreibung, Urheber und Quellenangabe in die Zieldatei schreiben, auch aus der Beistelldatei"
+                                                Tag="Description">Beschreibung</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyCopyright}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                ToolTip.Tip="Den Urheberrechtshinweis der Quelle in die Zieldatei schreiben, auch aus der Beistelldatei. Ein unten eingetragener Hinweis gilt in jedem Fall"
+                                                Tag="Copyright">Copyright</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding DialogSaveAsCopyPlace}"
+                                                Click="OnDialogMetaCopyToggleClick"
+                                                ToolTip.Tip="Den Aufnahmeort der Quelle in die Zieldatei schreiben, auch aus der Beistelldatei. Aus heißt: kein Aufnahmeort in der Zieldatei"
+                                                Tag="Place">Ort</Button>
+                                        <Button Classes="segmented"
                                                 Classes.active="{Binding DialogSaveAsPreserveExif}"
                                                 Click="OnDialogMetaCopyToggleClick"
                                                 ToolTip.Tip="Aufnahmedaten der Quelle (Kamera, Zeit, Objektiv) in die Zieldatei schreiben"
                                                 Tag="Exif">EXIF</Button>
-                                    </StackPanel>
+                                    </WrapPanel>
                                 </Border>
 
                             </Grid>

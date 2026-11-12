@@ -11583,4 +11583,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>グラフィックカードはまだ確認されていません。オンにしたとき、確認を押したとき、またはモデルがその上で計算するときに確認されます。</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>タイトル、見出し、説明、作成者、クレジットを保存先のファイルに書き込みます (サイドカーファイルの内容も含む)</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>元の画像の著作権表示を保存先のファイルに書き込みます (サイドカーファイルの内容も含む)。下に入力した表示は常に適用されます</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>元の画像の撮影場所を保存先のファイルに書き込みます (サイドカーファイルの内容も含む)。オフにすると、保存先のファイルに撮影場所は入りません</value>
+  </data>
 </root>

@@ -11587,4 +11587,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>ग्राफ़िक्स कार्ड की अभी जाँच नहीं हुई है। यह चालू करने पर, जाँचें दबाने पर या जब कोई मॉडल उस पर गणना करेगा तब होगी।</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>शीर्षक, मुख्य शीर्षक, विवरण, रचनाकार और श्रेय लक्ष्य फ़ाइल में लिखें, साइडकार फ़ाइल से भी</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>स्रोत की कॉपीराइट सूचना लक्ष्य फ़ाइल में लिखें, साइडकार फ़ाइल से भी। नीचे दर्ज की गई सूचना हर हाल में लागू होती है</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>स्रोत का स्थान लक्ष्य फ़ाइल में लिखें, साइडकार फ़ाइल से भी। बंद का अर्थ है: लक्ष्य फ़ाइल में कोई स्थान नहीं</value>
+  </data>
 </root>

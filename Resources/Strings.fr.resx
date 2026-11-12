@@ -11543,4 +11543,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>La carte graphique n'a pas encore été vérifiée. Cela se fait à l'activation, avec Vérifier ou lorsqu'un modèle doit calculer dessus.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Écrire le titre, le titre principal, la description, l'auteur et le crédit dans le fichier cible, y compris depuis le fichier annexe</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Écrire la mention de copyright de la source dans le fichier cible, y compris depuis le fichier annexe. Une mention saisie ci-dessous s'applique toujours</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Écrire le lieu de prise de vue de la source dans le fichier cible, y compris depuis le fichier annexe. Désactivé signifie : aucun lieu dans le fichier cible</value>
+  </data>
 </root>

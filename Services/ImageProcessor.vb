@@ -2512,6 +2512,13 @@ Namespace Services
             Dim scale = limit / CDbl(longest)
             Dim width = Math.Max(1, CInt(Math.Round(source.Width * scale)))
             Dim height = Math.Max(1, CInt(Math.Round(source.Height * scale)))
+
+            ' BEWUSST Skias Mitchell und NICHT ImageResampler, obwohl der flaechentreu mittelt und
+            ' "Einpassen" damit naeher am verkleinerten Ergebnis laege. Versucht und zurueckgenommen:
+            ' bei starkem Zoom blendet ein Reglerzug das Zoom-Detail aus und zeigt diese Quelle
+            ' vergroessert. Flaechentreu verkleinert war das Farbrauschen darin weggemittelt, und
+            ' nach dem Zug kam es mit dem Detail in voller Staerke zurueck - ein Springen bei jedem
+            ' Zug. Mitchell laesst das Rauschen stehen, Vorschau und Detail sehen gleich aus.
             Dim result = New SKBitmap(width, height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.Clear(SKColors.Transparent)

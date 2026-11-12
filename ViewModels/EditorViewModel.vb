@@ -23463,6 +23463,12 @@ Namespace ViewModels
                 ' Stapelwege der Galerie folgten ihm längst. Beim Speichern ÜBER das Original gibt es
                 ' keinen Dialog und damit keine Frage; dort bleiben die Aufnahmedaten.
                 Dim preserveMetadata = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.PreserveMetadata, True)
+                ' Die uebrigen Schalter der Zeile "Uebernehmen" ebenso nur aus dem Dialog; ohne ihn
+                ' bleibt SaveImage bei seinem Verhalten ohne Dialog.
+                Dim metadataParts As ImageProcessor.SavedMetadataParts? = Nothing
+                If saveAs AndAlso saveAsResult IsNot Nothing Then metadataParts = saveAsResult.MetadataParts
+                ' Der Urheberrechtshinweis aus dem Dialog; leer heisst "nicht anfassen".
+                Dim copyrightText = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.Copyright, "")
                 Dim ok As Boolean
                 If isFpxSave Then
                     ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
@@ -23590,7 +23596,9 @@ Namespace ViewModels
                     ' Arbeitsbild als Pipeline-Eingang (Stufe C): CloneFull ist threadsicher und
                     ' wartet automatisch auf einen laufenden Region-Commit.
                     ok = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adj, targetQuality, preserveMetadata,
-                                                                            workingFull:=CloneWorkingFullForRender()))
+                                                                            workingFull:=CloneWorkingFullForRender(),
+                                                                            copyrightText:=copyrightText,
+                                                                            metadataParts:=metadataParts))
                 End If
                 If ok AndAlso saveToNextcloud Then
                     ' Ziel Nextcloud: die gerenderte Datei in den Dateibaum legen. Wohin, ist NICHT

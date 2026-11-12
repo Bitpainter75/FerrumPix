@@ -11583,4 +11583,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>Näytönohjainta ei ole vielä tarkistettu. Se tehdään, kun otat tämän käyttöön, Tarkista-painikkeella tai kun malli laskee sillä.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Kirjoita otsikko, pääotsikko, kuvaus, tekijä ja lähde kohdetiedostoon, myös oheistiedostosta</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Kirjoita lähteen tekijänoikeusmerkintä kohdetiedostoon, myös oheistiedostosta. Alle kirjoitettu merkintä on aina voimassa</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Kirjoita lähteen kuvauspaikka kohdetiedostoon, myös oheistiedostosta. Pois tarkoittaa: kohdetiedostossa ei ole kuvauspaikkaa</value>
+  </data>
 </root>

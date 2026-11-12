@@ -11562,4 +11562,13 @@
   <data name="Die_Grafikkarte_ist_noch_nicht_gepr_ft_Das_gesch_2a7eda56" xml:space="preserve">
     <value>The graphics card has not been checked yet. That happens when you switch this on, with Check, or when a model is to compute on it.</value>
   </data>
+  <data name="Titel_berschrift_Beschreibung_Urheber_und_Quelle_80f9638c" xml:space="preserve">
+    <value>Write title, headline, description, creator and credit into the target file, also from the sidecar file</value>
+  </data>
+  <data name="Den_Urheberrechtshinweis_der_Quelle_in_die_Zield_4987a770" xml:space="preserve">
+    <value>Write the source's copyright notice into the target file, also from the sidecar file. A notice entered below always applies</value>
+  </data>
+  <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
+    <value>Write the source's location into the target file, also from the sidecar file. Off means: no location in the target file</value>
+  </data>
 </root>
