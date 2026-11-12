@@ -204,6 +204,16 @@ Namespace Services
             SyncLock _lock
                 If _runtimeChecked Then Return
                 _runtimeChecked = True
+                ' DIE C++-LAUFZEIT ZUERST, nur unter Windows: die mitgelieferte vorladen, bevor
+                ' irgendetwas die native Bibliothek anfasst. Steckt schon eine zu alte im Prozess,
+                ' stuerzte ONNX Runtime beim Laden ab; dann bleibt sie aus, und die KI-Funktionen
+                ' melden sich wie bei jeder anderen fehlenden Laufzeit. Siehe VcRuntimePreloader.
+                If Not VcRuntimePreloader.EnsureLoaded() Then
+                    _runtimeReady = False
+                    _runtimeError = "outdated Visual C++ runtime: " & VcRuntimePreloader.Outcome
+                    Threading.Volatile.Write(_runtimeSettled, True)
+                    Return
+                End If
                 ' DER STARTSCHUTZ: stirbt der Prozess beim Anlegen der Umgebung (Zugriffsverletzung,
                 ' nicht zu fangen; gesehen unter Windows 10 22H2), bleibt die Laufzeit beim naechsten
                 ' Start aus, statt die Anwendung erneut mitzureissen. Siehe NativeStartGuard.

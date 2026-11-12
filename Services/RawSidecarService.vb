@@ -332,6 +332,10 @@ Namespace Services
         ' nur die .fpxmp mit; Bewertung, Stichwoerter und eine fremde Entwicklung blieben am alten
         ' Ort liegen und wurden am neuen nicht mehr gefunden.
         '
+        ' Die fremde XMP zaehlt in jeder Schreibweise der Endung ("foto.cr2.XMP", "foto.Xmp"), nur
+        ' der Name davor muss gleich sein (XmpSidecarService.ExistingXmpPath). Sie wandert unter der
+        ' Endung, die sie hatte, und eine XMP am Ziel gilt auch in anderer Schreibweise als belegt.
+        '
         ' Ein Fehler an einer Begleitdatei laesst die Hauptoperation stehen (sie ist schon geschehen),
         ' wird protokolliert und als Pfad an den Aufrufer zur sichtbaren Meldung zurueckgegeben.
         '
@@ -412,7 +416,11 @@ Namespace Services
             ' nicht erreichbar, wird sie gemeldet statt still uebergangen (CompanionExists).
             Dim stemExists As Boolean
             Try
-                stemExists = stemXmp IsNot Nothing AndAlso CompanionExists(stemXmp)
+                ' In der Schreibweise, in der sie daliegt ("foto.XMP"): unter diesem Namen fuehren
+                ' sie der Stapel und seine Ordnerliste.
+                Dim actualStem = If(stemXmp Is Nothing, Nothing, ExistingCompanion(stemXmp))
+                stemExists = actualStem IsNot Nothing
+                If stemExists Then stemXmp = actualStem
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyDelete", ex)
                 failed.Add(stemXmp)
@@ -428,9 +436,11 @@ Namespace Services
                     companions.Add(stemXmp)
                 End If
             End If
-            For Each companion In companions
+            For Each listed In companions
+                Dim companion = listed
                 Try
-                    If Not CompanionExists(companion) Then Continue For
+                    companion = ExistingCompanion(listed)
+                    If companion Is Nothing Then Continue For
                     If useTrash Then
                         If Not moveToTrash(companion) Then Throw New IOException("Papierkorb nicht verfuegbar: " & companion)
                     Else
@@ -459,6 +469,25 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Die Begleitdatei unter diesem Namen, wie sie auf der Platte liegt, oder Nothing.
+        ''' Eine XMP auch mit anders geschriebener Endung ("foto.cr2.XMP", siehe
+        ''' <see cref="XmpSidecarService.ExistingXmpPath"/>); die eigenen Begleiter (.fpxmp, .fpdnz)
+        ''' schreibt nur diese Anwendung, und zwar klein. Fehler wie bei
+        ''' <see cref="CompanionExists"/>.</summary>
+        Private Shared Function ExistingCompanion(filePath As String) As String
+            If filePath.EndsWith(".xmp", StringComparison.OrdinalIgnoreCase) Then
+                Return XmpSidecarService.ExistingXmpPath(filePath, strict:=True)
+            End If
+            Return If(CompanionExists(filePath), filePath, Nothing)
+        End Function
+
+        ''' <summary>Der Zielname einer XMP mit der Endung in der Schreibweise der Quelle: aus
+        ''' "foto.cr2.XMP" wird "neu.cr2.XMP" und nicht "neu.cr2.xmp". Das Programm, das sie angelegt
+        ''' hat, sucht sie so.</summary>
+        Private Shared Function WithXmpSuffixOf(target As String, actualSource As String) As String
+            Return target.Substring(0, target.Length - 4) & actualSource.Substring(actualSource.Length - 4)
+        End Function
+
         ''' <summary>Nimmt die fremden XMP-Dateien mit. Siehe den Block oben fuer die Regeln.</summary>
         Private Shared Sub CarryXmpCompanions(sourcePath As String, targetPath As String, moveFiles As Boolean,
                                               failed As List(Of String))
@@ -473,21 +502,26 @@ Namespace Services
             ' HasStemSibling entfaellt (siehe AccompanyDeleteCore). Nicht erreichbar heisst nicht
             ' "fehlt": dann wird sie gemeldet.
             Try
-                If Not CompanionExists(sourceStem) Then Return
+                Dim actualStem = ExistingCompanion(sourceStem)
+                If actualStem Is Nothing Then Return
+                sourceStem = actualStem
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyXmp", ex)
                 failed.Add(sourceStem)
                 Return
             End Try
-            ' Die ersetzte Form am Ziel kann einem anderen Bild gehoeren: weil dort schon eine liegt,
-            ' oder weil dort ein anderes Bild desselben Stamms liegt (foto.jpg neben dem neuen
-            ' foto.cr2), das eine neue foto.xmp sonst ebenso faende und fremde Bewertungen und
-            ' Stichwoerter uebernaehme. Der eindeutige Name nimmt die Quell-XMP dann auf und hat beim
-            ' Lesen Vorrang. Im Zweifel (Ordner nicht lesbar) der eindeutige Name.
-            Dim stemTaken = File.Exists(targetStem)
+            targetStem = WithXmpSuffixOf(targetStem, sourceStem)
+            ' Die ersetzte Form am Ziel kann einem anderen Bild gehoeren: weil dort schon eine liegt
+            ' (in welcher Schreibweise auch immer), oder weil dort ein anderes Bild desselben Stamms
+            ' liegt (foto.jpg neben dem neuen foto.cr2), das eine neue foto.xmp sonst ebenso faende
+            ' und fremde Bewertungen und Stichwoerter uebernaehme. Der eindeutige Name nimmt die
+            ' Quell-XMP dann auf und hat beim Lesen Vorrang. Im Zweifel (Ordner nicht lesbar) der
+            ' eindeutige Name.
+            Dim stemTaken = XmpSidecarService.ExistingXmpPath(targetStem, strict:=False) IsNot Nothing
             Dim targetHasSibling = Not stemTaken AndAlso HasStemSiblingInBatch(targetPath, whenUnknown:=True)
-            If (stemTaken OrElse targetHasSibling) AndAlso Not File.Exists(targetPath & ".xmp") Then
-                targetStem = targetPath & ".xmp"
+            If (stemTaken OrElse targetHasSibling) AndAlso
+               XmpSidecarService.ExistingXmpPath(targetPath & ".xmp", strict:=False) Is Nothing Then
+                targetStem = WithXmpSuffixOf(targetPath & ".xmp", sourceStem)
             ElseIf targetHasSibling Then
                 ' Der eindeutige Name ist schon belegt (die angehaengte Form kam eben mit), die
                 ' Stamm-Form wuerde dem Nachbarn zugeordnet: kein freier Platz, die Quell-XMP bleibt
@@ -515,8 +549,19 @@ Namespace Services
         Private Shared Sub CarryOne(source As String, target As String, moveFile As Boolean, removeSourceIfSame As Boolean,
                                     failed As List(Of String), Optional sameIsDone As Boolean = False)
             Try
-                If Not CompanionExists(source) Then Return
-                If File.Exists(target) Then
+                ' Die Quelle in ihrer Schreibweise, und das Ziel bekommt deren Endung. Eine XMP am Ziel
+                ' zaehlt in jeder Schreibweise als vorhanden: daneben eine zweite anzulegen hiesse,
+                ' dass zwei Dateien dasselbe Bild beschreiben und je nach Programm die eine oder die
+                ' andere gilt.
+                Dim actualSource = ExistingCompanion(source)
+                If actualSource Is Nothing Then Return
+                source = actualSource
+                target = WithXmpSuffixOf(target, source)
+                Dim existingTarget = XmpSidecarService.ExistingXmpPath(target, strict:=False)
+                ' Die Quelle selbst ist kein belegtes Ziel.
+                If existingTarget IsNot Nothing AndAlso String.Equals(existingTarget, source, PathIdentity.Comparison) Then existingTarget = Nothing
+                If existingTarget IsNot Nothing Then
+                    target = existingTarget
                     ' Liegt dort schon DIESELBE Datei (ein Stapel, der foto.cr2 und foto.jpg nacheinander
                     ' umbenennt, hat sie beim ersten Schritt kopiert), bleibt die Quelle sonst als Waise
                     ' zurueck. Eine ANDERE Datei am Ziel gehoert jemand anderem und bleibt.
@@ -538,6 +583,7 @@ Namespace Services
                 Else
                     File.Copy(source, target)
                 End If
+                XmpSidecarService.ForgetFolderListing(Path.GetDirectoryName(target))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Sidecar.AccompanyXmp", ex)
                 failed.Add(source)
@@ -554,15 +600,20 @@ Namespace Services
         Public Shared Function UnrelatedTargetSidecar(sourcePath As String, targetPath As String,
                                                       Optional replacingTarget As Boolean = False) As String
             If Not File.Exists(targetPath) AndAlso File.Exists(SidecarPathFor(targetPath)) Then Return SidecarPathFor(targetPath)
-            If Not File.Exists(targetPath) AndAlso File.Exists(targetPath & ".xmp") AndAlso
-               Not String.Equals(sourcePath, targetPath, PathIdentity.Comparison) Then Return targetPath & ".xmp"
+            ' Die XMP in jeder Schreibweise der Endung (XmpSidecarService.ExistingXmpPath).
+            If Not File.Exists(targetPath) AndAlso Not String.Equals(sourcePath, targetPath, PathIdentity.Comparison) Then
+                Dim targetAppended = XmpSidecarService.ExistingXmpPath(targetPath & ".xmp", strict:=False)
+                If targetAppended IsNot Nothing Then Return targetAppended
+            End If
             Dim sourceStem = StemXmpPathFor(sourcePath)
             Dim targetStem = StemXmpPathFor(targetPath)
-            If targetStem Is Nothing OrElse Not File.Exists(targetStem) Then Return Nothing
+            If targetStem Is Nothing Then Return Nothing
             If String.Equals(sourceStem, targetStem, PathIdentity.Comparison) Then Return Nothing
+            Dim existingTargetStem = XmpSidecarService.ExistingXmpPath(targetStem, strict:=False)
+            If existingTargetStem Is Nothing Then Return Nothing
             If replacingTarget AndAlso File.Exists(targetPath) AndAlso OwnedStemXmp(targetPath) IsNot Nothing Then Return Nothing
-            If Not File.Exists(sourcePath & ".xmp") AndAlso
-               (sourceStem Is Nothing OrElse Not File.Exists(sourceStem)) Then Return targetStem
+            If XmpSidecarService.ExistingXmpPath(sourcePath & ".xmp", strict:=False) Is Nothing AndAlso
+               (sourceStem Is Nothing OrElse XmpSidecarService.ExistingXmpPath(sourceStem, strict:=False) Is Nothing) Then Return existingTargetStem
             Return Nothing
         End Function
 
@@ -575,8 +626,9 @@ Namespace Services
         ''' "allein", geht die XMP beiseite, und ihr Loeschen entscheidet erst das Ende des Stapels mit
         ''' frisch gelesenem Ordner (<see cref="DeferAsideStemRemoval"/>); verloren geht nichts.</summary>
         Public Shared Function OwnedStemXmp(imagePath As String) As String
-            Dim stem = StemXmpPathFor(imagePath)
-            If stem Is Nothing OrElse Not File.Exists(stem) Then Return Nothing
+            ' In der Schreibweise, in der sie daliegt (auch "foto.XMP").
+            Dim stem = XmpSidecarService.ExistingXmpPath(StemXmpPathFor(imagePath), strict:=False)
+            If stem Is Nothing Then Return Nothing
             ' Im Zweifel geteilt: dann bleibt sie, wo sie ist.
             If HasStemSiblingInBatch(imagePath, whenUnknown:=True) Then Return Nothing
             Return stem
@@ -864,6 +916,7 @@ Namespace Services
                                     failed.Add(removal.StemXmp)
                                 Else
                                     File.Move(removal.StemXmp, removal.AsideOriginal)
+                                    XmpSidecarService.ForgetFolderListing(folderGroup.Key)
                                     listing.Remove(removal.StemXmp)
                                     listing.Add(removal.AsideOriginal)
                                 End If

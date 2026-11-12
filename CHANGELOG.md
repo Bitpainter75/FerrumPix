@@ -36,8 +36,21 @@
 - Some Windows downloads of the last two updates were missing the part that runs the AI models,
   so the AI functions did not work there.
 
+- On Windows computers with an older Microsoft Visual C++ runtime, the AI functions could crash
+  FerrumPix while loading. The Windows downloads now bring the runtime they need. If an older one
+  is already in use anyway, the AI functions stay off instead of crashing.
+
 - On some Windows computers FerrumPix closed right away at every start, because the part that
   runs the AI models crashed while loading. That part now loads only when you use, switch on or
   check an AI function, so FerrumPix starts in any case. If it crashes there, FerrumPix remembers
   it and shows a message the next time instead of crashing again; a new version tries it again.
+
+- On Linux, sidecar files with an upper case ending such as IMG_1.XMP were overlooked. Rating,
+  label and keywords in them were not read, FerrumPix created a second sidecar file next to them,
+  and they stayed behind when the picture was moved, copied, renamed or deleted. They are now
+  found, written to and carried along like any other sidecar file.
+
+- Writing the names of people into a sidecar file removed other marked areas that another
+  program had stored there, such as pets, focus points or faces without a name. Only the named
+  faces are replaced now, everything else stays as it was.
 

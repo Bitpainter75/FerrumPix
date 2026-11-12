@@ -984,8 +984,15 @@ Namespace Services
             If Not IsConfigured OrElse String.IsNullOrWhiteSpace(filePathInTree) Then Return result
             Try
                 ' Beide XMP-Konventionen sind im Umlauf: foto.jpg.xmp und foto.xmp. Die zuerst
-                ' gefundene Form gilt, und unter ihrem Namen wird später auch geschrieben.
-                For Each candidate In {filePathInTree & ".xmp", IO.Path.ChangeExtension(filePathInTree, ".xmp")}.Distinct(StringComparer.OrdinalIgnoreCase)
+                ' gefundene Form gilt, und unter ihrem Namen wird später auch geschrieben. Je Form
+                ' auch die großgeschriebene Endung, wie sie Kameras und Programme unter Windows
+                ' anlegen: der Server unterscheidet Groß und Klein, und ohne diesen Versuch entstünde
+                ' neben "foto.XMP" eine zweite "foto.xmp". Andere Mischformen ("foto.Xmp") fände nur
+                ' eine Auflistung des Ordners und bleiben unberücksichtigt.
+                Dim appended = filePathInTree & ".xmp"
+                Dim replaced = IO.Path.ChangeExtension(filePathInTree, ".xmp")
+                For Each candidate In {appended, appended.Substring(0, appended.Length - 4) & ".XMP",
+                                       replaced, replaced.Substring(0, replaced.Length - 4) & ".XMP"}.Distinct(StringComparer.Ordinal)
                     Using response = Await GetClient().GetAsync(FileUrl(candidate), cancellationToken).ConfigureAwait(False)
                         If response.StatusCode = HttpStatusCode.NotFound Then Continue For
                         If Not response.IsSuccessStatusCode Then

@@ -254,8 +254,10 @@ Namespace Services
         Private Shared ReadOnly _cacheLock As New Object()
         ' XMP-Sidecars gehören oft FREMDEN Programmen. Deshalb atomar schreiben
         ' (temp + Move) und serialisiert, damit ein Abbruch mitten im Schreiben die fremde Datei nicht
-        ' abgeschnitten/unlesbar zurücklässt und zwei Schreiber sich nicht überholen.
-        Private Shared ReadOnly _sidecarWriteLock As New Object()
+        ' abgeschnitten/unlesbar zurücklässt und zwei Schreiber sich nicht überholen. Friend, weil
+        ' die Gesichtsregionen (XmpFaceRegionService.WriteRegions) dieselbe Datei unter derselben
+        ' Sperre schreiben.
+        Friend Shared ReadOnly _sidecarWriteLock As New Object()
         ' Pfad-Schluessel: PathIdentity.Comparer statt OrdinalIgnoreCase. Auf Linux sind
         ' /Bilder/RAW.jpg und /Bilder/raw.jpg zwei Dateien - vorher teilten sie sich den
         ' EXIF-Eintrag, die zweite Datei bekam also die Aufnahmedaten der ersten angezeigt.

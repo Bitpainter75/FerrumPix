@@ -15816,7 +15816,8 @@ Namespace ViewModels
             Dim ownedStem As String = Nothing
             If File.Exists(target) Then
                 companions.Add((RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)))
-                companions.Add((target & ".xmp", aside & ".xmp"))
+                ' Die angehaengte XMP in der Schreibweise, in der sie daliegt (auch "foto.cr2.XMP").
+                companions.Add((If(XmpSidecarService.ExistingXmpPath(target & ".xmp", strict:=False), target & ".xmp"), aside & ".xmp"))
                 companions.Add((ModelDenoiseFileService.PathFor(target), ModelDenoiseFileService.PathFor(aside)))
                 ownedStem = RawSidecarService.OwnedStemXmp(target)
                 If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
@@ -15856,6 +15857,8 @@ Namespace ViewModels
                 For Each companion In setAside
                     Try
                         File.Move(companion.Aside, companion.Original)
+                        ' Der alte Name kann eine grossgeschriebene Endung tragen ("foto.cr2.XMP").
+                        XmpSidecarService.ForgetFolderListing(IO.Path.GetDirectoryName(companion.Original))
                     Catch companionEx As Exception
                         DiagnosticLogService.LogException("Gallery.RunWithTargetSetAside.RestoreCompanion", companionEx)
                         stuck.Add(companion.Aside)
@@ -15966,7 +15969,9 @@ Namespace ViewModels
         Friend Shared Sub ThrowIfTargetSidecarConflict(source As String, target As String, replaceConfirmed As Boolean)
             Dim conflict = RawSidecarService.UnrelatedTargetSidecar(source, target, replacingTarget:=replaceConfirmed)
             If conflict Is Nothing Then Return
-            If String.Equals(conflict, RawSidecarService.StemXmpPathFor(target), PathIdentity.Comparison) Then
+            ' Die Stamm-XMP kann mit anders geschriebener Endung daliegen ("foto.XMP").
+            If conflict.EndsWith(".xmp", StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(IO.Path.ChangeExtension(conflict, ".xmp"), RawSidecarService.StemXmpPathFor(target), PathIdentity.Comparison) Then
                 Throw New IOException(String.Format(
                     LocalizationService.T("Am Ziel liegt schon die Begleitdatei {0}. Sie gehört zu einem anderen Bild mit demselben Namen und würde sonst auch diesem Bild zugeordnet."),
                     conflict))

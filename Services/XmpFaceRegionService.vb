@@ -76,71 +76,161 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Schreibt die Regionen in eine Beistelldatei. Vorhandene Regionen werden ERSETZT,
-        ''' alles andere in der Datei bleibt unangetastet - dort stehen Bewertung, Stichworte und
-        ''' Entwicklungseinstellungen, die niemand verlieren will.
+        ''' <summary>Schreibt die benannten Gesichter des Katalogs in eine Beistelldatei.
+        '''
+        ''' ERSETZT WERDEN NUR BENANNTE GESICHTER: Eintraege der Regionenliste vom Typ "Face" (oder
+        ''' ohne Typ, so liest sie <see cref="ReadRegions"/>) mit einem Namen. Sie stehen im Katalog,
+        ''' auch die aus einem anderen Programm uebernommenen, und kommen von dort neu; so steht ein
+        ''' umbenanntes Gesicht nicht neben seinem alten Namen, und ein geloeschtes verschwindet.
+        ''' Alles andere in der Liste bleibt Knoten fuer Knoten, wie es war: Haustiere, Fokusfelder,
+        ''' Gesichter ohne Namen, Typen, die wir nicht kennen. Ebenso alles ausserhalb der Liste
+        ''' (Bewertung, Stichworte, Entwicklungseinstellungen).
+        '''
+        ''' Die Bildgroesse (<c>AppliedToDimensions</c>) wird nur gesetzt, wenn sie fehlt, oder
+        ''' ersetzt, wenn keine fremden Eintraege mehr in der Liste stehen; die fremden beziehen sich
+        ''' auf die vorhandene Angabe. Die Koordinaten sind ohnehin relativ zum Bild.
         '''
         ''' Ohne Namen keine Region: eine Gruppe, die noch "Ohne Namen" heisst, hat in einer Datei
-        ''' nichts zu suchen. Sie liesse sich dort nur von Hand wieder loswerden.</summary>
+        ''' nichts zu suchen. Sie liesse sich dort nur von Hand wieder loswerden.
+        '''
+        ''' Unter derselben Sperre wie jedes andere Schreiben einer Beistelldatei
+        ''' (<see cref="ExifService"/>), Lesen eingeschlossen: sonst ueberschriebe der eine Schreiber
+        ''' den Stand des anderen. Eine Datei, die kein lesbares XML ist, bleibt unberuehrt.</summary>
         Public Shared Function WriteRegions(sidecarPath As String,
                                             imageWidth As Integer, imageHeight As Integer,
                                             regions As IReadOnlyList(Of FaceRegion)) As Boolean
             If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
             If imageWidth <= 0 OrElse imageHeight <= 0 Then Return False
-            Try
-                Dim doc As XDocument
-                If File.Exists(sidecarPath) Then
-                    doc = XDocument.Load(sidecarPath)
-                Else
-                    doc = NewSidecar()
-                End If
+            Dim named = If(regions, New List(Of FaceRegion)()).
+                        Where(Function(r) r IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(r.Name)).
+                        ToList()
+            SyncLock ExifService._sidecarWriteLock
+                Try
+                    Dim existed = File.Exists(sidecarPath)
+                    ' Ohne Datei und ohne Namen gibt es nichts zu schreiben; eine leere Beistelldatei
+                    ' anzulegen waere eine Datei im Bestand ohne Inhalt.
+                    If Not existed AndAlso named.Count = 0 Then Return True
+                    ' Leerraum erhalten und unformatiert speichern: die fremden Eintraege stehen
+                    ' danach Knoten fuer Knoten so da wie vorher. Zeichengleich bleibt nicht alles,
+                    ' was der Schreiber neu setzt: ein leeres Element bekommt vor "/>" ein
+                    ' Leerzeichen, Attribute stehen in doppelten Anfuehrungszeichen.
+                    Dim doc = If(existed, XDocument.Load(sidecarPath, LoadOptions.PreserveWhitespace), NewSidecar())
 
-                Dim description = doc.Descendants(RdfNs + "Description").FirstOrDefault()
-                If description Is Nothing Then Return False
+                    Dim changed = False
+                    Dim regionsElement = doc.Descendants(MwgRsNs + "Regions").FirstOrDefault()
+                    Dim listElement = regionsElement?.Descendants(MwgRsNs + "RegionList").FirstOrDefault()
+                    Dim container As XElement = Nothing
+                    If listElement IsNot Nothing Then
+                        container = listElement.Elements().FirstOrDefault(Function(e) e.Name = RdfNs + "Bag" OrElse e.Name = RdfNs + "Seq")
+                        If container Is Nothing AndAlso listElement.Elements().Any() Then
+                            ' Eine Liste in einer Form, die wir nicht kennen: nicht anfassen.
+                            DiagnosticLogService.LogAlways("Xmp.RegionenSchreiben",
+                                "Regionenliste unbekannter Form, nicht geschrieben: " & Path.GetFileName(sidecarPath))
+                            Return False
+                        End If
+                    End If
 
-                ' Alte Regionen weg, damit eine Umbenennung nicht neben der alten steht.
-                description.Elements(MwgRsNs + "Regions").Remove()
+                    ' Die benannten Gesichter heraus, samt dem Leerraum davor: sonst wuechse die Datei
+                    ' mit jedem Schreiben um eine Leerzeile je Gesicht.
+                    If container IsNot Nothing Then
+                        For Each entry In container.Elements(RdfNs + "li").Where(AddressOf IsNamedFace).ToList()
+                            Dim before = TryCast(entry.PreviousNode, XText)
+                            If before IsNot Nothing AndAlso String.IsNullOrWhiteSpace(before.Value) Then before.Remove()
+                            entry.Remove()
+                            changed = True
+                        Next
+                    End If
+                    Dim foreignLeft = container IsNot Nothing AndAlso container.Elements(RdfNs + "li").Any()
 
-                Dim benannte = If(regions, New List(Of FaceRegion)()).
-                               Where(Function(r) r IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(r.Name)).
-                               ToList()
-                If benannte.Count > 0 Then
-                    Dim liste As New XElement(RdfNs + "Bag")
-                    For Each r In benannte
-                        liste.Add(New XElement(RdfNs + "li",
-                            New XAttribute(RdfNs + "parseType", "Resource"),
-                            New XElement(MwgRsNs + "Name", r.Name),
-                            New XElement(MwgRsNs + "Type", "Face"),
-                            New XElement(MwgRsNs + "Area",
-                                New XAttribute(RdfNs + "parseType", "Resource"),
-                                New XElement(StAreaNs + "x", Zahl(r.CenterX)),
-                                New XElement(StAreaNs + "y", Zahl(r.CenterY)),
-                                New XElement(StAreaNs + "w", Zahl(r.Width)),
-                                New XElement(StAreaNs + "h", Zahl(r.Height)),
-                                New XElement(StAreaNs + "unit", "normalized"))))
-                    Next
+                    If named.Count = 0 Then
+                        ' Keine benannten Gesichter mehr: ohne fremde Eintraege geht der ganze Block,
+                        ' mit ihnen bleibt er, wie er nach dem Entfernen ist.
+                        If regionsElement IsNot Nothing AndAlso Not foreignLeft Then
+                            regionsElement.Remove()
+                            changed = True
+                        End If
+                    Else
+                        If regionsElement Is Nothing Then
+                            Dim description = doc.Descendants(RdfNs + "Description").FirstOrDefault()
+                            If description Is Nothing Then Return False
+                            regionsElement = New XElement(MwgRsNs + "Regions", New XAttribute(RdfNs + "parseType", "Resource"))
+                            description.Add(regionsElement)
+                        End If
+                        If listElement Is Nothing Then
+                            listElement = New XElement(MwgRsNs + "RegionList")
+                            regionsElement.Add(listElement)
+                        End If
+                        If container Is Nothing Then
+                            container = New XElement(RdfNs + "Bag")
+                            listElement.Add(container)
+                        End If
+                        For Each r In named
+                            container.Add(NewFaceEntry(r))
+                        Next
+                        SetDimensions(listElement.Parent, imageWidth, imageHeight, foreignLeft, sidecarPath)
+                        changed = True
+                    End If
 
-                    description.Add(New XElement(MwgRsNs + "Regions",
-                        New XAttribute(RdfNs + "parseType", "Resource"),
-                        New XElement(MwgRsNs + "AppliedToDimensions",
-                            New XAttribute(RdfNs + "parseType", "Resource"),
-                            New XElement(StDimNs + "w", imageWidth.ToString(CultureInfo.InvariantCulture)),
-                            New XElement(StDimNs + "h", imageHeight.ToString(CultureInfo.InvariantCulture)),
-                            New XElement(StDimNs + "unit", "pixel")),
-                        New XElement(MwgRsNs + "RegionList", liste)))
-                End If
+                    If Not changed Then Return True
 
-                ' Ueber eine Nachbardatei schreiben, nie direkt: ein abgebrochener Schreibvorgang
-                ' liesse sonst eine halbe Beistelldatei zurueck - mitsamt Bewertung und Stichworten.
-                Dim temp = sidecarPath & ".neu"
-                doc.Save(temp)
-                File.Move(temp, sidecarPath, overwrite:=True)
-                Return True
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Xmp.RegionenSchreiben", ex)
-                Return False
-            End Try
+                    ' Ueber eine Nachbardatei schreiben, nie direkt: ein abgebrochener Schreibvorgang
+                    ' liesse sonst eine halbe Beistelldatei zurueck - mitsamt Bewertung und Stichworten.
+                    Dim temp = sidecarPath & ".neu"
+                    doc.Save(temp, SaveOptions.DisableFormatting)
+                    File.Move(temp, sidecarPath, overwrite:=True)
+                    Return True
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Xmp.RegionenSchreiben", ex)
+                    Return False
+                End Try
+            End SyncLock
         End Function
+
+        ''' <summary>Ein Eintrag, den <see cref="WriteRegions"/> ersetzt: Typ "Face" oder kein Typ,
+        ''' und ein Name.</summary>
+        Private Shared Function IsNamedFace(entry As XElement) As Boolean
+            Dim type = ReadField(entry, MwgRsNs + "Type")
+            If type.Length > 0 AndAlso Not type.Equals("Face", StringComparison.OrdinalIgnoreCase) Then Return False
+            Return Not String.IsNullOrWhiteSpace(ReadField(entry, MwgRsNs + "Name"))
+        End Function
+
+        Private Shared Function NewFaceEntry(r As FaceRegion) As XElement
+            Return New XElement(RdfNs + "li",
+                New XAttribute(RdfNs + "parseType", "Resource"),
+                New XElement(MwgRsNs + "Name", r.Name),
+                New XElement(MwgRsNs + "Type", "Face"),
+                New XElement(MwgRsNs + "Area",
+                    New XAttribute(RdfNs + "parseType", "Resource"),
+                    New XElement(StAreaNs + "x", FormatRelative(r.CenterX)),
+                    New XElement(StAreaNs + "y", FormatRelative(r.CenterY)),
+                    New XElement(StAreaNs + "w", FormatRelative(r.Width)),
+                    New XElement(StAreaNs + "h", FormatRelative(r.Height)),
+                    New XElement(StAreaNs + "unit", "normalized")))
+        End Function
+
+        ''' <summary>Die Bildgroesse neben der Regionenliste: anlegen, wenn sie fehlt; stimmt sie,
+        ''' bleibt sie; weicht sie ab, wird sie nur ersetzt, wenn keine fremden Eintraege mehr da
+        ''' sind, die sich auf sie beziehen.</summary>
+        Private Shared Sub SetDimensions(holder As XElement, imageWidth As Integer, imageHeight As Integer,
+                                         foreignLeft As Boolean, sidecarPath As String)
+            Dim existing = holder.Elements(MwgRsNs + "AppliedToDimensions").FirstOrDefault()
+            If existing IsNot Nothing Then
+                Dim w = ReadNumber(existing, StDimNs + "w")
+                Dim h = ReadNumber(existing, StDimNs + "h")
+                If CInt(Math.Round(w)) = imageWidth AndAlso CInt(Math.Round(h)) = imageHeight Then Return
+                If foreignLeft Then
+                    DiagnosticLogService.LogAlways("Xmp.RegionenSchreiben",
+                        $"Bildgroesse der fremden Regionen ({w}x{h}) bleibt, eigene {imageWidth}x{imageHeight}: {Path.GetFileName(sidecarPath)}")
+                    Return
+                End If
+                existing.Remove()
+            End If
+            holder.AddFirst(New XElement(MwgRsNs + "AppliedToDimensions",
+                New XAttribute(RdfNs + "parseType", "Resource"),
+                New XElement(StDimNs + "w", imageWidth.ToString(CultureInfo.InvariantCulture)),
+                New XElement(StDimNs + "h", imageHeight.ToString(CultureInfo.InvariantCulture)),
+                New XElement(StDimNs + "unit", "pixel")))
+        End Sub
 
         ''' <summary>Die Bildgroesse, auf die sich die gespeicherten Gesichtsrechtecke beziehen.
         '''
@@ -206,7 +296,7 @@ Namespace Services
         ''' <summary>Sechs Nachkommastellen reichen: bei einem 10000 Punkte breiten Bild ist das
         ''' noch ein Hundertstel Punkt. Immer mit Punkt als Trennzeichen - eine deutsche
         ''' Zahlenschreibweise waere fuer jeden anderen Leser kaputt.</summary>
-        Private Shared Function Zahl(v As Double) As String
+        Private Shared Function FormatRelative(v As Double) As String
             Return v.ToString("0.######", CultureInfo.InvariantCulture)
         End Function
 

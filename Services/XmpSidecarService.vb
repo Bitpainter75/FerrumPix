@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Concurrent
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.IO
@@ -53,18 +54,178 @@ Namespace Services
         ''' ("foto.cr2" -> "foto.xmp"), andere HÄNGEN AN ("foto.cr2.xmp"). Wer nur
         ''' <c>Path.ChangeExtension</c> benutzt, findet die halbe Welt nicht. Angehängt wird zuerst
         ''' geprüft, weil diese Form eindeutig zur Bilddatei gehört - "foto.xmp" könnte daneben auch zu
-        ''' "foto.jpg" gehören, wenn beide im selben Ordner liegen.</summary>
+        ''' "foto.jpg" gehören, wenn beide im selben Ordner liegen.
+        '''
+        ''' Die Endung zählt in jeder Schreibweise ("foto.cr2.XMP", "foto.Xmp", siehe
+        ''' <see cref="ExistingXmpPath"/>); geliefert wird der Name, wie er auf der Platte steht.
+        ''' Wer danach schreibt, schreibt in diese Datei und legt keine zweite an.</summary>
         Public Shared Function FindSidecar(imagePath As String) As String
             If String.IsNullOrWhiteSpace(imagePath) Then Return Nothing
             Try
-                Dim appended = imagePath & ".xmp"
-                If File.Exists(appended) Then Return appended
+                Dim appended = ExistingXmpPath(imagePath & ".xmp", strict:=False)
+                If appended IsNot Nothing Then Return appended
                 Dim replaced = Path.ChangeExtension(imagePath, ".xmp")
-                If Not String.IsNullOrEmpty(replaced) AndAlso File.Exists(replaced) Then Return replaced
+                If Not String.IsNullOrEmpty(replaced) Then
+                    replaced = ExistingXmpPath(replaced, strict:=False)
+                    If replaced IsNot Nothing Then Return replaced
+                End If
             Catch
             End Try
             Return Nothing
         End Function
+
+        ' ── Die Endung in jeder Schreibweise ─────────────────────────────────────
+        ' Kameras und Programme unter Windows schreiben "IMG_1.XMP" oder "IMG_1.CR3.XMP". Unter
+        ' Windows und meist unter macOS ist das Dateisystem dabei gleichgültig gegen Groß und Klein,
+        ' unter Linux nicht: dort fand die Suche nach "IMG_1.xmp" die Datei nicht, sie wurde nicht
+        ' gelesen, eine zweite kleingeschriebene entstand daneben, und beim Verschieben, Kopieren
+        ' und Löschen blieb sie zurück.
+        '
+        ' Nur die ENDUNG ".xmp" gilt in jeder Schreibweise, der Name davor muss zeichengleich sein.
+        ' "FOTO.xmp" gehört unter Linux nicht zu "foto.cr2": zwei Dateien, die sich nur in Groß und
+        ' Klein unterscheiden, sind dort zwei Dateien (siehe PathIdentity), und ihre Beistelldateien
+        ' dürfen sich nicht vermischen.
+        '
+        ' Geprüft wird zuerst der kleingeschriebene Name (eine Abfrage, der Normalfall). Erst wenn er
+        ' fehlt, schlägt die Liste der anders geschriebenen XMP des Ordners nach. Sie wird je Ordner
+        ' einmal gelesen und gilt, solange sich die Änderungszeit des Ordners nicht rührt: ohne sie
+        ' zählte jedes Bild ohne Beistelldatei den ganzen Ordner auf. Anlegen, Löschen und
+        ' Umbenennen darin setzen diese Zeit. Die Uhr des Dateisystems geht aber in groben Takten:
+        ' fällt eine Änderung in denselben Takt wie das Lesen, verrät die Zeit sie nicht. Die
+        ' eigenen Dateioperationen, die eine XMP mit anders geschriebener Endung ablegen, vergessen
+        ' die Liste deshalb ausdrücklich (ForgetFolderListing); von außen bleibt dieser eine Takt
+        ' offen. Zusätzlich gilt sie höchstens eine halbe Minute. Was sie nennt, wird vor der
+        ' Rückgabe auf der Platte bestätigt, ein veralteter Eintrag liefert also nie eine Datei,
+        ' die es nicht mehr gibt.
+
+        ''' <summary>Die vorhandene XMP unter <paramref name="xmpPath"/> (ein Name auf ".xmp") in der
+        ''' Schreibweise, in der sie auf der Platte liegt, oder Nothing. Liegen mehrere Schreibweisen
+        ''' nebeneinander, gilt die kleingeschriebene, sonst die erste in Ordnungsfolge.
+        '''
+        ''' <paramref name="strict"/>: Fehler, die nicht "fehlt" bedeuten (Freigabe weg, keine Rechte),
+        ''' fliegen als Ausnahme weiter, wie bei den Begleitdateien der Dateioperationen; sonst gelten
+        ''' sie als "fehlt".</summary>
+        Public Shared Function ExistingXmpPath(xmpPath As String, strict As Boolean) As String
+            If String.IsNullOrWhiteSpace(xmpPath) Then Return Nothing
+            If ExistsAsFile(xmpPath, strict) Then Return xmpPath
+            If PathIdentity.IgnoresCase Then Return Nothing
+            Dim name = Path.GetFileName(xmpPath)
+            If name.Length <= XmpSuffix.Length OrElse Not name.EndsWith(XmpSuffix, StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            ' Gefragt nach "foto.XMP" (das Ziel einer wandernden XMP): die kleingeschriebene steht
+            ' nicht in der Liste, sie wird hier abgefragt.
+            If Not name.EndsWith(XmpSuffix, StringComparison.Ordinal) Then
+                Dim lower = xmpPath.Substring(0, xmpPath.Length - XmpSuffix.Length) & XmpSuffix
+                If ExistsAsFile(lower, strict) Then Return lower
+            End If
+            Dim folder = Path.GetDirectoryName(xmpPath)
+            If String.IsNullOrEmpty(folder) Then Return Nothing
+            Dim listing As OtherCasingListing
+            Try
+                listing = OtherCasingListing.ForFolder(folder)
+            Catch ex As DirectoryNotFoundException
+                Return Nothing
+            Catch
+                If strict Then Throw
+                Return Nothing
+            End Try
+            For Each candidate In listing.WithPrefix(name.Substring(0, name.Length - XmpSuffix.Length))
+                If ExistsAsFile(candidate, strict) Then Return candidate
+            Next
+            Return Nothing
+        End Function
+
+        Private Const XmpSuffix As String = ".xmp"
+
+        ''' <summary>Vergisst die gemerkte Liste eines Ordners. Fuer die eigenen Dateioperationen,
+        ''' die dort eben eine XMP mit anders geschriebener Endung abgelegt haben: die Aenderungszeit
+        ''' des Ordners kann im selben Takt der Uhr des Dateisystems liegen wie beim Lesen der Liste
+        ''' und verriete die neue Datei dann nicht.</summary>
+        Public Shared Sub ForgetFolderListing(folder As String)
+            If String.IsNullOrEmpty(folder) Then Return
+            OtherCasingListing.Forget(folder)
+        End Sub
+
+        ''' <summary>Eine Datei (kein Ordner) unter genau diesem Namen? Streng: nur "fehlt" ist
+        ''' False, jeder andere Fehler fliegt weiter.</summary>
+        Private Shared Function ExistsAsFile(filePath As String, strict As Boolean) As Boolean
+            If File.Exists(filePath) Then Return True
+            If Not strict Then Return False
+            Try
+                Return (File.GetAttributes(filePath) And FileAttributes.Directory) = 0
+            Catch ex As FileNotFoundException
+                Return False
+            Catch ex As DirectoryNotFoundException
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Die XMP eines Ordners, deren Endung nicht kleingeschrieben ist, nach dem Namen
+        ''' davor geordnet. Meist leer.</summary>
+        Private NotInheritable Class OtherCasingListing
+            Private Const MaxAgeSeconds As Double = 30.0
+            Private Const MaxFolders As Integer = 64
+
+            Private Shared ReadOnly Cache As New ConcurrentDictionary(Of String, OtherCasingListing)(PathIdentity.Comparer)
+
+            ''' IgnoreInaccessible AUS: ein Ordner ohne Leserecht soll werfen statt still leer zu sein.
+            ''' AttributesToSkip leer: unter Unix gilt ein Name mit Punkt vorn als versteckt.
+            Private Shared ReadOnly SearchOptions As New EnumerationOptions With {
+                .RecurseSubdirectories = False,
+                .MatchCasing = MatchCasing.CaseInsensitive,
+                .IgnoreInaccessible = False,
+                .AttributesToSkip = 0
+            }
+
+            Private ReadOnly _byPrefix As New Dictionary(Of String, List(Of String))(StringComparer.Ordinal)
+            Private _readUtc As DateTime
+            ''' Die Änderungszeit des Ordners VOR dem Lesen: was währenddessen dazukam, setzt sie
+            ''' neu, und die nächste Abfrage liest den Ordner dann noch einmal.
+            Private _folderWriteUtc As DateTime
+
+            Friend Function WithPrefix(prefix As String) As IReadOnlyList(Of String)
+                Dim paths As List(Of String) = Nothing
+                If _byPrefix.TryGetValue(prefix, paths) Then Return paths
+                Return Array.Empty(Of String)()
+            End Function
+
+            Friend Shared Function ForFolder(folder As String) As OtherCasingListing
+                Dim folderWriteUtc = Directory.GetLastWriteTimeUtc(folder)
+                Dim listing As OtherCasingListing = Nothing
+                If Cache.TryGetValue(folder, listing) AndAlso listing._folderWriteUtc = folderWriteUtc AndAlso
+                   (DateTime.UtcNow - listing._readUtc).TotalSeconds <= MaxAgeSeconds Then Return listing
+                listing = Read(folder, folderWriteUtc)
+                If Cache.Count >= MaxFolders Then Cache.Clear()
+                Cache(folder) = listing
+                Return listing
+            End Function
+
+            Friend Shared Sub Forget(folder As String)
+                Dim removed As OtherCasingListing = Nothing
+                Cache.TryRemove(folder, removed)
+            End Sub
+
+            Private Shared Function Read(folder As String, folderWriteUtc As DateTime) As OtherCasingListing
+                Dim listing As New OtherCasingListing With {._readUtc = DateTime.UtcNow, ._folderWriteUtc = folderWriteUtc}
+                For Each filePath In Directory.EnumerateFiles(folder, "*" & XmpSuffix, SearchOptions)
+                    Dim name = Path.GetFileName(filePath)
+                    If name.Length <= XmpSuffix.Length OrElse Not name.EndsWith(XmpSuffix, StringComparison.OrdinalIgnoreCase) Then Continue For
+                    ' Die kleingeschriebene findet schon die erste Abfrage.
+                    If name.EndsWith(XmpSuffix, StringComparison.Ordinal) Then Continue For
+                    Dim prefix = name.Substring(0, name.Length - XmpSuffix.Length)
+                    Dim paths As List(Of String) = Nothing
+                    If Not listing._byPrefix.TryGetValue(prefix, paths) Then
+                        paths = New List(Of String)()
+                        listing._byPrefix(prefix) = paths
+                    End If
+                    paths.Add(filePath)
+                Next
+                ' Feste Reihenfolge, wenn "foto.XMP" und "foto.Xmp" nebeneinander liegen.
+                For Each paths In listing._byPrefix.Values
+                    paths.Sort(StringComparer.Ordinal)
+                Next
+                Return listing
+            End Function
+        End Class
 
         ''' <summary>Beide Namensformen als Kandidaten - für den Abgleich gegen eine bereits eingelesene
         ''' Ordnerliste, ohne je Datei zweimal auf die Platte zu greifen (siehe GalleryViewModel).</summary>

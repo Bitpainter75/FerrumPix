@@ -53,11 +53,23 @@ Namespace Services
             Dim result As New FolderSidecarStamps(If(folderPath, ""))
             If String.IsNullOrWhiteSpace(folderPath) Then Return result
             Try
+                ' Kleingeschriebener Schluessel -> anders geschriebene Datei, die ihn gerade belegt.
+                Dim otherCasing As New Dictionary(Of String, String)(StringComparer.Ordinal)
                 For Each sidecar In Directory.EnumerateFiles(folderPath, "*.xmp", SearchOptions)
                     ' ".fpxmp" endet nicht auf ".xmp" und faellt hier nicht mit hinein - der Vergleich
                     ' steht trotzdem da, weil ein Treffer den Stempel still verfaelschen wuerde.
                     If sidecar.EndsWith(RawSidecarService.Extension, StringComparison.OrdinalIgnoreCase) Then Continue For
-                    result._xmp(sidecar) = File.GetLastWriteTime(sidecar).ToString("o")
+                    ' Abgelegt unter der kleingeschriebenen Endung, denn so fragt StampFor nach
+                    ' (SidecarCandidates). Liegen beide Schreibweisen da, gilt die kleingeschriebene,
+                    ' wie bei XmpSidecarService.FindSidecar; sonst die erste in Ordnungsfolge.
+                    Dim key = sidecar.Substring(0, sidecar.Length - 4) & ".xmp"
+                    Dim isLower = String.Equals(key, sidecar, StringComparison.Ordinal)
+                    Dim known As String = Nothing
+                    If Not isLower AndAlso otherCasing.TryGetValue(key, known) AndAlso
+                       String.CompareOrdinal(known, sidecar) < 0 Then Continue For
+                    If Not isLower AndAlso result._xmp.ContainsKey(key) AndAlso Not otherCasing.ContainsKey(key) Then Continue For
+                    result._xmp(key) = File.GetLastWriteTime(sidecar).ToString("o")
+                    If isLower Then otherCasing.Remove(key) Else otherCasing(key) = sidecar
                 Next
                 ' Zweite Auflistung fuer die eigenen Rezepte: Vorhandensein UND Aenderungszeit gehoeren
                 ' in den Stempel. So werden extern geaenderte Katalogwerte aus .fpxmp ebenso erkannt

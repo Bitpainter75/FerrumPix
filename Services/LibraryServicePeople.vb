@@ -1179,8 +1179,9 @@ Namespace Services
         ''' eigene Datei. Auf dem Bedienfaden stünde die Oberfläche.
         '''
         ''' Geschrieben werden IMMER ALLE benannten Gesichter des Bildes, nicht nur das eben
-        ''' benannte: <c>WriteRegions</c> ersetzt den Regionenblock als Ganzes, ein Einzelschreiben
-        ''' löschte also die übrigen Personen aus der Datei.</summary>
+        ''' benannte: <c>WriteRegions</c> ersetzt alle benannten Gesichter der Datei, ein
+        ''' Einzelschreiben löschte also die übrigen Personen aus ihr. Andere Regionen (Haustier,
+        ''' Fokus, Gesichter ohne Namen) bleiben dabei stehen.</summary>
         Public Sub SyncFaceRegionsToXmp(paths As IEnumerable(Of String))
             If paths Is Nothing Then Return
             Dim settings = AppSettingsService.Load()

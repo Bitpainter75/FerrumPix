@@ -933,7 +933,7 @@ Namespace Views
                     .AllowMultiple = False,
                     .FileTypeFilter = New List(Of FilePickerFileType) From {
                         New FilePickerFileType("XMP-Preset") With {
-                            .Patterns = New String() {"*.xmp"}
+                            .Patterns = New String() {"*.xmp", "*.XMP"}
                         }
                     }
                 })

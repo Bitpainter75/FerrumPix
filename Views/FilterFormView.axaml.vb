@@ -37,7 +37,7 @@ Namespace Views
 
                 Dim isLut = vm.IsDialogFilterSourceLut
                 Dim fileType = New FilePickerFileType(If(isLut, "LUT (*.cube)", "XMP-Preset (*.xmp)")) With {
-                    .Patterns = If(isLut, New String() {"*.cube"}, New String() {"*.xmp"})
+                    .Patterns = If(isLut, New String() {"*.cube"}, New String() {"*.xmp", "*.XMP"})
                 }
                 Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
                     .Title = LocalizationService.T(If(isLut, "LUT wählen", "XMP-Preset wählen")),
