@@ -52,5 +52,7 @@
 
 - Writing the names of people into a sidecar file removed other marked areas that another
   program had stored there, such as pets, focus points or faces without a name. Only the named
-  faces are replaced now, everything else stays as it was.
+  faces are replaced now, everything else stays as it was. Named faces that another program
+  added to the sidecar file are taken into FerrumPix first, so writing no longer removes them.
+  Faces you removed or renamed in FerrumPix do not come back from the file.
 

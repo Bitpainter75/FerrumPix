@@ -1232,20 +1232,37 @@ Namespace Services
                 Dim size = XmpFaceRegionService.ReadOrientedPixelSize(imagePath)
                 If size.Width <= 0 OrElse size.Height <= 0 Then Return
 
-                Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
-                For Each region In regions
-                    Dim width = region.Width * size.Width
-                    Dim height = region.Height * size.Height
-                    Dim x = region.CenterX * size.Width - width / 2
-                    Dim y = region.CenterY * size.Height - height / 2
-                    If width < 1 OrElse height < 1 Then Continue For
-                    If existing.Any(Function(f) RectsMeanSameFace(f.X, f.Y, f.Width, f.Height, x, y, width, height)) Then Continue For
-                    InsertImportedFace(imagePath, FindOrCreatePersonByName(region.Name), x, y, width, height, stamp)
-                Next
+                ImportRegionsAsFaces(imagePath, regions, size.Width, size.Height)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.ImportFaceRegionsFromXmp", ex)
             End Try
         End Sub
+
+        ''' <summary>Legt die Regionen als Gesichter des Bildes an, wie der Sidecar-Import: Person
+        ''' ueber den Namen (<see cref="FindOrCreatePersonByName"/>), als Handarbeit, und nicht dort,
+        ''' wo schon ein Gesicht liegt, gleich welcher Person (<see cref="RectsMeanSameFace"/>). Zwei
+        ''' Eintraege an derselben Stelle ergeben ebenso nur eine Zeile. Liefert die Zahl der neuen.</summary>
+        Private Function ImportRegionsAsFaces(imagePath As String, regions As IEnumerable(Of FaceRegion),
+                                              imageWidth As Integer, imageHeight As Integer) As Integer
+            Dim taken = GetFacesForImage(imagePath).Select(Function(f) (f.X, f.Y, f.Width, f.Height)).ToList()
+            Dim stamp = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+            Dim added = 0
+            For Each region In regions
+                If region Is Nothing OrElse String.IsNullOrWhiteSpace(region.Name) Then Continue For
+                Dim width = region.Width * imageWidth
+                Dim height = region.Height * imageHeight
+                Dim x = region.CenterX * imageWidth - width / 2
+                Dim y = region.CenterY * imageHeight - height / 2
+                If width < 1 OrElse height < 1 Then Continue For
+                If taken.Any(Function(f) RectsMeanSameFace(f.X, f.Y, f.Width, f.Height, x, y, width, height)) Then Continue For
+                Dim personId = FindOrCreatePersonByName(region.Name)
+                If String.IsNullOrWhiteSpace(personId) Then Continue For
+                InsertImportedFace(imagePath, personId, x, y, width, height, stamp)
+                taken.Add((x, y, width, height))
+                added += 1
+            Next
+            Return added
+        End Function
 
         ''' Meinen zwei Rechtecke denselben Kopf? Dieselbe Frage wie in <c>OverlapsManual</c>, nur
         ''' auf zwei rohen Rechtecken statt auf einem gefundenen Gesicht.
@@ -1333,13 +1350,44 @@ Namespace Services
             Dim size = XmpFaceRegionService.ReadOrientedPixelSize(imagePath)
             If size.Width <= 0 OrElse size.Height <= 0 Then Return
 
-            Dim regions = GetFacesForImage(imagePath).
+            ' Erst die benannten Gesichter ANDERER Programme in den Katalog: das Schreiben ersetzt alle
+            ' benannten Gesichter der Datei durch die des Katalogs und naehme sie sonst mit.
+            ' Uebernommen wird nur, was FerrumPix nicht selbst geschrieben hat (ohne den Vermerk
+            ' XmpFaceRegionService.WrittenMarker): ein eigenes Gesicht, das im Katalog inzwischen
+            ' geloescht oder umbenannt ist, soll verschwinden und nicht wiederkehren. Ein fremdes
+            ' an einer Stelle, an der der Katalog schon ein Gesicht fuehrt, kommt ebenfalls nicht
+            ' herein: dort entscheidet der Katalog. Das deckt auch eigene Eintraege ohne Vermerk ab
+            ' (aus aelteren Fassungen, oder ein anderes Programm hat ihn beim Umschreiben verloren),
+            ' solange das Gesicht im Katalog noch liegt, auch herausgeloest in den Ablagekorb.
+            Try
+                Dim foreign = XmpFaceRegionService.ReadRegions(sidecarPath).
+                              Where(Function(r) Not r.WrittenByUs AndAlso r.Width > 0 AndAlso r.Height > 0).ToList()
+                If foreign.Count > 0 Then ImportRegionsAsFaces(imagePath, foreign, size.Width, size.Height)
+            Catch ex As Exception
+                ' Scheitert die Uebernahme, wird nicht geschrieben: sonst ginge der fremde Name verloren.
+                DiagnosticLogService.LogException("Library.ImportForeignFaceRegions", ex)
+                Return
+            End Try
+
+            Dim faces = GetFacesForImage(imagePath)
+            Dim regions = faces.
                 Where(Function(f) Not String.IsNullOrWhiteSpace(f.Name)).
                 Select(Function(f) XmpFaceRegionService.ToRegion(f.Name, f.X, f.Y, f.Width, f.Height,
                                                                  size.Width, size.Height)).
                 Where(Function(r) r IsNot Nothing).
                 ToList()
-            XmpFaceRegionService.WriteRegions(sidecarPath, size.Width, size.Height, regions)
+            ' Ein fremdes Gesicht an einer Stelle, an der der Katalog ein Gesicht OHNE Namen fuehrt
+            ' (eine noch unbenannte Gruppe oder der Ablagekorb), kam oben nicht herein und bekaeme
+            ' beim Schreiben keinen Ersatz: es bleibt in der Datei stehen.
+            Dim unnamed = faces.Where(Function(f) String.IsNullOrWhiteSpace(f.Name)).ToList()
+            Dim keepForeign = Function(region As FaceRegion) As Boolean
+                                  Dim width = region.Width * size.Width
+                                  Dim height = region.Height * size.Height
+                                  Dim x = region.CenterX * size.Width - width / 2
+                                  Dim y = region.CenterY * size.Height - height / 2
+                                  Return unnamed.Any(Function(f) RectsMeanSameFace(f.X, f.Y, f.Width, f.Height, x, y, width, height))
+                              End Function
+            XmpFaceRegionService.WriteRegions(sidecarPath, size.Width, size.Height, regions, keepForeign)
         End Sub
 
         ''' <summary>Legt eine Person mit diesem Namen an. Fuer ein Gesicht, das aus dem Ablagekorb

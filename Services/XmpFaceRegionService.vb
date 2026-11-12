@@ -16,6 +16,9 @@ Namespace Services
         Public Property CenterY As Double
         Public Property Width As Double
         Public Property Height As Double
+        ''' <summary>Der Eintrag traegt den Vermerk, dass FerrumPix ihn geschrieben hat
+        ''' (<see cref="XmpFaceRegionService.WrittenMarker"/>). Nur beim Lesen gefuellt.</summary>
+        Public Property WrittenByUs As Boolean
     End Class
 
     ''' <summary>Personen in die XMP-Beistelldatei schreiben und von dort lesen.
@@ -44,6 +47,16 @@ Namespace Services
         Private Shared ReadOnly MwgRsNs As XNamespace = "http://www.metadataworkinggroup.com/schemas/regions/"
         Private Shared ReadOnly StAreaNs As XNamespace = "http://ns.adobe.com/xmp/sType/Area#"
         Private Shared ReadOnly StDimNs As XNamespace = "http://ns.adobe.com/xap/1.0/sType/Dimensions#"
+        Private Shared ReadOnly OwnNs As XNamespace = "https://github.com/Bitpainter75/FerrumPix/ns/regions/1.0"
+
+        ''' <summary>Der Vermerk an jedem Gesicht, das <see cref="WriteRegions"/> schreibt. Er trennt
+        ''' beim naechsten Schreiben die eigenen Eintraege von denen anderer Programme: die eigenen
+        ''' kommen aus dem Katalog neu (ein dort geloeschtes oder umbenanntes Gesicht verschwindet),
+        ''' fremde benannte Gesichter uebernimmt der Katalog vorher (LibraryServicePeople,
+        ''' WriteFaceRegionsForImage), damit das Schreiben sie nicht entfernt. Ein Feld im eigenen
+        ''' Namensraum ist nach dem Standard erlaubt; ein Programm, das es beim Umschreiben verliert,
+        ''' macht den Eintrag zu einem fremden, und dann entscheidet die Lage (siehe dort).</summary>
+        Public Shared ReadOnly WrittenMarker As XName = OwnNs + "Written"
 
         ''' <summary>Liest die Gesichtsregionen aus einer Beistelldatei. Leere Liste, wenn keine da
         ''' sind oder die Datei nicht lesbar ist - eine fehlende Angabe ist kein Fehler.</summary>
@@ -52,28 +65,35 @@ Namespace Services
             If String.IsNullOrWhiteSpace(sidecarPath) OrElse Not File.Exists(sidecarPath) Then Return result
             Try
                 Dim doc = XDocument.Load(sidecarPath)
-                For Each area In doc.Descendants(MwgRsNs + "RegionList").Descendants(RdfNs + "li")
-                    Dim typ = ReadField(area, MwgRsNs + "Type")
-                    ' Nur Gesichter. Derselbe Aufbau traegt auch Haustiere und Sehenswuerdigkeiten.
-                    If typ.Length > 0 AndAlso Not typ.Equals("Face", StringComparison.OrdinalIgnoreCase) Then Continue For
-
-                    Dim name = ReadField(area, MwgRsNs + "Name")
-                    If String.IsNullOrWhiteSpace(name) Then Continue For
-
-                    Dim region As New FaceRegion With {.Name = name.Trim()}
-                    Dim bereich = area.Descendants(MwgRsNs + "Area").FirstOrDefault()
-                    If bereich IsNot Nothing Then
-                        region.CenterX = ReadNumber(bereich, StAreaNs + "x")
-                        region.CenterY = ReadNumber(bereich, StAreaNs + "y")
-                        region.Width = ReadNumber(bereich, StAreaNs + "w")
-                        region.Height = ReadNumber(bereich, StAreaNs + "h")
-                    End If
-                    result.Add(region)
+                For Each entry In doc.Descendants(MwgRsNs + "RegionList").Descendants(RdfNs + "li")
+                    Dim region = ParseNamedFace(entry)
+                    If region IsNot Nothing Then result.Add(region)
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Xmp.RegionenLesen", ex)
             End Try
             Return result
+        End Function
+
+        ''' <summary>Ein Listeneintrag als benanntes Gesicht, oder Nothing, wenn er keins ist. Als
+        ''' Gesicht zaehlt der Typ "Face" oder gar kein Typ; derselbe Aufbau traegt auch Haustiere,
+        ''' Fokusfelder und Sehenswuerdigkeiten.</summary>
+        Private Shared Function ParseNamedFace(entry As XElement) As FaceRegion
+            Dim type = ReadField(entry, MwgRsNs + "Type")
+            If type.Length > 0 AndAlso Not type.Equals("Face", StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            Dim name = ReadField(entry, MwgRsNs + "Name")
+            If String.IsNullOrWhiteSpace(name) Then Return Nothing
+            Dim region As New FaceRegion With {
+                .Name = name.Trim(),
+                .WrittenByUs = String.Equals(ReadField(entry, WrittenMarker), "True", StringComparison.OrdinalIgnoreCase)}
+            Dim area = entry.Descendants(MwgRsNs + "Area").FirstOrDefault()
+            If area IsNot Nothing Then
+                region.CenterX = ReadNumber(area, StAreaNs + "x")
+                region.CenterY = ReadNumber(area, StAreaNs + "y")
+                region.Width = ReadNumber(area, StAreaNs + "w")
+                region.Height = ReadNumber(area, StAreaNs + "h")
+            End If
+            Return region
         End Function
 
         ''' <summary>Schreibt die benannten Gesichter des Katalogs in eine Beistelldatei.
@@ -93,12 +113,18 @@ Namespace Services
         ''' Ohne Namen keine Region: eine Gruppe, die noch "Ohne Namen" heisst, hat in einer Datei
         ''' nichts zu suchen. Sie liesse sich dort nur von Hand wieder loswerden.
         '''
+        ''' Jedes geschriebene Gesicht traegt den Vermerk <see cref="WrittenMarker"/>.
+        ''' <paramref name="keepForeign"/> laesst ein benanntes Gesicht OHNE Vermerk stehen, statt
+        ''' es zu ersetzen; der Aufrufer behaelt so ein fremdes Gesicht, das der Katalog nicht
+        ''' uebernehmen konnte (siehe LibraryServicePeople.WriteFaceRegionsForImage).
+        '''
         ''' Unter derselben Sperre wie jedes andere Schreiben einer Beistelldatei
         ''' (<see cref="ExifService"/>), Lesen eingeschlossen: sonst ueberschriebe der eine Schreiber
         ''' den Stand des anderen. Eine Datei, die kein lesbares XML ist, bleibt unberuehrt.</summary>
         Public Shared Function WriteRegions(sidecarPath As String,
                                             imageWidth As Integer, imageHeight As Integer,
-                                            regions As IReadOnlyList(Of FaceRegion)) As Boolean
+                                            regions As IReadOnlyList(Of FaceRegion),
+                                            Optional keepForeign As Func(Of FaceRegion, Boolean) = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(sidecarPath) Then Return False
             If imageWidth <= 0 OrElse imageHeight <= 0 Then Return False
             Dim named = If(regions, New List(Of FaceRegion)()).
@@ -133,7 +159,7 @@ Namespace Services
                     ' Die benannten Gesichter heraus, samt dem Leerraum davor: sonst wuechse die Datei
                     ' mit jedem Schreiben um eine Leerzeile je Gesicht.
                     If container IsNot Nothing Then
-                        For Each entry In container.Elements(RdfNs + "li").Where(AddressOf IsNamedFace).ToList()
+                        For Each entry In container.Elements(RdfNs + "li").Where(Function(e) IsReplaced(e, keepForeign)).ToList()
                             Dim before = TryCast(entry.PreviousNode, XText)
                             If before IsNot Nothing AndAlso String.IsNullOrWhiteSpace(before.Value) Then before.Remove()
                             entry.Remove()
@@ -186,16 +212,21 @@ Namespace Services
             End SyncLock
         End Function
 
-        ''' <summary>Ein Eintrag, den <see cref="WriteRegions"/> ersetzt: Typ "Face" oder kein Typ,
-        ''' und ein Name.</summary>
-        Private Shared Function IsNamedFace(entry As XElement) As Boolean
-            Dim type = ReadField(entry, MwgRsNs + "Type")
-            If type.Length > 0 AndAlso Not type.Equals("Face", StringComparison.OrdinalIgnoreCase) Then Return False
-            Return Not String.IsNullOrWhiteSpace(ReadField(entry, MwgRsNs + "Name"))
+        ''' <summary>Ein Eintrag, den <see cref="WriteRegions"/> ersetzt: ein benanntes Gesicht
+        ''' (<see cref="ParseNamedFace"/>), ausser er ist fremd (ohne Vermerk) und
+        ''' <paramref name="keepForeign"/> behaelt ihn.</summary>
+        Private Shared Function IsReplaced(entry As XElement, keepForeign As Func(Of FaceRegion, Boolean)) As Boolean
+            Dim region = ParseNamedFace(entry)
+            If region Is Nothing Then Return False
+            If Not region.WrittenByUs AndAlso keepForeign IsNot Nothing AndAlso keepForeign(region) Then Return False
+            Return True
         End Function
 
         Private Shared Function NewFaceEntry(r As FaceRegion) As XElement
+            ' Der Namensraum des Vermerks am Eintrag selbst: ohne Erklaerung erfaende der Schreiber
+            ' ein Kuerzel wie "p1".
             Return New XElement(RdfNs + "li",
+                New XAttribute(XNamespace.Xmlns + "ferrumpix", OwnNs.NamespaceName),
                 New XAttribute(RdfNs + "parseType", "Resource"),
                 New XElement(MwgRsNs + "Name", r.Name),
                 New XElement(MwgRsNs + "Type", "Face"),
@@ -205,7 +236,8 @@ Namespace Services
                     New XElement(StAreaNs + "y", FormatRelative(r.CenterY)),
                     New XElement(StAreaNs + "w", FormatRelative(r.Width)),
                     New XElement(StAreaNs + "h", FormatRelative(r.Height)),
-                    New XElement(StAreaNs + "unit", "normalized")))
+                    New XElement(StAreaNs + "unit", "normalized")),
+                New XElement(WrittenMarker, "True"))
         End Function
 
         ''' <summary>Die Bildgroesse neben der Regionenliste: anlegen, wenn sie fehlt; stimmt sie,
