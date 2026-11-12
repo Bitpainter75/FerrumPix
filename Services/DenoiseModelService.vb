@@ -424,7 +424,9 @@ Namespace Services
                 DiagnosticLogService.LogAlways("Entrauschen", ex.Message)
                 Return Nothing
             End Try
-            If RestoreCoarseLevelsEnabled Then RestoreCoarseLevels(samples, result, width, height, CoarseLevelCell, CoarseLevelLuminanceOnly)
+            If RestoreCoarseLevelsEnabled Then
+                RestoreCoarseLevels(samples, result, width, height, CoarseLevelCell, CoarseLevelLuminanceOnly, forward, scale)
+            End If
             clock.Stop()
             LastReport = String.Format(
                 LocalizationService.T("Bild {0}x{1}, {2} Kacheln, {3} s"),
@@ -457,9 +459,15 @@ Namespace Services
         ''' Deshalb hier: je Block von <paramref name="cell"/> Punkten der Mittelwert von Eingang und
         ''' Ergebnis je Kanal, der Unterschied zwischen den Blockmitten bilinear verteilt und auf das
         ''' Ergebnis gelegt. Was feiner ist als ein Block (das Rauschen, die Zeichnung), bleibt, wie
-        ''' das Modell es gemacht hat; was groeber ist, kommt vom Sensor. Ueber Weiss aendert sich
-        ''' nichts: dort ist das Ergebnis ohnehin der Eingang. Kostet zwei Durchgaenge ueber das Bild
-        ''' und einige hundert Kilobyte, keine Gleitkomma-Kopie des Bildes.
+        ''' das Modell es gemacht hat; was groeber ist, kommt vom Sensor. Kostet zwei Durchgaenge
+        ''' ueber das Bild und einige hundert Kilobyte, keine Gleitkomma-Kopie des Bildes.
+        '''
+        ''' UEBER WEISS BLEIBT ES DER EINGANG, hier wie in FlushRows (<see cref="HighlightWeight"/>).
+        ''' Das Modell sieht dort nur 1, sein Ergebnis gilt dort nicht, also gibt es auch keinen Pegel
+        ''' zurueckzuholen. Ohne Ausnahme trug die weiche Ueberblendung zwischen den Bloecken die
+        ''' Korrektur der verrauschten Nachbarn in den Rand geretteter Lichter, und die Lichter
+        ''' verduennten das Blockmittel ihrer Nachbarn. Das Gewicht gilt deshalb beim Mitteln wie beim
+        ''' Auftragen.
         '''
         ''' NUR DIE HELLIGKEIT (<paramref name="luminanceOnly"/>): der Unterschied der drei Kanaele
         ''' wird zu einem Helligkeitswert und gleich auf alle gelegt. Die Farbe der Blockmittel ist bei
@@ -474,29 +482,32 @@ Namespace Services
         ''' Helligkeit schlechter getroffen (1,7 und 2,1 L*). Groessere Bloecke (32, 64) nahmen die
         ''' Farbflecken je Kanal auch weg, liessen aber den kraeftigeren Stich stehen.</summary>
         Private Shared Sub RestoreCoarseLevels(noisy As Byte(), result As Byte(), width As Integer, height As Integer,
-                                               cell As Integer, luminanceOnly As Boolean)
+                                               cell As Integer, luminanceOnly As Boolean,
+                                               forward As Single(), scale As Single)
             Dim gw = (width + cell - 1) \ cell
             Dim gh = (height + cell - 1) \ cell
             Dim diff(gw * gh * 3 - 1) As Single
             Threading.Tasks.Parallel.For(0, gh,
                 Sub(by)
-                    Dim sumN(gw * 3 - 1) As Double, sumR(gw * 3 - 1) As Double, count(gw - 1) As Integer
+                    Dim sumN(gw * 3 - 1) As Double, sumR(gw * 3 - 1) As Double, count(gw - 1) As Double
                     Dim yEnd = Math.Min(height, (by + 1) * cell)
                     For y = by * cell To yEnd - 1
                         Dim rowStart = CLng(y) * width * 6
                         For x = 0 To width - 1
+                            Dim weight = HighlightWeight(noisy, CLng(y) * width + x, forward, scale)
+                            If weight <= 0.0F Then Continue For
                             Dim bx = x \ cell
                             Dim p = CInt(rowStart + CLng(x) * 6)
                             For c = 0 To 2
                                 Dim q = p + c * 2
-                                sumN(bx * 3 + c) += CInt(noisy(q)) Or (CInt(noisy(q + 1)) << 8)
-                                sumR(bx * 3 + c) += CInt(result(q)) Or (CInt(result(q + 1)) << 8)
+                                sumN(bx * 3 + c) += weight * (CInt(noisy(q)) Or (CInt(noisy(q + 1)) << 8))
+                                sumR(bx * 3 + c) += weight * (CInt(result(q)) Or (CInt(result(q + 1)) << 8))
                             Next
-                            count(bx) += 1
+                            count(bx) += weight
                         Next
                     Next
                     For bx = 0 To gw - 1
-                        If count(bx) = 0 Then Continue For
+                        If count(bx) <= 0 Then Continue For
                         For c = 0 To 2
                             diff((by * gw + bx) * 3 + c) = CSng((sumN(bx * 3 + c) - sumR(bx * 3 + c)) / count(bx))
                         Next
@@ -514,6 +525,8 @@ Namespace Services
                         Dim x0 = Math.Max(0, Math.Min(gw - 1, CInt(Math.Floor(fx))))
                         Dim x1 = Math.Min(gw - 1, x0 + 1)
                         Dim tx = CSng(Math.Max(0.0, Math.Min(1.0, fx - x0)))
+                        Dim weight = HighlightWeight(noisy, CLng(y) * width + x, forward, scale)
+                        If weight <= 0.0F Then Continue For
                         Dim p = CInt(rowStart + CLng(x) * 6)
                         Dim shift(2) As Single
                         For c = 0 To 2
@@ -529,7 +542,7 @@ Namespace Services
                             shift(0) = l : shift(1) = l : shift(2) = l
                         End If
                         For c = 0 To 2
-                            Dim d = shift(c)
+                            Dim d = shift(c) * weight
                             Dim q = p + c * 2
                             Dim v = (CInt(result(q)) Or (CInt(result(q + 1)) << 8)) + d
                             Dim s = If(v <= 0.0F, 0, If(v >= 65535.0F, 65535, CInt(Math.Round(v))))
@@ -539,6 +552,31 @@ Namespace Services
                     Next
                 End Sub)
         End Sub
+
+        ''' <summary>Wie weit das Ergebnis des Modells an einem Bildpunkt gilt, aus dem EINGANG in dem
+        ''' Raum, den das Modell sieht (Rec.2020, Weiss bei 1), am hellsten Kanal: 1 bis
+        ''' <see cref="HighlightFadeStart"/>, 0 ab <see cref="HighlightFadeEnd"/>, dazwischen linear.
+        ''' Eine Stelle fuer beide Wege: FlushRows traegt die Aenderung des Modells damit gewichtet
+        ''' auf, RestoreCoarseLevels den Pegelabgleich.</summary>
+        Private Shared Function HighlightWeight(samples As Byte(), index As Long, forward As Single(), scale As Single) As Single
+            Dim r, g, b As Single
+            ReadRec2020(samples, index, forward, scale, r, g, b)
+            Return HighlightWeight(Math.Max(r, Math.Max(g, b)))
+        End Function
+
+        Private Shared Function HighlightWeight(peak As Single) As Single
+            If peak <= HighlightFadeStart Then Return 1.0F
+            If peak >= HighlightFadeEnd Then Return 0.0F
+            Return (HighlightFadeEnd - peak) / (HighlightFadeEnd - HighlightFadeStart)
+        End Function
+
+        ''' <summary>Ab hier laeuft das Ergebnis des Modells zu den Lichtern hin aus (Weiss = 1).
+        ''' Fuer Messungen veraenderbar (TreeNetMessung/Lichter, ueber Reflexion).</summary>
+        Friend Shared HighlightFadeStart As Single = 1.0F
+
+        ''' <summary>Ab hier gilt nur noch der Eingang. Fuer Messungen veraenderbar
+        ''' (TreeNetMessung/Lichter, ueber Reflexion).</summary>
+        Friend Shared HighlightFadeEnd As Single = 1.1F
 
         ''' <summary>Die Sammelstelle fuer eine Kachelzeile: Summe der gewichteten Ergebnisse und
         ''' der Gewichte je Bildpunkt, fuer die Zeilen ab <see cref="Top"/>.</summary>
@@ -581,7 +619,13 @@ Namespace Services
 
         ''' <summary>Fertige Zeilen in den Ausgang: Eingang plus die Aenderung des Modells, zurueck
         ''' in den Speicheraufbau. Ein Bildpunkt ohne Gewicht (nur moeglich, wenn eine Kachel dort
-        ''' Unsinn lieferte) bleibt, wie er war.</summary>
+        ''' Unsinn lieferte) bleibt, wie er war.
+        '''
+        ''' UEBER WEISS GILT DER EINGANG (<see cref="HighlightWeight"/>). Das Modell sieht dort nur 1,
+        ''' am Rand geretteter Lichter zieht es diese 1 aber zu den dunkleren Nachbarn hin. Voll
+        ''' aufgetragen verschob das die Lichter selbst am Rand um bis zu knapp 2 %; dort gibt es
+        ''' kein Rauschen zu nehmen, das das Modell gesehen haette. Ausgeblendet wird oberhalb von
+        ''' Weiss, damit alles darunter wie bisher entrauscht wird.</summary>
         Private Shared Sub FlushRows(band As TileBand, samples As Byte(), result As Byte(),
                                      forward As Single(), inverse As Single(), scale As Single,
                                      fromRow As Integer, toRow As Integer)
@@ -596,10 +640,11 @@ Namespace Services
                         ReadRec2020(samples, pixel, forward, scale, r, g, b)
                         Dim bi = bandRow + x
                         Dim w = band.Weights(bi)
-                        If w > 0 Then
-                            r += band.Sum(bi * 3) / w - Clamp01(r)
-                            g += band.Sum(bi * 3 + 1) / w - Clamp01(g)
-                            b += band.Sum(bi * 3 + 2) / w - Clamp01(b)
+                        Dim valid = HighlightWeight(Math.Max(r, Math.Max(g, b)))
+                        If w > 0 AndAlso valid > 0.0F Then
+                            r += valid * (band.Sum(bi * 3) / w - Clamp01(r))
+                            g += valid * (band.Sum(bi * 3 + 1) / w - Clamp01(g))
+                            b += valid * (band.Sum(bi * 3 + 2) / w - Clamp01(b))
                         End If
                         Dim p = CInt(pixel * 6)
                         WriteSample(result, p, (inverse(0) * r + inverse(1) * g + inverse(2) * b) * back)
