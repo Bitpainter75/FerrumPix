@@ -34,6 +34,9 @@
 
 ### Fixes
 
+- Raw and TIFF files with an empty XMP entry in their metadata showed no camera, exposure or lens
+  data, and pictures saved from them carried none.
+
 - Choosing Nextcloud as the target in a batch dialog saved the files into the local folder instead.
 
 - Save as to Nextcloud with a # counter takes the next free number on the server, and uses the

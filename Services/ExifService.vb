@@ -1381,8 +1381,16 @@ Namespace Services
             ' Original liefert [TIFF-Verzeichnisse, File Type, File]; "File Type" gehoert also VOR
             ' das vorhandene "File", und ein zweites "File" darf nicht dazukommen - sonst stuenden
             ' Dateiname, Groesse und Aenderungszeit doppelt in den technischen Angaben.
-            Dim result As New List(Of MetadataExtractor.Directory)(
-                MetadataExtractor.Formats.Tiff.TiffMetadataReader.ReadMetadata(path))
+            ' Scheitert der Leser, versucht es EmptyXmpTolerantTiffReader ohne leere XMP-Eintraege;
+            ' traegt die Datei keinen, bleibt es beim urspruenglichen Fehler.
+            Dim tiffDirectories As IReadOnlyList(Of MetadataExtractor.Directory)
+            Try
+                tiffDirectories = MetadataExtractor.Formats.Tiff.TiffMetadataReader.ReadMetadata(path)
+            Catch
+                tiffDirectories = EmptyXmpTolerantTiffReader.TryReadMetadata(path)
+                If tiffDirectories Is Nothing Then Throw
+            End Try
+            Dim result As New List(Of MetadataExtractor.Directory)(tiffDirectories)
             Dim fileDirectory = result.FindLastIndex(Function(d) TypeOf d Is MetadataExtractor.Formats.FileSystem.FileMetadataDirectory)
             result.Insert(If(fileDirectory < 0, result.Count, fileDirectory),
                           New MetadataExtractor.Formats.FileType.FileTypeDirectory(fileType))
