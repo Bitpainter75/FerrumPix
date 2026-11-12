@@ -10,6 +10,16 @@
   Switched off, it leaves that out. Rating, label and keywords now work the same way. The
   switches come back the way you left them last time.
 
+- New setting under RAW development: keep denoised raw files. When a raw file is denoised with the
+  model, the result is stored next to it as a .fpdnz file when you save, export or run a batch.
+  Opening or exporting that picture again no longer has to wait for the model, and the strength
+  can still be changed. Saving without denoising removes the file, and it moves, copies and goes
+  to the trash together with the raw file. Switching the setting off keeps existing files. The
+  files are large, about 60 MB for a 24 megapixel picture.
+
+- The symbol on the Denoise with model button lights up in the accent colour while the picture
+  is denoised with the model.
+
 ### Fixes
 
 - A location, copyright or title that was stored only in a sidecar file, for example after

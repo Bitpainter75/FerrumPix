@@ -11551,4 +11551,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Gravar o local da foto da origem no arquivo de destino, também a partir do arquivo sidecar. Desligado significa: nenhum local no arquivo de destino</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Manter ficheiros RAW sem ruído</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Guarda o resultado da redução de ruído com o modelo como um ficheiro com a extensão .fpdnz junto ao RAW, ao guardar, exportar e em lote. Na próxima vez que a imagem for aberta ou exportada, o modelo não precisa de calcular de novo, e a intensidade continua ajustável. Ocupa muito espaço, cerca de 60 MB por imagem a 24 megapíxeis. Guardar sem redução de ruído elimina o ficheiro novamente.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>A carregar resultado sem ruído</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Não foi possível eliminar o ficheiro com o resultado sem ruído.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Não foi possível guardar o resultado sem ruído junto ao RAW.</value>
+  </data>
 </root>

@@ -11552,4 +11552,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Écrire le lieu de prise de vue de la source dans le fichier cible, y compris depuis le fichier annexe. Désactivé signifie : aucun lieu dans le fichier cible</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Conserver les fichiers RAW débruités</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Enregistre le résultat du débruitage par le modèle dans un fichier d'extension .fpdnz à côté du RAW, lors de l'enregistrement, de l'export et en lot. À la prochaine ouverture ou au prochain export, le modèle n'a plus besoin de recalculer, et l'intensité reste modifiable. Prend beaucoup de place, environ 60 Mo par image à 24 mégapixels. Enregistrer sans débruitage supprime à nouveau le fichier.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Chargement du résultat débruité</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Le fichier contenant le résultat débruité n'a pas pu être supprimé.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Le résultat débruité n'a pas pu être enregistré à côté du RAW.</value>
+  </data>
 </root>

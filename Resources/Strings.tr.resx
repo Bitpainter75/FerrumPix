@@ -11596,4 +11596,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Kaynağın çekim yerini hedef dosyaya yaz, yan dosyadan da. Kapalı şu anlama gelir: hedef dosyada çekim yeri yok</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Gürültüsü giderilmiş RAW dosyalarını sakla</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Modelle gürültü gidermenin sonucunu kaydederken, dışa aktarırken ve toplu işlemde .fpdnz uzantılı bir dosya olarak RAW dosyasının yanına kaydeder. Bir sonraki açışta veya dışa aktarmada modelin yeniden hesaplaması gerekmez ve güç değiştirilebilir kalır. Çok yer kaplar, 24 megapikselde görüntü başına yaklaşık 60 MB. Gürültü gidermeden kaydetmek dosyayı yeniden siler.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Gürültüsü giderilmiş sonuç yükleniyor</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Gürültüsü giderilmiş sonucu içeren dosya silinemedi.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Gürültüsü giderilmiş sonuç RAW dosyasının yanına kaydedilemedi.</value>
+  </data>
 </root>

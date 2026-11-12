@@ -11552,4 +11552,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Escribir la ubicación del origen en el archivo de destino, también desde el archivo adjunto. Desactivado significa: ninguna ubicación en el archivo de destino</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Conservar archivos RAW sin ruido</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Guarda el resultado de la reducción de ruido con el modelo como un archivo con la extensión .fpdnz junto al RAW, al guardar, exportar y en lote. La próxima vez que se abra o exporte la imagen, el modelo no tendrá que calcular de nuevo y la intensidad se podrá seguir cambiando. Ocupa mucho espacio, unos 60 MB por imagen a 24 megapíxeles. Guardar sin reducción de ruido vuelve a eliminar el archivo.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Cargando resultado sin ruido</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>No se pudo eliminar el archivo con el resultado sin ruido.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>No se pudo guardar el resultado sin ruido junto al RAW.</value>
+  </data>
 </root>

@@ -568,6 +568,11 @@
     <Style Selector="Button.ghost.active icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Ein Knopf, dessen Wirkung schon im Bild steckt ("Mit Modell entrauschen"): nur das
+         Symbol in Akzentfarbe, Rahmen und Flaeche bleiben die eines ghost-Knopfs. -->
+    <Style Selector="Button.model-applied icons|SvgIcon">
+        <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
     <!-- DERSELBE KNOPF ALS SCHALTER. Ohne diese Regeln galt "ghost" nur fuer Button, ein
          ToggleButton mit der Klasse bekam die Fluent-Optik und eingeschaltet eine volle
          Akzentflaeche ("Linie ziehen" im Panel Drehen, Fett und Kursiv beim Text). Aus sieht er

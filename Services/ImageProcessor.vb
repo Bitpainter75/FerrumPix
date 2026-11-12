@@ -249,8 +249,13 @@ Namespace Services
             ' in der RAW-Stufe).
             If rezept Is Nothing Then Return DecodeForAdjustments(path, Nothing, developRaw)
             ' Ein Entrauschen mit Modell kostet wie die gebackenen Vorgaenge Zeit und laeuft deshalb
-            ' nur mit derselben Zustimmung (CountPathsWithPendingBakedOperations zaehlt es mit).
-            If applyPendingBaked Then PrepareRecipeModelDenoise(path, rezept)
+            ' nur mit derselben Zustimmung (CountPathsWithPendingBakedOperations zaehlt es mit). Eine
+            ' passende .fpdnz braucht keine: sie wird immer geladen, auch ohne Modell.
+            If applyPendingBaked Then
+                PrepareRecipeModelDenoise(path, rezept)
+            Else
+                LoadRecipeModelDenoiseFile(path, rezept)
+            End If
             Dim decoded = DecodeForRender(path, rezept, rezept, True)
             If decoded Is Nothing Then Return Nothing
             Using decoded
@@ -518,11 +523,36 @@ Namespace Services
         End Function
 
         ''' <summary>Muesste fuer diese Datei das Modell erst laufen, damit ihr Rezept vollstaendig
-        ''' herauskommt? Fuer die Frage vor Druck, Collage und Stapel.</summary>
+        ''' herauskommt? Fuer die Frage vor Druck, Collage und Stapel. Eine passende .fpdnz zaehlt
+        ''' nicht: sie ist in Sekunden geladen und braucht keine Zustimmung
+        ''' (<see cref="LoadRecipeModelDenoiseFile"/>).</summary>
         Friend Shared Function NeedsModelDenoiseRun(path As String, adj As ImageAdjustments) As Boolean
             Return adj IsNot Nothing AndAlso adj.RawModelDenoise AndAlso DenoiseModelService.Available AndAlso
-                   DenoiseModelService.SupportsFile(path) AndAlso Not RawDecodeService.HasModelDenoised(path)
+                   DenoiseModelService.SupportsFile(path) AndAlso Not RawDecodeService.HasModelDenoised(path) AndAlso
+                   Not RawDecodeService.HasMatchingModelDenoiseFile(path)
         End Function
+
+        ''' <summary>Fuer jeden Ausgabeweg, auch OHNE Zustimmung zu den Modelllaeufen: traegt das
+        ''' Rezept ein Entrauschen mit Modell und liegt eine passende .fpdnz neben der RAW, wird sie
+        ''' geladen. Das ist kein Modelllauf, nur Lesen; ohne Modell ist es der einzige Weg zum
+        ''' entrauschten Bild.
+        '''
+        ''' SCHEITERT DAS LADEN einer Datei, deren Kopf passte (Bruch mitten in den Daten, den erst
+        ''' Deflate bemerkt), rechnet das Modell nach, wenn es da ist. Die Rueckfrage vor dem Druck
+        ''' ist ja gerade deshalb entfallen, weil die Datei genuegen sollte
+        ''' (<see cref="NeedsModelDenoiseRun"/>); ihr Bruch darf dann nicht still ein unentrauschtes
+        ''' Bild ergeben. Der Fall ist selten, die Wartezeit der kleinere Schaden.</summary>
+        Friend Shared Sub LoadRecipeModelDenoiseFile(path As String, adj As ImageAdjustments,
+                                                     Optional cancel As Threading.CancellationToken = Nothing)
+            If adj Is Nothing OrElse Not adj.RawModelDenoise Then Return
+            If Not RawPreviewService.IsSupportedRaw(path) Then Return
+            If RawDecodeService.HasModelDenoised(path) Then Return
+            Dim promised = RawDecodeService.HasMatchingModelDenoiseFile(path)
+            If RawDecodeService.LoadModelDenoiseFile(path) Then Return
+            If Not promised Then Return
+            DiagnosticLogService.LogAlways("Entrauschen", $"{IO.Path.GetFileName(path)}: .fpdnz passte im Kopf, liess sich aber nicht lesen - Modell rechnet nach")
+            PrepareRecipeModelDenoise(path, adj, cancel)
+        End Sub
 
         ''' <summary>Fuer einen Ausgabeweg, der auf das Ergebnis warten darf (Speichern, Stapel,
         ''' Druck, Collage): traegt das Rezept ein Entrauschen mit Modell, das Modell ueber diese
@@ -534,6 +564,8 @@ Namespace Services
             If adj Is Nothing OrElse Not adj.RawModelDenoise Then Return
             If Not RawPreviewService.IsSupportedRaw(path) Then Return
             If RawDecodeService.HasModelDenoised(path) Then Return
+            ' Eine passende .fpdnz neben der RAW ersetzt das Modell, auch wenn es fehlt.
+            If RawDecodeService.LoadModelDenoiseFile(path) Then Return
             If Not DenoiseModelService.Available Then
                 DiagnosticLogService.LogAlways("Entrauschen", $"{IO.Path.GetFileName(path)}: Modell fehlt - ohne Entrauschen")
                 Return

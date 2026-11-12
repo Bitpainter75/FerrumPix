@@ -11596,4 +11596,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>เขียนสถานที่ถ่ายภาพของต้นฉบับลงในไฟล์ปลายทาง รวมถึงจากไฟล์ข้าง ปิดหมายถึง: ไม่มีสถานที่ถ่ายภาพในไฟล์ปลายทาง</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>เก็บไฟล์ RAW ที่ลดสัญญาณรบกวนแล้ว</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>บันทึกผลการลดสัญญาณรบกวนด้วยโมเดลเป็นไฟล์นามสกุล .fpdnz ไว้ข้างไฟล์ RAW เมื่อบันทึก ส่งออก และในงานชุด เมื่อเปิดหรือส่งออกครั้งถัดไป โมเดลไม่ต้องคำนวณใหม่ และยังปรับความแรงได้ ใช้พื้นที่มาก ประมาณ 60 MB ต่อภาพที่ 24 ล้านพิกเซล การบันทึกโดยไม่ลดสัญญาณรบกวนจะลบไฟล์นั้นอีกครั้ง</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>กำลังโหลดผลการลดสัญญาณรบกวน</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>ไม่สามารถลบไฟล์ผลการลดสัญญาณรบกวนได้</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>ไม่สามารถบันทึกผลการลดสัญญาณรบกวนไว้ข้างไฟล์ RAW ได้</value>
+  </data>
 </root>

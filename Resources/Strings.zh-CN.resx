@@ -11550,4 +11550,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>将源文件的拍摄地点写入目标文件，也包括附属文件中的内容。关闭表示：目标文件中不含拍摄地点</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>保留已降噪的 RAW 文件</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>在保存、导出和批处理时，将模型降噪的结果另存为扩展名为 .fpdnz 的文件，放在 RAW 旁边。下次打开或导出时，模型无需再次计算，强度仍可调整。占用空间较大，2400 万像素时每张约 60 MB。不降噪而保存会再次删除该文件。</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>正在加载降噪结果</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>无法删除包含降噪结果的文件。</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>无法将降噪结果保存在 RAW 旁边。</value>
+  </data>
 </root>

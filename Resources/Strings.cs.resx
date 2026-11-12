@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Zapsat do cílového souboru místo pořízení zdroje, i z doprovodného souboru. Vypnuto znamená: v cílovém souboru nebude žádné místo pořízení</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Uchovávat odšuměné soubory RAW</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Uloží výsledek odšumění modelem jako soubor s příponou .fpdnz vedle souboru RAW, při ukládání, exportu a v dávce. Při dalším otevření nebo exportu už model nemusí počítat znovu a sílu lze dál měnit. Zabírá hodně místa, při 24 megapixelech asi 60 MB na snímek. Uložení bez odšumění soubor opět smaže.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Načítá se odšuměný výsledek</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Soubor s odšuměným výsledkem se nepodařilo smazat.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Odšuměný výsledek se nepodařilo uložit vedle souboru RAW.</value>
+  </data>
 </root>

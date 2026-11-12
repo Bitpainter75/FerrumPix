@@ -11570,4 +11570,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Den Aufnahmeort der Quelle in die Zieldatei schreiben, auch aus der Beistelldatei. Aus heißt: kein Aufnahmeort in der Zieldatei</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Entrauschte RAW-Dateien behalten</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Legt das Ergebnis des Entrauschens mit Modell als Datei mit der Endung .fpdnz neben die RAW, beim Speichern, Exportieren und im Stapel. Beim nächsten Öffnen oder Export muss das Modell dann nicht mehr rechnen, und die Stärke lässt sich weiter ändern. Braucht viel Platz, bei 24 Megapixeln rund 60 MB je Bild. Speichern ohne Entrauschen löscht die Datei wieder.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Entrauschtes Ergebnis wird geladen</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Die Datei mit dem entrauschten Ergebnis konnte nicht gelöscht werden.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Das entrauschte Ergebnis konnte nicht neben der RAW gespeichert werden.</value>
+  </data>
 </root>

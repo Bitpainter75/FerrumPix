@@ -352,6 +352,7 @@ Namespace Services
                 DiagnosticLogService.LogException("Sidecar.AccompanyMove", ex)
                 failed.Add(SidecarPathFor(sourcePath))
             End Try
+            CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=True, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=True, failed:=failed)
             Return failed
         End Function
@@ -366,9 +367,31 @@ Namespace Services
                 DiagnosticLogService.LogException("Sidecar.AccompanyCopy", ex)
                 failed.Add(SidecarPathFor(sourcePath))
             End Try
+            CarryModelDenoiseFile(sourcePath, targetPath, moveFile:=False, failed:=failed)
             CarryXmpCompanions(sourcePath, targetPath, moveFiles:=False, failed:=failed)
             Return failed
         End Function
+
+        ''' <summary>Die .fpdnz (ModelDenoiseFileService) geht mit wie die .fpxmp. Ihr Schluessel
+        ''' kennt den Pfad nicht, nur Groesse und Aenderungszeit der RAW; behaelt die Kopie die
+        ''' Aenderungszeit nicht, passt sie eben nicht mehr und das Modell rechnet. Eine vorhandene
+        ''' am Ziel wird nie ueberschrieben.</summary>
+        Private Shared Sub CarryModelDenoiseFile(sourcePath As String, targetPath As String, moveFile As Boolean,
+                                                 failed As List(Of String))
+            Dim source = ModelDenoiseFileService.PathFor(sourcePath)
+            Try
+                If Not CompanionExists(source) Then Return
+                Dim target = ModelDenoiseFileService.PathFor(targetPath)
+                If moveFile Then
+                    File.Move(source, target, overwrite:=False)
+                Else
+                    File.Copy(source, target, overwrite:=False)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Sidecar.CarryModelDenoise", ex)
+                failed.Add(source)
+            End Try
+        End Sub
 
         ''' <summary>Beim Papierkorb wandern die Begleitdateien ebenfalls in den Papierkorb (die
         ''' Bilddatei laesst sich so mitsamt Rezept wiederherstellen), sonst werden sie geloescht. Die
@@ -382,7 +405,8 @@ Namespace Services
                                                     moveToTrash As Func(Of String, Boolean)) As List(Of String)
             Dim failed As New List(Of String)()
             NoteInBatch(rawPath, added:=False)
-            Dim companions As New List(Of String) From {SidecarPathFor(rawPath), rawPath & ".xmp"}
+            Dim companions As New List(Of String) From {SidecarPathFor(rawPath), rawPath & ".xmp",
+                                                        ModelDenoiseFileService.PathFor(rawPath)}
             Dim stemXmp = StemXmpPathFor(rawPath)
             ' Erst nachsehen, ob es die Stamm-XMP gibt: HasStemSibling zaehlt den Ordner auf. Ist sie
             ' nicht erreichbar, wird sie gemeldet statt still uebergangen (CompanionExists).

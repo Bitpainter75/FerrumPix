@@ -471,6 +471,10 @@ Namespace Services
         ''' groessten Kacheln nicht hochgerechnet werden. AB WERK AUS: kostet Platz auf der Platte
         ''' und bis zu viermal so viel Arbeitsspeicher je gehaltenem Vorschaubild.
         Public Property ThumbnailHighResolution As Boolean = False
+        ''' Das Ergebnis des Entrauschens mit Modell als .fpdnz neben der RAW ablegen
+        ''' (ModelDenoiseFileService), beim Speichern im Editor, bei Export und Stapel. AB WERK AUS:
+        ''' die Datei ist gross, gemessen rund 2,6 Byte je Bildpunkt (24 MP: 63 MB).
+        Public Property KeepModelDenoiseFiles As Boolean = False
 
         ''' <summary>Ordner, die der Katalogindex durchgeht - samt Unterordnern.
         '''

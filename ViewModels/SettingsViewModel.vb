@@ -313,6 +313,7 @@ Namespace ViewModels
         ' Ohne Merker fuer das Abbrechen: diese Schalter werden beim Umlegen sofort geschrieben und
         ' vom Abbrechen bewusst nicht mehr zurueckgedreht (siehe RestoreSnapshot).
         Private _gpuAccelerationEnabled As Boolean = False
+        Private _keepModelDenoiseFiles As Boolean = False
         Private _gpuAccelerationDevice As String = ""
         Private _gpuAccelerationBusy As Boolean = False
         Private _gpuImageProcessing As Boolean = False
@@ -3533,6 +3534,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Das Ergebnis des Entrauschens mit Modell als .fpdnz neben der RAW behalten
+        ''' (ModelDenoiseFileService). Sofort geschrieben wie die Grafikkarte: Editor und Export
+        ''' lesen die Einstellung selbst. Ausschalten laesst vorhandene Dateien liegen: sie werden
+        ''' weiter gelesen, nur keine neuen geschrieben.</summary>
+        Public Property KeepModelDenoiseFiles As Boolean
+            Get
+                Return _keepModelDenoiseFiles
+            End Get
+            Set(value As Boolean)
+                If _keepModelDenoiseFiles = value Then Return
+                Me.RaiseAndSetIfChanged(_keepModelDenoiseFiles, value)
+                AppSettingsService.Update(Sub(s) s.KeepModelDenoiseFiles = _keepModelDenoiseFiles)
+            End Set
+        End Property
+
         ''' Lässt die gelernten Modelle auf der Grafikkarte rechnen statt auf dem Prozessor. Wirkt
         ''' auf ALLE Modelle gleichermaßen, weil alle durch dieselbe Stelle geladen werden
         ''' (AiModelService.Session). Eine bereits geladene Sitzung wird beim nächsten Zugriff neu
@@ -5223,6 +5239,7 @@ Namespace ViewModels
             _galleryInfoSidebarExpanded = _appSettings.GalleryInfoSidebarExpanded
             _videoHardwareAcceleration = _appSettings.VideoHardwareAcceleration
             _gpuAccelerationEnabled = _appSettings.GpuAccelerationEnabled
+            _keepModelDenoiseFiles = _appSettings.KeepModelDenoiseFiles
             _gpuImageProcessing = _appSettings.GpuImageProcessing
             _modelThreadCount = AppSettingsService.NormalizeModelThreadCount(_appSettings.ModelThreadCount)
             ' Der Tempovergleich der Karte kommt nach der Selbstpruefung im Hintergrund.

@@ -184,6 +184,20 @@
                             </StackPanel>
                         </Grid>
 
+                        <!-- Das Ergebnis des Entrauschens mit Modell als .fpdnz neben der RAW
+                             (ModelDenoiseFileService). -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Entrauschte RAW-Dateien behalten" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Legt das Ergebnis des Entrauschens mit Modell als Datei mit der Endung .fpdnz neben die RAW, beim Speichern, Exportieren und im Stapel. Beim nächsten Öffnen oder Export muss das Modell dann nicht mehr rechnen, und die Stärke lässt sich weiter ändern. Braucht viel Platz, bei 24 Megapixeln rund 60 MB je Bild. Speichern ohne Entrauschen löscht die Datei wieder." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding KeepModelDenoiseFiles}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
                         <!-- DER SCHALTER "Lichter unbeschnitten aus den Sensordaten lesen" IST
                              HIER AUSGEBAUT, die Einstellung RawHighlightUnclip steht weiter auf
                              ihrer Vorgabe True. Er war der Rueckweg fuer einen Feldbericht ueber zu

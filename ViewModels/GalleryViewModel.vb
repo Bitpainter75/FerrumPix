@@ -15817,6 +15817,7 @@ Namespace ViewModels
             If File.Exists(target) Then
                 companions.Add((RawSidecarService.SidecarPathFor(target), RawSidecarService.SidecarPathFor(aside)))
                 companions.Add((target & ".xmp", aside & ".xmp"))
+                companions.Add((ModelDenoiseFileService.PathFor(target), ModelDenoiseFileService.PathFor(aside)))
                 ownedStem = RawSidecarService.OwnedStemXmp(target)
                 If ownedStem IsNot Nothing Then companions.Add((ownedStem, aside & ".stem.xmp"))
             End If

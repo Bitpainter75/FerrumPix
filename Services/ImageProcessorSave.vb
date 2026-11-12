@@ -725,6 +725,9 @@ Namespace Services
                 ' nimmt der Decode das Ergebnis nur, wenn es aus dem Editor schon bereitliegt.
                 If workingFull Is Nothing AndAlso Not isFpxSource AndAlso applyPendingBaked Then
                     PrepareRecipeModelDenoise(sourcePath, adj, cancel)
+                ElseIf workingFull Is Nothing AndAlso Not isFpxSource Then
+                    ' Ohne Zustimmung kein Modell, eine passende .fpdnz aber schon: das ist nur Lesen.
+                    LoadRecipeModelDenoiseFile(sourcePath, adj, cancel)
                 End If
                 Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForRender(sourcePath, adj, renderAdj, developRaw)))
                 ' Ein hereingereichtes Arbeitsbild traegt Retusche (und bei RAW die Belichtung); das
@@ -763,6 +766,7 @@ Namespace Services
                 ' fertige Szene, und ein Buendel als Ziel speichert Original und Rezept, nicht Pixel.
                 Dim fpxTarget = String.Equals(IO.Path.GetExtension(targetPath), ".fpx", StringComparison.OrdinalIgnoreCase)
                 Dim sourceName = IO.Path.GetFileName(sourcePath)
+                Dim batchRawDenoised = False
                 If decoded IsNot Nothing AndAlso denoise IsNot Nothing AndAlso workingFull Is Nothing Then
                     If isFpxSource OrElse fpxTarget Then
                         DiagnosticLogService.LogAlways("Entrauschen", $"{sourceName}: Projektbuendel als Quelle oder Ziel - im Stapel nicht entrauscht")
@@ -788,6 +792,7 @@ Namespace Services
                             withDenoise.RawModelDenoise = True
                             withDenoise.RawModelDenoiseStrength = CSng(strength.Value)
                             If RawDecodeService.PrepareModelDenoise(sourcePath, cancel) Then
+                                batchRawDenoised = True
                                 ' Dieselbe Belichtung in der RAW-Stufe wie eben, renderAdj bleibt gueltig.
                                 Dim ignoredAdj As ImageAdjustments = Nothing
                                 Dim redecoded = DecodeForRender(sourcePath, withDenoise, ignoredAdj, developRaw)
@@ -798,6 +803,16 @@ Namespace Services
                             End If
                         End If
                     End If
+                End If
+
+                ' Das Ergebnis des Modells als .fpdnz neben die RAW, wenn die Einstellung an ist
+                ' (ModelDenoiseFileService). Auch aus dem Editor heraus (Arbeitsbild hereingereicht):
+                ' dann liegt das Ergebnis noch im Speicher. Geschrieben wird nur, was dort WIRKLICH
+                ' liegt; ohne Ergebnis, ohne Einstellung oder bei aktueller Datei geschieht nichts.
+                If Not isFpxSource AndAlso Not cancel.IsCancellationRequested AndAlso
+                   (batchRawDenoised OrElse (adj IsNot Nothing AndAlso adj.RawModelDenoise)) AndAlso
+                   RawPreviewService.IsSupportedRaw(sourcePath) Then
+                    RawDecodeService.StoreModelDenoiseFile(sourcePath)
                 End If
 
                 ' ABGEBROCHEN heisst: KEINE Datei. Ein Entrauschen, das der Nutzer angehalten hat,

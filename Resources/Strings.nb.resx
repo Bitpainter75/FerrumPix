@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Skriv kildens opptakssted i målfilen, også fra følgefilen. Av betyr: ikke noe opptakssted i målfilen</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Behold støyreduserte RAW-filer</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Lagrer resultatet av støyreduksjon med modellen som en fil med filendelsen .fpdnz ved siden av RAW-filen, ved lagring, eksport og i bunke. Neste gang bildet åpnes eller eksporteres, trenger ikke modellen å regne på nytt, og styrken kan fortsatt endres. Tar mye plass, rundt 60 MB per bilde ved 24 megapiksler. Lagring uten støyreduksjon sletter filen igjen.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Støyredusert resultat lastes inn</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Filen med det støyreduserte resultatet kunne ikke slettes.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Det støyreduserte resultatet kunne ikke lagres ved siden av RAW-filen.</value>
+  </data>
 </root>

@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Записать в целевой файл место съёмки источника, в том числе из сопроводительного файла. Выключено означает: в целевом файле нет места съёмки</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Сохранять RAW-файлы после шумоподавления</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Сохраняет результат шумоподавления моделью в файл с расширением .fpdnz рядом с RAW при сохранении, экспорте и пакетной обработке. При следующем открытии или экспорте модели не нужно считать заново, а силу можно по-прежнему менять. Занимает много места, около 60 МБ на снимок при 24 мегапикселях. Сохранение без шумоподавления снова удаляет файл.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Загрузка результата шумоподавления</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Не удалось удалить файл с результатом шумоподавления.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Не удалось сохранить результат шумоподавления рядом с RAW.</value>
+  </data>
 </root>

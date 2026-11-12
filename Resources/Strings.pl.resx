@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Zapisz miejsce wykonania zdjęcia źródła w pliku docelowym, także z pliku towarzyszącego. Wyłączone oznacza: brak miejsca w pliku docelowym</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Zachowuj odszumione pliki RAW</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Zapisuje wynik odszumiania modelem jako plik z rozszerzeniem .fpdnz obok pliku RAW, przy zapisywaniu, eksporcie i w trybie wsadowym. Przy następnym otwarciu lub eksporcie model nie musi liczyć ponownie, a siłę nadal można zmieniać. Zajmuje dużo miejsca, około 60 MB na zdjęcie przy 24 megapikselach. Zapisanie bez odszumiania ponownie usuwa plik.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Wczytywanie odszumionego wyniku</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Nie udało się usunąć pliku z odszumionym wynikiem.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Nie udało się zapisać odszumionego wyniku obok pliku RAW.</value>
+  </data>
 </root>

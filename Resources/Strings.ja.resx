@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>元の画像の撮影場所を保存先のファイルに書き込みます (サイドカーファイルの内容も含む)。オフにすると、保存先のファイルに撮影場所は入りません</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>ノイズ除去済みの RAW ファイルを保持</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>モデルによるノイズ除去の結果を、保存、書き出し、一括処理の際に拡張子 .fpdnz のファイルとして RAW の隣に保存します。次回開くときや書き出すときにモデルの再計算が不要になり、強さも引き続き変更できます。容量を多く使い、2400 万画素で 1 枚あたり約 60 MB です。ノイズ除去なしで保存すると、ファイルは再び削除されます。</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>ノイズ除去の結果を読み込んでいます</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>ノイズ除去の結果のファイルを削除できませんでした。</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>ノイズ除去の結果を RAW の隣に保存できませんでした。</value>
+  </data>
 </root>

@@ -11951,7 +11951,18 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Steckt das Modell gerade WIRKLICH im Bild? Bei einer RAW reicht das Rezept nicht:
+        ''' ohne Zustimmung beim Oeffnen steht das Bild ohne das Ergebnis da. Am fertigen Bild ist
+        ''' es der gebackene Vorgang. Der Knopf zeigt es mit dem Symbol in Akzentfarbe.</summary>
+        Public ReadOnly Property IsModelDenoiseApplied As Boolean
+            Get
+                If _rawModelDenoise Then Return RawDecodeService.HasModelDenoised(RenderSourcePath)
+                Return _bakedOperations.Any(Function(o) ImageProcessor.IsDenoiseOperation(o))
+            End Get
+        End Property
+
         Private Sub RaiseStoredDenoiseChanged()
+            Me.RaisePropertyChanged(NameOf(IsModelDenoiseApplied))
             Me.RaisePropertyChanged(NameOf(HasStoredDenoise))
             Me.RaisePropertyChanged(NameOf(StoredDenoiseText))
             Me.RaisePropertyChanged(NameOf(HasDenoiseMeasurement))
@@ -12308,6 +12319,7 @@ Namespace ViewModels
             Finally
                 _modelDenoiseRebuilding = False
                 RefreshBusyState()
+                Me.RaisePropertyChanged(NameOf(IsModelDenoiseApplied))
                 TraceModelDenoise("Neuaufbau fertig")
             End Try
             If warEingepasst Then ActiveZoomPreset = ZoomPresetMode.Fit
@@ -12345,12 +12357,15 @@ Namespace ViewModels
             If Not _rawModelDenoise OrElse _modelDenoiseRunning Then Return
             If _workingImage Is Nothing OrElse _workingImage.HasBakedContent Then Return
             Dim path = RenderSourcePath
+            ' Liegt das Ergebnis schon bereit (etwa aus der .fpdnz), braucht es weder Modell noch
+            ' Frage. VOR der Pruefung auf das Modell: sonst fragte der Editor nach einem Download,
+            ' obwohl er es gar nicht braucht.
+            If RawDecodeService.HasModelDenoised(path) Then Return
             If Not DenoiseModelService.SupportsFile(path) Then Return
             If Not DenoiseModelService.Available Then
                 AskForMissingDenoiseModel(path)
                 Return
             End If
-            If RawDecodeService.HasModelDenoised(path) Then Return
             ' Ein Entrauschen aus dem Rezept laeuft erst nach einer Zustimmung: dem Knopf, der Frage
             ' beim Oeffnen oder dem Download. Ohne sie wird gefragt (ScheduleModelDenoiseQuestion).
             If approvedByUser Then _modelDenoiseApproved.Add(path)
@@ -19975,6 +19990,7 @@ Namespace ViewModels
                 If Not String.IsNullOrEmpty(_currentFpxPath) Then PreviewImage = LoadFpxCompositePreview(_currentFpxPath)
                 InfoPanel.ExifInfo = Nothing
                 ClearHistogramData()
+                Await LoadStoredModelDenoiseAsync()
                 Await PreparePreviewSourceAsync(RenderSourcePath,
                                                 scheduleInitialRender:=Not publishAtomically,
                                                 showRawQuickPreview:=Not publishAtomically)
@@ -20459,6 +20475,7 @@ Namespace ViewModels
                 InfoPanel.ExifInfo = Nothing
                 ClearHistogramData()
                 recordOpenLap("bis zum Arbeitsbild")
+                Await LoadStoredModelDenoiseAsync()
                 Await PreparePreviewSourceAsync(RenderSourcePath,
                                                 scheduleInitialRender:=Not publishAtomically,
                                                 showRawQuickPreview:=Not publishAtomically)
@@ -24149,6 +24166,51 @@ Namespace ViewModels
             Return False
         End Function
 
+        ''' <summary>Die .fpdnz neben der RAW mit dem gespeicherten Rezept abgleichen: traegt es ein
+        ''' Entrauschen mit Modell, wird dessen Ergebnis geschrieben (nur mit der Einstellung, im
+        ''' Hintergrund); traegt es keins, faellt eine vorhandene Datei weg, auch nach "Alle
+        ''' Anpassungen zuruecksetzen". Geloescht wird erst HIER und nicht beim Zuruecksetzen:
+        ''' das laesst sich rueckgaengig machen, und dann muesste das Modell neu rechnen.</summary>
+        Private Sub SaveModelDenoiseFile(path As String, saved As ImageAdjustments)
+            If Not RawPreviewService.IsSupportedRaw(path) Then Return
+            ' Eine Arbeitskopie vom Server (Immich, Nextcloud) liegt im Zwischenspeicher der
+            ' Anwendung; die grosse Datei daneben ginge mit dem naechsten Aufraeumen verloren und
+            ' kaeme nie auf den Server.
+            If Not String.IsNullOrEmpty(_sourceDisplayFileName) Then Return
+            If saved Is Nothing OrElse Not saved.RawModelDenoise Then
+                If ModelDenoiseFileService.Exists(path) AndAlso Not ModelDenoiseFileService.Delete(path) Then
+                    StatusText = LocalizationService.T("Die Datei mit dem entrauschten Ergebnis konnte nicht gelöscht werden.")
+                End If
+                Return
+            End If
+            Dim pending = RawDecodeService.StoreModelDenoiseFileAsync(path)
+            If pending Is Nothing Then Return
+            pending.ContinueWith(
+                Sub(done)
+                    If done.Status = TaskStatus.RanToCompletion AndAlso done.Result Then Return
+                    Dispatcher.UIThread.Post(
+                        Sub() StatusText = LocalizationService.T("Das entrauschte Ergebnis konnte nicht neben der RAW gespeichert werden."))
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        ''' <summary>Beim Oeffnen: traegt das Rezept ein Entrauschen mit Modell und liegt dessen
+        ''' Ergebnis als .fpdnz neben der RAW, wird es VOR dem ersten Decode geladen. Dann entwickelt
+        ''' die RAW gleich entrauscht, ohne Frage und ohne zweiten Aufbau. Passt die Datei nicht
+        ''' mehr, bleibt alles wie ohne sie (StartModelDenoiseIfNeeded fragt).</summary>
+        Private Async Function LoadStoredModelDenoiseAsync() As Task
+            If Not _rawModelDenoise Then Return
+            Dim path = RenderSourcePath
+            If Not ModelDenoiseFileService.Exists(path) Then Return
+            Try
+                SetBusyReason(LocalizationService.T("Entrauschtes Ergebnis wird geladen"))
+                If Await Task.Run(Function() RawDecodeService.LoadModelDenoiseFile(path)) Then
+                    _modelDenoiseApproved.Add(path)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ModelDenoise", ex)
+            End Try
+        End Function
+
         ''' <summary>"Speichern" fuer RAW/PSD: schreibt das Rezept in die Begleitdatei
         ''' (die Quelldatei selbst wird nie angefasst).</summary>
         Private Function TrySaveSidecar() As Boolean
@@ -24173,6 +24235,8 @@ Namespace ViewModels
             ' Filmstreifen ihre alte Kachel, obwohl das Rezept (z.B. eine Drehung) jetzt anders ist.
             _mainVm?.ReloadThumbnailsForFile(RenderSourcePath)
             StatusText = LocalizationService.T("Bearbeitung in Begleitdatei gespeichert")
+            ' Nach der Meldung: scheitert die .fpdnz, soll das in der Statuszeile stehen bleiben.
+            SaveModelDenoiseFile(RenderSourcePath, sidecarAdjustments)
             Return True
         End Function
 

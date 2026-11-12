@@ -11596,4 +11596,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Tulis lokasi pemotretan sumber ke berkas tujuan, juga dari berkas sidecar. Mati berarti: tidak ada lokasi di berkas tujuan</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Simpan file RAW yang sudah diredam derau</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Menyimpan hasil peredaman derau dengan model sebagai file berekstensi .fpdnz di samping RAW, saat menyimpan, mengekspor, dan dalam batch. Saat gambar dibuka atau diekspor berikutnya, model tidak perlu menghitung lagi, dan kekuatannya tetap bisa diubah. Memakan banyak ruang, sekitar 60 MB per gambar pada 24 megapiksel. Menyimpan tanpa peredaman derau akan menghapus file itu lagi.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Memuat hasil peredaman derau</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>File berisi hasil peredaman derau tidak dapat dihapus.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Hasil peredaman derau tidak dapat disimpan di samping RAW.</value>
+  </data>
 </root>

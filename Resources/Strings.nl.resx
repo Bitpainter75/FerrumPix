@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>De opnamelocatie van de bron in het doelbestand schrijven, ook uit het sidecar-bestand. Uit betekent: geen opnamelocatie in het doelbestand</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Ontruisde RAW-bestanden bewaren</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Slaat het resultaat van ontruisen met het model op als bestand met de extensie .fpdnz naast de RAW, bij opslaan, exporteren en in batch. Bij het volgende openen of exporteren hoeft het model dan niet opnieuw te rekenen, en de sterkte blijft aanpasbaar. Neemt veel ruimte in, bij 24 megapixel ongeveer 60 MB per afbeelding. Opslaan zonder ontruisen verwijdert het bestand weer.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Ontruisd resultaat wordt geladen</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Het bestand met het ontruisde resultaat kon niet worden verwijderd.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Het ontruisde resultaat kon niet naast de RAW worden opgeslagen.</value>
+  </data>
 </root>

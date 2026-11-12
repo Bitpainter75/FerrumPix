@@ -11592,4 +11592,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Skriv källans fotoplats i målfilen, även från följefilen. Av betyder: ingen fotoplats i målfilen</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Behåll brusreducerade RAW-filer</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Sparar resultatet av brusreducering med modellen som en fil med filändelsen .fpdnz bredvid RAW-filen, vid sparande, export och i batch. Nästa gång bilden öppnas eller exporteras behöver modellen inte räkna igen, och styrkan kan fortfarande ändras. Tar mycket plats, cirka 60 MB per bild vid 24 megapixel. Att spara utan brusreducering tar bort filen igen.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Brusreducerat resultat läses in</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Filen med det brusreducerade resultatet kunde inte tas bort.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Det brusreducerade resultatet kunde inte sparas bredvid RAW-filen.</value>
+  </data>
 </root>

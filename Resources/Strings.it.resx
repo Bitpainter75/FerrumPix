@@ -11552,4 +11552,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Scrivi il luogo di scatto della sorgente nel file di destinazione, anche dal file collegato. Disattivato significa: nessun luogo nel file di destinazione</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Conserva i file RAW denoisati</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Salva il risultato della riduzione del rumore con il modello come file con estensione .fpdnz accanto al RAW, durante il salvataggio, l'esportazione e in batch. Alla successiva apertura o esportazione il modello non deve più calcolare, e l'intensità resta modificabile. Occupa molto spazio, circa 60 MB per immagine a 24 megapixel. Salvare senza riduzione del rumore elimina di nuovo il file.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Caricamento del risultato denoisato</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>Impossibile eliminare il file con il risultato denoisato.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>Impossibile salvare il risultato denoisato accanto al RAW.</value>
+  </data>
 </root>

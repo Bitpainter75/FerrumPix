@@ -11571,4 +11571,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>Write the source's location into the target file, also from the sidecar file. Off means: no location in the target file</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>Keep denoised RAW files</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>Stores the result of denoising with the model as a file with the extension .fpdnz next to the RAW, when saving, exporting and in batch. The next time the image is opened or exported, the model does not have to run again, and the strength can still be changed. Takes a lot of space, about 60 MB per image at 24 megapixels. Saving without denoising deletes the file again.</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>Loading denoised result</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>The file with the denoised result could not be deleted.</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>The denoised result could not be saved next to the RAW.</value>
+  </data>
 </root>

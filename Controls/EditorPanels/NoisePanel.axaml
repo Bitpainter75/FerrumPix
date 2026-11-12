@@ -124,7 +124,9 @@
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                  Value="{Binding DenoiseStrength, Mode=TwoWay}" Minimum="0" Maximum="100" />
                     </Grid>
+                    <!-- model-applied: das Symbol in Akzentfarbe, solange das Modell im Bild steckt. -->
                     <Button Classes="ghost" HorizontalAlignment="Stretch" Padding="10,6"
+                            Classes.model-applied="{Binding IsModelDenoiseApplied}"
                             Command="{Binding DenoiseWithModelCommand}"
                             ToolTip.Tip="{Binding DenoiseWithModelHint}" ToolTip.ShowOnDisabled="True">
                         <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">

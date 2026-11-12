@@ -11596,4 +11596,19 @@
   <data name="Den_Aufnahmeort_der_Quelle_in_die_Zieldatei_schr_f7d873dd" xml:space="preserve">
     <value>स्रोत का स्थान लक्ष्य फ़ाइल में लिखें, साइडकार फ़ाइल से भी। बंद का अर्थ है: लक्ष्य फ़ाइल में कोई स्थान नहीं</value>
   </data>
+  <data name="Entrauschte_RAW_Dateien_behalten_db5b09f5" xml:space="preserve">
+    <value>शोर हटाई गई RAW फ़ाइलें रखें</value>
+  </data>
+  <data name="Legt_das_Ergebnis_des_Entrauschens_mit_Modell_al_6363c7c1" xml:space="preserve">
+    <value>मॉडल से शोर हटाने का परिणाम सहेजते, निर्यात करते और बैच में .fpdnz एक्सटेंशन वाली फ़ाइल के रूप में RAW के बगल में रखता है। अगली बार खोलने या निर्यात करने पर मॉडल को दोबारा गणना नहीं करनी पड़ती, और तीव्रता अब भी बदली जा सकती है। काफ़ी जगह लेता है, 24 मेगापिक्सेल पर प्रति चित्र लगभग 60 MB। शोर हटाए बिना सहेजने पर फ़ाइल फिर से हट जाती है।</value>
+  </data>
+  <data name="Entrauschtes_Ergebnis_wird_geladen_691e1652" xml:space="preserve">
+    <value>शोर हटाया गया परिणाम लोड हो रहा है</value>
+  </data>
+  <data name="Die_Datei_mit_dem_entrauschten_Ergebnis_konnte_n_89e436fd" xml:space="preserve">
+    <value>शोर हटाए गए परिणाम वाली फ़ाइल हटाई नहीं जा सकी।</value>
+  </data>
+  <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
+    <value>शोर हटाया गया परिणाम RAW के बगल में सहेजा नहीं जा सका।</value>
+  </data>
 </root>
