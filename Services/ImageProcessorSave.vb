@@ -1101,8 +1101,6 @@ Namespace Services
             End Try
         End Function
 
-        ''' <summary>Weißer Untergrund für Formate ohne Alphakanal (JPEG). Liefert das Original
-        ''' zurück, wenn nichts zu tun ist; sonst ein NEUES Bitmap (Aufrufer disposed es).</summary>
         ''' <summary>Die Bytes eines JPEG, nachdem die Schalter "Uebernehmen" darauf angewendet sind:
         ''' Stichwoerter aus dem Katalog (ApplyCatalogKeywords), dann CarryShownMetadataIntoSavedFile,
         ''' beides wie nach SaveImage. Gerechnet an einer Kopie im temporaeren Ordner, die danach
@@ -1129,6 +1127,8 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Weißer Untergrund für Formate ohne Alphakanal (JPEG). Liefert das Original
+        ''' zurück, wenn nichts zu tun ist; sonst ein NEUES Bitmap (Aufrufer disposed es).</summary>
         Private Shared Function FlattenAlphaToWhite(source As SKBitmap) As SKBitmap
             If source Is Nothing Then Return source
             Dim flattened = New SKBitmap(source.Width, source.Height, source.ColorType, SKAlphaType.Premul)
@@ -1198,12 +1198,6 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Setzt den Urheberrechtshinweis an die eben geschriebene Datei. Ein leerer Text
-        ''' laesst sie unangetastet - so ist das Feld in den Stapelformularen gemeint.
-        '''
-        ''' Ein Fehlschlag darf das Speichern NICHT scheitern lassen: das Bild steht dann bereits auf
-        ''' der Platte, und eine Rueckmeldung "nicht gespeichert" waere schlicht falsch. Er wandert
-        ''' ins Diagnoselog.</summary>
         ''' <summary>Nach dem Speichern in eine NEUE Datei: die Angaben, die die Quelle in Infopanel und
         ''' Katalog zeigt, in die Zieldatei. Was in der Quelldatei selbst steht, reist schon mit den
         ''' kopierten Segmenten; was DANEBEN steht, kaeme ohne diesen Schritt nie an. Das ist bei
@@ -1318,6 +1312,12 @@ Namespace Services
             End If
         End Sub
 
+        ''' <summary>Setzt den Urheberrechtshinweis an die eben geschriebene Datei. Ein leerer Text
+        ''' laesst sie unangetastet - so ist das Feld in den Stapelformularen gemeint.
+        '''
+        ''' Ein Fehlschlag darf das Speichern NICHT scheitern lassen: das Bild steht dann bereits auf
+        ''' der Platte, und eine Rueckmeldung "nicht gespeichert" waere schlicht falsch. Er wandert
+        ''' ins Diagnoselog.</summary>
         Private Shared Sub ApplyCopyright(targetPath As String, copyrightText As String)
             If String.IsNullOrWhiteSpace(copyrightText) Then Return
             Try
