@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>操作に失敗しました。古いファイルは元に戻りましたが、付随ファイルを元に戻せませんでした。付随ファイルは {0} にあります</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>学習済みモデルのランタイムが前回の起動時にクラッシュしました。新しいバージョンのプログラムをインストールするまでオフのままです。その他の機能は通常どおり動作します。</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>グラフィックアクセラレーションが前回の起動時にクラッシュしました。新しいバージョンのプログラムをインストールするまでオフのままです。モデルはプロセッサで計算します。</value>
+  </data>
 </root>

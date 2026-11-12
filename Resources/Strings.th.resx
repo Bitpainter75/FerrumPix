@@ -11578,4 +11578,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>การดำเนินการล้มเหลว ไฟล์เก่ากลับมาแล้ว แต่กู้คืนไฟล์ประกอบของมันไม่ได้ ไฟล์นั้นอยู่ที่ {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>รันไทม์ของโมเดลที่เรียนรู้ขัดข้องเมื่อเริ่มโปรแกรมครั้งล่าสุด จะปิดไว้จนกว่าจะติดตั้งโปรแกรมเวอร์ชันใหม่ ส่วนอื่นทำงานตามปกติ</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>การเร่งความเร็วด้วยกราฟิกขัดข้องเมื่อเริ่มโปรแกรมครั้งล่าสุด จะปิดไว้จนกว่าจะติดตั้งโปรแกรมเวอร์ชันใหม่ โมเดลจะคำนวณบนโปรเซสเซอร์</value>
+  </data>
 </root>

@@ -11532,4 +11532,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>操作失败。旧文件已恢复，但其附属文件无法恢复。它位于 {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>学习模型的运行时在上次启动时崩溃。在安装新版本程序之前，它将保持关闭；其他功能照常工作。</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>图形加速在上次启动时崩溃。在安装新版本程序之前，它将保持关闭；模型在处理器上计算。</value>
+  </data>
 </root>

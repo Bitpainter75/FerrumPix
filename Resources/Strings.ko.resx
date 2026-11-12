@@ -11578,4 +11578,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>작업에 실패했습니다. 이전 파일은 복원되었지만 함께 쓰는 파일을 복원하지 못했습니다. 그 파일은 {0}에 있습니다</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>학습된 모델의 런타임이 지난번 시작할 때 충돌했습니다. 새 버전의 프로그램을 설치할 때까지 꺼진 상태로 유지되며, 다른 기능은 평소처럼 작동합니다.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>그래픽 가속이 지난번 시작할 때 충돌했습니다. 새 버전의 프로그램을 설치할 때까지 꺼진 상태로 유지되며, 모델은 프로세서에서 계산합니다.</value>
+  </data>
 </root>

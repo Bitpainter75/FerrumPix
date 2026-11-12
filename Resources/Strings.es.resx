@@ -11534,4 +11534,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>La operación falló. El archivo anterior ha vuelto, pero su archivo complementario no se pudo restaurar. Está en {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>El entorno de ejecución de los modelos aprendidos falló en el último inicio. Seguirá desactivado hasta que se instale una nueva versión del programa; todo lo demás funciona como siempre.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>La aceleración gráfica falló en el último inicio. Seguirá desactivada hasta que se instale una nueva versión del programa; los modelos calculan en el procesador.</value>
+  </data>
 </root>

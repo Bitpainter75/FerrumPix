@@ -11534,4 +11534,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>L'opération a échoué. L'ancien fichier est revenu, mais son fichier associé n'a pas pu être restauré. Il se trouve dans {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>L'environnement d'exécution des modèles appris a planté lors du dernier démarrage. Il reste désactivé jusqu'à l'installation d'une nouvelle version du programme ; tout le reste fonctionne comme d'habitude.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>L'accélération graphique a planté lors du dernier démarrage. Elle reste désactivée jusqu'à l'installation d'une nouvelle version du programme ; les modèles calculent sur le processeur.</value>
+  </data>
 </root>

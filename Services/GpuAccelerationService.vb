@@ -681,6 +681,7 @@ Namespace Services
             SyncLock _lock
                 If _checked Then Return
                 _checked = True
+                Dim guarded = False
                 Try
                     ' Erst die Laufzeit selbst. Sie schaltet dabei ihre Telemetrie ab, und das soll
                     ' geschehen sein, bevor hier irgendetwas anderes sie benutzt.
@@ -701,6 +702,15 @@ Namespace Services
                         DiagnosticLogService.LogAlways("Grafik", "Beschleunigung fuer diese Plattform nicht dabei")
                         Return
                     End If
+
+                    ' DER STARTSCHUTZ: Anmelden und Abfragen laden den Grafiktreiber in den Prozess.
+                    ' Stirbt er dabei, bleibt die Beschleunigung beim naechsten Start aus, und die
+                    ' Modelle rechnen auf dem Prozessor. Siehe NativeStartGuard.
+                    If Not NativeStartGuard.TryEnter(NativeStartGuard.GpuDevices) Then
+                        _setupError = "crashed during the previous start"
+                        Return
+                    End If
+                    guarded = True
 
                     OrtEnv.Instance().RegisterExecutionProviderLibrary(RegistrationName, path)
 
@@ -744,6 +754,8 @@ Namespace Services
                     _infos = New List(Of GpuDeviceInfo)()
                     _devices = New List(Of OrtEpDevice)()
                     DiagnosticLogService.LogAlways("Grafik", $"Beschleunigung steht nicht bereit: {_setupError}")
+                Finally
+                    If guarded Then NativeStartGuard.Leave(NativeStartGuard.GpuDevices)
                 End Try
             End SyncLock
         End Sub

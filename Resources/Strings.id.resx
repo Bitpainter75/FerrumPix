@@ -11578,4 +11578,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Operasi gagal. File lama sudah kembali, tetapi file pendampingnya tidak dapat dipulihkan. File itu ada di {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Runtime untuk model terlatih mogok saat terakhir dijalankan. Runtime tetap nonaktif sampai versi program yang baru dipasang; fungsi lainnya bekerja seperti biasa.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Akselerasi grafis mogok saat terakhir dijalankan. Akselerasi tetap nonaktif sampai versi program yang baru dipasang; model menghitung di prosesor.</value>
+  </data>
 </root>

@@ -11578,4 +11578,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>प्रक्रिया विफल रही। पुरानी फ़ाइल वापस आ गई है, लेकिन उसकी सहायक फ़ाइल वापस नहीं लाई जा सकी। वह {0} पर है</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>सीखे गए मॉडलों का रनटाइम पिछली बार शुरू होते समय क्रैश हो गया। प्रोग्राम का नया संस्करण इंस्टॉल होने तक यह बंद रहेगा; बाकी सब सामान्य रूप से काम करता है।</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>ग्राफ़िक्स त्वरण पिछली बार शुरू होते समय क्रैश हो गया। प्रोग्राम का नया संस्करण इंस्टॉल होने तक यह बंद रहेगा; मॉडल प्रोसेसर पर गणना करते हैं।</value>
+  </data>
 </root>

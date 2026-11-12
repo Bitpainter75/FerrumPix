@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Operacja nie powiodła się. Stary plik wrócił, ale jego pliku towarzyszącego nie udało się przywrócić. Znajduje się w {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Środowisko uruchomieniowe wyuczonych modeli uległo awarii przy ostatnim uruchomieniu. Pozostanie wyłączone do instalacji nowej wersji programu; wszystko inne działa jak zwykle.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Akceleracja graficzna uległa awarii przy ostatnim uruchomieniu. Pozostanie wyłączona do instalacji nowej wersji programu; modele liczą na procesorze.</value>
+  </data>
 </root>

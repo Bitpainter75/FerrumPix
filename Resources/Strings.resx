@@ -11553,4 +11553,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>The operation failed. The old file is back, but its companion file could not be restored. It is at {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>The runtime for learned models crashed during the last start. It stays off until a new version of the program is installed; everything else works as usual.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Graphics acceleration crashed during the last start. It stays off until a new version of the program is installed; the models compute on the processor.</value>
+  </data>
 </root>

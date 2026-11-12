@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>De bewerking is mislukt. Het oude bestand is terug, maar het bijbehorende bestand kon niet worden teruggezet. Het staat op {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>De runtime voor geleerde modellen is bij de laatste start vastgelopen. Deze blijft uit tot er een nieuwe programmaversie is geïnstalleerd; al het andere werkt zoals gewoonlijk.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>De grafische versnelling is bij de laatste start vastgelopen. Deze blijft uit tot er een nieuwe programmaversie is geïnstalleerd; de modellen rekenen op de processor.</value>
+  </data>
 </root>

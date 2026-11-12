@@ -3636,7 +3636,15 @@ Namespace ViewModels
             Get
                 If _gpuAccelerationBusy Then Return LocalizationService.T("Die Grafikkarte wird geprüft")
                 If Not AiModelService.RuntimeAvailable Then
+                    ' Der Startschutz hat sie ausgelassen (NativeStartGuard): das soll man lesen
+                    ' koennen, sonst sucht niemand nach dem Grund.
+                    If NativeStartGuard.IsBlocked(NativeStartGuard.ModelRuntime) Then
+                        Return LocalizationService.T("Die Laufzeit für gelernte Modelle ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; alles andere arbeitet wie gewohnt.")
+                    End If
                     Return LocalizationService.T("Die Laufzeit für gelernte Modelle steht auf diesem Gerät nicht zur Verfügung.")
+                End If
+                If NativeStartGuard.IsBlocked(NativeStartGuard.GpuDevices) Then
+                    Return LocalizationService.T("Die Grafikbeschleunigung ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; die Modelle rechnen auf dem Prozessor.")
                 End If
                 If GpuAccelerationService.LibraryMissing Then
                     Return LocalizationService.T("Für diese Programmfassung ist keine Grafikbeschleunigung dabei. Die Modelle rechnen auf dem Prozessor.")

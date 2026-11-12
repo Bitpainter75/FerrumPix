@@ -11578,4 +11578,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>İşlem başarısız oldu. Eski dosya geri geldi, ancak eşlik eden dosyası geri yüklenemedi. Dosya şurada: {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Öğrenilmiş modellerin çalışma ortamı son başlatmada çöktü. Programın yeni bir sürümü kurulana kadar kapalı kalır; diğer her şey her zamanki gibi çalışır.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Grafik hızlandırma son başlatmada çöktü. Programın yeni bir sürümü kurulana kadar kapalı kalır; modeller işlemcide hesaplanır.</value>
+  </data>
 </root>

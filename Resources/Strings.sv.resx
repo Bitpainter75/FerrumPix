@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Åtgärden misslyckades. Den gamla filen är tillbaka, men dess medföljande fil kunde inte återställas. Den finns på {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Körmiljön för inlärda modeller kraschade vid senaste start. Den förblir avstängd tills en ny programversion installeras; allt annat fungerar som vanligt.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Grafikaccelerationen kraschade vid senaste start. Den förblir avstängd tills en ny programversion installeras; modellerna räknar på processorn.</value>
+  </data>
 </root>

@@ -148,6 +148,14 @@ Namespace Services
             SyncLock _lock
                 If _runtimeChecked Then Return
                 _runtimeChecked = True
+                ' DER STARTSCHUTZ: stirbt der Prozess beim Anlegen der Umgebung (Zugriffsverletzung,
+                ' nicht zu fangen; gesehen unter Windows 10 22H2), bleibt die Laufzeit beim naechsten
+                ' Start aus, statt die Anwendung erneut mitzureissen. Siehe NativeStartGuard.
+                If Not NativeStartGuard.TryEnter(NativeStartGuard.ModelRuntime) Then
+                    _runtimeReady = False
+                    _runtimeError = "crashed during the previous start"
+                    Return
+                End If
                 Try
                     ' TELEMETRIE AUS, und zwar als ERSTES - bevor irgendetwas anderes die Laufzeit
                     ' benutzt. Der Riegel davor (die Umgebungsvariable) gehoert an den Programmstart
@@ -166,6 +174,8 @@ Namespace Services
                 Catch ex As Exception
                     _runtimeReady = False
                     _runtimeError = ex.GetType().Name & ": " & ex.Message
+                Finally
+                    NativeStartGuard.Leave(NativeStartGuard.ModelRuntime)
                 End Try
             End SyncLock
         End Sub

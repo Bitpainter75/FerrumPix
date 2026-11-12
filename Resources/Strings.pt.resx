@@ -11533,4 +11533,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>A operação falhou. O ficheiro anterior voltou, mas não foi possível restaurar o seu ficheiro associado. Está em {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>O ambiente de execução dos modelos aprendidos falhou no último arranque. Fica desligado até ser instalada uma nova versão do programa; tudo o resto funciona como habitualmente.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>A aceleração gráfica falhou no último arranque. Fica desligada até ser instalada uma nova versão do programa; os modelos calculam no processador.</value>
+  </data>
 </root>

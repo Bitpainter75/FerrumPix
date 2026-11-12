@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Handlingen mislyktes. Den gamle filen er tilbake, men følgefilen kunne ikke gjenopprettes. Den ligger på {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Kjøremiljøet for lærte modeller krasjet ved forrige oppstart. Det forblir av til en ny programversjon er installert; alt annet fungerer som vanlig.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Grafikkakselerasjonen krasjet ved forrige oppstart. Den forblir av til en ny programversjon er installert; modellene regner på prosessoren.</value>
+  </data>
 </root>

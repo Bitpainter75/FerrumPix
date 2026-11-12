@@ -11534,4 +11534,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>L'operazione non è riuscita. Il file precedente è tornato, ma non è stato possibile ripristinare il suo file associato. Si trova in {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Il runtime dei modelli appresi si è bloccato all'ultimo avvio. Resta disattivato finché non viene installata una nuova versione del programma; tutto il resto funziona come sempre.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>L'accelerazione grafica si è bloccata all'ultimo avvio. Resta disattivata finché non viene installata una nuova versione del programma; i modelli calcolano sul processore.</value>
+  </data>
 </root>

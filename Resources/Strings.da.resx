@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Handlingen mislykkedes. Den gamle fil er tilbage, men dens ledsagefil kunne ikke gendannes. Den ligger på {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Kørselsmiljøet til lærte modeller gik ned ved sidste start. Det forbliver slået fra, indtil en ny programversion er installeret; alt andet fungerer som normalt.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Grafikaccelerationen gik ned ved sidste start. Den forbliver slået fra, indtil en ny programversion er installeret; modellerne regner på processoren.</value>
+  </data>
 </root>

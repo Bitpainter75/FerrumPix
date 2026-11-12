@@ -11552,4 +11552,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Der Vorgang ist gescheitert. Die alte Datei ist zurück, ihre Begleitdatei ließ sich aber nicht zurückholen. Sie liegt unter {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Die Laufzeit für gelernte Modelle ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; alles andere arbeitet wie gewohnt.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Die Grafikbeschleunigung ist beim letzten Start abgestürzt. Sie bleibt aus, bis eine neue Programmfassung installiert ist; die Modelle rechnen auf dem Prozessor.</value>
+  </data>
 </root>

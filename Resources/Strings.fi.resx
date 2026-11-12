@@ -11574,4 +11574,10 @@
   <data name="Der_Vorgang_ist_gescheitert_Die_alte_Datei_ist_z_2cb41a72" xml:space="preserve">
     <value>Toiminto epäonnistui. Vanha tiedosto on palautettu, mutta sen sivutiedostoa ei voitu palauttaa. Se on kohteessa {0}</value>
   </data>
+  <data name="Die_Laufzeit_f_r_gelernte_Modelle_ist_beim_letzt_27ec6e80" xml:space="preserve">
+    <value>Opittujen mallien ajoympäristö kaatui edellisellä käynnistyskerralla. Se pysyy pois päältä, kunnes ohjelmasta asennetaan uusi versio; kaikki muu toimii tavalliseen tapaan.</value>
+  </data>
+  <data name="Die_Grafikbeschleunigung_ist_beim_letzten_Start__4f2f1c31" xml:space="preserve">
+    <value>Grafiikkakiihdytys kaatui edellisellä käynnistyskerralla. Se pysyy pois päältä, kunnes ohjelmasta asennetaan uusi versio; mallit laskevat suorittimella.</value>
+  </data>
 </root>
