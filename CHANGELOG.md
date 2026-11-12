@@ -33,17 +33,12 @@
 - Denoising a raw file with the model darkened the edges of bright areas that were brought back
   from overexposure, such as a sky or a lamp. They now stay as they were.
 
-- Some Windows downloads of the last two updates were missing the part that runs the AI models,
-  so the AI functions did not work there.
-
-- On Windows computers with an older Microsoft Visual C++ runtime, the AI functions could crash
-  FerrumPix while loading. The Windows downloads now bring the runtime they need. If an older one
-  is already in use anyway, the AI functions stay off instead of crashing.
-
-- On some Windows computers FerrumPix closed right away at every start, because the part that
-  runs the AI models crashed while loading. That part now loads only when you use, switch on or
-  check an AI function, so FerrumPix starts in any case. If it crashes there, FerrumPix remembers
-  it and shows a message the next time instead of crashing again; a new version tries it again.
+- AI functions on Windows: some downloads of the last two updates were missing the part that runs
+  the AI models, and on computers with an older Microsoft Visual C++ runtime that part could crash
+  FerrumPix, on some even at every start. The Windows downloads now bring everything they need,
+  including the runtime, and the AI part loads only when you use, switch on or check an AI
+  function, so FerrumPix always starts. If it still cannot load, the AI functions stay off and
+  FerrumPix shows a message instead of crashing; a new version tries it again.
 
 - On Linux, sidecar files with an upper case ending such as IMG_1.XMP were overlooked. Rating,
   label and keywords in them were not read, FerrumPix created a second sidecar file next to them,
