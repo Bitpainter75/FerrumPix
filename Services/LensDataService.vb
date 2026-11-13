@@ -918,6 +918,9 @@ Namespace Services
             ''' Wahl, weil sie schon durch jeden Decode-Weg gereicht wird; mit dem Objektiv hat
             ''' er sonst nichts zu tun. Nothing als Wahl heisst: kein Beschnitt.
             Public Property CropSensorEdge As Boolean
+            ''' Auf das in der Kamera gewaehlte Seitenverhaeltnis schneiden
+            ''' (ImageAdjustments.RawCameraAspectCrop), aus demselben Grund an der Wahl.
+            Public Property CropCameraAspect As Boolean
             ''' Entrauschen mit Modell in der RAW-Stufe (ImageAdjustments.RawModelDenoise), Staerke 0
             ''' bis 100, kleiner null fuer aus. Haengt aus demselben Grund an der Wahl wie der
             ''' Sensorrand. Der Decode nimmt es nur, wenn das Ergebnis des Modells schon bereitliegt

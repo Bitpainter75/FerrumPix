@@ -11676,4 +11676,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl は JPEG XL ファイルを読み書きし、BSD ライセンスで提供されています。Flatpak 以外のどのパッケージにも同梱され、システムの libjxl より優先して使われます。Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>カメラのアスペクト比</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>カメラで設定したアスペクト比（3:2、16:9、1:1 など）で写真を表示します。RAW ファイルにはそれでもセンサー全体が含まれており、オフにすると再び表示されます。最初に決めておくのがおすすめです。後から切り替えると、配置済みのマスクや挿入したオブジェクトがずれます。</value>
+  </data>
 </root>

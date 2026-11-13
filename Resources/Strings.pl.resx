@@ -11676,4 +11676,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl odczytuje i zapisuje pliki JPEG XL i jest objęta licencją BSD. Każdy pakiet oprócz Flatpaka zawiera ją i używa jej przed biblioteką libjxl z systemu; Flatpak bierze ją ze swojego środowiska uruchomieniowego. Gdy jej brakuje, takie pliki pozostają nieotwarte, a wszystko inne działa bez zmian.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Proporcje aparatu</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Pokazuje zdjęcie w proporcjach ustawionych w aparacie, na przykład 3:2, 16:9 lub 1:1. Plik RAW i tak zawiera cały sensor; po wyłączeniu znów jest widoczny. Najlepiej zdecydować od razu na początku: późniejsza zmiana przesuwa już ustawione maski i wstawione obiekty.</value>
+  </data>
 </root>

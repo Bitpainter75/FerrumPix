@@ -850,7 +850,7 @@ Namespace Services
                 ' aus dem Zwischenspeicher (TakeCached): eine Bitmap-Kopie davor waere eine zweite
                 ' Vollbildkopie, gemessen rund 300 ms bei 33 Megapixeln.
                 Dim directDistortion = lens IsNot Nothing AndAlso lens.HasDistortion AndAlso
-                                       Not (lensChoice IsNot Nothing AndAlso lensChoice.CropSensorEdge)
+                                       Not (lensChoice IsNot Nothing AndAlso (lensChoice.CropSensorEdge OrElse lensChoice.CropCameraAspect))
                 ' Das Entrauschen mit Modell zaehlt nur, wenn sein Ergebnis bereitliegt; der Decode
                 ' rechnet es nie selbst (RawDecodeServiceModelDenoise.vb).
                 Dim modelDenoise = If(lensChoice IsNot Nothing AndAlso lensChoice.ModelDenoiseStrength >= 0 AndAlso
@@ -979,6 +979,14 @@ Namespace Services
         Private Shared _sensorEdgePath As String
         Private Shared _sensorEdgeWriteTime As DateTime
         Private Shared _sensorEdge As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
+        Private Shared _cameraAspectEdge As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
+
+        ''' <summary>So weit muss das Seitenverhaeltnis des Kamera-Ausschnitts von dem des ganzen
+        ''' Bildes abweichen, damit er als gewaehltes Format gilt (3:2, 16:9 oder 1:1 auf einem
+        ''' 4:3-Sensor, 4:3 auf einem 3:2-Sensor). Darunter ist er nur der Sensorrand, und den
+        ''' regelt die Tabelle: Fujis 3:2-Ausschnitt weicht um 0,3 Prozent ab, ein anderes Format
+        ''' um mindestens 11 Prozent.</summary>
+        Private Const CameraAspectMinDeviation As Double = 0.02
 
         ''' <summary>Der Sensorrand dieser Datei in der GEDREHTEN Lage, so wie der Decode das Bild
         ''' ausgibt, oder Nothing, wenn fuer Kamera und Bildgroesse nichts bekannt ist.
@@ -991,37 +999,50 @@ Namespace Services
         ''' Nur open_file, kein Decode; das Ergebnis der letzten Datei wird gemerkt, weil jeder
         ''' Treffer im Zwischenspeicher hier vorbeikommt.</summary>
         Public Shared Function SensorEdgeFor(path As String) As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
-            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            Return EdgesFor(path).Sensor
+        End Function
+
+        ''' <summary>Der Rand, den das in der Kamera gewaehlte Seitenverhaeltnis abschneidet, in der
+        ''' GEDREHTEN Lage wie <see cref="SensorEdgeFor"/>, oder Nothing, wenn die Datei keinen
+        ''' Ausschnitt traegt oder er dem ganzen Bild entspricht (siehe
+        ''' <see cref="CameraAspectMinDeviation"/>). Er schliesst den Sensorrand ein.</summary>
+        Public Shared Function CameraAspectEdgeFor(path As String) As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
+            Return EdgesFor(path).CameraAspect
+        End Function
+
+        ''' <summary>Beide Raender aus einem einzigen open_file, fuer die letzte Datei gemerkt.</summary>
+        Private Shared Function EdgesFor(path As String) As (Sensor As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?,
+                                                             CameraAspect As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?)
+            If String.IsNullOrWhiteSpace(path) Then Return (Nothing, Nothing)
             Dim writeTime As DateTime
             Try
                 writeTime = File.GetLastWriteTimeUtc(path)
             Catch
-                Return Nothing
+                Return (Nothing, Nothing)
             End Try
             SyncLock _sensorEdgeLock
                 If String.Equals(_sensorEdgePath, path, StringComparison.Ordinal) AndAlso _sensorEdgeWriteTime = writeTime Then
-                    Return _sensorEdge
+                    Return (_sensorEdge, _cameraAspectEdge)
                 End If
             End SyncLock
 
-            Dim result As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)? = Nothing
+            Dim sensorResult As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)? = Nothing
+            Dim aspectResult As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)? = Nothing
             Dim facts = ReadFileMetadata(path)
             If facts IsNot Nothing AndAlso facts.Flip >= 0 Then
                 Dim squarePixels = (facts.OrientedWidth = facts.Width AndAlso facts.OrientedHeight = facts.Height) OrElse
                                    (facts.OrientedWidth = facts.Height AndAlso facts.OrientedHeight = facts.Width)
-                Dim sensor = If(squarePixels,
-                                CameraSensorCropTable.Lookup(facts.NormalizedMake, facts.NormalizedModel, facts.Width, facts.Height),
-                                Nothing)
-                If sensor.HasValue Then
-                    Dim s = sensor.Value
-                    ' Zeilen (oben, unten) und Spalten (links, rechts) des Sensors, gespiegelt wie
-                    ' die Ausgabe.
-                    Dim rows = If((facts.Flip And 2) <> 0, (First:=s.Bottom, Last:=s.Top), (First:=s.Top, Last:=s.Bottom))
-                    Dim cols = If((facts.Flip And 1) <> 0, (First:=s.Right, Last:=s.Left), (First:=s.Left, Last:=s.Right))
-                    If (facts.Flip And 4) <> 0 Then
-                        result = (rows.First, cols.First, rows.Last, cols.Last)
-                    Else
-                        result = (cols.First, rows.First, cols.Last, rows.Last)
+                If squarePixels Then
+                    Dim sensor = CameraSensorCropTable.Lookup(facts.NormalizedMake, facts.NormalizedModel, facts.Width, facts.Height)
+                    If sensor.HasValue Then sensorResult = OrientEdge(sensor.Value, facts.Flip)
+                    If facts.CameraCrop.HasValue Then
+                        Dim c = facts.CameraCrop.Value
+                        Dim whole = facts.Width / CDbl(facts.Height)
+                        Dim chosen = c.Width / CDbl(c.Height)
+                        If Math.Abs(chosen - whole) / whole > CameraAspectMinDeviation Then
+                            aspectResult = OrientEdge((c.Left, c.Top, facts.Width - c.Left - c.Width, facts.Height - c.Top - c.Height),
+                                                      facts.Flip)
+                        End If
                     End If
                 End If
             End If
@@ -1029,13 +1050,24 @@ Namespace Services
             SyncLock _sensorEdgeLock
                 _sensorEdgePath = path
                 _sensorEdgeWriteTime = writeTime
-                _sensorEdge = result
+                _sensorEdge = sensorResult
+                _cameraAspectEdge = aspectResult
             End SyncLock
-            Return result
+            Return (sensorResult, aspectResult)
+        End Function
+
+        ''' <summary>Ein Rand in der Lage des Sensors, gedreht und gespiegelt wie die Ausgabe.</summary>
+        Private Shared Function OrientEdge(s As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer),
+                                           flip As Integer) As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)
+            ' Zeilen (oben, unten) und Spalten (links, rechts) des Sensors, gespiegelt wie die Ausgabe.
+            Dim rows = If((flip And 2) <> 0, (First:=s.Bottom, Last:=s.Top), (First:=s.Top, Last:=s.Bottom))
+            Dim cols = If((flip And 1) <> 0, (First:=s.Right, Last:=s.Left), (First:=s.Left, Last:=s.Right))
+            If (flip And 4) <> 0 Then Return (rows.First, cols.First, rows.Last, cols.Last)
+            Return (cols.First, rows.First, cols.Last, rows.Last)
         End Function
 
         ''' <summary>Schneidet den Sensorrand ab, wenn die Wahl es verlangt und die Kamera bekannt
-        ''' ist. Laeuft HINTER dem Zwischenspeicher und VOR der Verzeichnung: der Zwischenspeicher
+        ''' ist, oder das in der Kamera gewaehlte Seitenverhaeltnis (CropCameraAspect). Laeuft HINTER dem Zwischenspeicher und VOR der Verzeichnung: der Zwischenspeicher
         ''' haelt das volle Bild, das Umschalten kostet also keinen neuen Decode, und die
         ''' Verzeichnung rechnet um die Mitte des beschnittenen Bildes, wie bei Adobe.
         '''
@@ -1049,8 +1081,12 @@ Namespace Services
         Private Shared Function WithSensorEdgeCrop(image As SKBitmap, path As String,
                                                    wahl As LensDataService.Wahl,
                                                    Optional halfSize As Boolean = False) As SKBitmap
-            If image Is Nothing OrElse wahl Is Nothing OrElse Not wahl.CropSensorEdge Then Return image
-            Dim edge = SensorEdgeFor(path)
+            If image Is Nothing OrElse wahl Is Nothing OrElse Not (wahl.CropSensorEdge OrElse wahl.CropCameraAspect) Then Return image
+            ' Das Format der Kamera schliesst den Sensorrand ein und geht ihm deshalb vor; ohne
+            ' gewaehltes Format bleibt es beim Rand der Tabelle.
+            Dim edges = EdgesFor(path)
+            Dim edge = If(wahl.CropCameraAspect AndAlso edges.CameraAspect.HasValue, edges.CameraAspect,
+                          If(wahl.CropSensorEdge, edges.Sensor, Nothing))
             If Not edge.HasValue Then Return image
             Dim e = edge.Value
             Dim scale = Function(v As Integer) If(halfSize, (v + 1) \ 2, v)
@@ -1419,6 +1455,12 @@ Namespace Services
             ''' Struktur nicht bestaetigen liess. Gebraucht fuer den Sensorrand, der in der
             ''' ungedrehten Lage zaehlt.
             Public Property Flip As Integer = -1
+            ''' Der Ausschnitt, den die Kamera selbst in die Datei schreibt (LibRaws
+            ''' raw_inset_crops[0]), in der ungedrehten Lage und bezogen auf das sichtbare Bild.
+            ''' Panasonic schreibt dort das gewaehlte Seitenverhaeltnis (3:2, 16:9, 1:1 auf dem
+            ''' 4:3-Sensor), Fujifilm ebenso. Nothing, wenn die Datei keinen traegt oder sich der
+            ''' Aufbau der Struktur nicht bestaetigen liess.
+            Public Property CameraCrop As (Left As Integer, Top As Integer, Width As Integer, Height As Integer)?
         End Class
 
         ' Der Aufbau der beiden Strukturen, gegen libraw_types.h. Gelesen wird an festen Versaetzen,
@@ -1579,9 +1621,23 @@ Namespace Services
             Dim flip = Marshal.ReadInt32(handle, SizesFlipOffset)
             If flip < 0 OrElse flip > 7 Then Return (0, 0)
             facts.Flip = flip
+            facts.CameraCrop = ReadCameraCrop(handle, facts.Width, facts.Height)
             ' Bit 4 ist das Vertauschen der Achsen: 5 und 6 sind die Hochkant-Drehungen.
             If (flip And 4) <> 0 Then Return (CInt(height), CInt(width))
             Return (CInt(width), CInt(height))
+        End Function
+
+        ''' <summary>Der Ausschnitt der Kamera aus raw_inset_crops[0], oder Nothing. Gelesen erst,
+        ''' nachdem ReadOrientedSize den Aufbau des Blocks gegen die Getter bestaetigt hat, und nur
+        ''' angenommen, wenn er ganz im sichtbaren Bild liegt und nicht winzig ist.</summary>
+        Private Shared Function ReadCameraCrop(handle As IntPtr, width As Integer, height As Integer) As (Left As Integer, Top As Integer, Width As Integer, Height As Integer)?
+            Dim left = Marshal.ReadInt16(handle, SizesInsetCropOffset) And &HFFFF
+            Dim top = Marshal.ReadInt16(handle, SizesInsetCropOffset + 2) And &HFFFF
+            Dim cropWidth = Marshal.ReadInt16(handle, SizesInsetCropOffset + 4) And &HFFFF
+            Dim cropHeight = Marshal.ReadInt16(handle, SizesInsetCropOffset + 6) And &HFFFF
+            If cropWidth < width \ 4 OrElse cropHeight < height \ 4 Then Return Nothing
+            If left + cropWidth > width OrElse top + cropHeight > height Then Return Nothing
+            Return (left, top, cropWidth, cropHeight)
         End Function
 
         ''' <summary>Ein Textfeld fester Laenge aus einer nativen Struktur. Gelesen wird bis zum
@@ -2991,6 +3047,9 @@ Namespace Services
         Private Const SizesIwidthOffset As Integer = 22
         Private Const SizesPixelAspectOffset As Integer = 32
         Private Const SizesFlipOffset As Integer = 40
+        ' Hinter dem Flip: mask[8][4] (128 Bytes), raw_aspect (ushort) bei 172, dann
+        ' raw_inset_crops[0] mit cleft, ctop, cwidth, cheight (je ushort) ab 174.
+        Private Const SizesInsetCropOffset As Integer = 174
         ''' So weit wird nach libraw_rawdata_t gesucht. Unter Linux liegt es bei 193768, unter
         ''' Windows weiter vorn, weil long dort vier Bytes hat.
         Private Const RawdataSearchEnd As Integer = 400000

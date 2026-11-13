@@ -11680,4 +11680,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl JPEG XL dosyalarını okur ve yazar, BSD lisansıyla sunulur. Flatpak dışındaki her paket onu getirir ve sistemdeki libjxl'den önce kullanır; Flatpak onu kendi çalışma ortamından alır. Yoksa bu tür dosyalar açılmaz, geri kalan her şey değişmeden çalışır.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Kameranın en boy oranı</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Fotoğrafı kamerada ayarlanmış en boy oranında gösterir, örneğin 3:2, 16:9 veya 1:1. RAW dosyası yine de sensörün tamamını içerir; kapatıldığında yeniden görünür. En iyisi baştan karar vermek: sonradan değiştirmek, yerleştirilmiş maskeleri ve eklenen nesneleri kaydırır.</value>
+  </data>
 </root>

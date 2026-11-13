@@ -11680,4 +11680,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl membaca dan menulis berkas JPEG XL dan berlisensi BSD. Setiap paket kecuali Flatpak membawanya dan memakainya lebih dulu daripada libjxl sistem; Flatpak mengambilnya dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Rasio aspek kamera</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Menampilkan foto dengan rasio aspek yang diatur di kamera, misalnya 3:2, 16:9, atau 1:1. Berkas RAW tetap berisi seluruh sensor; jika dimatikan, sensor itu terlihat lagi. Sebaiknya diputuskan sejak awal: jika diubah nanti, masker dan objek yang sudah ditempatkan akan bergeser.</value>
+  </data>
 </root>

@@ -11680,4 +11680,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl JPEG XL फ़ाइलें पढ़ता और लिखता है और BSD लाइसेंस के अंतर्गत है। Flatpak को छोड़कर हर पैकेज उसे साथ लाता है और सिस्टम के libjxl से पहले इस्तेमाल करता है; Flatpak उसे अपने रनटाइम से लेता है। उसके बिना ऐसी फ़ाइलें बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>कैमरे का पक्षानुपात</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>फ़ोटो को कैमरे पर सेट किए गए पक्षानुपात में दिखाता है, जैसे 3:2, 16:9 या 1:1। RAW फ़ाइल में फिर भी पूरा सेंसर रहता है; बंद करने पर वह फिर दिखता है। शुरुआत में ही तय करना सबसे अच्छा है: बाद में बदलने पर पहले से रखे मास्क और डाले गए ऑब्जेक्ट खिसक जाते हैं।</value>
+  </data>
 </root>

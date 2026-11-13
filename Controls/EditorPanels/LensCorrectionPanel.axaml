@@ -115,6 +115,12 @@
                           IsVisible="{Binding RawSensorEdgeCropAvailable}"
                           FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Schneidet die äußersten Pixelreihen ab, die der Sensor nicht sauber liefert und die als farbige Streifen am Bildrand stehen können. Am besten gleich zu Beginn entscheiden - schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau."/>
+                <!-- Das in der Kamera gewaehlte Seitenverhaeltnis (RawCameraAspectCropEnabled).
+                     Angeboten nur, wenn die Datei eines traegt, das vom ganzen Bild abweicht. -->
+                <CheckBox Content="Seitenverhältnis der Kamera" IsChecked="{Binding RawCameraAspectCropEnabled}"
+                          IsVisible="{Binding RawCameraAspectCropAvailable}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Zeigt das Bild im Seitenverhältnis, das an der Kamera eingestellt war, etwa 3:2, 16:9 oder 1:1. Die RAW-Datei enthält trotzdem den ganzen Sensor; ausgeschaltet ist er wieder zu sehen. Am besten gleich zu Beginn entscheiden, schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau."/>
 
                 <!-- Feinkorrektur des Farbquerfehlers von Hand. BEWUSST ausserhalb des Blocks
                      darueber, der nur mit gefundenem Profil sichtbar ist: gerade wenn die Sammlung

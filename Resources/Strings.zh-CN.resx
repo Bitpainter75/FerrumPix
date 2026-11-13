@@ -11634,4 +11634,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl 用于读写 JPEG XL 文件，采用 BSD 许可证。除 Flatpak 外，每个软件包都附带它，并优先于系统中的 libjxl 使用；Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>相机画幅比例</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>按相机上设置的画幅比例显示照片，例如 3:2、16:9 或 1:1。RAW 文件仍然包含整个传感器；关闭后会重新显示。最好一开始就决定：之后再切换，已放置的蒙版和插入的对象会发生偏移。</value>
+  </data>
 </root>

@@ -24,6 +24,13 @@
   navigator at the bottom: the picture small, with a frame around the part you are looking at. Drag
   the frame, or click beside it, to look at another part.
 
+- Raw files from cameras that let you choose the aspect ratio, such as 3:2, 16:9 or 1:1 on Panasonic
+  cameras, open in the editor in the format chosen on the camera. A new switch under Lens correction
+  shows the whole sensor again. Pictures you edited before keep the whole sensor.
+
+- Auto is more careful with pictures taken at high ISO: it brightens them less and keeps more of
+  the colour of the light, so the mood of a dim indoor scene stays and the noise stays down.
+
 ### Fixes
 
 

@@ -1058,6 +1058,7 @@ Namespace Services
                 .ChromaticAberrationRed = adj.LensTcaRed,
                 .ChromaticAberrationBlue = adj.LensTcaBlue,
                 .CropSensorEdge = adj.RawSensorEdgeCrop,
+                .CropCameraAspect = adj.RawCameraAspectCrop,
                 .ModelDenoiseStrength = adj.ModelDenoiseStrengthForDecode()}
         End Function
 

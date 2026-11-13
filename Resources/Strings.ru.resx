@@ -11676,4 +11676,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl читает и записывает файлы JPEG XL и распространяется по лицензии BSD. Каждый пакет, кроме Flatpak, содержит её и использует раньше системной libjxl; Flatpak берёт её из своей среды выполнения. Если её нет, такие файлы не открываются, а всё остальное работает как прежде.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Соотношение сторон камеры</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Показывает снимок в соотношении сторон, установленном на камере, например 3:2, 16:9 или 1:1. Файл RAW всё равно содержит весь сенсор; если выключить, он снова виден. Лучше решить сразу в начале: при переключении позже уже размещённые маски и вставленные объекты сместятся.</value>
+  </data>
 </root>

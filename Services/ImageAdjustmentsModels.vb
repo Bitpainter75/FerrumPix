@@ -1059,6 +1059,14 @@ Namespace Services
         ''' ohne; eines danach traegt es immer ausdruecklich.</summary>
         Public Property RawSensorEdgeCrop As Boolean = False
 
+        ''' <summary>Auf das Seitenverhaeltnis schneiden, das in der Kamera gewaehlt war (3:2, 16:9
+        ''' oder 1:1 auf einem 4:3-Sensor und umgekehrt). Die Kamera schreibt den Ausschnitt in die
+        ''' RAW, behaelt aber den ganzen Sensor (RawDecodeService.CameraAspectEdgeFor). Aus demselben
+        ''' Grund wie beim Sensorrand ist die Vorgabe des Feldes AUS und erst ForUneditedRaw schaltet
+        ''' es ein: ein Rezept von vorher wurde am ganzen Sensor bearbeitet, und sein Zuschnitt, seine
+        ''' Masken und Objekte saessen sonst daneben.</summary>
+        Public Property RawCameraAspectCrop As Boolean = False
+
         Public Property Vignette As Single = 0
         Public Property VignetteTransition As Single = 55
         Public Property VignetteRoundness As Single = 0
@@ -1515,7 +1523,7 @@ Namespace Services
         Private Shared ReadOnly StructuralPropertyNames As New HashSet(Of String)(StringComparer.Ordinal) From {
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceCamera", "WhiteBalanceModel", "WhiteBalanceMode",
-            "RawHighlightRecovery", "RawSensorEdgeCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
+            "RawHighlightRecovery", "RawSensorEdgeCrop", "RawCameraAspectCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
             "RampBlackShareInSource", "ShadowSaturationInSource", "RawModelDenoise", "RawModelDenoiseStrength",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
@@ -1603,6 +1611,8 @@ Namespace Services
             ' laesst er sich abschalten. Nur hier und nicht als Vorgabe des Feldes: ein Rezept ohne
             ' das Feld stammt aus der Zeit davor und muss ohne Beschnitt weiterrechnen.
             values.RawSensorEdgeCrop = True
+            ' Ebenso das in der Kamera gewaehlte Seitenverhaeltnis, wie beim Referenzprogramm.
+            values.RawCameraAspectCrop = True
             Dim stops = If(forNegative, 0.0, RawDecodeService.BaselineExposureStops(path))
             If stops <> 0.0 Then values.Exposure = CSng(stops * ExposurePointsPerStop)
             ' Die Kamera-Farbkalibrierung ist dieselbe sichtbare Reglergruppe wie im Editor.
@@ -1828,7 +1838,7 @@ Namespace Services
             "CalibrationRedHue", "CalibrationRedSaturation", "CalibrationGreenHue", "CalibrationGreenSaturation",
             "CalibrationBlueHue", "CalibrationBlueSaturation", "CalibrationShadowTint",
             "FarbrauschGrob", "ColorNoiseReduction",
-            "Sharpness", "SharpenDetail", "NoiseReduction", "RawSensorEdgeCrop"}
+            "Sharpness", "SharpenDetail", "NoiseReduction", "RawSensorEdgeCrop", "RawCameraAspectCrop"}
 
         ''' <summary>Wie weit die Belichtung in der nachsichtigen Pruefung von der Grundbelichtung
         ''' abweichen darf, in Blendenstufen: die Kameratabelle verschiebt sie bei einem neuen Eingang
@@ -1878,6 +1888,7 @@ Namespace Services
                 .WhiteBalanceKelvinTint = WhiteBalanceKelvinTint,
                 .RawHighlightRecovery = RawHighlightRecovery,
                 .RawSensorEdgeCrop = RawSensorEdgeCrop,
+                .RawCameraAspectCrop = RawCameraAspectCrop,
                 .RawModelDenoise = RawModelDenoise,
                 .RawModelDenoiseStrength = RawModelDenoiseStrength,
                 .LensDistortion = LensDistortion,

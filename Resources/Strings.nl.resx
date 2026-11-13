@@ -11676,4 +11676,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl leest en schrijft JPEG XL-bestanden en valt onder de BSD-licentie. Elk pakket behalve de Flatpak levert het mee en gebruikt het vóór een libjxl van het systeem; de Flatpak haalt het uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Beeldverhouding van de camera</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Toont de foto in de beeldverhouding die op de camera was ingesteld, zoals 3:2, 16:9 of 1:1. Het RAW-bestand bevat toch de hele sensor; uitgeschakeld is die weer te zien. Het beste meteen aan het begin beslissen: later omschakelen verschuift al geplaatste maskers en ingevoegde objecten.</value>
+  </data>
 </root>

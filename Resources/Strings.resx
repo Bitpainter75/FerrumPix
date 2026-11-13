@@ -11655,4 +11655,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl reads and writes JPEG XL files and is licensed under the BSD license. Every package except the Flatpak brings it and uses it before a system libjxl; the Flatpak takes it from its runtime. Without it, such files stay closed and everything else works unchanged.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Camera aspect ratio</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Shows the picture in the aspect ratio set on the camera, such as 3:2, 16:9 or 1:1. The raw file still holds the whole sensor; switched off, it can be seen again. Best decided right at the start: switching later moves masks and inserted objects that are already placed.</value>
+  </data>
 </root>

@@ -11636,4 +11636,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl legge e scrive file JPEG XL ed è distribuita con licenza BSD. Ogni pacchetto tranne il Flatpak la include e la usa prima della libjxl di sistema; il Flatpak la prende dal suo ambiente di esecuzione. Se manca, questi file restano chiusi e tutto il resto funziona come prima.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Formato della fotocamera</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Mostra la foto nel formato impostato sulla fotocamera, ad esempio 3:2, 16:9 o 1:1. Il file RAW contiene comunque l'intero sensore; disattivato, torna visibile. Meglio decidere subito all'inizio: cambiando in seguito, maschere e oggetti già inseriti si spostano.</value>
+  </data>
 </root>

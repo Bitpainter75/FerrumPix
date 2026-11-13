@@ -11676,4 +11676,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl čte a zapisuje soubory JPEG XL a podléhá licenci BSD. Každý balíček kromě Flatpaku ji přináší a používá ji před systémovou libjxl; Flatpak ji bere ze svého běhového prostředí. Pokud chybí, zůstanou takové soubory neotevřené a vše ostatní funguje beze změny.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Poměr stran fotoaparátu</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Zobrazí snímek v poměru stran nastaveném na fotoaparátu, například 3:2, 16:9 nebo 1:1. Soubor RAW přesto obsahuje celý snímač; po vypnutí je opět vidět. Nejlépe rozhodnout hned na začátku: pozdější přepnutí posune již umístěné masky a vložené objekty.</value>
+  </data>
 </root>

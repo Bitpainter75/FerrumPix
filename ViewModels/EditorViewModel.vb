@@ -2461,8 +2461,11 @@ Namespace ViewModels
             ' Mit den Anpassungen: bei einem Filmnegativ misst die Automatik das umgekehrte Bild,
             ' auf das ihre Regler wirken, nicht das Negativ.
             Dim current = GetCurrentAdjustments()
+            ' Mit der ISO der Aufnahme: bei hoher ISO hellt die Automatik weniger auf und laesst
+            ' die Lichtfarbe eher stehen (ImageProcessor.AutoNoiseFactor).
             Dim measured = If(source Is Nothing, Nothing,
-                              ImageProcessor.AnalyzeAutoAdjustments(source, current, current.ChainExposureInRawStage()))
+                              ImageProcessor.AnalyzeAutoAdjustments(source, current, current.ChainExposureInRawStage(),
+                                                                    ImageProcessor.AutoIsoOf(_currentImagePath)))
             If measured Is Nothing OrElse Not measured.HasMeasurement Then
                 StatusText = LocalizationService.T("Das Bild konnte nicht analysiert werden")
                 Return
@@ -5297,6 +5300,7 @@ Namespace ViewModels
                 _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
+                Me.RaisePropertyChanged(NameOf(RawCameraAspectCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImageRaw))
                 Me.RaisePropertyChanged(NameOf(IsCurrentImagePsd))
@@ -7398,6 +7402,9 @@ Namespace ViewModels
         Private ReadOnly _rawHighlightRecovery As Boolean = True
         ''' Den Sensorrand abschneiden (ImageAdjustments.RawSensorEdgeCrop). Ebenfalls im Decode.
         Private _rawSensorEdgeCrop As Boolean = False
+        ''' Auf das in der Kamera gewaehlte Seitenverhaeltnis schneiden
+        ''' (ImageAdjustments.RawCameraAspectCrop). Ebenfalls im Decode.
+        Private _rawCameraAspectCrop As Boolean = False
         ''' Mit Modell entrauschen (ImageAdjustments.RawModelDenoise) und wie stark. Ebenfalls im
         ''' Decode, siehe RawDecodeServiceModelDenoise.vb.
         Private _rawModelDenoise As Boolean = False
@@ -8041,6 +8048,7 @@ Namespace ViewModels
                 .ChromaticAberrationRed = _lensTcaRed,
                 .ChromaticAberrationBlue = _lensTcaBlue,
                 .CropSensorEdge = _rawSensorEdgeCrop,
+                .CropCameraAspect = _rawCameraAspectCrop,
                 .ModelDenoiseStrength = If(_rawModelDenoise, CDbl(_rawModelDenoiseStrength), -1.0)}
         End Function
 
@@ -8066,7 +8074,7 @@ Namespace ViewModels
             Dim hatteZuordnung = Not String.IsNullOrWhiteSpace(LensAssignment)
             Dim hatteSchalter = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
                                 _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
-                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart OrElse _rawCameraAspectCrop <> SensorEdgeCropStart
             If Not hatteZuordnung AndAlso Not hatteSchalter Then Return
             CaptureUndoState("Objektivkorrektur")
             _lensDistortion = Nothing
@@ -8078,6 +8086,7 @@ Namespace ViewModels
             _lensTcaRed = 0
             _lensTcaBlue = 0
             _rawSensorEdgeCrop = SensorEdgeCropStart
+            _rawCameraAspectCrop = SensorEdgeCropStart
             _lensModel = ""
             If hatteZuordnung AndAlso Not String.IsNullOrWhiteSpace(_objektivExifName) Then
                 LensDataService.SetAssignment(_objektivExifName, "")
@@ -8113,6 +8122,32 @@ Namespace ViewModels
             Get
                 If Not IsRawDeveloped Then Return False
                 Return RawDecodeService.SensorEdgeFor(RenderSourcePath).HasValue
+            End Get
+        End Property
+
+        ''' <summary>Auf das Seitenverhaeltnis schneiden, das in der Kamera gewaehlt war (3:2, 16:9
+        ''' oder 1:1 auf einem 4:3-Sensor). Sitzt wie der Sensorrand im Decode und kostet beim
+        ''' Umschalten keinen neuen Decode; ab Werk an wie der Sensorrand.</summary>
+        Public Property RawCameraAspectCropEnabled As Boolean
+            Get
+                Return _rawCameraAspectCrop
+            End Get
+            Set(value As Boolean)
+                If _rawCameraAspectCrop = value Then Return
+                CaptureUndoState(NameOf(RawCameraAspectCropEnabled))
+                _rawCameraAspectCrop = value
+                Me.RaisePropertyChanged(NameOf(RawCameraAspectCropEnabled))
+                RaiseResetButtonStateChanged()
+                RebuildWorkingImageForLens()
+            End Set
+        End Property
+
+        ''' <summary>Traegt die Datei ein in der Kamera gewaehltes Seitenverhaeltnis, das vom ganzen
+        ''' Bild abweicht? Nur dann wird der Schalter angeboten.</summary>
+        Public ReadOnly Property RawCameraAspectCropAvailable As Boolean
+            Get
+                If Not IsRawDeveloped Then Return False
+                Return RawDecodeService.CameraAspectEdgeFor(RenderSourcePath).HasValue
             End Get
         End Property
 
@@ -8202,7 +8237,8 @@ Namespace ViewModels
                            NameOf(LensTcaEnabled), NameOf(LensVignettingEnabled),
                            NameOf(LensDistortionAmount), NameOf(LensTcaAmount),
                            NameOf(LensVignettingAmount), NameOf(LensTcaRed), NameOf(LensTcaBlue),
-                           NameOf(RawSensorEdgeCropEnabled), NameOf(RawSensorEdgeCropAvailable)}
+                           NameOf(RawSensorEdgeCropEnabled), NameOf(RawSensorEdgeCropAvailable),
+                           NameOf(RawCameraAspectCropEnabled), NameOf(RawCameraAspectCropAvailable)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -16921,6 +16957,7 @@ Namespace ViewModels
         Private Sub RaiseRawStateChanged()
             Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
             Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
+            Me.RaisePropertyChanged(NameOf(RawCameraAspectCropAvailable))
             Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(LensCorrectionSupported))
             Me.RaisePropertyChanged(NameOf(LensCorrectionBlockedByBakedContent))
@@ -20125,6 +20162,7 @@ Namespace ViewModels
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
+                Me.RaisePropertyChanged(NameOf(RawCameraAspectCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
                 ' Dateinamen danach.
@@ -20620,6 +20658,7 @@ Namespace ViewModels
                 StatusText = $"{CInt(CurrentImage.Size.Width)} × {CInt(CurrentImage.Size.Height)}  {mp:F1} MP  •  {sizeStr}{RawStatusSuffix()}"
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
+                Me.RaisePropertyChanged(NameOf(RawCameraAspectCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
                 ' Erst hier steht fest, ob wirklich entwickelt wurde - die Fensterleiste faerbt den
                 ' Dateinamen danach.
@@ -24427,6 +24466,7 @@ Namespace ViewModels
             Dim adj = New ImageAdjustments With {
                 .RawHighlightRecovery = _rawHighlightRecovery,
                 .RawSensorEdgeCrop = _rawSensorEdgeCrop,
+                .RawCameraAspectCrop = _rawCameraAspectCrop,
                 .RawModelDenoise = _rawModelDenoise,
                 .RawModelDenoiseStrength = _rawModelDenoiseStrength,
                 .LensDistortion = _lensDistortion,
@@ -25126,6 +25166,7 @@ Namespace ViewModels
                 Case NameOf(Contrast) : Return LocalizationService.T("Kontrast")
                 Case NameOf(Highlights) : Return LocalizationService.T("Lichter")
                 Case NameOf(RawSensorEdgeCropEnabled) : Return LocalizationService.T("Sensorrand entfernen")
+                Case NameOf(RawCameraAspectCropEnabled) : Return LocalizationService.T("Seitenverhältnis der Kamera")
                 Case NameOf(ShadowsLevel) : Return LocalizationService.T("Tiefen")
                 Case NameOf(Whites) : Return LocalizationService.T("Weiß")
                 Case NameOf(Blacks) : Return LocalizationService.T("Schwarz")
@@ -25967,6 +26008,7 @@ Namespace ViewModels
             If _lensTcaBlue <> adj.LensTcaBlue Then note("LensTcaBlue", _lensTcaBlue, adj.LensTcaBlue)
             If _lensVignettingAmount <> adj.LensVignettingAmount Then note("LensVignettingAmount", _lensVignettingAmount, adj.LensVignettingAmount)
             If _rawSensorEdgeCrop <> adj.RawSensorEdgeCrop Then note("RawSensorEdgeCrop", _rawSensorEdgeCrop, adj.RawSensorEdgeCrop)
+            If _rawCameraAspectCrop <> adj.RawCameraAspectCrop Then note("RawCameraAspectCrop", _rawCameraAspectCrop, adj.RawCameraAspectCrop)
             If _rawModelDenoise <> adj.RawModelDenoise Then note("RawModelDenoise", _rawModelDenoise, adj.RawModelDenoise)
             If adj.RawModelDenoise AndAlso _rawModelDenoiseStrength <> adj.RawModelDenoiseStrength Then
                 note("RawModelDenoiseStrength", _rawModelDenoiseStrength, adj.RawModelDenoiseStrength)
@@ -25984,6 +26026,7 @@ Namespace ViewModels
         Private Sub TakeDecodeFieldsFrom(adj As ImageAdjustments)
             If adj Is Nothing Then Return
             _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
+            _rawCameraAspectCrop = adj.RawCameraAspectCrop
             _rawModelDenoise = adj.RawModelDenoise
             _rawModelDenoiseStrength = adj.RawModelDenoiseStrength
             _lensDistortion = adj.LensDistortion
@@ -26048,6 +26091,7 @@ Namespace ViewModels
             _tint = adj.Tint
             _whiteBalance = If(String.IsNullOrWhiteSpace(adj.WhiteBalanceMode), "Wie Aufnahme", adj.WhiteBalanceMode)
             _rawSensorEdgeCrop = adj.RawSensorEdgeCrop
+            _rawCameraAspectCrop = adj.RawCameraAspectCrop
             _rawModelDenoise = adj.RawModelDenoise
             _rawModelDenoiseStrength = adj.RawModelDenoiseStrength
             _lensDistortion = adj.LensDistortion
@@ -26569,13 +26613,16 @@ Namespace ViewModels
 
             PushUndo(LocalizationService.T("Alle Bearbeitungen zurückgesetzt"))
             Dim sensorEdgeBefore = _rawSensorEdgeCrop
+            Dim cameraAspectBefore = _rawCameraAspectCrop
             Dim modelDenoiseBefore = _rawModelDenoise
             ResetAdjustmentsInternal()
             ' Der Sensorrand sitzt im Decode: war er abgeschaltet, muss neu entwickelt werden, sonst
             ' steht der Haken wieder an und das Bild bleibt unbeschnitten. Dasselbe fuer das
             ' Entrauschen mit Modell.
-            If sensorEdgeBefore <> _rawSensorEdgeCrop OrElse modelDenoiseBefore <> _rawModelDenoise Then
+            If sensorEdgeBefore <> _rawSensorEdgeCrop OrElse cameraAspectBefore <> _rawCameraAspectCrop OrElse
+               modelDenoiseBefore <> _rawModelDenoise Then
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropEnabled))
+                Me.RaisePropertyChanged(NameOf(RawCameraAspectCropEnabled))
                 RebuildWorkingImageForLens()
             End If
             ' EINE RAW KEHRT ZU IHREN STARTWERTEN ZURUECK, nicht zu lauter Nullen. Geoeffnet ohne
@@ -26727,6 +26774,7 @@ Namespace ViewModels
             ' etwas. Der Sensorrand geht auf seinen Startwert; beim Oeffnen setzt ihn danach das
             ' Rezept oder ForUneditedRaw.
             _rawSensorEdgeCrop = SensorEdgeCropStart
+            _rawCameraAspectCrop = SensorEdgeCropStart
             _rawModelDenoise = False
             _rawModelDenoiseStrength = 70
             _lensDistortion = Nothing
@@ -31402,7 +31450,7 @@ Namespace ViewModels
             ' und das Bild blieb korrigiert bzw. beschnitten.
             Dim decodeChanged = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
                                 _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
-                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart OrElse
+                                _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart OrElse _rawCameraAspectCrop <> SensorEdgeCropStart OrElse
                                 Not String.IsNullOrEmpty(_lensModel)
             _lensDistortion = Nothing
             _lensTca = Nothing
@@ -31413,6 +31461,7 @@ Namespace ViewModels
             _lensTcaRed = 0
             _lensTcaBlue = 0
             _rawSensorEdgeCrop = SensorEdgeCropStart
+            _rawCameraAspectCrop = SensorEdgeCropStart
             _lensModel = ""
             _grain = 0
             _grainSize = 0
@@ -33365,6 +33414,7 @@ Namespace ViewModels
             _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
+                Me.RaisePropertyChanged(NameOf(RawCameraAspectCropAvailable))
                 Me.RaisePropertyChanged(NameOf(RawFooterTooltip))
             Me.RaisePropertyChanged(NameOf(StatusText))
         End Sub

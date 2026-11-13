@@ -11654,4 +11654,10 @@
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl liest und schreibt JPEG-XL-Dateien und steht unter der BSD-Lizenz. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libjxl des Systems; der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert.</value>
   </data>
+  <data name="Seitenverh_ltnis_der_Kamera_9e556bf7" xml:space="preserve">
+    <value>Seitenverhältnis der Kamera</value>
+  </data>
+  <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
+    <value>Zeigt das Bild im Seitenverhältnis, das an der Kamera eingestellt war, etwa 3:2, 16:9 oder 1:1. Die RAW-Datei enthält trotzdem den ganzen Sensor; ausgeschaltet ist er wieder zu sehen. Am besten gleich zu Beginn entscheiden, schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau.</value>
+  </data>
 </root>

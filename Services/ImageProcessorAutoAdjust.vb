@@ -46,6 +46,43 @@ Namespace Services
         Private Const AutoExposureDamping As Double = 0.6
         Private Const AutoWhiteBalanceDamping As Double = 0.6
 
+        ''' <summary>HOHE ISO. Ab hier beginnt die Automatik, Aufhellung, Weiss, Tiefen und
+        ''' Weissabgleich zu daempfen; bei <see cref="AutoNoiseIsoFull"/> ist die Daempfung voll.
+        ''' BEFUND (Nutzer, GX8 bei ISO 6400 unter Kunstlicht): die Automatik hob das Bild um eine
+        ''' halbe Blende und Weiss um 56 Punkte, rechnete die Glühlampenstimmung kuehl und holte das
+        ''' Rauschen in die Mitteltoene. Ein Bild bei hoher ISO ist fast immer eines bei wenig Licht:
+        ''' dunkel und warm ist dort die Szene, nicht der Fehler, und jede Aufhellung zieht das
+        ''' Rauschen mit hoch.</summary>
+        Private Const AutoNoiseIsoStart As Double = 800.0
+        Private Const AutoNoiseIsoFull As Double = 6400.0
+        ''' <summary>Was bei voller Daempfung von Aufhellung, Weiss und Tiefen bleibt.</summary>
+        Private Const AutoNoiseLiftKeep As Double = 0.4
+        ''' <summary>Was bei voller Daempfung vom Weissabgleich bleibt.</summary>
+        Private Const AutoNoiseWhiteBalanceKeep As Double = 0.5
+
+        ''' <summary>0 bis ISO 800, 1 ab ISO 6400, dazwischen nach Blendenstufen (log2). Ohne
+        ''' bekannte ISO 0: dann bleibt alles wie bisher.</summary>
+        Friend Shared Function AutoNoiseFactor(iso As Double) As Double
+            If Double.IsNaN(iso) OrElse iso <= AutoNoiseIsoStart Then Return 0.0
+            Return AutoClamp(Math.Log(iso / AutoNoiseIsoStart, 2.0) / Math.Log(AutoNoiseIsoFull / AutoNoiseIsoStart, 2.0), 0.0, 1.0)
+        End Function
+
+        ''' <summary>Die ISO einer Datei aus ihren Aufnahmedaten, 0 wenn sie keine traegt oder nicht
+        ''' lesbar ist.</summary>
+        Public Shared Function AutoIsoOf(path As String) As Double
+            If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return 0.0
+            Try
+                ' ExifData traegt die ISO als Text; die Suchfelder lesen die Zahl daraus.
+                Dim data = ExifService.ReadExif(path)
+                If data Is Nothing Then Return 0.0
+                Dim iso = ExifService.ExtractSearchFields(data, path).Iso
+                Return If(iso.HasValue AndAlso iso.Value > 0, CDbl(iso.Value), 0.0)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.AutoIsoOf", ex)
+                Return 0.0
+            End Try
+        End Function
+
         ''' <summary>Ergebnis der Bildanalyse: die Reglerwerte, die "Auto" setzt. Alles andere (Kurven,
         ''' HSL, Effekte, Filter) fasst die Automatik nicht an.</summary>
         Public Class AutoAdjustResult
@@ -95,7 +132,8 @@ Namespace Services
                 ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
                 ' zweites Umkehren gaebe wieder das Negativ.
                 Dim rawStage = throughRawStage AndAlso adj.ExposureBelongsToRawStage()
-                Dim r = If(isFpx, AnalyzeAutoAdjustments(bmp), AnalyzeAutoAdjustments(bmp, adj, rawStage))
+                Dim iso = If(isFpx, 0.0, AutoIsoOf(sourcePath))
+                Dim r = If(isFpx, AnalyzeAutoAdjustments(bmp), AnalyzeAutoAdjustments(bmp, adj, rawStage, iso))
                 If Not r.HasMeasurement OrElse r.IsNeutral() Then Return
                 ' Die Messung rechnet in Double, die Regler sind Single. Das Verengen stand
                 ' vorher unsichtbar im Compiler; ausgeschrieben ist es nachvollziehbar.
@@ -126,12 +164,15 @@ Namespace Services
         ''' Wie viel Belichtung schon in <paramref name="source"/> steckt, sagt
         ''' <see cref="ImageAdjustments.ExposureInSource"/> (das Arbeitsbild des Editors).
         ''' <paramref name="exposureInRawStage"/>: wirkt eine neue Belichtung in der RAW-Stufe, weil
-        ''' das Bild mit ihr neu entwickelt wird? Siehe die Kernfunktion.</summary>
+        ''' das Bild mit ihr neu entwickelt wird? Siehe die Kernfunktion.
+        ''' <paramref name="iso"/>: die ISO der Aufnahme, 0 wenn unbekannt; ein Filmnegativ hat keine
+        ''' sinnvolle und wird ohne gemessen.</summary>
         Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap, adj As ImageAdjustments,
-                                                      Optional exposureInRawStage As Boolean = False) As AutoAdjustResult
+                                                      Optional exposureInRawStage As Boolean = False,
+                                                      Optional iso As Double = 0.0) As AutoAdjustResult
             If source Is Nothing OrElse adj Is Nothing OrElse Not adj.NegativeEnabled Then
                 Return AnalyzeAutoAdjustments(source, exposureInRawStage,
-                                              If(adj Is Nothing, 0.0, CDbl(adj.ExposureInSource)))
+                                              If(adj Is Nothing, 0.0, CDbl(adj.ExposureInSource)), iso)
             End If
             Dim measure As New ImageAdjustments With {
                 .NegativeEnabled = True,
@@ -182,11 +223,18 @@ Namespace Services
         ''' gemessenen Bild steckt. Wirkt die Belichtung in der RAW-Stufe, wird sie vor der Messung
         ''' herausgerechnet: das Bild entsteht mit dem neuen Wert ja neu, und nur so ergibt zweimal
         ''' „Auto" dasselbe wie einmal. Sonst bleibt das Bild, wie es ist (eingebackener Inhalt), und
-        ''' die Automatik waehlt den Unterschied, den die Kette darauf rechnet.</summary>
+        ''' die Automatik waehlt den Unterschied, den die Kette darauf rechnet.
+        '''
+        ''' <paramref name="iso"/> daempft bei hoher ISO Aufhellung, Weiss, Tiefen und Weissabgleich
+        ''' (<see cref="AutoNoiseFactor"/>); 0 heisst unbekannt und laesst alles wie ohne.</summary>
         Public Shared Function AnalyzeAutoAdjustments(source As SKBitmap,
                                                       Optional exposureInRawStage As Boolean = False,
-                                                      Optional sourceExposure As Double = 0.0) As AutoAdjustResult
+                                                      Optional sourceExposure As Double = 0.0,
+                                                      Optional iso As Double = 0.0) As AutoAdjustResult
             Dim rawStage = exposureInRawStage
+            Dim noise = AutoNoiseFactor(iso)
+            Dim liftKeep = 1.0 - (1.0 - AutoNoiseLiftKeep) * noise
+            Dim whiteBalanceKeep = 1.0 - (1.0 - AutoNoiseWhiteBalanceKeep) * noise
             ' Die Belichtung, von der aus die Automatik rechnet: in der RAW-Stufe ist sie
             ' herausgerechnet, sonst steht das Bild mit ihr fest.
             Dim baseExposure = If(rawStage, 0.0, sourceExposure)
@@ -304,7 +352,7 @@ Namespace Services
             Dim footroom = AutoClamp((pLow - 0.08) / 0.22, 0.0, 1.0)
             Dim lowKeyDamping = AutoClamp(0.35 + 0.65 * headroom, 0.35, 1.0)
             Dim highKeyDamping = AutoClamp(0.35 + 0.65 * footroom, 0.35, 1.0)
-            If ev > 0 Then ev *= lowKeyDamping
+            If ev > 0 Then ev *= lowKeyDamping * liftKeep
             If ev < 0 Then ev *= highKeyDamping
 
             ' Wer schon ausgefressene Lichter hat, braucht keine Aufhellung mehr - und ein Bild mit
@@ -413,7 +461,9 @@ Namespace Services
                 Next
             End If
             If wantsBlack Then result.Blacks = AutoDeadband(blacks)
-            If wantsWhite Then result.Whites = AutoDeadband(whites)
+            ' Bei hoher ISO zieht Weiss die Mitten mit hoch und damit ihr Rauschen; gedaempft wie
+            ' die Belichtung. Schwarz bleibt: es dunkelt, das Rauschen faellt damit eher.
+            If wantsWhite Then result.Whites = AutoDeadband(whites * liftKeep)
 
             ' ── 4) Lichter und Tiefen ────────────────────────────────────────────────────────
             ' Nicht an einem einzelnen Extremwert, sondern an der MASSE in der jeweiligen Endzone:
@@ -431,7 +481,7 @@ Namespace Services
             ' Die Tiefen-Anhebung teilt sich die Low-Key-Dämpfung mit der Belichtung: ein Nachtbild
             ' hat viel dunkle Fläche, WEIL es eine Nacht zeigt - sie voll aufzuziehen macht daraus
             ' einen grauen Schleier.
-            result.ShadowsLevel = AutoDeadband(AutoClamp((loMass - 0.08) * 150.0, 0.0, 30.0) * lowKeyDamping)
+            result.ShadowsLevel = AutoDeadband(AutoClamp((loMass - 0.08) * 150.0, 0.0, 30.0) * lowKeyDamping * liftKeep)
 
             ' ── 5) Dynamik ───────────────────────────────────────────────────────────────────
             ' Nur anheben, nie entsättigen: kräftige Farben sind eine gestalterische Entscheidung,
@@ -464,7 +514,9 @@ Namespace Services
                 ' Engine: Rot wird mit (1 + Temp/200), Blau mit (1 - Temp/200) multipliziert. Gleich
                 ' gesetzt und nach Temp aufgelöst ergibt das genau diesen Ausdruck.
                 If mr + mb > 1.0 Then
-                    Dim temperature = 200.0 * (mb - mr) / (mr + mb) * AutoWhiteBalanceDamping
+                    ' Bei hoher ISO weniger: dort ist das Licht meist Kunstlicht, und seine Farbe ist
+                    ' die Stimmung der Szene.
+                    Dim temperature = 200.0 * (mb - mr) / (mr + mb) * AutoWhiteBalanceDamping * whiteBalanceKeep
                     temperature = AutoClamp(temperature, -20.0, 20.0)
                     If Math.Abs(temperature) < 1.5 Then temperature = 0.0
                     result.Temperature = Math.Round(temperature)
@@ -472,7 +524,7 @@ Namespace Services
                 If mg > 1.0 Then
                     ' Grün gegen den (bereits temperaturkorrigierten) Rot/Blau-Mittelwert abgleichen.
                     Dim neutral = (mr * (1.0 + result.Temperature / 200.0) + mb * (1.0 - result.Temperature / 200.0)) / 2.0
-                    Dim tint = 200.0 * (neutral - mg) / mg * AutoWhiteBalanceDamping
+                    Dim tint = 200.0 * (neutral - mg) / mg * AutoWhiteBalanceDamping * whiteBalanceKeep
                     tint = AutoClamp(tint, -20.0, 20.0)
                     If Math.Abs(tint) < 1.5 Then tint = 0.0
                     result.Tint = Math.Round(tint)
