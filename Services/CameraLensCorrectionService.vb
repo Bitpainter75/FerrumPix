@@ -78,13 +78,31 @@ Namespace Services
         End Function
 
         ''' <summary>Kameras, deren OpcodeList3 angewandt wird: Marke und Modell aus IFD0, ein leeres
-        ''' Modell steht fuer jedes Modell der Marke. Andere DNGs tragen die Liste ebenfalls (Telefone,
-        ''' Kompakte und Systemkameras, im Bestand 26 Dateien); dort ist sie nicht gegen das
-        ''' Referenzprogramm gemessen und bleibt deshalb aussen vor.</summary>
+        ''' Modell steht fuer jedes Modell der Marke. Aufgenommen ist nur, was gegen das
+        ''' Referenzprogramm gemessen naeher kam: Ecken (iPhone, Q2), Verzeichnung (Pixel, Leica);
+        ''' der Farbquerfehler der Leica-Listen wirkt gemischt (weitwinklig deutlich besser, bei der
+        ''' SL3-P mit 90 mm etwas schlechter) und kommt mit. Bewusst nicht: die Leica X2 (die Liste traegt nur
+        ''' Farbquerfehler, der Saum wurde damit breiter), Pixel 4a, Leica SL2 und die Sigma fp (Liste
+        ''' ohne Wirkung; die fp hielte mit ihrer flachen Karte sogar ein Profil fern) und die
+        ''' ILCE-7M4, deren DNG ein anderes Programm geschrieben hat: ihre Liste stammt nicht vom
+        ''' Hersteller.</summary>
         Private Shared ReadOnly Stage3Cameras As (Make As String, Model As String)() = {
             ("DJI", ""),
             ("Hasselblad", "L1D-20c"),
-            ("Hasselblad", "L2D-20c")}
+            ("Hasselblad", "L2D-20c"),
+            ("Apple", "iPhone 6s Plus"),
+            ("Apple", "iPhone SE"),
+            ("Apple", "iPhone 7 Plus"),
+            ("Apple", "iPhone 8"),
+            ("Apple", "iPhone XS"),
+            ("Google", "Pixel 3a"),
+            ("Google", "Pixel 6 Pro"),
+            ("Google", "Pixel 7 Pro"),
+            ("Google", "Pixel 8 Pro"),
+            ("LEICA CAMERA AG", "LEICA CL"),
+            ("LEICA CAMERA AG", "LEICA Q (Typ 116)"),
+            ("LEICA CAMERA AG", "LEICA Q2"),
+            ("LEICA CAMERA AG", "LEICA SL3-P")}
 
         ''' <summary>Die Objektivkorrektur aus OpcodeList3 einer DNG, oder Nothing (andere Kamera, keine
         ''' Liste, nichts Brauchbares darin).

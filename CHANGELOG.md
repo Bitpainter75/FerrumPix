@@ -60,5 +60,10 @@
   corrected the way the camera intends. They follow the lens correction switches like any other
   lens correction.
 
+- The same now applies to DNG files from several iPhones up to the XS, which had dark corners,
+  and from the Pixel 3a, 6 Pro, 7 Pro and 8 Pro and the Leica CL, Q, Q2 and SL3-P, which kept
+  part of the distortion of their lens. On the Leica Q2 the corners also no longer come out too
+  bright, since the camera has already evened them out.
+
 - Raw files from the Hasselblad H4D came out too bright.
 

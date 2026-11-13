@@ -272,8 +272,9 @@ Namespace Services
 
         ''' <summary>OpcodeList3 der Rohdaten-IFD: FixVignetteRadial, WarpRectilinear und GainMap.
         ''' Andere Opcodes werden uebersprungen. Ein FixVignetteRadial oder WarpRectilinear, dessen
-        ''' optische Mitte nicht in der Bildmitte liegt, faellt heraus: die Korrekturstufen rechnen um
-        ''' die Bildmitte. Nothing, wenn die Datei keine Liste oder nichts Brauchbares darin traegt.</summary>
+        ''' optische Mitte mehr als ein Prozent neben der Bildmitte liegt, faellt heraus: die
+        ''' Korrekturstufen rechnen um die Bildmitte (<see cref="IsCentered"/>). Nothing, wenn die
+        ''' Datei keine Liste oder nichts Brauchbares darin traegt.</summary>
         Public Shared Function ReadStage3(path As String) As Stage3Opcodes
             If String.IsNullOrEmpty(path) OrElse Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return Nothing
             Try
@@ -377,9 +378,12 @@ Namespace Services
             Next
         End Sub
 
-        ''' <summary>Liegt die optische Mitte (relativ zum Bild) in der Bildmitte?</summary>
+        ''' <summary>Liegt die optische Mitte (relativ zum Bild) nahe genug an der Bildmitte, um um
+        ''' diese zu rechnen? Telefone schreiben sie leicht daneben (bis 0,008 im Bestand). Ein Prozent
+        ''' der Bildkante verschiebt die Abschattung in der Ecke um wenige Hundertstel Blenden und die
+        ''' Verzeichnung um unter einen halben Bildpunkt; weiter daneben faellt der Opcode heraus.</summary>
         Private Shared Function IsCentered(centerH As Double, centerV As Double) As Boolean
-            Return Math.Abs(centerH - 0.5) <= 0.001 AndAlso Math.Abs(centerV - 0.5) <= 0.001
+            Return Math.Abs(centerH - 0.5) <= 0.01 AndAlso Math.Abs(centerV - 0.5) <= 0.01
         End Function
 
         ''' <summary>Die GainMaps aus OpcodeList3 so, wie die Umsetzung des Decodes sie braucht: je
