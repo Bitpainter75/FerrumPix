@@ -481,7 +481,9 @@ Namespace Services
                 LibraryService.Instance.SetColorLabelForMany({filePath}, pp3.ColorLabel)
             End If
 
-            Dim rating = If(pp3?.Rating, ExifService.GetXmpRating(data))
+            ' Die erste Quelle MIT Bewertung: eine 0 in der .pp3 heisst "keine" und verdeckt die
+            ' Sterne der Datei nicht, wie im Ordnerlauf der Galerie.
+            Dim rating = {pp3?.Rating, ExifService.GetXmpRating(data)}.FirstOrDefault(Function(r) r.HasValue AndAlso r.Value > 0)
             If rating.HasValue AndAlso rating.Value > 0 AndAlso
                LibraryService.Instance.GetRating(filePath) = 0 Then
                 LibraryService.Instance.SetRating(filePath, rating.Value)

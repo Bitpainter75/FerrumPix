@@ -7988,8 +7988,12 @@ Namespace ViewModels
                 ' was ein eingestellter Katalog des Referenzprogramms zu diesem Foto sagt.
                 Dim pp3 = Pp3SidecarService.Read(filePath)
 
-                ' Die Beistelldatei ist die speziellere Quelle und schlägt eingebettetes XMP.
-                Dim ratingSource = If(fpxmpCatalog?.Rating.HasValue, CType(Nothing, Integer?), If(sidecar?.Rating, If(pp3?.Rating, embeddedRating)))
+                ' Die Beistelldatei ist die speziellere Quelle und schlägt eingebettetes XMP - aber
+                ' nur mit einer Bewertung. Eine 0 dort heisst "keine" und verdeckt die Sterne der
+                ' Datei nicht: die Beistelldatei ist ein Zusatz zur Datei, kein Ersatz. Gefuellt wird
+                ' ohnehin nur ein leerer Katalog, und leer heisst dort ebenfalls 0.
+                Dim ratingSource = If(fpxmpCatalog?.Rating.HasValue, CType(Nothing, Integer?),
+                                      {sidecar?.Rating, pp3?.Rating, embeddedRating}.FirstOrDefault(Function(r) r.HasValue AndAlso r.Value > 0))
                 If ratingSource.HasValue AndAlso ratingSource.Value > 0 AndAlso currentRating = 0 Then
                     LibraryService.Instance.SetRating(filePath, ratingSource.Value)
                     result.Rating = ratingSource.Value

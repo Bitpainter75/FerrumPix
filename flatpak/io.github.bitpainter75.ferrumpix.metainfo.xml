@@ -112,6 +112,25 @@
 
   <releases>
 
+    <release version="0.9.82-2" date="2026-11-13">
+      <description>
+        <p>This update lets you browse photos from disconnected drives, improves lens corrections for phones and drones, saves denoised RAW files for faster reuse, and brings better compatibility with older Linux systems:</p>
+        <p xml:lang="de">Mit diesem Update kannst du Fotos von nicht angeschlossenen Laufwerken durchsehen, bekommst bessere Objektivkorrekturen für Smartphones und Drohnen, kannst entrauschte RAW-Dateien für die spätere Verwendung speichern und FerrumPix auch auf älteren Linux-Systemen nutzen:</p>
+        <ul>
+          <li>Indexed folders on disconnected drives now remain visible in the folder tree and are marked as unavailable. You can still browse their photos using the thumbnails, ratings, keywords and people stored in the catalog. Everything is read-only while the drive is disconnected, and you can remove individual folders from the catalog directly from the folder tree.</li>
+          <li xml:lang="de">Bereits indizierte Ordner bleiben jetzt auch dann im Ordnerbaum sichtbar, wenn das zugehörige Laufwerk nicht angeschlossen ist. Sie werden als nicht erreichbar gekennzeichnet. Du kannst die Fotos trotzdem weiterhin anhand der im Katalog gespeicherten Vorschaubilder, Bewertungen, Stichwörter und Personen durchsehen. Solange das Laufwerk nicht verbunden ist, ist der Zugriff schreibgeschützt. Einzelne Ordner lassen sich außerdem direkt im Ordnerbaum aus dem Katalog entfernen.</li>
+
+          <li>RAW files from DJI drones and action cameras, DJI-built Hasselblad cameras, various iPhones and Google Pixel phones, and some Leica cameras now use the lens correction data embedded in the files. This corrects vignetting, chromatic aberration and distortion as intended by the camera. These RAW files also no longer appear too bright.</li>
+          <li xml:lang="de">RAW-Dateien von DJI-Drohnen und Actionkameras, von DJI gebauten Hasselblad-Kameras, verschiedenen iPhones und Google-Pixel-Smartphones sowie einigen Leica-Kameras nutzen jetzt die in den Dateien gespeicherten Objektivkorrekturen. Dadurch werden Vignettierung, Farbsäume und Verzeichnung entsprechend den Vorgaben der Kamera korrigiert. Außerdem werden diese RAW-Dateien nicht mehr zu hell dargestellt.</li>
+
+          <li>Denoised RAW files can now be saved alongside the originals, so you won't have to wait for the denoising model to run again when reopening or exporting them. Save As, Export and batch operations also let you choose whether to include descriptions, copyright information and location metadata, including metadata from sidecar files.</li>
+          <li xml:lang="de">Entrauschte RAW-Dateien lassen sich jetzt neben den Originalen speichern. So muss die Entrauschung beim erneuten Öffnen oder Exportieren nicht noch einmal durchgeführt werden. Bei Speichern unter, Exportieren und der Stapelverarbeitung kannst du außerdem selbst entscheiden, ob Beschreibungen, Copyright-Angaben und Ortsinformationen übernommen werden sollen. Das gilt auch für Metadaten aus Beistelldateien.</li>
+
+          <li>The AppImage now includes its own support for RAW, HEIC and JPEG XL files, so these formats also work on older versions of Ubuntu and Linux Mint. On Windows, the AI features now include all their required components and can no longer prevent FerrumPix from starting. Sidecar files with uppercase extensions are also handled correctly, and face information written by other applications is preserved.</li>
+          <li xml:lang="de">Das AppImage bringt jetzt die benötigte Unterstützung für RAW-, HEIC- und JPEG-XL-Dateien selbst mit. Damit lassen sich diese Formate auch unter älteren Versionen von Ubuntu und Linux Mint öffnen. Unter Windows enthalten die KI-Funktionen jetzt alle benötigten Komponenten und können den Start von FerrumPix nicht mehr verhindern. Außerdem werden Beistelldateien mit großgeschriebenen Dateiendungen korrekt verarbeitet und Gesichtsinformationen aus anderen Programmen bleiben erhalten.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.81-1" date="2026-11-12">
       <description>
         <p>This update brings RAW denoising directly on the sensor data, Nextcloud uploads for batch operations, and support for Nikon High Efficiency RAW files across all platforms:</p>

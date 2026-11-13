@@ -435,21 +435,35 @@ Namespace Services
         End Sub
 
         ''' <summary>Die Aufnahmezeit aus dem XMP-Paket IN der Datei, im EXIF-Rohformat, und ihre Zone,
-        ''' beides leer, wenn keine dasteht. exif:DateTimeOriginal immer; photoshop:DateCreated (die
-        ''' IPTC-Entsprechung, oft nur ein Datum) nur, wenn die Datei sonst keine Aufnahmezeit traegt.
+        ''' beides leer, wenn keine dasteht oder keine gegen das EXIF ankommt.
+        '''
+        ''' Dieselbe Reihenfolge wie bei der Beistelldatei (ParseSidecarOverrides): exif:DateTimeOriginal,
+        ''' dann xmp:CreateDate (die XMP-Fassung von DateTimeDigitized, in aelteren Dateien und bei
+        ''' manchen Bildverwaltungen allein), dann photoshop:DateCreated (die IPTC-Entsprechung, oft nur
+        ''' ein Datum). Jedes Feld hat einen Rang wie die EXIF-Zeit, gegen die es antritt
+        ''' (<paramref name="exifRank"/>: 4 Aufnahmezeit, 3 Digitalisierungszeit, 1 Aenderungsdatum,
+        ''' 0 keine): exif:DateTimeOriginal 4, xmp:CreateDate 3, photoshop:DateCreated 2. Ein Feld
+        ''' zaehlt, wenn sein Rang hoeher ist, bei <paramref name="xmpWinsTie"/> auch bei gleichem Rang.
+        ''' So bleibt photoshop:DateCreated beim alten Zuschnitt: nur, wenn die Datei sonst keine
+        ''' Aufnahmezeit traegt.
         '''
         ''' GESPEICHERT WIRD DIE UHRZEIT VOR ORT, die Zone daneben (ParseXmpClock). Konverter schreiben
         ''' die Zone der Kamera dazu ("2018-06-24T12:14:49-04:00"), und im EXIF daneben steht 12:14:49
         ''' ohne Zone. Umgerechnet in die Zone des Rechners wird erst fuer die Anzeige
         ''' (ToDisplayTime); Sortierung und Suche bleiben bei der Uhrzeit, wie im Referenzprogramm.</summary>
         Private Shared Function EmbeddedXmpCaptureDate(directories As IReadOnlyList(Of MetadataExtractor.Directory),
-                                                       includeDateCreated As Boolean) As (Clock As String, Offset As String)
+                                                       exifRank As Integer,
+                                                       xmpWinsTie As Boolean) As (Clock As String, Offset As String)
             If directories Is Nothing Then Return ("", "")
+            Dim candidates As (Ns As String, Name As String, Rank As Integer)() = {
+                ("http://ns.adobe.com/exif/1.0/", "DateTimeOriginal", 4),
+                ("http://ns.adobe.com/xap/1.0/", "CreateDate", 3),
+                ("http://ns.adobe.com/photoshop/1.0/", "DateCreated", 2)}
+            Dim fields = candidates.Where(Function(c) c.Rank > exifRank OrElse (xmpWinsTie AndAlso c.Rank = exifRank)).ToList()
+            If fields.Count = 0 Then Return ("", "")
             For Each xmpDirectory In directories.OfType(Of MetadataExtractor.Formats.Xmp.XmpDirectory)()
                 Dim meta = xmpDirectory.XmpMeta
                 If meta Is Nothing Then Continue For
-                Dim fields As New List(Of (Ns As String, Name As String)) From {("http://ns.adobe.com/exif/1.0/", "DateTimeOriginal")}
-                If includeDateCreated Then fields.Add(("http://ns.adobe.com/photoshop/1.0/", "DateCreated"))
                 For Each field In fields
                     Dim raw As String = Nothing
                     Try
@@ -591,10 +605,25 @@ Namespace Services
                 End If
 
                 data.DateTaken = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagDateTimeOriginal)
+                ' Rang der Zeit, die das EXIF liefert, fuer den Abgleich mit dem XMP unten (siehe
+                ' EmbeddedXmpCaptureDate): 4 Aufnahmezeit, 3 Digitalisierungszeit, 1 nur das
+                ' Aenderungsdatum, 0 gar keine.
+                Dim exifDateRank = 0
                 ' Die Zone der Aufnahmezeit (OffsetTimeOriginal, 0x9011, seit EXIF 2.31), nur mit einer
                 ' Aufnahmezeit: sie gehoert zu genau diesem Feld.
                 If data.DateTaken.Length > 0 Then
+                    exifDateRank = 4
                     data.DateTakenOffset = NormalizeOffset(GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, &H9011))
+                Else
+                    ' Ohne Aufnahmezeit die Digitalisierungszeit (DateTimeDigitized, 0x9004) mit ihrer
+                    ' Zone (OffsetTimeDigitized, 0x9012), wie im Referenzprogramm. Bei einer Kamera
+                    ' ist sie dieselbe Zeit, bei einem Scan die des Scans; beides ist naeher an der
+                    ' Aufnahme als das Aenderungsdatum, das sonst einspringt.
+                    data.DateTaken = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagDateTimeDigitized)
+                    If data.DateTaken.Length > 0 Then
+                        exifDateRank = 3
+                        data.DateTakenOffset = NormalizeOffset(GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, &H9012))
+                    End If
                 End If
                 data.FocalLength = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.TagFocalLength)
                 data.FocalLength35mm = GetTagDescAcross(Of ExifSubIfdDirectory)(captureDirectories, ExifSubIfdDirectory.Tag35MMFilmEquivFocalLength)
@@ -647,15 +676,19 @@ Namespace Services
                 If String.IsNullOrEmpty(data.DateTaken) Then
                     data.DateTaken = data.DateModifiedExif
                     data.DateTakenIsFallback = data.DateTaken.Length > 0
+                    If data.DateTakenIsFallback Then exifDateRank = 1
                 End If
                 ' Die Zeit im EINGEBETTETEN XMP geht der im EXIF vor, wie bei der Beistelldatei und
                 ' wie beim Referenzprogramm, das bei Widerspruch die XMP-Zeit nimmt. In DNG und TIFF
                 ' schreibt es eine dort geaenderte Aufnahmezeit nur ins XMP der Datei.
-                ' NICHT BEI JPEG: dort schreibt FerrumPix eine korrigierte Zeit ins EXIF und laesst
-                ' das XMP stehen (CaptureDateService.Write); eine alte XMP-Zeit nahme die Korrektur
-                ' sofort zurueck. Das Referenzprogramm schreibt die Zeit in ein JPEG ohnehin ins EXIF.
-                If Not isFpx AndAlso Not GeotagService.IsJpegPath(imagePath) Then
-                    Dim fromXmp = EmbeddedXmpCaptureDate(metaDirectories, data.DateTaken.Length = 0 OrElse data.DateTakenIsFallback)
+                ' BEI JPEG NUR, WO DAS EXIF NICHTS GLEICHWERTIGES TRAEGT: dort schreibt FerrumPix eine
+                ' korrigierte Zeit ins EXIF und laesst das XMP stehen (CaptureDateService.Write);
+                ' eine alte XMP-Zeit nahme die Korrektur sofort zurueck. Ein JPEG ganz ohne EXIF-Zeit
+                ' (manche Bildverwaltungen schreiben nur XMP) bekommt seine Zeit dagegen aus dem XMP,
+                ' sonst stuende das Aenderungsdatum der Datei als Aufnahmedatum da.
+                If Not isFpx Then
+                    Dim fromXmp = EmbeddedXmpCaptureDate(metaDirectories, exifDateRank,
+                                                         Not GeotagService.IsJpegPath(imagePath))
                     If fromXmp.Clock.Length > 0 Then
                         data.DateTaken = fromXmp.Clock
                         data.DateTakenIsFallback = False
@@ -1038,9 +1071,14 @@ Namespace Services
         ' 11 fuehrt die Zone der Aufnahmezeit mit (Spalte DateTakenOffset) und speichert eine Zeit
         ' mit Zone aus der Beistelldatei als Uhrzeit vor Ort statt umgerechnet; ohne die Erhoehung
         ' blieben bestehende Zeilen ohne Zone und solche Zeiten verschoben.
+        ' 12 liest die Aufnahmezeit auch aus der Digitalisierungszeit des EXIF und aus xmp:CreateDate
+        ' im eingebetteten XMP, im JPEG ohne EXIF-Zeit auch das XMP ueberhaupt, und die Bewertung
+        ' bevorzugt xmp:Rating vor einer Angabe in Prozent. Ohne die Erhoehung bliebe bei solchen
+        ' Dateien das Aenderungsdatum als Aufnahmedatum im Katalog, und eine eingebettete Bewertung
+        ' kaeme nie an, weil unveraenderte Dateien nicht neu gelesen werden.
         ' Betrifft eine Aenderung nur EIN Format, gehoert sie nicht hierher, sondern in
         ' ReaderVersions: dann liest der Katalog nur dieses Format neu.
-        Public Const SummaryFormatVersion As Integer = 11
+        Public Const SummaryFormatVersion As Integer = 12
 
         Public Shared ReadOnly Property CurrentSummaryFormat As String
             Get
@@ -1705,9 +1743,12 @@ Namespace Services
             Dim tagValue = If(value, "").ToString().Trim()
             If String.IsNullOrWhiteSpace(tagName) OrElse String.IsNullOrWhiteSpace(tagValue) Then Return
             data.XmpTags.Add(New ExifTag(tagName, tagValue))
-            If Not data.XmpRating.HasValue Then
-                Dim rating = TryParseXmpRating(tagName, tagValue)
-                If rating.HasValue Then data.XmpRating = rating
+            ' xmp:Rating ist die Sternzahl und geht jedem anderen Feld mit "Rating" im Namen vor,
+            ' gleich in welcher Reihenfolge das Paket sie fuehrt; die anderen fuellen nur eine Luecke.
+            Dim rating = TryParseXmpRating(tagName, tagValue)
+            If rating.HasValue AndAlso (Not data.XmpRating.HasValue OrElse
+                                        String.Equals(tagName, "xmp:Rating", StringComparison.OrdinalIgnoreCase)) Then
+                data.XmpRating = rating
             End If
 
             ' Die beiden Stichwortfelder des Schemas. Beide sind rdf:Bag, und GetXmpProperties liefert
@@ -1725,6 +1766,21 @@ Namespace Services
             If normalizedName.IndexOf("rating", StringComparison.OrdinalIgnoreCase) < 0 Then Return Nothing
 
             Dim parsed As Integer
+            ' Die Bildverwaltung unter Windows fuehrt die Bewertung zusaetzlich in Prozent (1, 25, 50,
+            ' 75, 99 fuer einen bis fuenf Sterne). Als Sternzahl gelesen waeren 3 Sterne (50) fuenf.
+            ' Das Kuerzel ist nicht fest: die Namensraumtabelle des XMP-Lesers gilt fuer den ganzen
+            ' Prozess, und kam vorher eine andere Fassung desselben Kuerzels, heisst es hier
+            ' "MicrosoftPhoto_1_".
+            If normalizedName.StartsWith("MicrosoftPhoto", StringComparison.OrdinalIgnoreCase) Then
+                If Not Integer.TryParse(If(tagValue, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) Then Return Nothing
+                If parsed <= 0 Then Return 0
+                If parsed < 25 Then Return 1
+                If parsed < 50 Then Return 2
+                If parsed < 75 Then Return 3
+                If parsed < 99 Then Return 4
+                Return 5
+            End If
+
             If Integer.TryParse(If(tagValue, "").Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) Then
                 If parsed < 0 Then Return 0
                 Return Math.Max(0, Math.Min(5, parsed))
@@ -1842,7 +1898,14 @@ Namespace Services
                 If description Is Nothing Then Return False
 
                 description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
-                description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
+                ' Eine 0 nur dort, wo schon eine Bewertung stand, die sie zuruecknimmt. Ohne Sterne im
+                ' Katalog (oft nur: noch nicht eingelesen) bekaeme eine neue Beistelldatei sonst eine
+                ' 0, die fuer andere Programme den Sternen der Bilddatei widerspricht.
+                Dim hadRating = description.Attribute(xmpNamespace + "Rating") IsNot Nothing OrElse
+                                doc.Descendants(xmpNamespace + "Rating").Any()
+                If safeRating <> "0" OrElse hadRating Then
+                    description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
+                End If
 
                 ' xmp:Label: bekanntes Farbwort setzen, sonst vorhandenes Attribut entfernen (nicht raten).
                 If Not String.IsNullOrEmpty(colorLabelWord) Then
