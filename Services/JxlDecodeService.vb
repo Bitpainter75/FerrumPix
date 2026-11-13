@@ -17,10 +17,10 @@ Namespace Services
     '''   Linux    aus der Paketverwaltung; die Flatpak-Laufzeit bringt sie selbst mit. AppImage
     '''            und portables ZIP liefern eine libjxl.so.0.13 mit, gebaut wie die jxl.dll als
     '''            eine Datei mit Faden-Bibliothek darin (packaging/libjxl/build-linux.sh); die
-    '''            AppImage nimmt sie zuerst, das ZIP nur als Rueckfall (BundledLibraryOrder).
+    '''            mitgelieferte geht der des Systems vor (BundledLibraryOrder).
     '''   macOS    MITGELIEFERT als libjxl.dylib unter runtimes/osx-*/native, eine Datei mit
-    '''            Faden-Bibliothek darin wie die jxl.dll (packaging/libjxl/build-macos.sh). Eine
-    '''            libjxl aus Homebrew geht ihr vor.
+    '''            Faden-Bibliothek darin wie die jxl.dll (packaging/libjxl/build-macos.sh). Sie
+    '''            geht einer libjxl aus Homebrew vor.
     '''   Windows  MITGELIEFERT, als EINE jxl.dll mit Faden-Bibliothek, Farbmanagement, Brotli und
     '''            Highway darin, gebaut mit packaging/libjxl/build-windows.sh. Lizenzseitig
     '''            unkritisch: BSD-3, MIT und Apache-2.0, dazu libjxls lizenzfreie Patentzusage.
@@ -278,18 +278,16 @@ Namespace Services
                 Dim handle As IntPtr = IntPtr.Zero
                 Dim threadsName As String = Nothing
                 Dim loadedPath As String = Nothing
-                ' Je Namenspaar alle Orte, Paar fuer Paar. In der AppImage kommen die mitgelieferten
-                ' Pfade aller Paare vor jedem Namen des Systems (BundledLibraryOrder): Ubuntu 22.04
-                ' fuehrt gar keine libjxl, und eine aeltere des Systems soll die eigene nicht
-                ' verdraengen.
+                ' Je Namenspaar alle Orte, Paar fuer Paar. Die mitgelieferten Pfade aller Paare
+                ' kommen vor jedem Namen des Systems (BundledLibraryOrder): ueberall dieselbe Fassung,
+                ' und Ubuntu 22.04 fuehrt gar keine libjxl.
                 Dim attempts As New List(Of (Path As String, Threads As String))()
                 For Each pair In LibraryNames()
                     For Each candidate In CandidatePaths(pair.Main)
                         attempts.Add((candidate, pair.Threads))
                     Next
                 Next
-                For Each attempt In BundledLibraryOrder.Arrange(attempts, Function(a) a.Path,
-                                                                BundledLibraryOrder.PreferBundled, AppContext.BaseDirectory)
+                For Each attempt In BundledLibraryOrder.Arrange(attempts, Function(a) a.Path, AppContext.BaseDirectory)
                     If NativeLibrary.TryLoad(attempt.Path, handle) Then
                         loadedPath = attempt.Path
                         threadsName = attempt.Threads

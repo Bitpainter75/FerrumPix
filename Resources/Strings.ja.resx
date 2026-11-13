@@ -11592,12 +11592,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw と libde265 を含む libheif は LGPL、libmpv は GPL のもとで提供されます。いずれも動的に読み込むため、自作ビルドに置き換えられます。ライセンス本文と由来の記録は各パッケージに含まれ、通常はアプリケーションの隣の licenses フォルダーにあります。</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif は HEIC と HEIF ファイルを読み込みます。Windows と macOS、AppImage、ポータブル版 Linux ZIP には同梱されています。macOS ではまずシステム自身の読み込み機能を使います。そのほかの Linux パッケージはパッケージマネージャーから、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl は JPEG XL ファイルの読み込みと書き出しを行い、BSD ライセンスで提供されています。Windows と macOS、AppImage、ポータブル版 Linux ZIP には同梱されています。そのほかの Linux パッケージはパッケージマネージャーから、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>HEIC と HEIF ファイルの読み込み</value>
   </data>
@@ -11672,5 +11666,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>{0} 件の顔を削除しました</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw は RAW ファイルを現像します。Windows と macOS、AppImage、ポータブル版 Linux ZIP（AUR パッケージもこれを基にしています）には最新版が同梱され、システムの LibRaw より優先して使われるため、どのコンピューターでも同じように現像されます。deb と rpm はパッケージマネージャーから入手し、Flatpak は独自のものを持っています。ない場合、RAW ファイルにはカメラの埋め込みプレビューが表示されます。</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif は HEIC と HEIF ファイルを読み込みます。Windows と macOS、AppImage、ポータブル版 Linux ZIP（AUR パッケージもこれを基にしています）には同梱され、システムの libheif より優先して使われます。macOS ではまずシステム自身の読み込み機能を使います。deb と rpm はパッケージマネージャーから、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl は JPEG XL ファイルを読み書きし、BSD ライセンスで提供されています。Windows と macOS、AppImage、ポータブル版 Linux ZIP（AUR パッケージもこれを基にしています）には同梱され、システムの libjxl より優先して使われます。deb と rpm はパッケージマネージャーから、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
   </data>
 </root>

@@ -33,11 +33,11 @@ Namespace Services
     '''   Linux    aus der Paketverwaltung. Arch, Debian und Fedora führen libheif und libde265
     '''            in ihren Quellen; die Pakete empfehlen sie, erzwingen sie aber nicht. AppImage
     '''            und portables ZIP bringen eine eigene libheif.so.1 mit libde265 darin mit
-    '''            (packaging/libheif/build-linux.sh); die AppImage nimmt sie zuerst, das ZIP nur
-    '''            als Rueckfall (siehe BundledLibraryOrder).
+    '''            (packaging/libheif/build-linux.sh); die mitgelieferte geht der des Systems vor
+    '''            (siehe BundledLibraryOrder).
     '''   macOS    zuerst ImageIO (siehe oben). Als Rueckfall dahinter bringt das Mac-Paket eine
     '''            libheif.dylib im Zuschnitt der Windows-Datei mit, unter runtimes/osx-*/native
-    '''            (packaging/libheif/build-macos.sh). Eine libheif aus Homebrew geht ihr vor.
+    '''            (packaging/libheif/build-macos.sh). Sie geht einer libheif aus Homebrew vor.
     '''   Windows  MITGELIEFERT, seit dem 26. August 2026. Vorher lag dort nichts bei, mit dem
     '''            Codec als Begründung: HEIC ist in aller Regel HEVC-kodiert, HEVC ist
     '''            patentbelastet, und diese Entscheidung sollte die Distribution treffen.
@@ -273,9 +273,9 @@ Namespace Services
                 Dim handle As IntPtr
                 ' Der Mutationstest zu dieser Stelle: nimmt man BundledCandidates wieder heraus,
                 ' bleibt die Prüfung "Native Bibliotheken werden dort gesucht, wo das Paket sie
-                ' hinlegt" rot - sie ruft diese Liste per Reflexion ab. In der AppImage kommt die
-                ' mitgelieferte vor der des Systems (BundledLibraryOrder): Ubuntu 22.04 fuehrt
-                ' libheif 1.12, und nicht ueberall ist sie samt libde265 installiert.
+                ' hinlegt" rot - sie ruft diese Liste per Reflexion ab. Die mitgelieferte kommt vor
+                ' der des Systems (BundledLibraryOrder): ueberall dieselbe Fassung, Ubuntu 22.04
+                ' fuehrt nur libheif 1.12, und nicht ueberall ist sie samt libde265 installiert.
                 For Each candidate In BundledLibraryOrder.Arrange(BundledCandidates(candidates))
                     If NativeLibrary.TryLoad(candidate, handle) Then
                         _loadedLibrary = IO.Path.GetFileName(candidate)

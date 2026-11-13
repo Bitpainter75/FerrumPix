@@ -11592,12 +11592,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw en libheif met libde265 vallen onder de LGPL, libmpv onder de GPL. Ze worden dynamisch geladen en kunnen worden vervangen door een eigen build. De licentieteksten en herkomstgegevens worden met elk pakket meegeleverd, meestal in de map licenses naast de toepassing.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif leest HEIC- en HEIF-bestanden. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP wordt het meegeleverd; macOS vraagt eerst zijn eigen lezer. De overige Linux-pakketten halen het uit het pakketbeheer, de Flatpak uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl leest en schrijft JPEG XL-bestanden en valt onder de BSD-licentie. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP wordt het meegeleverd. De overige Linux-pakketten halen het uit het pakketbeheer, de Flatpak uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>HEIC- en HEIF-bestanden lezen</value>
   </data>
@@ -11672,5 +11666,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>{0} gezichten verwijderd</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw ontwikkelt RAW-bestanden. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP, waarop ook het AUR-pakket is gebouwd, wordt een actuele versie meegeleverd en vóór een LibRaw van het systeem gebruikt, zodat elke computer hetzelfde ontwikkelt. deb en rpm halen het uit het pakketbeheer, de Flatpak brengt het zelf mee. Ontbreekt het, dan tonen RAW-bestanden de ingebedde voorvertoning van de camera.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif leest HEIC- en HEIF-bestanden. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP, waarop ook het AUR-pakket is gebouwd, wordt het meegeleverd en vóór een libheif van het systeem gebruikt; macOS vraagt eerst zijn eigen lezer. deb en rpm halen het uit het pakketbeheer, de Flatpak uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl leest en schrijft JPEG XL-bestanden en valt onder de BSD-licentie. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP, waarop ook het AUR-pakket is gebouwd, wordt het meegeleverd en vóór een libjxl van het systeem gebruikt. deb en rpm halen het uit het pakketbeheer, de Flatpak uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
   </data>
 </root>

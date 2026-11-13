@@ -11550,12 +11550,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw 以及包含 libde265 的 libheif 以 LGPL 授权，libmpv 以 GPL 授权。它们均为动态加载，可用你自己编译的版本替换。授权文本和来源说明随每个软件包附带，通常位于应用程序旁边的 licenses 文件夹中。</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif 用于读取 HEIC 和 HEIF 文件。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP 中随程序附带；macOS 会先使用系统自带的读取功能。其他 Linux 软件包从软件包管理器获取它，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl 用于读取和写入 JPEG XL 文件，采用 BSD 许可证。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP 中随程序附带。其他 Linux 软件包从软件包管理器获取它，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>读取 HEIC 和 HEIF 文件</value>
   </data>
@@ -11630,5 +11624,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>已移除 {0} 张人脸</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw 用于冲印 RAW 文件。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP（AUR 软件包也基于它）中随程序附带最新版本，并优先于系统中的 LibRaw 使用，使每台电脑的冲印结果一致。deb 和 rpm 从软件包管理器获取它，Flatpak 自带一份。缺少它时，RAW 文件显示相机内嵌的预览图。</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif 用于读取 HEIC 和 HEIF 文件。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP（AUR 软件包也基于它）中随程序附带，并优先于系统中的 libheif 使用；macOS 会先使用系统自带的读取功能。deb 和 rpm 从软件包管理器获取它，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl 用于读写 JPEG XL 文件，采用 BSD 许可证。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP（AUR 软件包也基于它）中随程序附带，并优先于系统中的 libjxl 使用。deb 和 rpm 从软件包管理器获取它，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
   </data>
 </root>

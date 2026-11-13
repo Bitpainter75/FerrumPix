@@ -11596,12 +11596,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw serta libheif dengan libde265 berlisensi LGPL, libmpv berlisensi GPL. Semuanya dimuat secara dinamis dan dapat diganti dengan hasil bangunan Anda sendiri. Teks lisensi dan catatan asal-usulnya disertakan di setiap paket, biasanya di folder licenses di sebelah aplikasi.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif membaca berkas HEIC dan HEIF. Di Windows dan macOS, di AppImage, dan di ZIP Linux portabel pustaka ini sudah disertakan; macOS lebih dulu memakai pembacanya sendiri. Paket Linux lainnya mengambilnya dari pengelola paket, Flatpak dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl membaca dan menulis berkas JPEG XL dan berlisensi BSD. Di Windows dan macOS, di AppImage, dan di ZIP Linux portabel pustaka ini sudah disertakan. Paket Linux lainnya mengambilnya dari pengelola paket, Flatpak dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>Membaca berkas HEIC dan HEIF</value>
   </data>
@@ -11676,5 +11670,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>{0} wajah dihapus</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw memproses berkas RAW. Di Windows dan macOS, di AppImage, dan di ZIP Linux portabel, yang juga menjadi dasar paket AUR, versi terbarunya sudah disertakan dan dipakai lebih dulu daripada LibRaw sistem, sehingga setiap komputer memproses dengan cara yang sama. deb dan rpm mengambilnya dari pengelola paket, Flatpak membawa miliknya sendiri. Jika tidak ada, berkas RAW menampilkan pratinjau bawaan dari kamera.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif membaca berkas HEIC dan HEIF. Di Windows dan macOS, di AppImage, dan di ZIP Linux portabel, yang juga menjadi dasar paket AUR, pustaka ini sudah disertakan dan dipakai lebih dulu daripada libheif sistem; macOS lebih dulu memakai pembacanya sendiri. deb dan rpm mengambilnya dari pengelola paket, Flatpak dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl membaca dan menulis berkas JPEG XL dan berlisensi BSD. Di Windows dan macOS, di AppImage, dan di ZIP Linux portabel, yang juga menjadi dasar paket AUR, pustaka ini sudah disertakan dan dipakai lebih dulu daripada libjxl sistem. deb dan rpm mengambilnya dari pengelola paket, Flatpak dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
   </data>
 </root>

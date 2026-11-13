@@ -11592,12 +11592,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw, а также libheif вместе с libde265 распространяются по LGPL, libmpv по GPL. Они загружаются динамически, их можно заменить собственной сборкой. Тексты лицензий и сведения о происхождении входят в каждый пакет, обычно в папке licenses рядом с приложением.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif читает файлы HEIC и HEIF. В Windows и macOS, в AppImage и в переносном ZIP для Linux она входит в комплект; macOS сначала обращается к собственному средству чтения. Остальные пакеты для Linux берут её из менеджера пакетов, Flatpak из своей среды выполнения. Если её нет, такие файлы не открываются, а всё остальное работает как прежде.</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl читает и записывает файлы JPEG XL и распространяется по лицензии BSD. В Windows и macOS, в AppImage и в переносном ZIP для Linux она входит в комплект. Остальные пакеты для Linux берут её из менеджера пакетов, Flatpak из своей среды выполнения. Если её нет, такие файлы не открываются, а всё остальное работает как прежде.</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>Чтение файлов HEIC и HEIF</value>
   </data>
@@ -11672,5 +11666,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>Удалено лиц: {0}</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw проявляет файлы RAW. В Windows и macOS, в AppImage и в переносном ZIP для Linux, на котором основан и пакет AUR, она входит в комплект в актуальной версии и используется раньше системной LibRaw, чтобы каждый компьютер проявлял одинаково. deb и rpm берут её из менеджера пакетов, Flatpak приносит свою. Если её нет, файлы RAW показывают встроенное превью камеры.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif читает файлы HEIC и HEIF. В Windows и macOS, в AppImage и в переносном ZIP для Linux, на котором основан и пакет AUR, она входит в комплект и используется раньше системной libheif; macOS сначала обращается к собственному средству чтения. deb и rpm берут её из менеджера пакетов, Flatpak из своей среды выполнения. Если её нет, такие файлы не открываются, а всё остальное работает как прежде.</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl читает и записывает файлы JPEG XL и распространяется по лицензии BSD. В Windows и macOS, в AppImage и в переносном ZIP для Linux, на котором основан и пакет AUR, она входит в комплект и используется раньше системной libjxl. deb и rpm берут её из менеджера пакетов, Flatpak из своей среды выполнения. Если её нет, такие файлы не открываются, а всё остальное работает как прежде.</value>
   </data>
 </root>

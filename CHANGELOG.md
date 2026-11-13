@@ -16,6 +16,10 @@
   offers Find faces for the selection as well. Removed keywords and faces do not come back on their
   own; Analyse AI keywords again and Find faces bring them back on request.
 
+- RAW, HEIC and JPEG XL now always open with the libraries that come with FerrumPix, also where the
+  system has its own. Every computer develops a RAW the same way, and cameras the bundled RAW
+  library knows work everywhere.
+
 - When zoomed in, the info panel of the viewer, the full screen view and the editor shows a
   navigator at the bottom: the picture small, with a frame around the part you are looking at. Drag
   the frame, or click beside it, to look at another part.

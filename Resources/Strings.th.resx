@@ -11596,12 +11596,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw และ libheif รวมถึง libde265 ใช้สัญญาอนุญาต LGPL ส่วน libmpv ใช้ GPL ทั้งหมดโหลดแบบไดนามิกและเปลี่ยนเป็นไฟล์ที่คุณคอมไพล์เองได้ ข้อความสัญญาอนุญาตและที่มาแนบมากับทุกแพ็กเกจ โดยปกติอยู่ในโฟลเดอร์ licenses ข้างตัวโปรแกรม</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif อ่านไฟล์ HEIC และ HEIF บน Windows และ macOS ใน AppImage และใน ZIP แบบพกพาสำหรับ Linux มีมาให้พร้อมกัน โดย macOS จะใช้ตัวอ่านของระบบเองก่อน แพ็กเกจ Linux อื่นนำมาจากตัวจัดการแพ็กเกจ ส่วน Flatpak นำมาจากรันไทม์ของตัวเอง หากไม่มี ไฟล์ดังกล่าวจะเปิดไม่ได้เท่านั้น ส่วนอื่นทั้งหมดยังทำงานตามปกติ</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl อ่านและเขียนไฟล์ JPEG XL และใช้สัญญาอนุญาต BSD บน Windows และ macOS ใน AppImage และใน ZIP แบบพกพาสำหรับ Linux มีมาให้พร้อมกัน แพ็กเกจ Linux อื่นนำมาจากตัวจัดการแพ็กเกจ ส่วน Flatpak นำมาจากรันไทม์ของตัวเอง หากไม่มี ไฟล์ดังกล่าวจะเปิดไม่ได้เท่านั้น ส่วนอื่นทั้งหมดยังทำงานตามปกติ</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>การอ่านไฟล์ HEIC และ HEIF</value>
   </data>
@@ -11676,5 +11670,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>ลบใบหน้าแล้ว {0} ใบหน้า</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw ใช้ล้างไฟล์ RAW บน Windows และ macOS ใน AppImage และใน ZIP แบบพกพาสำหรับ Linux ซึ่งแพ็กเกจ AUR ก็สร้างจากตัวนี้ มีเวอร์ชันล่าสุดมาให้พร้อมกัน และจะถูกใช้ก่อน LibRaw ของระบบ เพื่อให้ทุกเครื่องล้างภาพได้เหมือนกัน deb และ rpm นำมาจากตัวจัดการแพ็กเกจ ส่วน Flatpak มีของตัวเองมาด้วย หากไม่มี ไฟล์ RAW จะแสดงภาพตัวอย่างที่ฝังมาจากกล้อง</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif อ่านไฟล์ HEIC และ HEIF บน Windows และ macOS ใน AppImage และใน ZIP แบบพกพาสำหรับ Linux ซึ่งแพ็กเกจ AUR ก็สร้างจากตัวนี้ มีมาให้พร้อมกัน และจะถูกใช้ก่อน libheif ของระบบ โดย macOS จะใช้ตัวอ่านของระบบเองก่อน deb และ rpm นำมาจากตัวจัดการแพ็กเกจ ส่วน Flatpak นำมาจากรันไทม์ของตัวเอง หากไม่มี ไฟล์ดังกล่าวจะเปิดไม่ได้เท่านั้น ส่วนอื่นทั้งหมดยังทำงานตามปกติ</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl อ่านและเขียนไฟล์ JPEG XL และใช้สัญญาอนุญาต BSD บน Windows และ macOS ใน AppImage และใน ZIP แบบพกพาสำหรับ Linux ซึ่งแพ็กเกจ AUR ก็สร้างจากตัวนี้ มีมาให้พร้อมกัน และจะถูกใช้ก่อน libjxl ของระบบ deb และ rpm นำมาจากตัวจัดการแพ็กเกจ ส่วน Flatpak นำมาจากรันไทม์ของตัวเอง หากไม่มี ไฟล์ดังกล่าวจะเปิดไม่ได้เท่านั้น ส่วนอื่นทั้งหมดยังทำงานตามปกติ</value>
   </data>
 </root>

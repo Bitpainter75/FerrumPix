@@ -11592,12 +11592,6 @@
   <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
     <value>LibRaw a libheif s libde265 podléhají licenci LGPL, libmpv licenci GPL. Načítají se dynamicky a lze je nahradit vlastním sestavením. Texty licencí a doklady o původu jsou součástí každého balíčku, obvykle ve složce licenses vedle aplikace.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
-    <value>libheif čte soubory HEIC a HEIF. Ve Windows a macOS, v AppImage a v přenosném ZIP pro Linux je přiložena; macOS se nejprve ptá vlastní čtečky. Ostatní linuxové balíčky ji berou ze správce balíčků, Flatpak ze svého běhového prostředí. Pokud chybí, zůstanou takové soubory neotevřené a vše ostatní funguje beze změny.</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
-    <value>libjxl čte a zapisuje soubory JPEG XL a podléhá licenci BSD. Ve Windows a macOS, v AppImage a v přenosném ZIP pro Linux je přiložena. Ostatní linuxové balíčky ji berou ze správce balíčků, Flatpak ze svého běhového prostředí. Pokud chybí, zůstanou takové soubory neotevřené a vše ostatní funguje beze změny.</value>
-  </data>
   <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
     <value>Čtení souborů HEIC a HEIF</value>
   </data>
@@ -11672,5 +11666,14 @@
   </data>
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>Odebráno tváří: {0}</value>
+  </data>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
+    <value>LibRaw vyvolává soubory RAW. Ve Windows a macOS, v AppImage a v přenosném ZIP pro Linux, na kterém staví i balíček AUR, je přiložena aktuální verze, která se použije před systémovou LibRaw, aby každý počítač vyvolával stejně. deb a rpm ji berou ze správce balíčků, Flatpak si přináší vlastní. Pokud chybí, zobrazí soubory RAW vložený náhled z fotoaparátu.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
+    <value>libheif čte soubory HEIC a HEIF. Ve Windows a macOS, v AppImage a v přenosném ZIP pro Linux, na kterém staví i balíček AUR, je přiložena a použije se před systémovou libheif; macOS se nejprve ptá vlastní čtečky. deb a rpm ji berou ze správce balíčků, Flatpak ze svého běhového prostředí. Pokud chybí, zůstanou takové soubory neotevřené a vše ostatní funguje beze změny.</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
+    <value>libjxl čte a zapisuje soubory JPEG XL a podléhá licenci BSD. Ve Windows a macOS, v AppImage a v přenosném ZIP pro Linux, na kterém staví i balíček AUR, je přiložena a použije se před systémovou libjxl. deb a rpm ji berou ze správce balíčků, Flatpak ze svého běhového prostředí. Pokud chybí, zůstanou takové soubory neotevřené a vše ostatní funguje beze změny.</value>
   </data>
 </root>

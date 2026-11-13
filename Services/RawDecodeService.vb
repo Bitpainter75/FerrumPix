@@ -420,26 +420,24 @@ Namespace Services
                 Dim handle As IntPtr
                 Dim loadedName As String = Nothing
 
-                ' Die Reihenfolge der Wege, gewoehnlich (BundledLibraryOrder):
+                ' Die Reihenfolge der Wege (BundledLibraryOrder):
                 '
-                ' ERST das System: eine vom Paketverwalter gepflegte LibRaw bekommt Sicherheits-
-                ' aktualisierungen und vor allem die Kameraunterstützung neuerer Modelle. Die
-                ' nackten Namen gehen über den Suchpfad des Betriebssystems.
+                ' ERST die mitgelieferte, auf jeder Plattform: ein Snapshot von LibRaw, mit dem jeder
+                ' Rechner dasselbe Bild entwickelt und der Kameras kennt, die das letzte Release der
+                ' Distribution noch nicht kennt. Sie liegt neben der Anwendung bzw. unter
+                ' runtimes/<rid>/native - ein nackter Name findet sie dort NICHT, es braucht den
+                ' vollen Pfad.
+                '
+                ' DANN als Rueckfall das System ueber die nackten Namen und den Suchpfad des
+                ' Betriebssystems; deb und rpm bringen keine eigene mit und landen immer hier.
                 '
                 ' DANN, unter macOS, dieselben Namen mit vollem Pfad in den Homebrew-Verzeichnissen.
-                ' Der Grund steht bei libmpv genauso: eine aus dem Finder gestartete .app erbt weder
-                ' die Shell-Umgebung noch einen Homebrew-Pfad, und dyld sucht einen Namen ohne
-                ' Schrägstrich nur in $HOME/lib, /usr/local/lib und /usr/lib. Auf Apple Silicon liegt
-                ' Homebrew unter /opt/homebrew/lib - dort fand FerrumPix eine vorhandene LibRaw also
-                ' nie und blieb wortlos bei der eingebetteten Vorschau. Diese Pfade gehoeren noch zur
-                ' SYSTEMbibliothek und stehen deshalb vor der mitgelieferten.
+                ' Eine aus dem Finder gestartete .app erbt weder die Shell-Umgebung noch einen
+                ' Homebrew-Pfad, und dyld sucht einen Namen ohne Schrägstrich nur in $HOME/lib,
+                ' /usr/local/lib und /usr/lib; auf Apple Silicon liegt Homebrew unter /opt/homebrew/lib.
                 '
-                ' DANN die mitgelieferte: Windows und die portablen Pakete haben keine System-
-                ' bibliothek. Sie liegt neben der Anwendung bzw. unter runtimes/<rid>/native -
-                ' ein nackter Name findet sie dort NICHT, es braucht den vollen Pfad.
-                '
-                ' IN DER APPIMAGE kommt die mitgelieferte zuerst: dort ist sie die Antwort auf eine
-                ' Systembibliothek, die zu alt ist (LibRaw 0.20 unter Ubuntu 22.04) oder fehlt.
+                ' Die Liste unten reiht System, Homebrew, mitgeliefert; Arrange zieht die
+                ' mitgelieferten nach vorn.
                 Dim attempts As New List(Of String)(candidates)
                 attempts.AddRange(HomebrewCandidates(candidates))
                 attempts.AddRange(BundledCandidates(candidates))
