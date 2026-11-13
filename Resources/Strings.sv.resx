@@ -3786,9 +3786,6 @@
   <data name="LGPL_2_1_6b15c16d" xml:space="preserve">
     <value>LGPL-2.1</value>
   </data>
-  <data name="LGPL_2_1_5ed68bd8" xml:space="preserve">
-    <value>LGPL-2.1+</value>
-  </data>
   <data name="NET_10_8bf9a6bd" xml:space="preserve">
     <value>.NET 10</value>
   </data>
@@ -5132,9 +5129,6 @@
   </data>
   <data name="Kalibrierdaten_f_r_Objektive_c22475f5" xml:space="preserve">
     <value>Kalibreringsdata för objektiv</value>
-  </data>
-  <data name="HEIC_HEIF_AVIF_nur_vom_System_7551d0f2" xml:space="preserve">
-    <value>HEIC/HEIF/AVIF, endast från systemet</value>
   </data>
   <data name="Keine_Ordner_im_Zwischenspeicher_d447e66a" xml:space="preserve">
     <value>Inga mappar i cachen</value>
@@ -7698,12 +7692,6 @@
   <data name="libheif_6795a7dc" xml:space="preserve">
     <value>libheif</value>
   </data>
-  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
-    <value>LibRaw, libmpv och libheif omfattas av LGPL: de ingår oförändrade och läses in dynamiskt, och kan ersättas med ett eget bygge av samma version. Licenstexterna och ursprungsuppgifterna finns i mappen licenses bredvid programmet.</value>
-  </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
-    <value>libheif läser HEIC- och HEIF-filer. På Windows följer det med, på Linux kommer det från pakethanteraren och macOS läser dessa filer själv. Saknas det förblir sådana filer helt enkelt oöppnade, allt annat fungerar oförändrat.</value>
-  </data>
   <data name="Infopanel_affd0653" xml:space="preserve">
     <value>Infopanel</value>
   </data>
@@ -8598,12 +8586,6 @@
   </data>
   <data name="libjxl_a5ba9e61" xml:space="preserve">
     <value>libjxl</value>
-  </data>
-  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
-    <value>JPEG XL, endast från systemet</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
-    <value>libjxl läser och skriver JPEG XL-filer och är licensierad under BSD-licensen. På Windows följer den med, på Linux kommer den från pakethanteraren, Flatpak-paketet har den med och på macOS kommer den från Homebrew. Saknas den förblir sådana filer bara oöppnade och allt annat fungerar som vanligt.</value>
   </data>
   <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
     <value>Packa om JPEG förlustfritt</value>
@@ -11606,5 +11588,23 @@
   </data>
   <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
     <value>Det brusreducerade resultatet kunde inte sparas bredvid RAW-filen.</value>
+  </data>
+  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
+    <value>LibRaw samt libheif med libde265 omfattas av LGPL, libmpv av GPL. De läses in dynamiskt och kan ersättas med ett eget bygge. Licenstexterna och ursprungsuppgifterna följer med varje paket, oftast i mappen licenses bredvid programmet.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
+    <value>libheif läser HEIC- och HEIF-filer. På Windows och macOS, i AppImage och i den portabla Linux-ZIP-filen följer den med; macOS frågar först sin egen läsare. Övriga Linux-paket hämtar den från pakethanteraren, Flatpak-paketet från sin körtidsmiljö. Saknas den förblir sådana filer oöppnade och allt annat fungerar som vanligt.</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
+    <value>libjxl läser och skriver JPEG XL-filer och är licensierad under BSD-licensen. På Windows och macOS, i AppImage och i den portabla Linux-ZIP-filen följer den med. Övriga Linux-paket hämtar den från pakethanteraren, Flatpak-paketet från sin körtidsmiljö. Saknas den förblir sådana filer oöppnade och allt annat fungerar som vanligt.</value>
+  </data>
+  <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
+    <value>Läsning av HEIC- och HEIF-filer</value>
+  </data>
+  <data name="JPEG_XL_Dateien_lesen_und_schreiben_37a1781b" xml:space="preserve">
+    <value>Läsning och skrivning av JPEG XL-filer</value>
+  </data>
+  <data name="GPL_2_0_351c2424" xml:space="preserve">
+    <value>GPL-2.0+</value>
   </data>
 </root>

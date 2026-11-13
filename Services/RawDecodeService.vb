@@ -2223,6 +2223,39 @@ Namespace Services
             Return If(CanonColorData.WhiteBalanceFromWords(words, word), camMul)
         End Function
 
+        ''' Die Dekoder, deren Daten den Aufnahme-Weissabgleich schon tragen. LibRaw setzt fuer sie
+        ''' immer as_shot_wb_applied (open.cpp), eine Abfrage dafuer hat die C-API nicht. Sonys
+        ''' verlustfreie ARW in den Groessen M und S sind schon
+        ''' Farbwerte aus YCbCr, Nikons sRAW ebenso.
+        Private Shared ReadOnly DecodersWithBakedWhiteBalance As String() = {"sony_ycbcr_load_raw", "nikon_load_sraw"}
+
+        ''' <summary>Traegt die Datei den Aufnahme-Weissabgleich schon in ihren Daten? Dann rechnet
+        ''' LibRaw mit anderen Multiplikatoren, als FerrumPix ihr gibt.
+        '''
+        ''' WAS LIBRAW DANN TUT (scale_colors): die ersten drei Werte von user_mul werden durch
+        ''' cam_mul geteilt (bei Sony noch mit einer Korrektur aus der Datei malgenommen), der
+        ''' vierte bleibt, wie er ist. Mit user_mul = cam_mul stehen also 1/1/1 und daneben der rohe
+        ''' vierte Wert, bei Sony 1024. Ab Lichtermodus 1 teilt LibRaw durch das Maximum, und das
+        ''' Bild lag um zehn Blendenstufen tiefer: es kam schwarz heraus. Bei Nikons sRAW (cam_mul
+        ''' 2/1/1/1) teilte LibRaw durch nichts, der Ausgleich der Rampe hob das Bild trotzdem um
+        ''' den Faktor 2 an.
+        '''
+        ''' DER DECODE setzt deshalb fuer solche Daten den vierten Wert auf 0 (LibRaw nimmt dann den
+        ''' Gruenwert) und rechnet mit 1/1/1/1 als Multiplikatoren: kein Ausgleich, Lichtermodus 0.
+        ''' Unter Beschnitt teilt LibRaw durch das Minimum, und das ist bei beiden Fassungen 1, mit
+        ''' und ohne Sonys Korrektur (sie ist auf ihr Minimum normiert).</summary>
+        Private Shared Function HasBakedWhiteBalance(handle As IntPtr) As Boolean
+            If _getDecoderInfo Is Nothing Then Return False
+            Try
+                Dim info As DecoderInfo
+                If _getDecoderInfo(handle, info) <> 0 OrElse info.Name = IntPtr.Zero Then Return False
+                Dim decoder = If(Marshal.PtrToStringAnsi(info.Name), "")
+                Return DecodersWithBakedWhiteBalance.Any(Function(d) decoder.StartsWith(d, StringComparison.Ordinal))
+            Catch
+                Return False
+            End Try
+        End Function
+
         ''' <summary>Tragen VIER gelesene Multiplikatoren eine Aussage? Die EINZIGE Stelle, an der
         ''' das entschieden wird - der Decode setzt seinen Weissabgleich nach derselben Regel wie
         ''' die Kamerafakten ihn lesen.
@@ -3299,9 +3332,12 @@ Namespace Services
                 ' ersetzt pre_mul durch user_mul und bildet erst danach Minimum und Maximum.
                 Dim camMul = AsShotMultipliers(handle, path)
                 Dim usingCamMul = AreUsableMultipliers(camMul)
+                ' Daten mit schon angewandtem Weissabgleich (HasBakedWhiteBalance): der vierte Wert
+                ' auf 0, sonst stuende er roh neben den von LibRaw geteilten drei.
+                Dim bakedWhiteBalance = usingCamMul AndAlso HasBakedWhiteBalance(handle)
                 If usingCamMul Then
                     For i = 0 To 3
-                        _setUserMul(handle, i, camMul(i))
+                        _setUserMul(handle, i, If(bakedWhiteBalance AndAlso i = 3, 0.0F, camMul(i)))
                     Next
                 ElseIf ownMatrix IsNot Nothing Then
                     ' Ohne Aufnahme-Weissabgleich nimmt dcraw pre_mul, und das stuende bei einer
@@ -3326,8 +3362,10 @@ Namespace Services
                 ' Aus pre_mul gerechnet kam am LX3 2,513 heraus, wirklich gemessen waren es 2,015
                 ' - der Ausgleich hob das Bild damit um 0,36 Blendenstufen an und riss die Lichter
                 ' auf. Nur ohne gueltige cam_mul gilt pre_mul, weil dcraw dann bei seinen eigenen
-                ' Werten bleibt.
-                Dim scaling = If(usingCamMul, camMul, ReadFourMultipliers(_getPreMul, handle))
+                ' Werten bleibt. Bei schon angewandtem Weissabgleich rechnet LibRaw mit 1/1/1/1
+                ' (HasBakedWhiteBalance), und der Faktor ist 1.
+                Dim scaling = If(bakedWhiteBalance, New Single() {1.0F, 1.0F, 1.0F, 1.0F},
+                                 If(usingCamMul, camMul, ReadFourMultipliers(_getPreMul, handle)))
                 Dim normalization = If(linearMoeglich AndAlso _setHighlight IsNot Nothing AndAlso
                                        ConfiguredHighlightUnclip(),
                                        NormalizationFactor(scaling), 1.0)

@@ -3788,9 +3788,6 @@
   <data name="LGPL_2_1_6b15c16d" xml:space="preserve">
     <value>LGPL-2.1</value>
   </data>
-  <data name="LGPL_2_1_5ed68bd8" xml:space="preserve">
-    <value>LGPL-2.1+</value>
-  </data>
   <data name="NET_10_8bf9a6bd" xml:space="preserve">
     <value>.NET 10</value>
   </data>
@@ -5134,9 +5131,6 @@
   </data>
   <data name="Kalibrierdaten_f_r_Objektive_c22475f5" xml:space="preserve">
     <value>Kalibrierdaten für Objektive</value>
-  </data>
-  <data name="HEIC_HEIF_AVIF_nur_vom_System_7551d0f2" xml:space="preserve">
-    <value>HEIC/HEIF/AVIF, nur vom System</value>
   </data>
   <data name="Keine_Ordner_im_Zwischenspeicher_d447e66a" xml:space="preserve">
     <value>Keine Ordner im Zwischenspeicher</value>
@@ -7658,12 +7652,6 @@
   <data name="libheif_6795a7dc" xml:space="preserve">
     <value>libheif</value>
   </data>
-  <data name="LibRaw_libmpv_und_libheif_stehen_unter_der_LGPL__7f9589da" xml:space="preserve">
-    <value>LibRaw, libmpv und libheif stehen unter der LGPL: sie werden unverändert und dynamisch geladen eingebunden und können durch eigene Übersetzungen derselben Version ersetzt werden. Die Lizenztexte und Herkunftsnachweise liegen im Ordner licenses neben der Anwendung.</value>
-  </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_3c3fd797" xml:space="preserve">
-    <value>libheif liest HEIC- und HEIF-Dateien. Unter Windows liegt sie bei, unter Linux kommt sie aus der Paketverwaltung, und macOS liest diese Dateien selbst. Fehlt sie, bleiben solche Dateien einfach ungeöffnet - alles andere arbeitet unverändert.</value>
-  </data>
   <data name="Infopanel_affd0653" xml:space="preserve">
     <value>Infopanel</value>
   </data>
@@ -8572,12 +8560,6 @@
   </data>
   <data name="libjxl_a5ba9e61" xml:space="preserve">
     <value>libjxl</value>
-  </data>
-  <data name="JPEG_XL_nur_vom_System_cd6e7014" xml:space="preserve">
-    <value>JPEG XL, nur vom System</value>
-  </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_d80c1c5e" xml:space="preserve">
-    <value>libjxl liest und schreibt JPEG-XL-Dateien und steht unter der BSD-Lizenz. Unter Windows liegt sie bei, unter Linux kommt sie aus der Paketverwaltung, der Flatpak bringt sie mit, und unter macOS kommt sie aus Homebrew. Fehlt sie, bleiben solche Dateien einfach ungeöffnet, alles andere arbeitet unverändert.</value>
   </data>
   <data name="JPEG_verlustfrei_umpacken_c75afd6c" xml:space="preserve">
     <value>JPEG verlustfrei umpacken</value>
@@ -11584,5 +11566,23 @@
   </data>
   <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
     <value>Das entrauschte Ergebnis konnte nicht neben der RAW gespeichert werden.</value>
+  </data>
+  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
+    <value>LibRaw sowie libheif mit libde265 stehen unter der LGPL, libmpv unter der GPL. Sie werden dynamisch geladen und lassen sich durch eigene Übersetzungen ersetzen. Die Lizenztexte und Herkunftsnachweise liegen jedem Paket bei, meist im Ordner licenses neben der Anwendung.</value>
+  </data>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_2c4795ba" xml:space="preserve">
+    <value>libheif liest HEIC- und HEIF-Dateien. Unter Windows und macOS, in der AppImage und im portablen Linux-ZIP liegt sie bei; macOS fragt zuerst seinen eigenen Leser. Die übrigen Linux-Pakete nehmen sie aus der Paketverwaltung, der Flatpak aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert.</value>
+  </data>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_417cde47" xml:space="preserve">
+    <value>libjxl liest und schreibt JPEG-XL-Dateien und steht unter der BSD-Lizenz. Unter Windows und macOS, in der AppImage und im portablen Linux-ZIP liegt sie bei. Die übrigen Linux-Pakete nehmen sie aus der Paketverwaltung, der Flatpak aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert.</value>
+  </data>
+  <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
+    <value>HEIC- und HEIF-Dateien lesen</value>
+  </data>
+  <data name="JPEG_XL_Dateien_lesen_und_schreiben_37a1781b" xml:space="preserve">
+    <value>JPEG-XL-Dateien lesen und schreiben</value>
+  </data>
+  <data name="GPL_2_0_351c2424" xml:space="preserve">
+    <value>GPL-2.0+</value>
   </data>
 </root>

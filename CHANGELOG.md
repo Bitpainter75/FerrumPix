@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.82
 
 ### Changes
 
@@ -77,4 +77,10 @@
   bright, since the camera has already evened them out.
 
 - Raw files from the Hasselblad H4D came out too bright.
+
+- Raw files from the Sony Alpha 900 came out too dark, those from the Fujifilm XF1 and FinePix
+  S5500 too bright. The Sony RX1 is now developed at the right brightness as well.
+
+- Sony raw files taken with lossless compression in size M or S came out almost black, and the
+  small sRAW files of Nikon cameras came out too bright. Both now open at the right brightness.
 
