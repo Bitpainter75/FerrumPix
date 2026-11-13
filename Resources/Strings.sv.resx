@@ -7074,8 +7074,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Borttagning är inte möjlig</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>De här filerna ligger utanför den personliga mappen eller i en dold mapp. FerrumPix tar inte bort någonting där.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>De här filerna ligger utanför den personliga mappen eller i en dold mapp. FerrumPix tar inte bort någonting där. Det kan tillåtas under Inställningar, Galleri, Tillåt filåtgärder utanför den personliga mappen.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopiera fotograferingsplatsen</value>

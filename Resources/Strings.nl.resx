@@ -7074,8 +7074,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Verwijderen niet mogelijk</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Deze bestanden staan buiten de persoonlijke map of in een verborgen map. FerrumPix verwijdert daar niets.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Deze bestanden staan buiten de persoonlijke map of in een verborgen map. FerrumPix verwijdert daar niets. Toestaan kan onder Instellingen, Galerij, Bestandsbewerkingen buiten de persoonlijke map toestaan.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Opnamelocatie kopiëren</value>

@@ -7032,8 +7032,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Cannot delete</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>These files are outside your personal folder or in a hidden folder. FerrumPix does not delete anything there.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>These files are outside your personal folder or in a hidden folder. FerrumPix does not delete anything there. You can allow this under Settings, Gallery, Allow file operations outside the home folder.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Copy location</value>

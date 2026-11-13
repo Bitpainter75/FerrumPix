@@ -7071,8 +7071,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Tidak dapat dihapus</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Berkas-berkas ini berada di luar folder pribadi Anda atau di folder tersembunyi. FerrumPix tidak menghapus apa pun di sana.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Berkas-berkas ini berada di luar folder pribadi Anda atau di folder tersembunyi. FerrumPix tidak menghapus apa pun di sana. Ini dapat diizinkan di Pengaturan, Galeri, Izinkan operasi file di luar folder pribadi.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Salin lokasi</value>

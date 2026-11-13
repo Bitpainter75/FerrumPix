@@ -7074,8 +7074,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Удаление невозможно</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Эти файлы лежат за пределами личной папки или в скрытой папке. Там FerrumPix ничего не удаляет.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Эти файлы лежат за пределами личной папки или в скрытой папке. Там FerrumPix ничего не удаляет. Разрешить это можно в Настройки, Галерея, Разрешить операции с файлами вне личной папки.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Копировать место съёмки</value>

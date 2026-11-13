@@ -7071,8 +7071,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>मिटाया नहीं जा सकता</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>ये फ़ाइलें आपके निजी फ़ोल्डर के बाहर या किसी छिपे फ़ोल्डर में हैं। FerrumPix वहाँ कुछ नहीं मिटाता।</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>ये फ़ाइलें आपके निजी फ़ोल्डर के बाहर या किसी छिपे फ़ोल्डर में हैं। FerrumPix वहाँ कुछ नहीं मिटाता। इसे सेटिंग्स, गैलरी, व्यक्तिगत फ़ोल्डर के बाहर फ़ाइल संचालन की अनुमति दें में अनुमति दी जा सकती है।</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>स्थान कॉपी करें</value>

@@ -7034,8 +7034,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Eliminazione non possibile</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Questi file sono fuori dalla cartella personale o in una cartella nascosta. FerrumPix non elimina nulla lì.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Questi file sono fuori dalla cartella personale o in una cartella nascosta. FerrumPix non elimina nulla lì. Si può consentire in Impostazioni, Galleria, Consenti operazioni sui file fuori dalla cartella personale.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Copia il luogo</value>

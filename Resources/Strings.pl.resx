@@ -7074,8 +7074,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Usuwanie niemożliwe</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Te pliki leżą poza folderem osobistym albo w folderze ukrytym. FerrumPix niczego tam nie usuwa.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Te pliki leżą poza folderem osobistym albo w folderze ukrytym. FerrumPix niczego tam nie usuwa. Można na to zezwolić w Ustawienia, Galeria, Zezwalaj na operacje na plikach poza folderem osobistym.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopiuj miejsce wykonania</value>

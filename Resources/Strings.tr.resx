@@ -7071,8 +7071,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Silinemiyor</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Bu dosyalar kişisel klasörünüzün dışında ya da gizli bir klasörde. FerrumPix orada hiçbir şeyi silmez.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Bu dosyalar kişisel klasörünüzün dışında ya da gizli bir klasörde. FerrumPix orada hiçbir şeyi silmez. Buna Ayarlar, Galeri, Kişisel klasör dışında dosya işlemlerine izin ver altında izin verilebilir.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Konumu kopyala</value>

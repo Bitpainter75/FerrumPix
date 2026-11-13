@@ -7071,8 +7071,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>ลบไม่ได้</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>ไฟล์เหล่านี้อยู่นอกโฟลเดอร์ส่วนตัวของคุณหรืออยู่ในโฟลเดอร์ที่ซ่อนไว้ FerrumPix จะไม่ลบอะไรที่นั่น</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>ไฟล์เหล่านี้อยู่นอกโฟลเดอร์ส่วนตัวของคุณหรืออยู่ในโฟลเดอร์ที่ซ่อนไว้ FerrumPix จะไม่ลบอะไรที่นั่น อนุญาตได้ที่ การตั้งค่า, แกลเลอรี, อนุญาตการจัดการไฟล์นอกโฟลเดอร์ส่วนตัว</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>คัดลอกตำแหน่ง</value>

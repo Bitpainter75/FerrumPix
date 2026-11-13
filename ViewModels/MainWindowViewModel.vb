@@ -6771,7 +6771,7 @@ Namespace ViewModels
                 Next
                 If gesperrt > 0 Then
                     Await ShowMessageAsync(LocalizationService.T("Löschen nicht möglich"),
-                                           LocalizationService.T("Diese Dateien liegen außerhalb des persönlichen Ordners oder in einem versteckten Ordner. FerrumPix löscht dort nichts."))
+                                           LocalizationService.T("Diese Dateien liegen außerhalb des persönlichen Ordners oder in einem versteckten Ordner. FerrumPix löscht dort nichts. Erlauben lässt sich das unter Einstellungen, Galerie, Dateioperationen außerhalb des persönlichen Ordners erlauben."))
                 End If
                 Return
             End If

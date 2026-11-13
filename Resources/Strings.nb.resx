@@ -7074,8 +7074,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>Sletting er ikke mulig</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>Disse filene ligger utenfor den personlige mappen eller i en skjult mappe. FerrumPix sletter ingenting der.</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>Disse filene ligger utenfor den personlige mappen eller i en skjult mappe. FerrumPix sletter ingenting der. Det kan tillates under Innstillinger, Galleri, Tillat filoperasjoner utenfor den personlige mappen.</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>Kopier opptaksstedet</value>

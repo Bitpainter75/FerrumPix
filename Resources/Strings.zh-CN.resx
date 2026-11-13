@@ -7032,8 +7032,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>无法删除</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>这些文件位于个人文件夹之外或隐藏文件夹中。FerrumPix 不会在那里删除任何内容。</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>这些文件位于个人文件夹之外或隐藏文件夹中。FerrumPix 不会在那里删除任何内容。可在设置, 图库, 允许在个人文件夹之外进行文件操作中允许。</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>复制拍摄地点</value>

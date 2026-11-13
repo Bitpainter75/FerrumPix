@@ -7074,8 +7074,8 @@
   <data name="L_schen_nicht_m_glich_96f81835" xml:space="preserve">
     <value>削除できません</value>
   </data>
-  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__116e8333" xml:space="preserve">
-    <value>これらのファイルはホームフォルダーの外か、隠しフォルダーの中にあります。FerrumPix はそこにあるものを削除しません。</value>
+  <data name="Diese_Dateien_liegen_au_erhalb_des_pers_nlichen__88570d35" xml:space="preserve">
+    <value>これらのファイルはホームフォルダーの外か、隠しフォルダーの中にあります。FerrumPix はそこにあるものを削除しません。設定, ギャラリー, 個人用フォルダー以外でのファイル操作を許可 で許可できます。</value>
   </data>
   <data name="Aufnahmeort_kopieren_7f6b9d64" xml:space="preserve">
     <value>撮影場所をコピー</value>
