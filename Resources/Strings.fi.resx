@@ -11625,4 +11625,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Poistetaanko luettelosta {0} merkintää kohteen {1} alta alikansioineen ja esikatselukuvineen? Kansiota ei sen jälkeen myöskään enää seurata. Näiden kuvien arviot, merkinnät, avainsanat ja henkilöt menetetään. Aseman tiedostoihin ei kosketa.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Kansiota ei ole enää</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Kansiota ei ole enää. Näytetään luettelon tiedot, vain katseltavaksi.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Kansiota ei ole enää: {0} kuvaa luettelosta</value>
+  </data>
 </root>

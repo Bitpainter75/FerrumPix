@@ -11625,4 +11625,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Fjerne {0} katalogoppføringer under {1}, inkludert undermapper og miniatyrbilder, fra katalogen? Mappen overvåkes da heller ikke lenger. Vurderinger, etiketter, nøkkelord og personer for disse bildene går tapt. Filene på stasjonen forblir urørt.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Mappen finnes ikke lenger</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Mappen finnes ikke lenger. Det katalogen kjenner til vises, kun for visning.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Mappen finnes ikke lenger: {0} bilder fra katalogen</value>
+  </data>
 </root>

@@ -11583,4 +11583,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>要从目录中移除 {1} 下的 {0} 个条目（包括子文件夹和缩略图）吗？此后该文件夹也不再受监视。这些图片的评分、标签、关键字和人物将会丢失。驱动器上的文件不受影响。</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>文件夹已不存在</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>文件夹已不存在。显示的是目录中的数据，仅供查看。</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>文件夹已不存在：来自目录的 {0} 张图片</value>
+  </data>
 </root>

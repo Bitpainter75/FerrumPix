@@ -34,7 +34,8 @@ Namespace ViewModels
                                      isVirtual As Boolean,
                                      canPaste As Boolean,
                                      commands As MenuCommands,
-                                     Optional offlineView As Boolean = False) As IReadOnlyList(Of Object)
+                                     Optional offlineView As Boolean = False,
+                                     Optional offlineViewMissing As Boolean = False) As IReadOnlyList(Of Object)
 
             Dim list As New List(Of Object)()
             If commands Is Nothing Then Return list
@@ -103,9 +104,13 @@ Namespace ViewModels
             ' oder schreibt die Datei, keine davon kann laufen. Statt eines leeren Menues steht der
             ' Grund als nicht waehlbare Zeile da. Ein Ordner der Ansicht oeffnet sich weiter per
             ' Doppelklick; durch den Katalog zu blaettern ist ja gerade erlaubt.
-            Dim offline = entries.Any(Function(i) i.IsOffline) OrElse (offlineView AndAlso entries.Count = 0)
+            ' Der Grund ist das Laufwerk, sobald eines der Elemente auf einem nicht erreichbaren
+            ' liegt; sonst ein Ordner, den es nicht mehr gibt (FolderListing).
+            Dim offlineEntries = entries.Where(Function(i) i.IsOffline).ToList()
+            Dim offline = offlineEntries.Count > 0 OrElse (offlineView AndAlso entries.Count = 0)
             If offline Then
-                list.Add(FooterMenuCatalog.DriveUnreachable())
+                Dim missing = If(offlineEntries.Count > 0, offlineEntries.All(Function(i) i.IsFolderMissing), offlineViewMissing)
+                list.Add(If(missing, FooterMenuCatalog.FolderMissing(), FooterMenuCatalog.DriveUnreachable()))
                 Return list
             End If
 

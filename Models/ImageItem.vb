@@ -370,8 +370,9 @@ Namespace Models
         End Function
 
         ''' <summary>True, wenn die Datei auf einem Laufwerk liegt, das gerade nicht erreichbar ist,
-        ''' und das Element deshalb allein aus dem Katalog stammt (Galerie offline, siehe
-        ''' OfflineVolumes). Gesetzt beim Bauen, bevor irgendetwas bindet.
+        ''' oder in einem Ordner, den es nicht mehr gibt (<see cref="IsFolderMissing"/>), und das
+        ''' Element deshalb allein aus dem Katalog stammt (Galerie offline, siehe FolderListing).
+        ''' Gesetzt beim Bauen, bevor irgendetwas bindet.
         '''
         ''' Ein solches Element fasst die Datei NIE an: keine Dateidaten (sie kommen aus dem
         ''' Katalog), keine Beistelldatei, die Kachel nur aus dem Zwischenspeicher, und jede
@@ -392,11 +393,32 @@ Namespace Models
         End Property
         Private _isOffline As Boolean
 
+        ''' <summary>Der Grund fuer <see cref="IsOffline"/> ist kein fehlendes Laufwerk, sondern ein
+        ''' Ordner, den es auf einem erreichbaren Laufwerk nicht mehr gibt (ausserhalb der Anwendung
+        ''' geloescht, siehe FolderListing). Fuer einen Ordner gilt das von ihm selbst, fuer eine
+        ''' Datei von ihrem Ordner. Gesetzt beim Bauen; wirkt nur zusammen mit IsOffline.</summary>
+        Public Property IsFolderMissing As Boolean
+            Get
+                Return _isFolderMissing AndAlso IsOffline
+            End Get
+            Set(value As Boolean)
+                _isFolderMissing = value
+            End Set
+        End Property
+        Private _isFolderMissing As Boolean
+
+        ''' <summary>Nur zum Ansehen, weil das Laufwerk fehlt: dann steht der Stecker da.</summary>
+        Public ReadOnly Property IsDriveOffline As Boolean
+            Get
+                Return IsOffline AndAlso Not _isFolderMissing
+            End Get
+        End Property
+
         ''' <summary>Der Grund als Hinweis an den gesperrten Knoepfen der Kachel (Sterne, Herz),
         ''' solange <see cref="IsOffline"/> gilt; sonst Nothing, also kein Hinweis.</summary>
         Public ReadOnly Property OfflineTip As String
             Get
-                Return If(IsOffline, LocalizationService.T("Laufwerk nicht erreichbar"), Nothing)
+                Return If(IsOffline, FolderListing.ReasonText(_isFolderMissing), Nothing)
             End Get
         End Property
 
@@ -1897,7 +1919,9 @@ Namespace Models
 
         ''' <param name="offline">Der Ordner liegt auf einem nicht erreichbaren Laufwerk und kommt
         ''' aus dem Katalog: kein Blick auf die Platte, das Element traegt <see cref="IsOffline"/>.</param>
-        Public Shared Function FromFolder(folderPath As String, Optional offline As Boolean = False) As ImageItem
+        ''' <param name="missing">Mit <paramref name="offline"/>: der Grund ist ein Ordner, den es
+        ''' nicht mehr gibt (<see cref="IsFolderMissing"/>), nicht das Laufwerk.</param>
+        Public Shared Function FromFolder(folderPath As String, Optional offline As Boolean = False, Optional missing As Boolean = False) As ImageItem
             Dim item = New ImageItem()
             item.FilePath = folderPath
             item.FileName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
@@ -1905,6 +1929,7 @@ Namespace Models
             item.IsFolder = True
             If offline Then
                 item.IsOffline = True
+                item.IsFolderMissing = missing
                 item.DateModified = DateTime.MinValue
                 Return item
             End If
@@ -1919,8 +1944,8 @@ Namespace Models
             Return item
         End Function
 
-        Public Shared Function CreateParentFolderEntry(folderPath As String, Optional offline As Boolean = False) As ImageItem
-            Dim item = FromFolder(folderPath, offline)
+        Public Shared Function CreateParentFolderEntry(folderPath As String, Optional offline As Boolean = False, Optional missing As Boolean = False) As ImageItem
+            Dim item = FromFolder(folderPath, offline, missing)
             item.IsParentFolderEntry = True
             item.FileName = ".."
             Return item

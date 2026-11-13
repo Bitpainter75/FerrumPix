@@ -28,12 +28,14 @@ Namespace Models
         Private _isExpanded As Boolean
         Private _childrenLoaded As Boolean
         Private _isOffline As Boolean
+        Private _isFolderMissing As Boolean
 
-        ''' <summary>Liegt der Ordner auf einem Laufwerk, das gerade nicht erreichbar ist? Dann
-        ''' steht er abgesetzt im Baum (Symbol und Hinweis in der Akzentfarbe), seine Unterordner
-        ''' kommen aus dem Katalog, und die Galerie zeigt ihn aus dem Katalog statt von der Platte
-        ''' (siehe OfflineVolumes). Nachgefuehrt bei jedem Einlesen der Unterordner und beim
-        ''' Oeffnen des Ordners in der Galerie.</summary>
+        ''' <summary>Steht der Ordner nur noch im Katalog, weil sein Laufwerk nicht erreichbar ist
+        ''' oder weil es ihn nicht mehr gibt (<see cref="IsFolderMissing"/>)? Dann steht er
+        ''' abgesetzt im Baum (Symbol und Hinweis in der Akzentfarbe), seine Unterordner kommen aus
+        ''' dem Katalog, und die Galerie zeigt ihn aus dem Katalog statt von der Platte (siehe
+        ''' FolderListing). Nachgefuehrt bei jedem Einlesen der Unterordner und beim Oeffnen des
+        ''' Ordners in der Galerie.</summary>
         Public Property IsOffline As Boolean
             Get
                 Return _isOffline
@@ -41,19 +43,56 @@ Namespace Models
             Set(value As Boolean)
                 If _isOffline = value Then Return
                 _isOffline = value
-                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(IsOffline)))
-                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(NameOf(OfflineTip)))
+                RaiseStateChanged()
             End Set
         End Property
 
-        ''' <summary>Der Hinweis am Stecker hinter dem Namen. Hier und nicht im XAML: die Zeile
+        ''' <summary>Gibt es den Ordner auf einem erreichbaren Laufwerk nicht mehr (ausserhalb der
+        ''' Anwendung geloescht)? Nur zusammen mit <see cref="IsOffline"/>; entscheidet ueber
+        ''' Symbol und Hinweis.</summary>
+        Public ReadOnly Property IsFolderMissing As Boolean
+            Get
+                Return _isOffline AndAlso _isFolderMissing
+            End Get
+        End Property
+
+        ''' <summary>Nicht erreichbar wegen des Laufwerks: dann steht der Stecker da.</summary>
+        Public ReadOnly Property IsDriveOffline As Boolean
+            Get
+                Return _isOffline AndAlso Not _isFolderMissing
+            End Get
+        End Property
+
+        ''' <summary>Der Zustand aus <see cref="FolderListing"/>, in einem Schritt gesetzt.</summary>
+        Public Property State As FolderState
+            Get
+                If Not _isOffline Then Return FolderState.Present
+                Return If(_isFolderMissing, FolderState.Missing, FolderState.Unreachable)
+            End Get
+            Set(value As FolderState)
+                Dim offline = value = FolderState.Unreachable OrElse value = FolderState.Missing
+                Dim missing = value = FolderState.Missing
+                If _isOffline = offline AndAlso _isFolderMissing = missing Then Return
+                _isOffline = offline
+                _isFolderMissing = missing
+                RaiseStateChanged()
+            End Set
+        End Property
+
+        ''' <summary>Der Hinweis am Zeichen hinter dem Namen. Hier und nicht im XAML: die Zeile
         ''' entsteht aus einer Vorlage, und deren feste Texte erreicht die Uebersetzung nicht
         ''' verlaesslich.</summary>
         Public ReadOnly Property OfflineTip As String
             Get
-                Return If(_isOffline, LocalizationService.T("Laufwerk nicht erreichbar"), Nothing)
+                Return If(_isOffline, FolderListing.ReasonText(_isFolderMissing), Nothing)
             End Get
         End Property
+
+        Private Sub RaiseStateChanged()
+            For Each propertyName In {NameOf(IsOffline), NameOf(IsFolderMissing), NameOf(IsDriveOffline), NameOf(State), NameOf(OfflineTip)}
+                RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+            Next
+        End Sub
 
         Public Property IsExpanded As Boolean
             Get
@@ -130,36 +169,27 @@ Namespace Models
                 Children.Clear()
                 Return
             End If
-            ' ZUERST die Frage nach dem Laufwerk, DANN die Platte. Liegt der Ordner auf einem nicht
-            ' erreichbaren Laufwerk, kennt nur der Katalog seine Unterordner, und ein Blick auf
-            ' die Platte zeigte bestenfalls einen leeren Einhaengeort, schlimmstenfalls haengt er.
-            IsOffline = OfflineVolumes.IsFolderUnreachable(FullPath)
-            Dim wanted As List(Of String)
-            If IsOffline Then
-                Try
-                    wanted = LibraryService.Instance.GetCatalogSubfolders(FullPath).
-                        Where(Function(d) ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                        ToList()
-                Catch ex As Exception
-                    DiagnosticLogService.LogException("FolderNode.CatalogSubfolders", ex)
-                    wanted = New List(Of String)()
-                End Try
-            Else
-                Try
-                    wanted = IO.Directory.GetDirectories(FullPath).
-                        Where(Function(d) ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                        OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase).
-                        ToList()
-                Catch ex As UnauthorizedAccessException
-                    wanted = New List(Of String)()
-                Catch ex As IOException
-                    wanted = New List(Of String)()
-                End Try
-            End If
+            ' ZUERST die Frage nach dem Laufwerk, DANN die Platte (FolderListing). Liegt der Ordner
+            ' auf einem nicht erreichbaren Laufwerk oder gibt es ihn nicht mehr, kennt nur der
+            ' Katalog seine Unterordner, und ein Blick auf die Platte zeigte bestenfalls einen
+            ' leeren Einhaengeort, schlimmstenfalls haengt er.
+            Dim ownState = FolderListing.StateOf(FullPath)
+            State = ownState
+            Dim wanted As List(Of FolderEntry)
+            Try
+                ' Die Kinder eines erreichbaren Ordners kommen von der Platte, dazu die, die nur
+                ' noch der Katalog kennt (abgezogenes Laufwerk, geloeschter Ordner); jedes mit
+                ' seinem eigenen Zustand, unter /mnt etwa ist jeder Eintrag ein eigener Einhaengeort.
+                wanted = FolderListing.ListSubfolders(FullPath, ownState, ShowHiddenFolders)
+            Catch ex As UnauthorizedAccessException
+                wanted = New List(Of FolderEntry)()
+            Catch ex As IOException
+                wanted = New List(Of FolderEntry)()
+            End Try
 
-            ' Platzhalter und verschwundene Ordner heraus, dann in der Reihenfolge der Platte
+            ' Platzhalter und verschwundene Ordner heraus, dann in der Reihenfolge der Liste
             ' verschieben oder neu einsetzen.
-            Dim wantedSet = New HashSet(Of String)(wanted, PathIdentity.Comparer)
+            Dim wantedSet = New HashSet(Of String)(wanted.Select(Function(w) w.Path), PathIdentity.Comparer)
             For i = Children.Count - 1 To 0 Step -1
                 Dim childPath = Children(i).FullPath
                 If String.IsNullOrEmpty(childPath) OrElse Not wantedSet.Contains(childPath) Then Children.RemoveAt(i)
@@ -168,18 +198,15 @@ Namespace Models
                 Dim target = wanted(i)
                 Dim existing = -1
                 For j = i To Children.Count - 1
-                    If String.Equals(Children(j).FullPath, target, PathIdentity.Comparison) Then
+                    If String.Equals(Children(j).FullPath, target.Path, PathIdentity.Comparison) Then
                         existing = j
                         Exit For
                     End If
                 Next
-                ' Ein Kind eines nicht erreichbaren Ordners ist es ebenso. Sonst wird je Kind gefragt:
-                ' unter /mnt etwa ist jeder Eintrag ein eigener Einhaengeort.
-                Dim childOffline = IsOffline OrElse OfflineVolumes.IsFolderUnreachable(target)
                 If existing < 0 Then
-                    Children.Insert(i, New FolderNode(target) With {.IsOffline = childOffline})
+                    Children.Insert(i, New FolderNode(target.Path) With {.State = target.State})
                 Else
-                    Children(existing).IsOffline = childOffline
+                    Children(existing).State = target.State
                     If existing <> i Then Children.Move(existing, i)
                 End If
             Next

@@ -893,11 +893,9 @@ Namespace ViewModels
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             Try
                 ' Der letzte Riegel fuer jeden Weg in den Betrachter: auf einem nicht erreichbaren
-                ' Laufwerk gibt es nichts zu laden (Galerie offline, siehe OfflineVolumes).
-                If OfflineVolumes.IsUnreachable(imagePath) Then
-                    If Gallery IsNot Nothing Then Gallery.StatusText = GalleryViewModel.DriveUnreachableText
-                    Return
-                End If
+                ' Laufwerk gibt es nichts zu laden (Galerie offline, siehe OfflineVolumes), in einem
+                ' Ordner, den es nicht mehr gibt, ebenso wenig (FolderListing).
+                If RefuseCatalogOnlyPath(imagePath) Then Return
                 If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
                     If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
@@ -914,6 +912,22 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("MainWindowViewModel.OpenImageInViewer", ex)
             End Try
         End Sub
+
+        ''' <summary>Der letzte Riegel vor Betrachter und Editor: liegt die Datei auf einem nicht
+        ''' erreichbaren Laufwerk oder in einem Ordner, den es nicht mehr gibt, steht der Grund in
+        ''' der Statuszeile der Galerie, und es wird nichts geoeffnet.</summary>
+        Private Function RefuseCatalogOnlyPath(path As String) As Boolean
+            Dim missing As Boolean
+            If OfflineVolumes.IsUnreachable(path) Then
+                missing = False
+            ElseIf FolderListing.IsInMissingFolder(path) Then
+                missing = True
+            Else
+                Return False
+            End If
+            If Gallery IsNot Nothing Then Gallery.StatusText = FolderListing.ReasonText(missing)
+            Return True
+        End Function
 
         ''' <summary>Öffnet eine Immich-Sitzung im Betrachter: der Filmstreifen zeigt das ganze Album
         ''' (Pseudo-Pfade), das aktuelle Bild wird on-demand heruntergeladen.</summary>
@@ -938,10 +952,7 @@ Namespace ViewModels
             ' und zwei Speicherabfragen uebereinander waeren das Gegenteil einer Hilfe.
             If _documentOpenInFlight Then Return
             ' Wie beim Betrachter: ohne erreichbares Laufwerk keine Datei, also kein Editor.
-            If OfflineVolumes.IsUnreachable(path) Then
-                If Gallery IsNot Nothing Then Gallery.StatusText = GalleryViewModel.DriveUnreachableText
-                Return
-            End If
+            If RefuseCatalogOnlyPath(path) Then Return
             _documentOpenInFlight = True
             Try
                 If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, PathIdentity.Comparison) Then
@@ -1163,7 +1174,7 @@ Namespace ViewModels
             Try
                 If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso Gallery.SelectedItem.IsOffline Then
                     ' Galerie offline: das Vollbild ist der Betrachter, und der braucht die Datei.
-                    Gallery.StatusText = GalleryViewModel.DriveUnreachableText
+                    Gallery.StatusText = GalleryViewModel.OfflineReasonText({Gallery.SelectedItem})
                     Return
                 ElseIf CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
                     _previousModeBeforeFullscreen = AppMode.Gallery
@@ -6861,6 +6872,10 @@ Namespace ViewModels
                 ReportFailedCompanionDeletion(RawSidecarService.AccompanyDelete(itemPath, useTrash:=False))
             ElseIf IO.Directory.Exists(itemPath) Then
                 IO.Directory.Delete(itemPath, True)
+                ' Endgueltig weg: Katalogzeilen und Kacheln gehen mit, sonst stuende der Ordner
+                ' danach als "nicht mehr vorhanden" im Baum. Der Weg in den Papierkorb oben
+                ' behaelt beides, der Ordner kann zurueckkommen (TrashedFolders).
+                GalleryViewModel.ForgetDeletedFolder(itemPath)
             End If
         End Sub
 

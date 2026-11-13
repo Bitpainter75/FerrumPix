@@ -2205,7 +2205,7 @@ Namespace Views
             ' die Zuordnung, und dafür ist der Pseudo-Pfad genau das Richtige.
             ' Galerie offline: es gibt keine Datei, die ein Ziel bekommen koennte.
             If dragItems.Any(Function(i) i IsNot Nothing AndAlso i.IsOffline) Then
-                vm.StatusText = GalleryViewModel.DriveUnreachableText
+                vm.StatusText = GalleryViewModel.OfflineReasonText(dragItems)
                 Return
             End If
             Dim paths = vm.GetPathsForTransfer(dragItems)
@@ -2748,18 +2748,21 @@ Namespace Views
             _folderTreeContextNode = contextNode
             _suppressFolderTreeSelectionChange = False
             Dim path = contextNode?.FullPath
-            ' Laufwerk nicht erreichbar: der Grund oben, darunter das Entfernen aus dem Katalog. Die
-            ' Dateiarbeit darunter faellt dort von selbst weg (FileOperationPolicy fragt zuerst
-            ' OfflineVolumes und blickt dann gar nicht erst auf die Platte).
-            Dim offline = vm.CanRemoveFolderFromCatalog(path)
-            SetMenuItemVisible("FolderTreeOfflineInfoMenuItem", offline)
-            SetMenuItemVisible("FolderTreeRemoveFromCatalogMenuItem", offline)
-            SetMenuItemVisible("FolderTreeCreateFolderMenuItem", vm.CanPasteIntoFolder(path))
-            SetMenuItemVisible("FolderTreeRenameMenuItem", vm.CanRenamePath(path))
-            SetMenuItemVisible("FolderTreeCopyMenuItem", vm.CanCopyPath(path))
-            SetMenuItemVisible("FolderTreeCutMenuItem", vm.CanCutPath(path))
-            SetMenuItemVisible("FolderTreePasteMenuItem", vm.CanPasteIntoFolder(path))
-            SetMenuItemVisible("FolderTreeDeleteMenuItem", vm.CanDeletePath(path))
+            ' Nur im Katalog (Laufwerk nicht erreichbar, Ordner nicht mehr vorhanden): der Grund
+            ' oben, darunter das Entfernen aus dem Katalog. Die Dateiarbeit darunter faellt weg; bei
+            ' einem fehlenden Laufwerk blickt FileOperationPolicy gar nicht erst auf die Platte, und
+            ' einen Ordner, den es nicht mehr gibt, kann niemand kopieren.
+            Dim state = FolderListing.StateOf(path)
+            Dim catalogOnly = state = FolderState.Unreachable OrElse state = FolderState.Missing
+            SetMenuItemVisible("FolderTreeOfflineInfoMenuItem", state = FolderState.Unreachable)
+            SetMenuItemVisible("FolderTreeMissingInfoMenuItem", state = FolderState.Missing)
+            SetMenuItemVisible("FolderTreeRemoveFromCatalogMenuItem", catalogOnly)
+            SetMenuItemVisible("FolderTreeCreateFolderMenuItem", Not catalogOnly AndAlso vm.CanPasteIntoFolder(path))
+            SetMenuItemVisible("FolderTreeRenameMenuItem", Not catalogOnly AndAlso vm.CanRenamePath(path))
+            SetMenuItemVisible("FolderTreeCopyMenuItem", Not catalogOnly AndAlso vm.CanCopyPath(path))
+            SetMenuItemVisible("FolderTreeCutMenuItem", Not catalogOnly AndAlso vm.CanCutPath(path))
+            SetMenuItemVisible("FolderTreePasteMenuItem", Not catalogOnly AndAlso vm.CanPasteIntoFolder(path))
+            SetMenuItemVisible("FolderTreeDeleteMenuItem", Not catalogOnly AndAlso vm.CanDeletePath(path))
             TidyMenuSeparators(tree.ContextMenu)
         End Sub
 

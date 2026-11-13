@@ -118,13 +118,20 @@
                     <!-- Ohne Trennlinien gliedert ein klarer, etwas größerer Weißraum die
                          unabhängigen Bereiche (Bilddaten, Scope, Bewertung und Stichwörter). -->
                     <StackPanel Spacing="32" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
-                        <!-- GALERIE OFFLINE: das Laufwerk des Bildes ist nicht erreichbar, die Leiste
-                             zeigt den Stand des Katalogs und laesst nichts aendern (IsReadOnly). Der
-                             Text kommt fertig uebersetzt aus dem ViewModel. -->
+                        <!-- GALERIE OFFLINE: das Laufwerk des Bildes ist nicht erreichbar oder sein
+                             Ordner nicht mehr vorhanden, die Leiste zeigt den Stand des Katalogs und
+                             laesst nichts aendern (IsReadOnly). Stecker fuer das Laufwerk, gestrichelter
+                             Ordner fuer den fehlenden Ordner. Der Text kommt fertig uebersetzt aus dem
+                             ViewModel. -->
                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsReadOnly}">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
                                            Width="18" Height="18" VerticalAlignment="Top"
-                                           IconBrush="{DynamicResource FP.Accent}"/>
+                                           IconBrush="{DynamicResource FP.Accent}"
+                                           IsVisible="{Binding IsReadOnlyDrive}"/>
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                           Width="18" Height="18" VerticalAlignment="Top"
+                                           IconBrush="{DynamicResource FP.Accent}"
+                                           IsVisible="{Binding IsReadOnlyMissing}"/>
                             <TextBlock Classes="no-translate" Text="{Binding ReadOnlyHint}" TextWrapping="Wrap" MaxWidth="260"
                                        Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
                         </StackPanel>

@@ -1457,11 +1457,12 @@
                                   </TreeView.Styles>
                                   <TreeView.ContextMenu>
                                       <ContextMenu Opened="OnLocalizedMenuOpened" MaxHeight="1000">
-                                          <!-- Nur an einem Ordner auf einem nicht erreichbaren Laufwerk: der
-                                               Grund als nicht waehlbare Zeile, dann das Entfernen aus dem
-                                               Katalog. Alles, was auf die Platte greift, faellt dort ueber
-                                               FileOperationPolicy weg. -->
+                                          <!-- Nur an einem Ordner auf einem nicht erreichbaren Laufwerk oder
+                                               einem, den es nicht mehr gibt: der Grund als nicht waehlbare
+                                               Zeile, dann das Entfernen aus dem Katalog. Alles, was auf die
+                                               Platte greift, faellt dort weg (OnFolderTreeContextRequested). -->
                                           <MenuItem Name="FolderTreeOfflineInfoMenuItem" Header="Laufwerk nicht erreichbar" IsEnabled="False"/>
+                                          <MenuItem Name="FolderTreeMissingInfoMenuItem" Header="Ordner nicht mehr vorhanden" IsEnabled="False"/>
                                           <MenuItem Name="FolderTreeRemoveFromCatalogMenuItem" Header="Aus dem Katalog entfernen" Click="OnContextRemoveFolderFromCatalog"/>
                                           <Separator/>
                                           <MenuItem Header="Zu Favoriten hinzufügen" Click="OnAddFolderFavoriteClick"/>
@@ -1483,10 +1484,12 @@
                                           <!-- Background="Transparent" macht die ganze Zeile hittestbar (sonst treffen
                                                nur Symbol und Beschriftung), DragDrop.AllowDrop meldet sie als Drop-Ziel
                                                an - siehe Kommentar am Immich-Baum. -->
-                                          <!-- NICHT ERREICHBAR (FolderNode.IsOffline): Ordner in der
-                                               Akzentfarbe, dahinter der Stecker, der Name gedaempft.
-                                               Der Akzent wird je Thema und Akzentwahl zur Laufzeit
-                                               gesetzt und hebt sich deshalb in allen vier Themen ab. -->
+                                          <!-- NUR IM KATALOG (FolderNode.IsOffline): Ordner in der
+                                               Akzentfarbe, dahinter das Zeichen, der Name gedaempft.
+                                               Der Stecker steht fuer ein nicht erreichbares Laufwerk,
+                                               der gestrichelte Ordner fuer einen Ordner, den es nicht
+                                               mehr gibt. Der Akzent wird je Thema und Akzentwahl zur
+                                               Laufzeit gesetzt und hebt sich in allen vier Themen ab. -->
                                           <Grid ColumnDefinitions="Auto,*,Auto"
                                                 VerticalAlignment="Center"
                                                 HorizontalAlignment="Stretch"
@@ -1510,7 +1513,12 @@
                                               <icons:SvgIcon Grid.Column="2" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
                                                      Width="16" Height="16" VerticalAlignment="Center" Margin="6,0,4,0"
                                                      IconBrush="{DynamicResource FP.Accent}"
-                                                     IsVisible="{Binding IsOffline}"
+                                                     IsVisible="{Binding IsDriveOffline}"
+                                                     ToolTip.Tip="{Binding OfflineTip}"/>
+                                              <icons:SvgIcon Grid.Column="2" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                                     Width="16" Height="16" VerticalAlignment="Center" Margin="6,0,4,0"
+                                                     IconBrush="{DynamicResource FP.Accent}"
+                                                     IsVisible="{Binding IsFolderMissing}"
                                                      ToolTip.Tip="{Binding OfflineTip}"/>
                                           </Grid>
                                       </TreeDataTemplate>
@@ -2001,6 +2009,12 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
                                        Width="18" Height="18"
                                        IconBrush="{DynamicResource FP.Accent}"
+                                       IsVisible="{Binding IsOfflineViewDrive}"
+                                       VerticalAlignment="Center"/>
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                       Width="18" Height="18"
+                                       IconBrush="{DynamicResource FP.Accent}"
+                                       IsVisible="{Binding IsOfflineViewMissing}"
                                        VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding OfflineViewText}"
                                    Classes="no-translate"
@@ -2280,19 +2294,30 @@
                                                                            VerticalAlignment="Center"/>
                                                         </Button>
                                                     </Panel>
-                                                    <!-- NICHT ERREICHBAR (ImageItem.IsOffline): derselbe
-                                                         Stecker in FP.Accent wie im Ordnerbaum, auf einer
+                                                    <!-- NUR IM KATALOG (ImageItem.IsOffline): dasselbe Zeichen
+                                                         in FP.Accent wie im Ordnerbaum (Stecker fuer das
+                                                         Laufwerk, gestrichelter Ordner fuer einen Ordner,
+                                                         den es nicht mehr gibt), auf einer
                                                          Pille in den Flaechenfarben des Themas, damit er in
                                                          allen vier Themen steht. Kein Knopf und unabhaengig
                                                          von Einstellungen, auch in der Fotowand immer sichtbar. -->
                                                     <Border Classes="offline-badge"
                                                             IsVisible="{Binding IsOffline}"
                                                             ToolTip.Tip="{Binding OfflineTip}">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
-                                                                       Width="16" Height="16"
-                                                                       IconBrush="{DynamicResource FP.Accent}"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
+                                                        <Panel>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                                                           Width="16" Height="16"
+                                                                           IconBrush="{DynamicResource FP.Accent}"
+                                                                           IsVisible="{Binding IsDriveOffline}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                                                           Width="16" Height="16"
+                                                                           IconBrush="{DynamicResource FP.Accent}"
+                                                                           IsVisible="{Binding IsFolderMissing}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                        </Panel>
                                                     </Border>
                                                 </StackPanel>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
@@ -2901,11 +2926,20 @@
                                                     <Border Classes="offline-badge" Margin="0,0,8,0"
                                                             IsVisible="{Binding IsOffline}"
                                                             ToolTip.Tip="{Binding OfflineTip}">
-                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
-                                                                       Width="16" Height="16"
-                                                                       IconBrush="{DynamicResource FP.Accent}"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
+                                                        <Panel>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                                                           Width="16" Height="16"
+                                                                           IconBrush="{DynamicResource FP.Accent}"
+                                                                           IsVisible="{Binding IsDriveOffline}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                                                           Width="16" Height="16"
+                                                                           IconBrush="{DynamicResource FP.Accent}"
+                                                                           IsVisible="{Binding IsFolderMissing}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                        </Panel>
                                                     </Border>
                                                     <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
                                                              Fill="{Binding ColorLabelBrush}"

@@ -18,13 +18,29 @@ Namespace ViewModels
     Partial Public Class GalleryViewModel
 
         Private _isOfflineView As Boolean
+        Private _isOfflineViewMissing As Boolean
 
-        ''' <summary>Steht gerade ein Ordner offen, dessen Laufwerk nicht erreichbar ist? Dann ist
-        ''' die Ansicht nur zum Ansehen: kein Betrachter, kein Editor, keine Dateioperation, keine
-        ''' Aenderung an Bewertung, Etikett oder Stichwoertern. Die Leiste ueber den Kacheln sagt es.</summary>
+        ''' <summary>Steht gerade ein Ordner offen, dessen Laufwerk nicht erreichbar ist oder den es
+        ''' nicht mehr gibt (<see cref="IsOfflineViewMissing"/>)? Dann ist die Ansicht nur zum
+        ''' Ansehen: kein Betrachter, kein Editor, keine Dateioperation, keine Aenderung an
+        ''' Bewertung, Etikett oder Stichwoertern. Die Leiste ueber den Kacheln sagt es.</summary>
         Public ReadOnly Property IsOfflineView As Boolean
             Get
                 Return _isOfflineView
+            End Get
+        End Property
+
+        ''' <summary>Die Ansicht aus dem Katalog gilt einem Ordner, den es nicht mehr gibt.</summary>
+        Public ReadOnly Property IsOfflineViewMissing As Boolean
+            Get
+                Return _isOfflineView AndAlso _isOfflineViewMissing
+            End Get
+        End Property
+
+        ''' <summary>Die Ansicht aus dem Katalog gilt einem nicht erreichbaren Laufwerk.</summary>
+        Public ReadOnly Property IsOfflineViewDrive As Boolean
+            Get
+                Return _isOfflineView AndAlso Not _isOfflineViewMissing
             End Get
         End Property
 
@@ -32,15 +48,17 @@ Namespace ViewModels
         ''' gilt.</summary>
         Public ReadOnly Property OfflineViewText As String
             Get
-                Return LocalizationService.T("Laufwerk nicht erreichbar. Angezeigt wird der Stand aus dem Katalog, nur zum Ansehen.")
+                Return FolderListing.ViewText(_isOfflineViewMissing)
             End Get
         End Property
 
-        Private Sub SetOfflineView(value As Boolean)
-            If _isOfflineView = value Then Return
+        Private Sub SetOfflineView(value As Boolean, Optional missing As Boolean = False)
+            If _isOfflineView = value AndAlso _isOfflineViewMissing = missing Then Return
             _isOfflineView = value
-            Me.RaisePropertyChanged(NameOf(IsOfflineView))
-            Me.RaisePropertyChanged(NameOf(OfflineViewText))
+            _isOfflineViewMissing = value AndAlso missing
+            For Each propertyName In {NameOf(IsOfflineView), NameOf(IsOfflineViewMissing), NameOf(IsOfflineViewDrive), NameOf(OfflineViewText)}
+                Me.RaisePropertyChanged(propertyName)
+            Next
             ' Das Kontextmenue haengt am selben Zustand (ContextMenuBuilder, Parameter offlineView).
             RefreshContextActions()
         End Sub
@@ -49,18 +67,26 @@ Namespace ViewModels
         ''' Kontextmenue und Ordnerbaum, damit ueberall dasselbe steht.</summary>
         Public Shared ReadOnly Property DriveUnreachableText As String
             Get
-                Return LocalizationService.T("Laufwerk nicht erreichbar")
+                Return FolderListing.ReasonText(folderMissing:=False)
             End Get
         End Property
 
-        ''' <summary>True, wenn eines der Elemente auf einem nicht erreichbaren Laufwerk liegt. Dann
-        ''' steht der Grund in der Statuszeile, und der Aufrufer bricht ab. Die eine Stelle, an der
-        ''' jeder schreibende Weg der Galerie fragt - so steht die Regel einmal und nicht an jedem
-        ''' Knopf.</summary>
+        ''' <summary>Der Grund fuer Elemente aus dem Katalog: das Laufwerk, sobald eines davon auf
+        ''' einem nicht erreichbaren liegt, sonst der Ordner, den es nicht mehr gibt.</summary>
+        Public Shared Function OfflineReasonText(items As IEnumerable(Of ImageItem)) As String
+            Dim offline = If(items, Enumerable.Empty(Of ImageItem)()).Where(Function(i) i IsNot Nothing AndAlso i.IsOffline).ToList()
+            Return FolderListing.ReasonText(offline.Count > 0 AndAlso offline.All(Function(i) i.IsFolderMissing))
+        End Function
+
+        ''' <summary>True, wenn eines der Elemente nur aus dem Katalog stammt (Laufwerk nicht
+        ''' erreichbar, Ordner nicht mehr vorhanden). Dann steht der Grund in der Statuszeile, und
+        ''' der Aufrufer bricht ab. Die eine Stelle, an der jeder schreibende Weg der Galerie
+        ''' fragt - so steht die Regel einmal und nicht an jedem Knopf.</summary>
         Private Function RefuseOffline(items As IEnumerable(Of ImageItem)) As Boolean
             If items Is Nothing Then Return False
-            If Not items.Any(Function(i) i IsNot Nothing AndAlso i.IsOffline) Then Return False
-            StatusText = DriveUnreachableText
+            Dim list = items.ToList()
+            If Not list.Any(Function(i) i IsNot Nothing AndAlso i.IsOffline) Then Return False
+            StatusText = OfflineReasonText(list)
             Return True
         End Function
 
@@ -69,7 +95,7 @@ Namespace ViewModels
         ''' wuerde dort die Dateien lesen.</summary>
         Private Function RefuseOfflineSelection() As Boolean
             If _isOfflineView Then
-                StatusText = DriveUnreachableText
+                StatusText = FolderListing.ReasonText(_isOfflineViewMissing)
                 Return True
             End If
             Dim selected As New List(Of ImageItem)()
@@ -90,28 +116,31 @@ Namespace ViewModels
             Return IO.File.Exists(path)
         End Function
 
-        ''' <summary>Fuehrt den Ordnerbaum nach, sobald die Galerie weiss, ob ein Ordner erreichbar
-        ''' ist. Kommt ein Laufwerk zurueck, liest der Knoten seine Unterordner wieder von der
-        ''' Platte; faellt es weg, aus dem Katalog.</summary>
-        Private Sub NoteFolderReachability(folderPath As String, offline As Boolean)
+        ''' <summary>Fuehrt den Ordnerbaum nach, sobald die Galerie weiss, wie ein Ordner dasteht.
+        ''' Kommt ein Laufwerk zurueck, liest der Knoten seine Unterordner wieder von der Platte;
+        ''' faellt es weg oder gibt es den Ordner nicht mehr, aus dem Katalog.</summary>
+        Private Sub NoteFolderReachability(folderPath As String, state As FolderState)
             Dim node = FindLoadedFolderNode(FolderTree, folderPath)
-            If node Is Nothing OrElse node.IsOffline = offline Then Return
-            node.IsOffline = offline
+            If state = FolderState.Absent Then state = FolderState.Present
+            If node Is Nothing OrElse node.State = state Then Return
+            node.State = state
             node.ReloadChildren()
         End Sub
 
         ''' <summary>Zeigt einen Ordner allein aus dem Katalog. Der Gegenweg zu Sofortbestand und
         ''' Dateisystemlauf in LoadFolderImagesAsync, ohne den Lauf: kein Directory.Exists, kein
-        ''' Beobachter, kein Nachlesen der Metadaten. Die Unterordner kommen aus dem Katalog.</summary>
-        Private Async Function LoadOfflineFolderAsync(folderPath As String, thumbnailToken As CancellationToken) As Task
+        ''' Beobachter, kein Nachlesen der Metadaten. Die Unterordner kommen aus dem Katalog.
+        ''' <paramref name="missing"/>: es gibt den Ordner nicht mehr, das Laufwerk ist da.</summary>
+        Private Async Function LoadOfflineFolderAsync(folderPath As String, thumbnailToken As CancellationToken,
+                                                      Optional missing As Boolean = False) As Task
             SetupWatcher(Nothing)
-            SetOfflineView(True)
-            NoteFolderReachability(folderPath, offline:=True)
-            StatusText = DriveUnreachableText
+            SetOfflineView(True, missing)
+            NoteFolderReachability(folderPath, If(missing, FolderState.Missing, FolderState.Unreachable))
+            StatusText = FolderListing.ReasonText(missing)
 
             Dim items As List(Of ImageItem)
             Try
-                items = Await Task.Run(Function() BuildOfflineCatalogSnapshot(folderPath, thumbnailToken), thumbnailToken)
+                items = Await Task.Run(Function() BuildOfflineCatalogSnapshot(folderPath, thumbnailToken, missing), thumbnailToken)
             Catch ex As OperationCanceledException
                 Return
             Catch ex As Exception
@@ -126,15 +155,20 @@ Namespace ViewModels
             _allItems.AddRange(items)
             FilterAndSort()
             Dim imageCount = items.LongCount(Function(i) i IsNot Nothing AndAlso Not i.IsFolder)
-            StatusText = String.Format(Globalization.CultureInfo.CurrentCulture,
-                                       LocalizationService.T("Laufwerk nicht erreichbar: {0} Bilder aus dem Katalog"), imageCount)
+            Dim template = If(missing,
+                              LocalizationService.T("Ordner nicht mehr vorhanden: {0} Bilder aus dem Katalog"),
+                              LocalizationService.T("Laufwerk nicht erreichbar: {0} Bilder aus dem Katalog"))
+            StatusText = String.Format(Globalization.CultureInfo.CurrentCulture, template, imageCount)
         End Function
 
         ''' <summary>Der Bestand eines Ordners offline: "..", die Unterordner aus dem Katalog und
-        ''' die Katalogzeilen der Ebene, jedes Element mit <see cref="ImageItem.IsOffline"/>, BEVOR
-        ''' etwas daran bindet. Laeuft im Hintergrund und beruehrt keine gebundene Sammlung.</summary>
-        Private Function BuildOfflineCatalogSnapshot(folderPath As String, thumbnailToken As CancellationToken) As List(Of ImageItem)
+        ''' die Katalogzeilen der Ebene, jedes Element mit <see cref="ImageItem.IsOffline"/> (und
+        ''' bei einem Ordner, den es nicht mehr gibt, mit <see cref="ImageItem.IsFolderMissing"/>),
+        ''' BEVOR etwas daran bindet. Laeuft im Hintergrund und beruehrt keine gebundene Sammlung.</summary>
+        Private Function BuildOfflineCatalogSnapshot(folderPath As String, thumbnailToken As CancellationToken,
+                                                     missing As Boolean) As List(Of ImageItem)
             Dim items As New List(Of ImageItem)()
+            Dim state = If(missing, FolderState.Missing, FolderState.Unreachable)
             If _showFolders Then
                 If _showParentFolder Then
                     Dim parentPath = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
@@ -142,9 +176,8 @@ Namespace ViewModels
                         AddOfflineParentEntry(items, parentPath)
                     End If
                 End If
-                For Each folder In LibraryService.Instance.GetCatalogSubfolders(folderPath).
-                    Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith("."))
-                    items.Add(ImageItem.FromFolder(folder, offline:=True))
+                For Each folder In FolderListing.ListSubfolders(folderPath, state, FolderNode.ShowHiddenFolders)
+                    items.Add(ImageItem.FromFolder(folder.Path, offline:=True, missing:=missing))
                 Next
             End If
             thumbnailToken.ThrowIfCancellationRequested()
@@ -153,6 +186,7 @@ Namespace ViewModels
                                      _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()))
             For Each item In BuildCatalogItems(rows, thumbnailToken)
                 item.IsOffline = True
+                item.IsFolderMissing = missing
                 items.Add(item)
             Next
             Return items
@@ -161,18 +195,37 @@ Namespace ViewModels
         ''' <summary>Der Eintrag ".." offline. Liegt der Elternordner selbst wieder auf einem
         ''' erreichbaren Laufwerk (die Wurzel des Laufwerks etwa), ist er ein gewoehnlicher Ordner;
         ''' sonst traegt auch er <see cref="ImageItem.IsOffline"/> und wird nicht auf der Platte
-        ''' nachgesehen.</summary>
+        ''' nachgesehen. Gibt es ihn weder auf der Platte noch im Katalog, fehlt der Eintrag.</summary>
         Private Shared Sub AddOfflineParentEntry(items As List(Of ImageItem), parentPath As String)
-            Dim parentOffline = OfflineVolumes.IsFolderUnreachable(parentPath)
-            If Not parentOffline AndAlso Not IO.Directory.Exists(parentPath) Then Return
-            items.Add(ImageItem.CreateParentFolderEntry(parentPath, parentOffline))
+            Dim parentState = FolderListing.StateOf(parentPath)
+            If parentState = FolderState.Absent Then Return
+            items.Add(ImageItem.CreateParentFolderEntry(parentPath, parentState <> FolderState.Present,
+                                                        parentState = FolderState.Missing))
         End Sub
 
         ''' <summary>Darf ein Ordner ueber den Ordnerbaum aus dem Katalog genommen werden? Nur, wenn
-        ''' sein Laufwerk nicht erreichbar ist. Fuer einen erreichbaren Ordner gibt es die Wege in
-        ''' den Einstellungen; hier geht es um die Reste eines Laufwerks, das nicht wiederkommt.</summary>
+        ''' sein Laufwerk nicht erreichbar ist oder es ihn nicht mehr gibt. Fuer einen vorhandenen
+        ''' Ordner gibt es die Wege in den Einstellungen; hier geht es um die Reste eines Laufwerks,
+        ''' das nicht wiederkommt, oder eines Ordners, der ausserhalb der Anwendung geloescht wurde.</summary>
         Public Function CanRemoveFolderFromCatalog(folderPath As String) As Boolean
-            Return Not String.IsNullOrWhiteSpace(folderPath) AndAlso OfflineVolumes.IsFolderUnreachable(folderPath)
+            If String.IsNullOrWhiteSpace(folderPath) Then Return False
+            Dim state = FolderListing.StateOf(folderPath)
+            Return state = FolderState.Unreachable OrElse state = FolderState.Missing
+        End Function
+
+        ''' <summary>Nach dem ENDGUELTIGEN Loeschen eines Ordners aus der Anwendung heraus: seine
+        ''' Katalogzeilen und Kacheln samt Unterordnern gehen mit, ueber denselben Weg wie "Aus dem
+        ''' Katalog entfernen" (RemoveFolderFromCatalogCore, unter der Aufraeumklammer). Sonst
+        ''' stuende der Ordner danach als "nicht mehr vorhanden" da. Nur, wenn er wirklich weg
+        ''' ist. Ein Ordner im Papierkorb behaelt alles (siehe TrashedFolders): er kann
+        ''' zurueckkommen. Laeuft im Hintergrund, beruehrt keine gebundene Sammlung.</summary>
+        Friend Shared Function ForgetDeletedFolder(folderPath As String) As (Rows As Integer, Tiles As Integer)
+            If String.IsNullOrWhiteSpace(folderPath) OrElse IO.Directory.Exists(folderPath) Then Return (0, 0)
+            Dim result = RemoveFolderFromCatalogCore(folderPath)
+            If result.Rows < 0 Then
+                DiagnosticLogService.LogAlways("Gallery.ForgetDeletedFolder", "Katalog nicht bereinigt, ein Hintergrundlauf haelt die Sperre: " & folderPath)
+            End If
+            Return result
         End Function
 
         ''' <summary>"Aus dem Katalog entfernen" im Ordnerbaum: fragt mit Zahl und Pfad nach und nimmt

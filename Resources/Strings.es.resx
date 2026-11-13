@@ -11585,4 +11585,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>¿Quitar del catálogo {0} entradas bajo {1}, con sus subcarpetas y miniaturas? La carpeta dejará también de estar vigilada. Se perderán las valoraciones, etiquetas, palabras clave y personas de estas imágenes. Los archivos de la unidad no se tocan.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>La carpeta ya no existe</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>La carpeta ya no existe. Se muestra lo que sabe el catálogo, solo para ver.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>La carpeta ya no existe: {0} imágenes del catálogo</value>
+  </data>
 </root>

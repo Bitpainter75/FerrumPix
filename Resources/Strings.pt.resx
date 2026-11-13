@@ -11584,4 +11584,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Remover do catálogo {0} entradas em {1}, incluindo subpastas e miniaturas? A pasta também deixará de ser vigiada. As classificações, etiquetas, palavras-chave e pessoas destas imagens serão perdidas. Os ficheiros na unidade não são alterados.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>A pasta já não existe</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>A pasta já não existe. É mostrado o que o catálogo sabe, apenas para visualizar.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>A pasta já não existe: {0} imagens do catálogo</value>
+  </data>
 </root>

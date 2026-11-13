@@ -11625,4 +11625,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Odebrat z katalogu {0} záznamů pod {1} včetně podsložek a náhledů? Složka pak také přestane být sledována. Hodnocení, štítky, klíčová slova a osoby těchto snímků budou ztraceny. Soubory na jednotce zůstanou nedotčené.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Složka již neexistuje</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Složka již neexistuje. Zobrazuje se stav z katalogu, jen k prohlížení.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Složka již neexistuje: {0} snímků z katalogu</value>
+  </data>
 </root>

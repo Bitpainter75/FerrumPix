@@ -11629,4 +11629,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>นำรายการแคตตาล็อก {0} รายการใต้ {1} รวมโฟลเดอร์ย่อยและภาพย่อออกจากแคตตาล็อกหรือไม่ หลังจากนั้นจะไม่เฝ้าดูโฟลเดอร์นี้อีก คะแนน ป้าย คำสำคัญ และบุคคลของภาพเหล่านี้จะหายไป ไฟล์บนไดรฟ์จะไม่ถูกแตะต้อง</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>ไม่มีโฟลเดอร์นี้แล้ว</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>ไม่มีโฟลเดอร์นี้แล้ว แสดงข้อมูลจากแคตตาล็อกเพื่อดูอย่างเดียว</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>ไม่มีโฟลเดอร์นี้แล้ว: {0} ภาพจากแคตตาล็อก</value>
+  </data>
 </root>

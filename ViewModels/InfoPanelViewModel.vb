@@ -335,6 +335,7 @@ Namespace ViewModels
                                       NameOf(IsInfoTabPeople), NameOf(HasPeopleTab), NameOf(ShowNoPeopleHint),
                                       NameOf(PlaceText), NameOf(HasPlace),
                                       NameOf(ShowPlaceRow), NameOf(IsReadOnly), NameOf(CanEditData), NameOf(ReadOnlyTip),
+                                      NameOf(IsReadOnlyMissing), NameOf(IsReadOnlyDrive), NameOf(ReadOnlyHint),
                                       NameOf(CanAnalyzeAiTags)}
                 Me.RaisePropertyChanged(propertyName)
             Next
@@ -1642,14 +1643,29 @@ Namespace ViewModels
         ''' <see cref="IsReadOnly"/> gilt; sonst Nothing, und es erscheint kein Hinweis.</summary>
         Public ReadOnly Property ReadOnlyTip As String
             Get
-                Return If(IsReadOnly, GalleryViewModel.DriveUnreachableText, Nothing)
+                Return If(IsReadOnly, GalleryViewModel.OfflineReasonText(_items), Nothing)
+            End Get
+        End Property
+
+        ''' <summary>Gilt <see cref="IsReadOnly"/>, weil es den Ordner der Bilder nicht mehr gibt,
+        ''' und nicht wegen des Laufwerks? Entscheidet ueber Symbol und Satz.</summary>
+        Public ReadOnly Property IsReadOnlyMissing As Boolean
+            Get
+                Return IsReadOnly AndAlso _items.Where(Function(i) i IsNot Nothing AndAlso i.IsOffline).All(Function(i) i.IsFolderMissing)
+            End Get
+        End Property
+
+        ''' <summary>Gilt <see cref="IsReadOnly"/> wegen des Laufwerks?</summary>
+        Public ReadOnly Property IsReadOnlyDrive As Boolean
+            Get
+                Return IsReadOnly AndAlso Not IsReadOnlyMissing
             End Get
         End Property
 
         ''' <summary>Der Hinweis ueber den Angaben, solange <see cref="IsReadOnly"/> gilt.</summary>
         Public ReadOnly Property ReadOnlyHint As String
             Get
-                Return LocalizationService.T("Laufwerk nicht erreichbar. Angezeigt wird der Stand aus dem Katalog, nur zum Ansehen.")
+                Return FolderListing.ViewText(IsReadOnlyMissing)
             End Get
         End Property
 

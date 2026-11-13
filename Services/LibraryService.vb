@@ -2128,8 +2128,12 @@ Namespace Services
         ''' erreichbar ist und die Platte deshalb nicht gefragt werden kann.
         '''
         ''' Derselbe halboffene Bereich wie in <see cref="GetImagesInFolder"/>, er nutzt also den
-        ''' Primaerschluessel. Gelesen wird nur die Pfadspalte; bei einem grossen Archiv sind das
-        ''' viele Zeilen, aber kein Blick auf die Platte.</summary>
+        ''' Primaerschluessel. SPRINGEND gelesen: ist ein Unterordner gefunden, setzt die naechste
+        ''' Abfrage hinter seinem ganzen Bereich wieder an (Name plus das Zeichen nach dem Trenner).
+        ''' Die Kosten wachsen so mit der Zahl der Unterordner und der Bilder direkt in diesem
+        ''' Ordner, nicht mit allem darunter. Das zaehlt, seit auch jeder ERREICHBARE Ordner hier
+        ''' fragt (FolderListing): der persoenliche Ordner oder die Wurzel liegen ueber dem ganzen
+        ''' Katalog.</summary>
         Public Function GetCatalogSubfolders(folderPath As String) As List(Of String)
             Dim result As New List(Of String)()
             If String.IsNullOrWhiteSpace(folderPath) Then Return result
@@ -2138,31 +2142,58 @@ Namespace Services
             Dim keyFolder = PathKey(normalizedFolder)
             Dim prefix = keyFolder.TrimEnd(Path.DirectorySeparatorChar) & Path.DirectorySeparatorChar
             Dim upperBound = keyFolder.TrimEnd(Path.DirectorySeparatorChar) & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
+            Dim afterSeparator = ChrW(AscW(Path.DirectorySeparatorChar) + 1)
             Dim seen As New HashSet(Of String)(PathIdentity.Comparer)
             Using conn = New SqliteConnection(_connectionString)
                 conn.Open()
                 Using cmd = conn.CreateCommand()
-                    cmd.CommandText = "SELECT FilePath FROM ImageMeta WHERE FilePath >= $prefix AND FilePath < $upper"
-                    cmd.Parameters.AddWithValue("$prefix", prefix)
+                    cmd.CommandText = "SELECT FilePath FROM ImageMeta WHERE FilePath >= $from AND FilePath < $upper ORDER BY FilePath"
+                    Dim fromParameter = cmd.Parameters.AddWithValue("$from", prefix)
                     cmd.Parameters.AddWithValue("$upper", upperBound)
-                    Using reader = cmd.ExecuteReader()
-                        While reader.Read()
-                            If reader.IsDBNull(0) Then Continue While
-                            Dim filePath = reader.GetString(0)
-                            If filePath.Length <= prefix.Length Then Continue While
-                            Dim rest = filePath.Substring(prefix.Length)
-                            Dim separator = rest.IndexOf(Path.DirectorySeparatorChar)
-                            ' Ohne Trenner liegt die Datei direkt in diesem Ordner, ist also kein
-                            ' Unterordner.
-                            If separator <= 0 Then Continue While
-                            Dim child = rest.Substring(0, separator)
-                            If seen.Add(child) Then result.Add(normalizedFolder.TrimEnd(Path.DirectorySeparatorChar) & Path.DirectorySeparatorChar & child)
-                        End While
-                    End Using
+                    Dim resumeAt As String = prefix
+                    Do While resumeAt IsNot Nothing
+                        fromParameter.Value = resumeAt
+                        resumeAt = Nothing
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If reader.IsDBNull(0) Then Continue While
+                                Dim filePath = reader.GetString(0)
+                                If filePath.Length <= prefix.Length Then Continue While
+                                Dim rest = filePath.Substring(prefix.Length)
+                                Dim separator = rest.IndexOf(Path.DirectorySeparatorChar)
+                                ' Ohne Trenner liegt die Datei direkt in diesem Ordner, ist also kein
+                                ' Unterordner.
+                                If separator <= 0 Then Continue While
+                                Dim child = rest.Substring(0, separator)
+                                If seen.Add(child) Then result.Add(normalizedFolder.TrimEnd(Path.DirectorySeparatorChar) & Path.DirectorySeparatorChar & child)
+                                ' Alles unter "child/" liegt vor "child" plus dem Zeichen nach dem
+                                ' Trenner; dort geht es weiter.
+                                resumeAt = prefix & child & afterSeparator
+                                Exit While
+                            End While
+                        End Using
+                    Loop
                 End Using
             End Using
             result.Sort(Function(a, b) StringComparer.CurrentCultureIgnoreCase.Compare(Path.GetFileName(a), Path.GetFileName(b)))
             Return result
+        End Function
+
+        ''' <summary>Steht unter einem Ordner, samt aller Unterordner, wenigstens eine Katalogzeile?
+        ''' Die billige Frage, ob ein Ordner, den es auf der Platte nicht mehr gibt, im Katalog noch
+        ''' etwas hinterlassen hat (FolderListing.StateOf).</summary>
+        Public Function HasCatalogRowsUnder(folderPath As String) As Boolean
+            If String.IsNullOrWhiteSpace(folderPath) Then Return False
+            Dim keyFolder = PathKey(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT 1 FROM ImageMeta WHERE FilePath >= $prefix AND FilePath < $upper LIMIT 1"
+                    cmd.Parameters.AddWithValue("$prefix", keyFolder & Path.DirectorySeparatorChar)
+                    cmd.Parameters.AddWithValue("$upper", keyFolder & ChrW(AscW(Path.DirectorySeparatorChar) + 1))
+                    Return cmd.ExecuteScalar() IsNot Nothing
+                End Using
+            End Using
         End Function
 
         ''' <summary>Wie viele Katalogzeilen unter einem Ordner stehen, samt aller Unterordner.

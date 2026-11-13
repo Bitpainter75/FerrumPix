@@ -11603,4 +11603,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>{0} Katalogeinträge unter {1} samt Unterordnern und Vorschaubildern aus dem Katalog entfernen? Der Ordner wird danach auch nicht mehr überwacht. Bewertungen, Etiketten, Stichwörter und Personen dieser Bilder gehen dabei verloren. Die Dateien auf dem Laufwerk bleiben unberührt.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Ordner nicht mehr vorhanden</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Ordner nicht mehr vorhanden. Angezeigt wird der Stand aus dem Katalog, nur zum Ansehen.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Ordner nicht mehr vorhanden: {0} Bilder aus dem Katalog</value>
+  </data>
 </root>

@@ -12,6 +12,13 @@
   the folder again or refreshing it brings everything back to normal. The folder menu can remove
   such a folder with its subfolders and thumbnails from the catalogue; a watched folder is then no
   longer watched. The files on the drive are never touched. Immich and Nextcloud are not affected.
+  Such folders now also show up inside an open folder, as tiles and in the tree, including drives
+  whose folder disappears completely when they are unplugged.
+  A folder that was deleted outside FerrumPix and still has entries in the catalogue is shown the
+  same way, marked as no longer there, and can be removed from the catalogue. A folder in the
+  trash is not shown and keeps its ratings, labels and keywords, so everything is back once it is
+  restored. Deleting a folder permanently in FerrumPix now also removes its catalogue entries and
+  thumbnails.
 
 - The Windows setup offers a desktop shortcut on its last page, ticked by default.
 

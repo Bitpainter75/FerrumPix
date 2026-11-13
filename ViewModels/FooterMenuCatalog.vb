@@ -274,6 +274,13 @@ Namespace ViewModels
                                                                                    End Sub, Function() False))
         End Function
 
+        ''' <summary>Wie <see cref="DriveUnreachable"/>, wenn der Ordner auf einem erreichbaren
+        ''' Laufwerk nicht mehr vorhanden ist und nur noch der Katalog ihn kennt.</summary>
+        Public Shared Function FolderMissing() As AppAction
+            Return Build("Ordner nicht mehr vorhanden", "folder-dashed", New DelegateCommand(Sub(ignored As Object)
+                                                                                         End Sub, Function() False))
+        End Function
+
         ''' <summary>Die einzige Geste im Papierkorb einer Serverquelle. Der Server legt die Datei
         ''' dorthin zurueck, wo sie herkam.</summary>
         Public Shared Function RestoreFromTrash(c As ICommand) As AppAction

@@ -11625,4 +11625,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Удалить из каталога {0} записей в {1} вместе с подпапками и миниатюрами? Папка после этого также перестанет отслеживаться. Оценки, метки, ключевые слова и люди этих изображений будут потеряны. Файлы на диске не затрагиваются.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Папка больше не существует</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Папка больше не существует. Показаны данные из каталога, только для просмотра.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Папка больше не существует: {0} изображений из каталога</value>
+  </data>
 </root>

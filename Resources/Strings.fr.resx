@@ -11585,4 +11585,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Retirer du catalogue {0} entrées sous {1}, avec les sous-dossiers et les vignettes ? Le dossier ne sera ensuite plus surveillé non plus. Les notes, étiquettes, mots-clés et personnes de ces images seront perdus. Les fichiers du support restent intacts.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Le dossier n'existe plus</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Le dossier n'existe plus. Affichage de ce que connaît le catalogue, en lecture seule.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Le dossier n'existe plus : {0} images du catalogue</value>
+  </data>
 </root>

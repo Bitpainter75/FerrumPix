@@ -11629,4 +11629,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>{1} altındaki {0} katalog girdisi, alt klasörler ve küçük resimlerle birlikte katalogdan kaldırılsın mı? Klasör bundan sonra izlenmeyecek de. Bu görüntülerin puanları, etiketleri, anahtar sözcükleri ve kişileri kaybolur. Sürücüdeki dosyalara dokunulmaz.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Klasör artık yok</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Klasör artık yok. Katalogdaki bilgiler yalnızca görüntülemek için gösteriliyor.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Klasör artık yok: katalogdan {0} görüntü</value>
+  </data>
 </root>

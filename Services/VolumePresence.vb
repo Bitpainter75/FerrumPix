@@ -90,6 +90,20 @@ Namespace Services
             Return verdict
         End Function
 
+        ''' <summary>Linux: der laengste eingehaengte Ort aus <c>mountinfo</c>, unter dem der Pfad
+        ''' liegt, also die Wurzel seines Datentraegers. Dort liegt dessen eigener Papierkorb
+        ''' (TrashedFolders). Reine Zeichenkettenarbeit, der Pfad muss nicht existieren. "/" ohne
+        ''' lesbare mountinfo, "" ausserhalb von Linux.</summary>
+        Public Function MountPointOf(path As String) As String
+            If Not OperatingSystem.IsLinux() OrElse String.IsNullOrEmpty(path) OrElse Not path.StartsWith("/"c) Then Return ""
+            Dim best = "/"
+            For Each mountPoint In _mounted
+                If mountPoint.Length <= best.Length Then Continue For
+                If path = mountPoint OrElse path.StartsWith(mountPoint & "/", StringComparison.Ordinal) Then best = mountPoint
+            Next
+            Return best
+        End Function
+
         ''' <summary>Der Einhaengeort, auf den es fuer diesen Pfad ankommt, oder "", wenn keiner
         ''' gesondert zu pruefen ist.</summary>
         Private Function ExpectedRoot(path As String) As String
@@ -121,7 +135,9 @@ Namespace Services
                 Return "/run/user/" & parts(2) & "/gvfs/" & parts(4)
             End If
             If parts.Length >= 3 AndAlso parts(0) = "media" Then
-                If parts.Length >= 4 AndAlso parts(1) = Environment.UserName Then Return "/media/" & parts(1) & "/" & parts(2)
+                ' /media/BENUTZER ist der Sammelordner der Datentraeger dieses Benutzers und selbst
+                ' keiner; eine Datei direkt darin liegt auf der Systemplatte.
+                If parts(1) = Environment.UserName Then Return If(parts.Length >= 4, "/media/" & parts(1) & "/" & parts(2), "")
                 Return "/media/" & parts(1)
             End If
             If parts.Length >= 3 AndAlso parts(0) = "mnt" Then Return "/mnt/" & parts(1)

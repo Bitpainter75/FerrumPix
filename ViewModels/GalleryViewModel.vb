@@ -1932,7 +1932,8 @@ Namespace ViewModels
                                                 isVirtual:=IsVirtualFolder,
                                                 canPaste:=CanPasteIntoFolder(CurrentFolder),
                                                 commands:=ContextCommands,
-                                                offlineView:=IsOfflineView)
+                                                offlineView:=IsOfflineView,
+                                                offlineViewMissing:=IsOfflineViewMissing)
             End Get
         End Property
 
@@ -3642,17 +3643,18 @@ Namespace ViewModels
         ''' aufgeklappten Ordner zuklappen und die Auswahl verlieren.</summary>
         Public Sub SyncExtraFolderRoots()
             ' In der eingetragenen Reihenfolge - sie ist die des Nutzers.
-            Dim wanted As New List(Of (Path As String, Label As String, Offline As Boolean))()
+            Dim wanted As New List(Of (Path As String, Label As String, State As FolderState))()
             Dim Merken As Action(Of String) =
                 Sub(rohPfad As String)
                     If String.IsNullOrWhiteSpace(rohPfad) Then Return
                     ' EIN ORDNER AUF EINEM NICHT ERREICHBAREN LAUFWERK BLEIBT STEHEN, abgesetzt
-                    ' als nicht erreichbar: seine Bilder stehen im Katalog, und die Galerie zeigt
-                    ' sie von dort (OfflineVolumes). Gefragt wird VOR Directory.Exists, das auf
-                    ' einer getrennten Freigabe haengen kann. Sonst gilt wie bisher: was es nicht
-                    ' gibt, steht nicht im Baum.
-                    Dim offline = OfflineVolumes.IsFolderUnreachable(rohPfad)
-                    If Not offline AndAlso Not Directory.Exists(rohPfad) Then Return
+                    ' als nicht erreichbar, ebenso einer, den es nicht mehr gibt, solange der
+                    ' Katalog etwas von ihm haelt: seine Bilder stehen dort, und die Galerie zeigt
+                    ' sie von dort (FolderListing). Gefragt wird VOR Directory.Exists, das auf
+                    ' einer getrennten Freigabe haengen kann. Was es weder auf der Platte noch im
+                    ' Katalog gibt oder was im Papierkorb liegt, steht nicht im Baum.
+                    Dim state = FolderListing.StateOf(rohPfad)
+                    If state = FolderState.Absent Then Return
                     ' OHNE SCHLUSSTRENNER in den Baum. Die Einstellung darf einen tragen, der Baum
                     ' nicht: an ihm haengen Vergleiche und die Pfadleiste, und beide rechnen mit der
                     ' knappen Schreibweise.
@@ -3666,7 +3668,7 @@ Namespace ViewModels
                     Dim name = IO.Path.GetFileName(path.TrimEnd(IO.Path.DirectorySeparatorChar,
                                                                 IO.Path.AltDirectorySeparatorChar))
                     If String.IsNullOrWhiteSpace(name) Then name = path
-                    wanted.Add((path, name, offline))
+                    wanted.Add((path, name, state))
                 End Sub
 
             Try
@@ -3694,9 +3696,9 @@ Namespace ViewModels
                                                                      PathsEqual(n.FullPath, eintrag.Path))
                 If existing Is Nothing Then
                     FolderTree.Insert(Math.Min(insertAt, FolderTree.Count),
-                                      New FolderNode(eintrag.Label, eintrag.Path) With {.IsExtraRoot = True, .IsOffline = eintrag.Offline})
+                                      New FolderNode(eintrag.Label, eintrag.Path) With {.IsExtraRoot = True, .State = eintrag.State})
                 Else
-                    existing.IsOffline = eintrag.Offline
+                    existing.State = eintrag.State
                     Dim current = FolderTree.IndexOf(existing)
                     If current <> insertAt AndAlso insertAt < FolderTree.Count Then FolderTree.Move(current, insertAt)
                 End If
@@ -9230,28 +9232,18 @@ Namespace ViewModels
             ' gefragt - auch nicht mit Directory.Exists. Der Stand der Laufwerke wird dafuer neu
             ' gelesen: wer einen Ordner waehlt, nachdem er die Platte eingesteckt hat, soll ihn
             ' sofort normal sehen.
-            Dim offline As Boolean
+            '
+            ' Danach Directory.Exists, auch das im Hintergrund: auf einer getrennten
+            ' Netzwerkfreigabe kann schon diese kleine Pruefung Sekunden dauern. Fehlt der Ordner
+            ' auf einem erreichbaren Laufwerk, haelt der Katalog aber noch etwas von ihm und liegt er
+            ' nicht im Papierkorb, kommt er ebenfalls aus dem Katalog, als "nicht mehr vorhanden"
+            ' (FolderListing.StateOf, das Laufwerk geht dabei vor).
+            Dim state As FolderState
             Try
-                offline = Await Task.Run(Function()
-                                             OfflineVolumes.Invalidate()
-                                             Return OfflineVolumes.IsFolderUnreachable(folderPath)
-                                         End Function, thumbnailToken)
-            Catch ex As OperationCanceledException
-                Return
-            End Try
-            If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
-            If offline Then
-                Await LoadOfflineFolderAsync(folderPath, thumbnailToken)
-                Return
-            End If
-            NoteFolderReachability(folderPath, offline:=False)
-
-            ' Auch diese kleine Pruefung kann auf einer getrennten Netzwerkfreigabe mehrere
-            ' Sekunden dauern. Sie gehoert daher zum Hintergrundteil des Ordnerwechsels und nicht
-            ' vor das erste Await auf dem Anzeigefaden.
-            Dim folderExists As Boolean
-            Try
-                folderExists = Await Task.Run(Function() Directory.Exists(folderPath), thumbnailToken)
+                state = Await Task.Run(Function()
+                                           OfflineVolumes.Invalidate()
+                                           Return FolderListing.StateOf(folderPath)
+                                       End Function, thumbnailToken)
             Catch ex As OperationCanceledException
                 Return
             Catch ex As Exception
@@ -9261,9 +9253,14 @@ Namespace ViewModels
                 SetupWatcher(Nothing)
                 Return
             End Try
-
             If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
-            If Not folderExists Then
+            If state = FolderState.Unreachable OrElse state = FolderState.Missing Then
+                Await LoadOfflineFolderAsync(folderPath, thumbnailToken, missing:=state = FolderState.Missing)
+                Return
+            End If
+            NoteFolderReachability(folderPath, FolderState.Present)
+
+            If state <> FolderState.Present Then
                 StatusText = LocalizationService.T("Kein Ordner gewählt")
                 SetupWatcher(Nothing)
                 Return
@@ -9509,13 +9506,20 @@ Namespace ViewModels
                 End If
             End If
 
-            For Each folder In Directory.GetDirectories(folderPath).
-                Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
-
-                entries.Add(ImageItem.FromFolder(folder))
+            ' Dieselbe Liste wie im Ordnerbaum (FolderListing): ein leerer Einhaengeort ohne
+            ' Laufwerk und ein Ordner, den nur noch der Katalog kennt, tragen ihren Zustand schon
+            ' hier, bevor die Kachel bindet.
+            For Each folder In FolderListing.ListSubfolders(folderPath, FolderState.Present, FolderNode.ShowHiddenFolders)
+                entries.Add(CreateFolderTile(folder))
             Next
             Return entries
+        End Function
+
+        ''' <summary>Die Kachel eines Unterordners in seinem Zustand. Ein Ordner aus dem Katalog
+        ''' wird nicht auf der Platte nachgesehen (ImageItem.FromFolder mit offline).</summary>
+        Private Shared Function CreateFolderTile(folder As FolderEntry) As ImageItem
+            If folder.State = FolderState.Present Then Return ImageItem.FromFolder(folder.Path)
+            Return ImageItem.FromFolder(folder.Path, offline:=True, missing:=folder.State = FolderState.Missing)
         End Function
 
         ''' <summary>Baut sofort darstellbare Einträge ausschließlich aus dem Katalog. Dateigröße und
@@ -9996,12 +10000,14 @@ Namespace ViewModels
                     End If
                 End If
 
-                For Each folder In Directory.GetDirectories(folderPath).
-                    Where(Function(d) FolderNode.ShowHiddenFolders OrElse Not IO.Path.GetFileName(d).StartsWith(".")).
-                    OrderBy(Function(d) IO.Path.GetFileName(d), StringComparer.CurrentCultureIgnoreCase)
-
+                For Each folder In FolderListing.ListSubfolders(folderPath, FolderState.Present, FolderNode.ShowHiddenFolders)
+                    ' Eine vorhandene Kachel bleibt nur, solange ihr Zustand stimmt; wechselt er
+                    ' (Laufwerk eingesteckt, Ordner geloescht), kommt eine neue.
                     Dim keptFolder As ImageItem = Nothing
-                    rebuilt.Add(If(existing.TryGetValue(folder, keptFolder) AndAlso keptFolder.IsFolder, keptFolder, ImageItem.FromFolder(folder)))
+                    Dim keep = existing.TryGetValue(folder.Path, keptFolder) AndAlso keptFolder.IsFolder AndAlso
+                               keptFolder.IsOffline = (folder.State <> FolderState.Present) AndAlso
+                               keptFolder.IsFolderMissing = (folder.State = FolderState.Missing)
+                    rebuilt.Add(If(keep, keptFolder, CreateFolderTile(folder)))
                 Next
             End If
 

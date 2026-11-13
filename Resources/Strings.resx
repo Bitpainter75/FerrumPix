@@ -11604,4 +11604,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Remove {0} catalogue entries under {1}, including subfolders and thumbnails, from the catalogue? The folder will then no longer be watched either. Ratings, labels, keywords and people of these images will be lost. The files on the drive are not touched.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Folder no longer exists</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Folder no longer exists. Showing what the catalogue knows, for viewing only.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Folder no longer exists: {0} images from the catalogue</value>
+  </data>
 </root>

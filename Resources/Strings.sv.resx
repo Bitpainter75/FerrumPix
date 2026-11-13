@@ -11625,4 +11625,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>Ta bort {0} katalogposter under {1}, inklusive undermappar och miniatyrer, från katalogen? Mappen bevakas därefter inte heller längre. Betyg, etiketter, nyckelord och personer för dessa bilder går förlorade. Filerna på enheten lämnas orörda.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Mappen finns inte längre</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Mappen finns inte längre. Det som katalogen vet visas, endast för visning.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Mappen finns inte längre: {0} bilder från katalogen</value>
+  </data>
 </root>

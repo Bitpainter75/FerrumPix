@@ -11625,4 +11625,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>{0} catalogusitems onder {1}, inclusief submappen en miniaturen, uit de catalogus verwijderen? De map wordt daarna ook niet meer bewaakt. Beoordelingen, labels, trefwoorden en personen van deze afbeeldingen gaan daarbij verloren. De bestanden op de station blijven onaangeroerd.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>Map bestaat niet meer</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>Map bestaat niet meer. Getoond wordt wat de catalogus weet, alleen om te bekijken.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>Map bestaat niet meer: {0} afbeeldingen uit de catalogus</value>
+  </data>
 </root>

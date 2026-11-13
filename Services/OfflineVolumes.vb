@@ -54,20 +54,39 @@ Namespace Services
         ''' zaehlt. <see cref="VolumePresence"/> fragt nach dem Ort, auf dem ein Pfad LIEGT; fuer
         ''' <c>/mnt/nas</c> ist das keiner, erst fuer <c>/mnt/nas/bild.jpg</c>. Ein Ordner wird
         ''' deshalb auch ueber einen Pfad darunter gefragt. Fuer Dateien gilt das nicht: eine Datei
-        ''' direkt unter <c>/mnt</c> ist kein Einhaengeort.</summary>
+        ''' direkt unter <c>/mnt</c> ist kein Einhaengeort.
+        '''
+        ''' Der Pfad darunter zaehlt nur, wenn sein Einhaengeort der Ordner SELBST ist. Sonst hielte
+        ''' das Probeglied einen Sammelordner fuer einen Einhaengeort: <c>/media/BENUTZER/x</c>
+        ''' ergibt den Ort <c>/media/BENUTZER</c>, <c>/run/user/UID/gvfs/x</c> eine Freigabe namens
+        ''' x, und beide Sammelordner stuenden als nicht erreichbar da.</summary>
         Public Shared Function IsFolderUnreachable(folderPath As String) As Boolean
             If String.IsNullOrWhiteSpace(folderPath) Then Return False
             If IsUnreachable(folderPath) Then Return True
             Dim trimmed = folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar)
             If trimmed.Length = 0 Then Return False
-            Return IsUnreachable(trimmed & IO.Path.DirectorySeparatorChar & "x")
+            Dim root = UnreachableRootOf(trimmed & IO.Path.DirectorySeparatorChar & "x")
+            Return root.Length > 0 AndAlso
+                   String.Equals(root.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar), trimmed, PathIdentity.Comparison)
         End Function
 
-        ''' <summary>Verwirft den gemerkten Stand; die naechste Frage liest neu.</summary>
+        ''' <summary>Linux: die Wurzel des Datentraegers, auf dem der Pfad liegt (siehe
+        ''' <see cref="VolumePresence.MountPointOf"/>), aus demselben gemerkten Stand.</summary>
+        Public Shared Function MountPointOf(path As String) As String
+            If String.IsNullOrWhiteSpace(path) OrElse path.Contains("://", StringComparison.Ordinal) Then Return ""
+            SyncLock _lock
+                Return CurrentLocked().MountPointOf(path)
+            End SyncLock
+        End Function
+
+        ''' <summary>Verwirft den gemerkten Stand; die naechste Frage liest neu. Der Stand des
+        ''' Papierkorbs (TrashedFolders) gehoert dazu: wer einen Ordner neu waehlt, nachdem er den
+        ''' Papierkorb geleert oder etwas zurueckgeholt hat, soll das sofort sehen.</summary>
         Public Shared Sub Invalidate()
             SyncLock _lock
                 _snapshot = Nothing
             End SyncLock
+            TrashedFolders.Invalidate()
         End Sub
 
         ''' <summary>NUR fuer den Pruefstand: ein vorgegebener Stand statt der echten

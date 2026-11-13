@@ -11629,4 +11629,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>{1} के अंतर्गत {0} कैटलॉग प्रविष्टियाँ, उप-फ़ोल्डर और थंबनेल सहित, कैटलॉग से हटाएँ? इसके बाद इस फ़ोल्डर पर निगरानी भी नहीं रहेगी। इन चित्रों की रेटिंग, लेबल, कीवर्ड और व्यक्ति खो जाएँगे। ड्राइव पर फ़ाइलें अछूती रहेंगी।</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>फ़ोल्डर अब मौजूद नहीं है</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>फ़ोल्डर अब मौजूद नहीं है। कैटलॉग की जानकारी केवल देखने के लिए दिखाई जा रही है।</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>फ़ोल्डर अब मौजूद नहीं है: कैटलॉग से {0} चित्र</value>
+  </data>
 </root>

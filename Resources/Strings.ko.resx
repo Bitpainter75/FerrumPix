@@ -11629,4 +11629,13 @@
   <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
     <value>{1} 아래의 카탈로그 항목 {0}개를 하위 폴더와 미리보기를 포함해 카탈로그에서 제거할까요? 이 폴더는 이후 감시 대상에서도 빠집니다. 이 이미지들의 별점, 레이블, 키워드, 인물 정보가 사라집니다. 드라이브의 파일은 그대로 유지됩니다.</value>
   </data>
+  <data name="Ordner_nicht_mehr_vorhanden_de1feeaf" xml:space="preserve">
+    <value>폴더가 더 이상 없음</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_Angezeigt_wird_der_S_85cd08d5" xml:space="preserve">
+    <value>폴더가 더 이상 없습니다. 카탈로그의 내용을 보기 전용으로 표시합니다.</value>
+  </data>
+  <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
+    <value>폴더가 더 이상 없음: 카탈로그의 이미지 {0}개</value>
+  </data>
 </root>
