@@ -287,11 +287,26 @@ Namespace Services
         End Function
 
         ''' <summary>True, wenn MINDESTENS EINES dieser Bilder eine Koordinate im Katalog hat.
-        '''
-        ''' EINE Abfrage fuer die ganze Auswahl. Fuer das Kontextmenue: "Aufnahmeort löschen" darf
-        ''' nur dastehen, wo es etwas zu loeschen gibt, und ein Rechtsklick auf hundert markierte
-        ''' Bilder darf dafuer nicht hundert Abfragen kosten.</summary>
+        ''' Fuer das Kontextmenue: "Aufnahmeort löschen" darf nur dastehen, wo es etwas zu loeschen
+        ''' gibt, siehe <see cref="AnyPathIn"/>.</summary>
         Public Function AnyGpsCoordinates(filePaths As IEnumerable(Of String)) As Boolean
+            Return AnyPathIn("ImageMeta", "AND GpsLatitude IS NOT NULL AND GpsLongitude IS NOT NULL",
+                             filePaths, "Library.AnyGpsCoordinates")
+        End Function
+
+        ''' <summary>Wie viele Pfade eine Abfrage von <see cref="AnyPathIn"/> hoechstens traegt. Weit
+        ''' unter SQLites Grenze fuer Parameter einer Anweisung (32766 ab 3.32, in aelteren
+        ''' Fassungen 999).</summary>
+        Private Const AnyPathInChunk As Integer = 500
+
+        ''' <summary>Gibt es in <paramref name="table"/> eine Zeile zu einem dieser Pfade, die
+        ''' <paramref name="extraCondition"/> erfuellt? Fuer das Kontextmenue, das das bei jedem
+        ''' Rechtsklick fragt: ein Rechtsklick auf hundert Bilder darf nicht hundert Abfragen kosten,
+        ''' deshalb ein IN mit vielen Pfaden. In BLOECKEN, nicht in einer Anweisung: eine sehr grosse
+        ''' Auswahl ueberschritte sonst die Zahl der Parameter, die Ausnahme fiele in den Fang, und
+        ''' der Eintrag fehlte still. Bricht beim ersten Treffer ab.</summary>
+        Private Function AnyPathIn(table As String, extraCondition As String,
+                                   filePaths As IEnumerable(Of String), logArea As String) As Boolean
             If filePaths Is Nothing Then Return False
             Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
                                   Distinct(PathIdentity.Comparer).ToList()
@@ -299,20 +314,23 @@ Namespace Services
             Try
                 Using conn = New SqliteConnection(_connectionString)
                     conn.Open()
-                    Using cmd = conn.CreateCommand()
-                        Dim names As New List(Of String)()
-                        For i = 0 To paths.Count - 1
-                            names.Add("$p" & i)
-                            cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(i)))
-                        Next
-                        cmd.CommandText =
-                            $"SELECT 1 FROM ImageMeta WHERE FilePath IN ({String.Join(",", names)}) " &
-                            "AND GpsLatitude IS NOT NULL AND GpsLongitude IS NOT NULL LIMIT 1"
-                        Return cmd.ExecuteScalar() IsNot Nothing
-                    End Using
+                    For start = 0 To paths.Count - 1 Step AnyPathInChunk
+                        Dim count = Math.Min(AnyPathInChunk, paths.Count - start)
+                        Using cmd = conn.CreateCommand()
+                            Dim names As New List(Of String)(count)
+                            For i = 0 To count - 1
+                                names.Add("$p" & i)
+                                cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(start + i)))
+                            Next
+                            cmd.CommandText = $"SELECT 1 FROM {table} WHERE FilePath IN ({String.Join(",", names)}) " &
+                                              $"{extraCondition} LIMIT 1"
+                            If cmd.ExecuteScalar() IsNot Nothing Then Return True
+                        End Using
+                    Next
                 End Using
+                Return False
             Catch ex As Exception
-                DiagnosticLogService.LogException("Library.AnyGpsCoordinates", ex)
+                DiagnosticLogService.LogException(logArea, ex)
                 Return False
             End Try
         End Function

@@ -86,9 +86,21 @@
                  Fenster. -->
             <Grid VerticalAlignment="Center">
                 <StackPanel x:Name="ToolbarLeftButtons" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                    <!-- Der Haus-Knopf zweimal, je nach Einstellung genau einer sichtbar: der
+                         Hinweis soll sagen, wohin er fuehrt. Gebunden ginge das nicht, der
+                         Uebersetzungsdurchlauf setzt Hinweise als festen Wert und haette die
+                         Bindung danach abgeloest. -->
                     <Button Classes="icon-btn" Width="34" Height="34"
                             Command="{Binding HomeCommand}"
+                            IsVisible="{Binding !HomeGoesToGallery}"
                             ToolTip.Tip="Zurück">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/house.svg"
+                                       Width="20" Height="20" />
+                    </Button>
+                    <Button Classes="icon-btn" Width="34" Height="34"
+                            Command="{Binding HomeCommand}"
+                            IsVisible="{Binding HomeGoesToGallery}"
+                            ToolTip.Tip="Zurück zur Galerie">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/house.svg"
                                        Width="20" Height="20" />
                     </Button>

@@ -18208,6 +18208,16 @@ Namespace ViewModels
         Public ReadOnly Property BackToViewerCommand As ICommand
         ''' <summary>Der Haus-Knopf der Werkzeugleiste, Ziel nach AppSettings.EditorHomeTarget.</summary>
         Public ReadOnly Property HomeCommand As ICommand
+
+        ''' <summary>Fuehrt der Haus-Knopf immer in die Galerie? Waehlt, welcher der beiden Knoepfe
+        ''' (mit welchem Hinweis) sichtbar ist. Die Einstellung aendert sich nur ausserhalb des
+        ''' Editors; beim Betreten wird neu gemeldet (ActivateDefaultToolForModeEntry).</summary>
+        Public ReadOnly Property HomeGoesToGallery As Boolean
+            Get
+                Return String.Equals(AppSettingsService.NormalizeEditorHomeTarget(_mainVm?.Settings?.EditorHomeTarget),
+                                     "Gallery", StringComparison.Ordinal)
+            End Get
+        End Property
         Public ReadOnly Property BackToGalleryCommand As ICommand
         Public ReadOnly Property PreviousCommand As ICommand
         Public ReadOnly Property NextCommand As ICommand
@@ -19468,6 +19478,8 @@ Namespace ViewModels
             Catch ex As Exception
                 DiagnosticLogService.LogException("Editor.ModeEntry.Startwerkzeug", ex)
             End Try
+            ' Die Einstellung kann sich seit dem letzten Besuch geaendert haben.
+            Me.RaisePropertyChanged(NameOf(HomeGoesToGallery))
 
             _overlayNotifySuppressDepth += 1
             Try

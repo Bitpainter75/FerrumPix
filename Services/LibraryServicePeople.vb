@@ -1450,43 +1450,10 @@ Namespace Services
             End Using
         End Sub
 
-        ''' <summary>Alles zu Personen wegwerfen. Fuer den Fall, dass jemand die Funktion wieder
-        ''' abschaltet - biometrische Merkmale sollen dann nicht liegenbleiben.
-        '''
-        ''' HAELT ZUERST EINEN LAUFENDEN SUCHLAUF AN. Sonst faellt das Leeren mitten hinein, und der
-        ''' Lauf schreibt danach weiter: die Tabellen waeren hinterher nicht leer, sondern halb
-        ''' gefuellt, und der Benutzer haette genau das nicht erreicht, wofuer er den Schalter
-        ''' umgelegt hat. Laesst der Lauf sich nicht anhalten, wird NICHTS geloescht - lieber gar
-        ''' nicht als halb: ein fehlender Scan-Vermerk zu vorhandenen Gesichtern taeuscht beim
-        ''' Wiedereinschalten einen erledigten Durchlauf vor.
-        '''
-        ''' EINE TRANSAKTION fuer alle drei Tabellen. Kaeme die zweite Loeschung nicht durch, waeren
-        ''' die Gesichter weg und die Vermerke da - dann gilt jedes Bild als bereits durchsucht, und
-        ''' ein Neu-Scan liefe nie wieder an.</summary>
-        ''' <returns>False, wenn nichts geleert wurde, weil der Suchlauf nicht anzuhalten war.</returns>
-        ''' <summary>Steht auf einem der Bilder mindestens ein Gesicht? EINE Abfrage fuer die ganze
-        ''' Auswahl; das Kontextmenue fragt das bei jedem Rechtsklick.</summary>
+        ''' <summary>Steht auf einem der Bilder mindestens ein Gesicht? Das Kontextmenue fragt das bei
+        ''' jedem Rechtsklick, siehe <see cref="AnyPathIn"/>.</summary>
         Public Function AnyFaces(filePaths As IEnumerable(Of String)) As Boolean
-            If filePaths Is Nothing Then Return False
-            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
-            If paths.Count = 0 Then Return False
-            Try
-                Using conn = New SqliteConnection(_connectionString)
-                    conn.Open()
-                    Using cmd = conn.CreateCommand()
-                        Dim names As New List(Of String)()
-                        For i = 0 To paths.Count - 1
-                            names.Add("$p" & i)
-                            cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(i)))
-                        Next
-                        cmd.CommandText = $"SELECT 1 FROM Face WHERE FilePath IN ({String.Join(",", names)}) LIMIT 1"
-                        Return cmd.ExecuteScalar() IsNot Nothing
-                    End Using
-                End Using
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Library.AnyFaces", ex)
-                Return False
-            End Try
+            Return AnyPathIn("Face", "", filePaths, "Library.AnyFaces")
         End Function
 
         ''' <summary>Entfernt alle Gesichter dieser Bilder aus dem Katalog, auch die von Hand
@@ -1572,6 +1539,20 @@ Namespace Services
             Return removed
         End Function
 
+        ''' <summary>Alles zu Personen wegwerfen. Fuer den Fall, dass jemand die Funktion wieder
+        ''' abschaltet - biometrische Merkmale sollen dann nicht liegenbleiben.
+        '''
+        ''' HAELT ZUERST EINEN LAUFENDEN SUCHLAUF AN. Sonst faellt das Leeren mitten hinein, und der
+        ''' Lauf schreibt danach weiter: die Tabellen waeren hinterher nicht leer, sondern halb
+        ''' gefuellt, und der Benutzer haette genau das nicht erreicht, wofuer er den Schalter
+        ''' umgelegt hat. Laesst der Lauf sich nicht anhalten, wird NICHTS geloescht - lieber gar
+        ''' nicht als halb: ein fehlender Scan-Vermerk zu vorhandenen Gesichtern taeuscht beim
+        ''' Wiedereinschalten einen erledigten Durchlauf vor.
+        '''
+        ''' EINE TRANSAKTION fuer alle drei Tabellen. Kaeme die zweite Loeschung nicht durch, waeren
+        ''' die Gesichter weg und die Vermerke da - dann gilt jedes Bild als bereits durchsucht, und
+        ''' ein Neu-Scan liefe nie wieder an.</summary>
+        ''' <returns>False, wenn nichts geleert wurde, weil der Suchlauf nicht anzuhalten war.</returns>
         Public Function ClearAllFaces() As Boolean
             ' DIESELBE Klammer wie die Katalog-Loeschwege: der Halt allein sieht nur das EIGENE
             ' Fenster. Lief die Gesichtssuche in einem zweiten Prozess, legte sie ihre Zeilen nach

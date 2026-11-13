@@ -169,29 +169,11 @@ Namespace Services
             End Try
         End Sub
 
-        ''' <summary>Steht bei einem der Bilder mindestens ein KI-Stichwort? EINE Abfrage fuer die
-        ''' ganze Auswahl; das Kontextmenue fragt das bei jedem Rechtsklick.</summary>
+        ''' <summary>Steht bei einem der Bilder mindestens ein KI-Stichwort? Das Kontextmenue fragt
+        ''' das bei jedem Rechtsklick, siehe <see cref="AnyPathIn"/>.</summary>
         Public Function AnyAiTags(filePaths As IEnumerable(Of String)) As Boolean
-            If filePaths Is Nothing OrElse Not HasAnyAiTags() Then Return False
-            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
-            If paths.Count = 0 Then Return False
-            Try
-                Using conn = New SqliteConnection(_connectionString)
-                    conn.Open()
-                    Using cmd = conn.CreateCommand()
-                        Dim names As New List(Of String)()
-                        For i = 0 To paths.Count - 1
-                            names.Add("$p" & i)
-                            cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(i)))
-                        Next
-                        cmd.CommandText = $"SELECT 1 FROM AiImageTag WHERE FilePath IN ({String.Join(",", names)}) LIMIT 1"
-                        Return cmd.ExecuteScalar() IsNot Nothing
-                    End Using
-                End Using
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Bibliothek.AnyAiTags", ex)
-                Return False
-            End Try
+            If Not HasAnyAiTags() Then Return False
+            Return AnyPathIn("AiImageTag", "", filePaths, "Bibliothek.AnyAiTags")
         End Function
 
         ''' <summary>Entfernt die KI-Stichwoerter der Bilder aus dem Katalog. Der Vermerk, dass das
