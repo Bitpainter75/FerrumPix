@@ -1457,15 +1457,15 @@
                                   </TreeView.Styles>
                                   <TreeView.ContextMenu>
                                       <ContextMenu Opened="OnLocalizedMenuOpened" MaxHeight="1000">
-                                          <!-- Nur an einem Ordner auf einem nicht erreichbaren Laufwerk oder
-                                               einem, den es nicht mehr gibt: der Grund als nicht waehlbare
-                                               Zeile, dann das Entfernen aus dem Katalog. Alles, was auf die
-                                               Platte greift, faellt dort weg (OnFolderTreeContextRequested). -->
+                                          <!-- Nur an einem Ordner auf einem nicht erreichbaren Laufwerk: der
+                                               Grund als nicht waehlbare Zeile, dann das Entfernen aus dem
+                                               Katalog; alles, was auf die Platte greift, faellt weg. An einem
+                                               Ordner, den es nicht mehr gibt, steht NUR das Entfernen
+                                               (OnFolderTreeContextRequested). -->
                                           <MenuItem Name="FolderTreeOfflineInfoMenuItem" Header="Laufwerk nicht erreichbar" IsEnabled="False"/>
-                                          <MenuItem Name="FolderTreeMissingInfoMenuItem" Header="Ordner nicht mehr vorhanden" IsEnabled="False"/>
                                           <MenuItem Name="FolderTreeRemoveFromCatalogMenuItem" Header="Aus dem Katalog entfernen" Click="OnContextRemoveFolderFromCatalog"/>
                                           <Separator/>
-                                          <MenuItem Header="Zu Favoriten hinzufügen" Click="OnAddFolderFavoriteClick"/>
+                                          <MenuItem Name="FolderTreeAddFavoriteMenuItem" Header="Zu Favoriten hinzufügen" Click="OnAddFolderFavoriteClick"/>
                                           <Separator/>
                                           <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
                                           <Separator/>
@@ -1473,8 +1473,8 @@
                                           <MenuItem Name="FolderTreeCopyMenuItem" Header="Kopieren" Click="OnContextCopyFolder"/>
                                           <MenuItem Name="FolderTreeCutMenuItem" Header="Ausschneiden" Click="OnContextCutFolder"/>
                                           <MenuItem Name="FolderTreePasteMenuItem" Header="Einfügen" Click="OnContextPasteFolder"/>
-                                          <MenuItem Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>
-                                          <MenuItem Header="Aktualisieren" Click="OnContextRefreshFolder"/>
+                                          <MenuItem Name="FolderTreeCopyPathMenuItem" Header="Pfad kopieren" Click="OnContextCopyFolderPath"/>
+                                          <MenuItem Name="FolderTreeRefreshMenuItem" Header="Aktualisieren" Click="OnContextRefreshFolder"/>
                                           <Separator/>
                                           <MenuItem Name="FolderTreeDeleteMenuItem" Header="Löschen" Click="OnContextDeleteFolder"/>
                                       </ContextMenu>
@@ -2464,7 +2464,7 @@
                                                             Width="30"
                                                             Height="30"
                                                             Padding="0"
-                                                            IsVisible="{Binding IsImage}"
+                                                            IsVisible="{Binding ShowViewerTileAction}"
                                                             Click="OnHoverOpenViewerClick"
                                                             ToolTip.Tip="Anzeigen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg"
@@ -2476,7 +2476,7 @@
                                                             Width="30"
                                                             Height="30"
                                                             Padding="0"
-                                                            IsVisible="{Binding CanEditFile}"
+                                                            IsVisible="{Binding ShowEditorTileAction}"
                                                             Click="OnHoverOpenEditorClick"
                                                             ToolTip.Tip="Anpassen">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"
@@ -3110,7 +3110,7 @@
                                                     Spacing="5">
                                             <Button Classes="gallery-overlay-btn"
                                                     Width="26" Height="26" Padding="0"
-                                                    IsVisible="{Binding IsImage}"
+                                                    IsVisible="{Binding ShowViewerTileAction}"
                                                     Click="OnHoverOpenViewerClick"
                                                     ToolTip.Tip="Anzeigen">
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg"
@@ -3118,7 +3118,7 @@
                                             </Button>
                                             <Button Classes="gallery-overlay-btn"
                                                     Width="26" Height="26" Padding="0"
-                                                    IsVisible="{Binding CanEditFile}"
+                                                    IsVisible="{Binding ShowEditorTileAction}"
                                                     Click="OnHoverOpenEditorClick"
                                                     ToolTip.Tip="Anpassen">
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"

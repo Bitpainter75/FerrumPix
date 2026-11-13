@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Kansiota ei ole enää: {0} kuvaa luettelosta</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Näytä tavoittamattomien asemien kansiot luettelosta</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Kansiot, joiden asema puuttuu juuri nyt tai jotka on poistettu sovelluksen ulkopuolella, pysyvät näkyvissä kansiopuussa, galleriassa ja hakutuloksissa luettelon tiedoin ja pikkukuvin, vain katseltavaksi. Pois päältä näytetään vain se, mitä asemalla on.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Poistetaanko luettelosta {0} merkintää {1} kansiosta alikansioineen ja esikatselukuvineen? Niiden joukossa olevia seurattuja kansioita ei sen jälkeen enää seurata. Näiden kuvien arviot, merkinnät, avainsanat ja henkilöt menetetään. Aseman tiedostoihin ei kosketa.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Poistetaanko luettelosta {0} merkintää {1} kansiosta alikansioineen ja esikatselukuvineen? Näiden kuvien arviot, merkinnät, avainsanat ja henkilöt menetetään. Aseman tiedostoihin ei kosketa.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Laskettu pikkukuvasta</value>
+  </data>
 </root>

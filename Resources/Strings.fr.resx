@@ -11594,4 +11594,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Le dossier n'existe plus : {0} images du catalogue</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Afficher depuis le catalogue les dossiers des supports inaccessibles</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Les dossiers dont le support manque en ce moment, ou qui ont été supprimés en dehors de l'application, restent visibles dans l'arborescence, la galerie et les résultats de recherche, avec les données et les vignettes du catalogue, en lecture seule. Désactivé, seul ce qui existe sur le support est affiché.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Retirer du catalogue {0} entrées dans {1} dossiers, avec les sous-dossiers et les vignettes ? Les dossiers surveillés parmi eux ne seront ensuite plus surveillés. Les notes, étiquettes, mots-clés et personnes de ces images seront perdus. Les fichiers du support restent intacts.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Retirer du catalogue {0} entrées dans {1} dossiers, avec les sous-dossiers et les vignettes ? Les notes, étiquettes, mots-clés et personnes de ces images seront perdus. Les fichiers du support restent intacts.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Calculé à partir de la vignette</value>
+  </data>
 </root>

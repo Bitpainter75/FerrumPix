@@ -18,7 +18,11 @@
   same way, marked as no longer there, and can be removed from the catalogue. A folder in the
   trash is not shown and keeps its ratings, labels and keywords, so everything is back once it is
   restored. Deleting a folder permanently in FerrumPix now also removes its catalogue entries and
-  thumbnails.
+  thumbnails. Keyword, person and place filters and searches find pictures from such folders too,
+  and clicking a keyword of such a picture shows all pictures with it. The info panel shows the
+  histogram for such a picture, calculated from its thumbnail. Folder tiles offer removal
+  from the catalogue as well, for several folders at once. All of this can be switched off in the
+  settings under Gallery.
 
 - The Windows setup offers a desktop shortcut on its last page, ticked by default.
 

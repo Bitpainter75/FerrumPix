@@ -11638,4 +11638,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>폴더가 더 이상 없음: 카탈로그의 이미지 {0}개</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>연결할 수 없는 드라이브의 폴더를 카탈로그에서 표시</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>드라이브가 지금 없거나 앱 밖에서 삭제된 폴더를 폴더 트리, 갤러리, 검색 결과에 계속 표시합니다. 정보와 미리보기는 카탈로그에서 가져오며 보기 전용입니다. 끄면 드라이브에 있는 것만 표시됩니다.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>{1}개 폴더의 카탈로그 항목 {0}개를 하위 폴더와 미리보기를 포함해 카탈로그에서 제거할까요? 이 중 감시 중인 폴더는 이후 감시 대상에서 빠집니다. 이 이미지들의 별점, 레이블, 키워드, 인물 정보가 사라집니다. 드라이브의 파일은 그대로 유지됩니다.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>{1}개 폴더의 카탈로그 항목 {0}개를 하위 폴더와 미리보기를 포함해 카탈로그에서 제거할까요? 이 이미지들의 별점, 레이블, 키워드, 인물 정보가 사라집니다. 드라이브의 파일은 그대로 유지됩니다.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>미리보기 이미지로 계산됨</value>
+  </data>
 </root>

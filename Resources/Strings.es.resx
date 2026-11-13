@@ -11594,4 +11594,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>La carpeta ya no existe: {0} imágenes del catálogo</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Mostrar desde el catálogo las carpetas de unidades no accesibles</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Las carpetas cuya unidad falta en este momento o que se eliminaron fuera de la aplicación siguen visibles en el árbol de carpetas, en la galería y en los resultados de búsqueda, con los datos y miniaturas del catálogo y solo para ver. Desactivado, solo aparece lo que existe en la unidad.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>¿Quitar del catálogo {0} entradas en {1} carpetas, con sus subcarpetas y miniaturas? Las carpetas vigiladas entre ellas dejarán de estar vigiladas. Se perderán las valoraciones, etiquetas, palabras clave y personas de estas imágenes. Los archivos de la unidad no se tocan.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>¿Quitar del catálogo {0} entradas en {1} carpetas, con sus subcarpetas y miniaturas? Se perderán las valoraciones, etiquetas, palabras clave y personas de estas imágenes. Los archivos de la unidad no se tocan.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Calculado a partir de la miniatura</value>
+  </data>
 </root>

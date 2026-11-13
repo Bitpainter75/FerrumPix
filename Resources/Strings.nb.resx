@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Mappen finnes ikke lenger: {0} bilder fra katalogen</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Vis mapper på stasjoner som ikke kan nås, fra katalogen</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Mapper der stasjonen mangler akkurat nå, eller som er slettet utenfor programmet, forblir synlige i mappetreet, i galleriet og i søkeresultater med opplysninger og miniatyrbilder fra katalogen, kun for visning. Slått av vises bare det som finnes på stasjonen.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Fjerne {0} katalogoppføringer i {1} mapper, inkludert undermapper og miniatyrbilder, fra katalogen? Overvåkede mapper blant dem overvåkes da ikke lenger. Vurderinger, etiketter, nøkkelord og personer for disse bildene går tapt. Filene på stasjonen forblir urørt.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Fjerne {0} katalogoppføringer i {1} mapper, inkludert undermapper og miniatyrbilder, fra katalogen? Vurderinger, etiketter, nøkkelord og personer for disse bildene går tapt. Filene på stasjonen forblir urørt.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Beregnet fra miniatyrbildet</value>
+  </data>
 </root>

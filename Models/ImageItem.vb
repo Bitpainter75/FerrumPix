@@ -388,10 +388,22 @@ Namespace Models
                 Return _isOffline AndAlso Not IsRemoteAsset
             End Get
             Set(value As Boolean)
+                If _isOffline = value Then Return
                 _isOffline = value
+                RaiseOfflineStateChanged()
             End Set
         End Property
         Private _isOffline As Boolean
+
+        ''' <summary>Gesetzt wird der Vermerk meist vor dem Binden. Kommt er spaeter (eine
+        ''' Trefferliste erfaehrt erst am Ende des Laufs, welche Treffer in einem geloeschten Ordner
+        ''' liegen), folgen Zeichen, Hinweis und Knoepfe der Kachel.</summary>
+        Private Sub RaiseOfflineStateChanged()
+            For Each propertyName In {NameOf(IsOffline), NameOf(IsFolderMissing), NameOf(IsDriveOffline), NameOf(OfflineTip),
+                                      NameOf(ShowViewerTileAction), NameOf(ShowEditorTileAction)}
+                RaisePropertyChanged(propertyName)
+            Next
+        End Sub
 
         ''' <summary>Der Grund fuer <see cref="IsOffline"/> ist kein fehlendes Laufwerk, sondern ein
         ''' Ordner, den es auf einem erreichbaren Laufwerk nicht mehr gibt (ausserhalb der Anwendung
@@ -402,7 +414,9 @@ Namespace Models
                 Return _isFolderMissing AndAlso IsOffline
             End Get
             Set(value As Boolean)
+                If _isFolderMissing = value Then Return
                 _isFolderMissing = value
+                RaiseOfflineStateChanged()
             End Set
         End Property
         Private _isFolderMissing As Boolean
@@ -570,6 +584,24 @@ Namespace Models
             RaisePropertyChanged(NameOf(CanFileOperationDelete))
             RaisePropertyChanged(NameOf(CanDeleteFromTile))
         End Sub
+
+        ''' <summary>Der Knopf "Anzeigen" auf Kachel und Zeile. Nicht an einem Element aus dem
+        ''' Katalog (<see cref="IsOffline"/>: Laufwerk nicht erreichbar, Ordner nicht mehr
+        ''' vorhanden): der Betrachter oeffnet dort nichts, der Knopf fehlt deshalb ganz, statt
+        ''' nur gesperrt dazustehen.</summary>
+        Public ReadOnly Property ShowViewerTileAction As Boolean
+            Get
+                Return IsImage AndAlso Not IsOffline
+            End Get
+        End Property
+
+        ''' <summary>Der Knopf "Anpassen" auf Kachel und Zeile, wie <see cref="ShowViewerTileAction"/>
+        ''' fuer den Editor. Das Bearbeitet-Zeichen bleibt; es zeigt den Stand der Datei.</summary>
+        Public ReadOnly Property ShowEditorTileAction As Boolean
+            Get
+                Return CanEditFile AndAlso Not IsOffline
+            End Get
+        End Property
 
         ''' <summary>Der Loeschknopf auf Kachel und Zeile: wie <see cref="CanFileOperationDelete"/>,
         ''' aber nicht an einer zugeklappten Serie (siehe <see cref="IsCollapsedBurst"/>).</summary>

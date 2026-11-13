@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Папка больше не существует: {0} изображений из каталога</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Показывать папки на недоступных дисках из каталога</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Папки, диск которых сейчас отсутствует или которые были удалены вне приложения, остаются видимыми в дереве папок, в галерее и в результатах поиска, с данными и миниатюрами из каталога, только для просмотра. Если выключено, показывается только то, что есть на диске.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Удалить из каталога {0} записей в {1} папках вместе с подпапками и миниатюрами? Отслеживаемые папки среди них после этого перестанут отслеживаться. Оценки, метки, ключевые слова и люди этих изображений будут потеряны. Файлы на диске не затрагиваются.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Удалить из каталога {0} записей в {1} папках вместе с подпапками и миниатюрами? Оценки, метки, ключевые слова и люди этих изображений будут потеряны. Файлы на диске не затрагиваются.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Рассчитано по миниатюре</value>
+  </data>
 </root>

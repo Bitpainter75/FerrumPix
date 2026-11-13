@@ -334,7 +334,7 @@ Namespace ViewModels
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc),
                                       NameOf(IsInfoTabPeople), NameOf(HasPeopleTab), NameOf(ShowNoPeopleHint),
                                       NameOf(PlaceText), NameOf(HasPlace),
-                                      NameOf(ShowPlaceRow), NameOf(IsReadOnly), NameOf(CanEditData), NameOf(ReadOnlyTip),
+                                      NameOf(ShowPlaceRow), NameOf(IsReadOnly), NameOf(IsScopeFromThumbnail), NameOf(CanEditData), NameOf(ReadOnlyTip),
                                       NameOf(IsReadOnlyMissing), NameOf(IsReadOnlyDrive), NameOf(ReadOnlyHint),
                                       NameOf(CanAnalyzeAiTags)}
                 Me.RaisePropertyChanged(propertyName)
@@ -1031,8 +1031,11 @@ Namespace ViewModels
         Private Sub LoadInBackground(token As Integer, path As String, item As ImageItem)
             If Not IsPanelLive Then Return
             ' Offline gibt es keine Datei zu lesen: Aufnahmedaten kamen schon aus dem Katalog,
-            ' ein Analysebild gibt es nicht.
-            If item IsNot Nothing AndAlso item.IsOffline Then Return
+            ' das Analysebild kommt aus dem Vorschaubild im Zwischenspeicher.
+            If item IsNot Nothing AndAlso item.IsOffline Then
+                LoadOfflineScope(token, path)
+                Return
+            End If
 
             Dim istServerbild = item IsNot Nothing AndAlso item.IsRemoteAsset
             Task.Run(Async Function()
@@ -1118,6 +1121,44 @@ Namespace ViewModels
                                                   End Sub)
                      End Function)
         End Sub
+
+        ''' <summary>Das Analysebild eines Elements aus dem Katalog (Laufwerk nicht erreichbar,
+        ''' Ordner nicht mehr vorhanden): gerechnet aus dem Vorschaubild im Zwischenspeicher
+        ''' (ThumbnailCacheService.LoadCachedOffline), nie aus der Datei. Die Zahlen gelten damit
+        ''' fuer das verkleinerte Bild; die Leiste sagt das (<see cref="IsScopeFromThumbnail"/>).
+        ''' Gibt es keine Kachel, bleibt der Kasten leer. Dieselbe Wartezeit und dieselben Merker
+        ''' wie der Weg mit Datei.</summary>
+        Private Sub LoadOfflineScope(token As Integer, path As String)
+            If String.IsNullOrEmpty(path) OrElse Not ScopeSelectionViewModel.ShowInInfoSidebar Then Return
+            If VideoPreviewService.IsSupportedVideo(path) Then Return
+            Task.Run(Async Function()
+                         Await Task.Delay(HistogramDelayMs)
+                         If token <> _loadToken OrElse _isSummary OrElse Not IsPanelLive Then Return
+                         Dim scopeGeneration = ScopeSelectionViewModel.Generation
+                         Dim scope = ImageProcessor.BuildScopeImage("offlinetile:" & path,
+                             Function() As SkiaSharp.SKBitmap
+                                 Using tile = ThumbnailCacheService.LoadCachedOffline(path)
+                                     Return If(tile Is Nothing, Nothing, ImageOrientationService.ToSkBitmap(tile))
+                                 End Using
+                             End Function, 600, 300)
+                         Dispatcher.UIThread.Post(Sub()
+                                                      If token <> _loadToken OrElse
+                                                         scopeGeneration <> ScopeSelectionViewModel.Generation Then
+                                                          scope?.Dispose()
+                                                          Return
+                                                      End If
+                                                      ScopeImage = scope
+                                                  End Sub)
+                     End Function)
+        End Sub
+
+        ''' <summary>Das Analysebild ist aus dem Vorschaubild gerechnet, weil die Datei gerade nicht
+        ''' erreichbar ist. Fuer den leisen Hinweis unter dem Kasten.</summary>
+        Public ReadOnly Property IsScopeFromThumbnail As Boolean
+            Get
+                Return _histogramImage IsNot Nothing AndAlso IsReadOnly
+            End Get
+        End Property
 
         Private Sub ApplyRatingState(rating As Integer, favorite As Boolean, label As String, pick As Integer)
             _rating = rating
@@ -1528,6 +1569,7 @@ Namespace ViewModels
             Set(value As Bitmap)
                 Dim previous = _histogramImage
                 Me.RaiseAndSetIfChanged(_histogramImage, value)
+                Me.RaisePropertyChanged(NameOf(IsScopeFromThumbnail))
                 ' Erst melden, dann freigeben: sonst zeichnet die Anzeige noch auf eine Bitmap,
                 ' die es nicht mehr gibt.
                 If previous IsNot Nothing AndAlso Not ReferenceEquals(previous, value) Then previous.Dispose()

@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Folder już nie istnieje: {0} zdjęć z katalogu</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Pokazuj z katalogu foldery na niedostępnych dyskach</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Foldery, których dysk jest teraz niedostępny lub które usunięto poza aplikacją, pozostają widoczne w drzewie folderów, w galerii i w wynikach wyszukiwania, z danymi i miniaturami z katalogu, tylko do przeglądania. Po wyłączeniu widać tylko to, co jest na dysku.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Usunąć z katalogu {0} wpisów w {1} folderach razem z podfolderami i miniaturami? Obserwowane foldery wśród nich nie będą już obserwowane. Oceny, etykiety, słowa kluczowe i osoby tych zdjęć zostaną utracone. Pliki na dysku pozostaną nietknięte.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Usunąć z katalogu {0} wpisów w {1} folderach razem z podfolderami i miniaturami? Oceny, etykiety, słowa kluczowe i osoby tych zdjęć zostaną utracone. Pliki na dysku pozostaną nietknięte.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Obliczono z miniatury</value>
+  </data>
 </root>

@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Map bestaat niet meer: {0} afbeeldingen uit de catalogus</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Mappen op onbereikbare stations uit de catalogus tonen</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Mappen waarvan het station nu ontbreekt, of die buiten de toepassing zijn verwijderd, blijven zichtbaar in de mappenstructuur, de galerie en zoekresultaten, met de gegevens en miniaturen uit de catalogus en alleen om te bekijken. Uitgeschakeld verschijnt alleen wat op het station aanwezig is.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>{0} catalogusitems in {1} mappen, inclusief submappen en miniaturen, uit de catalogus verwijderen? Bewaakte mappen daaronder worden daarna niet meer bewaakt. Beoordelingen, labels, trefwoorden en personen van deze afbeeldingen gaan daarbij verloren. De bestanden op de station blijven onaangeroerd.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>{0} catalogusitems in {1} mappen, inclusief submappen en miniaturen, uit de catalogus verwijderen? Beoordelingen, labels, trefwoorden en personen van deze afbeeldingen gaan daarbij verloren. De bestanden op de station blijven onaangeroerd.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Berekend uit de miniatuur</value>
+  </data>
 </root>

@@ -11613,4 +11613,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Folder no longer exists: {0} images from the catalogue</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Show folders on unreachable drives from the catalogue</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Folders whose drive is currently missing, or that were deleted outside the app, stay visible in the folder tree, the gallery and search results, with the details and thumbnails from the catalogue and for viewing only. When off, only what is present on the drive is shown.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Remove {0} catalogue entries in {1} folders, including subfolders and thumbnails, from the catalogue? Watched folders among them will then no longer be watched. Ratings, labels, keywords and people of these images will be lost. The files on the drive are not touched.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Remove {0} catalogue entries in {1} folders, including subfolders and thumbnails, from the catalogue? Ratings, labels, keywords and people of these images will be lost. The files on the drive are not touched.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Calculated from the thumbnail</value>
+  </data>
 </root>

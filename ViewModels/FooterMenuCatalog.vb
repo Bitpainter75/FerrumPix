@@ -267,6 +267,12 @@ Namespace ViewModels
             Return Build("Aus dem Album nehmen", "image-broken", c)
         End Function
 
+        ''' <summary>An der Kachel eines Ordners, den es nicht mehr gibt: der einzige Eintrag, derselbe
+        ''' Weg wie im Ordnerbaum (GalleryViewModel.ConfirmRemoveFolderFromCatalogAsync).</summary>
+        Public Shared Function RemoveFolderFromCatalog(c As ICommand) As AppAction
+            Return Build("Aus dem Katalog entfernen", "folder-minus", c)
+        End Function
+
         ''' <summary>Die Zeile, die in der Galerie offline sagt, warum nichts geht. Nicht waehlbar:
         ''' ihr Kommando kann nie ausfuehren, die Zeile steht deshalb ausgegraut da.</summary>
         Public Shared Function DriveUnreachable() As AppAction

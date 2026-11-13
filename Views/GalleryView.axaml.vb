@@ -2752,11 +2752,18 @@ Namespace Views
             ' oben, darunter das Entfernen aus dem Katalog. Die Dateiarbeit darunter faellt weg; bei
             ' einem fehlenden Laufwerk blickt FileOperationPolicy gar nicht erst auf die Platte, und
             ' einen Ordner, den es nicht mehr gibt, kann niemand kopieren.
+            ' Einen Ordner, den es nicht mehr gibt, kann man nur noch aus dem Katalog nehmen: dort
+            ' steht allein dieser Eintrag, ohne Grundzeile und ohne Favorit, Pfad oder Aktualisieren.
+            ' Ein nicht erreichbares Laufwerk kann wiederkommen; dort bleiben Grund, Favorit, Pfad
+            ' und Aktualisieren.
             Dim state = FolderListing.StateOf(path)
             Dim catalogOnly = state = FolderState.Unreachable OrElse state = FolderState.Missing
+            Dim missing = state = FolderState.Missing
             SetMenuItemVisible("FolderTreeOfflineInfoMenuItem", state = FolderState.Unreachable)
-            SetMenuItemVisible("FolderTreeMissingInfoMenuItem", state = FolderState.Missing)
             SetMenuItemVisible("FolderTreeRemoveFromCatalogMenuItem", catalogOnly)
+            SetMenuItemVisible("FolderTreeAddFavoriteMenuItem", Not missing)
+            SetMenuItemVisible("FolderTreeCopyPathMenuItem", Not missing)
+            SetMenuItemVisible("FolderTreeRefreshMenuItem", Not missing)
             SetMenuItemVisible("FolderTreeCreateFolderMenuItem", Not catalogOnly AndAlso vm.CanPasteIntoFolder(path))
             SetMenuItemVisible("FolderTreeRenameMenuItem", Not catalogOnly AndAlso vm.CanRenamePath(path))
             SetMenuItemVisible("FolderTreeCopyMenuItem", Not catalogOnly AndAlso vm.CanCopyPath(path))
@@ -2930,6 +2937,12 @@ Namespace Views
                 .RestoreFromTrash = New DelegateCommand(Sub()
                                                             Dim ignored = vm.RestoreSelectedFromTrashAsync()
                                                         End Sub),
+                .RemoveFolderFromCatalog = New DelegateCommand(Sub()
+                                                                   Dim folders = If(vm.ContextItems, New List(Of ImageItem)()).
+                                                                       Where(Function(i) i IsNot Nothing AndAlso i.IsFolder AndAlso i.IsOffline AndAlso Not i.IsParentFolderEntry).
+                                                                       Select(Function(i) i.FilePath).ToList()
+                                                                   Dim ignored = vm.ConfirmRemoveFoldersFromCatalogAsync(folders)
+                                                               End Sub),
                 .PickState = New DelegateCommand(Sub(p) vm.SetPickStateFor(vm.ContextItems, MenuCommands.PickStateFrom(p))),
                 .RejectRestOfStack = New DelegateCommand(Sub() vm.RejectRestOfStack(vm.ContextItems?.FirstOrDefault())),
                 .ToggleStack = New DelegateCommand(Sub() vm.OpenOrCloseStack(vm.ContextItems?.FirstOrDefault()))}

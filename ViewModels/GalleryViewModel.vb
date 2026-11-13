@@ -7176,10 +7176,51 @@ Namespace ViewModels
                                        Await flush()
                                    End If
 
-                                   If Not String.IsNullOrWhiteSpace(rootFolder) Then
+                                   ' Wie steht der Startordner da? Liegt er auf einem nicht
+                                   ' erreichbaren Laufwerk oder gibt es ihn nicht mehr, kennt nur der
+                                   ' Katalog seine Bilder: der Gang ueber die Platte faende nichts und
+                                   ' koennte auf einer getrennten Freigabe haengen. Gefragt wird das
+                                   ' Laufwerk zuerst (FolderListing.StateOf).
+                                   Dim rootState = If(String.IsNullOrWhiteSpace(rootFolder), FolderState.Absent, FolderListing.StateOf(rootFolder))
+                                   Dim rootCatalogOnly = rootState = FolderState.Unreachable OrElse rootState = FolderState.Missing
+                                   If rootCatalogOnly Then
+                                       Dim pending As New List(Of LibraryImageMeta)()
+                                       For Each meta In EnumerateCatalogSearchMetasLazy(rootFolder, node.IncludeSubfolders, token, node, dropLog)
+                                           token.ThrowIfCancellationRequested()
+                                           scannedCount += 1
+                                           ' Melden am Fortschritt, nicht am Block - siehe unten.
+                                           If scannedCount Mod 200 = 0 Then
+                                               Dim scannedFound = foundCount
+                                               Dim scannedSoFar = scannedCount
+                                               Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                   If Not SearchMayPublish(node, token) Then Return
+                                                   StatusText = String.Format(
+                                                       LocalizationService.T("Suche läuft... {0} Bilder, {1} geprüft"),
+                                                       scannedFound.ToString("N0"), scannedSoFar.ToString("N0"))
+                                               End Sub, DispatcherPriority.Background)
+                                           End If
+                                           If restored.Contains(meta.FilePath) Then Continue For
+                                           pending.Add(meta)
+                                           If pending.Count < 120 Then Continue For
+                                           Dim added = Await PublishSearchMetaBatchAsync(node, pending, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, cacheScopeId, cacheScopeName, token)
+                                           foundThisRun.AddRange(added)
+                                           foundCount += added.Count
+                                           pending.Clear()
+                                       Next
+                                       If pending.Count > 0 Then
+                                           Dim added = Await PublishSearchMetaBatchAsync(node, pending, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, cacheScopeId, cacheScopeName, token)
+                                           foundThisRun.AddRange(added)
+                                           foundCount += added.Count
+                                       End If
+                                   ElseIf rootState = FolderState.Present Then
+                                       ' Was der Gang ueber die Platte sieht. Danach kommen aus dem
+                                       ' Katalog die Bilder darunter, die es nur dort gibt (Unterordner
+                                       ' auf einem fehlenden Laufwerk oder ausserhalb geloescht).
+                                       Dim walked As New HashSet(Of String)(PathIdentity.Comparer)
                                        Dim pending As New List(Of String)()
                                        For Each file In EnumerateSearchFilesLazy(rootFolder, node.IncludeSubfolders, textQuery, token)
                                            token.ThrowIfCancellationRequested()
+                                           walked.Add(file)
                                            scannedCount += 1
                                            ' DIE ANZEIGE HAENGT AN DIESER STELLE, NICHT AM BLOCK.
                                            ' Gemeldet wurde frueher nur, wenn ein Block von 120
@@ -7219,6 +7260,43 @@ Namespace ViewModels
                                            foundThisRun.AddRange(added)
                                            foundCount += added.Count
                                        End If
+                                       ' Nur mit Unterordnern: ohne sie ist der Startordner selbst
+                                       ' vorhanden, und eine einzeln geloeschte Datei faellt heraus.
+                                       If node.IncludeSubfolders AndAlso FolderListing.ShowCatalogOnlyFolders Then
+                                           Dim catalogPending As New List(Of LibraryImageMeta)()
+                                           For Each meta In EnumerateCatalogSearchMetasLazy(rootFolder, True, token, node, Nothing,
+                                                                                            onlyCatalogOnly:=True, skip:=walked)
+                                               token.ThrowIfCancellationRequested()
+                                               scannedCount += 1
+                                               If scannedCount Mod 200 = 0 Then
+                                                   Dim scannedFound = foundCount
+                                                   Dim scannedSoFar = scannedCount
+                                                   Await Dispatcher.UIThread.InvokeAsync(Sub()
+                                                       If Not SearchMayPublish(node, token) Then Return
+                                                       StatusText = String.Format(
+                                                           LocalizationService.T("Suche läuft... {0} Bilder, {1} geprüft"),
+                                                           scannedFound.ToString("N0"), scannedSoFar.ToString("N0"))
+                                                   End Sub, DispatcherPriority.Background)
+                                               End If
+                                               If restored.Contains(meta.FilePath) Then Continue For
+                                               catalogPending.Add(meta)
+                                               If catalogPending.Count < 120 Then Continue For
+                                               Dim added = Await PublishSearchMetaBatchAsync(node, catalogPending, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, cacheScopeId, cacheScopeName, token)
+                                               foundThisRun.AddRange(added)
+                                               foundCount += added.Count
+                                               catalogPending.Clear()
+                                           Next
+                                           If catalogPending.Count > 0 Then
+                                               Dim added = Await PublishSearchMetaBatchAsync(node, catalogPending, textQuery, favoriteMode, ratingMin, selectedRatings, thumbnailToken, cacheScopeId, cacheScopeName, token)
+                                               foundThisRun.AddRange(added)
+                                               foundCount += added.Count
+                                           End If
+                                       End If
+                                   ElseIf Not String.IsNullOrWhiteSpace(rootFolder) Then
+                                       ' Den Startordner gibt es weder auf der Platte noch im Katalog,
+                                       ' oder er liegt auf einem fehlenden Laufwerk und die Ansicht aus
+                                       ' dem Katalog ist aus: nichts zu finden, und die Platte wird
+                                       ' nicht gefragt.
                                    Else
                                        Dim pending As New List(Of LibraryImageMeta)()
                                        For Each meta In EnumerateCatalogSearchMetasLazy("", node.IncludeSubfolders, token, node, dropLog)
@@ -7327,6 +7405,7 @@ Namespace ViewModels
                     ' naechsten Tick.
                     FlushPendingFilterAndSort()
                     CleanupSearchListResults(node, foundThisRun, stillExisting)
+                    MarkItemsInMissingFolders()
                     StatusText = $"{foundCount:N0} {LocalizationService.T("Bilder")}  •  {CurrentFolderName}"
                 End If
             Catch ex As OperationCanceledException
@@ -7354,7 +7433,13 @@ Namespace ViewModels
         Private Iterator Function EnumerateCatalogSearchMetasLazy(rootFolder As String, includeSubfolders As Boolean,
                                                                  token As CancellationToken,
                                                                  Optional node As VirtualNavigationNode = Nothing,
-                                                                 Optional dropLog As SearchDropLog = Nothing) As IEnumerable(Of LibraryImageMeta)
+                                                                 Optional dropLog As SearchDropLog = Nothing,
+                                                                 Optional onlyCatalogOnly As Boolean = False,
+                                                                 Optional skip As ISet(Of String) = Nothing) As IEnumerable(Of LibraryImageMeta)
+            ' onlyCatalogOnly: nur Zeilen, die es gerade nur im Katalog gibt (Laufwerk nicht
+            ' erreichbar, Ordner nicht mehr vorhanden), ohne die in skip. Fuer die Suche ueber einen
+            ' vorhandenen Ordner: was der Gang ueber die Platte gesehen hat, steht in skip, und was
+            ' auf einem fehlenden Laufwerk oder in einem geloeschten Unterordner lag, kommt von hier.
             Dim root = If(rootFolder, "").Trim()
             ' Vor dem Durchlauf leeren: eine gerade vergebene Benennung und eine gerade gelaufene
             ' Analyse sollen sofort greifen.
@@ -7390,7 +7475,14 @@ Namespace ViewModels
                     dropLog?.Record(SearchDropLog.ReasonHidden, meta)
                     Continue For
                 End If
-                If Not ExistsOrUnreachable(meta.FilePath) Then
+                ' Der Startordner VOR dem Blick auf die Platte: reine Zeichenkettenarbeit, und ausserhalb
+                ' davon braucht niemand zu wissen, ob die Datei noch da ist.
+                If Not IsPathInSearchRoot(meta.FilePath, root, includeSubfolders) Then Continue For
+                If onlyCatalogOnly Then
+                    If skip IsNot Nothing AndAlso skip.Contains(meta.FilePath) Then Continue For
+                    Dim state = CatalogFileState(meta.FilePath)
+                    If state <> FolderState.Unreachable AndAlso state <> FolderState.Missing Then Continue For
+                ElseIf Not ExistsOrUnreachable(meta.FilePath) Then
                     dropLog?.Record(SearchDropLog.ReasonMissing, meta)
                     Continue For
                 End If
@@ -7398,7 +7490,6 @@ Namespace ViewModels
                     dropLog?.Record(SearchDropLog.ReasonExtension, meta)
                     Continue For
                 End If
-                If Not IsPathInSearchRoot(meta.FilePath, root, includeSubfolders) Then Continue For
                 Yield meta
             Next
         End Function
@@ -8277,6 +8368,9 @@ Namespace ViewModels
                         If FileOperationPolicy.IsTrashFolder(child) Then Continue For
                         If Not FolderNode.ShowHiddenFolders AndAlso
                            IO.Path.GetFileName(child).StartsWith(".", StringComparison.Ordinal) Then Continue For
+                        ' Ein Einhaengeort ohne Laufwerk: auf der Platte ist dort nichts, und eine
+                        ' haengende Freigabe hielte den Lauf an. Seine Bilder kommen aus dem Katalog.
+                        If OfflineVolumes.IsFolderUnreachable(child) Then Continue For
                         pendingFolders.Push(child)
                     Next
                 End If
@@ -8691,15 +8785,22 @@ Namespace ViewModels
                 ' auf einer Freigabe ein Gang ueber die Leitung. Die Aufrufer pruefen im Hintergrund.
                 If IsTrashedLocalPath(meta.FilePath) Then Continue For
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
-                If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
-
                 ' Auf einem nicht erreichbaren Laufwerk ohne Dateidaten bauen: der gewoehnliche
-                ' Konstruktor fragte FileInfo, und das haengt auf einer getrennten Freigabe.
+                ' Konstruktor fragte FileInfo, und das haengt auf einer getrennten Freigabe. Ist
+                ' "Ordner aus dem Katalog anzeigen" aus, faellt der Treffer weg wie eine fehlende
+                ' Datei (FolderListing.ShowCatalogOnlyFolders).
                 Dim offline = OfflineVolumes.IsUnreachable(meta.FilePath)
-                Dim neu = If(offline,
+                If offline AndAlso Not FolderListing.ShowCatalogOnlyFolders Then Continue For
+                If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
+                ' Ein Treffer in einem Ordner, den es nicht mehr gibt, hat der Hintergrund schon
+                ' festgestellt (CatalogFileState); hier wird nur nachgeschlagen.
+                Dim missing = Not offline AndAlso IsKnownInMissingFolder(meta.FilePath)
+
+                Dim neu = If(offline OrElse missing,
                              ImageItem.CreateLightweight(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName),
                              New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName))
-                neu.IsOffline = offline
+                neu.IsOffline = offline OrElse missing
+                neu.IsFolderMissing = missing
                 neu.IsFavorite = meta.IsFavorite
                 neu.Rating = meta.Rating
                 neu.PickState = meta.PickState
@@ -8741,11 +8842,19 @@ Namespace ViewModels
             For Each item In If(items, New List(Of ImageItem)())
                 If item Is Nothing Then Continue For
                 If IsTrashedLocalPath(item.FilePath) Then Continue For
-                If Not _virtualPathSet.Add(item.FilePath) Then Continue For
                 ' Liegt die Datei auf einem nicht erreichbaren Laufwerk, gilt dasselbe wie in der
                 ' Galerie offline (GalleryViewModelOffline). Vor dem Einfuegen, also bevor eine
                 ' Kachel daran bindet. Serverbilder tragen den Vermerk nie (ImageItem.IsOffline).
-                If Not item.IsRemoteAsset AndAlso Not item.IsFolder Then item.IsOffline = OfflineVolumes.IsUnreachable(item.FilePath)
+                ' Ist "Ordner aus dem Katalog anzeigen" aus, faellt das Element weg wie eine
+                ' fehlende Datei.
+                Dim offline = Not item.IsRemoteAsset AndAlso Not item.IsFolder AndAlso OfflineVolumes.IsUnreachable(item.FilePath)
+                If offline AndAlso Not FolderListing.ShowCatalogOnlyFolders Then Continue For
+                If Not _virtualPathSet.Add(item.FilePath) Then Continue For
+                If Not item.IsRemoteAsset AndAlso Not item.IsFolder Then
+                    Dim missing = Not offline AndAlso IsKnownInMissingFolder(item.FilePath)
+                    item.IsOffline = offline OrElse missing
+                    item.IsFolderMissing = missing
+                End If
                 _allItems.Add(item)
                 added = True
             Next

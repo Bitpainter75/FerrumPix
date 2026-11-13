@@ -430,6 +430,12 @@ Namespace Services
         Public Property EditorShowRulers As Boolean = False
         Public Property EditorShowGrid As Boolean = False
         Public Property ShowHiddenFolders As Boolean = False
+        ''' Ordner, die es gerade nur im Katalog gibt (Laufwerk nicht erreichbar, ausserhalb der
+        ''' Anwendung geloescht), in Ordnerbaum, Ordnerkacheln und gemischten Listen zeigen und aus
+        ''' dem Katalog oeffnen (FolderListing.ShowCatalogOnlyFolders). AB WERK AN. Aus heisst: was
+        ''' nicht auf der Platte liegt, steht nicht da. Die Riegel gegen Dateiarbeit auf einem
+        ''' fehlenden Laufwerk und der Papierkorb gelten unabhaengig davon.
+        Public Property GalleryShowCatalogOnlyFolders As Boolean = True
         ''' Ob Dateiarbeit einem Verweis folgen darf, der aus dem Benutzerordner hinausfuehrt.
         ''' Standard AUS: das ist die sichere Richtung. Wer seinen Bilderordner bewusst per Verweis
         ''' auf eine andere Platte legt, schaltet es ein.

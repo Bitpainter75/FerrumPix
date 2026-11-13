@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Mappen findes ikke længere: {0} billeder fra kataloget</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Vis mapper på drev, der ikke kan nås, fra kataloget</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Mapper, hvis drev mangler lige nu, eller som er slettet uden for programmet, forbliver synlige i mappetræet, i galleriet og i søgeresultater med oplysninger og miniaturer fra kataloget og kun til visning. Slået fra vises kun det, der findes på drevet.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Fjern {0} katalogposter i {1} mapper, inklusive undermapper og miniaturer, fra kataloget? Overvågede mapper blandt dem overvåges derefter ikke længere. Bedømmelser, etiketter, nøgleord og personer for disse billeder går tabt. Filerne på drevet forbliver urørte.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Fjern {0} katalogposter i {1} mapper, inklusive undermapper og miniaturer, fra kataloget? Bedømmelser, etiketter, nøgleord og personer for disse billeder går tabt. Filerne på drevet forbliver urørte.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Beregnet ud fra miniaturen</value>
+  </data>
 </root>

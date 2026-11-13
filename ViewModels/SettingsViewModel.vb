@@ -51,6 +51,7 @@ Namespace ViewModels
         Private _editorFitMargin As Integer = 0
         Private _defaultSaveFormat As String = "JPG"
         Private _showHiddenFolders As Boolean = False
+        Private _galleryShowCatalogOnlyFolders As Boolean = True
         Private _followLinkedFolders As Boolean = False
         Private _allowFileOperationsOutsideHome As Boolean = False
         Private _deleteSkipTrash As Boolean = False
@@ -244,6 +245,7 @@ Namespace ViewModels
         Private _savedViewerRawFullResolution As Boolean = False
         Private _savedThumbnailCacheEnabled As Boolean = True
         Private _savedShowHiddenFolders As Boolean = False
+        Private _savedGalleryShowCatalogOnlyFolders As Boolean = True
         Private _savedFollowLinkedFolders As Boolean = False
         Private _savedAllowFileOperationsOutsideHome As Boolean = False
         Private _savedDeleteSkipTrash As Boolean = False
@@ -2193,6 +2195,24 @@ Namespace ViewModels
                 FolderNode.ShowHiddenFolders = value
                 SaveFileBrowserSettings()
                 _mainVm?.Gallery?.LoadCurrentFolder()
+            End Set
+        End Property
+
+        ''' <summary>Ordner, die es gerade nur im Katalog gibt (Laufwerk nicht erreichbar, ausserhalb
+        ''' der Anwendung geloescht), in Baum, Ordnerkacheln und gemischten Listen zeigen und aus
+        ''' dem Katalog oeffnen. Wirkt sofort: Baum und Ansicht werden neu gelesen
+        ''' (GalleryViewModel.ApplyCatalogOnlyFolderSetting). Die Riegel gegen Dateiarbeit auf
+        ''' einem fehlenden Laufwerk haengen nicht daran.</summary>
+        Public Property GalleryShowCatalogOnlyFolders As Boolean
+            Get
+                Return _galleryShowCatalogOnlyFolders
+            End Get
+            Set(value As Boolean)
+                If _galleryShowCatalogOnlyFolders = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryShowCatalogOnlyFolders, value)
+                FolderListing.ShowCatalogOnlyFolders = value
+                SaveFileBrowserSettings()
+                _mainVm?.Gallery?.ApplyCatalogOnlyFolderSetting()
             End Set
         End Property
 
@@ -5156,6 +5176,7 @@ Namespace ViewModels
             _jpgSaveQuality = _appSettings.JpgSaveQuality
             _preserveMetadataOnSave = _appSettings.PreserveMetadataOnSave
             _showHiddenFolders = _appSettings.ShowHiddenFolders
+            _galleryShowCatalogOnlyFolders = _appSettings.GalleryShowCatalogOnlyFolders
             _followLinkedFolders = _appSettings.FollowLinkedFolders
             _allowFileOperationsOutsideHome = _appSettings.AllowFileOperationsOutsideHome
             _deleteSkipTrash = _appSettings.DeleteSkipTrash
@@ -5280,6 +5301,7 @@ Namespace ViewModels
             _nextcloudDeletePermanently = _appSettings.NextcloudDeletePermanently
             ImageItem.NextcloudDeleteAllowed = _nextcloudAllowDelete
             FolderNode.ShowHiddenFolders = _showHiddenFolders
+            FolderListing.ShowCatalogOnlyFolders = _galleryShowCatalogOnlyFolders
             FileOperationPolicy.FollowLinkedFolders = _followLinkedFolders
             FileOperationPolicy.AllowOutsidePersonalFolder = _allowFileOperationsOutsideHome
             ImageItem.ImmichDeleteAllowed = _immichAllowDelete
@@ -5613,6 +5635,7 @@ Namespace ViewModels
             _savedNextcloudReplaceOriginal = _nextcloudReplaceOriginal
             _savedNextcloudDeletePermanently = _nextcloudDeletePermanently
             _savedShowHiddenFolders = _showHiddenFolders
+            _savedGalleryShowCatalogOnlyFolders = _galleryShowCatalogOnlyFolders
             _savedFollowLinkedFolders = _followLinkedFolders
             _savedAllowFileOperationsOutsideHome = _allowFileOperationsOutsideHome
             _savedDeleteSkipTrash = _deleteSkipTrash
@@ -5836,6 +5859,7 @@ Namespace ViewModels
             NextcloudDeletePermanently = _savedNextcloudDeletePermanently
             NextcloudEnabled = _savedNextcloudEnabled
             ShowHiddenFolders = _savedShowHiddenFolders
+            GalleryShowCatalogOnlyFolders = _savedGalleryShowCatalogOnlyFolders
             FollowLinkedFolders = _savedFollowLinkedFolders
             AllowFileOperationsOutsideHome = _savedAllowFileOperationsOutsideHome
             DeleteSkipTrash = _savedDeleteSkipTrash
@@ -5994,6 +6018,7 @@ Namespace ViewModels
             ImmichDeletePermanently = False
             ImmichWritePeopleTags = False
             ShowHiddenFolders = False
+            GalleryShowCatalogOnlyFolders = True
             FollowLinkedFolders = False
             AllowFileOperationsOutsideHome = False
             DeleteSkipTrash = False
@@ -6386,6 +6411,7 @@ Namespace ViewModels
         Private Sub SaveFileBrowserSettings()
             AppSettingsService.Update(Sub(s)
                                           s.ShowHiddenFolders = _showHiddenFolders
+                                          s.GalleryShowCatalogOnlyFolders = _galleryShowCatalogOnlyFolders
                                           s.FollowLinkedFolders = _followLinkedFolders
                                           s.AllowFileOperationsOutsideHome = _allowFileOperationsOutsideHome
                                           s.GalleryShowFolders = _galleryShowFolders

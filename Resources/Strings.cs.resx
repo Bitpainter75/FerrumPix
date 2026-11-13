@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Složka již neexistuje: {0} snímků z katalogu</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Zobrazovat složky na nedostupných jednotkách z katalogu</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Složky, jejichž jednotka právě chybí nebo které byly smazány mimo aplikaci, zůstanou viditelné ve stromu složek, v galerii a ve výsledcích hledání, s údaji a náhledy z katalogu a jen k prohlížení. Po vypnutí se zobrazí jen to, co na jednotce skutečně je.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Odebrat z katalogu {0} záznamů v {1} složkách včetně podsložek a náhledů? Sledované složky mezi nimi pak přestanou být sledovány. Hodnocení, štítky, klíčová slova a osoby těchto snímků budou ztraceny. Soubory na jednotce zůstanou nedotčené.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Odebrat z katalogu {0} záznamů v {1} složkách včetně podsložek a náhledů? Hodnocení, štítky, klíčová slova a osoby těchto snímků budou ztraceny. Soubory na jednotce zůstanou nedotčené.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Vypočteno z náhledu</value>
+  </data>
 </root>

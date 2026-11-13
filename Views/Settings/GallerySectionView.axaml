@@ -21,6 +21,14 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Ordner auf nicht erreichbaren Laufwerken aus dem Katalog anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Ordner, deren Laufwerk gerade fehlt oder die außerhalb der Anwendung gelöscht wurden, bleiben im Ordnerbaum, in der Galerie und in Suchergebnissen sichtbar, mit den Angaben und Vorschaubildern aus dem Katalog und nur zum Ansehen. Ausgeschaltet erscheint nur, was auf dem Laufwerk vorhanden ist." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GalleryShowCatalogOnlyFolders}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Bild aus der Galerie öffnen mit" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Text="Gilt für den Doppelklick auf ein Bild und für die Eingabetaste. Videos werden immer im Viewer geöffnet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>

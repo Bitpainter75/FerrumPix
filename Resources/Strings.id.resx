@@ -11638,4 +11638,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Folder sudah tidak ada: {0} gambar dari katalog</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Tampilkan folder di drive yang tidak terjangkau dari katalog</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Folder yang drive-nya sedang tidak ada, atau yang dihapus di luar aplikasi, tetap terlihat di pohon folder, galeri, dan hasil pencarian, dengan data dan gambar mini dari katalog, hanya untuk dilihat. Jika dimatikan, hanya yang ada di drive yang ditampilkan.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Hapus {0} entri katalog di {1} folder, termasuk subfolder dan thumbnail, dari katalog? Folder yang dipantau di antaranya tidak akan dipantau lagi. Rating, label, kata kunci, dan orang pada gambar ini akan hilang. File di drive tidak disentuh.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Hapus {0} entri katalog di {1} folder, termasuk subfolder dan thumbnail, dari katalog? Rating, label, kata kunci, dan orang pada gambar ini akan hilang. File di drive tidak disentuh.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Dihitung dari gambar mini</value>
+  </data>
 </root>

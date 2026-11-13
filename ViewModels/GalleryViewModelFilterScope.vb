@@ -187,11 +187,29 @@ Namespace ViewModels
                 _scopePaths = fromView
                 Return fromView
             End If
-            If _scopePaths IsNot Nothing AndAlso String.Equals(_scopePathsFolder, folder, PathIdentity.Comparison) Then
-                Return _scopePaths
-            End If
             Dim listed As New HashSet(Of String)(PathIdentity.Comparer)
             Try
+                ' Ein Ordner, den es gerade nur im Katalog gibt: seine Bilder stehen dort, die
+                ' Platte wird nicht gefragt. Sonst zaehlten die Listen null, waehrend die Suche
+                ' darin Treffer findet. VOR dem Merkposten: der kann aus dem Augenblick stammen, in
+                ' dem die Ansicht aus dem Katalog noch leer war (die Listen werden schon beim
+                ' Navigieren gezaehlt), und eine Katalogabfrage kostet hier nur eine Abfrage.
+                Dim state = FolderListing.StateOf(folder)
+                If state = FolderState.Present AndAlso _scopePaths IsNot Nothing AndAlso
+                   String.Equals(_scopePathsFolder, folder, PathIdentity.Comparison) Then
+                    Return _scopePaths
+                End If
+                If state = FolderState.Unreachable OrElse state = FolderState.Missing Then
+                    For Each meta In LibraryService.Instance.GetImagesInFolder(folder, restoreSpelling:=False)
+                        If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
+                        If Not _imageExtensions.Contains(Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
+                        listed.Add(meta.FilePath)
+                    Next
+                    _scopePathsFolder = folder
+                    _scopePaths = listed
+                    Return listed
+                End If
+                If state <> FolderState.Present Then Return listed
                 For Each file In Directory.EnumerateFiles(folder)
                     If IsTrashedLocalPath(file) Then Continue For
                     If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For

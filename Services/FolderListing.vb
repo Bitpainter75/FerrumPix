@@ -2,6 +2,7 @@ Imports System
 Imports System.Collections.Generic
 Imports System.IO
 Imports System.Linq
+Imports System.Threading
 
 Namespace Services
 
@@ -51,13 +52,37 @@ Namespace Services
         Private Sub New()
         End Sub
 
+        Private Shared _showCatalogOnlyFolders As Boolean = True
+
+        ''' <summary>Die Einstellung "Ordner aus dem Katalog anzeigen" (AppSettings.
+        ''' GalleryShowCatalogOnlyFolders), ab Werk an. Aus gibt es keine Ordner, die nur der
+        ''' Katalog kennt: ein Ordner auf einem nicht erreichbaren Laufwerk und ein ausserhalb
+        ''' geloeschter sind dann <see cref="FolderState.Absent"/>, und die Liste der Unterordner
+        ''' fuehrt nur, was auf einem erreichbaren Laufwerk auf der Platte liegt.
+        '''
+        ''' NUR die Anzeige haengt daran. Die Frage nach dem Laufwerk steht auch ausgeschaltet VOR
+        ''' jedem Blick auf die Platte, und die Riegel (FileOperationPolicy, Betrachter, Editor),
+        ''' der Papierkorb und das Aufraeumen beim endgueltigen Loeschen gelten immer.</summary>
+        Public Shared Property ShowCatalogOnlyFolders As Boolean
+            Get
+                Return Volatile.Read(_showCatalogOnlyFolders)
+            End Get
+            Set(value As Boolean)
+                Volatile.Write(_showCatalogOnlyFolders, value)
+            End Set
+        End Property
+
         ''' <summary>Der Zustand eines Ordners. Zuerst das Laufwerk, dann die Platte, zuletzt der
         ''' Katalog und der Papierkorb; die beiden letzten nur fuer einen Ordner, den es nicht
-        ''' gibt.</summary>
+        ''' gibt. Mit <see cref="ShowCatalogOnlyFolders"/> aus ist ein Ordner auf einem nicht
+        ''' erreichbaren Laufwerk <see cref="FolderState.Absent"/>, ohne dass die Platte gefragt
+        ''' wird, und der Katalog wird gar nicht gefragt.</summary>
         Public Shared Function StateOf(folderPath As String) As FolderState
             If String.IsNullOrWhiteSpace(folderPath) OrElse folderPath.Contains("://", StringComparison.Ordinal) Then Return FolderState.Absent
-            If OfflineVolumes.IsFolderUnreachable(folderPath) Then Return FolderState.Unreachable
+            Dim showCatalog = ShowCatalogOnlyFolders
+            If OfflineVolumes.IsFolderUnreachable(folderPath) Then Return If(showCatalog, FolderState.Unreachable, FolderState.Absent)
             If Directory.Exists(folderPath) Then Return FolderState.Present
+            If Not showCatalog Then Return FolderState.Absent
             Return If(IsMissingCatalogFolder(folderPath), FolderState.Missing, FolderState.Absent)
         End Function
 
@@ -69,6 +94,7 @@ Namespace Services
             Dim result As New List(Of FolderEntry)()
             If String.IsNullOrEmpty(folderPath) OrElse state = FolderState.Absent Then Return result
             If state <> FolderState.Present Then
+                If Not ShowCatalogOnlyFolders Then Return result
                 For Each child In CatalogSubfolders(folderPath)
                     If IsShown(child, showHidden) Then result.Add(New FolderEntry(child, state))
                 Next
@@ -77,10 +103,21 @@ Namespace Services
 
             Dim onDisk = Directory.GetDirectories(folderPath)
             Dim diskSet As New HashSet(Of String)(onDisk, PathIdentity.Comparer)
+            Dim showCatalog = ShowCatalogOnlyFolders
             For Each child In onDisk
                 If Not IsShown(child, showHidden) Then Continue For
-                result.Add(New FolderEntry(child, If(OfflineVolumes.IsFolderUnreachable(child), FolderState.Unreachable, FolderState.Present)))
+                If OfflineVolumes.IsFolderUnreachable(child) Then
+                    ' Ein leerer Einhaengeort ohne Laufwerk. Ausgeschaltet faellt er weg: dahinter
+                    ' laege nur die Ansicht aus dem Katalog, und die gibt es dann nicht.
+                    If showCatalog Then result.Add(New FolderEntry(child, FolderState.Unreachable))
+                Else
+                    result.Add(New FolderEntry(child, FolderState.Present))
+                End If
             Next
+            If Not showCatalog Then
+                result.Sort(Function(a, b) StringComparer.CurrentCultureIgnoreCase.Compare(Path.GetFileName(a.Path), Path.GetFileName(b.Path)))
+                Return result
+            End If
             For Each child In CatalogSubfolders(folderPath)
                 If diskSet.Contains(child) OrElse Not IsShown(child, showHidden) Then Continue For
                 If OfflineVolumes.IsFolderUnreachable(child) Then

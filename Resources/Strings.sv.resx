@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Mappen finns inte längre: {0} bilder från katalogen</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Visa mappar på enheter som inte kan nås från katalogen</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Mappar vars enhet saknas just nu, eller som har raderats utanför programmet, förblir synliga i mappträdet, i galleriet och i sökresultat med uppgifter och miniatyrer från katalogen, endast för visning. Avstängt visas bara det som finns på enheten.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Ta bort {0} katalogposter i {1} mappar, inklusive undermappar och miniatyrer, från katalogen? Bevakade mappar bland dem bevakas därefter inte längre. Betyg, etiketter, nyckelord och personer för dessa bilder går förlorade. Filerna på enheten lämnas orörda.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Ta bort {0} katalogposter i {1} mappar, inklusive undermappar och miniatyrer, från katalogen? Betyg, etiketter, nyckelord och personer för dessa bilder går förlorade. Filerna på enheten lämnas orörda.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Beräknat från miniatyren</value>
+  </data>
 </root>

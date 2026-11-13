@@ -11638,4 +11638,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>ไม่มีโฟลเดอร์นี้แล้ว: {0} ภาพจากแคตตาล็อก</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>แสดงโฟลเดอร์บนไดรฟ์ที่เข้าถึงไม่ได้จากแคตตาล็อก</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>โฟลเดอร์ที่ไดรฟ์หายไปในตอนนี้ หรือถูกลบนอกแอป จะยังแสดงในแผนผังโฟลเดอร์ แกลเลอรี และผลการค้นหา พร้อมข้อมูลและภาพย่อจากแคตตาล็อก เพื่อดูอย่างเดียว เมื่อปิด จะแสดงเฉพาะสิ่งที่อยู่บนไดรฟ์</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>นำรายการแคตตาล็อก {0} รายการใน {1} โฟลเดอร์ รวมโฟลเดอร์ย่อยและภาพย่อออกจากแคตตาล็อกหรือไม่ โฟลเดอร์ที่เฝ้าดูอยู่ในนั้นจะไม่ถูกเฝ้าดูอีก คะแนน ป้าย คำสำคัญ และบุคคลของภาพเหล่านี้จะหายไป ไฟล์บนไดรฟ์จะไม่ถูกแตะต้อง</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>นำรายการแคตตาล็อก {0} รายการใน {1} โฟลเดอร์ รวมโฟลเดอร์ย่อยและภาพย่อออกจากแคตตาล็อกหรือไม่ คะแนน ป้าย คำสำคัญ และบุคคลของภาพเหล่านี้จะหายไป ไฟล์บนไดรฟ์จะไม่ถูกแตะต้อง</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>คำนวณจากภาพย่อ</value>
+  </data>
 </root>

@@ -1,4 +1,5 @@
 Imports System
+Imports System.Collections.Concurrent
 Imports System.Collections.Generic
 Imports System.Linq
 Imports System.Threading
@@ -109,12 +110,87 @@ Namespace ViewModels
         ''' dann IsOffline, siehe AddPrebuiltItemsToVirtualFolder), und die Platte wird nicht gefragt.
         ''' Vorher fiel ein solcher Treffer als "fehlt" heraus, und auf einer getrennten Freigabe
         ''' konnte schon das File.Exists je Treffer haengen. Der Stand der Einhaengeorte wird dabei
-        ''' einmal je Einhaengeort gemerkt, nicht je Datei gelesen (OfflineVolumes).</summary>
+        ''' einmal je Einhaengeort gemerkt, nicht je Datei gelesen (OfflineVolumes).
+        '''
+        ''' Dasselbe gilt fuer einen Treffer in einem Ordner, den es nicht mehr gibt (ausserhalb
+        ''' geloescht, nicht im Papierkorb): er bleibt und wird als "nicht mehr vorhanden" vermerkt
+        ''' (siehe <see cref="IsKnownInMissingFolder"/>). Eine einzeln geloeschte Datei in einem
+        ''' vorhandenen Ordner faellt weiter heraus.
+        '''
+        ''' Mit FolderListing.ShowCatalogOnlyFolders aus faellt beides heraus wie eine fehlende
+        ''' Datei, der Treffer auf dem fehlenden Laufwerk ohne die Platte zu fragen.</summary>
         Private Shared Function ExistsOrUnreachable(path As String) As Boolean
-            If String.IsNullOrWhiteSpace(path) Then Return False
-            If OfflineVolumes.IsUnreachable(path) Then Return True
-            Return IO.File.Exists(path)
+            Return CatalogFileState(path) <> FolderState.Absent
         End Function
+
+        ''' <summary>Treffer, deren Ordner es nicht mehr gibt, so wie <see cref="CatalogFileState"/>
+        ''' sie im Hintergrund festgestellt hat. Die Anzeige liest nur hier nach und fragt selbst
+        ''' nicht die Platte; eine Datei, die wieder da ist, geht beim naechsten Nachsehen heraus.</summary>
+        Private Shared ReadOnly _filesInMissingFolders As New ConcurrentDictionary(Of String, Byte)(PathIdentity.Comparer)
+
+        ''' <summary>Wie eine Katalogzeile auf der Platte dasteht: Present (die Datei ist da),
+        ''' Unreachable (Laufwerk fehlt, gefragt VOR der Platte), Missing (der Ordner ist ausserhalb
+        ''' geloescht und nicht im Papierkorb) oder Absent (fehlt, oder die Ansicht aus dem Katalog
+        ''' ist ausgeschaltet). Nur im Hintergrund rufen: fuer eine fehlende Datei fragt es auch nach
+        ''' ihrem Ordner.</summary>
+        Private Shared Function CatalogFileState(path As String) As FolderState
+            If String.IsNullOrWhiteSpace(path) Then Return FolderState.Absent
+            Dim showCatalog = FolderListing.ShowCatalogOnlyFolders
+            If OfflineVolumes.IsUnreachable(path) Then Return If(showCatalog, FolderState.Unreachable, FolderState.Absent)
+            Dim dummy As Byte
+            If IO.File.Exists(path) Then
+                _filesInMissingFolders.TryRemove(path, dummy)
+                Return FolderState.Present
+            End If
+            If showCatalog AndAlso Not path.Contains("://", StringComparison.Ordinal) AndAlso FolderListing.IsInMissingFolder(path) AndAlso
+               Not TrashedFolders.IsTrashed(IO.Path.GetDirectoryName(path)) Then
+                _filesInMissingFolders(path) = 0
+                Return FolderState.Missing
+            End If
+            _filesInMissingFolders.TryRemove(path, dummy)
+            Return FolderState.Absent
+        End Function
+
+        ''' <summary>Liegt die Datei nach dem letzten Nachsehen in einem Ordner, den es nicht mehr
+        ''' gibt? Ohne Plattenzugriff, fuer den Anzeigefaden.</summary>
+        Private Shared Function IsKnownInMissingFolder(path As String) As Boolean
+            Return FolderListing.ShowCatalogOnlyFolders AndAlso Not String.IsNullOrEmpty(path) AndAlso
+                   _filesInMissingFolders.ContainsKey(path)
+        End Function
+
+        ''' <summary>Am Ende eines Suchlaufs: Treffer, die schon ohne Pruefung in der Liste stehen
+        ''' (die gemerkten aus der ersten Stufe), bekommen ihren Vermerk nachtraeglich, sobald der
+        ''' Hintergrund weiss, dass ihr Ordner fehlt.</summary>
+        Private Sub MarkItemsInMissingFolders()
+            For Each item In _allItems
+                If item Is Nothing OrElse item.IsFolder OrElse item.IsRemoteAsset OrElse item.IsOffline Then Continue For
+                If Not IsKnownInMissingFolder(item.FilePath) Then Continue For
+                item.IsFolderMissing = True
+                item.IsOffline = True
+            Next
+        End Sub
+
+        ''' <summary>Die Einstellung "Ordner aus dem Katalog anzeigen" hat sich geaendert: Wurzeln
+        ''' der ueberwachten Ordner, die geladenen Knoten des Baums und die Ansicht werden neu
+        ''' gelesen, ohne Neustart. Steht gerade eine gemischte Liste da, gehen ausgeschaltet ihre
+        ''' Elemente aus dem Katalog hinaus (wie eine fehlende Datei); eingeschaltet kommen sie erst
+        ''' mit dem naechsten Suchlauf, die Liste wird dafuer nicht neu gesucht.</summary>
+        Public Sub ApplyCatalogOnlyFolderSetting()
+            OfflineVolumes.Invalidate()
+            SyncExtraFolderRoots()
+            For Each root In FolderTree.ToList()
+                root?.RefreshSubtree()
+            Next
+            If _isVirtualFolder Then
+                If Not FolderListing.ShowCatalogOnlyFolders Then
+                    RemoveItemsFromVirtualFolder(_allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsOffline).
+                                                           Select(Function(i) i.FilePath).ToList())
+                    FilterAndSort()
+                End If
+            Else
+                LoadCurrentFolder()
+            End If
+        End Sub
 
         ''' <summary>Fuehrt den Ordnerbaum nach, sobald die Galerie weiss, wie ein Ordner dasteht.
         ''' Kommt ein Laufwerk zurueck, liest der Knoten seine Unterordner wieder von der Platte;
@@ -279,14 +355,87 @@ Namespace ViewModels
                 SyncExtraFolderRoots()
             End If
             DropFolderFromTree(folderPath)
-            ' Steht die Galerie gerade in diesem Ordner oder darunter, zeigt sie danach den leeren
-            ' Stand, statt Kacheln, die es im Katalog nicht mehr gibt.
-            If Not _isVirtualFolder AndAlso Not String.IsNullOrEmpty(_currentFolder) AndAlso
-               PathIdentity.IsAncestorOrSelf(folderPath, _currentFolder) Then
-                LoadCurrentFolder()
-            End If
+            ForgetRemovedFolderInView(folderPath)
             _mainVm?.People?.RefreshPeople()
             Return result
+        End Function
+
+        ''' <summary>Nach dem Entfernen aus dem Katalog verschwindet der Ordner sofort aus der
+        ''' Ansicht, ohne Aktualisieren. Steht die Galerie in ihm oder darunter, geht sie in seinen
+        ''' Elternordner (der Baum waehlt ihn mit); steht sie im Elternordner, geht nur die Kachel
+        ''' weg; in einer gemischten Liste gehen seine Treffer. Der gemerkte Vermerk "Ordner nicht
+        ''' mehr vorhanden" seiner Dateien geht mit: Zeilen hat er keine mehr, also gibt es nichts,
+        ''' was ihn als offline oder fehlend zurueckbraechte. Die Staende von Laufwerken und
+        ''' Papierkorb haengen nicht an Zeilen, und die Unterordner aus dem Katalog werden je
+        ''' Einlesen neu abgefragt.</summary>
+        Private Sub ForgetRemovedFolderInView(folderPath As String)
+            For Each known In _filesInMissingFolders.Keys.Where(Function(p) PathIdentity.IsAncestorOrSelf(folderPath, p)).ToList()
+                Dim dummy As Byte
+                _filesInMissingFolders.TryRemove(known, dummy)
+            Next
+            Dim parentOfRemoved = IO.Path.GetDirectoryName(folderPath.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+            If _isVirtualFolder Then
+                RemoveItemsFromVirtualFolder(_allItems.Where(Function(i) i IsNot Nothing AndAlso Not i.IsRemoteAsset AndAlso
+                                                                         PathIdentity.IsAncestorOrSelf(folderPath, i.FilePath)).
+                                                       Select(Function(i) i.FilePath).ToList())
+                FilterAndSort()
+                Return
+            End If
+            If String.IsNullOrEmpty(_currentFolder) Then Return
+            If PathIdentity.IsAncestorOrSelf(folderPath, _currentFolder) Then
+                If String.IsNullOrEmpty(parentOfRemoved) Then
+                    LoadCurrentFolder()
+                Else
+                    SetInitialFolderNodeForPath(parentOfRemoved)
+                    NavigateToFolder(parentOfRemoved)
+                End If
+            ElseIf Not String.IsNullOrEmpty(parentOfRemoved) AndAlso PathIdentity.AreSame(parentOfRemoved, _currentFolder) Then
+                If _allItems.RemoveAll(Function(i) i IsNot Nothing AndAlso i.IsFolder AndAlso Not i.IsParentFolderEntry AndAlso
+                                                   PathIdentity.AreSame(i.FilePath, folderPath)) > 0 Then
+                    FilterAndSort()
+                End If
+            End If
+        End Sub
+
+        ''' <summary>"Aus dem Katalog entfernen" an einer oder mehreren Ordnerkacheln: EINE Rueckfrage
+        ''' fuer alle, dann derselbe Weg wie im Ordnerbaum je Ordner (<see cref="RemoveFolderFromCatalogAsync"/>,
+        ''' samt ueberwachter Wurzel). Ein einzelner Ordner fragt mit Pfad wie im Baum.</summary>
+        Public Async Function ConfirmRemoveFoldersFromCatalogAsync(folderPaths As IEnumerable(Of String)) As Task
+            Dim folders = If(folderPaths, Enumerable.Empty(Of String)()).
+                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
+            ' Ein Ordner unter einem anderen der Auswahl geht mit diesem; einzeln entfernt zaehlte
+            ' er doppelt.
+            folders = folders.Where(Function(p) Not folders.Any(Function(o) Not PathIdentity.AreSame(o, p) AndAlso PathIdentity.IsAncestorOrSelf(o, p))).ToList()
+            If folders.Count = 0 Then Return
+            If folders.Count = 1 Then
+                Await ConfirmRemoveFolderFromCatalogAsync(folders(0))
+                Return
+            End If
+            Try
+                If _mainVm Is Nothing OrElse Not folders.All(Function(f) CanRemoveFolderFromCatalog(f)) Then Return
+                Dim count = Await Task.Run(Function() folders.Sum(Function(f) LibraryService.Instance.CountCatalogRowsUnder(f)))
+                Dim template = If(folders.Any(Function(f) IsWatchedFolder(f)),
+                    LocalizationService.T("{0} Katalogeinträge in {1} Ordnern samt Unterordnern und Vorschaubildern aus dem Katalog entfernen? Überwachte Ordner darunter werden danach nicht mehr überwacht. Bewertungen, Etiketten, Stichwörter und Personen dieser Bilder gehen dabei verloren. Die Dateien auf dem Laufwerk bleiben unberührt."),
+                    LocalizationService.T("{0} Katalogeinträge in {1} Ordnern samt Unterordnern und Vorschaubildern aus dem Katalog entfernen? Bewertungen, Etiketten, Stichwörter und Personen dieser Bilder gehen dabei verloren. Die Dateien auf dem Laufwerk bleiben unberührt."))
+                Dim question = String.Format(Globalization.CultureInfo.CurrentCulture, template, count, folders.Count)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Aus dem Katalog entfernen"), question,
+                                                      LocalizationService.T("Entfernen"), LocalizationService.T("Abbrechen")) Then Return
+                Dim rows = 0, tiles = 0
+                For Each folder In folders
+                    Dim result = Await RemoveFolderFromCatalogAsync(folder)
+                    If result.Rows < 0 Then
+                        StatusText = LocalizationService.T("In einem anderen Fenster läuft gerade ein Hintergrundlauf. Bitte danach noch einmal versuchen.")
+                        Return
+                    End If
+                    rows += result.Rows
+                    tiles += result.Tiles
+                Next
+                StatusText = String.Format(Globalization.CultureInfo.CurrentCulture,
+                                           LocalizationService.T("{0} Katalogeinträge und {1} Vorschaubilder entfernt."), rows, tiles)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.ConfirmRemoveFoldersFromCatalog", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
         End Function
 
         ''' <summary>Steht genau dieser Ordner in der Liste der ueberwachten Ordner?</summary>

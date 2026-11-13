@@ -11634,4 +11634,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>フォルダーはもう存在しません：カタログから {0} 枚の画像</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>アクセスできないドライブ上のフォルダーをカタログから表示する</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>ドライブが現在見つからないフォルダーや、アプリの外で削除されたフォルダーを、フォルダーツリー、ギャラリー、検索結果に表示し続けます。内容とサムネイルはカタログから取得し、閲覧のみです。オフにすると、ドライブ上にあるものだけが表示されます。</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>{1} 個のフォルダーにある {0} 件のカタログ項目を、サブフォルダーとサムネイルを含めてカタログから削除しますか？この中の監視対象フォルダーは、その後監視されなくなります。これらの画像の評価、ラベル、キーワード、人物は失われます。ドライブ上のファイルには触れません。</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>{1} 個のフォルダーにある {0} 件のカタログ項目を、サブフォルダーとサムネイルを含めてカタログから削除しますか？これらの画像の評価、ラベル、キーワード、人物は失われます。ドライブ上のファイルには触れません。</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>サムネイルから算出</value>
+  </data>
 </root>

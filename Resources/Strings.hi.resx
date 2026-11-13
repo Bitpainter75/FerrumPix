@@ -11638,4 +11638,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>फ़ोल्डर अब मौजूद नहीं है: कैटलॉग से {0} चित्र</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>उपलब्ध न होने वाली ड्राइव के फ़ोल्डर कैटलॉग से दिखाएँ</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>जिन फ़ोल्डरों की ड्राइव अभी उपलब्ध नहीं है, या जिन्हें ऐप के बाहर हटाया गया है, वे फ़ोल्डर ट्री, गैलरी और खोज परिणामों में कैटलॉग की जानकारी और थंबनेल के साथ केवल देखने के लिए दिखते रहते हैं। बंद होने पर केवल वही दिखता है जो ड्राइव पर मौजूद है।</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>{1} फ़ोल्डरों में {0} कैटलॉग प्रविष्टियाँ, उप-फ़ोल्डर और थंबनेल सहित, कैटलॉग से हटाएँ? इनमें से निगरानी वाले फ़ोल्डरों पर इसके बाद निगरानी नहीं रहेगी। इन चित्रों की रेटिंग, लेबल, कीवर्ड और व्यक्ति खो जाएँगे। ड्राइव पर फ़ाइलें अछूती रहेंगी।</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>{1} फ़ोल्डरों में {0} कैटलॉग प्रविष्टियाँ, उप-फ़ोल्डर और थंबनेल सहित, कैटलॉग से हटाएँ? इन चित्रों की रेटिंग, लेबल, कीवर्ड और व्यक्ति खो जाएँगे। ड्राइव पर फ़ाइलें अछूती रहेंगी।</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>थंबनेल से गणना की गई</value>
+  </data>
 </root>

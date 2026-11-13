@@ -11593,4 +11593,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>A pasta já não existe: {0} imagens do catálogo</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Mostrar a partir do catálogo as pastas em unidades inacessíveis</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>As pastas cuja unidade falta neste momento, ou que foram eliminadas fora da aplicação, continuam visíveis na árvore de pastas, na galeria e nos resultados de pesquisa, com os dados e as miniaturas do catálogo e apenas para visualizar. Desativado, só aparece o que existe na unidade.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Remover do catálogo {0} entradas em {1} pastas, incluindo subpastas e miniaturas? As pastas vigiadas entre elas deixarão de ser vigiadas. As classificações, etiquetas, palavras-chave e pessoas destas imagens serão perdidas. Os ficheiros na unidade não são alterados.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Remover do catálogo {0} entradas em {1} pastas, incluindo subpastas e miniaturas? As classificações, etiquetas, palavras-chave e pessoas destas imagens serão perdidas. Os ficheiros na unidade não são alterados.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Calculado a partir da miniatura</value>
+  </data>
 </root>

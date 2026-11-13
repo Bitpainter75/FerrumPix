@@ -110,6 +110,17 @@ Namespace ViewModels
             Dim offline = offlineEntries.Count > 0 OrElse (offlineView AndAlso entries.Count = 0)
             If offline Then
                 Dim missing = If(offlineEntries.Count > 0, offlineEntries.All(Function(i) i.IsFolderMissing), offlineViewMissing)
+                ' Ordnerkacheln aus dem Katalog (eine oder mehrere, alle Ordner, kein ".."): das
+                ' Entfernen aus dem Katalog wie im Ordnerbaum, fuer alle mit einer Rueckfrage. Gibt es
+                ' sie alle nicht mehr, steht NUR dieser Eintrag da; liegt einer auf einem nicht
+                ' erreichbaren Laufwerk, steht der Grund darueber, denn das Laufwerk kann wiederkommen.
+                Dim folderTiles = entries.Count > 0 AndAlso
+                                  entries.All(Function(i) i.IsFolder AndAlso i.IsOffline AndAlso Not i.IsParentFolderEntry)
+                If folderTiles AndAlso commands.RemoveFolderFromCatalog IsNot Nothing Then
+                    If Not missing Then list.Add(FooterMenuCatalog.DriveUnreachable())
+                    list.Add(FooterMenuCatalog.RemoveFolderFromCatalog(commands.RemoveFolderFromCatalog))
+                    Return list
+                End If
                 list.Add(If(missing, FooterMenuCatalog.FolderMissing(), FooterMenuCatalog.DriveUnreachable()))
                 Return list
             End If

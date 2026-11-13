@@ -11594,4 +11594,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>La cartella non esiste più: {0} immagini dal catalogo</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Mostra dal catalogo le cartelle su unità non raggiungibili</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Le cartelle la cui unità al momento manca, o che sono state eliminate fuori dall'applicazione, restano visibili nell'albero delle cartelle, nella galleria e nei risultati di ricerca, con i dati e le miniature del catalogo e solo in visualizzazione. Se disattivato, compare solo ciò che è presente sull'unità.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>Rimuovere dal catalogo {0} voci in {1} cartelle, con sottocartelle e miniature? Le cartelle monitorate tra queste non saranno più monitorate. Valutazioni, etichette, parole chiave e persone di queste immagini andranno perse. I file sull'unità restano intatti.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>Rimuovere dal catalogo {0} voci in {1} cartelle, con sottocartelle e miniature? Valutazioni, etichette, parole chiave e persone di queste immagini andranno perse. I file sull'unità restano intatti.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Calcolato dalla miniatura</value>
+  </data>
 </root>

@@ -401,6 +401,13 @@
                                            Foreground="{DynamicResource FP.Text.Muted}"
                                            FontSize="{DynamicResource FP.Font.Small}"/>
                             </Panel>
+                            <!-- Offline aus der Kachel gerechnet (InfoPanelViewModel.LoadOfflineScope):
+                                 leise darunter, damit niemand die Werte fuer die der Datei haelt. -->
+                            <TextBlock Text="Aus dem Vorschaubild berechnet"
+                                       IsVisible="{Binding IsScopeFromThumbnail}"
+                                       Foreground="{DynamicResource FP.Text.Muted}"
+                                       FontSize="{DynamicResource FP.Font.Small}"
+                                       TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <!-- Unter dem Analysebild steht keine Trennlinie: der dunkle Kasten des

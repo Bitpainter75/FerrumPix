@@ -11592,4 +11592,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>文件夹已不存在：来自目录的 {0} 张图片</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>从目录中显示无法访问的驱动器上的文件夹</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>驱动器当前不在或在应用之外被删除的文件夹，仍会显示在文件夹树、图库和搜索结果中，使用目录中的信息和缩略图，仅供查看。关闭后只显示驱动器上实际存在的内容。</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>要从目录中移除 {1} 个文件夹中的 {0} 个条目（包括子文件夹和缩略图）吗？其中受监视的文件夹此后不再受监视。这些图片的评分、标签、关键字和人物将会丢失。驱动器上的文件不受影响。</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>要从目录中移除 {1} 个文件夹中的 {0} 个条目（包括子文件夹和缩略图）吗？这些图片的评分、标签、关键字和人物将会丢失。驱动器上的文件不受影响。</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>根据缩略图计算</value>
+  </data>
 </root>

@@ -41,6 +41,10 @@ Namespace ViewModels
         Public Property Duplicate As ICommand
         Public Property Delete As ICommand
 
+        ''' <summary>Einen Ordner, den es nicht mehr gibt, aus dem Katalog nehmen. Nur die Galerie
+        ''' bietet es an, an der Kachel eines solchen Ordners.</summary>
+        Public Property RemoveFolderFromCatalog As ICommand
+
         ''' <summary>Zurueck aus dem Papierkorb einer Serverquelle. Nur die Galerie bietet es an, und
         ''' auch dort nur in der Papierkorbansicht.</summary>
         Public Property RestoreFromTrash As ICommand

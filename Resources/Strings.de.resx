@@ -11612,4 +11612,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Ordner nicht mehr vorhanden: {0} Bilder aus dem Katalog</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Ordner auf nicht erreichbaren Laufwerken aus dem Katalog anzeigen</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Ordner, deren Laufwerk gerade fehlt oder die außerhalb der Anwendung gelöscht wurden, bleiben im Ordnerbaum, in der Galerie und in Suchergebnissen sichtbar, mit den Angaben und Vorschaubildern aus dem Katalog und nur zum Ansehen. Ausgeschaltet erscheint nur, was auf dem Laufwerk vorhanden ist.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>{0} Katalogeinträge in {1} Ordnern samt Unterordnern und Vorschaubildern aus dem Katalog entfernen? Überwachte Ordner darunter werden danach nicht mehr überwacht. Bewertungen, Etiketten, Stichwörter und Personen dieser Bilder gehen dabei verloren. Die Dateien auf dem Laufwerk bleiben unberührt.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>{0} Katalogeinträge in {1} Ordnern samt Unterordnern und Vorschaubildern aus dem Katalog entfernen? Bewertungen, Etiketten, Stichwörter und Personen dieser Bilder gehen dabei verloren. Die Dateien auf dem Laufwerk bleiben unberührt.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Aus dem Vorschaubild berechnet</value>
+  </data>
 </root>

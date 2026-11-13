@@ -11638,4 +11638,19 @@
   <data name="Ordner_nicht_mehr_vorhanden_0_Bilder_aus_dem_Kat_3e439c38" xml:space="preserve">
     <value>Klasör artık yok: katalogdan {0} görüntü</value>
   </data>
+  <data name="Ordner_auf_nicht_erreichbaren_Laufwerken_aus_dem_ab1f5cb5" xml:space="preserve">
+    <value>Erişilemeyen sürücülerdeki klasörleri katalogdan göster</value>
+  </data>
+  <data name="Ordner_deren_Laufwerk_gerade_fehlt_oder_die_au_e_64141543" xml:space="preserve">
+    <value>Sürücüsü şu anda bulunmayan veya uygulama dışında silinmiş klasörler, katalogdaki bilgiler ve küçük resimlerle, yalnızca görüntülemek için klasör ağacında, galeride ve arama sonuçlarında görünmeye devam eder. Kapalıyken yalnızca sürücüde bulunanlar gösterilir.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_8015b669" xml:space="preserve">
+    <value>{1} klasördeki {0} katalog girdisi, alt klasörler ve küçük resimlerle birlikte katalogdan kaldırılsın mı? Aralarındaki izlenen klasörler bundan sonra izlenmeyecek. Bu görüntülerin puanları, etiketleri, anahtar sözcükleri ve kişileri kaybolur. Sürücüdeki dosyalara dokunulmaz.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_in_1_Ordnern_samt_Unterordnern_60b2fba8" xml:space="preserve">
+    <value>{1} klasördeki {0} katalog girdisi, alt klasörler ve küçük resimlerle birlikte katalogdan kaldırılsın mı? Bu görüntülerin puanları, etiketleri, anahtar sözcükleri ve kişileri kaybolur. Sürücüdeki dosyalara dokunulmaz.</value>
+  </data>
+  <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
+    <value>Küçük resimden hesaplandı</value>
+  </data>
 </root>
