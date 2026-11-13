@@ -11,7 +11,8 @@ Namespace Services
     '''
     ''' <para>Sony, Olympus/OM, Panasonic, Fujifilm und Nikon Z. Olympus siehe <see cref="ReadOlympus"/>,
     ''' Panasonic <see cref="ReadPanasonic"/>, Fujifilm <see cref="ReadFujifilm"/>, Nikon
-    ''' <see cref="ReadNikon"/>.</para>
+    ''' <see cref="ReadNikon"/>. Dazu OpcodeList3 einiger DNGs (<see cref="TryCreateFromStage3"/>),
+    ''' die anders als die uebrigen Quellen dem Profil vorgeht.</para>
     '''
     ''' <para>Sony: ARW-Dateien tragen im Feld 0x7037 die Verzeichnung und in 0x7035
     ''' den Farbquerfehler als Stuetzwerte. Der erste Wert ist die Zahl der Stuetzstellen
@@ -74,6 +75,129 @@ Namespace Services
             }
             k.NormScale = LensDataService.NormScaleFor(k, width, height)
             Return k
+        End Function
+
+        ''' <summary>Kameras, deren OpcodeList3 angewandt wird: Marke und Modell aus IFD0, ein leeres
+        ''' Modell steht fuer jedes Modell der Marke. Andere DNGs tragen die Liste ebenfalls (Telefone,
+        ''' Kompakte und Systemkameras, im Bestand 26 Dateien); dort ist sie nicht gegen das
+        ''' Referenzprogramm gemessen und bleibt deshalb aussen vor.</summary>
+        Private Shared ReadOnly Stage3Cameras As (Make As String, Model As String)() = {
+            ("DJI", ""),
+            ("Hasselblad", "L1D-20c"),
+            ("Hasselblad", "L2D-20c")}
+
+        ''' <summary>Die Objektivkorrektur aus OpcodeList3 einer DNG, oder Nothing (andere Kamera, keine
+        ''' Liste, nichts Brauchbares darin).
+        '''
+        ''' <para>Die Liste gilt nach der DNG-Spezifikation nach dem Demosaic auf dem linearen Bild,
+        ''' also genau dort, wo der Decode Vignettierung und Farbquerfehler rechnet. Umgesetzt:
+        ''' FixVignetteRadial wird zu <see cref="LensDataService.Korrektur.VignettingKnots"/> (die
+        ''' Achse hat 1 in der fernsten Ecke wie dort), die GainMaps zu
+        ''' <see cref="LensDataService.Korrektur.GainMaps"/> (eine Karte je Ebene, im Decode an der
+        ''' Stelle der Vignettierung angewandt), WarpRectilinear zur Verzeichnung (Ebene Gruen) und,
+        ''' wo Rot oder Blau eigene Werte tragen, zum Farbquerfehler. Karten und Vignettierung haengen
+        ''' am Schalter der Vignettierung und an ihrer Staerke.</para>
+        '''
+        ''' <para>WarpRectilinear: an jedem entzerrten Radius r (1 in der Ecke) liegt der Punkt in der
+        ''' Aufnahme bei r (kr0 + kr1 r^2 + kr2 r^4 + kr3 r^6); das ist genau das Verhaeltnis
+        ''' verzeichneter zu korrigiertem Radius der Stuetzwerte. Die tangentialen Glieder kt0 und kt1
+        ''' kennt die Verzeichnungsstufe nicht; traegt eine Datei sie, bleibt die Verzeichnung aussen
+        ''' vor.</para></summary>
+        Public Shared Function TryCreateFromStage3(path As String, directories As IEnumerable(Of Directory)) As LensDataService.Korrektur
+            If String.IsNullOrEmpty(path) OrElse Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) OrElse directories Is Nothing Then Return Nothing
+            Dim ifd0 = directories.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+            Dim make = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "").Trim()
+            Dim model = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagModel), "").Trim()
+            If Not Stage3Cameras.Any(Function(c) String.Equals(c.Make, make, StringComparison.OrdinalIgnoreCase) AndAlso
+                                                 (c.Model.Length = 0 OrElse String.Equals(c.Model, model, StringComparison.OrdinalIgnoreCase))) Then Return Nothing
+            Dim list = DngGainMapService.ReadStage3(path)
+            If list Is Nothing Then Return Nothing
+            Return FromStage3(list)
+        End Function
+
+        ''' <summary>Die Korrektur aus einer gelesenen OpcodeList3, siehe
+        ''' <see cref="TryCreateFromStage3"/>. Eigene Funktion, damit der Pruefstand sie an einer
+        ''' kuenstlichen Liste messen kann.</summary>
+        Friend Shared Function FromStage3(list As DngGainMapService.Stage3Opcodes) As LensDataService.Korrektur
+            If list Is Nothing OrElse list.ActiveWidth < 2 OrElse list.ActiveHeight < 2 Then Return Nothing
+
+            ' Verzeichnung und Farbquerfehler aus WarpRectilinear. Eine Zeile gilt fuer alle Ebenen.
+            Dim distortionKnots As Double() = Nothing
+            Dim redKnots As Double() = Nothing, blueKnots As Double() = Nothing
+            Dim inverseKnots As Double() = Nothing
+            Dim warp = list.WarpPlanes
+            If warp IsNot Nothing AndAlso warp.All(Function(p) Math.Abs(p(4)) <= 0.0000001 AndAlso Math.Abs(p(5)) <= 0.0000001) Then
+                Dim radial = Function(p As Double()) As Func(Of Double, Double)
+                                 Return Function(r)
+                                            Dim r2 = r * r
+                                            Return p(0) + r2 * (p(1) + r2 * (p(2) + r2 * p(3)))
+                                        End Function
+                             End Function
+                Dim green = radial(warp(If(warp.Length >= 3, 1, 0)))
+                Dim red = radial(warp(0))
+                Dim blue = radial(warp(warp.Length - 1))
+                Dim greenKnots = SampleFormula(green)
+                If greenKnots.Any(Function(v) Math.Abs(v - 1.0) > 0.000001) Then
+                    distortionKnots = greenKnots
+                    ' Fuer Karten hinter der Verzeichnung: entzerrter durch verzeichneten Radius, an
+                    ' verzeichneten Radien.
+                    inverseKnots = OnSourceRadius(Function(r) 1.0 / green(r), green)
+                End If
+                If warp.Length >= 3 Then
+                    ' Der Faktor gegen Gruen am Quellradius von Gruen, wo der Decode ihn anwendet.
+                    Dim r = OnSourceRadius(Function(q) red(q) / green(q), green)
+                    Dim b = OnSourceRadius(Function(q) blue(q) / green(q), green)
+                    If r IsNot Nothing AndAlso b IsNot Nothing AndAlso
+                       r.Concat(b).Any(Function(v) Math.Abs(v - 1.0) > 0.0000001) Then
+                        redKnots = r
+                        blueKnots = b
+                    End If
+                End If
+            End If
+
+            ' Vignettierung: FixVignetteRadial als verbleibendes Licht, also 1 durch die Verstaerkung.
+            Dim vignettingKnots As Double() = Nothing
+            If list.VignetteK IsNot Nothing Then
+                Dim k = list.VignetteK
+                Dim light = SampleFormula(Function(r)
+                                              Dim r2 = r * r
+                                              Dim gain = 1.0 + r2 * (k(0) + r2 * (k(1) + r2 * (k(2) + r2 * (k(3) + r2 * k(4)))))
+                                              Return 1.0 / Math.Max(0.05, gain)
+                                          End Function)
+                If light.Any(Function(v) Math.Abs(v - 1.0) > 0.0001) Then vignettingKnots = light
+            End If
+            Dim gainMaps As DngGainMapService.PlaneGainMaps = Nothing
+            If list.Maps.Count > 0 Then
+                gainMaps = New DngGainMapService.PlaneGainMaps With {
+                    .Maps = list.Maps, .AfterWarp = list.MapsAfterWarp,
+                    .ActiveWidth = list.ActiveWidth, .ActiveHeight = list.ActiveHeight, .Flip = list.Flip,
+                    .WarpInverseKnots = inverseKnots, .Key = list.Fingerprint}
+                ' Ohne FixVignetteRadial traegt die Vignettierung nur die Karten; die flache Kennlinie
+                ' haelt zugleich ein Profil fern, das Vk1 bis Vk3 setzen wuerde.
+                If vignettingKnots Is Nothing Then vignettingKnots = {1.0, 1.0}
+            End If
+            If distortionKnots Is Nothing AndAlso redKnots Is Nothing AndAlso vignettingKnots Is Nothing Then Return Nothing
+
+            ' Normiert wie in TryCreate, mit den Massen der ActiveArea, auf die sich die Liste bezieht.
+            Dim width = list.ActiveWidth, height = list.ActiveHeight
+            Dim aspect = CDbl(Math.Max(width, height) - 1) / Math.Max(1, Math.Min(width, height) - 1)
+            Dim result As New LensDataService.Korrektur With {
+                .Source = LensDataService.CorrectionSource.CameraData,
+                .CalibrationAspectRatio = aspect,
+                .CropRatio = 1.0,
+                .CornerScale = 1.0 / Math.Sqrt(aspect * aspect + 1.0),
+                .DistortionModel = If(distortionKnots IsNot Nothing, "knots", ""),
+                .DistortionKnots = distortionKnots,
+                .HasDistortion = distortionKnots IsNot Nothing,
+                .TcaRedKnots = redKnots,
+                .TcaBlueKnots = blueKnots,
+                .HasChromaticAberration = redKnots IsNot Nothing,
+                .VignettingKnots = vignettingKnots,
+                .HasVignetting = vignettingKnots IsNot Nothing,
+                .GainMaps = gainMaps
+            }
+            result.NormScale = LensDataService.NormScaleFor(result, width, height)
+            Return result
         End Function
 
         ''' <summary>Sony: Stuetzwerte in 0x7037 (Verzeichnung) und 0x7035 (Farbquerfehler).</summary>

@@ -1103,14 +1103,15 @@ Namespace Services
         Private Shared Function LensKey(k As LensDataService.Korrektur) As String
             If k Is Nothing Then Return ""
             Return String.Format(Globalization.CultureInfo.InvariantCulture,
-                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}|{12:R}|{13:R}|{14}|{15}|{16}|{17:R}|{18:R}",
+                "{0}|{1}|{2:R}|{3:R}|{4:R}|{5:R}|{6:R}|{7:R}|{8:R}|{9:R}|{10:R}|{11:R}|{12:R}|{13:R}|{14}|{15}|{16}|{17:R}|{18:R}|{19}",
                 k.HasChromaticAberration, k.HasVignetting,
                 k.TcaBr, k.TcaCr, k.TcaVr, k.TcaBb, k.TcaCb, k.TcaVb,
                 k.NormScale, k.Vk1 + k.Vk2 * 3 + k.Vk3 * 7,
                 k.ChromaticAberrationStrength, k.VignettingStrength,
                 k.TcaRedFine, k.TcaBlueFine,
                 KnotsKey(k.TcaRedKnots), KnotsKey(k.TcaBlueKnots),
-                KnotsKey(k.VignettingKnots), k.CornerScale, k.KnotAxisScale)
+                KnotsKey(k.VignettingKnots), k.CornerScale, k.KnotAxisScale,
+                If(k.GainMaps Is Nothing, "", k.GainMaps.Key))
         End Function
 
         ''' <summary>Stuetzwerte des Farbquerfehlers als Teil des Schluessels: zwei Dateien mit
@@ -4028,6 +4029,11 @@ Namespace Services
             ' LensDataService.NormScaleFor.
             Dim normScale = LensDataService.NormScaleFor(lens, width, height)
             Dim cornerScale = If(lens IsNot Nothing, lens.CornerScale, 1.0)
+            ' Die Verstaerkungskarten einer DNG (OpcodeList3) gehoeren zur Vignettierung und wirken
+            ' je Ebene: auf dem Weg in ProPhoto auf die Kamerakanaele, wo die Spezifikation sie
+            ' vorsieht, sonst naeherungsweise auf die sRGB-Kanaele.
+            Dim planeGains = If(korrigiertVignette AndAlso lens.GainMaps IsNot Nothing,
+                                lens.GainMaps.SamplerFor(width, height, lens.VignettingStrength), Nothing)
 
             ' Zeilenring: Gruen kommt aus der eigenen Zeile, Rot und Blau aus benachbarten. Die
             ' Verschiebung ist klein, deshalb reichen wenige Zeilen - und es bleibt bei EINER
@@ -4096,7 +4102,9 @@ Namespace Services
                             ' Farbquerfehler auf dem Weg in ProPhoto: Rot und Blau schon in linearem sRGB.
                             Dim tcaSrgb = False
                             Dim tcaRed = 0.0F, tcaBlue = 0.0F
+                            Dim gainR = 1.0F, gainG = 1.0F, gainB = 1.0F
                             If korrigiert Then
+                                If planeGains IsNot Nothing Then planeGains.GainsAt(x, y, gainR, gainG, gainB)
                                 Dim dxPix = x - cx
                                 ' EIN Radius fuer beide Korrekturen - die Wurzel ist der teuerste Anteil
                                 ' dieser Schleife und wird nicht zweimal gezogen.
@@ -4122,12 +4130,24 @@ Namespace Services
                                         ' Kamerakanaelen machte +35 von Hand den Saum doppelt so breit.
                                         Dim rx = cx + dxPix * fr, ry = cy + dyPix * fr
                                         Dim bx = cx + dxPix * fb, by = cy + dyPix * fb
-                                        tcaRed = pm(0) * AbtastenBilinear(FetchRow, width, height, rx, ry, 0) +
-                                                 pm(1) * AbtastenBilinear(FetchRow, width, height, rx, ry, 1) +
-                                                 pm(2) * AbtastenBilinear(FetchRow, width, height, rx, ry, 2)
-                                        tcaBlue = pm(6) * AbtastenBilinear(FetchRow, width, height, bx, by, 0) +
-                                                  pm(7) * AbtastenBilinear(FetchRow, width, height, bx, by, 1) +
-                                                  pm(8) * AbtastenBilinear(FetchRow, width, height, bx, by, 2)
+                                        If planeGains Is Nothing Then
+                                            tcaRed = pm(0) * AbtastenBilinear(FetchRow, width, height, rx, ry, 0) +
+                                                     pm(1) * AbtastenBilinear(FetchRow, width, height, rx, ry, 1) +
+                                                     pm(2) * AbtastenBilinear(FetchRow, width, height, rx, ry, 2)
+                                            tcaBlue = pm(6) * AbtastenBilinear(FetchRow, width, height, bx, by, 0) +
+                                                      pm(7) * AbtastenBilinear(FetchRow, width, height, bx, by, 1) +
+                                                      pm(8) * AbtastenBilinear(FetchRow, width, height, bx, by, 2)
+                                        Else
+                                            ' Die Karten gehoeren auf die Kamerakanaele VOR der Matrix;
+                                            ' sie aendern sich ueber den Versatz des Saums nicht
+                                            ' merklich, es gilt die Verstaerkung dieses Bildpunkts.
+                                            tcaRed = pm(0) * gainR * AbtastenBilinear(FetchRow, width, height, rx, ry, 0) +
+                                                     pm(1) * gainG * AbtastenBilinear(FetchRow, width, height, rx, ry, 1) +
+                                                     pm(2) * gainB * AbtastenBilinear(FetchRow, width, height, rx, ry, 2)
+                                            tcaBlue = pm(6) * gainR * AbtastenBilinear(FetchRow, width, height, bx, by, 0) +
+                                                      pm(7) * gainG * AbtastenBilinear(FetchRow, width, height, bx, by, 1) +
+                                                      pm(8) * gainB * AbtastenBilinear(FetchRow, width, height, bx, by, 2)
+                                        End If
                                         tcaSrgb = True
                                         r = rowShorts(x * 3) And &HFFFF
                                         b = rowShorts(x * 3 + 2) And &HFFFF
@@ -4150,11 +4170,16 @@ Namespace Services
                                     If abfall < 0.125 Then abfall = 0.125
                                     If wide Then
                                         ' Ohne Deckel: die Tonstufe in ProPhoto nimmt Werte ueber 1.
+                                        ' Die Karten folgen unten je Kanal, ebenso ohne Deckel.
                                         vignetteGain = CSng(1.0 / abfall)
-                                    Else
+                                    ElseIf planeGains Is Nothing Then
                                         r = Math.Min(65535, CInt(r / abfall))
                                         g = Math.Min(65535, CInt(g / abfall))
                                         b = Math.Min(65535, CInt(b / abfall))
+                                    Else
+                                        r = Math.Min(65535, CInt(r * gainR / abfall))
+                                        g = Math.Min(65535, CInt(g * gainG / abfall))
+                                        b = Math.Min(65535, CInt(b * gainB / abfall))
                                     End If
                                 End If
                             Else
@@ -4187,6 +4212,9 @@ Namespace Services
                                 ' Korrektur rosa Lichter, dann nach ProPhoto. Unter null wird auf null
                                 ' gesetzt wie im DNG-SDK; ueber 1 bleibt, was es ist.
                                 Dim fr = r * vignetteGain, fg = g * vignetteGain, fb = b * vignetteGain
+                                If planeGains IsNot Nothing Then
+                                    fr *= gainR : fg *= gainG : fb *= gainB
+                                End If
                                 Dim sr = If(tcaSrgb, tcaRed * vignetteGain, pm(0) * fr + pm(1) * fg + pm(2) * fb)
                                 Dim sg = pm(3) * fr + pm(4) * fg + pm(5) * fb
                                 Dim sb = If(tcaSrgb, tcaBlue * vignetteGain, pm(6) * fr + pm(7) * fg + pm(8) * fb)

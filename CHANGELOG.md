@@ -54,3 +54,11 @@
   added to the sidecar file are taken into FerrumPix first, so writing no longer removes them.
   Faces you removed or renamed in FerrumPix do not come back from the file.
 
+- Raw files from several DJI drones and action cameras, and from the Hasselblad cameras built by
+  DJI, had dark corners, some with a cyan tint, and came out too bright. FerrumPix now uses the
+  lens corrections these cameras store in the file, so shading, colour fringes and distortion are
+  corrected the way the camera intends. They follow the lens correction switches like any other
+  lens correction.
+
+- Raw files from the Hasselblad H4D came out too bright.
+

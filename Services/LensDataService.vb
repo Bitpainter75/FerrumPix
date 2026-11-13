@@ -165,6 +165,10 @@ Namespace Services
             ''' stehen Kamerastuetzwerte in einem Profil, rechnet das Profil seine Achse mit dem
             ''' Crop-Verhaeltnis, und der Massstab nimmt es wieder heraus (1 / CropRatio).
             Public Property KnotAxisScale As Double = 1.0
+            ''' Verstaerkungskarten je Ebene aus OpcodeList3 einer DNG, zusaetzlich zur Kennlinie der
+            ''' Vignettierung und mit ihr an- und abgeschaltet. Gelten im linearen Bild nach dem
+            ''' Demosaic (RawDecodeService.Convert16Rows). Nothing ohne.
+            Public Property GainMaps As DngGainMapService.PlaneGainMaps
 
             Public ReadOnly Property HasAnything As Boolean
                 Get
@@ -798,7 +802,19 @@ Namespace Services
                     width = fromFile.Width.GetValueOrDefault()
                     height = fromFile.Height.GetValueOrDefault()
                 End If
-                If width > 1 AndAlso height > 1 Then
+                ' OPCODELIST3 EINER DNG GEHT DEM PROFIL VOR, ganz und nicht nur fuer Vignettierung und
+                ' Farbquerfehler: die Kamera nennt darin fuer genau diese Aufnahme, was die Spezifikation
+                ' zwingend anwenden laesst, und das Referenzprogramm tut es. Ein Profil daneben zaehlte
+                ' die Abschattung doppelt (CameraLensCorrectionService.TryCreateFromStage3).
+                If fromCaptureData Then
+                    result = CameraLensCorrectionService.TryCreateFromStage3(path, directories)
+                    If result IsNot Nothing Then
+                        result.LensName = If(String.IsNullOrWhiteSpace(lens), model, lens)
+                        result.Brennweite = focalLength
+                        result.Aperture = aperture
+                    End If
+                End If
+                If result Is Nothing AndAlso width > 1 AndAlso height > 1 Then
                     result = FindCorrection(maker, model, searchName, focalLength, aperture, width, height,
                                             focusDistance, fromCaptureData)
                     ' Kein Profil in der Sammlung: dann die Korrekturwerte, die die Kamera selbst in
@@ -858,6 +874,7 @@ Namespace Services
                 .TcaRedFine = k.TcaRedFine, .TcaBlueFine = k.TcaBlueFine,
                 .HasVignetting = k.HasVignetting, .Vk1 = k.Vk1, .Vk2 = k.Vk2, .Vk3 = k.Vk3,
                 .VignettingKnots = k.VignettingKnots, .KnotAxisScale = k.KnotAxisScale,
+                .GainMaps = k.GainMaps,
                 .DistortionStrength = k.DistortionStrength,
                 .ChromaticAberrationStrength = k.ChromaticAberrationStrength,
                 .VignettingStrength = k.VignettingStrength}

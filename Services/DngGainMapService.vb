@@ -1,6 +1,7 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.IO
+Imports System.Linq
 Imports System.Runtime.InteropServices
 
 Namespace Services
@@ -21,10 +22,14 @@ Namespace Services
     ''' LibRaw das Schwarz noch in sich; gerechnet wird deshalb Schwarz + (Wert - Schwarz) * Gain, mit
     ''' demselben Schwarz und Weiss, die die Datei nennt.
     '''
-    ''' WAS NICHT angewandt wird, und dann bleibt die Datei, wie LibRaw sie liest: OpcodeList3 (wirkt
-    ''' nach dem Demosaic; an der Sigma fp ohne messbaren Unterschied), Karten fuer andere Ebenen als
-    ''' die eine des Sensors (lineare DNGs), Dateien mit LinearizationTable (dann ist der Rohwert noch
-    ''' nicht linear) und Karten mit Werten, die nicht endlich oder nicht positiv sind.</summary>
+    ''' WAS HIER NICHT angewandt wird, und dann bleibt die Datei, wie LibRaw sie liest: Karten fuer
+    ''' andere Ebenen als die eine des Sensors (lineare DNGs), Dateien mit LinearizationTable (dann
+    ''' ist der Rohwert noch nicht linear) und Karten mit Werten, die nicht endlich oder nicht positiv
+    ''' sind.
+    '''
+    ''' OPCODELIST3 wirkt nach dem Demosaic auf das RGB-Bild. Sie wird hier nur gelesen
+    ''' (<see cref="ReadStage3"/>) und geht als Objektivkorrektur aus der Kamera in die Umsetzung
+    ''' des Decodes, siehe CameraLensCorrectionService.TryCreateFromStage3.</summary>
     Public NotInheritable Class DngGainMapService
 
         Private Sub New()
@@ -70,8 +75,12 @@ Namespace Services
         Private Const TagWhiteLevel As Integer = 50717
         Private Const TagActiveArea As Integer = 50829
         Private Const TagOpcodeList2 As Integer = 51009
+        Private Const TagOpcodeList3 As Integer = 51022
+        Private Const TagOrientation As Integer = 274
         Private Const PhotometricCfa As Integer = 32803
         Private Const OpcodeGainMap As Integer = 9
+        Private Const OpcodeWarpRectilinear As Integer = 1
+        Private Const OpcodeFixVignetteRadial As Integer = 3
 
         ''' <summary>Die GainMaps aus OpcodeList2 der Rohdaten-IFD, oder Nothing, wenn die Datei keine
         ''' traegt oder etwas nicht so ist, wie die Regel oben verlangt.</summary>
@@ -233,6 +242,266 @@ Namespace Services
             Return applied
         End Function
 
+        ''' <summary>Was OpcodeList3 einer DNG zum Objektiv sagt. Die Liste wirkt nach der
+        ''' DNG-Spezifikation auf das Bild der Stufe 3: entwickelt (drei Ebenen, die Farben des
+        ''' Sensors), linear, ueber die ActiveArea, noch nicht gedreht.</summary>
+        Public NotInheritable Class Stage3Opcodes
+            ''' <summary>FixVignetteRadial: k0 bis k4, Verstaerkung 1 + k0 r^2 + k1 r^4 + ... + k4 r^10
+            ''' mit r = 1 in der fernsten Ecke. Nothing, wenn die Liste keine traegt.</summary>
+            Public VignetteK As Double()
+            ''' <summary>WarpRectilinear je Ebene: kr0 bis kr3, kt0, kt1. Eine Zeile gilt fuer alle
+            ''' Ebenen. Nothing, wenn die Liste keine traegt.</summary>
+            Public WarpPlanes As Double()()
+            ''' <summary>Die GainMaps in der Folge der Liste.</summary>
+            Public Maps As New List(Of GainMap)()
+            ''' <summary>Je Karte: steht sie in der Liste HINTER der Verzeichnung? Dann gilt sie in der
+            ''' entzerrten Lage.</summary>
+            Public MapsAfterWarp As New List(Of Boolean)()
+            Public ActiveWidth, ActiveHeight As Integer
+            ''' <summary>Die Drehung der Ausgabe in LibRaws Schreibweise (flip_index), aus Orientation.</summary>
+            Public Flip As Integer
+            ''' <summary>Pruefsumme der Liste und der Drehung, fuer den Schluessel des Zwischenspeichers.</summary>
+            Public Fingerprint As String = ""
+
+            Public ReadOnly Property HasAnything As Boolean
+                Get
+                    Return VignetteK IsNot Nothing OrElse WarpPlanes IsNot Nothing OrElse Maps.Count > 0
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>OpcodeList3 der Rohdaten-IFD: FixVignetteRadial, WarpRectilinear und GainMap.
+        ''' Andere Opcodes werden uebersprungen. Ein FixVignetteRadial oder WarpRectilinear, dessen
+        ''' optische Mitte nicht in der Bildmitte liegt, faellt heraus: die Korrekturstufen rechnen um
+        ''' die Bildmitte. Nothing, wenn die Datei keine Liste oder nichts Brauchbares darin traegt.</summary>
+        Public Shared Function ReadStage3(path As String) As Stage3Opcodes
+            If String.IsNullOrEmpty(path) OrElse Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return Nothing
+            Try
+                Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
+                    Dim reader As New TiffReader(stream)
+                    If Not reader.ReadHeader() Then Return Nothing
+                    Dim raw = reader.FindRawIfd()
+                    If raw Is Nothing Then Return Nothing
+                    Dim opcodeEntry As TiffEntry = Nothing
+                    If Not raw.TryGetValue(TagOpcodeList3, opcodeEntry) Then Return Nothing
+
+                    Dim result As New Stage3Opcodes With {
+                        .ActiveWidth = CInt(reader.ReadNumbers(raw(TagImageWidth))(0)),
+                        .ActiveHeight = CInt(reader.ReadNumbers(raw(TagImageLength))(0))}
+                    Dim areaEntry As TiffEntry = Nothing
+                    If raw.TryGetValue(TagActiveArea, areaEntry) Then
+                        Dim area = reader.ReadNumbers(areaEntry)
+                        If area.Length = 4 Then
+                            result.ActiveHeight = CInt(area(2) - area(0))
+                            result.ActiveWidth = CInt(area(3) - area(1))
+                        End If
+                    End If
+                    If result.ActiveHeight <= 0 OrElse result.ActiveWidth <= 0 Then Return Nothing
+
+                    ' Die Lage wie bei LibRaw: Orientation aus IFD0, umgesetzt wie in dcraw ("50132467").
+                    Dim first = reader.FirstIfd()
+                    Dim orientationEntry As TiffEntry = Nothing
+                    If first IsNot Nothing AndAlso first.TryGetValue(TagOrientation, orientationEntry) Then
+                        Dim orientation = CInt(reader.ReadNumbers(orientationEntry)(0)) And 7
+                        result.Flip = AscW("50132467"(orientation)) - AscW("0"c)
+                    End If
+
+                    Dim data = reader.ReadBytes(opcodeEntry)
+                    ParseStage3List(data, result)
+                    If Not result.HasAnything Then Return Nothing
+                    Using sha = Security.Cryptography.SHA1.Create()
+                        result.Fingerprint = Convert.ToHexString(sha.ComputeHash(data)) & "|" & result.Flip.ToString(Globalization.CultureInfo.InvariantCulture)
+                    End Using
+                    Return result
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("DngGainMap.ReadStage3", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Die Opcodes von OpcodeList3, die das Objektiv betreffen, in
+        ''' <paramref name="result"/>. Aufbau wie in OpcodeList2: grosse Endianness, je Opcode
+        ''' Kennung, Version, Schalter, Laenge und die Parameter.</summary>
+        Friend Shared Sub ParseStage3List(data As Byte(), result As Stage3Opcodes)
+            If data Is Nothing OrElse data.Length < 4 Then Return
+            Dim count = ReadU32(data, 0)
+            Dim position = 4
+            Dim warpSeen = False
+            For i = 1 To CInt(Math.Min(count, 1000L))
+                If position + 16 > data.Length Then Exit For
+                Dim id = ReadU32(data, position)
+                Dim size = ReadU32(data, position + 12)
+                Dim start = position + 16
+                If size < 0 OrElse start + size > data.Length Then Exit For
+                Select Case id
+                    Case OpcodeGainMap
+                        Dim map = ParseGainMap(data, start, CInt(size))
+                        If map IsNot Nothing AndAlso map.Plane >= 0 AndAlso map.Planes >= 1 AndAlso map.Plane + map.Planes <= 3 Then
+                            result.Maps.Add(map)
+                            result.MapsAfterWarp.Add(warpSeen)
+                        End If
+                    Case OpcodeFixVignetteRadial
+                        ' k0 bis k4, dann die Mitte (waagrecht, senkrecht), relativ zum Bild.
+                        If size >= 56 Then
+                            Dim k(4) As Double
+                            For j = 0 To 4
+                                k(j) = ReadF64(data, start + 8 * j)
+                            Next
+                            If k.All(Function(v) Double.IsFinite(v)) AndAlso
+                               IsCentered(ReadF64(data, start + 40), ReadF64(data, start + 48)) Then result.VignetteK = k
+                        End If
+                    Case OpcodeWarpRectilinear
+                        ' Zahl der Ebenen, je Ebene kr0 bis kr3, kt0 und kt1, dann die Mitte.
+                        If size >= 4 Then
+                            Dim planes = CInt(ReadU32(data, start))
+                            If planes >= 1 AndAlso planes <= 3 AndAlso size >= 4 + planes * 48 + 16 Then
+                                Dim rows(planes - 1)() As Double
+                                Dim usable = True
+                                For p = 0 To planes - 1
+                                    rows(p) = New Double(5) {}
+                                    For j = 0 To 5
+                                        rows(p)(j) = ReadF64(data, start + 4 + p * 48 + 8 * j)
+                                        If Not Double.IsFinite(rows(p)(j)) Then usable = False
+                                    Next
+                                Next
+                                Dim centerOffset = start + 4 + planes * 48
+                                If usable AndAlso IsCentered(ReadF64(data, centerOffset), ReadF64(data, centerOffset + 8)) Then
+                                    result.WarpPlanes = rows
+                                    warpSeen = True
+                                End If
+                            End If
+                        End If
+                End Select
+                position = start + CInt(size)
+            Next
+        End Sub
+
+        ''' <summary>Liegt die optische Mitte (relativ zum Bild) in der Bildmitte?</summary>
+        Private Shared Function IsCentered(centerH As Double, centerV As Double) As Boolean
+            Return Math.Abs(centerH - 0.5) <= 0.001 AndAlso Math.Abs(centerV - 0.5) <= 0.001
+        End Function
+
+        ''' <summary>Die GainMaps aus OpcodeList3 so, wie die Umsetzung des Decodes sie braucht: je
+        ''' Bildpunkt der fertigen (gedrehten) Ausgabe eine Verstaerkung je Ebene.</summary>
+        Public NotInheritable Class PlaneGainMaps
+            Public Maps As New List(Of GainMap)()
+            Public AfterWarp As New List(Of Boolean)()
+            Public ActiveWidth, ActiveHeight As Integer
+            Public Flip As Integer
+            ''' <summary>Fuer Karten hinter der Verzeichnung: entzerrter durch verzeichneten Radius,
+            ''' Stuetzwerte am VERZEICHNETEN Radius, gleichmaessig von der Mitte bis zur Ecke (1).
+            ''' Nothing, wenn die Liste keine Verzeichnung traegt.</summary>
+            Public WarpInverseKnots As Double()
+            Public Key As String = ""
+
+            ''' <summary>Der Abtaster fuer eine Ausgabe dieser Masse, oder Nothing, wenn sie nicht zur
+            ''' ActiveArea passt (weder ganz noch halb, auf zwei Prozent).</summary>
+            Friend Function SamplerFor(width As Integer, height As Integer, strength As Double) As PlaneGainSampler
+                If Maps.Count = 0 OrElse width < 2 OrElse height < 2 Then Return Nothing
+                Dim swap = (Flip And 4) <> 0
+                Dim w0 = If(swap, height, width), h0 = If(swap, width, height)
+                Dim scaleH = ActiveWidth / CDbl(w0), scaleV = ActiveHeight / CDbl(h0)
+                Dim fits = Function(s As Double) Math.Abs(s - 1.0) <= 0.02 OrElse Math.Abs(s - 2.0) <= 0.04
+                If Not fits(scaleH) OrElse Not fits(scaleV) Then
+                    DiagnosticLogService.LogAlways("DngGainMap.Stage3",
+                        $"Ausgabe {width}x{height} passt nicht zur ActiveArea {ActiveWidth}x{ActiveHeight}, Karten nicht angewandt")
+                    Return Nothing
+                End If
+                Return New PlaneGainSampler(Me, w0, h0, strength)
+            End Function
+        End Class
+
+        ''' <summary>Rechnet die Verstaerkung je Ebene fuer einen Bildpunkt der Ausgabe nach der Regel
+        ''' der DNG-Spezifikation: Lage relativ zum ganzen Bild der Stufe 3 an der Mitte des
+        ''' Bildpunkts, nur im Bereich der Karte und auf ihrem Zeilen- und Spaltenschritt, zwischen den
+        ''' Punkten bilinear, ausserhalb der Randwert. Mehrere Karten fuer dieselbe Ebene
+        ''' multiplizieren sich, wie nacheinander angewandt. Bei halber Kantenlaenge steht ein
+        ''' Bildpunkt fuer zwei mal zwei der Stufe 3 und wird an deren gemeinsamer Mitte gelesen.</summary>
+        Friend NotInheritable Class PlaneGainSampler
+            Private ReadOnly _maps As GainMap()
+            Private ReadOnly _afterWarp As Boolean()
+            Private ReadOnly _flip, _w0, _h0, _activeW, _activeH As Integer
+            Private ReadOnly _inverse As Double()
+            Private ReadOnly _halfDiagonal As Double
+            Private ReadOnly _strength As Double
+
+            Friend Sub New(source As PlaneGainMaps, w0 As Integer, h0 As Integer, strength As Double)
+                _maps = source.Maps.ToArray()
+                _afterWarp = source.AfterWarp.ToArray()
+                _flip = source.Flip
+                _w0 = w0 : _h0 = h0
+                _activeW = source.ActiveWidth : _activeH = source.ActiveHeight
+                _inverse = If(_afterWarp.Contains(True), source.WarpInverseKnots, Nothing)
+                _halfDiagonal = Math.Sqrt(CDbl(w0) * w0 + CDbl(h0) * h0) / 2.0
+                _strength = strength
+            End Sub
+
+            ''' <summary>Die Verstaerkung je Ebene am Bildpunkt (x, y) der gedrehten Ausgabe, die
+            ''' Staerke der Vignettierung eingerechnet (1 + (Gain - 1) * Staerke).</summary>
+            Friend Sub GainsAt(x As Integer, y As Integer, ByRef red As Single, ByRef green As Single, ByRef blue As Single)
+                ' Zurueck in die Lage des Sensors, wie LibRaws flip_index.
+                Dim row, col As Integer
+                If (_flip And 4) <> 0 Then
+                    row = x : col = y
+                Else
+                    row = y : col = x
+                End If
+                If (_flip And 2) <> 0 Then row = _h0 - 1 - row
+                If (_flip And 1) <> 0 Then col = _w0 - 1 - col
+                Dim relH = (col + 0.5) / _w0
+                Dim relV = (row + 0.5) / _h0
+                Dim warpedH = relH, warpedV = relV
+                If _inverse IsNot Nothing Then
+                    ' Eine Karte hinter der Verzeichnung gilt dort, wo dieser Bildpunkt nach dem
+                    ' Entzerren liegt.
+                    Dim dx = col + 0.5 - _w0 / 2.0, dy = row + 0.5 - _h0 / 2.0
+                    Dim ratio = LensDataService.InterpolateKnots(_inverse, Math.Sqrt(dx * dx + dy * dy) / _halfDiagonal)
+                    warpedH = (_w0 / 2.0 + dx * ratio) / _w0
+                    warpedV = (_h0 / 2.0 + dy * ratio) / _h0
+                End If
+                Dim gr = 1.0, gg = 1.0, gb = 1.0
+                For i = 0 To _maps.Length - 1
+                    Dim map = _maps(i)
+                    Dim h = If(_afterWarp(i), warpedH, relH)
+                    Dim v = If(_afterWarp(i), warpedV, relV)
+                    Dim r = CInt(Math.Floor(v * _activeH)), c = CInt(Math.Floor(h * _activeW))
+                    If r < map.Top OrElse r >= map.Bottom OrElse c < map.Left OrElse c >= map.Right Then Continue For
+                    If (r - map.Top) Mod map.RowPitch <> 0 OrElse (c - map.Left) Mod map.ColPitch <> 0 Then Continue For
+                    Dim fv = MapIndex(v, map.OriginV, map.SpacingV, map.PointsV)
+                    Dim fh = MapIndex(h, map.OriginH, map.SpacingH, map.PointsH)
+                    For p = map.Plane To map.Plane + map.Planes - 1
+                        ' Weniger Kartenebenen als Ebenen: die letzte gilt fuer die uebrigen.
+                        Dim gain = BilinearAt(map, fv, fh, Math.Min(p - map.Plane, map.MapPlanes - 1))
+                        Select Case p
+                            Case 0 : gr *= gain
+                            Case 1 : gg *= gain
+                            Case Else : gb *= gain
+                        End Select
+                    Next
+                Next
+                red = CSng(1.0 + (gr - 1.0) * _strength)
+                green = CSng(1.0 + (gg - 1.0) * _strength)
+                blue = CSng(1.0 + (gb - 1.0) * _strength)
+            End Sub
+        End Class
+
+        ''' <summary>Wie <see cref="Bilinear"/>, fuer eine bestimmte Kartenebene und ohne Lambda, weil
+        ''' es je Bildpunkt laeuft.</summary>
+        Private Shared Function BilinearAt(map As GainMap, fv As Double, fh As Double, mapPlane As Integer) As Double
+            Dim v0 = CInt(Math.Floor(fv)), h0 = CInt(Math.Floor(fh))
+            Dim v1 = Math.Min(map.PointsV - 1, v0 + 1), h1 = Math.Min(map.PointsH - 1, h0 + 1)
+            Dim tv = fv - v0, th = fh - h0
+            Dim stride = map.MapPlanes
+            Dim g00 = CDbl(map.Gains((v0 * map.PointsH + h0) * stride + mapPlane))
+            Dim g01 = CDbl(map.Gains((v0 * map.PointsH + h1) * stride + mapPlane))
+            Dim g10 = CDbl(map.Gains((v1 * map.PointsH + h0) * stride + mapPlane))
+            Dim g11 = CDbl(map.Gains((v1 * map.PointsH + h1) * stride + mapPlane))
+            Dim top = g00 + (g01 - g00) * th
+            Dim bottom = g10 + (g11 - g10) * th
+            Return top + (bottom - top) * tv
+        End Function
+
         ''' <summary>Stelle in der Karte als Gleitkommaindex, auf die Karte begrenzt.</summary>
         Private Shared Function MapIndex(relative As Double, origin As Double, spacing As Double, points As Integer) As Double
             If points <= 1 Then Return 0
@@ -337,6 +606,12 @@ Namespace Services
                     End If
                 End While
                 Return Nothing
+            End Function
+
+            ''' <summary>Die erste IFD der Datei (IFD0), oder Nothing.</summary>
+            Public Function FirstIfd() As Dictionary(Of Integer, TiffEntry)
+                Dim nextIfd As Long = 0
+                Return ReadIfd(_firstIfd, nextIfd)
             End Function
 
             Private Function ReadIfd(offset As Long, ByRef nextIfd As Long) As Dictionary(Of Integer, TiffEntry)
