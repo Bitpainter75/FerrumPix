@@ -16,7 +16,9 @@
 # (libraw/build-macos.sh, je Architektur nativ, mit Ladeprobe an den Test-RAWs) und packt diese
 # frischen ein. Sie stehen dann zusaetzlich als Artefakt am Lauf und gehoeren danach ins Build-Repo,
 # samt Pruefsummen in ci/binaries.sha256 und libraw/osx-*/licenses/THIRD-PARTY-libraw.txt - sonst
-# packt der naechste Lauf ohne den Schalter wieder die alten.
+# packt der naechste Lauf ohne den Schalter wieder die alten. Im Artefakt liegt neben HERKUNFT.txt
+# auch LICENSE.libomp.txt (die OpenMP-Laufzeit ist statisch eingebunden); beide gehoeren nach
+# libraw/osx-*/licenses/.
 #
 # LIBHEIF UND LIBJXL (HEIC und JPEG XL) nach demselben Muster: ab Werk die eingecheckten aus
 # packaging/libheif/osx-* und packaging/libjxl/osx-*, mit "bildformate_neu" vorher auf Macs neu
@@ -71,7 +73,8 @@ jobs:
           - arch: x64
             runner: macos-15-intel
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    # Seit libomp mitgebaut wird (Quellarchiv von LLVM, rund 180 MB) mit Reserve.
+    timeout-minutes: 45
     permissions:
       contents: read
 
@@ -84,9 +87,12 @@ jobs:
           ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
 
       # Ein LibRaw-Snapshot (git:<commit>) kommt ohne fertiges configure; build-macos.sh ruft
-      # dann autoreconf, und das braucht autoconf, automake und libtool.
-      - name: Autotools
-        run: brew list autoconf automake libtool >/dev/null 2>&1 || brew install autoconf automake libtool
+      # dann autoreconf, und das braucht autoconf, automake und libtool. cmake braucht der Bau von
+      # libomp; die Laeufer bringen es mit, sonst kommt es aus Homebrew.
+      - name: Autotools und cmake
+        run: |
+          brew list autoconf automake libtool >/dev/null 2>&1 || brew install autoconf automake libtool
+          command -v cmake >/dev/null || brew install cmake
 
       - name: Bauen und pruefen
         run: packaging/libraw/build-macos.sh ${{ matrix.arch }} ${{ inputs.libraw_version }}
@@ -97,6 +103,7 @@ jobs:
           path: |
             packaging/libraw/osx-${{ matrix.arch }}-build/libraw.dylib
             packaging/libraw/osx-${{ matrix.arch }}-build/HERKUNFT.txt
+            packaging/libraw/osx-${{ matrix.arch }}-build/LICENSE.libomp.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -193,6 +200,8 @@ jobs:
             dst="packaging/libraw/osx-$arch"
             cp "$src/libraw.dylib" "$dst/libraw.dylib"
             cp "$src/HERKUNFT.txt" "$dst/licenses/HERKUNFT.txt"
+            test -s "$src/LICENSE.libomp.txt" || { echo "Fehlt im Artefakt: $src/LICENSE.libomp.txt" >&2; exit 1; }
+            cp "$src/LICENSE.libomp.txt" "$dst/licenses/LICENSE.libomp.txt"
             echo "osx-$arch: $(sha256sum "$dst/libraw.dylib" | cut -d' ' -f1)"
           done
 
