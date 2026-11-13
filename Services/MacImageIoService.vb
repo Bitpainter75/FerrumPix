@@ -17,8 +17,9 @@ Namespace Services
     ''' meldet False, und keine der DllImport-Deklarationen unten wird je angefasst. Für diese
     ''' Systeme ändert die Datei damit nichts, der libheif-Weg bleibt dort der einzige.
     '''
-    ''' An der Linie des Projekts ändert das nichts: ImageIO gehört zum Betriebssystem, FerrumPix
-    ''' liefert weiterhin keinen HEVC-Dekoder aus (siehe Klassenkommentar von HeifDecodeService).
+    ''' Das Mac-Paket bringt zusätzlich eine libheif mit libde265 mit; sie ist nur der Rückfall
+    ''' hinter diesem Weg, für Dateien, die ImageIO nicht liefert (siehe Klassenkommentar von
+    ''' HeifDecodeService).
     ''' </summary>
     Public NotInheritable Class MacImageIoService
 

@@ -48,7 +48,11 @@ Namespace Services
         ''' Windows und die portablen Pakete.</summary>
         Private Shared Function TryLoadPreferSystem(assembly As Assembly, searchPath As DllImportSearchPath?, ByRef handle As IntPtr) As Boolean
             For Each candidate In LibraryNames()
-                If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then Return True
+                If NativeLibrary.TryLoad(candidate, assembly, searchPath, handle) Then
+                    If HasSupportedApi(handle) Then Return True
+                    NativeLibrary.Free(handle)
+                    handle = IntPtr.Zero
+                End If
             Next
 
             ' Eine aus dem Finder gestartete .app erbt weder die Shell-Umgebung noch einen
@@ -57,7 +61,11 @@ Namespace Services
             ' .NET-Loaders. Die expliziten Pfade gehoeren noch zur Systembibliothek und haben
             ' deshalb Vorrang vor einer allenfalls mitgelieferten Runtime.
             For Each path In HomebrewLibraryCandidates()
-                If NativeLibrary.TryLoad(path, handle) Then Return True
+                If NativeLibrary.TryLoad(path, handle) Then
+                    If HasSupportedApi(handle) Then Return True
+                    NativeLibrary.Free(handle)
+                    handle = IntPtr.Zero
+                End If
             Next
 
             Return TryLoadBundledLibrary(handle)
@@ -69,7 +77,37 @@ Namespace Services
             ElseIf OperatingSystem.IsMacOS() Then
                 Return {"libmpv.2.dylib", "libmpv.dylib"}
             End If
-            Return {"libmpv.so.2", "libmpv.so"}
+            ' libmpv.so.1 zuletzt: das ist mpv bis 0.34, unter Ubuntu 22.04 und Linux Mint 21 die
+            ' einzige. Alles, was FerrumPix ruft, gibt es dort mit gleicher Signatur und Bedeutung,
+            ' aber erst ab mpv 0.33 (siehe MinimumApiVersion); eine aeltere so.1 weist
+            ' HasSupportedApi ab.
+            Return {"libmpv.so.2", "libmpv.so", "libmpv.so.1"}
+        End Function
+
+        ''' <summary>Die kleinste Fassung der Client-API, mit der FerrumPix arbeitet: 1.109, also mpv
+        ''' 0.33 und 0.34 (libmpv.so.1). Erst dort gibt es den Software-Renderer der Render-API
+        ''' ("sw", MPV_RENDER_PARAM_SW_*), den der Betrachter unter macOS nimmt, und die Felder
+        ''' playlist_entry_id, playlist_insert_id und playlist_insert_num_entries am Ende von
+        ''' mpv_event_end_file, die <see cref="MpvEventEndFile"/> mitliest. mpv 0.32 (API 1.107, unter
+        ''' Debian 11) kennt beides nicht; der Strukturzugriff laese dort ueber das Ende hinaus.
+        ''' libmpv.so.2 meldet 2.x und mehr.</summary>
+        Friend Const MinimumApiVersion As ULong = (1UL << 16) Or 109UL
+
+        <UnmanagedFunctionPointer(CallingConvention.Cdecl)>
+        Private Delegate Function ClientApiVersionFn() As UIntPtr
+
+        ''' <summary>True, wenn die geladene libmpv mindestens <see cref="MinimumApiVersion"/> meldet.
+        ''' Ohne den Export (gibt es seit jeher) gilt sie als ungeeignet.</summary>
+        Private Shared Function HasSupportedApi(handle As IntPtr) As Boolean
+            Dim export As IntPtr
+            If Not NativeLibrary.TryGetExport(handle, "mpv_client_api_version", export) Then Return False
+            Dim version = Marshal.GetDelegateForFunctionPointer(Of ClientApiVersionFn)(export)().ToUInt64()
+            Return IsSupportedApiVersion(version)
+        End Function
+
+        ''' <summary>Die Regel allein, ohne geladene Bibliothek, damit sie sich pruefen laesst.</summary>
+        Friend Shared Function IsSupportedApiVersion(version As ULong) As Boolean
+            Return version >= MinimumApiVersion
         End Function
 
         Private Shared Iterator Function HomebrewLibraryCandidates() As IEnumerable(Of String)
@@ -84,7 +122,11 @@ Namespace Services
 
         Private Shared Function TryLoadBundledLibrary(ByRef handle As IntPtr) As Boolean
             For Each path In BundledLibraryCandidates()
-                If NativeLibrary.TryLoad(path, handle) Then Return True
+                If NativeLibrary.TryLoad(path, handle) Then
+                    If HasSupportedApi(handle) Then Return True
+                    NativeLibrary.Free(handle)
+                    handle = IntPtr.Zero
+                End If
             Next
             handle = IntPtr.Zero
             Return False

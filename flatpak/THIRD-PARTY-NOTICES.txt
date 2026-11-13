@@ -1,13 +1,15 @@
-FerrumPix - Third-party notices
-===============================
+FerrumPix Flatpak - Third-party notices
+=======================================
 
 FerrumPix itself is licensed under the GNU General Public License, version 3
 only. The full text is in the file LICENSE next to this one.
 
-This file lists the third-party components that FerrumPix is built from or
-ships alongside, together with the license each of them is used under. Where a
-license requires a copy or a notice to travel with the binary, that copy is
-either reproduced below or found in the licenses/ folder of this package.
+This file lists the third-party components this Flatpak is built from or ships,
+together with the license each of them is used under. Where a license requires
+a copy or a notice to travel with the binary, that copy is either reproduced
+below or found under /app/share/licenses/ inside the Flatpak. Libraries that come
+from the org.freedesktop.Platform runtime are part of that runtime and carry its
+notices; the one this application relies on directly is named in section 3.
 
 Nothing in this file changes the license of FerrumPix itself.
 
@@ -109,115 +111,58 @@ libraries are part of this package.
   https://github.com/BitMiracle/libtiff.net/blob/master/license.txt
 
 
-3. Bundled native libraries
----------------------------
+3. Native libraries in this Flatpak
+-----------------------------------
+
+The Flatpak manifest builds the following libraries from their unmodified
+source as modules of this Flatpak. It names the exact source archives, commits
+and checksums of each. flatpak-builder places their license texts in
+/app/share/licenses/io.github.bitpainter75.ferrumpix/.
 
   LibRaw
   Copyright (c) 2008-2024 LibRaw LLC
   Used under the GNU Lesser General Public License, version 2.1
   https://www.libraw.org/about
-  Bundled on Windows only. On Linux it comes from the distribution package.
-  License text: licenses/libraw/ in this package.
-
-  Corresponding source for the bundled LibRaw build is the official source
-  release published at https://www.libraw.org/download for the version stated
-  in licenses/libraw/. On Windows the library is built from that unmodified
-  source by us rather than taken as a prebuilt binary; the exact compiler,
-  options and checksums are recorded in licenses/libraw/.
-
-  zlib
-  Copyright (c) 1995-2026 Jean-loup Gailly and Mark Adler
-  Used under the zlib license
-  https://zlib.net/zlib_license.html
-  Bundled on Windows only, statically linked into the LibRaw library, where it
-  is needed to read deflate-compressed floating point DNG files. Version,
-  source URL and checksum are in licenses/libraw/.
-
-  libjpeg
-  Copyright (C) 1991-2024 Thomas G. Lane, Guido Vollbeding
-  Used under the Independent JPEG Group licence
-  https://www.ijg.org/
-  Bundled on Windows only, statically linked into the LibRaw library, where it
-  is needed to read lossy compressed DNG files. Version, source URL and checksum
-  are in licenses/libraw/.
-  This software is based in part on the work of the Independent JPEG Group.
+  Built as a module of this Flatpak from a fixed commit of
+  https://github.com/LibRaw/LibRaw, with zlib, JPEG, Little CMS and OpenMP
+  support. Those four come from the org.freedesktop.Platform runtime and are
+  linked dynamically, not built into LibRaw here. License text, version and
+  source reference: /app/share/licenses/ferrumpix/libraw/.
 
   libmpv (mpv)
   Copyright (c) the mpv developers
   Used under the GNU General Public License, version 2 or later
   https://github.com/mpv-player/mpv/blob/master/LICENSE.GPL
-  Bundled on Windows and in the Flatpak. The other Linux packages take it from
-  the distribution package. On Windows, license texts and the exact build this
-  package ships, including its version, upstream commit and build options, are
-  in licenses/mpv/ in this package.
-
-  Corresponding source for the bundled libmpv build is available from
-  https://github.com/mpv-player/mpv at the commit named in licenses/mpv/.
-
-  In the Flatpak, libmpv 0.41.0 is built from that unmodified source release
-  together with the three libraries below, which it needs and the Flatpak
-  runtime does not provide. Their license texts are in
-  /app/share/licenses/io.github.bitpainter75.ferrumpix/ inside the Flatpak; the
-  Flatpak manifest names the exact source archives, commits and checksums.
+  libmpv 0.41.0, built from that unmodified source release together with the
+  three libraries below, which it needs and the Flatpak runtime does not
+  provide. Its audio and video decoders (FFmpeg) come from the runtime.
 
   libplacebo
   Copyright (c) the libplacebo authors
   Used under the GNU Lesser General Public License, version 2.1 or later
   https://code.videolan.org/videolan/libplacebo
-  Bundled in the Flatpak only, as the renderer of libmpv.
+  The renderer of libmpv.
 
   libass
   Copyright (c) the libass contributors
   Used under the ISC License
   https://github.com/libass/libass
-  Bundled in the Flatpak only, because libmpv cannot be built without it.
-  Subtitles are not shown by this application.
+  Built because libmpv cannot be built without it. Subtitles are not shown by
+  this application.
 
   libXpresent
   Copyright (c) 2001, 2003 Keith Packard; Copyright (c) 2006 Oracle and/or its affiliates
   Used under the permissive X11-style licenses in its COPYING file
   https://gitlab.freedesktop.org/xorg/lib/libxpresent
-  Bundled in the Flatpak only, for the X11 video output of libmpv.
+  For the X11 video output of libmpv.
 
-  libheif
-  Copyright (c) struktur AG and the libheif contributors
-  Used under the GNU Lesser General Public License, version 3 or later
-  https://github.com/strukturag/libheif
-  Bundled on Windows only, where it reads HEIC and HEIF files. On Linux it comes
-  from the distribution package, and macOS reads those files itself. It is loaded
-  dynamically and can be replaced by overwriting libheif.dll. License texts and
-  the exact build this package ships, including versions, source checksums and
-  build options, are in licenses/libheif/ in this package.
-
-  libde265
-  Copyright (c) struktur AG and the libde265 contributors
-  Used under the GNU Lesser General Public License, version 3 or later
-  https://github.com/strukturag/libde265
-  Statically linked into the bundled libheif as its HEVC decoder. The encoder
-  (x265) is deliberately left out, so this application ships no HEIC encoder.
-
-  Corresponding source for both is available from the URLs above at the versions
-  named in licenses/libheif/HERKUNFT.txt; packaging/libheif/build-windows.sh is
-  the build recipe that produced this binary.
+Used from the org.freedesktop.Platform runtime and not shipped in this Flatpak:
 
   libjxl
   Copyright (c) the JPEG XL Project Authors
   Used under the BSD 3-Clause License, with the patent grant in PATENTS
   https://github.com/libjxl/libjxl
-  Bundled on Windows only, where it reads and writes JPEG XL files. On Linux it comes from
-  the distribution package or the Flatpak runtime, on macOS from Homebrew. It is
-  loaded dynamically and can be replaced by overwriting jxl.dll. License texts
-  and the exact build, including the upstream commits and build options, are in
-  licenses/libjxl/ in this package.
-
-  Brotli, Highway and skcms
-  Copyright (c) Google LLC and the respective contributors
-  Brotli under the MIT License, Highway under the Apache License 2.0 (also
-  available under the BSD 3-Clause License), skcms under the BSD 3-Clause License
-  https://github.com/google/brotli, https://github.com/google/highway,
-  https://skia.googlesource.com/skcms
-  Statically linked into the bundled jxl.dll as its compression, SIMD and colour
-  management code.
+  Reads and writes JPEG XL files. It is loaded dynamically from the runtime.
 
 
 4. Data and assets
@@ -308,7 +253,7 @@ The attribution is shown on the map itself. Tiles are fetched following the
 tile usage policy of the OpenStreetMap Foundation:
 https://operations.osmfoundation.org/policies/tiles/
 
-6. Optional external programs
+7. Optional external programs
 -----------------------------
 
 Not part of this package either, and not linked into it: a separate program that
@@ -333,8 +278,9 @@ with the package instead of only being linked. Which component uses which one is
 stated above; the copyright lines belong to the components, not to these texts.
 
 The GPL and LGPL libraries are not repeated here: their texts ship beside the
-libraries themselves (packaging/libraw, packaging/libheif), together with the
-source reference each of them requires.
+libraries themselves, LibRaw's in /app/share/licenses/ferrumpix/libraw/ together
+with its source reference, the texts of mpv, libplacebo, libass and libXpresent
+in /app/share/licenses/io.github.bitpainter75.ferrumpix/.
 
 
 --------------------------------------------------------------------------------
@@ -623,7 +569,7 @@ BSD 3-Clause License
 --------------------------------------------------------------------------------
 Used by: XmpCore (as a port of Adobe's XMP Toolkit SDK, whose text this is) and
 BitMiracle.LibTiff.NET, which carries its own copyright line under the same
-conditions.
+conditions; libjxl from the runtime is under the same licence.
 
 BSD 3-Clause License
 
@@ -654,82 +600,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
---------------------------------------------------------------------------------
-zlib License
---------------------------------------------------------------------------------
-Used by: zlib, bundled with LibRaw.
-
-Copyright notice:
-
- (C) 1995-2026 Jean-loup Gailly and Mark Adler
-
-  This software is provided 'as-is', without any express or implied
-  warranty.  In no event will the authors be held liable for any damages
-  arising from the use of this software.
-
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
-
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not be
-     misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
-
-  Jean-loup Gailly        Mark Adler
-  jloup@gzip.org          madler@alumni.caltech.edu
-
-
-
---------------------------------------------------------------------------------
-Independent JPEG Group License
---------------------------------------------------------------------------------
-Used by: libjpeg, bundled with LibRaw on Windows.
-
-This software is based in part on the work of the Independent JPEG Group.
-
-Copyright notice and conditions, reproduced from the README of the source
-package jpegsrc.v9f:
-
-  The authors make NO WARRANTY or representation, either express or implied,
-  with respect to this software, its quality, accuracy, merchantability, or
-  fitness for a particular purpose.  This software is provided "AS IS", and you,
-  its user, assume the entire risk as to its quality and accuracy.
-
-  This software is copyright (C) 1991-2024, Thomas G. Lane, Guido Vollbeding.
-  All Rights Reserved except as specified below.
-
-  Permission is hereby granted to use, copy, modify, and distribute this
-  software (or portions thereof) for any purpose, without fee, subject to these
-  conditions:
-  (1) If any part of the source code for this software is distributed, then this
-  README file must be included, with this copyright and no-warranty notice
-  unaltered; and any additions, deletions, or changes to the original files
-  must be clearly indicated in accompanying documentation.
-  (2) If only executable code is distributed, then the accompanying
-  documentation must state that "this software is based in part on the work of
-  the Independent JPEG Group".
-  (3) Permission for use of this software is granted only if the user accepts
-  full responsibility for any undesirable consequences; the authors accept
-  NO LIABILITY for damages of any kind.
-
-  These conditions apply to any software derived from or based on the IJG code,
-  not just to the unmodified library.  If you use our work, you ought to
-  acknowledge us.
-
-  Permission is NOT granted for the use of any IJG author's name or company name
-  in advertising or publicity relating to this software or products derived from
-  it.  This software may be referred to only as "the Independent JPEG Group's
-  software".
-
-  We specifically permit and encourage the use of this software as the basis of
-  commercial products, provided that all warranty or liability claims are
-  assumed by the product vendor.
-
-The full README of the source package is included with the Windows packages as
-licenses/libraw/LICENSE.libjpeg.txt.

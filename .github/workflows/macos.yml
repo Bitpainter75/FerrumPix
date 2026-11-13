@@ -18,9 +18,16 @@
 # samt Pruefsummen in ci/binaries.sha256 und libraw/osx-*/licenses/THIRD-PARTY-libraw.txt - sonst
 # packt der naechste Lauf ohne den Schalter wieder die alten.
 #
+# LIBHEIF UND LIBJXL (HEIC und JPEG XL) nach demselben Muster: ab Werk die eingecheckten aus
+# packaging/libheif/osx-* und packaging/libjxl/osx-*, mit "bildformate_neu" vorher auf Macs neu
+# gebaut (libheif/build-macos.sh und libjxl/build-macos.sh, je Architektur nativ, mit Ladeprobe).
+# Die Fassungen stehen in den Windows-Skripten daneben, die Mac-Skripte lesen sie dort. Auch diese
+# frischen gehoeren danach ins Build-Repo, samt Pruefsummen in ci/binaries.sha256. Fehlen sie dort,
+# bricht package.sh ab: ohne den Schalter gibt es dann keine Mac-Pakete.
+#
 # Die Pakete selbst entstehen auf Ubuntu, wie bisher im Release: package.sh setzt GNU-Werkzeuge
 # und eine neue bash voraus, die macOS nicht mitbringt, und dotnet publish baut fuer osx-* auch
-# unter Linux. Nur LibRaw braucht einen Mac.
+# unter Linux. Nur die drei nativen Bibliotheken brauchen einen Mac.
 #
 # Im oeffentlichen Repo, weil macOS-Minuten in einem privaten zehnfach zaehlen.
 
@@ -38,6 +45,10 @@ on:
         type: string
         required: false
         default: ""
+      bildformate_neu:
+        description: "libheif und libjxl vorher auf Macs neu bauen und einpacken (sonst die eingecheckten)"
+        type: boolean
+        default: false
       veroeffentlichen:
         description: "Die ZIPs an das Release anhaengen (sonst nur als Artefakt am Lauf)"
         type: boolean
@@ -89,13 +100,58 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  bildformate:
+    name: libheif und libjxl ${{ matrix.arch }}
+    if: ${{ inputs.bildformate_neu }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      # Nur das Build-Repo: Skripte und Pruefprogramme liegen dort, die Pruefbilder fuer HEIC im
+      # Quellarchiv von libheif.
+      - uses: actions/checkout@v7
+        with:
+          repository: Bitpainter75/FerrumPix-Build
+          path: packaging
+          ssh-key: ${{ secrets.PACKAGING_DEPLOY_KEY }}
+
+      - name: libheif bauen und pruefen
+        run: packaging/libheif/build-macos.sh ${{ matrix.arch }}
+
+      - name: libjxl bauen und pruefen
+        run: packaging/libjxl/build-macos.sh ${{ matrix.arch }}
+
+      # Zwei Pfade, gemeinsamer Elternordner packaging/: im Artefakt liegen sie danach unter
+      # libheif/osx-<arch>-build und libjxl/osx-<arch>-build, jeweils mit licenses/.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bildformate-osx-${{ matrix.arch }}
+          path: |
+            packaging/libheif/osx-${{ matrix.arch }}-build/
+            packaging/libjxl/osx-${{ matrix.arch }}-build/
+          if-no-files-found: error
+          retention-days: 14
+
   pakete:
     name: macOS-ZIPs
     runs-on: ubuntu-24.04
-    needs: [libraw]
-    # Uebersprungenes LibRaw (Schalter aus) haelt nichts auf, ein gescheitertes schon: dann
+    needs: [libraw, bildformate]
+    # Uebersprungene Bauten (Schalter aus) halten nichts auf, ein gescheiterter schon: dann
     # entstuenden Pakete mit der alten Bibliothek, obwohl eine neue verlangt war.
-    if: ${{ always() && (needs.libraw.result == 'success' || needs.libraw.result == 'skipped') }}
+    if: >-
+      ${{ always()
+          && (needs.libraw.result == 'success' || needs.libraw.result == 'skipped')
+          && (needs.bildformate.result == 'success' || needs.bildformate.result == 'skipped') }}
     timeout-minutes: 30
 
     steps:
@@ -138,6 +194,29 @@ jobs:
             cp "$src/libraw.dylib" "$dst/libraw.dylib"
             cp "$src/HERKUNFT.txt" "$dst/licenses/HERKUNFT.txt"
             echo "osx-$arch: $(sha256sum "$dst/libraw.dylib" | cut -d' ' -f1)"
+          done
+
+      - uses: actions/download-artifact@v8
+        if: ${{ inputs.bildformate_neu }}
+        with:
+          path: bildformate-neu
+          pattern: bildformate-osx-*
+
+      # Ebenfalls erst nach der Pruefung. Der Ordner wird ganz ersetzt, damit kein Lizenztext einer
+      # frueheren Fassung neben dem neuen liegen bleibt.
+      - name: Frisch gebaute libheif und libjxl einsetzen
+        if: ${{ inputs.bildformate_neu }}
+        run: |
+          for arch in arm64 x64; do
+            for lib in libheif libjxl; do
+              src="bildformate-neu/bildformate-osx-$arch/$lib/osx-$arch-build"
+              dst="packaging/$lib/osx-$arch"
+              test -s "$src/$lib.dylib" || { echo "Fehlt im Artefakt: $src/$lib.dylib" >&2; exit 1; }
+              rm -rf "$dst"
+              mkdir -p "$dst"
+              cp -R "$src/." "$dst/"
+              echo "$lib osx-$arch: $(sha256sum "$dst/$lib.dylib" | cut -d' ' -f1)"
+            done
           done
 
       - name: Paket - macOS-ZIPs (x64 + arm64)

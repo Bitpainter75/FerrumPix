@@ -23,6 +23,9 @@
 - Moving a large text or watermark in the editor is quicker, most of all when it uses a blend
   mode: only the area its letters and effects cover is redrawn, not its whole frame.
 
+- The Mac version opens and saves JPEG XL pictures without installing anything extra. It also
+  brings its own HEIC reader for the pictures macOS itself cannot open.
+
 ### Fixes
 
 - A location, copyright or title that was stored only in a sidecar file, for example after
@@ -32,6 +35,14 @@
 
 - In the Flatpak, videos did not play and showed no thumbnails; the viewer said mpv was not
   installed, although it is part of the Flatpak.
+
+- The AppImage now brings its own raw, HEIC and JPEG XL libraries, so raw files, HEIC and JPEG XL
+  pictures open on systems where these are too old or missing, such as older Ubuntu and Linux
+  Mint releases. The portable Linux ZIP carries them too, but prefers the ones of the system.
+  FerrumPix also tries the older mpv those systems bring along, so videos should play there too.
+
+- The deb package no longer asks for a raw library that is too old to be used. On such a system
+  it now only installs together with a newer one; the AppImage works there without it.
 
 - Denoising a raw file with the model darkened the edges of bright areas that were brought back
   from overexposure, such as a sky or a lamp. They now stay as they were.

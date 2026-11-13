@@ -31,8 +31,13 @@ Namespace Services
     ''' WOHER DIE BIBLIOTHEK KOMMT, hängt von der Plattform ab:
     '''
     '''   Linux    aus der Paketverwaltung. Arch, Debian und Fedora führen libheif und libde265
-    '''            in ihren Quellen; die Pakete empfehlen sie, erzwingen sie aber nicht.
-    '''   macOS    gar nicht, dort liest ImageIO die Dateien selbst (siehe oben).
+    '''            in ihren Quellen; die Pakete empfehlen sie, erzwingen sie aber nicht. AppImage
+    '''            und portables ZIP bringen eine eigene libheif.so.1 mit libde265 darin mit
+    '''            (packaging/libheif/build-linux.sh); die AppImage nimmt sie zuerst, das ZIP nur
+    '''            als Rueckfall (siehe BundledLibraryOrder).
+    '''   macOS    zuerst ImageIO (siehe oben). Als Rueckfall dahinter bringt das Mac-Paket eine
+    '''            libheif.dylib im Zuschnitt der Windows-Datei mit, unter runtimes/osx-*/native
+    '''            (packaging/libheif/build-macos.sh). Eine libheif aus Homebrew geht ihr vor.
     '''   Windows  MITGELIEFERT, seit dem 26. August 2026. Vorher lag dort nichts bei, mit dem
     '''            Codec als Begründung: HEIC ist in aller Regel HEVC-kodiert, HEVC ist
     '''            patentbelastet, und diese Entscheidung sollte die Distribution treffen.
@@ -260,15 +265,18 @@ Namespace Services
                     candidates = {"libheif.dylib", "libheif.1.dylib"}
                 Else
                     ' Sonamen der verbreiteten Versionen; das nackte libheif.so existiert nur mit
-                    ' Dev-Paket. Kein mitgelieferter Rückfall - siehe Klassenkommentar (HEVC).
+                    ' Dev-Paket. Mitgeliefert ist sie in der AppImage und im portablen ZIP, mit
+                    ' libde265 in derselben Datei (packaging/libheif/build-linux.sh).
                     candidates = {"libheif.so.1", "libheif.so"}
                 End If
 
                 Dim handle As IntPtr
                 ' Der Mutationstest zu dieser Stelle: nimmt man BundledCandidates wieder heraus,
                 ' bleibt die Prüfung "Native Bibliotheken werden dort gesucht, wo das Paket sie
-                ' hinlegt" rot - sie ruft diese Liste per Reflexion ab.
-                For Each candidate In BundledCandidates(candidates)
+                ' hinlegt" rot - sie ruft diese Liste per Reflexion ab. In der AppImage kommt die
+                ' mitgelieferte vor der des Systems (BundledLibraryOrder): Ubuntu 22.04 fuehrt
+                ' libheif 1.12, und nicht ueberall ist sie samt libde265 installiert.
+                For Each candidate In BundledLibraryOrder.Arrange(BundledCandidates(candidates))
                     If NativeLibrary.TryLoad(candidate, handle) Then
                         _loadedLibrary = IO.Path.GetFileName(candidate)
                         Exit For

@@ -418,19 +418,14 @@ Namespace Services
                 End If
 
                 Dim handle As IntPtr
-                Dim geladen As String = Nothing
+                Dim loadedName As String = Nothing
 
+                ' Die Reihenfolge der Wege, gewoehnlich (BundledLibraryOrder):
+                '
                 ' ERST das System: eine vom Paketverwalter gepflegte LibRaw bekommt Sicherheits-
                 ' aktualisierungen und vor allem die Kameraunterstützung neuerer Modelle. Die
                 ' nackten Namen gehen über den Suchpfad des Betriebssystems.
-                For Each candidate In candidates
-                    If NativeLibrary.TryLoad(candidate, handle) Then
-                        geladen = candidate
-                        Exit For
-                    End If
-                    handle = IntPtr.Zero
-                Next
-
+                '
                 ' DANN, unter macOS, dieselben Namen mit vollem Pfad in den Homebrew-Verzeichnissen.
                 ' Der Grund steht bei libmpv genauso: eine aus dem Finder gestartete .app erbt weder
                 ' die Shell-Umgebung noch einen Homebrew-Pfad, und dyld sucht einen Namen ohne
@@ -438,36 +433,32 @@ Namespace Services
                 ' Homebrew unter /opt/homebrew/lib - dort fand FerrumPix eine vorhandene LibRaw also
                 ' nie und blieb wortlos bei der eingebetteten Vorschau. Diese Pfade gehoeren noch zur
                 ' SYSTEMbibliothek und stehen deshalb vor der mitgelieferten.
-                If handle = IntPtr.Zero Then
-                    For Each filePath In HomebrewCandidates(candidates)
-                        If NativeLibrary.TryLoad(filePath, handle) Then
-                            geladen = filePath
-                            Exit For
-                        End If
-                        handle = IntPtr.Zero
-                    Next
-                End If
-
+                '
                 ' DANN die mitgelieferte: Windows und die portablen Pakete haben keine System-
                 ' bibliothek. Sie liegt neben der Anwendung bzw. unter runtimes/<rid>/native -
                 ' ein nackter Name findet sie dort NICHT, es braucht den vollen Pfad.
-                If handle = IntPtr.Zero Then
-                    For Each filePath In BundledCandidates(candidates)
-                        If NativeLibrary.TryLoad(filePath, handle) Then
-                            geladen = Path.GetFileName(filePath)
-                            Exit For
-                        End If
-                        handle = IntPtr.Zero
-                    Next
-                End If
+                '
+                ' IN DER APPIMAGE kommt die mitgelieferte zuerst: dort ist sie die Antwort auf eine
+                ' Systembibliothek, die zu alt ist (LibRaw 0.20 unter Ubuntu 22.04) oder fehlt.
+                Dim attempts As New List(Of String)(candidates)
+                attempts.AddRange(HomebrewCandidates(candidates))
+                attempts.AddRange(BundledCandidates(candidates))
+                For Each candidate In BundledLibraryOrder.Arrange(attempts)
+                    If NativeLibrary.TryLoad(candidate, handle) Then
+                        loadedName = If(BundledLibraryOrder.IsBundledPath(candidate, AppContext.BaseDirectory),
+                                     Path.GetFileName(candidate), candidate)
+                        Exit For
+                    End If
+                    handle = IntPtr.Zero
+                Next
 
                 If handle = IntPtr.Zero Then Return
 
                 ' Ist es die reentrante Variante? Wenn nicht, werden die nativen Aufrufe serialisiert -
                 ' lieber langsamere Thumbnails als sporadische Abstürze.
-                _loadedLibrary = geladen
-                _reentrant = geladen IsNot Nothing AndAlso
-                             (geladen.Contains("_r.") OrElse OperatingSystem.IsWindows() OrElse OperatingSystem.IsMacOS())
+                _loadedLibrary = loadedName
+                _reentrant = loadedName IsNot Nothing AndAlso
+                             (loadedName.Contains("_r.") OrElse OperatingSystem.IsWindows() OrElse OperatingSystem.IsMacOS())
 
                 Try
                     _init = GetExport(Of InitFn)(handle, "libraw_init")

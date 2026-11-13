@@ -6,14 +6,18 @@ redistributes it. LibRaw provides true RAW development in the editor without it 
 
 Bundled version:
 
-  LibRaw 0.22.2
-    Source URL:
-      https://www.libraw.org/data/LibRaw-0.22.2.tar.gz
+  LibRaw snapshot 202611 (reports itself as 0.23.0-Snapshot202611)
+    Source URL (fixed commit a9a14b1970d188c25dade81f8326ff00a6e33649):
+      https://github.com/LibRaw/LibRaw/archive/a9a14b1970d188c25dade81f8326ff00a6e33649.tar.gz
     SHA-256:
-      de86b035655accff8d4010f1a221fdf50d353cb7b1422ba26f14a0db92612cfa
+      453b1311b4825cc1946f114b5a0bcf0d4ad62a52c667dd5cc8b2b70e28342020
+    Build steps:
+      autoreconf -fi (the snapshot ships no configure script)
     Build options:
       --disable-examples --disable-static --enable-zlib --enable-jpeg
       --enable-lcms --enable-openmp
+    zlib, the JPEG library, Little CMS and the OpenMP runtime come from the
+    org.freedesktop.Platform runtime and are linked dynamically.
 
 License notes:
 
