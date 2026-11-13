@@ -1626,11 +1626,14 @@ Namespace Services
             Return ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, annotation)
         End Function
 
+        ''' <param name="followGlyphs">False: auch bei Text der Rahmen samt pauschalem Rand statt der
+        ''' gezeichneten Zeichen. Fuer eine neue Ebenenmaske, die auch Zeichen decken soll, die
+        ''' spaeter im Rahmen dazukommen.</param>
         Public Shared Function ComputeAnnotationDirtyRect(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation,
-                                                          adj As ImageAdjustments) As SKRectI
+                                                          adj As ImageAdjustments, Optional followGlyphs As Boolean = True) As SKRectI
             If annotation Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
             annotation = TransformAnnotationForGeometry(annotation, adj, sourceWidth, sourceHeight)
-            Return ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, annotation)
+            Return ComputeAnnotationDirtyRectCore(sourceWidth, sourceHeight, annotation, followGlyphs)
         End Function
 
         ''' <summary>
@@ -1660,7 +1663,8 @@ Namespace Services
             Return ComputeAnnotationDirtyRect(sourceWidth, sourceHeight, pseudo, adj)
         End Function
 
-        Private Shared Function ComputeAnnotationDirtyRectCore(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation) As SKRectI
+        Private Shared Function ComputeAnnotationDirtyRectCore(sourceWidth As Integer, sourceHeight As Integer, annotation As ImageAnnotation,
+                                                               Optional followGlyphs As Boolean = True) As SKRectI
             If annotation Is Nothing OrElse sourceWidth <= 0 OrElse sourceHeight <= 0 Then Return SKRectI.Empty
             Dim kind = If(annotation.Kind, "Text").Trim().ToLowerInvariant()
             If IsPaintKind(kind) Then
@@ -1700,6 +1704,21 @@ Namespace Services
             End If
 
             Dim rect = ComputeAnnotationRect(sourceWidth, sourceHeight, kind, annotation)
+            Dim frame = rect
+            ' Ein gerader TEXT malt nur seine Zeichen: Rahmen und pauschaler Rand sind fuer ihn viel
+            ' zu gross (siehe ComputeTextInkDirtyRect). Was sich so nicht sicher sagen laesst, geht
+            ' den allgemeinen Weg darunter.
+            ' Ein Wasserzeichen ohne Bild zeichnet ebenso nur Text, mit "FerrumPix", wenn keiner steht.
+            Dim inkText As String = Nothing
+            If kind = "text" Then
+                If Not String.IsNullOrWhiteSpace(annotation.Text) Then inkText = If(annotation.DisplayText(), "")
+            ElseIf kind = "watermark" AndAlso String.IsNullOrWhiteSpace(annotation.ImagePath) Then
+                inkText = If(String.IsNullOrWhiteSpace(annotation.Text), "FerrumPix", annotation.DisplayText())
+            End If
+            If inkText IsNot Nothing AndAlso followGlyphs Then
+                Dim ink = ComputeTextInkDirtyRect(sourceWidth, sourceHeight, annotation, inkText, rect)
+                If ink.HasValue Then Return ink.Value
+            End If
             ' FREIER PFAD: seine Punkte duerfen ueber das Objektrechteck hinausreichen (ein Griff
             ' traegt die Kurve nach aussen, und ein gezogener Stuetzpunkt wird bewusst nicht
             ' geklemmt). Das Rechteck allein waere dann zu klein, und der Teil ausserhalb bliebe beim
@@ -1750,13 +1769,17 @@ Namespace Services
             End If
             rect = RotationBounds(rect, annotation.RotationDegrees)
 
-            Dim extent = Math.Max(rect.Width, rect.Height)
             Dim effectPad = Math.Max(8.0F, annotation.StrokeWidth * 3.0F)
             ' Text an Pfad: die Glyphen stehen SENKRECHT zum Pfad und ragen bis zu einer
             ' Schrifthoehe ueber das Layout-Rechteck hinaus (Baseline liegt AUF dem Pfad).
+            ' Der Ueberstand kommt ZU den Effekten hinzu, nicht als einer von ihnen: ein Schatten
+            ' faellt auch von einem Zeichen, das ueber den Rahmen ragt. Als Maximum gerechnet blieb
+            ' am Kreis mit Schatten ein Rand stehen (Pruefung "Text: das enge Auffrisch-Rechteck").
+            ' Das Anderthalbfache, weil der Rand nach der Drehung dazukommt.
             If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) Then
                 ' EFFEKTIVE Groesse: der Kreis-Fit kann die Schrift ueber FontSizePixels hinaus wachsen lassen.
-                effectPad = Math.Max(effectPad, annotation.FontSizePixels * ComputeTextPathFitRatio(annotation) * 1.2F)
+                Dim pathPad = annotation.FontSizePixels * ComputeTextPathFitRatio(annotation) * 1.2F + Math.Max(0.0F, annotation.StrokeWidth)
+                rect.Inflate(pathPad * 1.5F, pathPad * 1.5F)
             End If
             If annotation.ShadowEnabled Then
                 Dim objSize = Math.Max(1.0F, Math.Min(rect.Width, rect.Height))
@@ -1782,7 +1805,174 @@ Namespace Services
                 effectPad = Math.Max(effectPad, 24.0F)
             End If
 
-            Return ClampRectToBitmap(InflateToRectI(rect, effectPad), sourceWidth, sourceHeight)
+            rect.Inflate(effectPad, effectPad)
+            If HasWarp(annotation) Then rect = WarpedAnnotationBounds(annotation, frame, rect, sourceWidth, sourceHeight)
+            Return ClampRectToBitmap(InflateToRectI(rect, 0.0F), sourceWidth, sourceHeight)
+        End Function
+
+        ''' <summary>Wohin eine VERZERRUNG das Rechteck eines Objekts traegt. Ohne sie blieb das Rechteck
+        ''' das unverzerrte, und was die Verzerrung nach aussen schob, lag ausserhalb: beim Zusammenlegen
+        ''' abgeschnitten, in einem Patch daneben vom Zeichnen ausgenommen (QuickReject).
+        '''
+        ''' Die eigene Verzerrung steht in Prozent des Objektrahmens (RenderAnnotationToLayer), sie wird
+        ''' an einem dichten Raster ueber dem Rechteck abgetastet. Das gezeichnete Netz liegt auf einem
+        ''' anderen Raster (dem der Ebene); deshalb kommt die groesste Maschenweite des abgetasteten
+        ''' Rasters als Rand dazu. Die Verzerrung des BILDES haengt an der Geometriekette, die hier nicht
+        ''' bekannt ist: dann gilt das ganze Bild. Ein so verzerrtes Objekt rechnet ohnehin im
+        ''' Vollrender (SelectedAnnotationsNeedFullRender).</summary>
+        Private Shared Function WarpedAnnotationBounds(annotation As ImageAnnotation, frame As SKRect, bounds As SKRect,
+                                                       sourceWidth As Integer, sourceHeight As Integer) As SKRect
+            If annotation.Warp IsNot Nothing AndAlso Not annotation.Warp.IsEmpty Then
+                Return SKRect.Union(bounds, New SKRect(0, 0, sourceWidth, sourceHeight))
+            End If
+            Dim warp = annotation.OwnWarp
+            If warp Is Nothing OrElse warp.IsEmpty Then Return bounds
+            Dim rx = CSng(Math.Floor(frame.Left)), ry = CSng(Math.Floor(frame.Top))
+            Dim rw = Math.Max(1, CInt(Math.Round(frame.Width)))
+            Dim rh = Math.Max(1, CInt(Math.Round(frame.Height)))
+            Const Steps As Integer = 64
+            Dim minX = Single.MaxValue, minY = Single.MaxValue
+            Dim maxX = Single.MinValue, maxY = Single.MinValue
+            Dim mesh = 0.0F
+            Dim previousRow(Steps) As SKPoint
+            For rowIdx = 0 To Steps
+                Dim previous As SKPoint = Nothing
+                For colIdx = 0 To Steps
+                    Dim px = bounds.Left + colIdx / CSng(Steps) * bounds.Width
+                    Dim py = bounds.Top + rowIdx / CSng(Steps) * bounds.Height
+                    Dim moved = MovePoint(warp, px - rx, py - ry, rw, rh)
+                    Dim z = New SKPoint(moved.X + rx, moved.Y + ry)
+                    minX = Math.Min(minX, z.X) : maxX = Math.Max(maxX, z.X)
+                    minY = Math.Min(minY, z.Y) : maxY = Math.Max(maxY, z.Y)
+                    If colIdx > 0 Then mesh = Math.Max(mesh, SKPoint.Distance(z, previous))
+                    If rowIdx > 0 Then mesh = Math.Max(mesh, SKPoint.Distance(z, previousRow(colIdx)))
+                    previous = z
+                    previousRow(colIdx) = z
+                Next
+            Next
+            If maxX < minX OrElse maxY < minY Then Return New SKRect(0, 0, sourceWidth, sourceHeight)
+            Dim pad = mesh + 2.0F
+            Return New SKRect(minX - pad, minY - pad, maxX + pad, maxY + pad)
+        End Function
+
+        ''' <summary>Gehrungsgrenze, die Skia einer Kontur ohne eigene Angabe gibt: eine spitze Ecke
+        ''' ragt hoechstens um das Vierfache der halben Konturbreite ueber den Umriss.</summary>
+        Private Const DefaultStrokeMiterLimit As Single = 4.0F
+
+        ''' <summary>Rand um die gemessenen Zeichenkanten: Kantenglaettung, gerundete Glyphengrenzen
+        ''' und das lineare Abtasten einer gedrehten Objekt-Bitmap im Kompositor.</summary>
+        Private Const TextInkMargin As Single = 3.0F
+
+        ''' <summary>DIE FLAECHE, DIE EIN GERADER TEXT WIRKLICH BEMALT, samt Kontur, Schatten und
+        ''' Schein, nach Spiegelung und Drehung um die Rahmenmitte. Nothing, wenn sich das nicht sicher
+        ''' sagen laesst; dann rechnet der allgemeine Weg mit Rahmen und pauschalem Rand.
+        '''
+        ''' Der allgemeine Weg nimmt den ganzen Rahmen, den Ueberstand der Zeilen mit einem halben
+        ''' Geviert Rand (MeasureAnnotationTextExtent) und die Effektraender ueber die groessere
+        ''' Kante. Bei einer grossen Zahl in einem hohen Rahmen war das das Doppelte bis Dreifache der
+        ''' bemalten Flaeche, und jeder Zugschritt im gebackenen Block rechnete die ganze Szene darin
+        ''' neu. Das Rechteck bestimmt ausserdem, welche Objekte ein Patch zeichnet (QuickReject), wie
+        ''' weit die Mischflaeche reicht und welche Ebenen ein Zusammenlegen erfasst.
+        '''
+        ''' Gerechnet wird mit denselben Groessen wie beim Zeichnen: Zeilen und Ausrichtung wie in
+        ''' DrawWrappedText (MeasureAnnotationTextInk mit der Rahmenbreite), Effekte bezogen auf die
+        ''' kleinere Kante des RAHMENS und skaliert um seine Mitte (DrawAnnotationEffects und
+        ''' DrawSilhouetteEffects). Jeder Rand ist eine obere Schranke:
+        ''' - Kontur: mit Lage aussen oder innen doppelt so breit gezeichnet, an spitzen Ecken bis zur
+        '''   Gehrungsgrenze, dazu drei Sigma des weichen Rands.
+        ''' - Schatten: die Silhouette um die Mitte skaliert und versetzt, drei Sigma Weichzeichnung,
+        '''   dazu ein Bildpunkt je Skalierungsstufe fuer das Abtasten der vergroesserten Maske.
+        ''' - Schein: Dilate und drei Sigma, dazu acht Punkte des verkleinerten Rasters, auf dem er
+        '''   gerechnet wird (Abtasten beim Verkleinern und Vergroessern, Runden des Dilate). Der
+        '''   Massstab dieses Rasters haengt an der Maskengroesse; genommen wird der kleinste, den eine
+        '''   Maske in Bild- oder Objekt-Bitmap erreichen kann.
+        ''' Innenschatten und inneres Gluehen bleiben in der Silhouette.
+        '''
+        ''' Ausgenommen sind Text am Pfad (die Zeichen stehen auf einer Kurve), Objekte mit eigenen
+        ''' Anpassungen (eine Weichzeichnung traegt ueber die Zeichen hinaus, und die Ebene haengt am
+        ''' Rechteck), verzerrte Objekte und ein Text ohne sichtbares Zeichen.
+        '''
+        ''' Gilt fuer Textobjekte und fuer Wasserzeichen ohne Bild: beide zeichnet DrawAnnotationText
+        ''' gleich, das Wasserzeichen nur an einem Rahmen, den sein Anker festlegt.</summary>
+        ''' <param name="text">Der gezeichnete Text, beim Wasserzeichen ohne eigenen Text "FerrumPix".</param>
+        Private Shared Function ComputeTextInkDirtyRect(sourceWidth As Integer, sourceHeight As Integer,
+                                                        annotation As ImageAnnotation, text As String,
+                                                        frame As SKRect) As SKRectI?
+            If Not String.IsNullOrWhiteSpace(annotation.TextPathKind) OrElse
+               Not String.IsNullOrWhiteSpace(annotation.PathPoints) Then Return Nothing
+            If HasObjectAdjustments(annotation) OrElse HasWarp(annotation) Then Return Nothing
+            Dim fontSize = Math.Max(8.0F, annotation.FontSizePixels)
+            Dim ink = MeasureAnnotationTextInk(text, annotation.FontFamily, fontSize,
+                                               annotation.LetterSpacingPercent, annotation.Bold, annotation.Italic,
+                                               0.0F, annotation.TextAlignment, frame.Width)
+            If ink.IsEmpty Then Return Nothing
+            ink.Offset(frame.Left, frame.Top)
+
+            Dim strokeReach = 0.0F
+            If annotation.StrokeWidth > 0 Then
+                Dim strokeWidth = Math.Max(1.0F, annotation.StrokeWidth)
+                Dim widthFactor = If(NormalizedStrokePosition(annotation.StrokePosition) = "Center", 1.0F, 2.0F)
+                strokeReach = strokeWidth * widthFactor / 2.0F * DefaultStrokeMiterLimit +
+                              3.0F * StrokeBlurSigma(annotation.StrokeHardness, strokeWidth)
+            End If
+            Dim silhouette = SKRect.Inflate(ink, strokeReach + TextInkMargin, strokeReach + TextInkMargin)
+            Dim painted = silhouette
+
+            Dim objSize = Math.Max(1.0F, Math.Min(frame.Width, frame.Height))
+            If annotation.ShadowEnabled Then
+                Dim scale = Clamp(annotation.ShadowSizePercent, 10, 400) / 100.0F
+                Dim blur = objSize * Clamp(annotation.ShadowBlur, 0, 100) / 100.0F * ShadowBlurSigmaFactor
+                Dim dx = objSize * annotation.ShadowOffsetXPercent / 100.0F
+                Dim dy = objSize * annotation.ShadowOffsetYPercent / 100.0F
+                Dim shadow = New SKRect(frame.MidX + (silhouette.Left - frame.MidX) * scale + dx,
+                                        frame.MidY + (silhouette.Top - frame.MidY) * scale + dy,
+                                        frame.MidX + (silhouette.Right - frame.MidX) * scale + dx,
+                                        frame.MidY + (silhouette.Bottom - frame.MidY) * scale + dy)
+                Dim shadowPad = 3.0F * blur + 2.0F * Math.Max(1.0F, scale) + TextInkMargin
+                shadow.Inflate(shadowPad, shadowPad)
+                painted.Union(shadow)
+            End If
+            If annotation.GlowEnabled Then
+                Dim glowReach = objSize * Clamp(annotation.GlowBlur, 0, 100) / 100.0F * 1.5F
+                Dim glowDilate = Math.Max(0, CInt(Math.Round(glowReach * 0.5F)))
+                Dim glowSigma = Math.Max(0.1F, glowReach * 0.17F)
+                ' Die groesste denkbare Maske: das ganze Bild (gedrehtes Objekt) oder die
+                ' Objekt-Bitmap des Kompositors, die um Ueberstand und alle Effektraender waechst.
+                Dim maskBound = Math.Max(Math.Max(frame.Width, frame.Height), Math.Max(silhouette.Width, silhouette.Height)) +
+                                2.0F * (fontSize + glowReach * 1.7F + objSize + strokeReach + 16.0F)
+                Dim longestSide = Math.Max(CSng(Math.Max(sourceWidth, sourceHeight)), maskBound)
+                Dim glowScale = 1.0F
+                If glowDilate > MaxGlowDilatePx Then glowScale = MaxGlowDilatePx / CSng(glowDilate)
+                If longestSide > MaxGlowDim Then glowScale = Math.Min(glowScale, MaxGlowDim / longestSide)
+                Dim glowPad = glowDilate + 3.0F * glowSigma + 8.0F / glowScale + TextInkMargin
+                painted.Union(SKRect.Inflate(silhouette, glowPad, glowPad))
+            End If
+
+            ' Erst spiegeln, dann drehen, beides um die Rahmenmitte - die Reihenfolge der Leinwand in
+            ' DrawAnnotationOnCanvas, von innen nach aussen gelesen.
+            If annotation.FlipHorizontal Then
+                painted = New SKRect(2.0F * frame.MidX - painted.Right, painted.Top, 2.0F * frame.MidX - painted.Left, painted.Bottom)
+            End If
+            If annotation.FlipVertical Then
+                painted = New SKRect(painted.Left, 2.0F * frame.MidY - painted.Bottom, painted.Right, 2.0F * frame.MidY - painted.Top)
+            End If
+            If Math.Abs(annotation.RotationDegrees) > 0.01F Then
+                Dim radians = annotation.RotationDegrees * Math.PI / 180.0
+                Dim cos = Math.Cos(radians), sin = Math.Sin(radians)
+                Dim xs = {painted.Left, painted.Right, painted.Right, painted.Left}
+                Dim ys = {painted.Top, painted.Top, painted.Bottom, painted.Bottom}
+                Dim minX = Single.MaxValue, minY = Single.MaxValue
+                Dim maxX = Single.MinValue, maxY = Single.MinValue
+                For i = 0 To 3
+                    Dim px = xs(i) - frame.MidX, py = ys(i) - frame.MidY
+                    Dim x = CSng(frame.MidX + px * cos - py * sin)
+                    Dim y = CSng(frame.MidY + px * sin + py * cos)
+                    minX = Math.Min(minX, x) : maxX = Math.Max(maxX, x)
+                    minY = Math.Min(minY, y) : maxY = Math.Max(maxY, y)
+                Next
+                painted = New SKRect(minX - TextInkMargin, minY - TextInkMargin, maxX + TextInkMargin, maxY + TextInkMargin)
+            End If
+            Return ClampRectToBitmap(InflateToRectI(painted, 0.0F), sourceWidth, sourceHeight)
         End Function
 
         Public Shared Function ComputePixelPaintDirtyRect(sourceWidth As Integer,

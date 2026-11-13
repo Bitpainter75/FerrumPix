@@ -20,6 +20,9 @@
 - The symbol on the Denoise with model button lights up in the accent colour while the picture
   is denoised with the model.
 
+- Moving a large text or watermark in the editor is quicker, most of all when it uses a blend
+  mode: only the area its letters and effects cover is redrawn, not its whole frame.
+
 ### Fixes
 
 - A location, copyright or title that was stored only in a sidecar file, for example after

@@ -4829,6 +4829,9 @@ Namespace ViewModels
         ''' Kasten heraus, und genau dort haette die Maske es beschnitten. Schatten und Schein sind
         ''' darin enthalten, und das ist richtig so - sie gehoeren zum Objekt.
         '''
+        ''' Bei Text gilt der RAHMEN samt Rand, nicht die gezeichneten Zeichen (followGlyphs:=False):
+        ''' sonst deckte die Maske ein Zeichen, das spaeter im Rahmen dazugeschrieben wird, nicht mehr.
+        '''
         ''' Gebaut wird sie ueber denselben Weg wie eine Auswahlmaske, nur mit dem Objektrechteck
         ''' anstelle der Auswahl: auf einer KOPIE der Anpassungen, damit eine laufende Auswahl
         ''' unberuehrt bleibt. Damit liegt sie automatisch im Quellraum und traegt dieselben
@@ -4837,7 +4840,8 @@ Namespace ViewModels
             If annotation Is Nothing Then Return Nothing
             Dim sceneSize = GetCurrentScenePixelSize()
             If sceneSize.Width <= 0 OrElse sceneSize.Height <= 0 Then Return Nothing
-            Dim rect = ComputeSceneDirtyRectFor(annotation)
+            Dim rect = ImageProcessor.ComputeAnnotationDirtyRect(sceneSize.Width, sceneSize.Height, annotation,
+                                                                 GetCurrentAdjustments(forPreview:=True), followGlyphs:=False)
             If rect.Width <= 0 OrElse rect.Height <= 0 Then Return Nothing
             Dim adj = BuildAdjustmentsFromFields()
             adj.SelectionMaskPngBase64 = ""
