@@ -14,10 +14,10 @@ Namespace Services
     '''
     ''' WOHER DIE BIBLIOTHEK KOMMT:
     '''
-    '''   Linux    aus der Paketverwaltung; die Flatpak-Laufzeit bringt sie selbst mit. AppImage
-    '''            und portables ZIP liefern eine libjxl.so.0.13 mit, gebaut wie die jxl.dll als
-    '''            eine Datei mit Faden-Bibliothek darin (packaging/libjxl/build-linux.sh); die
-    '''            mitgelieferte geht der des Systems vor (BundledLibraryOrder).
+    '''   Linux    AppImage, portables ZIP (und damit AUR), deb und rpm liefern eine
+    '''            libjxl.so.0.13 mit, gebaut wie die jxl.dll als eine Datei mit Faden-Bibliothek
+    '''            darin (packaging/libjxl/build-linux.sh); sie geht der des Systems vor
+    '''            (BundledLibraryOrder). Der Flatpak nimmt libjxl aus seiner Laufzeit.
     '''   macOS    MITGELIEFERT als libjxl.dylib unter runtimes/osx-*/native, eine Datei mit
     '''            Faden-Bibliothek darin wie die jxl.dll (packaging/libjxl/build-macos.sh). Sie
     '''            geht einer libjxl aus Homebrew vor.

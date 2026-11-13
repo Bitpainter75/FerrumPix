@@ -8,17 +8,18 @@ Namespace Services
     ''' In welcher Reihenfolge die Ladewege fuer LibRaw, libheif und libjxl ihre Kandidaten probieren.
     '''
     ''' DIE MITGELIEFERTE KOMMT UEBERALL ZUERST, auf jeder Plattform und in jedem Paket, das eine
-    ''' mitbringt (Windows, macOS, AppImage, portables ZIP und damit das AUR-Paket). Die Bibliothek
-    ''' des Systems oder aus Homebrew ist nur noch der Rueckfall, falls die eigene fehlt oder nicht
-    ''' laedt. Der Grund ist der Support: auf jedem Rechner entwickelt und dekodiert dieselbe Fassung,
+    ''' mitbringt. Die Bibliothek des Systems oder aus Homebrew ist nur noch der Rueckfall, falls die
+    ''' eigene fehlt oder nicht laedt. Der Grund ist der Support: auf jedem Rechner entwickelt und dekodiert dieselbe Fassung,
     ''' ein Befund laesst sich also ohne die Frage nachstellen, welche Bibliothek gerade geladen ist.
     ''' Bei LibRaw kommt dazu, dass die mitgelieferte ein Snapshot ist und Kameras kennt, die das
     ''' letzte Release der Distribution noch nicht kennt (Nikon High Efficiency etwa), und dass Ubuntu
     ''' 22.04 und Linux Mint 21 nur LibRaw 0.20 (Soname 20, den FerrumPix nicht laedt), libheif 1.12
     ''' und gar keine libjxl fuehren.
     '''
-    ''' Pakete ohne eigene Datei (deb, rpm) laden weiter die des Systems, ebenso das Flatpak, das die
-    ''' Bibliotheken als eigene Module mitbringt und nicht unter dem Verzeichnis der Anwendung ablegt.
+    ''' Mit eigenen Dateien kommen Windows, macOS, AppImage, portables ZIP (und damit AUR), deb und
+    ''' rpm. Nur der Flatpak bringt LibRaw als eigenes Modul mit und nimmt libheif und libjxl aus
+    ''' seiner Laufzeit; keine davon liegt unter dem Verzeichnis der Anwendung, er laedt also ueber
+    ''' den Suchpfad.
     ''' </summary>
     Friend NotInheritable Class BundledLibraryOrder
         Private Sub New()

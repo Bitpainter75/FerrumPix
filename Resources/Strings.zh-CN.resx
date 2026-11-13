@@ -11625,13 +11625,13 @@
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>已移除 {0} 张人脸</value>
   </data>
-  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
-    <value>LibRaw 用于冲印 RAW 文件。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP（AUR 软件包也基于它）中随程序附带最新版本，并优先于系统中的 LibRaw 使用，使每台电脑的冲印结果一致。deb 和 rpm 从软件包管理器获取它，Flatpak 自带一份。缺少它时，RAW 文件显示相机内嵌的预览图。</value>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
+    <value>LibRaw 用于冲印 RAW 文件。每个软件包都附带最新版本，并优先于系统中的 LibRaw 使用，使每台电脑的冲印结果一致；Flatpak 会自行构建同一版本。缺少它时，RAW 文件显示相机内嵌的预览图。</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
-    <value>libheif 用于读取 HEIC 和 HEIF 文件。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP（AUR 软件包也基于它）中随程序附带，并优先于系统中的 libheif 使用；macOS 会先使用系统自带的读取功能。deb 和 rpm 从软件包管理器获取它，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
+    <value>libheif 用于读取 HEIC 和 HEIF 文件。除 Flatpak 外，每个软件包都附带它，并优先于系统中的 libheif 使用；macOS 会先使用系统自带的读取功能，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
   </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
-    <value>libjxl 用于读写 JPEG XL 文件，采用 BSD 许可证。在 Windows 和 macOS、AppImage 以及便携版 Linux ZIP（AUR 软件包也基于它）中随程序附带，并优先于系统中的 libjxl 使用。deb 和 rpm 从软件包管理器获取它，Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
+    <value>libjxl 用于读写 JPEG XL 文件，采用 BSD 许可证。除 Flatpak 外，每个软件包都附带它，并优先于系统中的 libjxl 使用；Flatpak 则从其运行时获取。缺少它时，这类文件只是无法打开，其他功能照常工作。</value>
   </data>
 </root>

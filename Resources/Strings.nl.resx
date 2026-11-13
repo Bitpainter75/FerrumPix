@@ -11667,13 +11667,13 @@
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>{0} gezichten verwijderd</value>
   </data>
-  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
-    <value>LibRaw ontwikkelt RAW-bestanden. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP, waarop ook het AUR-pakket is gebouwd, wordt een actuele versie meegeleverd en vóór een LibRaw van het systeem gebruikt, zodat elke computer hetzelfde ontwikkelt. deb en rpm halen het uit het pakketbeheer, de Flatpak brengt het zelf mee. Ontbreekt het, dan tonen RAW-bestanden de ingebedde voorvertoning van de camera.</value>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
+    <value>LibRaw ontwikkelt RAW-bestanden. Elk pakket levert een actuele versie mee en gebruikt die vóór een LibRaw van het systeem, zodat elke computer hetzelfde ontwikkelt; de Flatpak bouwt dezelfde versie zelf. Ontbreekt het, dan tonen RAW-bestanden de ingebedde voorvertoning van de camera.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
-    <value>libheif leest HEIC- en HEIF-bestanden. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP, waarop ook het AUR-pakket is gebouwd, wordt het meegeleverd en vóór een libheif van het systeem gebruikt; macOS vraagt eerst zijn eigen lezer. deb en rpm halen het uit het pakketbeheer, de Flatpak uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
+    <value>libheif leest HEIC- en HEIF-bestanden. Elk pakket behalve de Flatpak levert het mee en gebruikt het vóór een libheif van het systeem; macOS vraagt eerst zijn eigen lezer, de Flatpak haalt het uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
   </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
-    <value>libjxl leest en schrijft JPEG XL-bestanden en valt onder de BSD-licentie. Op Windows en macOS, in de AppImage en in de draagbare Linux-ZIP, waarop ook het AUR-pakket is gebouwd, wordt het meegeleverd en vóór een libjxl van het systeem gebruikt. deb en rpm halen het uit het pakketbeheer, de Flatpak uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
+    <value>libjxl leest en schrijft JPEG XL-bestanden en valt onder de BSD-licentie. Elk pakket behalve de Flatpak levert het mee en gebruikt het vóór een libjxl van het systeem; de Flatpak haalt het uit zijn runtime. Ontbreekt het, dan blijven zulke bestanden gesloten en werkt al het andere ongewijzigd.</value>
   </data>
 </root>

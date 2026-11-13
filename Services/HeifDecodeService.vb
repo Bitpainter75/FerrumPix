@@ -30,11 +30,10 @@ Namespace Services
     '''
     ''' WOHER DIE BIBLIOTHEK KOMMT, hängt von der Plattform ab:
     '''
-    '''   Linux    aus der Paketverwaltung. Arch, Debian und Fedora führen libheif und libde265
-    '''            in ihren Quellen; die Pakete empfehlen sie, erzwingen sie aber nicht. AppImage
-    '''            und portables ZIP bringen eine eigene libheif.so.1 mit libde265 darin mit
-    '''            (packaging/libheif/build-linux.sh); die mitgelieferte geht der des Systems vor
-    '''            (siehe BundledLibraryOrder).
+    '''   Linux    AppImage, portables ZIP (und damit AUR), deb und rpm bringen eine eigene
+    '''            libheif.so.1 mit libde265 darin mit (packaging/libheif/build-linux.sh); sie geht
+    '''            der des Systems vor (siehe BundledLibraryOrder), die nur noch Rueckfall ist. Der
+    '''            Flatpak nimmt libheif aus seiner Laufzeit.
     '''   macOS    zuerst ImageIO (siehe oben). Als Rueckfall dahinter bringt das Mac-Paket eine
     '''            libheif.dylib im Zuschnitt der Windows-Datei mit, unter runtimes/osx-*/native
     '''            (packaging/libheif/build-macos.sh). Sie geht einer libheif aus Homebrew vor.

@@ -11667,13 +11667,13 @@
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>{0} 件の顔を削除しました</value>
   </data>
-  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
-    <value>LibRaw は RAW ファイルを現像します。Windows と macOS、AppImage、ポータブル版 Linux ZIP（AUR パッケージもこれを基にしています）には最新版が同梱され、システムの LibRaw より優先して使われるため、どのコンピューターでも同じように現像されます。deb と rpm はパッケージマネージャーから入手し、Flatpak は独自のものを持っています。ない場合、RAW ファイルにはカメラの埋め込みプレビューが表示されます。</value>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
+    <value>LibRaw は RAW ファイルを現像します。どのパッケージにも最新版が同梱され、システムの LibRaw より優先して使われるため、どのコンピューターでも同じように現像されます。Flatpak は同じ版を自分でビルドします。ない場合、RAW ファイルにはカメラの埋め込みプレビューが表示されます。</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
-    <value>libheif は HEIC と HEIF ファイルを読み込みます。Windows と macOS、AppImage、ポータブル版 Linux ZIP（AUR パッケージもこれを基にしています）には同梱され、システムの libheif より優先して使われます。macOS ではまずシステム自身の読み込み機能を使います。deb と rpm はパッケージマネージャーから、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
+    <value>libheif は HEIC と HEIF ファイルを読み込みます。Flatpak 以外のどのパッケージにも同梱され、システムの libheif より優先して使われます。macOS ではまずシステム自身の読み込み機能を使い、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
   </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
-    <value>libjxl は JPEG XL ファイルを読み書きし、BSD ライセンスで提供されています。Windows と macOS、AppImage、ポータブル版 Linux ZIP（AUR パッケージもこれを基にしています）には同梱され、システムの libjxl より優先して使われます。deb と rpm はパッケージマネージャーから、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
+    <value>libjxl は JPEG XL ファイルを読み書きし、BSD ライセンスで提供されています。Flatpak 以外のどのパッケージにも同梱され、システムの libjxl より優先して使われます。Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
   </data>
 </root>

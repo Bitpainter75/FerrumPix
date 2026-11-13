@@ -11,10 +11,9 @@ Namespace Services
     ''' JPEG-Vorschau zu lesen. Bewusst dynamisch geladen statt über NuGet gebunden - die Bindings
     ''' liefern keine Binaries für macOS/ARM64 und die Linux-Binary ist an Ubuntus glibc gebunden.
     '''
-    ''' Reihenfolge: ERST die Bibliothek des Systems (deb/rpm/AUR verlangen sie, der Flatpak baut
-    ''' sie mit), DANN die mitgelieferte neben der Anwendung. Die des Systems bekommt Sicherheits-
-    ''' aktualisierungen und die Kameraunterstützung neuerer Modelle; die mitgelieferte ist der
-    ''' Rückfall für Windows und die portablen Pakete.
+    ''' Reihenfolge: ERST die mitgelieferte neben der Anwendung (jedes Paket ausser dem Flatpak
+    ''' bringt denselben Snapshot mit), DANN die des Systems als Rueckfall. Der Flatpak baut den
+    ''' Snapshot als eigenes Modul und findet ihn ueber den Suchpfad (BundledLibraryOrder).
     '''
     ''' Fehlt beides, meldet IsAvailable False und ALLES läuft wie bisher über RawPreviewService
     ''' (eingebettete Vorschau) - kein Absturz, keine Verhaltensänderung.
@@ -429,7 +428,7 @@ Namespace Services
                 ' vollen Pfad.
                 '
                 ' DANN als Rueckfall das System ueber die nackten Namen und den Suchpfad des
-                ' Betriebssystems; deb und rpm bringen keine eigene mit und landen immer hier.
+                ' Betriebssystems; hier landet der Flatpak, der LibRaw als eigenes Modul baut.
                 '
                 ' DANN, unter macOS, dieselben Namen mit vollem Pfad in den Homebrew-Verzeichnissen.
                 ' Eine aus dem Finder gestartete .app erbt weder die Shell-Umgebung noch einen

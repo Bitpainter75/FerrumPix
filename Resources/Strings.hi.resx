@@ -11671,13 +11671,13 @@
   <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
     <value>{0} चेहरे हटाए गए</value>
   </data>
-  <data name="LibRaw_entwickelt_RAW_Dateien_Unter_Windows_und__1f86200f" xml:space="preserve">
-    <value>LibRaw RAW फ़ाइलों को डेवलप करता है। Windows और macOS पर, AppImage में और पोर्टेबल Linux ZIP में, जिस पर AUR पैकेज भी आधारित है, उसका नया संस्करण साथ आता है और सिस्टम के LibRaw से पहले इस्तेमाल होता है, ताकि हर कंप्यूटर एक जैसा डेवलप करे। deb और rpm उसे पैकेज प्रबंधक से लेते हैं, Flatpak अपना साथ लाता है। उसके बिना RAW फ़ाइलें कैमरे का अंतर्निहित प्रीव्यू दिखाती हैं।</value>
+  <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
+    <value>LibRaw RAW फ़ाइलों को डेवलप करता है। हर पैकेज उसका नया संस्करण साथ लाता है और सिस्टम के LibRaw से पहले इस्तेमाल करता है, ताकि हर कंप्यूटर एक जैसा डेवलप करे; Flatpak वही संस्करण खुद बनाता है। उसके बिना RAW फ़ाइलें कैमरे का अंतर्निहित प्रीव्यू दिखाती हैं।</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Unter_Window_fe067864" xml:space="preserve">
-    <value>libheif HEIC और HEIF फ़ाइलें पढ़ता है। Windows और macOS पर, AppImage में और पोर्टेबल Linux ZIP में, जिस पर AUR पैकेज भी आधारित है, वह साथ आता है और सिस्टम के libheif से पहले इस्तेमाल होता है; macOS पहले अपने स्वयं के रीडर से पूछता है। deb और rpm उसे पैकेज प्रबंधक से लेते हैं, Flatpak अपने रनटाइम से। उसके बिना ऐसी फ़ाइलें बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
+  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
+    <value>libheif HEIC और HEIF फ़ाइलें पढ़ता है। Flatpak को छोड़कर हर पैकेज उसे साथ लाता है और सिस्टम के libheif से पहले इस्तेमाल करता है; macOS पहले अपने स्वयं के रीडर से पूछता है, Flatpak उसे अपने रनटाइम से लेता है। उसके बिना ऐसी फ़ाइलें बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
   </data>
-  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c522d829" xml:space="preserve">
-    <value>libjxl JPEG XL फ़ाइलें पढ़ता और लिखता है और BSD लाइसेंस के अंतर्गत है। Windows और macOS पर, AppImage में और पोर्टेबल Linux ZIP में, जिस पर AUR पैकेज भी आधारित है, वह साथ आता है और सिस्टम के libjxl से पहले इस्तेमाल होता है। deb और rpm उसे पैकेज प्रबंधक से लेते हैं, Flatpak अपने रनटाइम से। उसके बिना ऐसी फ़ाइलें बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
+  <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
+    <value>libjxl JPEG XL फ़ाइलें पढ़ता और लिखता है और BSD लाइसेंस के अंतर्गत है। Flatpak को छोड़कर हर पैकेज उसे साथ लाता है और सिस्टम के libjxl से पहले इस्तेमाल करता है; Flatpak उसे अपने रनटाइम से लेता है। उसके बिना ऐसी फ़ाइलें बंद रह जाती हैं और बाकी सब कुछ पहले जैसा चलता है।</value>
   </data>
 </root>
