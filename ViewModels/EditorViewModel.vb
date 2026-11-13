@@ -18206,6 +18206,8 @@ Namespace ViewModels
         Public ReadOnly Property ToggleToolSidebarCommand As ICommand
         Public ReadOnly Property SetLayersPanelTabCommand As ICommand
         Public ReadOnly Property BackToViewerCommand As ICommand
+        ''' <summary>Der Haus-Knopf der Werkzeugleiste, Ziel nach AppSettings.EditorHomeTarget.</summary>
+        Public ReadOnly Property HomeCommand As ICommand
         Public ReadOnly Property BackToGalleryCommand As ICommand
         Public ReadOnly Property PreviousCommand As ICommand
         Public ReadOnly Property NextCommand As ICommand
@@ -18236,6 +18238,9 @@ Namespace ViewModels
         Public ReadOnly Property WriteCatalogToFilesCommand As ICommand
         Public ReadOnly Property CompareMetadataCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
+        Public ReadOnly Property RemoveAiTagsCommand As ICommand
+        Public ReadOnly Property ScanFacesCommand As ICommand
+        Public ReadOnly Property RemoveFacesCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
 
@@ -18949,6 +18954,9 @@ Namespace ViewModels
             BackToViewerCommand = ReactiveCommand.Create(Async Function() As Task
                                                              Await BackToViewerAsync()
                                                          End Function)
+            HomeCommand = ReactiveCommand.Create(Async Function() As Task
+                                                     Await BackToViewerAsync(fromHomeButton:=True)
+                                                 End Function)
             BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.CurrentMode = AppMode.Gallery)
             PreviousCommand = ReactiveCommand.Create(Async Function() As Task
                                                          Await NavigatePreviousAsync()
@@ -18987,6 +18995,9 @@ Namespace ViewModels
             WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogCurrentAsync(toCatalog:=False))
             CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() CompareMetadataCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
+            RemoveAiTagsCommand = ReactiveCommand.CreateFromTask(Function() RemoveAiTagsCurrentAsync())
+            ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesCurrentAsync())
+            RemoveFacesCommand = ReactiveCommand.CreateFromTask(Function() RemoveFacesCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             PrintCommand = ReactiveCommand.CreateFromTask(Function() PrintCurrentAsync())
@@ -19206,6 +19217,32 @@ Namespace ViewModels
             RefreshContextActions()
         End Function
 
+        ''' <summary>KI-Stichwoerter entfernen, Gesichter suchen und Personen entfernen fuer das
+        ''' angezeigte Bild, auf denselben Wegen wie die Galerie.</summary>
+        Private Async Function RemoveAiTagsCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.RemoveAiTagsFromImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        Private Async Function ScanFacesCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.ScanFacesForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        Private Async Function RemoveFacesCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.RemoveFacesFromImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
         Private Async Function RemovePlaceCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.RemovePlaceFromImageItemsAsync(i)
@@ -19257,6 +19294,9 @@ Namespace ViewModels
                                                     .WriteCatalogToFiles = WriteCatalogToFilesCommand,
                                                     .CompareMetadata = CompareMetadataCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
+                                                    .RemoveAiTags = RemoveAiTagsCommand,
+                                                    .ScanFaces = ScanFacesCommand,
+                                                    .RemoveFaces = RemoveFacesCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
@@ -19331,7 +19371,10 @@ Namespace ViewModels
             _entryMode = mode
         End Sub
 
-        Public Async Function BackToViewerAsync() As Task
+        ''' <param name="fromHomeButton">Vom Haus-Knopf: dann gilt die Einstellung
+        ''' <see cref="AppSettings.EditorHomeTarget"/>, mit "Gallery" geht es immer in die Galerie. Esc
+        ''' und Abbrechen gehen immer einen Schritt zurueck.</param>
+        Public Async Function BackToViewerAsync(Optional fromHomeButton As Boolean = False) As Task
             If Not Await ConfirmSaveBeforeLeavingAsync("den Editor verlässt") Then Return
 
             ' Ein NIE GESPEICHERTES neues Bild liegt nur im Temp-Ordner. Dessen Pfad darf hier auf
@@ -19345,8 +19388,12 @@ Namespace ViewModels
             End If
 
             ' Galerie-Einstieg: zurück in die Galerie, auf dem zuletzt bearbeiteten Bild -
-            ' nicht in den Viewer.
-            If _entryMode = AppMode.Gallery Then
+            ' nicht in den Viewer. Ebenso der Haus-Knopf, wenn er laut Einstellung immer in die
+            ' Galerie fuehrt; der Betrachter behaelt dann sein Bild, wie er es zuletzt zeigte.
+            Dim homeToGallery = fromHomeButton AndAlso
+                                String.Equals(AppSettingsService.NormalizeEditorHomeTarget(_mainVm?.Settings?.EditorHomeTarget),
+                                              "Gallery", StringComparison.Ordinal)
+            If _entryMode = AppMode.Gallery OrElse homeToGallery Then
                 If Not String.IsNullOrEmpty(_currentImagePath) Then _mainVm.Gallery?.SelectItemByPath(_currentImagePath)
                 _mainVm.CurrentMode = AppMode.Gallery
                 Return

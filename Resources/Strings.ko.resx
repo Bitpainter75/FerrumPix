@@ -11653,4 +11653,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>미리보기 이미지로 계산됨</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>편집기의 홈 버튼</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>편집기를 연 곳으로 돌아가거나 항상 갤러리로 돌아갑니다. ESC는 항상 한 단계 뒤로 갑니다.</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>AI 키워드 제거</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>인물 제거</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>{0}개 이미지의 AI 키워드가 카탈로그에서 제거되며, XMP 동기화가 켜져 있으면 사이드카 파일에서도 제거됩니다. AI 키워드 다시 분석으로만 되돌릴 수 있습니다.</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>{0}개 이미지의 인물이 카탈로그에서 제거되며, 직접 지정한 인물도 포함됩니다. XMP 동기화가 켜져 있으면 사이드카 파일의 이름도 제거됩니다. 얼굴 찾기로만 되돌릴 수 있습니다.</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>{0}개 이미지에서 AI 키워드를 제거했습니다</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>얼굴 {0}개를 제거했습니다</value>
+  </data>
 </root>

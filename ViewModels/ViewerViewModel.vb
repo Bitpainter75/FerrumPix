@@ -1061,6 +1061,9 @@ Namespace ViewModels
                                                     .WriteCatalogToFiles = WriteCatalogToFilesCommand,
                                                     .CompareMetadata = CompareMetadataCommand,
                                                     .ReanalyzeAiTags = ReanalyzeAiTagsCommand,
+                                                    .RemoveAiTags = RemoveAiTagsCommand,
+                                                    .ScanFaces = ScanFacesCommand,
+                                                    .RemoveFaces = RemoveFacesCommand,
                                                     .RemovePlace = RemovePlaceCommand,
                                                     .RemoveMetadata = RemoveMetadataCommand,
                                                     .CopyPath = CopyPathCommand,
@@ -1109,6 +1112,9 @@ Namespace ViewModels
         Public ReadOnly Property WriteCatalogToFilesCommand As ICommand
         Public ReadOnly Property CompareMetadataCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
+        Public ReadOnly Property RemoveAiTagsCommand As ICommand
+        Public ReadOnly Property ScanFacesCommand As ICommand
+        Public ReadOnly Property RemoveFacesCommand As ICommand
         Public ReadOnly Property RemovePlaceCommand As ICommand
         Public ReadOnly Property RemoveMetadataCommand As ICommand
         Public ReadOnly Property SetRatingCommand As ICommand
@@ -1204,6 +1210,9 @@ Namespace ViewModels
             WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogCurrentAsync(toCatalog:=False))
             CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() CompareMetadataCurrentAsync())
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsCurrentAsync())
+            RemoveAiTagsCommand = ReactiveCommand.CreateFromTask(Function() RemoveAiTagsCurrentAsync())
+            ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesCurrentAsync())
+            RemoveFacesCommand = ReactiveCommand.CreateFromTask(Function() RemoveFacesCurrentAsync())
             RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceCurrentAsync())
             RemoveMetadataCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataCurrentAsync())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopyToClipboard())
@@ -4626,6 +4635,32 @@ Namespace ViewModels
         Private Async Function ReanalyzeAiTagsCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
                                             Await g.ReanalyzeAiTagsForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        ''' <summary>KI-Stichwoerter entfernen, Gesichter suchen und Personen entfernen fuer das
+        ''' angezeigte Bild, auf denselben Wegen wie die Galerie.</summary>
+        Private Async Function RemoveAiTagsCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.RemoveAiTagsFromImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        Private Async Function ScanFacesCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.ScanFacesForImageItemsAsync(i)
+                                        End Function)
+            InfoPanel.Refresh()
+            RefreshContextActions()
+        End Function
+
+        Private Async Function RemoveFacesCurrentAsync() As Task
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            Await g.RemoveFacesFromImageItemsAsync(i)
                                         End Function)
             InfoPanel.Refresh()
             RefreshContextActions()

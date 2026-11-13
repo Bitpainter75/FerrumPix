@@ -11653,4 +11653,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>थंबनेल से गणना की गई</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>संपादक में होम बटन</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>वहीं लौटता है जहाँ से संपादक खोला गया था, या हमेशा गैलरी में। ESC हमेशा एक कदम पीछे जाता है।</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>एआई कीवर्ड हटाएँ</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>लोग हटाएँ</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>{0} चित्रों के एआई कीवर्ड कैटलॉग से हटाए जाएँगे, और XMP सिंक चालू हो तो साइडकार फ़ाइल से भी। वे केवल एआई कीवर्ड का फिर से विश्लेषण करें से वापस आएँगे।</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>{0} चित्रों के लोग कैटलॉग से हटाए जाएँगे, हाथ से जोड़े गए भी, और XMP सिंक चालू हो तो उनके नाम साइडकार फ़ाइल से भी। वे केवल चेहरे खोजें से वापस आएँगे।</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>{0} चित्रों से एआई कीवर्ड हटाए गए</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>{0} चेहरे हटाए गए</value>
+  </data>
 </root>

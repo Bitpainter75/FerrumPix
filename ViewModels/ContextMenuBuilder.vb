@@ -403,6 +403,24 @@ Namespace ViewModels
                     AddIfOffered(children, commands.ReanalyzeAiTags,
                                  FooterMenuCatalog.ReanalyzeAiTags(commands.ReanalyzeAiTags))
                 End If
+                ' ENTFERNEN steht als eigene Aktion daneben, aber nur, wo es etwas zu entfernen gibt
+                ' - EINE Abfrage fuer die ganze Auswahl, wie beim Aufnahmeort. Es haengt nicht am
+                ' Modell: wer es deinstalliert hat, will die Begriffe vielleicht gerade loswerden.
+                Dim localPaths = localImages.Select(Function(i) i.FilePath).ToList()
+                If commands.RemoveAiTags IsNot Nothing AndAlso LibraryService.Instance.AnyAiTags(localPaths) Then
+                    If Not (ImageTaggingService.Available OrElse AiModelService.RuntimeAvailable) Then children.Add(FooterMenuCatalog.Divider())
+                    children.Add(FooterMenuCatalog.RemoveAiTags(commands.RemoveAiTags))
+                End If
+
+                ' Personen: suchen, wo die Gesichtserkennung eingeschaltet ist, entfernen, wo
+                ' Gesichter stehen. Ein eigener Block, weil es um Personen geht, nicht um Stichwoerter.
+                children.Add(FooterMenuCatalog.Divider())
+                If FaceDetectionService.Enabled Then
+                    AddIfOffered(children, commands.ScanFaces, FooterMenuCatalog.ScanFaces(commands.ScanFaces))
+                End If
+                If commands.RemoveFaces IsNot Nothing AndAlso LibraryService.Instance.AnyFaces(localPaths) Then
+                    children.Add(FooterMenuCatalog.RemoveFaces(commands.RemoveFaces))
+                End If
             End If
 
             ' Auch reine Serverauswahlen haben eine bewusste Neu-Analyse. Sie schreibt nur in den

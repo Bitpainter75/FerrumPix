@@ -11609,4 +11609,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>Calculé à partir de la vignette</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>Bouton Accueil dans l'éditeur</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>Revient là où l'éditeur a été ouvert, ou toujours à la galerie. ESC revient toujours d'une étape.</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>Supprimer les mots-clés IA</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>Supprimer les personnes</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>Les mots-clés IA de {0} images sont supprimés du catalogue, et du fichier annexe si la synchronisation XMP est activée. Ils ne reviennent qu'avec Analyser à nouveau les mots-clés IA.</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>Les personnes de {0} images sont supprimées du catalogue, y compris celles attribuées à la main, et leurs noms du fichier annexe si la synchronisation XMP est activée. Elles ne reviennent qu'avec Rechercher les visages.</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>Mots-clés IA supprimés de {0} images</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>{0} visages supprimés</value>
+  </data>
 </root>

@@ -87,7 +87,7 @@
             <Grid VerticalAlignment="Center">
                 <StackPanel x:Name="ToolbarLeftButtons" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
                     <Button Classes="icon-btn" Width="34" Height="34"
-                            Command="{Binding BackToViewerCommand}"
+                            Command="{Binding HomeCommand}"
                             ToolTip.Tip="Zurück">
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/house.svg"
                                        Width="20" Height="20" />

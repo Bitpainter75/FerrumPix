@@ -74,6 +74,12 @@ Namespace ViewModels
         ''' <summary>Ersetzt die automatisch ermittelten Stichwörter der betroffenen lokalen
         ''' Bilder durch einen neuen Lauf des installierten KI-Modells.</summary>
         Public Property ReanalyzeAiTags As ICommand
+        ''' <summary>Entfernt die KI-Stichwoerter der lokalen Bilder aus dem Katalog.</summary>
+        Public Property RemoveAiTags As ICommand
+        ''' <summary>Sucht Gesichter auf den betroffenen lokalen Bildern.</summary>
+        Public Property ScanFaces As ICommand
+        ''' <summary>Entfernt Gesichter und Personen der lokalen Bilder aus dem Katalog.</summary>
+        Public Property RemoveFaces As ICommand
 
         ' Bild drehen (Betrachter und Editor)
         Public Property RotateLeft As ICommand

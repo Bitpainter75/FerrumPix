@@ -406,6 +406,10 @@ Namespace Services
         ''' "Gallery". Der Rückweg verwendet den normalen Galeriepfad und behält damit Auswahl,
         ''' Filter und gegebenenfalls die Rückfrage zu ungespeicherten Viewer-Änderungen bei.</summary>
         Public Property ViewerDoubleClickTarget As String = "Editor"
+        ''' <summary>Ziel des Haus-Knopfs im Editor: "Back" (Vorgabe) fuehrt dorthin zurueck, woher der
+        ''' Editor geoeffnet wurde (Betrachter oder Galerie), "Gallery" immer in die Galerie. Esc und
+        ''' Abbrechen gehen unabhaengig davon immer einen Schritt zurueck.</summary>
+        Public Property EditorHomeTarget As String = "Back"
         ''' "Always" (immer einpassen, auch kleinere Bilder hochskalieren) oder "OnlyWhenLarger"
         ''' (nur einpassen, wenn das Bild größer als die Darstellungsfläche ist, sonst 100%).
         Public Property ViewerFitBehavior As String = "Always"
@@ -1335,6 +1339,7 @@ Namespace Services
                 NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
+                settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
                 settings.ViewerFilmstripPosition = NormalizeFilmstripPosition(settings.ViewerFilmstripPosition)
                 settings.EditorFilmstripPosition = NormalizeFilmstripPosition(settings.EditorFilmstripPosition)
                 settings.FullscreenFilmstripPosition = NormalizeFilmstripPosition(settings.FullscreenFilmstripPosition)
@@ -1584,6 +1589,7 @@ Namespace Services
                 NormalizeMacGraphicsSettings(settings)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
+                settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
                 settings.ViewerFilmstripPosition = NormalizeFilmstripPosition(settings.ViewerFilmstripPosition)
                 settings.EditorFilmstripPosition = NormalizeFilmstripPosition(settings.EditorFilmstripPosition)
                 settings.FullscreenFilmstripPosition = NormalizeFilmstripPosition(settings.FullscreenFilmstripPosition)
@@ -1858,6 +1864,13 @@ Namespace Services
         Public Shared Function NormalizeViewerDoubleClickTarget(value As String) As String
             If String.Equals(If(value, "").Trim(), "Gallery", StringComparison.OrdinalIgnoreCase) Then Return "Gallery"
             Return "Editor"
+        End Function
+
+        ''' <summary>Normalisiert das Ziel des Haus-Knopfs im Editor; Unbekanntes bleibt beim
+        ''' bisherigen Verhalten, also "Back".</summary>
+        Public Shared Function NormalizeEditorHomeTarget(value As String) As String
+            If String.Equals(If(value, "").Trim(), "Gallery", StringComparison.OrdinalIgnoreCase) Then Return "Gallery"
+            Return "Back"
         End Function
 
         Public Shared Function NormalizeDefaultSaveFormat(value As String) As String

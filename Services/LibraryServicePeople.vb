@@ -1464,6 +1464,114 @@ Namespace Services
         ''' die Gesichter weg und die Vermerke da - dann gilt jedes Bild als bereits durchsucht, und
         ''' ein Neu-Scan liefe nie wieder an.</summary>
         ''' <returns>False, wenn nichts geleert wurde, weil der Suchlauf nicht anzuhalten war.</returns>
+        ''' <summary>Steht auf einem der Bilder mindestens ein Gesicht? EINE Abfrage fuer die ganze
+        ''' Auswahl; das Kontextmenue fragt das bei jedem Rechtsklick.</summary>
+        Public Function AnyFaces(filePaths As IEnumerable(Of String)) As Boolean
+            If filePaths Is Nothing Then Return False
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim names As New List(Of String)()
+                        For i = 0 To paths.Count - 1
+                            names.Add("$p" & i)
+                            cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(i)))
+                        Next
+                        cmd.CommandText = $"SELECT 1 FROM Face WHERE FilePath IN ({String.Join(",", names)}) LIMIT 1"
+                        Return cmd.ExecuteScalar() IsNot Nothing
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.AnyFaces", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Entfernt alle Gesichter dieser Bilder aus dem Katalog, auch die von Hand
+        ''' zugeordneten: wer "Personen entfernen" waehlt, meint das Bild, nicht nur die Funde des
+        ''' Modells. Der Vermerk, dass das Bild durchsucht wurde (ScannedImage), BLEIBT mit null
+        ''' Gesichtern stehen, sonst fuehrte die naechste Gesichtssuche des Katalogs sie still wieder
+        ''' ein; zurueck kommen sie nur ueber "Gesichter suchen". Die Gruppenmitten werden
+        ''' nachgezogen, namenlose Gruppen ohne Gesicht verschwinden, benannte bleiben (wie beim
+        ''' Aufraeumen). Ist der Abgleich mit XMP an, verlieren vorhandene Beistelldateien ihre
+        ''' benannten Gesichtsregionen, sonst kaemen die Namen beim naechsten Einlesen zurueck.
+        ''' Liefert die Zahl der entfernten Gesichter.</summary>
+        Public Function RemoveFacesForImages(filePaths As IEnumerable(Of String)) As Integer
+            If filePaths Is Nothing Then Return 0
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return 0
+            Dim removed = 0
+            Dim changed As New List(Of String)()
+            Dim removedFromCentroids As New List(Of (PersonId As String, Vector As Single()))()
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        For Each path In paths
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = "SELECT f.PersonId, f.Embedding FROM Face f " &
+                                                  "JOIN Person p ON p.Id = f.PersonId " &
+                                                  "WHERE f.FilePath=$p AND f.Embedding IS NOT NULL AND p.IsUnknownBin=0"
+                                cmd.Parameters.AddWithValue("$p", PathKey(path))
+                                Using reader = cmd.ExecuteReader()
+                                    While reader.Read()
+                                        removedFromCentroids.Add((reader.GetString(0), FromBlob(CType(reader.GetValue(1), Byte()))))
+                                    End While
+                                End Using
+                            End Using
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = "DELETE FROM Face WHERE FilePath=$p"
+                                cmd.Parameters.AddWithValue("$p", PathKey(path))
+                                Dim count = cmd.ExecuteNonQuery()
+                                If count > 0 Then
+                                    removed += count
+                                    changed.Add(path)
+                                End If
+                            End Using
+                            Using cmd = conn.CreateCommand()
+                                cmd.Transaction = tx
+                                cmd.CommandText = "UPDATE ScannedImage SET FaceCount=0 WHERE FilePath=$p"
+                                cmd.Parameters.AddWithValue("$p", PathKey(path))
+                                cmd.ExecuteNonQuery()
+                            End Using
+                        Next
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText =
+                                "DELETE FROM Person WHERE Name='' AND IsUnknownBin=0 " &
+                                "AND NOT EXISTS(SELECT 1 FROM Face WHERE Face.PersonId = Person.Id)"
+                            cmd.ExecuteNonQuery()
+                        End Using
+                        tx.Commit()
+                    End Using
+                End Using
+                RemoveFromCentroids(removedFromCentroids)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.RemoveFacesForImages", ex)
+                Return 0
+            End Try
+
+            If changed.Count > 0 AndAlso AppSettingsService.Load().SyncCatalogToXmp Then
+                For Each path In changed
+                    Try
+                        If LibraryService.IsServerPseudoPath(path) OrElse Not IO.File.Exists(path) Then Continue For
+                        Dim sidecarPath = XmpSidecarService.FindSidecar(path)
+                        If String.IsNullOrEmpty(sidecarPath) Then Continue For
+                        Dim size = XmpFaceRegionService.ReadOrientedPixelSize(path)
+                        If size.Width <= 0 OrElse size.Height <= 0 Then Continue For
+                        XmpFaceRegionService.WriteRegions(sidecarPath, size.Width, size.Height, New List(Of FaceRegion)())
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("Library.RemoveFaceRegionsFromXmp", ex)
+                    End Try
+                Next
+            End If
+            Return removed
+        End Function
+
         Public Function ClearAllFaces() As Boolean
             ' DIESELBE Klammer wie die Katalog-Loeschwege: der Halt allein sieht nur das EIGENE
             ' Fenster. Lief die Gesichtssuche in einem zweiten Prozess, legte sie ihre Zeilen nach

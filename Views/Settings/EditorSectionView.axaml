@@ -11,6 +11,25 @@
                             <TextBlock Text="Einstellungen für Bearbeitung und Vorschau." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Haus-Knopf im Editor" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Führt dorthin zurück, woher der Editor geöffnet wurde, oder immer zur Galerie. ESC geht immer einen Schritt zurück." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorHomeBack}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorHomeTargetCommand}"
+                                        CommandParameter="Back">Zurück</Button>
+                                <Button Classes="ghost"
+                                        Classes.active="{Binding IsEditorHomeGallery}"
+                                        Padding="10,6"
+                                        Command="{Binding SetEditorHomeTargetCommand}"
+                                        CommandParameter="Gallery">Galerie</Button>
+                            </StackPanel>
+                        </Grid>
+
                         <TextBlock Text="Ansicht" FontWeight="SemiBold" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}"/>
 
                         <!-- Eigene Einstellung, NICHT dieselbe wie im Betrachter-Abschnitt: beim

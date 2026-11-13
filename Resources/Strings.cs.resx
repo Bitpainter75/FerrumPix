@@ -11649,4 +11649,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>Vypočteno z náhledu</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>Tlačítko Domů v editoru</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>Vrátí se tam, odkud byl editor otevřen, nebo vždy do galerie. ESC vždy vrací o krok zpět.</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>Odebrat klíčová slova AI</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>Odebrat osoby</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>Klíčová slova AI u {0} snímků se odeberou z katalogu, a při zapnuté synchronizaci XMP i z doprovodného souboru. Zpět se dostanou jen přes Znovu analyzovat klíčová slova AI.</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>Osoby na {0} snímcích se odeberou z katalogu, i ty přiřazené ručně, a při zapnuté synchronizaci XMP i jejich jména z doprovodného souboru. Zpět se dostanou jen přes Hledat tváře.</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>Klíčová slova AI odebrána z {0} snímků</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>Odebráno tváří: {0}</value>
+  </data>
 </root>

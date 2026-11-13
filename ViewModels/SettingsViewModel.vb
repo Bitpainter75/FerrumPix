@@ -46,6 +46,7 @@ Namespace ViewModels
         Private _thumbnailCacheEnabled As Boolean = True
         Private _viewerOpenFitToWindow As Boolean = True
         Private _viewerDoubleClickTarget As String = "Editor"
+        Private _editorHomeTarget As String = "Back"
         Private _viewerFitBehavior As String = "Always"
         Private _editorFitBehavior As String = "Always"
         Private _editorFitMargin As Integer = 0
@@ -213,6 +214,7 @@ Namespace ViewModels
         Private _savedAccentStrength As Integer = 100
         Private _savedViewerOpenFitToWindow As Boolean = True
         Private _savedViewerDoubleClickTarget As String = "Editor"
+        Private _savedEditorHomeTarget As String = "Back"
         Private _savedViewerFitBehavior As String = "Always"
         Private _savedEditorFitBehavior As String = "Always"
         Private _savedEditorFitMargin As Integer = 0
@@ -1325,6 +1327,34 @@ Namespace ViewModels
         Public ReadOnly Property IsViewerDoubleClickGallery As Boolean
             Get
                 Return _viewerDoubleClickTarget = "Gallery"
+            End Get
+        End Property
+
+        ''' <summary>Wohin der Haus-Knopf im Editor fuehrt: "Back" dorthin, woher der Editor geoeffnet
+        ''' wurde, "Gallery" immer in die Galerie.</summary>
+        Public Property EditorHomeTarget As String
+            Get
+                Return _editorHomeTarget
+            End Get
+            Set(value As String)
+                value = AppSettingsService.NormalizeEditorHomeTarget(value)
+                If _editorHomeTarget = value Then Return
+                Me.RaiseAndSetIfChanged(_editorHomeTarget, value)
+                Me.RaisePropertyChanged(NameOf(IsEditorHomeBack))
+                Me.RaisePropertyChanged(NameOf(IsEditorHomeGallery))
+                SaveLayoutSettings()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsEditorHomeBack As Boolean
+            Get
+                Return _editorHomeTarget = "Back"
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditorHomeGallery As Boolean
+            Get
+                Return _editorHomeTarget = "Gallery"
             End Get
         End Property
 
@@ -4629,6 +4659,7 @@ Namespace ViewModels
         Public ReadOnly Property SetEditorFilmstripPositionCommand As ICommand
         Public ReadOnly Property SetFullscreenFilmstripPositionCommand As ICommand
         Public ReadOnly Property SetViewerDoubleClickTargetCommand As ICommand
+        Public ReadOnly Property SetEditorHomeTargetCommand As ICommand
         Public ReadOnly Property SetEditorFitBehaviorCommand As ICommand
         Public ReadOnly Property SetDefaultSaveFormatCommand As ICommand
         Public ReadOnly Property SetEditorStartupToolCommand As ICommand
@@ -5219,6 +5250,7 @@ Namespace ViewModels
             _viewerAdvanceAfterRating = _appSettings.ViewerAdvanceAfterRating
             _viewerOpenFitToWindow = _appSettings.ViewerOpenFitToWindow
             _viewerDoubleClickTarget = AppSettingsService.NormalizeViewerDoubleClickTarget(_appSettings.ViewerDoubleClickTarget)
+            _editorHomeTarget = AppSettingsService.NormalizeEditorHomeTarget(_appSettings.EditorHomeTarget)
             _viewerFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.ViewerFitBehavior)
             _editorFitBehavior = AppSettingsService.NormalizeViewerFitBehavior(_appSettings.EditorFitBehavior)
             _editorFitMargin = AppSettingsService.NormalizeEditorFitMargin(_appSettings.EditorFitMargin)
@@ -5384,6 +5416,7 @@ Namespace ViewModels
             SetViewerWheelActionCommand = ReactiveCommand.Create(Of String)(Sub(p) ViewerWheelAction = p)
             SetFullscreenWheelActionCommand = ReactiveCommand.Create(Of String)(Sub(p) FullscreenWheelAction = p)
             SetViewerDoubleClickTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewerDoubleClickTarget = m)
+            SetEditorHomeTargetCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorHomeTarget = m)
             SetEditorFitBehaviorCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorFitBehavior = m)
             SetDefaultSaveFormatCommand = ReactiveCommand.Create(Of String)(Sub(m) DefaultSaveFormat = m)
             SetEditorStartupToolCommand = ReactiveCommand.Create(Of String)(Sub(m) EditorStartupTool = m)
@@ -5586,6 +5619,7 @@ Namespace ViewModels
             _savedAccentStrength = _accentStrength
             _savedViewerOpenFitToWindow = _viewerOpenFitToWindow
             _savedViewerDoubleClickTarget = _viewerDoubleClickTarget
+            _savedEditorHomeTarget = _editorHomeTarget
             _savedViewerFitBehavior = _viewerFitBehavior
             _savedEditorFitBehavior = _editorFitBehavior
             _savedEditorFitMargin = _editorFitMargin
@@ -5808,6 +5842,7 @@ Namespace ViewModels
             AccentStrength = _savedAccentStrength
             ViewerOpenFitToWindow = _savedViewerOpenFitToWindow
             ViewerDoubleClickTarget = _savedViewerDoubleClickTarget
+            EditorHomeTarget = _savedEditorHomeTarget
             ViewerFitBehavior = _savedViewerFitBehavior
             EditorFitBehavior = _savedEditorFitBehavior
             EditorFitMargin = _savedEditorFitMargin
@@ -5974,6 +6009,7 @@ Namespace ViewModels
             AccentColor = "#F08A1A"
             ViewerOpenFitToWindow = True
             ViewerDoubleClickTarget = "Editor"
+            EditorHomeTarget = "Back"
             ViewerFitBehavior = "Always"
             EditorFitBehavior = "Always"
             EditorFitMargin = 0
@@ -6455,6 +6491,7 @@ Namespace ViewModels
                                           s.ViewerAdvanceAfterRating = _viewerAdvanceAfterRating
                                           s.ViewerOpenFitToWindow = _viewerOpenFitToWindow
                                           s.ViewerDoubleClickTarget = _viewerDoubleClickTarget
+                                          s.EditorHomeTarget = _editorHomeTarget
                                           s.ViewerFitBehavior = _viewerFitBehavior
                                           s.EditorFitBehavior = _editorFitBehavior
                                           s.EditorFitMargin = _editorFitMargin

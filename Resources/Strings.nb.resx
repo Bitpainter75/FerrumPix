@@ -11649,4 +11649,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>Beregnet fra miniatyrbildet</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>Hjem-knappen i redigeringsprogrammet</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>Går tilbake dit redigeringsprogrammet ble åpnet fra, eller alltid til galleriet. ESC går alltid ett steg tilbake.</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>Fjern KI-nøkkelord</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>Fjern personer</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>KI-nøkkelordene for {0} bilder fjernes fra katalogen, og fra sidefilen hvis XMP-synkronisering er på. De kommer bare tilbake via Analyser KI-nøkkelord på nytt.</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>Personene på {0} bilder fjernes fra katalogen, også de som er tildelt for hånd, og navnene deres fra sidefilen hvis XMP-synkronisering er på. De kommer bare tilbake via Søk etter ansikter.</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>KI-nøkkelord fjernet fra {0} bilder</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>{0} ansikter fjernet</value>
+  </data>
 </root>

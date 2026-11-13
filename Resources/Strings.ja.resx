@@ -11649,4 +11649,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>サムネイルから算出</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>エディターのホームボタン</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>エディターを開いた元の画面に戻るか、常にギャラリーに戻ります。ESC は常に一段階戻ります。</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>AIキーワードを削除</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>人物を削除</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>{0} 枚の画像のAIキーワードをカタログから削除します。XMP同期がオンの場合はサイドカーファイルからも削除します。元に戻すにはAIキーワードを再解析するしかありません。</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>{0} 枚の画像の人物をカタログから削除します。手動で割り当てた人物も含みます。XMP同期がオンの場合はサイドカーファイルの名前も削除します。元に戻すには顔を探すしかありません。</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>{0} 枚の画像からAIキーワードを削除しました</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>{0} 件の顔を削除しました</value>
+  </data>
 </root>

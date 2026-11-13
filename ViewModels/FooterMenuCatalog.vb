@@ -151,6 +151,18 @@ Namespace ViewModels
             Return Build("KI-Stichwörter neu analysieren", "scan", c)
         End Function
 
+        Public Shared Function RemoveAiTags(c As ICommand) As AppAction
+            Return Build("KI-Stichwörter entfernen", "eraser", c)
+        End Function
+
+        Public Shared Function ScanFaces(c As ICommand) As AppAction
+            Return Build("Gesichter suchen", "user-focus", c)
+        End Function
+
+        Public Shared Function RemoveFaces(c As ICommand) As AppAction
+            Return Build("Personen entfernen", "user-minus", c)
+        End Function
+
         Public Shared Function RotateLeft(c As ICommand) As AppAction
             Return Build("Nach links drehen", "arrow-counter-clockwise", c)
         End Function

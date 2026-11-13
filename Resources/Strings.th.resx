@@ -11653,4 +11653,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>คำนวณจากภาพย่อ</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>ปุ่มหน้าแรกในตัวแก้ไข</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>กลับไปยังที่ที่เปิดตัวแก้ไข หรือกลับไปที่แกลเลอรีเสมอ ESC ย้อนกลับหนึ่งขั้นเสมอ</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>ลบคำสำคัญ AI</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>ลบบุคคล</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>คำสำคัญ AI ของภาพ {0} ภาพจะถูกลบออกจากแคตตาล็อก และจากไฟล์ประกอบหากเปิดการซิงค์ XMP อยู่ จะกลับมาได้ด้วยการวิเคราะห์คำสำคัญ AI อีกครั้งเท่านั้น</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>บุคคลในภาพ {0} ภาพจะถูกลบออกจากแคตตาล็อก รวมถึงที่กำหนดเอง และชื่อจะถูกลบออกจากไฟล์ประกอบหากเปิดการซิงค์ XMP อยู่ จะกลับมาได้ด้วยการค้นหาใบหน้าเท่านั้น</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>ลบคำสำคัญ AI ออกจาก {0} ภาพแล้ว</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>ลบใบหน้าแล้ว {0} ใบหน้า</value>
+  </data>
 </root>

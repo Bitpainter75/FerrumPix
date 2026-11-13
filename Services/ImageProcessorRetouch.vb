@@ -600,6 +600,13 @@ Namespace Services
 
             If maskedCount = 0 Then Return False
 
+            ' Zuerst der Versatz je Strich (ImageProcessorRetouchOffset.vb); findet er keine Quelle,
+            ' die am Saum passt, fuellt der Weg darunter wie bisher.
+            If TryHealByStrokeOffset(result, maskAlpha, blendAlpha, targetLeft, targetTop, width, height,
+                                     HealingPatchRadiusFor(EffectiveHealingLongEdge(result, resolutionLongEdge))) Then
+                Return True
+            End If
+
             ' Nur Zielregion plus Suchrand kopieren. Die fruehere CloneBitmap(result)-Kopie
             ' allokierte bei 49 MP rund 196 MB pro Zug, obwohl nur ein kleiner Fleck veraendert wird.
             Dim workMargin = HealingSearchMargin

@@ -169,6 +169,70 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Steht bei einem der Bilder mindestens ein KI-Stichwort? EINE Abfrage fuer die
+        ''' ganze Auswahl; das Kontextmenue fragt das bei jedem Rechtsklick.</summary>
+        Public Function AnyAiTags(filePaths As IEnumerable(Of String)) As Boolean
+            If filePaths Is Nothing OrElse Not HasAnyAiTags() Then Return False
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return False
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        Dim names As New List(Of String)()
+                        For i = 0 To paths.Count - 1
+                            names.Add("$p" & i)
+                            cmd.Parameters.AddWithValue("$p" & i, PathKey(paths(i)))
+                        Next
+                        cmd.CommandText = $"SELECT 1 FROM AiImageTag WHERE FilePath IN ({String.Join(",", names)}) LIMIT 1"
+                        Return cmd.ExecuteScalar() IsNot Nothing
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.AnyAiTags", ex)
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Entfernt die KI-Stichwoerter der Bilder aus dem Katalog. Der Vermerk, dass das
+        ''' Bild analysiert wurde (AiTagScan), BLEIBT: sonst brachte der naechste Kataloglauf die eben
+        ''' entfernten Begriffe still zurueck. Wieder her kommen sie nur ueber "KI-Stichwoerter neu
+        ''' analysieren". Ist das Schreiben nach XMP an, wird die Beistelldatei neu geschrieben, dann
+        ''' ohne die KI-Begriffe; sonst kaemen sie beim naechsten Metadatenimport als gewoehnliche
+        ''' Stichwoerter zurueck. Liefert die Zahl der Bilder, die welche hatten.</summary>
+        Public Function RemoveAiTags(filePaths As IEnumerable(Of String)) As Integer
+            If filePaths Is Nothing Then Return 0
+            Dim paths = filePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).Distinct(PathIdentity.Comparer).ToList()
+            If paths.Count = 0 Then Return 0
+            Dim changed As New List(Of String)()
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using tx = conn.BeginTransaction()
+                        Using cmd = conn.CreateCommand()
+                            cmd.Transaction = tx
+                            cmd.CommandText = "DELETE FROM AiImageTag WHERE FilePath=$p"
+                            Dim pParam = cmd.Parameters.Add("$p", SqliteType.Text)
+                            For Each path In paths
+                                pParam.Value = PathKey(path)
+                                If cmd.ExecuteNonQuery() > 0 Then changed.Add(path)
+                            Next
+                        End Using
+                        tx.Commit()
+                    End Using
+                End Using
+                InvalidateAiTagPresence()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Bibliothek.KIStichwörterEntfernen", ex)
+                Return 0
+            End Try
+            For Each path In changed
+                If IsServerPseudoPath(path) OrElse Not File.Exists(path) Then Continue For
+                SyncAiTagsToXmp(path)
+            Next
+            Return changed.Count
+        End Function
+
         ''' <summary>Zu jedem gewünschten kanonischen Begriff die Pfade, die ihn tragen - in EINER
         ''' Abfrage. Das Gegenstück zu <see cref="GetPathsByTag"/> für die erkannten Stichwörter;
         ''' gebraucht für die Zahl an einer zusammengefassten Zeile der Filterliste.</summary>

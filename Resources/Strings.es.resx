@@ -11609,4 +11609,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>Calculado a partir de la miniatura</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>Botón de inicio en el editor</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>Vuelve a donde se abrió el editor o siempre a la galería. ESC siempre retrocede un paso.</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>Quitar palabras clave de IA</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>Quitar personas</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>Las palabras clave de IA de {0} imágenes se quitan del catálogo, y del archivo complementario si la sincronización XMP está activada. Solo vuelven con Volver a analizar las palabras clave de IA.</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>Las personas de {0} imágenes se quitan del catálogo, también las asignadas a mano, y sus nombres del archivo complementario si la sincronización XMP está activada. Solo vuelven con Buscar caras.</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>Palabras clave de IA quitadas de {0} imágenes</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>{0} caras quitadas</value>
+  </data>
 </root>

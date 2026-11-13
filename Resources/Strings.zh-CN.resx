@@ -11607,4 +11607,28 @@
   <data name="Aus_dem_Vorschaubild_berechnet_c522f9bc" xml:space="preserve">
     <value>根据缩略图计算</value>
   </data>
+  <data name="Haus_Knopf_im_Editor_61a882bc" xml:space="preserve">
+    <value>编辑器中的主页按钮</value>
+  </data>
+  <data name="F_hrt_dorthin_zur_ck_woher_der_Editor_ge_ffnet_w_23c841d0" xml:space="preserve">
+    <value>返回打开编辑器之前的位置，或始终返回图库。ESC 始终后退一步。</value>
+  </data>
+  <data name="KI_Stichw_rter_entfernen_bd79eab7" xml:space="preserve">
+    <value>移除 AI 关键词</value>
+  </data>
+  <data name="Personen_entfernen_e52841f1" xml:space="preserve">
+    <value>移除人物</value>
+  </data>
+  <data name="Die_KI_Stichw_rter_von_0_Bildern_werden_aus_dem__bd846df1" xml:space="preserve">
+    <value>{0} 张图片的 AI 关键词将从目录中移除，如果开启了 XMP 同步，也会从附属文件中移除。只能通过重新分析 AI 关键词恢复。</value>
+  </data>
+  <data name="Die_Personen_von_0_Bildern_werden_aus_dem_Katalo_861261a2" xml:space="preserve">
+    <value>{0} 张图片中的人物将从目录中移除，包括手动指定的，如果开启了 XMP 同步，其姓名也会从附属文件中移除。只能通过查找人脸恢复。</value>
+  </data>
+  <data name="KI_Stichw_rter_aus_0_Bildern_entfernt_ae249baf" xml:space="preserve">
+    <value>已从 {0} 张图片移除 AI 关键词</value>
+  </data>
+  <data name="0_Gesichter_entfernt_6ff53985" xml:space="preserve">
+    <value>已移除 {0} 张人脸</value>
+  </data>
 </root>

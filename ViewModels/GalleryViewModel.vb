@@ -1904,6 +1904,8 @@ Namespace ViewModels
         Public ReadOnly Property ClearPlaceFilterCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
         Public ReadOnly Property ReanalyzeAiTagsCommand As ICommand
+        Public ReadOnly Property RemoveAiTagsCommand As ICommand
+        Public ReadOnly Property RemoveFacesCommand As ICommand
         Public ReadOnly Property SetSelectedRatingCommand As ICommand
         Public ReadOnly Property SetSelectedColorLabelCommand As ICommand
         Public ReadOnly Property RenameSelectedCommand As ICommand
@@ -2313,6 +2315,8 @@ Namespace ViewModels
             ' kommen.
             ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ScanFacesAsync()))
             ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ReanalyzeAiTagsAsync()))
+            RemoveAiTagsCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, RemoveAiTagsFromImageItemsAsync(GetSelectedImageItems())))
+            RemoveFacesCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, RemoveFacesFromImageItemsAsync(GetSelectedImageItems())))
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             ' TAB im letzten Namensfeld der Leiste: naechste Kachel waehlen und dorthin rollen.
             InfoPanel.NavigateImage = Sub(delta)
@@ -6330,13 +6334,19 @@ Namespace ViewModels
         ''' der Fassung, mit der er einmal durchlief, und eine verbesserte Erkennung kaeme dort nie
         ''' an. Von Hand gesetzte Zuordnungen bleiben stehen: was der Benutzer eingetragen oder
         ''' geloest hat, ist seine Entscheidung und nicht die des Modells.</summary>
-        Public Async Function ScanFacesAsync() As Task
+        Public Function ScanFacesAsync() As Task
+            Return ScanFacesForImageItemsAsync(If(SelectedItems IsNot Nothing AndAlso SelectedItems.Count > 0,
+                                                  SelectedItems.Cast(Of ImageItem)().ToList(),
+                                                  Items.ToList()))
+        End Function
+
+        ''' <summary>Dieselbe Suche fuer eine vorgegebene Liste: das Kontextmenue (Metadaten) der
+        ''' Galerie mit der Auswahl, Betrachter und Editor mit ihrem einen Bild.</summary>
+        Public Async Function ScanFacesForImageItemsAsync(source As IEnumerable(Of ImageItem)) As Task
             If Not FaceDetectionService.Enabled Then Return
             If _faceScanRunning Then Return
+            If source Is Nothing Then Return
 
-            Dim source = If(SelectedItems IsNot Nothing AndAlso SelectedItems.Count > 0,
-                            SelectedItems.Cast(Of ImageItem)().ToList(),
-                            Items.ToList())
             Dim paths = source.Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).
                                Select(Function(i) i.FilePath).
                                Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
@@ -6417,6 +6427,64 @@ Namespace ViewModels
         ''' wird nichts geändert.</summary>
         Private Function ReanalyzeAiTagsAsync() As Task
             Return ReanalyzeAiTagsForImageItemsAsync(GetSelectedImageItems())
+        End Function
+
+        ''' <summary>Entfernt die KI-Stichwoerter der lokalen Bilder aus dem Katalog, nach
+        ''' Rueckfrage. Betrachter und Editor rufen denselben Weg mit ihrem einen Bild. Siehe
+        ''' LibraryService.RemoveAiTags: der Analysevermerk bleibt, die Begriffe kommen nur ueber
+        ''' "KI-Stichwoerter neu analysieren" zurueck.</summary>
+        Public Async Function RemoveAiTagsFromImageItemsAsync(source As IEnumerable(Of ImageItem)) As Task
+            Try
+                Dim paths = LocalCatalogPaths(source)
+                If paths.Count = 0 OrElse _mainVm Is Nothing Then Return
+                Dim message = String.Format(
+                    LocalizationService.T("Die KI-Stichwörter von {0} Bildern werden aus dem Katalog entfernt, bei eingeschaltetem XMP-Abgleich auch aus der Beistelldatei. Zurück kommen sie nur über KI-Stichwörter neu analysieren."),
+                    paths.Count)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("KI-Stichwörter entfernen"), message,
+                                                      LocalizationService.T("Entfernen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
+                Dim count = Await Task.Run(Function() LibraryService.Instance.RemoveAiTags(paths))
+                StatusText = String.Format(LocalizationService.T("KI-Stichwörter aus {0} Bildern entfernt"), count)
+                RefreshTagFilterOptions()
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RemoveAiTags", ex)
+            End Try
+        End Function
+
+        ''' <summary>Entfernt alle Gesichter und damit die Personen der lokalen Bilder aus dem
+        ''' Katalog, nach Rueckfrage. Siehe LibraryService.RemoveFacesForImages: der Suchvermerk
+        ''' bleibt, die Gesichter kommen nur ueber "Gesichter suchen" zurueck.</summary>
+        Public Async Function RemoveFacesFromImageItemsAsync(source As IEnumerable(Of ImageItem)) As Task
+            Try
+                Dim paths = LocalCatalogPaths(source)
+                If paths.Count = 0 OrElse _mainVm Is Nothing Then Return
+                Dim message = String.Format(
+                    LocalizationService.T("Die Personen von {0} Bildern werden aus dem Katalog entfernt, auch von Hand zugeordnete, bei eingeschaltetem XMP-Abgleich auch die Namen in der Beistelldatei. Zurück kommen sie nur über Gesichter suchen."),
+                    paths.Count)
+                If Not Await _mainVm.ShowConfirmAsync(LocalizationService.T("Personen entfernen"), message,
+                                                      LocalizationService.T("Entfernen"),
+                                                      LocalizationService.T("Abbrechen")) Then Return
+                Dim count = Await Task.Run(Function() LibraryService.Instance.RemoveFacesForImages(paths))
+                StatusText = String.Format(LocalizationService.T("{0} Gesichter entfernt"), count)
+                RefreshPersonFilterOptions()
+                UpdateInfoPanelTarget()
+                InfoPanel.Refresh()
+                RefreshContextActions()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.RemoveFaces", ex)
+            End Try
+        End Function
+
+        ''' <summary>Pfade der lokalen, erreichbaren Bilder; Serverbilder und Bilder auf einem
+        ''' nicht verbundenen Laufwerk fallen weg.</summary>
+        Private Shared Function LocalCatalogPaths(source As IEnumerable(Of ImageItem)) As List(Of String)
+            Return If(source, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso Not i.IsRemoteAsset AndAlso Not i.IsOffline AndAlso
+                                  Not String.IsNullOrWhiteSpace(i.FilePath)).
+                Select(Function(i) i.FilePath).Distinct(PathIdentity.Comparer).ToList()
         End Function
 
         ''' <summary>Analysiert die uebergebenen Bilder neu. Betrachter und Editor rufen denselben
