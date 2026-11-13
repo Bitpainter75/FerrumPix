@@ -267,6 +267,13 @@ Namespace ViewModels
             Return Build("Aus dem Album nehmen", "image-broken", c)
         End Function
 
+        ''' <summary>Die Zeile, die in der Galerie offline sagt, warum nichts geht. Nicht waehlbar:
+        ''' ihr Kommando kann nie ausfuehren, die Zeile steht deshalb ausgegraut da.</summary>
+        Public Shared Function DriveUnreachable() As AppAction
+            Return Build("Laufwerk nicht erreichbar", "plugs", New DelegateCommand(Sub(ignored As Object)
+                                                                                   End Sub, Function() False))
+        End Function
+
         ''' <summary>Die einzige Geste im Papierkorb einer Serverquelle. Der Server legt die Datei
         ''' dorthin zurueck, wo sie herkam.</summary>
         Public Shared Function RestoreFromTrash(c As ICommand) As AppAction

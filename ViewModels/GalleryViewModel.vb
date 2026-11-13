@@ -1883,6 +1883,7 @@ Namespace ViewModels
                            If(SelectedItem Is Nothing, Enumerable.Empty(Of ImageItem)(), {SelectedItem}),
                            SelectedItems.AsEnumerable())
             End If
+            If RefuseOffline(items) Then Return
             Dim paths = items.Where(AddressOf OpenWithService.IsOpenable).
                               Select(Function(i) i.FilePath).
                               Distinct(PathIdentity.Comparer).
@@ -1930,7 +1931,8 @@ Namespace ViewModels
                 Return ContextMenuBuilder.Build(ContextSite, ContextItems,
                                                 isVirtual:=IsVirtualFolder,
                                                 canPaste:=CanPasteIntoFolder(CurrentFolder),
-                                                commands:=ContextCommands)
+                                                commands:=ContextCommands,
+                                                offlineView:=IsOfflineView)
             End Get
         End Property
 
@@ -2289,10 +2291,10 @@ Namespace ViewModels
                                                                         End Sub)
             SetViewModeCommand = ReactiveCommand.Create(Of String)(Sub(m) ViewMode = m)
             SetGroupDateStepCommand = ReactiveCommand.Create(Of String)(Sub(dateStep) GroupDateStep = dateStep)
-            DeleteSelectedCommand = ReactiveCommand.Create(Sub() DeleteSelected())
+            DeleteSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then DeleteSelected())
             SelectAllCommand = ReactiveCommand.Create(Sub() SelectAllVisible())
             ClearSelectionCommand = ReactiveCommand.Create(Sub() ClearSelection())
-            OpenFileManagerCommand = ReactiveCommand.Create(Sub() OpenInFileManager())
+            OpenFileManagerCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then OpenInFileManager())
             CopyPathCommand = ReactiveCommand.Create(Sub() CopySelectedPath())
             ToggleFavoriteCommand = ReactiveCommand.Create(Of ImageItem)(Sub(item) DoToggleFavorite(item))
             ToggleSelectedFavoriteCommand = ReactiveCommand.Create(Sub() ToggleSelectedFavorite())
@@ -2303,8 +2305,13 @@ Namespace ViewModels
             ToggleFilterScopeCommand = ReactiveCommand.Create(Sub() IsCatalogFilterScope = Not IsCatalogFilterScope)
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
-            ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() ScanFacesAsync())
-            ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() ReanalyzeAiTagsAsync())
+            ' Alles, was eine Datei liest, schreibt oder neben ihr ablegt, fragt zuerst
+            ' RefuseOfflineSelection: auf einem nicht erreichbaren Laufwerk ist die Galerie nur zum
+            ' Ansehen da (GalleryViewModelOffline). Sterne, Herz, Etikett, Markierung und
+            ' Stichwoerter fragen in ihren Schreibwegen selbst, weil sie auch von Kachel und Leiste
+            ' kommen.
+            ScanFacesCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ScanFacesAsync()))
+            ReanalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ReanalyzeAiTagsAsync()))
             InfoPanel.OpenTagSearch = Sub(tag) OpenTagSearch(tag)
             ' TAB im letzten Namensfeld der Leiste: naechste Kachel waehlen und dorthin rollen.
             InfoPanel.NavigateImage = Sub(delta)
@@ -2320,30 +2327,30 @@ Namespace ViewModels
             InfoPanel.PersistPickState = Sub(items, value) ApplyPickState(items.ToList(), value)
             CopyPlaceCommand = ReactiveCommand.Create(Sub() CopyPlaceFromSelected())
             OpenPlaceInOsmCommand = ReactiveCommand.Create(Sub() OpenPlaceInOsmFromSelected())
-            PastePlaceCommand = ReactiveCommand.Create(Sub() PastePlaceToSelected())
-            SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceForSelectedAsync())
-            SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() SetPlaceFromTrackForSelectedAsync())
-            SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() SetCopyrightForSelectedAsync())
-            SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() SetCaptureDateForSelectedAsync())
-            SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() SetDescriptionForSelectedAsync())
-            ImportMetadataToCatalogCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogForSelectedAsync(toCatalog:=True))
-            WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() TransferCatalogForSelectedAsync(toCatalog:=False))
-            CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() CompareMetadataForSelectedAsync())
-            RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() RemovePlaceFromSelectedAsync())
-            RenameSelectedCommand = ReactiveCommand.Create(Sub() RenameSelected())
-            DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() DuplicateSelectedAsync())
+            PastePlaceCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then PastePlaceToSelected())
+            SetPlaceCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, SetPlaceForSelectedAsync()))
+            SetPlaceFromTrackCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, SetPlaceFromTrackForSelectedAsync()))
+            SetCopyrightCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, SetCopyrightForSelectedAsync()))
+            SetCaptureDateCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, SetCaptureDateForSelectedAsync()))
+            SetDescriptionCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, SetDescriptionForSelectedAsync()))
+            ImportMetadataToCatalogCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, TransferCatalogForSelectedAsync(toCatalog:=True)))
+            WriteCatalogToFilesCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, TransferCatalogForSelectedAsync(toCatalog:=False)))
+            CompareMetadataCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, CompareMetadataForSelectedAsync()))
+            RemovePlaceCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, RemovePlaceFromSelectedAsync()))
+            RenameSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then RenameSelected())
+            DuplicateSelectedCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, DuplicateSelectedAsync()))
             ' CreateFromTask: der Befehl bleibt bis zum Ende des Laufs gesperrt (siehe ResizeSelectedAsync).
-            ResizeSelectedCommand = ReactiveCommand.CreateFromTask(Function() ResizeSelectedAsync())
-            ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() ApplyWatermarkSelected())
-            BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() BatchConvertSelected())
-            ToggleFullscreenCommand = ReactiveCommand.Create(Sub() _mainVm?.ToggleFullscreen())
+            ResizeSelectedCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ResizeSelectedAsync()))
+            ApplyWatermarkSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then ApplyWatermarkSelected())
+            BatchConvertSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then BatchConvertSelected())
+            ToggleFullscreenCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then _mainVm?.ToggleFullscreen())
             NewDocumentCommand = ReactiveCommand.Create(Sub() _mainVm?.ShowNewDocumentDialog())
-            ExportSelectedCommand = ReactiveCommand.Create(Sub() ExportSelected())
-            PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() PrintSelectedAsync())
-            ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() ApplyFilterSelected())
-            CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() CopyAdjustmentsFromSelected())
-            PasteAdjustmentsCommand = ReactiveCommand.CreateFromTask(Function() PasteAdjustmentsToSelectedAsync())
-            RemoveMetadataSelectedCommand = ReactiveCommand.CreateFromTask(Function() RemoveMetadataSelectedAsync())
+            ExportSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then ExportSelected())
+            PrintSelectedCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, PrintSelectedAsync()))
+            ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then ApplyFilterSelected())
+            CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then CopyAdjustmentsFromSelected())
+            PasteAdjustmentsCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, PasteAdjustmentsToSelectedAsync()))
+            RemoveMetadataSelectedCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, RemoveMetadataSelectedAsync()))
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
             DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
             SetSelectedRatingCommand = ReactiveCommand.Create(Of String)(Sub(r) SetSelectedRating(r))
@@ -3245,6 +3252,7 @@ Namespace ViewModels
         ''' Server saehe sie nie, und der naechste Abgleich raeumte sie wieder weg.</summary>
         Friend Sub ApplyRatingTo(items As IList(Of ImageItem), rating As Integer)
             If items Is Nothing OrElse items.Count = 0 Then Return
+            If RefuseOffline(items) Then Return
             items = WithHiddenPartners(items)
             ' Alte Werte VOR dem Setzen sichern - nur damit kann ein abgelehnter Immich-Schreibvorgang
             ' die Kachel wieder auf ihren echten Stand zurueckdrehen.
@@ -3263,6 +3271,7 @@ Namespace ViewModels
 
         Friend Sub ApplyFavoriteTo(items As IList(Of ImageItem), value As Boolean)
             If items Is Nothing OrElse items.Count = 0 Then Return
+            If RefuseOffline(items) Then Return
             items = WithHiddenPartners(items)
             For Each item In items
                 Dim before = item.IsFavorite
@@ -3277,6 +3286,7 @@ Namespace ViewModels
         ''' Pseudo-Pfad ist dafuer ein stabiler Schluessel in der Bibliothek.</summary>
         Friend Sub ApplyColorLabelTo(items As IList(Of ImageItem), colorLabel As String)
             If items Is Nothing OrElse items.Count = 0 Then Return
+            If RefuseOffline(items) Then Return
             items = WithHiddenPartners(items)
             For Each item In items
                 item.ColorLabel = If(colorLabel, "")
@@ -3287,6 +3297,7 @@ Namespace ViewModels
 
         Friend Sub ApplyTagTo(items As IList(Of ImageItem), tag As String, add As Boolean)
             If items Is Nothing OrElse items.Count = 0 OrElse String.IsNullOrEmpty(tag) Then Return
+            If RefuseOffline(items) Then Return
             ' Das Infopanel hat die Stichwortliste der sichtbaren Kachel schon geaendert, die der
             ' verborgenen Dateien derselben Aufnahme bzw. Serie noch nicht.
             Dim visible As New HashSet(Of ImageItem)(items)
@@ -3421,7 +3432,7 @@ Namespace ViewModels
             Dim rating As Integer
             If Not Integer.TryParse(ratingText, rating) Then Return
             Dim images = WithHiddenPartners(GetSelectedImageItems())
-            If images.Count = 0 Then Return
+            If images.Count = 0 OrElse RefuseOffline(images) Then Return
 
             Dim currentRating = SelectedRating
             Dim targetRating = If(currentRating = rating, 0, rating)
@@ -3452,7 +3463,7 @@ Namespace ViewModels
         ''' zufällig zuerst in der Auswahl steht.</summary>
         Private Sub SetSelectedColorLabel(colorLabel As String)
             Dim images = WithHiddenPartners(GetSelectedImageItems())
-            If images.Count = 0 Then Return
+            If images.Count = 0 OrElse RefuseOffline(images) Then Return
 
             Dim value = If(colorLabel, "")
             Dim common = If(images(0).ColorLabel, "")
@@ -3472,7 +3483,7 @@ Namespace ViewModels
         ''' funktionieren mit: der Pseudo-Pfad ist ein stabiler library.db-Schlüssel - das Etikett
         ''' ist aber rein lokal und wandert nicht zum Server.</summary>
         Public Sub SetItemColorLabel(item As ImageItem, colorLabel As String)
-            If item Is Nothing OrElse Not item.IsImage Then Return
+            If item Is Nothing OrElse Not item.IsImage OrElse RefuseOffline({item}) Then Return
             Dim value = If(colorLabel, "")
             Dim target = If(String.Equals(item.ColorLabel, value, StringComparison.Ordinal), "", value)
 
@@ -3491,7 +3502,7 @@ Namespace ViewModels
         End Sub
 
         Public Sub SetItemRating(item As ImageItem, rating As Integer)
-            If item Is Nothing OrElse Not item.IsImage Then Return
+            If item Is Nothing OrElse Not item.IsImage OrElse RefuseOffline({item}) Then Return
             Dim targetRating = If(item.Rating = rating, 0, rating)
             For Each target In WithHiddenPartners({item})
                 Dim before = target.Rating
@@ -3631,10 +3642,17 @@ Namespace ViewModels
         ''' aufgeklappten Ordner zuklappen und die Auswahl verlieren.</summary>
         Public Sub SyncExtraFolderRoots()
             ' In der eingetragenen Reihenfolge - sie ist die des Nutzers.
-            Dim wanted As New List(Of (Path As String, Label As String))()
+            Dim wanted As New List(Of (Path As String, Label As String, Offline As Boolean))()
             Dim Merken As Action(Of String) =
                 Sub(rohPfad As String)
-                    If String.IsNullOrWhiteSpace(rohPfad) OrElse Not Directory.Exists(rohPfad) Then Return
+                    If String.IsNullOrWhiteSpace(rohPfad) Then Return
+                    ' EIN ORDNER AUF EINEM NICHT ERREICHBAREN LAUFWERK BLEIBT STEHEN, abgesetzt
+                    ' als nicht erreichbar: seine Bilder stehen im Katalog, und die Galerie zeigt
+                    ' sie von dort (OfflineVolumes). Gefragt wird VOR Directory.Exists, das auf
+                    ' einer getrennten Freigabe haengen kann. Sonst gilt wie bisher: was es nicht
+                    ' gibt, steht nicht im Baum.
+                    Dim offline = OfflineVolumes.IsFolderUnreachable(rohPfad)
+                    If Not offline AndAlso Not Directory.Exists(rohPfad) Then Return
                     ' OHNE SCHLUSSTRENNER in den Baum. Die Einstellung darf einen tragen, der Baum
                     ' nicht: an ihm haengen Vergleiche und die Pfadleiste, und beide rechnen mit der
                     ' knappen Schreibweise.
@@ -3648,7 +3666,7 @@ Namespace ViewModels
                     Dim name = IO.Path.GetFileName(path.TrimEnd(IO.Path.DirectorySeparatorChar,
                                                                 IO.Path.AltDirectorySeparatorChar))
                     If String.IsNullOrWhiteSpace(name) Then name = path
-                    wanted.Add((path, name))
+                    wanted.Add((path, name, offline))
                 End Sub
 
             Try
@@ -3676,8 +3694,9 @@ Namespace ViewModels
                                                                      PathsEqual(n.FullPath, eintrag.Path))
                 If existing Is Nothing Then
                     FolderTree.Insert(Math.Min(insertAt, FolderTree.Count),
-                                      New FolderNode(eintrag.Label, eintrag.Path) With {.IsExtraRoot = True})
+                                      New FolderNode(eintrag.Label, eintrag.Path) With {.IsExtraRoot = True, .IsOffline = eintrag.Offline})
                 Else
+                    existing.IsOffline = eintrag.Offline
                     Dim current = FolderTree.IndexOf(existing)
                     If current <> insertAt AndAlso insertAt < FolderTree.Count Then FolderTree.Move(current, insertAt)
                 End If
@@ -5227,6 +5246,9 @@ Namespace ViewModels
         ''' Ansicht.</summary>
         Public Sub RefreshFolder(folderPath As String)
             If String.IsNullOrEmpty(folderPath) Then Return
+            ' Aktualisieren heisst auch: nachsehen, ob ein Laufwerk inzwischen wieder da ist (oder
+            ' weg). Der Knoten liest danach von der Platte oder aus dem Katalog.
+            OfflineVolumes.Invalidate()
             Dim node = FindLoadedFolderNode(FolderTree, folderPath)
             node?.RefreshSubtree()
             If Not _isVirtualFolder AndAlso
@@ -6405,7 +6427,8 @@ Namespace ViewModels
                     {ImageTaggingService.ModelKey, ImageTaggingService.TagsKey, ImageTaggingService.ThresholdsKey}) Then Return
 
             Dim items = If(source, Enumerable.Empty(Of ImageItem)()).
-                Where(Function(i) i IsNot Nothing AndAlso (i.IsRemoteAsset OrElse (Not String.IsNullOrWhiteSpace(i.FilePath) AndAlso File.Exists(i.FilePath)))).ToList()
+                Where(Function(i) i IsNot Nothing AndAlso Not i.IsOffline AndAlso
+                                  (i.IsRemoteAsset OrElse (Not String.IsNullOrWhiteSpace(i.FilePath) AndAlso File.Exists(i.FilePath)))).ToList()
             If items.Count = 0 Then Return
 
             _aiTaggingRunning = True
@@ -7143,7 +7166,7 @@ Namespace ViewModels
                                                If passtJetzt = entry.Matched Then Continue For
                                                ' Ob die Datei noch da ist, fragt der Hintergrund, nicht
                                                ' AddMetasToVirtualFolder auf dem Anzeigefaden.
-                                               If passtJetzt AndAlso Not File.Exists(meta.FilePath) Then Continue For
+                                               If passtJetzt AndAlso Not ExistsOrUnreachable(meta.FilePath) Then Continue For
                                                If passtJetzt Then addNow.Add(meta) Else removeNow.Add(meta.FilePath)
                                                If addNow.Count + removeNow.Count >= 120 Then Await flush()
                                            Next
@@ -7292,7 +7315,7 @@ Namespace ViewModels
                                    Dim existing As New HashSet(Of String)(PathIdentity.Comparer)
                                    For Each path In foundThisRun
                                        token.ThrowIfCancellationRequested()
-                                       If File.Exists(path) Then existing.Add(path)
+                                       If ExistsOrUnreachable(path) Then existing.Add(path)
                                    Next
                                    stillExisting = existing
                                End Function, token)
@@ -7365,7 +7388,7 @@ Namespace ViewModels
                     dropLog?.Record(SearchDropLog.ReasonHidden, meta)
                     Continue For
                 End If
-                If Not File.Exists(meta.FilePath) Then
+                If Not ExistsOrUnreachable(meta.FilePath) Then
                     dropLog?.Record(SearchDropLog.ReasonMissing, meta)
                     Continue For
                 End If
@@ -7496,7 +7519,7 @@ Namespace ViewModels
                 ' Die Zeilen kommen aus dem Katalog, die Datei kann weg sein. Gefragt wird HIER im
                 ' Hintergrund und nur fuer Treffer, nicht in AddMetasToVirtualFolder auf dem
                 ' Anzeigefaden.
-                If Not File.Exists(meta.FilePath) Then Continue For
+                If Not ExistsOrUnreachable(meta.FilePath) Then Continue For
                 matches.Add(meta)
             Next
 
@@ -8614,6 +8637,7 @@ Namespace ViewModels
             ' Jede neue Ansicht faengt als gewoehnliche an; die beiden Papierkorb-Wege setzen das
             ' Kennzeichen gleich danach selbst. So kann es nirgends stehenbleiben.
             SetTrashView(False)
+            SetOfflineView(False)
             _virtualFolderName = If(String.IsNullOrWhiteSpace(name), "Virtueller Ordner", name)
             CurrentFolder = "virtual://" & _virtualFolderName
             _historyBack.Clear()
@@ -8667,15 +8691,20 @@ Namespace ViewModels
                 If Not _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
                 If Not _virtualPathSet.Add(meta.FilePath) Then Continue For
 
-                Dim neu = New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName) With {
-                    .IsFavorite = meta.IsFavorite,
-                    .Rating = meta.Rating,
-                    .PickState = meta.PickState,
-                    .ColorLabel = meta.ColorLabel,
-                    .Tags = If(meta.Tags, New List(Of String)()),
-                    .ImageWidth = If(meta.ImageWidth, 0),
-                    .ImageHeight = If(meta.ImageHeight, 0)
-                }
+                ' Auf einem nicht erreichbaren Laufwerk ohne Dateidaten bauen: der gewoehnliche
+                ' Konstruktor fragte FileInfo, und das haengt auf einer getrennten Freigabe.
+                Dim offline = OfflineVolumes.IsUnreachable(meta.FilePath)
+                Dim neu = If(offline,
+                             ImageItem.CreateLightweight(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName),
+                             New ImageItem(meta.FilePath, thumbnailToken, cacheScopeId, cacheScopeName))
+                neu.IsOffline = offline
+                neu.IsFavorite = meta.IsFavorite
+                neu.Rating = meta.Rating
+                neu.PickState = meta.PickState
+                neu.ColorLabel = meta.ColorLabel
+                neu.Tags = If(meta.Tags, New List(Of String)())
+                neu.ImageWidth = If(meta.ImageWidth, 0)
+                neu.ImageHeight = If(meta.ImageHeight, 0)
                 ' Siehe den anderen Weg oben: ohne die Dateidaten aus dem Katalog kennt weder die
                 ' Zeitleiste noch die Sortierung ein Datum.
                 neu.ApplyCatalogFileDates(meta.FileCreatedAt, meta.ScannedSourceModifiedAt)
@@ -8711,6 +8740,10 @@ Namespace ViewModels
                 If item Is Nothing Then Continue For
                 If IsTrashedLocalPath(item.FilePath) Then Continue For
                 If Not _virtualPathSet.Add(item.FilePath) Then Continue For
+                ' Liegt die Datei auf einem nicht erreichbaren Laufwerk, gilt dasselbe wie in der
+                ' Galerie offline (GalleryViewModelOffline). Vor dem Einfuegen, also bevor eine
+                ' Kachel daran bindet. Serverbilder tragen den Vermerk nie (ImageItem.IsOffline).
+                If Not item.IsRemoteAsset AndAlso Not item.IsFolder Then item.IsOffline = OfflineVolumes.IsUnreachable(item.FilePath)
                 _allItems.Add(item)
                 added = True
             Next
@@ -9076,7 +9109,7 @@ Namespace ViewModels
         ''' <summary>Das Herz auf der KACHEL. Ein eigener Weg neben dem der Fusszeile, weil er genau
         ''' ein Bild umschaltet statt der ganzen Auswahl.</summary>
         Private Sub DoToggleFavorite(item As ImageItem)
-            If item Is Nothing OrElse item.IsFolder Then Return
+            If item Is Nothing OrElse item.IsFolder OrElse RefuseOffline({item}) Then Return
             Dim newVal = Not item.IsFavorite
             For Each target In WithHiddenPartners({item})
                 Dim before = target.IsFavorite
@@ -9093,7 +9126,7 @@ Namespace ViewModels
         ''' einzeln umzuschalten - bei gemischter Auswahl werden also erst alle zu Favoriten.
         Private Sub ToggleSelectedFavorite()
             Dim images = WithHiddenPartners(GetSelectedImageItems())
-            If images.Count = 0 Then Return
+            If images.Count = 0 OrElse RefuseOffline(images) Then Return
 
             Dim target = Not SelectedIsFavorite
             For Each item In images
@@ -9183,6 +9216,7 @@ Namespace ViewModels
             _allItems.Clear()
             Items.Clear()
             DisplayItems.Clear()
+            SetOfflineView(False)
             UpdateStorageInfo()
 
             If String.IsNullOrEmpty(folderPath) Then
@@ -9190,6 +9224,27 @@ Namespace ViewModels
                 SetupWatcher(Nothing)
                 Return
             End If
+
+            ' ZUERST: liegt der Ordner auf einem Laufwerk, das gerade nicht erreichbar ist? Dann
+            ' kommt er aus dem Katalog (GalleryViewModelOffline), und die Platte wird gar nicht
+            ' gefragt - auch nicht mit Directory.Exists. Der Stand der Laufwerke wird dafuer neu
+            ' gelesen: wer einen Ordner waehlt, nachdem er die Platte eingesteckt hat, soll ihn
+            ' sofort normal sehen.
+            Dim offline As Boolean
+            Try
+                offline = Await Task.Run(Function()
+                                             OfflineVolumes.Invalidate()
+                                             Return OfflineVolumes.IsFolderUnreachable(folderPath)
+                                         End Function, thumbnailToken)
+            Catch ex As OperationCanceledException
+                Return
+            End Try
+            If Not IsCurrentFolderLoad(folderPath, thumbnailToken) Then Return
+            If offline Then
+                Await LoadOfflineFolderAsync(folderPath, thumbnailToken)
+                Return
+            End If
+            NoteFolderReachability(folderPath, offline:=False)
 
             ' Auch diese kleine Pruefung kann auf einer getrennten Netzwerkfreigabe mehrere
             ' Sekunden dauern. Sie gehoert daher zum Hintergrundteil des Ordnerwechsels und nicht
@@ -10793,7 +10848,7 @@ Namespace ViewModels
 
         Private Sub ApplyPickState(items As List(Of ImageItem), state As Integer)
             items = items?.Where(Function(i) i IsNot Nothing AndAlso Not i.IsRemoteAsset).ToList()
-            If items Is Nothing OrElse items.Count = 0 Then Return
+            If items Is Nothing OrElse items.Count = 0 OrElse RefuseOffline(items) Then Return
             For Each item In items
                 item.PickState = state
             Next
@@ -12110,9 +12165,11 @@ Namespace ViewModels
                 ' Der Vergleich laeuft ueber DATEIPFADE; ein Pseudo-Pfad gleich welcher Serverquelle
                 ' scheitert dort. Das Menue blendet den Eintrag entsprechend aus, hier steht dieselbe
                 ' Bedingung noch einmal - der Weg wird auch ueber Tastenkuerzel erreicht.
-                If gewaehlt.Any(Function(i) i.IsRemoteAsset) Then Return
+                If gewaehlt.Any(Function(i) i.IsRemoteAsset) OrElse RefuseOffline(gewaehlt) Then Return
+                ' Der Filmstreifen bekommt nur, was sich laden laesst: nichts von einem nicht
+                ' erreichbaren Laufwerk (gemischte Listen, siehe GalleryViewModelOffline).
                 _mainVm.OpenCompareInViewer(gewaehlt(0).FilePath, gewaehlt(1).FilePath,
-                                            Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                                            Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
                                             cacheScopeId:=CurrentThumbnailCacheScopeId,
                                             cacheScopeName:=CurrentThumbnailCacheScopeName)
             Catch ex As Exception
@@ -12123,6 +12180,12 @@ Namespace ViewModels
         Public Async Sub OpenSelectedInViewer()
             Try
                 Dim selectedMedia = Items.Where(Function(i) i IsNot Nothing AndAlso (i.IsImage OrElse i.IsVideoFile) AndAlso i.IsSelected).ToList()
+                ' Auf einem nicht erreichbaren Laufwerk gibt es keine Datei zum Zeigen; der
+                ' Betrachter wuerde sie suchen und auf einer Freigabe dabei haengen.
+                ' Ordner und ".." bleiben offen: durch den Katalog zu blaettern ist ja gerade erlaubt.
+                Dim mediaOnly = If(selectedMedia.Count > 0, selectedMedia,
+                                   (New ImageItem() {SelectedItem}).Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder).ToList())
+                If RefuseOffline(mediaOnly) Then Return
                 If selectedMedia.Count > 0 Then
                     Dim first = selectedMedia(0)
                     ' Jedes Serverbild geht ueber die Sitzung, nicht nur ein Immich-Asset: ein
@@ -12131,10 +12194,10 @@ Namespace ViewModels
                         Await OpenRemoteItemInViewerAsync(first)
                         Return
                     End If
-                    _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                    _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
                                               cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
                 ElseIf SelectedItem IsNot Nothing AndAlso (SelectedItem.IsImage OrElse SelectedItem.IsVideoFile) Then
-                    _mainVm.OpenImageInViewer(SelectedItem.FilePath, Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                    _mainVm.OpenImageInViewer(SelectedItem.FilePath, Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
                                               cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
                 ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
                     NavigateToParent()
@@ -12150,12 +12213,12 @@ Namespace ViewModels
         Public Async Sub OpenSelectedInEditor()
             Try
                 Dim image = GetSelectedImageItems().FirstOrDefault(Function(i) i.CanEditFile)
-                If image Is Nothing Then Return
+                If image Is Nothing OrElse RefuseOffline({image}) Then Return
                 If image.IsRemoteAsset Then
                     Await OpenRemoteItemInEditorAsync(image)
                     Return
                 End If
-                Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile).Select(Function(i) i.FilePath).ToList(),
+                Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
                                                 cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher

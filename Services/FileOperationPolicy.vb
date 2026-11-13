@@ -184,12 +184,20 @@ Namespace Services
             Return candidate
         End Function
 
+        ''' <summary>Auf einem nicht erreichbaren Laufwerk gibt es keine Dateiarbeit. Diese Frage
+        ''' steht in jeder der Pruefungen hier VORN: alles danach blickt auf die Platte, und auf
+        ''' einer haengenden Freigabe dauert schon das Sekunden (siehe OfflineVolumes).</summary>
+        Private Shared Function IsOnUnreachableVolume(path As String) As Boolean
+            Return Not String.IsNullOrEmpty(path) AndAlso OfflineVolumes.IsUnreachable(path)
+        End Function
+
         Public Shared Function CanCopy(path As String) As Boolean
-            Return IsInAllowedArea(path) AndAlso Not IsHiddenPath(path)
+            Return Not IsOnUnreachableVolume(path) AndAlso IsInAllowedArea(path) AndAlso Not IsHiddenPath(path)
         End Function
 
         Public Shared Function CanPasteInto(folderPath As String) As Boolean
             Return Not String.IsNullOrEmpty(folderPath) AndAlso
+                   Not OfflineVolumes.IsFolderUnreachable(folderPath) AndAlso
                    Directory.Exists(folderPath) AndAlso
                    IsInAllowedArea(folderPath) AndAlso
                    Not IsHiddenPath(folderPath)
@@ -216,6 +224,7 @@ Namespace Services
 
         Private Shared Function CanModify(path As String) As Boolean
             Return Not String.IsNullOrEmpty(path) AndAlso
+                   Not IsOnUnreachableVolume(path) AndAlso
                    (File.Exists(path) OrElse Directory.Exists(path)) AndAlso
                    IsInAllowedArea(path) AndAlso
                    Not IsHiddenPath(path)

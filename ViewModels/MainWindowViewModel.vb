@@ -892,6 +892,12 @@ Namespace ViewModels
 
         Public Async Sub OpenImageInViewer(imagePath As String, Optional allPaths As System.Collections.Generic.List(Of String) = Nothing, Optional bypassEditorPrompt As Boolean = False, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing)
             Try
+                ' Der letzte Riegel fuer jeden Weg in den Betrachter: auf einem nicht erreichbaren
+                ' Laufwerk gibt es nichts zu laden (Galerie offline, siehe OfflineVolumes).
+                If OfflineVolumes.IsUnreachable(imagePath) Then
+                    If Gallery IsNot Nothing Then Gallery.StatusText = GalleryViewModel.DriveUnreachableText
+                    Return
+                End If
                 If CurrentMode = AppMode.Editor AndAlso Not bypassEditorPrompt Then
                     If Not Await ConfirmEditorLeaveAsync("den Viewer öffnest") Then Return
                 End If
@@ -931,6 +937,11 @@ Namespace ViewModels
             ' Die Rueckfragen unten stehen bewusst INNERHALB der Sperre: sie gehoeren zum Oeffnen,
             ' und zwei Speicherabfragen uebereinander waeren das Gegenteil einer Hilfe.
             If _documentOpenInFlight Then Return
+            ' Wie beim Betrachter: ohne erreichbares Laufwerk keine Datei, also kein Editor.
+            If OfflineVolumes.IsUnreachable(path) Then
+                If Gallery IsNot Nothing Then Gallery.StatusText = GalleryViewModel.DriveUnreachableText
+                Return
+            End If
             _documentOpenInFlight = True
             Try
                 If CurrentMode = AppMode.Editor AndAlso Not String.Equals(Editor?.CurrentImagePath, path, PathIdentity.Comparison) Then
@@ -1150,9 +1161,13 @@ Namespace ViewModels
 
         Public Sub EnterFullscreen() Implements IViewerHost.EnterFullscreen
             Try
-                If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
+                If CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso Gallery.SelectedItem.IsOffline Then
+                    ' Galerie offline: das Vollbild ist der Betrachter, und der braucht die Datei.
+                    Gallery.StatusText = GalleryViewModel.DriveUnreachableText
+                    Return
+                ElseIf CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
                     _previousModeBeforeFullscreen = AppMode.Gallery
-                    OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) i.IsImage OrElse i.IsVideoFile).Select(Function(i) i.FilePath).ToList(),
+                    OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
                                       cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
                 ElseIf CurrentMode = AppMode.Editor AndAlso Editor.IsNewDocument Then
                     ' Ein nie gespeichertes neues Bild hat auf der Platte nur seine LEERE Temp-Datei -

@@ -11611,4 +11611,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>ไม่สามารถเข้าถึงไดรฟ์ได้ แสดงข้อมูลจากแคตตาล็อกเพื่อดูอย่างเดียว</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>ไม่สามารถเข้าถึงไดรฟ์ได้: {0} ภาพจากแคตตาล็อก</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>นำรายการแคตตาล็อก {0} รายการใต้ {1} รวมโฟลเดอร์ย่อยและภาพย่อออกจากแคตตาล็อกหรือไม่ คะแนน ป้าย คำสำคัญ และบุคคลของภาพเหล่านี้จะหายไป ไฟล์บนไดรฟ์จะไม่ถูกแตะต้อง</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>นำออกจากแคตตาล็อก</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>นำรายการแคตตาล็อก {0} รายการและภาพย่อ {1} ภาพออกแล้ว</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>นำรายการแคตตาล็อก {0} รายการใต้ {1} รวมโฟลเดอร์ย่อยและภาพย่อออกจากแคตตาล็อกหรือไม่ หลังจากนั้นจะไม่เฝ้าดูโฟลเดอร์นี้อีก คะแนน ป้าย คำสำคัญ และบุคคลของภาพเหล่านี้จะหายไป ไฟล์บนไดรฟ์จะไม่ถูกแตะต้อง</value>
+  </data>
 </root>

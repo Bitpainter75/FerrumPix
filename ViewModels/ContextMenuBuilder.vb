@@ -27,11 +27,14 @@ Namespace ViewModels
         ''' eine gemeinte Bild. Leer heisst: nur die bildunabhaengigen Eintraege.</param>
         ''' <param name="isVirtual">Suchliste oder Immich - es gibt keinen echten Ordner.</param>
         ''' <param name="canPaste">Darf in den aktuellen Ordner eingefuegt werden.</param>
+        ''' <param name="offlineView">Die Galerie zeigt einen Ordner auf einem nicht erreichbaren
+        ''' Laufwerk aus dem Katalog. Dann gilt das Menue offline auch ohne Auswahl.</param>
         Public Shared Function Build(site As MenuSite,
                                      items As IList(Of ImageItem),
                                      isVirtual As Boolean,
                                      canPaste As Boolean,
-                                     commands As MenuCommands) As IReadOnlyList(Of Object)
+                                     commands As MenuCommands,
+                                     Optional offlineView As Boolean = False) As IReadOnlyList(Of Object)
 
             Dim list As New List(Of Object)()
             If commands Is Nothing Then Return list
@@ -92,6 +95,17 @@ Namespace ViewModels
                     End If
                 End If
                 TidySeparators(list)
+                Return list
+            End If
+
+            ' --- Laufwerk nicht erreichbar: das Menue sagt, warum nichts geht ---------------------
+            ' Die Galerie offline zeigt den Stand aus dem Katalog. Jede Aktion dieses Menues liest
+            ' oder schreibt die Datei, keine davon kann laufen. Statt eines leeren Menues steht der
+            ' Grund als nicht waehlbare Zeile da. Ein Ordner der Ansicht oeffnet sich weiter per
+            ' Doppelklick; durch den Katalog zu blaettern ist ja gerade erlaubt.
+            Dim offline = entries.Any(Function(i) i.IsOffline) OrElse (offlineView AndAlso entries.Count = 0)
+            If offline Then
+                list.Add(FooterMenuCatalog.DriveUnreachable())
                 Return list
             End If
 

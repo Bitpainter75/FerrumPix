@@ -60,8 +60,12 @@ Namespace Services
         ''' (Dateiname/Typ, Rest leer) zurück - NIE Nothing: Bindings wie „ExifInfo.Camera"
         ''' aktualisieren bei Nothing nicht auf leer, sondern behalten stumpf den letzten Wert -
         ''' genau so blieb das Panel beim Filmstrip-Wechsel auf dem Vorgängerbild stehen
-        ''' (3. Runde).</summary>
-        Public Shared Function BuildProvisionalFromCatalog(imagePath As String) As ExifData
+        ''' (3. Runde).
+        '''
+        ''' <paramref name="readFileFacts"/> False laesst die Angaben weg, fuer die die Datei selbst
+        ''' gefragt wird (Groesse, Dateizeiten). Das braucht die Galerie offline: dort liegt die Datei
+        ''' auf einem nicht erreichbaren Laufwerk, und der Katalog ist dann der ganze Stand.</summary>
+        Public Shared Function BuildProvisionalFromCatalog(imagePath As String, Optional readFileFacts As Boolean = True) As ExifData
             Try
                 Dim meta = LibraryService.Instance.GetMetaForPaths({imagePath}).Values.FirstOrDefault()
                 If meta Is Nothing Then
@@ -70,7 +74,7 @@ Namespace Services
                         .FolderPath = If(IO.Path.GetDirectoryName(imagePath), ""),
                         .FileType = IO.Path.GetExtension(imagePath).TrimStart("."c).ToUpperInvariant()
                     }
-                    ExifService.FillFileFacts(minimal, imagePath)
+                    If readFileFacts Then ExifService.FillFileFacts(minimal, imagePath)
                     Return minimal
                 End If
 
@@ -92,7 +96,7 @@ Namespace Services
                 If meta.Aperture.HasValue Then data.Aperture = "f/" & meta.Aperture.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture)
                 If meta.FocalLengthMm.HasValue Then data.FocalLength = meta.FocalLengthMm.Value.ToString("0.#", Globalization.CultureInfo.InvariantCulture) & " mm"
                 If meta.Iso.HasValue Then data.ISO = meta.Iso.Value.ToString(Globalization.CultureInfo.InvariantCulture)
-                ExifService.FillFileFacts(data, imagePath)
+                If readFileFacts Then ExifService.FillFileFacts(data, imagePath)
                 If meta.ImageWidth.GetValueOrDefault() > 0 AndAlso meta.ImageHeight.GetValueOrDefault() > 0 Then
                     Dim w = meta.ImageWidth.Value
                     Dim h = meta.ImageHeight.Value

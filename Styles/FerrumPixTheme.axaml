@@ -1953,6 +1953,17 @@
     <Style Selector="Border.thumb-card.wall Button.edited-badge">
         <Setter Property="Opacity" Value="0"/>
     </Style>
+    <!-- Zeichen einer Kachel auf einem nicht erreichbaren Laufwerk (Galerie offline): gleich gross
+         wie das Bearbeitet-Zeichen und in derselben Reihe, damit nichts uebereinander faellt. Die
+         Pille nimmt Flaechen- und Randfarbe des Themas, der Stecker darauf den Akzent. -->
+    <Style Selector="Border.offline-badge">
+        <Setter Property="Width" Value="26"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
     <!-- Dasselbe Zeichen im Filmstreifen (Einstellung, ab Werk aus): kleiner, weil die Kachel dort
          nur 100 hoch ist, und kein Knopf, damit ein Klick wie ueberall im Streifen die Kachel waehlt. -->
     <Style Selector="Border.filmstrip-edited-badge">

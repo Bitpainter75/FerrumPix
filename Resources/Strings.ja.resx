@@ -11607,4 +11607,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>ドライブにアクセスできません。カタログの内容を表示しています（閲覧のみ）。</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>ドライブにアクセスできません：カタログから {0} 枚の画像</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>{1} 以下の {0} 件のカタログ項目を、サブフォルダーとサムネイルを含めてカタログから削除しますか？これらの画像の評価、ラベル、キーワード、人物は失われます。ドライブ上のファイルには触れません。</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>カタログから削除</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>{0} 件のカタログ項目と {1} 件のサムネイルを削除しました。</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>{1} 以下の {0} 件のカタログ項目を、サブフォルダーとサムネイルを含めてカタログから削除しますか？このフォルダーはその後、監視対象からも外れます。これらの画像の評価、ラベル、キーワード、人物は失われます。ドライブ上のファイルには触れません。</value>
+  </data>
 </root>

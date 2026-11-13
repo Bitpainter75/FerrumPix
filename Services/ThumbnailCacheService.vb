@@ -571,6 +571,50 @@ Namespace Services
             Return Nothing
         End Function
 
+        ''' <summary>Die Kachel einer Datei, deren Laufwerk gerade nicht erreichbar ist (Galerie
+        ''' offline, siehe OfflineVolumes).
+        '''
+        ''' Der genaue Name aus <see cref="BuildCacheFileName"/> laesst sich dann nicht bilden: er
+        ''' traegt Aenderungszeit und Groesse der Datei, dazu Teile aus der Beistelldatei (Drehung,
+        ''' Stand des Rezepts einer entwickelten RAW), und Datei wie Beistelldatei liegen auf dem
+        ''' Laufwerk, das fehlt. Gesucht wird deshalb nur ueber den Hash des Pfads im Namensverzeichnis
+        ''' des Ordners, wie beim veralteten Treffer in <see cref="LoadCached"/>; liegen mehrere da,
+        ''' gewinnt die zuletzt geschriebene. Im Regelfall ist es genau eine, denn beim Schreiben
+        ''' raeumt <see cref="DeleteStaleCacheFiles"/> die uebrigen weg.
+        '''
+        ''' Fasst die Quelle NICHT an, auch nicht mit File.Exists: genau dieser Blick haengt auf
+        ''' einer getrennten Freigabe. Nothing, wenn keine Kachel da ist; dann bleibt die Kachel leer,
+        ''' denn ohne Laufwerk laesst sich keine neue rechnen.</summary>
+        Public Shared Function LoadCachedOffline(filePath As String,
+                                                 Optional cancellationToken As CancellationToken = Nothing,
+                                                 Optional cacheScopeId As String = Nothing) As Bitmap
+            cancellationToken.ThrowIfCancellationRequested()
+            Dim cachePath = FindCachedTileOffline(filePath, cacheScopeId)
+            If String.IsNullOrEmpty(cachePath) Then Return Nothing
+            Try
+                cancellationToken.ThrowIfCancellationRequested()
+                Return OpenTileBitmap(cachePath, CurrentCacheWidth())
+            Catch ex As OperationCanceledException
+                Throw
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Der Pfad der Kachel, die <see cref="LoadCachedOffline"/> laden wuerde, oder "".
+        ''' Getrennt, damit der Pruefstand die Wahl messen kann, ohne ein Bitmap zu bauen.</summary>
+        Friend Shared Function FindCachedTileOffline(filePath As String, Optional cacheScopeId As String = Nothing) As String
+            If String.IsNullOrEmpty(filePath) OrElse ShouldSkipCache(filePath) Then Return ""
+            Try
+                Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
+                Dim folderCachePath = GetFolderCachePathById(folderId)
+                Dim imageHash = HashText(NormalizePath(filePath))
+                Return If(FindAnyCachedThumbnail(folderId, folderCachePath, imageHash), "")
+            Catch
+                Return ""
+            End Try
+        End Function
+
         ''' <summary>Eine Kachel von der Platte, hoechstens <paramref name="width"/> breit. Breiter
         ''' liegen die Kacheln entwickelter RAWs (<see cref="WriteDevelopedRawTile"/>) und alte aus
         ''' der hohen Aufloesung; voll geladen hielte die Galerie fuer jede davon bis zum Vierfachen
@@ -736,6 +780,34 @@ Namespace Services
             Catch
                 Return 0
             End Try
+        End Function
+
+        ''' <summary>Entfernt die Kacheln eines Ordners SAMT ALLER UNTERORDNER. Jeder Ordner hat sein
+        ''' eigenes Verzeichnis im Zwischenspeicher (benannt nach dem Hash seines Pfads); welche es
+        ''' unter einem Ordner gibt, sagt das Wurzelverzeichnis mit seinen Ordnerpfaden. Dort steht
+        ''' jeder Ordner, fuer den je eine Kachel geschrieben wurde (EnsureFolderRegistered).
+        '''
+        ''' Fasst nur den Zwischenspeicher an, nie den Ordner selbst. Gibt die Zahl der entfernten
+        ''' Kacheln zurueck.</summary>
+        Public Shared Function DeleteFolderCachesUnder(folderPath As String) As Integer
+            If String.IsNullOrWhiteSpace(folderPath) Then Return 0
+            Dim ids As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            ids.Add(GetFolderCacheId(folderPath))
+            Try
+                SyncLock _rootIndexLock
+                    For Each entry In LoadRootIndex().Folders
+                        If entry Is Nothing OrElse String.IsNullOrEmpty(entry.Id) OrElse String.IsNullOrEmpty(entry.FolderPath) Then Continue For
+                        If PathIdentity.IsAncestorOrSelf(folderPath, entry.FolderPath) Then ids.Add(entry.Id)
+                    Next
+                End SyncLock
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ThumbnailCache.DeleteFolderCachesUnder", ex)
+            End Try
+            Dim removed = 0
+            For Each id In ids
+                removed += DeleteFolderCacheById(id)
+            Next
+            Return removed
         End Function
 
         Public Shared Function DeleteSearchListCache(searchListId As String) As Integer

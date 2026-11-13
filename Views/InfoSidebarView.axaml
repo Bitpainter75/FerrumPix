@@ -118,6 +118,16 @@
                     <!-- Ohne Trennlinien gliedert ein klarer, etwas größerer Weißraum die
                          unabhängigen Bereiche (Bilddaten, Scope, Bewertung und Stichwörter). -->
                     <StackPanel Spacing="32" IsVisible="{Binding IsInfoTabGeneral}" Margin="0,0,12,0">
+                        <!-- GALERIE OFFLINE: das Laufwerk des Bildes ist nicht erreichbar, die Leiste
+                             zeigt den Stand des Katalogs und laesst nichts aendern (IsReadOnly). Der
+                             Text kommt fertig uebersetzt aus dem ViewModel. -->
+                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsReadOnly}">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                           Width="18" Height="18" VerticalAlignment="Top"
+                                           IconBrush="{DynamicResource FP.Accent}"/>
+                            <TextBlock Classes="no-translate" Text="{Binding ReadOnlyHint}" TextWrapping="Wrap" MaxWidth="260"
+                                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                        </StackPanel>
                         <StackPanel Spacing="10" IsVisible="{Binding IsSingleImage}">
                             <!-- Dateiname ohne Beschriftung über die volle Breite: er ist die
                                  Überschrift des Blocks, keine Wertzeile - und lange Namen haben so
@@ -397,7 +407,8 @@
                              Block: zwei Ueberschriften uebereinander kosteten Hoehe, die die Leiste
                              nicht hat. Deshalb drei Ueberschriften, von denen hoechstens eine steht -
                              als ein Text mit wechselndem Inhalt waere sie nicht uebersetzbar. -->
-                        <StackPanel Spacing="10" IsVisible="{Binding ShowRatingOrColorLabelSection}">
+                        <StackPanel Spacing="10" IsVisible="{Binding ShowRatingOrColorLabelSection}" IsEnabled="{Binding CanEditData}"
+                                    ToolTip.Tip="{Binding ReadOnlyTip}" ToolTip.ShowOnDisabled="True">
                             <TextBlock Text="Bewertung &amp; Etikett" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
                                        IsVisible="{Binding ShowRatingAndColorLabelHeading}"/>
                             <TextBlock Text="Bewertung" FontSize="{DynamicResource FP.Font.Subtitle}" FontWeight="SemiBold"
@@ -575,6 +586,7 @@
                                                         BorderThickness="0"
                                                         Padding="0,4,8,4"
                                                         Command="{Binding DataContext.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        IsEnabled="{Binding DataContext.CanEditData, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         ToolTip.Tip="Stichwort entfernen">
                                                     <TextBlock Text="×" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -585,7 +597,8 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Grid ColumnDefinitions="*,Auto">
+                            <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding CanEditData}"
+                                  ToolTip.Tip="{Binding ReadOnlyTip}" ToolTip.ShowOnDisabled="True">
                                 <AutoCompleteBox Text="{Binding NewTagText, Mode=TwoWay}"
                                                  ItemsSource="{Binding TagSuggestions}"
                                                  PlaceholderText="Stichwort hinzufügen…"
@@ -694,7 +707,8 @@
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-                        <StackPanel Spacing="4" IsVisible="{Binding HasPeople}">
+                        <StackPanel Spacing="4" IsVisible="{Binding HasPeople}" IsEnabled="{Binding CanEditData}"
+                                    ToolTip.Tip="{Binding ReadOnlyTip}" ToolTip.ShowOnDisabled="True">
                             <TextBlock Text="Name eintragen benennt die ganze Gruppe."
                                        Foreground="{DynamicResource FP.Text.Secondary}"
                                        FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>

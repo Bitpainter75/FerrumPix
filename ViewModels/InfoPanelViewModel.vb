@@ -64,17 +64,23 @@ Namespace ViewModels
             TagSuggestions = New ObservableCollection(Of String)()
 
             SetInfoTabCommand = ReactiveCommand.Create(Of String)(AddressOf SetInfoTab)
+            ' Offline (IsReadOnly) aendert keiner dieser Wege etwas: die Anzeige bleibt beim Stand
+            ' des Katalogs, statt einen Wert zu zeigen, der nirgends ankommt.
             SetRatingCommand = ReactiveCommand.Create(Of String)(
                 Sub(value)
+                    If IsReadOnly Then Return
                     Dim number As Integer
                     If Integer.TryParse(value, number) Then Rating = If(_rating = number, 0, number)
                 End Sub)
-            ToggleFavoriteCommand = ReactiveCommand.Create(Sub() IsFavorite = Not IsFavorite)
-            TogglePickedCommand = ReactiveCommand.Create(Sub() TogglePickState(1))
-            ToggleRejectedCommand = ReactiveCommand.Create(Sub() TogglePickState(-1))
+            ToggleFavoriteCommand = ReactiveCommand.Create(Sub() If Not IsReadOnly Then IsFavorite = Not IsFavorite)
+            TogglePickedCommand = ReactiveCommand.Create(Sub() If Not IsReadOnly Then TogglePickState(1))
+            ToggleRejectedCommand = ReactiveCommand.Create(Sub() If Not IsReadOnly Then TogglePickState(-1))
             ' Dieselbe Farbe noch einmal nimmt das Etikett weg - wie im Kontextmenue der Galerie.
             SetColorLabelCommand = ReactiveCommand.Create(Of String)(
-                Sub(hex) ColorLabel = If(String.Equals(_colorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, "")))
+                Sub(hex)
+                    If IsReadOnly Then Return
+                    ColorLabel = If(String.Equals(_colorLabel, If(hex, ""), StringComparison.OrdinalIgnoreCase), "", If(hex, ""))
+                End Sub)
             AddTagCommand = ReactiveCommand.Create(AddressOf AddTag)
             RemoveTagCommand = ReactiveCommand.Create(Of String)(AddressOf RemoveTag)
             OpenTagSearchCommand = ReactiveCommand.Create(Of String)(Sub(tag) OpenTagSearch?.Invoke(tag))
@@ -140,9 +146,11 @@ Namespace ViewModels
             ' Element selbst weiss, und der Rest nach dem Holen der Datei.
             ' Gilt fuer JEDE Serverquelle, nicht nur fuer Immich: ein Serverbild steht in keinem
             ' lokalen Katalog, ein Katalogblick liefert dort nichts.
+            ' Offline ist der Katalog der ganze Stand: ohne Blick auf die Datei, und
+            ' LoadInBackground laesst sie ebenfalls in Ruhe.
             ExifInfo = If(item IsNot Nothing AndAlso item.IsRemoteAsset,
                           BuildFromItem(item),
-                          ImageInfoService.BuildProvisionalFromCatalog(_path))
+                          ImageInfoService.BuildProvisionalFromCatalog(_path, readFileFacts:=Not IsReadOnly))
             Me.RaisePropertyChanged(NameOf(Name))
             LoadBaseData()
             LoadInBackground(token, _path, item)
@@ -326,7 +334,8 @@ Namespace ViewModels
                                       NameOf(IsInfoTabIptc), NameOf(IsInfoTabXmp), NameOf(IsInfoTabIcc),
                                       NameOf(IsInfoTabPeople), NameOf(HasPeopleTab), NameOf(ShowNoPeopleHint),
                                       NameOf(PlaceText), NameOf(HasPlace),
-                                      NameOf(ShowPlaceRow)}
+                                      NameOf(ShowPlaceRow), NameOf(IsReadOnly), NameOf(CanEditData), NameOf(ReadOnlyTip),
+                                      NameOf(CanAnalyzeAiTags)}
                 Me.RaisePropertyChanged(propertyName)
             Next
         End Sub
@@ -589,8 +598,12 @@ Namespace ViewModels
             End If
             Dim path = _items(0)?.FilePath
             Dim entries = FacePanelService.BuildEntries(path)
+            ' Offline stehen die Personen aus dem Katalog da, ohne Ausschnitte: die schneidet
+            ' FacePanelService aus der Datei, und die liegt auf dem fehlenden Laufwerk. Gesucht
+            ' wird dort ebenfalls nicht.
+            Dim offline = IsReadOnly
             ' Nur gefragt, wo es zaehlt: mit Gesichtern ist die Frage beantwortet.
-            If _faceRecognitionOn AndAlso entries.Count = 0 Then _needsFaceScan = FaceScanRunner.NeedsScan(path)
+            If _faceRecognitionOn AndAlso entries.Count = 0 AndAlso Not offline Then _needsFaceScan = FaceScanRunner.NeedsScan(path)
             FacePanelService.FillNameSuggestions(PersonNameSuggestions)
             For Each entry In entries
                 People.Add(entry)
@@ -601,7 +614,7 @@ Namespace ViewModels
             ' Die Ausschnitte kommen nach. Der Vergleich gegen die Marke haelt den Nachschub am
             ' richtigen Bild fest - beim schnellen Blaettern faellt er sonst ins naechste.
             Dim token = _loadToken
-            FacePanelService.LoadThumbnails(entries, path, Function() token = _loadToken)
+            If Not offline Then FacePanelService.LoadThumbnails(entries, path, Function() token = _loadToken)
         End Sub
 
         ''' <summary>Meldet den Personen-Abschnitt UND seinen Reiter.
@@ -630,7 +643,7 @@ Namespace ViewModels
         ''' dafuer wird gruppiert. Wer nur DIESES Gesicht meint, weil es falsch zugeordnet ist,
         ''' nimmt <see cref="DetachFace"/>.</summary>
         Public Sub RenamePerson(personId As String, newName As String, faceId As String) Implements IInfoSidebarPanel.RenamePerson
-            If String.IsNullOrWhiteSpace(personId) Then Return
+            If String.IsNullOrWhiteSpace(personId) OrElse IsReadOnly Then Return
             Try
                 ' NUR bei einer echten Aenderung nachziehen, und dann an Ort und Stelle. Ein Neuaufbau
                 ' wirft die Zeilen weg: stand eine Vorschlagsliste offen, verschwand sie mitsamt
@@ -751,7 +764,7 @@ Namespace ViewModels
         ''' sieht man am Bild, ob es schon durchgesehen ist oder nur Vorschlaege der Erkennung
         ''' traegt, und ein erneuter Durchlauf laesst das Gesicht stehen.</summary>
         Public Sub ConfirmFace(faceId As String) Implements IInfoSidebarPanel.ConfirmFace
-            If String.IsNullOrWhiteSpace(faceId) Then Return
+            If String.IsNullOrWhiteSpace(faceId) OrElse IsReadOnly Then Return
             Try
                 If Not LibraryService.Instance.ConfirmFace(faceId) Then Return
                 ' Die Zeile wird AN ORT UND STELLE umgestellt, nicht neu gebaut: der Neuaufbau nimmt
@@ -771,7 +784,7 @@ Namespace ViewModels
         ''' wieder leer, und der richtige Name traegt es in die richtige Gruppe (heisst schon jemand
         ''' so, verschmilzt die Bibliothek beides).</summary>
         Public Sub DetachFace(faceId As String) Implements IInfoSidebarPanel.DetachFace
-            If String.IsNullOrWhiteSpace(faceId) Then Return
+            If String.IsNullOrWhiteSpace(faceId) OrElse IsReadOnly Then Return
             Try
                 LibraryService.Instance.DetachFace(faceId)
                 LoadPeople()
@@ -1016,6 +1029,9 @@ Namespace ViewModels
         ''' Wechsel in die Ansicht holt <see cref="Refresh"/> alles nach.</summary>
         Private Sub LoadInBackground(token As Integer, path As String, item As ImageItem)
             If Not IsPanelLive Then Return
+            ' Offline gibt es keine Datei zu lesen: Aufnahmedaten kamen schon aus dem Katalog,
+            ' ein Analysebild gibt es nicht.
+            If item IsNot Nothing AndAlso item.IsOffline Then Return
 
             Dim istServerbild = item IsNot Nothing AndAlso item.IsRemoteAsset
             Task.Run(Async Function()
@@ -1403,7 +1419,7 @@ Namespace ViewModels
             Get
                 ' Auch ohne geladenes Modell: das Analysieren fragt dann nach dem Download.
                 Return (AiTaggingAvailable OrElse AiModelService.RuntimeAvailable) AndAlso Not IsAiTagging AndAlso Not _isSummary AndAlso
-                       Not String.IsNullOrWhiteSpace(_path)
+                       Not String.IsNullOrWhiteSpace(_path) AndAlso Not IsReadOnly
             End Get
         End Property
 
@@ -1604,9 +1620,44 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Liegt eines der gezeigten Bilder auf einem nicht erreichbaren Laufwerk
+        ''' (ImageItem.IsOffline)? Dann zeigt die Leiste nur, was der Katalog weiss: Bewertung,
+        ''' Etikett, Stichwoerter, Personen und Aufnahmedaten stehen da, aendern laesst sich nichts
+        ''' davon, und die Datei wird nicht gelesen. Serverbilder sind davon nie betroffen.</summary>
+        Public ReadOnly Property IsReadOnly As Boolean
+            Get
+                Return _items IsNot Nothing AndAlso _items.Any(Function(i) i IsNot Nothing AndAlso i.IsOffline)
+            End Get
+        End Property
+
+        ''' <summary>Das Gegenstueck zu <see cref="IsReadOnly"/> fuer die Bindungen der
+        ''' Bedienelemente.</summary>
+        Public ReadOnly Property CanEditData As Boolean
+            Get
+                Return Not IsReadOnly
+            End Get
+        End Property
+
+        ''' <summary>Der Grund als Hinweis an den gesperrten Bedienelementen, solange
+        ''' <see cref="IsReadOnly"/> gilt; sonst Nothing, und es erscheint kein Hinweis.</summary>
+        Public ReadOnly Property ReadOnlyTip As String
+            Get
+                Return If(IsReadOnly, GalleryViewModel.DriveUnreachableText, Nothing)
+            End Get
+        End Property
+
+        ''' <summary>Der Hinweis ueber den Angaben, solange <see cref="IsReadOnly"/> gilt.</summary>
+        Public ReadOnly Property ReadOnlyHint As String
+            Get
+                Return LocalizationService.T("Laufwerk nicht erreichbar. Angezeigt wird der Stand aus dem Katalog, nur zum Ansehen.")
+            End Get
+        End Property
+
         ''' <summary>Die Markierung lebt nur im lokalen Katalog; ein Serverbild hat keine.</summary>
         Public ReadOnly Property CanSetPickState As Boolean
             Get
+                ' Offline bleiben die Knoepfe stehen; gesperrt sind sie ueber den Block, in dem sie
+                ' stehen (CanEditData), und zeigen so weiter den Stand aus dem Katalog.
                 Return PickTargets().Count > 0
             End Get
         End Property
@@ -1739,6 +1790,7 @@ Namespace ViewModels
             ' Die Schreibweise bleibt, wie sie getippt wurde: aus einer Beistelldatei kommen
             ' Stichwoerter ebenfalls mit Grossbuchstaben, und Immich behaelt sie auch. Verglichen
             ' wird dafuer ohne Ruecksicht darauf - sonst stuende "Berlin" zweimal da.
+            If IsReadOnly Then Return
             Dim tag = NewTagText.Trim()
             If String.IsNullOrEmpty(tag) OrElse
                Tags.Any(Function(vorhanden) String.Equals(vorhanden, tag, StringComparison.OrdinalIgnoreCase)) Then Return
@@ -1749,7 +1801,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub RemoveTag(tag As String)
-            If Not Tags.Remove(tag) Then Return
+            If IsReadOnly OrElse Not Tags.Remove(tag) Then Return
             WriteTag(tag, add:=False)
         End Sub
 

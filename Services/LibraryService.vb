@@ -2077,8 +2077,13 @@ Namespace Services
         ''' <para>Der Katalog ist eine Erinnerung, keine Wahrheit: eine ausserhalb von FerrumPix
         ''' geloeschte Datei steht hier noch drin und erscheint fuer den Augenblick bis zum
         ''' Dateisystemlauf als Kachel. Das ist der bewusste Preis fuer den Sofortbestand - der
-        ''' Abgleich raeumt sie wieder weg.</para></summary>
-        Public Function GetImagesInFolder(folderPath As String) As List(Of LibraryImageMeta)
+        ''' Abgleich raeumt sie wieder weg.</para>
+        '''
+        ''' <para><paramref name="restoreSpelling"/> False laesst den Blick auf die Platte weg, mit
+        ''' dem unter Windows die Schreibweise der Dateinamen zurueckgeholt wird. Das braucht die
+        ''' Galerie offline: dort ist der Ordner nicht erreichbar, und schon der Versuch kann auf
+        ''' einer Freigabe haengen.</para></summary>
+        Public Function GetImagesInFolder(folderPath As String, Optional restoreSpelling As Boolean = True) As List(Of LibraryImageMeta)
             If String.IsNullOrWhiteSpace(folderPath) Then Return New List(Of LibraryImageMeta)()
             Dim normalizedFolder = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
             ' Kein LIKE ... ESCAPE: damit verliert SQLite die Indexoptimierung und prüft den
@@ -2113,8 +2118,68 @@ Namespace Services
                         ToList()
                 End Using
             End Using
-            RestoreFileSpelling(rows, normalizedFolder)
+            If restoreSpelling Then RestoreFileSpelling(rows, normalizedFolder)
             Return rows
+        End Function
+
+        ''' <summary>Die Unterordner einer Ebene, wie sie der KATALOG kennt: jeder Ordner direkt
+        ''' unter <paramref name="folderPath"/>, unter dem mindestens ein Bild eingetragen ist,
+        ''' gleich wie tief. Fuer den Ordnerbaum und die Galerie offline, wenn das Laufwerk nicht
+        ''' erreichbar ist und die Platte deshalb nicht gefragt werden kann.
+        '''
+        ''' Derselbe halboffene Bereich wie in <see cref="GetImagesInFolder"/>, er nutzt also den
+        ''' Primaerschluessel. Gelesen wird nur die Pfadspalte; bei einem grossen Archiv sind das
+        ''' viele Zeilen, aber kein Blick auf die Platte.</summary>
+        Public Function GetCatalogSubfolders(folderPath As String) As List(Of String)
+            Dim result As New List(Of String)()
+            If String.IsNullOrWhiteSpace(folderPath) Then Return result
+            Dim normalizedFolder = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            If normalizedFolder.Length = 0 Then normalizedFolder = folderPath
+            Dim keyFolder = PathKey(normalizedFolder)
+            Dim prefix = keyFolder.TrimEnd(Path.DirectorySeparatorChar) & Path.DirectorySeparatorChar
+            Dim upperBound = keyFolder.TrimEnd(Path.DirectorySeparatorChar) & ChrW(AscW(Path.DirectorySeparatorChar) + 1)
+            Dim seen As New HashSet(Of String)(PathIdentity.Comparer)
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT FilePath FROM ImageMeta WHERE FilePath >= $prefix AND FilePath < $upper"
+                    cmd.Parameters.AddWithValue("$prefix", prefix)
+                    cmd.Parameters.AddWithValue("$upper", upperBound)
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(0) Then Continue While
+                            Dim filePath = reader.GetString(0)
+                            If filePath.Length <= prefix.Length Then Continue While
+                            Dim rest = filePath.Substring(prefix.Length)
+                            Dim separator = rest.IndexOf(Path.DirectorySeparatorChar)
+                            ' Ohne Trenner liegt die Datei direkt in diesem Ordner, ist also kein
+                            ' Unterordner.
+                            If separator <= 0 Then Continue While
+                            Dim child = rest.Substring(0, separator)
+                            If seen.Add(child) Then result.Add(normalizedFolder.TrimEnd(Path.DirectorySeparatorChar) & Path.DirectorySeparatorChar & child)
+                        End While
+                    End Using
+                End Using
+            End Using
+            result.Sort(Function(a, b) StringComparer.CurrentCultureIgnoreCase.Compare(Path.GetFileName(a), Path.GetFileName(b)))
+            Return result
+        End Function
+
+        ''' <summary>Wie viele Katalogzeilen unter einem Ordner stehen, samt aller Unterordner.
+        ''' Fuer die Rueckfrage, bevor ein Ordner aus dem Katalog genommen wird; sie nennt die
+        ''' Zahl, damit man weiss, ob es zehn Bilder sind oder zehntausend.</summary>
+        Public Function CountCatalogRowsUnder(folderPath As String) As Integer
+            If String.IsNullOrWhiteSpace(folderPath) Then Return 0
+            Dim keyFolder = PathKey(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT COUNT(*) FROM ImageMeta WHERE FilePath >= $prefix AND FilePath < $upper"
+                    cmd.Parameters.AddWithValue("$prefix", keyFolder & Path.DirectorySeparatorChar)
+                    cmd.Parameters.AddWithValue("$upper", keyFolder & ChrW(AscW(Path.DirectorySeparatorChar) + 1))
+                    Return Convert.ToInt32(cmd.ExecuteScalar(), Globalization.CultureInfo.InvariantCulture)
+                End Using
+            End Using
         End Function
 
         ''' <summary>Gibt Katalogzeilen eines Ordners die Schreibweise der Dateien auf der Platte

@@ -11586,4 +11586,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>Drive not reachable. Showing what the catalogue knows, for viewing only.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>Drive not reachable: {0} images from the catalogue</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>Remove {0} catalogue entries under {1}, including subfolders and thumbnails, from the catalogue? Ratings, labels, keywords and people of these images will be lost. The files on the drive are not touched.</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>Remove from catalogue</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>{0} catalogue entries and {1} thumbnails removed.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>Remove {0} catalogue entries under {1}, including subfolders and thumbnails, from the catalogue? The folder will then no longer be watched either. Ratings, labels, keywords and people of these images will be lost. The files on the drive are not touched.</value>
+  </data>
 </root>

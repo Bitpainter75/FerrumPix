@@ -2203,6 +2203,11 @@ Namespace Views
             ' Was für ein fremdes Ziel wie Dolphin fehlt, ist die Datei. Dafür gibt es "Exportieren
             ' nach" und Kopieren; ein Zug aus der Galerie meint innerhalb der Anwendung fast immer
             ' die Zuordnung, und dafür ist der Pseudo-Pfad genau das Richtige.
+            ' Galerie offline: es gibt keine Datei, die ein Ziel bekommen koennte.
+            If dragItems.Any(Function(i) i IsNot Nothing AndAlso i.IsOffline) Then
+                vm.StatusText = GalleryViewModel.DriveUnreachableText
+                Return
+            End If
             Dim paths = vm.GetPathsForTransfer(dragItems)
             Dim hatServerbilder = False
             For Each it In dragItems
@@ -2743,6 +2748,12 @@ Namespace Views
             _folderTreeContextNode = contextNode
             _suppressFolderTreeSelectionChange = False
             Dim path = contextNode?.FullPath
+            ' Laufwerk nicht erreichbar: der Grund oben, darunter das Entfernen aus dem Katalog. Die
+            ' Dateiarbeit darunter faellt dort von selbst weg (FileOperationPolicy fragt zuerst
+            ' OfflineVolumes und blickt dann gar nicht erst auf die Platte).
+            Dim offline = vm.CanRemoveFolderFromCatalog(path)
+            SetMenuItemVisible("FolderTreeOfflineInfoMenuItem", offline)
+            SetMenuItemVisible("FolderTreeRemoveFromCatalogMenuItem", offline)
             SetMenuItemVisible("FolderTreeCreateFolderMenuItem", vm.CanPasteIntoFolder(path))
             SetMenuItemVisible("FolderTreeRenameMenuItem", vm.CanRenamePath(path))
             SetMenuItemVisible("FolderTreeCopyMenuItem", vm.CanCopyPath(path))
@@ -3062,6 +3073,22 @@ Namespace Views
             Dim node = GetFolderTreeContextNode()
             If node Is Nothing Then Return
             GetVm()?.CreateFolderIn(node.FullPath)
+        End Sub
+
+        ''' <summary>"Aus dem Katalog entfernen" an einem Ordner auf einem nicht erreichbaren
+        ''' Laufwerk. Fragt nach und nimmt ihn samt Unterordnern und Kacheln aus dem Katalog; die
+        ''' Dateien selbst bleiben unberuehrt.</summary>
+        Public Async Sub OnContextRemoveFolderFromCatalog(sender As Object, e As RoutedEventArgs)
+            Try
+                Dim node = GetFolderTreeContextNode()
+                Dim vm = GetVm()
+                If node Is Nothing OrElse vm Is Nothing Then Return
+                Await vm.ConfirmRemoveFolderFromCatalogAsync(node.FullPath)
+            Catch ex As Exception
+                ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
+                ' und beendet den Prozess.
+                DiagnosticLogService.LogException("GalleryView.OnContextRemoveFolderFromCatalog", ex)
+            End Try
         End Sub
 
         Public Sub OnContextRefreshFolder(sender As Object, e As RoutedEventArgs)
@@ -3491,7 +3518,8 @@ Namespace Views
                         e.Handled = True
                         Return
                     End If
-                    If vm.SelectedItem IsNot Nothing AndAlso vm.SelectedItem.IsImage Then
+                    ' Die Schnellansicht laedt die Datei; offline gibt es keine.
+                    If vm.SelectedItem IsNot Nothing AndAlso vm.SelectedItem.IsImage AndAlso Not vm.SelectedItem.IsOffline Then
                         _spaceOverviewActive = True
                         ShowQuickPreview(vm.SelectedItem)
                         e.Handled = True

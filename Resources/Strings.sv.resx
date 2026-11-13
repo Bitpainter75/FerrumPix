@@ -11607,4 +11607,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>Enheten kan inte nås. Det som katalogen vet visas, endast för visning.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>Enheten kan inte nås: {0} bilder från katalogen</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>Ta bort {0} katalogposter under {1}, inklusive undermappar och miniatyrer, från katalogen? Betyg, etiketter, nyckelord och personer för dessa bilder går förlorade. Filerna på enheten lämnas orörda.</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>Ta bort från katalogen</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>{0} katalogposter och {1} miniatyrer borttagna.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>Ta bort {0} katalogposter under {1}, inklusive undermappar och miniatyrer, från katalogen? Mappen bevakas därefter inte heller längre. Betyg, etiketter, nyckelord och personer för dessa bilder går förlorade. Filerna på enheten lämnas orörda.</value>
+  </data>
 </root>

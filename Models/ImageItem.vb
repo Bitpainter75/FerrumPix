@@ -369,6 +369,37 @@ Namespace Models
             End Try
         End Function
 
+        ''' <summary>True, wenn die Datei auf einem Laufwerk liegt, das gerade nicht erreichbar ist,
+        ''' und das Element deshalb allein aus dem Katalog stammt (Galerie offline, siehe
+        ''' OfflineVolumes). Gesetzt beim Bauen, bevor irgendetwas bindet.
+        '''
+        ''' Ein solches Element fasst die Datei NIE an: keine Dateidaten (sie kommen aus dem
+        ''' Katalog), keine Beistelldatei, die Kachel nur aus dem Zwischenspeicher, und jede
+        ''' Dateioperation ist aus. Auf einer haengenden Freigabe kostete schon der Blick darauf
+        ''' Sekunden je Kachel.
+        '''
+        ''' NUR FUER LOKALE DATEIEN. Ein Serverbild (Immich, Nextcloud) ist nie offline in diesem
+        ''' Sinn: wie es sich bei einem nicht erreichbaren Server verhaelt, regeln seine eigenen
+        ''' Wege, und daran aendert dieser Vermerk nichts. Gesetzt auf einem Serverbild bleibt er
+        ''' deshalb wirkungslos.</summary>
+        Public Property IsOffline As Boolean
+            Get
+                Return _isOffline AndAlso Not IsRemoteAsset
+            End Get
+            Set(value As Boolean)
+                _isOffline = value
+            End Set
+        End Property
+        Private _isOffline As Boolean
+
+        ''' <summary>Der Grund als Hinweis an den gesperrten Knoepfen der Kachel (Sterne, Herz),
+        ''' solange <see cref="IsOffline"/> gilt; sonst Nothing, also kein Hinweis.</summary>
+        Public ReadOnly Property OfflineTip As String
+            Get
+                Return If(IsOffline, LocalizationService.T("Laufwerk nicht erreichbar"), Nothing)
+            End Get
+        End Property
+
         ''' <summary>True, wenn dieses Element im Papierkorb seines Servers liegt. Es ist damit KEIN
         ''' gewoehnliches Element mehr: gelesen wird es ueber eigene Wege (bei Nextcloud liegt es in
         ''' einem anderen WebDAV-Baum), und alles Schreibende ist zu.</summary>
@@ -458,19 +489,19 @@ Namespace Models
                 ' Gefragt ist hier "gibt es eine lokale Datei", nicht "ist das Immich" - deshalb
                 ' ueber IsRemoteAsset. Vorher stand hier IsImmichAsset, und ein Serverbild einer
                 ' zweiten Quelle waere durchgerutscht.
-                Return Not IsRemoteAsset AndAlso CanEditFile
+                Return Not IsRemoteAsset AndAlso Not IsOffline AndAlso CanEditFile
             End Get
         End Property
 
         Public ReadOnly Property CanFileOperationCopy As Boolean
             Get
-                Return Not IsParentFolderEntry AndAlso FileOperationPolicy.CanCopy(FilePath)
+                Return Not IsParentFolderEntry AndAlso Not IsOffline AndAlso FileOperationPolicy.CanCopy(FilePath)
             End Get
         End Property
 
         Public ReadOnly Property CanFileOperationRename As Boolean
             Get
-                Return Not IsParentFolderEntry AndAlso FileOperationPolicy.CanRename(FilePath)
+                Return Not IsParentFolderEntry AndAlso Not IsOffline AndAlso FileOperationPolicy.CanRename(FilePath)
             End Get
         End Property
 
@@ -494,6 +525,8 @@ Namespace Models
         Public ReadOnly Property CanFileOperationDelete As Boolean
             Get
                 If IsParentFolderEntry Then Return False
+                ' Ohne erreichbares Laufwerk gibt es nichts zu loeschen; die Datei ist gar nicht da.
+                If IsOffline Then Return False
                 ' Was schon im Papierkorb liegt, wird hier nicht noch einmal geloescht: das waere das
                 ' endgueltige Loeschen, und dafuer gibt es keine Geste - der Papierkorb kennt genau
                 ' eine Richtung, zurueck.
@@ -526,6 +559,7 @@ Namespace Models
 
         Public ReadOnly Property CanFileOperationPasteInto As Boolean
             Get
+                If IsOffline Then Return False
                 Return If(IsFolder, FileOperationPolicy.CanPasteInto(FilePath), FileOperationPolicy.CanPasteInto(IO.Path.GetDirectoryName(FilePath)))
             End Get
         End Property
@@ -694,7 +728,8 @@ Namespace Models
         ''' gerade ausblendet und deren Kachel nach dem Speichern nicht neu geladen wurde. Nur fuer
         ''' lokale Dateien; Server-Eintraege gelten als unbearbeitet.</summary>
         Public Function ResolveIsEdited() As Boolean
-            Dim value = _immichAssetId Is Nothing AndAlso _nextcloudFileId Is Nothing AndAlso
+            ' Offline liegt die Beistelldatei auf dem Laufwerk, das fehlt: dort wird nicht gefragt.
+            Dim value = _immichAssetId Is Nothing AndAlso _nextcloudFileId Is Nothing AndAlso Not IsOffline AndAlso
                         Services.RawSidecarService.IsEditedFile(FilePath)
             If Not _isEdited.HasValue OrElse _isEdited.Value <> value Then
                 _isEdited = value
@@ -1621,6 +1656,12 @@ Namespace Models
 
         Private Sub EnsureFileInfoLoaded()
             If _fileInfoLoaded OrElse IsFolder Then Return
+            ' Offline gelten die Dateidaten aus dem Katalog (ApplyCatalogFileDates); die Groesse
+            ' kennt er nicht und bleibt 0. Ein FileInfo haengt auf einer getrennten Freigabe.
+            If IsOffline Then
+                _fileInfoLoaded = True
+                Return
+            End If
             Try
                 Dim info = New FileInfo(filePath)
                 FileSize = info.Length
@@ -1635,7 +1676,7 @@ Namespace Models
         End Sub
 
         Public Sub RefreshFileInfo()
-            If IsFolder Then Return
+            If IsFolder OrElse IsOffline Then Return
             _fileInfoLoaded = False
             EnsureFileInfoLoaded()
             RaisePropertyChanged(NameOf(FileSizeText))
@@ -1854,12 +1895,19 @@ Namespace Models
             RaisePropertyChanged(NameOf(SearchText))
         End Sub
 
-        Public Shared Function FromFolder(folderPath As String) As ImageItem
+        ''' <param name="offline">Der Ordner liegt auf einem nicht erreichbaren Laufwerk und kommt
+        ''' aus dem Katalog: kein Blick auf die Platte, das Element traegt <see cref="IsOffline"/>.</param>
+        Public Shared Function FromFolder(folderPath As String, Optional offline As Boolean = False) As ImageItem
             Dim item = New ImageItem()
             item.FilePath = folderPath
             item.FileName = Path.GetFileName(folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
             If String.IsNullOrEmpty(item.FileName) Then item.FileName = folderPath
             item.IsFolder = True
+            If offline Then
+                item.IsOffline = True
+                item.DateModified = DateTime.MinValue
+                Return item
+            End If
 
             Try
                 Dim info = New DirectoryInfo(folderPath)
@@ -1871,8 +1919,8 @@ Namespace Models
             Return item
         End Function
 
-        Public Shared Function CreateParentFolderEntry(folderPath As String) As ImageItem
-            Dim item = FromFolder(folderPath)
+        Public Shared Function CreateParentFolderEntry(folderPath As String, Optional offline As Boolean = False) As ImageItem
+            Dim item = FromFolder(folderPath, offline)
             item.IsParentFolderEntry = True
             item.FileName = ".."
             Return item
@@ -2483,6 +2531,10 @@ Namespace Models
                 Await LoadNextcloudThumbnailAsync(token, generation)
                 Return
             End If
+            If IsOffline Then
+                Await LoadOfflineThumbnailAsync(token, generation)
+                Return
+            End If
 
             Try
                 Dim bmp As Bitmap = Nothing
@@ -2618,6 +2670,34 @@ Namespace Models
             ' An den (viewport-priorisierten) Thumbnail-Ladeweg gekoppelt: sichtbare Bilder bekommen ihre
             ' Detaildaten (Dateigröße/Rating/Kamera/Tags) zuerst, statt eager 25.000 Assets auf einmal.
             RequestImmichDetailOnce()
+        End Function
+
+        ''' <summary>Die Kachel eines Elements auf einem nicht erreichbaren Laufwerk: NUR aus dem
+        ''' Zwischenspeicher (ThumbnailCacheService.LoadCachedOffline), ohne Dateidaten, ohne
+        ''' Beistelldatei und ohne Decode. Fehlt sie dort, bleibt die Kachel leer und gilt trotzdem
+        ''' als fertig (Zustand 2): ohne Laufwerk kaeme auch ein zweiter Versuch zu nichts, und die
+        ''' Nachversuche des lokalen Zweigs liefen ins Leere.</summary>
+        Private Async Function LoadOfflineThumbnailAsync(token As CancellationToken, generation As Integer) As Task
+            Try
+                Dim scopeId = _thumbnailCacheScopeId
+                Dim bmp = Await Task.Run(Function() ThumbnailCacheService.LoadCachedOffline(FilePath, token, scopeId), token)
+                If token.IsCancellationRequested Then
+                    bmp?.Dispose()
+                    SetThumbStateAfterLoad(0, generation)
+                    Return
+                End If
+                Dim replaced As Bitmap = Nothing
+                If Not CommitThumbnail(bmp, generation, replaced) Then
+                    bmp?.Dispose()
+                    Return
+                End If
+                Await NotifyThumbnailReadyAsync()
+                If Not Object.ReferenceEquals(replaced, bmp) Then replaced?.Dispose()
+            Catch ex As OperationCanceledException
+                SetThumbStateAfterLoad(0, generation)
+            Catch
+                SetThumbStateAfterLoad(2, generation)
+            End Try
         End Function
 
         ''' <summary>Laedt das Vorschaubild einer Nextcloud-Aufnahme. Derselbe Zustands- und

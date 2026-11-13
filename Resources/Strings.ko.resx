@@ -11611,4 +11611,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>드라이브에 연결할 수 없습니다. 카탈로그의 내용을 보기 전용으로 표시합니다.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>드라이브에 연결할 수 없음: 카탈로그의 이미지 {0}개</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>{1} 아래의 카탈로그 항목 {0}개를 하위 폴더와 미리보기를 포함해 카탈로그에서 제거할까요? 이 이미지들의 별점, 레이블, 키워드, 인물 정보가 사라집니다. 드라이브의 파일은 그대로 유지됩니다.</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>카탈로그에서 제거</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>카탈로그 항목 {0}개와 미리보기 {1}개를 제거했습니다.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>{1} 아래의 카탈로그 항목 {0}개를 하위 폴더와 미리보기를 포함해 카탈로그에서 제거할까요? 이 폴더는 이후 감시 대상에서도 빠집니다. 이 이미지들의 별점, 레이블, 키워드, 인물 정보가 사라집니다. 드라이브의 파일은 그대로 유지됩니다.</value>
+  </data>
 </root>

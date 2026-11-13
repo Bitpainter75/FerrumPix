@@ -11565,4 +11565,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>驱动器无法访问。显示的是目录中的数据，仅供查看。</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>驱动器无法访问：来自目录的 {0} 张图片</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>要从目录中移除 {1} 下的 {0} 个条目（包括子文件夹和缩略图）吗？这些图片的评分、标签、关键字和人物将会丢失。驱动器上的文件不受影响。</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>从目录中移除</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>已移除 {0} 个目录条目和 {1} 个缩略图。</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>要从目录中移除 {1} 下的 {0} 个条目（包括子文件夹和缩略图）吗？此后该文件夹也不再受监视。这些图片的评分、标签、关键字和人物将会丢失。驱动器上的文件不受影响。</value>
+  </data>
 </root>

@@ -11566,4 +11566,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>Unidade inacessível. É mostrado o que o catálogo sabe, apenas para visualizar.</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>Unidade inacessível: {0} imagens do catálogo</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>Remover do catálogo {0} entradas em {1}, incluindo subpastas e miniaturas? As classificações, etiquetas, palavras-chave e pessoas destas imagens serão perdidas. Os ficheiros na unidade não são alterados.</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>Remover do catálogo</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>{0} entradas do catálogo e {1} miniaturas removidas.</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>Remover do catálogo {0} entradas em {1}, incluindo subpastas e miniaturas? A pasta também deixará de ser vigiada. As classificações, etiquetas, palavras-chave e pessoas destas imagens serão perdidas. Os ficheiros na unidade não são alterados.</value>
+  </data>
 </root>

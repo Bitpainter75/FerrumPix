@@ -11611,4 +11611,22 @@
   <data name="GPL_2_0_351c2424" xml:space="preserve">
     <value>GPL-2.0+</value>
   </data>
+  <data name="Laufwerk_nicht_erreichbar_Angezeigt_wird_der_Sta_d399ba26" xml:space="preserve">
+    <value>ड्राइव उपलब्ध नहीं है। कैटलॉग की जानकारी केवल देखने के लिए दिखाई जा रही है।</value>
+  </data>
+  <data name="Laufwerk_nicht_erreichbar_0_Bilder_aus_dem_Katal_4340cc56" xml:space="preserve">
+    <value>ड्राइव उपलब्ध नहीं है: कैटलॉग से {0} चित्र</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__01eee644" xml:space="preserve">
+    <value>{1} के अंतर्गत {0} कैटलॉग प्रविष्टियाँ, उप-फ़ोल्डर और थंबनेल सहित, कैटलॉग से हटाएँ? इन चित्रों की रेटिंग, लेबल, कीवर्ड और व्यक्ति खो जाएँगे। ड्राइव पर फ़ाइलें अछूती रहेंगी।</value>
+  </data>
+  <data name="Aus_dem_Katalog_entfernen_9f71fff4" xml:space="preserve">
+    <value>कैटलॉग से हटाएँ</value>
+  </data>
+  <data name="0_Katalogeintr_ge_und_1_Vorschaubilder_entfernt_e65e8adf" xml:space="preserve">
+    <value>{0} कैटलॉग प्रविष्टियाँ और {1} थंबनेल हटाए गए।</value>
+  </data>
+  <data name="0_Katalogeintr_ge_unter_1_samt_Unterordnern_und__69dcec70" xml:space="preserve">
+    <value>{1} के अंतर्गत {0} कैटलॉग प्रविष्टियाँ, उप-फ़ोल्डर और थंबनेल सहित, कैटलॉग से हटाएँ? इसके बाद इस फ़ोल्डर पर निगरानी भी नहीं रहेगी। इन चित्रों की रेटिंग, लेबल, कीवर्ड और व्यक्ति खो जाएँगे। ड्राइव पर फ़ाइलें अछूती रहेंगी।</value>
+  </data>
 </root>

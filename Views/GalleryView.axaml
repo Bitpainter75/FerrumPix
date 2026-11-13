@@ -1449,9 +1449,21 @@
                                           <Setter Property="Background" Value="{DynamicResource FP.Accent.Dim}"/>
                                           <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
                                       </Style>
+                                      <!-- Name eines Ordners auf einem nicht erreichbaren Laufwerk. -->
+                                      <Style Selector="TextBlock.offline-folder">
+                                          <Setter Property="Foreground" Value="{DynamicResource FP.Text.Secondary}"/>
+                                          <Setter Property="FontStyle" Value="Italic"/>
+                                      </Style>
                                   </TreeView.Styles>
                                   <TreeView.ContextMenu>
                                       <ContextMenu Opened="OnLocalizedMenuOpened" MaxHeight="1000">
+                                          <!-- Nur an einem Ordner auf einem nicht erreichbaren Laufwerk: der
+                                               Grund als nicht waehlbare Zeile, dann das Entfernen aus dem
+                                               Katalog. Alles, was auf die Platte greift, faellt dort ueber
+                                               FileOperationPolicy weg. -->
+                                          <MenuItem Name="FolderTreeOfflineInfoMenuItem" Header="Laufwerk nicht erreichbar" IsEnabled="False"/>
+                                          <MenuItem Name="FolderTreeRemoveFromCatalogMenuItem" Header="Aus dem Katalog entfernen" Click="OnContextRemoveFolderFromCatalog"/>
+                                          <Separator/>
                                           <MenuItem Header="Zu Favoriten hinzufügen" Click="OnAddFolderFavoriteClick"/>
                                           <Separator/>
                                           <MenuItem Name="FolderTreeCreateFolderMenuItem" Header="Neuer Ordner" Click="OnContextCreateFolder"/>
@@ -1471,20 +1483,35 @@
                                           <!-- Background="Transparent" macht die ganze Zeile hittestbar (sonst treffen
                                                nur Symbol und Beschriftung), DragDrop.AllowDrop meldet sie als Drop-Ziel
                                                an - siehe Kommentar am Immich-Baum. -->
-                                          <Grid ColumnDefinitions="Auto,*"
+                                          <!-- NICHT ERREICHBAR (FolderNode.IsOffline): Ordner in der
+                                               Akzentfarbe, dahinter der Stecker, der Name gedaempft.
+                                               Der Akzent wird je Thema und Akzentwahl zur Laufzeit
+                                               gesetzt und hebt sich deshalb in allen vier Themen ab. -->
+                                          <Grid ColumnDefinitions="Auto,*,Auto"
                                                 VerticalAlignment="Center"
                                                 HorizontalAlignment="Stretch"
                                                 Background="Transparent"
                                                 DragDrop.AllowDrop="True"
                                                 Margin="4,4">
                                               <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
-                                                     Width="18" Height="18" VerticalAlignment="Center" Opacity="0.85"/>
+                                                     Width="18" Height="18" VerticalAlignment="Center" Opacity="0.85"
+                                                     IsVisible="{Binding !IsOffline}"/>
+                                              <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
+                                                     Width="18" Height="18" VerticalAlignment="Center"
+                                                     IconBrush="{DynamicResource FP.Accent}"
+                                                     IsVisible="{Binding IsOffline}"/>
                                               <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="10,0,0,0"
                                                          VerticalAlignment="Center"
                                                          HorizontalAlignment="Stretch"
                                                          FontSize="{DynamicResource FP.Font.Body}"
                                                          TextTrimming="CharacterEllipsis"
+                                                         Classes.offline-folder="{Binding IsOffline}"
                                                          ToolTip.Tip="{Binding FullPath}"/>
+                                              <icons:SvgIcon Grid.Column="2" Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                                     Width="16" Height="16" VerticalAlignment="Center" Margin="6,0,4,0"
+                                                     IconBrush="{DynamicResource FP.Accent}"
+                                                     IsVisible="{Binding IsOffline}"
+                                                     ToolTip.Tip="{Binding OfflineTip}"/>
                                           </Grid>
                                       </TreeDataTemplate>
                                       </TreeView.ItemTemplate>
@@ -1961,6 +1988,29 @@
                     <TextBlock Text="Wähle einen Ordner in der Sidebar" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
+                <!-- GALERIE OFFLINE: der Ordner liegt auf einem nicht erreichbaren Laufwerk und
+                     kommt aus dem Katalog (GalleryViewModelOffline). Dieselbe schwebende Leiste
+                     wie in der Serienansicht, damit sich unter ihr nichts verschiebt; das Symbol
+                     in der Akzentfarbe wie im Ordnerbaum. Der Text kommt fertig uebersetzt. -->
+                <Border Classes="stack-focus-bar"
+                        IsVisible="{Binding IsOfflineView}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="16,8" VerticalAlignment="Center">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                       Width="18" Height="18"
+                                       IconBrush="{DynamicResource FP.Accent}"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding OfflineViewText}"
+                                   Classes="no-translate"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="560"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- SERIENANSICHT: die Galerie zeigt nur eine geoeffnete Serie. Die Leiste schwebt
                      unten ueber den Kacheln, statt eine Zeile ueber dem Raster einzuziehen - die
                      Flaechen darunter liegen alle uebereinander in diesem Raster, und eine Zeile
@@ -2230,6 +2280,20 @@
                                                                            VerticalAlignment="Center"/>
                                                         </Button>
                                                     </Panel>
+                                                    <!-- NICHT ERREICHBAR (ImageItem.IsOffline): derselbe
+                                                         Stecker in FP.Accent wie im Ordnerbaum, auf einer
+                                                         Pille in den Flaechenfarben des Themas, damit er in
+                                                         allen vier Themen steht. Kein Knopf und unabhaengig
+                                                         von Einstellungen, auch in der Fotowand immer sichtbar. -->
+                                                    <Border Classes="offline-badge"
+                                                            IsVisible="{Binding IsOffline}"
+                                                            ToolTip.Tip="{Binding OfflineTip}">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                                                       Width="16" Height="16"
+                                                                       IconBrush="{DynamicResource FP.Accent}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                    </Border>
                                                 </StackPanel>
                                                 <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder.svg"
                                                                IsVisible="{Binding IsFolder}"
@@ -2415,7 +2479,13 @@
                                                             VerticalAlignment="Bottom"
                                                             Margin="8,0,0,4"
                                                             Spacing="0"
-                                                            IsVisible="{Binding IsImage}">
+                                                            IsVisible="{Binding IsImage}"
+                                                            IsEnabled="{Binding !IsOffline}"
+                                                            ToolTip.Tip="{Binding OfflineTip}"
+                                                            ToolTip.ShowOnDisabled="True">
+                                                    <!-- GALERIE OFFLINE: die Sterne zeigen den Stand aus dem
+                                                         Katalog, lassen sich aber nicht setzen (ImageItem.IsOffline),
+                                                         und der Hinweis sagt, warum. -->
                                                     <!-- EINE LINIE MIT HERZ UND ABZEICHEN: die Mitten der
                                                          Sterne, des Herzens und der Metadatenzeichen stehen
                                                          alle 18 Punkte ueber der Unterkante (Rand 4 plus
@@ -2580,6 +2650,7 @@
                                                         VerticalAlignment="Bottom"
                                                         Margin="0,0,4,4"
                                                         IsVisible="{Binding IsImage}"
+                                                        IsEnabled="{Binding !IsOffline}"
                                                         Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         ToolTip.Tip="Favorit">
@@ -2823,9 +2894,23 @@
                                                     Spacing="5"
                                                     Margin="4,0,14,0">
                                             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                                <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
-                                                         Fill="{Binding ColorLabelBrush}"
-                                                         IsVisible="{Binding HasColorLabel}"/>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <!-- Nicht erreichbar: dasselbe Zeichen wie auf der Kachel, vor
+                                                         dem Namen und nicht unter den Aufsaetzen, die erst beim
+                                                         Ueberfahren erscheinen. -->
+                                                    <Border Classes="offline-badge" Margin="0,0,8,0"
+                                                            IsVisible="{Binding IsOffline}"
+                                                            ToolTip.Tip="{Binding OfflineTip}">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plugs.svg"
+                                                                       Width="16" Height="16"
+                                                                       IconBrush="{DynamicResource FP.Accent}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                             Fill="{Binding ColorLabelBrush}"
+                                                             IsVisible="{Binding HasColorLabel}"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="{Binding FileName}"
                                                            FontSize="{DynamicResource FP.Font.ItemTitle}"
                                                            FontWeight="SemiBold"
@@ -3027,7 +3112,10 @@
                                                     VerticalAlignment="Center"
                                                     Margin="0,0,10,0"
                                                     Spacing="0"
-                                                    IsVisible="{Binding IsImage}">
+                                                    IsVisible="{Binding IsImage}"
+                                                    IsEnabled="{Binding !IsOffline}"
+                                                    ToolTip.Tip="{Binding OfflineTip}"
+                                                    ToolTip.ShowOnDisabled="True">
                                             <Button Classes="star-btn compact" Background="Transparent" BorderThickness="0" Padding="0"
                                                     Classes.active="{Binding Rating, Converter={StaticResource RatingThresholdConverter}, ConverterParameter=1}"
                                                     Tag="1"
@@ -3078,6 +3166,7 @@
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
                                                 IsVisible="{Binding IsImage}"
+                                                IsEnabled="{Binding !IsOffline}"
                                                 Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip.Tip="Favorit">

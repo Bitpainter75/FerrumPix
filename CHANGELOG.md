@@ -2,6 +2,17 @@
 
 ### Changes
 
+- Folders on a drive that is not connected right now, such as an unplugged USB disk or a network
+  share that is not mounted, stay in the folder tree, marked in the accent colour. Opening one
+  shows its pictures from the catalogue: thumbnails, ratings, labels, keywords, people, capture
+  data and location, with filters and the info panel as usual. It is for looking only: viewer,
+  editor, full screen, file operations and changes to ratings, labels or keywords are switched
+  off there, and the menu says why. Pictures from such a drive in saved searches and catalogue
+  searches carry a small plug badge and follow the same rules. Once the drive is back, choosing
+  the folder again or refreshing it brings everything back to normal. The folder menu can remove
+  such a folder with its subfolders and thumbnails from the catalogue; a watched folder is then no
+  longer watched. The files on the drive are never touched. Immich and Nextcloud are not affected.
+
 - The Windows setup offers a desktop shortcut on its last page, ticked by default.
 
 - Save as, Export and the batch dialogs have three more switches under Take over: description,
