@@ -1178,6 +1178,7 @@ Namespace Views
             If _subscribedVm IsNot Nothing Then
                 AddHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 AddHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
+                AddHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
                 ' Eine Aenderung der Seite, solange die Ansicht nicht im Baum hing, kam hier nicht an.
                 ApplyFilmstripPlacement()
             End If
@@ -1187,7 +1188,83 @@ Namespace Views
             If _subscribedVm Is Nothing Then Return
             RemoveHandler _subscribedVm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             RemoveHandler _subscribedVm.CenteredZoomRequested, AddressOf OnCenteredZoomRequested
+            RemoveHandler _subscribedVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
             _subscribedVm = Nothing
+        End Sub
+
+        ' ── Navigator im Infopanel ───────────────────────────────────────────────
+        '
+        ' Das Infopanel zeigt das Bild klein mit dem gerade gezeigten Ausschnitt
+        ' (InfoPanelViewModel.UpdateNavigator); gezogen meldet es die neue Mitte zurueck. Im Fenster
+        ' kommt der Ausschnitt aus dem Rollbereich, im Vollbild aus Zoom und Versatz der Ansicht.
+
+        Public Sub OnImageScrollChanged(sender As Object, e As ScrollChangedEventArgs)
+            PublishNavigator()
+        End Sub
+
+        ''' <summary>Meldet dem Infopanel, welcher Teil des Bildes zu sehen ist. Nichts im Vergleich,
+        ''' ohne Bild und bei gedrehtem oder gespiegeltem Bild: Drehen und Spiegeln laufen als
+        ''' RenderTransform und aendern den Rollbereich nicht, der Navigator zeigte das ungedrehte Bild
+        ''' mit einem Rechteck an der falschen Stelle.</summary>
+        Private Sub PublishNavigator()
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            Dim image = vm.CurrentImage
+            Dim rect As New Rect()
+            If image IsNot Nothing AndAlso Not vm.IsCompareMode AndAlso image.Size.Width > 0 AndAlso image.Size.Height > 0 Then
+                If vm.IsFullscreenMode Then
+                    Dim fullscreenImage = Me.FindControl(Of Image)("FullscreenImage")
+                    Dim viewport = Me.FindControl(Of Grid)("FullscreenViewport")
+                    If _fullscreenZoom > 0 AndAlso fullscreenImage IsNot Nothing AndAlso viewport IsNot Nothing Then
+                        Dim w = fullscreenImage.Width, h = fullscreenImage.Height
+                        Dim vw = viewport.Bounds.Width, vh = viewport.Bounds.Height
+                        rect = ViewportNavigator.VisibleRectOnStage((vw - w) / 2 + _fullscreenPan.X, (vh - h) / 2 + _fullscreenPan.Y,
+                                                                    w, h, vw, vh)
+                    End If
+                ElseIf Math.Abs(vm.RotationAngle Mod 360) < 0.01 AndAlso Math.Abs(vm.ScaleX - 1) < 0.0001 Then
+                    Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+                    If scrollViewer IsNot Nothing Then
+                        rect = ViewportNavigator.VisibleRect(scrollViewer.Offset.X, scrollViewer.Offset.Y,
+                                                             scrollViewer.Viewport.Width, scrollViewer.Viewport.Height,
+                                                             scrollViewer.Extent.Width, scrollViewer.Extent.Height)
+                    End If
+                End If
+            End If
+            Dim aspect = If(image IsNot Nothing AndAlso image.Size.Height > 0, image.Size.Width / image.Size.Height, 1.5)
+            vm.InfoPanel.UpdateNavigator(If(ViewportNavigator.HasViewport(rect), NavigatorSource(vm, aspect), Nothing), rect, aspect)
+        End Sub
+
+        ''' <summary>Was der Navigator klein zeigt: das Vorschaubild der Kachel, wenn es da ist und
+        ''' dasselbe Seitenverhaeltnis hat. Das gezeigte Bild selbst kann ein volles RAW sein, und es
+        ''' bei jedem Schritt eines Schwenks auf die Breite des Panels herunterzurechnen kostet
+        ''' unnoetig. Bei anderem Verhaeltnis (die eingebettete Vorschau einer RAW ist mitunter
+        ''' anders beschnitten) bleibt es beim Bild, sonst saesse das Rechteck daneben.</summary>
+        Private Shared Function NavigatorSource(vm As ViewerViewModel, aspect As Double) As Avalonia.Media.IImage
+            Dim index = vm.CurrentFilmstripIndex
+            Dim items = vm.FilmstripItems
+            If items IsNot Nothing AndAlso index >= 0 AndAlso index < items.Count Then
+                Dim thumbnail = items(index)?.Thumbnail
+                If thumbnail IsNot Nothing AndAlso thumbnail.Size.Height > 0 AndAlso
+                   Math.Abs(thumbnail.Size.Width / thumbnail.Size.Height - aspect) < aspect * 0.01 Then Return thumbnail
+            End If
+            Return vm.CurrentImage
+        End Function
+
+        ''' <summary>Im Navigator gezogen: die Mitte des Ausschnitts dorthin, am Rand geklemmt.</summary>
+        Private Sub OnNavigatorPanRequested(sender As Object, center As Point)
+            Dim vm = GetVm()
+            If vm Is Nothing Then Return
+            If vm.IsFullscreenMode Then
+                Dim fullscreenImage = Me.FindControl(Of Image)("FullscreenImage")
+                If _fullscreenZoom <= 0 OrElse fullscreenImage Is Nothing Then Return
+                _fullscreenPan = New Vector(fullscreenImage.Width * (0.5 - center.X), fullscreenImage.Height * (0.5 - center.Y))
+                ApplyFullscreenImageMode()
+                Return
+            End If
+            Dim scrollViewer = Me.FindControl(Of ScrollViewer)("ImageScrollViewer")
+            If scrollViewer Is Nothing Then Return
+            scrollViewer.Offset = New Vector(OffsetForAnchor(center.X, scrollViewer.Viewport.Width, scrollViewer.Extent.Width),
+                                             OffsetForAnchor(center.Y, scrollViewer.Viewport.Height, scrollViewer.Extent.Height))
         End Sub
 
         ''' Ein Druck auf SHIFT+PFEIL verschiebt um ein Achtel des Sichtfensters.
@@ -1307,6 +1384,11 @@ Namespace Views
                e.PropertyName = NameOf(ViewerViewModel.CompareRightImage) Then
                 ApplyCompareFitMode()
             End If
+
+            ' Vergleich, Drehen und Spiegeln blenden den Navigator aus bzw. wieder ein (PublishNavigator).
+            If e.PropertyName = NameOf(ViewerViewModel.IsCompareMode) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.RotationAngle) OrElse
+               e.PropertyName = NameOf(ViewerViewModel.ScaleX) Then PublishNavigator()
 
             If e.PropertyName = NameOf(ViewerViewModel.IsFullscreenMode) Then
                 ' Rein und raus beginnt eingepasst, und ein Filmstreifen im Vollbild geht an seinen
@@ -1750,6 +1832,7 @@ Namespace Views
             If Not CanPanImage(vm, scrollViewer) Then
                 _isPanningImage = False
             End If
+            PublishNavigator()
         End Sub
 
         Private Function CanPanImage(vm As ViewerViewModel, scrollViewer As ScrollViewer) As Boolean
@@ -1818,6 +1901,7 @@ Namespace Views
                 If _fullscreenZoom <= 0 Then _fullscreenPan = New Vector(0, 0)
                 background.RenderTransform = New Avalonia.Media.TranslateTransform(_fullscreenPan.X, _fullscreenPan.Y)
             End If
+            PublishNavigator()
         End Sub
 
         ' ── Zoom und Bedienleiste im Vollbild ─────────────────────────────────────
@@ -2073,6 +2157,11 @@ Namespace Views
             End If
             ' Ueber den Knopf eingeschaltet bleibt er, bis der Knopf ihn wieder ausschaltet.
             If IsFullscreenFilmstripPinned Then Return
+            ' Solange etwas die Maus haelt, ist das ein Zug und kein Griff zum Rand: wer im
+            ' Navigator des Infopanels nach unten zieht oder das gezoomte Bild verschiebt, stiess
+            ' sonst an den Rand und holte den Filmstreifen herein (Nutzerbefund). Dieses Ereignis
+            ' sieht jede Bewegung, auch die schon behandelten eines Zugs.
+            If e.Pointer.Captured IsNot Nothing Then Return
             Dim vw = viewport.Bounds.Width
             Dim vh = viewport.Bounds.Height
             If vw <= 0 OrElse vh <= 0 Then Return

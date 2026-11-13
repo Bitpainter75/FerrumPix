@@ -55,7 +55,7 @@
                    Classes="no-translate"
                    Foreground="{DynamicResource FP.Text.Muted}"
                    FontSize="{DynamicResource FP.Font.Body}"/>
-        <Grid RowDefinitions="Auto,*" RowSpacing="14" IsVisible="{Binding HasInfoContent}">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14" IsVisible="{Binding HasInfoContent}">
             <StackPanel Spacing="0">
                 <!-- Ohne Ueberschrift: die Leiste steht in einer eigenen Spalte, "Info" sagte
                      nichts, was der Inhalt nicht schon zeigt, und kostete eine Zeile Hoehe. -->
@@ -898,6 +898,26 @@
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
+
+            <!-- Der Navigator: das Bild klein, darauf der gerade gross gezeigte Ausschnitt, zum
+                 Ziehen. Unter dem Rollbereich, damit er beim Blaettern durch die Angaben stehen
+                 bleibt; nur da, solange in Betrachter oder Editor hineingezoomt ist
+                 (InfoPanelViewModel.HasNavigator). Bild und Rechteck liegen in derselben Flaeche
+                 mit derselben Streckung, ViewportNavigator rechnet die Bildflaeche selbst nach. -->
+            <Border Grid.Row="2" Height="150"
+                    IsVisible="{Binding HasNavigator}"
+                    Background="{DynamicResource FP.Bg.Dark}"
+                    CornerRadius="6" ClipToBounds="True">
+                <Panel>
+                    <Image Source="{Binding NavigatorImage}" Stretch="Uniform"
+                           RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+                    <icons:ViewportNavigator ViewRect="{Binding NavigatorRect}"
+                                             ImageAspect="{Binding NavigatorAspect}"
+                                             Fill="False"
+                                             PanCommand="{Binding NavigatorPanCommand}"
+                                             Cursor="Hand"/>
+                </Panel>
+            </Border>
         </Grid>
         </Panel>
     </Border>

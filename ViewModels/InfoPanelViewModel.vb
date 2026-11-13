@@ -88,6 +88,10 @@ Namespace ViewModels
                 Sub(tag) OpenTagSearch?.Invoke(If(tag?.Canonical, "")))
             AnalyzeAiTagsCommand = ReactiveCommand.CreateFromTask(AddressOf AnalyzeAiTagsAsync)
             ScanFacesCommand = ReactiveCommand.CreateFromTask(AddressOf ScanFacesForImageAsync)
+            NavigatorPanCommand = ReactiveCommand.Create(Of Object)(
+                Sub(p)
+                    If TypeOf p Is Avalonia.Point Then RaiseEvent NavigatorPanRequested(Me, CType(p, Avalonia.Point))
+                End Sub)
 
             ' Die Zeilenauswahl gilt anwendungsweit, und es gibt drei Leisten. Ohne dieses Abo
             ' zeigte nur die Ansicht, die beim Umschalten auf dem Schirm stand, den neuen Stand -
@@ -1979,6 +1983,68 @@ Namespace ViewModels
         Public ReadOnly Property OpenAiTagSearchCommand As ICommand
         Public ReadOnly Property AnalyzeAiTagsCommand As ICommand
         Public ReadOnly Property ScanFacesCommand As ICommand
+
+        ' ---------------------------------------------------------------- Navigator
+
+        ' Der Navigator unten in der Leiste: das Bild klein, darauf der gerade gross gezeigte
+        ' Ausschnitt als Rechteck, das sich ziehen laesst (Controls.ViewportNavigator). Betrachter
+        ' und Editor halten Zoom und Schwenk in ihren Ansichten; die melden hier, was zu sehen ist
+        ' (UpdateNavigator), und hoeren auf NavigatorPanRequested. Die Galerie setzt nichts, dort
+        ' bleibt er aus.
+        Private _navigatorImage As Avalonia.Media.IImage
+        Private _navigatorRect As Avalonia.Rect
+        Private _navigatorAspect As Double = 1.5
+
+        ''' <summary>Gezogen: die gewuenschte Mitte des Ausschnitts, auf das Bild bezogen (0 bis 1).</summary>
+        Public Event NavigatorPanRequested As EventHandler(Of Avalonia.Point)
+
+        Public ReadOnly Property NavigatorPanCommand As ICommand
+
+        Public ReadOnly Property NavigatorImage As Avalonia.Media.IImage
+            Get
+                Return _navigatorImage
+            End Get
+        End Property
+
+        ''' <summary>Der sichtbare Ausschnitt, auf das Bild bezogen (0 bis 1).</summary>
+        Public ReadOnly Property NavigatorRect As Avalonia.Rect
+            Get
+                Return _navigatorRect
+            End Get
+        End Property
+
+        Public ReadOnly Property NavigatorAspect As Double
+            Get
+                Return _navigatorAspect
+            End Get
+        End Property
+
+        ''' <summary>Nur, wenn ein Bild da ist und nicht das ganze zu sehen ist.</summary>
+        Public ReadOnly Property HasNavigator As Boolean
+            Get
+                Return _navigatorImage IsNot Nothing AndAlso Controls.ViewportNavigator.HasViewport(_navigatorRect)
+            End Get
+        End Property
+
+        ''' <summary>Was die Ansicht gerade zeigt. Nothing oder ein leerer Ausschnitt blenden den
+        ''' Navigator aus. Meldet nur, was sich geaendert hat: die Ansichten rufen das bei jedem
+        ''' Schritt eines Schwenks.</summary>
+        Public Sub UpdateNavigator(image As Avalonia.Media.IImage, rect As Avalonia.Rect, aspect As Double)
+            Dim hadNavigator = HasNavigator
+            If Not Object.ReferenceEquals(_navigatorImage, image) Then
+                _navigatorImage = image
+                Me.RaisePropertyChanged(NameOf(NavigatorImage))
+            End If
+            If _navigatorRect <> rect Then
+                _navigatorRect = rect
+                Me.RaisePropertyChanged(NameOf(NavigatorRect))
+            End If
+            If aspect > 0 AndAlso Not Double.IsNaN(aspect) AndAlso Math.Abs(_navigatorAspect - aspect) > 0.0001 Then
+                _navigatorAspect = aspect
+                Me.RaisePropertyChanged(NameOf(NavigatorAspect))
+            End If
+            If HasNavigator <> hadNavigator Then Me.RaisePropertyChanged(NameOf(HasNavigator))
+        End Sub
 
     End Class
 

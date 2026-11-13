@@ -1667,6 +1667,7 @@ Namespace Views
                 RemoveHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 RemoveHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
                 RemoveHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
+                RemoveHandler _currentVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
             End If
             _currentVm = TryCast(DataContext, EditorViewModel)
             If _currentVm IsNot Nothing Then
@@ -1675,6 +1676,7 @@ Namespace Views
                 AddHandler _currentVm.FitToViewportRequested, AddressOf OnEditorFitToViewportRequested
                 AddHandler _currentVm.SceneInvalidated, AddressOf OnSceneInvalidated
                 AddHandler _currentVm.LeavingDocument, AddressOf OnEditorLeavingDocument
+                AddHandler _currentVm.InfoPanel.NavigatorPanRequested, AddressOf OnNavigatorPanRequested
             End If
             EnsureNewDocumentDialogOverlay()
             _filmstripController.Reset()
@@ -2098,6 +2100,19 @@ Namespace Views
             Return New Avalonia.Size(imgW * sceneScale, imgH * sceneScale)
         End Function
 
+        ' Groesse des Bildes auf der Buehne beim letzten Layout, fuer den Navigator.
+        Private _navigatorImageWidth As Double
+        Private _navigatorImageHeight As Double
+
+        ''' <summary>Im Navigator des Infopanels gezogen: die Mitte des Ausschnitts dorthin. Der
+        ''' Schwenk zaehlt von der Mitte der Buehne aus; geklemmt wird in UpdateSliderLayout.</summary>
+        Private Sub OnNavigatorPanRequested(sender As Object, center As Avalonia.Point)
+            If _navigatorImageWidth <= 0 OrElse _navigatorImageHeight <= 0 Then Return
+            _panX = _navigatorImageWidth * (0.5 - center.X)
+            _panY = _navigatorImageHeight * (0.5 - center.Y)
+            UpdateSliderLayout()
+        End Sub
+
         Private Sub UpdateSliderLayout()
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
@@ -2149,6 +2164,12 @@ Namespace Views
             Dim ix = Math.Round((cw - iw) / 2.0 + _panX, MidpointRounding.AwayFromZero)
             Dim iy = Math.Round((ch - ih) / 2.0 + _panY, MidpointRounding.AwayFromZero)
             Dim sliderX = ix + iw * _sliderPosition
+            ' Der Navigator im Infopanel: welcher Teil des Bildes auf der Buehne steht.
+            _navigatorImageWidth = iw
+            _navigatorImageHeight = ih
+            Dim navigatorRect = ViewportNavigator.VisibleRectOnStage(ix, iy, iw, ih, cw, ch)
+            vm.InfoPanel.UpdateNavigator(If(ViewportNavigator.HasViewport(navigatorRect), displayBitmap, Nothing),
+                                         navigatorRect, If(imgH > 0, imgW / imgH, 1.5))
 
             Dim backgroundBorder = Me.FindControl(Of Border)("ImageBackgroundBorder")
             If backgroundBorder IsNot Nothing Then

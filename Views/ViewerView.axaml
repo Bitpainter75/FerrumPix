@@ -230,6 +230,7 @@
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
                                   SizeChanged="OnImageViewportSizeChanged"
+                                  ScrollChanged="OnImageScrollChanged"
                                   IsVisible="{Binding IsSingleImageVisible}">
                         <!-- Die Zieh-Ereignisse haengen am PANEL, nicht am Bild: der Zuschneide-Rahmen
                              soll wie im Editor auch AUSSERHALB des Bildes auf der Buehne angesetzt
