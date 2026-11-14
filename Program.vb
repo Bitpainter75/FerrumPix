@@ -1,4 +1,7 @@
 Imports Avalonia
+Imports Avalonia.Dialogs
+Imports Avalonia.Headless
+Imports Avalonia.Platform
 Imports Avalonia.X11
 Imports FerrumPix.Services
 Imports ReactiveUI.Avalonia
@@ -22,7 +25,12 @@ Module Program
 
     <STAThread>
     Function Main(args As String()) As Integer
-        ' DER PROTOKOLLSCHALTER ZUERST, noch vor allem anderen. Er ist fuer den Fall gebaut, in dem
+        ' NOCH VOR DEM PROTOKOLLSCHALTER, weil es um die Ladereihenfolge im Prozess geht und alles
+        ' Spaetere zu spaet sein kann: die eigene HarfBuzz muss gebunden sein, bevor irgendetwas
+        ' die des Systems hereinholt. Siehe TextShapingPreload.
+        TextShapingPreload.Apply()
+
+        ' DER PROTOKOLLSCHALTER DANACH, noch vor allem anderen. Er ist fuer den Fall gebaut, in dem
         ' die Anwendung ueberhaupt nicht hochkommt: das Protokoll liegt ab Werk aus und laesst sich
         ' nur IN der Anwendung einschalten - wer sie nicht starten kann, kaeme also nie an eines.
         ' Genau daran ist eine Fehlersuche unter Windows 10 schon einmal haengengeblieben.
@@ -73,7 +81,8 @@ Module Program
         Catch
         End Try
 
-        Dim exitCode = BuildAvaloniaApp().StartWithClassicDesktopLifetime(ForwardedArguments(args))
+        Dim builder = If(BrowserBridge.IsRequested(args), BuildBrowserApp(args), BuildAvaloniaApp())
+        Dim exitCode = builder.StartWithClassicDesktopLifetime(ForwardedArguments(args))
         ' DIE LETZTE ZEILE IST SELBST EIN BEFUND: kommt sie, hat der Aufbau des Toolkits gehalten
         ' und die Anwendung ist geordnet zu Ende gegangen. Bleibt sie aus, endete der Prozess
         ' vorher - und der Unterschied ist genau der, den ein Fehlerbericht sonst nicht hergibt.
@@ -194,7 +203,8 @@ Module Program
     ''' also genau in dem Moment, in dem jemand einen Fehler an einer bestimmten Datei sucht.</summary>
     Friend Function ForwardedArguments(args As String()) As String()
         If args Is Nothing Then Return Array.Empty(Of String)()
-        Return args.Where(Function(a) Not String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase)).ToArray()
+        Return args.Where(Function(a) Not String.Equals(a, DebugSwitch, StringComparison.OrdinalIgnoreCase) AndAlso
+                                      Not BrowserBridge.IsOwnArgument(a)).ToArray()
     End Function
 
     ''' <summary>Was auf diesem Rechner laeuft - eine Zeile, die in einen Fehlerbericht passt.
@@ -246,6 +256,30 @@ Module Program
             builder = builder.With(New AvaloniaNativePlatformOptions With {.RenderingMode = renderingMode})
         End If
         Return builder
+    End Function
+
+    ''' <summary>Der Aufbau fuer den Start mit <c>--browser</c>: dieselbe Anwendung, aber ohne
+    ''' Fenstersystem. Gezeichnet wird mit Skia in den Speicher, und <see cref="BrowserBridge"/>
+    ''' bringt die Bilder in den Browser.
+    '''
+    ''' <para>FrameBufferFormat: Bgra8888 ist das Format, in dem die Bruecke die Bilder ohne
+    ''' Umrechnen kodieren kann.</para>
+    '''
+    ''' <para>UseManagedSystemDialogs: ohne Fenstersystem gibt es keinen Dateidialog des Systems.
+    ''' Der des Toolkits ist ein gewoehnliches Fenster und erscheint damit auch im Browser.</para>
+    '''
+    ''' <para>Die Bruecke startet ueber AfterSetup, also sobald das Toolkit steht und bevor das
+    ''' erste Fenster entsteht.</para></summary>
+    Function BuildBrowserApp(args As String()) As AppBuilder
+        Return AppBuilder.Configure(Of App)().
+            UseSkia().
+            UseHeadless(New AvaloniaHeadlessPlatformOptions With {
+                .UseHeadlessDrawing = False,
+                .FrameBufferFormat = PixelFormat.Bgra8888}).
+            UseManagedSystemDialogs().
+            UseReactiveUI(AddressOf ConfigureReactiveUI).
+            LogToTrace().
+            AfterSetup(Sub(appBuilder) BrowserBridge.Start(args))
     End Function
 
     ''' <summary>Die gewählte Reihenfolge der Zeichenwege, oder Nothing für die des Toolkits.

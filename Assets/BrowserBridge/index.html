@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>FerrumPix</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0B0E11; }
+  #stage { position: fixed; inset: 0; outline: none; touch-action: none; user-select: none; }
+  #stage canvas { position: absolute; display: block; }
+</style>
+</head>
+<body>
+<div id="stage" tabindex="0"></div>
+<script>
+'use strict';
+// Die Gegenstelle zu Services/BrowserBridge*.vb. Je Fenster der Anwendung ein Canvas; der Server
+// schickt Bildausschnitte, diese Seite schickt Maus, Tastatur und die Groesse des Tabs zurueck.
+const stage = document.getElementById('stage');
+const canvases = new Map();
+let socket = null;
+// Die Kennung dieser Seite. Der Server setzt sie beim Ausliefern ein und nimmt den WebSocket nur
+// mit ihr an; eine Seite, die nicht von ihm stammt, hat keine.
+const token = '__FERRUMPIX_TOKEN__';
+// Bilder werden im Hintergrund dekodiert. Die Kette haelt die Reihenfolge fest, in der sie
+// ankamen: ein verlustfreier Nachzug darf nicht von einem aelteren Ausschnitt uebermalt werden.
+let chain = Promise.resolve();
+
+function connect() {
+  const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  socket = new WebSocket(scheme + location.host + '/ws');
+  socket.binaryType = 'arraybuffer';
+  socket.onopen = () => send({ t: 'hello', w: innerWidth, h: innerHeight, scale: devicePixelRatio || 1, token });
+  socket.onmessage = event => {
+    if (typeof event.data === 'string') onText(JSON.parse(event.data));
+    else onImage(event.data);
+  };
+  socket.onclose = () => setTimeout(connect, 1000);
+}
+
+function send(message) {
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+}
+
+function onText(message) {
+  if (message.t === 'windows') {
+    chain = chain.then(() => layout(message));
+  } else if (message.t === 'cursor') {
+    stage.style.cursor = cursors[message.name] || 'default';
+  } else if (message.t === 'reload') {
+    // Die Kennung gilt nicht mehr, etwa weil die Anwendung neu gestartet wurde. Neu laden holt
+    // eine frische; ist eine Anmeldung gesetzt, fragt der Browser dabei von selbst danach.
+    socket.onclose = null;
+    setTimeout(() => location.reload(), 1000);
+  }
+}
+
+function layout(message) {
+  const seen = new Set();
+  for (const win of message.list) {
+    seen.add(win.id);
+    let canvas = canvases.get(win.id);
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      stage.appendChild(canvas);
+      canvases.set(win.id, canvas);
+    }
+    if (canvas.width !== win.w || canvas.height !== win.h) {
+      canvas.width = win.w;
+      canvas.height = win.h;
+    }
+    const scale = win.s || message.scale || 1;
+    canvas.style.left = (win.x / scale) + 'px';
+    canvas.style.top = (win.y / scale) + 'px';
+    canvas.style.width = (win.w / scale) + 'px';
+    canvas.style.height = (win.h / scale) + 'px';
+    canvas.style.zIndex = win.z;
+  }
+  for (const [id, canvas] of canvases) {
+    if (!seen.has(id)) {
+      canvas.remove();
+      canvases.delete(id);
+    }
+  }
+}
+
+function onImage(buffer) {
+  const view = new DataView(buffer);
+  if (view.getUint8(0) !== 1) return;
+  const id = view.getInt32(1, true);
+  const x = view.getInt32(5, true);
+  const y = view.getInt32(9, true);
+  const w = view.getInt32(13, true);
+  const h = view.getInt32(17, true);
+  const lossless = view.getUint8(21) === 1;
+  const blob = new Blob([new Uint8Array(buffer, 22)], { type: lossless ? 'image/png' : 'image/jpeg' });
+  const decoded = createImageBitmap(blob);
+  chain = chain.then(() => decoded).then(bitmap => {
+    const canvas = canvases.get(id);
+    if (canvas) {
+      const context = canvas.getContext('2d');
+      if (lossless) context.clearRect(x, y, w, h);
+      context.drawImage(bitmap, x, y);
+    }
+    bitmap.close();
+  }).catch(() => {});
+}
+
+// Die Zeigerarten der Anwendung und ihre Entsprechung im Browser.
+const cursors = {
+  Arrow: 'default', Ibeam: 'text', Wait: 'wait', Cross: 'crosshair', UpArrow: 'default',
+  SizeWestEast: 'ew-resize', SizeNorthSouth: 'ns-resize', SizeAll: 'move', No: 'not-allowed',
+  Hand: 'pointer', AppStarting: 'progress', Help: 'help', TopSide: 'ns-resize', BottomSide: 'ns-resize',
+  LeftSide: 'ew-resize', RightSide: 'ew-resize', TopLeftCorner: 'nwse-resize', BottomRightCorner: 'nwse-resize',
+  TopRightCorner: 'nesw-resize', BottomLeftCorner: 'nesw-resize', DragMove: 'move', DragCopy: 'copy',
+  DragLink: 'alias', None: 'none'
+};
+
+// Die Zahl entspricht den Eingabemerkern der Anwendung: Alt 1, Strg 2, Umschalt 4, Meta 8,
+// linke Maustaste 16, rechte 32, mittlere 64.
+function modifiers(event) {
+  const buttons = event.buttons || 0;
+  return (event.altKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) | (event.shiftKey ? 4 : 0) | (event.metaKey ? 8 : 0) |
+         ((buttons & 1) ? 16 : 0) | ((buttons & 2) ? 32 : 0) | ((buttons & 4) ? 64 : 0);
+}
+
+// Mausbewegungen kommen oefter, als ein Bild entsteht. Gesendet wird die letzte je Bildwechsel.
+let pendingMove = null;
+function flushMove() {
+  if (pendingMove) {
+    send(pendingMove);
+    pendingMove = null;
+  }
+}
+stage.addEventListener('pointermove', event => {
+  const first = pendingMove === null;
+  pendingMove = { t: 'm', e: 'move', x: event.clientX, y: event.clientY, mods: modifiers(event) };
+  if (first) requestAnimationFrame(flushMove);
+});
+stage.addEventListener('pointerdown', event => {
+  stage.focus();
+  stage.setPointerCapture(event.pointerId);
+  flushMove();
+  send({ t: 'm', e: 'down', x: event.clientX, y: event.clientY, b: event.button, mods: modifiers(event) });
+  event.preventDefault();
+});
+stage.addEventListener('pointerup', event => {
+  flushMove();
+  send({ t: 'm', e: 'up', x: event.clientX, y: event.clientY, b: event.button, mods: modifiers(event) });
+  event.preventDefault();
+});
+stage.addEventListener('wheel', event => {
+  // Eine Raste des Mausrads sind im Browser rund hundert Punkte, in der Anwendung eine Einheit,
+  // und die Richtung ist umgekehrt.
+  const unit = event.deltaMode === 1 ? 3 : 100;
+  send({ t: 'm', e: 'wheel', x: event.clientX, y: event.clientY,
+         dx: -event.deltaX / unit, dy: -event.deltaY / unit, mods: modifiers(event) });
+  event.preventDefault();
+}, { passive: false });
+stage.addEventListener('contextmenu', event => event.preventDefault());
+
+function onKey(event, kind) {
+  // F12 bleibt beim Browser, sonst kaeme niemand mehr an dessen Werkzeuge.
+  if (event.key === 'F12') return;
+  const message = { t: 'k', e: kind, code: event.code, key: event.key, mods: modifiers(event) };
+  // Ein einzelnes Zeichen ist Text, solange keine Befehlstaste gehalten wird. AltGr meldet sich
+  // unter Windows als Strg+Alt und ist trotzdem Text.
+  const command = (event.ctrlKey || event.metaKey) && !event.getModifierState('AltGraph');
+  if (kind === 'down' && event.key.length === 1 && !command) message.text = event.key;
+  send(message);
+  event.preventDefault();
+}
+stage.addEventListener('keydown', event => onKey(event, 'down'));
+stage.addEventListener('keyup', event => onKey(event, 'up'));
+
+let resizeTimer = 0;
+addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => send({ t: 'resize', w: innerWidth, h: innerHeight, scale: devicePixelRatio || 1 }), 150);
+});
+
+stage.focus();
+connect();
+</script>
+</body>
+</html>

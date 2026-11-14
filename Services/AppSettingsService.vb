@@ -318,6 +318,9 @@ Namespace Services
         ''' Galerie: aus heisst der gewaehlte Ordner (ohne Unterordner), an der ganze Katalog. Ab
         ''' Werk der Ordner: was man im Baum waehlt, soll die Suche auch eingrenzen.</summary>
         Public Property GalleryFilterScopeCatalog As Boolean = False
+        ''' <summary>Die Galerie zeigt zu einem Ordner auch die Bilder aus allen seinen Unterordnern.
+        ''' Ab Werk aus: ein Ordner zeigt, was in ihm liegt.</summary>
+        Public Property GalleryIncludeSubfolders As Boolean = False
         ''' <summary>Abzeichen "bearbeitet" an der Kachel neben dem fuer verworfene Bilder. Ab Werk aus:
         ''' es ist ein weiteres Zeichen auf dem Bild und soll bewusst eingeschaltet werden. In der
         ''' Fotowand erscheint es nur beim Ueberfahren.</summary>
@@ -3077,10 +3080,13 @@ Namespace Services
         End Sub
 
         Public Shared Sub SaveMainWindowMaximized(value As Boolean)
+            ' Im Browser gehoert die Fenstergroesse dem Tab, siehe BrowserBridge.IsActive.
+            If BrowserBridge.IsActive Then Return
             Update(Sub(s) s.MainWindowMaximized = value)
         End Sub
 
         Public Shared Sub SaveMainWindowPlacement(left As Integer, top As Integer, width As Double, height As Double)
+            If BrowserBridge.IsActive Then Return
             Update(Sub(s)
                        s.MainWindowLeft = left
                        s.MainWindowTop = top
