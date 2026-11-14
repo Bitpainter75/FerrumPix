@@ -2,6 +2,9 @@
 
 ### Changes
 
+- On some newer Linux systems FerrumPix ended right at startup, before a window appeared. It starts
+  there now.
+
 - When deleting is refused because the pictures are outside the home folder, the message now says
   where this can be allowed in the settings.
 

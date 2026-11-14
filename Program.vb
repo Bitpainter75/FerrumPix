@@ -22,7 +22,12 @@ Module Program
 
     <STAThread>
     Function Main(args As String()) As Integer
-        ' DER PROTOKOLLSCHALTER ZUERST, noch vor allem anderen. Er ist fuer den Fall gebaut, in dem
+        ' NOCH VOR DEM PROTOKOLLSCHALTER, weil es um die Ladereihenfolge im Prozess geht und alles
+        ' Spaetere zu spaet sein kann: die eigene HarfBuzz muss gebunden sein, bevor irgendetwas
+        ' die des Systems hereinholt. Siehe TextShapingPreload.
+        TextShapingPreload.Apply()
+
+        ' DER PROTOKOLLSCHALTER DANACH, noch vor allem anderen. Er ist fuer den Fall gebaut, in dem
         ' die Anwendung ueberhaupt nicht hochkommt: das Protokoll liegt ab Werk aus und laesst sich
         ' nur IN der Anwendung einschalten - wer sie nicht starten kann, kaeme also nie an eines.
         ' Genau daran ist eine Fehlersuche unter Windows 10 schon einmal haengengeblieben.
