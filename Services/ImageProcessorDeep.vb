@@ -39,7 +39,35 @@ Namespace Services
         Public NotInheritable Class SaveOutcome
             ''' Farbtiefe der geschriebenen Datei je Kanal, 8 oder 16.
             Public Property WrittenBitDepth As Integer = 8
+            ''' Waren 16 Bit verlangt und entstanden 8: die Stelle, an der das tiefe Bild endete
+            ''' (<see cref="NoteDeepLost"/>), fuer Protokoll und Pruefstand. Sonst leer.
+            Public Property DeepLostAt As String = ""
         End Class
+
+        ''' <summary>Die erste Stelle, an der in diesem Aufruf ein tiefes Bild endete. Je Faden,
+        ''' weil die Kette auf dem Faden ihres Aufrufers laeuft und mehrere Ausgaben nebeneinander
+        ''' rechnen koennen.</summary>
+        <ThreadStatic>
+        Private Shared _deepLossNote As String
+
+        ''' <summary>Vermerkt, wo ein tiefes Bild endete, und schreibt es ins Protokoll. Behalten
+        ''' wird die erste Stelle: danach hat das Bild keinen Begleiter mehr, und was folgt, ist nur
+        ''' die Folge davon.</summary>
+        Friend Shared Sub NoteDeepLost(where As String)
+            If _deepLossNote IsNot Nothing Then Return
+            _deepLossNote = If(where, "")
+            DiagnosticLogService.LogAlways("ImageProcessor.Deep", "das tiefe Bild endet hier: " & where)
+        End Sub
+
+        ''' <summary>Vor einer Ausgabe: den Vermerk leeren.</summary>
+        Friend Shared Sub ResetDeepLossNote()
+            _deepLossNote = Nothing
+        End Sub
+
+        ''' <summary>Der Vermerk dieser Ausgabe, oder leer.</summary>
+        Friend Shared Function DeepLossNote() As String
+            Return If(_deepLossNote, "")
+        End Function
 
         Private Shared ReadOnly _deepCompanions As New ConditionalWeakTable(Of SKBitmap, SKBitmap)()
 
@@ -189,8 +217,14 @@ Namespace Services
                                                       If(adj Is Nothing, 0.0, adj.RawExposureEv()))
             ' Passt es nicht zum 8-Bit-Bild (andere Masse, anderer Inhalt), ist es nicht sein
             ' tiefes Bild: etwa wenn statt der Entwicklung die eingebettete Vorschau einsprang.
-            If deep IsNot Nothing AndAlso
-               (deep.Width <> decoded.Width OrElse deep.Height <> decoded.Height OrElse Not DeepMatchesShallow(decoded, deep)) Then
+            If deep Is Nothing Then
+                NoteDeepLost("die RAW-Stufe lieferte kein tiefes Bild")
+            ElseIf deep.Width <> decoded.Width OrElse deep.Height <> decoded.Height Then
+                NoteDeepLost($"das tiefe Bild der RAW-Stufe hat {deep.Width}x{deep.Height}, das 8-Bit-Bild {decoded.Width}x{decoded.Height}")
+                deep.Dispose()
+                deep = Nothing
+            ElseIf Not DeepMatchesShallow(decoded, deep) Then
+                NoteDeepLost("das tiefe Bild der RAW-Stufe ist nicht das 8-Bit-Bild der RAW-Stufe")
                 deep.Dispose()
                 deep = Nothing
             End If
@@ -247,6 +281,7 @@ Namespace Services
                 reason = "mehr als die Haelfte des Bilds weicht von der Entwicklung der RAW-Stufe ab"
             End If
             If reason IsNot Nothing Then
+                NoteDeepLost("das bearbeitete Bild: " & reason)
                 DiagnosticLogService.LogAlways("ImageProcessor.Deep", "das bearbeitete Bild bleibt bei 8 Bit: " & reason)
                 deep.Dispose()
                 Return
@@ -389,6 +424,7 @@ Namespace Services
                                                     Optional developRaw As Boolean = True,
                                                     Optional outcome As SaveOutcome = Nothing) As Boolean
             If outcome IsNot Nothing Then outcome.WrittenBitDepth = 8
+            ResetDeepLossNote()
             If String.IsNullOrWhiteSpace(targetPath) OrElse adj Is Nothing Then
                 workingFull?.Dispose()
                 Return False
@@ -417,6 +453,8 @@ Namespace Services
                     Dim deepOk = deepComposite IsNot Nothing AndAlso deepBackground IsNot Nothing AndAlso
                                  DeepMatchesShallow(composite, deepComposite) AndAlso DeepMatchesShallow(background, deepBackground)
                     If Not deepOk Then
+                        NoteDeepLost("Gesamtbild oder unterste Ebene der PSD kam ohne tiefes Bild an")
+                        If outcome IsNot Nothing Then outcome.DeepLostAt = DeepLossNote()
                         DiagnosticLogService.LogAlways("ImageProcessor.Save",
                             $"PSD mit 16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, gespeichert mit 8 Bit target={IO.Path.GetFileName(targetPath)}")
                     End If

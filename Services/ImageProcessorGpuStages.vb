@@ -222,6 +222,7 @@ Namespace Services
             ' Ohne tiefes Ergebnis laeuft die Stufe wie gewohnt, und das tiefe Bild endet hier.
             Dim fromDeep = RunDeepStage(processed, measureName, deepStage)
             If fromDeep IsNot Nothing Then Return ReplaceBitmapOwned(processed, fromDeep, owned)
+            If DeepOf(processed) IsNot Nothing Then NoteDeepLost(measureName)
             If session IsNot Nothing AndAlso gpu IsNot Nothing Then
                 Dim done = PerformanceTraceService.Measure(measureName & " (Grafikkarte)",
                                                            Function() session.TryApply(processed, gpu))

@@ -5518,6 +5518,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ReplaceBitmap(oldBitmap As SKBitmap, newBitmap As SKBitmap) As SKBitmap
             If newBitmap Is Nothing OrElse Object.ReferenceEquals(oldBitmap, newBitmap) Then Return oldBitmap
             ' Mit dem alten Bild geht sein tiefer Begleiter (ImageProcessorDeep.vb).
+            If DeepOf(oldBitmap) IsNot Nothing AndAlso DeepOf(newBitmap) Is Nothing Then NoteDeepLost("eine Stufe ohne tiefes Ergebnis")
             DropDeep(oldBitmap)
             oldBitmap.Dispose()
             Return newBitmap
@@ -5536,6 +5537,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ReplaceBitmapOwned(oldBitmap As SKBitmap, newBitmap As SKBitmap,
                                                    ByRef owned As Boolean) As SKBitmap
             If newBitmap Is Nothing OrElse Object.ReferenceEquals(oldBitmap, newBitmap) Then Return oldBitmap
+            If DeepOf(oldBitmap) IsNot Nothing AndAlso DeepOf(newBitmap) Is Nothing Then NoteDeepLost("eine Stufe ohne tiefes Ergebnis")
             If owned Then
                 DropDeep(oldBitmap)
                 oldBitmap.Dispose()

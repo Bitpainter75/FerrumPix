@@ -706,6 +706,7 @@ Namespace Services
             ' sonst wuerde aus einem mehrseitigen oder 16-Bit-TIFF still ein 8-Bit-Einzelbild.
             ' Mit verlangten 16 Bit darf auch ein vorhandenes Ziel mit 16 Bit weichen.
             Dim wantsDeep = bitDepth = 16 AndAlso CanEncodeDeep(targetPath)
+            ResetDeepLossNote()
             If TiffPreviewService.IsSupportedTiff(targetPath) AndAlso Not TiffWriterService.CanReplaceExisting(targetPath, wantsDeep) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: vorhandenes TIFF traegt mehr als 8 Bit, mehrere Seiten, CMYK oder Ebenen target={IO.Path.GetFileName(targetPath)}")
@@ -1018,7 +1019,9 @@ Namespace Services
                         ' Sonst dieselbe Datei mit 8 Bit.
                         If wantsDeep Then
                             Dim deepResult = DetachDeep(processed)
+                            If deepResult Is Nothing Then NoteDeepLost("die Quelle brachte kein tiefes Bild mit")
                             If deepResult IsNot Nothing AndAlso Not DeepMatchesShallow(processed, deepResult) Then
+                                NoteDeepLost("der Vergleich vor dem Schreiben: das tiefe Bild ist nicht das 8-Bit-Bild")
                                 deepResult.Dispose()
                                 deepResult = Nothing
                             End If
@@ -1026,6 +1029,7 @@ Namespace Services
                                 toEncode = deepResult
                                 If outcome IsNot Nothing Then outcome.WrittenBitDepth = 16
                             Else
+                                If outcome IsNot Nothing Then outcome.DeepLostAt = DeepLossNote()
                                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                                     $"16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, gespeichert mit 8 Bit target={IO.Path.GetFileName(targetPath)}")
                             End If
