@@ -2841,15 +2841,9 @@ Namespace Services
 
         Private Shared Function ProcessBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed = ProcessBitmapBase(source, adj)
-            Dim annotationAdj = WithAnnotationSourceSpace(adj, source)
-            Dim annotated = ApplyAnnotations(processed, annotationAdj)
-            ' Mit tiefem Bild (Ausgabe in 16 Bit) die Objekte auch darauf, soweit der einfache
-            ' Zeichenweg reicht (ApplyAnnotationsDeep); sonst endet das tiefe Bild hier.
-            If annotated IsNot Nothing AndAlso Not ReferenceEquals(annotated, processed) Then
-                Dim deep = DeepOf(processed)
-                If deep IsNot Nothing Then AttachDeep(annotated, ApplyAnnotationsDeep(deep, annotationAdj))
-            End If
-            Return ReplaceBitmap(processed, annotated)
+            ' Mit tiefem Bild (Ausgabe in 16 Bit) zeichnet ApplyAnnotationsCore die Objekte auch
+            ' darauf; das Ergebnis traegt dann seinen Begleiter schon.
+            Return ReplaceBitmap(processed, ApplyAnnotations(processed, WithAnnotationSourceSpace(adj, source)))
         End Function
 
         ''' <summary>Stapel- und Export-Aufrufer bauen ihre Anpassungen frisch zusammen und kennen die

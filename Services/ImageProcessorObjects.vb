@@ -122,6 +122,11 @@ Namespace Services
             Else
                 result = CloneBitmapForAnnotationComposite(source)
             End If
+            ' Haengt an der Quelle ein tiefes Bild (Ausgabe in 16 Bit, ImageProcessorDeep.vb), bekommt
+            ' das Komposit seinen Begleiter in derselben Form: vormultipliziert, mit dem Bild oder
+            ' der Hintergrundfarbe als Grund. Alles, was unten auf result gezeichnet wird, wird
+            ' danach auch auf ihn gezeichnet (DrawAnnotationsOnDeep).
+            AttachDeep(result, DeepForAnnotationComposite(DeepOf(source), adj))
 
             If Not hasObjects Then Return result
 
@@ -136,6 +141,7 @@ Namespace Services
                 Using canvas = New SKCanvas(result)
                     DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, adj.Annotations)
                 End Using
+                DrawAnnotationsOnDeep(result, adj, source.Width, source.Height, adj.Annotations)
                 Return result
             End If
 
@@ -150,7 +156,9 @@ Namespace Services
             ' dem unvermeidbaren Klon je Korrektur.
             Dim targetColorType = result.ColorType
             If targetColorType <> SKColorType.Bgra8888 Then
-                result = ReplaceBitmap(result, ConvertBitmapToColorType(result, SKColorType.Bgra8888))
+                Dim converted = ConvertBitmapToColorType(result, SKColorType.Bgra8888)
+                MoveDeep(result, converted)
+                result = ReplaceBitmap(result, converted)
             End If
 
             Dim index = 0
@@ -158,10 +166,11 @@ Namespace Services
                 Dim annotation = adj.Annotations(index)
                 Dim chain = RenderStepChainFor(adj, annotation)
                 If chain.Count = 0 Then
+                    Dim oneObject = New System.Collections.Generic.List(Of ImageAnnotation) From {annotation}
                     Using canvas = New SKCanvas(result)
-                        DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height,
-                                                New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
+                        DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, oneObject)
                     End Using
+                    DrawAnnotationsOnDeep(result, adj, source.Width, source.Height, oneObject)
                     If stacked.Any(Function(l) String.Equals(l.StackAboveAnnotationId, annotation.Id, StringComparison.Ordinal)) Then
                         ' KEIN Using um das Ergebnis: es WIRD das neue Komposit (ReplaceBitmap gibt das
                         ' alte frei). Ein Using würde genau das Bitmap freigeben, mit dem weitergezeichnet
@@ -179,6 +188,9 @@ Namespace Services
                 Dim groupX = 0, groupY = 0
                 Dim groupLayer = DrawGroupRun(adj, source, stacked, chain(0), index, groupX, groupY)
                 If groupLayer IsNot Nothing Then
+                    ' Die Gruppe wird als fertiges 8-Bit-Bild in das Komposit gemischt, an Ort und
+                    ' Stelle. Das tiefe Bild endet hier (RecipeBlocksDeep nennt den Fall).
+                    DropDeep(result)
                     Try
                         ' Das Ziel ist hier das ganze Bild, seine Ecke also 0/0.
                         CompositeGroupLayer(result, 0, 0, groupLayer, groupX, groupY, chain(0), adj,
@@ -190,7 +202,9 @@ Namespace Services
             End While
 
             If result.ColorType <> targetColorType Then
-                result = ReplaceBitmap(result, ConvertBitmapToColorType(result, targetColorType))
+                Dim converted = ConvertBitmapToColorType(result, targetColorType)
+                MoveDeep(result, converted)
+                result = ReplaceBitmap(result, converted)
             End If
             Return result
         End Function

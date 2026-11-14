@@ -1,5 +1,7 @@
 Imports System
 Imports System.Buffers
+Imports System.Collections.Generic
+Imports System.Linq
 Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
 Imports System.Threading
@@ -146,9 +148,9 @@ Namespace Services
         '''
         ''' Die Liste folgt den Stellen, an denen das tiefe Bild heute endet: gebackene Vorgaenge
         ''' (Retusche, Striche, Objekt entfernen, Entrauschen am fertigen Bild: sie stecken als
-        ''' 8-Bit-Bildpunkte im Arbeitsbild), Hochskalieren mit Modell, ein ausgeblendeter
-        ''' Hintergrund, Korrekturebenen im Objektstapel, Gruppen als eigener Schritt und Staub und
-        ''' Kratzer entfernen. Wer eine dieser Stellen tief rechnen laesst, nimmt sie hier heraus.
+        ''' 8-Bit-Bildpunkte im Arbeitsbild), Hochskalieren mit Modell, Gruppen als eigener Schritt
+        ''' und Staub und Kratzer entfernen. Wer eine dieser Stellen tief rechnen laesst, nimmt sie
+        ''' hier heraus.
         '''
         ''' Eine Vorabfrage, keine Zusage: Nein heisst nur, dass das Rezept nichts dagegen hat. Ob
         ''' die Datei wirklich 16 Bit traegt, entscheidet SaveImage und meldet es in
@@ -157,12 +159,7 @@ Namespace Services
             If adj Is Nothing Then Return False
             If adj.BakedOperations IsNot Nothing AndAlso adj.BakedOperations.Count > 0 Then Return True
             If Not String.IsNullOrWhiteSpace(adj.UpscaleModel) Then Return True
-            If adj.BackgroundHidden Then Return True
             If adj.DustScratches < 0 Then Return True
-            If adj.MaskedAdjustmentLayers IsNot Nothing AndAlso
-               adj.MaskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId)) Then
-                Return True
-            End If
             Return HasRenderStepGroupMember(adj)
         End Function
 
@@ -240,40 +237,58 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>Die Objekte der Buehne auf dem tiefen Bild, fuer den EINFACHEN Fall von
-        ''' ApplyAnnotationsCore: das Bild als Grund, alle Objekte in einem Zug auf dieselbe Flaeche
-        ''' gezeichnet. Das Zeichnen selbst (Formen, Text, Bilder, Effekte) rechnet Skia, hier auf
-        ''' einer Flaeche mit 16 Bit; was ein Objekt an Farbe mitbringt, ist dabei so fein wie seine
-        ''' Quelle, das Foto darunter bleibt tief.
-        '''
-        ''' Nothing, und damit kein tiefes Ergebnis, fuer die Faelle, die dort eigene 8-Bit-Zwischenbilder
-        ''' brauchen: ein ausgeblendeter Hintergrund, Korrekturebenen im Objektstapel und Gruppen, die
-        ''' als eigener Schritt gerechnet werden.</summary>
-        Private Shared Function ApplyAnnotationsDeep(deep As SKBitmap, adj As ImageAdjustments) As SKBitmap
-            If deep Is Nothing OrElse adj Is Nothing OrElse adj.BackgroundHidden Then Return Nothing
-            If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return Nothing
-            If adj.MaskedAdjustmentLayers IsNot Nothing AndAlso
-               adj.MaskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId)) Then
-                Return Nothing
-            End If
-            If HasRenderStepGroupMember(adj) Then Return Nothing
-            ' Vormultipliziert wie das 8-Bit-Bild dieser Stufe (CloneBitmapForAnnotationComposite).
-            Dim result = NewDeepBitmap(deep.Width, deep.Height, SKAlphaType.Premul)
+        ' ── Objekte der Buehne (ApplyAnnotationsCore) ────────────────────────────
+        '
+        ' Das Komposit der Objekte ist ein eigenes 8-Bit-Bild, auf das der Reihe nach gezeichnet
+        ' wird. Mit tiefem Bild an der Quelle bekommt es einen Begleiter in derselben Form, und
+        ' jeder Zeichenschritt laeuft danach auch auf ihm: das Zeichnen selbst (Formen, Text,
+        ' Bilder, Effekte) rechnet Skia, hier auf einer Flaeche mit 16 Bit. Was ein Objekt an Farbe
+        ' mitbringt, ist dabei so fein wie seine Quelle; das Foto darunter bleibt tief.
+        ' Korrekturebenen im Objektstapel rechnen ueber ApplyMaskedAdjustmentLayers auf dem Paar.
+        ' Nur die Gruppe als eigener Schritt beendet das tiefe Bild: sie wird als fertiges
+        ' 8-Bit-Bild an Ort und Stelle eingemischt.
+
+        ''' <summary>Der Begleiter fuer das Komposit der Objekte: vormultipliziert wie
+        ''' CloneBitmapForAnnotationComposite, mit dem tiefen Bild als Grund oder, bei ausgeblendetem
+        ''' Hintergrund, mit der Hintergrundfarbe des Dokuments. Nothing ohne tiefes Bild.</summary>
+        Private Shared Function DeepForAnnotationComposite(deepSource As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If deepSource Is Nothing OrElse adj Is Nothing Then Return Nothing
+            Dim result = NewDeepBitmap(deepSource.Width, deepSource.Height, SKAlphaType.Premul)
             If result Is Nothing Then Return Nothing
-            Try
-                Using canvas = New SKCanvas(result)
+            Using canvas = New SKCanvas(result)
+                If adj.BackgroundHidden Then
+                    canvas.Clear(DocumentBackgroundColor(adj))
+                Else
                     Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        canvas.DrawBitmap(deep, 0, 0, paint)
+                        canvas.DrawBitmap(deepSource, 0, 0, paint)
                     End Using
-                    DrawAnnotationsOnCanvas(canvas, adj, deep.Width, deep.Height, 0, 0, deep.Width, deep.Height, adj.Annotations)
+                End If
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Zeichnet dieselben Objekte, die eben auf <paramref name="composite"/> gezeichnet
+        ''' wurden, auf dessen tiefes Bild. Scheitert das, endet das tiefe Bild hier.</summary>
+        Private Shared Sub DrawAnnotationsOnDeep(composite As SKBitmap, adj As ImageAdjustments, width As Integer, height As Integer,
+                                                 annotations As IReadOnlyList(Of ImageAnnotation))
+            Dim deep = DeepOf(composite)
+            If deep Is Nothing Then Return
+            Try
+                Using canvas = New SKCanvas(deep)
+                    DrawAnnotationsOnCanvas(canvas, adj, width, height, 0, 0, width, height, annotations)
                 End Using
-                Return result
             Catch ex As Exception
                 DiagnosticLogService.LogException("ImageProcessor.Deep", ex)
-                result.Dispose()
-                Return Nothing
+                DropDeep(composite)
             End Try
-        End Function
+        End Sub
+
+        ''' <summary>Gibt das tiefe Bild von <paramref name="source"/> an <paramref name="target"/>
+        ''' weiter, wenn das Ziel dasselbe Bild in anderer Anordnung ist (BGRA statt RGBA).</summary>
+        Private Shared Sub MoveDeep(source As SKBitmap, target As SKBitmap)
+            Dim deep = DetachDeep(source)
+            If deep IsNot Nothing Then AttachDeep(target, deep)
+        End Sub
 
         ''' <summary>Gibt <paramref name="copy"/>, einer Kopie von <paramref name="original"/>, eine
         ''' eigene Kopie von dessen tiefem Bild mit. Ohne tiefes Bild am Original geschieht nichts.</summary>
