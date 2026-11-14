@@ -1122,10 +1122,29 @@ Namespace Services
 
         ''' <summary>Staub und Kratzer auf dem tiefen Bild. Die hinzufuegende Seite zeichnet ueber
         ''' Skia und rechnet deshalb mit jedem Farbtyp; sie laeuft hier unveraendert mit dem tiefen
-        ''' Bild als Quelle. Die entfernende Seite (Median, nur noch in alten Rezepten) hat keine
-        ''' tiefe Fassung.</summary>
+        ''' Bild als Quelle. Die entfernende Seite (nur noch in alten Rezepten) legt wie dort das
+        ''' Medianbild mit der Reglerstaerke als Deckkraft ueber das Bild, hier das tiefe Medianbild
+        ''' ueber das tiefe Bild.</summary>
         Private Shared Function ApplyDustScratchesDeep(deep As SKBitmap, amount As Single) As SKBitmap
-            If Clamp(amount, -1, 1) <= 0.001F Then Return Nothing
+            Dim strength = Clamp(amount, -1, 1)
+            If Math.Abs(strength) <= 0.001F Then Return Nothing
+            If strength < 0 Then
+                Dim removeStrength = -strength
+                Using median = ApplyMedianBlurDeep(deep, removeStrength)
+                    If median Is Nothing Then Return Nothing
+                    Dim blended = CopyBitmap(deep)
+                    If blended Is Nothing OrElse blended.ColorType <> DeepColorType Then
+                        blended?.Dispose()
+                        Return Nothing
+                    End If
+                    Using canvas = New SKCanvas(blended)
+                        Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255.0F * removeStrength))}
+                            canvas.DrawBitmap(median, 0, 0, paint)
+                        End Using
+                    End Using
+                    Return blended
+                End Using
+            End If
             Dim result = ApplyDustScratches(deep, amount)
             If result Is Nothing OrElse ReferenceEquals(result, deep) Then Return Nothing
             If result.ColorType <> DeepColorType Then

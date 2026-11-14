@@ -14011,15 +14011,25 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Ist im Stapel eine Quelle, aus der eine Datei mit 16 Bit entstehen kann (eine RAW,
-        ''' die durch die RAW-Stufe laeuft)? Dann bietet der Dialog die Farbtiefe an. Abseits des
-        ''' Oberflaechenfadens: bei einer DNG liest die Frage in die Datei.</summary>
+        ''' die durch die RAW-Stufe laeuft und deren Rezept nichts dagegen hat)? Dann bietet der Dialog
+        ''' die Farbtiefe an. Das Rezept je Datei wird gefragt wie im Editor
+        ''' (ImageProcessor.RecipeBlocksDeep): besteht der Stapel nur aus RAWs, deren Rezept das
+        ''' ganze Bild ersetzt, stuende die Wahl ohne Wirkung da. Abseits des Oberflaechenfadens:
+        ''' bei einer DNG liest die Frage in die Datei, und das Rezept kommt aus der Beistelldatei.</summary>
         Private Function BatchIncludesDeepSourceAsync(targetItems As IEnumerable(Of ImageItem)) As Task(Of Boolean)
             ' Ein neuer Stapel beginnt: der Zaehler der Dateien, die mit 8 statt 16 Bit entstanden,
             ' faengt bei null an (ein Lauf, der ohne Schlussmeldung endete, liesse sonst seinen Rest stehen).
             Threading.Interlocked.Exchange(_batchShallowCount, 0)
             Dim paths = If(targetItems, Enumerable.Empty(Of ImageItem)()).
                 Where(Function(i) i IsNot Nothing).Select(Function(i) i.FilePath).ToList()
-            Return Task.Run(Function() paths.Any(Function(p) ImageProcessor.CanSourceGoDeep(p)))
+            Return Task.Run(Function() paths.Any(Function(p) BatchSourceCanGoDeep(p)))
+        End Function
+
+        ''' <summary>Eine Datei des Stapels: RAW durch die RAW-Stufe, und ihr Rezept sperrt die
+        ''' Ausgabe in 16 Bit nicht.</summary>
+        Friend Shared Function BatchSourceCanGoDeep(path As String) As Boolean
+            If Not ImageProcessor.CanSourceGoDeep(path) Then Return False
+            Return Not ImageProcessor.RecipeBlocksDeep(RawSidecarService.TryRead(path))
         End Function
 
         ''' <summary>Sind JPG-Dateien im Stapel? Dann zeigt der Dialog den Qualitaetsregler auch

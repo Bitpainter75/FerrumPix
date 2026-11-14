@@ -23695,6 +23695,15 @@ Namespace ViewModels
                     Dim psdWorking As SKBitmap = If(_workingImage.HasBakedContent, CloneWorkingFullForRender(), Nothing)
                     ok = Await Task.Run(Function() As Boolean
                                             Try
+                                                ' Verlangte 16 Bit: der eigene Einstieg rechnet Gesamtbild
+                                                ' und unterste Ebene mit dem tiefen Bild und schreibt die
+                                                ' Datei mit 16 Bit, wenn es bis ans Ende mitkommt.
+                                                If bitDepth = 16 Then
+                                                    Dim deepWorking = psdWorking
+                                                    psdWorking = Nothing
+                                                    Return ImageProcessor.ExportLayeredPsdDeep(psdTarget, psdSourcePath, adj, deepWorking,
+                                                                                               preserveMetadata, outcome:=saveOutcome)
+                                                End If
                                                 Dim withoutObjects = adj.Clone()
                                                 withoutObjects.Annotations?.Clear()
                                                 Dim processMs As Long = 0

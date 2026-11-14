@@ -1515,7 +1515,7 @@ Namespace ViewModels
         ' ── Farbtiefe der Ausgabe: 8 oder 16 Bit je Kanal ────────────────────────
         '
         ' Die Zeile erscheint nur, wenn beides zutrifft: das gewaehlte Format traegt 16 Bit (TIFF,
-        ' PNG, JPEG XL), und unter den Quellen des Dialogs ist eine, aus der eine Datei mit 16 Bit
+        ' PNG, JPEG XL und der PSD-Export des Editors), und unter den Quellen des Dialogs ist eine, aus der eine Datei mit 16 Bit
         ' entstehen kann (eine RAW-Datei, die durch die RAW-Stufe laeuft, siehe
         ' ImageProcessor.CanSourceGoDeep). Bei einer 8-Bit-Quelle gibt es keine Ausgabe in 16 Bit,
         ' und die Wahl bleibt dann weg, statt ohne Wirkung dazustehen.
@@ -1540,7 +1540,8 @@ Namespace ViewModels
                 Return DialogShowsSaveAsOptions AndAlso _dialogDeepSourceAvailable AndAlso
                        (String.Equals(_dialogSelectedFormat, "TIFF", StringComparison.OrdinalIgnoreCase) OrElse
                         String.Equals(_dialogSelectedFormat, "PNG", StringComparison.OrdinalIgnoreCase) OrElse
-                        String.Equals(_dialogSelectedFormat, "JXL", StringComparison.OrdinalIgnoreCase))
+                        String.Equals(_dialogSelectedFormat, "JXL", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(_dialogSelectedFormat, "PSD", StringComparison.OrdinalIgnoreCase))
             End Get
         End Property
 

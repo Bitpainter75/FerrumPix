@@ -188,9 +188,8 @@ Namespace Services
                 Dim groupX = 0, groupY = 0
                 Dim groupLayer = DrawGroupRun(adj, source, stacked, chain(0), index, groupX, groupY)
                 If groupLayer IsNot Nothing Then
-                    ' Die Gruppe wird als fertiges 8-Bit-Bild in das Komposit gemischt, an Ort und
-                    ' Stelle. Das tiefe Bild endet hier (RecipeBlocksDeep nennt den Fall).
-                    DropDeep(result)
+                    ' Die Gruppe wird als fertige Ebene in das Komposit gemischt, an Ort und Stelle,
+                    ' und ebenso in sein tiefes Bild (CompositeGroupLayer).
                     Try
                         ' Das Ziel ist hier das ganze Bild, seine Ecke also 0/0.
                         CompositeGroupLayer(result, 0, 0, groupLayer, groupX, groupY, chain(0), adj,
@@ -385,6 +384,20 @@ Namespace Services
                     .Color = New SKColor(255, 255, 255, alpha)}
                     ApplyCustomAnnotationBlender(paint, group.BlendMode)
                     DrawLayerBitmap(canvas, groupLayer, layerX - targetX, layerY - targetY, paint)
+                    ' Haengt am Ziel ein tiefes Bild (Ausgabe in 16 Bit), kommt dieselbe Ebene mit
+                    ' derselben Mischung auch dort hinein. Die Ebene selbst ist so fein wie ihre
+                    ' Objekte, das Foto darunter bleibt tief. Die Maske oben liegt schon auf ihr.
+                    Dim deepTarget = DeepOf(target)
+                    If deepTarget IsNot Nothing Then
+                        Try
+                            Using deepCanvas = New SKCanvas(deepTarget)
+                                DrawLayerBitmap(deepCanvas, groupLayer, layerX - targetX, layerY - targetY, paint)
+                            End Using
+                        Catch ex As Exception
+                            DiagnosticLogService.LogException("ImageProcessor.Deep", ex)
+                            DropDeep(target)
+                        End Try
+                    End If
                 End Using
             End Using
         End Sub

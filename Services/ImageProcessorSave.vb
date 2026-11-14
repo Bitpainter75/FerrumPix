@@ -76,10 +76,16 @@ Namespace Services
         ''' Aus <paramref name="sourcePath"/> kommen die Aufloesung (immer, sie ist eine Eigenschaft
         ''' des Bilds) und mit <paramref name="preserveMetadata"/> das XMP-Paket, so wie die anderen
         ''' Speicherwege die Aufnahmedaten uebernehmen.</summary>
+        ''' <param name="deepComposite">Das Gesamtbild mit 16 Bit je Kanal. Mit ihm entsteht eine
+        ''' Datei mit 16 Bit (PsdWriterService.Save); <paramref name="deepBackground"/> ist dann
+        ''' die unterste Ebene in 16 Bit. Die Objektebenen entstehen wie sonst und werden beim
+        ''' Schreiben gespreizt. Der Einstieg dafuer ist <see cref="ExportLayeredPsdDeep"/>.</param>
         Public Shared Function ExportLayeredPsd(targetPath As String, composite As SKBitmap,
                                                 background As SKBitmap, adj As ImageAdjustments,
                                                 Optional sourcePath As String = Nothing,
-                                                Optional preserveMetadata As Boolean = False) As Boolean
+                                                Optional preserveMetadata As Boolean = False,
+                                                Optional deepComposite As SKBitmap = Nothing,
+                                                Optional deepBackground As SKBitmap = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(targetPath) OrElse composite Is Nothing Then Return False
 
             Dim layers As New List(Of PsdWriterService.PsdLayerInput)()
@@ -93,6 +99,7 @@ Namespace Services
                     layers.Add(New PsdWriterService.PsdLayerInput With {
                         .Name = LocalizationService.T("Hintergrund"),
                         .Pixels = background,
+                        .DeepPixels = If(deepComposite Is Nothing, Nothing, deepBackground),
                         .Left = 0,
                         .Top = 0,
                         .LockPosition = adj IsNot Nothing AndAlso adj.BaseLayerLockPosition,
@@ -235,7 +242,8 @@ Namespace Services
                 Return PsdWriterService.Save(targetPath, composite, layers,
                                              If(roundtrip Is Nothing, Nothing, PsdRecipeService.Build(roundtrip)),
                                              ReadSourceResolutionDpi(sourcePath),
-                                             If(preserveMetadata, ReadSourceXmpForPsd(sourcePath), Nothing))
+                                             If(preserveMetadata, ReadSourceXmpForPsd(sourcePath), Nothing),
+                                             deepComposite)
             Finally
                 ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
                 ' gehören dem Aufrufer und werden hier nur gelesen. Die Maskenraster entstehen
@@ -759,9 +767,14 @@ Namespace Services
                 ' Ob ein vermerktes Entrauschen am Bild dabei WIRKLICH nachgezogen wurde: fehlt das
                 ' Bildmodell, kommt das Nachziehen ohne Entrauschen zurueck.
                 Dim pendingDenoiseApplied = False
+                ' Fuer die Ausgabe in 16 Bit: das Bild nach den nachgezogenen Vorgaengen. Bleibt es
+                ' bis zum Schreiben dieses Bild, bekommt es das tiefe Bild der RAW-Stufe mit den
+                ' bearbeiteten Stellen aus sich selbst (AttachDeepEditedRawSource).
+                Dim editedRawBitmap As SKBitmap = Nothing
                 If workingFull Is Nothing AndAlso applyPendingBaked AndAlso decoded IsNot Nothing Then
                     Dim reapplied = ApplyPendingBakedOperations(decoded, adj, cancel)
                     If reapplied IsNot Nothing Then
+                        If ReferenceEquals(decoded, rawStageBitmap) Then editedRawBitmap = reapplied
                         decoded.Dispose()
                         decoded = reapplied
                         pendingDenoiseApplied = HasRunnableDenoiseOperation(adj)
@@ -868,10 +881,14 @@ Namespace Services
                     If original Is Nothing Then Return False
                     If wantsDeep AndAlso ReferenceEquals(decoded, rawStageBitmap) Then
                         AttachDeepRawSource(original, sourcePath, rawStageAdj, developRaw)
+                    ElseIf wantsDeep AndAlso editedRawBitmap IsNot Nothing AndAlso ReferenceEquals(decoded, editedRawBitmap) Then
+                        ' Selbst entwickelt, danach Retusche, Striche oder Objekt entfernen
+                        ' nachgezogen: tief bis auf die bearbeiteten Stellen.
+                        AttachDeepEditedRawSource(original, sourcePath, rawStageAdj, developRaw)
                     ElseIf wantsDeep AndAlso workingFull IsNot Nothing AndAlso ReferenceEquals(decoded, workingFull) AndAlso
                            Not isFpxSource Then
-                        ' Das Arbeitsbild des Editors: tief nur, wenn es nichts als die Entwicklung
-                        ' der RAW-Stufe ist. Das prueft der Vergleich dort, Bildpunkt fuer Bildpunkt.
+                        ' Das Arbeitsbild des Editors: die Entwicklung der RAW-Stufe, tief bis auf
+                        ' die Stellen, an denen es davon abweicht (Retusche, Malerei).
                         AttachDeepWorkingSource(original, sourcePath, adj, developRaw)
                     End If
 

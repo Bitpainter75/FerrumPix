@@ -450,7 +450,7 @@
                                                 Click="OnDialogBitDepthClick"
                                                 Tag="16">16 Bit</Button>
                                     </StackPanel>
-                                    <TextBlock Text="16 Bit gibt es für RAW-Dateien. Mit Retusche, Malerei oder gruppierten Objekten kann die Datei mit 8 Bit entstehen."
+                                    <TextBlock Text="16 Bit gibt es für RAW-Dateien. Retuschierte und übermalte Stellen bleiben dabei so fein wie 8 Bit."
                                                IsVisible="{Binding IsDialogBitDepth16}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"

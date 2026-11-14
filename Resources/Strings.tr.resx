@@ -11695,8 +11695,8 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bit</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
-    <value>16 bit RAW dosyaları için kullanılabilir. Rötuş, boyama veya gruplanmış nesneler varsa dosya 8 bit olarak yazılabilir.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
+    <value>16 bit RAW dosyaları için kullanılabilir. Rötuşlanan ve boyanan yerler 8 bit inceliğinde kalır.</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
     <value>8 bit olarak kaydedildi, görüntüde rötuş, boyama veya gruplanmış nesneler var: {0}</value>
