@@ -9892,8 +9892,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} lapisan teks tanpa konten yang terlihat tidak dapat diambil dan hilang.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>{0} lapisan teks direntangkan, dimiringkan, atau dicerminkan dan masuk sebagai gambar, teksnya tidak dapat diedit.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>{0} lapisan teks terdistorsi, dilengkungkan, atau mengikuti jalur dan masuk sebagai gambar, teksnya tidak dapat diedit.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>Gunakan kartu grafis untuk penyuntingan gambar</value>

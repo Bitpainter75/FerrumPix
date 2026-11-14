@@ -27,6 +27,17 @@ Namespace Services
         Public Property BoundsRight As Double
         Public Property BoundsBottom As Double
 
+        ''' <summary>Die Nummer des Textobjekts im dokumentweiten Textblock (<c>TextIndex</c> des
+        ''' TySh-Blocks); -1, wenn keine dasteht.</summary>
+        Public Property TextIndex As Integer = -1
+        ''' <summary>Der Text ist verformt (Bogen, Flagge, Stauchung): im TySh-Block steht eine
+        ''' andere Verformung als "keine". Ein Textobjekt hat dafür kein Gegenstück.</summary>
+        Public Property IsWarped As Boolean
+        ''' <summary>Der Text läuft an einem Pfad. Das steht NICHT in der Ebene, dort sieht er aus
+        ''' wie Rahmentext; die Kontur liegt im dokumentweiten Textblock (siehe
+        ''' <see cref="PathTextIndices"/>), und <see cref="PsdLayerReader"/> trägt es hier nach.</summary>
+        Public Property IsOnPath As Boolean
+
         Private Sub New()
         End Sub
 
@@ -98,6 +109,48 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Welche Textobjekte des dokumentweiten Textblocks ("Txt2") an einem Pfad laufen,
+        ''' als Menge ihrer Nummern (<see cref="TextIndex"/>). Leer, wenn keines oder der Block
+        ''' nicht lesbar ist.
+        '''
+        ''' Der Block ist dieselbe Schreibweise wie die Textdaten einer Ebene, nur mit Nummern als
+        ''' Schlüsseln und ohne äußere Klammer. Gebraucht werden drei Stellen: die Textobjekte
+        ''' (<c>/1/1</c>, die Stelle in der Liste ist die Nummer), an jedem die Liste seiner Rahmen
+        ''' (<c>/1/0</c>, je Eintrag die Nummer unter <c>/0</c>), und in der Rahmenliste (<c>/0/8/0</c>) die Art des Rahmens
+        ''' (<c>/0/2/0</c>): ohne Eintrag Punkttext, 1 Rahmentext, 2 Text am Pfad.</summary>
+        Public Shared Function PathTextIndices(data As Byte()) As HashSet(Of Integer)
+            Dim result As New HashSet(Of Integer)()
+            If data Is Nothing OrElse data.Length = 0 OrElse data.Length > 32_000_000 Then Return result
+            Try
+                Dim wrapped(data.Length + 3) As Byte
+                wrapped(0) = 60 : wrapped(1) = 60
+                Buffer.BlockCopy(data, 0, wrapped, 2, data.Length)
+                wrapped(wrapped.Length - 2) = 62 : wrapped(wrapped.Length - 1) = 62
+                ' Der Block trägt je Zeile das fertig gesetzte Schriftbild; ein Dokument mit viel
+                ' Text kommt damit weit über die Grenze, die für die Daten EINER Ebene reicht.
+                Dim parser As New Parser(wrapped, 4_000_000)
+                Dim root = TryCast(parser.ReadValue(0), Dictionary(Of String, Object))
+                Dim frames = Arr(Dict(Dict(root, "0"), "8"), "0")
+                Dim objects = Arr(Dict(root, "1"), "1")
+                If frames Is Nothing OrElse objects Is Nothing Then Return result
+                For i = 0 To objects.Count - 1
+                    Dim frameIndices = Arr(Dict(TryCast(objects(i), Dictionary(Of String, Object)), "1"), "0")
+                    If frameIndices Is Nothing Then Continue For
+                    For Each entry In frameIndices
+                        ' Jeder Eintrag ist selbst ein Verzeichnis, die Nummer des Rahmens steht
+                        ' darin unter /0.
+                        Dim frameIndex = Number(TryCast(entry, Dictionary(Of String, Object)), "0")
+                        If frameIndex < 0 OrElse frameIndex >= frames.Count OrElse frameIndex <> Math.Truncate(frameIndex) Then Continue For
+                        Dim frame = Dict(Dict(TryCast(frames(CInt(frameIndex)), Dictionary(Of String, Object)), "0"), "2")
+                        If Number(frame, "0") = 2 Then result.Add(i)
+                    Next
+                Next
+            Catch
+                result.Clear()
+            End Try
+            Return result
+        End Function
+
         Private Shared Function Dict(d As Dictionary(Of String, Object), key As String) As Dictionary(Of String, Object)
             If d Is Nothing OrElse Not d.ContainsKey(key) Then Return Nothing
             Return TryCast(d(key), Dictionary(Of String, Object))
@@ -115,8 +168,10 @@ Namespace Services
             Private ReadOnly bytes As Byte()
             Private pos As Integer
             Private count As Integer
-            Public Sub New(data As Byte())
+            Private ReadOnly maxValues As Integer
+            Public Sub New(data As Byte(), Optional maxValues As Integer = 100_000)
                 bytes = data
+                Me.maxValues = maxValues
             End Sub
             Private Sub Space()
                 While pos < bytes.Length
@@ -133,7 +188,7 @@ Namespace Services
             End Sub
             Public Function ReadValue(depth As Integer) As Object
                 count += 1
-                If depth > 32 OrElse count > 100_000 Then Throw New FormatException()
+                If depth > 32 OrElse count > maxValues Then Throw New FormatException()
                 Space()
                 If pos >= bytes.Length Then Throw New FormatException()
                 If bytes(pos) = 60 AndAlso pos + 1 < bytes.Length AndAlso bytes(pos + 1) = 60 Then

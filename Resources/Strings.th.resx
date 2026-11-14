@@ -9892,8 +9892,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>เลเยอร์ข้อความ {0} รายการที่ไม่มีเนื้อหาที่มองเห็นได้ไม่สามารถนำเข้าได้และหายไป</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>เลเยอร์ข้อความ {0} รายการถูกยืด เอียง หรือพลิกกลับ จึงนำเข้าเป็นภาพและแก้ไขข้อความไม่ได้</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>เลเยอร์ข้อความ {0} รายการถูกบิดเบือน ดัดโค้ง หรือวางตามเส้นพาธ จึงนำเข้าเป็นภาพและแก้ไขข้อความไม่ได้</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>ใช้การ์ดจอสำหรับการแก้ไขภาพ</value>

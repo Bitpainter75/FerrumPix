@@ -9848,8 +9848,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} capas de texto sin contenido visible no se pueden transferir y faltan.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>{0} capas de texto están estiradas, inclinadas o reflejadas y llegan como imagen, su texto no se puede editar.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>{0} capas de texto están distorsionadas, deformadas o siguen un trazado y llegan como imagen, su texto no se puede editar.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>Usar la tarjeta gráfica para la edición de imágenes</value>

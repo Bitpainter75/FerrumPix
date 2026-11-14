@@ -9888,8 +9888,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} tekstitasoa ilman näkyvää sisältöä ei voi siirtää, ja ne puuttuvat.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>{0} tekstitasoa on venytetty, vinoutettu tai peilattu, ja ne tuodaan kuvina, joten niiden tekstiä ei voi muokata.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>{0} tekstitasoa on vääristetty, taivutettu tai ne kulkevat polkua pitkin, ja ne tuodaan kuvina, joten niiden tekstiä ei voi muokata.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>Käytä näytönohjainta kuvankäsittelyyn</value>

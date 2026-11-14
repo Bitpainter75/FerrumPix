@@ -9848,8 +9848,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} calques de texte sans contenu visible ne peuvent pas être repris et sont absents.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>{0} calques de texte sont étirés, inclinés ou mis en miroir et arrivent comme image, leur texte n'est pas modifiable.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>{0} calques de texte sont déformés, courbés ou suivent un tracé et arrivent comme image, leur texte n'est pas modifiable.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>Utiliser la carte graphique pour la retouche d'images</value>

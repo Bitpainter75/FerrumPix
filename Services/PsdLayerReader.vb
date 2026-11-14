@@ -204,6 +204,7 @@ Namespace Services
             Try
                 Using fs = File.OpenRead(filePath)
                     result = ReadLayersCore(fs, metadataOnly)
+                    If result IsNot Nothing Then MarkPathText(fs, result)
                 End Using
             Catch
                 result = Nothing
@@ -211,6 +212,69 @@ Namespace Services
 
             If result IsNot Nothing AndAlso result.Layers.Count = 0 Then Return Nothing
             Return result
+        End Function
+
+        ''' <summary>Trägt an den Textebenen nach, welche an einem Pfad laufen
+        ''' (<see cref="PsdEngineData.IsOnPath"/>). In der Ebene steht das nicht: dort ist Text am
+        ''' Pfad ein Rahmentext mit den Maßen der Kontur. Die Kontur und die Art des Rahmens liegen
+        ''' im dokumentweiten Textblock "Txt2" hinter der globalen Maske; die Ebene verweist mit
+        ''' ihrer Textnummer hinein.
+        '''
+        ''' Gelesen wird nur, wenn überhaupt eine Textebene eine Nummer trägt. Ein fehlender oder
+        ''' unlesbarer Block ändert nichts: dann gilt kein Text als Pfadtext, wie vorher.</summary>
+        Private Shared Sub MarkPathText(fs As FileStream, doc As PsdDocumentInfo)
+            If Not doc.Layers.Any(Function(l) l.TextStyle IsNot Nothing AndAlso l.TextStyle.TextIndex >= 0) Then Return
+            Try
+                Dim onPath = PsdEngineData.PathTextIndices(ReadGlobalBlock(fs, "Txt2", 32_000_000))
+                If onPath.Count = 0 Then Return
+                For Each layer In doc.Layers
+                    If layer.TextStyle IsNot Nothing AndAlso onPath.Contains(layer.TextStyle.TextIndex) Then layer.TextStyle.IsOnPath = True
+                Next
+            Catch
+                ' Ein abgeschnittener Abschnitt lässt das Lesen werfen; die Ebenen stehen schon.
+            End Try
+        End Sub
+
+        ''' <summary>Der Inhalt eines dokumentweiten Zusatzblocks aus dem Abschnitt der Ebenen und
+        ''' Masken, oder Nothing, wenn er fehlt oder größer ist als <paramref name="maxLength"/>.
+        ''' Der Lesezeiger wird dafür neu vom Dateianfang gesetzt.</summary>
+        Private Shared Function ReadGlobalBlock(fs As FileStream, wanted As String, maxLength As Long) As Byte()
+            fs.Position = 0
+            Dim buf(25) As Byte
+            If Not ReadExactly(fs, buf, 26) Then Return Nothing
+            Dim isPsb = (CInt(buf(4)) * 256 + buf(5)) = 2
+            If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing
+            If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing
+            Dim sectionLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
+            If sectionLen <= 0 Then Return Nothing
+            Dim sectionEnd = fs.Position + sectionLen
+            If sectionEnd > fs.Length Then Return Nothing
+
+            ' Die Ebenen-Info überspringen, dann die globale Maske (Länge immer vier Byte).
+            Dim infoLen = If(isPsb, ReadU64(fs), CLng(ReadU32(fs)))
+            If infoLen < 0 OrElse fs.Position + infoLen + 4 > sectionEnd Then Return Nothing
+            fs.Position += infoLen
+            If Not SkipBlock(fs, ReadU32(fs)) Then Return Nothing
+            While fs.Position + 12 <= sectionEnd
+                Dim sig(3) As Byte
+                If Not ReadExactly(fs, sig, 4) Then Return Nothing
+                Dim s = Encoding.ASCII.GetString(sig)
+                If s <> "8BIM" AndAlso s <> "8B64" Then Return Nothing
+                Dim keyBytes(3) As Byte
+                If Not ReadExactly(fs, keyBytes, 4) Then Return Nothing
+                Dim key = Encoding.ASCII.GetString(keyBytes)
+                Dim length = ReadBlockLength(fs, isPsb, key)
+                Dim dataStart = fs.Position
+                If length < 0 OrElse dataStart + length > sectionEnd Then Return Nothing
+                If key = wanted Then
+                    If length = 0 OrElse length > maxLength Then Return Nothing
+                    Dim data(CInt(length) - 1) As Byte
+                    Return If(ReadExactly(fs, data, data.Length), data, Nothing)
+                End If
+                ' Auf vier Byte ausgerichtet, wie in SeekLayerCount.
+                fs.Position = dataStart + ((length + 3L) And Not 3L)
+            End While
+            Return Nothing
         End Function
 
         ''' <summary>Wie viele Ebenen im Verzeichnis der Datei stehen - einschliesslich derer, die

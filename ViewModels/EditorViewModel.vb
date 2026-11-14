@@ -20347,7 +20347,7 @@ Namespace ViewModels
                     parts.Add(String.Format(LocalizationService.T("{0} Füll- oder Formebenen tragen in der Datei keine Bildpunkte und fehlen."), importResult.MissingContentLayers))
                 End If
                 If stretchedNotice Then
-                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind gestreckt, geschert oder gespiegelt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
+                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind verzerrt, verformt oder laufen an einem Pfad und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
                 End If
                 If importResult.DroppedTextLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Textebenen ohne sichtbaren Inhalt lassen sich nicht übernehmen und fehlen."), importResult.DroppedTextLayers))

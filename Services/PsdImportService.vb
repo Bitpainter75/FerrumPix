@@ -617,8 +617,13 @@ Namespace Services
         ''' EINEN Schriftgrad und eine Drehung; als Text käme ein in Photoshop breit gezogener
         ''' Schriftzug schmaler zurück, ein geschrägter gerade und ein gespiegelter seitenrichtig
         ''' (die Spiegelung läse <see cref="ApplyPsdTextLayout"/> sogar als Drehung). Dann bleibt
-        ''' die Ebene ein Bild, und jeder Punkt stimmt.</summary>
+        ''' die Ebene ein Bild, und jeder Punkt stimmt.
+        '''
+        ''' Ebenso verformter Text (Bogen, Flagge) und Text an einem Pfad: beides steht nicht in
+        ''' der Matrix, und als Text kämen sie in geraden Zeilen zurück. Den Pfad eines fremden
+        ''' Textes liest der Import nicht aus, obwohl ein Textobjekt einen tragen könnte.</summary>
         Private Shared Function IsDistortedText(style As PsdEngineData) As Boolean
+            If style IsNot Nothing AndAlso (style.IsWarped OrElse style.IsOnPath) Then Return True
             Dim m = style?.Matrix
             If m Is Nothing Then Return False
             Dim scaleX = Math.Sqrt(m(0) * m(0) + m(1) * m(1))

@@ -9892,8 +9892,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>보이는 내용이 없는 텍스트 레이어 {0}개를 가져올 수 없어 누락되었습니다.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>텍스트 레이어 {0}개가 늘어나거나 기울어지거나 뒤집혀 있어 이미지로 가져오며, 텍스트는 편집할 수 없습니다.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>텍스트 레이어 {0}개가 왜곡되거나 변형되었거나 패스를 따라 놓여 있어 이미지로 가져오며, 텍스트는 편집할 수 없습니다.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>이미지 편집에 그래픽 카드 사용</value>

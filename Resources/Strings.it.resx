@@ -9848,8 +9848,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>{0} livelli di testo senza contenuto visibile non possono essere importati e mancano.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>{0} livelli di testo sono allungati, inclinati o specchiati e arrivano come immagine, il loro testo non è modificabile.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>{0} livelli di testo sono distorti, deformati o seguono un tracciato e arrivano come immagine, il loro testo non è modificabile.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>Usa la scheda grafica per la modifica delle immagini</value>
