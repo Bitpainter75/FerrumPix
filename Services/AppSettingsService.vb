@@ -920,6 +920,10 @@ Namespace Services
         ''' bleibt es leer, und der Vorschlag aus EditorSaveAsNamePattern gilt. Getrennt von
         ''' LastTargetNamePattern: dort heisst leer "Name der Quelle".</summary>
         Public Property LastSaveAsNamePattern As String = ""
+        ''' <summary>Die zuletzt in einem Dialog mit Formatwahl gewaehlte Farbtiefe, 8 oder 16 Bit je
+        ''' Kanal. Sie kommt beim naechsten Mal wieder; gelten tut sie nur, wo der Dialog die Zeile
+        ''' anbietet (Format mit 16 Bit und eine Quelle, die sie hergibt).</summary>
+        Public Property LastSaveBitDepth As Integer = 8
         ''' <summary>Namensvorlage fuer „Speichern unter" im Editor. Sie spricht dieselben
         ''' Platzhalter wie das Stapel-Umbenennen; die Vorgabe markiert bearbeitete Kopien klar.</summary>
         Public Property EditorSaveAsNamePattern As String = "{name}_fx"
@@ -2896,6 +2900,13 @@ Namespace Services
 
         Public Shared Sub SaveLastSaveAsNamePattern(pattern As String)
             Update(Sub(s) s.LastSaveAsNamePattern = NormalizeTargetNamePattern(pattern))
+        End Sub
+
+        ''' <summary>Die zuletzt gewaehlte Farbtiefe der Ausgabe; alles ausser 16 gilt als 8.</summary>
+        Public Shared Sub SaveLastSaveBitDepth(bitDepth As Integer)
+            Dim normalized = If(bitDepth = 16, 16, 8)
+            If Load().LastSaveBitDepth = normalized Then Return
+            Update(Sub(s) s.LastSaveBitDepth = normalized)
         End Sub
 
         Public Shared Function NormalizeTargetNamePattern(value As String) As String

@@ -1520,15 +1520,16 @@ Namespace ViewModels
         ' ImageProcessor.CanSourceGoDeep). Bei einer 8-Bit-Quelle gibt es keine Ausgabe in 16 Bit,
         ' und die Wahl bleibt dann weg, statt ohne Wirkung dazustehen.
         '
-        ' Die Wahl bleibt ueber die Dialoge hinweg stehen, solange die Anwendung laeuft: wer TIFF mit
-        ' 16 Bit ausgibt, tut es meist mehrmals hintereinander. Ob die Quellen sie hergeben, sagt
-        ' dagegen jeder Dialog beim Oeffnen neu (SetDialogDeepSource).
+        ' Die Wahl wird gemerkt (AppSettings.LastSaveBitDepth) und kommt in jedem Dialog wieder, auch
+        ' nach dem Neustart: wer TIFF mit 16 Bit ausgibt, tut es meist mehrmals hintereinander. Ob
+        ' die Quellen sie hergeben, sagt dagegen jeder Dialog beim Oeffnen neu (SetDialogDeepSource).
         Private _dialogBitDepth As Integer = 8
         Private _dialogDeepSourceAvailable As Boolean = False
 
         ''' <summary>Beim Oeffnen eines Dialogs mit Formatwahl: geben die Quellen 16 Bit her?</summary>
         Private Sub SetDialogDeepSource(available As Boolean)
             _dialogDeepSourceAvailable = available
+            _dialogBitDepth = If(AppSettingsService.Load().LastSaveBitDepth = 16, 16, 8)
             Me.RaisePropertyChanged(NameOf(IsDialogBitDepthVisible))
             Me.RaisePropertyChanged(NameOf(IsDialogBitDepth8))
             Me.RaisePropertyChanged(NameOf(IsDialogBitDepth16))
@@ -1560,6 +1561,7 @@ Namespace ViewModels
             Dim normalized = If(value = 16, 16, 8)
             If _dialogBitDepth = normalized Then Return
             _dialogBitDepth = normalized
+            AppSettingsService.SaveLastSaveBitDepth(normalized)
             Me.RaisePropertyChanged(NameOf(IsDialogBitDepth8))
             Me.RaisePropertyChanged(NameOf(IsDialogBitDepth16))
         End Sub
