@@ -11670,4 +11670,10 @@
   <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
     <value>Subfolders can only be included in a folder</value>
   </data>
+  <data name="Bilder_aus_Unterordnern_zeigen_7a498b95" xml:space="preserve">
+    <value>Show pictures from subfolders</value>
+  </data>
+  <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
+    <value>In a folder, also shows the pictures from all subfolders below it. Searching and filtering then cover them too.</value>
+  </data>
 </root>

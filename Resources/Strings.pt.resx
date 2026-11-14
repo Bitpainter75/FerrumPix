@@ -11650,4 +11650,10 @@
   <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
     <value>As subpastas só podem ser incluídas numa pasta</value>
   </data>
+  <data name="Bilder_aus_Unterordnern_zeigen_7a498b95" xml:space="preserve">
+    <value>Mostrar imagens das subpastas</value>
+  </data>
+  <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
+    <value>Numa pasta, mostra também as imagens de todas as subpastas. A pesquisa e os filtros passam a abrangê-las também.</value>
+  </data>
 </root>

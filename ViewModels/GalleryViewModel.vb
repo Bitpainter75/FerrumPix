@@ -2307,7 +2307,6 @@ Namespace ViewModels
             ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
             ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
             ToggleFilterScopeCommand = ReactiveCommand.Create(Sub() IsCatalogFilterScope = Not IsCatalogFilterScope)
-            ToggleIncludeSubfoldersCommand = ReactiveCommand.Create(Sub() IncludeSubfolders = Not IncludeSubfolders)
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
             ' Alles, was eine Datei liest, schreibt oder neben ihr ablegt, fragt zuerst

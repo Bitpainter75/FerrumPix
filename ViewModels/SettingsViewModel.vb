@@ -61,6 +61,7 @@ Namespace ViewModels
         Private _galleryShowParentFolder As Boolean = True
         Private _galleryRatingBadgesAlwaysVisible As Boolean = False
         Private _galleryStacks As Boolean = False
+        Private _galleryIncludeSubfolders As Boolean = False
         Private _galleryFavoriteBadgeAlwaysVisible As Boolean = True
         Private _galleryMetadataBadgesAlwaysVisible As Boolean = True
         Private _galleryEditedBadge As Boolean = False
@@ -256,6 +257,7 @@ Namespace ViewModels
         Private _savedGalleryShowParentFolder As Boolean = True
         Private _savedGalleryRatingBadgesAlwaysVisible As Boolean = False
         Private _savedGalleryStacks As Boolean = False
+        Private _savedGalleryIncludeSubfolders As Boolean = False
         Private _savedGalleryFavoriteBadgeAlwaysVisible As Boolean = True
         Private _savedGalleryMetadataBadgesAlwaysVisible As Boolean = True
         Private _savedGalleryEditedBadge As Boolean = False
@@ -2329,6 +2331,20 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Die Galerie zeigt zu einem Ordner auch die Bilder aus allen Unterordnern.
+        ''' Ab Werk aus. Derselbe Stand wie der Schalter in der Fusszeile der Galerie.</summary>
+        Public Property GalleryIncludeSubfolders As Boolean
+            Get
+                Return _galleryIncludeSubfolders
+            End Get
+            Set(value As Boolean)
+                If _galleryIncludeSubfolders = value Then Return
+                Me.RaiseAndSetIfChanged(_galleryIncludeSubfolders, value)
+                If _mainVm?.Gallery IsNot Nothing Then _mainVm.Gallery.IncludeSubfolders = value
+                SaveFileBrowserSettings()
+            End Set
+        End Property
+
         Public Property GalleryFavoriteBadgeAlwaysVisible As Boolean
             Get
                 Return _galleryFavoriteBadgeAlwaysVisible
@@ -2437,6 +2453,14 @@ Namespace ViewModels
             If _galleryStacks = value Then Return
             _galleryStacks = value
             Me.RaisePropertyChanged(NameOf(GalleryStacks))
+        End Sub
+
+        ' Wird von der Galerie gerufen, wenn die Unterordner ueber den Schalter in ihrer Fusszeile
+        ' umgelegt werden. Gespeichert hat die Galerie schon, hier wird nur der Stand nachgezogen.
+        Public Sub SyncGalleryIncludeSubfolders(value As Boolean)
+            If _galleryIncludeSubfolders = value Then Return
+            _galleryIncludeSubfolders = value
+            Me.RaisePropertyChanged(NameOf(GalleryIncludeSubfolders))
         End Sub
 
         Private Sub RaiseGalleryViewModeProperties()
@@ -5216,6 +5240,7 @@ Namespace ViewModels
             _galleryShowParentFolder = _appSettings.GalleryShowParentFolder
             _galleryRatingBadgesAlwaysVisible = _appSettings.GalleryRatingBadgesAlwaysVisible
             _galleryStacks = _appSettings.GalleryStacks
+            _galleryIncludeSubfolders = _appSettings.GalleryIncludeSubfolders
             _galleryFavoriteBadgeAlwaysVisible = _appSettings.GalleryFavoriteBadgeAlwaysVisible
             _galleryMetadataBadgesAlwaysVisible = _appSettings.GalleryMetadataBadgesAlwaysVisible
             _galleryEditedBadge = _appSettings.GalleryEditedBadge
@@ -5678,6 +5703,7 @@ Namespace ViewModels
             _savedGalleryShowParentFolder = _galleryShowParentFolder
             _savedGalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
             _savedGalleryStacks = _galleryStacks
+            _savedGalleryIncludeSubfolders = _galleryIncludeSubfolders
             _savedGalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
             _savedGalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
             _savedGalleryEditedBadge = _galleryEditedBadge
@@ -5903,6 +5929,7 @@ Namespace ViewModels
             GalleryShowParentFolder = _savedGalleryShowParentFolder
             GalleryRatingBadgesAlwaysVisible = _savedGalleryRatingBadgesAlwaysVisible
             GalleryStacks = _savedGalleryStacks
+            GalleryIncludeSubfolders = _savedGalleryIncludeSubfolders
             GalleryFavoriteBadgeAlwaysVisible = _savedGalleryFavoriteBadgeAlwaysVisible
             GalleryMetadataBadgesAlwaysVisible = _savedGalleryMetadataBadgesAlwaysVisible
             GalleryEditedBadge = _savedGalleryEditedBadge
@@ -6063,6 +6090,7 @@ Namespace ViewModels
             GalleryShowParentFolder = True
             GalleryRatingBadgesAlwaysVisible = False
             GalleryStacks = False
+            GalleryIncludeSubfolders = False
             GalleryFavoriteBadgeAlwaysVisible = True
             GalleryMetadataBadgesAlwaysVisible = True
             GalleryEditedBadge = False
@@ -6454,6 +6482,7 @@ Namespace ViewModels
                                           s.GalleryShowParentFolder = _galleryShowParentFolder
                                           s.GalleryRatingBadgesAlwaysVisible = _galleryRatingBadgesAlwaysVisible
                                           s.GalleryStacks = _galleryStacks
+                                          s.GalleryIncludeSubfolders = _galleryIncludeSubfolders
                                           s.GalleryFavoriteBadgeAlwaysVisible = _galleryFavoriteBadgeAlwaysVisible
                                           s.GalleryMetadataBadgesAlwaysVisible = _galleryMetadataBadgesAlwaysVisible
                                           s.GalleryEditedBadge = _galleryEditedBadge

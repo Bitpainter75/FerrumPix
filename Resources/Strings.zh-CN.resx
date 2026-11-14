@@ -11649,4 +11649,10 @@
   <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
     <value>只有在文件夹中才能包含子文件夹</value>
   </data>
+  <data name="Bilder_aus_Unterordnern_zeigen_7a498b95" xml:space="preserve">
+    <value>显示子文件夹中的图片</value>
+  </data>
+  <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
+    <value>在文件夹中同时显示其所有子文件夹中的图片。搜索和筛选也会包含这些图片。</value>
+  </data>
 </root>

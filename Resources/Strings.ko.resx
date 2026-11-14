@@ -11695,4 +11695,10 @@
   <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
     <value>하위 폴더는 폴더 안에서만 포함할 수 있습니다</value>
   </data>
+  <data name="Bilder_aus_Unterordnern_zeigen_7a498b95" xml:space="preserve">
+    <value>하위 폴더의 사진 표시</value>
+  </data>
+  <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
+    <value>폴더에서 그 아래 모든 하위 폴더의 사진도 함께 표시합니다. 검색과 필터도 해당 사진에 적용됩니다.</value>
+  </data>
 </root>

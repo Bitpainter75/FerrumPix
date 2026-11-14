@@ -11691,4 +11691,10 @@
   <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
     <value>Alikansiot voi ottaa mukaan vain kansiossa</value>
   </data>
+  <data name="Bilder_aus_Unterordnern_zeigen_7a498b95" xml:space="preserve">
+    <value>Näytä alikansioiden kuvat</value>
+  </data>
+  <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
+    <value>Näyttää kansiossa myös kaikkien sen alikansioiden kuvat. Haku ja suodatus koskevat silloin myös niitä.</value>
+  </data>
 </root>

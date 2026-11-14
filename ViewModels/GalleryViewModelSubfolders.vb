@@ -38,8 +38,6 @@ Namespace ViewModels
 
         Private _includeSubfolders As Boolean
 
-        Public ReadOnly Property ToggleIncludeSubfoldersCommand As ICommand
-
         Public Property IncludeSubfolders As Boolean
             Get
                 Return _includeSubfolders
@@ -55,6 +53,9 @@ Namespace ViewModels
                 ' Neu laden und nicht nur anhaengen oder wegnehmen: der Beobachter muss mit
                 ' umgestellt werden, und der Weg ist derselbe wie beim Betreten des Ordners.
                 If CanIncludeSubfolders Then LoadCurrentFolder()
+                ' Auch der Schalter in der Fusszeile setzt hier; der Einstellungsdialog soll
+                ' danach denselben Stand zeigen.
+                _mainVm?.Settings?.SyncGalleryIncludeSubfolders(value)
             End Set
         End Property
 
