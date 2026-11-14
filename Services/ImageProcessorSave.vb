@@ -1030,6 +1030,15 @@ Namespace Services
                                 If outcome IsNot Nothing Then outcome.WrittenBitDepth = 16
                             Else
                                 If outcome IsNot Nothing Then outcome.DeepLostAt = DeepLossNote()
+                                ' Die Frage von oben noch einmal, jetzt mit dem, was wirklich
+                                ' geschrieben wird: dort durfte ein vorhandenes Ziel mit 16 Bit
+                                ' weichen, weil 16 Bit verlangt waren. Mit 8 Bit darf es das nicht.
+                                If (isTiff AndAlso Not TiffWriterService.CanReplaceExisting(targetPath)) OrElse
+                                   (isJxl AndAlso Not JxlDecodeService.CanReplaceExisting(targetPath)) Then
+                                    DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                                        $"refused: 16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, und das vorhandene Ziel traegt mehr als 8 Bit target={IO.Path.GetFileName(targetPath)}")
+                                    Return False
+                                End If
                                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                                     $"16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, gespeichert mit 8 Bit target={IO.Path.GetFileName(targetPath)}")
                             End If
@@ -1074,7 +1083,11 @@ Namespace Services
                             Else
                                 ' PNG ueber den gemeinsamen Kodierer: die Qualitaetszahl wirkt dort nicht,
                                 ' die Packstufe der Ausgabe steht in PngEncoder.
-                                Using image = SKImage.FromBitmap(toEncode)
+                                ' Das SKImage braucht nur der Rest (WebP und so weiter): PNG und JPEG
+                                ' gehen ueber die eigenen Kodierer, und FromBitmap kopiert das ganze
+                                ' Bild, bei einem tiefen mit 8 Byte je Bildpunkt.
+                                Dim ownEncoder = fileFormat = SKEncodedImageFormat.Png OrElse fileFormat = SKEncodedImageFormat.Jpeg
+                                Using image = If(ownEncoder, Nothing, SKImage.FromBitmap(toEncode))
                                     Using data = If(fileFormat = SKEncodedImageFormat.Png,
                                                     PngEncoder.Encode(toEncode, PngPurpose.Export),
                                                     If(fileFormat = SKEncodedImageFormat.Jpeg,

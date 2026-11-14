@@ -23476,8 +23476,9 @@ Namespace ViewModels
                 Dim initialFormat = MainWindowViewModel.DefaultSaveFormat(allowFpx:=True)
                 ' Die Farbtiefe bietet der Dialog nur an, wenn aus DIESEM Bild eine Datei mit 16 Bit
                 ' werden kann: die Quelle ist eine RAW, und das Rezept traegt nichts, womit das tiefe
-                ' Bild endet (Retusche und Striche als gebackene Vorgaenge, Objektgruppen und so
-                ' weiter, siehe ImageProcessor.RecipeBlocksDeep). Sonst stuende die Wahl ohne Wirkung da.
+                ' Bild endet (ein Vorgang, der das ganze Bild ersetzt: Entrauschen am fertigen Bild,
+                ' Hochskalieren mit Modell, siehe ImageProcessor.RecipeBlocksDeep). Sonst stuende die
+                ' Wahl ohne Wirkung da.
                 Dim recipeAllowsDeep = Not ImageProcessor.RecipeBlocksDeep(GetCurrentAdjustments())
                 Dim deepSource = RenderSourcePath
                 saveAsResult = Await _mainVm.ShowSaveAsAsync(LocalizationService.T("Speichern unter"),

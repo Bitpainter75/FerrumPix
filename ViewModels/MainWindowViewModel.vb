@@ -1518,7 +1518,9 @@ Namespace ViewModels
         ' PNG, JPEG XL und der PSD-Export des Editors), und unter den Quellen des Dialogs ist eine, aus der eine Datei mit 16 Bit
         ' entstehen kann (eine RAW-Datei, die durch die RAW-Stufe laeuft, siehe
         ' ImageProcessor.CanSourceGoDeep). Bei einer 8-Bit-Quelle gibt es keine Ausgabe in 16 Bit,
-        ' und die Wahl bleibt dann weg, statt ohne Wirkung dazustehen.
+        ' und die Wahl bleibt dann weg, statt ohne Wirkung dazustehen. PSD zaehlt nur in "Speichern
+        ' unter": nur der Editor schreibt eine PSD, die Stapelwege gehen ueber SaveImage, und das
+        ' lehnt ein Ziel mit dieser Endung ab.
         '
         ' Die Wahl wird gemerkt (AppSettings.LastSaveBitDepth) und kommt in jedem Dialog wieder, auch
         ' nach dem Neustart: wer TIFF mit 16 Bit ausgibt, tut es meist mehrmals hintereinander. Ob
@@ -1541,7 +1543,8 @@ Namespace ViewModels
                        (String.Equals(_dialogSelectedFormat, "TIFF", StringComparison.OrdinalIgnoreCase) OrElse
                         String.Equals(_dialogSelectedFormat, "PNG", StringComparison.OrdinalIgnoreCase) OrElse
                         String.Equals(_dialogSelectedFormat, "JXL", StringComparison.OrdinalIgnoreCase) OrElse
-                        String.Equals(_dialogSelectedFormat, "PSD", StringComparison.OrdinalIgnoreCase))
+                        (_dialogKind = AppDialogKind.SaveAs AndAlso
+                         String.Equals(_dialogSelectedFormat, "PSD", StringComparison.OrdinalIgnoreCase)))
             End Get
         End Property
 

@@ -239,7 +239,16 @@ Namespace Services
             ' Mit tiefem Bild (Ausgabe in 16 Bit) rechnet der Prozessor: nur dieser Durchlauf
             ' fuehrt es mit, und die Karte legt keine Flaeche mit 16 Bit ganzzahlig an.
             Dim deep = DeepOf(source)
-            If deep IsNot Nothing Then Return RunPointOpChainCore(source, chain, deep)
+            If deep IsNot Nothing Then
+                ' Scheitert der Durchlauf mit dem tiefen Bild (er haelt ein Bild mit 16 Bit mehr),
+                ' endet nur das tiefe Bild: darunter rechnet die Kette wie ohne es.
+                Try
+                    Return RunPointOpChainCore(source, chain, deep)
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("ImageProcessor.Deep", ex)
+                    NoteDeepLost("die Punktkette: " & ex.GetType().Name)
+                End Try
+            End If
             Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
             If onGpu IsNot Nothing Then Return onGpu
             Return RunPointOpChain(source, chain)

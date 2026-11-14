@@ -163,8 +163,8 @@ Namespace Services
         ''' mit 16 Bit wird beim Lesen auf 8 gebracht.
         '''
         ''' Die Frage fuer die Dialoge: danach richtet sich, ob sie die Farbtiefe anbieten. Ob die
-        ''' Datei am Ende wirklich 16 Bit traegt, entscheidet erst SaveImage (Maskenebenen, Objekte
-        ''' oder Retusche beenden das tiefe Bild).</summary>
+        ''' Datei am Ende wirklich 16 Bit traegt, entscheidet erst SaveImage (ein Vorgang, der das
+        ''' ganze Bild ersetzt, beendet das tiefe Bild, siehe <see cref="RecipeBlocksDeep"/>).</summary>
         Public Shared Function CanSourceGoDeep(sourcePath As String) As Boolean
             If String.IsNullOrWhiteSpace(sourcePath) Then Return False
             Return RawPreviewService.IsSupportedRaw(sourcePath) AndAlso RawDecodeService.DevelopsThroughRawStage(sourcePath)
@@ -238,7 +238,7 @@ Namespace Services
         ''' Was im Arbeitsbild darueber hinaus steckt (Retusche, Malerei, Objekt entfernen), sagt
         ''' kein Schalter, sondern der Vergleich Bildpunkt fuer Bildpunkt: die Stellen, an denen es
         ''' von der Entwicklung abweicht, kommen aus dem Arbeitsbild
-        ''' (<see cref="PatchDeepFromShallow"/>). Weicht mehr als die Haelfte ab (ein Arbeitsbild,
+        ''' (<see cref="PatchDeepFromShallow"/>). Kaeme so mehr als die Haelfte von dort (ein Arbeitsbild,
         ''' das mit anderen Angaben entstand) oder hat ein Vorgang das ganze Bild ersetzt, bleibt
         ''' das Arbeitsbild ohne tiefes Bild, und die Ausgabe bei 8 Bit.</summary>
         Friend Shared Sub AttachDeepWorkingSource(working As SKBitmap, path As String, adj As ImageAdjustments,
@@ -277,8 +277,17 @@ Namespace Services
                 reason = "andere Masse als die Entwicklung der RAW-Stufe"
             ElseIf HasWholeImageBakedOperation(adj) Then
                 reason = "ein Vorgang hat das ganze Bild ersetzt (Entrauschen am fertigen Bild, Hochskalieren)"
-            ElseIf Not PatchDeepFromShallow(edited, deep) Then
-                reason = "mehr als die Haelfte des Bilds weicht von der Entwicklung der RAW-Stufe ab"
+            Else
+                ' Die Mischung legt Felder ueber das ganze Bild an. Reicht der Speicher nicht, bleibt
+                ' es bei 8 Bit; die Datei entsteht trotzdem.
+                Try
+                    If Not PatchDeepFromShallow(edited, deep) Then
+                        reason = "mehr als die Haelfte des Bilds weicht von der Entwicklung der RAW-Stufe ab"
+                    End If
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("ImageProcessor.Deep", ex)
+                    reason = "die Mischung mit dem 8-Bit-Bild scheiterte (" & ex.GetType().Name & ")"
+                End Try
             End If
             If reason IsNot Nothing Then
                 NoteDeepLost("das bearbeitete Bild: " & reason)
@@ -305,8 +314,8 @@ Namespace Services
         ''' und in einem schmalen Saum darum bekommt <paramref name="deep"/> die Werte des
         ''' 8-Bit-Bilds. Ueberall sonst bleibt es so fein wie die RAW-Stufe.
         '''
-        ''' Falsch bei mehr als <see cref="DeepPatchShareLimit"/> veraenderter Flaeche;
-        ''' <paramref name="deep"/> ist dann unberuehrt.</summary>
+        ''' Falsch, wenn mehr als <see cref="DeepPatchShareLimit"/> der Flaeche aus dem 8-Bit-Bild
+        ''' kaeme, gemessen MIT dem Saum; <paramref name="deep"/> ist dann unberuehrt.</summary>
         Friend Shared Function PatchDeepFromShallow(shallow As SKBitmap, deep As SKBitmap) As Boolean
             If shallow Is Nothing OrElse deep Is Nothing Then Return False
             If deep.ColorType <> DeepColorType OrElse deep.Width <> shallow.Width OrElse deep.Height <> shallow.Height Then Return False
@@ -353,7 +362,10 @@ Namespace Services
             Dim share = total / (CDbl(w) * h)
             If share > DeepPatchShareLimit Then Return False
 
-            ' Der Saum: erst waagerecht, dann senkrecht wachsen lassen.
+            ' Der Saum: erst waagerecht, dann senkrecht wachsen lassen. Das Ergebnis steht danach
+            ' wieder in changed und wird je Zeile gezaehlt. Erst diese Zahl sagt, wie viel der
+            ' Flaeche aus dem 8-Bit-Bild kaeme: verstreute Stellen wachsen auf ein Vielfaches,
+            ' ein Prozent einzelner Bildpunkte auf weit ueber die Haelfte des Bilds.
             Dim grownAcross(w * h - 1) As Byte
             Threading.Tasks.Parallel.For(0, h,
                 Sub(y)
@@ -371,6 +383,7 @@ Namespace Services
                         End If
                     Next
                 End Sub)
+            Dim grownCounts(h - 1) As Integer
             Threading.Tasks.Parallel.For(0, h,
                 Sub(y)
                     Dim yFrom = Math.Max(0, y - DeepPatchGrow), yTo = Math.Min(h - 1, y + DeepPatchGrow)
@@ -381,32 +394,55 @@ Namespace Services
                             Exit For
                         End If
                     Next
+                    ' Ohne bearbeitete Stelle in Reichweite ist die Zeile in changed schon leer.
                     If Not any Then Return
+                    Dim rowStart = y * w
+                    Dim count = 0
+                    For x = 0 To w - 1
+                        Dim take As Byte = 0
+                        For yy = yFrom To yTo
+                            If grownAcross(yy * w + x) <> 0 Then
+                                take = 1
+                                Exit For
+                            End If
+                        Next
+                        changed(rowStart + x) = take
+                        count += take
+                    Next
+                    grownCounts(y) = count
+                End Sub)
+            Dim grownTotal = 0L
+            For Each count In grownCounts
+                grownTotal += count
+            Next
+            Dim grownShare = grownTotal / (CDbl(w) * h)
+            If grownShare > DeepPatchShareLimit Then
+                DiagnosticLogService.LogAlways("ImageProcessor.Deep", String.Format(Globalization.CultureInfo.InvariantCulture,
+                    "bearbeitete Stellen: {0:P3} der Flaeche, mit Saum {1:P3}, das ist mehr als die Haelfte", share, grownShare))
+                Return False
+            End If
+
+            ' Erst jetzt wird das tiefe Bild angefasst.
+            Threading.Tasks.Parallel.For(0, h,
+                Sub(y)
+                    If grownCounts(y) = 0 Then Return
+                    Dim rowStart = y * w
                     Dim shallowRow(w * 4 - 1) As Byte
                     Dim deepRow(w * 4 - 1) As Short
                     Marshal.Copy(IntPtr.Add(shallowPixels, y * shallowStride), shallowRow, 0, w * 4)
                     ReadDeepRow(deep, deepPixels, y, deepRow)
-                    Dim touched = False
                     For x = 0 To w - 1
-                        Dim take = False
-                        For yy = yFrom To yTo
-                            If grownAcross(yy * w + x) <> 0 Then
-                                take = True
-                                Exit For
-                            End If
-                        Next
-                        If Not take Then Continue For
+                        If changed(rowStart + x) = 0 Then Continue For
                         Dim o = x * 4
                         deepRow(o) = ToDeepShort(CInt(shallowRow(o + ri)) * 257)
                         deepRow(o + 1) = ToDeepShort(CInt(shallowRow(o + 1)) * 257)
                         deepRow(o + 2) = ToDeepShort(CInt(shallowRow(o + bi)) * 257)
                         deepRow(o + 3) = ToDeepShort(CInt(shallowRow(o + 3)) * 257)
-                        touched = True
                     Next
-                    If touched Then WriteDeepRow(deep, deepPixels, y, deepRow)
+                    WriteDeepRow(deep, deepPixels, y, deepRow)
                 End Sub)
             DiagnosticLogService.LogAlways("ImageProcessor.Deep", String.Format(Globalization.CultureInfo.InvariantCulture,
-                "bearbeitete Stellen aus dem 8-Bit-Bild uebernommen: {0:P3} der Flaeche", share))
+                "bearbeitete Stellen aus dem 8-Bit-Bild uebernommen: {0:P3} der Flaeche, mit Saum {1:P3}", share, grownShare))
             Return True
         End Function
 
@@ -508,8 +544,9 @@ Namespace Services
         ' Bilder, Effekte) rechnet Skia, hier auf einer Flaeche mit 16 Bit. Was ein Objekt an Farbe
         ' mitbringt, ist dabei so fein wie seine Quelle; das Foto darunter bleibt tief.
         ' Korrekturebenen im Objektstapel rechnen ueber ApplyMaskedAdjustmentLayers auf dem Paar.
-        ' Nur die Gruppe als eigener Schritt beendet das tiefe Bild: sie wird als fertiges
-        ' 8-Bit-Bild an Ort und Stelle eingemischt.
+        ' Die Gruppe als eigener Schritt wird als fertige 8-Bit-Ebene eingemischt, in das Komposit
+        ' und mit derselben Mischung in sein tiefes Bild (CompositeGroupLayer): ihr Inhalt ist so
+        ' fein wie 8 Bit, das Foto darunter bleibt tief.
 
         ''' <summary>Der Begleiter fuer das Komposit der Objekte: vormultipliziert wie
         ''' CloneBitmapForAnnotationComposite, mit dem tiefen Bild als Grund oder, bei ausgeblendetem
@@ -654,13 +691,7 @@ Namespace Services
         ''' 8-Bit-Bild veraendert, ohne das tiefe mitzurechnen, weichen beide dort ab, wo die Stufe
         ''' gewirkt hat. Verglichen wird jeder Bildpunkt eines Rasters, das hoechstens rund eine
         ''' Million Punkte liest.</summary>
-        Friend Shared Function DeepMatchesShallow(shallow As SKBitmap, deep As SKBitmap,
-                                                  Optional everyPixel As Boolean = False) As Boolean
-            ' <everyPixel>: die strenge Fassung fuer das Arbeitsbild des Editors
-            ' (AttachDeepWorkingSource). Jeder Bildpunkt wird gelesen, die Toleranz sind 2 Stufen
-            ' (Dither unter einer, die Verzeichnung auf Karte und Prozessor hoechstens eine), und
-            ' darueber darf nur ein Millionstel der Punkte liegen. Eine Retusche oder ein Strich
-            ' aendert mehr als das; dann ist das tiefe Bild der RAW-Stufe nicht das des Arbeitsbilds.
+        Friend Shared Function DeepMatchesShallow(shallow As SKBitmap, deep As SKBitmap) As Boolean
             If shallow Is Nothing OrElse deep Is Nothing Then Return False
             If deep.ColorType <> DeepColorType OrElse deep.Width <> shallow.Width OrElse deep.Height <> shallow.Height Then Return False
             Dim ri, gi, bi As Integer
@@ -673,9 +704,9 @@ Namespace Services
                     Return False
             End Select
             Dim width = shallow.Width, height = shallow.Height
-            Dim stepSize = If(everyPixel, 1, Math.Max(1, CInt(Math.Ceiling(Math.Sqrt(CDbl(width) * height / 1000000.0)))))
-            Dim tolerance = If(everyPixel, 2, DeepMatchTolerance)
-            Dim allowedShare = If(everyPixel, 0.000001, DeepMatchOutlierShare)
+            Dim stepSize = Math.Max(1, CInt(Math.Ceiling(Math.Sqrt(CDbl(width) * height / 1000000.0))))
+            Dim tolerance = DeepMatchTolerance
+            Dim allowedShare = DeepMatchOutlierShare
             Dim shallowPixels = shallow.GetPixels()
             Dim deepPixels = deep.GetPixels()
             If shallowPixels = IntPtr.Zero OrElse deepPixels = IntPtr.Zero Then Return False

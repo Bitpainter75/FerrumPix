@@ -310,15 +310,27 @@ Namespace Services
             If deepStage Is Nothing Then Return Nothing
             Dim deepIn = DeepOf(processed)
             If deepIn Is Nothing Then Return Nothing
-            Dim deepOut = PerformanceTraceService.Measure(measureName & " (16 Bit)", Function() deepStage(deepIn))
-            If deepOut Is Nothing Then Return Nothing
-            Dim shallow = ShallowFromDeep(deepOut, processed.ColorType, processed.AlphaType)
-            If shallow Is Nothing Then
-                deepOut.Dispose()
+            ' Die tiefen Stufen rechnen auf Ebenen in Gleitkomma und brauchen ein Mehrfaches des
+            ' Speichers der 8-Bit-Stufe. Scheitert eine (auch am Speicher), endet nur das tiefe
+            ' Bild: die 8-Bit-Stufe laeuft danach wie gewohnt, und die Datei entsteht mit 8 Bit.
+            ' Ohne das Abfangen kostete der Fehler die ganze Datei.
+            Dim deepOut As SKBitmap = Nothing
+            Try
+                deepOut = PerformanceTraceService.Measure(measureName & " (16 Bit)", Function() deepStage(deepIn))
+                If deepOut Is Nothing Then Return Nothing
+                Dim shallow = ShallowFromDeep(deepOut, processed.ColorType, processed.AlphaType)
+                If shallow Is Nothing Then
+                    deepOut.Dispose()
+                    Return Nothing
+                End If
+                AttachDeep(shallow, deepOut)
+                Return shallow
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.Deep", ex)
+                NoteDeepLost(measureName & ": " & ex.GetType().Name)
+                deepOut?.Dispose()
                 Return Nothing
-            End If
-            AttachDeep(shallow, deepOut)
-            Return shallow
+            End Try
         End Function
 
         ''' <summary>16-Bit-Wert nach Wurzel des Linearlichts, die Kodierung, in der das Farbrauschen
