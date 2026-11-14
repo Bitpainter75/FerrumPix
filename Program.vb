@@ -81,6 +81,16 @@ Module Program
         Catch
         End Try
 
+        ' Falsche Angaben fuer den Browser enden HIER mit einer Zeile, bevor das Toolkit entsteht:
+        ' danach waere es eine Ausnahme mitten im Start, mit Aufrufkette statt Erklaerung.
+        If BrowserBridge.IsRequested(args) Then
+            Dim problem = BrowserBridge.CheckArguments(args)
+            If problem IsNot Nothing Then
+                Console.Error.WriteLine(problem)
+                Return 2
+            End If
+        End If
+
         Dim builder = If(BrowserBridge.IsRequested(args), BuildBrowserApp(args), BuildAvaloniaApp())
         Dim exitCode = builder.StartWithClassicDesktopLifetime(ForwardedArguments(args))
         ' DIE LETZTE ZEILE IST SELBST EIN BEFUND: kommt sie, hat der Aufbau des Toolkits gehalten

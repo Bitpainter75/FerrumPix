@@ -31,9 +31,11 @@ Namespace Services
     ''' Sitzung mit einer Fenstergroesse, und zwei Tabs wuerden sich darum streiten.</para>
     '''
     ''' <para>ZUGANG IN DREI STUFEN. Erstens die Adresse: ab Werk nur der eigene Rechner
-    ''' (127.0.0.1). Zweitens die Anmeldung: ist ein Kennwort gesetzt, fragt der Browser mit seinem
-    ''' eigenen Dialog nach Benutzername und Kennwort, bevor er die Seite bekommt (HTTP Basic); fuer
-    ''' jede Adresse ausser der eigenen ist das Pflicht. Drittens die Verbindung: jede ausgelieferte
+    ''' (127.0.0.1). Die Bruecke spricht nur HTTP, unverschluesselt; ueber den eigenen Rechner
+    ''' hinaus gibt es sie deshalb nur hinter einem Reverse Proxy, der verschluesselt, und nur auf
+    ''' ausdrueckliche Zusage (<see cref="ReadOptions"/>). Zweitens die Anmeldung: ist ein Kennwort
+    ''' gesetzt, fragt der Browser mit seinem eigenen Dialog nach Benutzername und Kennwort, bevor
+    ''' er die Seite bekommt (HTTP Basic); hinter dem Proxy ist das Pflicht. Drittens die Verbindung: jede ausgelieferte
     ''' Seite traegt eine einmalige Kennung, und der WebSocket nimmt nur eine Verbindung an, die
     ''' diese Kennung vorzeigt und deren Herkunft die eigene Seite ist. Ohne die dritte Stufe
     ''' koennte jede fremde Webseite im selben Browser die Anwendung fernbedienen.</para>
@@ -66,12 +68,19 @@ Namespace Services
 
         Public Const PasswordVariable As String = "FERRUMPIX_BROWSER_PASSWORD"
 
-        ''' <summary>Auf "1" gesetzt, darf die Bruecke ohne Kennwort an allen Adressen lauschen. Das
-        ''' ist fuer den Behaelter gedacht: darin muss sie an allen Adressen lauschen, damit die
-        ''' Portweiterleitung sie erreicht, und nach aussen gibt erst die Weiterleitung den Port
-        ''' frei. Angenommen werden dann nur Anfragen, die der Browser an den eigenen Rechner
-        ''' gerichtet hat (127.0.0.1 oder localhost), siehe <see cref="IsLoopbackHost"/>.</summary>
+        ''' <summary>Auf "1" gesetzt, darf die Bruecke an allen Adressen lauschen, mit oder ohne
+        ''' Kennwort. Das ist fuer den Behaelter gedacht: darin muss sie an allen Adressen lauschen,
+        ''' damit die Portweiterleitung sie erreicht, und nach aussen gibt erst die Weiterleitung
+        ''' den Port frei. Angenommen werden dann nur Anfragen, die der Browser an den eigenen
+        ''' Rechner gerichtet hat (127.0.0.1 oder localhost), siehe <see cref="IsLoopbackHost"/>.</summary>
         Public Const LocalForwardVariable As String = "FERRUMPIX_BROWSER_LOCAL_FORWARD"
+
+        ''' <summary>Startparameter: vor der Bruecke steht ein Reverse Proxy, der verschluesselt.
+        ''' Ohne diese Zusage (oder <see cref="TlsProxyVariable"/> auf "1") lauscht die Bruecke an
+        ''' keiner Adresse ausser der eigenen, siehe <see cref="ReadOptions"/>.</summary>
+        Public Const TlsProxySwitch As String = "--browser-tls-proxy"
+
+        Public Const TlsProxyVariable As String = "FERRUMPIX_BROWSER_TLS_PROXY"
 
         Private Const DefaultBind As String = "127.0.0.1:14500"
 
@@ -98,6 +107,7 @@ Namespace Services
         Private Shared _user As String = ""
         Private Shared _password As String = ""
         Private Shared _loopbackHostOnly As Boolean
+        Private Shared _tlsProxy As Boolean
         Private Shared ReadOnly Tokens As New List(Of String)()
 
         ''' <summary>Woher die Liste der offenen Fenster kommt. Ab Werk aus der Anwendung; der
@@ -133,12 +143,22 @@ Namespace Services
         ''' <summary>Startet Webserver und Bildabholung. Adresse, Benutzername und Kennwort kommen
         ''' aus den Startparametern, ersatzweise aus der Umgebung. Gerufen, sobald das Toolkit steht.</summary>
         Public Shared Sub Start(args As String())
+            Dim problem As String = Nothing
+            Dim options = ReadOptions(args, problem)
+            If options Is Nothing Then Throw New InvalidOperationException(problem)
             IsActive = True
-            Dim bind = Setting(args, BindSwitch, BindVariable)
-            If String.IsNullOrWhiteSpace(bind) Then bind = DefaultBind
-            Start(bind, Setting(args, UserSwitch, UserVariable), Setting(args, PasswordSwitch, PasswordVariable),
-                  Environment.GetEnvironmentVariable(LocalForwardVariable) = "1")
+            Start(options)
         End Sub
+
+        ''' <summary>Prueft die Angaben fuer die Bruecke, bevor irgendetwas startet. Nothing heisst
+        ''' in Ordnung, sonst steht hier der Satz fuer die Konsole. Main ruft das vor dem Aufbau
+        ''' des Toolkits: eine falsche Adresse soll mit einer Zeile enden und nicht mit einer
+        ''' Aufrufkette mitten im Start.</summary>
+        Public Shared Function CheckArguments(args As String()) As String
+            Dim problem As String = Nothing
+            ReadOptions(args, problem)
+            Return problem
+        End Function
 
         Private Shared Function Setting(args As String(), prefix As String, variable As String) As String
             Dim argument = args?.FirstOrDefault(Function(a) a IsNot Nothing AndAlso a.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
@@ -146,32 +166,106 @@ Namespace Services
             Return Environment.GetEnvironmentVariable(variable)
         End Function
 
+        ''' <summary>Was fuer einen Lauf der Bruecke feststeht: wo sie lauscht, wer sich anmelden
+        ''' darf und unter welcher Zusage sie ueber den eigenen Rechner hinaus erreichbar ist.</summary>
+        Friend NotInheritable Class BridgeOptions
+            Public Host As String = "127.0.0.1"
+            Public Port As Integer = 14500
+            Public User As String = ""
+            Public Password As String = ""
+            Public LocalForward As Boolean
+            Public TlsProxy As Boolean
+
+            Public ReadOnly Property IsLoopback As Boolean
+                Get
+                    Return Host = "127.0.0.1" OrElse String.Equals(Host, "localhost", StringComparison.OrdinalIgnoreCase)
+                End Get
+            End Property
+        End Class
+
+        ''' <summary>Liest Adresse, Anmeldung und Zusagen aus Startparametern und Umgebung und
+        ''' prueft sie. Liefert Nothing und den Grund in <paramref name="problem"/>, wenn etwas
+        ''' nicht stimmt.
+        '''
+        ''' <para>DIE VERBINDUNG IST UNVERSCHLUESSELT. Die Bruecke spricht nur HTTP, und die
+        ''' Anmeldung des Browsers schickt Name und Kennwort dabei lesbar mit, bei jeder Anfrage.
+        ''' Im eigenen Rechner bleibt das unter sich. Ueber ein Netz kann es jeder mitlesen, der an
+        ''' der Leitung sitzt, samt allem, was ueber die Verbindung geht. Eine Adresse ausser der
+        ''' eigenen gibt es deshalb nur unter einer von zwei Zusagen:</para>
+        '''
+        ''' <para><see cref="LocalForwardVariable"/>: der Port ist nur am eigenen Rechner
+        ''' freigegeben (Behaelter). Angenommen wird dann nur, was der Browser an 127.0.0.1 oder
+        ''' localhost gerichtet hat.</para>
+        '''
+        ''' <para><see cref="TlsProxySwitch"/>: davor steht ein Reverse Proxy, der verschluesselt.
+        ''' Angenommen wird dann nur, was dieser Proxy als verschluesselt angenommen kennzeichnet
+        ''' (X-Forwarded-Proto: https); wer den Port am Proxy vorbei mit dem Browser aufruft, wird
+        ''' abgewiesen, BEVOR der Browser nach Name und Kennwort fragt. Ein Kennwort ist hier
+        ''' Pflicht.</para></summary>
+        Friend Shared Function ReadOptions(args As String(), ByRef problem As String) As BridgeOptions
+            problem = Nothing
+            Dim options As New BridgeOptions With {
+                .User = If(Setting(args, UserSwitch, UserVariable), ""),
+                .Password = If(Setting(args, PasswordSwitch, PasswordVariable), ""),
+                .LocalForward = Environment.GetEnvironmentVariable(LocalForwardVariable) = "1",
+                .TlsProxy = Environment.GetEnvironmentVariable(TlsProxyVariable) = "1" OrElse
+                            (args IsNot Nothing AndAlso args.Any(Function(a) String.Equals(a, TlsProxySwitch, StringComparison.OrdinalIgnoreCase)))}
+
+            Dim bind = Setting(args, BindSwitch, BindVariable)
+            If String.IsNullOrWhiteSpace(bind) Then bind = DefaultBind
+            bind = bind.Trim()
+            Dim separator = bind.LastIndexOf(":"c)
+            If separator <= 0 OrElse separator = bind.Length - 1 Then
+                problem = $"The address ""{bind}"" needs a host and a port, for example 127.0.0.1:14500 ({BindSwitch} or {BindVariable})."
+                Return Nothing
+            End If
+            options.Host = bind.Substring(0, separator)
+            Dim portText = bind.Substring(separator + 1)
+            If Not Integer.TryParse(portText, Globalization.NumberStyles.None, Globalization.CultureInfo.InvariantCulture, options.Port) OrElse
+               options.Port < 1 OrElse options.Port > 65535 Then
+                problem = $"""{portText}"" is not a port. It has to be a number from 1 to 65535 ({BindSwitch} or {BindVariable})."
+                Return Nothing
+            End If
+
+            If options.User.Length > 0 AndAlso options.Password.Length = 0 Then
+                problem = $"A user name for the browser needs a password as well ({PasswordSwitch} or {PasswordVariable})."
+                Return Nothing
+            End If
+            If options.LocalForward Then Return options
+            ' Hinter einem Proxy ist die Bruecke von aussen erreichbar, gleich an welcher Adresse
+            ' sie selbst lauscht: steht der Proxy auf demselben Rechner, ist das 127.0.0.1.
+            If options.TlsProxy Then
+                If options.Password.Length = 0 Then
+                    problem = $"Behind a reverse proxy FerrumPix can be reached from other computers and needs a password ({PasswordSwitch} or {PasswordVariable})."
+                    Return Nothing
+                End If
+                Return options
+            End If
+            If options.IsLoopback Then Return options
+            problem = $"The address {bind} can be reached from other computers, and the connection is not encrypted: " &
+                      "user name, password and everything shown would be readable on the network. " &
+                      $"Put a reverse proxy with TLS in front and start with {TlsProxySwitch}, or stay on 127.0.0.1."
+            Return Nothing
+        End Function
+
+        ''' <summary>Fuer den Pruefstand: am eigenen Rechner, mit Anmeldung.</summary>
         Friend Shared Sub Start(bind As String, user As String, password As String)
-            Start(bind, user, password, False)
+            Dim separator = bind.LastIndexOf(":"c)
+            Start(New BridgeOptions With {
+                .Host = bind.Substring(0, separator),
+                .Port = Integer.Parse(bind.Substring(separator + 1), Globalization.CultureInfo.InvariantCulture),
+                .User = If(user, ""), .Password = If(password, "")})
         End Sub
 
-        Private Shared Sub Start(bind As String, user As String, password As String, localForward As Boolean)
+        Private Shared Sub Start(options As BridgeOptions)
             If _listener IsNot Nothing Then Return
-            _user = If(user, "")
-            _password = If(password, "")
-            _loopbackHostOnly = localForward AndAlso _password.Length = 0
-            If _user.Length > 0 AndAlso _password.Length = 0 Then
-                Throw New InvalidOperationException("A user name for the browser needs a password as well.")
-            End If
-
-            Dim host = "127.0.0.1"
-            Dim port = 14500
-            Dim separator = bind.LastIndexOf(":"c)
-            If separator > 0 Then
-                host = bind.Substring(0, separator)
-                Integer.TryParse(bind.Substring(separator + 1), port)
-            End If
-
-            Dim local = host = "127.0.0.1" OrElse String.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)
-            If Not local AndAlso _password.Length = 0 AndAlso Not localForward Then
-                Throw New InvalidOperationException(
-                    $"The address {bind} is reachable from other computers and needs a password ({PasswordSwitch} or {PasswordVariable}).")
-            End If
+            _user = options.User
+            _password = options.Password
+            _loopbackHostOnly = options.LocalForward AndAlso Not options.IsLoopback
+            _tlsProxy = options.TlsProxy AndAlso Not options.LocalForward
+            Dim host = options.Host
+            Dim port = options.Port
+            Dim local = options.IsLoopback
 
             _pageText = LoadPage()
             Dim listener As New HttpListener()
@@ -189,9 +283,14 @@ Namespace Services
             ' Browser schickt die Anmeldung dort mit. Er weist sich ueber die Kennung aus, die nur
             ' eine angemeldet geladene Seite bekommt.
             listener.Realm = Realm
+            '
+            ' Eine Anfrage, die gar nicht angenommen wird (am Proxy vorbei, an einen fremden Namen
+            ' gerichtet), bekommt KEINE Aufforderung zur Anmeldung: der Browser schickte Name und
+            ' Kennwort sonst genau ueber den Weg, der sie nicht sehen soll.
             listener.AuthenticationSchemeSelectorDelegate =
                 Function(request)
-                    If _password.Length > 0 AndAlso request.Url.AbsolutePath <> "/ws" Then Return AuthenticationSchemes.Basic
+                    If _password.Length > 0 AndAlso request.Url.AbsolutePath <> "/ws" AndAlso
+                       IsAcceptedRoute(request) Then Return AuthenticationSchemes.Basic
                     Return AuthenticationSchemes.Anonymous
                 End Function
             listener.Start()
@@ -248,6 +347,17 @@ Namespace Services
         Private Shared Async Function HandleContextAsync(context As HttpListenerContext) As Task
             Try
                 Dim path = context.Request.Url.AbsolutePath
+                If Not IsAcceptedRoute(context.Request) Then
+                    Dim hint = Encoding.UTF8.GetBytes(
+                        If(_tlsProxy, "FerrumPix is only available through its encrypted address.",
+                                      "FerrumPix is only available at 127.0.0.1 or localhost."))
+                    context.Response.StatusCode = 403
+                    context.Response.ContentType = "text/plain; charset=utf-8"
+                    context.Response.ContentLength64 = hint.Length
+                    Await context.Response.OutputStream.WriteAsync(hint)
+                    context.Response.Close()
+                    Return
+                End If
                 If context.Request.IsWebSocketRequest AndAlso path = "/ws" Then
                     If Not IsOwnOrigin(context.Request) Then
                         context.Response.StatusCode = 403
@@ -332,8 +442,36 @@ Namespace Services
         ''' sein. Ein Browser schickt den Kopf immer mit und laesst ihn sich von keiner Seite
         ''' faelschen; eine fremde Seite scheitert deshalb hier.</summary>
         Friend Shared Function IsOwnOrigin(request As HttpListenerRequest) As Boolean
-            If _loopbackHostOnly AndAlso Not IsLoopbackHost(request.Headers("Host")) Then Return False
-            Return IsOwnOrigin(request.Headers("Origin"), request.Headers("Host"))
+            Return IsOwnOrigin(request.Headers("Origin"), PublicHost(request))
+        End Function
+
+        ''' <summary>Kommt die Anfrage ueber den Weg, der zugesagt ist? Am eigenen Rechner immer.
+        ''' Mit der Zusage "nur am eigenen Rechner freigegeben" nur, wenn der Browser sie an
+        ''' 127.0.0.1 oder localhost gerichtet hat. Hinter einem Proxy nur, wenn der sie als
+        ''' verschluesselt angenommen kennzeichnet.</summary>
+        Private Shared Function IsAcceptedRoute(request As HttpListenerRequest) As Boolean
+            If _loopbackHostOnly Then Return IsLoopbackHost(request.Headers("Host"))
+            If _tlsProxy Then Return IsForwardedAsHttps(request.Headers("X-Forwarded-Proto"))
+            Return True
+        End Function
+
+        Friend Shared Function IsForwardedAsHttps(forwardedProto As String) As Boolean
+            If String.IsNullOrEmpty(forwardedProto) Then Return False
+            ' Bei mehreren Proxys hintereinander steht je einer in der Liste; der erste Eintrag ist
+            ' der Weg des Browsers.
+            Dim first = forwardedProto.Split(","c)(0).Trim()
+            Return String.Equals(first, "https", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Der Name, unter dem der BROWSER die Seite kennt. Hinter einem Proxy steht er in
+        ''' X-Forwarded-Host, wenn der Proxy den Host-Kopf auf die innere Adresse umschreibt; die
+        ''' Herkunft der Seite wird gegen diesen Namen geprueft.</summary>
+        Private Shared Function PublicHost(request As HttpListenerRequest) As String
+            If _tlsProxy Then
+                Dim forwarded = request.Headers("X-Forwarded-Host")
+                If Not String.IsNullOrEmpty(forwarded) Then Return forwarded.Split(","c)(0).Trim()
+            End If
+            Return request.Headers("Host")
         End Function
 
         ''' <summary>Ob der Browser die Anfrage an den eigenen Rechner gerichtet hat. Ohne Kennwort
