@@ -9330,6 +9330,7 @@ Namespace ViewModels
                 RemoveHandler _watcher.Created, AddressOf OnFileSystemChanged
                 RemoveHandler _watcher.Deleted, AddressOf OnFileSystemChanged
                 RemoveHandler _watcher.Renamed, AddressOf OnFileSystemChanged
+                RemoveHandler _watcher.Error, AddressOf OnFileSystemWatcherError
                 _watcher.Dispose()
                 _watcher = Nothing
             End If
@@ -9342,9 +9343,14 @@ Namespace ViewModels
                     .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName,
                     .IncludeSubdirectories = _includeSubfolders
                 }
+                ' Mit den Unterordnern kommen die Meldungen eines ganzen Baums an. Der Puffer ab
+                ' Werk (8 KB) laeuft dabei schon ueber, wenn jemand ein paar hundert Dateien auf
+                ' einmal hineinkopiert; 64 KB ist das Hoechste, was die Laufzeit annimmt.
+                If _includeSubfolders Then _watcher.InternalBufferSize = 65536
                 AddHandler _watcher.Created, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Deleted, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Renamed, AddressOf OnFileSystemChanged
+                AddHandler _watcher.Error, AddressOf OnFileSystemWatcherError
                 _watcher.EnableRaisingEvents = True
             Catch ex As Exception
                 ' Scheitert typischerweise am inotify-Limit unter Linux. Die Galerie funktioniert dann
@@ -9354,6 +9360,20 @@ Namespace ViewModels
                 _watcher?.Dispose()
                 _watcher = Nothing
             End Try
+        End Sub
+
+        ''' <summary>Der Beobachter meldet, dass ihm Meldungen verloren gegangen sind (der Puffer
+        ''' lief ueber) oder dass er den Ordner nicht mehr beobachten kann.
+        '''
+        ''' WELCHE Aenderung fehlt, sagt er nicht. Die Antwort ist deshalb derselbe Abgleich wie
+        ''' nach einer gewoehnlichen Meldung: er liest den Ordner (und die einbezogenen
+        ''' Unterordner) neu und holt nach, was liegen blieb. Ohne das stand die Ansicht nach
+        ''' einem grossen Kopiervorgang unvollstaendig da, bis zur naechsten Aenderung. Ist der
+        ''' Ordner selbst weg, laedt der Abgleich ihn neu und haengt dabei den Beobachter um.</summary>
+        Private Sub OnFileSystemWatcherError(sender As Object, e As ErrorEventArgs)
+            ' Läuft wie OnFileSystemChanged auf einem Faden des Beobachters.
+            DiagnosticLogService.LogException("Gallery.Watcher", e?.GetException())
+            OnFileSystemChanged(sender, Nothing)
         End Sub
 
         Private Sub OnFileSystemChanged(sender As Object, e As FileSystemEventArgs)
@@ -10207,7 +10227,19 @@ Namespace ViewModels
             ' selbst, dann jeder darunter. Je Ordner und nicht ueber alle Dateien auf einmal, weil
             ' BuildFileItems die Beistelldateien je Ordner auflistet.
             Dim syncFolders As New List(Of String) From {folderPath}
-            If includeSubfolders Then syncFolders.AddRange(ListDescendantFolders(folderPath, thumbnailToken))
+            ' Unterordner, die nur noch der Katalog kennt (Laufwerk nicht erreichbar, nicht mehr
+            ' vorhanden): auf der Platte gibt es dort nichts abzugleichen, ihre Bilder muessen den
+            ' Abgleich aber ueberstehen. Sie kommen unten dazu.
+            Dim catalogOnlyFolders As New List(Of FolderEntry)()
+            If includeSubfolders Then
+                For Each entry In ListDescendantEntries(folderPath, FolderState.Present, thumbnailToken)
+                    If entry.State = FolderState.Present Then
+                        syncFolders.Add(entry.Path)
+                    Else
+                        catalogOnlyFolders.Add(entry)
+                    End If
+                Next
+            End If
             Dim newItems As New List(Of ImageItem)()
             Dim rescanned As New List(Of ImageItem)()
             Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
@@ -10258,6 +10290,23 @@ Namespace ViewModels
                     End If
                 Next
             Next
+
+            ' Die Bilder der Unterordner aus dem Katalog: was schon als Kachel dasteht, bleibt
+            ' dieselbe Kachel, der Rest kommt aus dem Katalog dazu. Weder neu gelesene Metadaten
+            ' noch Vorschaubilder im Hintergrund: die Dateien gibt es nicht.
+            If catalogOnlyFolders.Count > 0 Then
+                Dim existingByFolder = existing.Values.
+                    Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso Not String.IsNullOrEmpty(i.FilePath)).
+                    GroupBy(Function(i) If(IO.Path.GetDirectoryName(i.FilePath), ""), PathIdentity.Comparer).
+                    ToDictionary(Function(g) g.Key, Function(g) g.ToList(), PathIdentity.Comparer)
+                For Each entry In catalogOnlyFolders
+                    thumbnailToken.ThrowIfCancellationRequested()
+                    Dim kept As List(Of ImageItem) = Nothing
+                    If existingByFolder.TryGetValue(entry.Path, kept) Then rebuilt.AddRange(kept)
+                    rebuilt.AddRange(BuildCatalogOnlyFolderItems(entry.Path, entry.State = FolderState.Missing, thumbnailToken,
+                                                                 Function(path) existing.ContainsKey(path)))
+                Next
+            End If
 
             Return New FolderSyncResult With {
                 .Rebuilt = rebuilt,

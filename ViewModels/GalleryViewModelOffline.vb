@@ -53,6 +53,29 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Schalter in der Fusszeile der Galerie: Ordner zeigen, die es gerade nur im
+        ''' Katalog gibt (Laufwerk nicht erreichbar, ausserhalb der Anwendung geloescht). Derselbe
+        ''' Stand wie die Einstellung unter Galerie (SettingsViewModel.GalleryShowCatalogOnlyFolders):
+        ''' gesetzt wird ueber sie, damit Speichern, Baum und Ansicht einen Weg haben, und sie
+        ''' meldet jeden Wechsel ueber <see cref="ApplyCatalogOnlyFolderSetting"/> hierher zurueck.</summary>
+        Public Property ShowCatalogOnlyFolders As Boolean
+            Get
+                Return FolderListing.ShowCatalogOnlyFolders
+            End Get
+            Set(value As Boolean)
+                If FolderListing.ShowCatalogOnlyFolders = value Then Return
+                Dim settings = _mainVm?.Settings
+                If settings IsNot Nothing Then
+                    settings.GalleryShowCatalogOnlyFolders = value
+                    Return
+                End If
+                ' Ohne Einstellungsdialog (ein Fenster ohne ihn): derselbe Weg von Hand.
+                FolderListing.ShowCatalogOnlyFolders = value
+                AppSettingsService.Update(Sub(s) s.GalleryShowCatalogOnlyFolders = value)
+                ApplyCatalogOnlyFolderSetting()
+            End Set
+        End Property
+
         Private Sub SetOfflineView(value As Boolean, Optional missing As Boolean = False)
             If _isOfflineView = value AndAlso _isOfflineViewMissing = missing Then Return
             _isOfflineView = value
@@ -176,6 +199,8 @@ Namespace ViewModels
         ''' Elemente aus dem Katalog hinaus (wie eine fehlende Datei); eingeschaltet kommen sie erst
         ''' mit dem naechsten Suchlauf, die Liste wird dafuer nicht neu gesucht.</summary>
         Public Sub ApplyCatalogOnlyFolderSetting()
+            ' Der Schalter in der Fusszeile zeigt denselben Stand.
+            Me.RaisePropertyChanged(NameOf(ShowCatalogOnlyFolders))
             OfflineVolumes.Invalidate()
             SyncExtraFolderRoots()
             For Each root In FolderTree.ToList()
@@ -235,6 +260,12 @@ Namespace ViewModels
                               LocalizationService.T("Ordner nicht mehr vorhanden: {0} Bilder aus dem Katalog"),
                               LocalizationService.T("Laufwerk nicht erreichbar: {0} Bilder aus dem Katalog"))
             StatusText = String.Format(Globalization.CultureInfo.CurrentCulture, template, imageCount)
+
+            ' Sind die Unterordner einbezogen, kommen ihre Bilder dazu, ebenfalls aus dem Katalog
+            ' (GalleryViewModelSubfolders).
+            If _includeSubfolders Then
+                StartSubfolderLoad(folderPath, thumbnailToken, If(missing, FolderState.Missing, FolderState.Unreachable))
+            End If
         End Function
 
         ''' <summary>Der Bestand eines Ordners offline: "..", die Unterordner aus dem Katalog und
@@ -257,14 +288,7 @@ Namespace ViewModels
                 Next
             End If
             thumbnailToken.ThrowIfCancellationRequested()
-            Dim rows = LibraryService.Instance.GetImagesInFolder(folderPath, restoreSpelling:=False).
-                Where(Function(meta) meta IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(meta.FilePath) AndAlso
-                                     _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()))
-            For Each item In BuildCatalogItems(rows, thumbnailToken)
-                item.IsOffline = True
-                item.IsFolderMissing = missing
-                items.Add(item)
-            Next
+            items.AddRange(BuildCatalogOnlyFolderItems(folderPath, missing, thumbnailToken))
             Return items
         End Function
 

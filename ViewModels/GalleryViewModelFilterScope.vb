@@ -202,12 +202,23 @@ Namespace ViewModels
                    String.Equals(_scopePathsFolder, folder, PathIdentity.Comparison) Then
                     Return _scopePaths
                 End If
+                ' Die Bilder eines Ordners aus dem Katalog, ohne die Platte zu fragen.
+                Dim addCatalogFolder =
+                    Sub(catalogFolder As String)
+                        For Each meta In LibraryService.Instance.GetImagesInFolder(catalogFolder, restoreSpelling:=False)
+                            If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
+                            If Not _imageExtensions.Contains(Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
+                            listed.Add(meta.FilePath)
+                        Next
+                    End Sub
                 If state = FolderState.Unreachable OrElse state = FolderState.Missing Then
-                    For Each meta In LibraryService.Instance.GetImagesInFolder(folder, restoreSpelling:=False)
-                        If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
-                        If Not _imageExtensions.Contains(Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
-                        listed.Add(meta.FilePath)
-                    Next
+                    addCatalogFolder(folder)
+                    ' Mit einbezogenen Unterordnern auch sie, ebenfalls aus dem Katalog.
+                    If _includeSubfolders Then
+                        For Each entry In ListDescendantEntries(folder, state, Threading.CancellationToken.None)
+                            addCatalogFolder(entry.Path)
+                        Next
+                    End If
                     _scopePathsFolder = folder
                     _scopePaths = listed
                     Return listed
@@ -215,7 +226,16 @@ Namespace ViewModels
                 If state <> FolderState.Present Then Return listed
                 ' Mit einbezogenen Unterordnern zaehlen auch deren Bilder, wie in der Ansicht.
                 Dim counted As New List(Of String) From {folder}
-                If _includeSubfolders Then counted.AddRange(ListDescendantFolders(folder, Threading.CancellationToken.None))
+                If _includeSubfolders Then
+                    For Each entry In ListDescendantEntries(folder, FolderState.Present, Threading.CancellationToken.None)
+                        If entry.State = FolderState.Present Then
+                            counted.Add(entry.Path)
+                        Else
+                            ' Ein Unterordner, den nur noch der Katalog kennt, zaehlt mit dessen Zeilen.
+                            addCatalogFolder(entry.Path)
+                        End If
+                    Next
+                End If
                 For Each countedFolder In counted
                     ' Je Ordner abgefangen, wie beim Laden und beim Abgleich: ein Unterordner, der
                     ' sich nicht lesen laesst oder gerade verschwunden ist, fehlt in der Zaehlung,

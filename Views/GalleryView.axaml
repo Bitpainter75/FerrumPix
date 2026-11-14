@@ -3499,6 +3499,18 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/tree-structure.svg"
                                        Width="18" Height="18"/>
                     </ToggleButton>
+                    <!-- ORDNER AUS DEM KATALOG: Ordner zeigen, deren Laufwerk gerade fehlt oder die
+                         außerhalb der Anwendung gelöscht wurden. Der dritte Schalter derselben Art:
+                         auch er stellt um, was die Ansicht zeigt. Derselbe Stand und derselbe Text
+                         wie die Einstellung unter Galerie
+                         (SettingsViewModel.GalleryShowCatalogOnlyFolders). -->
+                    <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                  Margin="11,0,0,0"
+                                  IsChecked="{Binding ShowCatalogOnlyFolders, Mode=TwoWay}"
+                                  ToolTip.Tip="Ordner auf nicht erreichbaren Laufwerken aus dem Katalog anzeigen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                       Width="18" Height="18"/>
+                    </ToggleButton>
                     <TextBlock
                                Text="{Binding FooterStatusText}"
                                Foreground="{DynamicResource FP.Text.Secondary}"

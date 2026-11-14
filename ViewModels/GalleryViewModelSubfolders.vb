@@ -26,8 +26,9 @@ Namespace ViewModels
     ' der Beobachter (SetupWatcher). Alle drei fragen ListDescendantFolders.
     '
     ' Nur im lokalen Ordner. Trefferlisten, Immich, Nextcloud und Favoriten haben keine
-    ' Unterordner; ein Ordner, den es gerade nur im Katalog gibt (Laufwerk nicht erreichbar),
-    ' zeigt weiter nur seine eigene Ebene.
+    ' Unterordner. Ein Unterordner, den es gerade nur im Katalog gibt (Laufwerk nicht erreichbar,
+    ' ausserhalb geloescht), gehoert dazu: seine Bilder kommen aus dem Katalog, nur zum Ansehen
+    ' (ListDescendantEntries, BuildCatalogOnlyFolderItems).
 
     Partial Public Class GalleryViewModel
 
@@ -91,18 +92,36 @@ Namespace ViewModels
         ''' <para>EIN ORDNER NUR EINMAL, gemessen an seinem wirklichen Ort. Eine Verknuepfung, die
         ''' auf einen Ordner weiter oben zeigt, liesse den Lauf sonst im Kreis laufen.</para></summary>
         Friend Shared Function ListDescendantFolders(root As String, token As CancellationToken) As List(Of String)
-            Dim result As New List(Of String)()
-            If String.IsNullOrEmpty(root) Then Return result
-            Dim visited As New HashSet(Of String)(PathIdentity.Comparer) From {ResolveFolder(root)}
-            Dim pending As New Stack(Of String)()
-            pending.Push(root)
+            Return ListDescendantEntries(root, FolderState.Present, token).
+                Where(Function(entry) entry.State = FolderState.Present).
+                Select(Function(entry) entry.Path).ToList()
+        End Function
+
+        ''' <summary>Wie <see cref="ListDescendantFolders"/>, aber MIT den Ordnern, die nur noch der
+        ''' Katalog kennt, jeder mit seinem Zustand: ein Unterordner auf einem nicht erreichbaren
+        ''' Laufwerk und einer, den es nicht mehr gibt, stehen als Ordnerkachel da, also gehoeren
+        ''' auch ihre Bilder in die Ansicht. Unter einem solchen Ordner geht es im Katalog weiter;
+        ''' die Platte wird fuer ihn nicht gefragt, auch nicht nach einer Verknuepfung.
+        '''
+        ''' <paramref name="rootState"/> ist der Zustand des Ordners selbst: steht die Galerie in
+        ''' einem Ordner aus dem Katalog, kommen alle Unterordner von dort. Mit
+        ''' FolderListing.ShowCatalogOnlyFolders aus liefert FolderListing keine solchen Ordner,
+        ''' und die Liste ist die der vorhandenen.</summary>
+        Friend Shared Function ListDescendantEntries(root As String, rootState As FolderState,
+                                                     token As CancellationToken) As List(Of FolderEntry)
+            Dim result As New List(Of FolderEntry)()
+            If String.IsNullOrEmpty(root) OrElse rootState = FolderState.Absent Then Return result
+            Dim visited As New HashSet(Of String)(PathIdentity.Comparer) From {
+                If(rootState = FolderState.Present, ResolveFolder(root), root)}
+            Dim pending As New Stack(Of FolderEntry)()
+            pending.Push(New FolderEntry(root, rootState))
 
             While pending.Count > 0
                 token.ThrowIfCancellationRequested()
                 Dim folder = pending.Pop()
                 Dim children As List(Of FolderEntry)
                 Try
-                    children = FolderListing.ListSubfolders(folder, FolderState.Present, FolderNode.ShowHiddenFolders)
+                    children = FolderListing.ListSubfolders(folder.Path, folder.State, FolderNode.ShowHiddenFolders)
                 Catch ex As UnauthorizedAccessException
                     Continue While
                 Catch ex As IOException
@@ -110,14 +129,33 @@ Namespace ViewModels
                 End Try
 
                 For Each child In children
-                    If child.State <> FolderState.Present Then Continue For
+                    If child.State = FolderState.Absent Then Continue For
                     If FileOperationPolicy.IsTrashFolder(child.Path) Then Continue For
-                    If Not visited.Add(ResolveFolder(child.Path)) Then Continue For
-                    result.Add(child.Path)
-                    pending.Push(child.Path)
+                    If Not visited.Add(If(child.State = FolderState.Present, ResolveFolder(child.Path), child.Path)) Then Continue For
+                    result.Add(child)
+                    pending.Push(child)
                 Next
             End While
             Return result
+        End Function
+
+        ''' <summary>Die Bilder eines Ordners, den nur noch der Katalog kennt, als Elemente aus dem
+        ''' Katalog: jedes mit <see cref="ImageItem.IsOffline"/> (und bei einem Ordner, den es nicht
+        ''' mehr gibt, mit <see cref="ImageItem.IsFolderMissing"/>), BEVOR etwas daran bindet.
+        ''' <paramref name="known"/>: Pfade, die schon als Kachel dastehen und nicht noch einmal
+        ''' gebaut werden. Laeuft im Hintergrund, die Platte wird nicht gefragt.</summary>
+        Private Function BuildCatalogOnlyFolderItems(folder As String, missing As Boolean, thumbnailToken As CancellationToken,
+                                                     Optional known As Func(Of String, Boolean) = Nothing) As List(Of ImageItem)
+            Dim rows = LibraryService.Instance.GetImagesInFolder(folder, restoreSpelling:=False).
+                Where(Function(meta) meta IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(meta.FilePath) AndAlso
+                                     _imageExtensions.Contains(IO.Path.GetExtension(meta.FilePath).ToLowerInvariant()) AndAlso
+                                     (known Is Nothing OrElse Not known(meta.FilePath)))
+            Dim items = BuildCatalogItems(rows, thumbnailToken)
+            For Each item In items
+                item.IsOffline = True
+                item.IsFolderMissing = missing
+            Next
+            Return items
         End Function
 
         ''' <summary>Der wirkliche Ort eines Ordners: bei einer Verknuepfung ihr Ziel, sonst er selbst.</summary>
@@ -136,8 +174,9 @@ Namespace ViewModels
 
         ''' <summary>Startet das Nachladen der Unterordner und kehrt zurueck. Der Ordnerwechsel
         ''' selbst wartet nicht darauf: wer navigiert, soll den Ordner sofort bedienen koennen.</summary>
-        Private Sub StartSubfolderLoad(folderPath As String, thumbnailToken As CancellationToken)
-            AppendSubfolderImagesAsync(folderPath, thumbnailToken).ContinueWith(
+        Private Sub StartSubfolderLoad(folderPath As String, thumbnailToken As CancellationToken,
+                                       Optional folderState As FolderState = FolderState.Present)
+            AppendSubfolderImagesAsync(folderPath, thumbnailToken, folderState).ContinueWith(
                 Sub(run) DiagnosticLogService.LogException("Gallery.Subfolders", run.Exception),
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted,
@@ -153,7 +192,10 @@ Namespace ViewModels
         ''' <para>Der Abbruch-Token ist der des Ordnerwechsels. Ein neuer Ordner, eine Trefferliste
         ''' oder das Ausschalten beenden den Lauf, und ein Schub, der danach noch ankommt, wird
         ''' verworfen.</para></summary>
-        Private Async Function AppendSubfolderImagesAsync(folderPath As String, thumbnailToken As CancellationToken) As Task
+        Private Async Function AppendSubfolderImagesAsync(folderPath As String, thumbnailToken As CancellationToken,
+                                                          Optional folderState As FolderState = FolderState.Present) As Task
+            ' <folderState>: wie der Ordner selbst dasteht. Kommt er aus dem Katalog (Laufwerk nicht
+            ' erreichbar, nicht mehr vorhanden), kommen auch alle Unterordner von dort.
             Dim adopted As New HashSet(Of ImageItem)()
             Dim needsMetaRefresh As New List(Of ImageItem)()
             Try
@@ -161,18 +203,27 @@ Namespace ViewModels
                     Async Function()
                         Dim batch As New List(Of ImageItem)()
                         Dim lastFlush = Environment.TickCount64
-                        For Each folder In ListDescendantFolders(folderPath, thumbnailToken)
+                        For Each entry In ListDescendantEntries(folderPath, folderState, thumbnailToken)
                             thumbnailToken.ThrowIfCancellationRequested()
-                            Dim files As FileInfo()
-                            Try
-                                files = EnumerateImageFiles(folder)
-                            Catch ex As UnauthorizedAccessException
-                                Continue For
-                            Catch ex As IOException
-                                Continue For
-                            End Try
-                            If files.Length = 0 Then Continue For
-                            batch.AddRange(BuildFileItems(files, folder, thumbnailToken, needsMetaRefresh))
+                            Dim folder = entry.Path
+                            If entry.State = FolderState.Present Then
+                                Dim files As FileInfo()
+                                Try
+                                    files = EnumerateImageFiles(folder)
+                                Catch ex As UnauthorizedAccessException
+                                    Continue For
+                                Catch ex As IOException
+                                    Continue For
+                                End Try
+                                If files.Length = 0 Then Continue For
+                                batch.AddRange(BuildFileItems(files, folder, thumbnailToken, needsMetaRefresh))
+                            Else
+                                ' Ein Unterordner, den nur noch der Katalog kennt: seine Bilder
+                                ' kommen von dort, wie in der Ansicht des Ordners selbst.
+                                Dim fromCatalog = BuildCatalogOnlyFolderItems(folder, entry.State = FolderState.Missing, thumbnailToken)
+                                If fromCatalog.Count = 0 Then Continue For
+                                batch.AddRange(fromCatalog)
+                            End If
 
                             If Environment.TickCount64 - lastFlush < SubfolderBatchMilliseconds Then Continue For
                             Dim ready = batch
@@ -194,7 +245,19 @@ Namespace ViewModels
             ' jeder sortierte am Ende die ganze Liste.
             Dim stale = needsMetaRefresh.Where(Function(i) i IsNot Nothing AndAlso adopted.Contains(i)).ToList()
             If stale.Count > 0 Then QueueBackgroundMetaRefresh(stale, thumbnailToken)
-            Dim thumbnails = adopted.ToList()
+            ' Steht der Ordner selbst aus dem Katalog da, nennt die Statuszeile die Zahl seiner
+            ' Bilder; mit den Unterordnern sind es mehr geworden.
+            If _isOfflineView Then
+                Dim template = If(_isOfflineViewMissing,
+                                  LocalizationService.T("Ordner nicht mehr vorhanden: {0} Bilder aus dem Katalog"),
+                                  LocalizationService.T("Laufwerk nicht erreichbar: {0} Bilder aus dem Katalog"))
+                StatusText = String.Format(Globalization.CultureInfo.CurrentCulture, template,
+                                           _allItems.LongCount(Function(i) i IsNot Nothing AndAlso Not i.IsFolder))
+            End If
+            ' Vorschaubilder im Hintergrund nur fuer Dateien, die es gibt: ein Bild aus dem Katalog
+            ' zeigt seine Kachel aus dem Zwischenspeicher, die Datei wird nie angefasst.
+            Dim thumbnails = adopted.Where(Function(i) Not i.IsOffline).ToList()
+            If thumbnails.Count = 0 Then Return
             Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(thumbnails), DispatcherPriority.Background)
         End Function
 
