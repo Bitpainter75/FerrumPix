@@ -46,6 +46,15 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' Die beiden Knoepfe der Farbtiefe; im Tag steht 8 oder 16.
+        Private Sub OnDialogBitDepthClick(sender As Object, e As RoutedEventArgs)
+            Dim button = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, MainWindowViewModel)
+            If button Is Nothing OrElse vm Is Nothing Then Return
+            vm.SetDialogBitDepth(If(String.Equals(TryCast(button.Tag, String), "16", StringComparison.Ordinal), 16, 8))
+            e.Handled = True
+        End Sub
+
         ''' Platzhalter des Zieldateinamens an der Cursorposition einfuegen, wie im
         ''' Stapel-Umbenennen-Dialog.
         Private Sub OnInsertNamePlaceholder(sender As Object, e As RoutedEventArgs)

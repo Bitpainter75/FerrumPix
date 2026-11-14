@@ -11686,4 +11686,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>แสดงภาพตามสัดส่วนภาพที่ตั้งไว้ในกล้อง เช่น 3:2, 16:9 หรือ 1:1 ไฟล์ RAW ยังคงมีเซนเซอร์ทั้งหมด เมื่อปิดก็จะเห็นอีกครั้ง ควรตัดสินใจตั้งแต่แรก หากเปลี่ยนภายหลัง มาสก์และวัตถุที่วางไว้แล้วจะเลื่อนไป</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>ความลึกบิต</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 บิต</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 บิต</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 บิตใช้ได้กับไฟล์ RAW หากมีเลเยอร์มาสก์ วัตถุ การรีทัช หรือการระบายสี ไฟล์จะถูกเขียนด้วย 8 บิต</value>
+  </data>
 </root>

@@ -11682,4 +11682,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Näyttää kuvan siinä kuvasuhteessa, joka kamerassa oli asetettuna, esimerkiksi 3:2, 16:9 tai 1:1. RAW-tiedosto sisältää silti koko kennon; pois päältä se näkyy taas. Paras päättää heti alussa: myöhemmin vaihdettaessa jo asetetut maskit ja lisätyt objektit siirtyvät.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Bittisyvyys</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bittiä</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bittiä</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bittiä on käytettävissä RAW-tiedostoille. Jos kuvassa on maskitasoja, objekteja, retusointia tai maalausta, tiedosto kirjoitetaan 8 bitillä.</value>
+  </data>
 </root>

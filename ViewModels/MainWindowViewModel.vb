@@ -1502,6 +1502,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsDialogJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogOverwriteJpgQualityVisible))
                 Me.RaisePropertyChanged(NameOf(IsDialogConvertLosslessJpegVisible))
+                Me.RaisePropertyChanged(NameOf(IsDialogBitDepthVisible))
                 ' Verfügbarkeit des Immich-Ziels hängt vom Format ab (FPX: nur lokal); ein zuvor gewähltes
                 ' Immich-Ziel auf Lokal zurücksetzen, damit keine ausgeblendete Option aktiv bleibt.
                 Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
@@ -1509,6 +1510,67 @@ Namespace ViewModels
                     DialogSaveAsTarget = "Local"
                 End If
             End Set
+        End Property
+
+        ' ── Farbtiefe der Ausgabe: 8 oder 16 Bit je Kanal ────────────────────────
+        '
+        ' Die Zeile erscheint nur, wenn beides zutrifft: das gewaehlte Format traegt 16 Bit (TIFF,
+        ' PNG, JPEG XL), und unter den Quellen des Dialogs ist eine, aus der eine Datei mit 16 Bit
+        ' entstehen kann (eine RAW-Datei, die durch die RAW-Stufe laeuft, siehe
+        ' ImageProcessor.CanSourceGoDeep). Bei einer 8-Bit-Quelle gibt es keine Ausgabe in 16 Bit,
+        ' und die Wahl bleibt dann weg, statt ohne Wirkung dazustehen.
+        '
+        ' Die Wahl bleibt ueber die Dialoge hinweg stehen, solange die Anwendung laeuft: wer TIFF mit
+        ' 16 Bit ausgibt, tut es meist mehrmals hintereinander. Ob die Quellen sie hergeben, sagt
+        ' dagegen jeder Dialog beim Oeffnen neu (SetDialogDeepSource).
+        Private _dialogBitDepth As Integer = 8
+        Private _dialogDeepSourceAvailable As Boolean = False
+
+        ''' <summary>Beim Oeffnen eines Dialogs mit Formatwahl: geben die Quellen 16 Bit her?</summary>
+        Private Sub SetDialogDeepSource(available As Boolean)
+            _dialogDeepSourceAvailable = available
+            Me.RaisePropertyChanged(NameOf(IsDialogBitDepthVisible))
+            Me.RaisePropertyChanged(NameOf(IsDialogBitDepth8))
+            Me.RaisePropertyChanged(NameOf(IsDialogBitDepth16))
+        End Sub
+
+        Public ReadOnly Property IsDialogBitDepthVisible As Boolean
+            Get
+                Return DialogShowsSaveAsOptions AndAlso _dialogDeepSourceAvailable AndAlso
+                       (String.Equals(_dialogSelectedFormat, "TIFF", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(_dialogSelectedFormat, "PNG", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(_dialogSelectedFormat, "JXL", StringComparison.OrdinalIgnoreCase))
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBitDepth16 As Boolean
+            Get
+                Return _dialogBitDepth = 16
+            End Get
+        End Property
+
+        Public ReadOnly Property IsDialogBitDepth8 As Boolean
+            Get
+                Return _dialogBitDepth <> 16
+            End Get
+        End Property
+
+        ''' <summary>Die Wahl der beiden Knoepfe; alles ausser 16 gilt als 8.</summary>
+        Public Sub SetDialogBitDepth(value As Integer)
+            Dim normalized = If(value = 16, 16, 8)
+            If _dialogBitDepth = normalized Then Return
+            _dialogBitDepth = normalized
+            Me.RaisePropertyChanged(NameOf(IsDialogBitDepth8))
+            Me.RaisePropertyChanged(NameOf(IsDialogBitDepth16))
+        End Sub
+
+        ''' <summary>Was der Dialog an SaveImage weitergibt: 16 nur, wenn die Zeile sichtbar ist und
+        ''' 16 gewaehlt wurde. Eine stehengebliebene Wahl gilt also nicht fuer ein Format oder eine
+        ''' Quelle, bei denen sie gar nicht angeboten wird.</summary>
+        Private ReadOnly Property DialogBitDepth As Integer
+            Get
+                Return If(IsDialogBitDepthVisible AndAlso _dialogBitDepth = 16, 16, 8)
+            End Get
         End Property
 
         Public Property DialogJpgQuality As Integer
@@ -2437,7 +2499,11 @@ Namespace ViewModels
         End Sub
 
         Public Async Function ShowExportToAsync(fileCount As Integer, Optional currentFolder As String = "",
-                                                Optional samplePath As String = Nothing) As Task(Of ExportToDialogResult)
+                                                Optional samplePath As String = Nothing,
+                                                Optional deepSourceAvailable As Boolean = False) As Task(Of ExportToDialogResult)
+            ' <deepSourceAvailable>: unter den Quellen ist eine, aus der eine Datei mit 16 Bit
+            ' entstehen kann; dann bietet der Dialog die Farbtiefe an (IsDialogBitDepthVisible).
+            SetDialogDeepSource(deepSourceAvailable)
             Dim settings = AppSettingsService.Load()
             ' Zuletzt benutzte Zusammenstellung wiederherstellen - ein Sammel-Export wird meist mit
             ' denselben Bausteinen wiederholt.
@@ -2560,6 +2626,7 @@ Namespace ViewModels
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .BitDepth = DialogBitDepth,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
                 .CopyRating = _dialogSaveAsCopyRating,
@@ -2800,7 +2867,9 @@ Namespace ViewModels
                                                    Optional allowOverwrite As Boolean = True,
                                                    Optional sourcesIncludeJpg As Boolean = False,
                                                    Optional recipeCount As Integer = 0,
-                                                   Optional denoiseBlockedCount As Integer = 0) As Task(Of BatchFilterDialogResult)
+                                                   Optional denoiseBlockedCount As Integer = 0,
+                                                   Optional deepSourceAvailable As Boolean = False) As Task(Of BatchFilterDialogResult)
+            SetDialogDeepSource(deepSourceAvailable)
             _dialogFilterSourceKind = BatchFilterDialogResult.SourceFilter
             _dialogFilterNoneAllowed = True
             _dialogBatchOverwriteAvailable = allowOverwrite
@@ -2870,6 +2939,7 @@ Namespace ViewModels
                 .AppendNameToFileName = _dialogBatchFilterAppendName,
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .BitDepth = DialogBitDepth,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
                 .CopyRating = _dialogSaveAsCopyRating,
@@ -5748,7 +5818,9 @@ Namespace ViewModels
         Public Async Function ShowBatchResizeAsync(Optional samplePath As String = Nothing, Optional currentFolder As String = "",
                                                    Optional allowOverwrite As Boolean = True,
                                                    Optional singleImage As Boolean = False,
-                                                   Optional sourcesIncludeJpg As Boolean = False) As Task(Of BatchResizeResult)
+                                                   Optional sourcesIncludeJpg As Boolean = False,
+                                                   Optional deepSourceAvailable As Boolean = False) As Task(Of BatchResizeResult)
+            SetDialogDeepSource(deepSourceAvailable)
             Dim settings = AppSettingsService.Load()
             _dialogBatchOverwriteAvailable = allowOverwrite
             _dialogBatchSourcesIncludeJpg = sourcesIncludeJpg
@@ -5851,6 +5923,7 @@ Namespace ViewModels
                 .Overwrite = _dialogBatchResizeOverwrite,
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .BitDepth = DialogBitDepth,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
                 .CopyRating = _dialogSaveAsCopyRating,
@@ -5871,7 +5944,9 @@ Namespace ViewModels
 
         Public Async Function ShowWatermarkPresetDialogAsync(Optional allowOverwrite As Boolean = True,
                                                              Optional currentFolder As String = "",
-                                                             Optional sourcesIncludeJpg As Boolean = False) As Task(Of WatermarkPresetDialogResult)
+                                                             Optional sourcesIncludeJpg As Boolean = False,
+                                                             Optional deepSourceAvailable As Boolean = False) As Task(Of WatermarkPresetDialogResult)
+            SetDialogDeepSource(deepSourceAvailable)
             Dim settings = AppSettingsService.Load()
             SetDialogFormats(includeFpx:=False)
             _dialogWatermarkPresets.Clear()
@@ -5934,6 +6009,7 @@ Namespace ViewModels
                 .NamePattern = If(_dialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .BitDepth = DialogBitDepth,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
                 .CopyRating = _dialogSaveAsCopyRating,
@@ -6151,7 +6227,9 @@ Namespace ViewModels
                                              initialFormat As String,
                                              Optional initialJpgQuality As Integer = 0,
                                              Optional confirmText As String = "Speichern",
-                                             Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult) Implements IEditorHost.ShowSaveAsAsync
+                                             Optional cancelText As String = "Abbrechen",
+                                             Optional deepSourceAvailable As Boolean = False) As Task(Of SaveAsDialogResult) Implements IEditorHost.ShowSaveAsAsync
+            SetDialogDeepSource(deepSourceAvailable)
             SetDialogFormats(includeFpx:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             ' 0 = kein eigener Startwert, dann gilt die Einstellung.
@@ -6188,6 +6266,7 @@ Namespace ViewModels
                 .BaseName = If(DialogTargetNamePattern, "").Trim(),
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .BitDepth = DialogBitDepth,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
                 .CopyRating = _dialogSaveAsCopyRating,
@@ -6203,7 +6282,9 @@ Namespace ViewModels
         ''' Wiederverwendet denselben Format+Qualität-Block wie ShowSaveAsAsync, aber ohne
         ''' Dateinamen-Feld (BatchConvert lässt die Originalnamen unangetastet, ändert nur die Endung).
         Public Async Function ShowBatchConvertAsync(fileCount As Integer, initialFormat As String, Optional initialJpgQuality As Integer = 0,
-                                                    Optional currentFolder As String = "") As Task(Of SaveAsDialogResult)
+                                                    Optional currentFolder As String = "",
+                                                    Optional deepSourceAvailable As Boolean = False) As Task(Of SaveAsDialogResult)
+            SetDialogDeepSource(deepSourceAvailable)
             SetDialogFormats(includeFpx:=False, includeDng:=True)
             DialogSelectedFormat = NormalizeSaveAsFormat(initialFormat)
             DialogLosslessJpegToJxl = True
@@ -6232,6 +6313,7 @@ Namespace ViewModels
             Return New SaveAsDialogResult With {
                 .Format = DialogSelectedFormat,
                 .JpgQuality = DialogJpgQuality,
+                .BitDepth = DialogBitDepth,
                 .LosslessJpegToJxl = IsDialogConvertLosslessJpegVisible AndAlso _dialogLosslessJpegToJxl,
                 .Target = DialogSaveAsTarget,
                 .TargetFolder = DialogSaveAsTargetFolder,
@@ -6710,7 +6792,8 @@ Namespace ViewModels
             ' JPEG XL nur, wenn libjxl mit Encoder geladen ist - ein Format, das beim Klick scheitert,
             ' waere schlechter als keins. Wie TIFF immer als neue Datei.
             If JxlEncodeService.IsAvailable Then DialogFormatOptions.Add("JXL")
-            ' TIFF mit 8 Bit, siehe TiffWriterService. Immer als neue Datei, deshalb in beiden Dialogen.
+            ' TIFF mit 8 oder 16 Bit (Zeile Farbtiefe), siehe TiffWriterService. Immer als neue Datei,
+            ' deshalb in beiden Dialogen.
             DialogFormatOptions.Add("TIFF")
             ' PDF in BEIDEN Dialogen: einzeln als druckfertige Datei speichern und stapelweise
             ' konvertieren (dort entsteht wie bei allen Formaten eine Zieldatei je Bild).

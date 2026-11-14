@@ -119,6 +119,19 @@ Namespace Services
             Return String.Equals(IO.Path.GetExtension(targetPath), ".png", StringComparison.OrdinalIgnoreCase)
         End Function
 
+        ''' <summary>Kann aus dieser Quelle eine Datei mit 16 Bit entstehen? Nur aus einer RAW-Datei,
+        ''' die durch die RAW-Stufe laeuft: dort liegen die Tonwerte feiner vor als 8 Bit. Eine
+        ''' 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein TIFF oder PNG
+        ''' mit 16 Bit wird beim Lesen auf 8 gebracht.
+        '''
+        ''' Die Frage fuer die Dialoge: danach richtet sich, ob sie die Farbtiefe anbieten. Ob die
+        ''' Datei am Ende wirklich 16 Bit traegt, entscheidet erst SaveImage (Maskenebenen, Objekte
+        ''' oder Retusche beenden das tiefe Bild).</summary>
+        Public Shared Function CanSourceGoDeep(sourcePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(sourcePath) Then Return False
+            Return RawPreviewService.IsSupportedRaw(sourcePath) AndAlso RawDecodeService.DevelopsThroughRawStage(sourcePath)
+        End Function
+
         ''' <summary>Haengt an ein frisch entwickeltes RAW-Bild sein tiefes Bild: derselbe Decode mit
         ''' denselben Angaben wie in <see cref="DecodeForRender"/>, aus den linearen Daten, die nach
         ''' dem 8-Bit-Decode bereitliegen. Nichts geschieht, wenn die Datei nicht durch die RAW-Stufe

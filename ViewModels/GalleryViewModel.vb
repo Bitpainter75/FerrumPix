@@ -13846,7 +13846,8 @@ Namespace ViewModels
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
                                                            singleImage:=targetItems.Count = 1,
-                                                           sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
+                                                           sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
+                                                           deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If resize Is Nothing Then Return
             ' Der Haken steht im Auftrag, festgehalten beim Bestaetigen (siehe ApplyPendingBaked).
             Dim applyPendingBaked = resize.ApplyPendingBaked
@@ -13893,7 +13894,8 @@ Namespace ViewModels
                                                              copyrightText:=resize.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=PartsForNewFiles(resize.Overwrite, resize.MetadataParts))
+                                                             metadataParts:=PartsForNewFiles(resize.Overwrite, resize.MetadataParts),
+                                                             bitDepth:=resize.BitDepth)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14005,6 +14007,15 @@ Namespace ViewModels
             Return If(_isVirtualFolder, "", If(_currentFolder, ""))
         End Function
 
+        ''' <summary>Ist im Stapel eine Quelle, aus der eine Datei mit 16 Bit entstehen kann (eine RAW,
+        ''' die durch die RAW-Stufe laeuft)? Dann bietet der Dialog die Farbtiefe an. Abseits des
+        ''' Oberflaechenfadens: bei einer DNG liest die Frage in die Datei.</summary>
+        Private Shared Function BatchIncludesDeepSourceAsync(targetItems As IEnumerable(Of ImageItem)) As Task(Of Boolean)
+            Dim paths = If(targetItems, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing).Select(Function(i) i.FilePath).ToList()
+            Return Task.Run(Function() paths.Any(Function(p) ImageProcessor.CanSourceGoDeep(p)))
+        End Function
+
         ''' <summary>Sind JPG-Dateien im Stapel? Dann zeigt der Dialog den Qualitaetsregler auch
         ''' beim Ueberschreiben - die Dateien werden dabei neu encodiert.</summary>
         Private Shared Function BatchIncludesJpg(targetItems As IEnumerable(Of ImageItem)) As Boolean
@@ -14055,7 +14066,8 @@ Namespace ViewModels
             Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
                                                             sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
                                                             recipeCount:=recipeCount,
-                                                            denoiseBlockedCount:=denoiseBlockedCount)
+                                                            denoiseBlockedCount:=denoiseBlockedCount,
+                                                            deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing Then Return
             Dim applyPendingBaked = result.ApplyPendingBaked
 
@@ -14091,7 +14103,8 @@ Namespace ViewModels
                                                              cancel:=cancel,
                                                              denoise:=result.Denoise,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts))
+                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts),
+                                                             bitDepth:=result.BitDepth)
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14474,7 +14487,8 @@ Namespace ViewModels
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar,
                                                                       currentFolder:=BatchFolderHint(targetItems),
-                                                                      sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
+                                                                      sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
+                                                                      deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing OrElse result.Preset Is Nothing Then Return
             Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
@@ -14502,7 +14516,8 @@ Namespace ViewModels
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts))
+                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts),
+                                                             bitDepth:=result.BitDepth)
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
@@ -15438,7 +15453,8 @@ Namespace ViewModels
             Dim samplePath = targetItems.Select(Function(i) i.FilePath).
                 FirstOrDefault(Function(pth) Not String.IsNullOrEmpty(pth) AndAlso File.Exists(pth))
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
-            Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
+            Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath,
+                                                         deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing Then Return
             Dim applyPendingBaked = result.ApplyPendingBaked
 
@@ -15553,7 +15569,8 @@ Namespace ViewModels
                                                              cancel:=cancel,
                                                              denoise:=result.Denoise,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=result.MetadataParts)
+                                                             metadataParts:=result.MetadataParts,
+                                                             bitDepth:=result.BitDepth)
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -15643,7 +15660,8 @@ Namespace ViewModels
 
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat(),
-                                                             currentFolder:=BatchFolderHint(targetItems))
+                                                             currentFolder:=BatchFolderHint(targetItems),
+                                                             deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing Then Return
             Dim isDngConversion = String.Equals(result.Format, "DNG", StringComparison.OrdinalIgnoreCase)
             If isDngConversion Then
@@ -15700,7 +15718,8 @@ Namespace ViewModels
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=result.MetadataParts)
+                                                             metadataParts:=result.MetadataParts,
+                                                             bitDepth:=result.BitDepth)
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
             ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.

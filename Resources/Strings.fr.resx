@@ -11642,4 +11642,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Affiche la photo au format réglé sur l'appareil, par exemple 3:2, 16:9 ou 1:1. Le fichier RAW contient quand même tout le capteur ; désactivé, il redevient visible. Mieux vaut décider dès le début : changer plus tard décale les masques et objets déjà placés.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Profondeur de bits</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bits</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bits</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bits est disponible pour les fichiers RAW. Avec des calques de masque, des objets, de la retouche ou de la peinture, le fichier est écrit en 8 bits.</value>
+  </data>
 </root>

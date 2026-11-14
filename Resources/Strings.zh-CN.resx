@@ -11640,4 +11640,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>按相机上设置的画幅比例显示照片，例如 3:2、16:9 或 1:1。RAW 文件仍然包含整个传感器；关闭后会重新显示。最好一开始就决定：之后再切换，已放置的蒙版和插入的对象会发生偏移。</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>位深度</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 位</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 位</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 位适用于 RAW 文件。如果有蒙版图层、对象、修饰或绘画，文件将以 8 位写入。</value>
+  </data>
 </root>

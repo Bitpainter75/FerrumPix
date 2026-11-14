@@ -11661,4 +11661,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Shows the picture in the aspect ratio set on the camera, such as 3:2, 16:9 or 1:1. The raw file still holds the whole sensor; switched off, it can be seen again. Best decided right at the start: switching later moves masks and inserted objects that are already placed.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Bit depth</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bit</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bit</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bit is available for raw files. With masked layers, objects, retouching or painting the file is written with 8 bit.</value>
+  </data>
 </root>

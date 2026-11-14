@@ -353,7 +353,7 @@
                             <!-- Die Labelspalte teilt ihre Breite mit den dialogeigenen Sektionen
                                  (SharedSizeGroup): Eingabefelder beider Bereiche beginnen auf derselben
                                  Linie, egal welches Label das längste ist. -->
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="14"
                                   RowSpacing="12"
                                   IsVisible="{Binding DialogShowsSaveAsOptions}">
@@ -428,14 +428,43 @@
                                                Foreground="{DynamicResource FP.Text.Secondary}"/>
                                 </Grid>
 
+                                <!-- Farbtiefe der Datei: 8 oder 16 Bit je Kanal. Nur bei einem Format,
+                                     das 16 Bit traegt (TIFF, PNG, JPEG XL), und nur, wenn eine Quelle
+                                     sie hergibt (eine RAW-Datei). Der Hinweis darunter sagt, wann die
+                                     Datei trotz der Wahl mit 8 Bit entsteht. -->
+                                <TextBlock Grid.Row="2"
+                                           Text="Farbtiefe"
+                                           VerticalAlignment="Top"
+                                           Margin="0,7,0,0"
+                                           IsVisible="{Binding IsDialogBitDepthVisible}"
+                                           Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                <StackPanel Grid.Row="2" Grid.Column="1" Spacing="6"
+                                            IsVisible="{Binding IsDialogBitDepthVisible}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding IsDialogBitDepth8}"
+                                                Click="OnDialogBitDepthClick"
+                                                Tag="8">8 Bit</Button>
+                                        <Button Classes="segmented"
+                                                Classes.active="{Binding IsDialogBitDepth16}"
+                                                Click="OnDialogBitDepthClick"
+                                                Tag="16">16 Bit</Button>
+                                    </StackPanel>
+                                    <TextBlock Text="16 Bit gibt es für RAW-Dateien. Mit Maskenebenen, Objekten, Retusche oder Malerei entsteht die Datei mit 8 Bit."
+                                               IsVisible="{Binding IsDialogBitDepth16}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+
                                 <!-- Ziel in EINER Zeile. Frueher stand hier nur "Ordner / Immich",
                                      und WELCHER Ordner stand eine Zeile tiefer im Textfeld - die beiden
                                      naheliegenden Ordner waren damit nirgends anklickbar. -->
-                                <TextBlock Grid.Row="2" Text="Ziel"
+                                <TextBlock Grid.Row="3" Text="Ziel"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsSaveAsTargetRowVisible}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8"
                                             IsVisible="{Binding IsSaveAsTargetRowVisible}">
                                     <!-- Immer sichtbar, ohne Ordner nur ausgegraut: Knoepfe, die je
                                          nach Aufrufweg auftauchen und verschwinden, machen die Zeile
@@ -458,14 +487,14 @@
                                             Tag="Nextcloud">Nextcloud</Button>
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="3"
+                                <TextBlock Grid.Row="4"
                                            Text="Zielordner"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsSaveAsTargetFolderVisible}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
                                 <!-- Wie beim Import (GitHub #102): eine Auswahl ueber dem Feld, das Feld
                                      bleibt frei aenderbar, auch mit Platzhaltern; aufgeloest je Bild. -->
-                                <StackPanel Grid.Row="3"
+                                <StackPanel Grid.Row="4"
                                             Grid.Column="1"
                                             Spacing="6"
                                             IsVisible="{Binding IsSaveAsTargetFolderVisible}">
@@ -498,13 +527,13 @@
                                      beim Stapel-Umbenennen; leer = Originalname bleibt. Die Platzhalter
                                      stehen wie dort als Klick-Auswahl darunter; die Beschriftung sitzt
                                      deshalb oben auf Hoehe des Textfelds statt mittig. -->
-                                <TextBlock Grid.Row="4"
+                                <TextBlock Grid.Row="5"
                                            Text="Dateiname"
                                            VerticalAlignment="Top"
                                            Margin="0,9,0,0"
                                            IsVisible="{Binding IsDialogNamePatternVisible}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                <StackPanel Grid.Row="4"
+                                <StackPanel Grid.Row="5"
                                             Grid.Column="1"
                                             Spacing="7"
                                             IsVisible="{Binding IsDialogNamePatternVisible}">
@@ -540,12 +569,12 @@
 
                                 <!-- Einzeloptionen: welche Katalog-Metadaten die
                                      neue Datei übernimmt - Akzent = aktiv, Klick schaltet um. -->
-                                <TextBlock Grid.Row="5"
+                                <TextBlock Grid.Row="6"
                                            Text="Übernehmen"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding DialogShowsSaveAsMetaOptions}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"/>
-                                <Border Grid.Row="5"
+                                <Border Grid.Row="6"
                                         Grid.Column="1"
                                         BorderBrush="{DynamicResource FP.Border.Normal}"
                                         BorderThickness="1"

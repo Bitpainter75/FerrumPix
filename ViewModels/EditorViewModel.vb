@@ -23480,7 +23480,9 @@ Namespace ViewModels
                                                              initialFormat,
                                                              SaveQuality,
                                                              LocalizationService.T("Speichern"),
-                                                             LocalizationService.T("Abbrechen"))
+                                                             LocalizationService.T("Abbrechen"),
+                                                             deepSourceAvailable:=Await Task.Run(
+                                                                 Function() ImageProcessor.CanSourceGoDeep(RenderSourcePath)))
                 If saveAsResult Is Nothing Then Return False
 
                 ' Eine Namensvorlage aus der Auswahl des Dialogs (GitHub #102) wird hier fuer dieses
@@ -23584,6 +23586,8 @@ Namespace ViewModels
                 If saveAs AndAlso saveAsResult IsNot Nothing Then metadataParts = saveAsResult.MetadataParts
                 ' Der Urheberrechtshinweis aus dem Dialog; leer heisst "nicht anfassen".
                 Dim copyrightText = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.Copyright, "")
+                ' Die Farbtiefe aus dem Dialog; ohne Dialog (Speichern ueber das Original) 8 Bit.
+                Dim bitDepth = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.BitDepth, 8)
                 Dim ok As Boolean
                 If isFpxSave Then
                     ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
@@ -23713,7 +23717,8 @@ Namespace ViewModels
                     ok = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adj, targetQuality, preserveMetadata,
                                                                             workingFull:=CloneWorkingFullForRender(),
                                                                             copyrightText:=copyrightText,
-                                                                            metadataParts:=metadataParts))
+                                                                            metadataParts:=metadataParts,
+                                                                            bitDepth:=bitDepth))
                 End If
                 If ok AndAlso saveToNextcloud Then
                     ' Ziel Nextcloud: die gerenderte Datei in den Dateibaum legen. Wohin, ist NICHT

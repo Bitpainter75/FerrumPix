@@ -66,7 +66,8 @@ Namespace ViewModels
                                  initialFormat As String,
                                  Optional initialJpgQuality As Integer = 0,
                                  Optional confirmText As String = "Speichern",
-                                 Optional cancelText As String = "Abbrechen") As Task(Of SaveAsDialogResult)
+                                 Optional cancelText As String = "Abbrechen",
+                                 Optional deepSourceAvailable As Boolean = False) As Task(Of SaveAsDialogResult)
         ''' <summary>Löst die gemeinsame Platzhaltersprache für einen vorgeschlagenen Dateinamen auf.</summary>
         Function ExpandTargetNamePattern(pattern As String, sourcePath As String, counter As Integer,
                                          Optional appendSourceExtension As Boolean = False,

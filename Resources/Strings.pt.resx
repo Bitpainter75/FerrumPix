@@ -11641,4 +11641,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Mostra a fotografia no formato definido na câmara, como 3:2, 16:9 ou 1:1. O ficheiro RAW contém mesmo assim o sensor inteiro; desligado, volta a ver-se. Melhor decidir logo no início: mudar mais tarde desloca máscaras e objetos já colocados.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Profundidade de bits</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bits</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bits</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bits está disponível para ficheiros RAW. Com camadas de máscara, objetos, retoque ou pintura, o ficheiro é gravado com 8 bits.</value>
+  </data>
 </root>

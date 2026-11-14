@@ -11682,4 +11682,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>カメラで設定したアスペクト比（3:2、16:9、1:1 など）で写真を表示します。RAW ファイルにはそれでもセンサー全体が含まれており、オフにすると再び表示されます。最初に決めておくのがおすすめです。後から切り替えると、配置済みのマスクや挿入したオブジェクトがずれます。</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>ビット深度</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 ビット</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 ビット</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 ビットは RAW ファイルで利用できます。マスクレイヤー、オブジェクト、レタッチ、ペイントがある場合、ファイルは 8 ビットで書き出されます。</value>
+  </data>
 </root>

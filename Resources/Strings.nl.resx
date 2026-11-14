@@ -11682,4 +11682,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Toont de foto in de beeldverhouding die op de camera was ingesteld, zoals 3:2, 16:9 of 1:1. Het RAW-bestand bevat toch de hele sensor; uitgeschakeld is die weer te zien. Het beste meteen aan het begin beslissen: later omschakelen verschuift al geplaatste maskers en ingevoegde objecten.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Bitdiepte</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bit</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bit</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bit is beschikbaar voor RAW-bestanden. Met maskerlagen, objecten, retouche of schilderwerk wordt het bestand met 8 bit geschreven.</value>
+  </data>
 </root>

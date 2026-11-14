@@ -11682,4 +11682,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Viser bildet i bildeformatet som var stilt inn på kameraet, for eksempel 3:2, 16:9 eller 1:1. RAW-filen inneholder likevel hele sensoren; slått av er den synlig igjen. Best å bestemme helt i starten: bytter man senere, flytter allerede plasserte masker og innsatte objekter seg.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Bitdybde</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bit</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bit</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bit finnes for RAW-filer. Med maskelag, objekter, retusjering eller maling skrives filen med 8 bit.</value>
+  </data>
 </root>

@@ -11682,4 +11682,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Pokazuje zdjęcie w proporcjach ustawionych w aparacie, na przykład 3:2, 16:9 lub 1:1. Plik RAW i tak zawiera cały sensor; po wyłączeniu znów jest widoczny. Najlepiej zdecydować od razu na początku: późniejsza zmiana przesuwa już ustawione maski i wstawione obiekty.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Głębia bitowa</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 bitów</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 bitów</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 bitów jest dostępne dla plików RAW. Przy warstwach masek, obiektach, retuszu lub malowaniu plik jest zapisywany w 8 bitach.</value>
+  </data>
 </root>

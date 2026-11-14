@@ -11660,4 +11660,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Zeigt das Bild im Seitenverhältnis, das an der Kamera eingestellt war, etwa 3:2, 16:9 oder 1:1. Die RAW-Datei enthält trotzdem den ganzen Sensor; ausgeschaltet ist er wieder zu sehen. Am besten gleich zu Beginn entscheiden, schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>Farbtiefe</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8 Bit</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16 Bit</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16 Bit gibt es für RAW-Dateien. Mit Maskenebenen, Objekten, Retusche oder Malerei entsteht die Datei mit 8 Bit.</value>
+  </data>
 </root>

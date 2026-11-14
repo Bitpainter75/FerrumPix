@@ -12,6 +12,10 @@
         Public Property BaseName As String
         Public Property Format As String
         Public Property JpgQuality As Integer
+        ''' <summary>Farbtiefe der Datei, 8 oder 16 Bit je Kanal. 16 nur, wenn der Dialog die Wahl
+        ''' angeboten hat (Format und Quelle geben es her); ImageProcessor.SaveImage schreibt sie
+        ''' auch dann nur, wenn die Kette ein tiefes Bild bis ans Ende gebracht hat.</summary>
+        Public Property BitDepth As Integer = 8
         ''' <summary>Nur beim Konvertieren nach JPEG XL: unbearbeitete JPEG verlustfrei umpacken,
         ''' statt sie mit der Qualitaet oben neu zu kodieren.</summary>
         Public Property LosslessJpegToJxl As Boolean = False

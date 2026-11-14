@@ -166,6 +166,8 @@ Namespace ViewModels
         Public Property NamePattern As String = ""
         Public Property Format As String = "JPG"
         Public Property JpgQuality As Integer = 90
+        ''' Farbtiefe der Datei, 8 oder 16 Bit je Kanal (siehe SaveAsDialogResult.BitDepth).
+        Public Property BitDepth As Integer = 8
         Public Property Target As String = "Local"
         Public Property TargetFolder As String = ""
         Public Property CopyRating As Boolean = True
@@ -286,6 +288,8 @@ Namespace ViewModels
 
         Public Property Format As String = "JPG"
         Public Property JpgQuality As Integer = 90
+        ''' Farbtiefe der Datei, 8 oder 16 Bit je Kanal (siehe SaveAsDialogResult.BitDepth).
+        Public Property BitDepth As Integer = 8
 
         ''' <summary>Zielort für neue Dateien: "Local" (Ordner) oder "Immich" (Upload als neues Asset).</summary>
         Public Property Target As String = "Local"
@@ -347,6 +351,8 @@ Namespace ViewModels
         Public Property NamePattern As String = ""
         Public Property Format As String = "JPG"
         Public Property JpgQuality As Integer = 90
+        ''' Farbtiefe der Datei, 8 oder 16 Bit je Kanal (siehe SaveAsDialogResult.BitDepth).
+        Public Property BitDepth As Integer = 8
         Public Property Target As String = "Local"
         Public Property TargetFolder As String = ""
         Public Property CopyRating As Boolean = True

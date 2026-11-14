@@ -2,6 +2,10 @@
 
 ### Changes
 
+- Pictures from raw files can now be saved with 16 bit per channel as TIFF, PNG or JPEG XL. Save
+  as, export and the batch dialogs offer the bit depth when a raw file is among the pictures. With
+  masked layers, objects, retouching or painting the file is still written with 8 bit.
+
 - When deleting is refused because the pictures are outside the home folder, the message now says
   where this can be allowed in the settings.
 

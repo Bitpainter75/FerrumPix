@@ -11686,4 +11686,16 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>카메라에서 설정한 화면비(3:2, 16:9, 1:1 등)로 사진을 표시합니다. RAW 파일에는 그래도 센서 전체가 들어 있으며, 끄면 다시 보입니다. 처음에 정하는 것이 좋습니다. 나중에 바꾸면 이미 배치한 마스크와 삽입한 개체가 어긋납니다.</value>
   </data>
+  <data name="Farbtiefe_e082262e" xml:space="preserve">
+    <value>비트 심도</value>
+  </data>
+  <data name="8_Bit_0ebc7a78" xml:space="preserve">
+    <value>8비트</value>
+  </data>
+  <data name="16_Bit_8f2daba0" xml:space="preserve">
+    <value>16비트</value>
+  </data>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
+    <value>16비트는 RAW 파일에서 사용할 수 있습니다. 마스크 레이어, 개체, 리터치 또는 페인팅이 있으면 파일이 8비트로 저장됩니다.</value>
+  </data>
 </root>

@@ -58,6 +58,8 @@ Namespace ViewModels
         Public Property AppendNameToFileName As Boolean = True
         Public Property Format As String = "JPG"
         Public Property JpgQuality As Integer = 90
+        ''' Farbtiefe der Datei, 8 oder 16 Bit je Kanal (siehe SaveAsDialogResult.BitDepth).
+        Public Property BitDepth As Integer = 8
 
         ''' <summary>Zielort für neue Dateien: "Local" (Ordner) oder "Immich" (Upload als neues Asset).</summary>
         Public Property Target As String = "Local"
