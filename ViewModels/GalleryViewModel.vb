@@ -13511,8 +13511,14 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Try
                 For Each source In targets
-                    If Not FileOperationPolicy.CanDuplicate(source, _currentFolder) Then Continue For
-                    Await CopyOrMovePathAsync(source, _currentFolder, False, True)
+                    ' NEBEN DAS ORIGINAL, nicht in den gewaehlten Ordner. Mit einbezogenen
+                    ' Unterordnern (GalleryViewModelSubfolders) liegt ein Bild der Ansicht nicht
+                    ' mehr zwingend im gewaehlten Ordner; sein Duplikat landete sonst eine oder
+                    ' mehrere Ebenen weiter oben.
+                    Dim sourceFolder = IO.Path.GetDirectoryName(source.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+                    If String.IsNullOrEmpty(sourceFolder) Then sourceFolder = _currentFolder
+                    If Not FileOperationPolicy.CanDuplicate(source, sourceFolder) Then Continue For
+                    Await CopyOrMovePathAsync(source, sourceFolder, False, True)
                 Next
                 SyncFolderItems()
                 RefreshTree()

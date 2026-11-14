@@ -217,7 +217,18 @@ Namespace ViewModels
                 Dim counted As New List(Of String) From {folder}
                 If _includeSubfolders Then counted.AddRange(ListDescendantFolders(folder, Threading.CancellationToken.None))
                 For Each countedFolder In counted
-                    For Each file In Directory.EnumerateFiles(countedFolder)
+                    ' Je Ordner abgefangen, wie beim Laden und beim Abgleich: ein Unterordner, der
+                    ' sich nicht lesen laesst oder gerade verschwunden ist, fehlt in der Zaehlung,
+                    ' die Ordner nach ihm zaehlen weiter. Der Ordner selbst bleibt der Fehler der
+                    ' ganzen Zaehlung.
+                    Dim files As String()
+                    Try
+                        files = Directory.GetFiles(countedFolder)
+                    Catch ex As Exception When (TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is IOException) AndAlso
+                                               Not String.Equals(countedFolder, folder, PathIdentity.Comparison)
+                        Continue For
+                    End Try
+                    For Each file In files
                         If IsTrashedLocalPath(file) Then Continue For
                         If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For
                         listed.Add(file)
