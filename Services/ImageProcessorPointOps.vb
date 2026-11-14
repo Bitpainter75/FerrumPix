@@ -236,6 +236,10 @@ Namespace Services
             Dim chain = PerformanceTraceService.Measure("Pixel: build the point chain",
                                                         Function() BuildPointOpChain(adj, source, toneReference))
             If chain.IsIdentity Then Return source
+            ' Mit tiefem Bild (Ausgabe in 16 Bit) rechnet der Prozessor: nur dieser Durchlauf
+            ' fuehrt es mit, und die Karte legt keine Flaeche mit 16 Bit ganzzahlig an.
+            Dim deep = DeepOf(source)
+            If deep IsNot Nothing Then Return RunPointOpChainCore(source, chain, deep)
             Dim onGpu = TryRunPointOpChainOnGpu(source, chain)
             If onGpu IsNot Nothing Then Return onGpu
             Return RunPointOpChain(source, chain)
@@ -4038,6 +4042,17 @@ Namespace Services
         ' ── Der eine Durchlauf ───────────────────────────────────────────────────
 
         Private Shared Function RunPointOpChain(source As SKBitmap, chain As PointOpChain) As SKBitmap
+            Return RunPointOpChainCore(source, chain, Nothing)
+        End Function
+
+        ''' <summary>Der Durchlauf selbst. Mit <paramref name="deepSource"/> (dem tiefen Bild zu
+        ''' <paramref name="source"/>, ImageProcessorDeep.vb) kommen die Farbwerte jedes Bildpunkts
+        ''' aus dem tiefen Bild statt aus den Bytes, und das Ergebnis traegt sein tiefes Bild als
+        ''' Begleiter: dieselben Gleitkommawerte, einmal mit Dither auf 8 Bit und einmal auf 16 Bit
+        ''' gerundet. Alles, was am Bild GEMESSEN wird (oertliche Basis, Fuehrung des Farbmischers,
+        ''' Deckung), liest weiter das 8-Bit-Bild, wie in der Vorschau.</summary>
+        Private Shared Function RunPointOpChainCore(source As SKBitmap, chain As PointOpChain,
+                                                    deepSource As SKBitmap) As SKBitmap
             Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing, guideBuf As Byte() = Nothing
             Dim stride, ri, gi, bi, ai As Integer
             Dim sLen = 0, dstLen = 0
@@ -4063,6 +4078,19 @@ Namespace Services
             dstLen = width * source.Height * 4
             dstBuf = ArrayPool(Of Byte).Shared.Rent(dstLen)
             Dim dstStride = width * 4
+
+            ' Das tiefe Bild laeuft zeilenweise mit: gelesen aus dem Begleiter der Quelle,
+            ' geschrieben in den des Ergebnisses. Passt der Begleiter nicht, rechnet der Durchlauf
+            ' wie ohne ihn, und das Ergebnis hat dann keinen.
+            Dim deepResult As SKBitmap = Nothing
+            Dim deepSourcePixels = IntPtr.Zero, deepResultPixels = IntPtr.Zero
+            If deepSource IsNot Nothing AndAlso deepSource.ColorType = DeepColorType AndAlso
+               deepSource.Width = width AndAlso deepSource.Height = source.Height Then
+                deepSourcePixels = deepSource.GetPixels()
+                If deepSourcePixels <> IntPtr.Zero Then deepResult = NewDeepBitmap(width, source.Height, source.AlphaType)
+                If deepResult IsNot Nothing Then deepResultPixels = deepResult.GetPixels()
+            End If
+            Dim deepRowLength = width * 4
 
             Dim m = chain.ColorMatrix
             Dim wbm = chain.WhiteBalanceMatrix
@@ -4138,6 +4166,13 @@ Namespace Services
                     Dim rowOffset = y * stride
                     Dim dstRow = y * dstStride
                     Dim ditherRow = (y And 7) << 3
+                    ' Die Zeile des tiefen Bilds: jeder Bildpunkt liest seine vier Werte und
+                    ' schreibt sein Ergebnis an dieselbe Stelle.
+                    Dim deepRow As Short() = Nothing
+                    If deepResult IsNot Nothing Then
+                        deepRow = ArrayPool(Of Short).Shared.Rent(deepRowLength)
+                        ReadDeepRow(deepSource, deepSourcePixels, y, deepRow)
+                    End If
                     For x = 0 To width - 1
                         Dim o = rowOffset + x * 4
                         Dim d = dstRow + x * 4
@@ -4148,13 +4183,31 @@ Namespace Services
                         ' Premul-Zustand, der beim Ueberblenden als Farbsaum durchschlaegt.
                         If a = 0 Then
                             dstBuf(d) = 0 : dstBuf(d + 1) = 0 : dstBuf(d + 2) = 0 : dstBuf(d + 3) = 0
+                            If deepRow IsNot Nothing Then
+                                Dim q = x * 4
+                                deepRow(q) = 0S : deepRow(q + 1) = 0S : deepRow(q + 2) = 0S : deepRow(q + 3) = 0S
+                            End If
                             Continue For
                         End If
 
                         Dim rr As Single, gg As Single, bb As Single
                         ' Gewicht des Farbfelds, dessen Bereich die Vorschau zeigt; -1 ohne Anzeige.
                         Dim pointColorShown = -1.0
-                        If a = 255 OrElse Not srcPremul Then
+                        If deepRow IsNot Nothing Then
+                            ' Aus dem tiefen Bild, mit dessen eigener Deckung zurueckgerechnet.
+                            Dim q = x * 4
+                            Dim deepAlpha = deepRow(q + 3) And &HFFFF
+                            If deepAlpha = 65535 OrElse deepAlpha = 0 OrElse Not srcPremul Then
+                                rr = (deepRow(q) And &HFFFF) / 65535.0F
+                                gg = (deepRow(q + 1) And &HFFFF) / 65535.0F
+                                bb = (deepRow(q + 2) And &HFFFF) / 65535.0F
+                            Else
+                                Dim inv = 1.0F / deepAlpha
+                                rr = Math.Min(1.0F, (deepRow(q) And &HFFFF) * inv)
+                                gg = Math.Min(1.0F, (deepRow(q + 1) And &HFFFF) * inv)
+                                bb = Math.Min(1.0F, (deepRow(q + 2) And &HFFFF) * inv)
+                            End If
+                        ElseIf a = 255 OrElse Not srcPremul Then
                             ' Deckend, oder die Werte liegen ohnehin schon unvormultipliziert vor.
                             rr = srcBuf(o + ri) / 255.0F
                             gg = srcBuf(o + gi) / 255.0F
@@ -4498,6 +4551,16 @@ Namespace Services
                         Dim outG = QuantizeDithered(gg, dth)
                         Dim outB = QuantizeDithered(bb, dth)
 
+                        If deepRow IsNot Nothing Then
+                            ' Dieselben Werte ohne Dither auf 16 Bit, vormultipliziert wie das 8-Bit-Bild.
+                            Dim q = x * 4
+                            Dim cover = If(a <> 255 AndAlso srcPremul, a / 255.0F, 1.0F)
+                            deepRow(q) = QuantizeDeep(Clamp(rr, 0.0F, 1.0F) * cover)
+                            deepRow(q + 1) = QuantizeDeep(Clamp(gg, 0.0F, 1.0F) * cover)
+                            deepRow(q + 2) = QuantizeDeep(Clamp(bb, 0.0F, 1.0F) * cover)
+                            deepRow(q + 3) = ToDeepShort(a * 257)
+                        End If
+
                         ' Nur zurueck nach Premultipliziert, wenn die AUSGABE premultipliziert ist.
                         ' Bei einer Unpremul-Ausgabe bleiben die Werte die Farbe selbst.
                         If a <> 255 AndAlso srcPremul Then
@@ -4513,9 +4576,14 @@ Namespace Services
                         dstBuf(d + bi) = outB
                         dstBuf(d + ai) = a
                     Next
+                    If deepRow IsNot Nothing Then
+                        WriteDeepRow(deepResult, deepResultPixels, y, deepRow)
+                        ArrayPool(Of Short).Shared.Return(deepRow)
+                    End If
                 End Sub)
 
             Marshal.Copy(dstBuf, 0, result.GetPixels(), dstLen)
+            If deepResult IsNot Nothing Then AttachDeep(result, deepResult)
             Return result
             Finally
                 ReturnPooledBuffer(srcBuf)

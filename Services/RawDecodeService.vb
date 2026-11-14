@@ -2560,7 +2560,9 @@ Namespace Services
                                                       lens As LensDataService.Korrektur,
                                                       baseEv As Double, knee As Double, sliderEv As Double,
                                                       halfSize As Boolean,
-                                                      Optional modelDenoise As Double = -1) As SKBitmap
+                                                      Optional modelDenoise As Double = -1,
+                                                      Optional deep As Boolean = False) As SKBitmap
+            ' <deep>: statt des 8-Bit-Bilds das tiefe fuer die 16-Bit-Ausgabe (RawDecodeServiceDeep.vb).
             Dim bytes As Byte() = Nothing
             Dim width = 0, height = 0
             Dim normalization = 1.0
@@ -2589,11 +2591,19 @@ Namespace Services
                 If denoisedSource IsNot Nothing Then
                     Dim denoisedPin = GCHandle.Alloc(denoisedSource, GCHandleType.Pinned)
                     Try
+                        If deep Then
+                            Return BuildDeepFrom16Bit(denoisedPin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization,
+                                                      knee, sliderEv, ShadowSaturationForFile(path), toneMatrix)
+                        End If
                         Return BuildFrom16Bit(denoisedPin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization,
                                               knee, sliderEv, ShadowSaturationForFile(path), toneMatrix)
                     Finally
                         denoisedPin.Free()
                     End Try
+                End If
+                If deep Then
+                    Return BuildDeepFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
+                                              ShadowSaturationForFile(path), toneMatrix)
                 End If
                 Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
                                       ShadowSaturationForFile(path), toneMatrix)
@@ -4073,7 +4083,11 @@ Namespace Services
                                          Optional blackLevel As Double = BlackSubtraction,
                                          Optional knee As Double = 1.0,
                                          Optional shadowSaturation As Single() = Nothing,
-                                         Optional toneMatrix As Single() = Nothing)
+                                         Optional toneMatrix As Single() = Nothing,
+                                         Optional onDeepRow As Action(Of Integer, Short()) = Nothing)
+            ' <onDeepRow>: dieselbe Zeile VOR dem Dither, 16 Bit je Kanal nach der Gammatabelle, vier
+            ' Werte je Bildpunkt (Rot, Gruen, Blau, Alpha) fuer das tiefe Bild der 16-Bit-Ausgabe
+            ' (ImageProcessorDeep.vb). Das 8-Bit-Bild ist genau diese Zeile mit Dither.
             Dim thresholds = If(DitherEnabled, DitherThresholds, Enumerable.Repeat(32767, 64).ToArray())
             Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
             ' Tonstufe in ProPhoto (WideToneStage): die Kameramatrix nach linearem sRGB, schon durch
@@ -4160,6 +4174,7 @@ Namespace Services
                         ReDim ring(i)(width * 3 - 1) : ringRow(i) = -1
                     Next
                     Dim rowBuffer(width * 4 - 1) As Byte
+                    Dim deepRow As Short() = If(onDeepRow Is Nothing, Nothing, New Short(width * 4 - 1) {})
                     Dim FetchRow = Function(zy As Integer) As Short()
                                        Dim yy = Math.Min(Math.Max(zy, 0), height - 1)
                                        Dim slot = yy Mod ringSize
@@ -4356,9 +4371,16 @@ Namespace Services
                             rowBuffer(d + 1) = CByte((gamma(gg) * 255 + t) \ 65535)
                             rowBuffer(d + 2) = CByte((gamma(rr) * 255 + t) \ 65535)
                             rowBuffer(d + 3) = 255
+                            If deepRow IsNot Nothing Then
+                                deepRow(d) = ImageProcessor.ToDeepShort(gamma(rr))
+                                deepRow(d + 1) = ImageProcessor.ToDeepShort(gamma(gg))
+                                deepRow(d + 2) = ImageProcessor.ToDeepShort(gamma(bb))
+                                deepRow(d + 3) = -1S
+                            End If
                             d += 4
                         Next
                         onRow(y, rowBuffer)
+                        If deepRow IsNot Nothing Then onDeepRow(y, deepRow)
                     Next
                 End Sub)
         End Sub

@@ -58,6 +58,8 @@ Namespace Services
         Private Const EncSuccess As Integer = 0
         Private Const EncNeedMoreOutput As Integer = 2
         Private Const TypeUint8 As Integer = 2
+        ''' JXL_TYPE_UINT16, fuer ein tiefes Bild (ImageProcessorDeep.vb).
+        Private Const TypeUint16 As Integer = 3
 
         ''' <summary>Versatz der Felder in JxlBasicInfo, siehe JxlDecodeService. Gesetzt werden nur
         ''' diese; alles andere bleibt, wie JxlEncoderInitBasicInfo es vorgibt.</summary>
@@ -185,7 +187,10 @@ Namespace Services
             Dim width = bitmap.Width
             Dim height = bitmap.Height
             If width <= 0 OrElse height <= 0 Then Throw New InvalidOperationException("JPEG XL: leeres Bild")
-            If CLng(width) * CLng(height) * 4L > Integer.MaxValue Then Throw New InvalidOperationException("JPEG XL: Bild zu gross")
+            ' Ein tiefes Bild geht mit 16 Bit je Kanal hinein, in der Bytefolge des Rechners.
+            Dim deep = bitmap.ColorType = SKColorType.Rgba16161616
+            Dim sampleBytes = If(deep, 2, 1)
+            If CLng(width) * CLng(height) * 4L * sampleBytes > Integer.MaxValue Then Throw New InvalidOperationException("JPEG XL: Bild zu gross")
 
             Dim lossless = quality >= 100
             Dim pixels As IntPtr = IntPtr.Zero
@@ -196,16 +201,17 @@ Namespace Services
             Try
                 ' In unvormultipliziertes RGBA umrechnen lassen. Die Bitmaps der Pipeline tragen
                 ' keinen Farbraum, es wird also nur die Form gewandelt, nicht die Farbe.
-                pixels = Marshal.AllocHGlobal(width * height * 4)
-                Dim rgbaInfo = New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+                pixels = Marshal.AllocHGlobal(width * height * 4 * sampleBytes)
+                Dim rgbaInfo = New SKImageInfo(width, height, If(deep, SKColorType.Rgba16161616, SKColorType.Rgba8888),
+                                               SKAlphaType.Unpremul)
                 Using pixmap = bitmap.PeekPixels()
-                    If pixmap Is Nothing OrElse Not pixmap.ReadPixels(rgbaInfo, pixels, width * 4) Then
+                    If pixmap Is Nothing OrElse Not pixmap.ReadPixels(rgbaInfo, pixels, width * 4 * sampleBytes) Then
                         Throw New InvalidOperationException("JPEG XL: Bildpunkte nicht lesbar")
                     End If
                 End Using
-                Dim hasAlpha = HasTransparency(pixels, width, height)
+                Dim hasAlpha = HasTransparency(pixels, width, height, sampleBytes)
                 Dim channels = If(hasAlpha, 4, 3)
-                If Not hasAlpha Then DropAlphaInPlace(pixels, width, height)
+                If Not hasAlpha Then DropAlphaInPlace(pixels, width, height, sampleBytes)
 
                 enc = _create(IntPtr.Zero)
                 If enc = IntPtr.Zero Then Throw New InvalidOperationException("JPEG XL: Encoder nicht angelegt")
@@ -223,7 +229,7 @@ Namespace Services
                 _initBasicInfo(info)
                 Marshal.WriteInt32(info, InfoXsize, width)
                 Marshal.WriteInt32(info, InfoYsize, height)
-                Marshal.WriteInt32(info, InfoBits, 8)
+                Marshal.WriteInt32(info, InfoBits, 8 * sampleBytes)
                 Marshal.WriteInt32(info, InfoExponentBits, 0)
                 ' Verlustfrei muss im Farbraum der Bildpunkte gespeichert werden, sonst ist es nicht
                 ' mehr bitgenau; verlustbehaftet ist XYB die bessere Wahl.
@@ -231,7 +237,7 @@ Namespace Services
                 Marshal.WriteInt32(info, InfoOrientation, 1)
                 Marshal.WriteInt32(info, InfoColorChannels, 3)
                 Marshal.WriteInt32(info, InfoExtraChannels, If(hasAlpha, 1, 0))
-                Marshal.WriteInt32(info, InfoAlphaBits, If(hasAlpha, 8, 0))
+                Marshal.WriteInt32(info, InfoAlphaBits, If(hasAlpha, 8 * sampleBytes, 0))
                 Marshal.WriteInt32(info, InfoAlphaExponentBits, 0)
                 Check(_setBasicInfo(enc, info), "Kopfdaten")
 
@@ -258,8 +264,10 @@ Namespace Services
                     Check(_setDistance(settings, Math.Max(0.01F, DistanceForQuality(quality))), "Qualitaet")
                 End If
 
-                Dim format = New JxlPixelFormat With {.NumChannels = CUInt(channels), .DataType = TypeUint8, .Endianness = 0, .Align = UIntPtr.Zero}
-                Check(_addImageFrame(settings, format, pixels, CType(CULng(width) * CULng(height) * CULng(channels), UIntPtr)), "Bild")
+                Dim format = New JxlPixelFormat With {.NumChannels = CUInt(channels), .DataType = If(deep, TypeUint16, TypeUint8),
+                                                      .Endianness = 0, .Align = UIntPtr.Zero}
+                Check(_addImageFrame(settings, format, pixels,
+                                     CType(CULng(width) * CULng(height) * CULng(channels) * CULng(sampleBytes), UIntPtr)), "Bild")
                 _closeInput(enc)
                 WriteOutput(enc, output)
             Finally
@@ -362,13 +370,16 @@ Namespace Services
 
         ''' <summary>Hat das Bild eine Stelle, die nicht voll deckt? Zeilenweise, damit ein grosses
         ''' Bild nicht auf einmal in den verwalteten Speicher kopiert wird.</summary>
-        Private Shared Function HasTransparency(pixels As IntPtr, width As Integer, height As Integer) As Boolean
-            Dim rowBytes = width * 4
+        Private Shared Function HasTransparency(pixels As IntPtr, width As Integer, height As Integer,
+                                                Optional sampleBytes As Integer = 1) As Boolean
+            Dim pixelBytes = 4 * sampleBytes
+            Dim rowBytes = width * pixelBytes
             Dim row(rowBytes - 1) As Byte
             For y = 0 To height - 1
                 Marshal.Copy(pixels + y * rowBytes, row, 0, rowBytes)
-                For x = 3 To rowBytes - 1 Step 4
-                    If row(x) <> 255 Then Return True
+                ' Bei 16 Bit beide Bytes des Alphawerts: deckend sind sie beide 255.
+                For x = 3 * sampleBytes To rowBytes - 1 Step pixelBytes
+                    If row(x) <> 255 OrElse row(x + sampleBytes - 1) <> 255 Then Return True
                 Next
             Next
             Return False
@@ -376,19 +387,20 @@ Namespace Services
 
         ''' <summary>RGBA zu RGB an Ort und Stelle. Das Ziel liegt nie hinter der Quelle, deshalb
         ''' ueberschreibt der Umbau nichts, was noch gelesen wird.</summary>
-        Private Shared Sub DropAlphaInPlace(pixels As IntPtr, width As Integer, height As Integer)
-            Dim sourceRow(width * 4 - 1) As Byte
-            Dim targetRow(width * 3 - 1) As Byte
+        Private Shared Sub DropAlphaInPlace(pixels As IntPtr, width As Integer, height As Integer,
+                                            Optional sampleBytes As Integer = 1)
+            Dim pixelBytes = 4 * sampleBytes
+            Dim colorBytes = 3 * sampleBytes
+            Dim sourceRow(width * pixelBytes - 1) As Byte
+            Dim targetRow(width * colorBytes - 1) As Byte
             For y = 0 To height - 1
-                Marshal.Copy(pixels + y * width * 4, sourceRow, 0, sourceRow.Length)
+                Marshal.Copy(pixels + y * width * pixelBytes, sourceRow, 0, sourceRow.Length)
                 Dim t = 0
-                For s = 0 To sourceRow.Length - 1 Step 4
-                    targetRow(t) = sourceRow(s)
-                    targetRow(t + 1) = sourceRow(s + 1)
-                    targetRow(t + 2) = sourceRow(s + 2)
-                    t += 3
+                For s = 0 To sourceRow.Length - 1 Step pixelBytes
+                    Array.Copy(sourceRow, s, targetRow, t, colorBytes)
+                    t += colorBytes
                 Next
-                Marshal.Copy(targetRow, 0, pixels + y * width * 3, targetRow.Length)
+                Marshal.Copy(targetRow, 0, pixels + y * width * colorBytes, targetRow.Length)
             Next
         End Sub
 

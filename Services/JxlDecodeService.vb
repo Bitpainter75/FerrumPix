@@ -712,11 +712,13 @@ Namespace Services
         ''' 8 Bit und einem Einzelbild. Traegt die vorhandene Datei mehr, also hoehere Bittiefe,
         ''' Gleitkomma (HDR) oder eine Animation, ginge das still verloren. Was sich nicht lesen
         ''' laesst, gilt als nicht ersetzbar.</summary>
-        Public Shared Function CanReplaceExisting(path As String) As Boolean
+        Public Shared Function CanReplaceExisting(path As String, Optional writesDeep As Boolean = False) As Boolean
+            ' <writesDeep>: das neue Bild geht mit 16 Bit hinein; dann darf auch eine vorhandene
+            ' Datei mit 16 Bit weichen.
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return True
             Dim fields = TryReadBasicFields(path)
             If fields Is Nothing Then Return False
-            Return fields.BitsPerSample <= 8 AndAlso fields.ExponentBits = 0 AndAlso Not fields.HasAnimation
+            Return fields.BitsPerSample <= If(writesDeep, 16, 8) AndAlso fields.ExponentBits = 0 AndAlso Not fields.HasAnimation
         End Function
 
         ''' <summary>Was die Kopfdaten ueber eine Datei sagen.</summary>

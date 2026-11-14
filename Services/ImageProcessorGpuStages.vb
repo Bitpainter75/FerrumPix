@@ -214,7 +214,14 @@ Namespace Services
         Private Shared Function RunDetailStage(session As GpuDetailSession, processed As SKBitmap, ByRef owned As Boolean,
                                                measureName As String,
                                                gpu As Func(Of GRContext, SKImage, SKSurface),
-                                               cpu As Func(Of SKBitmap, SKBitmap)) As SKBitmap
+                                               cpu As Func(Of SKBitmap, SKBitmap),
+                                               Optional deepStage As Func(Of SKBitmap, SKBitmap) = Nothing) As SKBitmap
+            ' <deepStage>: dieselbe Stufe fuer das tiefe Bild der 16-Bit-Ausgabe
+            ' (ImageProcessorDeepStages.vb). Haengt eines an der Quelle und liefert die Stufe ein
+            ' Ergebnis, entsteht das 8-Bit-Bild daraus mit Dither statt aus einem zweiten Lauf.
+            ' Ohne tiefes Ergebnis laeuft die Stufe wie gewohnt, und das tiefe Bild endet hier.
+            Dim fromDeep = RunDeepStage(processed, measureName, deepStage)
+            If fromDeep IsNot Nothing Then Return ReplaceBitmapOwned(processed, fromDeep, owned)
             If session IsNot Nothing AndAlso gpu IsNot Nothing Then
                 Dim done = PerformanceTraceService.Measure(measureName & " (Grafikkarte)",
                                                            Function() session.TryApply(processed, gpu))
