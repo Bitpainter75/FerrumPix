@@ -1,3 +1,10 @@
+## Unreleased
+
+### Fixes
+
+- When a video shows no picture or gets no thumbnail, the diagnostic log now says what the video
+  player reported as the reason, such as a missing decoder.
+
 ## 0.9.83
 
 ### Changes
