@@ -44,36 +44,72 @@ Namespace Services
         '
         ' Deshalb zwei Regeln:
         '
-        ' 1. AUFEINANDERFOLGENDE BEWEGUNGEN WERDEN EINE. Steht schon eine Bewegung am Ende der
-        '    Schlange, ersetzt die neue sie: gezaehlt wird, wo die Maus JETZT ist. Mausraddrehungen
-        '    werden ebenso zusammengelegt, ihre Betraege addiert. Alles andere (Taste gedrueckt und
-        '    losgelassen, Tastatur) bleibt einzeln und in seiner Reihenfolge, auch gegenueber den
-        '    Bewegungen davor und danach.
+        ' 1. BEWEGUNGEN OHNE GEDRUECKTE TASTE WERDEN EINE. Steht schon eine am Ende der Schlange,
+        '    ersetzt die neue sie: gezaehlt wird, wo die Maus JETZT ist. Alles andere (ein Zug mit
+        '    gedrueckter Taste, Mausrad, Taste gedrueckt und losgelassen, Tastatur) bleibt einzeln
+        '    und in seiner Reihenfolge, auch gegenueber den Bewegungen davor und danach.
+        '
+        '    EIN ZUG MIT GEDRUECKTER TASTE BEHAELT JEDEN PUNKT. Die Anwendung wertet jede
+        '    Mausbewegung einzeln aus und fragt keine Zwischenpunkte ab; zur letzten Stelle
+        '    zusammengelegt wurde aus einem gemalten Bogen ein Vieleck (Nutzerbefund). Die
+        '    wartenden Punkte eines Zugs gehen deshalb wie beim Mausrad in EINEM Zug durch, ohne
+        '    dazwischen zu zeichnen. Erst wenn sich sehr viele angesammelt haben, wird
+        '    gleichmaessig ausgeduennt (MaxDragBurst).
         '
         ' 2. DIE NAECHSTE BEWEGUNG WARTET AUF DAS BILD DER VORIGEN. Erst wenn die Abholung das
         '    Ergebnis mitgenommen hat, kommt die naechste an die Reihe; was inzwischen eintrifft,
         '    faellt nach Regel 1 zusammen. Die Anwendung zeichnet so nur, was der Browser auch zu
         '    sehen bekommt. Eine Frist haelt die Schlange in Gang, falls kein Bild entsteht.
         '
-        ' Der Preis: steht die Anwendung im Stau, wird ein Pinselstrich grober, weil Punkte
-        ' dazwischen fehlen. Kommt sie nach, faellt nichts zusammen.
+        ' 3. DAS MAUSRAD WARTET EBENSO, ABER JEDE DREHUNG KOMMT AN. Zusammenzaehlen wie bei der
+        '    Bewegung geht hier nicht: viele Stellen der Anwendung werten je Ereignis nur die
+        '    RICHTUNG aus (ein Schritt Zoom, ein Schritt am Regler, ein Schritt Pinselgroesse), eine
+        '    Summe waere dort ein einziger Schritt, und der Rest ginge verloren. Was sich hinter
+        '    der Sperre gesammelt hat, wird deshalb als einzelne Ereignisse in EINEM Zug
+        '    verarbeitet, ohne dazwischen zu zeichnen, und danach kommt ein Bild. Ohne das bekam
+        '    jede Raste ihr eigenes Bild, eines nach dem anderen (Nutzerbefund).
+        '
+        ' Der Preis bei einem Zug: jeder Punkt kostet die Anwendung ihre Arbeit je Mausbewegung,
+        ' auch wenn dazwischen kein Bild entsteht. Ist die schwer (eine Ebene, die bei jeder
+        ' Bewegung neu gerechnet wird), haelt das Ausduennen den Rueckstand in Grenzen.
         ' ------------------------------------------------------------------------------------
 
         Private Enum InputKind
             Other
+            ''' <summary>Mausbewegung ohne gedrueckte Taste.</summary>
             Move
+            ''' <summary>Mausbewegung mit gedrueckter Taste: ein Zug.</summary>
+            Drag
             Wheel
         End Enum
 
         Private NotInheritable Class PendingInput
             Public Kind As InputKind
             Public Message As JsonElement
-            Public WheelX As Double
-            Public WheelY As Double
         End Class
 
-        ''' <summary>So lange wartet eine Mausbewegung hoechstens auf das Bild der vorigen.</summary>
+        ''' <summary>So lange wartet eine Mausbewegung oder Raddrehung hoechstens auf das Bild der
+        ''' vorigen.</summary>
         Private Const MoveFrameTimeoutMilliseconds As Long = 250
+
+        ''' <summary>So viele Raddrehungen gehen hoechstens in einem Zug durch. Der Oberflaechenfaden
+        ''' soll auch bei einem festgehaltenen Rad wieder zum Zeichnen kommen.</summary>
+        Private Const MaxWheelBurst As Integer = 40
+
+        ''' <summary>So viele Punkte eines Zugs gehen hoechstens in einem Zug durch. Hat sich mehr
+        ''' angesammelt, wird gleichmaessig ausgeduennt, und der letzte Punkt bleibt immer dabei.
+        ''' Die Grenze ist weit: im gewoehnlichen Betrieb entscheidet die Zeit darunter.</summary>
+        Private Const MaxDragBurst As Integer = 512
+
+        ''' <summary>So lange darf ein Zug die Anwendung in einem Durchgang beschaeftigen. Ist die
+        ''' Arbeit je Punkt leicht (ein Pinseltupfer), gehen in der Zeit alle wartenden Punkte
+        ''' durch, und der Strich bleibt rund. Ist sie schwer (eine Ebene, die bei jeder Bewegung
+        ''' neu gerechnet wird), ist die Zeit nach wenigen Punkten um; dann geht es gleich zum
+        ''' letzten, und die Anwendung rechnet nicht den ganzen Weg nach.</summary>
+        Private Const DragBudgetMilliseconds As Long = 30
+
+        ''' <summary>Die Nachfrist fuer den Rest eines Zugs, wenn die Zeit oben um ist.</summary>
+        Private Const DragOverrunMilliseconds As Double = 40
 
         Private Shared ReadOnly InputQueue As New List(Of PendingInput)()
         Private Shared ReadOnly InputLock As New Object()
@@ -87,7 +123,8 @@ Namespace Services
             If ReadString(message, "t") = "m" Then
                 Select Case ReadString(message, "e")
                     Case "move"
-                        kind = InputKind.Move
+                        Dim held = CType(CInt(ReadNumber(message, "mods", 0)), RawInputModifiers) And MouseButtonMask
+                        kind = If(held = RawInputModifiers.None, InputKind.Move, InputKind.Drag)
                     Case "wheel"
                         kind = InputKind.Wheel
                 End Select
@@ -97,14 +134,8 @@ Namespace Services
                 Dim last = If(InputQueue.Count > 0, InputQueue(InputQueue.Count - 1), Nothing)
                 If kind = InputKind.Move AndAlso last IsNot Nothing AndAlso last.Kind = InputKind.Move Then
                     last.Message = message
-                ElseIf kind = InputKind.Wheel AndAlso last IsNot Nothing AndAlso last.Kind = InputKind.Wheel Then
-                    last.WheelX += ReadNumber(message, "dx", 0)
-                    last.WheelY += ReadNumber(message, "dy", 0)
-                    last.Message = message
                 Else
-                    InputQueue.Add(New PendingInput With {
-                        .Kind = kind, .Message = message,
-                        .WheelX = ReadNumber(message, "dx", 0), .WheelY = ReadNumber(message, "dy", 0)})
+                    InputQueue.Add(New PendingInput With {.Kind = kind, .Message = message})
                 End If
             End SyncLock
             KickInput()
@@ -123,29 +154,77 @@ Namespace Services
         End Sub
 
         ''' <summary>Verarbeitet EINE Eingabe und stellt sich fuer die naechste wieder an. Eine je
-        ''' Durchgang, damit zwischen zwei Eingaben gezeichnet und abgeholt werden kann.</summary>
+        ''' Durchgang, damit zwischen zwei Eingaben gezeichnet und abgeholt werden kann. Die
+        ''' Ausnahme sind Raddrehungen, die hintereinander warten: sie gehen in einem Zug durch.</summary>
         Private Shared Sub DrainInput()
-            Dim item As PendingInput
+            Dim batch As New List(Of PendingInput)()
             SyncLock InputLock
                 _inputDrainPosted = False
                 If InputQueue.Count = 0 Then Return
-                item = InputQueue(0)
-                If item.Kind = InputKind.Move AndAlso _awaitingFrame AndAlso
+                Dim first = InputQueue(0)
+                If first.Kind <> InputKind.Other AndAlso _awaitingFrame AndAlso
                    Environment.TickCount64 - _awaitingFrameSince < MoveFrameTimeoutMilliseconds Then
-                    ' Das Bild der vorigen Bewegung ist noch nicht abgeholt. Die Abholung stoesst
-                    ' wieder an; bis dahin faellt alles Neue mit dieser Bewegung zusammen.
+                    ' Das Bild der vorigen Bewegung oder Drehung ist noch nicht abgeholt. Die
+                    ' Abholung stoesst wieder an; bis dahin sammelt sich hier, was dazukommt.
                     Return
                 End If
                 InputQueue.RemoveAt(0)
+                batch.Add(first)
+                If first.Kind = InputKind.Wheel Then
+                    While batch.Count < MaxWheelBurst AndAlso InputQueue.Count > 0 AndAlso InputQueue(0).Kind = InputKind.Wheel
+                        batch.Add(InputQueue(0))
+                        InputQueue.RemoveAt(0)
+                    End While
+                ElseIf first.Kind = InputKind.Drag Then
+                    ' Der ganze wartende Zug, Punkt fuer Punkt.
+                    While InputQueue.Count > 0 AndAlso InputQueue(0).Kind = InputKind.Drag
+                        batch.Add(InputQueue(0))
+                        InputQueue.RemoveAt(0)
+                    End While
+                End If
             End SyncLock
+            If batch.Count > MaxDragBurst AndAlso batch(0).Kind = InputKind.Drag Then batch = ThinOut(batch, MaxDragBurst)
 
-            If item.Kind = InputKind.Move Then
+            If batch(0).Kind <> InputKind.Other Then
                 _awaitingFrame = True
                 _awaitingFrameSince = Environment.TickCount64
             End If
-            HandleMessage(item.Message, item)
+            Dim clock = Diagnostics.Stopwatch.StartNew()
+            Dim index = 0
+            While index < batch.Count
+                HandleMessage(batch(index).Message)
+                index += 1
+                ' Ein Zug, der die Anwendung zu lange beschaeftigt. Was noch wartet, wird
+                ' GLEICHMAESSIG ausgeduennt: so viele Punkte, wie bei den gemessenen Kosten je
+                ' Punkt in die Nachfrist passen, in gleichen Abstaenden ueber den Rest verteilt,
+                ' der letzte immer dabei. Gleich zum letzten zu springen liess von einem Bogen
+                ' zwei, drei Punkte am Anfang und das Ende uebrig.
+                If batch(0).Kind = InputKind.Drag AndAlso batch.Count - index > 2 AndAlso
+                   clock.ElapsedMilliseconds >= DragBudgetMilliseconds Then
+                    Dim costPerPoint = clock.Elapsed.TotalMilliseconds / index
+                    Dim affordable = Math.Max(2, CInt(Math.Floor(DragOverrunMilliseconds / Math.Max(costPerPoint, 0.01))))
+                    Dim rest = ThinOut(batch.GetRange(index, batch.Count - index), affordable)
+                    For Each item In rest
+                        HandleMessage(item.Message)
+                    Next
+                    Exit While
+                End If
+            End While
             KickInput()
+            ' Nicht auf den naechsten Takt warten: was die Eingabe bewirkt hat, soll gleich zu sehen sein.
+            If batch(0).Kind <> InputKind.Other Then RequestFrameNow()
         End Sub
+
+        ''' <summary>Duennt eine Folge gleichmaessig auf <paramref name="count"/> Eintraege aus. Der
+        ''' erste und der letzte bleiben, dazwischen faellt in gleichen Abstaenden weg.</summary>
+        Friend Shared Function ThinOut(Of T)(items As List(Of T), count As Integer) As List(Of T)
+            If items.Count <= count OrElse count < 2 Then Return items
+            Dim result As New List(Of T)(count)
+            For index = 0 To count - 1
+                result.Add(items(CInt(Math.Round(index * (items.Count - 1) / CDbl(count - 1)))))
+            Next
+            Return result
+        End Function
 
         ''' <summary>Die Abholung hat die Bilder mitgenommen (oder es gab nichts Neues): die naechste
         ''' Mausbewegung darf kommen.</summary>
@@ -161,13 +240,13 @@ Namespace Services
             _awaitingFrame = False
         End Sub
 
-        Private Shared Sub HandleMessage(message As JsonElement, Optional input As PendingInput = Nothing)
+        Private Shared Sub HandleMessage(message As JsonElement)
             Try
                 Select Case ReadString(message, "t")
                     Case "resize"
                         ApplyViewport(message)
                     Case "m"
-                        HandlePointer(message, input)
+                        HandlePointer(message)
                     Case "k"
                         HandleKey(message)
                 End Select
@@ -176,7 +255,7 @@ Namespace Services
             End Try
         End Sub
 
-        Private Shared Sub HandlePointer(message As JsonElement, Optional input As PendingInput = Nothing)
+        Private Shared Sub HandlePointer(message As JsonElement)
             Dim x = ReadNumber(message, "x", 0)
             Dim y = ReadNumber(message, "y", 0)
             Dim modifiers = CType(CInt(ReadNumber(message, "mods", 0)), RawInputModifiers)
@@ -196,11 +275,8 @@ Namespace Services
                     InvokeHeadless(win, "MouseUp", local, ToMouseButton(CInt(ReadNumber(message, "b", 0))), modifiers)
                     If (modifiers And MouseButtonMask) = RawInputModifiers.None Then _pointerOwner = Nothing
                 Case "wheel"
-                    ' Zusammengelegte Drehungen tragen ihre Summe in der Schlange, nicht in der Nachricht.
-                    Dim wheel = If(input IsNot Nothing,
-                                   New Vector(input.WheelX, input.WheelY),
-                                   New Vector(ReadNumber(message, "dx", 0), ReadNumber(message, "dy", 0)))
-                    InvokeHeadless(win, "MouseWheel", local, wheel, modifiers)
+                    InvokeHeadless(win, "MouseWheel", local,
+                                   New Vector(ReadNumber(message, "dx", 0), ReadNumber(message, "dy", 0)), modifiers)
             End Select
         End Sub
 

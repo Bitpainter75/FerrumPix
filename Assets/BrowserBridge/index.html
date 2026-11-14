@@ -132,7 +132,33 @@ function flushMove() {
     pendingMove = null;
   }
 }
+// EIN ZUG MIT GEDRUECKTER TASTE BEHAELT JEDEN PUNKT. Die Anwendung malt von Punkt zu Punkt; nur
+// die letzte Stelle je Bildwechsel ergaebe aus einem Bogen ein Vieleck. Der Browser fasst mehrere
+// Bewegungen zu einem Ereignis zusammen und haelt die einzelnen bereit (getCoalescedEvents), die
+// gehen hier alle hinaus. Ausgelassen wird nur, was weniger als einen Punkt vom letzten gesendeten
+// entfernt liegt: eine schnelle Maus meldet sich sonst tausendmal in der Sekunde.
+let lastDragX = NaN;
+let lastDragY = NaN;
+function sendDrag(event) {
+  const mods = modifiers(event);
+  const points = event.getCoalescedEvents ? event.getCoalescedEvents() : [];
+  const list = points.length > 0 ? points : [event];
+  for (let index = 0; index < list.length; index++) {
+    const x = list[index].clientX;
+    const y = list[index].clientY;
+    const isLast = index === list.length - 1;
+    if (!isLast && Math.abs(x - lastDragX) < 1 && Math.abs(y - lastDragY) < 1) continue;
+    lastDragX = x;
+    lastDragY = y;
+    send({ t: 'm', e: 'move', x, y, mods });
+  }
+}
 stage.addEventListener('pointermove', event => {
+  if (event.buttons) {
+    flushMove();
+    sendDrag(event);
+    return;
+  }
   const first = pendingMove === null;
   pendingMove = { t: 'm', e: 'move', x: event.clientX, y: event.clientY, mods: modifiers(event) };
   if (first) requestAnimationFrame(flushMove);
@@ -141,6 +167,8 @@ stage.addEventListener('pointerdown', event => {
   stage.focus();
   stage.setPointerCapture(event.pointerId);
   flushMove();
+  lastDragX = event.clientX;
+  lastDragY = event.clientY;
   send({ t: 'm', e: 'down', x: event.clientX, y: event.clientY, b: event.button, mods: modifiers(event) });
   event.preventDefault();
 });

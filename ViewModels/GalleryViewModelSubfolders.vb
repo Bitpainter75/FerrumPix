@@ -19,7 +19,7 @@ Namespace ViewModels
     ' Brotkrumen, Einfuegen und Aktualisieren gelten weiter dem gewaehlten Ordner, und die Kacheln
     ' seiner direkten Unterordner stehen weiter da. Dazu kommen nur die Bilder von weiter unten.
     ' Eine gespeicherte Suche ohne Bedingung konnte das schon, aber je Ordner eine, und wer viele
-    ' verschachtelte Ordner hat, braucht viele davon (Nutzerwunsch).
+    ' verschachtelte Ordner hat, braucht viele davon.
     '
     ' DREI STELLEN muessen dieselben Ordner sehen, sonst faellt ein Bild beim naechsten Abgleich
     ' wieder heraus: das Laden (hier), der Abgleich nach Aenderungen (BuildFolderSyncResult) und

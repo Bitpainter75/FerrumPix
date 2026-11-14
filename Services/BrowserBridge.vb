@@ -157,6 +157,7 @@ Namespace Services
             Dim options = ReadOptions(args, problem)
             If options Is Nothing Then Throw New InvalidOperationException(problem)
             IsActive = True
+            LimitImageSmoothing()
             Start(options)
         End Sub
 

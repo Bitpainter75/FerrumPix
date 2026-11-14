@@ -29,9 +29,10 @@ Namespace Services
     ' Anwendung gezeichnet hat - fuer eine Bildbearbeitung ist das der Punkt des Ganzen.
     Partial Public NotInheritable Class BrowserBridge
 
-        ''' <summary>Abstand der Abholung in Millisekunden, also hoechstens rund dreissig Bilder je
-        ''' Sekunde.</summary>
-        Private Const FrameIntervalMilliseconds As Integer = 33
+        ''' <summary>Abstand der Abholung in Millisekunden, also hoechstens rund sechzig Bilder je
+        ''' Sekunde. Kostet im Leerlauf fast nichts: hat die Anwendung nichts neu gezeichnet,
+        ''' endet ein Durchgang nach einem Vergleich zweier Verweise.</summary>
+        Private Const FrameIntervalMilliseconds As Integer = 16
 
         ''' <summary>So lange muss ein Fenster stillstehen, bevor der verlustfreie Nachzug kommt.</summary>
         Private Const LosslessDelayMilliseconds As Long = 300
@@ -113,6 +114,69 @@ Namespace Services
             _framePump.Start()
         End Sub
 
+        ' ------------------------------------------------------------------------------------
+        ' Die Glaettung beim Zeichnen von Bildern.
+        '
+        ' IM BROWSER ZEICHNET DER PROZESSOR, nicht die Grafikkarte, und dort kostet die Glaettung
+        ' etwas ganz anderes. Gemessen an einem Fenster von 5,4 Megapixeln, je Bild der
+        ' Oberflaeche: ein Bild in Anzeigegroesse 44 ms, gleich mit welcher Stufe. Ein GROESSERES
+        ' Bild verkleinert: ohne oder mit einfacher Glaettung 52 bis 59 ms, mit mittlerer oder
+        ' hoher rund 650 ms. Editor und Betrachter verlangen die hohe, und der Anzeigefaden stand
+        ' damit je Bild 200 bis 300 ms: beim Malen kamen drei bis neun Bilder in der Sekunde an
+        ' (Nutzerbefund, im Diagnoseprotokoll als "Anzeigefaden blockiert" ohne offenen Messpunkt).
+        '
+        ' Deshalb gilt im Browser hoechstens die einfache Stufe. Der Preis: stark verkleinerte
+        ' Bilder sind etwas weniger sauber gezeichnet. Die Bildrechnung selbst, das Speichern und
+        ' der Export sind nicht betroffen, es geht nur um das Zeichnen auf den Schirm.
+        '
+        ' Die Angabe steht in der Oberflaeche an den einzelnen Elementen. Beim Laden eines Elements
+        ' wird sie begrenzt; ein Fenster bekommt die einfache Stufe selbst, damit auch alles ohne
+        ' eigene Angabe sie erbt.
+        ' ------------------------------------------------------------------------------------
+        Private Shared _limitSmoothing As Boolean
+
+        Private Shared Sub LimitImageSmoothing()
+            If _limitSmoothing Then Return
+            _limitSmoothing = True
+            Control.LoadedEvent.AddClassHandler(Of Control)(Sub(control, e) ClampSmoothing(control, includeUnspecified:=False))
+        End Sub
+
+        Private Shared Sub ClampSmoothing(target As Visual, includeUnspecified As Boolean)
+            Dim mode = Avalonia.Media.RenderOptions.GetBitmapInterpolationMode(target)
+            If mode = Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality OrElse
+               mode = Avalonia.Media.Imaging.BitmapInterpolationMode.MediumQuality OrElse
+               (includeUnspecified AndAlso mode = Avalonia.Media.Imaging.BitmapInterpolationMode.Unspecified) Then
+                Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(target, Avalonia.Media.Imaging.BitmapInterpolationMode.LowQuality)
+            End If
+        End Sub
+
+        Private Shared _frameNowPosted As Boolean
+
+        ''' <summary>Zeichnet und holt ab, ohne auf die beiden Takte zu warten.
+        '''
+        ''' Nach einer Eingabe vergehen sonst bis zu 16 Millisekunden, bis die Anwendung zeichnet,
+        ''' und noch einmal so viel, bis die Abholung das Bild mitnimmt. Beim Malen ist das die
+        ''' Zeit, um die der Pinselkreis der Maus nachlaeuft: er ist ein Element der Szene und
+        ''' kommt nur ueber das Bild im Browser an.
+        '''
+        ''' Als eigene Aufgabe mit der Prioritaet der Abholung, nicht sofort: was die Eingabe an
+        ''' Anordnung und Zeichnen angestossen hat, steht darueber und laeuft vorher.</summary>
+        Private Shared Sub RequestFrameNow()
+            If _frameNowPosted OrElse _framePump Is Nothing Then Return
+            _frameNowPosted = True
+            Dispatcher.UIThread.Post(
+                Sub()
+                    _frameNowPosted = False
+                    If _framePump Is Nothing Then Return
+                    Try
+                        AvaloniaHeadlessPlatform.ForceRenderTimerTick()
+                    Catch ex As Exception
+                        DiagnosticLogService.LogException("BrowserBridge.Frame", ex)
+                    End Try
+                    OnFrameTick(Nothing, EventArgs.Empty)
+                End Sub, DispatcherPriority.Loaded)
+        End Sub
+
         Private Shared Sub StopFramePump()
             If _framePump Is Nothing Then Return
             _framePump.Stop()
@@ -180,6 +244,8 @@ Namespace Services
                     state.ActivationOrder = _activationCounter
                 End Sub
             If _scale <> 1.0 Then InvokeHeadless(win, "SetRenderScaling", _scale)
+            ' Was im Fenster keine eigene Angabe traegt, erbt die des Fensters.
+            If _limitSmoothing Then ClampSmoothing(win, includeUnspecified:=True)
             Return state
         End Function
 
@@ -504,7 +570,7 @@ Namespace Services
                                             If(job.Lossless, SKAlphaType.Premul, SKAlphaType.Opaque))
                 Using pixmap As New SKPixmap(info, handle.AddrOfPinnedObject(), job.Width * 4)
                     Using data = If(job.Lossless,
-                                    pixmap.Encode(New SKPngEncoderOptions(SKPngEncoderFilterFlags.Sub, 1)),
+                                    PngEncoder.Encode(pixmap, PngPurpose.Stored),
                                     pixmap.Encode(New SKJpegEncoderOptions(JpegQuality)))
                         Dim image = data.ToArray()
                         Dim message = New Byte(HeaderLength + image.Length - 1) {}

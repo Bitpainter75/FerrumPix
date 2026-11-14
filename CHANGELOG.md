@@ -79,9 +79,6 @@
   `--browser` itself always stays on the command line, and a start parameter wins over the
   variable of the same setting.
 
-- On some newer Linux systems FerrumPix ended right at startup, before a window appeared. It starts
-  there now.
-
 - When deleting is refused because the pictures are outside the home folder, the message now says
   where this can be allowed in the settings.
 
@@ -111,7 +108,6 @@
 - Auto is more careful with pictures taken at high ISO: it brightens them less and keeps more of
   the colour of the light, so the mood of a dim indoor scene stays and the noise stays down.
 
-### Fixes
 
 
 
