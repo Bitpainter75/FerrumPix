@@ -11691,7 +11691,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 ビット</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 ビットは RAW ファイルで利用できます。マスクレイヤー、オブジェクト、レタッチ、ペイントがある場合、ファイルは 8 ビットで書き出されます。</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 ビットは RAW ファイルで利用できます。レタッチ、ペイント、グループ化したオブジェクトがある場合、ファイルは 8 ビットで書き出されることがあります。</value>
   </data>
 </root>

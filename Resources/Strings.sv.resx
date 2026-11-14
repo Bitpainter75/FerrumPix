@@ -11691,7 +11691,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bitar</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 bitar finns för RAW-filer. Med masklager, objekt, retusch eller målning skrivs filen med 8 bitar.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 bitar finns för RAW-filer. Med retusch, målning eller grupperade objekt kan filen skrivas med 8 bitar.</value>
   </data>
 </root>

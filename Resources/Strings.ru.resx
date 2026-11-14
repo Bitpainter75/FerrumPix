@@ -11691,7 +11691,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 бит</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 бит доступно для файлов RAW. При слоях-масках, объектах, ретуши или рисовании файл записывается с 8 битами.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 бит доступно для файлов RAW. При ретуши, рисовании или сгруппированных объектах файл может быть записан с 8 битами.</value>
   </data>
 </root>

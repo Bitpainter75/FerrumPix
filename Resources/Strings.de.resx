@@ -11669,7 +11669,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 Bit</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 Bit gibt es für RAW-Dateien. Mit Maskenebenen, Objekten, Retusche oder Malerei entsteht die Datei mit 8 Bit.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 Bit gibt es für RAW-Dateien. Mit Retusche, Malerei oder gruppierten Objekten kann die Datei mit 8 Bit entstehen.</value>
   </data>
 </root>

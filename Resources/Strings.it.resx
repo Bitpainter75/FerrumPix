@@ -11651,7 +11651,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bit</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 bit è disponibile per i file RAW. Con livelli maschera, oggetti, ritocco o pittura il file viene scritto a 8 bit.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 bit è disponibile per i file RAW. Con ritocco, pittura o oggetti raggruppati il file può essere scritto a 8 bit.</value>
   </data>
 </root>

@@ -11691,7 +11691,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bittiä</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 bittiä on käytettävissä RAW-tiedostoille. Jos kuvassa on maskitasoja, objekteja, retusointia tai maalausta, tiedosto kirjoitetaan 8 bitillä.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 bittiä on käytettävissä RAW-tiedostoille. Jos kuvassa on retusointia, maalausta tai ryhmiteltyjä objekteja, tiedosto voidaan kirjoittaa 8 bitillä.</value>
   </data>
 </root>

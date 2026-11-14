@@ -206,6 +206,41 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Die Objekte der Buehne auf dem tiefen Bild, fuer den EINFACHEN Fall von
+        ''' ApplyAnnotationsCore: das Bild als Grund, alle Objekte in einem Zug auf dieselbe Flaeche
+        ''' gezeichnet. Das Zeichnen selbst (Formen, Text, Bilder, Effekte) rechnet Skia, hier auf
+        ''' einer Flaeche mit 16 Bit; was ein Objekt an Farbe mitbringt, ist dabei so fein wie seine
+        ''' Quelle, das Foto darunter bleibt tief.
+        '''
+        ''' Nothing, und damit kein tiefes Ergebnis, fuer die Faelle, die dort eigene 8-Bit-Zwischenbilder
+        ''' brauchen: ein ausgeblendeter Hintergrund, Korrekturebenen im Objektstapel und Gruppen, die
+        ''' als eigener Schritt gerechnet werden.</summary>
+        Private Shared Function ApplyAnnotationsDeep(deep As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            If deep Is Nothing OrElse adj Is Nothing OrElse adj.BackgroundHidden Then Return Nothing
+            If adj.Annotations Is Nothing OrElse adj.Annotations.Count = 0 Then Return Nothing
+            If adj.MaskedAdjustmentLayers IsNot Nothing AndAlso
+               adj.MaskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId)) Then
+                Return Nothing
+            End If
+            If HasRenderStepGroupMember(adj) Then Return Nothing
+            ' Vormultipliziert wie das 8-Bit-Bild dieser Stufe (CloneBitmapForAnnotationComposite).
+            Dim result = NewDeepBitmap(deep.Width, deep.Height, SKAlphaType.Premul)
+            If result Is Nothing Then Return Nothing
+            Try
+                Using canvas = New SKCanvas(result)
+                    Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
+                        canvas.DrawBitmap(deep, 0, 0, paint)
+                    End Using
+                    DrawAnnotationsOnCanvas(canvas, adj, deep.Width, deep.Height, 0, 0, deep.Width, deep.Height, adj.Annotations)
+                End Using
+                Return result
+            Catch ex As Exception
+                DiagnosticLogService.LogException("ImageProcessor.Deep", ex)
+                result.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Gibt <paramref name="copy"/>, einer Kopie von <paramref name="original"/>, eine
         ''' eigene Kopie von dessen tiefem Bild mit. Ohne tiefes Bild am Original geschieht nichts.</summary>
         Private Shared Sub CopyDeepTo(original As SKBitmap, copy As SKBitmap)

@@ -2841,7 +2841,15 @@ Namespace Services
 
         Private Shared Function ProcessBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed = ProcessBitmapBase(source, adj)
-            Return ReplaceBitmap(processed, ApplyAnnotations(processed, WithAnnotationSourceSpace(adj, source)))
+            Dim annotationAdj = WithAnnotationSourceSpace(adj, source)
+            Dim annotated = ApplyAnnotations(processed, annotationAdj)
+            ' Mit tiefem Bild (Ausgabe in 16 Bit) die Objekte auch darauf, soweit der einfache
+            ' Zeichenweg reicht (ApplyAnnotationsDeep); sonst endet das tiefe Bild hier.
+            If annotated IsNot Nothing AndAlso Not ReferenceEquals(annotated, processed) Then
+                Dim deep = DeepOf(processed)
+                If deep IsNot Nothing Then AttachDeep(annotated, ApplyAnnotationsDeep(deep, annotationAdj))
+            End If
+            Return ReplaceBitmap(processed, annotated)
         End Function
 
         ''' <summary>Stapel- und Export-Aufrufer bauen ihre Anpassungen frisch zusammen und kennen die
@@ -3803,10 +3811,12 @@ Namespace Services
                                                                      restoreTarget.Width, restoreTarget.Height, layer.Opacity, Nothing)
                         If restoreMask Is Nothing Then Continue For
                         Dim baselineForMix = restoreBaseline
-                        processed = ReplaceBitmapOwned(processed,
-                                                       PerformanceTraceService.Measure("Layers: restore original",
-                                                           Function() CompositeSelectionScoped(restoreTarget, baselineForMix, restoreMask)),
-                                                       owned)
+                        Dim restored = PerformanceTraceService.Measure("Layers: restore original",
+                                                           Function() CompositeSelectionScoped(restoreTarget, baselineForMix, restoreMask))
+                        ' Mit tiefem Bild (Ausgabe in 16 Bit) dieselbe Mischung fuer die Begleiter;
+                        ' traegt das Ursprungsbild keines, endet das tiefe Bild hier.
+                        AttachSelectionScopedDeep(restored, restoreTarget, baselineForMix, restoreMask)
+                        processed = ReplaceBitmapOwned(processed, restored, owned)
                     End Using
                     Continue For
                 End If
@@ -3886,8 +3896,12 @@ Namespace Services
                             If Not hasStroke AndAlso Not hasEffects Then
                                 If Not sessionTried Then
                                     Dim sessionSource = processed
-                                    session = PerformanceTraceService.Measure("Layers: start the GPU session",
-                                                                              Function() GpuDetailSession.TryCreate(sessionSource))
+                                    ' Mit tiefem Bild keine Sitzung auf der Karte: ein Bild, das oben
+                                    ' liegt, haette seinen Begleiter nicht bei sich.
+                                    If DeepOf(sessionSource) Is Nothing Then
+                                        session = PerformanceTraceService.Measure("Layers: start the GPU session",
+                                                                                  Function() GpuDetailSession.TryCreate(sessionSource))
+                                    End If
                                     sessionTried = True
                                 End If
                                 If session IsNot Nothing Then
@@ -3943,7 +3957,9 @@ Namespace Services
                             If Not ranOnGpu Then
                             processed = BringDetailSessionHome(session, processed, owned)
                             Dim scopeRect As SKRectI? = Nothing
-                            If owned AndAlso LayerAdjustmentsAreCropSafe(layerPixelAdjustments) Then
+                            ' Der Weg im Rechteck aendert processed AN ORT UND STELLE. Mit tiefem Bild
+                            ' bliebe dessen Begleiter dabei veraltet haengen, deshalb dann der ganze Weg.
+                            If owned AndAlso DeepOf(processed) Is Nothing AndAlso LayerAdjustmentsAreCropSafe(layerPixelAdjustments) Then
                                 scopeRect = TryGetMaskScopeRect(effectMask, processed.Width, processed.Height)
                             End If
 
@@ -3956,6 +3972,10 @@ Namespace Services
                                                                                  Function() ApplyPixelAdjustmentStages(layerInput, layerPixelAdjustments))
                                     Dim blended = PerformanceTraceService.Measure("Layers: blend through the mask",
                                                                                   Function() CompositeSelectionScoped(layerInput, adjusted, effectMask))
+                                    ' Die Kette der Ebene hat das tiefe Bild mitgerechnet; gemischt wird
+                                    ' es mit derselben Maske. Der Begleiter des Zwischenbilds geht mit ihm.
+                                    AttachSelectionScopedDeep(blended, layerInput, adjusted, effectMask)
+                                    DropDeep(adjusted)
                                     processed = ReplaceBitmapOwned(processed, blended, owned)
                                 End Using
                             End If
@@ -3971,12 +3991,14 @@ Namespace Services
                     End If
                     ' Schatten und Glühen liegen UNTER Füllung und Kontur, wie an einem Objekt.
                     If hasEffects AndAlso processed IsNot Nothing Then
-                        Dim withEffects = CompositeLayerEffects(processed, mask, layer)
+                        ' Effekte, Fuellung und Kontur zeichnen ueber Skia auf eine Kopie des Bildes;
+                        ' mit tiefem Bild laeuft dieselbe Stufe darauf mit (RunStepWithDeep).
+                        Dim withEffects = RunStepWithDeep(processed, Function(b) CompositeLayerEffects(b, mask, layer))
                         If withEffects IsNot Nothing Then processed = ReplaceBitmapOwned(processed, withEffects, owned)
                     End If
                     ' Sichtbare Füllung nur, wenn die Füllung NICHT bereits eine Anpassung abstuft.
                     If hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj Then
-                        Dim filled = CompositeVisibleFill(processed, mask, layer)
+                        Dim filled = RunStepWithDeep(processed, Function(b) CompositeVisibleFill(b, mask, layer))
                         If filled IsNot Nothing Then processed = ReplaceBitmapOwned(processed, filled, owned)
                     End If
                     ' Die Kontur liegt ueber Fuellung und Anpassung. Ihre Breite steht in Punkten der
@@ -3984,7 +4006,7 @@ Namespace Services
                     If hasStroke Then
                         Dim strokeScale = If(adj.SourceWidthPixels > 0, pipelineInputWidth / CSng(adj.SourceWidthPixels), 1.0F)
                         If processed IsNot Nothing Then
-                            Dim stroked = CompositeVisibleStroke(processed, mask, layer, strokeScale)
+                            Dim stroked = RunStepWithDeep(processed, Function(b) CompositeVisibleStroke(b, mask, layer, strokeScale))
                             If stroked IsNot Nothing Then processed = ReplaceBitmapOwned(processed, stroked, owned)
                         End If
                     End If

@@ -11695,7 +11695,7 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bit</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Maskenebenen__663efb49" xml:space="preserve">
-    <value>16 bit tersedia untuk file RAW. Dengan lapisan topeng, objek, retus, atau lukisan, file ditulis dengan 8 bit.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
+    <value>16 bit tersedia untuk file RAW. Dengan retus, lukisan, atau objek yang dikelompokkan, file dapat ditulis dengan 8 bit.</value>
   </data>
 </root>
