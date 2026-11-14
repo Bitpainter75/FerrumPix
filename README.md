@@ -220,6 +220,16 @@ Everything you can pass on the command line can also come from the environment, 
 env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=secret FerrumPix --browser
 ```
 
+If you installed FerrumPix from Flathub, it works the same way. What you would write after `FerrumPix` goes at the end of the Flatpak command, and settings from the environment are handed in with `--env`:
+
+```
+flatpak run io.github.bitpainter75.ferrumpix --browser
+```
+
+```
+flatpak run --env=FERRUMPIX_BROWSER_USER=anna --env=FERRUMPIX_BROWSER_PASSWORD=secret io.github.bitpainter75.ferrumpix --browser
+```
+
 | On the command line | In the environment | What it does |
 |---|---|---|
 | `--browser` | | shows FerrumPix in the browser instead of a window |
