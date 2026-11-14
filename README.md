@@ -29,6 +29,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine. If you switch it on, a map shows where your photos were taken.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
+- Use FerrumPix in a web browser: let it run on the computer where your photos are and work with it from the sofa.
 - Work in your own language: twenty-one are built in, and the symbol search finds shapes by their name in each of them.
 
 Your originals are never changed behind your back, and nothing at all is written until you save. Saving a RAW or a Photoshop file puts your edits in a small sidecar beside it, because those two are never written to; everything else is written the way you asked for it.
@@ -184,6 +185,51 @@ Because Nextcloud keeps your photos as files, more is possible here than on an I
 Local pictures can be uploaded by dragging them onto a Nextcloud entry, by pasting, or from the right-click menu; they go to the folder set in Settings and an existing name is numbered rather than overwritten. Keywords, favourites and album assignments are written back to the server; stars and colour labels stay local, as Nextcloud does not know them.
 
 FerrumPix signs in with your user name and an app password, which you create in Nextcloud under Settings, Security. Deleting on the server has to be enabled in Settings; deleted photos go to the Nextcloud trash, unless you also switch on *Delete for good*.
+
+## In the browser
+
+Sometimes the photos live on one computer and you would rather sit at another. Maybe they are on a small server in the hallway that has no screen at all, or on the big machine in the study while you are on the sofa with a laptop. For that, FerrumPix can show itself in a web browser instead of in a window.
+
+It is the same FerrumPix with everything it can do, gallery, viewer and editor. Nothing is installed on the device you sit at; a browser is enough. The pictures stay where they are, and all the work happens on the computer FerrumPix runs on.
+
+To try it on your own computer, start FerrumPix with `--browser`:
+
+```
+FerrumPix --browser
+```
+
+No window opens. FerrumPix tells you the address instead, `http://127.0.0.1:14500`, and when you open it, FerrumPix fills the browser tab. Close the tab and come back later, and everything is as you left it.
+
+If you want a sign-in in front of it, give it a password, and a user name if you like. The browser then asks for them before it shows anything:
+
+```
+FerrumPix --browser --browser-user=anna --browser-password=secret
+```
+
+To reach it from another device, such as a tablet or a laptop in the same network, one more thing is needed. FerrumPix does not encrypt the connection itself, and a password travelling through the network unprotected could be read by anyone listening. So it only lets other devices in through a reverse proxy that provides HTTPS, the kind of small web server many people already run in front of their home services. Tell FerrumPix that the proxy is there, and a password becomes mandatory:
+
+```
+FerrumPix --browser --browser-tls-proxy --browser-user=anna --browser-password=secret
+```
+
+If you start it for other devices without that, FerrumPix does not start and tells you why. That is on purpose: it is better to be told once than to find out later that your password was readable.
+
+Everything you can pass on the command line can also come from the environment, which is handy for a service or a container and keeps the password out of the list of running programs:
+
+```
+env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=secret FerrumPix --browser
+```
+
+| On the command line | In the environment | What it does |
+|---|---|---|
+| `--browser` | | shows FerrumPix in the browser instead of a window |
+| `--browser-bind=127.0.0.1:8080` | `FERRUMPIX_BROWSER_BIND` | the address and port to listen on |
+| `--browser-user=anna` | `FERRUMPIX_BROWSER_USER` | the user name for the sign-in |
+| `--browser-password=secret` | `FERRUMPIX_BROWSER_PASSWORD` | the password for the sign-in |
+| `--browser-tls-proxy` | `FERRUMPIX_BROWSER_TLS_PROXY=1` | a reverse proxy with HTTPS stands in front |
+| `--browser-proxy-address=192.168.1.2` | `FERRUMPIX_BROWSER_PROXY_ADDRESS` | where that proxy is, if it runs on a different computer |
+
+This is a first version, and a few things are still missing. Copy and paste stay inside FerrumPix and do not reach the clipboard of the device you sit at. Videos play without sound. Pictures cannot yet be uploaded from or downloaded to that device. And because the computer draws everything without the help of its graphics card in this mode, it feels a little less quick than the window does, mostly with very large browser windows.
 
 ## Settings
 
