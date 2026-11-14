@@ -7,6 +7,7 @@ Imports Avalonia
 Imports Avalonia.Controls
 Imports Avalonia.Headless
 Imports Avalonia.Input
+Imports Avalonia.Threading
 Imports Avalonia.VisualTree
 
 Namespace Services
@@ -32,13 +33,141 @@ Namespace Services
         Private Shared _pointerOwner As Window
         Private Shared _lastCursor As String
 
-        Private Shared Sub HandleMessage(message As JsonElement)
+        ' ------------------------------------------------------------------------------------
+        ' Die Warteschlange der Eingaben.
+        '
+        ' DER BROWSER SCHICKT SCHNELLER, ALS DIE ANWENDUNG ZEICHNET. Wer eine Ebene zieht, schickt
+        ' sechzig Mausbewegungen in der Sekunde, und jede loest in der Anwendung ein neues Bild
+        ' aus. Kommt sie nicht nach, stauen sich die Bewegungen. Der Reihe nach abgearbeitet
+        ' liefe der ganze Weg der Maus noch in Einzelbildern ab, lange nachdem die Taste
+        ' losgelassen ist (Nutzerbefund).
+        '
+        ' Deshalb zwei Regeln:
+        '
+        ' 1. AUFEINANDERFOLGENDE BEWEGUNGEN WERDEN EINE. Steht schon eine Bewegung am Ende der
+        '    Schlange, ersetzt die neue sie: gezaehlt wird, wo die Maus JETZT ist. Mausraddrehungen
+        '    werden ebenso zusammengelegt, ihre Betraege addiert. Alles andere (Taste gedrueckt und
+        '    losgelassen, Tastatur) bleibt einzeln und in seiner Reihenfolge, auch gegenueber den
+        '    Bewegungen davor und danach.
+        '
+        ' 2. DIE NAECHSTE BEWEGUNG WARTET AUF DAS BILD DER VORIGEN. Erst wenn die Abholung das
+        '    Ergebnis mitgenommen hat, kommt die naechste an die Reihe; was inzwischen eintrifft,
+        '    faellt nach Regel 1 zusammen. Die Anwendung zeichnet so nur, was der Browser auch zu
+        '    sehen bekommt. Eine Frist haelt die Schlange in Gang, falls kein Bild entsteht.
+        '
+        ' Der Preis: steht die Anwendung im Stau, wird ein Pinselstrich grober, weil Punkte
+        ' dazwischen fehlen. Kommt sie nach, faellt nichts zusammen.
+        ' ------------------------------------------------------------------------------------
+
+        Private Enum InputKind
+            Other
+            Move
+            Wheel
+        End Enum
+
+        Private NotInheritable Class PendingInput
+            Public Kind As InputKind
+            Public Message As JsonElement
+            Public WheelX As Double
+            Public WheelY As Double
+        End Class
+
+        ''' <summary>So lange wartet eine Mausbewegung hoechstens auf das Bild der vorigen.</summary>
+        Private Const MoveFrameTimeoutMilliseconds As Long = 250
+
+        Private Shared ReadOnly InputQueue As New List(Of PendingInput)()
+        Private Shared ReadOnly InputLock As New Object()
+        Private Shared _inputDrainPosted As Boolean
+        Private Shared _awaitingFrame As Boolean
+        Private Shared _awaitingFrameSince As Long
+
+        ''' <summary>Nimmt eine Nachricht des Browsers an. Von jedem Faden aus.</summary>
+        Private Shared Sub EnqueueInput(message As JsonElement)
+            Dim kind = InputKind.Other
+            If ReadString(message, "t") = "m" Then
+                Select Case ReadString(message, "e")
+                    Case "move"
+                        kind = InputKind.Move
+                    Case "wheel"
+                        kind = InputKind.Wheel
+                End Select
+            End If
+
+            SyncLock InputLock
+                Dim last = If(InputQueue.Count > 0, InputQueue(InputQueue.Count - 1), Nothing)
+                If kind = InputKind.Move AndAlso last IsNot Nothing AndAlso last.Kind = InputKind.Move Then
+                    last.Message = message
+                ElseIf kind = InputKind.Wheel AndAlso last IsNot Nothing AndAlso last.Kind = InputKind.Wheel Then
+                    last.WheelX += ReadNumber(message, "dx", 0)
+                    last.WheelY += ReadNumber(message, "dy", 0)
+                    last.Message = message
+                Else
+                    InputQueue.Add(New PendingInput With {
+                        .Kind = kind, .Message = message,
+                        .WheelX = ReadNumber(message, "dx", 0), .WheelY = ReadNumber(message, "dy", 0)})
+                End If
+            End SyncLock
+            KickInput()
+        End Sub
+
+        ''' <summary>Stoesst das Abarbeiten an, falls etwas wartet und noch nichts unterwegs ist.
+        ''' Auch von der Abholung der Bilder gerufen, die damit eine wartende Bewegung freigibt.</summary>
+        Private Shared Sub KickInput()
+            SyncLock InputLock
+                If _inputDrainPosted OrElse InputQueue.Count = 0 Then Return
+                _inputDrainPosted = True
+            End SyncLock
+            ' Input und nicht hoeher: Zeichnen und Abholen der Bilder liegen darueber und kommen
+            ' deshalb zwischen zwei Eingaben an die Reihe.
+            Dispatcher.UIThread.Post(AddressOf DrainInput, DispatcherPriority.Input)
+        End Sub
+
+        ''' <summary>Verarbeitet EINE Eingabe und stellt sich fuer die naechste wieder an. Eine je
+        ''' Durchgang, damit zwischen zwei Eingaben gezeichnet und abgeholt werden kann.</summary>
+        Private Shared Sub DrainInput()
+            Dim item As PendingInput
+            SyncLock InputLock
+                _inputDrainPosted = False
+                If InputQueue.Count = 0 Then Return
+                item = InputQueue(0)
+                If item.Kind = InputKind.Move AndAlso _awaitingFrame AndAlso
+                   Environment.TickCount64 - _awaitingFrameSince < MoveFrameTimeoutMilliseconds Then
+                    ' Das Bild der vorigen Bewegung ist noch nicht abgeholt. Die Abholung stoesst
+                    ' wieder an; bis dahin faellt alles Neue mit dieser Bewegung zusammen.
+                    Return
+                End If
+                InputQueue.RemoveAt(0)
+            End SyncLock
+
+            If item.Kind = InputKind.Move Then
+                _awaitingFrame = True
+                _awaitingFrameSince = Environment.TickCount64
+            End If
+            HandleMessage(item.Message, item)
+            KickInput()
+        End Sub
+
+        ''' <summary>Die Abholung hat die Bilder mitgenommen (oder es gab nichts Neues): die naechste
+        ''' Mausbewegung darf kommen.</summary>
+        Private Shared Sub ReleaseInputGate()
+            _awaitingFrame = False
+            KickInput()
+        End Sub
+
+        Private Shared Sub ClearInput()
+            SyncLock InputLock
+                InputQueue.Clear()
+            End SyncLock
+            _awaitingFrame = False
+        End Sub
+
+        Private Shared Sub HandleMessage(message As JsonElement, Optional input As PendingInput = Nothing)
             Try
                 Select Case ReadString(message, "t")
                     Case "resize"
                         ApplyViewport(message)
                     Case "m"
-                        HandlePointer(message)
+                        HandlePointer(message, input)
                     Case "k"
                         HandleKey(message)
                 End Select
@@ -47,7 +176,7 @@ Namespace Services
             End Try
         End Sub
 
-        Private Shared Sub HandlePointer(message As JsonElement)
+        Private Shared Sub HandlePointer(message As JsonElement, Optional input As PendingInput = Nothing)
             Dim x = ReadNumber(message, "x", 0)
             Dim y = ReadNumber(message, "y", 0)
             Dim modifiers = CType(CInt(ReadNumber(message, "mods", 0)), RawInputModifiers)
@@ -67,8 +196,11 @@ Namespace Services
                     InvokeHeadless(win, "MouseUp", local, ToMouseButton(CInt(ReadNumber(message, "b", 0))), modifiers)
                     If (modifiers And MouseButtonMask) = RawInputModifiers.None Then _pointerOwner = Nothing
                 Case "wheel"
-                    InvokeHeadless(win, "MouseWheel", local,
-                                   New Vector(ReadNumber(message, "dx", 0), ReadNumber(message, "dy", 0)), modifiers)
+                    ' Zusammengelegte Drehungen tragen ihre Summe in der Schlange, nicht in der Nachricht.
+                    Dim wheel = If(input IsNot Nothing,
+                                   New Vector(input.WheelX, input.WheelY),
+                                   New Vector(ReadNumber(message, "dx", 0), ReadNumber(message, "dy", 0)))
+                    InvokeHeadless(win, "MouseWheel", local, wheel, modifiers)
             End Select
         End Sub
 

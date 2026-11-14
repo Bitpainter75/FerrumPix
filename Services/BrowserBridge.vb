@@ -82,6 +82,14 @@ Namespace Services
 
         Public Const TlsProxyVariable As String = "FERRUMPIX_BROWSER_TLS_PROXY"
 
+        ''' <summary>Startparameter: die Adressen, von denen aus der Proxy die Bruecke anspricht,
+        ''' mit Komma getrennt. Noetig, wenn der Proxy auf einem ANDEREN Rechner steht; einer auf
+        ''' demselben Rechner kommt ueber 127.0.0.1 und gilt ohne Angabe. Siehe
+        ''' <see cref="IsTrustedSender"/>.</summary>
+        Public Const ProxyAddressSwitch As String = "--browser-proxy-address="
+
+        Public Const ProxyAddressVariable As String = "FERRUMPIX_BROWSER_PROXY_ADDRESS"
+
         Private Const DefaultBind As String = "127.0.0.1:14500"
 
         Private Const PageAsset As String = "avares://FerrumPix/Assets/BrowserBridge/index.html"
@@ -108,6 +116,8 @@ Namespace Services
         Private Shared _password As String = ""
         Private Shared _loopbackHostOnly As Boolean
         Private Shared _tlsProxy As Boolean
+        Private Shared _trustEverySender As Boolean
+        Private Shared _proxyAddresses As IReadOnlyList(Of IPAddress) = Array.Empty(Of IPAddress)()
         Private Shared ReadOnly Tokens As New List(Of String)()
 
         ''' <summary>Woher die Liste der offenen Fenster kommt. Ab Werk aus der Anwendung; der
@@ -175,6 +185,7 @@ Namespace Services
             Public Password As String = ""
             Public LocalForward As Boolean
             Public TlsProxy As Boolean
+            Public ProxyAddresses As New List(Of IPAddress)()
 
             Public ReadOnly Property IsLoopback As Boolean
                 Get
@@ -198,10 +209,12 @@ Namespace Services
         ''' localhost gerichtet hat.</para>
         '''
         ''' <para><see cref="TlsProxySwitch"/>: davor steht ein Reverse Proxy, der verschluesselt.
-        ''' Angenommen wird dann nur, was dieser Proxy als verschluesselt angenommen kennzeichnet
-        ''' (X-Forwarded-Proto: https); wer den Port am Proxy vorbei mit dem Browser aufruft, wird
-        ''' abgewiesen, BEVOR der Browser nach Name und Kennwort fragt. Ein Kennwort ist hier
-        ''' Pflicht.</para></summary>
+        ''' Angenommen wird dann nur, was VOM PROXY KOMMT (<see cref="IsTrustedSender"/>: vom
+        ''' eigenen Rechner oder von einer mit <see cref="ProxyAddressSwitch"/> genannten Adresse)
+        ''' und was er als verschluesselt angenommen kennzeichnet (X-Forwarded-Proto: https). Wer
+        ''' den Port am Proxy vorbei aufruft, wird abgewiesen, BEVOR der Browser nach Name und
+        ''' Kennwort fragt. Ein Kennwort ist hier Pflicht. Lauscht die Bruecke dabei an einer
+        ''' Adresse im Netz, muss die Adresse des Proxys genannt sein.</para></summary>
         Friend Shared Function ReadOptions(args As String(), ByRef problem As String) As BridgeOptions
             problem = Nothing
             Dim options As New BridgeOptions With {
@@ -231,7 +244,22 @@ Namespace Services
                 problem = $"A user name for the browser needs a password as well ({PasswordSwitch} or {PasswordVariable})."
                 Return Nothing
             End If
-            If options.LocalForward Then Return options
+            Dim proxyAddresses = Setting(args, ProxyAddressSwitch, ProxyAddressVariable)
+            If Not String.IsNullOrWhiteSpace(proxyAddresses) Then
+                For Each part In proxyAddresses.Split(","c, StringSplitOptions.RemoveEmptyEntries Or StringSplitOptions.TrimEntries)
+                    Dim address As IPAddress = Nothing
+                    If Not IPAddress.TryParse(part, address) Then
+                        problem = $"""{part}"" is not an IP address ({ProxyAddressSwitch} or {ProxyAddressVariable})."
+                        Return Nothing
+                    End If
+                    options.ProxyAddresses.Add(address)
+                Next
+                If Not options.TlsProxy Then
+                    problem = $"The address of a proxy only means something together with {TlsProxySwitch}."
+                    Return Nothing
+                End If
+            End If
+
             ' Hinter einem Proxy ist die Bruecke von aussen erreichbar, gleich an welcher Adresse
             ' sie selbst lauscht: steht der Proxy auf demselben Rechner, ist das 127.0.0.1.
             If options.TlsProxy Then
@@ -239,8 +267,16 @@ Namespace Services
                     problem = $"Behind a reverse proxy FerrumPix can be reached from other computers and needs a password ({PasswordSwitch} or {PasswordVariable})."
                     Return Nothing
                 End If
+                ' An einer Adresse im Netz erreicht JEDER den Port, nicht nur der Proxy. Die Bruecke
+                ' muss dann wissen, welcher Absender der Proxy ist; ohne das wiese sie alle ab.
+                If Not options.IsLoopback AndAlso Not options.LocalForward AndAlso options.ProxyAddresses.Count = 0 Then
+                    problem = $"The address {bind} can be reached by every computer in the network, not only by the proxy. " &
+                              $"Name the proxy with {ProxyAddressSwitch}, or use 127.0.0.1 when the proxy runs on this computer."
+                    Return Nothing
+                End If
                 Return options
             End If
+            If options.LocalForward Then Return options
             If options.IsLoopback Then Return options
             problem = $"The address {bind} can be reached from other computers, and the connection is not encrypted: " &
                       "user name, password and everything shown would be readable on the network. " &
@@ -261,8 +297,13 @@ Namespace Services
             If _listener IsNot Nothing Then Return
             _user = options.User
             _password = options.Password
-            _loopbackHostOnly = options.LocalForward AndAlso Not options.IsLoopback
-            _tlsProxy = options.TlsProxy AndAlso Not options.LocalForward
+            _tlsProxy = options.TlsProxy
+            _loopbackHostOnly = options.LocalForward AndAlso Not options.TlsProxy AndAlso Not options.IsLoopback
+            ' Im Behaelter kommt jede Anfrage von der Adresse der Portweiterleitung, gleich wer
+            ' sie geschickt hat: der Absender sagt dort nichts. Die Zusage "nur am eigenen Rechner
+            ' freigegeben" tritt an seine Stelle.
+            _trustEverySender = options.LocalForward
+            _proxyAddresses = options.ProxyAddresses.ToArray()
             Dim host = options.Host
             Dim port = options.Port
             Dim local = options.IsLoopback
@@ -451,8 +492,39 @@ Namespace Services
         ''' verschluesselt angenommen kennzeichnet.</summary>
         Private Shared Function IsAcceptedRoute(request As HttpListenerRequest) As Boolean
             If _loopbackHostOnly Then Return IsLoopbackHost(request.Headers("Host"))
-            If _tlsProxy Then Return IsForwardedAsHttps(request.Headers("X-Forwarded-Proto"))
+            If _tlsProxy Then
+                Return IsTrustedSender(request.RemoteEndPoint?.Address, _trustEverySender, _proxyAddresses) AndAlso
+                       IsForwardedAsHttps(request.Headers("X-Forwarded-Proto"))
+            End If
             Return True
+        End Function
+
+        ''' <summary>Kommt die Anfrage vom Proxy? Entschieden wird das an der ABSENDERADRESSE der
+        ''' Verbindung, nicht an einem Kopf.
+        '''
+        ''' <para>X-Forwarded-Proto und X-Forwarded-Host kann jeder setzen, der den Port erreicht.
+        ''' Sie sind eine Auskunft des Proxys und kein Nachweis, dass er es war: wer die Bruecke
+        ''' direkt anspricht und die Koepfe selbst mitschickt, saehe sonst aus wie der Proxy. Die
+        ''' Absenderadresse einer TCP-Verbindung laesst sich so nicht vortaeuschen. Den Koepfen
+        ''' wird deshalb nur geglaubt, wenn sie von dort kommen, wo der Proxy steht: vom eigenen
+        ''' Rechner, oder von einer der genannten Adressen.</para>
+        '''
+        ''' <para>Im Behaelter (<paramref name="trustEverySender"/>) traegt jede Verbindung die
+        ''' Adresse der Portweiterleitung. Dort schuetzt allein, dass der Port nur am eigenen
+        ''' Rechner freigegeben ist.</para></summary>
+        Friend Shared Function IsTrustedSender(sender As IPAddress, trustEverySender As Boolean,
+                                               proxyAddresses As IReadOnlyList(Of IPAddress)) As Boolean
+            If trustEverySender Then Return True
+            If sender Is Nothing Then Return False
+            ' Eine IPv4-Adresse kann als IPv6-Schreibweise ankommen (::ffff:192.168.1.2).
+            Dim address = If(sender.IsIPv4MappedToIPv6, sender.MapToIPv4(), sender)
+            If IPAddress.IsLoopback(address) Then Return True
+            If proxyAddresses Is Nothing Then Return False
+            For Each proxy In proxyAddresses
+                Dim known = If(proxy.IsIPv4MappedToIPv6, proxy.MapToIPv4(), proxy)
+                If known.Equals(address) Then Return True
+            Next
+            Return False
         End Function
 
         Friend Shared Function IsForwardedAsHttps(forwardedProto As String) As Boolean
@@ -516,9 +588,11 @@ Namespace Services
                         End If
                         accepted = True
                         ReplaceClient(socket)
+                        ' Was vom abgeloesten Browser noch wartet, gehoert nicht in diese Sitzung.
+                        ClearInput()
                         Dispatcher.UIThread.Post(Sub() OnClientConnected(message))
                     Else
-                        Dispatcher.UIThread.Post(Sub() HandleMessage(message))
+                        EnqueueInput(message)
                     End If
                 End While
             Catch ex As Exception When TypeOf ex Is WebSocketException OrElse TypeOf ex Is IOException OrElse

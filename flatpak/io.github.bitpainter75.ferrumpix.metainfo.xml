@@ -112,6 +112,28 @@
 
   <releases>
 
+    <release version="0.9.83-1" date="2026-11-14">
+      <description>
+        <p>This update lets you browse photos from all subfolders at once, use FerrumPix in your web browser, navigate zoomed-in images more easily, and open RAW photos with the aspect ratio selected in your camera:</p>
+        <p xml:lang="de">Mit diesem Update kannst du Fotos aus allen Unterordnern gemeinsam anzeigen, FerrumPix im Webbrowser nutzen, dich in vergrößerten Bildern leichter zurechtfinden und RAW-Fotos im Seitenverhältnis öffnen, das du an deiner Kamera eingestellt hast:</p>
+        <ul>
+          <li>The gallery can now display photos from all subfolders of the selected folder, no matter how deeply nested they are. A new button to the left of the search field lets you turn this on or off. When enabled, searches and filters also include photos from all those subfolders.</li>
+          <li xml:lang="de">Die Galerie kann jetzt auch die Fotos aus sämtlichen Unterordnern des ausgewählten Ordners anzeigen, egal wie tief sie verschachtelt sind. Mit einem neuen Knopf links neben dem Suchfeld kannst du diese Ansicht ein- und ausschalten. Ist sie aktiviert, berücksichtigen auch Suche und Filter alle Unterordner.</li>
+
+          <li>You can now use FerrumPix directly in a web browser. Start it with <code>--browser</code> to open the interface in a browser tab instead of a separate application window. If you've set a password, you'll be asked to sign in. This is an early version, so there are still a few limitations: copying and pasting only work within FerrumPix, and videos currently play without sound.</li>
+          <li xml:lang="de">FerrumPix lässt sich jetzt auch direkt im Webbrowser nutzen. Wenn du es mit <code>--browser</code> startest, öffnet sich die Oberfläche in einem Browser-Tab statt in einem eigenen Programmfenster. Hast du ein Kennwort eingerichtet, musst du dich zunächst anmelden. Diese Funktion steht noch am Anfang und hat einige Einschränkungen: Kopieren und Einfügen funktionieren nur innerhalb von FerrumPix, und Videos werden derzeit ohne Ton abgespielt.</li>
+
+          <li>When you zoom into a photo, a new navigator appears in the info panel of the viewer, full-screen view and editor. It shows a small preview of the entire image with a rectangle marking the area you're currently looking at. Simply drag the rectangle or click elsewhere in the preview to move to another part of the photo.</li>
+          <li xml:lang="de">Wenn du ein Foto vergrößerst, erscheint im Infobereich des Bildbetrachters, der Vollbildansicht und des Editors ein neuer Navigator. Er zeigt eine kleine Vorschau des gesamten Bildes mit einem Rahmen um den gerade sichtbaren Ausschnitt. Zieh den Rahmen einfach an eine andere Stelle oder klick in die Vorschau, um einen anderen Bildbereich anzuzeigen.</li>
+
+          <li>RAW photos from cameras that let you choose an aspect ratio, such as 3:2, 16:9 or 1:1, now open in the editor using the ratio selected in the camera. A new switch under Lens Correction lets you reveal the full sensor image whenever you want.</li>
+          <li xml:lang="de">RAW-Fotos von Kameras mit wählbarem Seitenverhältnis, etwa 3:2, 16:9 oder 1:1, öffnen sich im Editor jetzt mit dem an der Kamera eingestellten Bildformat. Über einen neuen Schalter unter Objektivkorrektur kannst du dir jederzeit wieder den vollständigen Sensorbereich anzeigen lassen.</li>
+
+          <li>The healing brush now does a better job of continuing lines through repaired areas, such as the horizon or a treeline. Automatic adjustments are also more gentle with high-ISO photos. And a startup issue that caused FerrumPix to close immediately on some newer Linux systems has been fixed.</li>
+          <li xml:lang="de">Der Reparaturpinsel setzt Linien wie den Horizont oder eine Baumgrenze jetzt auch durch ausgebesserte Bildbereiche hindurch natürlicher fort. Die automatische Bildkorrektur geht außerdem behutsamer mit Fotos um, die bei hohen ISO-Werten aufgenommen wurden. Und ein Fehler, durch den FerrumPix auf einigen neueren Linux-Systemen direkt nach dem Start wieder beendet wurde, ist behoben.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.82-2" date="2026-11-13">
       <description>
         <p>This update lets you browse photos from disconnected drives, improves lens corrections for phones and drones, saves denoised RAW files for faster reuse, and brings better compatibility with older Linux systems:</p>

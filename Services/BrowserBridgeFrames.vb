@@ -121,6 +121,7 @@ Namespace Services
             States.Clear()
             _lastLayout = Nothing
             _pointerOwner = Nothing
+            ClearInput()
         End Sub
 
         ''' <summary>Ein Browser hat sich verbunden: seine Flaeche und sein Pixelverhaeltnis
@@ -189,6 +190,9 @@ Namespace Services
             ' sich inzwischen geaendert hat, steckt im naechsten Ausschnitt.
             If Volatile.Read(_sending) <> 0 Then
                 _skippedTicks += 1
+                ' Eine wartende Mausbewegung bleibt gesperrt, bis ihr Vorgaenger abgeholt ist;
+                ' der Anstoss hier laesst nur ihre Frist greifen.
+                KickInput()
                 Return
             End If
             Try
@@ -202,6 +206,8 @@ Namespace Services
                 For Each win In windows
                     CollectFrame(win, StateOf(win), jobs)
                 Next
+                ' Was die letzte Mausbewegung bewirkt hat, ist jetzt abgeholt: die naechste darf.
+                ReleaseInputGate()
 
                 Dim layout = BuildLayout(windows)
                 Dim layoutChanged = Not String.Equals(layout, _lastLayout, StringComparison.Ordinal)
