@@ -11682,4 +11682,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>カメラで設定したアスペクト比（3:2、16:9、1:1 など）で写真を表示します。RAW ファイルにはそれでもセンサー全体が含まれており、オフにすると再び表示されます。最初に決めておくのがおすすめです。後から切り替えると、配置済みのマスクや挿入したオブジェクトがずれます。</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>ギャラリーにはこのフォルダーの写真だけが表示されています。クリックすると、すべてのサブフォルダーの写真も表示します</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>ギャラリーにはすべてのサブフォルダーの写真も表示されています。クリックすると、このフォルダーの写真だけを表示します</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>サブフォルダーを含められるのはフォルダーを表示しているときだけです</value>
+  </data>
 </root>

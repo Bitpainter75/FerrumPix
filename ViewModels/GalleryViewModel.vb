@@ -2210,6 +2210,7 @@ Namespace ViewModels
             _filterRejected = NormalizeRejectedFilter(settings.GalleryFilterRejected)
             _filterEdited = NormalizeEditedFilter(settings.GalleryFilterEdited)
             _catalogFilterScope = settings.GalleryFilterScopeCatalog
+            _includeSubfolders = settings.GalleryIncludeSubfolders
             _editedBadgeEnabled = settings.GalleryEditedBadge
             _pickBadgeEnabled = settings.GalleryPickBadge
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
@@ -2306,6 +2307,7 @@ Namespace ViewModels
             ToggleTagFilterCommand = ReactiveCommand.Create(Of String)(Sub(tag) ToggleTagFilter(tag))
             ClearTagFilterCommand = ReactiveCommand.Create(Sub() ClearTagFilter())
             ToggleFilterScopeCommand = ReactiveCommand.Create(Sub() IsCatalogFilterScope = Not IsCatalogFilterScope)
+            ToggleIncludeSubfoldersCommand = ReactiveCommand.Create(Sub() IncludeSubfolders = Not IncludeSubfolders)
             ClearPersonFilterCommand = ReactiveCommand.Create(Sub() ClearPersonFilter())
             ClearPlaceFilterCommand = ReactiveCommand.Create(Sub() ClearPlaceFilter())
             ' Alles, was eine Datei liest, schreibt oder neben ihr ablegt, fragt zuerst
@@ -5512,8 +5514,9 @@ Namespace ViewModels
                 Return
             End If
             If text.Length > 0 Then RememberFilterOrigin()
-            ' Im Umfang "Ordner" sucht der Knoten nur im Ordner selbst, ohne Unterordner. Leer heisst
-            ' ganzer Katalog, und so bleibt es auch dort, wo es keinen Ordner gibt.
+            ' Im Umfang "Ordner" sucht der Knoten in dem, was die Galerie dort zeigt: im Ordner selbst
+            ' und, wenn die Unterordner einbezogen sind, auch in ihnen. Leer heisst ganzer Katalog,
+            ' und so bleibt es auch dort, wo es keinen Ordner gibt.
             Dim scopeFolder = If(IsFolderFilterScope(), FilterScopeFolder(), "")
             _catalogTextQuery = text
             ' Favoriten sind keine eigene Datenquelle: dort wird nur die bereits sichtbare
@@ -5535,7 +5538,7 @@ Namespace ViewModels
                 .PersonQueries = people,
                 .PlaceQueries = places,
                 .RootFolder = scopeFolder,
-                .IncludeSubfolders = String.IsNullOrEmpty(scopeFolder),
+                .IncludeSubfolders = String.IsNullOrEmpty(scopeFolder) OrElse _includeSubfolders,
                 .IsRemovable = False
             }
             SidebarTab = TabForNode(node)
@@ -9335,8 +9338,10 @@ Namespace ViewModels
             Try
                 ' Erst die Handler, dann scharfstellen: mit EnableRaisingEvents im Initialisierer gingen
                 ' alle Ereignisse verloren, die zwischen Konstruktor und AddHandler eintrafen.
+                ' Mit einbezogenen Unterordnern gehoert auch deren Inhalt zur Ansicht.
                 _watcher = New FileSystemWatcher(folderPath) With {
-                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName
+                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName,
+                    .IncludeSubdirectories = _includeSubfolders
                 }
                 AddHandler _watcher.Created, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Deleted, AddressOf OnFileSystemChanged
@@ -9586,6 +9591,10 @@ Namespace ViewModels
                                               End Try
                                               Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
                                           End Function)
+
+            ' Der Ordner selbst steht. Sind die Unterordner einbezogen, kommen ihre Bilder jetzt
+            ' dazu, im Hintergrund und in Schueben (GalleryViewModelSubfolders).
+            If _includeSubfolders Then StartSubfolderLoad(folderPath, thumbnailToken)
         End Function
 
         ''' <summary>Legt das Ergebnis des Dateisystemlaufs auf den bereits gezeigten Sofortbestand:
@@ -10055,11 +10064,13 @@ Namespace ViewModels
             Dim keepParent = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsParentFolderEntry)
             Dim showFolders = _showFolders
             Dim showParentFolder = _showParentFolder
+            Dim includeSubfolders = _includeSubfolders
             Dim syncResult As FolderSyncResult
             Try
                 syncResult = Await Task.Run(Function() BuildFolderSyncResult(folderPath, thumbnailToken,
                                                                               existing, keepParent,
-                                                                              showFolders, showParentFolder))
+                                                                              showFolders, showParentFolder,
+                                                                              includeSubfolders))
             Catch ex As UnauthorizedAccessException
                 If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
                 StatusText = LocalizationService.T("Zugriff verweigert")
@@ -10171,7 +10182,8 @@ Namespace ViewModels
                                                existing As Dictionary(Of String, ImageItem),
                                                keepParent As ImageItem,
                                                showFolders As Boolean,
-                                               showParentFolder As Boolean) As FolderSyncResult
+                                               showParentFolder As Boolean,
+                                               Optional includeSubfolders As Boolean = False) As FolderSyncResult
             Dim rebuilt As New List(Of ImageItem)()
             If showFolders Then
                 If showParentFolder Then
@@ -10192,35 +10204,60 @@ Namespace ViewModels
                 Next
             End If
 
-            Dim files = EnumerateImageFiles(folderPath)
-            ' GEAENDERTE DATEIEN WERDEN NEU GELESEN, nicht nur neue. Der Watcher meldet eine Datei
-            ' schon beim ANLEGEN, also waehrend sie noch kopiert wird. Der Abgleich dazu baute ihre
-            ' Kachel aus dem halben Inhalt: das Vorschaubild scheiterte (und gilt danach als fertig),
-            ' der Metadaten-Nachlauf las nichts und der Katalog bekam keinen brauchbaren Eintrag.
-            ' Der Abgleich nach dem Einfuegen fand die Datei dann schon vor und liess sie so stehen
-            ' (Nutzerbefund: eingefuegte Bilder ohne Vorschaubild und nicht im Katalog). Groesse
-            ' oder Aenderungszeit verraten das.
-            Dim changedFiles = files.Where(Function(f)
-                                               Dim kept As ImageItem = Nothing
-                                               Return existing.TryGetValue(f.FullName, kept) AndAlso
-                                                      Not kept.IsFolder AndAlso
-                                                      (kept.FileSize <> f.Length OrElse kept.DateModified <> f.LastWriteTime)
-                                           End Function).ToArray()
-            Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
+            ' Mit einbezogenen Unterordnern laeuft derselbe Abgleich je Ordner: erst der Ordner
+            ' selbst, dann jeder darunter. Je Ordner und nicht ueber alle Dateien auf einmal, weil
+            ' BuildFileItems die Beistelldateien je Ordner auflistet.
+            Dim syncFolders As New List(Of String) From {folderPath}
+            If includeSubfolders Then syncFolders.AddRange(ListDescendantFolders(folderPath, thumbnailToken))
+            Dim newItems As New List(Of ImageItem)()
+            Dim rescanned As New List(Of ImageItem)()
             Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
-            Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
-            Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, PathIdentity.Comparer)
             Dim changedMetaRefresh As New List(Of ImageItem)()
-            Dim rescanned = BuildFileItems(changedFiles, folderPath, thumbnailToken, changedMetaRefresh)
 
-            For Each file In files
-                Dim keptFile As ImageItem = Nothing
-                If existing.TryGetValue(file.FullName, keptFile) Then
-                    rebuilt.Add(keptFile)
+            For Each syncFolder In syncFolders
+                Dim files As FileInfo()
+                If String.Equals(syncFolder, folderPath, PathIdentity.Comparison) Then
+                    ' Der Ordner selbst: ein Fehler beim Auflisten ist der Fehler der Ansicht.
+                    files = EnumerateImageFiles(syncFolder)
                 Else
-                    Dim added As ImageItem = Nothing
-                    If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
+                    ' Ein Unterordner, der sich nicht lesen laesst oder gerade verschwunden ist,
+                    ' faellt aus der Ansicht, ohne sie zu verlieren.
+                    Try
+                        files = EnumerateImageFiles(syncFolder)
+                    Catch ex As UnauthorizedAccessException
+                        Continue For
+                    Catch ex As IOException
+                        Continue For
+                    End Try
                 End If
+                ' GEAENDERTE DATEIEN WERDEN NEU GELESEN, nicht nur neue. Der Watcher meldet eine Datei
+                ' schon beim ANLEGEN, also waehrend sie noch kopiert wird. Der Abgleich dazu baute ihre
+                ' Kachel aus dem halben Inhalt: das Vorschaubild scheiterte (und gilt danach als fertig),
+                ' der Metadaten-Nachlauf las nichts und der Katalog bekam keinen brauchbaren Eintrag.
+                ' Der Abgleich nach dem Einfuegen fand die Datei dann schon vor und liess sie so stehen
+                ' (Nutzerbefund: eingefuegte Bilder ohne Vorschaubild und nicht im Katalog). Groesse
+                ' oder Aenderungszeit verraten das.
+                Dim changedFiles = files.Where(Function(f)
+                                                   Dim kept As ImageItem = Nothing
+                                                   Return existing.TryGetValue(f.FullName, kept) AndAlso
+                                                          Not kept.IsFolder AndAlso
+                                                          (kept.FileSize <> f.Length OrElse kept.DateModified <> f.LastWriteTime)
+                                               End Function).ToArray()
+                Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
+                Dim folderNewItems = BuildFileItems(newFiles, syncFolder, thumbnailToken, itemsNeedingMetaRefresh)
+                newItems.AddRange(folderNewItems)
+                Dim newItemsByPath = folderNewItems.ToDictionary(Function(i) i.FilePath, PathIdentity.Comparer)
+                rescanned.AddRange(BuildFileItems(changedFiles, syncFolder, thumbnailToken, changedMetaRefresh))
+
+                For Each file In files
+                    Dim keptFile As ImageItem = Nothing
+                    If existing.TryGetValue(file.FullName, keptFile) Then
+                        rebuilt.Add(keptFile)
+                    Else
+                        Dim added As ImageItem = Nothing
+                        If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
+                    End If
+                Next
             Next
 
             Return New FolderSyncResult With {
@@ -15859,6 +15896,7 @@ Namespace ViewModels
                                           s.GalleryFilterRejected = _filterRejected
                                           s.GalleryFilterEdited = _filterEdited
                                           s.GalleryFilterScopeCatalog = _catalogFilterScope
+                                          s.GalleryIncludeSubfolders = _includeSubfolders
                                           s.GalleryEditedBadge = _editedBadgeEnabled
                                           s.GalleryPickBadge = _pickBadgeEnabled
                                       End Sub)

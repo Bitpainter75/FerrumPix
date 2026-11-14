@@ -11682,4 +11682,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Näyttää kuvan siinä kuvasuhteessa, joka kamerassa oli asetettuna, esimerkiksi 3:2, 16:9 tai 1:1. RAW-tiedosto sisältää silti koko kennon; pois päältä se näkyy taas. Paras päättää heti alussa: myöhemmin vaihdettaessa jo asetetut maskit ja lisätyt objektit siirtyvät.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Galleria näyttää vain tämän kansion kuvat. Napsauta, jos haluat näyttää myös kaikkien alikansioiden kuvat</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Galleria näyttää myös kaikkien alikansioiden kuvat. Napsauta, jos haluat näyttää vain tämän kansion kuvat</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Alikansiot voi ottaa mukaan vain kansiossa</value>
+  </data>
 </root>

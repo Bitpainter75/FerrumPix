@@ -11660,4 +11660,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Zeigt das Bild im Seitenverhältnis, das an der Kamera eingestellt war, etwa 3:2, 16:9 oder 1:1. Die RAW-Datei enthält trotzdem den ganzen Sensor; ausgeschaltet ist er wieder zu sehen. Am besten gleich zu Beginn entscheiden, schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Die Galerie zeigt nur die Bilder dieses Ordners. Klicken, um auch die Bilder aus allen Unterordnern zu zeigen</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Die Galerie zeigt auch die Bilder aus allen Unterordnern. Klicken, um nur die Bilder dieses Ordners zu zeigen</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Unterordner lassen sich nur in einem Ordner einbeziehen</value>
+  </data>
 </root>

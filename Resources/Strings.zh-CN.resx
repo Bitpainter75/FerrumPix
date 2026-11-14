@@ -11640,4 +11640,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>按相机上设置的画幅比例显示照片，例如 3:2、16:9 或 1:1。RAW 文件仍然包含整个传感器；关闭后会重新显示。最好一开始就决定：之后再切换，已放置的蒙版和插入的对象会发生偏移。</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>图库只显示此文件夹中的图片。点击可同时显示所有子文件夹中的图片</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>图库同时显示所有子文件夹中的图片。点击可只显示此文件夹中的图片</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>只有在文件夹中才能包含子文件夹</value>
+  </data>
 </root>

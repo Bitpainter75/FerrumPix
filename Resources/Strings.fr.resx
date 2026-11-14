@@ -11642,4 +11642,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Affiche la photo au format réglé sur l'appareil, par exemple 3:2, 16:9 ou 1:1. Le fichier RAW contient quand même tout le capteur ; désactivé, il redevient visible. Mieux vaut décider dès le début : changer plus tard décale les masques et objets déjà placés.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>La galerie n'affiche que les photos de ce dossier. Cliquez pour afficher aussi les photos de tous les sous-dossiers</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>La galerie affiche aussi les photos de tous les sous-dossiers. Cliquez pour n'afficher que les photos de ce dossier</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Les sous-dossiers ne peuvent être inclus que dans un dossier</value>
+  </data>
 </root>

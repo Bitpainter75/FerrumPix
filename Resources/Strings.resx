@@ -11661,4 +11661,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Shows the picture in the aspect ratio set on the camera, such as 3:2, 16:9 or 1:1. The raw file still holds the whole sensor; switched off, it can be seen again. Best decided right at the start: switching later moves masks and inserted objects that are already placed.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>The gallery shows only the pictures in this folder. Click to show the pictures from all subfolders as well</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>The gallery also shows the pictures from all subfolders. Click to show only the pictures in this folder</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Subfolders can only be included in a folder</value>
+  </data>
 </root>

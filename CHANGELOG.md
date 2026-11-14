@@ -2,6 +2,17 @@
 
 ### Changes
 
+- The gallery can show the pictures from all subfolders of a folder as well. A new button left of
+  the search field switches this on and off; searching and filtering then cover the subfolders too.
+
+- FerrumPix can be used in a web browser. Started with `--browser`, it opens no window and shows
+  itself at `http://127.0.0.1:14500` instead; with `--browser-bind`, `--browser-user` and
+  `--browser-password` it can be reached from another device behind a sign-in. This is a first
+  version: copy and paste stay inside FerrumPix, and videos play without sound.
+
+- On some newer Linux systems FerrumPix ended right at startup, before a window appeared. It starts
+  there now.
+
 - When deleting is refused because the pictures are outside the home folder, the message now says
   where this can be allowed in the settings.
 

@@ -11641,4 +11641,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Mostra a fotografia no formato definido na câmara, como 3:2, 16:9 ou 1:1. O ficheiro RAW contém mesmo assim o sensor inteiro; desligado, volta a ver-se. Melhor decidir logo no início: mudar mais tarde desloca máscaras e objetos já colocados.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>A galeria mostra apenas as imagens desta pasta. Clique para mostrar também as imagens de todas as subpastas</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>A galeria mostra também as imagens de todas as subpastas. Clique para mostrar apenas as imagens desta pasta</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>As subpastas só podem ser incluídas numa pasta</value>
+  </data>
 </root>

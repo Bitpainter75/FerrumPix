@@ -11682,4 +11682,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Pokazuje zdjęcie w proporcjach ustawionych w aparacie, na przykład 3:2, 16:9 lub 1:1. Plik RAW i tak zawiera cały sensor; po wyłączeniu znów jest widoczny. Najlepiej zdecydować od razu na początku: późniejsza zmiana przesuwa już ustawione maski i wstawione obiekty.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Galeria pokazuje tylko zdjęcia z tego folderu. Kliknij, aby pokazać także zdjęcia ze wszystkich podfolderów</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Galeria pokazuje także zdjęcia ze wszystkich podfolderów. Kliknij, aby pokazać tylko zdjęcia z tego folderu</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Podfoldery można uwzględnić tylko w folderze</value>
+  </data>
 </root>

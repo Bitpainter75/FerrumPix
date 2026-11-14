@@ -234,7 +234,25 @@
                          und jeder behält seinen eigenen Abbrechen-Knopf. Der Text wird dabei
                          beschnitten statt zu drängeln, deshalb hat die Kachel keine Mindestbreite:
                          die käme bei einem schmalen Fenster über die Spalte hinaus. -->
-                    <ItemsControl Grid.Column="0"
+                    <!-- Die erste Spalte der Leiste teilen sich der Knopf für die Unterordner und,
+                         rechts daneben, Suchfeld oder Laufanzeige. Der Knopf steht in einem eigenen
+                         inneren Raster, damit er bleibt, wenn die Laufanzeige das Suchfeld ablöst. -->
+                    <Grid Grid.Column="0" ColumnDefinitions="Auto,*">
+                    <!-- UNTERORDNER EINBEZIEHEN: die Galerie zeigt zum Ordner auch die Bilder aus
+                         allem darunter. Links vom Suchfeld, weil es vor allem anderen kommt: erst
+                         steht fest, was die Galerie zeigt, dann wird darin gesucht und gefiltert.
+                         Der Akzent heißt "an", was gilt, sagt ausgeschrieben der Tooltip.
+                         Ausgegraut, wo es keinen Ordner gibt. -->
+                    <Button Grid.Column="0" Height="34" Padding="8,5" Margin="0,0,8,0"
+                            Classes="filter-btn"
+                            Classes.active="{Binding IncludeSubfolders}"
+                            Command="{Binding ToggleIncludeSubfoldersCommand}"
+                            IsEnabled="{Binding CanIncludeSubfolders}"
+                            ToolTip.Tip="{Binding IncludeSubfoldersToolTip}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/tree-structure.svg"
+                                       Classes="filter-glyph" Width="20" Height="20"/>
+                    </Button>
+                    <ItemsControl Grid.Column="1"
                                   IsVisible="{Binding HasBackgroundRuns}"
                                   ItemsSource="{Binding BackgroundRuns}"
                                   Margin="0,0,8,0">
@@ -283,7 +301,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Border Grid.Column="0"
+                    <Border Grid.Column="1"
                             IsVisible="{Binding !HasBackgroundRuns}"
                             Background="{DynamicResource FP.Bg.Input}"
                             BorderBrush="{DynamicResource FP.Border.Normal}"
@@ -323,6 +341,7 @@
                             </Button>
                         </Grid>
                     </Border>
+                    </Grid>
 
                     <!-- UMFANG VON SUCHE UND FILTER: dieser Ordner oder der ganze Katalog. Gilt für
                          alles rechts davon und für das Suchfeld links, deshalb steht er zwischen

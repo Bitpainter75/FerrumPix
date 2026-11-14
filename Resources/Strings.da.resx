@@ -11682,4 +11682,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Viser billedet i det billedformat, der var indstillet på kameraet, for eksempel 3:2, 16:9 eller 1:1. RAW-filen indeholder stadig hele sensoren; slået fra kan den ses igen. Bedst at beslutte helt fra starten: skifter man senere, flytter allerede placerede masker og indsatte objekter sig.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Galleriet viser kun billederne i denne mappe. Klik for også at vise billederne fra alle undermapper</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Galleriet viser også billederne fra alle undermapper. Klik for kun at vise billederne i denne mappe</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Undermapper kan kun medtages i en mappe</value>
+  </data>
 </root>

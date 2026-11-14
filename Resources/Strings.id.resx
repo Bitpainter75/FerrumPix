@@ -11686,4 +11686,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Menampilkan foto dengan rasio aspek yang diatur di kamera, misalnya 3:2, 16:9, atau 1:1. Berkas RAW tetap berisi seluruh sensor; jika dimatikan, sensor itu terlihat lagi. Sebaiknya diputuskan sejak awal: jika diubah nanti, masker dan objek yang sudah ditempatkan akan bergeser.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Galeri hanya menampilkan gambar di folder ini. Klik untuk menampilkan juga gambar dari semua subfolder</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Galeri juga menampilkan gambar dari semua subfolder. Klik untuk hanya menampilkan gambar di folder ini</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Subfolder hanya dapat disertakan di dalam folder</value>
+  </data>
 </root>

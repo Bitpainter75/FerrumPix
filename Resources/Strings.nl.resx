@@ -11682,4 +11682,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Toont de foto in de beeldverhouding die op de camera was ingesteld, zoals 3:2, 16:9 of 1:1. Het RAW-bestand bevat toch de hele sensor; uitgeschakeld is die weer te zien. Het beste meteen aan het begin beslissen: later omschakelen verschuift al geplaatste maskers en ingevoegde objecten.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>De galerij toont alleen de foto's in deze map. Klik om ook de foto's uit alle submappen te tonen</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>De galerij toont ook de foto's uit alle submappen. Klik om alleen de foto's in deze map te tonen</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Submappen kunnen alleen in een map worden meegenomen</value>
+  </data>
 </root>

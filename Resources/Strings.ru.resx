@@ -11682,4 +11682,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Показывает снимок в соотношении сторон, установленном на камере, например 3:2, 16:9 или 1:1. Файл RAW всё равно содержит весь сенсор; если выключить, он снова виден. Лучше решить сразу в начале: при переключении позже уже размещённые маски и вставленные объекты сместятся.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Галерея показывает только снимки из этой папки. Нажмите, чтобы показать также снимки из всех вложенных папок</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Галерея показывает также снимки из всех вложенных папок. Нажмите, чтобы показать только снимки из этой папки</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Вложенные папки можно включить только в папке</value>
+  </data>
 </root>

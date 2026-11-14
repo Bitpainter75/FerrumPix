@@ -37,7 +37,7 @@ Your originals are never changed behind your back, and nothing at all is written
 
 <img src="Screenshots/Gallery.jpg" />
 
-Folder tree, grid, list, group view, photo wall and map view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken, image size, title, description, creator, place and copyright.
+Folder tree, grid, list, group view, photo wall and map view, fast thumbnails, file operations, ratings, favourites, keywords and saved searches. A folder can show the pictures from all its subfolders as well. Search combines plain text with metadata such as camera, ISO, aperture, focal length, date taken, image size, title, description, creator, place and copyright.
 
 The group view puts a heading above each block of pictures, following whatever you sort by: one block per day when sorting by date, or by month or year, and by name, camera, file type or rating just as well. A circle in front of the heading selects a whole block at once.
 

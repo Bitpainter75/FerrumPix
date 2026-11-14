@@ -11686,4 +11686,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>แสดงภาพตามสัดส่วนภาพที่ตั้งไว้ในกล้อง เช่น 3:2, 16:9 หรือ 1:1 ไฟล์ RAW ยังคงมีเซนเซอร์ทั้งหมด เมื่อปิดก็จะเห็นอีกครั้ง ควรตัดสินใจตั้งแต่แรก หากเปลี่ยนภายหลัง มาสก์และวัตถุที่วางไว้แล้วจะเลื่อนไป</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>แกลเลอรีแสดงเฉพาะรูปภาพในโฟลเดอร์นี้ คลิกเพื่อแสดงรูปภาพจากโฟลเดอร์ย่อยทั้งหมดด้วย</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>แกลเลอรีแสดงรูปภาพจากโฟลเดอร์ย่อยทั้งหมดด้วย คลิกเพื่อแสดงเฉพาะรูปภาพในโฟลเดอร์นี้</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>รวมโฟลเดอร์ย่อยได้เฉพาะเมื่ออยู่ในโฟลเดอร์เท่านั้น</value>
+  </data>
 </root>

@@ -11642,4 +11642,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Muestra la foto en la relación de aspecto ajustada en la cámara, como 3:2, 16:9 o 1:1. El archivo RAW sigue conteniendo todo el sensor; desactivado, vuelve a verse. Conviene decidirlo al principio: si se cambia más tarde, las máscaras y los objetos ya colocados se desplazan.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>La galería muestra solo las imágenes de esta carpeta. Haz clic para mostrar también las imágenes de todas las subcarpetas</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>La galería muestra también las imágenes de todas las subcarpetas. Haz clic para mostrar solo las imágenes de esta carpeta</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Las subcarpetas solo se pueden incluir dentro de una carpeta</value>
+  </data>
 </root>

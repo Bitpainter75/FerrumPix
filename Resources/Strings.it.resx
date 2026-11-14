@@ -11642,4 +11642,13 @@
   <data name="Zeigt_das_Bild_im_Seitenverh_ltnis_das_an_der_Ka_a8f4c7ec" xml:space="preserve">
     <value>Mostra la foto nel formato impostato sulla fotocamera, ad esempio 3:2, 16:9 o 1:1. Il file RAW contiene comunque l'intero sensore; disattivato, torna visibile. Meglio decidere subito all'inizio: cambiando in seguito, maschere e oggetti già inseriti si spostano.</value>
   </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>La galleria mostra solo le immagini di questa cartella. Fai clic per mostrare anche le immagini di tutte le sottocartelle</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>La galleria mostra anche le immagini di tutte le sottocartelle. Fai clic per mostrare solo le immagini di questa cartella</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Le sottocartelle si possono includere solo in una cartella</value>
+  </data>
 </root>

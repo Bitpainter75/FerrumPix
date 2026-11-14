@@ -16,7 +16,8 @@ Namespace ViewModels
     ' Baum einen Ordner waehlte und dann ein Stichwort, bekam Treffer von ueberall, und die Zahl in
     ' der Liste zaehlte Zeilen, deren Datei laengst woanders lag (Nutzerbefund).
     '
-    ' "Ordner" heisst der Ordner selbst, OHNE Unterordner - genau das, was die Galerie dort zeigt.
+    ' "Ordner" heisst genau das, was die Galerie dort zeigt: der Ordner selbst, und nur wenn die
+    ' Unterordner einbezogen sind (GalleryViewModelSubfolders), auch sie.
     ' Der Schalter wirkt nur im lokalen Bestand. Immich, Nextcloud, Favoriten und gespeicherte
     ' Suchen haben keinen Ordner; dort ist er ausgegraut, und die Filter laufen wie bisher ueber
     ' die ganze Quelle.
@@ -99,6 +100,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanToggleFilterScope))
             Me.RaisePropertyChanged(NameOf(FilterScopeToolTip))
             Me.RaisePropertyChanged(NameOf(IsCatalogScopeFiltering))
+            Me.RaisePropertyChanged(NameOf(CanIncludeSubfolders))
+            Me.RaisePropertyChanged(NameOf(IncludeSubfoldersToolTip))
         End Sub
 
         ''' <summary>Ist eine Knopfauswahl oder eine Katalogsuche aus dem Suchfeld aktiv?</summary>
@@ -210,10 +213,15 @@ Namespace ViewModels
                     Return listed
                 End If
                 If state <> FolderState.Present Then Return listed
-                For Each file In Directory.EnumerateFiles(folder)
-                    If IsTrashedLocalPath(file) Then Continue For
-                    If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For
-                    listed.Add(file)
+                ' Mit einbezogenen Unterordnern zaehlen auch deren Bilder, wie in der Ansicht.
+                Dim counted As New List(Of String) From {folder}
+                If _includeSubfolders Then counted.AddRange(ListDescendantFolders(folder, Threading.CancellationToken.None))
+                For Each countedFolder In counted
+                    For Each file In Directory.EnumerateFiles(countedFolder)
+                        If IsTrashedLocalPath(file) Then Continue For
+                        If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For
+                        listed.Add(file)
+                    Next
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.FolderScopePaths", ex)
