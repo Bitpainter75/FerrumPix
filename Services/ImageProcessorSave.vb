@@ -652,13 +652,17 @@ Namespace Services
                                          Optional denoise As DenoiseModelService.DenoiseRequest = Nothing,
                                          Optional missingSource As MissingSourceMetadata = MissingSourceMetadata.FailWhenSameFile,
                                          Optional metadataParts As SavedMetadataParts? = Nothing,
-                                         Optional bitDepth As Integer = 8) As Boolean
+                                         Optional bitDepth As Integer = 8,
+                                         Optional outcome As SaveOutcome = Nothing) As Boolean
             ' <metadataParts>: die Schalter "Uebernehmen" des Dialogs. Ohne Angabe gilt, was vorher
             ' galt: mit Aufnahmedaten alles, ohne nichts.
             ' <bitDepth>: 16 verlangt eine Datei mit 16 Bit je Kanal. Geschrieben wird sie nur, wenn
             ' das Ziel sie traegt (CanEncodeDeep) UND die Kette ein tiefes Bild durchgehend
             ' mitgerechnet hat (ImageProcessorDeep.vb). Sonst entsteht dieselbe Datei mit 8 Bit, und
             ' das Protokoll sagt es: eine 16-Bit-Datei mit 8-Bit-Inhalt gibt es nicht.
+            ' <outcome>: wer wissen will, mit welcher Farbtiefe die Datei wirklich entstand, gibt
+            ' ein Objekt hinein und liest es danach.
+            If outcome IsNot Nothing Then outcome.WrittenBitDepth = 8
             ' <denoise>: Entrauschen mit Modell aus dem Stapel, siehe weiter unten beim Anwenden.
             ' <missingSource>: siehe MissingSourceMetadata und ProbeMetadataSource.
             '
@@ -1003,6 +1007,7 @@ Namespace Services
                             End If
                             If deepResult IsNot Nothing Then
                                 toEncode = deepResult
+                                If outcome IsNot Nothing Then outcome.WrittenBitDepth = 16
                             Else
                                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                                     $"16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, gespeichert mit 8 Bit target={IO.Path.GetFileName(targetPath)}")

@@ -11698,4 +11698,10 @@
   <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
     <value>16 bit tersedia untuk file RAW. Dengan retus, lukisan, atau objek yang dikelompokkan, file dapat ditulis dengan 8 bit.</value>
   </data>
+  <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
+    <value>Disimpan dengan 8 bit, gambar berisi retus, lukisan, atau objek yang dikelompokkan: {0}</value>
+  </data>
+  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_Re_0e5106a2" xml:space="preserve">
+    <value>{0} file RAW ditulis dengan 8 bit, bukan 16 (retus, lukisan, atau objek yang dikelompokkan).</value>
+  </data>
 </root>

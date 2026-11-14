@@ -31,6 +31,14 @@ Namespace Services
     ''' </summary>
     Partial Public Class ImageProcessor
 
+        ''' <summary>Was SaveImage ueber die geschriebene Datei meldet. Der Aufrufer gibt ein Objekt
+        ''' hinein und liest es danach; so erfaehrt er, ob aus verlangten 16 Bit doch 8 wurden.
+        ''' (Kein ByRef-Parameter: den muesste jeder Aufrufer angeben, auch der Pruefstand.)</summary>
+        Public NotInheritable Class SaveOutcome
+            ''' Farbtiefe der geschriebenen Datei je Kanal, 8 oder 16.
+            Public Property WrittenBitDepth As Integer = 8
+        End Class
+
         Private Shared ReadOnly _deepCompanions As New ConditionalWeakTable(Of SKBitmap, SKBitmap)()
 
         ''' <summary>Wie viele tiefe Bilder gerade unterwegs sind. Ausserhalb einer tiefen Ausgabe
@@ -130,6 +138,32 @@ Namespace Services
         Public Shared Function CanSourceGoDeep(sourcePath As String) As Boolean
             If String.IsNullOrWhiteSpace(sourcePath) Then Return False
             Return RawPreviewService.IsSupportedRaw(sourcePath) AndAlso RawDecodeService.DevelopsThroughRawStage(sourcePath)
+        End Function
+
+        ''' <summary>Traegt dieses Rezept etwas, womit die Kette das tiefe Bild sicher nicht bis ans
+        ''' Ende bringt? Dann entstuende trotz gewaehlter 16 Bit eine Datei mit 8 Bit, und der Dialog
+        ''' bietet die Farbtiefe fuer dieses Bild gar nicht erst an.
+        '''
+        ''' Die Liste folgt den Stellen, an denen das tiefe Bild heute endet: gebackene Vorgaenge
+        ''' (Retusche, Striche, Objekt entfernen, Entrauschen am fertigen Bild: sie stecken als
+        ''' 8-Bit-Bildpunkte im Arbeitsbild), Hochskalieren mit Modell, ein ausgeblendeter
+        ''' Hintergrund, Korrekturebenen im Objektstapel, Gruppen als eigener Schritt und Staub und
+        ''' Kratzer entfernen. Wer eine dieser Stellen tief rechnen laesst, nimmt sie hier heraus.
+        '''
+        ''' Eine Vorabfrage, keine Zusage: Nein heisst nur, dass das Rezept nichts dagegen hat. Ob
+        ''' die Datei wirklich 16 Bit traegt, entscheidet SaveImage und meldet es in
+        ''' <see cref="SaveOutcome"/>.</summary>
+        Public Shared Function RecipeBlocksDeep(adj As ImageAdjustments) As Boolean
+            If adj Is Nothing Then Return False
+            If adj.BakedOperations IsNot Nothing AndAlso adj.BakedOperations.Count > 0 Then Return True
+            If Not String.IsNullOrWhiteSpace(adj.UpscaleModel) Then Return True
+            If adj.BackgroundHidden Then Return True
+            If adj.DustScratches < 0 Then Return True
+            If adj.MaskedAdjustmentLayers IsNot Nothing AndAlso
+               adj.MaskedAdjustmentLayers.Any(Function(l) l IsNot Nothing AndAlso Not String.IsNullOrEmpty(l.StackAboveAnnotationId)) Then
+                Return True
+            End If
+            Return HasRenderStepGroupMember(adj)
         End Function
 
         ''' <summary>Haengt an ein frisch entwickeltes RAW-Bild sein tiefes Bild: derselbe Decode mit

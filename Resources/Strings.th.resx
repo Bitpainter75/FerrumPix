@@ -11698,4 +11698,10 @@
   <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Mit_Retusche_Male_b2275c17" xml:space="preserve">
     <value>16 บิตใช้ได้กับไฟล์ RAW หากมีการรีทัช การระบายสี หรือวัตถุที่จัดกลุ่ม ไฟล์อาจถูกเขียนด้วย 8 บิต</value>
   </data>
+  <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
+    <value>บันทึกด้วย 8 บิต ภาพมีการรีทัช การระบายสี หรือวัตถุที่จัดกลุ่ม: {0}</value>
+  </data>
+  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_Re_0e5106a2" xml:space="preserve">
+    <value>เขียนไฟล์ RAW {0} ไฟล์ด้วย 8 บิตแทน 16 บิต (การรีทัช การระบายสี หรือวัตถุที่จัดกลุ่ม)</value>
+  </data>
 </root>

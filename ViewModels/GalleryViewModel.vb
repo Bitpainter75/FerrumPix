@@ -13888,14 +13888,17 @@ Namespace ViewModels
                              ' Fehlt die Quelle beim Lesen der Aufnahmedaten, entsteht die neue Datei
                              ' ohne sie. Beim Ueberschreiben haelt RewriteImagesInPlaceAsync den Fall
                              ' selbst auf (siehe dort), deshalb gilt die Regel fuer beide Wege.
-                             Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=resize.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
                                                              metadataParts:=PartsForNewFiles(resize.Overwrite, resize.MetadataParts),
-                                                             bitDepth:=resize.BitDepth)
+                                                             bitDepth:=resize.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, resize.BitDepth, outcome)
+                             Return saved
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14010,7 +14013,10 @@ Namespace ViewModels
         ''' <summary>Ist im Stapel eine Quelle, aus der eine Datei mit 16 Bit entstehen kann (eine RAW,
         ''' die durch die RAW-Stufe laeuft)? Dann bietet der Dialog die Farbtiefe an. Abseits des
         ''' Oberflaechenfadens: bei einer DNG liest die Frage in die Datei.</summary>
-        Private Shared Function BatchIncludesDeepSourceAsync(targetItems As IEnumerable(Of ImageItem)) As Task(Of Boolean)
+        Private Function BatchIncludesDeepSourceAsync(targetItems As IEnumerable(Of ImageItem)) As Task(Of Boolean)
+            ' Ein neuer Stapel beginnt: der Zaehler der Dateien, die mit 8 statt 16 Bit entstanden,
+            ' faengt bei null an (ein Lauf, der ohne Schlussmeldung endete, liesse sonst seinen Rest stehen).
+            Threading.Interlocked.Exchange(_batchShallowCount, 0)
             Dim paths = If(targetItems, Enumerable.Empty(Of ImageItem)()).
                 Where(Function(i) i IsNot Nothing).Select(Function(i) i.FilePath).ToList()
             Return Task.Run(Function() paths.Any(Function(p) ImageProcessor.CanSourceGoDeep(p)))
@@ -14096,7 +14102,8 @@ Namespace ViewModels
                              ' Das Entrauschen misst bei der Automatik JE BILD, und zwar erst im
                              ' Speicherweg am frisch entwickelten Bild - hier gibt es noch keine Pixel.
                              ' Fehlende Quelle: siehe ResizeImageItemsCoreAsync.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
@@ -14104,7 +14111,9 @@ Namespace ViewModels
                                                              denoise:=result.Denoise,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
                                                              metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts),
-                                                             bitDepth:=result.BitDepth)
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14510,14 +14519,17 @@ Namespace ViewModels
                              Dim adj = BatchBaseAdjustments(source)
                              adj.Annotations.Add(annotation.Clone())
                              ' Fehlende Quelle: siehe ResizeImageItemsCoreAsync.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
                                                              metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts),
-                                                             bitDepth:=result.BitDepth)
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
@@ -14749,11 +14761,30 @@ Namespace ViewModels
         ''' <summary>Die Schlussmeldung eines Stapels. Nach einem Abbruch sagt sie das auch: eine
         ''' blosse Zahl liest sich dort wie ein Fehlschlag.</summary>
         Private Function BatchResultText(template As String, done As Integer, total As Integer) As String
+            ' Dateien, die trotz gewaehlter 16 Bit mit 8 entstanden (NoteBatchBitDepth): die Meldung
+            ' sagt es, sonst stuende es nur im Protokoll. Gelesen wird der Zaehler genau einmal.
+            Dim shallow = Threading.Interlocked.Exchange(_batchShallowCount, 0)
+            Dim note = If(shallow > 0,
+                          " " & String.Format(LocalizationService.T("{0} RAW-Datei(en) mit 8 Bit statt 16 geschrieben (Retusche, Malerei oder gruppierte Objekte)."), shallow),
+                          "")
             If BatchWasCancelled() Then
-                Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total)
+                Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total) & note
             End If
-            Return String.Format(template, done, total)
+            Return String.Format(template, done, total) & note
         End Function
+
+        ''' <summary>Wie viele Dateien des laufenden Stapels trotz gewaehlter 16 Bit mit 8 entstanden
+        ''' sind, obwohl ihre Quelle 16 Bit hergibt. Eine 8-Bit-Quelle zaehlt nicht: bei ihr sind
+        ''' 8 Bit das Erwartete. Zurueckgesetzt beim Oeffnen eines Stapeldialogs und beim Lesen in
+        ''' <see cref="BatchResultText"/>.</summary>
+        Private _batchShallowCount As Integer
+
+        ''' <summary>Nach jedem geschriebenen Bild eines Stapels: vermerkt, wenn aus verlangten 16 Bit
+        ''' 8 wurden. Aus den Arbeitsfaeden des Stapels gerufen.</summary>
+        Private Sub NoteBatchBitDepth(source As String, requested As Integer, outcome As ImageProcessor.SaveOutcome)
+            If requested <> 16 OrElse outcome Is Nothing OrElse outcome.WrittenBitDepth = 16 Then Return
+            If ImageProcessor.CanSourceGoDeep(source) Then Threading.Interlocked.Increment(_batchShallowCount)
+        End Sub
 
         ''' <param name="rewritten">Wenn angegeben: bekommt genau die Pfade, deren Datei wirklich
         ''' ersetzt wurde. Fuer Aufrufer, die danach an DIESEN Dateien weiterarbeiten (Metadaten
@@ -15562,7 +15593,8 @@ Namespace ViewModels
                              SetBatchResizeStep(adj, resizeFields)
                              ' Export schreibt immer neue Dateien: fehlt die Quelle beim Lesen der
                              ' Aufnahmedaten, entsteht die Datei ohne sie.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
@@ -15570,7 +15602,9 @@ Namespace ViewModels
                                                              denoise:=result.Denoise,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
                                                              metadataParts:=result.MetadataParts,
-                                                             bitDepth:=result.BitDepth)
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -15712,14 +15746,17 @@ Namespace ViewModels
                              Dim adj = BatchBaseAdjustments(source)
                              ' Konvertieren schreibt immer neue Dateien: fehlt die Quelle beim Lesen
                              ' der Aufnahmedaten, entsteht die Datei ohne sie.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
                                                              metadataParts:=result.MetadataParts,
-                                                             bitDepth:=result.BitDepth)
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
             ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.

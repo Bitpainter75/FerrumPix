@@ -23474,6 +23474,12 @@ Namespace ViewModels
                 ' Vorgabe aus den Einstellungen (dort ist FPX waehlbar); ist FPX abgeschaltet oder
                 ' nicht eingestellt, kommt das dort gewaehlte Bildformat heraus.
                 Dim initialFormat = MainWindowViewModel.DefaultSaveFormat(allowFpx:=True)
+                ' Die Farbtiefe bietet der Dialog nur an, wenn aus DIESEM Bild eine Datei mit 16 Bit
+                ' werden kann: die Quelle ist eine RAW, und das Rezept traegt nichts, womit das tiefe
+                ' Bild endet (Retusche und Striche als gebackene Vorgaenge, Objektgruppen und so
+                ' weiter, siehe ImageProcessor.RecipeBlocksDeep). Sonst stuende die Wahl ohne Wirkung da.
+                Dim recipeAllowsDeep = Not ImageProcessor.RecipeBlocksDeep(GetCurrentAdjustments())
+                Dim deepSource = RenderSourcePath
                 saveAsResult = Await _mainVm.ShowSaveAsAsync(LocalizationService.T("Speichern unter"),
                                                              LocalizationService.T("Dateiname eingeben"),
                                                              proposedName,
@@ -23481,8 +23487,8 @@ Namespace ViewModels
                                                              SaveQuality,
                                                              LocalizationService.T("Speichern"),
                                                              LocalizationService.T("Abbrechen"),
-                                                             deepSourceAvailable:=Await Task.Run(
-                                                                 Function() ImageProcessor.CanSourceGoDeep(RenderSourcePath)))
+                                                             deepSourceAvailable:=recipeAllowsDeep AndAlso Await Task.Run(
+                                                                 Function() ImageProcessor.CanSourceGoDeep(deepSource)))
                 If saveAsResult Is Nothing Then Return False
 
                 ' Eine Namensvorlage aus der Auswahl des Dialogs (GitHub #102) wird hier fuer dieses
@@ -23588,6 +23594,8 @@ Namespace ViewModels
                 Dim copyrightText = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.Copyright, "")
                 ' Die Farbtiefe aus dem Dialog; ohne Dialog (Speichern ueber das Original) 8 Bit.
                 Dim bitDepth = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.BitDepth, 8)
+                ' Womit die Datei wirklich entstand: aus verlangten 16 Bit koennen 8 werden.
+                Dim saveOutcome As New ImageProcessor.SaveOutcome()
                 Dim ok As Boolean
                 If isFpxSave Then
                     ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
@@ -23718,7 +23726,8 @@ Namespace ViewModels
                                                                             workingFull:=CloneWorkingFullForRender(),
                                                                             copyrightText:=copyrightText,
                                                                             metadataParts:=metadataParts,
-                                                                            bitDepth:=bitDepth))
+                                                                            bitDepth:=bitDepth,
+                                                                            outcome:=saveOutcome))
                 End If
                 If ok AndAlso saveToNextcloud Then
                     ' Ziel Nextcloud: die gerenderte Datei in den Dateibaum legen. Wohin, ist NICHT
@@ -23817,6 +23826,12 @@ Namespace ViewModels
                     StatusText = If(saveAs,
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
                                     LocalizationService.T("Gespeichert"))
+                    ' 16 Bit gewaehlt, 8 geschrieben: das darf nicht nur im Protokoll stehen.
+                    If bitDepth = 16 AndAlso saveOutcome.WrittenBitDepth <> 16 Then
+                        StatusText = String.Format(
+                            LocalizationService.T("Mit 8 Bit gespeichert, das Bild trägt Retusche, Malerei oder gruppierte Objekte: {0}"),
+                            IO.Path.GetFileName(targetPath))
+                    End If
                     MarkDocumentSaved()
                     If saveAs Then
                         ' Katalog-Metadaten zur neuen Datei übernehmen - das Original behält seine.
