@@ -11698,10 +11698,10 @@
   <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
     <value>16 बिट RAW फ़ाइलों के लिए उपलब्ध है। रीटच और पेंट किए गए हिस्से 8 बिट जितने ही बारीक रहते हैं।</value>
   </data>
-  <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
-    <value>8 बिट में सहेजा गया, छवि में रीटच, पेंटिंग या समूहित ऑब्जेक्ट हैं: {0}</value>
+  <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
+    <value>8 बिट में सहेजा गया, इस छवि के लिए 16 बिट उपलब्ध नहीं है: {0}</value>
   </data>
-  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_Re_0e5106a2" xml:space="preserve">
-    <value>{0} RAW फ़ाइलें 16 के बजाय 8 बिट में लिखी गईं (रीटच, पेंटिंग या समूहित ऑब्जेक्ट)।</value>
+  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
+    <value>{0} RAW फ़ाइलें 16 के बजाय 8 बिट में लिखी गईं।</value>
   </data>
 </root>

@@ -1163,7 +1163,59 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_collageFormat, If(String.IsNullOrWhiteSpace(value), "JPG", value.ToUpperInvariant()))
                 Me.RaisePropertyChanged(NameOf(IsCollageJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsCollageBitDepthVisible))
             End Set
+        End Property
+
+        ' Die Farbtiefe der Collage: 8 oder 16 Bit je Kanal. Angeboten wird sie wie in den
+        ' Speicherdialogen nur, wenn das Format 16 Bit traegt (PNG, JPEG XL) und unter den Bildern
+        ' eine RAW ist, aus der ein tiefes Bild entstehen kann (BatchSourceCanGoDeep). Die Wahl
+        ' teilt sich die gemerkte Einstellung mit den Speicherdialogen (LastSaveBitDepth).
+        Private _collageBitDepth As Integer = 8
+        Private _collageDeepSourceAvailable As Boolean = False
+
+        Public ReadOnly Property IsCollageBitDepthVisible As Boolean
+            Get
+                Return _collageDeepSourceAvailable AndAlso
+                       (String.Equals(_collageFormat, "PNG", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(_collageFormat, "JXL", StringComparison.OrdinalIgnoreCase))
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCollageBitDepth8 As Boolean
+            Get
+                Return _collageBitDepth <> 16
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCollageBitDepth16 As Boolean
+            Get
+                Return _collageBitDepth = 16
+            End Get
+        End Property
+
+        ''' <summary>Die Wahl der beiden Knoepfe im Collage-Dialog; alles ausser 16 gilt als 8.</summary>
+        Public Sub SetCollageBitDepth(value As Integer)
+            _collageBitDepth = If(value = 16, 16, 8)
+            AppSettingsService.SaveLastSaveBitDepth(_collageBitDepth)
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth8))
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth16))
+        End Sub
+
+        ''' <summary>Beim Oeffnen des Collage-Dialogs: geben die Bilder 16 Bit her?</summary>
+        Private Sub SetCollageDeepSource(available As Boolean)
+            _collageDeepSourceAvailable = available
+            _collageBitDepth = If(AppSettingsService.Load().LastSaveBitDepth = 16, 16, 8)
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepthVisible))
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth8))
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth16))
+        End Sub
+
+        ''' <summary>Was an die Collage hinausgeht: 16 nur, wenn die Wahl im Dialog zu sehen war.</summary>
+        Private ReadOnly Property CollageBitDepth As Integer
+            Get
+                Return If(IsCollageBitDepthVisible AndAlso _collageBitDepth = 16, 16, 8)
+            End Get
         End Property
 
         Public Property CollageWidth As Integer
@@ -13130,6 +13182,7 @@ Namespace ViewModels
             CollageRandomPrintSize = 100
             CollageRandomSizeVariation = 15
             CollagePreviewZoom = 1.0
+            SetCollageDeepSource(Await Task.Run(Function() paths.Any(Function(p) BatchSourceCanGoDeep(p))))
             IsCollageDialogOpen = True
         End Function
 
@@ -13238,6 +13291,7 @@ Namespace ViewModels
                     .BackgroundColor = CollageBackgroundColor,
                     .Format = CollageFormat,
                     .Quality = CollageQuality,
+                    .BitDepth = CollageBitDepth,
                     .LayoutMode = CollageLayoutMode,
                     .HeroIndex = CollageHeroIndex,
                     .HeroPosition = CollageHeroPosition,
@@ -13261,6 +13315,11 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Collage wird erstellt...")
                 Dim ok = Await Task.Run(Function() CollageService.SaveCollage(paths, options))
                 StatusText = If(ok, $"Collage gespeichert: {IO.Path.GetFileName(target)}", "Collage konnte nicht erstellt werden")
+                ' 16 Bit gewaehlt, 8 geschrieben: das darf nicht nur im Protokoll stehen.
+                If ok AndAlso options.BitDepth = 16 AndAlso options.WrittenBitDepth <> 16 Then
+                    StatusText = String.Format(LocalizationService.T("Mit 8 Bit gespeichert, für dieses Bild gibt es keine 16 Bit: {0}"),
+                                               IO.Path.GetFileName(target))
+                End If
                 If ok Then SyncFolderItems()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -14775,7 +14834,7 @@ Namespace ViewModels
             ' sagt es, sonst stuende es nur im Protokoll. Gelesen wird der Zaehler genau einmal.
             Dim shallow = Threading.Interlocked.Exchange(_batchShallowCount, 0)
             Dim note = If(shallow > 0,
-                          " " & String.Format(LocalizationService.T("{0} RAW-Datei(en) mit 8 Bit statt 16 geschrieben (Retusche, Malerei oder gruppierte Objekte)."), shallow),
+                          " " & String.Format(LocalizationService.T("{0} RAW-Datei(en) mit 8 Bit statt 16 geschrieben."), shallow),
                           "")
             If BatchWasCancelled() Then
                 Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total) & note

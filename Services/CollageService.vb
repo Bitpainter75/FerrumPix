@@ -22,6 +22,12 @@ Namespace Services
         Public Property BackgroundColor As String = "#FFFFFFFF"
         Public Property Format As String = "JPG"
         Public Property Quality As Integer = 90
+        ''' 16 verlangt eine Datei mit 16 Bit je Kanal. Geschrieben wird sie bei PNG und JPEG XL,
+        ''' wenn mindestens ein Bild der Collage ein tiefes Bild mitbringt (eine RAW durch die
+        ''' RAW-Stufe); die uebrigen Bilder und der Grund sind darin so fein wie 8 Bit.
+        Public Property BitDepth As Integer = 8
+        ''' Nach SaveCollage: die Farbtiefe der geschriebenen Datei, 8 oder 16.
+        Public Property WrittenBitDepth As Integer = 8
         Public Property SquareCells As Boolean = True
         ''' "Grid" (Standard-Raster), "Hero" (ein großes Bild + Rest daneben), "Random" (Größe/Rotation zufällig).
         Public Property LayoutMode As String = "Grid"
@@ -108,9 +114,32 @@ Namespace Services
     Public Class CollageService
         Public Shared Function SaveCollage(imagePaths As IEnumerable(Of String), options As CollageOptions) As Boolean
             If options Is Nothing OrElse String.IsNullOrWhiteSpace(options.OutputPath) Then Return False
+            options.WrittenBitDepth = 8
+            Dim wantsDeep = options.BitDepth = 16 AndAlso
+                            (String.Equals(options.Format, "PNG", StringComparison.OrdinalIgnoreCase) OrElse
+                             String.Equals(options.Format, "JXL", StringComparison.OrdinalIgnoreCase))
 
-            Using surfaceBitmap = RenderCollage(imagePaths, options)
+            Using surfaceBitmap = RenderCollage(imagePaths, options, withDeep:=wantsDeep),
+                  surfaceDeep = ImageProcessor.DeepGuard(surfaceBitmap)
                 If surfaceBitmap Is Nothing Then Return False
+
+                ' Verlangte 16 Bit: die tiefe Flaeche geht in die Datei, wenn der Render sie
+                ' mitgezeichnet hat. Sonst dieselbe Datei mit 8 Bit.
+                Dim deepSurface = If(wantsDeep, ImageProcessor.DeepOf(surfaceBitmap), Nothing)
+                If deepSurface IsNot Nothing Then
+                    If String.Equals(options.Format, "JXL", StringComparison.OrdinalIgnoreCase) Then
+                        If Not JxlEncodeService.IsAvailable Then Return False
+                        ImageProcessor.WriteFileAtomic(options.OutputPath,
+                            Sub(fs) JxlEncodeService.Encode(deepSurface, fs, Math.Max(1, Math.Min(100, options.Quality))))
+                    Else
+                        Using data = PngEncoder.Encode(deepSurface, PngPurpose.Export)
+                            If data Is Nothing Then Return False
+                            ImageProcessor.WriteFileAtomic(options.OutputPath, Sub(fs) data.SaveTo(fs))
+                        End Using
+                    End If
+                    options.WrittenBitDepth = 16
+                    Return True
+                End If
 
                 ' PDF ist kein Bildformat, das Skia hier kodieren könnte - es entsteht als
                 ' einseitiges Dokument über denselben Weg wie „Speichern unter: PDF" und mit dem
@@ -226,9 +255,15 @@ Namespace Services
         ''' sie zu entwickeln. Für die LIVE-Vorschau: die läuft nach jeder Regleränderung neu, und
         ''' der Entwicklungs-Cache hält nur EIN Bild - mit mehreren RAWs entwickelte er sonst bei
         ''' jedem Durchgang jedes Bild neu. Für die gespeicherte Collage wird voll entwickelt.</param>
+        ''' <param name="withDeep">Fuer die Ausgabe in 16 Bit: neben der Flaeche entsteht dieselbe
+        ''' Collage auf einer Flaeche mit 16 Bit je Kanal und haengt danach als tiefes Bild an der
+        ''' zurueckgegebenen (ImageProcessor.DeepOf). Jede Kachel kommt dort aus dem tiefen Bild
+        ''' ihrer Quelle, wenn es eins gibt, sonst aus dem 8-Bit-Bild. Bringt keine Quelle eins
+        ''' mit, entsteht keine tiefe Flaeche: es waere 8-Bit-Inhalt in 16 Bit.</param>
         Private Shared Function RenderCollage(imagePaths As IEnumerable(Of String), options As CollageOptions,
                                               Optional developRaw As Boolean = True,
-                                              Optional cacheGeneration As Long = 0) As SKBitmap
+                                              Optional cacheGeneration As Long = 0,
+                                              Optional withDeep As Boolean = False) As SKBitmap
             If imagePaths Is Nothing OrElse options Is Nothing Then Return Nothing
 
             Dim paths = imagePaths.
@@ -257,6 +292,11 @@ Namespace Services
             Dim bg = ParseColor(options.BackgroundColor, SKColors.White)
 
             Dim surfaceBitmap = New SKBitmap(width, layout.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
+            Dim deepSurface As SKBitmap = If(withDeep AndAlso developRaw,
+                                             ImageProcessor.NewDeepBitmap(width, layout.Height, SKAlphaType.Premul), Nothing)
+            Dim deepCanvas As SKCanvas = If(deepSurface Is Nothing, Nothing, New SKCanvas(deepSurface))
+            Dim deepTiles = 0
+            deepCanvas?.Clear(bg)
             Using canvas = New SKCanvas(surfaceBitmap)
                 canvas.Clear(bg)
                 ' SKFilterQuality ist abgekündigt; SamplingHigh entspricht der alten Stufe "High" (kubisch/Mitchell).
@@ -280,9 +320,10 @@ Namespace Services
                         ' dem Zwischenspeicher, statt bei jedem Reglerschritt jede Datei zu lesen.
                         Dim applyPending = options.ApplyPendingBakedOperations
                         Using source = If(developRaw,
-                                          ImageProcessor.DecodeDevelopedForOutput(path, True, applyPending),
+                                          ImageProcessor.DecodeDevelopedForOutput(path, True, applyPending, withDeep:=deepSurface IsNot Nothing),
                                           PreviewImageCache.GetCopy(path, $"raw=False;pending={applyPending}", cacheGeneration,
-                                              Function() ImageProcessor.DecodeDevelopedForOutput(path, False, applyPending)))
+                                              Function() ImageProcessor.DecodeDevelopedForOutput(path, False, applyPending))),
+                              sourceDeepGuard = ImageProcessor.DeepGuard(source)
                             If source Is Nothing Then
                                 DiagnosticLogService.LogAlways("Collage", $"Nicht dekodierbar, Kachel bleibt leer: {path}")
                                 Continue For
@@ -295,6 +336,11 @@ Namespace Services
                             End If
                             Dim slotBorder = CSng(border)
                             If slot.IsPrint Then slotBorder = DrawPrintCard(canvas, slot, gap)
+                            If deepCanvas IsNot Nothing Then
+                                deepCanvas.Save()
+                                If slot.RotationDegrees <> 0 Then deepCanvas.RotateDegrees(slot.RotationDegrees, centerX, centerY)
+                                If slot.IsPrint Then DrawPrintCard(deepCanvas, slot, gap)
+                            End If
                             Dim innerWidth = Math.Max(1.0F, slot.Width - slotBorder * 2)
                             Dim innerHeight = Math.Max(1.0F, slot.Height - slotBorder * 2)
                             Dim insetX = slot.X + (slot.Width - innerWidth) / 2.0F
@@ -314,11 +360,39 @@ Namespace Services
                             End Using
                             reduced?.Dispose()
                             canvas.Restore()
+                            If deepCanvas IsNot Nothing Then
+                                ' Dieselbe Kachel auf die tiefe Flaeche: aus dem tiefen Bild der
+                                ' Quelle, wenn es eins gibt und dasselbe Bild ist, sonst aus dem
+                                ' 8-Bit-Bild.
+                                Dim tileSource = ImageProcessor.DeepOf(source)
+                                If tileSource IsNot Nothing AndAlso
+                                   (tileSource.Width <> source.Width OrElse tileSource.Height <> source.Height OrElse
+                                    Not ImageProcessor.DeepMatchesShallow(source, tileSource)) Then tileSource = Nothing
+                                If tileSource IsNot Nothing Then deepTiles += 1 Else tileSource = source
+                                Dim deepReduced = ReduceToTile(tileSource, src, CInt(Math.Ceiling(innerWidth)), CInt(Math.Ceiling(innerHeight)))
+                                Using image = SKImage.FromBitmap(If(deepReduced, tileSource))
+                                    If deepReduced IsNot Nothing Then
+                                        deepCanvas.DrawImage(image, New SKRect(0, 0, deepReduced.Width, deepReduced.Height), dst, samplingHigh, paint)
+                                    Else
+                                        deepCanvas.DrawImage(image, src, dst, samplingHigh, paint)
+                                    End If
+                                End Using
+                                deepReduced?.Dispose()
+                                deepCanvas.Restore()
+                            End If
                         End Using
                     Next
                 End Using
             End Using
 
+            deepCanvas?.Dispose()
+            If deepSurface IsNot Nothing Then
+                If deepTiles > 0 Then
+                    ImageProcessor.AttachDeep(surfaceBitmap, deepSurface)
+                Else
+                    deepSurface.Dispose()
+                End If
+            End If
             Return surfaceBitmap
         End Function
 

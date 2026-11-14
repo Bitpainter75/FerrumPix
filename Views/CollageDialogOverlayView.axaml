@@ -194,11 +194,24 @@
                                    Text="Format"
                                    Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center"/>
-                        <ComboBox Grid.Row="5"
-                                  Grid.Column="1"
-                                  ItemsSource="{Binding CollageFormatOptions}"
-                                  SelectedItem="{Binding CollageFormat}"
-                                  MinHeight="34"/>
+                        <!-- Neben dem Format die Farbtiefe: nur bei PNG und JPEG XL und nur, wenn unter
+                             den Bildern eine RAW ist, aus der 16 Bit entstehen koennen. -->
+                        <WrapPanel Grid.Row="5" Grid.Column="1" ItemSpacing="8" LineSpacing="8">
+                            <ComboBox ItemsSource="{Binding CollageFormatOptions}"
+                                      SelectedItem="{Binding CollageFormat}"
+                                      MinHeight="34"/>
+                            <Button Classes="segmented"
+                                    Classes.active="{Binding IsCollageBitDepth8}"
+                                    IsVisible="{Binding IsCollageBitDepthVisible}"
+                                    Click="OnBitDepthClick"
+                                    Tag="8">8 Bit</Button>
+                            <Button Classes="segmented"
+                                    Classes.active="{Binding IsCollageBitDepth16}"
+                                    IsVisible="{Binding IsCollageBitDepthVisible}"
+                                    Click="OnBitDepthClick"
+                                    Tag="16"
+                                    ToolTip.Tip="16 Bit gibt es für RAW-Dateien. Retuschierte und übermalte Stellen bleiben dabei so fein wie 8 Bit.">16 Bit</Button>
+                        </WrapPanel>
 
                         <TextBlock Grid.Row="7"
                                    Text="Größe"

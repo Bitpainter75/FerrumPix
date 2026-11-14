@@ -11694,10 +11694,10 @@
   <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
     <value>16 бит доступно для файлов RAW. Отретушированные и закрашенные участки сохраняют точность 8 бит.</value>
   </data>
-  <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
-    <value>Сохранено с 8 битами, изображение содержит ретушь, рисование или сгруппированные объекты: {0}</value>
+  <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
+    <value>Сохранено с 8 битами, для этого изображения 16 бит недоступно: {0}</value>
   </data>
-  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_Re_0e5106a2" xml:space="preserve">
-    <value>Файлов RAW, записанных с 8 битами вместо 16: {0} (ретушь, рисование или сгруппированные объекты).</value>
+  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
+    <value>Файлов RAW, записанных с 8 битами вместо 16: {0}.</value>
   </data>
 </root>

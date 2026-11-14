@@ -236,8 +236,12 @@ Namespace Services
         ''' werden? Vorgabe NEIN, und das mit Absicht: es kostet Minuten je Bild, und wer eine
         ''' Vorschau aufbaut, wartet nicht minutenlang. Die Ausgabewege fragen den Nutzer und geben
         ''' seine Antwort hier herein.</param>
+        ''' <param name="withDeep">Fuer die Ausgabe in 16 Bit: das Ergebnis traegt sein tiefes Bild als
+        ''' Begleiter (ImageProcessorDeep.vb), wenn die Quelle eine RAW ist und die Kette es bis ans
+        ''' Ende mitrechnet. Der Aufrufer gibt es mit DropDeep frei, bevor er das Bild freigibt.</param>
         Friend Shared Function DecodeDevelopedForOutput(path As String, Optional developRaw As Boolean = True,
-                                                        Optional applyPendingBaked As Boolean = False) As SKBitmap
+                                                        Optional applyPendingBaked As Boolean = False,
+                                                        Optional withDeep As Boolean = False) As SKBitmap
             If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
 
             Dim rezept As ImageAdjustments = Nothing
@@ -247,7 +251,14 @@ Namespace Services
 
             ' Ohne Rezept die rohe Quelle, mit Rezept der Decode fuer die Kette (mit der Belichtung
             ' in der RAW-Stufe).
-            If rezept Is Nothing Then Return DecodeForAdjustments(path, Nothing, developRaw)
+            If rezept Is Nothing Then
+                Dim plain = DecodeForAdjustments(path, Nothing, developRaw)
+                If withDeep AndAlso plain IsNot Nothing Then AttachDeepRawSource(plain, path, Nothing, developRaw)
+                Return plain
+            End If
+            ' Das Rezept, wie es in der Datei steht: der Decode unten ersetzt die Variable durch
+            ' das Rezept fuer die Kette, das tiefe Bild braucht die Angaben der RAW-Stufe.
+            Dim rawStageRecipe = rezept
             ' Ein Entrauschen mit Modell kostet wie die gebackenen Vorgaenge Zeit und laeuft deshalb
             ' nur mit derselben Zustimmung (CountPathsWithPendingBakedOperations zaehlt es mit). Eine
             ' passende .fpdnz braucht keine: sie wird immer geladen, auch ohne Modell.
@@ -269,9 +280,20 @@ Namespace Services
                         reapplied = ApplyPendingBakedOperations(decoded, rezept)
                         If reapplied IsNot Nothing Then input = reapplied
                     End If
+                    If withDeep Then
+                        If reapplied Is Nothing Then
+                            AttachDeepRawSource(decoded, path, rawStageRecipe, True)
+                        Else
+                            AttachDeepEditedRawSource(reapplied, path, rawStageRecipe, True)
+                        End If
+                    End If
                     Return ProcessBitmap(input, rezept)
                 Finally
-                    reapplied?.Dispose()
+                    DropDeep(decoded)
+                    If reapplied IsNot Nothing Then
+                        DropDeep(reapplied)
+                        reapplied.Dispose()
+                    End If
                 End Try
             End Using
         End Function

@@ -11652,10 +11652,10 @@
   <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
     <value>16 位适用于 RAW 文件。修饰和涂画过的区域仍保持 8 位的精细度。</value>
   </data>
-  <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
-    <value>已以 8 位保存，图像包含修饰、绘画或成组的对象：{0}</value>
+  <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
+    <value>已以 8 位保存，此图像无法使用 16 位：{0}</value>
   </data>
-  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_Re_0e5106a2" xml:space="preserve">
-    <value>{0} 个 RAW 文件以 8 位而非 16 位写入（修饰、绘画或成组的对象）。</value>
+  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
+    <value>{0} 个 RAW 文件以 8 位而非 16 位写入。</value>
   </data>
 </root>

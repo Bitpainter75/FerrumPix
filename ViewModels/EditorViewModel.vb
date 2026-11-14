@@ -23838,7 +23838,7 @@ Namespace ViewModels
                     ' 16 Bit gewaehlt, 8 geschrieben: das darf nicht nur im Protokoll stehen.
                     If bitDepth = 16 AndAlso saveOutcome.WrittenBitDepth <> 16 Then
                         StatusText = String.Format(
-                            LocalizationService.T("Mit 8 Bit gespeichert, das Bild trägt Retusche, Malerei oder gruppierte Objekte: {0}"),
+                            LocalizationService.T("Mit 8 Bit gespeichert, für dieses Bild gibt es keine 16 Bit: {0}"),
                             IO.Path.GetFileName(targetPath))
                     End If
                     MarkDocumentSaved()

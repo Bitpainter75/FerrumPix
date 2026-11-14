@@ -11694,10 +11694,10 @@
   <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
     <value>16 bittiä on käytettävissä RAW-tiedostoille. Retusoidut ja maalatut kohdat pysyvät 8 bitin tarkkuudessa.</value>
   </data>
-  <data name="Mit_8_Bit_gespeichert_das_Bild_tr_gt_Retusche_Ma_47cccd4c" xml:space="preserve">
-    <value>Tallennettu 8 bitillä, kuvassa on retusointia, maalausta tai ryhmiteltyjä objekteja: {0}</value>
+  <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
+    <value>Tallennettu 8 bitillä, 16 bittiä ei ole käytettävissä tälle kuvalle: {0}</value>
   </data>
-  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_Re_0e5106a2" xml:space="preserve">
-    <value>{0} RAW-tiedosto(a) kirjoitettu 8 bitillä 16:n sijaan (retusointi, maalaus tai ryhmitellyt objektit).</value>
+  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
+    <value>{0} RAW-tiedosto(a) kirjoitettu 8 bitillä 16:n sijaan.</value>
   </data>
 </root>
