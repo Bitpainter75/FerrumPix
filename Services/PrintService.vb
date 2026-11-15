@@ -271,9 +271,10 @@ Namespace Services
                         End Using
                     End Using
                 Else
+                    ' Die Seite ist eine PDF-Flaeche und fuehrt erst spaeter aus: sie braucht die Kopie.
                     ImageProcessor.DrawBitmapSampled(canvas, source,
                                                      New SKRect(0, 0, source.Width, source.Height),
-                                                     destRect, ImageProcessor.SamplingHigh, paint)
+                                                     destRect, ImageProcessor.SamplingHigh, paint, copyPixels:=True)
                 End If
                 canvas.Restore()
             Finally

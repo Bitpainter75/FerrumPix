@@ -2506,11 +2506,130 @@ Namespace Services
 
         Private Shared Sub DropRawBits()
             _cachedRawBytes = Nothing
+            FringePlane.Drop()
             _cachedRawPath = ""
             _cachedRawWidth = 0
             _cachedRawHeight = 0
             _cachedRawDemosaic = -1
         End Sub
+
+        ''' <summary>Der Vorrat des Farbquerfehlers: je Bildpunkt Rot und Blau in linearem sRGB,
+        ''' an verschobener Stelle abgetastet und durch die Kameramatrix (zwei Gleitkommawerte).
+        '''
+        ''' WOZU. Beim Neuaufbau fuer Belichtung und Lichter aus dem 16-Bit-Zwischenspeicher war der
+        ''' Farbquerfehler der groesste Posten: an 33 Megapixeln 1,0 bis 1,3 Sekunden, bei jedem
+        ''' Schritt neu, obwohl er an Belichtung und Lichtern nicht haengt. Der erste Neuaufbau
+        ''' rechnet wie bisher und merkt sich das Ergebnis, jeder weitere liest es.
+        '''
+        ''' DER PREIS: 8 Byte je Bildpunkt, an 33 Megapixeln 263 MB, solange dieselbe Datei im
+        ''' 16-Bit-Zwischenspeicher liegt. Angelegt wird erst beim ERSTEN NEUAUFBAU, nicht beim
+        ''' Oeffnen: wer nur blaettert, zahlt nichts. Es gibt genau einen Vorrat; er geht mit dem
+        ''' Zwischenspeicher (<see cref="Drop"/>).
+        '''
+        ''' GUELTIG fuer genau diese Daten (dasselbe Feld), diese Masse, diese Kameramatrix und
+        ''' diese Kennlinie des Farbquerfehlers samt Staerke und Feinkorrektur; alles steht im
+        ''' Schluessel. Aendert sich etwas davon, wird im selben Feld neu gerechnet. Die Werte sind
+        ''' die der Schleife selbst, das Bild also Bit fuer Bit dasselbe.</summary>
+        Private NotInheritable Class FringePlane
+            Private Sub New()
+            End Sub
+
+            Private Shared ReadOnly Gate As New Object()
+            Private Shared _values As Single()
+            Private Shared _owner As WeakReference(Of Object)
+            Private Shared _key As String
+
+            ''' <summary>Der Schluessel: alles, wovon die gemerkten Werte abhaengen, ausser den Daten.</summary>
+            Friend Shared Function KeyFor(lens As LensDataService.Korrektur, width As Integer, height As Integer,
+                                          normScale As Double, cameraToSrgb As Single()) As String
+                Dim text = New System.Text.StringBuilder(256)
+                Dim inv = Globalization.CultureInfo.InvariantCulture
+                text.Append(width).Append("x"c).Append(height)
+                For Each value In {normScale, lens.CornerScale, lens.KnotAxisScale, lens.ChromaticAberrationStrength,
+                                   lens.TcaBr, lens.TcaCr, lens.TcaVr, lens.TcaBb, lens.TcaCb, lens.TcaVb,
+                                   lens.TcaRedFine, lens.TcaBlueFine}
+                    text.Append("|"c).Append(value.ToString("R", inv))
+                Next
+                For Each knots In {lens.TcaRedKnots, lens.TcaBlueKnots}
+                    text.Append("|k")
+                    If knots IsNot Nothing Then
+                        For Each value In knots
+                            text.Append(","c).Append(value.ToString("R", inv))
+                        Next
+                    End If
+                Next
+                text.Append("|m")
+                For Each value In cameraToSrgb
+                    text.Append(","c).Append(value.ToString("R", inv))
+                Next
+                Return text.ToString()
+            End Function
+
+            ''' <summary>Nimmt den Vorrat heraus: <paramref name="ready"/> ist gesetzt, wenn er zu
+            ''' Daten und Schluessel passt, sonst <paramref name="toFill"/> als Feld zum Fuellen
+            ''' (das alte, wenn die Groesse stimmt). Solange er draussen ist, hat ihn niemand sonst;
+            ''' zurueck kommt er ueber <see cref="Put"/>. Beides Nothing: kein Vorrat (zu gross
+            ''' oder kein Speicher).</summary>
+            Friend Shared Sub Take(owner As Object, key As String, width As Integer, height As Integer,
+                                   ByRef ready As Single(), ByRef toFill As Single())
+                ready = Nothing
+                toFill = Nothing
+                Dim count = CLng(width) * height * 2
+                If count <= 0 OrElse count > Integer.MaxValue - 64 Then Return
+                Dim taken As Single() = Nothing
+                SyncLock Gate
+                    taken = _values
+                    _values = Nothing
+                    Dim current As Object = Nothing
+                    If taken IsNot Nothing AndAlso taken.Length = count AndAlso _owner IsNot Nothing AndAlso
+                       _owner.TryGetTarget(current) AndAlso current Is owner AndAlso String.Equals(_key, key, StringComparison.Ordinal) Then
+                        ready = taken
+                        Return
+                    End If
+                    _owner = Nothing
+                    _key = Nothing
+                End SyncLock
+                If taken IsNot Nothing AndAlso taken.Length = count Then
+                    toFill = taken
+                    Return
+                End If
+                taken = Nothing
+                Try
+                    toFill = New Single(CInt(count) - 1) {}
+                Catch ex As OutOfMemoryException
+                    toFill = Nothing
+                End Try
+            End Sub
+
+            ''' <summary>Legt den Vorrat nach einem vollstaendigen Lauf zurueck.</summary>
+            Friend Shared Sub Put(owner As Object, key As String, values As Single())
+                If values Is Nothing OrElse owner Is Nothing Then Return
+                SyncLock Gate
+                    _values = values
+                    _owner = New WeakReference(Of Object)(owner)
+                    _key = key
+                End SyncLock
+            End Sub
+
+            ''' <summary>Gibt den Vorrat frei; der 16-Bit-Zwischenspeicher ruft das, wenn er geht
+            ''' oder eine andere Datei aufnimmt.</summary>
+            Friend Shared Sub Drop()
+                SyncLock Gate
+                    _values = Nothing
+                    _owner = Nothing
+                    _key = Nothing
+                End SyncLock
+            End Sub
+
+            ''' <summary>Belegte Bytes, fuer Messungen.</summary>
+            Friend Shared ReadOnly Property Bytes As Long
+                Get
+                    SyncLock Gate
+                        Return If(_values Is Nothing, 0L, CLng(_values.Length) * 4L)
+                    End SyncLock
+                End Get
+            End Property
+        End Class
 
         ''' <summary>Aus linearen 16-Bit-Daten eine fertige 8-Bit-Bitmap: Belichtungsrampe,
         ''' ACR3-Kurve, Objektivkorrektur, Dither.
@@ -2523,7 +2642,8 @@ Namespace Services
                                                baseEv As Double, normalization As Double,
                                                knee As Double, sliderEv As Double,
                                                shadowSaturation As Single(),
-                                               toneMatrix As Single()) As SKBitmap
+                                               toneMatrix As Single(),
+                                               Optional fringeOwner As Object = Nothing) As SKBitmap
             Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
             Try
                 ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
@@ -2545,7 +2665,7 @@ Namespace Services
                 Dim ramp = ToneRampFor(baseEv, normalization, sliderEv)
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
-                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation, toneMatrix)
+                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation, toneMatrix, fringeOwner)
                 Return bitmap
             Catch ex As Exception
                 DiagnosticLogService.LogException("RawDecodeService.BuildFrom16Bit", ex)
@@ -2590,13 +2710,13 @@ Namespace Services
                     Dim denoisedPin = GCHandle.Alloc(denoisedSource, GCHandleType.Pinned)
                     Try
                         Return BuildFrom16Bit(denoisedPin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization,
-                                              knee, sliderEv, ShadowSaturationForFile(path), toneMatrix)
+                                              knee, sliderEv, ShadowSaturationForFile(path), toneMatrix, denoisedSource)
                     Finally
                         denoisedPin.Free()
                     End Try
                 End If
                 Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
-                                      ShadowSaturationForFile(path), toneMatrix)
+                                      ShadowSaturationForFile(path), toneMatrix, bytes)
             Finally
                 pin.Free()
             End Try
@@ -3591,6 +3711,7 @@ Namespace Services
                             Marshal.Copy(pixels, keep, 0, keep.Length)
                             SyncLock _cacheLock
                                 _cachedRawBytes = keep
+                                FringePlane.Drop()
                                 _cachedRawWidth = width
                                 _cachedRawHeight = height
                                 _cachedRawNormalization = normalization
@@ -4110,7 +4231,8 @@ Namespace Services
                                          Optional blackLevel As Double = BlackSubtraction,
                                          Optional knee As Double = 1.0,
                                          Optional shadowSaturation As Single() = Nothing,
-                                         Optional toneMatrix As Single() = Nothing)
+                                         Optional toneMatrix As Single() = Nothing,
+                                         Optional fringeOwner As Object = Nothing)
             Dim thresholds = If(DitherEnabled, DitherThresholds, Enumerable.Repeat(32767, 64).ToArray())
             Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
             ' Tonstufe in ProPhoto (WideToneStage): die Kameramatrix nach linearem sRGB, schon durch
@@ -4181,6 +4303,20 @@ Namespace Services
                 ringSize = Math.Max(ringSize, 2 * CInt(Math.Ceiling(maxShift)) + 4)
             End If
 
+            ' DER VORRAT DES FARBQUERFEHLERS (FringePlane): Rot und Blau jeder Stelle, abgetastet und
+            ' durch die Kameramatrix, haengen nicht an Belichtung und Lichtern. Wer dieselben Daten
+            ' ein zweites Mal umsetzt, liest sie, statt je Bildpunkt zweimal bilinear abzutasten.
+            ' Nur auf dem Weg in ProPhoto und ohne Verstaerkungskarten (mit ihnen steckte die
+            ' Staerke der Vignettierung in den Werten). Bricht der Lauf ab, geht der Vorrat verloren
+            ' statt halb gefuellt zurueck.
+            Dim fringe As Single() = Nothing
+            Dim fringeFill As Single() = Nothing
+            Dim fringeKey As String = Nothing
+            If korrigiertTca AndAlso wide AndAlso planeGains Is Nothing AndAlso fringeOwner IsNot Nothing Then
+                fringeKey = FringePlane.KeyFor(lens, width, height, normScale, pm)
+                FringePlane.Take(fringeOwner, fringeKey, width, height, fringe, fringeFill)
+            End If
+
             ' IN BAENDERN AUF ALLEN KERNEN. Jede Ausgabezeile haengt nur von wenigen
             ' Nachbarzeilen ab, und das Dither nur von der Lage: aufgeteilt kommt Bit fuer Bit
             ' dasselbe Bild heraus. Vorher lief das auf einem Faden und kostete bei 32 Megapixeln
@@ -4233,7 +4369,17 @@ Namespace Services
                                 Dim rPix = Math.Sqrt(dxPix * dxPix + dyPix * dyPix)
                                 Dim rNorm = rPix * normScale
 
-                                If korrigiertTca AndAlso rPix > 0.0 Then
+                                If fringe IsNot Nothing Then
+                                    ' Aus dem Vorrat (FringePlane): Rot und Blau dieser Stelle sind schon
+                                    ' abgetastet und durch die Kameramatrix. NaN steht fuer die Bildmitte,
+                                    ' an der es nichts zu verschieben gibt.
+                                    Dim fi = (y * width + x) * 2
+                                    tcaRed = fringe(fi)
+                                    tcaBlue = fringe(fi + 1)
+                                    tcaSrgb = Not Single.IsNaN(tcaRed)
+                                    r = rowShorts(x * 3) And &HFFFF
+                                    b = rowShorts(x * 3 + 2) And &HFFFF
+                                ElseIf korrigiertTca AndAlso rPix > 0.0 Then
                                     ' ACHTUNG Konvention: der Faktor sagt, WIE WEIT AUSSEN der Kanal in der
                                     ' Aufnahme wirklich liegt (Rd = Ru * f, wie die Sammlung ihn definiert).
                                     ' Korrigiert wird deshalb, indem man ihn DORT abtastet, also mit dem
@@ -4279,6 +4425,11 @@ Namespace Services
                                                       pm(8) * gainB * blue2
                                         End If
                                         tcaSrgb = True
+                                        If fringeFill IsNot Nothing Then
+                                            Dim fi = (y * width + x) * 2
+                                            fringeFill(fi) = tcaRed
+                                            fringeFill(fi + 1) = tcaBlue
+                                        End If
                                         r = rowShorts(x * 3) And &HFFFF
                                         b = rowShorts(x * 3 + 2) And &HFFFF
                                     Else
@@ -4286,6 +4437,11 @@ Namespace Services
                                         b = AbtastenBilinear(FetchRow, width, height, cx + dxPix * fb, cy + dyPix * fb, 2)
                                     End If
                                 Else
+                                    If fringeFill IsNot Nothing Then
+                                        Dim fi = (y * width + x) * 2
+                                        fringeFill(fi) = Single.NaN
+                                        fringeFill(fi + 1) = Single.NaN
+                                    End If
                                     r = rowShorts(x * 3) And &HFFFF
                                     b = rowShorts(x * 3 + 2) And &HFFFF
                                 End If
@@ -4406,6 +4562,7 @@ Namespace Services
                         onRow(y, rowBuffer)
                     Next
                 End Sub)
+            If fringeKey IsNot Nothing Then FringePlane.Put(fringeOwner, fringeKey, If(fringe, fringeFill))
         End Sub
 
         ''' <summary>MESSSCHALTER der Reglereichung, ab Werk an: die Korrektur rosa Lichter

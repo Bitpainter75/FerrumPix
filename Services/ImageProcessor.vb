@@ -82,9 +82,13 @@ Namespace Services
         ''' Zeichnet eine Bitmap mit ausdrücklicher Abtastung. SKCanvas.DrawBitmap kennt keine
         ''' SKSamplingOptions-Überladung, DrawImage schon - ohne sie fiele die Skalierung auf
         ''' Nearest zurück, weil SKSamplingOptions.Default nicht filtert.
+        ''' Gezeichnet wird ueber den Bildpunkten der Bitmap, ohne Kopie (ShareBitmapPixels und seine
+        ''' Bedingungen). copyPixels verlangt die Kopie: fuer eine Flaeche, die erst spaeter ausfuehrt
+        ''' (die PDF-Seite beim Druck).
         Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, source As SKRect, dest As SKRect,
-                                             sampling As SKSamplingOptions, paint As SKPaint)
-            Using image = SKImage.FromBitmap(bitmap)
+                                             sampling As SKSamplingOptions, paint As SKPaint,
+                                             Optional copyPixels As Boolean = False)
+            Using image = If(copyPixels, SKImage.FromBitmap(bitmap), ShareBitmapPixels(bitmap))
                 canvas.DrawImage(image, source, dest, sampling, paint)
             End Using
         End Sub
@@ -144,7 +148,7 @@ Namespace Services
         ''' ueber eine gesetzte Matrix und braucht deshalb genau diese Ueberladung.
         Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
                                              sampling As SKSamplingOptions, paint As SKPaint)
-            Using image = SKImage.FromBitmap(bitmap)
+            Using image = ShareBitmapPixels(bitmap)
                 canvas.DrawImage(image, x, y, sampling, paint)
             End Using
         End Sub

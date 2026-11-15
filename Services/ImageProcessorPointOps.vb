@@ -1463,6 +1463,13 @@ Namespace Services
         ''' (TOP_PERCENTILE) muss denselben Wert tragen.</summary>
         Private Const ToneTopFraction As Double = 0.99
 
+        ''' <summary>Was ein Faden beim Zaehlen in <see cref="MeasureToneReference"/> fuer sich hat.</summary>
+        Private NotInheritable Class ToneMeasureLocal
+            Public Counts As Long()
+            Public Row As Byte()
+            Public Total As Long
+        End Class
+
         ''' <summary>Median und Spitze der Helligkeit L (CIE, 0 bis 100) eines Bildes, aus einem
         ''' Raster von rund 250 000 Bildpunkten; voll durchsichtige zaehlen nicht. Ungemessen, wenn
         ''' kein Bild da ist oder das Format nicht 8 Bit RGBA ist. Gelesen wird zeilenweise ueber den
@@ -1525,7 +1532,6 @@ Namespace Services
             Dim stepSize = Math.Max(1, CInt(Math.Sqrt(CDbl(bounds.Width) * bounds.Height / 250000.0)))
             Dim histogram As Long() = Nothing
             Dim total = 0L
-            Dim row = New Byte(rowBytes - 1) {}
             ' DUENN BESETZT HEISST: JEDEN BILDPUNKT ZAEHLEN. Ein festes Raster kann sichtbare Punkte
             ' systematisch verfehlen: eine weisse Diagonale in einem grossen durchsichtigen Objekt
             ' liegt bei Schrittweite 4 auf keinem Rasterpunkt, ein einzelner schwarzer daneben schon,
@@ -1540,24 +1546,38 @@ Namespace Services
                 ' regelmaessiges Muster nur von einer Seite: ein schwarz-weisses Schachbrett mit einem
                 ' Bildpunkt je Feld traf bei Schrittweite 4 nur Schwarz. Der Versatz haengt allein an
                 ' der Lage der Zelle im Rechteck, Bildrender und Kompositor sehen also dieselben Punkte.
+                '
+                ' DIE RASTERZEILEN ZAEHLEN NEBENEINANDER, jeder Faden in ein eigenes Histogramm, am
+                ' Ende zusammengezaehlt. Es sind ganze Zahlen, die Summe ist also dieselbe wie der
+                ' Reihe nach. Der Reihe nach kostete die Messung an einem Foto rund 8 ms und war
+                ' damit der groesste Teil des Kettenbaus bei jedem Zugschritt mit Lichtern oder Tiefen.
                 Dim jitter = stepSize > 1
-                For yCell = bounds.Top To bounds.Bottom - 1 Step stepSize
-                    Dim cellRow = (yCell - bounds.Top) \ stepSize
+                Dim gridStep = stepSize
+                Dim counts = histogram
+                Dim cellRows = (bounds.Height + gridStep - 1) \ gridStep
+                Dim merge As New Object()
+                Dim counted = 0L
+                Parallel.For(0, cellRows,
+                    Function() New ToneMeasureLocal With {.Counts = New Long(1000) {}, .Row = New Byte(rowBytes - 1) {}},
+                    Function(cellRow As Integer, loopState As ParallelLoopState, local As ToneMeasureLocal) As ToneMeasureLocal
+                    Dim counting = local.Counts
+                    Dim rowBuffer = local.Row
+                    Dim yCell = bounds.Top + cellRow * stepSize
                     Dim y = If(jitter, Math.Min(bounds.Bottom - 1, yCell + RasterJitter(cellRow, -1, stepSize)), yCell)
-                    Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), row, 0, rowBytes)
+                    Marshal.Copy(IntPtr.Add(pixels, y * rowBytes), rowBuffer, 0, rowBytes)
                     Dim maskRow = y * bmp.Width
                     For xCell = bounds.Left To bounds.Right - 1 Step stepSize
                         Dim x = If(jitter, Math.Min(bounds.Right - 1, xCell + RasterJitter((xCell - bounds.Left) \ stepSize, cellRow, stepSize)), xCell)
                         Dim o = x * 4
-                        If row(o + 3) = 0 Then Continue For
+                        If rowBuffer(o + 3) = 0 Then Continue For
                         If mask IsNot Nothing AndAlso mask(maskRow + x) = 0 Then Continue For
                         Dim lum As Double
-                        Dim alpha = row(o + 3)
+                        Dim alpha = rowBuffer(o + 3)
                         If dividesAlpha AndAlso alpha < 255 Then
                             ' Wie die Kette: erst durch Alpha teilen, dann wie ein deckender Bildpunkt.
-                            Dim r = Math.Min(1.0, row(o + rOff) / CDbl(alpha))
-                            Dim g = Math.Min(1.0, row(o + 1) / CDbl(alpha))
-                            Dim b = Math.Min(1.0, row(o + bOff) / CDbl(alpha))
+                            Dim r = Math.Min(1.0, rowBuffer(o + rOff) / CDbl(alpha))
+                            Dim g = Math.Min(1.0, rowBuffer(o + 1) / CDbl(alpha))
+                            Dim b = Math.Min(1.0, rowBuffer(o + bOff) / CDbl(alpha))
                             If inverts Then
                                 r = SampleTable(negative.NegR, CSng(r))
                                 g = SampleTable(negative.NegG, CSng(g))
@@ -1571,18 +1591,28 @@ Namespace Services
                                   0.7152 * toLinear(Math.Max(0.0, Math.Min(1.0, g))) +
                                   0.0722 * toLinear(Math.Max(0.0, Math.Min(1.0, b)))
                         ElseIf Not inverts Then
-                            lum = 0.2126 * linear(row(o + rOff)) + 0.7152 * linear(row(o + 1)) + 0.0722 * linear(row(o + bOff))
+                            lum = 0.2126 * linear(rowBuffer(o + rOff)) + 0.7152 * linear(rowBuffer(o + 1)) + 0.0722 * linear(rowBuffer(o + bOff))
                         ElseIf negative.NegMonochrome Then
-                            Dim gray = 0.299 * negGamma(0)(row(o + rOff)) + 0.587 * negGamma(1)(row(o + 1)) + 0.114 * negGamma(2)(row(o + bOff))
+                            Dim gray = 0.299 * negGamma(0)(rowBuffer(o + rOff)) + 0.587 * negGamma(1)(rowBuffer(o + 1)) + 0.114 * negGamma(2)(rowBuffer(o + bOff))
                             lum = toLinear(Math.Max(0.0, Math.Min(1.0, gray)))
                         Else
-                            lum = 0.2126 * negLinear(0)(row(o + rOff)) + 0.7152 * negLinear(1)(row(o + 1)) + 0.0722 * negLinear(2)(row(o + bOff))
+                            lum = 0.2126 * negLinear(0)(rowBuffer(o + rOff)) + 0.7152 * negLinear(1)(rowBuffer(o + 1)) + 0.0722 * negLinear(2)(rowBuffer(o + bOff))
                         End If
                         Dim l = If(lum > 0.008856, 116.0 * Math.Pow(lum, 1.0 / 3.0) - 16.0, 903.3 * lum)
-                        histogram(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += 1
-                        total += 1
+                        counting(Math.Max(0, Math.Min(1000, CInt(l * 10.0)))) += 1
+                        local.Total += 1
                     Next
-                Next
+                    Return local
+                    End Function,
+                    Sub(local As ToneMeasureLocal)
+                        SyncLock merge
+                            For k = 0 To 1000
+                                counts(k) += local.Counts(k)
+                            Next
+                            counted += local.Total
+                        End SyncLock
+                    End Sub)
+                total = counted
                 If stepSize > 1 Then
                     Dim gridPoints = CLng((bounds.Height + stepSize - 1) \ stepSize) * ((bounds.Width + stepSize - 1) \ stepSize)
                     If total * 4L < gridPoints Then
