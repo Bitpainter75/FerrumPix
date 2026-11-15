@@ -195,21 +195,33 @@ It is the same FerrumPix with everything it can do, gallery, viewer and editor. 
 To try it on your own computer, start FerrumPix with `--browser`:
 
 ```
-FerrumPix --browser
+ferrumpix --browser
 ```
+
+`ferrumpix`, in lowercase, is the command the Linux packages install. The AppImage is started by its file name, and on macOS the app is opened with its arguments behind `--args`:
+
+```
+./FerrumPix-0.9.84-1-x86_64.AppImage --browser
+```
+
+```
+open -a FerrumPix --args --browser
+```
+
+Everything that follows works the same way with each of them.
 
 No window opens. FerrumPix tells you the address instead, `http://127.0.0.1:14500`, and when you open it, FerrumPix fills the browser tab. Close the tab and come back later, and everything is as you left it.
 
 If you want a sign-in in front of it, give it a password, and a user name if you like. The browser then asks for them before it shows anything:
 
 ```
-FerrumPix --browser --browser-user=anna --browser-password=secret
+ferrumpix --browser --browser-user=anna --browser-password=secret
 ```
 
 To reach it from another device, such as a tablet or a laptop in the same network, one more thing is needed. FerrumPix does not encrypt the connection itself, and a password travelling through the network unprotected could be read by anyone listening. So it only lets other devices in through a reverse proxy that provides HTTPS, the kind of small web server many people already run in front of their home services. Tell FerrumPix that the proxy is there, and a password becomes mandatory:
 
 ```
-FerrumPix --browser --browser-tls-proxy --browser-user=anna --browser-password=secret
+ferrumpix --browser --browser-tls-proxy --browser-user=anna --browser-password=secret
 ```
 
 If you start it for other devices without that, FerrumPix does not start and tells you why. That is on purpose: it is better to be told once than to find out later that your password was readable.
@@ -217,10 +229,10 @@ If you start it for other devices without that, FerrumPix does not start and tel
 Everything you can pass on the command line can also come from the environment, which is handy for a service or a container and keeps the password out of the list of running programs:
 
 ```
-env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=secret FerrumPix --browser
+env FERRUMPIX_BROWSER_USER=anna FERRUMPIX_BROWSER_PASSWORD=secret ferrumpix --browser
 ```
 
-If you installed FerrumPix from Flathub, it works the same way. What you would write after `FerrumPix` goes at the end of the Flatpak command, and settings from the environment are handed in with `--env`:
+If you installed FerrumPix from Flathub, it works the same way. What you would write after `ferrumpix` goes at the end of the Flatpak command, and settings from the environment are handed in with `--env`:
 
 ```
 flatpak run io.github.bitpainter75.ferrumpix --browser
