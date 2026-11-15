@@ -2,6 +2,11 @@
 
 ### Changes
 
+- Pictures from raw files can now be saved with 16 bit per channel as TIFF, PNG, JPEG XL or PSD.
+  Save as, export, the batch dialogs and the collage offer the bit depth when a raw file is among
+  the pictures. Retouched and painted areas stay as fine as 8 bit, the rest of the picture keeps
+  the full depth.
+
 - The button that shows the pictures from all subfolders has moved to the bar at the bottom of the
   gallery, next to the button for stacks. The same switch is now also in the settings under Gallery.
 

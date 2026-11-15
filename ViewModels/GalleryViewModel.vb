@@ -1163,7 +1163,59 @@ Namespace ViewModels
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_collageFormat, If(String.IsNullOrWhiteSpace(value), "JPG", value.ToUpperInvariant()))
                 Me.RaisePropertyChanged(NameOf(IsCollageJpgQualityVisible))
+                Me.RaisePropertyChanged(NameOf(IsCollageBitDepthVisible))
             End Set
+        End Property
+
+        ' Die Farbtiefe der Collage: 8 oder 16 Bit je Kanal. Angeboten wird sie wie in den
+        ' Speicherdialogen nur, wenn das Format 16 Bit traegt (PNG, JPEG XL) und unter den Bildern
+        ' eine RAW ist, aus der ein tiefes Bild entstehen kann (BatchSourceCanGoDeep). Die Wahl
+        ' teilt sich die gemerkte Einstellung mit den Speicherdialogen (LastSaveBitDepth).
+        Private _collageBitDepth As Integer = 8
+        Private _collageDeepSourceAvailable As Boolean = False
+
+        Public ReadOnly Property IsCollageBitDepthVisible As Boolean
+            Get
+                Return _collageDeepSourceAvailable AndAlso
+                       (String.Equals(_collageFormat, "PNG", StringComparison.OrdinalIgnoreCase) OrElse
+                        String.Equals(_collageFormat, "JXL", StringComparison.OrdinalIgnoreCase))
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCollageBitDepth8 As Boolean
+            Get
+                Return _collageBitDepth <> 16
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCollageBitDepth16 As Boolean
+            Get
+                Return _collageBitDepth = 16
+            End Get
+        End Property
+
+        ''' <summary>Die Wahl der beiden Knoepfe im Collage-Dialog; alles ausser 16 gilt als 8.</summary>
+        Public Sub SetCollageBitDepth(value As Integer)
+            _collageBitDepth = If(value = 16, 16, 8)
+            AppSettingsService.SaveLastSaveBitDepth(_collageBitDepth)
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth8))
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth16))
+        End Sub
+
+        ''' <summary>Beim Oeffnen des Collage-Dialogs: geben die Bilder 16 Bit her?</summary>
+        Private Sub SetCollageDeepSource(available As Boolean)
+            _collageDeepSourceAvailable = available
+            _collageBitDepth = If(AppSettingsService.Load().LastSaveBitDepth = 16, 16, 8)
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepthVisible))
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth8))
+            Me.RaisePropertyChanged(NameOf(IsCollageBitDepth16))
+        End Sub
+
+        ''' <summary>Was an die Collage hinausgeht: 16 nur, wenn die Wahl im Dialog zu sehen war.</summary>
+        Private ReadOnly Property CollageBitDepth As Integer
+            Get
+                Return If(IsCollageBitDepthVisible AndAlso _collageBitDepth = 16, 16, 8)
+            End Get
         End Property
 
         Public Property CollageWidth As Integer
@@ -13344,6 +13396,7 @@ Namespace ViewModels
             CollageRandomPrintSize = 100
             CollageRandomSizeVariation = 15
             CollagePreviewZoom = 1.0
+            SetCollageDeepSource(Await Task.Run(Function() paths.Any(Function(p) BatchSourceCanGoDeep(p))))
             IsCollageDialogOpen = True
         End Function
 
@@ -13452,6 +13505,7 @@ Namespace ViewModels
                     .BackgroundColor = CollageBackgroundColor,
                     .Format = CollageFormat,
                     .Quality = CollageQuality,
+                    .BitDepth = CollageBitDepth,
                     .LayoutMode = CollageLayoutMode,
                     .HeroIndex = CollageHeroIndex,
                     .HeroPosition = CollageHeroPosition,
@@ -13475,6 +13529,11 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Collage wird erstellt...")
                 Dim ok = Await Task.Run(Function() CollageService.SaveCollage(paths, options))
                 StatusText = If(ok, $"Collage gespeichert: {IO.Path.GetFileName(target)}", "Collage konnte nicht erstellt werden")
+                ' 16 Bit gewaehlt, 8 geschrieben: das darf nicht nur im Protokoll stehen.
+                If ok AndAlso options.BitDepth = 16 AndAlso options.WrittenBitDepth <> 16 Then
+                    StatusText = String.Format(LocalizationService.T("Mit 8 Bit gespeichert, für dieses Bild gibt es keine 16 Bit: {0}"),
+                                               IO.Path.GetFileName(target))
+                End If
                 If ok Then SyncFolderItems()
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -14066,7 +14125,8 @@ Namespace ViewModels
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim resize = Await _mainVm.ShowBatchResizeAsync(samplePath, folderHint, ueberschreibbar,
                                                            singleImage:=targetItems.Count = 1,
-                                                           sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
+                                                           sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
+                                                           deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If resize Is Nothing Then Return
             ' Der Haken steht im Auftrag, festgehalten beim Bestaetigen (siehe ApplyPendingBaked).
             Dim applyPendingBaked = resize.ApplyPendingBaked
@@ -14107,13 +14167,17 @@ Namespace ViewModels
                              ' Fehlt die Quelle beim Lesen der Aufnahmedaten, entsteht die neue Datei
                              ' ohne sie. Beim Ueberschreiben haelt RewriteImagesInPlaceAsync den Fall
                              ' selbst auf (siehe dort), deshalb gilt die Regel fuer beide Wege.
-                             Return ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, jpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=resize.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=PartsForNewFiles(resize.Overwrite, resize.MetadataParts))
+                                                             metadataParts:=PartsForNewFiles(resize.Overwrite, resize.MetadataParts),
+                                                             bitDepth:=resize.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, resize.BitDepth, outcome)
+                             Return saved
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14225,6 +14289,28 @@ Namespace ViewModels
             Return If(_isVirtualFolder, "", If(_currentFolder, ""))
         End Function
 
+        ''' <summary>Ist im Stapel eine Quelle, aus der eine Datei mit 16 Bit entstehen kann (eine RAW,
+        ''' die durch die RAW-Stufe laeuft und deren Rezept nichts dagegen hat)? Dann bietet der Dialog
+        ''' die Farbtiefe an. Das Rezept je Datei wird gefragt wie im Editor
+        ''' (ImageProcessor.RecipeBlocksDeep): besteht der Stapel nur aus RAWs, deren Rezept das
+        ''' ganze Bild ersetzt, stuende die Wahl ohne Wirkung da. Abseits des Oberflaechenfadens:
+        ''' bei einer DNG liest die Frage in die Datei, und das Rezept kommt aus der Beistelldatei.</summary>
+        Private Function BatchIncludesDeepSourceAsync(targetItems As IEnumerable(Of ImageItem)) As Task(Of Boolean)
+            ' Ein neuer Stapel beginnt: der Zaehler der Dateien, die mit 8 statt 16 Bit entstanden,
+            ' faengt bei null an (ein Lauf, der ohne Schlussmeldung endete, liesse sonst seinen Rest stehen).
+            Threading.Interlocked.Exchange(_batchShallowCount, 0)
+            Dim paths = If(targetItems, Enumerable.Empty(Of ImageItem)()).
+                Where(Function(i) i IsNot Nothing).Select(Function(i) i.FilePath).ToList()
+            Return Task.Run(Function() paths.Any(Function(p) BatchSourceCanGoDeep(p)))
+        End Function
+
+        ''' <summary>Eine Datei des Stapels: RAW durch die RAW-Stufe, und ihr Rezept sperrt die
+        ''' Ausgabe in 16 Bit nicht.</summary>
+        Friend Shared Function BatchSourceCanGoDeep(path As String) As Boolean
+            If Not ImageProcessor.CanSourceGoDeep(path) Then Return False
+            Return Not ImageProcessor.RecipeBlocksDeep(RawSidecarService.TryRead(path))
+        End Function
+
         ''' <summary>Sind JPG-Dateien im Stapel? Dann zeigt der Dialog den Qualitaetsregler auch
         ''' beim Ueberschreiben - die Dateien werden dabei neu encodiert.</summary>
         Private Shared Function BatchIncludesJpg(targetItems As IEnumerable(Of ImageItem)) As Boolean
@@ -14275,7 +14361,8 @@ Namespace ViewModels
             Dim result = Await _mainVm.ShowBatchFilterAsync(targetItems.Count, folderHint, ueberschreibbar,
                                                             sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
                                                             recipeCount:=recipeCount,
-                                                            denoiseBlockedCount:=denoiseBlockedCount)
+                                                            denoiseBlockedCount:=denoiseBlockedCount,
+                                                            deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing Then Return
             Dim applyPendingBaked = result.ApplyPendingBaked
 
@@ -14304,14 +14391,18 @@ Namespace ViewModels
                              ' Das Entrauschen misst bei der Automatik JE BILD, und zwar erst im
                              ' Speicherweg am frisch entwickelten Bild - hier gibt es noch keine Pixel.
                              ' Fehlende Quelle: siehe ResizeImageItemsCoreAsync.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              denoise:=result.Denoise,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts))
+                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts),
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
 
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
@@ -14694,7 +14785,8 @@ Namespace ViewModels
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowWatermarkPresetDialogAsync(ueberschreibbar,
                                                                       currentFolder:=BatchFolderHint(targetItems),
-                                                                      sourcesIncludeJpg:=BatchIncludesJpg(targetItems))
+                                                                      sourcesIncludeJpg:=BatchIncludesJpg(targetItems),
+                                                                      deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing OrElse result.Preset Is Nothing Then Return
             Dim applyPendingBaked = _mainVm.DialogApplyPendingBaked
 
@@ -14716,13 +14808,17 @@ Namespace ViewModels
                              Dim adj = BatchBaseAdjustments(source)
                              adj.Annotations.Add(annotation.Clone())
                              ' Fehlende Quelle: siehe ResizeImageItemsCoreAsync.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts))
+                                                             metadataParts:=PartsForNewFiles(result.Overwrite, result.MetadataParts),
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
             ' LOKAL heisst "hat eine Datei auf dieser Platte" - nicht "ist kein Immich". Ein
             ' Nextcloud-Element fiel vorher in diesen Topf und wurde mit seinem Pseudo-Pfad wie eine
@@ -14954,11 +15050,30 @@ Namespace ViewModels
         ''' <summary>Die Schlussmeldung eines Stapels. Nach einem Abbruch sagt sie das auch: eine
         ''' blosse Zahl liest sich dort wie ein Fehlschlag.</summary>
         Private Function BatchResultText(template As String, done As Integer, total As Integer) As String
+            ' Dateien, die trotz gewaehlter 16 Bit mit 8 entstanden (NoteBatchBitDepth): die Meldung
+            ' sagt es, sonst stuende es nur im Protokoll. Gelesen wird der Zaehler genau einmal.
+            Dim shallow = Threading.Interlocked.Exchange(_batchShallowCount, 0)
+            Dim note = If(shallow > 0,
+                          " " & String.Format(LocalizationService.T("{0} RAW-Datei(en) mit 8 Bit statt 16 geschrieben."), shallow),
+                          "")
             If BatchWasCancelled() Then
-                Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total)
+                Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total) & note
             End If
-            Return String.Format(template, done, total)
+            Return String.Format(template, done, total) & note
         End Function
+
+        ''' <summary>Wie viele Dateien des laufenden Stapels trotz gewaehlter 16 Bit mit 8 entstanden
+        ''' sind, obwohl ihre Quelle 16 Bit hergibt. Eine 8-Bit-Quelle zaehlt nicht: bei ihr sind
+        ''' 8 Bit das Erwartete. Zurueckgesetzt beim Oeffnen eines Stapeldialogs und beim Lesen in
+        ''' <see cref="BatchResultText"/>.</summary>
+        Private _batchShallowCount As Integer
+
+        ''' <summary>Nach jedem geschriebenen Bild eines Stapels: vermerkt, wenn aus verlangten 16 Bit
+        ''' 8 wurden. Aus den Arbeitsfaeden des Stapels gerufen.</summary>
+        Private Sub NoteBatchBitDepth(source As String, requested As Integer, outcome As ImageProcessor.SaveOutcome)
+            If requested <> 16 OrElse outcome Is Nothing OrElse outcome.WrittenBitDepth = 16 Then Return
+            If ImageProcessor.CanSourceGoDeep(source) Then Threading.Interlocked.Increment(_batchShallowCount)
+        End Sub
 
         ''' <param name="rewritten">Wenn angegeben: bekommt genau die Pfade, deren Datei wirklich
         ''' ersetzt wurde. Fuer Aufrufer, die danach an DIESEN Dateien weiterarbeiten (Metadaten
@@ -15658,7 +15773,8 @@ Namespace ViewModels
             Dim samplePath = targetItems.Select(Function(i) i.FilePath).
                 FirstOrDefault(Function(pth) Not String.IsNullOrEmpty(pth) AndAlso File.Exists(pth))
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
-            Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath)
+            Dim result = Await _mainVm.ShowExportToAsync(targetItems.Count, folderHint, samplePath,
+                                                         deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing Then Return
             Dim applyPendingBaked = result.ApplyPendingBaked
 
@@ -15766,14 +15882,18 @@ Namespace ViewModels
                              SetBatchResizeStep(adj, resizeFields)
                              ' Export schreibt immer neue Dateien: fehlt die Quelle beim Lesen der
                              ' Aufnahmedaten, entsteht die Datei ohne sie.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, result.PreserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              denoise:=result.Denoise,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=result.MetadataParts)
+                                                             metadataParts:=result.MetadataParts,
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
             Dim nameBuilder = CreateNameBuilder(result.NamePattern)
 
@@ -15863,7 +15983,8 @@ Namespace ViewModels
 
             Await _mainVm.PreparePendingBakedOptionAsync(targetItems.Select(Function(i) i.FilePath))
             Dim result = Await _mainVm.ShowBatchConvertAsync(targetItems.Count, MainWindowViewModel.DefaultSaveFormat(),
-                                                             currentFolder:=BatchFolderHint(targetItems))
+                                                             currentFolder:=BatchFolderHint(targetItems),
+                                                             deepSourceAvailable:=Await BatchIncludesDeepSourceAsync(targetItems))
             If result Is Nothing Then Return
             Dim isDngConversion = String.Equals(result.Format, "DNG", StringComparison.OrdinalIgnoreCase)
             If isDngConversion Then
@@ -15914,13 +16035,17 @@ Namespace ViewModels
                              Dim adj = BatchBaseAdjustments(source)
                              ' Konvertieren schreibt immer neue Dateien: fehlt die Quelle beim Lesen
                              ' der Aufnahmedaten, entsteht die Datei ohne sie.
-                             Return ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
+                             Dim outcome As New ImageProcessor.SaveOutcome()
+                             Dim saved = ImageProcessor.SaveImage(source, target, adj, result.JpgQuality, preserveMetadata,
                                                              developRaw:=BatchDevelopsRaw(source),
                                                              applyPendingBaked:=applyPendingBaked,
                                                              copyrightText:=result.Copyright,
                                                              cancel:=cancel,
                                                              missingSource:=ImageProcessor.MissingSourceMetadata.SaveWithoutMetadata,
-                                                             metadataParts:=result.MetadataParts)
+                                                             metadataParts:=result.MetadataParts,
+                                                             bitDepth:=result.BitDepth, outcome:=outcome)
+                             If saved Then NoteBatchBitDepth(source, result.BitDepth, outcome)
+                             Return saved
                          End Function
             ' Fuer die Serverwege dieselbe Kette, nur mit der Bedingung davor, die es dort seit jeher
             ' gibt: liegt die Quelle schon im Zielformat vor, gibt es nichts zu konvertieren.

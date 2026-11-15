@@ -25,8 +25,9 @@ Namespace Services
     '''
     ''' Gerechnet wird in Baendern von Zielzeilen, jedes Band mit eigenem kleinen Zwischenpuffer;
     ''' ein Zwischenbild ueber die ganze Hoehe der Quelle waere bei 100 Megapixeln fast ein
-    ''' Gigabyte. Nur 8 Bit je Kanal (BGRA oder RGBA): das ist das Format der Pixelkette. Alles
-    ''' andere liefert Nothing, und der Aufrufer zeichnet wie bisher ueber Skia.
+    ''' Gigabyte. 8 Bit je Kanal (BGRA oder RGBA), das Format der Pixelkette, dazu 16 Bit je Kanal
+    ''' fuer das tiefe Bild der 16-Bit-Ausgabe. Alles andere liefert Nothing, und der Aufrufer
+    ''' zeichnet wie bisher ueber Skia.
     ''' </summary>
     Friend NotInheritable Class ImageResampler
 
@@ -56,6 +57,8 @@ Namespace Services
                                       kernel As Kernel) As SKBitmap
             If source Is Nothing OrElse targetWidth <= 0 OrElse targetHeight <= 0 Then Return Nothing
             Dim info = source.Info
+            ' Das tiefe Bild der 16-Bit-Ausgabe mit demselben Filter (ImageProcessorDeep.vb).
+            If info.ColorType = SKColorType.Rgba16161616 Then Return ResizeDeep(source, targetWidth, targetHeight, kernel)
             If info.ColorType <> SKColorType.Bgra8888 AndAlso info.ColorType <> SKColorType.Rgba8888 Then Return Nothing
             Dim sourcePixels = source.GetPixels()
             If sourcePixels = IntPtr.Zero Then Return Nothing
@@ -145,6 +148,109 @@ Namespace Services
 
             result.NotifyPixelsChanged()
             Return result
+        End Function
+
+        ''' <summary>Dieselbe Rechnung wie <see cref="Resize"/> fuer ein Bild mit 16 Bit je Kanal
+        ''' (Rgba16161616): dieselben Baender, dieselben Gewichte, geklemmt auf 0 bis 65535. Die
+        ''' beiden Durchlaeufe stehen nebeneinander statt in einem, weil der eine Bytes und der
+        ''' andere 16-Bit-Werte liest und schreibt; wer den einen aendert, aendert den anderen mit.</summary>
+        Private Shared Function ResizeDeep(source As SKBitmap, targetWidth As Integer, targetHeight As Integer,
+                                           kernel As Kernel) As SKBitmap
+            Dim info = source.Info
+            Dim sourcePixels = source.GetPixels()
+            If sourcePixels = IntPtr.Zero Then Return Nothing
+
+            Dim srcW = info.Width
+            Dim srcH = info.Height
+            Dim srcStride = source.RowBytes
+            Dim premul = info.AlphaType = SKAlphaType.Premul
+
+            Dim horizontal = BuildContributions(srcW, targetWidth, kernel)
+            Dim vertical = BuildContributions(srcH, targetHeight, kernel)
+
+            Dim result = New SKBitmap(New SKImageInfo(targetWidth, targetHeight, info.ColorType, info.AlphaType, info.ColorSpace))
+            Dim targetPixels = result.GetPixels()
+            If targetPixels = IntPtr.Zero Then
+                result.Dispose()
+                Return Nothing
+            End If
+            Dim dstStride = result.RowBytes
+            Dim bandCount = (targetHeight + BandRows - 1) \ BandRows
+
+            Parallel.For(0, bandCount,
+                Sub(band)
+                    Dim y0 = band * BandRows
+                    Dim y1 = Math.Min(targetHeight, y0 + BandRows)
+                    Dim firstSource = vertical(y0).Start
+                    Dim lastSource = 0
+                    For y = y0 To y1 - 1
+                        lastSource = Math.Max(lastSource, vertical(y).Start + vertical(y).Weights.Length)
+                    Next
+                    Dim rowsInBand = lastSource - firstSource
+                    Dim rowFloats = targetWidth * 4
+                    Dim buffer(rowsInBand * rowFloats - 1) As Single
+                    Dim sourceRow(srcW * 4 - 1) As Short
+
+                    For r = 0 To rowsInBand - 1
+                        Marshal.Copy(sourcePixels + (firstSource + r) * srcStride, sourceRow, 0, srcW * 4)
+                        Dim baseOut = r * rowFloats
+                        For x = 0 To targetWidth - 1
+                            Dim c = horizontal(x)
+                            Dim w = c.Weights
+                            Dim p = c.Start * 4
+                            Dim a0 = 0.0F, a1 = 0.0F, a2 = 0.0F, a3 = 0.0F
+                            For k = 0 To w.Length - 1
+                                Dim wk = w(k)
+                                a0 += (sourceRow(p) And &HFFFF) * wk
+                                a1 += (sourceRow(p + 1) And &HFFFF) * wk
+                                a2 += (sourceRow(p + 2) And &HFFFF) * wk
+                                a3 += (sourceRow(p + 3) And &HFFFF) * wk
+                                p += 4
+                            Next
+                            Dim o = baseOut + x * 4
+                            buffer(o) = a0
+                            buffer(o + 1) = a1
+                            buffer(o + 2) = a2
+                            buffer(o + 3) = a3
+                        Next
+                    Next
+
+                    Dim targetRow(targetWidth * 4 - 1) As Short
+                    For y = y0 To y1 - 1
+                        Dim c = vertical(y)
+                        Dim w = c.Weights
+                        Dim firstRow = c.Start - firstSource
+                        For x = 0 To targetWidth - 1
+                            Dim o = x * 4
+                            Dim a0 = 0.0F, a1 = 0.0F, a2 = 0.0F, a3 = 0.0F
+                            Dim p = firstRow * rowFloats + o
+                            For k = 0 To w.Length - 1
+                                Dim wk = w(k)
+                                a0 += buffer(p) * wk
+                                a1 += buffer(p + 1) * wk
+                                a2 += buffer(p + 2) * wk
+                                a3 += buffer(p + 3) * wk
+                                p += rowFloats
+                            Next
+                            Dim alpha = ToDeep(a3)
+                            Dim limit = If(premul, alpha, 65535)
+                            targetRow(o) = ImageProcessor.ToDeepShort(Math.Min(ToDeep(a0), limit))
+                            targetRow(o + 1) = ImageProcessor.ToDeepShort(Math.Min(ToDeep(a1), limit))
+                            targetRow(o + 2) = ImageProcessor.ToDeepShort(Math.Min(ToDeep(a2), limit))
+                            targetRow(o + 3) = ImageProcessor.ToDeepShort(alpha)
+                        Next
+                        Marshal.Copy(targetRow, 0, targetPixels + y * dstStride, targetWidth * 4)
+                    Next
+                End Sub)
+
+            result.NotifyPixelsChanged()
+            Return result
+        End Function
+
+        Private Shared Function ToDeep(value As Single) As Integer
+            If Not value > 0.0F Then Return 0
+            If value >= 65535.0F Then Return 65535
+            Return CInt(Math.Floor(value + 0.5F))
         End Function
 
         Private Shared Function ToByte(value As Single) As Byte

@@ -45,6 +45,10 @@ Namespace Services
         Public Class PsdLayerInput
             Public Property Name As String = ""
             Public Property Pixels As SKBitmap
+            ''' <summary>Dieselben Bildpunkte mit 16 Bit je Kanal (Rgba16161616, Masse wie
+            ''' <see cref="Pixels"/>), wenn es sie gibt. Gelesen nur in einer Datei mit 16 Bit;
+            ''' fehlt es dort, werden die 8-Bit-Bildpunkte auf 16 Bit gespreizt.</summary>
+            Public Property DeepPixels As SKBitmap
             Public Property Left As Integer
             Public Property Top As Integer
             Public Property OpacityPercent As Single = 100
@@ -248,14 +252,24 @@ Namespace Services
         ''' <param name="resolutionDpi">Die Aufloesung in Punkten je Zoll, 0 = keine schreiben (dann
         ''' nimmt jedes Programm seine Vorgabe, Photoshop 72).</param>
         ''' <param name="xmp">Das XMP-Paket der Quelle, Nothing = keins schreiben.</param>
+        ''' <param name="deepComposite">Das Gesamtbild mit 16 Bit je Kanal (Rgba16161616, Masse wie
+        ''' <paramref name="composite"/>). Damit entsteht eine Datei mit 16 Bit: Kopf, Gesamtbild
+        ''' und jede Ebene tragen dann 16 Bit, die Ebenen stehen im Zusatzblock "Lr16" und sind mit
+        ''' ZIP und Vorhersage gepackt, so wie Photoshop solche Dateien selbst schreibt.</param>
         Public Shared Function Save(filePath As String, composite As SKBitmap,
                                     layers As IList(Of PsdLayerInput),
                                     Optional recipe As Byte() = Nothing,
                                     Optional resolutionDpi As Double = 0,
-                                    Optional xmp As Byte() = Nothing) As Boolean
+                                    Optional xmp As Byte() = Nothing,
+                                    Optional deepComposite As SKBitmap = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(filePath) OrElse composite Is Nothing Then Return False
             If composite.Width < 1 OrElse composite.Height < 1 Then Return False
             If composite.Width > MaxSide OrElse composite.Height > MaxSide Then Return False
+            If deepComposite IsNot Nothing Then
+                If deepComposite.ColorType <> SKColorType.Rgba16161616 OrElse
+                   deepComposite.Width <> composite.Width OrElse deepComposite.Height <> composite.Height Then Return False
+                Return SaveDeep(filePath, deepComposite, layers, recipe, resolutionDpi, xmp)
+            End If
 
             Dim usable As New List(Of PsdLayerInput)()
             If layers IsNot Nothing Then
@@ -282,7 +296,7 @@ Namespace Services
                 ' also vier Byte je Bildpunkt zusaetzlich zu dessen eigenem Puffer.
                 Dim compositePlanes = ExtractPlanes(composite)
                 Using fs = File.Create(tempPath)
-                    WriteHeader(fs, composite.Width, composite.Height)
+                    WriteHeader(fs, composite.Width, composite.Height, 8)
                     WriteU32(fs, 0)  ' Farbmodus-Daten: keine
                     WriteImageResources(fs, recipe, resolutionDpi, xmp)
                     WriteLayerSection(fs, usable, HasTransparentPixels(compositePlanes))
@@ -303,7 +317,7 @@ Namespace Services
 
         ' ── Kopf ─────────────────────────────────────────────────────────────────
 
-        Private Shared Sub WriteHeader(fs As Stream, width As Integer, height As Integer)
+        Private Shared Sub WriteHeader(fs As Stream, width As Integer, height As Integer, depth As Integer)
             fs.Write(Encoding.ASCII.GetBytes("8BPS"), 0, 4)
             WriteU16(fs, 1)          ' Version 1 = PSD
             For i = 1 To 6           ' sechs Nullbytes, vom Format so verlangt
@@ -312,7 +326,7 @@ Namespace Services
             WriteU16(fs, 4)          ' Kanaele: R, G, B und Transparenz
             WriteU32(fs, height)
             WriteU32(fs, width)
-            WriteU16(fs, 8)          ' 8 Bit je Kanal
+            WriteU16(fs, depth)      ' Bit je Kanal: 8 oder 16
             WriteU16(fs, 3)          ' Farbmodus RGB
         End Sub
 
@@ -396,7 +410,8 @@ Namespace Services
         ''' vorangestellten Laengen. Ohne Ebenen bleibt die Sektion leer - eine Laenge 0 ist gueltig
         ''' und heisst "nur ein Gesamtbild".</summary>
         Private Shared Sub WriteLayerSection(fs As Stream, layers As IList(Of PsdLayerInput),
-                                             mergedImageHasTransparency As Boolean)
+                                             mergedImageHasTransparency As Boolean,
+                                             Optional deep As Boolean = False)
             If layers.Count = 0 Then
                 WriteU32(fs, 0)
                 Return
@@ -407,7 +422,7 @@ Namespace Services
             ' einen fuenften, wenn eine Maske dabei ist.
             Dim packed As New List(Of Byte()())()
             For Each layer In layers
-                packed.Add(PackLayerChannels(layer))
+                packed.Add(If(deep, PackLayerChannelsDeep(layer), PackLayerChannels(layer)))
             Next
 
             Using info As New MemoryStream()
@@ -487,6 +502,24 @@ Namespace Services
                 ' globalen Maskenlaenge.
                 Dim infoLen = CInt(info.Length)
                 Dim padded = (infoLen + 3) And Not 3
+                If deep Then
+                    ' Bei 16 Bit bleibt die Ebenen-Info am Standardplatz LEER, und die Ebenen
+                    ' stehen mit demselben Aufbau im Zusatzblock "Lr16" hinter der globalen
+                    ' Maske. So schreibt Photoshop es selbst, und so sucht der eigene Leser
+                    ' (PsdLayerReader.SeekLayerCount).
+                    WriteU32(fs, 4 + 4 + 12 + padded)
+                    WriteU32(fs, 0)  ' Ebenen-Info: leer
+                    WriteU32(fs, 0)  ' globale Ebenenmaske: keine
+                    fs.Write(Encoding.ASCII.GetBytes("8BIM"), 0, 4)
+                    fs.Write(Encoding.ASCII.GetBytes("Lr16"), 0, 4)
+                    WriteU32(fs, padded)
+                    info.Position = 0
+                    info.CopyTo(fs)
+                    For i = infoLen + 1 To padded
+                        fs.WriteByte(0)
+                    Next
+                    Return
+                End If
                 WriteU32(fs, padded + 4 + 4)
                 WriteU32(fs, padded)
                 info.Position = 0
@@ -496,6 +529,214 @@ Namespace Services
                 Next
                 WriteU32(fs, 0)  ' globale Ebenenmaske: keine
             End Using
+        End Sub
+
+        ' ── 16 Bit je Kanal ──────────────────────────────────────────────────────
+        '
+        ' Eine Datei mit 16 Bit traegt ALLES in 16 Bit: Gesamtbild, jede Ebene, jede Maske. Was
+        ' nur mit 8 Bit vorliegt (Objektebenen, Masken), wird gespreizt (Wert mal 257); der
+        ' Hintergrund und das Gesamtbild kommen aus dem tiefen Bild der Kette.
+
+        ''' <summary>Die Fassung von <see cref="Save"/> fuer 16 Bit je Kanal.</summary>
+        Private Shared Function SaveDeep(filePath As String, deepComposite As SKBitmap,
+                                         layers As IList(Of PsdLayerInput), recipe As Byte(),
+                                         resolutionDpi As Double, xmp As Byte()) As Boolean
+            Dim usable As New List(Of PsdLayerInput)()
+            If layers IsNot Nothing Then
+                For Each layer In layers
+                    If layer Is Nothing Then Continue For
+                    If Not layer.HasNoPixels Then
+                        If layer.Pixels Is Nothing Then Continue For
+                        If layer.Pixels.Width < 1 OrElse layer.Pixels.Height < 1 Then Continue For
+                    End If
+                    usable.Add(layer)
+                Next
+            End If
+
+            Dim tempPath = filePath & ".tmp"
+            Try
+                Dim compositePlanes = ExtractPlanesDeep(deepComposite)
+                If compositePlanes Is Nothing Then Return False
+                Dim transparent = False
+                For Each alpha In compositePlanes(3)
+                    If alpha <> UShort.MaxValue Then
+                        transparent = True
+                        Exit For
+                    End If
+                Next
+                Using fs = File.Create(tempPath)
+                    WriteHeader(fs, deepComposite.Width, deepComposite.Height, 16)
+                    WriteU32(fs, 0)  ' Farbmodus-Daten: keine
+                    WriteImageResources(fs, recipe, resolutionDpi, xmp)
+                    WriteLayerSection(fs, usable, transparent, deep:=True)
+                    WriteMergedImageDeep(fs, deepComposite.Width, deepComposite.Height, compositePlanes)
+                End Using
+                File.Move(tempPath, filePath, overwrite:=True)
+                Return True
+            Catch ex As Exception
+                DiagnosticLogService.LogException("PsdWriter.SaveDeep", ex)
+                Try
+                    If File.Exists(tempPath) Then File.Delete(tempPath)
+                Catch
+                End Try
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Zerlegt ein Bild mit 16 Bit je Kanal in vier Kanal-Ebenen (R, G, B, A), gerade
+        ''' statt vormultipliziert. Nothing, wenn sich die Bildpunkte nicht lesen lassen.</summary>
+        Private Shared Function ExtractPlanesDeep(deep As SKBitmap) As UShort()()
+            If deep Is Nothing OrElse deep.ColorType <> SKColorType.Rgba16161616 Then Return Nothing
+            Dim width = deep.Width
+            Dim height = deep.Height
+            Dim pixels = deep.GetPixels()
+            If pixels = IntPtr.Zero Then Return Nothing
+            Dim count = width * height
+            Dim r(count - 1) As UShort
+            Dim g(count - 1) As UShort
+            Dim b(count - 1) As UShort
+            Dim a(count - 1) As UShort
+            Dim premultiplied = deep.AlphaType = SKAlphaType.Premul
+            Dim stride = deep.RowBytes
+            Threading.Tasks.Parallel.For(0, height,
+                Sub(y)
+                    Dim row(width * 4 - 1) As Short
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(pixels, y * stride), row, 0, width * 4)
+                    Dim o = y * width
+                    For x = 0 To width - 1
+                        Dim red = row(x * 4) And &HFFFF
+                        Dim green = row(x * 4 + 1) And &HFFFF
+                        Dim blue = row(x * 4 + 2) And &HFFFF
+                        Dim alpha = row(x * 4 + 3) And &HFFFF
+                        If premultiplied AndAlso alpha > 0 AndAlso alpha < 65535 Then
+                            red = Math.Min(65535, CInt((CLng(red) * 65535L + alpha \ 2) \ alpha))
+                            green = Math.Min(65535, CInt((CLng(green) * 65535L + alpha \ 2) \ alpha))
+                            blue = Math.Min(65535, CInt((CLng(blue) * 65535L + alpha \ 2) \ alpha))
+                        End If
+                        r(o + x) = CUShort(red)
+                        g(o + x) = CUShort(green)
+                        b(o + x) = CUShort(blue)
+                        a(o + x) = CUShort(alpha)
+                    Next
+                End Sub)
+            Return New UShort()() {r, g, b, a}
+        End Function
+
+        ''' <summary>Ein Kanal mit 8 Bit, gespreizt auf 16: 255 wird 65535.</summary>
+        Private Shared Function WidenPlane(plane As Byte()) As UShort()
+            Dim wide(plane.Length - 1) As UShort
+            For i = 0 To plane.Length - 1
+                wide(i) = CUShort(CInt(plane(i)) * 257)
+            Next
+            Return wide
+        End Function
+
+        ''' <summary>Wie <see cref="PackLayerChannels"/>, fuer eine Datei mit 16 Bit: Transparenz,
+        ''' Rot, Gruen, Blau und gegebenenfalls die Maske, jeder Kanal mit ZIP und Vorhersage.</summary>
+        Private Shared Function PackLayerChannelsDeep(layer As PsdLayerInput) As Byte()()
+            Dim maskPlane As Byte() = Nothing
+            If layer.HasMask Then maskPlane = ExtractMaskPlane(layer.MaskPixels)
+            Dim result As Byte()() = New Byte(If(maskPlane Is Nothing, 3, 4))() {}
+            If layer.HasNoPixels Then
+                For c = 0 To 3
+                    result(c) = New Byte() {0, 0}
+                Next
+            Else
+                Dim bmp = layer.Pixels
+                Dim planes As UShort()() = Nothing
+                If layer.DeepPixels IsNot Nothing AndAlso layer.DeepPixels.Width = bmp.Width AndAlso
+                   layer.DeepPixels.Height = bmp.Height Then
+                    planes = ExtractPlanesDeep(layer.DeepPixels)
+                End If
+                If planes Is Nothing Then
+                    Dim narrow = ExtractPlanes(bmp)
+                    planes = New UShort()() {WidenPlane(narrow(0)), WidenPlane(narrow(1)), WidenPlane(narrow(2)), WidenPlane(narrow(3))}
+                End If
+                ' ExtractPlanes liefert R, G, B, A - hier wird auf A, R, G, B umsortiert.
+                Dim order = New Integer() {3, 0, 1, 2}
+                For c = 0 To 3
+                    result(c) = PackPlaneZipDeep(planes(order(c)), bmp.Width, bmp.Height)
+                Next
+            End If
+            If maskPlane IsNot Nothing Then
+                result(4) = PackPlaneZipDeep(WidenPlane(maskPlane), layer.MaskPixels.Width, layer.MaskPixels.Height)
+            End If
+            Return result
+        End Function
+
+        ''' <summary>Packt einen Kanal mit 16 Bit: Kompressionsmarke 3 (ZIP mit Vorhersage), danach
+        ''' EIN zlib-Strom ueber alle Zeilen. In jeder Zeile steht statt des Werts die Differenz zum
+        ''' linken Nachbarn, als ganzes Wort mit dem oberen Byte zuerst; der erste Wert der Zeile
+        ''' steht selbst da. Das Gegenstueck im Leser ist PsdPreviewService.UndoPrediction.</summary>
+        Private Shared Function PackPlaneZipDeep(plane As UShort(), width As Integer, height As Integer) As Byte()
+            Dim raw(width * height * 2 - 1) As Byte
+            Threading.Tasks.Parallel.For(0, height,
+                Sub(row)
+                    Dim source = row * width
+                    Dim target = row * width * 2
+                    Dim before = 0
+                    For x = 0 To width - 1
+                        Dim value = CInt(plane(source + x))
+                        Dim delta = (value - before) And &HFFFF
+                        raw(target + x * 2) = CByte((delta >> 8) And &HFF)
+                        raw(target + x * 2 + 1) = CByte(delta And &HFF)
+                        before = value
+                    Next
+                End Sub)
+            Using packed As New MemoryStream()
+                packed.WriteByte(0)
+                packed.WriteByte(3)
+                Using zip As New Compression.ZLibStream(packed, Compression.CompressionLevel.Optimal, leaveOpen:=True)
+                    zip.Write(raw, 0, raw.Length)
+                End Using
+                Return packed.ToArray()
+            End Using
+        End Function
+
+        ''' <summary>Das Gesamtbild mit 16 Bit: wie <see cref="WriteMergedImage"/> gegen Weiss
+        ''' verrechnet und zeilenweise mit PackBits gepackt, hier ueber die Bytes der Worte (oberes
+        ''' Byte zuerst). ZIP kennt das Gesamtbild nicht.</summary>
+        Private Shared Sub WriteMergedImageDeep(fs As Stream, width As Integer, height As Integer,
+                                                planes As UShort()())
+            Dim alpha = planes(3)
+            For i = 0 To alpha.Length - 1
+                Dim a = CLng(alpha(i))
+                If a = 65535 Then Continue For
+                For c = 0 To 2
+                    planes(c)(i) = CUShort((CLng(planes(c)(i)) * a + 65535L * (65535L - a) + 32767L) \ 65535L)
+                Next
+            Next
+
+            WriteU16(fs, 1)  ' Kompression: RLE/PackBits
+
+            Dim rows As Byte()()() = New Byte(3)()() {}
+            For c = 0 To 3
+                Dim channel = planes(c)
+                Dim packedRows(height - 1)() As Byte
+                Threading.Tasks.Parallel.For(0, height,
+                    Sub(row)
+                        Dim line(width * 2 - 1) As Byte
+                        Dim source = row * width
+                        For x = 0 To width - 1
+                            Dim value = CInt(channel(source + x))
+                            line(x * 2) = CByte((value >> 8) And &HFF)
+                            line(x * 2 + 1) = CByte(value And &HFF)
+                        Next
+                        packedRows(row) = PackBits(line, 0, line.Length)
+                    End Sub)
+                rows(c) = packedRows
+            Next
+
+            For c = 0 To 3
+                For row = 0 To height - 1
+                    WriteU16(fs, rows(c)(row).Length)
+                Next
+            Next
+            For c = 0 To 3
+                For row = 0 To height - 1
+                    fs.Write(rows(c)(row), 0, rows(c)(row).Length)
+                Next
+            Next
         End Sub
 
         ''' <summary>Die Abschnittsmarke einer Gruppe: der Zusatzblock "lsct" mit ihrer Art und, bei

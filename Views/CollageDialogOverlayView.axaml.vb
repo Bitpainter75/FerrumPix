@@ -99,6 +99,14 @@ Namespace Views
             vm.CollageLayoutMode = TryCast(btn.Tag, String)
         End Sub
 
+        ''' Die beiden Knoepfe der Farbtiefe; im Tag steht 8 oder 16.
+        Private Sub OnBitDepthClick(sender As Object, e As RoutedEventArgs)
+            Dim btn = TryCast(sender, Button)
+            Dim vm = TryCast(DataContext, GalleryViewModel)
+            If btn Is Nothing OrElse vm Is Nothing Then Return
+            vm.SetCollageBitDepth(If(String.Equals(TryCast(btn.Tag, String), "16", StringComparison.Ordinal), 16, 8))
+        End Sub
+
         Private Sub OnSizeModeClick(sender As Object, e As RoutedEventArgs)
             Dim btn = TryCast(sender, Button)
             Dim vm = TryCast(DataContext, GalleryViewModel)

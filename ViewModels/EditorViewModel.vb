@@ -23474,13 +23474,22 @@ Namespace ViewModels
                 ' Vorgabe aus den Einstellungen (dort ist FPX waehlbar); ist FPX abgeschaltet oder
                 ' nicht eingestellt, kommt das dort gewaehlte Bildformat heraus.
                 Dim initialFormat = MainWindowViewModel.DefaultSaveFormat(allowFpx:=True)
+                ' Die Farbtiefe bietet der Dialog nur an, wenn aus DIESEM Bild eine Datei mit 16 Bit
+                ' werden kann: die Quelle ist eine RAW, und das Rezept traegt nichts, womit das tiefe
+                ' Bild endet (ein Vorgang, der das ganze Bild ersetzt: Entrauschen am fertigen Bild,
+                ' Hochskalieren mit Modell, siehe ImageProcessor.RecipeBlocksDeep). Sonst stuende die
+                ' Wahl ohne Wirkung da.
+                Dim recipeAllowsDeep = Not ImageProcessor.RecipeBlocksDeep(GetCurrentAdjustments())
+                Dim deepSource = RenderSourcePath
                 saveAsResult = Await _mainVm.ShowSaveAsAsync(LocalizationService.T("Speichern unter"),
                                                              LocalizationService.T("Dateiname eingeben"),
                                                              proposedName,
                                                              initialFormat,
                                                              SaveQuality,
                                                              LocalizationService.T("Speichern"),
-                                                             LocalizationService.T("Abbrechen"))
+                                                             LocalizationService.T("Abbrechen"),
+                                                             deepSourceAvailable:=recipeAllowsDeep AndAlso Await Task.Run(
+                                                                 Function() ImageProcessor.CanSourceGoDeep(deepSource)))
                 If saveAsResult Is Nothing Then Return False
 
                 ' Eine Namensvorlage aus der Auswahl des Dialogs (GitHub #102) wird hier fuer dieses
@@ -23584,6 +23593,10 @@ Namespace ViewModels
                 If saveAs AndAlso saveAsResult IsNot Nothing Then metadataParts = saveAsResult.MetadataParts
                 ' Der Urheberrechtshinweis aus dem Dialog; leer heisst "nicht anfassen".
                 Dim copyrightText = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.Copyright, "")
+                ' Die Farbtiefe aus dem Dialog; ohne Dialog (Speichern ueber das Original) 8 Bit.
+                Dim bitDepth = If(saveAs AndAlso saveAsResult IsNot Nothing, saveAsResult.BitDepth, 8)
+                ' Womit die Datei wirklich entstand: aus verlangten 16 Bit koennen 8 werden.
+                Dim saveOutcome As New ImageProcessor.SaveOutcome()
                 Dim ok As Boolean
                 If isFpxSave Then
                     ' Nicht-destruktiv als .fpx-Bündel sichern: das gerenderte Komposit (für die Anzeige) plus
@@ -23683,6 +23696,15 @@ Namespace ViewModels
                     Dim psdWorking As SKBitmap = If(_workingImage.HasBakedContent, CloneWorkingFullForRender(), Nothing)
                     ok = Await Task.Run(Function() As Boolean
                                             Try
+                                                ' Verlangte 16 Bit: der eigene Einstieg rechnet Gesamtbild
+                                                ' und unterste Ebene mit dem tiefen Bild und schreibt die
+                                                ' Datei mit 16 Bit, wenn es bis ans Ende mitkommt.
+                                                If bitDepth = 16 Then
+                                                    Dim deepWorking = psdWorking
+                                                    psdWorking = Nothing
+                                                    Return ImageProcessor.ExportLayeredPsdDeep(psdTarget, psdSourcePath, adj, deepWorking,
+                                                                                               preserveMetadata, outcome:=saveOutcome)
+                                                End If
                                                 ' Beide Bilder aus EINEM Decode (RenderLayeredExportPair).
                                                 Dim background As SKBitmap = Nothing
                                                 Dim composite = ImageProcessor.RenderLayeredExportPair(psdSourcePath, psdWorking, adj, background)
@@ -23706,7 +23728,9 @@ Namespace ViewModels
                     ok = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adj, targetQuality, preserveMetadata,
                                                                             workingFull:=CloneWorkingFullForRender(),
                                                                             copyrightText:=copyrightText,
-                                                                            metadataParts:=metadataParts))
+                                                                            metadataParts:=metadataParts,
+                                                                            bitDepth:=bitDepth,
+                                                                            outcome:=saveOutcome))
                 End If
                 If ok AndAlso saveToNextcloud Then
                     ' Ziel Nextcloud: die gerenderte Datei in den Dateibaum legen. Wohin, ist NICHT
@@ -23805,6 +23829,12 @@ Namespace ViewModels
                     StatusText = If(saveAs,
                                     $"{LocalizationService.T("Gespeichert als")} {IO.Path.GetFileName(targetPath)}",
                                     LocalizationService.T("Gespeichert"))
+                    ' 16 Bit gewaehlt, 8 geschrieben: das darf nicht nur im Protokoll stehen.
+                    If bitDepth = 16 AndAlso saveOutcome.WrittenBitDepth <> 16 Then
+                        StatusText = String.Format(
+                            LocalizationService.T("Mit 8 Bit gespeichert, für dieses Bild gibt es keine 16 Bit: {0}"),
+                            IO.Path.GetFileName(targetPath))
+                    End If
                     MarkDocumentSaved()
                     If saveAs Then
                         ' Katalog-Metadaten zur neuen Datei übernehmen - das Original behält seine.

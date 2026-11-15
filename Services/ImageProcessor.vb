@@ -276,8 +276,12 @@ Namespace Services
         ''' werden? Vorgabe NEIN, und das mit Absicht: es kostet Minuten je Bild, und wer eine
         ''' Vorschau aufbaut, wartet nicht minutenlang. Die Ausgabewege fragen den Nutzer und geben
         ''' seine Antwort hier herein.</param>
+        ''' <param name="withDeep">Fuer die Ausgabe in 16 Bit: das Ergebnis traegt sein tiefes Bild als
+        ''' Begleiter (ImageProcessorDeep.vb), wenn die Quelle eine RAW ist und die Kette es bis ans
+        ''' Ende mitrechnet. Der Aufrufer gibt es mit DropDeep frei, bevor er das Bild freigibt.</param>
         Friend Shared Function DecodeDevelopedForOutput(path As String, Optional developRaw As Boolean = True,
-                                                        Optional applyPendingBaked As Boolean = False) As SKBitmap
+                                                        Optional applyPendingBaked As Boolean = False,
+                                                        Optional withDeep As Boolean = False) As SKBitmap
             If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
 
             Dim rezept As ImageAdjustments = Nothing
@@ -287,7 +291,14 @@ Namespace Services
 
             ' Ohne Rezept die rohe Quelle, mit Rezept der Decode fuer die Kette (mit der Belichtung
             ' in der RAW-Stufe).
-            If rezept Is Nothing Then Return DecodeForAdjustments(path, Nothing, developRaw)
+            If rezept Is Nothing Then
+                Dim plain = DecodeForAdjustments(path, Nothing, developRaw)
+                If withDeep AndAlso plain IsNot Nothing Then AttachDeepRawSource(plain, path, Nothing, developRaw)
+                Return plain
+            End If
+            ' Das Rezept, wie es in der Datei steht: der Decode unten ersetzt die Variable durch
+            ' das Rezept fuer die Kette, das tiefe Bild braucht die Angaben der RAW-Stufe.
+            Dim rawStageRecipe = rezept
             ' Ein Entrauschen mit Modell kostet wie die gebackenen Vorgaenge Zeit und laeuft deshalb
             ' nur mit derselben Zustimmung (CountPathsWithPendingBakedOperations zaehlt es mit). Eine
             ' passende .fpdnz braucht keine: sie wird immer geladen, auch ohne Modell.
@@ -309,9 +320,20 @@ Namespace Services
                         reapplied = ApplyPendingBakedOperations(decoded, rezept)
                         If reapplied IsNot Nothing Then input = reapplied
                     End If
+                    If withDeep Then
+                        If reapplied Is Nothing Then
+                            AttachDeepRawSource(decoded, path, rawStageRecipe, True)
+                        Else
+                            AttachDeepEditedRawSource(reapplied, path, rawStageRecipe, True)
+                        End If
+                    End If
                     Return ProcessBitmap(input, rezept)
                 Finally
-                    reapplied?.Dispose()
+                    DropDeep(decoded)
+                    If reapplied IsNot Nothing Then
+                        DropDeep(reapplied)
+                        reapplied.Dispose()
+                    End If
                 End Try
             End Using
         End Function
@@ -2946,6 +2968,8 @@ Namespace Services
 
         Private Shared Function ProcessBitmap(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
             Dim processed = ProcessBitmapBase(source, adj)
+            ' Mit tiefem Bild (Ausgabe in 16 Bit) zeichnet ApplyAnnotationsCore die Objekte auch
+            ' darauf; das Ergebnis traegt dann seinen Begleiter schon.
             Return ReplaceBitmap(processed, ApplyAnnotations(processed, WithAnnotationSourceSpace(adj, source)))
         End Function
 
@@ -3041,7 +3065,7 @@ Namespace Services
                 PerformanceTraceService.Measure("Pixel: Geometrie",
                     Sub()
                         processed = ApplyGeometryPipelineOwned(processed, adj, owned)
-                        processed = ReplaceBitmapOwned(processed, ApplyDocumentBackground(processed, adj), owned)
+                        processed = ReplaceBitmapOwned(processed, RunStepWithDeep(processed, Function(b) ApplyDocumentBackground(b, adj)), owned)
                     End Sub)
             End If
 
@@ -3051,7 +3075,11 @@ Namespace Services
             ' in den Abmessungen noch in der Pixelanordnung zur sichtbaren Auswahl.
             If adj IsNot Nothing AndAlso Not adj.GlobalAdjustmentsHidden Then
                 Dim selectionBaseline As SKBitmap = Nothing
-                If SelectionScopeIsEnabled(adj) Then selectionBaseline = CloneBitmap(processed)
+                If SelectionScopeIsEnabled(adj) Then
+                    selectionBaseline = CloneBitmap(processed)
+                    ' Mit tiefem Bild (Ausgabe in 16 Bit) auch dessen Stand vor den Anpassungen.
+                    CopyDeepTo(processed, selectionBaseline)
+                End If
 
                 If cachedTone Is Nothing Then
                     ' Die Tonstufe in ihren zwei Haelften (ApplyToneAdjustmentStagesCore), damit der
@@ -3075,13 +3103,18 @@ Namespace Services
                     Dim scopeMask = BuildSelectionScopeMask(adj, processed.Width, processed.Height)
                     If scopeMask IsNot Nothing Then
                         Using scopeMask
-                            processed = ReplaceBitmapOwned(processed, CompositeSelectionScoped(selectionBaseline, processed, scopeMask), owned)
+                            Dim composite = CompositeSelectionScoped(selectionBaseline, processed, scopeMask)
+                            AttachSelectionScopedDeep(composite, selectionBaseline, processed, scopeMask)
+                            processed = ReplaceBitmapOwned(processed, composite, owned)
                         End Using
                     Else
                         ' Eine aktive, aber unlesbare/leer gewordene Maske darf niemals still auf eine
                         ' globale Anpassung zurueckfallen. Im Fehlerfall bleibt das Bild unveraendert.
-                        processed = ReplaceBitmapOwned(processed, CloneBitmap(selectionBaseline), owned)
+                        Dim unchanged = CloneBitmap(selectionBaseline)
+                        CopyDeepTo(selectionBaseline, unchanged)
+                        processed = ReplaceBitmapOwned(processed, unchanged, owned)
                     End If
+                    DropDeep(selectionBaseline)
                     selectionBaseline.Dispose()
                 End If
             End If
@@ -3175,6 +3208,9 @@ Namespace Services
             If adj IsNot Nothing AndAlso adj.ColorNoiseReduction > 0 Then
                 Dim input = processed
                 Dim amount = adj.ColorNoiseReduction / 100.0F
+                ' Mit tiefem Bild (Ausgabe in 16 Bit) die tiefe Fassung, das 8-Bit-Bild folgt ihr.
+                Dim fromDeep = RunDeepStage(input, "Pixel: Farbrauschen", Function(d) ApplyColorNoiseReductionDeep(d, amount))
+                If fromDeep IsNot Nothing Then Return ReplaceBitmapOwned(processed, fromDeep, owned)
                 Dim onGpu = TryColorNoiseReductionOnGpu(input, amount)
                 processed = ReplaceBitmapOwned(processed, If(onGpu, PerformanceTraceService.Measure(
                     "Pixel: Farbrauschen", Function() ApplyColorNoiseReduction(input, amount))), owned)
@@ -3228,7 +3264,9 @@ Namespace Services
         Private Shared Function ApplyDetailAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
                                                                 ByRef owned As Boolean) As SKBitmap
             Dim processed = source
-            Dim session = GpuDetailSession.TryCreate(processed)
+            ' Mit tiefem Bild (Ausgabe in 16 Bit) ohne Sitzung auf der Karte: die tiefen Stufen
+            ' rechnen auf dem Prozessor, und ein Bild, das oben liegt, haette seinen Begleiter nicht bei sich.
+            Dim session = If(DeepOf(processed) IsNot Nothing, Nothing, GpuDetailSession.TryCreate(processed))
             Try
 
             ' "weich" steht im selben Select Case wie die 15 Farbpresets, ist aber als einziges KEINE
@@ -3237,7 +3275,8 @@ Namespace Services
             If String.Equals(If(adj.FilterPreset, "").Trim(), "weich", StringComparison.OrdinalIgnoreCase) Then
                 Dim softStrength = Clamp(adj.FilterStrength / 100.0F, 0, 1)
                 processed = RunDetailStage(session, processed, owned, "Pixel: Filter weich", SoftFocusOnGpu(softStrength),
-                                           Function(s) ApplySoftFocusBlur(s, softStrength))
+                                           Function(s) ApplySoftFocusBlur(s, softStrength),
+                                           Function(d) ApplySoftFocusDeep(d, softStrength))
             End If
 
             ' JE STUFE EIN MESSPUNKT. Die Kette kostet an einem realistischen Bild rund 150 ms
@@ -3252,16 +3291,19 @@ Namespace Services
             ' rechnete, saehe dann einen veralteten Stand - deshalb keine Abkuerzung daran vorbei.
             If adj.Clarity <> 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Klarheit", ClarityOnGpu(adj.Clarity / 100.0F),
-                                           Function(s) ApplyClarity(s, adj.Clarity / 100.0F))
+                                           Function(s) ApplyClarity(s, adj.Clarity / 100.0F),
+                                           Function(d) ApplyClarityDeep(d, adj.Clarity / 100.0F))
             End If
             If adj.[Structure] <> 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Struktur", StructureOnGpu(adj.[Structure] / 100.0F),
-                                           Function(s) ApplyStructure(s, adj.[Structure] / 100.0F))
+                                           Function(s) ApplyStructure(s, adj.[Structure] / 100.0F),
+                                           Function(d) ApplyStructureDeep(d, adj.[Structure] / 100.0F))
             End If
             If adj.Haze <> 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Dunst",
                                            If(adj.Haze > 0, HazeOnGpu(adj.Haze / 100.0F), DehazeOnGpu(adj.Haze / 100.0F)),
-                                           Function(s) ApplyHaze(s, adj.Haze / 100.0F))
+                                           Function(s) ApplyHaze(s, adj.Haze / 100.0F),
+                                           Function(d) ApplyHazeDeep(d, adj.Haze / 100.0F))
             End If
 
             If adj.NoiseReduction > 0 Then
@@ -3269,30 +3311,37 @@ Namespace Services
                     Case NoiseReductionMethod.Median
                         processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen (Median)",
                                                    MedianOnGpu(processed, adj.NoiseReduction / 100.0F),
-                                                   Function(s) ApplyMedianBlur(s, adj.NoiseReduction / 100.0F))
+                                                   Function(s) ApplyMedianBlur(s, adj.NoiseReduction / 100.0F),
+                                                   Function(d) ApplyMedianBlurDeep(d, adj.NoiseReduction / 100.0F))
                     Case NoiseReductionMethod.Guided
                         processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen (Fuehrung)",
                                                    GuidedNoiseReductionOnGpu(adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F,
                                                                              adaptive:=False, multiScale:=False),
                                                    Function(s) ApplyGuidedNoiseReduction(
-                                                       s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
+                                                       s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F),
+                                                   Function(d) ApplyGuidedNoiseReductionDeep(
+                                                       d, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                     Case NoiseReductionMethod.AdaptiveGuided
                         processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen (Fuehrung angepasst)",
                                                    GuidedNoiseReductionOnGpu(adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F,
                                                                              adaptive:=True, multiScale:=True),
                                                    Function(s) ApplyMultiScaleGuidedNoiseReduction(
-                                                       s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
+                                                       s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F),
+                                                   Function(d) ApplyMultiScaleGuidedNoiseReductionDeep(
+                                                       d, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                     Case Else
                         processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen",
                                                    NoiseReductionOnGpu(adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F),
-                                                   Function(s) ApplyNoiseReduction(s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
+                                                   Function(s) ApplyNoiseReduction(s, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F),
+                                                   Function(d) ApplyNoiseReductionDeep(d, adj.NoiseReduction / 100.0F, adj.NoiseReductionDetail / 100.0F))
                 End Select
             End If
             ' Der Weichzeichner direkt hinter dem Glaetten und VOR der Schaerfe, der Vignette und der
             ' Koernung: Korn auf einem weichgezeichneten Bild soll scharf bleiben, wie auf Film.
             If adj.Blur > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Weichzeichnen", ImageBlurOnGpu(processed, adj.Blur / 100.0F),
-                                           Function(s) ApplyImageBlur(s, adj.Blur / 100.0F))
+                                           Function(s) ApplyImageBlur(s, adj.Blur / 100.0F),
+                                           Function(d) ApplyImageBlurDeep(d, adj.Blur / 100.0F))
             End If
             ' Die beiden Seiten desselben Panel-Reglers: Minus glaettet die Farbanteile, Plus faerbt
             ' sie ein. Getrennte Felder, weil nur die Reduzierung eine Entsprechung in den Presets hat
@@ -3304,26 +3353,33 @@ Namespace Services
                 processed = RunDetailStage(session, processed, owned, "Pixel: Farbrauschen grob",
                                            MultiScaleDenoiseOnGpu(adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F),
                                            Function(s) ApplyMultiScaleDenoise(
-                                               s, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F))
+                                               s, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F),
+                                           Function(d) ApplyMultiScaleDenoiseDeep(
+                                               d, adj.FarbrauschGrob / 100.0F, adj.ColorNoiseCoarseScale / 100.0F))
             End If
             If adj.ColorNoiseAdd > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Farbflecken", ColorNoiseAddOnGpu(adj.ColorNoiseAdd / 100.0F),
-                                           Function(s) ApplyColorNoiseAdd(s, adj.ColorNoiseAdd / 100.0F))
+                                           Function(s) ApplyColorNoiseAdd(s, adj.ColorNoiseAdd / 100.0F),
+                                           Function(d) ApplyColorNoiseAddDeep(d, adj.ColorNoiseAdd / 100.0F))
             End If
             If adj.DustScratches <> 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Staub/Kratzer", DustScratchesOnGpu(processed, adj.DustScratches / 100.0F),
-                                           Function(s) ApplyDustScratches(s, adj.DustScratches / 100.0F))
+                                           Function(s) ApplyDustScratches(s, adj.DustScratches / 100.0F),
+                                           Function(d) ApplyDustScratchesDeep(d, adj.DustScratches / 100.0F))
             End If
             If adj.Glow <> 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Gluehen", GlowOnGpu(adj.Glow / 100.0F),
-                                           Function(s) ApplyImageGlow(s, adj.Glow / 100.0F))
+                                           Function(s) ApplyImageGlow(s, adj.Glow / 100.0F),
+                                           Function(d) ApplyImageGlowDeep(d, adj.Glow / 100.0F))
             End If
 
             If adj.Sharpness > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Schaerfe",
                                            SharpnessOnGpu(adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
                                                           adj.SharpenMasking / 100.0F, adj.SharpenMethod),
-                                           Function(s) ApplySharpness(s, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod))
+                                           Function(s) ApplySharpness(s, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod),
+                                           Function(d) ApplySharpnessDeep(d, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
+                                                                          adj.SharpenMasking / 100.0F, adj.SharpenMethod))
             End If
 
             ' Tilt-Shift HINTER der Schaerfe: das scharfe Band behaelt sie, die Unschaerfe davor und
@@ -3334,7 +3390,9 @@ Namespace Services
                                            TiltShiftOnGpu(processed, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
                                                           adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition),
                                            Function(s) ApplyTiltShift(s, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
-                                                                      adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition))
+                                                                      adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition),
+                                           Function(d) ApplyTiltShiftDeep(d, adj.TiltShiftAmount / 100.0F, adj.TiltShiftCenterX, adj.TiltShiftCenterY,
+                                                                          adj.TiltShiftAngle, adj.TiltShiftFocus, adj.TiltShiftTransition))
             End If
 
             If adj.Vignette <> 0 Then
@@ -3344,23 +3402,27 @@ Namespace Services
                 vignetteAmount *= If(vignetteAmount > 0, 0.59F, 0.85F)
                 processed = RunDetailStage(session, processed, owned, "Pixel: Vignette",
                                            VignetteOnGpu(processed, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle),
-                                           Function(s) ApplyVignette(s, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
+                                           Function(s) ApplyVignette(s, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle),
+                                           Function(d) ApplyVignetteDeep(d, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
             End If
 
             If adj.Grain > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Koernung",
                                            GrainOnGpu(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
-                                           Function(s) ApplyGrain(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F))
+                                           Function(s) ApplyGrain(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
+                                           Function(d) ApplyGrainDeep(d, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F))
             End If
             If adj.AddNoise > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen hinzufuegen", AddNoiseOnGpu(adj.AddNoise / 100.0F),
-                                           Function(s) ApplyAddNoise(s, adj.AddNoise / 100.0F))
+                                           Function(s) ApplyAddNoise(s, adj.AddNoise / 100.0F),
+                                           Function(d) ApplyAddNoiseDeep(d, adj.AddNoise / 100.0F))
             ElseIf adj.AddNoise < 0 Then
                 ' Negative Haelfte = Rauschen REDUZIEREN (gleichmaessiges Weichzeichnen wie der
                 ' Gaussian-Modus der Rauschreduzierung) - ein Regler, beide Richtungen.
                 processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen hinzufuegen",
                                            NoiseReductionOnGpu(-adj.AddNoise / 100.0F),
-                                           Function(s) ApplyNoiseReduction(s, -adj.AddNoise / 100.0F))
+                                           Function(s) ApplyNoiseReduction(s, -adj.AddNoise / 100.0F),
+                                           Function(d) ApplyNoiseReductionDeep(d, -adj.AddNoise / 100.0F, 0))
             End If
 
             ' Der Rahmen war bis hierher die letzte Stufe der Pixelkette. Er ist jetzt ein OBJEKT
@@ -3870,10 +3932,12 @@ Namespace Services
                                                                      restoreTarget.Width, restoreTarget.Height, layer.Opacity, Nothing)
                         If restoreMask Is Nothing Then Continue For
                         Dim baselineForMix = restoreBaseline
-                        processed = ReplaceBitmapOwned(processed,
-                                                       PerformanceTraceService.Measure("Layers: restore original",
-                                                           Function() CompositeSelectionScoped(restoreTarget, baselineForMix, restoreMask)),
-                                                       owned)
+                        Dim restored = PerformanceTraceService.Measure("Layers: restore original",
+                                                           Function() CompositeSelectionScoped(restoreTarget, baselineForMix, restoreMask))
+                        ' Mit tiefem Bild (Ausgabe in 16 Bit) dieselbe Mischung fuer die Begleiter;
+                        ' traegt das Ursprungsbild keines, endet das tiefe Bild hier.
+                        AttachSelectionScopedDeep(restored, restoreTarget, baselineForMix, restoreMask)
+                        processed = ReplaceBitmapOwned(processed, restored, owned)
                     End Using
                     Continue For
                 End If
@@ -3953,8 +4017,12 @@ Namespace Services
                             If Not hasStroke AndAlso Not hasEffects Then
                                 If Not sessionTried Then
                                     Dim sessionSource = processed
-                                    session = PerformanceTraceService.Measure("Layers: start the GPU session",
-                                                                              Function() GpuDetailSession.TryCreate(sessionSource))
+                                    ' Mit tiefem Bild keine Sitzung auf der Karte: ein Bild, das oben
+                                    ' liegt, haette seinen Begleiter nicht bei sich.
+                                    If DeepOf(sessionSource) Is Nothing Then
+                                        session = PerformanceTraceService.Measure("Layers: start the GPU session",
+                                                                                  Function() GpuDetailSession.TryCreate(sessionSource))
+                                    End If
                                     sessionTried = True
                                 End If
                                 If session IsNot Nothing Then
@@ -4010,7 +4078,9 @@ Namespace Services
                             If Not ranOnGpu Then
                             processed = BringDetailSessionHome(session, processed, owned)
                             Dim scopeRect As SKRectI? = Nothing
-                            If owned AndAlso LayerAdjustmentsAreCropSafe(layerPixelAdjustments) Then
+                            ' Der Weg im Rechteck aendert processed AN ORT UND STELLE. Mit tiefem Bild
+                            ' bliebe dessen Begleiter dabei veraltet haengen, deshalb dann der ganze Weg.
+                            If owned AndAlso DeepOf(processed) Is Nothing AndAlso LayerAdjustmentsAreCropSafe(layerPixelAdjustments) Then
                                 scopeRect = TryGetMaskScopeRect(effectMask, processed.Width, processed.Height)
                             End If
 
@@ -4023,6 +4093,10 @@ Namespace Services
                                                                                  Function() ApplyPixelAdjustmentStages(layerInput, layerPixelAdjustments))
                                     Dim blended = PerformanceTraceService.Measure("Layers: blend through the mask",
                                                                                   Function() CompositeSelectionScoped(layerInput, adjusted, effectMask))
+                                    ' Die Kette der Ebene hat das tiefe Bild mitgerechnet; gemischt wird
+                                    ' es mit derselben Maske. Der Begleiter des Zwischenbilds geht mit ihm.
+                                    AttachSelectionScopedDeep(blended, layerInput, adjusted, effectMask)
+                                    DropDeep(adjusted)
                                     processed = ReplaceBitmapOwned(processed, blended, owned)
                                 End Using
                             End If
@@ -4038,12 +4112,14 @@ Namespace Services
                     End If
                     ' Schatten und Glühen liegen UNTER Füllung und Kontur, wie an einem Objekt.
                     If hasEffects AndAlso processed IsNot Nothing Then
-                        Dim withEffects = CompositeLayerEffects(processed, mask, layer)
+                        ' Effekte, Fuellung und Kontur zeichnen ueber Skia auf eine Kopie des Bildes;
+                        ' mit tiefem Bild laeuft dieselbe Stufe darauf mit (RunStepWithDeep).
+                        Dim withEffects = RunStepWithDeep(processed, Function(b) CompositeLayerEffects(b, mask, layer))
                         If withEffects IsNot Nothing Then processed = ReplaceBitmapOwned(processed, withEffects, owned)
                     End If
                     ' Sichtbare Füllung nur, wenn die Füllung NICHT bereits eine Anpassung abstuft.
                     If hasFill AndAlso Not layer.IsMaskLayer AndAlso Not hasAdj Then
-                        Dim filled = CompositeVisibleFill(processed, mask, layer)
+                        Dim filled = RunStepWithDeep(processed, Function(b) CompositeVisibleFill(b, mask, layer))
                         If filled IsNot Nothing Then processed = ReplaceBitmapOwned(processed, filled, owned)
                     End If
                     ' Die Kontur liegt ueber Fuellung und Anpassung. Ihre Breite steht in Punkten der
@@ -4051,7 +4127,7 @@ Namespace Services
                     If hasStroke Then
                         Dim strokeScale = If(adj.SourceWidthPixels > 0, pipelineInputWidth / CSng(adj.SourceWidthPixels), 1.0F)
                         If processed IsNot Nothing Then
-                            Dim stroked = CompositeVisibleStroke(processed, mask, layer, strokeScale)
+                            Dim stroked = RunStepWithDeep(processed, Function(b) CompositeVisibleStroke(b, mask, layer, strokeScale))
                             If stroked IsNot Nothing Then processed = ReplaceBitmapOwned(processed, stroked, owned)
                         End If
                     End If
@@ -5546,6 +5622,9 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
 
         Private Shared Function ReplaceBitmap(oldBitmap As SKBitmap, newBitmap As SKBitmap) As SKBitmap
             If newBitmap Is Nothing OrElse Object.ReferenceEquals(oldBitmap, newBitmap) Then Return oldBitmap
+            ' Mit dem alten Bild geht sein tiefer Begleiter (ImageProcessorDeep.vb).
+            If DeepOf(oldBitmap) IsNot Nothing AndAlso DeepOf(newBitmap) Is Nothing Then NoteDeepLost("eine Stufe ohne tiefes Ergebnis")
+            DropDeep(oldBitmap)
             oldBitmap.Dispose()
             Return newBitmap
         End Function
@@ -5563,7 +5642,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         Private Shared Function ReplaceBitmapOwned(oldBitmap As SKBitmap, newBitmap As SKBitmap,
                                                    ByRef owned As Boolean) As SKBitmap
             If newBitmap Is Nothing OrElse Object.ReferenceEquals(oldBitmap, newBitmap) Then Return oldBitmap
-            If owned Then oldBitmap.Dispose()
+            If DeepOf(oldBitmap) IsNot Nothing AndAlso DeepOf(newBitmap) Is Nothing Then NoteDeepLost("eine Stufe ohne tiefes Ergebnis")
+            If owned Then
+                DropDeep(oldBitmap)
+                oldBitmap.Dispose()
+            End If
             owned = True
             Return newBitmap
         End Function
@@ -5573,7 +5656,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' die fremde Quelle und wird einmal kopiert.</summary>
         Private Shared Function TakeOwnership(bitmap As SKBitmap, owned As Boolean) As SKBitmap
             If owned OrElse bitmap Is Nothing Then Return bitmap
-            Return CloneBitmap(bitmap)
+            Dim clone = CloneBitmap(bitmap)
+            ' Die fremde Quelle behaelt ihr tiefes Bild, die Kopie bekommt ein eigenes.
+            Dim deep = DeepOf(bitmap)
+            If deep IsNot Nothing AndAlso clone IsNot Nothing Then AttachDeep(clone, CopyBitmap(deep))
+            Return clone
         End Function
 
         ''' Kopiert den rohen Pixelspeicher eines Bgra8888-Bitmaps in ein verwaltetes Byte-Array, damit
@@ -6081,14 +6168,16 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 Dim stepAdj = stepItem?.Adjustments
                 If stepAdj Is Nothing Then Continue For
                 Select Case If(stepItem.Kind, "").ToLowerInvariant()
-                    Case "crop" : result = ReplaceBitmapOwned(result, ApplyCrop(result, stepAdj), owned)
+                    ' Jede Stufe ueber RunStepWithDeep: haengt an der Quelle ein tiefes Bild (Ausgabe
+                    ' in 16 Bit, ImageProcessorDeep.vb), rechnet dieselbe Stufe es mit.
+                    Case "crop" : result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyCrop(b, stepAdj)), owned)
                     Case "transform"
-                        result = ReplaceBitmapOwned(result, ApplyGeometryTransforms(result, stepAdj), owned)
-                        result = ReplaceBitmapOwned(result, ApplyStraighten(result, stepAdj), owned)
-                    Case "perspective" : result = ReplaceBitmapOwned(result, ApplyPerspective(result, stepAdj), owned)
-                    Case "warp" : result = ReplaceBitmapOwned(result, ApplyImageWarp(result, stepAdj), owned)
-                    Case "resize" : result = ReplaceBitmapOwned(result, ApplyResize(result, stepAdj), owned)
-                    Case "canvas" : result = ReplaceBitmapOwned(result, ApplyCanvasResize(result, stepAdj), owned)
+                        result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyGeometryTransforms(b, stepAdj)), owned)
+                        result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyStraighten(b, stepAdj)), owned)
+                    Case "perspective" : result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyPerspective(b, stepAdj)), owned)
+                    Case "warp" : result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyImageWarp(b, stepAdj)), owned)
+                    Case "resize" : result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyResize(b, stepAdj)), owned)
+                    Case "canvas" : result = ReplaceBitmapOwned(result, RunStepWithDeep(result, Function(b) ApplyCanvasResize(b, stepAdj)), owned)
                 End Select
             Next
             Return result

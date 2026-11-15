@@ -76,10 +76,16 @@ Namespace Services
         ''' Aus <paramref name="sourcePath"/> kommen die Aufloesung (immer, sie ist eine Eigenschaft
         ''' des Bilds) und mit <paramref name="preserveMetadata"/> das XMP-Paket, so wie die anderen
         ''' Speicherwege die Aufnahmedaten uebernehmen.</summary>
+        ''' <param name="deepComposite">Das Gesamtbild mit 16 Bit je Kanal. Mit ihm entsteht eine
+        ''' Datei mit 16 Bit (PsdWriterService.Save); <paramref name="deepBackground"/> ist dann
+        ''' die unterste Ebene in 16 Bit. Die Objektebenen entstehen wie sonst und werden beim
+        ''' Schreiben gespreizt. Der Einstieg dafuer ist <see cref="ExportLayeredPsdDeep"/>.</param>
         Public Shared Function ExportLayeredPsd(targetPath As String, composite As SKBitmap,
                                                 background As SKBitmap, adj As ImageAdjustments,
                                                 Optional sourcePath As String = Nothing,
-                                                Optional preserveMetadata As Boolean = False) As Boolean
+                                                Optional preserveMetadata As Boolean = False,
+                                                Optional deepComposite As SKBitmap = Nothing,
+                                                Optional deepBackground As SKBitmap = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(targetPath) OrElse composite Is Nothing Then Return False
 
             Dim layers As New List(Of PsdWriterService.PsdLayerInput)()
@@ -93,6 +99,7 @@ Namespace Services
                     layers.Add(New PsdWriterService.PsdLayerInput With {
                         .Name = LocalizationService.T("Hintergrund"),
                         .Pixels = background,
+                        .DeepPixels = If(deepComposite Is Nothing, Nothing, deepBackground),
                         .Left = 0,
                         .Top = 0,
                         .LockPosition = adj IsNot Nothing AndAlso adj.BaseLayerLockPosition,
@@ -236,7 +243,8 @@ Namespace Services
                 Return PsdWriterService.Save(targetPath, composite, layers,
                                              If(roundtrip Is Nothing, Nothing, PsdRecipeService.Build(roundtrip)),
                                              ReadSourceResolutionDpi(sourcePath),
-                                             If(preserveMetadata, ReadSourceXmpForPsd(sourcePath), Nothing))
+                                             If(preserveMetadata, ReadSourceXmpForPsd(sourcePath), Nothing),
+                                             deepComposite)
             Finally
                 ' Nur die selbst erzeugten Objektebenen freigeben - Hintergrund und Gesamtbild
                 ' gehören dem Aufrufer und werden hier nur gelesen. Die Maskenraster entstehen
@@ -652,13 +660,16 @@ Namespace Services
                                          Optional cancel As Threading.CancellationToken = Nothing,
                                          Optional denoise As DenoiseModelService.DenoiseRequest = Nothing,
                                          Optional missingSource As MissingSourceMetadata = MissingSourceMetadata.FailWhenSameFile,
-                                         Optional metadataParts As SavedMetadataParts? = Nothing) As Boolean
+                                         Optional metadataParts As SavedMetadataParts? = Nothing,
+                                         Optional bitDepth As Integer = 8,
+                                         Optional outcome As SaveOutcome = Nothing) As Boolean
             ' Der Rahmen der Ausgabe fuer den Vorrat der bildgrossen Felder (PlanePool): solange
             ' er steht, bekommen die Filterstufen ihre Ebenen in genauer Laenge und reichen sie
             ' von Stufe zu Stufe weiter; mit seinem Ende wird der Vorrat geleert.
             Using PlanePoolScope.BeginOutput()
                 Return SaveImageCore(sourcePath, targetPath, adj, quality, preserveMetadata, workingFull, developRaw,
-                                     applyPendingBaked, copyrightText, cancel, denoise, missingSource, metadataParts)
+                                     applyPendingBaked, copyrightText, cancel, denoise, missingSource, metadataParts,
+                                     bitDepth, outcome)
             End Using
         End Function
 
@@ -672,9 +683,18 @@ Namespace Services
                                               cancel As Threading.CancellationToken,
                                               denoise As DenoiseModelService.DenoiseRequest,
                                               missingSource As MissingSourceMetadata,
-                                              metadataParts As SavedMetadataParts?) As Boolean
+                                              metadataParts As SavedMetadataParts?,
+                                              bitDepth As Integer,
+                                              outcome As SaveOutcome) As Boolean
             ' <metadataParts>: die Schalter "Uebernehmen" des Dialogs. Ohne Angabe gilt, was vorher
             ' galt: mit Aufnahmedaten alles, ohne nichts.
+            ' <bitDepth>: 16 verlangt eine Datei mit 16 Bit je Kanal. Geschrieben wird sie nur, wenn
+            ' das Ziel sie traegt (CanEncodeDeep) UND die Kette ein tiefes Bild durchgehend
+            ' mitgerechnet hat (ImageProcessorDeep.vb). Sonst entsteht dieselbe Datei mit 8 Bit, und
+            ' das Protokoll sagt es: eine 16-Bit-Datei mit 8-Bit-Inhalt gibt es nicht.
+            ' <outcome>: wer wissen will, mit welcher Farbtiefe die Datei wirklich entstand, gibt
+            ' ein Objekt hinein und liest es danach.
+            If outcome IsNot Nothing Then outcome.WrittenBitDepth = 8
             ' <denoise>: Entrauschen mit Modell aus dem Stapel, siehe weiter unten beim Anwenden.
             ' <missingSource>: siehe MissingSourceMetadata und ProbeMetadataSource.
             '
@@ -708,7 +728,10 @@ Namespace Services
             ' Dasselbe fuer ein ANDERES, schon vorhandenes TIFF als Ziel ("Speichern unter" mit
             ' Ueberschreiben): ersetzt wird es nur, wenn es nicht mehr traegt, als wir schreiben -
             ' sonst wuerde aus einem mehrseitigen oder 16-Bit-TIFF still ein 8-Bit-Einzelbild.
-            If TiffPreviewService.IsSupportedTiff(targetPath) AndAlso Not TiffWriterService.CanReplaceExisting(targetPath) Then
+            ' Mit verlangten 16 Bit darf auch ein vorhandenes Ziel mit 16 Bit weichen.
+            Dim wantsDeep = bitDepth = 16 AndAlso CanEncodeDeep(targetPath)
+            ResetDeepLossNote()
+            If TiffPreviewService.IsSupportedTiff(targetPath) AndAlso Not TiffWriterService.CanReplaceExisting(targetPath, wantsDeep) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: vorhandenes TIFF traegt mehr als 8 Bit, mehrere Seiten, CMYK oder Ebenen target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()
@@ -716,7 +739,7 @@ Namespace Services
             End If
             ' Und genauso fuer ein vorhandenes JPEG XL als Ziel: 16 Bit, HDR oder eine Animation
             ' gingen beim Ersetzen verloren.
-            If JxlDecodeService.IsSupportedJxl(targetPath) AndAlso Not JxlDecodeService.CanReplaceExisting(targetPath) Then
+            If JxlDecodeService.IsSupportedJxl(targetPath) AndAlso Not JxlDecodeService.CanReplaceExisting(targetPath, wantsDeep) Then
                 DiagnosticLogService.LogAlways("ImageProcessor.Save",
                     $"refused: vorhandenes JPEG XL traegt mehr als 8 Bit, Gleitkomma oder eine Animation target={IO.Path.GetFileName(targetPath)}")
                 workingFull?.Dispose()
@@ -751,6 +774,12 @@ Namespace Services
                     LoadRecipeModelDenoiseFile(sourcePath, adj, cancel)
                 End If
                 Dim decoded = If(workingFull, If(isFpxSource, RenderFpxFullResolution(sourcePath), DecodeForRender(sourcePath, adj, renderAdj, developRaw)))
+                ' Fuer die Ausgabe in 16 Bit: das Bild, wie es aus der RAW-Stufe kam, und das Rezept
+                ' dazu. Ersetzt ein spaeterer Schritt die Bildpunkte (gebackene Vorgaenge, Entrauschen
+                ' am fertigen Bild, Hochskalieren), ist es nicht mehr dasselbe Bild, und es bleibt bei
+                ' 8 Bit.
+                Dim rawStageBitmap = If(workingFull Is Nothing AndAlso Not isFpxSource, decoded, Nothing)
+                Dim rawStageAdj = adj
                 ' Ein hereingereichtes Arbeitsbild traegt Retusche (und bei RAW die Belichtung); das
                 ' Ursprungsbild einer Protokollebene ist die Datei dahinter, ohne Belichtung.
                 If workingFull IsNot Nothing AndAlso Not isFpxSource AndAlso HasVisibleRestoreLayer(adj) Then
@@ -763,9 +792,14 @@ Namespace Services
                 ' Ob ein vermerktes Entrauschen am Bild dabei WIRKLICH nachgezogen wurde: fehlt das
                 ' Bildmodell, kommt das Nachziehen ohne Entrauschen zurueck.
                 Dim pendingDenoiseApplied = False
+                ' Fuer die Ausgabe in 16 Bit: das Bild nach den nachgezogenen Vorgaengen. Bleibt es
+                ' bis zum Schreiben dieses Bild, bekommt es das tiefe Bild der RAW-Stufe mit den
+                ' bearbeiteten Stellen aus sich selbst (AttachDeepEditedRawSource).
+                Dim editedRawBitmap As SKBitmap = Nothing
                 If workingFull Is Nothing AndAlso applyPendingBaked AndAlso decoded IsNot Nothing Then
                     Dim reapplied = ApplyPendingBakedOperations(decoded, adj, cancel)
                     If reapplied IsNot Nothing Then
+                        If ReferenceEquals(decoded, rawStageBitmap) Then editedRawBitmap = reapplied
                         decoded.Dispose()
                         decoded = reapplied
                         pendingDenoiseApplied = HasRunnableDenoiseOperation(adj)
@@ -820,6 +854,8 @@ Namespace Services
                                 If redecoded IsNot Nothing Then
                                     decoded.Dispose()
                                     decoded = redecoded
+                                    rawStageBitmap = redecoded
+                                    rawStageAdj = withDenoise
                                 End If
                             End If
                         End If
@@ -866,8 +902,20 @@ Namespace Services
                     End If
                 End If
 
-                Using original = decoded
+                Using original = decoded, originalDeep = DeepGuard(decoded)
                     If original Is Nothing Then Return False
+                    If wantsDeep AndAlso ReferenceEquals(decoded, rawStageBitmap) Then
+                        AttachDeepRawSource(original, sourcePath, rawStageAdj, developRaw)
+                    ElseIf wantsDeep AndAlso editedRawBitmap IsNot Nothing AndAlso ReferenceEquals(decoded, editedRawBitmap) Then
+                        ' Selbst entwickelt, danach Retusche, Striche oder Objekt entfernen
+                        ' nachgezogen: tief bis auf die bearbeiteten Stellen.
+                        AttachDeepEditedRawSource(original, sourcePath, rawStageAdj, developRaw)
+                    ElseIf wantsDeep AndAlso workingFull IsNot Nothing AndAlso ReferenceEquals(decoded, workingFull) AndAlso
+                           Not isFpxSource Then
+                        ' Das Arbeitsbild des Editors: die Entwicklung der RAW-Stufe, tief bis auf
+                        ' die Stellen, an denen es davon abweicht (Retusche, Malerei).
+                        AttachDeepWorkingSource(original, sourcePath, adj, developRaw)
+                    End If
 
                     Dim ext = IO.Path.GetExtension(targetPath).ToLowerInvariant()
                     Dim isPdf = ext = ".pdf"
@@ -963,7 +1011,7 @@ Namespace Services
                         End If
                     End Try
 
-                    Using processed = ProcessBitmap(original, renderAdj)
+                    Using processed = ProcessBitmap(original, renderAdj), processedDeep = DeepGuard(processed)
                         ' DIE LETZTE FRAGE VOR DEM SCHREIBEN. Die Modellwege steigen an ihrer
                         ' Kachelgrenze aus, aber die Reglerkette darunter laeuft am Stueck und kostet
                         ' bei einem grossen Bild Sekunden. Wer in dieser Zeit abbricht, bekaeme sonst
@@ -989,6 +1037,35 @@ Namespace Services
                         ' nicht kennt - deshalb stehen sie hier einzeln.
                         If isPdf OrElse (fileFormat = SKEncodedImageFormat.Jpeg AndAlso Not isTiff AndAlso Not isJxl) Then
                             toEncode = FlattenAlphaToWhite(processed)
+                        End If
+                        ' Verlangte 16 Bit: das tiefe Bild geht in die Datei, wenn die Kette es bis
+                        ' hierher mitgerechnet hat und es dasselbe Bild ist wie das 8-Bit-Ergebnis.
+                        ' Sonst dieselbe Datei mit 8 Bit.
+                        If wantsDeep Then
+                            Dim deepResult = DetachDeep(processed)
+                            If deepResult Is Nothing Then NoteDeepLost("die Quelle brachte kein tiefes Bild mit")
+                            If deepResult IsNot Nothing AndAlso Not DeepMatchesShallow(processed, deepResult) Then
+                                NoteDeepLost("der Vergleich vor dem Schreiben: das tiefe Bild ist nicht das 8-Bit-Bild")
+                                deepResult.Dispose()
+                                deepResult = Nothing
+                            End If
+                            If deepResult IsNot Nothing Then
+                                toEncode = deepResult
+                                If outcome IsNot Nothing Then outcome.WrittenBitDepth = 16
+                            Else
+                                If outcome IsNot Nothing Then outcome.DeepLostAt = DeepLossNote()
+                                ' Die Frage von oben noch einmal, jetzt mit dem, was wirklich
+                                ' geschrieben wird: dort durfte ein vorhandenes Ziel mit 16 Bit
+                                ' weichen, weil 16 Bit verlangt waren. Mit 8 Bit darf es das nicht.
+                                If (isTiff AndAlso Not TiffWriterService.CanReplaceExisting(targetPath)) OrElse
+                                   (isJxl AndAlso Not JxlDecodeService.CanReplaceExisting(targetPath)) Then
+                                    DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                                        $"refused: 16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, und das vorhandene Ziel traegt mehr als 8 Bit target={IO.Path.GetFileName(targetPath)}")
+                                    Return False
+                                End If
+                                DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                                    $"16 Bit verlangt, die Kette hat kein tiefes Bild geliefert, gespeichert mit 8 Bit target={IO.Path.GetFileName(targetPath)}")
+                            End If
                         End If
                         Try
                             If isPdf Then
@@ -1032,7 +1109,7 @@ Namespace Services
                                 ' die Packstufe der Ausgabe steht in PngEncoder.
                                 ' Das SKImage braucht nur der Rest (WebP und so weiter): PNG und JPEG
                                 ' gehen ueber die eigenen Kodierer, und FromBitmap kopiert das ganze
-                                ' Bild.
+                                ' Bild, bei einem tiefen mit 8 Byte je Bildpunkt.
                                 Dim ownEncoder = fileFormat = SKEncodedImageFormat.Png OrElse fileFormat = SKEncodedImageFormat.Jpeg
                                 Using image = If(ownEncoder, Nothing, SKImage.FromBitmap(toEncode))
                                     Using data = If(fileFormat = SKEncodedImageFormat.Png,
@@ -1085,6 +1162,9 @@ Namespace Services
                 ' den Vorgang dann sauber abbrechen; die Diagnose enthält die Ursache.
                 DiagnosticLogService.LogException("ImageProcessor.Save", ex)
                 Return False
+            Finally
+                ' Nach einer Ausgabe mit tiefem Bild: was ohne sein 8-Bit-Bild liegen blieb, weg.
+                SweepDeepCompanions()
             End Try
         End Function
 

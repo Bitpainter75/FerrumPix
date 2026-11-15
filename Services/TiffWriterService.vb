@@ -9,12 +9,14 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>
-    ''' Schreibt TIFF mit 8 Bit je Kanal. Nur als NEUE Datei: Speichern unter und die Stapelwege mit
-    ''' Zielordner, nie ueber ein TIFF-Original (siehe <see cref="ImageProcessor.CanEncodeAsNewFile"/>).
+    ''' Schreibt TIFF mit 8 oder 16 Bit je Kanal. Nur als NEUE Datei: Speichern unter und die Stapelwege
+    ''' mit Zielordner, nie ueber ein TIFF-Original (siehe <see cref="ImageProcessor.CanEncodeAsNewFile"/>).
     '''
-    ''' WARUM 8 BIT. Die Pipeline rechnet hinter dem Decode mit 8 Bit ("Kein 16-Bit-Arbeitsbild" in
-    ''' FALLEN_UND_ENTSCHEIDUNGEN.md). Ein 16-Bit-TIFF truege nur 8 Bit Inhalt, hochskaliert, und
-    ''' verspraeche damit etwas, das die Datei nicht haelt.
+    ''' DIE BITTIEFE FOLGT DEM BILD. Die Pipeline rechnet hinter dem Decode mit 8 Bit ("Kein
+    ''' 16-Bit-Arbeitsbild" in FALLEN_UND_ENTSCHEIDUNGEN.md); ein 16-Bit-TIFF daraus truege nur 8 Bit
+    ''' Inhalt, hochskaliert, und verspraeche damit etwas, das die Datei nicht haelt. 16 Bit schreibt
+    ''' dieser Schreiber deshalb nur fuer ein tiefes Bild (Rgba16161616, ImageProcessorDeep.vb), das
+    ''' die Kette durchgehend mitgerechnet hat.
     '''
     ''' DIE BILDPUNKTE schreibt LibTiff.NET, verlustfrei mit Deflate und waagerechter Vorhersage. Ein
     ''' Alphakanal kommt nur mit, wenn das Bild wirklich Transparenz traegt; sonst waere jede Datei
@@ -45,14 +47,17 @@ Namespace Services
         ''' denselben Ordner, obwohl der Nutzer im Konfliktdialog "Ueberschreiben" gewaehlt hat - und
         ''' an einer Datei, die dieser Schreiber selbst angelegt hat. Was sich nicht lesen laesst,
         ''' gilt als nicht ersetzbar.</summary>
-        Friend Shared Function CanReplaceExisting(path As String) As Boolean
+        Friend Shared Function CanReplaceExisting(path As String, Optional writesDeep As Boolean = False) As Boolean
+            ' <writesDeep>: das neue Bild geht mit 16 Bit hinein; dann darf auch ein vorhandenes
+            ' TIFF mit 16 Bit weichen, mehr als das weiterhin nicht.
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return True
             Try
                 Using tif = Tiff.Open(path, "r")
                     If tif Is Nothing Then Return False
                     If tif.NumberOfDirectories() <> 1 Then Return False
                     Dim bits = tif.GetField(TiffTag.BITSPERSAMPLE)
-                    If bits IsNot Nothing AndAlso bits.Length > 0 AndAlso bits(0).ToInt() > 8 Then Return False
+                    If bits IsNot Nothing AndAlso bits.Length > 0 AndAlso
+                       bits(0).ToInt() > If(writesDeep, 16, 8) Then Return False
                     ' Nicht "photometric" nennen: der Name verdeckte in VB die Aufzaehlung Photometric.
                     Dim colorModel = tif.GetField(TiffTag.PHOTOMETRIC)
                     If colorModel IsNot Nothing AndAlso colorModel.Length > 0 Then
@@ -110,22 +115,29 @@ Namespace Services
 
                 ' Zeilenweise nach RGBA ohne vormultipliziertes Alpha - so steht es im TIFF. Skia
                 ' rechnet dabei selbst um, gleich in welcher Anordnung das Bitmap vorliegt.
-                Dim rowInfo = New SKImageInfo(width, 1, SKColorType.Rgba8888, SKAlphaType.Unpremul)
-                Dim rgba(width * 4 - 1) As Byte
+                ' Ein tiefes Bild (ImageProcessorDeep.vb) geht mit 16 Bit je Kanal hinein: dieselbe
+                ' Anordnung, zwei Bytes je Wert in der Bytefolge des Rechners, wie LibTiff sie
+                ' fuer eine Datei erwartet, die es selbst anlegt.
+                Dim deep = bitmap.ColorType = SKColorType.Rgba16161616
+                Dim sampleBytes = If(deep, 2, 1)
+                Dim pixelBytes = 4 * sampleBytes
+                Dim rowInfo = New SKImageInfo(width, 1, If(deep, SKColorType.Rgba16161616, SKColorType.Rgba8888),
+                                              SKAlphaType.Unpremul)
+                Dim rgba(width * pixelBytes - 1) As Byte
                 Dim handle = GCHandle.Alloc(rgba, GCHandleType.Pinned)
                 Try
                     Dim pointer = handle.AddrOfPinnedObject()
                     Dim hasAlpha = bitmap.AlphaType <> SKAlphaType.Opaque AndAlso
-                                   HasTransparency(pixmap, height, rowInfo, rgba, pointer)
+                                   HasTransparency(pixmap, height, rowInfo, rgba, pointer, sampleBytes)
                     Dim samples = If(hasAlpha, 4, 3)
-                    Dim row(width * samples - 1) As Byte
+                    Dim row(width * samples * sampleBytes - 1) As Byte
 
                     Using tif = Tiff.ClientOpen("ferrumpix.tif", "w", output, New RetainingTiffStream())
                         If tif Is Nothing Then Return False
 
                         tif.SetField(TiffTag.IMAGEWIDTH, width)
                         tif.SetField(TiffTag.IMAGELENGTH, height)
-                        tif.SetField(TiffTag.BITSPERSAMPLE, 8)
+                        tif.SetField(TiffTag.BITSPERSAMPLE, 8 * sampleBytes)
                         tif.SetField(TiffTag.SAMPLESPERPIXEL, samples)
                         tif.SetField(TiffTag.PHOTOMETRIC, Photometric.RGB)
                         tif.SetField(TiffTag.PLANARCONFIG, PlanarConfig.CONTIG)
@@ -147,12 +159,12 @@ Namespace Services
                             If hasAlpha Then
                                 Array.Copy(rgba, row, rgba.Length)
                             Else
+                                ' Die drei Farbwerte jedes Bildpunkts, der vierte bleibt weg.
+                                Dim colorBytes = 3 * sampleBytes
                                 Dim target = 0
-                                For source = 0 To rgba.Length - 1 Step 4
-                                    row(target) = rgba(source)
-                                    row(target + 1) = rgba(source + 1)
-                                    row(target + 2) = rgba(source + 2)
-                                    target += 3
+                                For source = 0 To rgba.Length - 1 Step pixelBytes
+                                    Array.Copy(rgba, source, row, target, colorBytes)
+                                    target += colorBytes
                                 Next
                             End If
                             If Not tif.WriteScanline(row, y) Then Return False
@@ -169,12 +181,15 @@ Namespace Services
         ''' <summary>Traegt irgendein Bildpunkt Transparenz? Zeilenweise und mit fruehem Ausstieg,
         ''' ein deckendes Bild kostet also genau einen Lesedurchgang.</summary>
         Private Shared Function HasTransparency(pixmap As SKPixmap, height As Integer, rowInfo As SKImageInfo,
-                                                rgba As Byte(), pointer As IntPtr) As Boolean
+                                                rgba As Byte(), pointer As IntPtr,
+                                                Optional sampleBytes As Integer = 1) As Boolean
+            Dim pixelBytes = 4 * sampleBytes
             For y = 0 To height - 1
                 ' Im Zweifel MIT Alpha: ein ueberfluessiger Kanal kostet Platz, ein fehlender das Bild.
                 If Not pixmap.ReadPixels(rowInfo, pointer, rgba.Length, 0, y) Then Return True
-                For i = 3 To rgba.Length - 1 Step 4
-                    If rgba(i) <> 255 Then Return True
+                ' Bei 16 Bit beide Bytes des Alphawerts: deckend sind sie beide 255.
+                For i = 3 * sampleBytes To rgba.Length - 1 Step pixelBytes
+                    If rgba(i) <> 255 OrElse rgba(i + sampleBytes - 1) <> 255 Then Return True
                 Next
             Next
             Return False

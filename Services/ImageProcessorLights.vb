@@ -564,11 +564,23 @@ Namespace Services
             End If
             Dim back = tables.Backward
             Dim dst = CType(buf.Clone(), Byte())
+            ' Haengt an der Quelle ein tiefes Bild (Ausgabe in 16 Bit, ImageProcessorDeep.vb), laeuft
+            ' es zeilenweise mit: dieselben Verstaerkungen, die Werte aus dem tiefen Bild gelesen
+            ' und ohne Rundung auf das Byte zurueckgeschrieben.
+            Dim deepSource = DeepOf(source)
+            Dim deepResult As SKBitmap = If(deepSource Is Nothing, Nothing, NewDeepBitmap(width, height, deepSource.AlphaType))
+            Dim deepSourcePixels = If(deepResult Is Nothing, IntPtr.Zero, deepSource.GetPixels())
+            Dim deepResultPixels = If(deepResult Is Nothing, IntPtr.Zero, deepResult.GetPixels())
             ForEachRow(width, height,
                 Sub(y)
                     Dim row = y * stride
                     Dim py = y + 0.5
                     Dim v = py / height
+                    Dim deepRow As Short() = Nothing
+                    If deepResult IsNot Nothing Then
+                        deepRow = New Short(width * 4 - 1) {}
+                        ReadDeepRow(deepSource, deepSourcePixels, y, deepRow)
+                    End If
                     For x = 0 To width - 1
                         Dim px = x + 0.5
                         Dim u = px / width
@@ -639,10 +651,50 @@ Namespace Services
                         dst(o) = CByte(Math.Min(CInt(a), CInt(Math.Round(b1 * scale))))
                         dst(o + 1) = CByte(Math.Min(CInt(a), CInt(Math.Round(g1 * scale))))
                         dst(o + 2) = CByte(Math.Min(CInt(a), CInt(Math.Round(r1 * scale))))
+
+                        If deepRow IsNot Nothing Then
+                            Dim q = x * 4
+                            Dim deepAlpha = deepRow(q + 3) And &HFFFF
+                            If deepAlpha > 0 Then
+                                ' Auf die geraden Werte in der Einheit der 8-Bit-Stufen, wie oben.
+                                Dim deepInv = 255.0 / deepAlpha
+                                Dim dr0 = BackwardAt(back, (deepRow(q) And &HFFFF) * deepInv)
+                                Dim dg0 = BackwardAt(back, (deepRow(q + 1) And &HFFFF) * deepInv)
+                                Dim db0 = BackwardAt(back, (deepRow(q + 2) And &HFFFF) * deepInv)
+                                Dim deepScale = deepAlpha / 255.0
+                                deepRow(q) = ToDeepShort(Math.Min(deepAlpha, CInt(Math.Round(
+                                    SceneForward(tables, dr0 * Math.Max(0.0, gr) + ar, dr0) * deepScale))))
+                                deepRow(q + 1) = ToDeepShort(Math.Min(deepAlpha, CInt(Math.Round(
+                                    SceneForward(tables, dg0 * Math.Max(0.0, gg) + ag, dg0) * deepScale))))
+                                deepRow(q + 2) = ToDeepShort(Math.Min(deepAlpha, CInt(Math.Round(
+                                    SceneForward(tables, db0 * Math.Max(0.0, gb) + ab, db0) * deepScale))))
+                            End If
+                        End If
                     Next
+                    If deepRow IsNot Nothing Then WriteDeepRow(deepResult, deepResultPixels, y, deepRow)
                 End Sub)
+            If deepResult IsNot Nothing Then
+                ' Das 8-Bit-Bild folgt dem tiefen (ImageProcessorDeepStages.vb), statt aus der
+                ' eigenen Rechnung oben zu kommen.
+                Dim shallow = ShallowFromDeep(deepResult, source.ColorType, source.AlphaType)
+                If shallow IsNot Nothing Then
+                    result.Dispose()
+                    AttachDeep(shallow, deepResult)
+                    Return shallow
+                End If
+                deepResult.Dispose()
+            End If
             CommitBgraBuffer(result, dst)
             Return result
+        End Function
+
+        ''' <summary>Die Tabelle vom Tonwert zum Szenenlicht an einer Stelle zwischen zwei Bytes, linear
+        ''' gelesen. Die 8-Bit-Stufe schlaegt nur an ganzen Bytes nach.</summary>
+        Private Shared Function BackwardAt(back As Double(), value As Double) As Double
+            If Not value > 0.0 Then Return back(0)
+            If value >= 255.0 Then Return back(255)
+            Dim index = CInt(Math.Floor(value))
+            Return back(index) + (back(index + 1) - back(index)) * (value - index)
         End Function
 
     End Class
