@@ -11715,4 +11715,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Toont in een map ook de foto's uit alle onderliggende submappen. Zoeken en filteren gelden dan ook voor die foto's.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Muiswiel boven de afbeelding uitschakelen</value>
+  </data>
 </root>

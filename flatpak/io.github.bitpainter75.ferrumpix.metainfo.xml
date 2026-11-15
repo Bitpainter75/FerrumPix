@@ -112,6 +112,28 @@
 
   <releases>
 
+    <release version="0.9.84-1" date="2026-11-15">
+      <description>
+        <p>This update adds 16-bit export for RAW photos, makes the gallery smoother and many editing operations faster, and reduces memory usage:</p>
+        <p xml:lang="de">Dieses Update bringt den 16-Bit-Export für RAW-Fotos, sorgt für eine flüssigere Galerie und schnellere Bearbeitung und senkt den Speicherverbrauch:</p>
+        <ul>
+          <li>RAW photos can now be saved with 16 bits per channel as TIFF, PNG, JPEG XL or PSD files. Save As, Export, batch operations and the collage tool offer the bit-depth option whenever RAW files are included. Retouched or painted areas still have 8-bit precision, while the rest of the image retains the full 16-bit depth.</li>
+          <li xml:lang="de">RAW-Fotos lassen sich jetzt mit 16 Bit pro Kanal als TIFF, PNG, JPEG XL oder PSD speichern. Bei Speichern unter, Exportieren, der Stapelverarbeitung und im Collage-Werkzeug steht die entsprechende Farbtiefe zur Auswahl, sobald RAW-Dateien dabei sind. Retuschierte oder übermalte Bereiche bleiben bei einer Genauigkeit von 8 Bit, während der Rest des Bildes die volle 16-Bit-Farbtiefe behält.</li>
+
+          <li>The gallery now runs more smoothly while thumbnails are loading, after sorting or filtering, and when displaying photos from subfolders. Image tiles are created faster, and RAW thumbnails appear sooner when you open a folder for the first time.</li>
+          <li xml:lang="de">Die Galerie läuft jetzt flüssiger, während Vorschaubilder geladen werden, nach dem Sortieren oder Filtern und beim Anzeigen von Fotos aus Unterordnern. Bildkacheln werden schneller aufgebaut, und RAW-Vorschaubilder erscheinen früher, wenn du einen Ordner zum ersten Mal öffnest.</li>
+
+          <li>The buttons for showing photos from all subfolders and browsing folders stored in the catalog have moved to the toolbar at the bottom of the gallery, next to the stacks button. Photos from subfolders on disconnected drives are now also displayed using their catalog entries, just like the folders themselves.</li>
+          <li xml:lang="de">Die Schaltflächen zum Anzeigen aller Unterordner und zum Durchsuchen von Ordnern aus dem Katalog befinden sich jetzt unten in der Galerie, direkt neben der Schaltfläche für Stapel. Auch Fotos aus Unterordnern auf nicht angeschlossenen Laufwerken werden jetzt anhand ihrer Katalogeinträge angezeigt, genau wie die Ordner selbst.</li>
+
+          <li>Several editing operations are now noticeably faster, including adding noise, moving text or shapes with blend modes such as Soft Light, sharpening, blurring and feathering mask edges on large photos. Saving layered images as Photoshop files is faster too, as is reprocessing RAW files after adjusting exposure or highlights.</li>
+          <li xml:lang="de">Viele Bearbeitungsschritte sind jetzt spürbar schneller, darunter das Hinzufügen von Rauschen, das Verschieben von Texten oder Formen mit Mischmodi wie „Weiches Licht“ sowie Schärfen, Weichzeichnen und das Erstellen weicher Maskenkanten bei großen Fotos. Auch das Speichern von Bildern mit Ebenen als Photoshop-Datei und die erneute RAW-Entwicklung nach Änderungen an Belichtung oder Lichtern gehen schneller.</li>
+
+          <li>Exporting large images now uses less memory, and FerrumPix releases more memory after browsing through many RAW files. Copyright notices containing the © symbol and names with accented characters are now preserved correctly in exported images. Duplicating a photo from a subfolder also places the copy alongside the original.</li>
+          <li xml:lang="de">Beim Export großer Bilder benötigt FerrumPix jetzt weniger Arbeitsspeicher und gibt nach dem Durchsehen vieler RAW-Dateien mehr Speicher wieder frei. Copyright-Angaben mit dem ©-Zeichen und Namen mit Umlauten oder anderen Sonderzeichen bleiben in exportierten Bildern jetzt korrekt erhalten. Wenn du ein Foto aus einem Unterordner duplizierst, wird die Kopie außerdem direkt neben dem Original gespeichert.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.83-1" date="2026-11-14">
       <description>
         <p>This update lets you browse photos from all subfolders at once, use FerrumPix in your web browser, navigate zoomed-in images more easily, and open RAW photos with the aspect ratio selected in your camera:</p>

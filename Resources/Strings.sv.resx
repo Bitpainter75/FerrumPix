@@ -11715,4 +11715,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Visar i en mapp även bilderna från alla undermappar. Sökning och filtrering gäller då även för dem.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Stäng av mushjulet över bilden</value>
+  </data>
 </root>

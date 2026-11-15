@@ -1240,6 +1240,12 @@ Namespace Views
                 current = TryCast(current.Parent, Control)
             End While
             If Not isInsideCanvas Then Return
+            ' Der Knopf in der Fusszeile: ueber dem Bild tut das Rad nichts, weder Zoomen noch
+            ' Blaettern noch Werkzeuggroesse.
+            If ImageWheelLock.IsEditorDisabled Then
+                e.Handled = True
+                Return
+            End If
             If IsTrackpadMode() AndAlso Math.Abs(e.Delta.X) > Math.Abs(e.Delta.Y) AndAlso e.Delta.X <> 0 Then
                 Dim navigationVm = TryCast(DataContext, EditorViewModel)
                 navigationVm?.NavigateByWheel(e.Delta.X)

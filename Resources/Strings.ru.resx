@@ -11715,4 +11715,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>В папке показываются также изображения из всех вложенных папок. Поиск и фильтры тогда распространяются и на них.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Отключить колесо мыши над изображением</value>
+  </data>
 </root>

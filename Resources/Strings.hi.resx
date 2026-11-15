@@ -11719,4 +11719,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>फ़ोल्डर में उसके नीचे के सभी सबफ़ोल्डर की तस्वीरें भी दिखाता है। खोज और फ़िल्टर तब उन पर भी लागू होते हैं।</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>चित्र के ऊपर माउस व्हील बंद करें</value>
+  </data>
 </root>

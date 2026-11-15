@@ -11715,4 +11715,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Viser i en mappe også bildene fra alle undermapper. Søk og filtrering gjelder da også for dem.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Slå av musehjulet over bildet</value>
+  </data>
 </root>

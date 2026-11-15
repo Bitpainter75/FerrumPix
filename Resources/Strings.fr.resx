@@ -11675,4 +11675,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Dans un dossier, affiche aussi les images de tous ses sous-dossiers. La recherche et les filtres s'appliquent alors aussi à elles.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Désactiver la molette sur l’image</value>
+  </data>
 </root>

@@ -11715,4 +11715,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>フォルダーを開くと、その下のすべてのサブフォルダーの画像も表示します。検索とフィルターもそれらに適用されます。</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>画像上でマウスホイールを無効にする</value>
+  </data>
 </root>

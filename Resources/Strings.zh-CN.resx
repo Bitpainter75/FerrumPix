@@ -11673,4 +11673,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>在文件夹中同时显示其所有子文件夹中的图片。搜索和筛选也会包含这些图片。</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>在图片上停用鼠标滚轮</value>
+  </data>
 </root>

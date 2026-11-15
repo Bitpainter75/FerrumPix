@@ -11674,4 +11674,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Numa pasta, mostra também as imagens de todas as subpastas. A pesquisa e os filtros passam a abrangê-las também.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Desativar a roda do mouse sobre a imagem</value>
+  </data>
 </root>

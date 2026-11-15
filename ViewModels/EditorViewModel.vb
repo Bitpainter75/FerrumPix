@@ -4996,6 +4996,19 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Der Knopf in der Fusszeile: das Mausrad hat ueber dem Bild des Editors keine
+        ''' Wirkung. Ein eigener Stand je Ansicht, gemerkt in den Einstellungen (Services.ImageWheelLock).</summary>
+        Public Property IsImageWheelDisabled As Boolean
+            Get
+                Return ImageWheelLock.IsEditorDisabled
+            End Get
+            Set(value As Boolean)
+                If ImageWheelLock.IsEditorDisabled = value Then Return
+                ImageWheelLock.IsEditorDisabled = value
+                Me.RaisePropertyChanged()
+            End Set
+        End Property
+
         ''' <summary>Ob die Fusszeile sichtbar ist: die Leiste mit Bildangaben und Zoom. NICHT der
         ''' Filmstreifen darueber - der hat seinen eigenen Schalter und bleibt stehen.</summary>
         Public ReadOnly Property ShowFooter As Boolean

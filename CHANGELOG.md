@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.84
 
 ### Changes
 
@@ -17,12 +17,16 @@
 - When the bar at the bottom of the gallery gets too narrow, the slider for the size of the
   thumbnails makes room and comes back as soon as there is space again.
 
+- The bars at the bottom of the viewer and the editor have a new button that turns off the mouse
+  wheel over the picture, so it no longer zooms, turns pages or changes the brush size by accident.
+  Viewer and editor remember their own choice.
+
 - Faster: adding noise or colour noise to a picture, dragging a text or shape with a blend mode such
   as soft light or linear light, sharpening, blurring and soft mask edges on large pictures,
   saving a picture with layers as a Photoshop file, and the fresh development of a raw file after
   moving exposure or highlights when the lens correction removes colour fringes. In very large
-  folders, changing the sort order, a
-  filter or the search text no longer makes the window stand still.
+  folders, changing the sort order, a filter or the search text no longer makes the window stand
+  still.
 
 - The gallery stutters less while thumbnails arrive, after sorting or filtering, and when the
   pictures of subfolders are loaded. Its tiles are built faster.

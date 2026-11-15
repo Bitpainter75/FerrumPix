@@ -11694,4 +11694,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>In a folder, also shows the pictures from all subfolders below it. Searching and filtering then cover them too.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Turn off the mouse wheel over the picture</value>
+  </data>
 </root>

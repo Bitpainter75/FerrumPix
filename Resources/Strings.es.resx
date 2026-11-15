@@ -11675,4 +11675,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>En una carpeta muestra también las imágenes de todas sus subcarpetas. La búsqueda y los filtros se aplican entonces también a ellas.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Desactivar la rueda del ratón sobre la imagen</value>
+  </data>
 </root>

@@ -971,6 +971,11 @@ Namespace Services
         Public Property BrushSmoothing As Integer = 100
         ''' Eigene Gestenbelegung für Trackpads; standardmäßig aus, damit Mauswege unverändert bleiben.
         Public Property TrackpadMode As Boolean = False
+        ''' Die Knoepfe in den Fusszeilen von Betrachter und Editor: das Mausrad hat ueber dem Bild keine
+        ''' Wirkung (kein Zoomen, kein Blaettern, keine Pinselgroesse). Je Ansicht ein eigener Stand,
+        ''' siehe ImageWheelLock.
+        Public Property ViewerWheelDisabled As Boolean = False
+        Public Property EditorWheelDisabled As Boolean = False
         ''' Was das blanke Mausrad im Viewer tut: "Navigate" blaettert, "Zoom" zoomt am Zeiger. STRG
         ''' dazu tut jeweils das andere, die rechte Taste zoomt immer. Ab Werk Blaettern.
         Public Property ViewerWheelAction As String = WheelActionNavigate

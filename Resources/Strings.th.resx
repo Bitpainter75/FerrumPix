@@ -11719,4 +11719,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>ในโฟลเดอร์จะแสดงรูปภาพจากโฟลเดอร์ย่อยทั้งหมดด้วย การค้นหาและตัวกรองจะครอบคลุมรูปภาพเหล่านั้นด้วย</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>ปิดล้อเมาส์เมื่ออยู่เหนือภาพ</value>
+  </data>
 </root>

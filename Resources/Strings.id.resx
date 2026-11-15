@@ -11719,4 +11719,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Di dalam folder, menampilkan juga gambar dari semua subfolder di bawahnya. Pencarian dan filter kemudian berlaku juga untuk gambar itu.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Matikan roda mouse di atas gambar</value>
+  </data>
 </root>

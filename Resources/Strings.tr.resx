@@ -11719,4 +11719,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Bir klasörde, altındaki tüm alt klasörlerin resimlerini de gösterir. Arama ve filtreler o zaman onları da kapsar.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Resmin üzerinde fare tekerleğini kapat</value>
+  </data>
 </root>

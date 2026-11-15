@@ -11675,4 +11675,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>In una cartella mostra anche le immagini di tutte le sottocartelle. Ricerca e filtri valgono allora anche per queste.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Disattiva la rotellina del mouse sull’immagine</value>
+  </data>
 </root>

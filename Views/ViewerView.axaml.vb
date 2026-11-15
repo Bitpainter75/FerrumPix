@@ -545,6 +545,12 @@ Namespace Views
             Dim vm = GetVm()
             If vm Is Nothing Then Return
             If IsWithinInfoSidebar(e.Source) Then Return
+            ' Der Knopf in der Fusszeile: ueber dem Bild tut das Rad nichts. Der Filmstreifen rollt
+            ' weiter, er ist nicht das Bild.
+            If ImageWheelLock.IsViewerDisabled AndAlso Not IsWithinFilmstrip(e.Source) Then
+                e.Handled = True
+                Return
+            End If
 
             ' Im Vollbild entscheidet die Einstellung, was das blanke Rad tut (FullscreenWheelAction,
             ' ab Werk Blaettern); STRG tut das andere, die rechte Taste zoomt immer, verankert am
@@ -713,6 +719,16 @@ Namespace Views
             applyOffset()
             Dispatcher.UIThread.Post(applyOffset, DispatcherPriority.Background)
         End Sub
+
+        ''' <summary>Liegt die Quelle in einem Filmstreifen (einer Liste von Kacheln)?</summary>
+        Private Shared Function IsWithinFilmstrip(source As Object) As Boolean
+            Dim ctrl = TryCast(source, Control)
+            While ctrl IsNot Nothing
+                If TypeOf ctrl Is ListBox Then Return True
+                ctrl = TryCast(ctrl.Parent, Control)
+            End While
+            Return False
+        End Function
 
         Private Function IsWithinInfoSidebar(source As Object) As Boolean
             Dim ctrl = TryCast(source, Control)

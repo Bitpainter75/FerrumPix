@@ -11715,4 +11715,7 @@
   <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
     <value>Ve složce zobrazí také obrázky ze všech podsložek. Hledání a filtry se pak vztahují i na ně.</value>
   </data>
+  <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
+    <value>Vypnout kolečko myši nad obrázkem</value>
+  </data>
 </root>

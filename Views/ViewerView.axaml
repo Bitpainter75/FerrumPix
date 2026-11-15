@@ -747,6 +747,17 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/list.svg"
                                            Width="18" Height="18"/>
                         </Button>
+                        <!-- MAUSRAD UEBER DEM BILD ABSCHALTEN: kein Zoomen und kein Blaettern mit dem
+                             Rad. Gedrueckt (Akzent) heisst abgeschaltet, wie die Schalter in der
+                             Fusszeile der Galerie. Betrachter und Editor haben je einen eigenen
+                             Stand, gemerkt in den Einstellungen (ImageWheelLock). -->
+                        <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                      Margin="-5,0,0,0"
+                                      IsChecked="{Binding IsImageWheelDisabled, Mode=TwoWay}"
+                                      ToolTip.Tip="Mausrad über dem Bild abschalten">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mouse-scroll.svg"
+                                           Width="18" Height="18"/>
+                        </ToggleButton>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>

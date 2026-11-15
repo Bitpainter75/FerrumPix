@@ -2270,6 +2270,17 @@
                                                Width="18" Height="18" IsVisible="{Binding IsToolSidebarCollapsed}" />
                             </Panel>
                         </Button>
+                        <!-- MAUSRAD UEBER DEM BILD ABSCHALTEN: kein Zoomen, kein Blaettern und keine
+                             Werkzeuggroesse mit dem Rad. Gedrueckt (Akzent) heisst abgeschaltet, wie die Schalter in der
+                             Fusszeile der Galerie. Betrachter und Editor haben je einen eigenen
+                             Stand, gemerkt in den Einstellungen (ImageWheelLock). -->
+                        <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                      Margin="-5,0,0,0"
+                                      IsChecked="{Binding IsImageWheelDisabled, Mode=TwoWay}"
+                                      ToolTip.Tip="Mausrad über dem Bild abschalten">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mouse-scroll.svg"
+                                           Width="18" Height="18"/>
+                        </ToggleButton>
                         <!-- Dateiname und Farbetikett stehen jetzt als Fenstertitel oben in der Mitte. -->
                         <!-- KEIN StatusText hier: die Fußzeile ist die linke Spalte eines *,Auto,*-Rasters
                              und wächst mit dem Text, bis sie die mittig zentrierten Zoom-Bedienelemente
