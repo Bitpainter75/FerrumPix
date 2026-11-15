@@ -13,9 +13,10 @@
   thumbnails makes room and comes back as soon as there is space again.
 
 - Faster: adding noise or colour noise to a picture, dragging a text or shape with a blend mode such
-  as soft light or linear light, sharpening, blurring and soft mask edges on large pictures, and
-  the fresh development of a raw file after moving exposure or highlights when the lens correction
-  removes colour fringes. In very large folders, changing the sort order, a
+  as soft light or linear light, sharpening, blurring and soft mask edges on large pictures,
+  saving a picture with layers as a Photoshop file, and the fresh development of a raw file after
+  moving exposure or highlights when the lens correction removes colour fringes. In very large
+  folders, changing the sort order, a
   filter or the search text no longer makes the window stand still.
 
 - Less memory: exporting a large picture with sharpening and noise reduction needs less of it, and
