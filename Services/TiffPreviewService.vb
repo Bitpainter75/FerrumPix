@@ -81,6 +81,10 @@ Namespace Services
         Public Shared Function TryDecode(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
             EnsureSilentHandler()
+            ' Eine Datei mit 16 Bit, die der tiefe Leser kann, kommt AUS dem tiefen Bild (siehe
+            ' ShallowFromDeep). Alle anderen gehen den Weg darunter.
+            Dim fromDeep = ShallowFromDeep(path)
+            If fromDeep IsNot Nothing Then Return fromDeep
             Try
                 Using tif = Tiff.Open(path, "r")
                     If tif Is Nothing Then Return Nothing
@@ -141,6 +145,260 @@ Namespace Services
             Catch
                 Return Nothing
             End Try
+        End Function
+
+        ' ---------------------------------------------------------------- 16 Bit
+
+        ''' <summary>Was der tiefe Leser kann, aus den Tags einer geöffneten Datei. Bewusst eng: 16
+        ''' Bit ganzzahlig ohne Vorzeichen, RGB oder Graustufen, OHNE weitere Kanäle (kein Alpha),
+        ''' zusammenhängend oder in getrennten Ebenen, Streifen oder Kacheln. Alles andere (CMYK,
+        ''' Lab, Palette, Gleitkomma, Alpha) bleibt beim 8-Bit-Weg, der es über libtiffs
+        ''' RGBA-Schnittstelle liest; dessen Rechnung für Alpha und fremde Farbmodelle hier
+        ''' nachzubauen, wäre eine zweite Wahrheit neben der Bibliothek.</summary>
+        Private Structure DeepLayout
+            Public Width As Integer
+            Public Height As Integer
+            Public Samples As Integer
+            Public Separate As Boolean
+            Public Inverted As Boolean
+            Public FlipHorizontal As Boolean
+            Public FlipVertical As Boolean
+        End Structure
+
+        Private Shared Function ReadDeepLayout(tif As Tiff, ByRef layout As DeepLayout) As Boolean
+            Dim widthField = tif.GetField(TiffTag.IMAGEWIDTH)
+            Dim heightField = tif.GetField(TiffTag.IMAGELENGTH)
+            If widthField Is Nothing OrElse heightField Is Nothing Then Return False
+            layout.Width = widthField(0).ToInt()
+            layout.Height = heightField(0).ToInt()
+            If layout.Width <= 0 OrElse layout.Height <= 0 Then Return False
+            If CLng(layout.Width) * CLng(layout.Height) > MaxPixels Then Return False
+
+            Dim bits = tif.GetFieldDefaulted(TiffTag.BITSPERSAMPLE)
+            If bits Is Nothing OrElse bits(0).ToInt() <> 16 Then Return False
+            Dim format = tif.GetFieldDefaulted(TiffTag.SAMPLEFORMAT)
+            If format IsNot Nothing AndAlso format(0).ToInt() <> CInt(SampleFormat.UINT) Then Return False
+            Dim samples = tif.GetFieldDefaulted(TiffTag.SAMPLESPERPIXEL)
+            layout.Samples = If(samples Is Nothing, 1, samples(0).ToInt())
+            Dim extra = tif.GetField(TiffTag.EXTRASAMPLES)
+            If extra IsNot Nothing AndAlso extra(0).ToInt() > 0 Then Return False
+
+            Dim photometricField = tif.GetField(TiffTag.PHOTOMETRIC)
+            If photometricField Is Nothing Then Return False
+            Select Case CType(photometricField(0).ToInt(), Photometric)
+                Case Photometric.RGB
+                    If layout.Samples <> 3 Then Return False
+                Case Photometric.MINISBLACK
+                    If layout.Samples <> 1 Then Return False
+                Case Photometric.MINISWHITE
+                    If layout.Samples <> 1 Then Return False
+                    layout.Inverted = True
+                Case Else
+                    Return False
+            End Select
+
+            Dim planar = tif.GetFieldDefaulted(TiffTag.PLANARCONFIG)
+            layout.Separate = planar IsNot Nothing AndAlso planar(0).ToInt() = CInt(PlanarConfig.SEPARATE) AndAlso layout.Samples > 1
+
+            ' Die Ausrichtung wie libtiffs ReadRGBAImageOriented mit dem Ziel "oben links": die
+            ' gestürzten Lagen (5 bis 8) behandelt die Bibliothek wie ihre aufrechten Gegenstücke,
+            ' ohne Breite und Höhe zu tauschen. Dasselbe hier, damit beide Bilder deckungsgleich
+            ' bleiben.
+            Dim orientationField = tif.GetFieldDefaulted(TiffTag.ORIENTATION)
+            Dim orientationValue = If(orientationField Is Nothing, 1, orientationField(0).ToInt())
+            Select Case orientationValue
+                Case 2, 6 : layout.FlipHorizontal = True
+                Case 3, 7 : layout.FlipHorizontal = True : layout.FlipVertical = True
+                Case 4, 8 : layout.FlipVertical = True
+            End Select
+            Return True
+        End Function
+
+        ''' <summary>Trägt diese Datei 16 Bit je Kanal in einer Form, die sich tief lesen lässt?
+        ''' Liest nur die Tags der ersten Seite. Danach richtet sich, ob die Dialoge 16 Bit
+        ''' anbieten und ob die Kette ein tiefes Bild bekommt.</summary>
+        Public Shared Function IsDeepTiff(path As String) As Boolean
+            If Not IsSupportedTiff(path) OrElse Not File.Exists(path) Then Return False
+            EnsureSilentHandler()
+            Try
+                Using tif = Tiff.Open(path, "r")
+                    If tif Is Nothing Then Return False
+                    Dim layout As DeepLayout
+                    Return ReadDeepLayout(tif, layout)
+                End Using
+            Catch
+                Return False
+            End Try
+        End Function
+
+        ''' <summary>Die erste Seite mit 16 Bit je Kanal (Rgba16161616, deckend, Besitz beim
+        ''' Aufrufer) oder Nothing. DAS TIEFE GEGENSTÜCK ZU <see cref="TryDecode"/>: dieselbe
+        ''' Seite, dieselbe Ausrichtung, dieselbe Umrechnung des eingebetteten Profils nach sRGB,
+        ''' nur ohne den Schritt auf 8 Bit. Das Paar muss deckungsgleich sein, die Kette prüft es
+        ''' vor dem Schreiben (ImageProcessor.DeepMatchesShallow).
+        '''
+        ''' Gelesen wird zeilenweise bzw. kachelweise in der Tiefe der Datei; libtiff gibt die
+        ''' Werte in der Byte-Reihenfolge des Rechners zurück.</summary>
+        Friend Shared Function TryDecodeDeep(path As String) As SKBitmap
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
+            EnsureSilentHandler()
+            Try
+                Using tif = Tiff.Open(path, "r")
+                    If tif Is Nothing Then Return Nothing
+                    Dim layout As DeepLayout
+                    If Not ReadDeepLayout(tif, layout) Then Return Nothing
+                    Dim width = layout.Width
+                    Dim height = layout.Height
+                    Dim planes = If(layout.Separate, layout.Samples, 1)
+                    Dim samplesPerPlane = If(layout.Separate, 1, layout.Samples)
+
+                    ' Alle Werte der Seite, Zeile für Zeile, je Bildpunkt Samples Werte.
+                    Dim values(width * layout.Samples * height - 1) As UShort
+                    If tif.IsTiled() Then
+                        Dim tileWidthField = tif.GetField(TiffTag.TILEWIDTH)
+                        Dim tileHeightField = tif.GetField(TiffTag.TILELENGTH)
+                        If tileWidthField Is Nothing OrElse tileHeightField Is Nothing Then Return Nothing
+                        Dim tileWidth = tileWidthField(0).ToInt()
+                        Dim tileHeight = tileHeightField(0).ToInt()
+                        If tileWidth <= 0 OrElse tileHeight <= 0 Then Return Nothing
+                        Dim tile(tif.TileSize() - 1) As Byte
+                        For plane = 0 To planes - 1
+                            For tileY = 0 To height - 1 Step tileHeight
+                                For tileX = 0 To width - 1 Step tileWidth
+                                    If tif.ReadTile(tile, 0, tileX, tileY, 0, CShort(plane)) < 0 Then Return Nothing
+                                    Dim rows = Math.Min(tileHeight, height - tileY)
+                                    Dim columns = Math.Min(tileWidth, width - tileX)
+                                    For y = 0 To rows - 1
+                                        Dim sourceIndex = y * tileWidth * samplesPerPlane * 2
+                                        For x = 0 To columns - 1
+                                            For s = 0 To samplesPerPlane - 1
+                                                Dim sample = If(layout.Separate, plane, s)
+                                                values(((tileY + y) * width + tileX + x) * layout.Samples + sample) =
+                                                    BitConverter.ToUInt16(tile, sourceIndex + (x * samplesPerPlane + s) * 2)
+                                            Next
+                                        Next
+                                    Next
+                                Next
+                            Next
+                        Next
+                    Else
+                        Dim line(tif.ScanlineSize() - 1) As Byte
+                        If line.Length < width * samplesPerPlane * 2 Then Return Nothing
+                        For plane = 0 To planes - 1
+                            For y = 0 To height - 1
+                                If Not tif.ReadScanline(line, y, CShort(plane)) Then Return Nothing
+                                If Not layout.Separate Then
+                                    ' Der Normalfall: die Zeile liegt schon in der Reihenfolge des Felds.
+                                    Buffer.BlockCopy(line, 0, values, y * width * layout.Samples * 2, width * layout.Samples * 2)
+                                    Continue For
+                                End If
+                                For x = 0 To width - 1
+                                    For s = 0 To samplesPerPlane - 1
+                                        Dim sample = If(layout.Separate, plane, s)
+                                        values((y * width + x) * layout.Samples + sample) =
+                                            BitConverter.ToUInt16(line, (x * samplesPerPlane + s) * 2)
+                                    Next
+                                Next
+                            Next
+                        Next
+                    End If
+
+                    Dim bitmap = ImageProcessor.NewDeepBitmap(width, height, SKAlphaType.Opaque)
+                    If bitmap Is Nothing Then Return Nothing
+                    Try
+                        Dim row(width * 4 - 1) As Short
+                        Dim target = bitmap.GetPixels()
+                        Dim targetStride = bitmap.RowBytes
+                        For y = 0 To height - 1
+                            Dim sourceY = If(layout.FlipVertical, height - 1 - y, y)
+                            For x = 0 To width - 1
+                                Dim sourceX = If(layout.FlipHorizontal, width - 1 - x, x)
+                                Dim index = (sourceY * width + sourceX) * layout.Samples
+                                Dim r = values(index)
+                                Dim g = If(layout.Samples = 1, r, values(index + 1))
+                                Dim b = If(layout.Samples = 1, r, values(index + 2))
+                                If layout.Inverted Then
+                                    r = CUShort(65535 - r)
+                                    g = r
+                                    b = r
+                                End If
+                                ' Dieselbe Bitfolge als Short: Marshal.Copy kennt kein UShort-Feld.
+                                row(x * 4) = CShort(If(r >= 32768, CInt(r) - 65536, CInt(r)))
+                                row(x * 4 + 1) = CShort(If(g >= 32768, CInt(g) - 65536, CInt(g)))
+                                row(x * 4 + 2) = CShort(If(b >= 32768, CInt(b) - 65536, CInt(b)))
+                                row(x * 4 + 3) = -1
+                            Next
+                            Marshal.Copy(row, 0, target + y * targetStride, width * 4)
+                        Next
+
+                        Using profile = ReadIccProfile(tif)
+                            Dim managed = ColorManagementService.ToSrgb(bitmap, profile)
+                            If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
+                            Return managed
+                        End Using
+                    Catch
+                        bitmap.Dispose()
+                        Return Nothing
+                    End Try
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Tiff.TryDecodeDeep", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Das 8-Bit-Bild einer 16-Bit-Datei, gerundet aus ihrem tiefen Bild. Nothing,
+        ''' wenn der tiefe Leser die Datei nicht annimmt.
+        '''
+        ''' WARUM NICHT UEBER LIBTIFF WIE BEI ALLEN ANDEREN. Die Bibliothek schneidet 16 Bit auf 8
+        ''' ab (das obere Byte), statt zu runden, und das Profil wurde danach auf den
+        ''' abgeschnittenen Werten nach sRGB umgerechnet. Beides zusammen legte das 8-Bit-Bild bis
+        ''' zu drei Stufen neben das tiefe (gemessen an einem Verlauf in Adobe RGB), und in glatten
+        ''' Flaechen nicht zufaellig, sondern durchgehend in eine Richtung. Die Kette haelt eine
+        ''' solche Flaeche fuer bearbeitet und nimmt dort die 8-Bit-Werte (PatchDeepFromShallow):
+        ''' gerade kraeftige, glatte Farben eines Scans verloeren ihre Tiefe. Aus dem tiefen Bild
+        ''' gerundet liegt jeder Punkt hoechstens eine halbe Stufe daneben, und die Umrechnung des
+        ''' Profils geschieht einmal, in 16 Bit.
+        '''
+        ''' Der Preis ist Speicher: das tiefe Bild (8 Byte je Bildpunkt) liegt kurz neben dem
+        ''' 8-Bit-Bild.</summary>
+        Private Shared Function ShallowFromDeep(path As String) As SKBitmap
+            Dim deep = TryDecodeDeep(path)
+            If deep Is Nothing Then Return Nothing
+            Using deep
+                Dim width = deep.Width
+                Dim height = deep.Height
+                Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul))
+                Try
+                    Dim source = deep.GetPixels()
+                    Dim target = bitmap.GetPixels()
+                    If source = IntPtr.Zero OrElse target = IntPtr.Zero Then
+                        bitmap.Dispose()
+                        Return Nothing
+                    End If
+                    Dim sourceStride = deep.RowBytes
+                    Dim targetStride = bitmap.RowBytes
+                    Threading.Tasks.Parallel.For(0, height,
+                        Sub(y)
+                            Dim deepRow(width * 4 - 1) As Short
+                            Dim row(width * 4 - 1) As Byte
+                            Marshal.Copy(source + y * sourceStride, deepRow, 0, width * 4)
+                            For x = 0 To width - 1
+                                Dim o = x * 4
+                                ' Gerundet, nicht abgeschnitten: 65535 wird 255, 128 wird 0, 129 wird 1.
+                                row(o) = CByte(((deepRow(o + 2) And &HFFFF) + 128) \ 257)
+                                row(o + 1) = CByte(((deepRow(o + 1) And &HFFFF) + 128) \ 257)
+                                row(o + 2) = CByte(((deepRow(o) And &HFFFF) + 128) \ 257)
+                                row(o + 3) = 255
+                            Next
+                            Marshal.Copy(row, 0, target + y * targetStride, width * 4)
+                        End Sub)
+                    Return bitmap
+                Catch
+                    bitmap.Dispose()
+                    Return Nothing
+                End Try
+            End Using
         End Function
 
         ''' <summary>Das eingebettete ICC-Profil (TIFF-Tag 34675), oder Nothing.

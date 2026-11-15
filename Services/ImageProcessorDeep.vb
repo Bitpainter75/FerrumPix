@@ -199,17 +199,32 @@ Namespace Services
             Return String.Equals(IO.Path.GetExtension(targetPath), ".png", StringComparison.OrdinalIgnoreCase)
         End Function
 
-        ''' <summary>Kann aus dieser Quelle eine Datei mit 16 Bit entstehen? Nur aus einer RAW-Datei,
-        ''' die durch die RAW-Stufe laeuft: dort liegen die Tonwerte feiner vor als 8 Bit. Eine
-        ''' 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein TIFF oder PNG
-        ''' mit 16 Bit wird beim Lesen auf 8 gebracht.
+        ''' <summary>Kann aus dieser Quelle eine Datei mit 16 Bit entstehen? Aus einer RAW-Datei, die
+        ''' durch die RAW-Stufe laeuft (dort liegen die Tonwerte feiner vor als 8 Bit), und aus einer
+        ''' Datei, die selbst 16 Bit traegt und sich tief lesen laesst (<see cref="IsDeepFileSource"/>,
+        ''' heute TIFF). Eine 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein
+        ''' PNG oder JPEG XL mit 16 Bit wird beim Lesen noch auf 8 gebracht.
         '''
         ''' Die Frage fuer die Dialoge: danach richtet sich, ob sie die Farbtiefe anbieten. Ob die
         ''' Datei am Ende wirklich 16 Bit traegt, entscheidet erst SaveImage (ein Vorgang, der das
         ''' ganze Bild ersetzt, beendet das tiefe Bild, siehe <see cref="RecipeBlocksDeep"/>).</summary>
         Public Shared Function CanSourceGoDeep(sourcePath As String) As Boolean
             If String.IsNullOrWhiteSpace(sourcePath) Then Return False
+            If IsDeepFileSource(sourcePath) Then Return True
             Return RawPreviewService.IsSupportedRaw(sourcePath) AndAlso RawDecodeService.DevelopsThroughRawStage(sourcePath)
+        End Function
+
+        ''' <summary>Eine Bilddatei, die selbst 16 Bit je Kanal traegt und sich tief lesen laesst:
+        ''' heute ein TIFF mit 16 Bit (TiffPreviewService.IsDeepTiff). Die zweite Herkunft eines
+        ''' tiefen Bilds neben der RAW-Stufe. Der Unterschied: hier gibt es keine Entwicklung mit
+        ''' Angaben aus dem Rezept, das tiefe Bild ist die Datei.</summary>
+        Friend Shared Function IsDeepFileSource(path As String) As Boolean
+            Return TiffPreviewService.IsDeepTiff(path)
+        End Function
+
+        ''' <summary>Das tiefe Bild einer solchen Datei, oder Nothing.</summary>
+        Private Shared Function DecodeDeepFileSource(path As String) As SKBitmap
+            Return TiffPreviewService.TryDecodeDeep(path)
         End Function
 
         ''' <summary>Traegt dieses Rezept etwas, womit die Kette das tiefe Bild sicher nicht bis ans
@@ -251,18 +266,25 @@ Namespace Services
         ''' laeuft; dann hat die Kette kein tiefes Bild, und die Ausgabe bleibt bei 8 Bit.</summary>
         Friend Shared Sub AttachDeepRawSource(decoded As SKBitmap, path As String, adj As ImageAdjustments,
                                               developRaw As Boolean)
-            If decoded Is Nothing OrElse Not developRaw OrElse Not RawPreviewService.IsSupportedRaw(path) Then Return
-            If Not RawDecodeService.DevelopsThroughRawStage(path) Then Return
-            Dim deep = RawDecodeService.TryDecodeDeep(path, LensChoiceFrom(adj),
+            If decoded Is Nothing Then Return
+            Dim deep As SKBitmap
+            If IsDeepFileSource(path) Then
+                ' Eine Datei, die selbst 16 Bit traegt: ihr tiefes Bild ist die Datei.
+                deep = DecodeDeepFileSource(path)
+            Else
+                If Not developRaw OrElse Not RawPreviewService.IsSupportedRaw(path) Then Return
+                If Not RawDecodeService.DevelopsThroughRawStage(path) Then Return
+                deep = RawDecodeService.TryDecodeDeep(path, LensChoiceFrom(adj),
                                                       adj IsNot Nothing AndAlso adj.RawHighlightRecovery,
                                                       If(adj Is Nothing, RawDecodeService.HighlightRecoveryKnee, adj.RawHighlightKnee()),
                                                       If(adj Is Nothing, 0.0, adj.RawExposureEv()))
+            End If
             ' Passt es nicht zum 8-Bit-Bild (andere Masse, anderer Inhalt), ist es nicht sein
             ' tiefes Bild: etwa wenn statt der Entwicklung die eingebettete Vorschau einsprang.
             If deep Is Nothing Then
-                NoteDeepLost("die RAW-Stufe lieferte kein tiefes Bild")
+                NoteDeepLost("die Quelle lieferte kein tiefes Bild (RAW-Stufe oder 16-Bit-Datei)")
             ElseIf deep.Width <> decoded.Width OrElse deep.Height <> decoded.Height Then
-                NoteDeepLost($"das tiefe Bild der RAW-Stufe hat {deep.Width}x{deep.Height}, das 8-Bit-Bild {decoded.Width}x{decoded.Height}")
+                NoteDeepLost($"das tiefe Bild der Quelle hat {deep.Width}x{deep.Height}, das 8-Bit-Bild {decoded.Width}x{decoded.Height}")
                 deep.Dispose()
                 deep = Nothing
             ElseIf Not DeepMatchesShallow(decoded, deep) Then
@@ -285,6 +307,12 @@ Namespace Services
         ''' das Arbeitsbild ohne tiefes Bild, und die Ausgabe bei 8 Bit.</summary>
         Friend Shared Sub AttachDeepWorkingSource(working As SKBitmap, path As String, adj As ImageAdjustments,
                                                   developRaw As Boolean)
+            If working IsNot Nothing AndAlso adj IsNot Nothing AndAlso IsDeepFileSource(path) Then
+                ' Das Arbeitsbild einer 16-Bit-Datei: die Datei, tief bis auf die Stellen, an denen
+                ' es von ihr abweicht.
+                AttachPatchedDeep(working, DecodeDeepFileSource(path), adj)
+                Return
+            End If
             If working Is Nothing OrElse adj Is Nothing OrElse Not developRaw OrElse Not RawPreviewService.IsSupportedRaw(path) Then Return
             If Not RawDecodeService.DevelopsThroughRawStage(path) Then Return
             Dim deep = RawDecodeService.TryDecodeDeep(path, LensChoiceFrom(adj), adj.RawHighlightRecovery,
@@ -299,6 +327,10 @@ Namespace Services
         ''' ersetzt durch das bearbeitete Bild.</summary>
         Friend Shared Sub AttachDeepEditedRawSource(edited As SKBitmap, path As String, adj As ImageAdjustments,
                                                     developRaw As Boolean)
+            If edited IsNot Nothing AndAlso IsDeepFileSource(path) Then
+                AttachPatchedDeep(edited, DecodeDeepFileSource(path), adj)
+                Return
+            End If
             If edited Is Nothing OrElse Not developRaw OrElse Not RawPreviewService.IsSupportedRaw(path) Then Return
             If Not RawDecodeService.DevelopsThroughRawStage(path) Then Return
             Dim deep = RawDecodeService.TryDecodeDeep(path, LensChoiceFrom(adj),

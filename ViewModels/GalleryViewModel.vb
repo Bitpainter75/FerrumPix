@@ -15312,7 +15312,7 @@ Namespace ViewModels
             ' sagt es, sonst stuende es nur im Protokoll. Gelesen wird der Zaehler genau einmal.
             Dim shallow = Threading.Interlocked.Exchange(_batchShallowCount, 0)
             Dim note = If(shallow > 0,
-                          " " & String.Format(LocalizationService.T("{0} RAW-Datei(en) mit 8 Bit statt 16 geschrieben."), shallow),
+                          " " & String.Format(LocalizationService.T("{0} Datei(en) mit 8 Bit statt 16 geschrieben."), shallow),
                           "")
             If BatchWasCancelled() Then
                 Return String.Format(LocalizationService.T("Stapel abgebrochen: {0} von {1} Datei(en) geschrieben"), done, total) & note

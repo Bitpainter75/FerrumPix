@@ -11651,14 +11651,14 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bit</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
-    <value>16 bit è disponibile per i file RAW. Le aree ritoccate e dipinte restano fini come a 8 bit.</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_und_f_r_TIFF_Date_95afbca2" xml:space="preserve">
+    <value>16 bit è disponibile per i file RAW e per i file TIFF a 16 bit. Le aree ritoccate e dipinte restano fini come a 8 bit.</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
     <value>Salvato a 8 bit, per questa immagine i 16 bit non sono disponibili: {0}</value>
   </data>
-  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
-    <value>{0} file RAW scritti a 8 bit invece di 16.</value>
+  <data name="0_Datei_en_mit_8_Bit_statt_16_geschrieben_ec1d22b4" xml:space="preserve">
+    <value>{0} file scritti a 8 bit invece di 16.</value>
   </data>
   <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
     <value>La galleria mostra solo le immagini di questa cartella. Fai clic per mostrare anche le immagini di tutte le sottocartelle</value>

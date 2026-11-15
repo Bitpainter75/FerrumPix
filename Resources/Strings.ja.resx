@@ -11691,14 +11691,14 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 ビット</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_Retuschierte_und__e254d569" xml:space="preserve">
-    <value>16 ビットは RAW ファイルで利用できます。レタッチやペイントをした部分は 8 ビット相当の細かさのままです。</value>
+  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_und_f_r_TIFF_Date_95afbca2" xml:space="preserve">
+    <value>16 ビットは RAW ファイルと 16 ビットの TIFF ファイルで利用できます。レタッチやペイントをした部分は 8 ビット相当の細かさのままです。</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
     <value>8 ビットで保存しました。この画像では 16 ビットを利用できません: {0}</value>
   </data>
-  <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
-    <value>{0} 個の RAW ファイルを 16 ビットではなく 8 ビットで書き出しました。</value>
+  <data name="0_Datei_en_mit_8_Bit_statt_16_geschrieben_ec1d22b4" xml:space="preserve">
+    <value>{0} 個のファイルを 16 ビットではなく 8 ビットで書き出しました。</value>
   </data>
   <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
     <value>ギャラリーにはこのフォルダーの写真だけが表示されています。クリックすると、すべてのサブフォルダーの写真も表示します</value>
