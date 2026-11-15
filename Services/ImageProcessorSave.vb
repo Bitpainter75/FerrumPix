@@ -1009,7 +1009,11 @@ Namespace Services
                             Else
                                 ' PNG ueber den gemeinsamen Kodierer: die Qualitaetszahl wirkt dort nicht,
                                 ' die Packstufe der Ausgabe steht in PngEncoder.
-                                Using image = SKImage.FromBitmap(toEncode)
+                                ' Das SKImage braucht nur der Rest (WebP und so weiter): PNG und JPEG
+                                ' gehen ueber die eigenen Kodierer, und FromBitmap kopiert das ganze
+                                ' Bild.
+                                Dim ownEncoder = fileFormat = SKEncodedImageFormat.Png OrElse fileFormat = SKEncodedImageFormat.Jpeg
+                                Using image = If(ownEncoder, Nothing, SKImage.FromBitmap(toEncode))
                                     Using data = If(fileFormat = SKEncodedImageFormat.Png,
                                                     PngEncoder.Encode(toEncode, PngPurpose.Export),
                                                     If(fileFormat = SKEncodedImageFormat.Jpeg,

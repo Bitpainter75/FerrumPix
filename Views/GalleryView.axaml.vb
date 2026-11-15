@@ -118,6 +118,7 @@ Namespace Views
             AvaloniaXamlLoader.Load(Me)
             AddHandler DataContextChanged, AddressOf OnViewDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("GalleryRootGrid"), AddressOf OnContextRequested)
+            HookFooterZoomFit()
             AddHandler AttachedToVisualTree, AddressOf OnGalleryAttachedToVisualTree
             AddHandler DetachedFromVisualTree, AddressOf OnGalleryDetachedFromVisualTree
             Me.AddHandler(InputElement.GotFocusEvent, AddressOf OnDescendantGotFocus, RoutingStrategies.Bubble)
@@ -694,6 +695,64 @@ Namespace Views
         Private Const InfoSplitterColumn As Integer = 3
         Private Const InfoSidebarColumn As Integer = 4
         Private Const SplitterWidth As Double = 6
+
+        ' ── Fusszeile: die Zoom-Gruppe weicht, wenn der Platz nicht reicht ──────────
+        '
+        ' Die drei Gruppen der Fusszeile liegen in EINER Zelle: links Knoepfe und Status, mittig
+        ' die Groesse der Kacheln (oder die Zoomstufe der Karte), rechts Status und Sterne. Wird
+        ' es eng, laege die mittlere auf ihren Nachbarn. Dann wird sie ausgeblendet.
+
+        ''' <summary>So viel Luft bleibt zwischen der Zoom-Gruppe und ihren Nachbarn mindestens.</summary>
+        Public Const FooterZoomGap As Double = 16
+
+        ''' <summary>Die Breite der Zoom-Gruppe, wie sie zuletzt gezeigt wurde. Ausgeblendet misst
+        ''' sie null; ohne den gemerkten Wert kaeme sie beim naechsten Durchgang sofort zurueck und
+        ''' schaltete hin und her.</summary>
+        Private _footerZoomWidth As Double
+
+        Private _footerZoomFitQueued As Boolean
+
+        ''' <summary>Hat die mittig stehende Zoom-Gruppe neben der linken und der rechten Gruppe
+        ''' Platz? Sie steht in der Mitte der Leiste; auf jeder Seite muss deshalb die Haelfte des
+        ''' Rests fuer die Gruppe dort und den Abstand reichen. Die breitere Seite entscheidet.</summary>
+        Public Shared Function FooterZoomFits(footerWidth As Double, leftWidth As Double,
+                                              rightWidth As Double, zoomWidth As Double) As Boolean
+            If footerWidth <= 0 OrElse zoomWidth <= 0 Then Return True
+            Dim sideSpace = (footerWidth - zoomWidth) / 2.0
+            Return Math.Max(leftWidth, rightWidth) + FooterZoomGap <= sideSpace
+        End Function
+
+        ''' <summary>Sammelt die Anstoesse eines Durchgangs: Breite der Leiste und der beiden
+        ''' Gruppen aendern sich oft gemeinsam.</summary>
+        Private Sub QueueFooterZoomFit()
+            If _footerZoomFitQueued Then Return
+            _footerZoomFitQueued = True
+            Dispatcher.UIThread.Post(Sub()
+                                         _footerZoomFitQueued = False
+                                         UpdateFooterZoomFit()
+                                     End Sub, DispatcherPriority.Loaded)
+        End Sub
+
+        ''' <summary>Blendet die Zoom-Gruppe aus oder ein. Das Ausblenden aendert die Breite der
+        ''' beiden anderen Gruppen nicht (sie liegen in derselben Zelle, nicht nebeneinander), die
+        ''' Entscheidung kann sich also nicht selbst umstossen.</summary>
+        Private Sub UpdateFooterZoomFit()
+            Dim footer = Me.FindControl(Of Grid)("GalleryFooterGrid")
+            Dim left = Me.FindControl(Of Control)("GalleryFooterLeft")
+            Dim right = Me.FindControl(Of Control)("GalleryFooterRight")
+            Dim zoom = Me.FindControl(Of Control)("GalleryFooterZoom")
+            If footer Is Nothing OrElse left Is Nothing OrElse right Is Nothing OrElse zoom Is Nothing Then Return
+            If zoom.IsVisible AndAlso zoom.Bounds.Width > 0 Then _footerZoomWidth = zoom.Bounds.Width
+            Dim fits = FooterZoomFits(footer.Bounds.Width, left.Bounds.Width, right.Bounds.Width, _footerZoomWidth)
+            If zoom.IsVisible <> fits Then zoom.IsVisible = fits
+        End Sub
+
+        Private Sub HookFooterZoomFit()
+            For Each controlName In {"GalleryFooterGrid", "GalleryFooterLeft", "GalleryFooterRight", "GalleryFooterZoom"}
+                Dim control = Me.FindControl(Of Control)(controlName)
+                If control IsNot Nothing Then AddHandler control.SizeChanged, Sub(sender, e) QueueFooterZoomFit()
+            Next
+        End Sub
 
         ''' <summary>Die beiden Leisten auf ihre gemerkten Breiten setzen, eingeklappt samt Griff auf
         ''' null. Laeuft beim Aufbau und bei jedem Umschalten; das Ziehen am Griff aendert die

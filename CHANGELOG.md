@@ -9,6 +9,9 @@
   were deleted outside the application. It is the same switch as the one in the settings under
   Gallery.
 
+- When the bar at the bottom of the gallery gets too narrow, the slider for the size of the
+  thumbnails makes room and comes back as soon as there is space again.
+
 ### Fixes
 
 - A copyright notice with the copyright sign, or a name with an umlaut or an accent, arrived in the
