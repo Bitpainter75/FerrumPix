@@ -7,26 +7,80 @@ Namespace Services
     ''' löschen. Linux: <c>gio trash</c> (glib, auf Desktop-Systemen vorhanden). macOS: Finder-Papierkorb
     ''' über AppleScript. Windows: Papierkorb über
     ''' Microsoft.VisualBasic.FileIO. Liefert False, wenn kein Papierkorb verfügbar ist oder die Verschiebung
-    ''' scheitert - der Aufrufer entscheidet dann, ob er eine Fehlermeldung zeigt, statt still dauerhaft zu
-    ''' löschen.</summary>
+    ''' scheitert. Still dauerhaft gelöscht wird nie: der Aufrufer zeigt den Grund und fragt, ob er
+    ''' stattdessen endgültig löschen soll.</summary>
     Public NotInheritable Class TrashService
         Private Sub New()
         End Sub
 
         Public Shared Function MoveToTrash(path As String) As Boolean
+            Dim reason As String = Nothing
+            Return MoveToTrash(path, reason)
+        End Function
+
+        ''' <summary>Wie oben, nennt bei einem Fehlschlag aber den Grund, den das System angibt
+        ''' (die Fehlerausgabe von <c>gio</c> oder <c>osascript</c>, unter Windows die Ausnahme).
+        ''' Leer, wenn das System nichts sagt. Der Wortlaut kommt vom System und steht deshalb in
+        ''' dessen Sprache, nicht in der der Anwendung.</summary>
+        Public Shared Function MoveToTrash(path As String, ByRef reason As String) As Boolean
+            reason = ""
             If String.IsNullOrEmpty(path) Then Return False
             If Not (File.Exists(path) OrElse Directory.Exists(path)) Then Return False
             Try
                 If OperatingSystem.IsWindows() Then
                     Return MoveToTrashWindows(path)
                 ElseIf OperatingSystem.IsMacOS() Then
-                    Return MoveToTrashMacOS(path)
+                    Return RunTrashTool(MacOsCommand(path), reason)
                 Else
-                    Return MoveToTrashViaGio(path)
+                    Return RunTrashTool(GioCommand(path), reason)
                 End If
-            Catch
+            Catch ex As Exception
+                ' Auch ein fehlendes Programm (gio nicht installiert) landet hier und ist ein Grund.
+                reason = If(ex.Message, "").Trim()
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Startet das Papierkorb-Programm und liest seine Fehlerausgabe. Beide Ströme
+        ''' werden nebenher gelesen: ein voller Puffer hielte das Programm sonst an, und die Wartezeit
+        ''' liefe ab, obwohl es längst fertig sein könnte.</summary>
+        Private Shared Function RunTrashTool(psi As ProcessStartInfo, ByRef reason As String) As Boolean
+            Using proc = Process.Start(psi)
+                If proc Is Nothing Then Return False
+                Dim errorText = proc.StandardError.ReadToEndAsync()
+                Dim outputText = proc.StandardOutput.ReadToEndAsync()
+                If Not proc.WaitForExit(15000) Then
+                    Try : proc.Kill(True) : Catch : End Try
+                    Return False
+                End If
+                If proc.ExitCode = 0 Then Return True
+                Dim text = ""
+                Try
+                    If errorText.Wait(2000) Then text = errorText.Result
+                    If String.IsNullOrWhiteSpace(text) AndAlso outputText.Wait(2000) Then text = outputText.Result
+                Catch
+                End Try
+                reason = ReasonFromOutput(text)
+                Return False
+            End Using
+        End Function
+
+        ''' <summary>Der Grund aus der Fehlerausgabe: die letzte nicht leere Zeile, ohne den
+        ''' Programmnamen und ohne die Adresse der Datei davor. <c>gio</c> schreibt
+        ''' <c>gio: file:///pfad/bild.jpg: Grund</c>; der Dateiname steht in der Meldung der
+        ''' Anwendung schon daneben.</summary>
+        Friend Shared Function ReasonFromOutput(output As String) As String
+            If String.IsNullOrWhiteSpace(output) Then Return ""
+            Dim line = output.Split({vbCr, vbLf}, StringSplitOptions.RemoveEmptyEntries).
+                Select(Function(l) l.Trim()).
+                LastOrDefault(Function(l) l.Length > 0)
+            If String.IsNullOrEmpty(line) Then Return ""
+            If line.StartsWith("gio: ", StringComparison.Ordinal) Then line = line.Substring(5).TrimStart()
+            If line.StartsWith("file://", StringComparison.Ordinal) Then
+                Dim cut = line.IndexOf(": ", StringComparison.Ordinal)
+                If cut >= 0 AndAlso cut + 2 < line.Length Then line = line.Substring(cut + 2).Trim()
+            End If
+            Return line
         End Function
 
         Private Shared Function MoveToTrashWindows(path As String) As Boolean
@@ -44,7 +98,7 @@ Namespace Services
             Return True
         End Function
 
-        Private Shared Function MoveToTrashViaGio(path As String) As Boolean
+        Private Shared Function GioCommand(path As String) As ProcessStartInfo
             Dim psi As New ProcessStartInfo("gio") With {
                 .UseShellExecute = False,
                 .RedirectStandardOutput = True,
@@ -54,18 +108,10 @@ Namespace Services
             psi.ArgumentList.Add("trash")
             psi.ArgumentList.Add("--")
             psi.ArgumentList.Add(path)
-
-            Using proc = Process.Start(psi)
-                If proc Is Nothing Then Return False
-                If Not proc.WaitForExit(15000) Then
-                    Try : proc.Kill(True) : Catch : End Try
-                    Return False
-                End If
-                Return proc.ExitCode = 0
-            End Using
+            Return psi
         End Function
 
-        Private Shared Function MoveToTrashMacOS(path As String) As Boolean
+        Private Shared Function MacOsCommand(path As String) As ProcessStartInfo
             Dim psi As New ProcessStartInfo("osascript") With {
                 .UseShellExecute = False,
                 .RedirectStandardOutput = True,
@@ -79,15 +125,7 @@ Namespace Services
             psi.ArgumentList.Add("-e")
             psi.ArgumentList.Add("end run")
             psi.ArgumentList.Add(path)
-
-            Using proc = Process.Start(psi)
-                If proc Is Nothing Then Return False
-                If Not proc.WaitForExit(15000) Then
-                    Try : proc.Kill(True) : Catch : End Try
-                    Return False
-                End If
-                Return proc.ExitCode = 0
-            End Using
+            Return psi
         End Function
     End Class
 

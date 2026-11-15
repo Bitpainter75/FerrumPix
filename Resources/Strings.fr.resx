@@ -11678,4 +11678,16 @@
   <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
     <value>Désactiver la molette sur l’image</value>
   </data>
+  <data name="In_den_Papierkorb_fehlgeschlagen_c2ffbafd" xml:space="preserve">
+    <value>Échec de la mise à la corbeille</value>
+  </data>
+  <data name="0_lie_sich_nicht_in_den_Papierkorb_verschieben_f2b91c10" xml:space="preserve">
+    <value>{0} n’a pas pu être mis à la corbeille.</value>
+  </data>
+  <data name="0_Elemente_lie_en_sich_nicht_in_den_Papierkorb_v_529c5f8a" xml:space="preserve">
+    <value>{0} éléments n’ont pas pu être mis à la corbeille.</value>
+  </data>
+  <data name="Stattdessen_endg_ltig_l_schen_Das_l_sst_sich_nic_ca16dcf8" xml:space="preserve">
+    <value>Supprimer définitivement à la place ? Cette action est irréversible.</value>
+  </data>
 </root>

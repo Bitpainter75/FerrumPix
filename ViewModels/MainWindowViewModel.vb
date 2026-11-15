@@ -6896,27 +6896,24 @@ Namespace ViewModels
             ' nicht abbricht und die Ansicht trotzdem aktualisiert wird.
             ' Im Hintergrund: "gio trash" ist ein eigener Prozess je Datei - auf dem UI-Thread stand das
             ' Fenster so lange still, und die Ansicht konnte das Ausblenden gar nicht erst zeigen.
-            Dim failures = Await Task.Run(Function()
-                                              Dim errors As New List(Of String)()
-                                              ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des
-                                              ' Stapels, mit frisch gelesenem Ordner (RawSidecarService.BatchScope).
-                                              Using batch = RawSidecarService.BatchScope()
-                                                  For Each itemPath In pathList
-                                                      Try
-                                                          DeletePath(itemPath, useTrash)
-                                                      Catch ex As Exception
-                                                          errors.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
-                                                      End Try
-                                                  Next
-                                                  Dim leftover = batch.Finish()
-                                                  If leftover.Count > 0 Then
-                                                      errors.Add(String.Format(LocalizationService.T("Die Datei wurde entfernt, aber diese Begleitdateien blieben zurück: {0}"),
-                                                                               String.Join(", ", leftover)))
-                                                  End If
-                                              End Using
-                                              Return errors
-                                          End Function)
-            DiagnosticLogService.LogAlways("Delete", $"{pathList.Count} Element(e), Papierkorb={useTrash}, Fehler={failures.Count}")
+            Dim notTrashed As New List(Of TrashRefusal)()
+            Dim failures = Await Task.Run(Function() DeletePathsCollecting(pathList, useTrash, notTrashed))
+            DiagnosticLogService.LogAlways("Delete", $"{pathList.Count} Element(e), Papierkorb={useTrash}, Fehler={failures.Count}, nicht im Papierkorb={notTrashed.Count}")
+
+            ' DER PAPIERKORB NIMMT ES NICHT: den Grund des Systems zeigen und fragen, ob stattdessen
+            ' endgültig gelöscht werden soll. Gefragt wird immer, auch wenn die Rückfrage vor dem
+            ' Löschen abgeschaltet ist: zugestimmt wurde dem Papierkorb, nicht dem endgültigen Löschen.
+            If notTrashed.Count > 0 Then
+                For Each refusal In notTrashed
+                    DiagnosticLogService.LogAlways("Delete", $"Papierkorb abgelehnt: {refusal.Path} - {If(refusal.Reason.Length = 0, "ohne Angabe", refusal.Reason)}")
+                Next
+                If Await ShowConfirmAsync("Papierkorb nicht verfügbar", TrashRefusalQuestion(notTrashed), "Endgültig löschen", "Abbrechen") Then
+                    Dim refusedPaths = notTrashed.Select(Function(r) r.Path).ToList()
+                    Dim permanentFailures = Await Task.Run(Function() DeletePathsCollecting(refusedPaths, False, Nothing))
+                    DiagnosticLogService.LogAlways("Delete", $"{refusedPaths.Count} Element(e) nach abgelehntem Papierkorb endgültig, Fehler={permanentFailures.Count}")
+                    failures.AddRange(permanentFailures)
+                End If
+            End If
 
             ' AUS DER GALERIE NEHMEN, WER AUCH IMMER GELOESCHT HAT. Hier und nicht bei den drei
             ' Aufrufern: die Galerie raeumte bisher nur ihre EIGENE Loeschung ab, und der Betrachter
@@ -6934,10 +6931,76 @@ Namespace ViewModels
             afterDelete?.Invoke()
 
             If failures.Count > 0 Then
-                Dim title = If(useTrash, "In den Papierkorb fehlgeschlagen", "Löschen fehlgeschlagen")
+                Dim title = If(useTrash, LocalizationService.T("In den Papierkorb fehlgeschlagen"),
+                                         LocalizationService.T("Löschen fehlgeschlagen"))
                 Await ShowMessageAsync(title, String.Join(Environment.NewLine, failures))
             End If
         End Sub
+
+        ''' <summary>Ein Element, das der Papierkorb des Systems nicht genommen hat, mit dem Grund,
+        ''' den das System nennt (leer, wenn es keinen nennt).</summary>
+        Friend NotInheritable Class TrashRefusal
+            Public Property Path As String = ""
+            Public Property Reason As String = ""
+        End Class
+
+        ''' <summary>Der Papierkorb hat ein Element abgelehnt. Eigene Ausnahme, damit der Aufrufer
+        ''' diesen Fall von jedem anderen Fehler beim Löschen trennen und nachfragen kann.</summary>
+        Private NotInheritable Class TrashRefusedException
+            Inherits IOException
+
+            Public Sub New(reason As String)
+                MyBase.New(If(reason, ""))
+            End Sub
+        End Class
+
+        ''' <summary>Löscht die Elemente nacheinander und sammelt, was nicht ging. Läuft auf einem
+        ''' Hintergrundfaden. Was der Papierkorb ablehnt, kommt nach <paramref name="notTrashed"/>
+        ''' und nicht in die Fehlerliste; darüber entscheidet erst die Rückfrage.</summary>
+        Private Function DeletePathsCollecting(paths As IReadOnlyList(Of String), useTrash As Boolean,
+                                               notTrashed As List(Of TrashRefusal)) As List(Of String)
+            Dim errors As New List(Of String)()
+            ' Ueber geteilte Stamm-XMP entscheidet erst das Ende des
+            ' Stapels, mit frisch gelesenem Ordner (RawSidecarService.BatchScope).
+            Using batch = RawSidecarService.BatchScope()
+                For Each itemPath In paths
+                    Try
+                        DeletePath(itemPath, useTrash)
+                    Catch ex As TrashRefusedException When notTrashed IsNot Nothing
+                        notTrashed.Add(New TrashRefusal With {.Path = itemPath, .Reason = ex.Message})
+                    Catch ex As Exception
+                        errors.Add($"{IO.Path.GetFileName(itemPath)}: {ex.Message}")
+                    End Try
+                Next
+                Dim leftover = batch.Finish()
+                If leftover.Count > 0 Then
+                    errors.Add(String.Format(LocalizationService.T("Die Datei wurde entfernt, aber diese Begleitdateien blieben zurück: {0}"),
+                                             String.Join(", ", leftover)))
+                End If
+            End Using
+            Return errors
+        End Function
+
+        ''' <summary>Der Text der Rückfrage nach einem abgelehnten Papierkorb: was nicht ging, die
+        ''' Gründe des Systems (jeder einmal, höchstens drei) und die Frage nach dem endgültigen
+        ''' Löschen.</summary>
+        Friend Shared Function TrashRefusalQuestion(notTrashed As IReadOnlyList(Of TrashRefusal)) As String
+            Dim lines As New List(Of String)()
+            If notTrashed.Count = 1 Then
+                lines.Add(String.Format(LocalizationService.T("{0} ließ sich nicht in den Papierkorb verschieben."),
+                                        IO.Path.GetFileName(notTrashed(0).Path)))
+            Else
+                lines.Add(String.Format(LocalizationService.T("{0} Elemente ließen sich nicht in den Papierkorb verschieben."),
+                                        notTrashed.Count))
+            End If
+            lines.AddRange(notTrashed.Select(Function(r) r.Reason).
+                               Where(Function(reason) Not String.IsNullOrWhiteSpace(reason)).
+                               Distinct(StringComparer.Ordinal).
+                               Take(3))
+            lines.Add("")
+            lines.Add(LocalizationService.T("Stattdessen endgültig löschen? Das lässt sich nicht rückgängig machen."))
+            Return String.Join(Environment.NewLine, lines)
+        End Function
 
         Private Sub DeletePath(itemPath As String, useTrash As Boolean)
             If String.IsNullOrEmpty(itemPath) Then Return
@@ -6949,8 +7012,10 @@ Namespace ViewModels
                 Dim isFile = IO.File.Exists(itemPath)
                 ' Bewusst KEIN stiller Rückfall auf dauerhaftes Löschen, wenn der Papierkorb scheitert -
                 ' das wäre die gefährliche Überraschung, die dieser Schalter gerade verhindern soll.
-                If Not TrashService.MoveToTrash(itemPath) Then
-                    Throw New IOException("Papierkorb nicht verfügbar")
+                ' Der Aufrufer zeigt den Grund und fragt.
+                Dim reason As String = Nothing
+                If Not TrashService.MoveToTrash(itemPath, reason) Then
+                    Throw New TrashRefusedException(reason)
                 End If
                 If isFile Then ReportFailedCompanionDeletion(RawSidecarService.AccompanyDelete(itemPath, useTrash:=True))
                 Return

@@ -11722,4 +11722,16 @@
   <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
     <value>Matikan roda mouse di atas gambar</value>
   </data>
+  <data name="In_den_Papierkorb_fehlgeschlagen_c2ffbafd" xml:space="preserve">
+    <value>Gagal memindahkan ke tempat sampah</value>
+  </data>
+  <data name="0_lie_sich_nicht_in_den_Papierkorb_verschieben_f2b91c10" xml:space="preserve">
+    <value>{0} tidak dapat dipindahkan ke tempat sampah.</value>
+  </data>
+  <data name="0_Elemente_lie_en_sich_nicht_in_den_Papierkorb_v_529c5f8a" xml:space="preserve">
+    <value>{0} item tidak dapat dipindahkan ke tempat sampah.</value>
+  </data>
+  <data name="Stattdessen_endg_ltig_l_schen_Das_l_sst_sich_nic_ca16dcf8" xml:space="preserve">
+    <value>Hapus permanen saja? Tindakan ini tidak dapat dibatalkan.</value>
+  </data>
 </root>

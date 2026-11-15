@@ -11718,4 +11718,16 @@
   <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
     <value>Отключить колесо мыши над изображением</value>
   </data>
+  <data name="In_den_Papierkorb_fehlgeschlagen_c2ffbafd" xml:space="preserve">
+    <value>Не удалось переместить в корзину</value>
+  </data>
+  <data name="0_lie_sich_nicht_in_den_Papierkorb_verschieben_f2b91c10" xml:space="preserve">
+    <value>Не удалось переместить {0} в корзину.</value>
+  </data>
+  <data name="0_Elemente_lie_en_sich_nicht_in_den_Papierkorb_v_529c5f8a" xml:space="preserve">
+    <value>Не удалось переместить в корзину элементов: {0}.</value>
+  </data>
+  <data name="Stattdessen_endg_ltig_l_schen_Das_l_sst_sich_nic_ca16dcf8" xml:space="preserve">
+    <value>Удалить безвозвратно? Это действие нельзя отменить.</value>
+  </data>
 </root>

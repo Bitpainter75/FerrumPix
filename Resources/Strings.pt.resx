@@ -11677,4 +11677,16 @@
   <data name="Mausrad_ber_dem_Bild_abschalten_c602549c" xml:space="preserve">
     <value>Desativar a roda do mouse sobre a imagem</value>
   </data>
+  <data name="In_den_Papierkorb_fehlgeschlagen_c2ffbafd" xml:space="preserve">
+    <value>Falha ao mover para a lixeira</value>
+  </data>
+  <data name="0_lie_sich_nicht_in_den_Papierkorb_verschieben_f2b91c10" xml:space="preserve">
+    <value>Não foi possível mover {0} para a lixeira.</value>
+  </data>
+  <data name="0_Elemente_lie_en_sich_nicht_in_den_Papierkorb_v_529c5f8a" xml:space="preserve">
+    <value>Não foi possível mover {0} itens para a lixeira.</value>
+  </data>
+  <data name="Stattdessen_endg_ltig_l_schen_Das_l_sst_sich_nic_ca16dcf8" xml:space="preserve">
+    <value>Excluir permanentemente em vez disso? Isso não pode ser desfeito.</value>
+  </data>
 </root>

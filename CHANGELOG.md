@@ -54,6 +54,10 @@
 - After many files were copied into a folder at once, the gallery could miss some of them until
   the next change. It now looks again by itself.
 
+- When the trash of the system refuses a file, for example on a second drive that has no trash,
+  FerrumPix now shows the reason the system gives and asks whether to delete the file for good
+  instead. Before, it only said that the trash was not available, and in German in every language.
+
 - When a video shows no picture or gets no thumbnail, the diagnostic log now says what the video
   player reported as the reason, such as a missing decoder.
 
