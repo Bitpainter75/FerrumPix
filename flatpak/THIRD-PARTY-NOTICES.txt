@@ -32,11 +32,16 @@ libraries are part of this package.
 2. NuGet packages
 -----------------
 
-  Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent,
+  Avalonia, Avalonia.Desktop, Avalonia.Headless, Avalonia.Themes.Fluent,
   Avalonia.Controls.ItemsRepeater
   Copyright (c) .NET Foundation and Contributors
   MIT License
   https://github.com/AvaloniaUI/Avalonia/blob/master/licence.md
+
+  Inter (typeface, comes with Avalonia.Headless as Avalonia.Fonts.Inter)
+  Copyright (c) 2016 The Inter Project Authors
+  SIL Open Font License 1.1
+  https://github.com/rsms/inter/blob/master/LICENSE.txt
 
   ReactiveUI.Avalonia (ReactiveUI)
   Copyright (c) .NET Foundation and Contributors

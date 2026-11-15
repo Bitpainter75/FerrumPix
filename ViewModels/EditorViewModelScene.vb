@@ -380,7 +380,7 @@ Namespace ViewModels
                             ' Region ERSETZEN statt mischen: die Szene ist das fertige Komposit,
                             ' inkl. Transparenz bei ausgeblendetem Hintergrund.
                             Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                                canvas.DrawBitmap(_sceneSk, region, region, replacePaint)
+                                ImageProcessor.DrawBitmapShared(canvas, _sceneSk, region, region, replacePaint)
                             End Using
                             ' Die Anschlagswarnung liegt auf dem BILD, nicht auf den Objekten
                             ' darüber: sie beantwortet, wo die Reglerkette Zeichnung verloren hat.
@@ -470,6 +470,7 @@ Namespace ViewModels
             Try
                 Using layer = New SKBitmap(New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul))
                     Using canvas = New SKCanvas(layer)
+                        ImageProcessor.NoteRasterTarget(canvas, layer)
                         canvas.Clear(SKColors.Transparent)
                         ImageProcessor.DrawAnnotationsOnCanvas(canvas, context, width, height,
                                                                0, 0, width, height,
@@ -509,7 +510,7 @@ Namespace ViewModels
                 Dim drawn As Integer
                 Using canvas = New SKCanvas(composite)
                     canvas.Clear(SKColors.Transparent)
-                    canvas.DrawBitmap(scene, 0, 0)
+                    ImageProcessor.DrawBitmapShared(canvas, scene, 0, 0)
                     drawn = OverlaySceneRenderer.DrawCachedAnnotations(canvas, GetCompositorBlitAdjustments(),
                                                                         scene.Width, scene.Height, _annotationBitmapCache)
                 End Using
@@ -622,7 +623,7 @@ Namespace ViewModels
                     ' Region ERSETZEN statt mischen (BlendMode.Src): das Patch ist das fertige Komposit,
                     ' inkl. Transparenz bei ausgeblendetem Hintergrund.
                     Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        canvas.DrawBitmap(patch, clamped.Left, clamped.Top, replacePaint)
+                        ImageProcessor.DrawBitmapShared(canvas, patch, clamped.Left, clamped.Top, replacePaint)
                     End Using
                 End Using
             End Using
@@ -794,7 +795,7 @@ Namespace ViewModels
                     Using patch
                         Using canvas = New SKCanvas(_sceneSk)
                             Using replacePaint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                                canvas.DrawBitmap(patch, clamped.Left, clamped.Top, replacePaint)
+                                ImageProcessor.DrawBitmapShared(canvas, patch, clamped.Left, clamped.Top, replacePaint)
                             End Using
                         End Using
                     End Using

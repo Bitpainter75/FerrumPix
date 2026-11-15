@@ -54,7 +54,38 @@ Namespace Services
                     style.BoundsBottom = bottom
                 End If
             End If
+            Dim textIndex = descriptor.GetValue("TextIndex")
+            If TypeOf textIndex Is Long AndAlso CLng(textIndex) >= 0 AndAlso CLng(textIndex) <= 1_000_000 Then
+                style.TextIndex = CInt(CLng(textIndex))
+            End If
+            style.IsWarped = HasWarp(block)
             Return style
+        End Function
+
+        ''' <summary>Ob der Block eine andere Verformung nennt als "keine". Die Verformung steht in
+        ''' einem zweiten Deskriptor HINTER dem des Textes; gesucht wird deshalb ihr Eintrag selbst:
+        ''' der Aufzählungswert vom Typ "warpStyle", dessen Wert bei unverformtem Text "warpNone"
+        ''' heißt. Von hinten, weil die Textdaten davor beliebige Bytes tragen.</summary>
+        Private Shared Function HasWarp(block As Byte()) As Boolean
+            Dim marker = Encoding.ASCII.GetBytes("enum" & ChrW(0) & ChrW(0) & ChrW(0) & ChrW(9) & "warpStyle")
+            For start = block.Length - marker.Length - 8 To 0 Step -1
+                Dim match = True
+                For i = 0 To marker.Length - 1
+                    If block(start + i) <> marker(i) Then
+                        match = False
+                        Exit For
+                    End If
+                Next
+                If Not match Then Continue For
+                Dim position = start + marker.Length
+                Dim length = (CInt(block(position)) << 24) Or (CInt(block(position + 1)) << 16) Or
+                             (CInt(block(position + 2)) << 8) Or block(position + 3)
+                ' Länge 0 heißt: eine Kennung aus genau vier Zeichen.
+                If length = 0 Then length = 4
+                If length < 0 OrElse length > 64 OrElse position + 4 + length > block.Length Then Return False
+                Return Encoding.ASCII.GetString(block, position + 4, length) <> "warpNone"
+            Next
+            Return False
         End Function
 
         ''' Ein Zahlenwert mit Einheit oder ohne; NaN, wenn keiner dasteht.

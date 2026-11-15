@@ -673,7 +673,7 @@ Namespace ViewModels
                 ' Die Gruppen entstehen aus der Sortierung; eine andere Sortierung heisst andere Gruppen,
                 ' auch wenn dieselben Bilder in derselben Reihenfolge stehen bleiben.
                 InvalidateGroupLayout()
-                FilterAndSort()
+                FilterAndSortInteractive()
                 AppSettingsService.SaveGallerySort(_sortMode, _sortAscending)
             End Set
         End Property
@@ -687,7 +687,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_sortAscending, value)
                 Me.RaisePropertyChanged(NameOf(SortLabel))
                 RaiseSortStateChanged()
-                FilterAndSort()
+                FilterAndSortInteractive()
                 AppSettingsService.SaveGallerySort(_sortMode, _sortAscending)
             End Set
         End Property
@@ -849,7 +849,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterFavoriteOnly))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveGalleryFilters()
             End Set
         End Property
@@ -867,7 +867,7 @@ Namespace ViewModels
                 End If
             End If
             RaiseFilterRatingStateChanged()
-            FilterAndSort()
+            FilterAndSortInteractive()
             SaveGalleryFilters()
         End Sub
 
@@ -883,7 +883,7 @@ Namespace ViewModels
                 If Not _filterColorLabels.Add(value) Then _filterColorLabels.Remove(value)
             End If
             RaiseFilterColorLabelStateChanged()
-            FilterAndSort()
+            FilterAndSortInteractive()
         End Sub
 
         Private Sub RaiseFilterColorLabelStateChanged()
@@ -990,7 +990,7 @@ Namespace ViewModels
                 RefreshFileTypeFilterOptions()
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveGalleryFilters()
             End Set
         End Property
@@ -2262,6 +2262,7 @@ Namespace ViewModels
             _filterRejected = NormalizeRejectedFilter(settings.GalleryFilterRejected)
             _filterEdited = NormalizeEditedFilter(settings.GalleryFilterEdited)
             _catalogFilterScope = settings.GalleryFilterScopeCatalog
+            _includeSubfolders = settings.GalleryIncludeSubfolders
             _editedBadgeEnabled = settings.GalleryEditedBadge
             _pickBadgeEnabled = settings.GalleryPickBadge
             ' Die Galerie lebt so lange wie das Fenster; die Anmeldung haelt sie also nicht
@@ -2313,7 +2314,7 @@ Namespace ViewModels
                                                                ApplyButtonFilters()
                                                            End If
                                                        Else
-                                                           FilterAndSort()
+                                                           FilterAndSortInteractive()
                                                        End If
                                                    End Sub
 
@@ -5564,8 +5565,9 @@ Namespace ViewModels
                 Return
             End If
             If text.Length > 0 Then RememberFilterOrigin()
-            ' Im Umfang "Ordner" sucht der Knoten nur im Ordner selbst, ohne Unterordner. Leer heisst
-            ' ganzer Katalog, und so bleibt es auch dort, wo es keinen Ordner gibt.
+            ' Im Umfang "Ordner" sucht der Knoten in dem, was die Galerie dort zeigt: im Ordner selbst
+            ' und, wenn die Unterordner einbezogen sind, auch in ihnen. Leer heisst ganzer Katalog,
+            ' und so bleibt es auch dort, wo es keinen Ordner gibt.
             Dim scopeFolder = If(IsFolderFilterScope(), FilterScopeFolder(), "")
             _catalogTextQuery = text
             ' Favoriten sind keine eigene Datenquelle: dort wird nur die bereits sichtbare
@@ -5587,7 +5589,7 @@ Namespace ViewModels
                 .PersonQueries = people,
                 .PlaceQueries = places,
                 .RootFolder = scopeFolder,
-                .IncludeSubfolders = String.IsNullOrEmpty(scopeFolder),
+                .IncludeSubfolders = String.IsNullOrEmpty(scopeFolder) OrElse _includeSubfolders,
                 .IsRemovable = False
             }
             SidebarTab = TabForNode(node)
@@ -9380,6 +9382,7 @@ Namespace ViewModels
                 RemoveHandler _watcher.Created, AddressOf OnFileSystemChanged
                 RemoveHandler _watcher.Deleted, AddressOf OnFileSystemChanged
                 RemoveHandler _watcher.Renamed, AddressOf OnFileSystemChanged
+                RemoveHandler _watcher.Error, AddressOf OnFileSystemWatcherError
                 _watcher.Dispose()
                 _watcher = Nothing
             End If
@@ -9387,12 +9390,19 @@ Namespace ViewModels
             Try
                 ' Erst die Handler, dann scharfstellen: mit EnableRaisingEvents im Initialisierer gingen
                 ' alle Ereignisse verloren, die zwischen Konstruktor und AddHandler eintrafen.
+                ' Mit einbezogenen Unterordnern gehoert auch deren Inhalt zur Ansicht.
                 _watcher = New FileSystemWatcher(folderPath) With {
-                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName
+                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName,
+                    .IncludeSubdirectories = _includeSubfolders
                 }
+                ' Mit den Unterordnern kommen die Meldungen eines ganzen Baums an. Der Puffer ab
+                ' Werk (8 KB) laeuft dabei schon ueber, wenn jemand ein paar hundert Dateien auf
+                ' einmal hineinkopiert; 64 KB ist das Hoechste, was die Laufzeit annimmt.
+                If _includeSubfolders Then _watcher.InternalBufferSize = 65536
                 AddHandler _watcher.Created, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Deleted, AddressOf OnFileSystemChanged
                 AddHandler _watcher.Renamed, AddressOf OnFileSystemChanged
+                AddHandler _watcher.Error, AddressOf OnFileSystemWatcherError
                 _watcher.EnableRaisingEvents = True
             Catch ex As Exception
                 ' Scheitert typischerweise am inotify-Limit unter Linux. Die Galerie funktioniert dann
@@ -9402,6 +9412,20 @@ Namespace ViewModels
                 _watcher?.Dispose()
                 _watcher = Nothing
             End Try
+        End Sub
+
+        ''' <summary>Der Beobachter meldet, dass ihm Meldungen verloren gegangen sind (der Puffer
+        ''' lief ueber) oder dass er den Ordner nicht mehr beobachten kann.
+        '''
+        ''' WELCHE Aenderung fehlt, sagt er nicht. Die Antwort ist deshalb derselbe Abgleich wie
+        ''' nach einer gewoehnlichen Meldung: er liest den Ordner (und die einbezogenen
+        ''' Unterordner) neu und holt nach, was liegen blieb. Ohne das stand die Ansicht nach
+        ''' einem grossen Kopiervorgang unvollstaendig da, bis zur naechsten Aenderung. Ist der
+        ''' Ordner selbst weg, laedt der Abgleich ihn neu und haengt dabei den Beobachter um.</summary>
+        Private Sub OnFileSystemWatcherError(sender As Object, e As ErrorEventArgs)
+            ' Läuft wie OnFileSystemChanged auf einem Faden des Beobachters.
+            DiagnosticLogService.LogException("Gallery.Watcher", e?.GetException())
+            OnFileSystemChanged(sender, Nothing)
         End Sub
 
         Private Sub OnFileSystemChanged(sender As Object, e As FileSystemEventArgs)
@@ -9638,6 +9662,10 @@ Namespace ViewModels
                                               End Try
                                               Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(itemsSnapshot), DispatcherPriority.Background)
                                           End Function)
+
+            ' Der Ordner selbst steht. Sind die Unterordner einbezogen, kommen ihre Bilder jetzt
+            ' dazu, im Hintergrund und in Schueben (GalleryViewModelSubfolders).
+            If _includeSubfolders Then StartSubfolderLoad(folderPath, thumbnailToken)
         End Function
 
         ''' <summary>Legt das Ergebnis des Dateisystemlaufs auf den bereits gezeigten Sofortbestand:
@@ -10107,11 +10135,13 @@ Namespace ViewModels
             Dim keepParent = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsParentFolderEntry)
             Dim showFolders = _showFolders
             Dim showParentFolder = _showParentFolder
+            Dim includeSubfolders = _includeSubfolders
             Dim syncResult As FolderSyncResult
             Try
                 syncResult = Await Task.Run(Function() BuildFolderSyncResult(folderPath, thumbnailToken,
                                                                               existing, keepParent,
-                                                                              showFolders, showParentFolder))
+                                                                              showFolders, showParentFolder,
+                                                                              includeSubfolders))
             Catch ex As UnauthorizedAccessException
                 If Not IsCurrentFolderSync(generation, folderPath, thumbnailToken) Then Return
                 StatusText = LocalizationService.T("Zugriff verweigert")
@@ -10223,7 +10253,8 @@ Namespace ViewModels
                                                existing As Dictionary(Of String, ImageItem),
                                                keepParent As ImageItem,
                                                showFolders As Boolean,
-                                               showParentFolder As Boolean) As FolderSyncResult
+                                               showParentFolder As Boolean,
+                                               Optional includeSubfolders As Boolean = False) As FolderSyncResult
             Dim rebuilt As New List(Of ImageItem)()
             If showFolders Then
                 If showParentFolder Then
@@ -10244,36 +10275,90 @@ Namespace ViewModels
                 Next
             End If
 
-            Dim files = EnumerateImageFiles(folderPath)
-            ' GEAENDERTE DATEIEN WERDEN NEU GELESEN, nicht nur neue. Der Watcher meldet eine Datei
-            ' schon beim ANLEGEN, also waehrend sie noch kopiert wird. Der Abgleich dazu baute ihre
-            ' Kachel aus dem halben Inhalt: das Vorschaubild scheiterte (und gilt danach als fertig),
-            ' der Metadaten-Nachlauf las nichts und der Katalog bekam keinen brauchbaren Eintrag.
-            ' Der Abgleich nach dem Einfuegen fand die Datei dann schon vor und liess sie so stehen
-            ' (Nutzerbefund: eingefuegte Bilder ohne Vorschaubild und nicht im Katalog). Groesse
-            ' oder Aenderungszeit verraten das.
-            Dim changedFiles = files.Where(Function(f)
-                                               Dim kept As ImageItem = Nothing
-                                               Return existing.TryGetValue(f.FullName, kept) AndAlso
-                                                      Not kept.IsFolder AndAlso
-                                                      (kept.FileSize <> f.Length OrElse kept.DateModified <> f.LastWriteTime)
-                                           End Function).ToArray()
-            Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
+            ' Mit einbezogenen Unterordnern laeuft derselbe Abgleich je Ordner: erst der Ordner
+            ' selbst, dann jeder darunter. Je Ordner und nicht ueber alle Dateien auf einmal, weil
+            ' BuildFileItems die Beistelldateien je Ordner auflistet.
+            Dim syncFolders As New List(Of String) From {folderPath}
+            ' Unterordner, die nur noch der Katalog kennt (Laufwerk nicht erreichbar, nicht mehr
+            ' vorhanden): auf der Platte gibt es dort nichts abzugleichen, ihre Bilder muessen den
+            ' Abgleich aber ueberstehen. Sie kommen unten dazu.
+            Dim catalogOnlyFolders As New List(Of FolderEntry)()
+            If includeSubfolders Then
+                For Each entry In ListDescendantEntries(folderPath, FolderState.Present, thumbnailToken)
+                    If entry.State = FolderState.Present Then
+                        syncFolders.Add(entry.Path)
+                    Else
+                        catalogOnlyFolders.Add(entry)
+                    End If
+                Next
+            End If
+            Dim newItems As New List(Of ImageItem)()
+            Dim rescanned As New List(Of ImageItem)()
             Dim itemsNeedingMetaRefresh As New List(Of ImageItem)()
-            Dim newItems = BuildFileItems(newFiles, folderPath, thumbnailToken, itemsNeedingMetaRefresh)
-            Dim newItemsByPath = newItems.ToDictionary(Function(i) i.FilePath, PathIdentity.Comparer)
             Dim changedMetaRefresh As New List(Of ImageItem)()
-            Dim rescanned = BuildFileItems(changedFiles, folderPath, thumbnailToken, changedMetaRefresh)
 
-            For Each file In files
-                Dim keptFile As ImageItem = Nothing
-                If existing.TryGetValue(file.FullName, keptFile) Then
-                    rebuilt.Add(keptFile)
+            For Each syncFolder In syncFolders
+                Dim files As FileInfo()
+                If String.Equals(syncFolder, folderPath, PathIdentity.Comparison) Then
+                    ' Der Ordner selbst: ein Fehler beim Auflisten ist der Fehler der Ansicht.
+                    files = EnumerateImageFiles(syncFolder)
                 Else
-                    Dim added As ImageItem = Nothing
-                    If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
+                    ' Ein Unterordner, der sich nicht lesen laesst oder gerade verschwunden ist,
+                    ' faellt aus der Ansicht, ohne sie zu verlieren.
+                    Try
+                        files = EnumerateImageFiles(syncFolder)
+                    Catch ex As UnauthorizedAccessException
+                        Continue For
+                    Catch ex As IOException
+                        Continue For
+                    End Try
                 End If
+                ' GEAENDERTE DATEIEN WERDEN NEU GELESEN, nicht nur neue. Der Watcher meldet eine Datei
+                ' schon beim ANLEGEN, also waehrend sie noch kopiert wird. Der Abgleich dazu baute ihre
+                ' Kachel aus dem halben Inhalt: das Vorschaubild scheiterte (und gilt danach als fertig),
+                ' der Metadaten-Nachlauf las nichts und der Katalog bekam keinen brauchbaren Eintrag.
+                ' Der Abgleich nach dem Einfuegen fand die Datei dann schon vor und liess sie so stehen
+                ' (Nutzerbefund: eingefuegte Bilder ohne Vorschaubild und nicht im Katalog). Groesse
+                ' oder Aenderungszeit verraten das.
+                Dim changedFiles = files.Where(Function(f)
+                                                   Dim kept As ImageItem = Nothing
+                                                   Return existing.TryGetValue(f.FullName, kept) AndAlso
+                                                          Not kept.IsFolder AndAlso
+                                                          (kept.FileSize <> f.Length OrElse kept.DateModified <> f.LastWriteTime)
+                                               End Function).ToArray()
+                Dim newFiles = files.Where(Function(f) Not existing.ContainsKey(f.FullName)).ToArray()
+                Dim folderNewItems = BuildFileItems(newFiles, syncFolder, thumbnailToken, itemsNeedingMetaRefresh)
+                newItems.AddRange(folderNewItems)
+                Dim newItemsByPath = folderNewItems.ToDictionary(Function(i) i.FilePath, PathIdentity.Comparer)
+                rescanned.AddRange(BuildFileItems(changedFiles, syncFolder, thumbnailToken, changedMetaRefresh))
+
+                For Each file In files
+                    Dim keptFile As ImageItem = Nothing
+                    If existing.TryGetValue(file.FullName, keptFile) Then
+                        rebuilt.Add(keptFile)
+                    Else
+                        Dim added As ImageItem = Nothing
+                        If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
+                    End If
+                Next
             Next
+
+            ' Die Bilder der Unterordner aus dem Katalog: was schon als Kachel dasteht, bleibt
+            ' dieselbe Kachel, der Rest kommt aus dem Katalog dazu. Weder neu gelesene Metadaten
+            ' noch Vorschaubilder im Hintergrund: die Dateien gibt es nicht.
+            If catalogOnlyFolders.Count > 0 Then
+                Dim existingByFolder = existing.Values.
+                    Where(Function(i) i IsNot Nothing AndAlso Not i.IsFolder AndAlso Not String.IsNullOrEmpty(i.FilePath)).
+                    GroupBy(Function(i) If(IO.Path.GetDirectoryName(i.FilePath), ""), PathIdentity.Comparer).
+                    ToDictionary(Function(g) g.Key, Function(g) g.ToList(), PathIdentity.Comparer)
+                For Each entry In catalogOnlyFolders
+                    thumbnailToken.ThrowIfCancellationRequested()
+                    Dim kept As List(Of ImageItem) = Nothing
+                    If existingByFolder.TryGetValue(entry.Path, kept) Then rebuilt.AddRange(kept)
+                    rebuilt.AddRange(BuildCatalogOnlyFolderItems(entry.Path, entry.State = FolderState.Missing, thumbnailToken,
+                                                                 Function(path) existing.ContainsKey(path)))
+                Next
+            End If
 
             Return New FolderSyncResult With {
                 .Rebuilt = rebuilt,
@@ -10788,10 +10873,79 @@ Namespace ViewModels
         End Sub
 
         Private Sub FilterAndSort()
-            ' Jeder Lauf erledigt auch einen vorgemerkten aus dem Fuellen einer Suchansicht.
+            ' Jeder Lauf erledigt auch einen vorgemerkten aus dem Fuellen einer Suchansicht, und er
+            ' ueberholt einen Lauf, der noch im Hintergrund rechnet (FilterAndSortInteractive).
             _fillSortPending = False
             _fillSortTimer?.Stop()
-            Dim filtered = _allItems.AsEnumerable()
+            _filterSortVersion += 1
+            Dim filteredList = ApplySimilarView(ApplyStackFocus(ComputeFilteredList(_allItems)))
+            FinishFilterAndSort(filteredList, SortItems(filteredList))
+        End Sub
+
+        ''' <summary>Ab so vielen Elementen rechnen Filter- und Sortierwechsel im Hintergrund
+        ''' (<see cref="FilterAndSortInteractive"/>). Darunter kostet der Lauf wenige Millisekunden
+        ''' und bleibt, wie er ist; bei 100000 Bildern sind es je nach Sortierung 74 bis 156 ms,
+        ''' in denen das Fenster stand.</summary>
+        Friend Shared BackgroundFilterSortThreshold As Integer = 30000
+
+        ''' <summary>Zaehlt die Laeufe von <see cref="FilterAndSort"/>. Ein Lauf im Hintergrund
+        ''' uebernimmt sein Ergebnis nur, wenn inzwischen kein anderer begonnen hat.</summary>
+        Private _filterSortVersion As Long
+
+        ''' <summary>Wie <see cref="FilterAndSort"/>, fuer die Stellen, an denen der Nutzer Filter,
+        ''' Sortierung oder Suchtext umstellt: bei einem grossen Bestand laufen Sieben und Sortieren
+        ''' im Hintergrund auf einer Momentaufnahme, und das Fenster bleibt bedienbar.
+        '''
+        ''' NUR HIER, nicht in FilterAndSort selbst. Die meisten Aufrufer brauchen die Liste sofort
+        ''' (Auswahl nach dem Abgleich, Stapelschritte, das Fuellen einer Suchansicht), und fuer sie
+        ''' aendert sich nichts. Auf dem Anzeigefaden bleibt, was an den Kacheln haengt: Stapel
+        ''' bilden und die Liste austauschen.
+        '''
+        ''' Ein spaeterer Lauf, gleich welcher Art, ueberholt diesen: sein Ergebnis wird dann
+        ''' verworfen. Mit geoeffneter Serie oder in der Ansicht aehnlicher Bilder rechnet er wie
+        ''' bisher sofort, weil diese beiden Schritte selbst den Zustand der Ansicht aendern.</summary>
+        Private Sub FilterAndSortInteractive()
+            If _allItems.Count < BackgroundFilterSortThreshold OrElse _focusedStackPaths IsNot Nothing OrElse
+               IsSimilarView OrElse Not Dispatcher.UIThread.CheckAccess() Then
+                FilterAndSort()
+                Return
+            End If
+            _fillSortPending = False
+            _fillSortTimer?.Stop()
+            _filterSortVersion += 1
+            Dim version = _filterSortVersion
+            Dim snapshot = _allItems.ToList()
+            Task.Run(Function()
+                         Dim filteredList = ComputeFilteredList(snapshot)
+                         Return (Filtered:=filteredList, Sorted:=SortItems(filteredList).ToList())
+                     End Function).ContinueWith(
+                Sub(run)
+                    If run.IsFaulted Then
+                        ' Ein Filter, der waehrend des Laufs umgestellt wurde, kann ihn scheitern
+                        ' lassen (die Mengen der Sterne und Farben werden nebenher gelesen). Dann
+                        ' rechnet laengst der naechste, und dieser hier ist ohne Belang. Gilt er
+                        ' noch, den gewohnten Weg, damit die Ansicht nicht stehen bleibt.
+                        Dim failure = run.Exception
+                        Dispatcher.UIThread.Post(Sub()
+                                                     If version <> _filterSortVersion Then Return
+                                                     DiagnosticLogService.LogException("Gallery.FilterAndSort", failure)
+                                                     FilterAndSort()
+                                                 End Sub)
+                        Return
+                    End If
+                    Dim result = run.Result
+                    Dispatcher.UIThread.Post(Sub()
+                                                 If version <> _filterSortVersion Then Return
+                                                 FinishFilterAndSort(result.Filtered, result.Sorted)
+                                             End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        ''' <summary>Der erste Teil eines Laufs: aus <paramref name="source"/> die Elemente, die nach
+        ''' Suchtext und Filtern bleiben, in der Reihenfolge der Quelle. Liest nur; darf deshalb auf
+        ''' einer Momentaufnahme im Hintergrund laufen.</summary>
+        Private Function ComputeFilteredList(source As IEnumerable(Of ImageItem)) As List(Of ImageItem)
+            Dim filtered = source
 
             ' Mehrere asynchrone Quellen dürfen denselben Treffer melden (Katalog-Wiederherstellung
             ' und nachfolgender Dateisystemlauf einer Suchliste). Die Anzeige besitzt deshalb eine
@@ -10875,9 +11029,14 @@ Namespace ViewModels
                     String.Equals(i.ExtensionLower, extension, StringComparison.OrdinalIgnoreCase))
             End If
 
-            Dim filteredList = filtered.ToList()
-            filteredList = ApplySimilarView(ApplyStackFocus(filteredList))
-            Items.ReplaceAll(ApplyStacks(filteredList, SimilarOrder(SortItems(filteredList))))
+            Return filtered.ToList()
+        End Function
+
+        ''' <summary>Der zweite Teil eines Laufs, immer auf dem Anzeigefaden: aus der gesiebten Liste
+        ''' und ihrer sortierten Folge die Stapel bilden, die Liste der Ansicht austauschen,
+        ''' Anzeigefenster, Zaehler und Statuszeile nachziehen.</summary>
+        Private Sub FinishFilterAndSort(filteredList As List(Of ImageItem), sorted As IEnumerable(Of ImageItem))
+            Items.ReplaceAll(ApplyStacks(filteredList, SimilarOrder(sorted)))
             RefreshFileTypeFilterOptions()
             If DisplayItems.Count = 0 Then
                 ResetDisplayWindow()
@@ -10956,7 +11115,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterKeptOnly))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -11007,7 +11166,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterEditedHide))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -13534,8 +13693,14 @@ Namespace ViewModels
             Dim errorMessage As String = Nothing
             Try
                 For Each source In targets
-                    If Not FileOperationPolicy.CanDuplicate(source, _currentFolder) Then Continue For
-                    Await CopyOrMovePathAsync(source, _currentFolder, False, True)
+                    ' NEBEN DAS ORIGINAL, nicht in den gewaehlten Ordner. Mit einbezogenen
+                    ' Unterordnern (GalleryViewModelSubfolders) liegt ein Bild der Ansicht nicht
+                    ' mehr zwingend im gewaehlten Ordner; sein Duplikat landete sonst eine oder
+                    ' mehrere Ebenen weiter oben.
+                    Dim sourceFolder = IO.Path.GetDirectoryName(source.TrimEnd(IO.Path.DirectorySeparatorChar, IO.Path.AltDirectorySeparatorChar))
+                    If String.IsNullOrEmpty(sourceFolder) Then sourceFolder = _currentFolder
+                    If Not FileOperationPolicy.CanDuplicate(source, sourceFolder) Then Continue For
+                    Await CopyOrMovePathAsync(source, sourceFolder, False, True)
                 Next
                 SyncFolderItems()
                 RefreshTree()
@@ -15984,6 +16149,7 @@ Namespace ViewModels
                                           s.GalleryFilterRejected = _filterRejected
                                           s.GalleryFilterEdited = _filterEdited
                                           s.GalleryFilterScopeCatalog = _catalogFilterScope
+                                          s.GalleryIncludeSubfolders = _includeSubfolders
                                           s.GalleryEditedBadge = _editedBadgeEnabled
                                           s.GalleryPickBadge = _pickBadgeEnabled
                                       End Sub)

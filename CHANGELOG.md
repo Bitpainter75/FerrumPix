@@ -7,36 +7,41 @@
   the pictures. Retouched and painted areas stay as fine as 8 bit, the rest of the picture keeps
   the full depth.
 
-- When deleting is refused because the pictures are outside the home folder, the message now says
-  where this can be allowed in the settings.
+- The button that shows the pictures from all subfolders has moved to the bar at the bottom of the
+  gallery, next to the button for stacks. The same switch is now also in the settings under Gallery.
 
-- The healing brush continues lines that run through the repaired spot, such as a treeline or the
-  horizon, instead of pulling the ground up into the sky or leaving a bright patch in the trees.
-  Where no fitting part of the picture is found, it repairs as before.
+- Next to it there is a new button that shows or hides folders whose drive is not connected or that
+  were deleted outside the application. It is the same switch as the one in the settings under
+  Gallery.
 
-- A new setting under Editor decides where the home button in the editor leads: back to where the
-  editor was opened from, as before, or always to the gallery. ESC still goes back one step.
+- When the bar at the bottom of the gallery gets too narrow, the slider for the size of the
+  thumbnails makes room and comes back as soon as there is space again.
 
-- The Metadata menu can now remove the AI keywords or the people of the selected pictures, and it
-  offers Find faces for the selection as well. Removed keywords and faces do not come back on their
-  own; Analyse AI keywords again and Find faces bring them back on request.
+- Faster: adding noise or colour noise to a picture, dragging a text or shape with a blend mode such
+  as soft light or linear light, sharpening, blurring and soft mask edges on large pictures,
+  saving a picture with layers as a Photoshop file, and the fresh development of a raw file after
+  moving exposure or highlights when the lens correction removes colour fringes. In very large
+  folders, changing the sort order, a
+  filter or the search text no longer makes the window stand still.
 
-- RAW, HEIC and JPEG XL now always open with the libraries that come with FerrumPix, also where the
-  system has its own. Every computer develops a RAW the same way, and cameras the bundled RAW
-  library knows work everywhere.
-
-- When zoomed in, the info panel of the viewer, the full screen view and the editor shows a
-  navigator at the bottom: the picture small, with a frame around the part you are looking at. Drag
-  the frame, or click beside it, to look at another part.
-
-- Raw files from cameras that let you choose the aspect ratio, such as 3:2, 16:9 or 1:1 on Panasonic
-  cameras, open in the editor in the format chosen on the camera. A new switch under Lens correction
-  shows the whole sensor again. Pictures you edited before keep the whole sensor.
-
-- Auto is more careful with pictures taken at high ISO: it brightens them less and keeps more of
-  the colour of the light, so the mood of a dim indoor scene stays and the noise stays down.
+- Less memory: exporting a large picture with sharpening and noise reduction needs less of it, and
+  after going through many raw files the application gives more of it back.
 
 ### Fixes
 
+- A copyright notice with the copyright sign, or a name with an umlaut or an accent, arrived in the
+  exported picture with a question mark in place of that character. The characters are now kept.
 
+- With the pictures from subfolders shown, duplicating a picture from a subfolder put the copy into
+  the folder at the top. The copy now lands next to the original.
+
+- With the pictures from subfolders shown, the pictures of a subfolder whose drive is not
+  connected, or that was deleted outside the application, were missing. They now appear from the
+  catalogue like the folder itself, for viewing only.
+
+- After many files were copied into a folder at once, the gallery could miss some of them until
+  the next change. It now looks again by itself.
+
+- When a video shows no picture or gets no thumbnail, the diagnostic log now says what the video
+  player reported as the reason, such as a missing decoder.
 

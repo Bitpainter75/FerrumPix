@@ -43,12 +43,52 @@ Namespace Services
         ''' die kubische Abtastung nicht, und ohne ausdrueckliche Angabe faellt es auf Nearest.
         Friend Shared ReadOnly SamplingMedium As New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
 
+        ''' <summary>Ein Bild UEBER den Bildpunkten der Bitmap, ohne sie zu kopieren.
+        '''
+        ''' SKCanvas.DrawBitmap legt je Aufruf ein SKImage aus der Bitmap an, und das ist bei einer
+        ''' veraenderlichen Bitmap eine Kopie ALLER ihrer Bildpunkte (nachgeschlagen im Paket), auch
+        ''' wenn nur ein Ausschnitt gezeichnet wird. Gemessen an 24 Megapixeln 39 ms je Aufruf
+        ''' gegen 15 ms; wer aus dem vollen Arbeitsbild einen kleinen Ausschnitt holt, zahlt die
+        ''' Kopie des ganzen Bildes.
+        '''
+        ''' NUR FUER SOFORTIGES ZEICHNEN AUF EINE RASTERFLAECHE. Das Bild gilt, solange die Bitmap
+        ''' lebt und niemand in sie schreibt. Eine Flaeche, die erst spaeter ausfuehrt (PDF, Karte),
+        ''' braucht weiter die Kopie, ebenso das Zeichnen einer Bitmap in sich selbst.</summary>
+        Private Shared Function ShareBitmapPixels(bitmap As SKBitmap) As SKImage
+            Dim pixmap = bitmap.PeekPixels()
+            If pixmap Is Nothing Then Return SKImage.FromBitmap(bitmap)
+            Using pixmap
+                Return If(SKImage.FromPixels(pixmap), SKImage.FromBitmap(bitmap))
+            End Using
+        End Function
+
+        ''' <summary>Wie SKCanvas.DrawBitmap, aber ohne die Kopie der Bitmap
+        ''' (siehe <see cref="ShareBitmapPixels"/> fuer die Bedingungen).</summary>
+        Friend Shared Sub DrawBitmapShared(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
+                                           Optional paint As SKPaint = Nothing)
+            Using image = ShareBitmapPixels(bitmap)
+                canvas.DrawImage(image, x, y, paint)
+            End Using
+        End Sub
+
+        ''' <summary>Dasselbe fuer einen Ausschnitt der Bitmap in ein Zielrechteck.</summary>
+        Friend Shared Sub DrawBitmapShared(canvas As SKCanvas, bitmap As SKBitmap, source As SKRect, dest As SKRect,
+                                           Optional paint As SKPaint = Nothing)
+            Using image = ShareBitmapPixels(bitmap)
+                canvas.DrawImage(image, source, dest, paint)
+            End Using
+        End Sub
+
         ''' Zeichnet eine Bitmap mit ausdrücklicher Abtastung. SKCanvas.DrawBitmap kennt keine
         ''' SKSamplingOptions-Überladung, DrawImage schon - ohne sie fiele die Skalierung auf
         ''' Nearest zurück, weil SKSamplingOptions.Default nicht filtert.
+        ''' Gezeichnet wird ueber den Bildpunkten der Bitmap, ohne Kopie (ShareBitmapPixels und seine
+        ''' Bedingungen). copyPixels verlangt die Kopie: fuer eine Flaeche, die erst spaeter ausfuehrt
+        ''' (die PDF-Seite beim Druck).
         Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, source As SKRect, dest As SKRect,
-                                             sampling As SKSamplingOptions, paint As SKPaint)
-            Using image = SKImage.FromBitmap(bitmap)
+                                             sampling As SKSamplingOptions, paint As SKPaint,
+                                             Optional copyPixels As Boolean = False)
+            Using image = If(copyPixels, SKImage.FromBitmap(bitmap), ShareBitmapPixels(bitmap))
                 canvas.DrawImage(image, source, dest, sampling, paint)
             End Using
         End Sub
@@ -108,7 +148,7 @@ Namespace Services
         ''' ueber eine gesetzte Matrix und braucht deshalb genau diese Ueberladung.
         Friend Shared Sub DrawBitmapSampled(canvas As SKCanvas, bitmap As SKBitmap, x As Single, y As Single,
                                              sampling As SKSamplingOptions, paint As SKPaint)
-            Using image = SKImage.FromBitmap(bitmap)
+            Using image = ShareBitmapPixels(bitmap)
                 canvas.DrawImage(image, x, y, sampling, paint)
             End Using
         End Sub
@@ -450,6 +490,7 @@ Namespace Services
                         End If
                         If hasStrokes Then
                             Using canvas = New SKCanvas(current)
+                                NoteRasterTarget(canvas, current)
                                 Dim drawAdj As New ImageAdjustments With {
                                     .SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
                                 For Each stroke In adj.RasterPaintStrokes
@@ -501,7 +542,7 @@ Namespace Services
                     Using canvas = New SKCanvas(converted)
                         canvas.Clear(SKColors.Transparent)
                         Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                            canvas.DrawBitmap(source, 0, 0, paint)
+                            DrawBitmapShared(canvas, source, 0, 0, paint)
                         End Using
                     End Using
                     input = converted
@@ -925,7 +966,7 @@ Namespace Services
                         Using drawnNull = New SKBitmap(raw.Width, raw.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
                             Using canvas = New SKCanvas(drawnNull)
                                 canvas.Clear(SKColors.Transparent)
-                                canvas.DrawBitmap(raw, 0, 0)
+                                DrawBitmapShared(canvas, raw, 0, 0)
                             End Using
                             pNull = drawnNull.GetPixel(cx, cy)
                         End Using
@@ -936,7 +977,7 @@ Namespace Services
                         Using drawnSrgb = New SKBitmap(srgbInfo)
                             Using canvas = New SKCanvas(drawnSrgb)
                                 canvas.Clear(SKColors.Transparent)
-                                canvas.DrawBitmap(raw, 0, 0)
+                                DrawBitmapShared(canvas, raw, 0, 0)
                             End Using
                             pSrgb = drawnSrgb.GetPixel(cx, cy)
                         End Using
@@ -1053,6 +1094,69 @@ Namespace Services
                 processMs = sw.ElapsedMilliseconds
                 Return EncodePngStream(processed, encodeMs)
             End Using
+        End Function
+
+        ''' <summary>Die beiden Bilder des Ebenen-Exports in voller Groesse: das fertige Bild
+        ''' (Rueckgabe) und dasselbe ohne Objekte (<paramref name="background"/>, die unterste
+        ''' Ebene). Besitz beider beim Aufrufer.
+        '''
+        ''' EIN DECODE FUER BEIDE. Vorher lief je Bild ein eigener Render ueber einen PNG-Strom:
+        ''' die Quelle zweimal dekodiert (eine RAW zweimal entwickelt), jedes Ergebnis als PNG
+        ''' kodiert und gleich wieder gelesen. Die Kette rechnet weiter zweimal, einmal je Rezept:
+        ''' so bleibt es dieselbe Rechnung wie zuvor.
+        '''
+        ''' DER PNG-RUNDWEG BLEIBT, WO ER ETWAS TUT. Ein deckendes Bild kommt aus ihm mit denselben
+        ''' Bytes zurueck und geht deshalb direkt weiter. Mit Transparenz wandelt er vormultipliziert
+        ''' nach gerade und zurueck; ohne ihn koennten einzelne Werte um eine Stufe abweichen, also
+        ''' laeuft er dort wie bisher.</summary>
+        ''' <param name="working">Das Arbeitsbild mit gebackenem Inhalt als Eingang, oder Nothing:
+        ''' dann wird <paramref name="sourcePath"/> dekodiert.</param>
+        Friend Shared Function RenderLayeredExportPair(sourcePath As String, working As SKBitmap, adj As ImageAdjustments,
+                                                       ByRef background As SKBitmap) As SKBitmap
+            background = Nothing
+            If adj Is Nothing Then Return Nothing
+            Using PlanePoolScope.BeginOutput()
+                Dim renderAdj = adj
+                Dim decoded As SKBitmap = Nothing
+                Dim source = working
+                If source Is Nothing Then
+                    decoded = DecodeForRender(sourcePath, adj, renderAdj)
+                    source = decoded
+                End If
+                If source Is Nothing Then Return Nothing
+                Try
+                    Dim withoutObjects = renderAdj.Clone()
+                    withoutObjects.Annotations?.Clear()
+                    Dim composite = RenderForLayeredExport(source, renderAdj)
+                    If composite Is Nothing Then Return Nothing
+                    background = RenderForLayeredExport(source, withoutObjects)
+                    Return composite
+                Finally
+                    decoded?.Dispose()
+                End Try
+            End Using
+        End Function
+
+        ''' <summary>Ein Bild fuer <see cref="RenderLayeredExportPair"/>: die Kette, danach nur bei
+        ''' Transparenz der PNG-Rundweg.</summary>
+        Private Shared Function RenderForLayeredExport(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            Dim processed = ProcessBitmap(source, adj)
+            If processed Is Nothing Then Return Nothing
+            Dim keep = False
+            Try
+                If processed.AlphaType = SKAlphaType.Opaque AndAlso
+                   (processed.ColorType = SKColorType.Bgra8888 OrElse processed.ColorType = SKColorType.Rgba8888) Then
+                    If Object.ReferenceEquals(processed, source) Then Return CopyBitmap(processed)
+                    keep = True
+                    Return processed
+                End If
+                Dim encodeMs As Long = 0
+                Using stream = EncodePngStream(processed, encodeMs)
+                    Return If(stream Is Nothing, Nothing, SKBitmap.Decode(stream))
+                End Using
+            Finally
+                If Not keep AndAlso Not Object.ReferenceEquals(processed, source) Then processed.Dispose()
+            End Try
         End Function
 
         ''' Abgelegt, nicht durchgereicht: der Editor legt das Ergebnis als Anzeigebild ins Buendel.
@@ -1329,7 +1433,7 @@ Namespace Services
             Using patch = New SKBitmap(clipped.Width, clipped.Height, source.ColorType, source.AlphaType)
                 Using canvas = New SKCanvas(patch)
                     canvas.Clear(SKColors.Transparent)
-                    canvas.DrawBitmap(source,
+                    DrawBitmapShared(canvas, source,
                                       New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
                                       New SKRect(0, 0, clipped.Width, clipped.Height))
                 End Using
@@ -1360,7 +1464,7 @@ Namespace Services
             Using patch = New SKBitmap(clipped.Width, clipped.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(patch)
                     canvas.Clear(SKColors.Transparent)
-                    canvas.DrawBitmap(source,
+                    DrawBitmapShared(canvas, source,
                                       New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
                                       New SKRect(0, 0, clipped.Width, clipped.Height))
                 End Using
@@ -1369,7 +1473,7 @@ Namespace Services
                     Using baselinePatch = New SKBitmap(clipped.Width, clipped.Height, SKColorType.Bgra8888, SKAlphaType.Premul)
                         Using canvas = New SKCanvas(baselinePatch)
                             canvas.Clear(SKColors.Transparent)
-                            canvas.DrawBitmap(baseline,
+                            DrawBitmapShared(canvas, baseline,
                                               New SKRect(clipped.Left, clipped.Top, clipped.Right, clipped.Bottom),
                                               New SKRect(0, 0, clipped.Width, clipped.Height))
                         End Using
@@ -1377,8 +1481,8 @@ Namespace Services
                         Dim tol = Math.Max(0, tolerance)
                         Dim rowBytes = patch.RowBytes
                         Dim activeBytes = clipped.Width * 4
-                        Dim patchRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
-                        Dim baselineRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
+                        Dim patchRow = PlanePool(Of Byte).Rent(rowBytes)
+                        Dim baselineRow = PlanePool(Of Byte).Rent(rowBytes)
                         Try
                             ' Nur je eine Zeile statt zwei kompletter Patch-Kopien puffern. Dieser
                             ' Pfad laeuft waehrend Verwischen und Stempeln bis zu etwa 40-mal/s und
@@ -1405,8 +1509,8 @@ Namespace Services
                                 Marshal.Copy(patchRow, 0, IntPtr.Add(patchPixels, nativeOffset), rowBytes)
                             Next
                         Finally
-                            ArrayPool(Of Byte).Shared.Return(patchRow)
-                            ArrayPool(Of Byte).Shared.Return(baselineRow)
+                            PlanePool(Of Byte).Return(patchRow)
+                            PlanePool(Of Byte).Return(baselineRow)
                         End Try
                     End Using
                 End If
@@ -1436,7 +1540,7 @@ Namespace Services
                         Case 3
                             canvas.Translate(0, rh) : canvas.RotateDegrees(270)
                     End Select
-                    canvas.DrawBitmap(src, 0, 0)
+                    DrawBitmapShared(canvas, src, 0, 0)
                 End Using
                 Return rotated
             Catch
@@ -1613,13 +1717,14 @@ Namespace Services
 
                 Dim patch = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
                 Using canvas = New SKCanvas(patch)
+                    NoteRasterTarget(canvas, patch)
                     canvas.Clear(SKColors.Transparent)
                     ' ARBEITSBILD-Umbau (Stufe D): Pinsel-/Radiererstriche sind ins Arbeitsbild
                     ' eingebacken und stecken damit bereits im Base-Cache-Bitmap - der Patch
                     ' schneidet nur noch Basis-Slice + Z-Order-Objekte (der RasterCompositeCache
                     ' und sein Strich-Stamp sind entfallen).
                     If adj Is Nothing OrElse Not adj.BackgroundHidden Then
-                        canvas.DrawBitmap(_baseCacheBitmap,
+                        DrawBitmapShared(canvas, _baseCacheBitmap,
                                           New SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom),
                                           New SKRect(0, 0, rect.Width, rect.Height))
                     End If
@@ -4108,7 +4213,7 @@ Namespace Services
                     DrawSilhouetteEffects(canvas, silhouette, 0, 0, w, h, rect, effects, 1.0F)
                     ' Innen ausstanzen: die Auswahl selbst bleibt, wie sie ist.
                     Using knockOut = New SKPaint With {.BlendMode = SKBlendMode.DstOut}
-                        canvas.DrawBitmap(silhouette, 0, 0, knockOut)
+                        DrawBitmapShared(canvas, silhouette, 0, 0, knockOut)
                     End Using
                     canvas.Restore()
                     ' Innen dagegen AUF den Pixeln der Auswahl, auf sie beschnitten.
@@ -4145,7 +4250,7 @@ Namespace Services
                     If stroke Is Nothing Then Return Nothing
                     Dim result = CloneBitmap(processed)
                     Using canvas = New SKCanvas(result)
-                        canvas.DrawBitmap(stroke, placement.Left, placement.Top)
+                        DrawBitmapShared(canvas, stroke, placement.Left, placement.Top)
                     End Using
                     Return result
                 End Using
@@ -4226,7 +4331,7 @@ Namespace Services
 
                 Dim result = CloneBitmap(processed)
                 Using canvas = New SKCanvas(result)
-                    canvas.DrawBitmap(fill, 0, 0)   ' SrcOver: Füllung über das Bild
+                    DrawBitmapShared(canvas, fill, 0, 0)   ' SrcOver: Füllung über das Bild
                 End Using
                 Return result
             End Using
@@ -5617,7 +5722,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 length = 0
                 Return False
             End If
-            buffer = ArrayPool(Of Byte).Shared.Rent(length)
+            buffer = PlanePool(Of Byte).Rent(length)
             Marshal.Copy(bmp.GetPixels(), buffer, 0, length)
             Return True
         End Function
@@ -5627,7 +5732,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
         ''' muss. NICHT genullt zurueckgeben: das kostet die Ersparnis wieder auf, und jeder Nutzer
         ''' beschreibt die Bytes, die er liest.</summary>
         Private Shared Sub ReturnPooledBuffer(buffer As Byte())
-            If buffer IsNot Nothing Then ArrayPool(Of Byte).Shared.Return(buffer)
+            If buffer IsNot Nothing Then PlanePool(Of Byte).Return(buffer)
         End Sub
 
         Private Shared Sub CommitBgraBuffer(bmp As SKBitmap, buffer As Byte())
@@ -5869,7 +5974,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End Using
             End If
             Using canvas = New SKCanvas(clone)
-                canvas.DrawBitmap(source, 0, 0)
+                DrawBitmapShared(canvas, source, 0, 0)
             End Using
             Return clone
         End Function
@@ -5883,7 +5988,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim clone = New SKBitmap(source.Width, source.Height, colorType, SKAlphaType.Premul)
             Using canvas = New SKCanvas(clone)
                 canvas.Clear(SKColors.Transparent)
-                canvas.DrawBitmap(source, 0, 0)
+                DrawBitmapShared(canvas, source, 0, 0)
             End Using
             Return clone
         End Function
@@ -5910,7 +6015,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ' beschrieben, ein vorheriges Loeschen ist eine zweite Fahrt ueber dieselben Bytes.
                 ' Bei 24 MP gemessen 143 auf 130 ms - dieselben Bildpunkte, eine Fahrt weniger.
                 Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                    canvas.DrawBitmap(source, 0, 0, paint)
+                    DrawBitmapShared(canvas, source, 0, 0, paint)
                 End Using
             End Using
             Return clone
@@ -6110,7 +6215,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Using canvas = New SKCanvas(result)
                 Dim srcRect = New SKRect(left, top, right, bottom)
                 Dim dstRect = New SKRect(0, 0, cropWidth, cropHeight)
-                canvas.DrawBitmap(source, srcRect, dstRect)
+                DrawBitmapShared(canvas, source, srcRect, dstRect)
             End Using
             Return result
         End Function
@@ -6201,7 +6306,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End If
                 Using paint = New SKPaint With {.IsAntialias = True}
                     If downscaled IsNot Nothing Then
-                        canvas.DrawBitmap(downscaled, 0, 0, paint)
+                        DrawBitmapShared(canvas, downscaled, 0, 0, paint)
                         downscaled.Dispose()
                     Else
                         DrawBitmapSampled(canvas, source, New SKRect(0, 0, source.Width, source.Height), New SKRect(0, 0, targetWidth, targetHeight),
@@ -6261,7 +6366,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Using canvas = New SKCanvas(result)
                 canvas.Clear(color)
-                canvas.DrawBitmap(source, 0, 0)
+                DrawBitmapShared(canvas, source, 0, 0)
             End Using
             Return result
         End Function
@@ -6299,7 +6404,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 canvas.Clear(SKColors.Transparent)
                 occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.CreateTranslation(offsetX, offsetY),
                                                 source.Width, source.Height, targetWidth, targetHeight, antialiased:=False)
-                canvas.DrawBitmap(source, offsetX, offsetY)
+                DrawBitmapShared(canvas, source, offsetX, offsetY)
             End Using
             Return result
         End Function
@@ -7119,7 +7224,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 blurred.Dispose()
                 Return result
             End If
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim w = source.Width, h = source.Height
 
@@ -7127,8 +7232,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             ' daraus, Rand fortgesetzt. Der Shader summiert in derselben Reihenfolge.
             Dim k = SharpenInnerWeights(p.InnerSigma)
             Dim k0 = k.W0, k1 = k.W1, k2 = k.W2
-            lumaPlane = ArrayPool(Of Single).Shared.Rent(w * h)
-            innerPlane = ArrayPool(Of Single).Shared.Rent(w * h)
+            lumaPlane = PlanePool(Of Single).Rent(w * h)
+            innerPlane = PlanePool(Of Single).Rent(w * h)
             ForEachRow(w, h,
                 Sub(y)
                     Dim rowOffset = y * stride
@@ -7191,8 +7296,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ReturnPooledBuffer(srcBuf)
                 ReturnPooledBuffer(blurBuf)
                 ReturnPooledBuffer(dstBuf)
-                If lumaPlane IsNot Nothing Then ArrayPool(Of Single).Shared.Return(lumaPlane)
-                If innerPlane IsNot Nothing Then ArrayPool(Of Single).Shared.Return(innerPlane)
+                If lumaPlane IsNot Nothing Then PlanePool(Of Single).Return(lumaPlane)
+                If innerPlane IsNot Nothing Then PlanePool(Of Single).Return(innerPlane)
             End Try
         End Function
 
@@ -7352,7 +7457,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                         canvas.RotateDegrees(270)
                 End Select
                 occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.Identity, sw, sh, rw, rh, antialiased:=False)
-                canvas.DrawBitmap(source, 0, 0)
+                DrawBitmapShared(canvas, source, 0, 0)
             End Using
 
             If Not adj.FlipHorizontal AndAlso Not adj.FlipVertical Then Return rotated
@@ -7373,7 +7478,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 End If
                 canvas.SetMatrix(matrix)
                 occupied = ClipCanvasToOccupied(canvas, occupied, SKMatrix.Identity, w, h, w, h, antialiased:=False)
-                canvas.DrawBitmap(rotated, 0, 0)
+                DrawBitmapShared(canvas, rotated, 0, 0)
             End Using
             rotated.Dispose()
             Return result
@@ -7868,7 +7973,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             Try
                 Using cv As New SKCanvas(acht)
                     cv.Clear(SKColors.Transparent)
-                    cv.DrawBitmap(skBitmap, 0, 0)
+                    DrawBitmapShared(cv, skBitmap, 0, 0)
                 End Using
                 Return ImageOrientationService.ToAvaloniaBitmapFast(acht)
             Finally

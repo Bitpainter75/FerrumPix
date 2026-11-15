@@ -559,6 +559,8 @@ Namespace Services
 
                 Dim result = MpvInterop.Initialize(_handle)
                 If result < 0 Then Throw New InvalidOperationException($"libmpv konnte nicht initialisiert werden ({result}).")
+                ' Warnungen und Fehler von mpv ins Diagnoseprotokoll, siehe MpvInterop.RequestWarnings.
+                MpvInterop.RequestWarnings(_handle)
 
                 ObservePropertyRaw(PropTimePos, "time-pos", MpvInterop.MpvFormat.Double)
                 ObservePropertyRaw(PropDuration, "duration", MpvInterop.MpvFormat.Double)
@@ -685,7 +687,11 @@ Namespace Services
 
         ' ── Ereignisfaden ────────────────────────────────────────────────────────
 
+        ''' <summary>So viele Meldungen von mpv gehen je Datei ins Diagnoseprotokoll.</summary>
+        Private Const MaxLoggedMessagesPerFile As Integer = 30
+
         Private Sub EventLoop(handle As IntPtr)
+            Dim loggedMessages = 0
             Do
                 If Volatile.Read(_eventLoopStopping) Then Exit Do
 
@@ -695,6 +701,17 @@ Namespace Services
                 Dim ev = Marshal.PtrToStructure(Of MpvInterop.MpvEvent)(eventPtr)
                 Select Case ev.EventId
                     Case MpvInterop.MpvEventId.None
+                    Case MpvInterop.MpvEventId.StartFile
+                        loggedMessages = 0
+                    Case MpvInterop.MpvEventId.LogMessage
+                        ' Je Datei eine begrenzte Zahl: eine Datei, die bei jedem Bild warnt, soll
+                        ' das Protokoll nicht fuellen. Die ersten Meldungen sind die, die den
+                        ' Grund nennen.
+                        Dim line = MpvInterop.ReadLogMessage(ev)
+                        If line IsNot Nothing AndAlso loggedMessages < MaxLoggedMessagesPerFile Then
+                            loggedMessages += 1
+                            DiagnosticLogService.LogAlways("VideoPlayback.Mpv", line)
+                        End If
                     Case MpvInterop.MpvEventId.PropertyChange
                         HandlePropertyChange(ev)
                     Case MpvInterop.MpvEventId.EndFile

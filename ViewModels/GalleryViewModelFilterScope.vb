@@ -16,7 +16,8 @@ Namespace ViewModels
     ' Baum einen Ordner waehlte und dann ein Stichwort, bekam Treffer von ueberall, und die Zahl in
     ' der Liste zaehlte Zeilen, deren Datei laengst woanders lag (Nutzerbefund).
     '
-    ' "Ordner" heisst der Ordner selbst, OHNE Unterordner - genau das, was die Galerie dort zeigt.
+    ' "Ordner" heisst genau das, was die Galerie dort zeigt: der Ordner selbst, und nur wenn die
+    ' Unterordner einbezogen sind (GalleryViewModelSubfolders), auch sie.
     ' Der Schalter wirkt nur im lokalen Bestand. Immich, Nextcloud, Favoriten und gespeicherte
     ' Suchen haben keinen Ordner; dort ist er ausgegraut, und die Filter laufen wie bisher ueber
     ' die ganze Quelle.
@@ -99,6 +100,8 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(CanToggleFilterScope))
             Me.RaisePropertyChanged(NameOf(FilterScopeToolTip))
             Me.RaisePropertyChanged(NameOf(IsCatalogScopeFiltering))
+            Me.RaisePropertyChanged(NameOf(CanIncludeSubfolders))
+            Me.RaisePropertyChanged(NameOf(IncludeSubfoldersToolTip))
         End Sub
 
         ''' <summary>Ist eine Knopfauswahl oder eine Katalogsuche aus dem Suchfeld aktiv?</summary>
@@ -199,21 +202,57 @@ Namespace ViewModels
                    String.Equals(_scopePathsFolder, folder, PathIdentity.Comparison) Then
                     Return _scopePaths
                 End If
+                ' Die Bilder eines Ordners aus dem Katalog, ohne die Platte zu fragen.
+                Dim addCatalogFolder =
+                    Sub(catalogFolder As String)
+                        For Each meta In LibraryService.Instance.GetImagesInFolder(catalogFolder, restoreSpelling:=False)
+                            If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
+                            If Not _imageExtensions.Contains(Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
+                            listed.Add(meta.FilePath)
+                        Next
+                    End Sub
                 If state = FolderState.Unreachable OrElse state = FolderState.Missing Then
-                    For Each meta In LibraryService.Instance.GetImagesInFolder(folder, restoreSpelling:=False)
-                        If meta Is Nothing OrElse String.IsNullOrWhiteSpace(meta.FilePath) Then Continue For
-                        If Not _imageExtensions.Contains(Path.GetExtension(meta.FilePath).ToLowerInvariant()) Then Continue For
-                        listed.Add(meta.FilePath)
-                    Next
+                    addCatalogFolder(folder)
+                    ' Mit einbezogenen Unterordnern auch sie, ebenfalls aus dem Katalog.
+                    If _includeSubfolders Then
+                        For Each entry In ListDescendantEntries(folder, state, Threading.CancellationToken.None)
+                            addCatalogFolder(entry.Path)
+                        Next
+                    End If
                     _scopePathsFolder = folder
                     _scopePaths = listed
                     Return listed
                 End If
                 If state <> FolderState.Present Then Return listed
-                For Each file In Directory.EnumerateFiles(folder)
-                    If IsTrashedLocalPath(file) Then Continue For
-                    If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For
-                    listed.Add(file)
+                ' Mit einbezogenen Unterordnern zaehlen auch deren Bilder, wie in der Ansicht.
+                Dim counted As New List(Of String) From {folder}
+                If _includeSubfolders Then
+                    For Each entry In ListDescendantEntries(folder, FolderState.Present, Threading.CancellationToken.None)
+                        If entry.State = FolderState.Present Then
+                            counted.Add(entry.Path)
+                        Else
+                            ' Ein Unterordner, den nur noch der Katalog kennt, zaehlt mit dessen Zeilen.
+                            addCatalogFolder(entry.Path)
+                        End If
+                    Next
+                End If
+                For Each countedFolder In counted
+                    ' Je Ordner abgefangen, wie beim Laden und beim Abgleich: ein Unterordner, der
+                    ' sich nicht lesen laesst oder gerade verschwunden ist, fehlt in der Zaehlung,
+                    ' die Ordner nach ihm zaehlen weiter. Der Ordner selbst bleibt der Fehler der
+                    ' ganzen Zaehlung.
+                    Dim files As String()
+                    Try
+                        files = Directory.GetFiles(countedFolder)
+                    Catch ex As Exception When (TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is IOException) AndAlso
+                                               Not String.Equals(countedFolder, folder, PathIdentity.Comparison)
+                        Continue For
+                    End Try
+                    For Each file In files
+                        If IsTrashedLocalPath(file) Then Continue For
+                        If Not _imageExtensions.Contains(Path.GetExtension(file).ToLowerInvariant()) Then Continue For
+                        listed.Add(file)
+                    Next
                 Next
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.FolderScopePaths", ex)

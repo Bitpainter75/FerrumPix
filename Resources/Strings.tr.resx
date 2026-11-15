@@ -9892,8 +9892,8 @@
   <data name="0_Textebenen_ohne_sichtbaren_Inhalt_lassen_sich__bbfcd191" xml:space="preserve">
     <value>Görünür içeriği olmayan {0} metin katmanı aktarılamıyor ve eksik.</value>
   </data>
-  <data name="0_Textebenen_sind_gestreckt_geschert_oder_gespie_dc9f8b8b" xml:space="preserve">
-    <value>{0} metin katmanı gerilmiş, eğilmiş veya yansıtılmış ve görüntü olarak geliyor, metni düzenlenemez.</value>
+  <data name="0_Textebenen_sind_verzerrt_verformt_oder_laufen__a0a49e1a" xml:space="preserve">
+    <value>{0} metin katmanı bozulmuş, bükülmüş veya bir yol boyunca ilerliyor ve görüntü olarak geliyor, metni düzenlenemez.</value>
   </data>
   <data name="Grafikkarte_f_r_die_Bildbearbeitung_nutzen_f60eef73" xml:space="preserve">
     <value>Görüntü düzenleme için ekran kartını kullan</value>
@@ -11703,5 +11703,20 @@
   </data>
   <data name="0_RAW_Datei_en_mit_8_Bit_statt_16_geschrieben_ae959d3a" xml:space="preserve">
     <value>{0} RAW dosyası 16 yerine 8 bit olarak yazıldı.</value>
+  </data>
+  <data name="Die_Galerie_zeigt_nur_die_Bilder_dieses_Ordners__501c8cd8" xml:space="preserve">
+    <value>Galeri yalnızca bu klasördeki resimleri gösteriyor. Tüm alt klasörlerdeki resimleri de göstermek için tıklayın</value>
+  </data>
+  <data name="Die_Galerie_zeigt_auch_die_Bilder_aus_allen_Unte_8ae6cb05" xml:space="preserve">
+    <value>Galeri tüm alt klasörlerdeki resimleri de gösteriyor. Yalnızca bu klasördeki resimleri göstermek için tıklayın</value>
+  </data>
+  <data name="Unterordner_lassen_sich_nur_in_einem_Ordner_einb_8d5f93fc" xml:space="preserve">
+    <value>Alt klasörler yalnızca bir klasörde dahil edilebilir</value>
+  </data>
+  <data name="Bilder_aus_Unterordnern_zeigen_7a498b95" xml:space="preserve">
+    <value>Alt klasörlerdeki resimleri göster</value>
+  </data>
+  <data name="Zeigt_in_einem_Ordner_auch_die_Bilder_aus_allen__7aa53e44" xml:space="preserve">
+    <value>Bir klasörde, altındaki tüm alt klasörlerin resimlerini de gösterir. Arama ve filtreler o zaman onları da kapsar.</value>
   </data>
 </root>

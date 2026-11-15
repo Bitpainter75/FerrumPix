@@ -151,7 +151,7 @@ Namespace Services
                     converted = New SKBitmap(New SKImageInfo(fullBitmap.Width, fullBitmap.Height,
                                                              targetType, SKAlphaType.Premul))
                     Using cv As New SKCanvas(converted)
-                        cv.DrawBitmap(fullBitmap, 0, 0)
+                        ImageProcessor.DrawBitmapShared(cv, fullBitmap, 0, 0)
                     End Using
                 Catch
                     converted?.Dispose()
@@ -248,7 +248,7 @@ Namespace Services
                                                             SKColorType.Bgra8888, SKAlphaType.Premul))
                     Using cv As New SKCanvas(acht)
                         cv.Clear(SKColors.Transparent)
-                        cv.DrawBitmap(clone, 0, 0)
+                        ImageProcessor.DrawBitmapShared(cv, clone, 0, 0)
                     End Using
                     clone.Dispose()
                     clone = acht
@@ -430,7 +430,7 @@ Namespace Services
                     ' freigeben und den Fehler WEITERREICHEN - die Commit-Queue loggt ihn.
                     Using canvas = New SKCanvas(_full)
                         Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                            canvas.DrawBitmap(before, clamped.Left, clamped.Top, paint)
+                            ImageProcessor.DrawBitmapShared(canvas, before, clamped.Left, clamped.Top, paint)
                         End Using
                     End Using
                     before.Dispose()
@@ -479,7 +479,7 @@ Namespace Services
                 Using canvas = New SKCanvas(_full)
                     ' Src-Blend ersetzt die Region exakt (inkl. Alpha) statt darüberzumischen.
                     Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        canvas.DrawBitmap(patch.Pixels, patch.Rect.Left, patch.Rect.Top, paint)
+                        ImageProcessor.DrawBitmapShared(canvas, patch.Pixels, patch.Rect.Left, patch.Rect.Top, paint)
                     End Using
                 End Using
                 patch.Pixels.Dispose()
@@ -554,7 +554,7 @@ Namespace Services
             Dim region As New SKBitmap(rect.Width, rect.Height, _full.ColorType, _full.AlphaType)
             Using canvas = New SKCanvas(region)
                 canvas.Clear(SKColors.Transparent)
-                canvas.DrawBitmap(_full, rect, New SKRect(0, 0, rect.Width, rect.Height))
+                ImageProcessor.DrawBitmapShared(canvas, _full, rect, New SKRect(0, 0, rect.Width, rect.Height))
             End Using
             Return region
         End Function
@@ -575,7 +575,7 @@ Namespace Services
                 ' Unskalierte Vorschau (kleines Bild): Region 1:1 ersetzen (Src-Blend, inkl. Alpha).
                 Using canvas = New SKCanvas(_preview)
                     Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                        canvas.DrawBitmap(_full, rect, SKRect.Create(rect.Left, rect.Top, rect.Width, rect.Height), paint)
+                        ImageProcessor.DrawBitmapShared(canvas, _full, rect, SKRect.Create(rect.Left, rect.Top, rect.Width, rect.Height), paint)
                     End Using
                 End Using
                 Return

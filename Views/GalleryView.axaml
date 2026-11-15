@@ -3411,12 +3411,12 @@
                  eine Sternspalte wird nie schmaler als ihr Inhalt, und die breitere Seite schob die
                  mittlere Gruppe weg. Mittig heisst hier mittig zur LEISTE - die beginnt rechts der
                  Ordnerspalte, und weiter links waere die Mitte halb unter der Seitenleiste. -->
-            <Grid VerticalAlignment="Center">
+            <Grid x:Name="GalleryFooterGrid" VerticalAlignment="Center">
                 <!-- EIN Abstand fuer alle Knoepfe der Gruppe, 11 Punkte wie zwischen Menue und
                      Werkzeugleisten-Knopf im Editor (Reihenabstand 16, Knopf 5 herangerueckt). Er
                      sitzt links an jedem Knopf: faellt "Exportieren" ohne Auswahl weg, rueckt der
                      naechste nicht an seinen Vorgaenger heran. -->
-                <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center" HorizontalAlignment="Left">
+                <StackPanel x:Name="GalleryFooterLeft" Orientation="Horizontal" Spacing="0" VerticalAlignment="Center" HorizontalAlignment="Left">
                     <!-- Zeigt dasselbe Menü wie ein Rechtsklick auf ein Bild: dort stecken inzwischen die
                          meisten Stapelfunktionen, und ein Rechtsklick ist nicht auf jedem Gerät bequem.
                          Die Einträge tragen keine IsVisible-Bindungen - OnGalleryMenuButtonClick setzt
@@ -3485,6 +3485,32 @@
                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stack.svg"
                                        Width="18" Height="18"/>
                     </ToggleButton>
+                    <!-- UNTERORDNER EINBEZIEHEN: die Galerie zeigt zum Ordner auch die Bilder aus
+                         allem darunter. Neben dem Stapelknopf, weil beide dasselbe tun: sie
+                         stellen um, was die Kacheln zeigen. Der Akzent heißt "an", was gilt, sagt
+                         ausgeschrieben der Tooltip. Ausgegraut, wo es keinen Ordner gibt.
+                         Derselbe Stand wie "Bilder aus Unterordnern zeigen" in den Einstellungen
+                         (SettingsViewModel.SyncGalleryIncludeSubfolders). -->
+                    <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                  Margin="11,0,0,0"
+                                  IsChecked="{Binding IncludeSubfolders, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanIncludeSubfolders}"
+                                  ToolTip.Tip="{Binding IncludeSubfoldersToolTip}">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/tree-structure.svg"
+                                       Width="18" Height="18"/>
+                    </ToggleButton>
+                    <!-- ORDNER AUS DEM KATALOG: Ordner zeigen, deren Laufwerk gerade fehlt oder die
+                         außerhalb der Anwendung gelöscht wurden. Der dritte Schalter derselben Art:
+                         auch er stellt um, was die Ansicht zeigt. Derselbe Stand und derselbe Text
+                         wie die Einstellung unter Galerie
+                         (SettingsViewModel.GalleryShowCatalogOnlyFolders). -->
+                    <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                  Margin="11,0,0,0"
+                                  IsChecked="{Binding ShowCatalogOnlyFolders, Mode=TwoWay}"
+                                  ToolTip.Tip="Ordner auf nicht erreichbaren Laufwerken aus dem Katalog anzeigen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/folder-dashed.svg"
+                                       Width="18" Height="18"/>
+                    </ToggleButton>
                     <TextBlock
                                Text="{Binding FooterStatusText}"
                                Foreground="{DynamicResource FP.Text.Secondary}"
@@ -3508,6 +3534,13 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- DIE ZOOM-GRUPPE WEICHT, WENN DER PLATZ NICHT REICHT. Die drei Gruppen liegen in
+                     derselben Zelle uebereinander; wird das Fenster schmal oder die Gruppe links
+                     lang (Auswahl, Status, Hintergrundlauf), laege die mittlere sonst auf ihren
+                     Nachbarn. Dann geht sie ganz: die Groesse der Kacheln bleibt ueber STRG und
+                     Mausrad erreichbar, die Knoepfe links und die Sterne rechts haben keinen
+                     zweiten Weg. Gemessen in GalleryView.UpdateFooterZoomFit. -->
+                <Panel x:Name="GalleryFooterZoom" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <!-- In der Kartenansicht steht hier die Zoomstufe der Karte statt der Vorschaugröße:
                      derselbe Platz, dieselbe Bedienung, und die Vorschaugröße hat dort keine
                      Wirkung. -->
@@ -3547,8 +3580,9 @@
                         <TextBlock Text="+" FontSize="{DynamicResource FP.Glyph.Large}" Foreground="{DynamicResource FP.Text.Secondary}" VerticalAlignment="Center"/>
                     </Button>
                 </StackPanel>
-                
-                <StackPanel Spacing="12" Orientation="Horizontal" HorizontalAlignment="Right">
+                </Panel>
+
+                <StackPanel x:Name="GalleryFooterRight" Spacing="12" Orientation="Horizontal" HorizontalAlignment="Right">
                     <!-- Die Gesichtssuche über die Ansicht meldete sich früher hier mit eigenem
                          Balken. Sie zeigt jetzt oben an der Stelle des Suchfelds, zusammen mit den
                          übrigen Läufen - hier unten stand sie zwischen Statuszeile, Sternen und

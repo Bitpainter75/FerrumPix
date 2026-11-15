@@ -204,13 +204,21 @@ Namespace Services
                 For Each field In metadata.Ifd0
                     If field.FieldType <> GeotagService.TiffTypeAscii Then Continue For
                     If field.Tag = TagCopyright AndAlso copyright.Length > 0 Then Continue For
-                    Dim text = System.Text.Encoding.ASCII.GetString(field.Data).TrimEnd(ChrW(0)).Trim()
+                    Dim text = System.Text.Encoding.UTF8.GetString(field.Data).TrimEnd(ChrW(0)).Trim()
                     If text.Length = 0 Then Continue For
-                    tif.SetField(CType(field.Tag, TiffTag), text)
+                    tif.SetField(CType(field.Tag, TiffTag), Utf8ForLibTiff(text))
                 Next
             End If
-            If copyright.Length > 0 Then tif.SetField(TiffTag.COPYRIGHT, copyright)
+            If copyright.Length > 0 Then tif.SetField(TiffTag.COPYRIGHT, Utf8ForLibTiff(copyright))
         End Sub
+
+        ''' <summary>LibTiff schreibt Textfelder als Latin-1: je Zeichen ein Byte. Damit in der
+        ''' Datei UTF-8 steht wie in den anderen Formaten (siehe
+        ''' <see cref="GeotagService.ExifTextBytes"/>), bekommt es die UTF-8-Bytes als Zeichen
+        ''' gereicht. Reiner ASCII-Text bleibt dabei, wie er ist.</summary>
+        Private Shared Function Utf8ForLibTiff(text As String) As String
+            Return System.Text.Encoding.Latin1.GetString(GeotagService.ExifTextBytes(text))
+        End Function
 
         ''' <summary>Haengt das Aufnahme-Verzeichnis und den Ort an die fertig kodierte Datei.
         '''

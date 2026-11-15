@@ -282,6 +282,51 @@ Namespace Services
         Friend Shared Function WaitEvent(handle As IntPtr, timeout As Double) As IntPtr
         End Function
 
+        <StructLayout(LayoutKind.Sequential)>
+        Friend Structure MpvEventLogMessage
+            Public Prefix As IntPtr
+            Public Level As IntPtr
+            Public Text As IntPtr
+            Public LogLevel As Integer
+        End Structure
+
+        <DllImport("libmpv", EntryPoint:="mpv_request_log_messages", CallingConvention:=CallingConvention.Cdecl)>
+        Private Shared Function RequestLogMessagesRaw(handle As IntPtr, minLevel As IntPtr) As Integer
+        End Function
+
+        ''' <summary>Laesst sich die Warnungen und Fehler von mpv als Ereignisse geben.
+        '''
+        ''' <para>WOZU: Konsole und Meldungsstufen von mpv sind abgeschaltet (terminal=no,
+        ''' msg-level all=no), sonst stuenden Hinweise des Demuxers auf der Konsole. Damit sagte
+        ''' aber auch niemand mehr, WARUM ein Video kein Bild zeigt: fehlt der Decoder, scheitert
+        ''' die Bildausgabe, ist die Datei beschaedigt. Im Diagnoseprotokoll stand nur, dass
+        ''' geladen wurde, und der Nutzer sah eine graue Flaeche ohne Erklaerung.</para>
+        '''
+        ''' <para>Dieser Weg ist von den beiden Schaltern oben unabhaengig (im Flatpak
+        ''' nachgemessen): die Meldungen kommen als Ereignis LogMessage beim Aufrufer an und
+        ''' nirgends sonst. Ein Fehlschlag haelt nichts auf, dann bleibt es beim alten Stand.</para></summary>
+        Friend Shared Sub RequestWarnings(handle As IntPtr)
+            If handle = IntPtr.Zero Then Return
+            Dim level = Marshal.StringToCoTaskMemUTF8("warn")
+            Try
+                RequestLogMessagesRaw(handle, level)
+            Catch ex As EntryPointNotFoundException
+                ' Eine sehr alte libmpv ohne diesen Einstieg.
+            Finally
+                Marshal.FreeCoTaskMem(level)
+            End Try
+        End Sub
+
+        ''' <summary>Der Text eines LogMessage-Ereignisses als eine Zeile, etwa
+        ''' <c>vd/error: Failed to initialize a decoder for codec 'hevc'.</c>, oder Nothing.</summary>
+        Friend Shared Function ReadLogMessage(ev As MpvEvent) As String
+            If ev.EventId <> MpvEventId.LogMessage OrElse ev.Data = IntPtr.Zero Then Return Nothing
+            Dim message = Marshal.PtrToStructure(Of MpvEventLogMessage)(ev.Data)
+            Dim text = If(Marshal.PtrToStringUTF8(message.Text), "").Trim()
+            If text.Length = 0 Then Return Nothing
+            Return $"{Marshal.PtrToStringUTF8(message.Prefix)}/{Marshal.PtrToStringUTF8(message.Level)}: {text}"
+        End Function
+
         ' ── Render-API ───────────────────────────────────────────────────────────
         '
         ' Der zweite Ausgabeweg von libmpv: statt in ein Fenster zu zeichnen, gibt mpv das

@@ -20347,7 +20347,7 @@ Namespace ViewModels
                     parts.Add(String.Format(LocalizationService.T("{0} Füll- oder Formebenen tragen in der Datei keine Bildpunkte und fehlen."), importResult.MissingContentLayers))
                 End If
                 If stretchedNotice Then
-                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind gestreckt, geschert oder gespiegelt und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
+                    parts.Add(String.Format(LocalizationService.T("{0} Textebenen sind verzerrt, verformt oder laufen an einem Pfad und kommen als Bild, ihr Wortlaut lässt sich nicht bearbeiten."), importResult.StretchedTextLayers))
                 End If
                 If importResult.DroppedTextLayers > 0 Then
                     parts.Add(String.Format(LocalizationService.T("{0} Textebenen ohne sichtbaren Inhalt lassen sich nicht übernehmen und fehlen."), importResult.DroppedTextLayers))
@@ -23705,24 +23705,17 @@ Namespace ViewModels
                                                     Return ImageProcessor.ExportLayeredPsdDeep(psdTarget, psdSourcePath, adj, deepWorking,
                                                                                                preserveMetadata, outcome:=saveOutcome)
                                                 End If
-                                                Dim withoutObjects = adj.Clone()
-                                                withoutObjects.Annotations?.Clear()
-                                                Dim processMs As Long = 0
-                                                Dim encodeMs As Long = 0
-                                                Using compositeStream = If(psdWorking IsNot Nothing,
-                                                                           ImageProcessor.RenderPngStream(psdWorking, adj, processMs, encodeMs),
-                                                                           ImageProcessor.RenderPngStream(psdSourcePath, adj)),
-                                                      backgroundStream = If(psdWorking IsNot Nothing,
-                                                                            ImageProcessor.RenderPngStream(psdWorking, withoutObjects, processMs, encodeMs),
-                                                                            ImageProcessor.RenderPngStream(psdSourcePath, withoutObjects))
-                                                    If compositeStream Is Nothing Then Return False
-                                                    Using composite = SKBitmap.Decode(compositeStream),
-                                                          background = If(backgroundStream Is Nothing, Nothing, SKBitmap.Decode(backgroundStream))
-                                                        If composite Is Nothing Then Return False
-                                                        Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj,
-                                                                                                       psdSourcePath, preserveMetadata)
-                                                    End Using
-                                                End Using
+                                                ' Beide Bilder aus EINEM Decode (RenderLayeredExportPair).
+                                                Dim background As SKBitmap = Nothing
+                                                Dim composite = ImageProcessor.RenderLayeredExportPair(psdSourcePath, psdWorking, adj, background)
+                                                Try
+                                                    If composite Is Nothing Then Return False
+                                                    Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj,
+                                                                                           psdSourcePath, preserveMetadata)
+                                                Finally
+                                                    composite?.Dispose()
+                                                    background?.Dispose()
+                                                End Try
                                             Finally
                                                 psdWorking?.Dispose()
                                             End Try
@@ -28478,6 +28471,7 @@ Namespace ViewModels
                                 If selectionCoverage IsNot Nothing Then before = ImageProcessor.CopyRegion(full, dirtyFull)
                                 Try
                                     Using canvas = New SKCanvas(full)
+                                        ImageProcessor.NoteRasterTarget(canvas, full)
                                         canvas.ClipRect(SKRect.Create(dirtyFull.Left, dirtyFull.Top, dirtyFull.Width, dirtyFull.Height))
                                         Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
                                         ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
@@ -28605,6 +28599,7 @@ Namespace ViewModels
             If previewRect.Width <= 0 OrElse previewRect.Height <= 0 Then Return
             Try
                 Using canvas = New SKCanvas(_sceneSk)
+                    ImageProcessor.NoteRasterTarget(canvas, _sceneSk)
                     canvas.ClipRect(SKRect.Create(previewRect.Left, previewRect.Top, previewRect.Width, previewRect.Height))
                     Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
                     ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, _sceneSk.Width, _sceneSk.Height,
@@ -29384,6 +29379,7 @@ Namespace ViewModels
             Dim rect = job.Rect
             Dim merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
             Using canvas = New SKCanvas(merged)
+                ImageProcessor.NoteRasterTarget(canvas, merged)
                 canvas.Clear(SKColors.Transparent)
                 ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
                 ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.

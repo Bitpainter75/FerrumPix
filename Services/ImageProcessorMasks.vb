@@ -2456,14 +2456,7 @@ Namespace Services
             If mask Is Nothing OrElse radiusPixels <= 0.05F Then Return Nothing
             Dim sigma = Math.Max(0.1F, radiusPixels * 0.5F)
             Dim result = New SKBitmap(mask.Width, mask.Height, SKColorType.Alpha8, SKAlphaType.Premul)
-            Using canvas = New SKCanvas(result)
-                canvas.Clear(SKColors.Transparent)
-                Using paint = New SKPaint()
-                    paint.ImageFilter = SKImageFilter.CreateBlur(sigma, sigma)
-                    paint.Color = SKColors.White
-                    canvas.DrawBitmap(mask, 0, 0, paint)
-                End Using
-            End Using
+            BlurInto(result, mask, sigma, clampEdges:=False, asMask:=True)
             Return result
         End Function
 
@@ -2480,7 +2473,7 @@ Namespace Services
             Dim padded = New SKBitmap(mask.Width + 2 * pad, mask.Height + 2 * pad, SKColorType.Alpha8, SKAlphaType.Premul)
             Using canvas = New SKCanvas(padded)
                 canvas.Clear(SKColors.Transparent)
-                canvas.DrawBitmap(mask, pad, pad)
+                DrawBitmapShared(canvas, mask, pad, pad)
             End Using
 
             Dim blurred = BlurAlphaMask(padded, radiusPixels)
@@ -2667,9 +2660,9 @@ Namespace Services
             Dim maskBytes = Math.Min(w, maskW)
             ForEachRow(w, h,
                 Sub(y)
-                    Dim aRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
-                    Dim bRow = ArrayPool(Of Byte).Shared.Rent(rowBytes)
-                    Dim mRow = ArrayPool(Of Byte).Shared.Rent(Math.Max(1, w))
+                    Dim aRow = PlanePool(Of Byte).Rent(rowBytes)
+                    Dim bRow = PlanePool(Of Byte).Rent(rowBytes)
+                    Dim mRow = PlanePool(Of Byte).Rent(Math.Max(1, w))
                     Try
                         Marshal.Copy(IntPtr.Add(adjustedPixels, y * adjustedStride), aRow, 0, rowBytes)
                         Marshal.Copy(IntPtr.Add(baselinePixels, y * baselineStride), bRow, 0, rowBytes)
@@ -2692,9 +2685,9 @@ Namespace Services
                         Next
                         Marshal.Copy(aRow, 0, IntPtr.Add(resultPixels, y * resultStride), rowBytes)
                     Finally
-                        ArrayPool(Of Byte).Shared.Return(aRow)
-                        ArrayPool(Of Byte).Shared.Return(bRow)
-                        ArrayPool(Of Byte).Shared.Return(mRow)
+                        PlanePool(Of Byte).Return(aRow)
+                        PlanePool(Of Byte).Return(bRow)
+                        PlanePool(Of Byte).Return(mRow)
                     End Try
                 End Sub)
             result.NotifyPixelsChanged()
@@ -2710,7 +2703,7 @@ Namespace Services
             Using canvas = New SKCanvas(copy)
                 ' Src statt SrcOver: der Ausschnitt wird exakt uebernommen, Alpha eingeschlossen.
                 Using paint = New SKPaint With {.BlendMode = SKBlendMode.Src}
-                    canvas.DrawBitmap(source,
+                    DrawBitmapShared(canvas, source,
                                       New SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom),
                                       New SKRect(0, 0, rect.Width, rect.Height), paint)
                 End Using
@@ -2805,7 +2798,7 @@ Namespace Services
 
                         Using cropped = New SKBitmap(width, height, processed.ColorType, processed.AlphaType)
                             Using canvas = New SKCanvas(cropped)
-                                canvas.DrawBitmap(processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
+                                DrawBitmapShared(canvas, processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
                             End Using
                             If Not SaveBitmapPng(cropped, targetPngPath) Then Return False
                         End Using
@@ -3523,7 +3516,7 @@ Namespace Services
 
                         Dim cropped = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
                         Using canvas = New SKCanvas(cropped)
-                            canvas.DrawBitmap(processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
+                            DrawBitmapShared(canvas, processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
                         End Using
                         If mask Is Nothing Then Return cropped
                         Try
@@ -3533,7 +3526,7 @@ Namespace Services
                                 Dim premul = New SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul)
                                 Using canvas = New SKCanvas(premul)
                                     canvas.Clear(SKColors.Transparent)
-                                    canvas.DrawBitmap(cutout, 0, 0)
+                                    DrawBitmapShared(canvas, cutout, 0, 0)
                                 End Using
                                 Return premul
                             End Using
@@ -3572,7 +3565,7 @@ Namespace Services
 
                         Using cropped = New SKBitmap(width, height, processed.ColorType, processed.AlphaType)
                             Using canvas = New SKCanvas(cropped)
-                                canvas.DrawBitmap(processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
+                                DrawBitmapShared(canvas, processed, New SKRect(left, top, right, bottom), New SKRect(0, 0, width, height))
                             End Using
                             Using cutout = ApplyMaskCutout(cropped, mask)
                                 Return SaveBitmapPng(cutout, targetPngPath)
@@ -3898,7 +3891,7 @@ Namespace Services
                         Else
                             canvas.Scale(1.0F, -1.0F, 0.0F, h / 2.0F)
                         End If
-                        canvas.DrawBitmap(decoded, 0.0F, 0.0F)
+                        DrawBitmapShared(canvas, decoded, 0.0F, 0.0F)
                     End Using
                     ' Das Ergebnis bleibt ein Raster; gepackt wird erst beim Schreiben.
                     Dim transformed = AlphaRaster.FromBitmap(mirrored)
@@ -4106,7 +4099,7 @@ Namespace Services
                         Else
                             canvas.Scale(1.0F, -1.0F, 0.0F, decoded.Height / 2.0F)
                         End If
-                        canvas.DrawBitmap(decoded, 0.0F, 0.0F)
+                        DrawBitmapShared(canvas, decoded, 0.0F, 0.0F)
                     End Using
                     Dim mirrored = AlphaRaster.FromBitmap(gespiegelt)
                     If mirrored Is Nothing Then succeeded = False
@@ -4310,7 +4303,7 @@ RasterTeil:
                             Using canvas = New SKCanvas(blurred)
                                 canvas.Clear(SKColors.Transparent)
                                 Using paint = New SKPaint With {.ImageFilter = SKImageFilter.CreateBlur(amount / 2.0F, amount / 2.0F)}
-                                    canvas.DrawBitmap(blurSource, 0, 0, paint)
+                                    DrawBitmapShared(canvas, blurSource, 0, 0, paint)
                                 End Using
                             End Using
                             Dim soft = CopyAlpha8ToBytes(blurred)

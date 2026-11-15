@@ -749,6 +749,13 @@ Namespace Views
             Dim logo = Me.FindControl(Of StackPanel)("WindowLogoPanel")
             If host Is Nothing OrElse panel Is Nothing Then Return
 
+            ' Im Browser gibt es nichts zu minimieren, zu maximieren oder zu schliessen: das Fenster
+            ' fuellt den Tab, und der gehoert dem Browser.
+            If BrowserBridge.IsActive Then
+                host.IsVisible = False
+                Return
+            End If
+
             ' Beim Bauen des Fensters gibt es noch kein ViewModel - dann direkt ueber die
             ' Einstellung, es ist dieselbe Quelle.
             Dim layout = TryCast(DataContext, MainWindowViewModel)?.WindowButtonLayout
@@ -807,6 +814,7 @@ Namespace Views
             Dim border = Me.FindControl(Of Border)(name)
             If border Is Nothing Then Return
             AddHandler border.PointerPressed, Sub(s, e)
+                If BrowserBridge.IsActive Then Return
                 If WindowState = WindowState.Maximized Then Return
                 If e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then
                     BeginResizeDrag(edge, e)
@@ -823,6 +831,8 @@ Namespace Views
         ''' darin bleiben bedienbar: die Suche nach oben bricht an Knoepfen, Eingabefeldern,
         ''' Schiebereglern und Listen ab, bevor sie den Ziehbereich erreicht.</summary>
         Private Sub TitleBarPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            ' Im Browser weder verschieben noch per Doppelklick umschalten: das Fenster fuellt den Tab.
+            If BrowserBridge.IsActive Then Return
             If Not e.GetCurrentPoint(Me).Properties.IsLeftButtonPressed Then Return
             Dim source = TryCast(e.Source, Control)
             Dim inTopBar = IsInTopWindowDragArea(source)
@@ -918,6 +928,7 @@ Namespace Views
         End Sub
 
         Private Sub OnMinimizeClick(sender As Object, e As RoutedEventArgs)
+            If BrowserBridge.IsActive Then Return
             WindowState = WindowState.Minimized
         End Sub
 
@@ -930,6 +941,7 @@ Namespace Views
         ''' unangetastet: dort gehoert er dem Vollbildmodus, und ein Wechsel von hier aus liesse
         ''' Fenster und Ansichtsmodus auseinanderlaufen.</summary>
         Private Sub ToggleMaximized()
+            If BrowserBridge.IsActive Then Return
             If WindowState = WindowState.FullScreen Then Return
             WindowState = If(WindowState = WindowState.Maximized, WindowState.Normal, WindowState.Maximized)
             UpdateMaximizeGlyph()

@@ -1273,6 +1273,7 @@ Namespace ViewModels
                         End If
                     Else
                         Using canvas = New SKCanvas(copy)
+                            ImageProcessor.NoteRasterTarget(canvas, copy)
                             canvas.ClipRect(SKRect.Create(dirty.Left, dirty.Top, dirty.Width, dirty.Height))
                             Dim adjDraw As New ImageAdjustments With {
                                 .SourceWidthPixels = copy.Width, .SourceHeightPixels = copy.Height}

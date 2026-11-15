@@ -66,21 +66,26 @@ Namespace Services
                     Return Nothing
                 End If
 
+                ' Warnungen und Fehler von mpv mitschreiben: ohne sie stand im Protokoll nur, DASS es
+                ' scheiterte, siehe MpvInterop.RequestWarnings.
+                MpvInterop.RequestWarnings(handle)
+                Dim messages As New List(Of String)()
+
                 If Command(handle, "loadfile", filePath, "replace") < 0 Then
-                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: loadfile fehlgeschlagen")
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: loadfile fehlgeschlagen{Reason(handle, messages)}")
                     Return Nothing
                 End If
 
-                If Not WaitForEvent(handle, timeoutMs, MpvInterop.MpvEventId.FileLoaded) Then
-                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein FileLoaded binnen {timeoutMs} ms")
+                If Not WaitForEvent(handle, timeoutMs, messages, MpvInterop.MpvEventId.FileLoaded) Then
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: kein FileLoaded binnen {timeoutMs} ms{Reason(handle, messages)}")
                     Return Nothing
                 End If
 
                 Command(handle, "seek", "10", "absolute-percent", "exact")
-                WaitForEvent(handle, Math.Min(timeoutMs, 1500), MpvInterop.MpvEventId.PlaybackRestart)
+                WaitForEvent(handle, Math.Min(timeoutMs, 1500), messages, MpvInterop.MpvEventId.PlaybackRestart)
 
                 If Command(handle, "screenshot-to-file", tempPath, "video") < 0 Then
-                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: screenshot-to-file fehlgeschlagen")
+                    DiagnosticLogService.LogAlways("Video.Thumbnail", $"{name}: screenshot-to-file fehlgeschlagen{Reason(handle, messages)}")
                     Return Nothing
                 End If
 
@@ -107,7 +112,16 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function WaitForEvent(handle As IntPtr, timeoutMs As Integer, ParamArray acceptedEvents As MpvInterop.MpvEventId()) As Boolean
+        ''' <summary>Was mpv dazu gesagt hat, als Anhang fuer eine Protokollzeile. Vorher wird kurz
+        ''' nachgehorcht: die Meldung zu einem gescheiterten Befehl kommt erst nach ihm an.</summary>
+        Private Shared Function Reason(handle As IntPtr, messages As List(Of String)) As String
+            WaitForEvent(handle, 200, messages)
+            If messages.Count = 0 Then Return ""
+            Return " - mpv: " & String.Join(" | ", messages)
+        End Function
+
+        Private Shared Function WaitForEvent(handle As IntPtr, timeoutMs As Integer, messages As List(Of String),
+                                             ParamArray acceptedEvents As MpvInterop.MpvEventId()) As Boolean
             Dim accepted = New HashSet(Of MpvInterop.MpvEventId)(acceptedEvents)
             Dim deadline = Environment.TickCount64 + timeoutMs
             Do
@@ -118,6 +132,8 @@ Namespace Services
                 If eventPtr = IntPtr.Zero Then Continue Do
 
                 Dim ev = Marshal.PtrToStructure(Of MpvInterop.MpvEvent)(eventPtr)
+                Dim line = MpvInterop.ReadLogMessage(ev)
+                If line IsNot Nothing AndAlso messages IsNot Nothing AndAlso messages.Count < 8 Then messages.Add(line)
                 If accepted.Contains(ev.EventId) Then Return ev.Error >= 0
                 If ev.EventId = MpvInterop.MpvEventId.EndFile AndAlso accepted.Contains(MpvInterop.MpvEventId.FileLoaded) Then Return False
                 If ev.EventId = MpvInterop.MpvEventId.Shutdown Then Return False

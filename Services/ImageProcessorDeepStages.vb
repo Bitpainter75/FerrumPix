@@ -527,17 +527,16 @@ Namespace Services
             If w <= 0 OrElse h <= 0 Then Return
 
             Dim n = w * h
-            Dim pool = Buffers.ArrayPool(Of Single).Shared
-            Dim luma = pool.Rent(n)
-            Dim chromaR = pool.Rent(n)
-            Dim chromaB = pool.Rent(n)
-            Dim meanI = pool.Rent(n)
-            Dim meanSquares = pool.Rent(n)
-            Dim aCoef = pool.Rent(n)
-            Dim bCoef = pool.Rent(n)
-            Dim meanChromaR = pool.Rent(n)
-            Dim meanChromaB = pool.Rent(n)
-            Dim scratch = pool.Rent(n)
+            Dim luma = PlanePool(Of Single).Rent(n)
+            Dim chromaR = PlanePool(Of Single).Rent(n)
+            Dim chromaB = PlanePool(Of Single).Rent(n)
+            Dim meanI = PlanePool(Of Single).Rent(n)
+            Dim meanSquares = PlanePool(Of Single).Rent(n)
+            Dim aCoef = PlanePool(Of Single).Rent(n)
+            Dim bCoef = PlanePool(Of Single).Rent(n)
+            Dim meanChromaR = PlanePool(Of Single).Rent(n)
+            Dim meanChromaB = PlanePool(Of Single).Rent(n)
+            Dim scratch = PlanePool(Of Single).Rent(n)
             Try
                 For y = 0 To h - 1
                     Dim row = (top + y) * imageWidth + left
@@ -597,16 +596,16 @@ Namespace Services
                     Next
                 Next
             Finally
-                pool.Return(luma)
-                pool.Return(chromaR)
-                pool.Return(chromaB)
-                pool.Return(meanI)
-                pool.Return(meanSquares)
-                pool.Return(aCoef)
-                pool.Return(bCoef)
-                pool.Return(meanChromaR)
-                pool.Return(meanChromaB)
-                pool.Return(scratch)
+                PlanePool(Of Single).Return(luma)
+                PlanePool(Of Single).Return(chromaR)
+                PlanePool(Of Single).Return(chromaB)
+                PlanePool(Of Single).Return(meanI)
+                PlanePool(Of Single).Return(meanSquares)
+                PlanePool(Of Single).Return(aCoef)
+                PlanePool(Of Single).Return(bCoef)
+                PlanePool(Of Single).Return(meanChromaR)
+                PlanePool(Of Single).Return(meanChromaB)
+                PlanePool(Of Single).Return(scratch)
             End Try
         End Sub
 
@@ -1424,12 +1423,11 @@ Namespace Services
                     If tw <= 0 OrElse th <= 0 Then Return
 
                     Dim n = tw * th
-                    Dim pool = Buffers.ArrayPool(Of Single).Shared
-                    Dim observed = pool.Rent(n)
-                    Dim estimate = pool.Rent(n)
-                    Dim blurred = pool.Rent(n)
-                    Dim ratio = pool.Rent(n)
-                    Dim scratch = pool.Rent(n)
+                    Dim observed = PlanePool(Of Single).Rent(n)
+                    Dim estimate = PlanePool(Of Single).Rent(n)
+                    Dim blurred = PlanePool(Of Single).Rent(n)
+                    Dim ratio = PlanePool(Of Single).Rent(n)
+                    Dim scratch = PlanePool(Of Single).Rent(n)
                     Try
                         For y = 0 To th - 1
                             Array.Copy(luma, (top + y) * w + left, observed, y * tw, tw)
@@ -1466,11 +1464,11 @@ Namespace Services
                             Next
                         Next
                     Finally
-                        pool.Return(observed)
-                        pool.Return(estimate)
-                        pool.Return(blurred)
-                        pool.Return(ratio)
-                        pool.Return(scratch)
+                        PlanePool(Of Single).Return(observed)
+                        PlanePool(Of Single).Return(estimate)
+                        PlanePool(Of Single).Return(blurred)
+                        PlanePool(Of Single).Return(ratio)
+                        PlanePool(Of Single).Return(scratch)
                     End Try
                 End Sub)
             Return result.ToBitmap()

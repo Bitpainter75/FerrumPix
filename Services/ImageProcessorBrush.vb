@@ -997,6 +997,7 @@ Namespace Services
             Using layer = New SKBitmap(New SKImageInfo(region.Width, region.Height, SKColorType.Bgra8888, SKAlphaType.Premul))
                 layer.Erase(SKColors.Transparent)
                 Using canvas = New SKCanvas(layer)
+                    NoteRasterTarget(canvas, layer)
                     canvas.Translate(-region.Left, -region.Top)
                     Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = sourceWidth, .SourceHeightPixels = sourceHeight}
                     DrawAnnotationsOnCanvas(canvas, adjDraw, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight,

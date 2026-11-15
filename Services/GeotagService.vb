@@ -825,8 +825,19 @@ Namespace Services
             Return fields
         End Function
 
+        ''' <summary>Ein Text fuer ein EXIF-Feld vom Typ ASCII, als UTF-8.
+        '''
+        ''' Der Feldtyp heisst ASCII und erklaert keine Kodierung, aber reines ASCII machte aus
+        ''' jedem anderen Zeichen ein Fragezeichen: "© Name" kam als "? Name" in der Datei an,
+        ''' ein Umlaut im Namen des Urhebers ebenso. UTF-8 ist, was die verbreiteten Programme in
+        ''' diese Felder schreiben und beim Lesen annehmen, und fuer reinen ASCII-Text sind die
+        ''' Bytes dieselben wie vorher. Gelesen wird hier ohnehin als UTF-8.</summary>
+        Friend Shared Function ExifTextBytes(value As String) As Byte()
+            Return New System.Text.UTF8Encoding(False).GetBytes(If(value, ""))
+        End Function
+
         Friend Shared Function AsciiField(tag As Integer, value As String) As TiffField
-            Dim raw = System.Text.Encoding.ASCII.GetBytes(value)
+            Dim raw = ExifTextBytes(value)
             Dim data(raw.Length) As Byte
             Buffer.BlockCopy(raw, 0, data, 0, raw.Length)
             ' Das abschliessende Nullbyte zaehlt in EXIF zur Laenge.

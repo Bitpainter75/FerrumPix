@@ -373,15 +373,14 @@ Namespace Services
             End If
         End Sub
 
-        ''' <summary>Der Text als ASCII mit abschliessender Null, wie der Aufbau es fuer diesen
-        ''' Feldtyp verlangt. Zeichen ausserhalb von ASCII werden ersetzt: das EXIF-Feld kennt
-        ''' keine Kodierung, und ein roh eingesetztes Byte laese sich anderswo als Zufallszeichen.
-        ''' Der volle Text steht im XMP, das Unicode kann.</summary>
+        ''' <summary>Der Text mit abschliessender Null, wie der Aufbau es fuer diesen Feldtyp
+        ''' verlangt, kodiert wie jedes Textfeld im EXIF: siehe
+        ''' <see cref="GeotagService.ExifTextBytes"/>.</summary>
         Private Shared Function AsciiWithTerminator(text As String) As Byte()
-            Dim ascii = Encoding.ASCII.GetBytes(text)
-            Dim withTerminator(ascii.Length) As Byte
-            Buffer.BlockCopy(ascii, 0, withTerminator, 0, ascii.Length)
-            withTerminator(ascii.Length) = 0
+            Dim raw = GeotagService.ExifTextBytes(text)
+            Dim withTerminator(raw.Length) As Byte
+            Buffer.BlockCopy(raw, 0, withTerminator, 0, raw.Length)
+            withTerminator(raw.Length) = 0
             Return withTerminator
         End Function
 

@@ -2482,7 +2482,7 @@ half4 main(float2 p) {
 
         ''' <summary>Rauschfelder aus einem System.Random-Strom, in der Reihenfolge des
         ''' Prozessorwegs: zeilenweise, je Punkt <paramref name="perPixel"/> Zuege (NextDouble mal 2
-        ''' minus 1). Der Strom laesst sich nicht vorspulen, gebaut wird deshalb seriell und direkt in
+        ''' minus 1). Der Strom laesst sich nicht vorspulen, gezogen wird deshalb der Reihe nach, direkt in
         ''' die Bytes; je Bild zwei Werte, also ein Bild je zwei Zuege.</summary>
         Private Shared Function RandomStreamImages(seed As Integer, width As Integer, height As Integer,
                                                    perPixel As Integer) As SKImage()
@@ -2491,19 +2491,21 @@ half4 main(float2 p) {
             For k = 0 To imageCount - 1
                 data(k) = New Byte(width * height * 4 - 1) {}
             Next
-            Dim random = New Random(seed)
-            For y = 0 To height - 1
-                For x = 0 To width - 1
-                    Dim o = (y * width + x) * 4
-                    For d = 0 To perPixel - 1
-                        Dim v = random.NextDouble() * 2.0 - 1.0
-                        Dim q = CInt(Math.Round((v + 1.0) * 32767.5))
-                        Dim target = data(d \ 2)
-                        Dim at = o + (d And 1) * 2
-                        target(at) = CByte(q >> 8) : target(at + 1) = CByte(q And 255)
+            ' Gezogen wird der Reihe nach, die Zeilen entstehen nebeneinander
+            ' (ForEachRowWithRandomStream): dieselben Bytes wie die eine Schleife.
+            ForEachRowWithRandomStream(seed, width, height, perPixel,
+                Sub(y, values, start)
+                    For x = 0 To width - 1
+                        Dim o = (y * width + x) * 4
+                        For d = 0 To perPixel - 1
+                            Dim v = values(start + x * perPixel + d) * 2.0 - 1.0
+                            Dim q = CInt(Math.Round((v + 1.0) * 32767.5))
+                            Dim target = data(d \ 2)
+                            Dim at = o + (d And 1) * 2
+                            target(at) = CByte(q >> 8) : target(at + 1) = CByte(q And 255)
+                        Next
                     Next
-                Next
-            Next
+                End Sub)
             Dim images = New SKImage(imageCount - 1) {}
             For k = 0 To imageCount - 1
                 Using bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul))
