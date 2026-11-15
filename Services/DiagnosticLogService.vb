@@ -153,6 +153,67 @@ Namespace Services
             End Try
         End Sub
 
+        ''' <summary>Groesser soll keine der Protokolldateien auf Dauer werden.</summary>
+        Friend Const MaxLogBytes As Long = 10L * 1024L * 1024L
+
+        ''' <summary>So viel vom Ende bleibt nach dem Kuerzen stehen. Weniger als die Grenze, damit
+        ''' nicht schon die naechste Zeile sie wieder ueberschreitet.</summary>
+        Friend Const KeptLogBytes As Long = 8L * 1024L * 1024L
+
+        Private Shared _trimStarted As Integer
+
+        ''' <summary>Kuerzt die Protokolldateien einmal je Lauf im Hintergrund auf ihr Ende, wenn sie
+        ''' ueber <see cref="MaxLogBytes"/> liegen: das ausfuehrliche Protokoll und die Fehlerdatei
+        ''' samt ihrer Vorgaengerfassung.
+        '''
+        ''' WOZU. Das ausfuehrliche Protokoll hatte keine Grenze und wuchs bei eingeschaltetem
+        ''' Schalter ueber Wochen (gesehen: 27 MB). Geprueft wird beim Start und nicht bei jeder
+        ''' Zeile: waehrend eines Laufs darf die Datei ueber die Grenze wachsen, der naechste Start
+        ''' raeumt auf. Die Fehlerdatei ist zusaetzlich schon beim Schreiben gedeckelt
+        ''' (<see cref="RotateIfTooLarge"/>); hier faellt sie nur auf, wenn sie von frueher gross ist.</summary>
+        Public Shared Sub TrimLogsSoon()
+            If Threading.Interlocked.Exchange(_trimStarted, 1) <> 0 Then Return
+            Threading.Tasks.Task.Run(
+                Sub()
+                    For Each logFile In {LogPath, ErrorLogPath, ErrorLogPath & ".1"}
+                        Try
+                            SyncLock _writeLock
+                                TrimFileToTail(logFile, MaxLogBytes, KeptLogBytes)
+                            End SyncLock
+                        Catch
+                            ' Ein Protokoll, das sich nicht kuerzen laesst, darf den Start nicht stoeren.
+                        End Try
+                    Next
+                End Sub)
+        End Sub
+
+        ''' <summary>Laesst von einer Textdatei ueber <paramref name="maxBytes"/> nur die letzten
+        ''' <paramref name="keepBytes"/> stehen, beginnend an einem Zeilenanfang. True, wenn gekuerzt
+        ''' wurde. Geschrieben wird in eine Nachbardatei, die die alte ersetzt: bricht der Vorgang
+        ''' ab, steht die alte Datei unversehrt da.</summary>
+        Friend Shared Function TrimFileToTail(filePath As String, maxBytes As Long, keepBytes As Long) As Boolean
+            Dim info = New FileInfo(filePath)
+            If Not info.Exists OrElse info.Length <= maxBytes Then Return False
+            keepBytes = Math.Max(0L, Math.Min(keepBytes, maxBytes))
+            Dim partPath = filePath & ".kuerzen"
+            Using source = New FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+                source.Position = source.Length - keepBytes
+                ' Bis hinter den naechsten Zeilenumbruch: die erste Zeile soll ganz sein.
+                Dim skipped = 0
+                While skipped < 65536
+                    Dim value = source.ReadByte()
+                    If value < 0 Then Exit While
+                    skipped += 1
+                    If value = 10 Then Exit While
+                End While
+                Using target = New FileStream(partPath, FileMode.Create, FileAccess.Write, FileShare.None)
+                    source.CopyTo(target)
+                End Using
+            End Using
+            File.Move(partPath, filePath, True)
+            Return True
+        End Function
+
         ''' <summary>Deckelt die Fehlerdatei: ist sie voll, wird sie EINMAL zur .1 und neu begonnen.
         ''' Kein Ringpuffer mit vielen Ständen - eine Vorgängerfassung reicht, um einen Fehler zu
         ''' verfolgen, und mehr als 2 MB soll das Protokoll nie belegen.</summary>

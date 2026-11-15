@@ -576,6 +576,23 @@ Namespace Views
             _observedVm = Nothing
         End Sub
 
+        Private _tracedLayoutQueued As Boolean
+
+        ''' <summary>NUR BEI EINGESCHALTETEM PROTOKOLL: nach geaenderten Kacheln das Anordnen der
+        ''' Ansicht sofort und unter einem Messpunkt ausfuehren. Avalonia ordnet sonst kurz darauf von
+        ''' selbst an, ausserhalb jedes Messpunkts, und eine Stockung dort hiess im Protokoll nur
+        ''' "kein Messpunkt offen". Es ist dieselbe Arbeit, nur frueher und mit Namen; mehrere
+        ''' Aenderungen kurz nacheinander ergeben einen Durchgang.</summary>
+        Private Sub QueueTracedLayout()
+            If Not PerformanceTraceService.IsActive OrElse _tracedLayoutQueued Then Return
+            _tracedLayoutQueued = True
+            Dispatcher.UIThread.Post(
+                Sub()
+                    _tracedLayoutQueued = False
+                    PerformanceTraceService.Measure("Galerie: Anordnen nach geaenderten Kacheln", Sub() UpdateLayout())
+                End Sub, DispatcherPriority.Normal)
+        End Sub
+
         ''' Der Ordner wird asynchron geladen: DisplayItems füllt sich, nachdem das Anzeigesteuerelement bereits
         ''' (leer) vermessen und angeordnet wurde. Sein Reset-Ereignis erneuert zwar seine eigene
         ''' Wunschgröße, der umgebende StackPanel wird davon aber nicht neu vermessen - das Steuerelement
@@ -583,6 +600,7 @@ Namespace Views
         ''' Bei vielen Bildern fiel das nie auf, weil dort die Platzhalter-Höhen des Sichtfensters von 0
         ''' abweichen und damit ohnehin eine neue Messung auslösen.
         Private Sub OnDisplayItemsCollectionChanged(sender As Object, e As NotifyCollectionChangedEventArgs)
+            QueueTracedLayout()
             If e.Action <> NotifyCollectionChangedAction.Reset Then Return
             Dim vm = GetVm()
             ' Die Liste meldet ueber DisplayItems, die Gruppenansicht ueber GroupEntries - massgeblich
@@ -604,6 +622,7 @@ Namespace Views
                         _pendingFolderScrollReset = Nothing
                     End If
                     InvalidateGalleryItemsLayout()
+                    QueueTracedLayout()
                     ' Erst nach dem Layout steht die tatsächliche Zahl sichtbarer Kacheln fest.
                     ' Das ist der erste Bild-Ladeimpuls beim Ordnerwechsel und richtet sich damit
                     ' nach Fenstergröße und Zoom statt nach einer starren Anzahl.

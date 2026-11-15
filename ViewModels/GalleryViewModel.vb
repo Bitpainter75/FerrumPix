@@ -9324,41 +9324,81 @@ Namespace ViewModels
             If _sortMode = "Favorite" Then FilterAndSort()
         End Sub
 
+        ''' <summary>Zaehlt die Auftraege an <see cref="SetupWatcher"/>. Ein Beobachter, der im
+        ''' Hintergrund entsteht, wird nur uebernommen, wenn inzwischen kein neuerer Auftrag kam.</summary>
+        Private _watcherGeneration As Integer
+
+        ''' <summary>Haengt den Beobachter auf einen Ordner um (Nothing: keiner).
+        '''
+        ''' DAS SCHARFSTELLEN LAEUFT IM HINTERGRUND. Mit einbezogenen Unterordnern geht die Laufzeit
+        ''' dabei unter Linux den GANZEN Baum ab und meldet jeden Unterordner einzeln beim System
+        ''' an, und zwar in dem Aufruf, der EnableRaisingEvents setzt. Auf einer Netzfreigabe stand
+        ''' der Anzeigefaden dafuer ueber eine halbe Sekunde im Plattenzugriff (Protokoll: blockiert
+        ''' 566 ms, davon 20 ms gerechnet, Zustand D). Der alte Beobachter geht sofort; der neue
+        ''' wird erst uebernommen, wenn er steht, und nur, wenn dann noch derselbe Auftrag gilt.
+        ''' Was in der Zwischenzeit im Ordner geschieht, sieht der Abgleich nach dem Laden ohnehin.</summary>
         Private Sub SetupWatcher(folderPath As String)
+            Dim generation = Threading.Interlocked.Increment(_watcherGeneration)
             If _watcher IsNot Nothing Then
-                _watcher.EnableRaisingEvents = False
-                RemoveHandler _watcher.Created, AddressOf OnFileSystemChanged
-                RemoveHandler _watcher.Deleted, AddressOf OnFileSystemChanged
-                RemoveHandler _watcher.Renamed, AddressOf OnFileSystemChanged
-                RemoveHandler _watcher.Error, AddressOf OnFileSystemWatcherError
-                _watcher.Dispose()
+                ' Auch das Abstellen meldet jeden Unterordner einzeln ab: nicht auf dem Anzeigefaden.
+                Dim old = _watcher
                 _watcher = Nothing
+                Task.Run(Sub() DisposeWatcher(old))
             End If
-            If String.IsNullOrEmpty(folderPath) OrElse Not Directory.Exists(folderPath) Then Return
+            If String.IsNullOrEmpty(folderPath) Then Return
+            Dim withSubfolders = _includeSubfolders
+            Task.Run(
+                Sub()
+                    Dim created As FileSystemWatcher = Nothing
+                    Try
+                        If Not Directory.Exists(folderPath) Then Return
+                        ' Erst die Handler, dann scharfstellen: mit EnableRaisingEvents im Initialisierer
+                        ' gingen alle Ereignisse verloren, die zwischen Konstruktor und AddHandler eintrafen.
+                        ' Mit einbezogenen Unterordnern gehoert auch deren Inhalt zur Ansicht.
+                        created = New FileSystemWatcher(folderPath) With {
+                            .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName,
+                            .IncludeSubdirectories = withSubfolders
+                        }
+                        ' Mit den Unterordnern kommen die Meldungen eines ganzen Baums an. Der Puffer ab
+                        ' Werk (8 KB) laeuft dabei schon ueber, wenn jemand ein paar hundert Dateien auf
+                        ' einmal hineinkopiert; 64 KB ist das Hoechste, was die Laufzeit annimmt.
+                        If withSubfolders Then created.InternalBufferSize = 65536
+                        AddHandler created.Created, AddressOf OnFileSystemChanged
+                        AddHandler created.Deleted, AddressOf OnFileSystemChanged
+                        AddHandler created.Renamed, AddressOf OnFileSystemChanged
+                        AddHandler created.Error, AddressOf OnFileSystemWatcherError
+                        created.EnableRaisingEvents = True
+                    Catch ex As Exception
+                        ' Scheitert typischerweise am inotify-Limit unter Linux. Die Galerie funktioniert dann
+                        ' weiter, bekommt externe Änderungen aber nicht mehr mit - das gehört ins Diagnoseprotokoll,
+                        ' statt still verschluckt zu werden.
+                        DiagnosticLogService.LogException("Gallery.SetupWatcher", ex)
+                        If created IsNot Nothing Then DisposeWatcher(created)
+                        Return
+                    End Try
+                    Dim ready = created
+                    Dispatcher.UIThread.Post(
+                        Sub()
+                            If Threading.Volatile.Read(_watcherGeneration) <> generation Then
+                                DisposeWatcher(ready)
+                                Return
+                            End If
+                            _watcher = ready
+                        End Sub)
+                End Sub)
+        End Sub
+
+        ''' <summary>Stellt einen Beobachter ab und gibt ihn frei.</summary>
+        Private Sub DisposeWatcher(watcher As FileSystemWatcher)
             Try
-                ' Erst die Handler, dann scharfstellen: mit EnableRaisingEvents im Initialisierer gingen
-                ' alle Ereignisse verloren, die zwischen Konstruktor und AddHandler eintrafen.
-                ' Mit einbezogenen Unterordnern gehoert auch deren Inhalt zur Ansicht.
-                _watcher = New FileSystemWatcher(folderPath) With {
-                    .NotifyFilter = NotifyFilters.FileName Or NotifyFilters.DirectoryName,
-                    .IncludeSubdirectories = _includeSubfolders
-                }
-                ' Mit den Unterordnern kommen die Meldungen eines ganzen Baums an. Der Puffer ab
-                ' Werk (8 KB) laeuft dabei schon ueber, wenn jemand ein paar hundert Dateien auf
-                ' einmal hineinkopiert; 64 KB ist das Hoechste, was die Laufzeit annimmt.
-                If _includeSubfolders Then _watcher.InternalBufferSize = 65536
-                AddHandler _watcher.Created, AddressOf OnFileSystemChanged
-                AddHandler _watcher.Deleted, AddressOf OnFileSystemChanged
-                AddHandler _watcher.Renamed, AddressOf OnFileSystemChanged
-                AddHandler _watcher.Error, AddressOf OnFileSystemWatcherError
-                _watcher.EnableRaisingEvents = True
+                watcher.EnableRaisingEvents = False
+                RemoveHandler watcher.Created, AddressOf OnFileSystemChanged
+                RemoveHandler watcher.Deleted, AddressOf OnFileSystemChanged
+                RemoveHandler watcher.Renamed, AddressOf OnFileSystemChanged
+                RemoveHandler watcher.Error, AddressOf OnFileSystemWatcherError
+                watcher.Dispose()
             Catch ex As Exception
-                ' Scheitert typischerweise am inotify-Limit unter Linux. Die Galerie funktioniert dann
-                ' weiter, bekommt externe Änderungen aber nicht mehr mit - das gehört ins Diagnoseprotokoll,
-                ' statt still verschluckt zu werden.
-                DiagnosticLogService.LogException("Gallery.SetupWatcher", ex)
-                _watcher?.Dispose()
-                _watcher = Nothing
+                DiagnosticLogService.LogException("Gallery.DisposeWatcher", ex)
             End Try
         End Sub
 
@@ -9885,6 +9925,8 @@ Namespace ViewModels
                                                                Dim catalogText = fields.CatalogSearchText
                                                                Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                                                                           If cancellationToken.IsCancellationRequested Then Return
+                                                                                                          PerformanceTraceService.Measure("Metadaten in die Kachel",
+                                                                                                              Sub()
                                                                                                           item.ImageWidth = width
                                                                                                           item.ImageHeight = height
                                                                                                           If imported.Rating.HasValue Then item.Rating = imported.Rating.Value
@@ -9914,6 +9956,7 @@ Namespace ViewModels
                                                                                                           item.IptcMetadataSummary = iptcSummary
                                                                                                           item.XmpMetadataSummary = xmpSummary
                                                                                                           item.IccMetadataSummary = iccSummary
+                                                                                                              End Sub)
                                                                                                       End Sub)
                                                            Catch
                                                            End Try
@@ -9941,7 +9984,8 @@ Namespace ViewModels
                          If cancellationToken.IsCancellationRequested Then Return
                          Await Dispatcher.UIThread.InvokeAsync(Sub()
                                                                     If cancellationToken.IsCancellationRequested Then Return
-                                                                    FilterAndSort()
+                                                                    PerformanceTraceService.Measure("Metadaten fertig: filtern und sortieren",
+                                                                                                    AddressOf FilterAndSort)
                                                                 End Sub)
                      End Function)
         End Sub
@@ -10826,8 +10870,14 @@ Namespace ViewModels
             _fillSortPending = False
             _fillSortTimer?.Stop()
             _filterSortVersion += 1
-            Dim filteredList = ApplySimilarView(ApplyStackFocus(ComputeFilteredList(_allItems)))
-            FinishFilterAndSort(filteredList, SortItems(filteredList))
+            ' Messpunkt um den GANZEN Lauf: er hat viele Aufrufer (Schub aus den Unterordnern,
+            ' Abgleich, Stapel), und eine Stockung dahinter hatte bisher keinen Namen.
+            PerformanceTraceService.Measure("Galerie: filtern und sortieren",
+                Sub()
+                    Dim filteredList = PerformanceTraceService.Measure("Galerie: sieben",
+                        Function() ApplySimilarView(ApplyStackFocus(ComputeFilteredList(_allItems))))
+                    FinishFilterAndSort(filteredList, SortItems(filteredList))
+                End Sub)
         End Sub
 
         ''' <summary>Ab so vielen Elementen rechnen Filter- und Sortierwechsel im Hintergrund
@@ -10984,8 +11034,12 @@ Namespace ViewModels
         ''' und ihrer sortierten Folge die Stapel bilden, die Liste der Ansicht austauschen,
         ''' Anzeigefenster, Zaehler und Statuszeile nachziehen.</summary>
         Private Sub FinishFilterAndSort(filteredList As List(Of ImageItem), sorted As IEnumerable(Of ImageItem))
-            Items.ReplaceAll(ApplyStacks(filteredList, SimilarOrder(sorted)))
-            RefreshFileTypeFilterOptions()
+            Dim stacked = PerformanceTraceService.Measure("Galerie: sortieren und Stapel bilden",
+                                                          Function() ApplyStacks(filteredList, SimilarOrder(sorted)))
+            ' Nur melden, was sich geaendert hat (ReplaceAllMinimal): eine Ruecksetzung laesst das
+            ' Raster jede sichtbare Kachel zurueckgeben und neu holen.
+            PerformanceTraceService.Measure("Galerie: Liste austauschen", Sub() Items.ReplaceAllMinimal(stacked))
+            PerformanceTraceService.Measure("Galerie: Dateitypen der Filterleiste", AddressOf RefreshFileTypeFilterOptions)
             If DisplayItems.Count = 0 Then
                 ResetDisplayWindow()
             Else
@@ -10996,7 +11050,7 @@ Namespace ViewModels
                 ' SetDisplayWindow rief. Das Fenster wird nur ersetzt, wenn sich sein Inhalt wirklich
                 ' geaendert hat - waehrend einer laufenden Suche kaeme sonst pro Stapel ein voller
                 ' Neuaufbau der sichtbaren Kacheln.
-                RefreshDisplayWindow()
+                PerformanceTraceService.Measure("Galerie: Anzeigefenster auffrischen", AddressOf RefreshDisplayWindow)
             End If
             Me.RaisePropertyChanged(NameOf(FooterStatusText))
             RaiseFilterScopeState()
@@ -11751,7 +11805,7 @@ Namespace ViewModels
             Dispatcher.UIThread.Post(
                 Sub()
                     _groupEntryPublishQueued = False
-                    PublishGroupEntries()
+                    PerformanceTraceService.Measure("Galerie: Gruppenliste neu bauen", AddressOf PublishGroupEntries)
                 End Sub, DispatcherPriority.Background)
         End Sub
 
@@ -12380,7 +12434,8 @@ Namespace ViewModels
                     If Not IsWallView Then Return
                     _wallDirty = True
                     _wallRevision += 1
-                    Me.RaisePropertyChanged(NameOf(WallRevision))
+                    PerformanceTraceService.Measure("Galerie: Fotowand neu anstossen",
+                                                    Sub() Me.RaisePropertyChanged(NameOf(WallRevision)))
                 End Sub, DispatcherPriority.Background)
         End Sub
 

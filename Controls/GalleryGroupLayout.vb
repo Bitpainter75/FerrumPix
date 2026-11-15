@@ -79,6 +79,12 @@ Namespace Controls
         End Sub
 
         Protected Overrides Function MeasureOverride(context As VirtualizingLayoutContext, availableSize As Size) As Size
+            ' Messpunkt: das Anordnen der Kacheln laeuft auf dem Anzeigefaden und hatte keinen.
+            If Not Services.PerformanceTraceService.IsActive Then Return MeasureOverrideCore(context, availableSize)
+            Return Services.PerformanceTraceService.Measure("Galerie-Layout Gruppen: messen", Function() MeasureOverrideCore(context, availableSize))
+        End Function
+
+        Private Function MeasureOverrideCore(context As VirtualizingLayoutContext, availableSize As Size) As Size
             _realizedElements.Clear()
             _realizedBounds.Clear()
 
@@ -153,6 +159,12 @@ Namespace Controls
         End Function
 
         Protected Overrides Function ArrangeOverride(context As VirtualizingLayoutContext, finalSize As Size) As Size
+            ' Messpunkt: das Anordnen der Kacheln laeuft auf dem Anzeigefaden und hatte keinen.
+            If Not Services.PerformanceTraceService.IsActive Then Return ArrangeOverrideCore(context, finalSize)
+            Return Services.PerformanceTraceService.Measure("Galerie-Layout Gruppen: anordnen", Function() ArrangeOverrideCore(context, finalSize))
+        End Function
+
+        Private Function ArrangeOverrideCore(context As VirtualizingLayoutContext, finalSize As Size) As Size
             For i = 0 To _realizedElements.Count - 1
                 _realizedElements(i).Arrange(_realizedBounds(i))
             Next

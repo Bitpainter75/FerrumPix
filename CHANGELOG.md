@@ -19,6 +19,11 @@
   folders, changing the sort order, a
   filter or the search text no longer makes the window stand still.
 
+- Thumbnails of raw files appear faster in a folder that is opened for the first time.
+
+- The diagnostic log no longer grows without limit. At start, a log above 10 MB is shortened to
+  its most recent part.
+
 - Less memory: exporting a large picture with sharpening and noise reduction needs less of it, and
   after going through many raw files the application gives more of it back.
 
