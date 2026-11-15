@@ -19,6 +19,9 @@
   folders, changing the sort order, a
   filter or the search text no longer makes the window stand still.
 
+- The gallery stutters less while thumbnails arrive, after sorting or filtering, and when the
+  pictures of subfolders are loaded. Its tiles are built faster.
+
 - Thumbnails of raw files appear faster in a folder that is opened for the first time.
 
 - The diagnostic log no longer grows without limit. At start, a log above 10 MB is shortened to
