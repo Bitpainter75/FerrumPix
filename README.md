@@ -212,6 +212,8 @@ Everything that follows works the same way with each of them.
 
 No window opens. FerrumPix tells you the address instead, `http://127.0.0.1:14500`, and when you open it, FerrumPix fills the browser tab. Close the tab and come back later, and everything is as you left it.
 
+Leave the terminal open while you use it. FerrumPix runs in that terminal, and closing it ends FerrumPix; the page in the browser then stops reacting.
+
 If you want a sign-in in front of it, give it a password, and a user name if you like. The browser then asks for them before it shows anything:
 
 ```
