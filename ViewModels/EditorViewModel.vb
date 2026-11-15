@@ -28448,6 +28448,7 @@ Namespace ViewModels
                                 If selectionCoverage IsNot Nothing Then before = ImageProcessor.CopyRegion(full, dirtyFull)
                                 Try
                                     Using canvas = New SKCanvas(full)
+                                        ImageProcessor.NoteRasterTarget(canvas, full)
                                         canvas.ClipRect(SKRect.Create(dirtyFull.Left, dirtyFull.Top, dirtyFull.Width, dirtyFull.Height))
                                         Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
                                         ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, full.Width, full.Height,
@@ -28575,6 +28576,7 @@ Namespace ViewModels
             If previewRect.Width <= 0 OrElse previewRect.Height <= 0 Then Return
             Try
                 Using canvas = New SKCanvas(_sceneSk)
+                    ImageProcessor.NoteRasterTarget(canvas, _sceneSk)
                     canvas.ClipRect(SKRect.Create(previewRect.Left, previewRect.Top, previewRect.Width, previewRect.Height))
                     Dim adjDraw As New ImageAdjustments With {.SourceWidthPixels = baseW, .SourceHeightPixels = baseH}
                     ImageProcessor.DrawAnnotationsOnCanvas(canvas, adjDraw, _sceneSk.Width, _sceneSk.Height,
@@ -29354,6 +29356,7 @@ Namespace ViewModels
             Dim rect = job.Rect
             Dim merged = New SKBitmap(rect.Width, rect.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
             Using canvas = New SKCanvas(merged)
+                ImageProcessor.NoteRasterTarget(canvas, merged)
                 canvas.Clear(SKColors.Transparent)
                 ' Versatz statt Clip: der Aufrufer-Ursprung ist die linke obere Ecke des
                 ' gemeinsamen Rechtecks, und die Objekte rechnen selbst in Bildkoordinaten.

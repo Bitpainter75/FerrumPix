@@ -4026,11 +4026,9 @@ Namespace Services
             If source.ColorType <> SKColorType.Bgra8888 AndAlso source.ColorType <> SKColorType.Rgba8888 Then Return Nothing
             Dim info = New SKImageInfo(source.Width, source.Height, source.ColorType, source.AlphaType)
             Dim guide = New SKBitmap(info)
-            Using canvas = New SKCanvas(guide),
-                  filter = SKImageFilter.CreateBlur(MixerGuideSigma, MixerGuideSigma, SKShaderTileMode.Clamp),
-                  paint = New SKPaint With {.ImageFilter = filter, .BlendMode = SKBlendMode.Src}
-                canvas.Clear(SKColors.Transparent)
-                canvas.DrawImage(source, 0, 0, paint)
+            Using pixmap = source.PeekPixels()
+                BlurInto(guide, pixmap, MixerGuideSigma, clampEdges:=True, asMask:=False,
+                         Sub(canvas, paint) canvas.DrawImage(source, 0, 0, paint))
             End Using
             Return guide
         End Function
@@ -4061,7 +4059,7 @@ Namespace Services
             ' Dicht gepackt (width*4 je Zeile), also ohne Zeilenauffuellung - und die Kette schreibt
             ' jeden Bildpunkt. Ein geliehenes, ungenulltes Feld ist hier deshalb ohne Folgen.
             dstLen = width * source.Height * 4
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(dstLen)
+            dstBuf = PlanePool(Of Byte).Rent(dstLen)
             Dim dstStride = width * 4
 
             Dim m = chain.ColorMatrix
@@ -4126,7 +4124,7 @@ Namespace Services
                         Dim gLen = 0, gStride, gri, ggi, gbi, gai As Integer
                         If TryRentRgbaLikeBuffer(guide, guideBuf, gLen, gStride, gri, ggi, gbi, gai) AndAlso
                            (gStride <> stride OrElse gri <> ri OrElse ggi <> gi OrElse gbi <> bi OrElse gai <> ai) Then
-                            ArrayPool(Of Byte).Shared.Return(guideBuf)
+                            PlanePool(Of Byte).Return(guideBuf)
                             guideBuf = Nothing
                         End If
                     End If

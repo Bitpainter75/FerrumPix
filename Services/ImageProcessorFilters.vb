@@ -72,12 +72,12 @@ Namespace Services
             Public Sub New(planeWidth As Integer, planeHeight As Integer)
                 Width = planeWidth
                 Height = planeHeight
-                Red = ArrayPool(Of Single).Shared.Rent(planeWidth * planeHeight)
-                Blue = ArrayPool(Of Single).Shared.Rent(planeWidth * planeHeight)
+                Red = PlanePool(Of Single).Rent(planeWidth * planeHeight)
+                Blue = PlanePool(Of Single).Rent(planeWidth * planeHeight)
             End Sub
             Public Sub Dispose() Implements IDisposable.Dispose
-                If Red IsNot Nothing Then ArrayPool(Of Single).Shared.Return(Red)
-                If Blue IsNot Nothing Then ArrayPool(Of Single).Shared.Return(Blue)
+                If Red IsNot Nothing Then PlanePool(Of Single).Return(Red)
+                If Blue IsNot Nothing Then PlanePool(Of Single).Return(Blue)
                 Red = Nothing
                 Blue = Nothing
             End Sub
@@ -94,12 +94,12 @@ Namespace Services
             Public Sub New(maskWidth As Integer, maskHeight As Integer)
                 Width = maskWidth
                 Height = maskHeight
-                Unclipped = ArrayPool(Of Boolean).Shared.Rent(maskWidth * maskHeight)
-                Black = ArrayPool(Of Single).Shared.Rent(maskWidth * maskHeight)
+                Unclipped = PlanePool(Of Boolean).Rent(maskWidth * maskHeight)
+                Black = PlanePool(Of Single).Rent(maskWidth * maskHeight)
             End Sub
             Public Sub Dispose() Implements IDisposable.Dispose
-                If Unclipped IsNot Nothing Then ArrayPool(Of Boolean).Shared.Return(Unclipped)
-                If Black IsNot Nothing Then ArrayPool(Of Single).Shared.Return(Black)
+                If Unclipped IsNot Nothing Then PlanePool(Of Boolean).Return(Unclipped)
+                If Black IsNot Nothing Then PlanePool(Of Single).Return(Black)
                 Unclipped = Nothing
                 Black = Nothing
             End Sub
@@ -389,7 +389,7 @@ Namespace Services
                     ' Die acht Zeilen der aufgeweiteten Ebene fuer diese Blockzeile, je Zeile
                     ' Rot ab 0 und Blau ab w. Summiert wird wie vorher Block fuer Block, Zeile fuer
                     ' Zeile, also in derselben Reihenfolge.
-                    Dim rows = ArrayPool(Of Single).Shared.Rent(block * 2 * w)
+                    Dim rows = PlanePool(Of Single).Rent(block * 2 * w)
                     Try
                         For dy = 0 To block - 1
                             ChromaUpRow(upperWide, by * block + dy, rows, dy * 2 * w, rows, dy * 2 * w + w)
@@ -413,7 +413,7 @@ Namespace Services
                             black(by * bw + bx) = dark / (block * block)
                         Next
                     Finally
-                        ArrayPool(Of Single).Shared.Return(rows)
+                        PlanePool(Of Single).Return(rows)
                     End Try
                 End Sub)
             Return ChromaNoiseFromBlocks(energy, black)
@@ -545,7 +545,7 @@ Namespace Services
                                             red As Single(), redOffset As Integer, blue As Single(), blueOffset As Integer)
             Dim w = p.Width
             ' Je Zeile vier Zwischenzeilen: Rot und Blau der aufgeweiteten Ebene vor und nach dem Filtern.
-            Dim rows = ArrayPool(Of Single).Shared.Rent(4 * w)
+            Dim rows = PlanePool(Of Single).Rent(4 * w)
             Try
                 ChromaUpRow(prepared.UpperWide, y, rows, 0, rows, w)
                 ChromaUpRow(prepared.CoarseUpWide, y, rows, 2 * w, rows, 3 * w)
@@ -561,7 +561,7 @@ Namespace Services
                     blue(blueOffset + x) = CSng(rows(3 * w + x) + db * keep)
                 Next
             Finally
-                ArrayPool(Of Single).Shared.Return(rows)
+                PlanePool(Of Single).Return(rows)
             End Try
         End Sub
 
@@ -626,7 +626,7 @@ Namespace Services
                     prepared = ChromaPrepareLevel(plane, mask, 0, 0, 0, amount)
                 End Using
 
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 If stride <> w * 4 Then Array.Clear(dstBuf, 0, sLen)
                 ' Die feinste Ebene entsteht nicht als ganzes Feld: jede Zeile wird gefiltert und
                 ' gleich geschrieben.
@@ -634,7 +634,7 @@ Namespace Services
                 Dim level0 = prepared
                 ForEachRow(w, h,
                     Sub(y)
-                        Dim filtered = ArrayPool(Of Single).Shared.Rent(2 * w)
+                        Dim filtered = PlanePool(Of Single).Rent(2 * w)
                         Try
                             If level0 IsNot Nothing Then
                                 ChromaCombineRow(finest, level0, y, filtered, 0, filtered, w)
@@ -657,7 +657,7 @@ Namespace Services
                                                    toByte(Math.Min(backSize, CInt(b * backSize))), a)
                             Next
                         Finally
-                            ArrayPool(Of Single).Shared.Return(filtered)
+                            PlanePool(Of Single).Return(filtered)
                         End Try
                     End Sub)
                 Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
@@ -669,6 +669,60 @@ Namespace Services
                 ReturnPooledBuffer(dstBuf)
             End Try
         End Function
+
+        ''' <summary>Ruft <paramref name="rowBody"/> fuer jede Zeile mit ihrem Abschnitt eines
+        ''' System.Random-Stroms: je Bildpunkt <paramref name="perPixel"/> Zuege von NextDouble, in
+        ''' genau der Reihenfolge, in der eine Schleife Zeile fuer Zeile und Punkt fuer Punkt sie
+        ''' zoege. Der Wert zu Punkt x, Zug d steht in <c>values(start + x * perPixel + d)</c>.
+        '''
+        ''' WARUM SO. Der Strom laesst sich nicht vorspulen, gezogen wird also weiter der Reihe
+        ''' nach. Das Ziehen ist aber der kleinere Teil; die Arbeit je Bildpunkt (lesen, rechnen,
+        ''' schreiben) haengt nicht an der Reihenfolge. Ein Faden zieht deshalb den Strom in Baendern
+        ''' von einigen Zeilen, und die Baender werden nebeneinander verrechnet, waehrend er schon
+        ''' das naechste zieht. Das Ergebnis ist Bit fuer Bit das der einen Schleife.
+        '''
+        ''' Der Speicher bleibt klein: je Band ein geliehenes Feld, und hoechstens so viele Baender
+        ''' unterwegs, wie der Rechner Kerne hat. Den ganzen Strom auf einmal zu halten kostete bei
+        ''' 24 Megapixeln und zwei Zuegen je Punkt fast 400 MB.</summary>
+        Friend Shared Sub ForEachRowWithRandomStream(seed As Integer, width As Integer, height As Integer, perPixel As Integer,
+                                                     rowBody As Action(Of Integer, Double(), Integer))
+            If width <= 0 OrElse height <= 0 OrElse perPixel <= 0 Then Return
+            Dim random = New Random(seed)
+            Dim perRow = width * perPixel
+            ' Rund eine Viertelmillion Bildpunkte je Band: gross genug, dass die Uebergabe nicht
+            ' zaehlt, klein genug fuer den Zwischenspeicher des Prozessors.
+            Dim bandRows = Math.Max(1, Math.Min(height, RandomStreamBandPixels \ width))
+            Dim maxBands = Math.Max(1, Environment.ProcessorCount)
+            Using gate As New Threading.SemaphoreSlim(maxBands)
+                Dim bands As New List(Of Threading.Tasks.Task)()
+                Dim bandStart = 0
+                While bandStart < height
+                    Dim firstRow = bandStart
+                    Dim rows = Math.Min(bandRows, height - firstRow)
+                    gate.Wait()
+                    Dim values = ArrayPool(Of Double).Shared.Rent(rows * perRow)
+                    For i = 0 To rows * perRow - 1
+                        values(i) = random.NextDouble()
+                    Next
+                    bands.Add(Threading.Tasks.Task.Run(
+                        Sub()
+                            Try
+                                For row = 0 To rows - 1
+                                    rowBody(firstRow + row, values, row * perRow)
+                                Next
+                            Finally
+                                ArrayPool(Of Double).Shared.Return(values)
+                                gate.Release()
+                            End Try
+                        End Sub))
+                    bandStart += rows
+                End While
+                Threading.Tasks.Task.WaitAll(bands.ToArray())
+            End Using
+        End Sub
+
+        ''' <summary>Bildpunkte je Band in <see cref="ForEachRowWithRandomStream"/>.</summary>
+        Private Const RandomStreamBandPixels As Integer = 262144
 
         ''' <summary>Die PLUS-Seite des Farbrauschen-Reglers: faerbt das Bild ein, ohne es heller oder
         ''' dunkler zu machen. Pro Pixel wandern Rot und Blau gegenlaeufig, Gruen gleicht die Helligkeit
@@ -687,27 +741,32 @@ Namespace Services
             Dim dstBuf As Byte() = Nothing
             Try
             If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
-            Dim random = New Random(source.Width * 733 Xor source.Height * 397)
             Dim amplitude = strength * 48.0
+            Dim w = source.Width
+            Dim sourceBytes = srcBuf, targetBytes = dstBuf
 
-            For y As Integer = 0 To source.Height - 1
-                Dim rowOffset = y * stride
-                For x As Integer = 0 To source.Width - 1
-                    Dim o = rowOffset + x * 4
-                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                    Dim dr = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    Dim db = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    ' Rec.601: Gruen traegt 0,587 der Helligkeit - genau so viel gegensteuern, wie
-                    ' Rot (0,299) und Blau (0,114) zusammen einbringen, dann bleibt die Luma gleich.
-                    Dim dg = -(0.299 * dr + 0.114 * db) / 0.587
-                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                                       ClampToByte(cr + dr), ClampToByte(cg + dg), ClampToByte(cb + db), a)
-                Next
-            Next
+            ' Der Strom wird der Reihe nach gezogen, die Zeilen nebeneinander verrechnet
+            ' (ForEachRowWithRandomStream): dasselbe Bild wie die eine Schleife, in einem Bruchteil
+            ' der Zeit.
+            ForEachRowWithRandomStream(source.Width * 733 Xor source.Height * 397, w, source.Height, 2,
+                Sub(y, values, start)
+                    Dim rowOffset = y * stride
+                    For x As Integer = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(sourceBytes, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        Dim dr = (values(start + x * 2) * 2.0 - 1.0) * amplitude
+                        Dim db = (values(start + x * 2 + 1) * 2.0 - 1.0) * amplitude
+                        ' Rec.601: Gruen traegt 0,587 der Helligkeit - genau so viel gegensteuern, wie
+                        ' Rot (0,299) und Blau (0,114) zusammen einbringen, dann bleibt die Luma gleich.
+                        Dim dg = -(0.299 * dr + 0.114 * db) / 0.587
+                        WritePremultiplied(targetBytes, o, ri, gi, bi, ai,
+                                           ClampToByte(cr + dr), ClampToByte(cg + dg), ClampToByte(cb + db), a)
+                    Next
+                End Sub)
 
             Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
@@ -1158,7 +1217,7 @@ Namespace Services
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Try
                 If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 Array.Copy(srcBuf, dstBuf, sLen)
 
                 Dim w = source.Width, h = source.Height
@@ -1446,25 +1505,24 @@ Namespace Services
             ' oder gleich der angeforderten. Keine Schleife hier darf deshalb ueber .Length laufen,
             ' sondern nur ueber n - genau daran ist schon ein Puffer im Bestand haengengeblieben.
             Dim n = w * h
-            Dim pool = ArrayPool(Of Single).Shared
-            Dim luma = pool.Rent(n)
+            Dim luma = PlanePool(Of Single).Rent(n)
             ' Die beiden FARBABSTAENDE zur Helligkeit. Sie werden mitgeglaettet, und zwar mit
             ' derselben Gerade: der Gauss-Weg daneben nahm beim Ziehen des Helligkeitsreglers das
             ' Farbrauschen mit (gemessen 64 Prozent am Anschlag), weil er alle Kanaele gleich
             ' weichzeichnet. Ohne diesen Schritt blieben die bunten Sprenkel stehen, und der Regler
             ' taete ploetzlich weniger als vorher. Fuer starkes Farbrauschen bleibt der eigene Regler
             ' zustaendig - der greift tiefer.
-            Dim chromaR = pool.Rent(n)
-            Dim chromaB = pool.Rent(n)
-            Dim meanI = pool.Rent(n)
-            Dim meanSquares = pool.Rent(n)
-            Dim aCoef = pool.Rent(n)
-            Dim bCoef = pool.Rent(n)
-            Dim meanChromaR = pool.Rent(n)
-            Dim meanChromaB = pool.Rent(n)
+            Dim chromaR = PlanePool(Of Single).Rent(n)
+            Dim chromaB = PlanePool(Of Single).Rent(n)
+            Dim meanI = PlanePool(Of Single).Rent(n)
+            Dim meanSquares = PlanePool(Of Single).Rent(n)
+            Dim aCoef = PlanePool(Of Single).Rent(n)
+            Dim bCoef = PlanePool(Of Single).Rent(n)
+            Dim meanChromaR = PlanePool(Of Single).Rent(n)
+            Dim meanChromaB = PlanePool(Of Single).Rent(n)
             ' Der waagerechte Zwischenschritt der Fenstermittel. EINER fuer alle sechs Durchlaeufe:
             ' er ist nach jedem verbraucht.
-            Dim scratch = pool.Rent(n)
+            Dim scratch = PlanePool(Of Single).Rent(n)
             Try
             For y = 0 To h - 1
                 Dim row = (top + y) * stride
@@ -1544,16 +1602,16 @@ Namespace Services
                 Next
             Next
             Finally
-                pool.Return(luma)
-                pool.Return(chromaR)
-                pool.Return(chromaB)
-                pool.Return(meanI)
-                pool.Return(meanSquares)
-                pool.Return(aCoef)
-                pool.Return(bCoef)
-                pool.Return(meanChromaR)
-                pool.Return(meanChromaB)
-                pool.Return(scratch)
+                PlanePool(Of Single).Return(luma)
+                PlanePool(Of Single).Return(chromaR)
+                PlanePool(Of Single).Return(chromaB)
+                PlanePool(Of Single).Return(meanI)
+                PlanePool(Of Single).Return(meanSquares)
+                PlanePool(Of Single).Return(aCoef)
+                PlanePool(Of Single).Return(bCoef)
+                PlanePool(Of Single).Return(meanChromaR)
+                PlanePool(Of Single).Return(meanChromaB)
+                PlanePool(Of Single).Return(scratch)
             End Try
         End Sub
 
@@ -1631,7 +1689,7 @@ Namespace Services
                 blurred.Dispose()
                 Return result
             End If
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
             Dim w = source.Width, h = source.Height
 
@@ -1812,7 +1870,7 @@ Namespace Services
                     Return result
                 End If
 
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 ' Ein geliehenes Feld ist nicht genullt. Die Schleife unten beschreibt je Bildpunkt
                 ' alle vier Bytes, also bleibt hoechstens die ZEILENAUFFUELLUNG stehen - die gibt es
                 ' bei Bgra8888/Rgba8888 normalerweise nicht, und wenn doch, wird sie hier geraeumt.
@@ -1936,7 +1994,7 @@ Namespace Services
             Dim sLen = 0
             Try
                 If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
                 ' Verkleinern: je Feld der Mittelwert der Helligkeit (0 bis 1). Der Faktor haelt
@@ -2105,7 +2163,7 @@ Namespace Services
             Dim sLen = 0
             Try
                 If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
                 Dim lw, lh As Integer
@@ -2312,7 +2370,7 @@ Namespace Services
             Dim sLen = 0
             Try
                 If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 If stride <> width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
                 ' 1. Verkleinerte Kopie als Flaechenmittel, Werte 0 bis 1.
@@ -2543,7 +2601,7 @@ Namespace Services
                    Not TryRentRgbaLikeBuffer(blurred, blurBuf, bLen, bStride, bri, bgi, bbi, bai) Then
                     Return result
                 End If
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 If sStride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
                 Dim width = source.Width
                 Dim positiv = strength > 0
@@ -2600,7 +2658,7 @@ Namespace Services
                     Dim blended = CloneBitmap(source)
                     Using canvas = New SKCanvas(blended)
                         Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255.0F * removeStrength))}
-                            canvas.DrawBitmap(median, 0, 0, paint)
+                            DrawBitmapShared(canvas, median, 0, 0, paint)
                         End Using
                     End Using
                     Return blended
@@ -3294,7 +3352,7 @@ Namespace Services
                 Dim result = CloneBitmap(source)
                 Using canvas = New SKCanvas(result)
                     Using paint = New SKPaint With {.Color = New SKColor(255, 255, 255, ClampToByte(255 * strength))}
-                        canvas.DrawBitmap(blurred, 0, 0, paint)
+                        DrawBitmapShared(canvas, blurred, 0, 0, paint)
                     End Using
                 End Using
                 Return result
@@ -3326,12 +3384,7 @@ Namespace Services
             ' Unter einem halben Punkt rechnet Skia nichts Sichtbares, das Bild bliebe gleich.
             If sigma < 0.5F Then Return source
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using filter = SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp),
-                  paint = New SKPaint With {.ImageFilter = filter, .BlendMode = SKBlendMode.Src},
-                  canvas = New SKCanvas(result)
-                canvas.Clear(SKColors.Transparent)
-                canvas.DrawBitmap(source, 0, 0, paint)
-            End Using
+            BlurInto(result, source, sigma, clampEdges:=True, asMask:=False)
             Return result
         End Function
 
@@ -3427,15 +3480,90 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Ab so vielen Bildpunkten lohnt das Weichzeichnen in Baendern.</summary>
+        Private Const BlurBandMinimumPixels As Long = 500000
+
+        ''' <summary>Zeichnet <paramref name="source"/> mit Skias Weichzeichner nach
+        ''' <paramref name="result"/> (gleiche Groesse), in Baendern auf allen Kernen, wo das geht.
+        '''
+        ''' Skia rechnet den Weichzeichner auf EINEM Faden, an 24 Megapixeln rund 180 ms. Ein
+        ''' Bildpunkt haengt aber nur von seiner Umgebung ab. Jedes Band bekommt deshalb seine
+        ''' Zeilen der Quelle plus einen Ueberstand, der weiter reicht als der Kern (dreimal ein
+        ''' Kasten von rund 1,9 Sigma, also knapp 3 Sigma; genommen werden 4 Sigma plus 8 Zeilen),
+        ''' und eine Zeichenflaeche ueber seinen Zeilen des Ziels. Das Ergebnis ist bytegleich mit
+        ''' dem Lauf am Stueck. Je groesser der Radius, desto hoeher die Baender und desto weniger
+        ''' davon; passen keine zwei, laeuft es wie bisher am Stueck (<paramref name="drawWhole"/>).
+        ''' </summary>
+        ''' <param name="source">Die Bildpunkte der Quelle; Nothing, wenn sie nicht erreichbar sind.</param>
+        ''' <param name="clampEdges">Der Rand wird geklemmt statt gegen Durchsichtig gemittelt.</param>
+        ''' <param name="asMask">Zeichnen einer Maske (weiss, ueberblendet) statt Ersetzen.</param>
+        ''' <param name="drawWhole">Zeichnet die ganze Quelle mit dem uebergebenen Stift.</param>
+        Friend Shared Sub BlurInto(result As SKBitmap, source As SKPixmap, sigma As Single, clampEdges As Boolean,
+                                   asMask As Boolean, drawWhole As Action(Of SKCanvas, SKPaint))
+            Dim makePaint = Function() As SKPaint
+                                Dim paint = New SKPaint()
+                                paint.ImageFilter = If(clampEdges, SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp),
+                                                       SKImageFilter.CreateBlur(sigma, sigma))
+                                If asMask Then paint.Color = SKColors.White Else paint.BlendMode = SKBlendMode.Src
+                                Return paint
+                            End Function
+            Dim w = result.Width, h = result.Height
+            Dim cores = Environment.ProcessorCount
+            Dim halo = CInt(Math.Ceiling(sigma * 4.0F)) + 8
+            Dim bandHeight = Math.Max(Math.Max(64, (h + cores - 1) \ cores), 4 * halo)
+            Dim bands = (h + bandHeight - 1) \ bandHeight
+            Dim sourcePixels = If(source Is Nothing, IntPtr.Zero, source.GetPixels())
+            Dim resultPixels = result.GetPixels()
+            If cores < 2 OrElse bands < 2 OrElse CLng(w) * h < BlurBandMinimumPixels OrElse sourcePixels = IntPtr.Zero OrElse
+               resultPixels = IntPtr.Zero OrElse source.Width <> w OrElse source.Height <> h Then
+                Using canvas = New SKCanvas(result), paint = makePaint()
+                    Try
+                        canvas.Clear(SKColors.Transparent)
+                        drawWhole(canvas, paint)
+                    Finally
+                        paint.ImageFilter?.Dispose()
+                    End Try
+                End Using
+                Return
+            End If
+            Dim sourceInfo = source.Info, resultInfo = result.Info
+            Dim sourceStride = source.RowBytes, resultStride = result.RowBytes
+            Parallel.For(0, bands,
+                Sub(n)
+                    Dim y0 = n * bandHeight
+                    Dim y1 = Math.Min(h, y0 + bandHeight)
+                    Dim q0 = Math.Max(0, y0 - halo)
+                    Dim q1 = Math.Min(h, y1 + halo)
+                    Dim partInfo = New SKImageInfo(w, q1 - q0, sourceInfo.ColorType, sourceInfo.AlphaType, sourceInfo.ColorSpace)
+                    Dim bandInfo = New SKImageInfo(w, y1 - y0, resultInfo.ColorType, resultInfo.AlphaType, resultInfo.ColorSpace)
+                    Using part = SKImage.FromPixels(partInfo, sourcePixels + q0 * sourceStride, sourceStride),
+                          surface = SKSurface.Create(bandInfo, resultPixels + y0 * resultStride, resultStride),
+                          paint = makePaint()
+                        Try
+                            If part Is Nothing OrElse surface Is Nothing Then Throw New InvalidOperationException("Blur band could not be created")
+                            Dim canvas = surface.Canvas
+                            canvas.Clear(SKColors.Transparent)
+                            canvas.DrawImage(part, 0, q0 - y0, paint)
+                            canvas.Flush()
+                        Finally
+                            paint.ImageFilter?.Dispose()
+                        End Try
+                    End Using
+                End Sub)
+        End Sub
+
+        ''' <summary>Dasselbe aus einer Bitmap.</summary>
+        Friend Shared Sub BlurInto(result As SKBitmap, source As SKBitmap, sigma As Single, clampEdges As Boolean, asMask As Boolean)
+            Using pixmap = source.PeekPixels()
+                BlurInto(result, pixmap, sigma, clampEdges, asMask,
+                         Sub(canvas, paint) DrawBitmapShared(canvas, source, 0, 0, paint))
+            End Using
+        End Sub
+
         ''' <summary>Ein Gauss ueber das ganze Bild mit geklemmtem Rand, wie in ApplyImageBlur.</summary>
         Private Shared Function GaussianClamped(source As SKBitmap, sigma As Single) As SKBitmap
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
-            Using filter = SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp),
-                  paint = New SKPaint With {.ImageFilter = filter, .BlendMode = SKBlendMode.Src},
-                  canvas = New SKCanvas(result)
-                canvas.Clear(SKColors.Transparent)
-                canvas.DrawBitmap(source, 0, 0, paint)
-            End Using
+            BlurInto(result, source, sigma, clampEdges:=True, asMask:=False)
             Return result
         End Function
 
@@ -3845,7 +3973,7 @@ Namespace Services
             Dim sLen = 0
             Try
             If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
             Dim seed = source.Width * 397 Xor source.Height * 151
@@ -3899,7 +4027,7 @@ Namespace Services
             Dim sLen = 0
             Try
             If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
             Dim w = source.Width, h = source.Height
@@ -3996,28 +4124,31 @@ Namespace Services
             Dim dstBuf As Byte() = Nothing
             Try
             If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-            dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+            dstBuf = PlanePool(Of Byte).Rent(sLen)
             If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
 
-            Dim random = New Random(source.Width * 541 Xor source.Height * 877)
             Dim amplitude = strength * 72.0
+            Dim w = source.Width
+            Dim sourceBytes = srcBuf, targetBytes = dstBuf
 
-            For y As Integer = 0 To source.Height - 1
-                Dim rowOffset = y * stride
-                For x As Integer = 0 To source.Width - 1
-                    Dim o = rowOffset + x * 4
-                    Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
-                    ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
-                    ' Digitales Rauschen ist chromatisch: pro Kanal ein eigener Zufallswert, damit
-                    ' farbige Sensor-Speckles entstehen. Das unterscheidet "Rauschen" klar von der
-                    ' monochromen "Koernung" (ApplyGrain), die denselben Wert auf alle Kanaele legt.
-                    Dim noiseR = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    Dim noiseG = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    Dim noiseB = (random.NextDouble() * 2.0 - 1.0) * amplitude
-                    WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
-                                       ClampToByte(cr + noiseR), ClampToByte(cg + noiseG), ClampToByte(cb + noiseB), a)
-                Next
-            Next
+            ' Strom der Reihe nach, Zeilen nebeneinander: siehe ForEachRowWithRandomStream.
+            ForEachRowWithRandomStream(source.Width * 541 Xor source.Height * 877, w, source.Height, 3,
+                Sub(y, values, start)
+                    Dim rowOffset = y * stride
+                    For x As Integer = 0 To w - 1
+                        Dim o = rowOffset + x * 4
+                        Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                        ReadUnpremultiplied(sourceBytes, o, ri, gi, bi, ai, cr, cg, cb, a)
+                        ' Digitales Rauschen ist chromatisch: pro Kanal ein eigener Zufallswert, damit
+                        ' farbige Sensor-Speckles entstehen. Das unterscheidet "Rauschen" klar von der
+                        ' monochromen "Koernung" (ApplyGrain), die denselben Wert auf alle Kanaele legt.
+                        Dim noiseR = (values(start + x * 3) * 2.0 - 1.0) * amplitude
+                        Dim noiseG = (values(start + x * 3 + 1) * 2.0 - 1.0) * amplitude
+                        Dim noiseB = (values(start + x * 3 + 2) * 2.0 - 1.0) * amplitude
+                        WritePremultiplied(targetBytes, o, ri, gi, bi, ai,
+                                           ClampToByte(cr + noiseR), ClampToByte(cg + noiseG), ClampToByte(cb + noiseB), a)
+                    Next
+                End Sub)
 
             Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
             Return result
@@ -4086,7 +4217,7 @@ Namespace Services
             Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
             Try
                 If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
-                dstBuf = ArrayPool(Of Byte).Shared.Rent(sLen)
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
                 Array.Copy(srcBuf, dstBuf, sLen)
 
                 Dim w = source.Width, h = source.Height
@@ -4154,12 +4285,11 @@ Namespace Services
 
             ' Geliehen, und nur ueber n gerechnet: ein geliehenes Feld ist oft laenger als bestellt.
             Dim n = w * h
-            Dim pool = ArrayPool(Of Single).Shared
-            Dim observed = pool.Rent(n)
-            Dim estimate = pool.Rent(n)
-            Dim blurred = pool.Rent(n)
-            Dim ratio = pool.Rent(n)
-            Dim scratch = pool.Rent(n)
+            Dim observed = PlanePool(Of Single).Rent(n)
+            Dim estimate = PlanePool(Of Single).Rent(n)
+            Dim blurred = PlanePool(Of Single).Rent(n)
+            Dim ratio = PlanePool(Of Single).Rent(n)
+            Dim scratch = PlanePool(Of Single).Rent(n)
             Try
                 For y = 0 To h - 1
                     Dim row = (top + y) * stride
@@ -4213,11 +4343,11 @@ Namespace Services
                     Next
                 Next
             Finally
-                pool.Return(observed)
-                pool.Return(estimate)
-                pool.Return(blurred)
-                pool.Return(ratio)
-                pool.Return(scratch)
+                PlanePool(Of Single).Return(observed)
+                PlanePool(Of Single).Return(estimate)
+                PlanePool(Of Single).Return(blurred)
+                PlanePool(Of Single).Return(ratio)
+                PlanePool(Of Single).Return(scratch)
             End Try
         End Sub
 

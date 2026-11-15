@@ -134,6 +134,7 @@ Namespace Services
             Dim hasRenderStepGroup = HasRenderStepGroupMember(adj)
             If stacked.Count = 0 AndAlso Not hasRenderStepGroup Then
                 Using canvas = New SKCanvas(result)
+                    NoteRasterTarget(canvas, result)
                     DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height, adj.Annotations)
                 End Using
                 Return result
@@ -159,6 +160,7 @@ Namespace Services
                 Dim chain = RenderStepChainFor(adj, annotation)
                 If chain.Count = 0 Then
                     Using canvas = New SKCanvas(result)
+                        NoteRasterTarget(canvas, result)
                         DrawAnnotationsOnCanvas(canvas, adj, source.Width, source.Height, 0, 0, source.Width, source.Height,
                                                 New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
                     End Using
@@ -269,6 +271,7 @@ Namespace Services
                     ' wenn es dazugehoert.
                     If subset Is Nothing OrElse subset.Contains(current) Then
                         Using layerCanvas = New SKCanvas(layer)
+                            NoteRasterTarget(layerCanvas, layer)
                             DrawAnnotationsOnCanvas(layerCanvas, adj, source.Width, source.Height,
                                                     originX, originY, layer.Width, layer.Height,
                                                     New System.Collections.Generic.List(Of ImageAnnotation) From {current})
@@ -364,6 +367,7 @@ Namespace Services
                 If coverage IsNot Nothing Then ApplyCoverageToLayer(groupLayer, layerX, layerY, coverage, width, height)
             End If
             Using canvas = New SKCanvas(target)
+                NoteRasterTarget(canvas, target)
                 Dim alpha = CByte(Math.Max(0, Math.Min(255, Math.Round(Clamp(CSng(group.Opacity), 0, 100) / 100.0 * 255.0))))
                 Using paint = New SKPaint With {
                     .BlendMode = ResolveAnnotationBlendMode(group.BlendMode),
@@ -400,6 +404,7 @@ Namespace Services
                 If chain.Count = 0 Then
                     If subset.Contains(annotation) Then
                         Using canvas = New SKCanvas(target)
+                            NoteRasterTarget(canvas, target)
                             DrawAnnotationsOnCanvas(canvas, adj, sizeSource.Width, sizeSource.Height,
                                                     targetX, targetY, target.Width, target.Height,
                                                     New System.Collections.Generic.List(Of ImageAnnotation) From {annotation})
@@ -1283,7 +1288,14 @@ Namespace Services
         ''' also auch ueber alles, wo sie leer ist. Dort gibt er das Ziel unveraendert zurueck
         ''' (Quelle Alpha 0: Ziel mal 1 plus 0); die leeren Kacheln auszulassen aendert das Bild
         ''' deshalb nicht. Gezeichnet wird in Laeufen benachbarter Kacheln einer Kachelreihe, ohne
-        ''' Skalierung, an ganzzahligen Stellen: jeder Punkt der Quelle trifft genau seinen Punkt.</summary>
+        ''' Skalierung, an ganzzahligen Stellen: jeder Punkt der Quelle trifft genau seinen Punkt.
+        '''
+        ''' EIN BILD FUER ALLE LAEUFE. SKCanvas.DrawBitmap legt je Aufruf ein SKImage aus der Bitmap
+        ''' an, und das ist bei einer veraenderlichen Bitmap eine Kopie ALLER ihrer Bildpunkte
+        ''' (nachgeschlagen im Paket). Je Lauf gezeichnet, wurde die bildgrosse Ebene also so oft
+        ''' kopiert, wie es Laeufe gibt, bei einem grossen Text ueber hundertmal. Das Bild entsteht
+        ''' deshalb einmal und teilt sich die Bildpunkte mit der Ebene (FromPixels kopiert nicht);
+        ''' die Ebene lebt laenger als dieser Aufruf.</summary>
         Private Shared Sub DrawLayerBitmap(canvas As SKCanvas, layer As SKBitmap, dx As Integer, dy As Integer, paint As SKPaint)
             If paint.Blender Is Nothing OrElse
                (layer.ColorType <> SKColorType.Bgra8888 AndAlso layer.ColorType <> SKColorType.Rgba8888) Then
@@ -1315,26 +1327,124 @@ Namespace Services
                         Next
                     Next
                 End Sub)
-            For ty = 0 To tilesY - 1
-                Dim tx = 0
-                While tx < tilesX
-                    If Not occupied(ty * tilesX + tx) Then
-                        tx += 1
-                        Continue While
-                    End If
-                    Dim runStart = tx
-                    While tx < tilesX AndAlso occupied(ty * tilesX + tx)
-                        tx += 1
-                    End While
-                    Dim left = runStart * BlenderTileSize
-                    Dim top = ty * BlenderTileSize
-                    Dim right = Math.Min(w, tx * BlenderTileSize)
-                    Dim bottom = Math.Min(h, top + BlenderTileSize)
-                    canvas.DrawBitmap(layer, New SKRect(left, top, right, bottom),
-                                      New SKRect(left + dx, top + dy, right + dx, bottom + dy), paint)
-                End While
-            Next
+            If Not occupied.Contains(True) Then Return
+            Using pixmap = layer.PeekPixels(),
+                  image = If(pixmap Is Nothing, SKImage.FromBitmap(layer), SKImage.FromPixels(pixmap))
+                If DrawTileRunsParallel(canvas, image, occupied, tilesX, tilesY, w, h, dx, dy, paint) Then Return
+                For ty = 0 To tilesY - 1
+                    DrawTileRow(canvas, image, occupied, tilesX, ty, w, h, dx, dy, paint)
+                Next
+            End Using
         End Sub
+
+        ''' <summary>Zeichnet die Laeufe belegter Kacheln EINER Kachelreihe.</summary>
+        Private Shared Sub DrawTileRow(canvas As SKCanvas, image As SKImage, occupied As Boolean(), tilesX As Integer, ty As Integer,
+                                       w As Integer, h As Integer, dx As Integer, dy As Integer, paint As SKPaint)
+            Dim tx = 0
+            While tx < tilesX
+                If Not occupied(ty * tilesX + tx) Then
+                    tx += 1
+                    Continue While
+                End If
+                Dim runStart = tx
+                While tx < tilesX AndAlso occupied(ty * tilesX + tx)
+                    tx += 1
+                End While
+                Dim left = runStart * BlenderTileSize
+                Dim top = ty * BlenderTileSize
+                Dim right = Math.Min(w, tx * BlenderTileSize)
+                Dim bottom = Math.Min(h, top + BlenderTileSize)
+                canvas.DrawImage(image, New SKRect(left, top, right, bottom),
+                                 New SKRect(left + dx, top + dy, right + dx, bottom + dy), paint)
+            End While
+        End Sub
+
+        ''' <summary>Zu welcher Bitmap eine Zeichenflaeche gehoert. An die Bildpunkte einer SKCanvas
+        ''' kommt man nicht heran; wer eine Flaeche fuer Objekte anlegt, meldet deshalb ihre Bitmap.
+        ''' Der Eintrag haelt nichts am Leben und faellt mit der Flaeche weg.</summary>
+        Private Shared ReadOnly RasterTargets As New System.Runtime.CompilerServices.ConditionalWeakTable(Of SKCanvas, SKBitmap)()
+
+        ''' <summary>Meldet, dass <paramref name="canvas"/> unmittelbar in <paramref name="target"/>
+        ''' zeichnet. Ohne die Meldung mischt <see cref="DrawLayerBitmap"/> auf einem Faden.</summary>
+        Friend Shared Sub NoteRasterTarget(canvas As SKCanvas, target As SKBitmap)
+            If canvas Is Nothing OrElse target Is Nothing Then Return
+            RasterTargets.AddOrUpdate(canvas, target)
+        End Sub
+
+        ''' <summary>Ab so vielen belegten Kacheln lohnt das Verteilen auf die Kerne.</summary>
+        Private Const ParallelBlendMinimumTiles As Integer = 64
+
+        ''' <summary>Mischt die Kachelreihen nebeneinander auf allen Kernen. Liefert False, wenn das
+        ''' hier nicht geht; dann zeichnet der Aufrufer der Reihe nach.
+        '''
+        ''' Skia rechnet einen Zeichenaufruf auf EINEM Faden, und ein SkSL-Blender ist dort der
+        ''' ganze Preis. Die Kachelreihen treffen aber getrennte Zeilen des Ziels (ohne Skalierung,
+        ''' an ganzzahligen Stellen), sie stoeren einander also nicht. Jede Reihe bekommt deshalb
+        ''' eine eigene Zeichenflaeche UEBER DENSELBEN BILDPUNKTEN des Ziels, nur ueber ihre Zeilen,
+        ''' und dieselbe Zeichenanweisung wie sonst: je Bildpunkt rechnet derselbe Blender dasselbe.
+        '''
+        ''' NUR, WO DAS ZIEL DAS HERGIBT: seine Bitmap muss gemeldet sein
+        ''' (<see cref="NoteRasterTarget"/>), die Lage eine ganzzahlige Verschiebung und der
+        ''' Ausschnitt ein Rechteck. Alles andere bleibt beim alten Weg. Innerhalb einer
+        ''' Zwischenebene (SaveLayer) darf dieser Weg nicht laufen, sie haette eigene Bildpunkte;
+        ''' die Ebenen der Objekte werden nirgends in einer gezeichnet.</summary>
+        Private Shared Function DrawTileRunsParallel(canvas As SKCanvas, image As SKImage, occupied As Boolean(),
+                                                     tilesX As Integer, tilesY As Integer, w As Integer, h As Integer,
+                                                     dx As Integer, dy As Integer, paint As SKPaint) As Boolean
+            If Environment.ProcessorCount < 2 Then Return False
+            Dim count = 0
+            For Each isOccupied In occupied
+                If isOccupied Then count += 1
+            Next
+            If count < ParallelBlendMinimumTiles Then Return False
+            If Not canvas.IsClipRect Then Return False
+            Dim matrix = canvas.TotalMatrix
+            If matrix.ScaleX <> 1.0F OrElse matrix.ScaleY <> 1.0F OrElse matrix.SkewX <> 0.0F OrElse matrix.SkewY <> 0.0F OrElse
+               matrix.Persp0 <> 0.0F OrElse matrix.Persp1 <> 0.0F OrElse matrix.Persp2 <> 1.0F Then Return False
+            If matrix.TransX <> CSng(Math.Round(matrix.TransX)) OrElse matrix.TransY <> CSng(Math.Round(matrix.TransY)) Then Return False
+            Dim offsetX = CInt(matrix.TransX) + dx
+            Dim offsetY = CInt(matrix.TransY) + dy
+            Dim clip = canvas.DeviceClipBounds
+            Dim targetBitmap As SKBitmap = Nothing
+            If Not RasterTargets.TryGetValue(canvas, targetBitmap) OrElse targetBitmap Is Nothing OrElse
+               targetBitmap.Handle = IntPtr.Zero Then Return False
+            Using target = targetBitmap.PeekPixels()
+                If target Is Nothing OrElse target.GetPixels() = IntPtr.Zero Then Return False
+                Dim info = target.Info
+                Dim targetPixels = target.GetPixels()
+                Dim targetStride = target.RowBytes
+                Dim clipLeft = Math.Max(0, clip.Left), clipRight = Math.Min(info.Width, clip.Right)
+                Dim clipTop = Math.Max(0, clip.Top), clipBottom = Math.Min(info.Height, clip.Bottom)
+                If clipRight <= clipLeft OrElse clipBottom <= clipTop Then Return True
+                ' Was vorher gezeichnet wurde, muss in den Bildpunkten stehen, bevor andere Flaechen sie lesen.
+                canvas.Flush()
+                Parallel.For(0, tilesY,
+                    Sub(ty)
+                        Dim any = False
+                        For tx = 0 To tilesX - 1
+                            If occupied(ty * tilesX + tx) Then
+                                any = True
+                                Exit For
+                            End If
+                        Next
+                        If Not any Then Return
+                        Dim rowTop = Math.Max(clipTop, ty * BlenderTileSize + offsetY)
+                        Dim rowBottom = Math.Min(clipBottom, Math.Min(h, (ty + 1) * BlenderTileSize) + offsetY)
+                        If rowBottom <= rowTop Then Return
+                        Dim bandInfo = New SKImageInfo(info.Width, rowBottom - rowTop, info.ColorType, info.AlphaType, info.ColorSpace)
+                        Using surface = SKSurface.Create(bandInfo, targetPixels + rowTop * targetStride, targetStride),
+                              bandPaint = paint.Clone()
+                            If surface Is Nothing Then Throw New InvalidOperationException("Blend band surface could not be created")
+                            Dim bandCanvas = surface.Canvas
+                            bandCanvas.ClipRect(New SKRect(clipLeft, 0, clipRight, rowBottom - rowTop))
+                            bandCanvas.Translate(offsetX - dx, offsetY - dy - rowTop)
+                            DrawTileRow(bandCanvas, image, occupied, tilesX, ty, w, h, dx, dy, bandPaint)
+                            bandCanvas.Flush()
+                        End Using
+                    End Sub)
+            End Using
+            Return True
+        End Function
 
         Private Shared Function IsNormalAnnotationBlendMode(blendModeName As String) As Boolean
             Return Not PsdBlendModes.IsCustom(blendModeName) AndAlso ResolveAnnotationBlendMode(blendModeName) = SKBlendMode.SrcOver
@@ -1355,7 +1465,7 @@ Namespace Services
                 Case "colordodge" : Return SKBlendMode.ColorDodge
                 Case "colorburn" : Return SKBlendMode.ColorBurn
                 Case "hardlight" : Return SKBlendMode.HardLight
-                Case "softlight" : Return SKBlendMode.SoftLight
+                Case "softlight", "psdsoftlight" : Return SKBlendMode.SoftLight
                 Case "difference" : Return SKBlendMode.Difference
                 Case "exclusion" : Return SKBlendMode.Exclusion
                 Case "plus" : Return SKBlendMode.Plus

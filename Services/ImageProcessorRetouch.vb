@@ -319,9 +319,9 @@ Namespace Services
             If count <= 0 OrElse count > Integer.MaxValue \ 4 Then Return Nothing
             Dim byteCount = count * 4
             Dim rowByteCount = width * 4
-            Dim src = ArrayPool(Of Byte).Shared.Rent(byteCount)
-            Dim tmp = ArrayPool(Of Byte).Shared.Rent(byteCount)
-            Dim output = ArrayPool(Of Byte).Shared.Rent(byteCount)
+            Dim src = PlanePool(Of Byte).Rent(byteCount)
+            Dim tmp = PlanePool(Of Byte).Rent(byteCount)
+            Dim output = PlanePool(Of Byte).Rent(byteCount)
             Dim result As SKBitmap = Nothing
 
             ' Drei gepoolte Byte-Puffer ersetzen zwoelf Integer-Arrays. Der Algorithmus bleibt
@@ -436,9 +436,9 @@ Namespace Services
                 result?.Dispose()
                 Throw
             Finally
-                ArrayPool(Of Byte).Shared.Return(src)
-                ArrayPool(Of Byte).Shared.Return(tmp)
-                ArrayPool(Of Byte).Shared.Return(output)
+                PlanePool(Of Byte).Return(src)
+                PlanePool(Of Byte).Return(tmp)
+                PlanePool(Of Byte).Return(output)
             End Try
         End Function
 

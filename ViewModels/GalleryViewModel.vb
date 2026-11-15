@@ -673,7 +673,7 @@ Namespace ViewModels
                 ' Die Gruppen entstehen aus der Sortierung; eine andere Sortierung heisst andere Gruppen,
                 ' auch wenn dieselben Bilder in derselben Reihenfolge stehen bleiben.
                 InvalidateGroupLayout()
-                FilterAndSort()
+                FilterAndSortInteractive()
                 AppSettingsService.SaveGallerySort(_sortMode, _sortAscending)
             End Set
         End Property
@@ -687,7 +687,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_sortAscending, value)
                 Me.RaisePropertyChanged(NameOf(SortLabel))
                 RaiseSortStateChanged()
-                FilterAndSort()
+                FilterAndSortInteractive()
                 AppSettingsService.SaveGallerySort(_sortMode, _sortAscending)
             End Set
         End Property
@@ -849,7 +849,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterFavoriteOnly))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveGalleryFilters()
             End Set
         End Property
@@ -867,7 +867,7 @@ Namespace ViewModels
                 End If
             End If
             RaiseFilterRatingStateChanged()
-            FilterAndSort()
+            FilterAndSortInteractive()
             SaveGalleryFilters()
         End Sub
 
@@ -883,7 +883,7 @@ Namespace ViewModels
                 If Not _filterColorLabels.Add(value) Then _filterColorLabels.Remove(value)
             End If
             RaiseFilterColorLabelStateChanged()
-            FilterAndSort()
+            FilterAndSortInteractive()
         End Sub
 
         Private Sub RaiseFilterColorLabelStateChanged()
@@ -990,7 +990,7 @@ Namespace ViewModels
                 RefreshFileTypeFilterOptions()
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveGalleryFilters()
             End Set
         End Property
@@ -2262,7 +2262,7 @@ Namespace ViewModels
                                                                ApplyButtonFilters()
                                                            End If
                                                        Else
-                                                           FilterAndSort()
+                                                           FilterAndSortInteractive()
                                                        End If
                                                    End Sub
 
@@ -10821,10 +10821,79 @@ Namespace ViewModels
         End Sub
 
         Private Sub FilterAndSort()
-            ' Jeder Lauf erledigt auch einen vorgemerkten aus dem Fuellen einer Suchansicht.
+            ' Jeder Lauf erledigt auch einen vorgemerkten aus dem Fuellen einer Suchansicht, und er
+            ' ueberholt einen Lauf, der noch im Hintergrund rechnet (FilterAndSortInteractive).
             _fillSortPending = False
             _fillSortTimer?.Stop()
-            Dim filtered = _allItems.AsEnumerable()
+            _filterSortVersion += 1
+            Dim filteredList = ApplySimilarView(ApplyStackFocus(ComputeFilteredList(_allItems)))
+            FinishFilterAndSort(filteredList, SortItems(filteredList))
+        End Sub
+
+        ''' <summary>Ab so vielen Elementen rechnen Filter- und Sortierwechsel im Hintergrund
+        ''' (<see cref="FilterAndSortInteractive"/>). Darunter kostet der Lauf wenige Millisekunden
+        ''' und bleibt, wie er ist; bei 100000 Bildern sind es je nach Sortierung 74 bis 156 ms,
+        ''' in denen das Fenster stand.</summary>
+        Friend Shared BackgroundFilterSortThreshold As Integer = 30000
+
+        ''' <summary>Zaehlt die Laeufe von <see cref="FilterAndSort"/>. Ein Lauf im Hintergrund
+        ''' uebernimmt sein Ergebnis nur, wenn inzwischen kein anderer begonnen hat.</summary>
+        Private _filterSortVersion As Long
+
+        ''' <summary>Wie <see cref="FilterAndSort"/>, fuer die Stellen, an denen der Nutzer Filter,
+        ''' Sortierung oder Suchtext umstellt: bei einem grossen Bestand laufen Sieben und Sortieren
+        ''' im Hintergrund auf einer Momentaufnahme, und das Fenster bleibt bedienbar.
+        '''
+        ''' NUR HIER, nicht in FilterAndSort selbst. Die meisten Aufrufer brauchen die Liste sofort
+        ''' (Auswahl nach dem Abgleich, Stapelschritte, das Fuellen einer Suchansicht), und fuer sie
+        ''' aendert sich nichts. Auf dem Anzeigefaden bleibt, was an den Kacheln haengt: Stapel
+        ''' bilden und die Liste austauschen.
+        '''
+        ''' Ein spaeterer Lauf, gleich welcher Art, ueberholt diesen: sein Ergebnis wird dann
+        ''' verworfen. Mit geoeffneter Serie oder in der Ansicht aehnlicher Bilder rechnet er wie
+        ''' bisher sofort, weil diese beiden Schritte selbst den Zustand der Ansicht aendern.</summary>
+        Private Sub FilterAndSortInteractive()
+            If _allItems.Count < BackgroundFilterSortThreshold OrElse _focusedStackPaths IsNot Nothing OrElse
+               IsSimilarView OrElse Not Dispatcher.UIThread.CheckAccess() Then
+                FilterAndSort()
+                Return
+            End If
+            _fillSortPending = False
+            _fillSortTimer?.Stop()
+            _filterSortVersion += 1
+            Dim version = _filterSortVersion
+            Dim snapshot = _allItems.ToList()
+            Task.Run(Function()
+                         Dim filteredList = ComputeFilteredList(snapshot)
+                         Return (Filtered:=filteredList, Sorted:=SortItems(filteredList).ToList())
+                     End Function).ContinueWith(
+                Sub(run)
+                    If run.IsFaulted Then
+                        ' Ein Filter, der waehrend des Laufs umgestellt wurde, kann ihn scheitern
+                        ' lassen (die Mengen der Sterne und Farben werden nebenher gelesen). Dann
+                        ' rechnet laengst der naechste, und dieser hier ist ohne Belang. Gilt er
+                        ' noch, den gewohnten Weg, damit die Ansicht nicht stehen bleibt.
+                        Dim failure = run.Exception
+                        Dispatcher.UIThread.Post(Sub()
+                                                     If version <> _filterSortVersion Then Return
+                                                     DiagnosticLogService.LogException("Gallery.FilterAndSort", failure)
+                                                     FilterAndSort()
+                                                 End Sub)
+                        Return
+                    End If
+                    Dim result = run.Result
+                    Dispatcher.UIThread.Post(Sub()
+                                                 If version <> _filterSortVersion Then Return
+                                                 FinishFilterAndSort(result.Filtered, result.Sorted)
+                                             End Sub)
+                End Sub, TaskScheduler.Default)
+        End Sub
+
+        ''' <summary>Der erste Teil eines Laufs: aus <paramref name="source"/> die Elemente, die nach
+        ''' Suchtext und Filtern bleiben, in der Reihenfolge der Quelle. Liest nur; darf deshalb auf
+        ''' einer Momentaufnahme im Hintergrund laufen.</summary>
+        Private Function ComputeFilteredList(source As IEnumerable(Of ImageItem)) As List(Of ImageItem)
+            Dim filtered = source
 
             ' Mehrere asynchrone Quellen dürfen denselben Treffer melden (Katalog-Wiederherstellung
             ' und nachfolgender Dateisystemlauf einer Suchliste). Die Anzeige besitzt deshalb eine
@@ -10908,9 +10977,14 @@ Namespace ViewModels
                     String.Equals(i.ExtensionLower, extension, StringComparison.OrdinalIgnoreCase))
             End If
 
-            Dim filteredList = filtered.ToList()
-            filteredList = ApplySimilarView(ApplyStackFocus(filteredList))
-            Items.ReplaceAll(ApplyStacks(filteredList, SimilarOrder(SortItems(filteredList))))
+            Return filtered.ToList()
+        End Function
+
+        ''' <summary>Der zweite Teil eines Laufs, immer auf dem Anzeigefaden: aus der gesiebten Liste
+        ''' und ihrer sortierten Folge die Stapel bilden, die Liste der Ansicht austauschen,
+        ''' Anzeigefenster, Zaehler und Statuszeile nachziehen.</summary>
+        Private Sub FinishFilterAndSort(filteredList As List(Of ImageItem), sorted As IEnumerable(Of ImageItem))
+            Items.ReplaceAll(ApplyStacks(filteredList, SimilarOrder(sorted)))
             RefreshFileTypeFilterOptions()
             If DisplayItems.Count = 0 Then
                 ResetDisplayWindow()
@@ -10989,7 +11063,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterKeptOnly))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveFileBrowserSettings()
             End Set
         End Property
@@ -11040,7 +11114,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(IsFilterEditedHide))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
-                FilterAndSort()
+                FilterAndSortInteractive()
                 SaveFileBrowserSettings()
             End Set
         End Property

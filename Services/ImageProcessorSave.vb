@@ -127,6 +127,7 @@ Namespace Services
                         Dim layerBitmap = New SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul)
                         Dim drawn = 0
                         Using canvas = New SKCanvas(layerBitmap)
+                            NoteRasterTarget(canvas, layerBitmap)
                             canvas.Clear(SKColors.Transparent)
                             drawn = DrawAnnotationsOnCanvas(canvas, adj, width, height, 0, 0, width, height,
                                                             New List(Of ImageAnnotation) From {forRender})
@@ -652,6 +653,26 @@ Namespace Services
                                          Optional denoise As DenoiseModelService.DenoiseRequest = Nothing,
                                          Optional missingSource As MissingSourceMetadata = MissingSourceMetadata.FailWhenSameFile,
                                          Optional metadataParts As SavedMetadataParts? = Nothing) As Boolean
+            ' Der Rahmen der Ausgabe fuer den Vorrat der bildgrossen Felder (PlanePool): solange
+            ' er steht, bekommen die Filterstufen ihre Ebenen in genauer Laenge und reichen sie
+            ' von Stufe zu Stufe weiter; mit seinem Ende wird der Vorrat geleert.
+            Using PlanePoolScope.BeginOutput()
+                Return SaveImageCore(sourcePath, targetPath, adj, quality, preserveMetadata, workingFull, developRaw,
+                                     applyPendingBaked, copyrightText, cancel, denoise, missingSource, metadataParts)
+            End Using
+        End Function
+
+        ''' <summary>Der Inhalt von <see cref="SaveImage"/>, ohne den Rahmen fuer den Vorrat.</summary>
+        Private Shared Function SaveImageCore(sourcePath As String, targetPath As String, adj As ImageAdjustments, quality As Integer,
+                                              preserveMetadata As Boolean,
+                                              workingFull As SKBitmap,
+                                              developRaw As Boolean,
+                                              applyPendingBaked As Boolean,
+                                              copyrightText As String,
+                                              cancel As Threading.CancellationToken,
+                                              denoise As DenoiseModelService.DenoiseRequest,
+                                              missingSource As MissingSourceMetadata,
+                                              metadataParts As SavedMetadataParts?) As Boolean
             ' <metadataParts>: die Schalter "Uebernehmen" des Dialogs. Ohne Angabe gilt, was vorher
             ' galt: mit Aufnahmedaten alles, ohne nichts.
             ' <denoise>: Entrauschen mit Modell aus dem Stapel, siehe weiter unten beim Anwenden.

@@ -3305,6 +3305,12 @@ Namespace Services
             Dim image As IntPtr = IntPtr.Zero
             ' Bei einem einkanaligen Bild die auf drei Kanaele aufgefaecherte Kopie (siehe unten).
             Dim expanded As IntPtr = IntPtr.Zero
+            ' LibRaw ist schon geschlossen (gleich nach make_mem_image).
+            Dim handleClosed = False
+            ' Die gesicherten linearen Daten dieses Laufs und ihre Heftung, solange aus ihnen
+            ' umgesetzt wird.
+            Dim kept As Byte() = Nothing
+            Dim keptPin As GCHandle = Nothing
             Dim abortable = BeginAbortable(handle)
             Try
                 If plainDng IsNot Nothing Then
@@ -3496,6 +3502,15 @@ Namespace Services
                 image = _makeMemImage(handle, errc)
                 If image = IntPtr.Zero OrElse errc <> 0 Then Return Nothing
 
+                ' LIBRAW HIER SCHON SCHLIESSEN. Das Bild aus make_mem_image ist ein eigener Block
+                ' und haengt nicht mehr am Handle; in dem liegen aber noch die Sensordaten und
+                ' LibRaws Arbeitsbild mit vier Werten zu 16 Bit je Bildpunkt (bei 45 Megapixeln
+                ' rund 450 MB). Bis zum Ende dieser Funktion gehalten, lagen sie waehrend des
+                ' Sicherns und des ganzen Umsetzens nach 8 Bit ungenutzt daneben.
+                If abortable Then EndAbortable(handle)
+                _close(handle)
+                handleClosed = True
+
                 ' libraw_processed_image_t: type(4) height(2) width(2) colors(2) bits(2) data_size(4) data.
                 Dim imageType = Marshal.ReadInt32(image, 0)
                 Dim height = CInt(CUShort(Marshal.ReadInt16(image, 4)))
@@ -3587,6 +3602,7 @@ Namespace Services
                                 _cachedRawColorPath = ColorPathState()
                                 _cachedRawHalf = useHalfSize
                             End SyncLock
+                            kept = keep
                             DiagnosticLogService.LogAlways("RawDecodeService.RawCache",
                                 $"abgelegt, {keep.Length \ (1024 * 1024)} MB")
                         Catch ex As OutOfMemoryException
@@ -3605,6 +3621,20 @@ Namespace Services
                         DiagnosticLogService.LogAlways("RawDecodeService.Cancelled",
                             $"Aufbau aus 16 Bit ausgelassen, Ergebnis nicht mehr gebraucht: {IO.Path.GetFileName(path)}")
                         Return Nothing
+                    End If
+                    ' AUS DER EIGENEN KOPIE UMSETZEN, wenn es sie gibt, und LibRaws Bild vorher
+                    ' freigeben: beide tragen dieselben Werte, und waehrend des Umsetzens laege
+                    ' sonst das Bild ein zweites Mal im Speicher (bei 45 Megapixeln 270 MB). Der
+                    ' Inhalt des Feldes aendert sich nach dem Sichern nicht mehr.
+                    If kept IsNot Nothing Then
+                        keptPin = GCHandle.Alloc(kept, GCHandleType.Pinned)
+                        pixels = keptPin.AddrOfPinnedObject()
+                        If expanded <> IntPtr.Zero Then
+                            Marshal.FreeHGlobal(expanded)
+                            expanded = IntPtr.Zero
+                        End If
+                        _clearMem(image)
+                        image = IntPtr.Zero
                     End If
                     ' Mit Entrauschen aus dessen Ergebnis statt aus den verrauschten Daten.
                     Dim denoisedSource = If(keepRaw AndAlso Not useHalfSize,
@@ -3670,12 +3700,19 @@ Namespace Services
             Catch
                 Return Nothing
             Finally
+                If keptPin.IsAllocated Then keptPin.Free()
                 If expanded <> IntPtr.Zero Then Marshal.FreeHGlobal(expanded)
                 If image <> IntPtr.Zero Then _clearMem(image)
                 ' VOR dem Schliessen austragen: danach kann ein neues Handle dieselbe Adresse
-                ' bekommen, und das Austragen naehme ihm seine Frage weg.
-                If abortable Then EndAbortable(handle)
-                _close(handle)
+                ' bekommen, und das Austragen naehme ihm seine Frage weg. Nach einem gelungenen
+                ' make_mem_image ist beides schon geschehen (handleClosed).
+                If Not handleClosed Then
+                    If abortable Then EndAbortable(handle)
+                    _close(handle)
+                End If
+                ' Was LibRaw an kleineren Bloecken freigegeben hat, liegt noch im Haufen der
+                ' C-Bibliothek; ans System geht es erst auf Anstoss (NativeHeap).
+                NativeHeap.TrimSoon()
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
                 If plainPin.IsAllocated Then plainPin.Free()
             End Try
@@ -4215,23 +4252,31 @@ Namespace Services
                                         ' Kamerakanaelen machte +35 von Hand den Saum doppelt so breit.
                                         Dim rx = cx + dxPix * fr, ry = cy + dyPix * fr
                                         Dim bx = cx + dxPix * fb, by = cy + dyPix * fb
+                                        ' Alle drei Kamerakanaele einer Stelle in EINEM Zugriff
+                                        ' (AbtastenBilinearRgb): dieselben Werte wie drei einzelne
+                                        ' Abtastungen, aber Lage, Gewichte und die beiden Zeilen nur
+                                        ' einmal. Je Kanal einzeln kostete der Farbquerfehler an 33
+                                        ' Megapixeln 1,3 Sekunden des Umsetzens.
+                                        Dim red0, red1, red2, blue0, blue1, blue2 As Integer
+                                        AbtastenBilinearRgb(FetchRow, width, height, rx, ry, red0, red1, red2)
+                                        AbtastenBilinearRgb(FetchRow, width, height, bx, by, blue0, blue1, blue2)
                                         If planeGains Is Nothing Then
-                                            tcaRed = pm(0) * AbtastenBilinear(FetchRow, width, height, rx, ry, 0) +
-                                                     pm(1) * AbtastenBilinear(FetchRow, width, height, rx, ry, 1) +
-                                                     pm(2) * AbtastenBilinear(FetchRow, width, height, rx, ry, 2)
-                                            tcaBlue = pm(6) * AbtastenBilinear(FetchRow, width, height, bx, by, 0) +
-                                                      pm(7) * AbtastenBilinear(FetchRow, width, height, bx, by, 1) +
-                                                      pm(8) * AbtastenBilinear(FetchRow, width, height, bx, by, 2)
+                                            tcaRed = pm(0) * red0 +
+                                                     pm(1) * red1 +
+                                                     pm(2) * red2
+                                            tcaBlue = pm(6) * blue0 +
+                                                      pm(7) * blue1 +
+                                                      pm(8) * blue2
                                         Else
                                             ' Die Karten gehoeren auf die Kamerakanaele VOR der Matrix;
                                             ' sie aendern sich ueber den Versatz des Saums nicht
                                             ' merklich, es gilt die Verstaerkung dieses Bildpunkts.
-                                            tcaRed = pm(0) * gainR * AbtastenBilinear(FetchRow, width, height, rx, ry, 0) +
-                                                     pm(1) * gainG * AbtastenBilinear(FetchRow, width, height, rx, ry, 1) +
-                                                     pm(2) * gainB * AbtastenBilinear(FetchRow, width, height, rx, ry, 2)
-                                            tcaBlue = pm(6) * gainR * AbtastenBilinear(FetchRow, width, height, bx, by, 0) +
-                                                      pm(7) * gainG * AbtastenBilinear(FetchRow, width, height, bx, by, 1) +
-                                                      pm(8) * gainB * AbtastenBilinear(FetchRow, width, height, bx, by, 2)
+                                            tcaRed = pm(0) * gainR * red0 +
+                                                     pm(1) * gainG * red1 +
+                                                     pm(2) * gainB * red2
+                                            tcaBlue = pm(6) * gainR * blue0 +
+                                                      pm(7) * gainG * blue1 +
+                                                      pm(8) * gainB * blue2
                                         End If
                                         tcaSrgb = True
                                         r = rowShorts(x * 3) And &HFFFF
@@ -4472,6 +4517,36 @@ Namespace Services
             Dim v = top * (1.0 - fy) + bottom * fy
             Return CInt(Math.Min(Math.Max(v, 0.0), 65535.0))
         End Function
+
+        ''' <summary>Wie <see cref="AbtastenBilinear"/> fuer alle drei Kanaele derselben Stelle: Lage,
+        ''' Gewichte und die beiden Zeilen einmal, die Rechnung je Kanal Zeichen fuer Zeichen
+        ''' dieselbe. Die Ergebnisse sind die der drei einzelnen Aufrufe.</summary>
+        Private Shared Sub AbtastenBilinearRgb(holeZeile As Func(Of Integer, Short()),
+                                               width As Integer, height As Integer,
+                                               sx As Double, sy As Double,
+                                               ByRef kanal0 As Integer, ByRef kanal1 As Integer, ByRef kanal2 As Integer)
+            If sx < 0 Then sx = 0
+            If sy < 0 Then sy = 0
+            If sx > width - 1.001 Then sx = width - 1.001
+            If sy > height - 1.001 Then sy = height - 1.001
+            Dim x0 = CInt(Math.Floor(sx)), y0 = CInt(Math.Floor(sy))
+            Dim fx = sx - x0, fy = sy - y0
+            Dim x1 = Math.Min(x0 + 1, width - 1)
+            Dim z0 = holeZeile(y0), z1 = holeZeile(y0 + 1)
+            Dim o0 = x0 * 3, o1 = x1 * 3
+            Dim top = (z0(o0) And &HFFFF) * (1.0 - fx) + (z0(o1) And &HFFFF) * fx
+            Dim bottom = (z1(o0) And &HFFFF) * (1.0 - fx) + (z1(o1) And &HFFFF) * fx
+            Dim v = top * (1.0 - fy) + bottom * fy
+            kanal0 = CInt(Math.Min(Math.Max(v, 0.0), 65535.0))
+            top = (z0(o0 + 1) And &HFFFF) * (1.0 - fx) + (z0(o1 + 1) And &HFFFF) * fx
+            bottom = (z1(o0 + 1) And &HFFFF) * (1.0 - fx) + (z1(o1 + 1) And &HFFFF) * fx
+            v = top * (1.0 - fy) + bottom * fy
+            kanal1 = CInt(Math.Min(Math.Max(v, 0.0), 65535.0))
+            top = (z0(o0 + 2) And &HFFFF) * (1.0 - fx) + (z0(o1 + 2) And &HFFFF) * fx
+            bottom = (z1(o0 + 2) And &HFFFF) * (1.0 - fx) + (z1(o1 + 2) And &HFFFF) * fx
+            v = top * (1.0 - fy) + bottom * fy
+            kanal2 = CInt(Math.Min(Math.Max(v, 0.0), 65535.0))
+        End Sub
 
         ' Die frueher hier stehende SCHAETZUNG des Farbquerfehlers aus dem Bildinhalt ist
         ' entfernt. Sie fand auf echten Fotos nur ein Neuntel des Farbsaums, waehrend Messwerte
