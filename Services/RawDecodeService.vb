@@ -52,6 +52,7 @@ Namespace Services
         Private Delegate Function OpenFileFn(handle As IntPtr, path As IntPtr) As Integer
         Private Delegate Function OpenBufferFn(handle As IntPtr, buffer As IntPtr, size As UIntPtr) As Integer
         Private Delegate Function IntFn(handle As IntPtr) As Integer
+        Private Delegate Function IndexedIntFn(handle As IntPtr, index As Integer) As Integer
         Private Delegate Sub SetIntFn(handle As IntPtr, value As Integer)
         Private Delegate Function GetCamMulFn(handle As IntPtr, index As Integer) As Single
         ''' <summary>libraw_get_rgb_cam: Zeile und Spalte der Matrix Kameraraum -> Ausgabefarbraum.
@@ -130,6 +131,7 @@ Namespace Services
         Private Shared _setAdjustMaximumThr As SetFloatFn
         Private Shared _process As IntFn
         Private Shared _unpackThumb As IntFn
+        Private Shared _unpackThumbEx As IndexedIntFn
         Private Shared _makeMemThumb As MakeMemImageFn
         Private Shared _makeMemImage As MakeMemImageFn
         Private Shared _clearMem As PtrFn
@@ -492,6 +494,12 @@ Namespace Services
                         _getDecoderInfo = Nothing
                         _dataErrorCallbackPointer = IntPtr.Zero
                     End Try
+                    ' OPTIONAL: ohne ihn nimmt die Kachel weiter die groesste Vorschau.
+                    Try
+                        _unpackThumbEx = GetExport(Of IndexedIntFn)(handle, "libraw_unpack_thumb_ex")
+                    Catch
+                        _unpackThumbEx = Nothing
+                    End Try
                     Try
                         _openBuffer = GetExport(Of OpenBufferFn)(handle, "libraw_open_buffer")
                     Catch
@@ -577,7 +585,7 @@ Namespace Services
                     _setHighlight = Nothing : _setAdjustMaximumThr = Nothing
                     _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
                     _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
-                    _unpackThumb = Nothing : _makeMemThumb = Nothing
+                    _unpackThumb = Nothing : _unpackThumbEx = Nothing : _makeMemThumb = Nothing
                     _cameraList = Nothing : _cameraCount = Nothing
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
@@ -661,6 +669,118 @@ Namespace Services
                 _close(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
+        End Function
+
+        ''' <summary>Die KLEINSTE eingebettete JPEG-Vorschau, deren kurze Kante noch
+        ''' <paramref name="minShortSide"/> erreicht, oder Nothing (dann gilt der Weg ueber
+        ''' <see cref="TryExtractThumbnail"/>).
+        '''
+        ''' WOZU. LibRaws einfache Abfrage liefert die GROESSTE Vorschau, bei heutigen Kameras das
+        ''' ganze Bild als JPEG (33 bis 60 Megapixel). Fuer eine Kachel von 480 Punkten kostete
+        ''' allein dessen Dekodieren 60 bis 100 ms, auch in Achtelstufe. Viele Formate fuehren
+        ''' daneben eine mittlere Vorschau (1616x1080 bei Sony, 1620x1080 bei Canon und Nikon), die
+        ''' fuer die Kachel reicht und in wenigen Millisekunden dekodiert ist.
+        '''
+        ''' NUR MIT GLEICHEM SEITENVERHAELTNIS wie die groesste Vorschau: manche kleinen Vorschauen
+        ''' tragen schwarze Balken oder ein anderes Format. Und nur JPEG; alles andere bleibt beim
+        ''' alten Weg. Braucht libraw_unpack_thumb_ex (LibRaw ab 0.21); fehlt der Einstieg, Nothing.
+        ''' </summary>
+        Public Shared Function TryExtractSmallestThumbnail(path As String, minShortSide As Integer) As MemoryStream
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable OrElse _unpackThumbEx Is Nothing Then Return Nothing
+            If Not _reentrant Then
+                SyncLock _nativeLock
+                    Return ExtractSmallestThumbnailCore(path, minShortSide)
+                End SyncLock
+            End If
+            Return ExtractSmallestThumbnailCore(path, minShortSide)
+        End Function
+
+        ''' <summary>So viele Vorschauen fuehrt LibRaw hoechstens je Datei (LIBRAW_THUMBNAIL_MAXCOUNT).</summary>
+        Private Const MaxEmbeddedThumbnails As Integer = 8
+
+        Private Shared Function ExtractSmallestThumbnailCore(path As String, minShortSide As Integer) As MemoryStream
+            Dim handle = _init(0UI)
+            If handle = IntPtr.Zero Then Return Nothing
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                pathPtr = StringToUtf8(path)
+                If _openFile(handle, pathPtr) <> 0 Then Return Nothing
+                Dim payloads As New List(Of Byte())()
+                Dim sizes As New List(Of (Width As Integer, Height As Integer))()
+                For index = 0 To MaxEmbeddedThumbnails - 1
+                    If _unpackThumbEx(handle, index) <> 0 Then Continue For
+                    Dim errc = 0
+                    Dim thumb = _makeMemThumb(handle, errc)
+                    If thumb = IntPtr.Zero Then Continue For
+                    Try
+                        If errc <> 0 OrElse Marshal.ReadInt32(thumb, 0) <> 1 Then Continue For
+                        Dim dataSize = Marshal.ReadInt32(thumb, 12)
+                        If dataSize <= 4 Then Continue For
+                        Dim payload(dataSize - 1) As Byte
+                        Marshal.Copy(thumb + 16, payload, 0, dataSize)
+                        Dim size = JpegSize(payload)
+                        If size.Width <= 0 OrElse size.Height <= 0 Then Continue For
+                        payloads.Add(payload)
+                        sizes.Add(size)
+                    Finally
+                        _clearMem(thumb)
+                    End Try
+                Next
+                If payloads.Count < 2 Then Return Nothing
+                Dim largest = 0
+                For i = 1 To sizes.Count - 1
+                    If CLng(sizes(i).Width) * sizes(i).Height > CLng(sizes(largest).Width) * sizes(largest).Height Then largest = i
+                Next
+                Dim largestRatio = Math.Max(sizes(largest).Width, sizes(largest).Height) / CDbl(Math.Min(sizes(largest).Width, sizes(largest).Height))
+                Dim best = -1
+                For i = 0 To sizes.Count - 1
+                    If i = largest Then Continue For
+                    Dim shortSide = Math.Min(sizes(i).Width, sizes(i).Height)
+                    If shortSide < minShortSide Then Continue For
+                    Dim ratio = Math.Max(sizes(i).Width, sizes(i).Height) / CDbl(shortSide)
+                    If Math.Abs(ratio - largestRatio) > largestRatio * 0.015 Then Continue For
+                    If best < 0 OrElse CLng(sizes(i).Width) * sizes(i).Height < CLng(sizes(best).Width) * sizes(best).Height Then best = i
+                Next
+                If best < 0 Then Return Nothing
+                Return New MemoryStream(payloads(best))
+            Catch
+                Return Nothing
+            Finally
+                _close(handle)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
+        ''' <summary>Breite und Hoehe aus dem Kopf einer JPEG-Datei (erster SOF-Abschnitt), ohne
+        ''' sie zu dekodieren. (0, 0), wenn die Bytes kein lesbares JPEG sind.</summary>
+        Friend Shared Function JpegSize(data As Byte()) As (Width As Integer, Height As Integer)
+            If data Is Nothing OrElse data.Length < 4 OrElse data(0) <> &HFF OrElse data(1) <> &HD8 Then Return (0, 0)
+            Dim position = 2
+            While position + 9 < data.Length
+                If data(position) <> &HFF Then Return (0, 0)
+                Dim marker = data(position + 1)
+                ' Fuellbytes vor einem Marker.
+                If marker = &HFF Then
+                    position += 1
+                    Continue While
+                End If
+                ' Marker ohne Laenge.
+                If marker = &HD8 OrElse marker = &H1 OrElse (marker >= &HD0 AndAlso marker <= &HD7) Then
+                    position += 2
+                    Continue While
+                End If
+                If marker = &HD9 OrElse marker = &HDA Then Return (0, 0)
+                Dim length = (CInt(data(position + 2)) << 8) Or data(position + 3)
+                If length < 2 Then Return (0, 0)
+                Dim isFrame = marker >= &HC0 AndAlso marker <= &HCF AndAlso marker <> &HC4 AndAlso marker <> &HC8 AndAlso marker <> &HCC
+                If isFrame Then
+                    Dim height = (CInt(data(position + 5)) << 8) Or data(position + 6)
+                    Dim width = (CInt(data(position + 7)) << 8) Or data(position + 8)
+                    Return (width, height)
+                End If
+                position += 2 + length
+            End While
+            Return (0, 0)
         End Function
 
         Private Shared Function EncodeRgbToPng(rgb As Byte(), width As Integer, height As Integer) As MemoryStream

@@ -228,11 +228,15 @@ Namespace ViewModels
                             If Environment.TickCount64 - lastFlush < SubfolderBatchMilliseconds Then Continue For
                             Dim ready = batch
                             batch = New List(Of ImageItem)()
-                            Await Dispatcher.UIThread.InvokeAsync(Sub() AdoptSubfolderItems(folderPath, thumbnailToken, ready, adopted))
+                            Await Dispatcher.UIThread.InvokeAsync(
+                                Sub() PerformanceTraceService.Measure("Unterordner: Schub uebernehmen",
+                                                                      Sub() AdoptSubfolderItems(folderPath, thumbnailToken, ready, adopted)))
                             lastFlush = Environment.TickCount64
                         Next
                         If batch.Count > 0 Then
-                            Await Dispatcher.UIThread.InvokeAsync(Sub() AdoptSubfolderItems(folderPath, thumbnailToken, batch, adopted))
+                            Await Dispatcher.UIThread.InvokeAsync(
+                                Sub() PerformanceTraceService.Measure("Unterordner: Schub uebernehmen",
+                                                                      Sub() AdoptSubfolderItems(folderPath, thumbnailToken, batch, adopted)))
                         End If
                     End Function, thumbnailToken)
             Catch ex As OperationCanceledException
@@ -258,7 +262,10 @@ Namespace ViewModels
             ' zeigt seine Kachel aus dem Zwischenspeicher, die Datei wird nie angefasst.
             Dim thumbnails = adopted.Where(Function(i) Not i.IsOffline).ToList()
             If thumbnails.Count = 0 Then Return
-            Dispatcher.UIThread.Post(Sub() ImageItem.QueueBackgroundThumbnails(thumbnails), DispatcherPriority.Background)
+            Dispatcher.UIThread.Post(
+                Sub() PerformanceTraceService.Measure("Unterordner: Kacheln einreihen",
+                                                      Sub() ImageItem.QueueBackgroundThumbnails(thumbnails)),
+                DispatcherPriority.Background)
         End Function
 
         ''' <summary>Gehoert ein Ergebnis des Nachladens noch zur Ansicht? Derselbe Ordner, derselbe

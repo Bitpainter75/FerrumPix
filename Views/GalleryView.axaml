@@ -2253,6 +2253,7 @@
                                                     <!-- Behalten und Verworfen haengen an der Einstellung
                                                          (PickBadgeEnabled, ab Werk an). -->
                                                     <Panel IsVisible="{Binding DataContext.PickBadgeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                    <icons:DeferredPart Load="{Binding IsRejected}"><Template>
                                                     <Button Classes="reject-badge tile-action-hit"
                                                             IsVisible="{Binding IsRejected}"
                                                             Click="OnRejectBadgeClick"
@@ -2263,9 +2264,11 @@
                                                                        HorizontalAlignment="Center"
                                                                        VerticalAlignment="Center"/>
                                                     </Button>
+                                                    </Template></icons:DeferredPart>
                                                     <!-- BEHALTEN: dieselbe Pille in Gruen, ohne das Bild
                                                          zu dimmen. Ein Klick hebt das Behalten fuer genau
                                                          dieses Bild auf (samt verstecktem Partner). -->
+                                                    <icons:DeferredPart Load="{Binding IsPicked}"><Template>
                                                     <Button Classes="keep-badge tile-action-hit"
                                                             IsVisible="{Binding IsPicked}"
                                                             Click="OnKeepBadgeClick"
@@ -2276,6 +2279,7 @@
                                                                        HorizontalAlignment="Center"
                                                                        VerticalAlignment="Center"/>
                                                     </Button>
+                                                    </Template></icons:DeferredPart>
                                                     </Panel>
                                                     <!-- Ein KNOPF, kein reines Zeichen: ein Klick öffnet
                                                          das Bild im Editor, wie "Anpassen" in der
@@ -2283,6 +2287,7 @@
                                                          er den Druck selbst ab, die Kachel wählt dabei
                                                          nichts aus und beginnt kein Ziehen. -->
                                                     <Panel IsVisible="{Binding DataContext.EditedBadgeEnabled, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                        <icons:DeferredPart Load="{Binding IsEdited}"><Template>
                                                         <Button Classes="edited-badge tile-action-hit"
                                                                 IsVisible="{Binding IsEdited}"
                                                                 Click="OnHoverOpenEditorClick"
@@ -2293,6 +2298,7 @@
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
                                                         </Button>
+                                                        </Template></icons:DeferredPart>
                                                     </Panel>
                                                     <!-- NUR IM KATALOG (ImageItem.IsOffline): dasselbe Zeichen
                                                          in FP.Accent wie im Ordnerbaum (Stecker fuer das
@@ -2353,6 +2359,7 @@
                                                         </MultiBinding>
                                                     </TextBlock.IsVisible>
                                                 </TextBlock>
+                                                <icons:DeferredPart Load="{Binding IsVideoFile}"><Template>
                                                 <Button IsVisible="{Binding IsVideoFile}"
                                                         Classes="video-play-badge"
                                                         Width="46" Height="46"
@@ -2367,6 +2374,7 @@
                                                                    VerticalAlignment="Center"
                                                                    IconBrush="{DynamicResource FP.OnAccent}"/>
                                                 </Button>
+                                                </Template></icons:DeferredPart>
                                                 <!-- DIE TREFFERFLAECHE IST GROESSER ALS DER KREIS.
                                                      Sichtbar bleibt der 16er-Kreis an derselben
                                                      Stelle (Mitte 16 Punkte von den Kanten), der
@@ -2404,6 +2412,7 @@
                                                      die Knoepfe links (gallery-hover-actions): beide
                                                      sind 30 hoch, ihre Mitten liegen auf einer Linie
                                                      (oben 5, siehe die Reihe Verworfen/Bearbeitet). -->
+                                                <icons:DeferredPart Load="{Binding HasStackBadge}" ZIndex="3"><Template>
                                                 <Button Classes="gallery-overlay-btn stack-badge tile-action-hit"
                                                         Classes.expanded="{Binding IsStackExpanded}"
                                                         IsVisible="{Binding HasStackBadge}"
@@ -2425,6 +2434,7 @@
                                                                    VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
+                                                </Template></icons:DeferredPart>
                                                 <Border Classes="stack-member-strip"
                                                         IsVisible="{Binding IsStackMember}"
                                                         VerticalAlignment="Bottom"/>
@@ -2442,18 +2452,22 @@
                                                             Width="{Binding SharpnessBarWidth}"
                                                             HorizontalAlignment="Left"/>
                                                 </Border>
-                                                <!-- DIE AUFSAETZE DER KACHEL stehen bewusst FEST in
-                                                     der Vorlage und werden ueber Opacity versteckt.
-                                                     Sie erst beim Ueberfahren zu bauen war am
-                                                     2026-08-28 kurz eingebaut und ist wieder
-                                                     draussen: gemessen brachte es nichts (die Zeit
-                                                     steckte im zu grossen Anzeigefenster, nicht in
-                                                     der Zahl der Steuerelemente), und beim Rollen
-                                                     mit dem Mausrad wanderten die Kacheln unter dem
-                                                     Zeiger durch - jede baute dabei ihre
-                                                     fuenfunddreissig Aufsaetze auf und gleich wieder
-                                                     ab. Das Rollen wurde dadurch traeger, nicht
-                                                     schneller. -->
+                                                <!-- DIE AUFSAETZE DER KACHEL ENTSTEHEN ERST, WENN SIE GEBRAUCHT
+                                                     WERDEN (icons:DeferredPart): die Schnellaktionen und
+                                                     die Sterne beim ersten Ueberfahren der Kachel, die
+                                                     Knoepfe fuer Verworfen, Behalten, Bearbeitet,
+                                                     Abspielen und Stapel, sobald ihre Bedingung gilt.
+                                                     Gemessen hing der erste Aufbau einer Kachel fast
+                                                     ganz an ihren fuenfzehn Knoepfen, von denen im
+                                                     Ruhezustand zwei zu sehen sind.
+                                                     EINMAL GEBAUT, BLEIBEN SIE. Ein frueherer Versuch
+                                                     (2026-08-28) baute sie beim Verlassen wieder ab:
+                                                     beim Rollen mit dem Mausrad wandern die Kacheln
+                                                     unter dem Zeiger durch, jede baute ihre Aufsaetze
+                                                     auf und gleich wieder ab, und das Rollen wurde
+                                                     traeger. Versteckt werden sie weiter ueber
+                                                     Opacity. -->
+                                                <icons:DeferredPart Classes="load-on-hover"><Template>
                                                 <StackPanel Classes="gallery-hover-actions"
                                                             Orientation="Horizontal"
                                                             HorizontalAlignment="Left"
@@ -2497,6 +2511,8 @@
                                                                        IconBrush="White"/>
                                                     </Button>
                                                 </StackPanel>
+                                                </Template></icons:DeferredPart>
+                                                <icons:DeferredPart Classes="load-on-hover" Classes.load-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}" ZIndex="3"><Template>
                                                 <StackPanel Classes="gallery-rating-actions gallery-toggle-badge"
                                                             Classes.badge-always="{Binding DataContext.RatingBadgesAlwaysVisible, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             Orientation="Horizontal"
@@ -2562,6 +2578,7 @@
                                                                        Width="18" Height="18" />
                                                     </Button>
                                                 </StackPanel>
+                                                </Template></icons:DeferredPart>
                                                 <StackPanel Orientation="Horizontal"
                                                             HorizontalAlignment="Right"
                                                             VerticalAlignment="Bottom">

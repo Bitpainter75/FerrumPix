@@ -1100,6 +1100,18 @@ Namespace Services
         Private Shared Function OpenEmbeddedRawPreview(filePath As String, width As Integer, ByRef previewSide As Integer) As MemoryStream
             ' Stufe 1: LibRaws Thumbnail-API - formatkundig und schnell (bei einer 50-MP-.arw
             ' 2 ms gegen 26 ms des Scanners, der bis zu 16 MB nach JPEG-Signaturen durchsucht).
+            ' Davor: die KLEINSTE Vorschau, die fuer die Kachel reicht. Die einfache Abfrage liefert
+            ' die groesste, und deren Dekodieren war der groesste Teil der Kachelzeit
+            ' (RawDecodeService.TryExtractSmallestThumbnail).
+            Dim smallest = RawDecodeService.TryExtractSmallestThumbnail(filePath, width)
+            Dim smallestSide As Integer
+            If IsBigEnoughForTile(smallest, width, smallestSide) Then
+                NoteRawSource(RawSourceEmbeddedLibRaw)
+                previewSide = smallestSide
+                Return smallest
+            End If
+            smallest?.Dispose()
+
             Dim viaLibRaw = RawDecodeService.TryExtractThumbnail(filePath)
             Dim libRawSide As Integer
             If IsBigEnoughForTile(viaLibRaw, width, libRawSide) Then

@@ -1690,8 +1690,11 @@ Namespace Models
                     Dim bmp = entry.Value
                     If bmp IsNot Nothing Then
                         Dispatcher.UIThread.Post(Sub()
-                                                      oldest.RaisePropertyChanged(NameOf(Thumbnail))
-                                                      bmp.Dispose()
+                                                      PerformanceTraceService.Measure("Kachel gibt ihr Bild ab",
+                                                          Sub()
+                                                              oldest.RaisePropertyChanged(NameOf(Thumbnail))
+                                                              bmp.Dispose()
+                                                          End Sub)
                                                   End Sub, ThumbnailReadyPriority)
                     End If
                 Next

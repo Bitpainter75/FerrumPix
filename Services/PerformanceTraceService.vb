@@ -68,6 +68,22 @@ Namespace Services
         Private Shared _currentSection As String = ""
         Private Shared _sectionStartedTicks As Long = 0
 
+        ''' <summary>Der zuletzt GESCHLOSSENE Messpunkt des Anzeigefadens und wann er endete. Steht
+        ''' der Faden, ohne dass ein Messpunkt offen ist, sagt das wenigstens, wonach: was auf einen
+        ''' Messpunkt folgt (Anordnen und Zeichnen der eben geaenderten Kacheln etwa), hat selbst
+        ''' keinen, und "kein Messpunkt offen" allein gab keinen Anhalt.</summary>
+        Private Shared _lastSection As String = ""
+        Private Shared _lastSectionEndedTicks As Long = 0
+
+        ''' <summary>Der Zusatz fuer die Meldung einer Stockung ohne offenen Messpunkt.</summary>
+        Private Shared Function LastSectionHint() As String
+            Dim name = _lastSection
+            Dim ended = Threading.Volatile.Read(_lastSectionEndedTicks)
+            If String.IsNullOrEmpty(name) OrElse ended = 0 Then Return ""
+            Dim agoMs = (Stopwatch.GetTimestamp() - ended) * 1000.0 / Stopwatch.Frequency
+            Return $"; zuletzt beendet: {name} vor {agoMs:F0} ms"
+        End Function
+
         ''' <summary>Misst einen Block und haelt seine Dauer fest. Ist nicht eingeschaltet, laeuft der
         ''' Block ohne jede Zutat.</summary>
         Public Shared Sub Measure(name As String, action As Action)
@@ -89,7 +105,11 @@ Namespace Services
                 action()
             Finally
                 uhr.Stop()
-                If onUiThread Then _currentSection = vorheriger
+                If onUiThread Then
+                    _currentSection = vorheriger
+                    _lastSection = name
+                    Threading.Volatile.Write(_lastSectionEndedTicks, Stopwatch.GetTimestamp())
+                End If
                 Record(name, uhr.Elapsed.TotalMilliseconds)
             End Try
         End Sub
@@ -112,7 +132,11 @@ Namespace Services
                 Return func()
             Finally
                 uhr.Stop()
-                If onUiThread Then _currentSection = vorheriger
+                If onUiThread Then
+                    _currentSection = vorheriger
+                    _lastSection = name
+                    Threading.Volatile.Write(_lastSectionEndedTicks, Stopwatch.GetTimestamp())
+                End If
                 Record(name, uhr.Elapsed.TotalMilliseconds)
             End Try
         End Function
@@ -203,7 +227,7 @@ Namespace Services
                 Dim pauseMs = TimeSpan.FromTicks(GC.GetTotalPauseDuration().Ticks - _pingPauseTicks).TotalMilliseconds
                 Record("Anzeigefaden blockiert", durationMs)
                 DiagnosticLogService.LogAlways("Messung",
-                    $"Anzeigefaden blockiert {durationMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {_pingContext}")
+                    $"Anzeigefaden blockiert {durationMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {_pingContext}{CpuHint(_pingCpuMs)}")
             End If
             _pingReported = False
             _pingContext = ""
@@ -216,6 +240,7 @@ Namespace Services
                 Dim now = Stopwatch.GetTimestamp()
                 _pingGen2 = GC.CollectionCount(2)
                 _pingPauseTicks = GC.GetTotalPauseDuration().Ticks
+                _pingCpuMs = ReadUiThreadCpuMs()
                 Threading.Volatile.Write(_pingSentTicks, now)
                 Dispatcher.UIThread.Post(Sub() PingArrived(now), DispatcherPriority.Send)
                 Return
@@ -229,11 +254,67 @@ Namespace Services
             Dim since = Threading.Volatile.Read(_sectionStartedTicks)
             Dim sectionMs = If(since = 0, 0.0, (Stopwatch.GetTimestamp() - since) * 1000.0 / Stopwatch.Frequency)
             _pingContext = If(String.IsNullOrEmpty(section),
-                              "kein Messpunkt offen - der Blockierer hat keinen",
+                              "kein Messpunkt offen - der Blockierer hat keinen" & LastSectionHint(),
                               $"offener Messpunkt: {section} (seit {sectionMs:F0} ms)")
         End Sub
 
+        ''' <summary>Die Kennung des Anzeigefadens beim Betriebssystem (nur Linux), 0 = unbekannt.
+        ''' Damit liest der Beobachter aus /proc, wie viel RECHENZEIT der Faden in einer Stockung
+        ''' verbraucht hat und in welchem Zustand er steht. Das trennt die beiden Faelle, die im
+        ''' Protokoll bisher gleich aussahen: der Faden RECHNET (Aufbau und Zeichnen der Oberflaeche,
+        ''' eigener Code ohne Messpunkt) oder er WARTET (eine Sperre, die ein Hintergrundfaden haelt,
+        ''' eine Platte, das Netz).</summary>
+        Private Shared _uiThreadId As Integer = 0
+        Private Shared _schlagCpuMs As Long = -1
+        Private Shared _pingCpuMs As Long = -1
+
+        ''' <summary>Auf dem Anzeigefaden rufen: merkt sich dessen Kennung.</summary>
+        Private Shared Sub CaptureUiThreadId()
+            If _uiThreadId <> 0 OrElse Not OperatingSystem.IsLinux() Then Return
+            Try
+                Dim link = IO.File.ResolveLinkTarget("/proc/thread-self", False)
+                Dim id = 0
+                If link IsNot Nothing AndAlso Integer.TryParse(IO.Path.GetFileName(link.FullName.TrimEnd("/"c)), id) Then
+                    _uiThreadId = id
+                Else
+                    _uiThreadId = -1
+                End If
+            Catch
+                _uiThreadId = -1
+            End Try
+        End Sub
+
+        ''' <summary>Rechenzeit des Anzeigefadens in Millisekunden (Nutzer plus Kern, Aufloesung
+        ''' 10 ms) und sein Zustand (R rechnet, S wartet, D wartet auf die Platte). -1, wenn nicht
+        ''' zu ermitteln.</summary>
+        Private Shared Function ReadUiThreadCpuMs(Optional ByRef state As String = Nothing) As Long
+            state = ""
+            Dim id = _uiThreadId
+            If id <= 0 Then Return -1
+            Try
+                Dim text = IO.File.ReadAllText($"/proc/self/task/{id}/stat")
+                Dim tail = text.Substring(text.LastIndexOf(")"c) + 2).Split(" "c)
+                If tail.Length < 13 Then Return -1
+                state = tail(0)
+                Return (Long.Parse(tail(11), Globalization.CultureInfo.InvariantCulture) +
+                        Long.Parse(tail(12), Globalization.CultureInfo.InvariantCulture)) * 10L
+            Catch
+                Return -1
+            End Try
+        End Function
+
+        ''' <summary>Der Zusatz "davon gerechnet" fuer die Meldung einer Stockung.</summary>
+        Private Shared Function CpuHint(startCpuMs As Long) As String
+            If startCpuMs < 0 Then Return ""
+            Dim state As String = Nothing
+            Dim now = ReadUiThreadCpuMs(state)
+            If now < 0 Then Return ""
+            Return $" - Faden rechnete davon {now - startCpuMs} ms, Zustand jetzt {state}"
+        End Function
+
         Private Shared Sub Herzschlag()
+            CaptureUiThreadId()
+            Threading.Volatile.Write(_schlagCpuMs, ReadUiThreadCpuMs())
             _schlagGen2 = GC.CollectionCount(2)
             Threading.Volatile.Write(_schlagPauseTicks, GC.GetTotalPauseDuration().Ticks)
             Threading.Volatile.Write(_letzterSchlagTicks, Stopwatch.GetTimestamp())
@@ -264,6 +345,7 @@ Namespace Services
             Dim offenGen2 = 0
             Dim offenPause As Long = 0
             Dim offenWobei = ""
+            Dim offenCpu As Long = -1
             While Threading.Volatile.Read(_beobachterLauf) = meinLauf
                 Try
                     Threading.Thread.Sleep(50)
@@ -279,7 +361,7 @@ Namespace Services
                         Record("Anzeigefaden Stockung ganz", durationMs)
                         Record("Anzeigefaden Stockung davon Bereinigung", pauseMs)
                         DiagnosticLogService.LogAlways("Messung",
-                            $"Anzeigefaden stand {durationMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {offenWobei}")
+                            $"Anzeigefaden stand {durationMs:F0} ms - Bereinigung darin: {gen2} Gen-2-Laeufe, Pause {pauseMs:F0} ms - {offenWobei}{CpuHint(offenCpu)}")
                         offenSeit = 0
                     End If
 
@@ -293,10 +375,11 @@ Namespace Services
                     Dim seit = Threading.Volatile.Read(_sectionStartedTicks)
                     Dim abschnittMs = If(seit = 0, 0.0, (Stopwatch.GetTimestamp() - seit) * 1000.0 / Stopwatch.Frequency)
                     Dim wobei = If(String.IsNullOrEmpty(abschnitt),
-                                   "kein Messpunkt offen - der Blockierer hat keinen",
+                                   "kein Messpunkt offen - der Blockierer hat keinen" & LastSectionHint(),
                                    $"offener Messpunkt: {abschnitt} (seit {abschnittMs:F0} ms)")
                     Record("Anzeigefaden stockt", stillMs)
-                    DiagnosticLogService.LogAlways("Messung", $"Anzeigefaden steht seit {stillMs:F0} ms - {wobei}")
+                    offenCpu = Threading.Volatile.Read(_schlagCpuMs)
+                    DiagnosticLogService.LogAlways("Messung", $"Anzeigefaden steht seit {stillMs:F0} ms - {wobei}{CpuHint(offenCpu)}")
                     offenSeit = letzter
                     offenGen2 = _schlagGen2
                     offenPause = Threading.Volatile.Read(_schlagPauseTicks)

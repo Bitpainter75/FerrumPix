@@ -1801,6 +1801,14 @@
         <Setter Property="Padding" Value="6,5"/>
         <Setter Property="MaxWidth" Value="160"/>
     </Style>
+    <!-- AUFGESCHOBENE TEILE DER KACHEL (icons:DeferredPart): gebaut beim ersten Ueberfahren der
+         Kachel oder sofort, wenn sie dauerhaft zu sehen sein sollen. Einmal gebaut, bleiben sie. -->
+    <Style Selector="Border.thumb-card:pointerover icons|DeferredPart.load-on-hover">
+        <Setter Property="Load" Value="True"/>
+    </Style>
+    <Style Selector="icons|DeferredPart.load-always">
+        <Setter Property="Load" Value="True"/>
+    </Style>
     <Style Selector="Border.thumb-card:pointerover StackPanel.gallery-hover-actions">
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="IsHitTestVisible" Value="True"/>

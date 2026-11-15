@@ -80,6 +80,8 @@ Module Program
             If debugRequested Then LogSystemInfo()
         Catch
         End Try
+        ' Einmal je Lauf, im Hintergrund: die Protokolldateien auf ihre Obergrenze kuerzen.
+        DiagnosticLogService.TrimLogsSoon()
 
         ' Falsche Angaben fuer den Browser enden HIER mit einer Zeile, bevor das Toolkit entsteht:
         ' danach waere es eine Ausnahme mitten im Start, mit Aufrufkette statt Erklaerung.
