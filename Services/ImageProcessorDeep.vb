@@ -90,10 +90,52 @@ Namespace Services
                 Return
             End If
             DropDeep(bitmap)
+            ' Der Zaehler aendert sich unter derselben Sperre wie die Tabelle: so kann
+            ' SweepDeepCompanions ihn aus der Tabelle neu setzen.
             SyncLock _deepCompanions
                 _deepCompanions.Add(bitmap, deep)
+                Interlocked.Increment(_deepCompanionCount)
             End SyncLock
-            Interlocked.Increment(_deepCompanionCount)
+        End Sub
+
+        ''' <summary>Nach einer Ausgabe: gibt jedes tiefe Bild frei, dessen 8-Bit-Bild schon
+        ''' freigegeben ist, und setzt den Zaehler auf das, was wirklich noch in der Tabelle steht.
+        '''
+        ''' Wird ein 8-Bit-Bild ohne <see cref="DropDeep"/> freigegeben (ein Ausstieg ueber eine
+        ''' Ausnahme, eine Stelle, die den Begleiter nicht kennt), bliebe sein tiefes Bild mit
+        ''' 8 Byte je Bildpunkt liegen, bis die Speicherbereinigung das 8-Bit-Bild findet, und die
+        ''' weiss von diesem Speicher nichts. Und der Zaehler bliebe zu hoch, wenn sie den Eintrag
+        ''' spaeter still entfernt. Ein Bild, das noch lebt (eine zweite Ausgabe auf einem anderen
+        ''' Faden), bleibt unberuehrt.</summary>
+        Friend Shared Sub SweepDeepCompanions()
+            If Volatile.Read(_deepCompanionCount) <= 0 Then Return
+            Dim orphaned As List(Of SKBitmap) = Nothing
+            SyncLock _deepCompanions
+                Dim alive = 0
+                Dim stale As List(Of SKBitmap) = Nothing
+                For Each pair In _deepCompanions
+                    If pair.Key Is Nothing OrElse pair.Key.Handle = IntPtr.Zero Then
+                        If stale Is Nothing Then stale = New List(Of SKBitmap)()
+                        stale.Add(pair.Key)
+                        If orphaned Is Nothing Then orphaned = New List(Of SKBitmap)()
+                        If pair.Value IsNot Nothing Then orphaned.Add(pair.Value)
+                    Else
+                        alive += 1
+                    End If
+                Next
+                If stale IsNot Nothing Then
+                    For Each key In stale
+                        If key IsNot Nothing Then _deepCompanions.Remove(key)
+                    Next
+                End If
+                Interlocked.Exchange(_deepCompanionCount, alive)
+            End SyncLock
+            If orphaned Is Nothing Then Return
+            For Each deep In orphaned
+                deep.Dispose()
+            Next
+            DiagnosticLogService.LogAlways("ImageProcessor.Deep",
+                $"{orphaned.Count} tiefe(s) Bild(er) ohne ihr 8-Bit-Bild freigegeben")
         End Sub
 
         ''' <summary>Das tiefe Bild zu <paramref name="bitmap"/>, oder Nothing. Es bleibt angehaengt
@@ -116,8 +158,8 @@ Namespace Services
             SyncLock _deepCompanions
                 If Not _deepCompanions.TryGetValue(bitmap, deep) Then Return Nothing
                 _deepCompanions.Remove(bitmap)
+                Interlocked.Decrement(_deepCompanionCount)
             End SyncLock
-            Interlocked.Decrement(_deepCompanionCount)
             Return deep
         End Function
 
@@ -307,10 +349,20 @@ Namespace Services
         ''' fiele sonst durch den Vergleich.</summary>
         Private Const DeepPatchGrow As Integer = 6
 
+        ''' <summary>Kante des Felds, ueber das die Abweichung gemittelt wird, um eine feine
+        ''' Bearbeitung zu finden, und der Versatz von Feld zu Feld (halbe Kante).</summary>
+        Private Const DeepPatchBlock As Integer = 8
+        Private Const DeepPatchBlockStep As Integer = 4
+
+        ''' <summary>Ab diesem Mittel der Abweichung in 8-Bit-Stufen gilt ein Feld als bearbeitet.
+        ''' Ohne Bearbeitung bleibt das Mittel unter einem Viertel einer Stufe.</summary>
+        Private Const DeepPatchBlockMean As Double = 0.5
+
         ''' <summary>Die Mischloesung fuer Retusche, Malerei und Objekt entfernen: diese Vorgaenge
         ''' stecken als 8-Bit-Bildpunkte in <paramref name="shallow"/>, das tiefe Bild der RAW-Stufe
         ''' kennt sie nicht. Wo beide um mehr als zwei Stufen auseinanderliegen (Dither unter einer,
-        ''' die Verzeichnung auf Karte und Prozessor hoechstens eine), ist das Bild bearbeitet; dort
+        ''' die Verzeichnung auf Karte und Prozessor hoechstens eine) oder im Mittel ueber ein Feld
+        ''' von 8 x 8 um mehr als eine halbe (die feine Bearbeitung), ist das Bild bearbeitet; dort
         ''' und in einem schmalen Saum darum bekommt <paramref name="deep"/> die Werte des
         ''' 8-Bit-Bilds. Ueberall sonst bleibt es so fein wie die RAW-Stufe.
         '''
@@ -341,7 +393,6 @@ Namespace Services
                     Dim deepRow(w * 4 - 1) As Short
                     Marshal.Copy(IntPtr.Add(shallowPixels, y * shallowStride), shallowRow, 0, w * 4)
                     ReadDeepRow(deep, deepPixels, y, deepRow)
-                    Dim count = 0
                     For x = 0 To w - 1
                         Dim o = x * 4
                         If Math.Abs(CInt(shallowRow(o + ri)) * 257 - (deepRow(o) And &HFFFF)) > limit OrElse
@@ -349,8 +400,66 @@ Namespace Services
                            Math.Abs(CInt(shallowRow(o + bi)) * 257 - (deepRow(o + 2) And &HFFFF)) > limit OrElse
                            Math.Abs(CInt(shallowRow(o + 3)) * 257 - (deepRow(o + 3) And &HFFFF)) > limit Then
                             changed(y * w + x) = 1
-                            count += 1
                         End If
+                    Next
+                End Sub)
+
+            ' DIE FEINE BEARBEITUNG. Ein schwacher Pinselzug aendert das Bild flaechig um ein oder
+            ' zwei Stufen und bleibt damit je Bildpunkt unter der Schwelle oben: die liegt bei zwei
+            ' Stufen, weil Dither und Verzeichnung einen einzelnen Punkt so weit streuen. Im
+            ' Mittel ueber ein Feld von 8 x 8 heben sich Dither und Verzeichnung aber auf (gemessen
+            ' hoechstens ein Viertel einer Stufe), eine Bearbeitung nicht. Liegt das Mittel eines
+            ' Felds in einem Kanal um mehr als eine halbe Stufe daneben, gilt das ganze Feld als
+            ' bearbeitet. Die Felder ueberlappen sich zur Haelfte, damit ein Zug, der zwischen zwei
+            ' Feldern liegt, eines davon ueberwiegend trifft. Was darunter bleibt (eine Linie von
+            ' ein oder zwei Bildpunkten Breite mit einer Stufe Unterschied), laesst sich vom
+            ' Dither nicht trennen.
+            If w >= DeepPatchBlock AndAlso h >= DeepPatchBlock Then
+                Dim blockRows = (h - DeepPatchBlock) \ DeepPatchBlockStep + 1
+                Dim blockLimit = CInt(DeepPatchBlockMean * 257 * DeepPatchBlock * DeepPatchBlock)
+                Threading.Tasks.Parallel.For(0, blockRows,
+                    Sub(blockRow)
+                        Dim top = blockRow * DeepPatchBlockStep
+                        ' Je Spalte die Summe der Abweichung ueber die Zeilen des Felds, je Kanal.
+                        Dim sums(w * 3 - 1) As Integer
+                        Dim shallowRow(w * 4 - 1) As Byte
+                        Dim deepRow(w * 4 - 1) As Short
+                        For y = top To top + DeepPatchBlock - 1
+                            Marshal.Copy(IntPtr.Add(shallowPixels, y * shallowStride), shallowRow, 0, w * 4)
+                            ReadDeepRow(deep, deepPixels, y, deepRow)
+                            For x = 0 To w - 1
+                                Dim o = x * 4
+                                Dim s = x * 3
+                                sums(s) += CInt(shallowRow(o + ri)) * 257 - (deepRow(o) And &HFFFF)
+                                sums(s + 1) += CInt(shallowRow(o + 1)) * 257 - (deepRow(o + 1) And &HFFFF)
+                                sums(s + 2) += CInt(shallowRow(o + bi)) * 257 - (deepRow(o + 2) And &HFFFF)
+                            Next
+                        Next
+                        Dim left = 0
+                        While left + DeepPatchBlock <= w
+                            Dim sumR = 0, sumG = 0, sumB = 0
+                            For x = left To left + DeepPatchBlock - 1
+                                sumR += sums(x * 3)
+                                sumG += sums(x * 3 + 1)
+                                sumB += sums(x * 3 + 2)
+                            Next
+                            If Math.Abs(sumR) > blockLimit OrElse Math.Abs(sumG) > blockLimit OrElse Math.Abs(sumB) > blockLimit Then
+                                ' Nachbarfelder schreiben dieselbe Eins an dieselbe Stelle; gezaehlt wird danach.
+                                For y = top To top + DeepPatchBlock - 1
+                                    Array.Fill(changed, CByte(1), y * w + left, DeepPatchBlock)
+                                Next
+                            End If
+                            left += DeepPatchBlockStep
+                        End While
+                    End Sub)
+            End If
+
+            Threading.Tasks.Parallel.For(0, h,
+                Sub(y)
+                    Dim rowStart = y * w
+                    Dim count = 0
+                    For x = 0 To w - 1
+                        count += changed(rowStart + x)
                     Next
                     counts(y) = count
                 End Sub)
@@ -468,8 +577,20 @@ Namespace Services
             Dim renderAdj = adj
             Dim source = If(workingFull, DecodeForRender(sourcePath, adj, renderAdj, developRaw))
             If source Is Nothing Then Return False
+            Try
+                Return ExportLayeredPsdDeepCore(targetPath, sourcePath, adj, renderAdj, source, workingFull IsNot Nothing,
+                                                preserveMetadata, developRaw, outcome)
+            Finally
+                SweepDeepCompanions()
+            End Try
+        End Function
+
+        Private Shared Function ExportLayeredPsdDeepCore(targetPath As String, sourcePath As String, adj As ImageAdjustments,
+                                                         renderAdj As ImageAdjustments, source As SKBitmap,
+                                                         isWorkingImage As Boolean, preserveMetadata As Boolean,
+                                                         developRaw As Boolean, outcome As SaveOutcome) As Boolean
             Using sourceBitmap = source, sourceDeep = DeepGuard(source)
-                If workingFull Is Nothing Then
+                If Not isWorkingImage Then
                     AttachDeepRawSource(source, sourcePath, adj, developRaw)
                 ElseIf Not FpxService.IsFpx(sourcePath) Then
                     AttachDeepWorkingSource(source, sourcePath, adj, developRaw)
@@ -735,7 +856,70 @@ Namespace Services
                     "tiefes Bild weicht vom 8-Bit-Bild ab: {0:P4} der Punkte ueber {1} Stufen", share, tolerance))
                 Return False
             End If
-            Return True
+            Return DeepMatchesShallowInBlocks(shallow, deep, ri, gi, bi)
+        End Function
+
+        ''' <summary>Kante der Felder des zweiten Vergleichs und das Mittel der Abweichung in
+        ''' 8-Bit-Stufen, ab dem ein Feld nicht mehr als dasselbe Bild gilt. Die Stufen der Kette
+        ''' bleiben im Mittel ueber 8 x 8 unter 0,7 Stufen (Pruefung "jede Stufe der Kette rechnet
+        ''' das tiefe Bild mit"); der Abstand dazu ist Spielraum fuer mehrere Stufen hintereinander.</summary>
+        Private Const DeepMatchBlock As Integer = 8
+        Private Const DeepMatchBlockMean As Double = 2.5
+
+        ''' <summary>Der zweite Vergleich, fuer die KLEINE Stelle: das Raster oben liest jeden
+        ''' soundsovielten Punkt und duldet ein Tausendstel Ausreisser, eine Stufe, die das
+        ''' 8-Bit-Bild nur an einer kleinen Stelle aendert und das tiefe nicht mitfuehrt, sieht es
+        ''' nicht. Hier wird JEDER Bildpunkt gelesen und die Abweichung je Feld von 8 x 8 gemittelt:
+        ''' Dither und getrenntes Abtasten heben sich im Feld auf, eine fehlende Aenderung nicht.
+        ''' Ein einziges Feld ueber der Grenze genuegt.</summary>
+        Private Shared Function DeepMatchesShallowInBlocks(shallow As SKBitmap, deep As SKBitmap,
+                                                           ri As Integer, gi As Integer, bi As Integer) As Boolean
+            Dim w = shallow.Width, h = shallow.Height
+            If w < DeepMatchBlock OrElse h < DeepMatchBlock Then Return True
+            Dim shallowPixels = shallow.GetPixels(), deepPixels = deep.GetPixels()
+            Dim shallowStride = shallow.RowBytes
+            Dim blockLimit = CInt(DeepMatchBlockMean * 257 * DeepMatchBlock * DeepMatchBlock)
+            Dim blocksAcross = w \ DeepMatchBlock
+            Dim failed = 0
+            Dim worstSum = 0, worstX = 0, worstY = 0
+            Dim worstLock As New Object()
+            Threading.Tasks.Parallel.For(0, h \ DeepMatchBlock,
+                Sub(blockRow)
+                    Dim top = blockRow * DeepMatchBlock
+                    Dim sums(blocksAcross * 4 - 1) As Integer
+                    Dim shallowRow(w * 4 - 1) As Byte
+                    Dim deepRow(w * 4 - 1) As Short
+                    For y = top To top + DeepMatchBlock - 1
+                        Marshal.Copy(IntPtr.Add(shallowPixels, y * shallowStride), shallowRow, 0, w * 4)
+                        ReadDeepRow(deep, deepPixels, y, deepRow)
+                        For x = 0 To blocksAcross * DeepMatchBlock - 1
+                            Dim o = x * 4
+                            Dim s = (x \ DeepMatchBlock) * 4
+                            sums(s) += CInt(shallowRow(o + ri)) * 257 - (deepRow(o) And &HFFFF)
+                            sums(s + 1) += CInt(shallowRow(o + gi)) * 257 - (deepRow(o + 1) And &HFFFF)
+                            sums(s + 2) += CInt(shallowRow(o + bi)) * 257 - (deepRow(o + 2) And &HFFFF)
+                            sums(s + 3) += CInt(shallowRow(o + 3)) * 257 - (deepRow(o + 3) And &HFFFF)
+                        Next
+                    Next
+                    For block = 0 To blocksAcross - 1
+                        Dim worst = Math.Max(Math.Max(Math.Abs(sums(block * 4)), Math.Abs(sums(block * 4 + 1))),
+                                             Math.Max(Math.Abs(sums(block * 4 + 2)), Math.Abs(sums(block * 4 + 3))))
+                        If worst <= blockLimit Then Continue For
+                        Interlocked.Increment(failed)
+                        SyncLock worstLock
+                            If worst > worstSum Then
+                                worstSum = worst
+                                worstX = block * DeepMatchBlock
+                                worstY = top
+                            End If
+                        End SyncLock
+                    Next
+                End Sub)
+            If failed = 0 Then Return True
+            DiagnosticLogService.LogAlways("ImageProcessor.Deep", String.Format(Globalization.CultureInfo.InvariantCulture,
+                "tiefes Bild weicht an einer Stelle vom 8-Bit-Bild ab: {0} Feld(er) von 8 x 8 im Mittel ueber {1} Stufen, am weitesten bei {2},{3} mit {4:F1} Stufen",
+                failed, DeepMatchBlockMean, worstX, worstY, worstSum / (257.0 * DeepMatchBlock * DeepMatchBlock)))
+            Return False
         End Function
 
     End Class

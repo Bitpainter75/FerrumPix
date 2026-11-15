@@ -1138,6 +1138,9 @@ Namespace Services
                 ' den Vorgang dann sauber abbrechen; die Diagnose enthält die Ursache.
                 DiagnosticLogService.LogException("ImageProcessor.Save", ex)
                 Return False
+            Finally
+                ' Nach einer Ausgabe mit tiefem Bild: was ohne sein 8-Bit-Bild liegen blieb, weg.
+                SweepDeepCompanions()
             End Try
         End Function
 

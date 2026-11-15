@@ -392,6 +392,8 @@ Namespace Services
                 Else
                     deepSurface.Dispose()
                 End If
+                ' Was von den Kacheln ohne sein 8-Bit-Bild liegen blieb, weg; die Flaeche selbst lebt.
+                ImageProcessor.SweepDeepCompanions()
             End If
             Return surfaceBitmap
         End Function
