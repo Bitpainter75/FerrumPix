@@ -5582,7 +5582,7 @@ Namespace ViewModels
             Dim node As New VirtualNavigationNode(String.Join(", ", nameParts), "SavedSearch") With {
                 .Source = source,
                 .TextQuery = text,
-                .TagQueries = tags,
+                .TagQueries = WithKeywordDescendants(tags, source),
                 .NextcloudTagIds = _activeNextcloudTagIds.ToList(),
                 .NextcloudPersonIds = _activeNextcloudPersonIds.ToList(),
                 .NextcloudPlaceIds = _activeNextcloudPlaceIds.ToList(),
@@ -5811,7 +5811,7 @@ Namespace ViewModels
                 AddServerAiTagOptions(ImmichIndexService.Instance.GetAiTagCounts(), ImmichSourceName, built)
                 AddServerAiTagOptions(NextcloudIndexService.Instance.GetAiTagCounts(), NextcloudSourceName, built)
                 KeepOnlyActiveSource(built, Function(o) o.ServerSource)
-                _allTagFilterOptions = MergeTagOptionsByLabel(built)
+                _allTagFilterOptions = ArrangeTagTree(MergeTagOptionsByLabel(built), scopePaths)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.RefreshTagFilterOptions", ex)
                 _allTagFilterOptions = built
@@ -5819,12 +5819,238 @@ Namespace ViewModels
             ApplyTagFilterSearch()
         End Sub
 
+        ' ---------------------------------------------------------------- Stichwoerter als Baum
+
+        ''' <summary>Steht in der Stichwortauswahl gerade ein Baum? Nur im lokalen Katalog und nur,
+        ''' wenn ueberhaupt ein Stichwort unter einem anderen haengt. Sonst ist die Liste die flache
+        ''' von frueher, mit dem Ausgewaehlten oben.</summary>
+        Private _tagFilterIsTree As Boolean
+
+        ''' <summary>Die zugeklappten Stichwoerter. Gemerkt fuer die Sitzung: die Liste entsteht bei
+        ''' jedem Oeffnen neu, und ohne das Merken klappte jedes Oeffnen alles wieder auf.</summary>
+        Private ReadOnly _collapsedTags As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+        ''' <summary>Ein gewaehltes Stichwort meint alles mit, was unter ihm haengt: "Tiere" findet
+        ''' auch die Bilder, an denen nur "Hunde" steht. Die Auswahl selbst bleibt das eine Wort,
+        ''' erweitert wird erst die Frage an den Katalog. Nur lokal, die Server kennen die Ordnung
+        ''' nicht.</summary>
+        Friend Shared Function WithKeywordDescendants(tags As List(Of String), source As String) As List(Of String)
+            If tags Is Nothing OrElse tags.Count = 0 Then Return tags
+            If Not String.Equals(source, "Local", StringComparison.Ordinal) Then Return tags
+            Dim tree = LibraryService.Instance.GetKeywordTree()
+            If tree.IsEmpty Then Return tags
+            Return tags.Concat(tags.SelectMany(Function(t) tree.DescendantsOf(t))).
+                   Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        ''' <summary>Bringt die fertigen Zeilen in die Reihenfolge des Baums und setzt Stufe und
+        ''' Pfeil. Ohne Ordnung oder ausserhalb des lokalen Katalogs kommt die Liste unveraendert
+        ''' zurueck.
+        '''
+        ''' EIN UEBERGEORDNETES WORT BEKOMMT EINE ZEILE, AUCH WENN ES AN KEINEM BILD STEHT: "Tiere"
+        ''' ist oft nur die Ueberschrift ueber "Hunde" und "Katzen". Ohne Zeile hingen die beiden in
+        ''' der Luft. Eine Familie, von der im gezaehlten Umfang gar nichts vorkommt, bleibt weg.
+        '''
+        ''' DIE ZAHL EINER SOLCHEN ZEILE ZAEHLT DIE FAMILIE, also jedes Bild mit dem Wort selbst oder
+        ''' einem darunter, jedes einmal. Das ist genau die Menge, die ein Klick auf die Zeile
+        ''' zeigt.</summary>
+        Private Function ArrangeTagTree(entries As List(Of TagFilterOption),
+                                        scopePaths As IEnumerable(Of String)) As List(Of TagFilterOption)
+            _tagFilterIsTree = False
+            If entries Is Nothing Then Return entries
+            If Not String.Equals(ActiveFilterSource(), "Local", StringComparison.Ordinal) Then Return entries
+            Dim arranged = ArrangeTagTree(entries, LibraryService.Instance.GetKeywordTree(), scopePaths,
+                                          _collapsedTags, AddressOf IsTagFilterSelected)
+            _tagFilterIsTree = arranged.Any(Function(o) o.HasChildren)
+            Return arranged
+        End Function
+
+        ''' <summary>Der Aufbau selbst, ohne Zustand der Galerie und damit einzeln pruefbar.</summary>
+        Friend Shared Function ArrangeTagTree(entries As List(Of TagFilterOption), tree As KeywordTree,
+                                              scopePaths As IEnumerable(Of String),
+                                              collapsed As ICollection(Of String),
+                                              isSelected As Func(Of String, Boolean)) As List(Of TagFilterOption)
+            If entries Is Nothing OrElse tree Is Nothing OrElse tree.IsEmpty Then Return entries
+
+            ' Zeile je Wort. Eine zusammengefasste Zeile (von Hand und erkannt gleich beschriftet)
+            ' steht unter jedem ihrer Begriffe; rein erkannte Zeilen haben keine Ordnung.
+            Dim rowOf As New Dictionary(Of String, TagFilterOption)(StringComparer.OrdinalIgnoreCase)
+            For Each entry In entries
+                If entry.IsFromServer OrElse entry.IsAiTag Then Continue For
+                For Each tag In entry.FilterTags
+                    If Not rowOf.ContainsKey(tag) Then rowOf(tag) = entry
+                Next
+            Next
+
+            ' Fehlende uebergeordnete Woerter ergaenzen, vom vorhandenen Wort aus nach oben.
+            Dim added As New List(Of TagFilterOption)()
+            For Each name In rowOf.Keys.ToList()
+                For Each stepName In tree.PathOf(name)
+                    If rowOf.ContainsKey(stepName) Then Continue For
+                    Dim row As New TagFilterOption(stepName, 0, isSelected IsNot Nothing AndAlso isSelected(stepName))
+                    rowOf(stepName) = row
+                    added.Add(row)
+                Next
+            Next
+
+            ' Familien zaehlen: jede Zeile, unter der etwas haengt.
+            Dim families As New Dictionary(Of String, List(Of String))(StringComparer.OrdinalIgnoreCase)
+            For Each name In rowOf.Keys
+                If Not tree.HasChildren(name) Then Continue For
+                Dim members = tree.DescendantsOf(name)
+                members.Add(name)
+                families(name) = members
+            Next
+            Dim familyCounts = LibraryService.Instance.GetKeywordFamilyCounts(families, scopePaths)
+
+            ' Zeilen mit Familie neu bauen (die Zahl ist nur beim Anlegen setzbar).
+            Dim all = entries.Concat(added).ToList()
+            Dim rebuilt As New Dictionary(Of TagFilterOption, TagFilterOption)()
+            For Each entry In all
+                If entry.IsFromServer OrElse entry.IsAiTag Then Continue For
+                Dim familyName = entry.FilterTags.FirstOrDefault(Function(t) families.ContainsKey(t))
+                If familyName Is Nothing Then Continue For
+                Dim count = 0
+                familyCounts.TryGetValue(familyName, count)
+                rebuilt(entry) = New TagFilterOption(entry.Tag, Math.Max(count, entry.Count), entry.IsSelected,
+                                                     displayTag:=entry.DisplayTag, filterTags:=entry.FilterTags) With {
+                    .HasChildren = True,
+                    .IsExpanded = collapsed Is Nothing OrElse Not collapsed.Contains(familyName)
+                }
+            Next
+            If rebuilt.Count > 0 Then
+                all = all.Select(Function(entry) If(rebuilt.ContainsKey(entry), rebuilt(entry), entry)).ToList()
+                For Each tag In rowOf.Keys.ToList()
+                    If rebuilt.ContainsKey(rowOf(tag)) Then rowOf(tag) = rebuilt(rowOf(tag))
+                Next
+            End If
+
+            Dim childrenOf As New Dictionary(Of TagFilterOption, List(Of TagFilterOption))()
+            Dim roots As New List(Of TagFilterOption)()
+            For Each entry In all
+                Dim above As TagFilterOption = Nothing
+                If Not entry.IsFromServer AndAlso Not entry.IsAiTag Then
+                    For Each tag In entry.FilterTags
+                        Dim aboveName = tree.ParentOf(tag)
+                        Dim aboveRow As TagFilterOption = Nothing
+                        If aboveName.Length > 0 AndAlso rowOf.TryGetValue(aboveName, aboveRow) AndAlso aboveRow IsNot entry Then
+                            above = aboveRow
+                            Exit For
+                        End If
+                    Next
+                End If
+                entry.ParentOption = above
+                If above Is Nothing Then
+                    roots.Add(entry)
+                Else
+                    Dim list As List(Of TagFilterOption) = Nothing
+                    If Not childrenOf.TryGetValue(above, list) Then
+                        list = New List(Of TagFilterOption)()
+                        childrenOf(above) = list
+                    End If
+                    list.Add(entry)
+                End If
+            Next
+
+            Dim ordered As New List(Of TagFilterOption)()
+            Dim placed As New HashSet(Of TagFilterOption)()
+            Dim pending As New Stack(Of (Row As TagFilterOption, Depth As Integer))()
+            Dim placeFrom =
+                Sub(start As TagFilterOption)
+                    pending.Push((start, 0))
+                    While pending.Count > 0
+                        Dim current = pending.Pop()
+                        If Not placed.Add(current.Row) Then Continue While
+                        current.Row.Depth = current.Depth
+                        ordered.Add(current.Row)
+                        Dim list As List(Of TagFilterOption) = Nothing
+                        If Not childrenOf.TryGetValue(current.Row, list) Then Continue While
+                        ' Rueckwaerts auf den Stapel, damit das erste Kind als erstes herunterkommt.
+                        For Each child In list.OrderByDescending(Function(o) o.DisplayTag, StringComparer.OrdinalIgnoreCase)
+                            pending.Push((child, current.Depth + 1))
+                        Next
+                    End While
+                End Sub
+            For Each root In roots.OrderBy(Function(o) o.DisplayTag, StringComparer.OrdinalIgnoreCase)
+                placeFrom(root)
+            Next
+            ' Was ueber eine Schleife in der Tabelle nie erreicht wurde, steht am Ende auf der
+            ' obersten Ebene, statt zu verschwinden.
+            For Each entry In all
+                If placed.Contains(entry) Then Continue For
+                entry.ParentOption = Nothing
+                placeFrom(entry)
+            Next
+            Return ordered
+        End Function
+
+        ''' <summary>Ein Stichwort mit Familie auf- oder zuklappen.</summary>
+        Public Sub ToggleTagExpanded(entry As TagFilterOption)
+            If entry Is Nothing OrElse Not entry.HasChildren Then Return
+            entry.IsExpanded = Not entry.IsExpanded
+            For Each tag In entry.FilterTags
+                If entry.IsExpanded Then _collapsedTags.Remove(tag) Else _collapsedTags.Add(tag)
+            Next
+            ApplyTagFilterSearch()
+        End Sub
+
+        ''' <summary>Der Dialog zum Ordnen der Stichwoerter. Er entsteht beim ersten Oeffnen; nach
+        ''' jeder Aenderung darin zieht die Galerie ihre Stichwortauswahl nach und fragt eine
+        ''' laufende Auswahl neu, weil sich die Familie des gewaehlten Worts geaendert haben kann.</summary>
+        Public ReadOnly Property KeywordManager As KeywordManagerViewModel
+            Get
+                If _keywordManager Is Nothing Then
+                    _keywordManager = New KeywordManagerViewModel With {
+                        .OrderChanged = Sub()
+                                       RefreshTagFilterOptions()
+                                       If _activeTagFilters.Count > 0 Then ApplyButtonFilters()
+                                   End Sub
+                    }
+                End If
+                Return _keywordManager
+            End Get
+        End Property
+        Private _keywordManager As KeywordManagerViewModel
+
+        ''' <summary>Fuer die Ansicht: sie baut den Dialog erst, wenn er zum ersten Mal aufgeht.</summary>
+        Public ReadOnly Property IsKeywordManagerOpen As Boolean
+            Get
+                Return _keywordManager IsNot Nothing AndAlso _keywordManager.IsOpen
+            End Get
+        End Property
+
+        Public Sub OpenKeywordManager()
+            KeywordManager.Open()
+            Me.RaisePropertyChanged(NameOf(IsKeywordManagerOpen))
+        End Sub
+
+        ''' <summary>Haengt <paramref name="tag"/> unter das letzte Wort des Wegs in
+        ''' <paramref name="parentPath"/>; leer heisst oberste Ebene. Falsch, wenn sich damit ein
+        ''' Kreis schloesse. Geprueft wird VOR dem ersten Schreiben: kaeme das Wort selbst im Weg
+        ''' vor oder haengt das Ziel schon unter ihm, bleibt alles, wie es war.</summary>
+        Friend Shared Function ArrangeTag(tag As String, parentPath As String) As Boolean
+            Dim library = LibraryService.Instance
+            Dim steps = KeywordTree.SplitPath(parentPath)
+            If steps.Count = 0 Then Return library.SetKeywordParent(tag, "")
+            Dim name = LibraryService.NormalizeKeyword(tag)
+            If steps.Any(Function(stepName) String.Equals(stepName, name, StringComparison.OrdinalIgnoreCase)) Then Return False
+            Dim tree = library.GetKeywordTree()
+            If steps.Any(Function(stepName) tree.WouldCycle(name, stepName)) Then Return False
+            library.SetKeywordPath(steps)
+            Return library.SetKeywordParent(name, steps.Last())
+        End Function
+
         ''' <summary>Siebt den Suchtext aus der fertigen Liste in die angezeigte.</summary>
         Private Sub ApplyTagFilterSearch()
             Dim search = If(_tagFilterSearch, "").Trim()
+            ' Der Baum steht nur ohne Suchtext da. Treffer einer Suche stehen flach untereinander:
+            ' ihre uebergeordneten Woerter passen meist nicht zum Suchtext und fehlten dann.
+            Dim showsTree = _tagFilterIsTree AndAlso search.Length = 0
             TagFilterOptions.Clear()
             For Each entry In _allTagFilterOptions
+                entry.ShowsTree = showsTree
                 If search.Length > 0 AndAlso Not MatchesTagFilterSearch(entry, search) Then Continue For
+                If showsTree AndAlso entry.IsHiddenByCollapse Then Continue For
                 TagFilterOptions.Add(entry)
             Next
             RefreshTagFilterState()
@@ -6627,6 +6853,9 @@ Namespace ViewModels
                 ' einer von ihnen ausgewaehlt ist.
                 entry.IsSelected = entry.FilterTags.Any(AddressOf IsTagFilterSelected)
             Next
+            ' Im Baum bleibt die Reihenfolge des Baums. "Ausgewaehltes nach oben" risse ein Wort
+            ' aus seiner Familie, und der Einzug stuende dann unter dem falschen Wort.
+            If _tagFilterIsTree AndAlso If(_tagFilterSearch, "").Trim().Length = 0 Then Return
             SortFilterColumn(TagFilterOptions, Function(o) o.IsSelected, Function(o) o.DisplayTag)
         End Sub
 
@@ -9504,6 +9733,32 @@ Namespace ViewModels
         ''' die schnellere überschreibt - deshalb wird beim Eintreffen sowohl der Token als auch der
         ''' inzwischen aktuelle Ordner geprüft.
         ''' </summary>
+        ''' <summary>Zaehlt die Filterlisten neu, sobald die Bilder eines Ordners in der Ansicht
+        ''' stehen. Nur im Umfang "Ordner": dort zaehlen die Listen ueber die Bilder der Ansicht.
+        '''
+        ''' NavigateToFolder zaehlt schon VOR dem Laden, dann aber ueber das, was die verlassene
+        ''' Ansicht zeigte. Nach "Auswahl aufheben" in der offenen Stichwortauswahl standen deshalb
+        ''' nur die Woerter der vorherigen Trefferliste da (Nutzerbefund), und nach einem
+        ''' gewoehnlichen Ordnerwechsel die des alten Ordners, bis das Aufklappfenster neu geoeffnet
+        ''' wurde.
+        '''
+        ''' Gerufen nach BEIDEN Fuellungen, der schnellen aus dem Katalog und der geprueften von
+        ''' der Platte. Die zweite zaehlt nur, wenn sie andere Dateien gebracht hat als die erste:
+        ''' im Normalfall sind es dieselben, und der Durchgang waere doppelt.</summary>
+        Private Sub RefreshFolderScopeListsAfterFill()
+            If Not IsFolderFilterScope() OrElse _isVirtualFolder Then Return
+            Dim folder = FilterScopeFolder()
+            If String.IsNullOrEmpty(folder) Then Return
+            Dim current As New HashSet(Of String)(PathIdentity.Comparer)
+            For Each item In _allItems
+                If item Is Nothing OrElse item.IsFolder OrElse String.IsNullOrEmpty(item.FilePath) Then Continue For
+                current.Add(item.FilePath)
+            Next
+            If _scopePaths IsNot Nothing AndAlso String.Equals(_scopePathsFolder, folder, PathIdentity.Comparison) AndAlso
+               _scopePaths.SetEquals(current) Then Return
+            RefreshFilterListsForCurrentSource()
+        End Sub
+
         Public Async Function LoadFolderImagesAsync(folderPath As String) As Task
             CancelActiveSearch()
             ClearVirtualFolderState()
@@ -9584,6 +9839,7 @@ Namespace ViewModels
                             _allItems.AddRange(catalog.Items)
                             FilterAndSort()
                         End Sub)
+                    RefreshFolderScopeListsAfterFill()
                 End If
             Catch ex As OperationCanceledException
                 Return
@@ -9671,6 +9927,8 @@ Namespace ViewModels
                     _allItems.AddRange(adopted)
                     FilterAndSort()
                 End Sub)
+
+            RefreshFolderScopeListsAfterFill()
 
             ' Der Nachlauf muss die ANGEZEIGTEN Objekte treffen, nicht die frisch gebauten: nach der
             ' Uebernahme sind das zwei verschiedene. Der Pfad ist das Bindeglied.

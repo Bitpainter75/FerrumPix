@@ -1,3 +1,8 @@
+## Unreleased
+
+### Changes
+
+
 ## 0.9.84
 
 ### Changes
@@ -16,6 +21,20 @@
 
 - When the bar at the bottom of the gallery gets too narrow, the slider for the size of the
   thumbnails makes room and comes back as soon as there is space again.
+
+- Keywords can be arranged under one another, for example Dogs and Cats under Animals. The new
+  button "Arrange keywords" at the bottom of the folder panel opens a dialog in which a keyword is
+  dragged onto another one. The keyword
+  list of the gallery then shows them as a tree, and choosing Animals also finds the pictures that
+  only carry Dogs. Typing "Animals > Dogs" into the keyword field arranges a keyword while
+  assigning it, and keyword paths from other programs are taken over as this order. The pictures
+  themselves keep their plain keywords.
+
+- The Export button has moved from the bar at the bottom of the gallery into the folder panel,
+  below Import.
+
+- The dialogs for exporting, importing, Save as, resizing, converting, filters and watermarks are
+  wider.
 
 - The bars at the bottom of the viewer and the editor have a new button that turns off the mouse
   wheel over the picture, so it no longer zooms, turns pages or changes the brush size by accident.

@@ -4438,23 +4438,21 @@ Namespace ViewModels
                 If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse
                    DialogShowsShortcuts Then Return 820
                 ' Die Stapel-Dialoge teilen sich mit „Exportieren nach“ umfangreiche Formulare
-                ' und den Speichern-unter-Block. 570 px lässt insbesondere die Quellenwahl,
-                ' Wasserzeichenoptionen und die Zielauswahl unnötig gedrängt wirken.
+                ' und den Speichern-unter-Block; Einlesen zeigt Quelle und Ziel als Pfade. Alle
+                ' gehen in DERSELBEN Breite auf, damit ein langer Zielordner lesbar bleibt, die
+                ' Schalterzeilen Luft haben und die Dialoge beim Wechsel nicht springen
+                ' (Nutzerwunsch). Vorher 840, Einlesen 680.
                 '
-                ' 840 UND NICHT 780: bei 780 blieben von den fünfzehn Größen-Vorgaben genau zwei
-                ' Bildpunkte zu wenig, und die letzte („32") rutschte allein in eine zweite Zeile
-                ' (Nutzerbefund mit Bildschirmaufnahme). Eine Vorgabenreihe, die
-                ' umbricht, liest sich wie zwei Gruppen, die es nicht gibt.
-                '
-                ' Speichern unter in DERSELBEN Breite: es teilt sich mit diesen Dialogen den
-                ' Speichern-unter-Block, und die Zeile "Uebernehmen" hat acht Schalter. Bei 570 fiel
-                ' im Englischen mit groesserer Schrift EXIF schon bei fuenf Schaltern aus der Zeile
-                ' (Forumsbefund mit Bildschirmaufnahme), danach stand es auf 700.
-                If DialogShowsBatchResize OrElse DialogShowsExportTo OrElse
+                ' NICHT SCHMALER ALS 840: bei 780 blieben von den fünfzehn Größen-Vorgaben genau
+                ' zwei Bildpunkte zu wenig, und die letzte („32") rutschte allein in eine zweite
+                ' Zeile (Nutzerbefund mit Bildschirmaufnahme). Bei 570 fiel in Speichern unter im
+                ' Englischen mit groesserer Schrift EXIF aus der Zeile "Uebernehmen"
+                ' (Forumsbefund mit Bildschirmaufnahme).
+                If DialogShowsBatchResize OrElse DialogShowsExportTo OrElse DialogShowsImport OrElse
                    _dialogKind = AppDialogKind.BatchConvert OrElse
                    _dialogKind = AppDialogKind.BatchFilter OrElse
                    _dialogKind = AppDialogKind.WatermarkPreset OrElse
-                   _dialogKind = AppDialogKind.SaveAs Then Return 840
+                   _dialogKind = AppDialogKind.SaveAs Then Return 960
                 ' Aufnahmedatum: die beiden Wege stehen als Optionen nebeneinander, und bei 440
                 ' wurde "Um eine Zeitspanne verschieben" abgeschnitten (Nutzerbefund).
                 If DialogShowsCaptureDate Then Return 570
@@ -4471,8 +4469,6 @@ Namespace ViewModels
                 ' Loeschknoepfe und im Fuss drei Bedienelemente. Bei 840 ueberlappten sich die
                 ' Bedienelemente (Nutzerbefund); 1100 gibt jeder Wertspalte gut 400 Punkte.
                 If DialogShowsCompareMetadata Then Return 1100
-                ' Einlesen: Quelle und Ziel stehen als Pfade da und sollen lesbar bleiben.
-                If DialogShowsImport Then Return 680
                 If DialogShowsBackupOrRestore Then Return 620
                 Return 440
             End Get

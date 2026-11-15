@@ -114,6 +114,23 @@ Namespace Views
             LocalizationService.ApplyTo(_collageDialogOverlay)
         End Sub
 
+        Private _keywordManagerOverlay As KeywordManagerOverlayView
+
+        ''' <summary>Der Dialog zum Ordnen der Stichwoerter entsteht wie die Collage erst beim
+        ''' ersten Oeffnen und bleibt danach dieselbe Instanz.</summary>
+        Private Sub EnsureKeywordManagerOverlay()
+            If _keywordManagerOverlay IsNot Nothing Then Return
+            Dim vm = GetVm()
+            If vm Is Nothing OrElse Not vm.IsKeywordManagerOpen Then Return
+            _keywordManagerOverlay = New KeywordManagerOverlayView With {.DataContext = vm.KeywordManager}
+            Me.FindControl(Of ContentControl)("KeywordManagerHost").Content = _keywordManagerOverlay
+            LocalizationService.ApplyTo(_keywordManagerOverlay)
+        End Sub
+
+        Private Sub OnManageKeywordsClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.OpenKeywordManager()
+        End Sub
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
             AddHandler DataContextChanged, AddressOf OnViewDataContextChanged
@@ -269,7 +286,13 @@ Namespace Views
             ' Den EINTRAG durchreichen, nicht nur seinen Namen: nur er weiss, ob das Stichwort vom
             ' Server kommt und welche Kennung es dort hat.
             GetVm()?.ToggleTagFilter(entry)
-            ScrollFilterListToTop(sender)
+            ' Im Baum bleibt die Zeile, wo sie ist; nach oben rollen hiesse sie aus dem Blick nehmen.
+            If Not entry.ShowsTree Then ScrollFilterListToTop(sender)
+        End Sub
+
+        ''' <summary>Der Pfeil vor einem Stichwort mit Familie klappt sie auf oder zu.</summary>
+        Private Sub OnTagFilterExpandClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.ToggleTagExpanded(TryCast(TryCast(sender, Button)?.DataContext, TagFilterOption))
         End Sub
 
         ''' <summary>Nach oben rollen, nachdem eine Zeile an- oder abgewaehlt wurde.
@@ -830,6 +853,7 @@ Namespace Views
                 ApplySidebarColumns()
             End If
             If e.PropertyName = NameOf(GalleryViewModel.IsCollageDialogOpen) Then EnsureCollageDialogOverlay()
+            If e.PropertyName = NameOf(GalleryViewModel.IsKeywordManagerOpen) Then EnsureKeywordManagerOverlay()
             ' Der Streifen unter der Karte folgt der Auswahl wie der Filmstreifen dem aktuellen
             ' Bild. Ein neues Haeufchen beginnt mit neuem Sichtfenster.
             If e.PropertyName = NameOf(GalleryViewModel.HasMapSelection) Then

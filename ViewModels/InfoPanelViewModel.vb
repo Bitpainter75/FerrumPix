@@ -1854,6 +1854,18 @@ Namespace ViewModels
             ' wird dafuer ohne Ruecksicht darauf - sonst stuende "Berlin" zweimal da.
             If IsReadOnly Then Return
             Dim tag = NewTagText.Trim()
+            ' Ein getippter Weg ("Tiere > Hunde") vergibt das letzte Wort und merkt sich die
+            ' Ordnung darueber. Am Bild steht weiter nur "Hunde". Die Ordnung wird auch dann
+            ' gemerkt, wenn das Bild das Wort schon traegt: der Weg ist dann die ganze Absicht.
+            Dim steps = KeywordTree.SplitPath(tag)
+            If steps.Count > 1 Then
+                LibraryService.Instance.SetKeywordPath(steps)
+                tag = steps.Last()
+                If Tags.Any(Function(existing) String.Equals(existing, tag, StringComparison.OrdinalIgnoreCase)) Then
+                    NewTagText = ""
+                    Return
+                End If
+            End If
             If String.IsNullOrEmpty(tag) OrElse
                Tags.Any(Function(vorhanden) String.Equals(vorhanden, tag, StringComparison.OrdinalIgnoreCase)) Then Return
             Tags.Add(tag)

@@ -90,6 +90,112 @@ Namespace Models
             End Set
         End Property
 
+        ' ---------------------------------------------------------------- Ordnung als Baum
+
+        Private _depth As Integer
+        Private _showsTree As Boolean
+        Private _isExpanded As Boolean = True
+
+        ''' <summary>Die Zeile des übergeordneten Stichworts, Nothing auf der obersten Ebene.
+        ''' Gesetzt beim Aufbau der Liste; über sie entscheidet sich, ob die Zeile gerade unter
+        ''' einem zugeklappten Wort verschwindet.</summary>
+        Public Property ParentOption As TagFilterOption
+
+        ''' <summary>Hängen andere Stichwörter unter diesem? Dann trägt die Zeile den Pfeil zum
+        ''' Auf- und Zuklappen, und ein Klick auf sie meint alles darunter mit.</summary>
+        Public Property HasChildren As Boolean
+
+        ''' <summary>Die Stufe im Baum, null auf der obersten Ebene.</summary>
+        Public Property Depth As Integer
+            Get
+                Return _depth
+            End Get
+            Set(value As Integer)
+                If _depth = value Then Return
+                _depth = value
+                Notify()
+                Notify(NameOf(IndentWidth))
+            End Set
+        End Property
+
+        ''' <summary>Zeigt die Liste gerade den Baum? Beim Suchen nicht: dann stehen die Treffer
+        ''' flach untereinander, ohne Einzug und ohne Pfeil, weil ihre übergeordneten Wörter meist
+        ''' gar nicht in der Liste stehen.</summary>
+        Public Property ShowsTree As Boolean
+            Get
+                Return _showsTree
+            End Get
+            Set(value As Boolean)
+                If _showsTree = value Then Return
+                _showsTree = value
+                Notify()
+                Notify(NameOf(IndentWidth))
+                Notify(NameOf(ShowsExpandedArrow))
+                Notify(NameOf(ShowsCollapsedArrow))
+            End Set
+        End Property
+
+        Public Property IsExpanded As Boolean
+            Get
+                Return _isExpanded
+            End Get
+            Set(value As Boolean)
+                If _isExpanded = value Then Return
+                _isExpanded = value
+                Notify()
+                Notify(NameOf(ShowsExpandedArrow))
+                Notify(NameOf(ShowsCollapsedArrow))
+            End Set
+        End Property
+
+        Private _isDropTarget As Boolean
+
+        ''' <summary>Liegt beim Ziehen im Dialog gerade ein anderes Stichwort über dieser Zeile, und
+        ''' ließe es sich hier ablegen? Die Zeile zeigt das mit einem Akzentrahmen.</summary>
+        Public Property IsDropTarget As Boolean
+            Get
+                Return _isDropTarget
+            End Get
+            Set(value As Boolean)
+                If _isDropTarget = value Then Return
+                _isDropTarget = value
+                Notify()
+            End Set
+        End Property
+
+        ''' <summary>Der Einzug vor der Zeile in Bildpunkten.</summary>
+        Public ReadOnly Property IndentWidth As Double
+            Get
+                Return If(_showsTree, _depth * 16.0, 0.0)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowsExpandedArrow As Boolean
+            Get
+                Return _showsTree AndAlso HasChildren AndAlso _isExpanded
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowsCollapsedArrow As Boolean
+            Get
+                Return _showsTree AndAlso HasChildren AndAlso Not _isExpanded
+            End Get
+        End Property
+
+        ''' <summary>Steht ein übergeordnetes Wort dieser Zeile zugeklappt da?</summary>
+        Public ReadOnly Property IsHiddenByCollapse As Boolean
+            Get
+                Dim above = ParentOption
+                Dim guard = 0
+                While above IsNot Nothing AndAlso guard < 64
+                    If Not above.IsExpanded Then Return True
+                    above = above.ParentOption
+                    guard += 1
+                End While
+                Return False
+            End Get
+        End Property
+
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
         Private Sub Notify(<CallerMemberName> Optional name As String = Nothing)

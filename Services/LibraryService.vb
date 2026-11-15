@@ -420,6 +420,7 @@ Namespace Services
                 EnsurePeopleTables(conn)
                 EnsureFaceColumns(conn)
                 EnsureAiTagTables(conn)
+                EnsureKeywordTreeTable(conn)
                 If Not PathIdentity.IgnoresCase Then Return
                 Using cmd = conn.CreateCommand()
                     cmd.CommandText = "PRAGMA user_version"
@@ -433,6 +434,21 @@ Namespace Services
                 ' Schreibweise bleiben stehen, und beim naechsten Start wird es erneut versucht.
                 DiagnosticLogService.LogException("Library.NormalizeStoredPaths", ex)
             End Try
+        End Sub
+
+        ''' <summary>Die Ordnung der Stichwörter: je Wort eine Zeile mit dem übergeordneten Wort.
+        ''' Ein LEERES übergeordnetes Wort ist eine Aussage und kein Fehlen: das Wort wurde bewusst
+        ''' auf die oberste Ebene gestellt, und ein Pfad aus einer fremden Datei hängt es danach
+        ''' nicht wieder um (siehe <see cref="LearnKeywordPath"/>).</summary>
+        Private Shared Sub EnsureKeywordTreeTable(conn As SqliteConnection)
+            Using cmd = conn.CreateCommand()
+                cmd.CommandText =
+                    "CREATE TABLE IF NOT EXISTS KeywordParent (" &
+                    "  Name   TEXT PRIMARY KEY," &
+                    "  Parent TEXT NOT NULL DEFAULT ''" &
+                    ")"
+                cmd.ExecuteNonQuery()
+            End Using
         End Sub
 
         ''' <summary>Die beiden Tabellen fuer Personen. Eigene Tabellen statt Spalten in ImageMeta:
@@ -919,6 +935,236 @@ Namespace Services
             End If
             RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.Rating = rating})
         End Sub
+
+        ' ---------------------------------------------------------------- Ordnung der Stichwörter
+
+        Private ReadOnly _keywordParentsLock As New Object()
+        ''' <summary>Die Tabelle KeywordParent im Speicher, auch die Zeilen mit leerem
+        ''' übergeordnetem Wort. Nothing heißt: noch nicht gelesen. Im Speicher, weil
+        ''' <see cref="LearnKeywordPath"/> bei jedem gelesenen Stichwortpfad fragt und die Antwort
+        ''' fast immer "kenne ich schon" lautet.</summary>
+        Private _keywordParents As Dictionary(Of String, String)
+
+        Private Function KeywordParents() As Dictionary(Of String, String)
+            SyncLock _keywordParentsLock
+                If _keywordParents IsNot Nothing Then Return _keywordParents
+                Dim loaded As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+                Try
+                    Using conn = New SqliteConnection(_connectionString)
+                        conn.Open()
+                        Using cmd = conn.CreateCommand()
+                            cmd.CommandText = "SELECT Name, Parent FROM KeywordParent"
+                            Using reader = cmd.ExecuteReader()
+                                While reader.Read()
+                                    If reader.IsDBNull(0) Then Continue While
+                                    loaded(reader.GetString(0)) = If(reader.IsDBNull(1), "", reader.GetString(1))
+                                End While
+                            End Using
+                        End Using
+                    End Using
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Library.KeywordParents", ex)
+                End Try
+                _keywordParents = loaded
+                Return _keywordParents
+            End SyncLock
+        End Function
+
+        ''' <summary>Die Ordnung der Stichwörter als Momentaufnahme.</summary>
+        Public Function GetKeywordTree() As KeywordTree
+            SyncLock _keywordParentsLock
+                Return New KeywordTree(KeywordParents().ToList())
+            End SyncLock
+        End Function
+
+        ''' <summary>Hängt ein Stichwort unter ein anderes; ein leeres übergeordnetes Wort stellt es
+        ''' auf die oberste Ebene. Falsch, wenn sich damit ein Kreis schlösse oder nichts zu
+        ''' schreiben ist. An den Bildern ändert sich dabei nichts.</summary>
+        Public Function SetKeywordParent(name As String, parent As String) As Boolean
+            Dim child = NormalizeKeyword(name)
+            Dim above = NormalizeKeyword(parent)
+            If child.Length = 0 Then Return False
+            SyncLock _keywordParentsLock
+                Dim known = KeywordParents()
+                If New KeywordTree(known.ToList()).WouldCycle(child, above) Then Return False
+                ' Die Schreibweise der ersten Zeile bleibt: die Tabelle unterscheidet bei Umlauten
+                ' Groß und Klein, der Speicher nicht, und zwei Zeilen für dasselbe Wort wären zwei
+                ' widersprüchliche Antworten.
+                Dim stored = known.Keys.FirstOrDefault(Function(k) String.Equals(k, child, StringComparison.OrdinalIgnoreCase))
+                If stored IsNot Nothing Then child = stored
+                Try
+                    Using conn = New SqliteConnection(_connectionString)
+                        conn.Open()
+                        Using cmd = conn.CreateCommand()
+                            cmd.CommandText =
+                                "INSERT INTO KeywordParent(Name,Parent) VALUES($n,$p) " &
+                                "ON CONFLICT(Name) DO UPDATE SET Parent=$p"
+                            cmd.Parameters.AddWithValue("$n", child)
+                            cmd.Parameters.AddWithValue("$p", above)
+                            cmd.ExecuteNonQuery()
+                        End Using
+                    End Using
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Library.SetKeywordParent", ex)
+                    Return False
+                End Try
+                known(child) = above
+                Return True
+            End SyncLock
+        End Function
+
+        ''' <summary>Jedes Wort, das die Ordnung kennt: eingeordnete, übergeordnete und solche, die
+        ''' bewusst auf der obersten Ebene stehen. Darunter können Wörter sein, die an keinem Bild
+        ''' stehen, etwa eine frisch angelegte Kategorie.</summary>
+        Public Function GetKeywordTreeNames() As List(Of String)
+            SyncLock _keywordParentsLock
+                Dim names As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                For Each pair In KeywordParents()
+                    names.Add(pair.Key)
+                    If pair.Value.Length > 0 Then names.Add(pair.Value)
+                Next
+                Return names.ToList()
+            End SyncLock
+        End Function
+
+        ''' <summary>Nimmt ein Wort aus der Ordnung. Was unter ihm hing, rückt eine Stufe hinauf,
+        ''' an die Stelle des entfernten Worts. An den Bildern ändert sich nichts: ein Wort, das
+        ''' noch an Bildern steht, bleibt als Stichwort bestehen und steht danach auf der obersten
+        ''' Ebene.</summary>
+        Public Function RemoveKeywordFromTree(name As String) As Boolean
+            Dim word = NormalizeKeyword(name)
+            If word.Length = 0 Then Return False
+            SyncLock _keywordParentsLock
+                Dim known = KeywordParents()
+                Dim above = ""
+                known.TryGetValue(word, above)
+                Dim children = known.Where(Function(pair) String.Equals(pair.Value, word, StringComparison.OrdinalIgnoreCase)).
+                                     Select(Function(pair) pair.Key).ToList()
+                Try
+                    Using conn = New SqliteConnection(_connectionString)
+                        conn.Open()
+                        Using tx = conn.BeginTransaction()
+                            For Each child In children
+                                Using cmd = conn.CreateCommand()
+                                    cmd.Transaction = tx
+                                    cmd.CommandText = "UPDATE KeywordParent SET Parent=$p WHERE Name=$n"
+                                    cmd.Parameters.AddWithValue("$p", If(above, ""))
+                                    cmd.Parameters.AddWithValue("$n", child)
+                                    cmd.ExecuteNonQuery()
+                                End Using
+                            Next
+                            Dim stored = known.Keys.FirstOrDefault(Function(k) String.Equals(k, word, StringComparison.OrdinalIgnoreCase))
+                            If stored IsNot Nothing Then
+                                Using cmd = conn.CreateCommand()
+                                    cmd.Transaction = tx
+                                    cmd.CommandText = "DELETE FROM KeywordParent WHERE Name=$n"
+                                    cmd.Parameters.AddWithValue("$n", stored)
+                                    cmd.ExecuteNonQuery()
+                                End Using
+                            End If
+                            tx.Commit()
+                        End Using
+                    End Using
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Library.RemoveKeywordFromTree", ex)
+                    Return False
+                End Try
+                For Each child In children
+                    known(child) = If(above, "")
+                Next
+                known.Remove(word)
+                Return True
+            End SyncLock
+        End Function
+
+        ''' <summary>Legt einen ganzen Weg fest, von oben nach unten: jede Stufe hängt unter der
+        ''' davor. Für den getippten Weg ("Tiere > Hunde"); er gilt als bewusste Angabe und hängt
+        ''' ein schon eingeordnetes Wort um. Die oberste Stufe bleibt, wo sie ist.</summary>
+        Public Function SetKeywordPath(steps As IEnumerable(Of String)) As Boolean
+            Dim path = If(steps, Enumerable.Empty(Of String)()).
+                       Select(AddressOf NormalizeKeyword).Where(Function(s) s.Length > 0).ToList()
+            Dim changed = False
+            For index = 1 To path.Count - 1
+                If SetKeywordParent(path(index), path(index - 1)) Then changed = True
+            Next
+            Return changed
+        End Function
+
+        ''' <summary>Lernt die Ordnung aus einem Stichwortpfad einer fremden Datei
+        ''' ("Tiere|Hunde"). NUR FÜR WÖRTER, DIE NOCH KEINE ZEILE HABEN: was der Benutzer selbst
+        ''' eingeordnet oder auf die oberste Ebene gestellt hat, hängt keine Datei wieder um, und
+        ''' nach dem ersten Lesen eines Pfades wird für ihn nichts mehr geschrieben. Ein Text ohne
+        ''' Pfad kostet nur die Suche nach dem Trennzeichen.</summary>
+        Public Sub LearnKeywordPath(value As String)
+            If value Is Nothing OrElse value.IndexOf("|"c) < 0 Then Return
+            Dim path = value.Split("|"c).Select(AddressOf NormalizeKeyword).Where(Function(s) s.Length > 0).ToList()
+            If path.Count < 2 Then Return
+            SyncLock _keywordParentsLock
+                Dim known = KeywordParents()
+                For index = 1 To path.Count - 1
+                    If known.ContainsKey(path(index)) Then Continue For
+                    SetKeywordParent(path(index), path(index - 1))
+                Next
+            End SyncLock
+        End Sub
+
+        ''' <summary>Wie viele Bilder tragen mindestens EINES der Wörter einer Familie? Je Familie
+        ''' eine Zahl, in einem Durchgang für alle. Für die Zeile eines übergeordneten Stichworts:
+        ''' sie zählt, was unter ihm hängt, mit, und ein Bild mit zwei Wörtern derselben Familie
+        ''' zählt einmal. Mit <paramref name="scopePaths"/> nur über diese Dateien, sonst über den
+        ''' ganzen Katalog.</summary>
+        Public Function GetKeywordFamilyCounts(families As IDictionary(Of String, List(Of String)),
+                                               scopePaths As IEnumerable(Of String)) As Dictionary(Of String, Integer)
+            Dim result As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+            If families Is Nothing OrElse families.Count = 0 Then Return result
+            Dim familiesOfTag As New Dictionary(Of String, List(Of String))(StringComparer.OrdinalIgnoreCase)
+            For Each family In families
+                result(family.Key) = 0
+                For Each tag In If(family.Value, New List(Of String)())
+                    Dim list As List(Of String) = Nothing
+                    If Not familiesOfTag.TryGetValue(tag, list) Then
+                        list = New List(Of String)()
+                        familiesOfTag(tag) = list
+                    End If
+                    list.Add(family.Key)
+                Next
+            Next
+            Dim countRow =
+                Sub(tags As IEnumerable(Of String))
+                    Dim hit As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+                    For Each tag In tags
+                        Dim list As List(Of String) = Nothing
+                        If familiesOfTag.TryGetValue(tag, list) Then hit.UnionWith(list)
+                    Next
+                    For Each family In hit
+                        result(family) += 1
+                    Next
+                End Sub
+            Try
+                If scopePaths IsNot Nothing Then
+                    Dim list = scopePaths.Where(Function(p) Not String.IsNullOrWhiteSpace(p)).
+                               Distinct(PathIdentity.Comparer).ToList()
+                    For Each meta In GetMetaForPaths(list).Values
+                        countRow(If(meta.Tags, New List(Of String)()))
+                    Next
+                    Return result
+                End If
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT Tags FROM ImageMeta WHERE Tags<>''"
+                        Using reader = cmd.ExecuteReader()
+                            While reader.Read()
+                                If Not reader.IsDBNull(0) Then countRow(ParseTags(reader.GetString(0)))
+                            End While
+                        End Using
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.KeywordFamilyCounts", ex)
+            End Try
+            Return result
+        End Function
 
         Public Function GetTags(filePath As String) As List(Of String)
             Using conn = New SqliteConnection(_connectionString)

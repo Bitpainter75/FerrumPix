@@ -11730,4 +11730,43 @@
   <data name="Stattdessen_endg_ltig_l_schen_Das_l_sst_sich_nic_ca16dcf8" xml:space="preserve">
     <value>Slet permanent i stedet? Det kan ikke fortrydes.</value>
   </data>
+  <data name="Ein_Stichwort_kann_nicht_unter_sich_selbst_stehe_64c3bc89" xml:space="preserve">
+    <value>Et nøgleord kan ikke stå under sig selv</value>
+  </data>
+  <data name="Stichw_rter_ordnen_1d2828cd" xml:space="preserve">
+    <value>Ordn nøgleord</value>
+  </data>
+  <data name="H_nge_Stichw_rter_untereinander_etwa_Hunde_und_K_4d83c3f2" xml:space="preserve">
+    <value>Placer nøgleord under hinanden, for eksempel Hunde og Katte under Dyr. Vælger man Dyr i galleriet, finder man også billederne med Hunde. Selve billederne ændres ikke.</value>
+  </data>
+  <data name="Ziehe_ein_Stichwort_auf_ein_anderes_um_es_darunt_16285d1c" xml:space="preserve">
+    <value>Træk et nøgleord over på et andet for at placere det under, eller vælg et.</value>
+  </data>
+  <data name="Steht_unter_9664b5f6" xml:space="preserve">
+    <value>Står under</value>
+  </data>
+  <data name="Oberste_Ebene_2ab111eb" xml:space="preserve">
+    <value>Øverste niveau</value>
+  </data>
+  <data name="Einordnen_326e238b" xml:space="preserve">
+    <value>Indordn</value>
+  </data>
+  <data name="Ein_Weg_wie_Reisen_Italien_legt_die_Stufen_dar_b_7de8bc95" xml:space="preserve">
+    <value>En sti som Rejser &gt; Italien opretter også niveauerne ovenover.</value>
+  </data>
+  <data name="Auf_die_oberste_Ebene_2749d3a1" xml:space="preserve">
+    <value>Til øverste niveau</value>
+  </data>
+  <data name="Nur_f_r_ein_Stichwort_das_an_keinem_Bild_steht_W_ab79f778" xml:space="preserve">
+    <value>Kun for et nøgleord, som ikke står på noget billede. Det, der ligger under, rykker et niveau op.</value>
+  </data>
+  <data name="Neues_Stichwort_darunter_06c3853d" xml:space="preserve">
+    <value>Nyt nøgleord herunder</value>
+  </data>
+  <data name="Neues_Stichwort_auf_der_obersten_Ebene_8cc5caa3" xml:space="preserve">
+    <value>Nyt nøgleord på øverste niveau</value>
+  </data>
+  <data name="Anlegen_846460c3" xml:space="preserve">
+    <value>Opret</value>
+  </data>
 </root>

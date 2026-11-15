@@ -11734,4 +11734,43 @@
   <data name="Stattdessen_endg_ltig_l_schen_Das_l_sst_sich_nic_ca16dcf8" xml:space="preserve">
     <value>इसके बजाय स्थायी रूप से मिटाएँ? इसे पूर्ववत नहीं किया जा सकता।</value>
   </data>
+  <data name="Ein_Stichwort_kann_nicht_unter_sich_selbst_stehe_64c3bc89" xml:space="preserve">
+    <value>कोई कीवर्ड स्वयं के अंतर्गत नहीं हो सकता</value>
+  </data>
+  <data name="Stichw_rter_ordnen_1d2828cd" xml:space="preserve">
+    <value>कीवर्ड व्यवस्थित करें</value>
+  </data>
+  <data name="H_nge_Stichw_rter_untereinander_etwa_Hunde_und_K_4d83c3f2" xml:space="preserve">
+    <value>कीवर्ड को एक-दूसरे के अंतर्गत रखें, जैसे कुत्ते और बिल्लियाँ को जानवर के अंतर्गत। गैलरी में जानवर चुनने पर कुत्ते वाली तस्वीरें भी मिलती हैं। तस्वीरों में कोई बदलाव नहीं होता।</value>
+  </data>
+  <data name="Ziehe_ein_Stichwort_auf_ein_anderes_um_es_darunt_16285d1c" xml:space="preserve">
+    <value>किसी कीवर्ड को दूसरे पर खींचकर उसके नीचे रखें, या कोई एक चुनें।</value>
+  </data>
+  <data name="Steht_unter_9664b5f6" xml:space="preserve">
+    <value>इसके अंतर्गत है</value>
+  </data>
+  <data name="Oberste_Ebene_2ab111eb" xml:space="preserve">
+    <value>सबसे ऊपरी स्तर</value>
+  </data>
+  <data name="Einordnen_326e238b" xml:space="preserve">
+    <value>रखें</value>
+  </data>
+  <data name="Ein_Weg_wie_Reisen_Italien_legt_die_Stufen_dar_b_7de8bc95" xml:space="preserve">
+    <value>यात्रा &gt; इटली जैसा पथ ऊपर के स्तर भी साथ में बना देता है।</value>
+  </data>
+  <data name="Auf_die_oberste_Ebene_2749d3a1" xml:space="preserve">
+    <value>सबसे ऊपरी स्तर पर</value>
+  </data>
+  <data name="Nur_f_r_ein_Stichwort_das_an_keinem_Bild_steht_W_ab79f778" xml:space="preserve">
+    <value>केवल उस कीवर्ड के लिए जो किसी तस्वीर पर नहीं है। उसके नीचे का सब कुछ एक स्तर ऊपर आ जाता है।</value>
+  </data>
+  <data name="Neues_Stichwort_darunter_06c3853d" xml:space="preserve">
+    <value>इसके नीचे नया कीवर्ड</value>
+  </data>
+  <data name="Neues_Stichwort_auf_der_obersten_Ebene_8cc5caa3" xml:space="preserve">
+    <value>सबसे ऊपरी स्तर पर नया कीवर्ड</value>
+  </data>
+  <data name="Anlegen_846460c3" xml:space="preserve">
+    <value>बनाएँ</value>
+  </data>
 </root>

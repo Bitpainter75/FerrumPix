@@ -424,6 +424,9 @@ Namespace Services
                 ' weil dieselben Regeln auch für die eingebetteten Stichwörter gelten.
                 Dim leaf = LibraryService.NormalizeKeyword(li.Value)
                 If leaf.Length = 0 Then Continue For
+                ' Die Stufen darueber gehen nicht mehr verloren: sie werden zur Ordnung der
+                ' Stichwoerter, am Bild steht weiter das Blatt.
+                LibraryService.Instance.LearnKeywordPath(li.Value)
 
                 If Not target.Any(Function(t) String.Equals(t, leaf, StringComparison.OrdinalIgnoreCase)) Then
                     target.Add(leaf)

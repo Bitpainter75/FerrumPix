@@ -943,6 +943,8 @@ Namespace Services
         Private Shared Sub AddEmbeddedKeyword(data As ExifData, value As String)
             Dim keyword = LibraryService.NormalizeKeyword(value)
             If keyword.Length = 0 Then Return
+            ' Aus einem Pfad die Ordnung lernen; am Bild steht weiter das Blatt.
+            LibraryService.Instance.LearnKeywordPath(value)
             If data.EmbeddedKeywords.Any(Function(t) String.Equals(t, keyword, StringComparison.OrdinalIgnoreCase)) Then Return
             data.EmbeddedKeywords.Add(keyword)
         End Sub
