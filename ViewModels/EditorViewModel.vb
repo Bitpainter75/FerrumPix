@@ -23683,24 +23683,17 @@ Namespace ViewModels
                     Dim psdWorking As SKBitmap = If(_workingImage.HasBakedContent, CloneWorkingFullForRender(), Nothing)
                     ok = Await Task.Run(Function() As Boolean
                                             Try
-                                                Dim withoutObjects = adj.Clone()
-                                                withoutObjects.Annotations?.Clear()
-                                                Dim processMs As Long = 0
-                                                Dim encodeMs As Long = 0
-                                                Using compositeStream = If(psdWorking IsNot Nothing,
-                                                                           ImageProcessor.RenderPngStream(psdWorking, adj, processMs, encodeMs),
-                                                                           ImageProcessor.RenderPngStream(psdSourcePath, adj)),
-                                                      backgroundStream = If(psdWorking IsNot Nothing,
-                                                                            ImageProcessor.RenderPngStream(psdWorking, withoutObjects, processMs, encodeMs),
-                                                                            ImageProcessor.RenderPngStream(psdSourcePath, withoutObjects))
-                                                    If compositeStream Is Nothing Then Return False
-                                                    Using composite = SKBitmap.Decode(compositeStream),
-                                                          background = If(backgroundStream Is Nothing, Nothing, SKBitmap.Decode(backgroundStream))
-                                                        If composite Is Nothing Then Return False
-                                                        Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj,
-                                                                                                       psdSourcePath, preserveMetadata)
-                                                    End Using
-                                                End Using
+                                                ' Beide Bilder aus EINEM Decode (RenderLayeredExportPair).
+                                                Dim background As SKBitmap = Nothing
+                                                Dim composite = ImageProcessor.RenderLayeredExportPair(psdSourcePath, psdWorking, adj, background)
+                                                Try
+                                                    If composite Is Nothing Then Return False
+                                                    Return ImageProcessor.ExportLayeredPsd(psdTarget, composite, background, adj,
+                                                                                           psdSourcePath, preserveMetadata)
+                                                Finally
+                                                    composite?.Dispose()
+                                                    background?.Dispose()
+                                                End Try
                                             Finally
                                                 psdWorking?.Dispose()
                                             End Try

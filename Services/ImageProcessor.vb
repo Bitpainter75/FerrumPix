@@ -1074,6 +1074,69 @@ Namespace Services
             End Using
         End Function
 
+        ''' <summary>Die beiden Bilder des Ebenen-Exports in voller Groesse: das fertige Bild
+        ''' (Rueckgabe) und dasselbe ohne Objekte (<paramref name="background"/>, die unterste
+        ''' Ebene). Besitz beider beim Aufrufer.
+        '''
+        ''' EIN DECODE FUER BEIDE. Vorher lief je Bild ein eigener Render ueber einen PNG-Strom:
+        ''' die Quelle zweimal dekodiert (eine RAW zweimal entwickelt), jedes Ergebnis als PNG
+        ''' kodiert und gleich wieder gelesen. Die Kette rechnet weiter zweimal, einmal je Rezept:
+        ''' so bleibt es dieselbe Rechnung wie zuvor.
+        '''
+        ''' DER PNG-RUNDWEG BLEIBT, WO ER ETWAS TUT. Ein deckendes Bild kommt aus ihm mit denselben
+        ''' Bytes zurueck und geht deshalb direkt weiter. Mit Transparenz wandelt er vormultipliziert
+        ''' nach gerade und zurueck; ohne ihn koennten einzelne Werte um eine Stufe abweichen, also
+        ''' laeuft er dort wie bisher.</summary>
+        ''' <param name="working">Das Arbeitsbild mit gebackenem Inhalt als Eingang, oder Nothing:
+        ''' dann wird <paramref name="sourcePath"/> dekodiert.</param>
+        Friend Shared Function RenderLayeredExportPair(sourcePath As String, working As SKBitmap, adj As ImageAdjustments,
+                                                       ByRef background As SKBitmap) As SKBitmap
+            background = Nothing
+            If adj Is Nothing Then Return Nothing
+            Using PlanePoolScope.BeginOutput()
+                Dim renderAdj = adj
+                Dim decoded As SKBitmap = Nothing
+                Dim source = working
+                If source Is Nothing Then
+                    decoded = DecodeForRender(sourcePath, adj, renderAdj)
+                    source = decoded
+                End If
+                If source Is Nothing Then Return Nothing
+                Try
+                    Dim withoutObjects = renderAdj.Clone()
+                    withoutObjects.Annotations?.Clear()
+                    Dim composite = RenderForLayeredExport(source, renderAdj)
+                    If composite Is Nothing Then Return Nothing
+                    background = RenderForLayeredExport(source, withoutObjects)
+                    Return composite
+                Finally
+                    decoded?.Dispose()
+                End Try
+            End Using
+        End Function
+
+        ''' <summary>Ein Bild fuer <see cref="RenderLayeredExportPair"/>: die Kette, danach nur bei
+        ''' Transparenz der PNG-Rundweg.</summary>
+        Private Shared Function RenderForLayeredExport(source As SKBitmap, adj As ImageAdjustments) As SKBitmap
+            Dim processed = ProcessBitmap(source, adj)
+            If processed Is Nothing Then Return Nothing
+            Dim keep = False
+            Try
+                If processed.AlphaType = SKAlphaType.Opaque AndAlso
+                   (processed.ColorType = SKColorType.Bgra8888 OrElse processed.ColorType = SKColorType.Rgba8888) Then
+                    If Object.ReferenceEquals(processed, source) Then Return CopyBitmap(processed)
+                    keep = True
+                    Return processed
+                End If
+                Dim encodeMs As Long = 0
+                Using stream = EncodePngStream(processed, encodeMs)
+                    Return If(stream Is Nothing, Nothing, SKBitmap.Decode(stream))
+                End Using
+            Finally
+                If Not keep AndAlso Not Object.ReferenceEquals(processed, source) Then processed.Dispose()
+            End Try
+        End Function
+
         ''' Abgelegt, nicht durchgereicht: der Editor legt das Ergebnis als Anzeigebild ins Buendel.
         ''' Die Miniaturen nehmen denselben Weg, sind aber klein genug, dass die Stufe dort nicht
         ''' ins Gewicht faellt.
