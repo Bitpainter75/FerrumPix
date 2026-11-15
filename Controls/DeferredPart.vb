@@ -57,7 +57,7 @@ Namespace Controls
         Private _partTemplate As ITemplate(Of Control)
 
         ''' <summary>Ist der Inhalt schon gebaut?</summary>
-        Public ReadOnly Property IsLoaded As Boolean
+        Public ReadOnly Property IsPartLoaded As Boolean
             Get
                 Return Child IsNot Nothing
             End Get
