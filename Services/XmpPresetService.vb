@@ -32,6 +32,16 @@ Namespace Services
             Public Property HasCropTop As Boolean
             Public Property HasCropRight As Boolean
             Public Property HasCropBottom As Boolean
+            ''' <summary>Der Zuschnitt traegt einen Winkel. Dann sind die vier Werte keine Raender,
+            ''' sondern zwei Ecken, und die Kanten in <see cref="Geometry"/> gelten NICHT: sie
+            ''' haengen vom Seitenverhaeltnis des Bildes ab und entstehen erst beim Uebernehmen
+            ''' (<see cref="ResolveRotatedCrop"/>).</summary>
+            Public Property HasRotatedCrop As Boolean
+            Public Property CropAngleDegrees As Double
+            Public Property CropCornerLeft As Double
+            Public Property CropCornerTop As Double
+            Public Property CropCornerRight As Double
+            Public Property CropCornerBottom As Double
             Public Property HasLensCorrection As Boolean
             Public Property HasChromaticAberration As Boolean
             ''' Das Preset schaltet die Profilkorrektur ausdruecklich ab (LensProfileEnable="0").
@@ -41,6 +51,64 @@ Namespace Services
             Public Property ProfileName As String = ""
             Public Property HasEmbeddedProfileReference As Boolean
         End Class
+
+        ''' <summary>Ein gedrehter Zuschnitt, umgerechnet in eine Begradigung mit erweiterter
+        ''' Leinwand und vier Kanten auf dieser Leinwand.</summary>
+        Public Structure RotatedCrop
+            Public Valid As Boolean
+            Public StraightenDegrees As Single
+            Public LeftPercent As Single
+            Public TopPercent As Single
+            Public RightPercent As Single
+            Public BottomPercent As Single
+        End Structure
+
+        ''' <summary>Rechnet den gedrehten Zuschnitt einer Beistelldatei in unsere zwei Schritte um.
+        '''
+        ''' WIE DIE FELDER GEMEINT SIND (gegen das Referenzprogramm gemessen, an zwei Bildern mit
+        ''' beiden Vorzeichen): links/oben und rechts/unten sind zwei gegenueberliegende ECKEN des
+        ''' Zuschnitts im ungedrehten Bild, als Anteil von Breite und Hoehe. Der Winkel dreht das
+        ''' Rechteck um seine erste Ecke; seine Achsen sind u = (cos a, sin a) und
+        ''' v = (-sin a, cos a), y nach unten. Breite und Hoehe sind der Vektor von Ecke zu Ecke,
+        ''' entlang dieser Achsen gemessen. Vier achsparallele Raender sind es nur ohne Winkel.
+        '''
+        ''' UNSERE ZWEI SCHRITTE dafuer: das Bild um -a begradigen, auf erweiterter Leinwand (die
+        ''' Ecken bleiben erhalten), dann liegt das Rechteck achsparallel und wird zu vier Kanten.
+        ''' Die Kanten haengen am Seitenverhaeltnis, deshalb braucht die Rechnung die Bildmasse.
+        '''
+        ''' Ungueltig ist ein Zuschnitt ohne Flaeche. Ragt er ueber das Bild hinaus, wird er an der
+        ''' Leinwand begrenzt; das Referenzprogramm schreibt so einen Zuschnitt nicht.</summary>
+        Public Shared Function ResolveRotatedCrop(cornerLeft As Double, cornerTop As Double,
+                                                  cornerRight As Double, cornerBottom As Double,
+                                                  angleDegrees As Double,
+                                                  imageWidth As Integer, imageHeight As Integer) As RotatedCrop
+            Dim result As New RotatedCrop()
+            If imageWidth <= 0 OrElse imageHeight <= 0 Then Return result
+            Dim radians = angleDegrees * Math.PI / 180.0
+            Dim cosA = Math.Cos(radians), sinA = Math.Sin(radians)
+            Dim dx = (cornerRight - cornerLeft) * imageWidth
+            Dim dy = (cornerBottom - cornerTop) * imageHeight
+            Dim cropWidth = dx * cosA + dy * sinA
+            Dim cropHeight = dy * cosA - dx * sinA
+            If cropWidth < 1 OrElse cropHeight < 1 Then Return result
+
+            ' Die Begradigung dreht um die Bildmitte auf die Mitte der Huelle. Mit -a wird aus der
+            ' Achse u die Waagerechte: x' = x cos a + y sin a, y' = -x sin a + y cos a.
+            Dim straighten = -angleDegrees
+            Dim hull = ImageProcessor.StraightenExpandedSize(imageWidth, imageHeight, straighten)
+            Dim fromCenterX = cornerLeft * imageWidth - imageWidth / 2.0
+            Dim fromCenterY = cornerTop * imageHeight - imageHeight / 2.0
+            Dim leftOnHull = fromCenterX * cosA + fromCenterY * sinA + hull.Width / 2.0
+            Dim topOnHull = -fromCenterX * sinA + fromCenterY * cosA + hull.Height / 2.0
+
+            result.StraightenDegrees = CSng(straighten)
+            result.LeftPercent = CSng(Clamp(leftOnHull / hull.Width * 100, 0, 99))
+            result.TopPercent = CSng(Clamp(topOnHull / hull.Height * 100, 0, 99))
+            result.RightPercent = CSng(Clamp((1 - (leftOnHull + cropWidth) / hull.Width) * 100, 0, 99))
+            result.BottomPercent = CSng(Clamp((1 - (topOnHull + cropHeight) / hull.Height) * 100, 0, 99))
+            result.Valid = True
+            Return result
+        End Function
 
         ''' <summary>Liest die importierbaren Zusatzteile. Adobe speichert in XMP normalerweise
         ''' nur eine Profil-REFERENZ; die 3D-Daten bleiben im Camera-Raw-Installationsordner. Daher
@@ -81,6 +149,19 @@ Namespace Services
                 result.HasCropRight = hasRight
                 result.HasCropBottom = hasBottom
                 result.HasCrop = True
+                ' Ein Winkel am Zuschnitt macht aus den vier Werten etwas anderes als vier Raender
+                ' (siehe ResolveRotatedCrop). Er zaehlt nur zusammen mit allen vier Werten: ein
+                ' Winkel allein laesst das Bild im Referenzprogramm ungedreht.
+                Dim angle As Double
+                If hasLeft AndAlso hasTop AndAlso hasRight AndAlso hasBottom AndAlso
+                   TryGetXmpDouble(values, "CropAngle", angle) AndAlso Math.Abs(angle) >= 0.005 Then
+                    result.HasRotatedCrop = True
+                    result.CropAngleDegrees = Clamp(angle, -45, 45)
+                    result.CropCornerLeft = leftValue
+                    result.CropCornerTop = topValue
+                    result.CropCornerRight = rightValue
+                    result.CropCornerBottom = bottomValue
+                End If
             End If
             ' Die Adobe-Schalter sagen nur, DASS eine Korrektur aktiv war. Die konkreten
             ' Objektivdaten sind nicht portabel; FerrumPix verwendet dafür seine eigene Datenbank.

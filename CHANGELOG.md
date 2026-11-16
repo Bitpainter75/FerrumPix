@@ -33,6 +33,9 @@
 - FerrumPix could close without warning while a RAW file was being developed, mostly after it
   had been idle for a moment. This no longer happens.
 
+- A crop that was also rotated arrived wrong when it was taken over from an XMP file: the
+  rotation was dropped and the frame sat in the wrong place. Both now arrive as they were set.
+
 - Typing part of a name at a face and then clicking the full name in the list of suggestions
   assigned the typed part, for example "Dad" instead of "Daddy (me)", and further steps could
   rename the whole person. The clicked suggestion now counts. Before a name typed at one face

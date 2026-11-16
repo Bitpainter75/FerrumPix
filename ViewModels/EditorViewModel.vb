@@ -32582,10 +32582,31 @@ Namespace ViewModels
                 ' Kante fuehrt die uebrigen drei als 0 - wer sie mit uebernimmt, loescht damit den
                 ' Zuschnitt, den der Nutzer am Bild bereits gesetzt hat.
                 Dim crop As New ImageAdjustments()
-                If extras.HasCropLeft Then crop.CropLeftPercent = extras.Geometry.CropLeftPercent
-                If extras.HasCropTop Then crop.CropTopPercent = extras.Geometry.CropTopPercent
-                If extras.HasCropRight Then crop.CropRightPercent = extras.Geometry.CropRightPercent
-                If extras.HasCropBottom Then crop.CropBottomPercent = extras.Geometry.CropBottomPercent
+                ' Ein Zuschnitt MIT Winkel ist kein Rechteck aus vier Raendern: die Werte sind dann
+                ' zwei Ecken, und das Rechteck liegt gedreht im Bild. Daraus werden eine
+                ' Begradigung auf erweiterter Leinwand und vier Kanten darauf. Die Drehung gehoert
+                ' hier zum Zuschnitt und nicht zum Ausrichten, weil der Ausschnitt ohne sie ein
+                ' anderer waere.
+                Dim rotated As XmpPresetService.RotatedCrop = Nothing
+                If extras.HasRotatedCrop Then
+                    Dim before = ImageProcessor.ComputeGeometryOutputSize(GetBaseWidth(), GetBaseHeight(), merged)
+                    rotated = XmpPresetService.ResolveRotatedCrop(extras.CropCornerLeft, extras.CropCornerTop,
+                                                                  extras.CropCornerRight, extras.CropCornerBottom,
+                                                                  extras.CropAngleDegrees, before.Width, before.Height)
+                End If
+                If rotated.Valid Then
+                    merged.GeometryOperations.Add(New GeometryOperation With {.Kind = "transform", .Adjustments = New ImageAdjustments With {
+                        .StraightenDegrees = rotated.StraightenDegrees, .StraightenExpandCanvas = True}})
+                    crop.CropLeftPercent = rotated.LeftPercent
+                    crop.CropTopPercent = rotated.TopPercent
+                    crop.CropRightPercent = rotated.RightPercent
+                    crop.CropBottomPercent = rotated.BottomPercent
+                Else
+                    If extras.HasCropLeft Then crop.CropLeftPercent = extras.Geometry.CropLeftPercent
+                    If extras.HasCropTop Then crop.CropTopPercent = extras.Geometry.CropTopPercent
+                    If extras.HasCropRight Then crop.CropRightPercent = extras.Geometry.CropRightPercent
+                    If extras.HasCropBottom Then crop.CropBottomPercent = extras.Geometry.CropBottomPercent
+                End If
                 merged.GeometryOperations.Add(New GeometryOperation With {.Kind = "crop", .Adjustments = crop})
                 changed = True
             End If
