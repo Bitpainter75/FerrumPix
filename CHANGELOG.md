@@ -28,6 +28,10 @@
 - The dialogs for exporting, importing, Save as, resizing, converting, filters and watermarks are
   wider.
 
+- On a small screen the scrollbar of the tool bar in the editor lay over the tools. It is gone:
+  the mouse wheel still scrolls the bar, and a small arrow at the top and at the bottom shows
+  that there are more tools in that direction.
+
 ### Fixes
 
 - FerrumPix could close without warning while a RAW file was being developed, mostly after it

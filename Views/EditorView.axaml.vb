@@ -1083,6 +1083,45 @@ Namespace Views
             UpdateSliderLayout()
         End Sub
 
+        ''' <summary>Weg eines Klicks auf einen Pfeil der Werkzeugleiste: eine Zeile, also ein Knopf
+        ''' (36) samt Abstand (2).</summary>
+        Private Const ToolSidebarScrollStep As Double = 38.0
+
+        ''' <summary>Die Werkzeugleiste hat keine Bildlaufleiste. Feuert bei jeder Änderung von
+        ''' Versatz, Inhaltshöhe und Sichthöhe, also auch beim ersten Layout und beim Ändern der
+        ''' Fensterhöhe.</summary>
+        Private Sub OnToolSidebarScrollChanged(sender As Object, e As ScrollChangedEventArgs)
+            UpdateToolSidebarScrollArrows()
+        End Sub
+
+        ''' <summary>Ein Pfeil steht nur, solange in seine Richtung mindestens ein halber Punkt zu
+        ''' scrollen bleibt. Die Pfeile liegen über der Liste und nehmen ihr keine Höhe, die
+        ''' Sichthöhe hängt also nicht davon ab, ob sie stehen.</summary>
+        Private Sub UpdateToolSidebarScrollArrows()
+            Dim viewer = Me.FindControl(Of ScrollViewer)("ToolSidebarScrollViewer")
+            Dim up = Me.FindControl(Of RepeatButton)("ToolSidebarScrollUp")
+            Dim down = Me.FindControl(Of RepeatButton)("ToolSidebarScrollDown")
+            If viewer Is Nothing OrElse up Is Nothing OrElse down Is Nothing Then Return
+            Dim remaining = viewer.Extent.Height - viewer.Viewport.Height - viewer.Offset.Y
+            up.IsVisible = viewer.Offset.Y >= 0.5
+            down.IsVisible = remaining >= 0.5
+        End Sub
+
+        Private Sub OnToolSidebarScrollUpClick(sender As Object, e As RoutedEventArgs)
+            ScrollToolSidebarBy(-ToolSidebarScrollStep)
+        End Sub
+
+        Private Sub OnToolSidebarScrollDownClick(sender As Object, e As RoutedEventArgs)
+            ScrollToolSidebarBy(ToolSidebarScrollStep)
+        End Sub
+
+        Private Sub ScrollToolSidebarBy(delta As Double)
+            Dim viewer = Me.FindControl(Of ScrollViewer)("ToolSidebarScrollViewer")
+            If viewer Is Nothing Then Return
+            Dim maximum = Math.Max(0.0, viewer.Extent.Height - viewer.Viewport.Height)
+            viewer.Offset = New Vector(viewer.Offset.X, Math.Clamp(viewer.Offset.Y + delta, 0.0, maximum))
+        End Sub
+
         ''' <summary>Ein Flyout entsteht erst beim Oeffnen aus seinem Template und ist beim
         ''' einmaligen Durchlauf ueber das Fenster noch nicht da. Ohne diesen Einstieg bliebe sein
         ''' Inhalt in der Ausgangssprache stehen, waehrend die uebrige Oberflaeche umgeschaltet

@@ -889,6 +889,28 @@
     <Style Selector="Button.tool-btn-row.selected-kind icons|SvgIcon">
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
     </Style>
+    <!-- Die zwei Pfeile der Werkzeugleiste des Editors, wenn ihre Hoehe nicht fuer alle Werkzeuge
+         reicht. Sie liegen ueber der Liste und tragen deshalb die Flaeche der Leiste. -->
+    <Style Selector="RepeatButton.tool-scroll-arrow">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Border.Strong}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="RepeatButton.tool-scroll-arrow:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource FP.Accent}"/>
+    </Style>
+    <Style Selector="RepeatButton.tool-scroll-arrow:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource FP.Bg.Elevated}"/>
+    </Style>
     <Style Selector="Button.winchr">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>

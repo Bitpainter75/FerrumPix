@@ -452,7 +452,19 @@
              niemand mehr erklaeren kann. -->
         <Border Grid.Row="1" Grid.Column="0" Classes="sidebar" Padding="8,8" Width="{Binding ToolSidebarWidth}"
                 IsEnabled="{Binding IsInteractionAllowed}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" FocusAdorner="{x:Null}">
+            <!-- Keine Bildlaufleiste: sie lag 13 Punkte breit ueber den Knoepfen, in der
+                 eingeklappten Leiste ueber einem Drittel jedes Symbols. Reicht die Hoehe nicht,
+                 scrollt das Mausrad, und oben und unten steht je ein Pfeil, solange in seine
+                 Richtung noch Werkzeuge liegen (UpdateToolSidebarScrollArrows). Die Pfeile liegen
+                 UEBER der Liste und nicht in eigenen Zeilen: ein Pfeil, der Hoehe nimmt, aendert
+                 die Sichthoehe, nach der er selbst entschieden wird.
+                 Der durchsichtige Hintergrund macht die ganze Flaeche zum Ziel des Mausrads: ein
+                 Bildlaufbereich ohne Hintergrund ist nur dort trefferfaehig, wo ein Kind steht,
+                 zwischen zwei Knoepfen und neben einer Ueberschrift also nicht. -->
+            <Grid>
+            <ScrollViewer x:Name="ToolSidebarScrollViewer" VerticalScrollBarVisibility="Hidden"
+                          Background="Transparent"
+                          FocusAdorner="{x:Null}" ScrollChanged="OnToolSidebarScrollChanged">
                 <!-- UseLayoutRounding AUS für die Liste (die Eigenschaft vererbt sich an alle
                      Knöpfe darin). Bei einer krummen Anwendungsskalierung rastet sonst jede Zeile
                      einzeln auf ganze Geräte-Pixel: bei Skalierung 1,68 misst eine Zeile aus Knopf
@@ -776,6 +788,17 @@
                     </Grid>
                 </StackPanel>
             </ScrollViewer>
+            <RepeatButton x:Name="ToolSidebarScrollUp" Classes="tool-scroll-arrow" VerticalAlignment="Top"
+                          IsVisible="False" Focusable="False" Click="OnToolSidebarScrollUpClick">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-up.svg"
+                               Width="16" Height="16" IconBrush="{DynamicResource FP.Accent}" />
+            </RepeatButton>
+            <RepeatButton x:Name="ToolSidebarScrollDown" Classes="tool-scroll-arrow" VerticalAlignment="Bottom"
+                          IsVisible="False" Focusable="False" Click="OnToolSidebarScrollDownClick">
+                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/caret-down.svg"
+                               Width="16" Height="16" IconBrush="{DynamicResource FP.Accent}" />
+            </RepeatButton>
+            </Grid>
         </Border>
 
         <!-- Spalte 1 ist die Vorgabe. Steht das Anpassungspanel links, tauschen Buehne und Panel
