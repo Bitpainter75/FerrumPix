@@ -192,11 +192,13 @@ Namespace ViewModels
                 ' KOPIEREN nur von EINER Kachel mit Rezept (RAW oder PSD mit .fpxmp), EINFÜGEN, sobald
                 ' etwas in der Ablage liegt und mindestens ein Bild es annehmen kann. Dieselben
                 ' Fragen, die auch beim Ausführen entscheiden.
-                If singleItemActions AndAlso GalleryViewModel.HasCopyableAdjustments(first) Then
+                ' Im Editor gilt der geöffnete Stand statt der Datei (AdjustmentsFromOpenDocument).
+                If commands.AdjustmentsFromOpenDocument OrElse
+                   (singleItemActions AndAlso GalleryViewModel.HasCopyableAdjustments(first)) Then
                     AddIfOffered(adjustmentChildren, commands.CopyAdjustments, FooterMenuCatalog.CopyAdjustments(commands.CopyAdjustments))
                 End If
                 If commands.PasteAdjustments IsNot Nothing AndAlso GalleryViewModel.HasCopiedAdjustments AndAlso
-                   images.Any(AddressOf GalleryViewModel.CanPasteAdjustments) Then
+                   (commands.AdjustmentsFromOpenDocument OrElse images.Any(AddressOf GalleryViewModel.CanPasteAdjustments)) Then
                     AddIfOffered(adjustmentChildren, commands.PasteAdjustments, FooterMenuCatalog.PasteAdjustments(commands.PasteAdjustments))
                 End If
                 AddIfOffered(adjustmentChildren, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))

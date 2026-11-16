@@ -14854,7 +14854,14 @@ Namespace ViewModels
         End Function
 
         Private Sub CopyAdjustmentsFromSelected()
-            Dim items = GetSelectedImageItems()
+            CopyAdjustmentsFromImageItems(GetSelectedImageItems())
+        End Sub
+
+        ''' <summary>"Anpassungen kopieren" für eine Liste von Bildern. Öffentlich, weil der
+        ''' Betrachter denselben Ablauf für das gezeigte Bild auslöst: eine Umsetzung, nicht zwei.
+        ''' Was geschah, steht danach in <see cref="StatusText"/>.</summary>
+        Public Sub CopyAdjustmentsFromImageItems(items As IList(Of ImageItem))
+            If items Is Nothing Then items = New List(Of ImageItem)()
             If items.Count <> 1 OrElse Not HasCopyableAdjustments(items(0)) Then
                 ' Das Menü bietet den Befehl dann gar nicht an; über die Tasten kommt man trotzdem
                 ' hierher, und ohne Meldung sähe es aus, als wäre kopiert worden.
@@ -14875,7 +14882,14 @@ Namespace ViewModels
         ''' <summary>Die Ablage auf die Auswahl einfügen. RAW und PSD bekommen sie ins Rezept, also
         ''' ohne Verlust und rückgängig zu machen; JPG, PNG und WebP bekommen neue Bildpunkte, und
         ''' davor wird gefragt, weil das die Originale überschreibt.</summary>
-        Private Async Function PasteAdjustmentsToSelectedAsync() As Task
+        Private Function PasteAdjustmentsToSelectedAsync() As Task
+            Return PasteAdjustmentsToImageItemsAsync(GetSelectedImageItems())
+        End Function
+
+        ''' <summary>"Anpassungen einfügen" für eine Liste von Bildern, öffentlich aus demselben
+        ''' Grund wie <see cref="CopyAdjustmentsFromImageItems"/>.</summary>
+        Public Async Function PasteAdjustmentsToImageItemsAsync(items As IList(Of ImageItem)) As Task
+            If items Is Nothing Then items = New List(Of ImageItem)()
             Dim template As ImageAdjustments = Nothing
             Try
                 template = FpxService.DeserializeAdjustments(AppSettingsService.Load().CopiedAdjustments)
@@ -14888,7 +14902,7 @@ Namespace ViewModels
                 Return
             End If
 
-            Dim targets = GetSelectedImageItems().Where(AddressOf CanPasteAdjustments).
+            Dim targets = items.Where(AddressOf CanPasteAdjustments).
                 Where(Function(i) File.Exists(i.FilePath)).ToList()
             If targets.Count = 0 Then
                 StatusText = LocalizationService.T("Auf diese Bilder lassen sich keine Anpassungen einfügen.")

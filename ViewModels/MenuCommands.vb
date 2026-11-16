@@ -60,11 +60,14 @@ Namespace ViewModels
         Public Property ResizeImage As ICommand
         Public Property ApplyWatermark As ICommand
         Public Property ApplyFilter As ICommand
-        ''' <summary>Bildanpassungen EINER Kachel in die gemeinsame Ablage, die Ablage auf die
-        ''' Auswahl. Nur die Galerie bietet sie an; im Editor stehen Kopieren und Einfügen im
-        ''' Anpassen-Werkzeug.</summary>
+        ''' <summary>Bildanpassungen EINES Bildes in die gemeinsame Ablage, die Ablage auf die
+        ''' Auswahl. Galerie, Betrachter und Editor bieten beide an, über dieselbe Ablage.</summary>
         Public Property CopyAdjustments As ICommand
         Public Property PasteAdjustments As ICommand
+        ''' <summary>Der Editor kopiert aus dem GEÖFFNETEN Stand und fügt in ihn ein, nicht aus und
+        ''' in die Datei: Kopieren gibt es dort auch ohne gespeichertes Rezept, Einfügen in jedes
+        ''' geöffnete Bild und ohne Rückfrage, weil es sich zurücknehmen lässt.</summary>
+        Public Property AdjustmentsFromOpenDocument As Boolean
         Public Property ConvertTo As ICommand
         Public Property ExportTo As ICommand
         Public Property RemoveMetadata As ICommand

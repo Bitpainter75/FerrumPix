@@ -2,9 +2,11 @@
 
 ### Changes
 
-- CTRL+SHIFT+C copies the adjustments of a picture and CTRL+SHIFT+V pastes them, in the gallery
-  onto the whole selection and in the editor onto the open picture. Both were only in the menu
-  before.
+- Copying the adjustments of a picture and pasting them onto others now works the same in the
+  gallery, the viewer and the editor. Before, both commands were only in the context menu of the
+  gallery. The viewer has them in its menu for the picture shown, the editor in its menu and as
+  two buttons below the saved adjustments. CTRL+SHIFT+C copies and CTRL+SHIFT+V pastes in all
+  three.
 
 - Every search field has a small cross that empties it as soon as something is typed in it.
 

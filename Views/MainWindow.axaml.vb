@@ -1455,6 +1455,22 @@ Namespace Views
                     Return
                 End If
 
+                ' STRG+SHIFT+C und STRG+SHIFT+V im Betrachter: die Anpassungen des gezeigten Bildes
+                ' kopieren und die kopierten darauf einfügen, wie in Galerie und Editor.
+                If vm.CurrentMode = AppMode.Viewer AndAlso vm.Viewer IsNot Nothing AndAlso
+                   PlatformShortcutService.HasPrimaryModifier(e.KeyModifiers) AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+                   Not PlatformShortcutService.IsInputFieldSource(e.Source) Then
+                    If e.Key = Key.C Then
+                        e.Handled = True
+                        vm.Viewer.CopyAdjustmentsCurrentCommand.Execute(Nothing)
+                        Return
+                    ElseIf e.Key = Key.V Then
+                        e.Handled = True
+                        vm.Viewer.PasteAdjustmentsCurrentCommand.Execute(Nothing)
+                        Return
+                    End If
+                End If
+
                 If vm.CurrentMode = AppMode.Viewer Then
                     Select Case e.Key
                         Case Key.Delete

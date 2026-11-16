@@ -1052,6 +1052,8 @@ Namespace ViewModels
                                                     .ResizeImage = ResizeCurrentCommand,
                                                     .ApplyWatermark = ApplyWatermarkCurrentCommand,
                                                     .ApplyFilter = ApplyFilterCurrentCommand,
+                                                    .CopyAdjustments = CopyAdjustmentsCurrentCommand,
+                                                    .PasteAdjustments = PasteAdjustmentsCurrentCommand,
                                                     .ConvertTo = ConvertCurrentCommand,
                                                     .ExportTo = ExportCurrentCommand,
                                                     .Print = PrintCommand,
@@ -1094,6 +1096,10 @@ Namespace ViewModels
         Public ReadOnly Property ConvertCurrentCommand As ICommand
         Public ReadOnly Property ExportCurrentCommand As ICommand
         Public ReadOnly Property ApplyFilterCurrentCommand As ICommand
+        ''' <summary>Anpassungen des gezeigten Bildes kopieren und die kopierten darauf einfügen:
+        ''' dieselbe Ablage und derselbe Ablauf wie in der Galerie, für das Bild auf der Bühne.</summary>
+        Public ReadOnly Property CopyAdjustmentsCurrentCommand As ICommand
+        Public ReadOnly Property PasteAdjustmentsCurrentCommand As ICommand
         Public ReadOnly Property RenameCurrentCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
@@ -1205,6 +1211,8 @@ Namespace ViewModels
             ConvertCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ConvertImageItems(i)))
             ExportCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ExportImageItems(i)))
             ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyFilterToImageItems(i)))
+            CopyAdjustmentsCurrentCommand = ReactiveCommand.CreateFromTask(Function() CopyAdjustmentsCurrentAsync())
+            PasteAdjustmentsCurrentCommand = ReactiveCommand.CreateFromTask(Function() PasteAdjustmentsCurrentAsync())
             RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
             ' Metadaten: dieselben Ablaeufe wie in der Galerie, angewandt auf das angezeigte Bild.
             ' Die schreibenden bleiben als CreateFromTask bis zum Ende gesperrt.
@@ -4577,6 +4585,47 @@ Namespace ViewModels
             InfoPanel.RefreshPlace()
             RefreshContextActions()
         End Sub
+
+        ''' <summary>Kopiert die Anpassungen des gezeigten Bildes in die gemeinsame Ablage. Der
+        ''' Betrachter hat keine Statuszeile: geht es nicht (über die Tasten kommt man auch dann
+        ''' hierher, wenn das Menü den Befehl nicht anböte), sagt eine Meldung warum.</summary>
+        Private Async Function CopyAdjustmentsCurrentAsync() As Task
+            Dim refused As String = Nothing
+            WithCurrentImage(Sub(g, i)
+                                 If Not GalleryViewModel.HasCopyableAdjustments(i(0)) Then
+                                     refused = LocalizationService.T("Anpassungen lassen sich nur von einem einzelnen entwickelten RAW- oder PSD-Bild kopieren")
+                                     Return
+                                 End If
+                                 g.CopyAdjustmentsFromImageItems(i)
+                             End Sub)
+            RefreshContextActions()
+            If refused IsNot Nothing AndAlso _mainVm IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen kopieren"), refused)
+            End If
+        End Function
+
+        ''' <summary>Fügt die kopierten Anpassungen auf das gezeigte Bild ein, mit denselben Regeln
+        ''' wie in der Galerie (ein JPG, PNG oder WebP erst nach Rückfrage), und lädt es danach neu.</summary>
+        Private Async Function PasteAdjustmentsCurrentAsync() As Task
+            Dim refused As String = Nothing
+            Dim pasted = False
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            If Not GalleryViewModel.HasCopiedAdjustments Then
+                                                refused = LocalizationService.T("Es sind keine Anpassungen kopiert")
+                                                Return
+                                            End If
+                                            If Not GalleryViewModel.CanPasteAdjustments(i(0)) Then
+                                                refused = LocalizationService.T("Auf diese Bilder lassen sich keine Anpassungen einfügen.")
+                                                Return
+                                            End If
+                                            Await g.PasteAdjustmentsToImageItemsAsync(i)
+                                            pasted = True
+                                        End Function)
+            If pasted Then ReloadCurrentImageFromDisk()
+            If refused IsNot Nothing AndAlso _mainVm IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen einfügen"), refused)
+            End If
+        End Function
 
         Private Async Function SetPlaceCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
