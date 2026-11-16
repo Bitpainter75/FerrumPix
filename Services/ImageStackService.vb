@@ -109,10 +109,15 @@ Namespace Services
                    Not String.IsNullOrEmpty(item.FilePath)
         End Function
 
-        Public Shared Function Build(items As IEnumerable(Of ImageItem)) As List(Of ImageStack)
+        ''' <summary>Die Stapel einer Liste. Mit <paramref name="acrossFolders"/> zeigt die Liste
+        ''' einen Ordner samt allem darunter: Serien und Paare entstehen dann auch aus Dateien
+        ''' verschiedener Ordner. Eine Kopie derselben Aufnahme (gleicher Dateiname, gleiche
+        ''' Groesse) ist dabei keine zweite Ausloesung und kommt nicht in die Serie ihres
+        ''' Originals.</summary>
+        Public Shared Function Build(items As IEnumerable(Of ImageItem), Optional acrossFolders As Boolean = False) As List(Of ImageStack)
             Dim candidates = items.Where(AddressOf IsStackable).ToList()
             Dim standalone As New HashSet(Of StackShot)()
-            Dim shots = BuildShots(candidates, standalone)
+            Dim shots = BuildShots(candidates, standalone, acrossFolders)
             Dim stacks As New List(Of ImageStack)()
 
             ' Serien je Ordner und Kamera; zwei Gehaeuse, die in derselben Sekunde ausloesen, sind
@@ -124,22 +129,37 @@ Namespace Services
             ' einzeln im Raster.
             Dim timed = shots.Where(Function(s) s.TakenAt.HasValue AndAlso Not standalone.Contains(s) AndAlso
                                                 Not String.IsNullOrWhiteSpace(s.Primary.ExifCamera)).
-                GroupBy(Function(s) SeriesKey(s.Primary), StringComparer.OrdinalIgnoreCase)
+                GroupBy(Function(s) If(acrossFolders, If(s.Primary.ExifCamera, ""), SeriesKey(s.Primary)), StringComparer.OrdinalIgnoreCase)
             Dim inBurst As New HashSet(Of StackShot)()
             For Each group In timed
-                Dim ordered = group.OrderBy(Function(s) s.TakenAt.Value).
-                    ThenBy(Function(s) s.Primary.FileName, StringComparer.OrdinalIgnoreCase).ToList()
-                Dim run As New List(Of StackShot)()
-                For Each shot In ordered
-                    If run.Count > 0 AndAlso
-                       ((shot.TakenAt.Value - run(run.Count - 1).TakenAt.Value).TotalSeconds > BurstGapSeconds OrElse
-                        BothSingleShots(run(run.Count - 1), shot)) Then
-                        If run.Count > 1 Then stacks.Add(NewStack(run)) : inBurst.UnionWith(run)
-                        run = New List(Of StackShot)()
-                    End If
-                    run.Add(shot)
-                Next
-                If run.Count > 1 Then stacks.Add(NewStack(run)) : inBurst.UnionWith(run)
+                ' Nach dem Pfad zuletzt: bei Kopien mit gleicher Zeit und gleichem Namen steht so
+                ' in jedem Lauf dieselbe vorn, und die Aufnahmen eines Ordners bleiben beisammen.
+                Dim pending = group.OrderBy(Function(s) s.TakenAt.Value).
+                    ThenBy(Function(s) s.Primary.FileName, StringComparer.OrdinalIgnoreCase).
+                    ThenBy(Function(s) s.Primary.FilePath, StringComparer.OrdinalIgnoreCase).ToList()
+                ' Ueber Ordner hinweg in mehreren Durchgaengen: was als Kopie einer schon
+                ' eingereihten Aufnahme uebrig bleibt, bildet im naechsten Durchgang seine eigene
+                ' Serie. Ohne Kopien, und immer innerhalb eines Ordners, ist es genau einer.
+                While pending.Count > 0
+                    Dim copies As New List(Of StackShot)()
+                    Dim run As New List(Of StackShot)()
+                    For Each shot In pending
+                        Dim candidate = shot
+                        If acrossFolders AndAlso run.Any(Function(r) IsCopyOf(r.Primary, candidate.Primary)) Then
+                            copies.Add(shot)
+                            Continue For
+                        End If
+                        If run.Count > 0 AndAlso
+                           ((shot.TakenAt.Value - run(run.Count - 1).TakenAt.Value).TotalSeconds > BurstGapSeconds OrElse
+                            BothSingleShots(run(run.Count - 1), shot)) Then
+                            If run.Count > 1 Then stacks.Add(NewStack(run)) : inBurst.UnionWith(run)
+                            run = New List(Of StackShot)()
+                        End If
+                        run.Add(shot)
+                    Next
+                    If run.Count > 1 Then stacks.Add(NewStack(run)) : inBurst.UnionWith(run)
+                    pending = copies
+                End While
             Next
 
             ' Ein Paar ausserhalb einer Serie ist ein Stapel fuer sich.
@@ -152,10 +172,10 @@ Namespace Services
         ''' <summary>Die RAW+JPEG-Paare einer Liste, je Datei ihr Partner (in beide Richtungen).
         ''' Dieselbe Paarregel wie <see cref="Build"/>, ohne Serien: wer vor dem Stapeln filtert,
         ''' muss ein Paar als die EINE Kachel beurteilen, die es danach ist.</summary>
-        Public Shared Function PairPartners(items As IEnumerable(Of ImageItem)) As Dictionary(Of ImageItem, ImageItem)
+        Public Shared Function PairPartners(items As IEnumerable(Of ImageItem), Optional acrossFolders As Boolean = False) As Dictionary(Of ImageItem, ImageItem)
             Dim result As New Dictionary(Of ImageItem, ImageItem)()
             Dim candidates = items.Where(AddressOf IsStackable).ToList()
-            For Each shot In BuildShots(candidates, New HashSet(Of StackShot)())
+            For Each shot In BuildShots(candidates, New HashSet(Of StackShot)(), acrossFolders)
                 If Not shot.IsPair Then Continue For
                 result(shot.Files(0)) = shot.Files(1)
                 result(shot.Files(1)) = shot.Files(0)
@@ -193,7 +213,8 @@ Namespace Services
         ''' <see cref="PairGapSeconds"/> auseinander, und, wo beide sie nennen, dieselbe Kamera.
         ''' Was davon abweicht, bleibt eine eigene Aufnahme - lieber ein Paar zu wenig als ein
         ''' fremdes JPEG, das hinter dem RAW verschwindet.</summary>
-        Private Shared Function BuildShots(items As List(Of ImageItem), standalone As HashSet(Of StackShot)) As List(Of StackShot)
+        Private Shared Function BuildShots(items As List(Of ImageItem), standalone As HashSet(Of StackShot),
+                                           Optional acrossFolders As Boolean = False) As List(Of StackShot)
             Dim result As New List(Of StackShot)()
             Dim byName = items.GroupBy(Function(i) Path.Combine(FolderOf(i.FilePath), Path.GetFileNameWithoutExtension(i.FilePath)),
                                        StringComparer.OrdinalIgnoreCase)
@@ -227,8 +248,41 @@ Namespace Services
                 Next
                 result.Add(shot)
             Next
+            If acrossFolders Then PairAcrossFolders(result, standalone)
             Return result
         End Function
+
+        ''' <summary>Dieselbe Datei an zwei Orten: gleicher Dateiname und gleiche Groesse.</summary>
+        Private Shared Function IsCopyOf(first As ImageItem, second As ImageItem) As Boolean
+            Return first.FileSize = second.FileSize AndAlso
+                   String.Equals(first.FileName, second.FileName, StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Paart ein RAW mit dem JPEG gleichen Namens aus einem ANDEREN Ordner, wenn im
+        ''' eigenen Ordner keines lag (RAW oben, JPEG im Unterordner oder umgekehrt). Dieselbe
+        ''' Paarregel wie im Ordner (Zeit, Kamera). Nur wenn es EINDEUTIG ist: genau eine passende
+        ''' Begleitdatei fuer das RAW und genau ein passendes RAW fuer sie. Mehrere Kandidaten
+        ''' sind Kopien oder fremde Bilder gleichen Namens, und dann bleibt jede Datei fuer sich.
+        ''' Eine uebrige Begleitdatei neben einem schon vollstaendigen Paar kommt nicht in Frage.</summary>
+        Private Shared Sub PairAcrossFolders(shots As List(Of StackShot), standalone As HashSet(Of StackShot))
+            Dim open = shots.Where(Function(s) Not s.IsPair AndAlso Not standalone.Contains(s)).
+                GroupBy(Function(s) Path.GetFileNameWithoutExtension(s.Primary.FilePath), StringComparer.OrdinalIgnoreCase).
+                ToList()
+            For Each group In open
+                Dim raws = group.Where(Function(s) s.Primary.IsRawFile).ToList()
+                Dim others = group.Where(Function(s) Not s.Primary.IsRawFile).ToList()
+                If raws.Count = 0 OrElse others.Count = 0 Then Continue For
+                For Each raw In raws
+                    Dim current = raw
+                    Dim matches = others.Where(Function(o) IsCompanion(current.Primary, o.Primary)).ToList()
+                    If matches.Count <> 1 Then Continue For
+                    Dim companion = matches(0)
+                    If raws.Where(Function(r) IsCompanion(r.Primary, companion.Primary)).Count() <> 1 Then Continue For
+                    raw.Files.Add(companion.Primary)
+                    shots.Remove(companion)
+                Next
+            Next
+        End Sub
 
         Private Shared Function SingleShot(item As ImageItem) As StackShot
             Dim shot As New StackShot()

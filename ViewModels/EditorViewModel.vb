@@ -32587,11 +32587,20 @@ Namespace ViewModels
                 ' Begradigung auf erweiterter Leinwand und vier Kanten darauf. Die Drehung gehoert
                 ' hier zum Zuschnitt und nicht zum Ausrichten, weil der Ausschnitt ohne sie ein
                 ' anderer waere.
+                ' Die Felder zaehlen von der Bezugsflaeche des Referenzprogramms (ganzes Sensorbild
+                ' ohne Rand), nicht von dem Bild, das hier steht. Mit dem Seitenverhaeltnis der
+                ' Kamera ist unser Bild nur ein Ausschnitt davon; ohne Umrechnung naehme ein
+                ' Zuschnitt dort doppelt so viel weg wie gemeint.
+                Dim frame As (Left As Double, Top As Double, Right As Double, Bottom As Double)? = Nothing
+                If IsRawDeveloped Then
+                    frame = RawDecodeService.ShownFrameInReferenceArea(RenderSourcePath, _rawSensorEdgeCrop, _rawCameraAspectCrop)
+                End If
                 Dim rotated As XmpPresetService.RotatedCrop = Nothing
                 If extras.HasRotatedCrop Then
                     Dim before = ImageProcessor.ComputeGeometryOutputSize(GetBaseWidth(), GetBaseHeight(), merged)
-                    rotated = XmpPresetService.ResolveRotatedCrop(extras.CropCornerLeft, extras.CropCornerTop,
-                                                                  extras.CropCornerRight, extras.CropCornerBottom,
+                    Dim corners = XmpPresetService.CropInFrame(extras.CropCornerLeft, extras.CropCornerTop,
+                                                               extras.CropCornerRight, extras.CropCornerBottom, frame)
+                    rotated = XmpPresetService.ResolveRotatedCrop(corners.Left, corners.Top, corners.Right, corners.Bottom,
                                                                   extras.CropAngleDegrees, before.Width, before.Height)
                 End If
                 If rotated.Valid Then
@@ -32601,6 +32610,16 @@ Namespace ViewModels
                     crop.CropTopPercent = rotated.TopPercent
                     crop.CropRightPercent = rotated.RightPercent
                     crop.CropBottomPercent = rotated.BottomPercent
+                ElseIf frame.HasValue Then
+                    ' Jede Kante einzeln: eine, die das Preset nicht nennt, bleibt wie sie ist.
+                    Dim edges = XmpPresetService.CropInFrame(extras.Geometry.CropLeftPercent / 100.0,
+                                                             extras.Geometry.CropTopPercent / 100.0,
+                                                             1 - extras.Geometry.CropRightPercent / 100.0,
+                                                             1 - extras.Geometry.CropBottomPercent / 100.0, frame)
+                    If extras.HasCropLeft Then crop.CropLeftPercent = CSng(Math.Clamp(edges.Left * 100, 0, 99))
+                    If extras.HasCropTop Then crop.CropTopPercent = CSng(Math.Clamp(edges.Top * 100, 0, 99))
+                    If extras.HasCropRight Then crop.CropRightPercent = CSng(Math.Clamp((1 - edges.Right) * 100, 0, 99))
+                    If extras.HasCropBottom Then crop.CropBottomPercent = CSng(Math.Clamp((1 - edges.Bottom) * 100, 0, 99))
                 Else
                     If extras.HasCropLeft Then crop.CropLeftPercent = extras.Geometry.CropLeftPercent
                     If extras.HasCropTop Then crop.CropTopPercent = extras.Geometry.CropTopPercent

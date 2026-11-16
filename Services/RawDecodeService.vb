@@ -1125,6 +1125,9 @@ Namespace Services
         Private Shared _sensorEdgeWriteTime As DateTime
         Private Shared _sensorEdge As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
         Private Shared _cameraAspectEdge As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?
+        ''' Die Masse des ganzen entwickelten Bildes derselben Datei, 0 wenn unbekannt.
+        Private Shared _sensorEdgeFullWidth As Integer
+        Private Shared _sensorEdgeFullHeight As Integer
 
         ''' <summary>So weit muss das Seitenverhaeltnis des Kamera-Ausschnitts von dem des ganzen
         ''' Bildes abweichen, damit er als gewaehltes Format gilt (3:2, 16:9 oder 1:1 auf einem
@@ -1155,6 +1158,63 @@ Namespace Services
             Return EdgesFor(path).CameraAspect
         End Function
 
+        ''' <summary>Wo das Bild, das der Decode mit dieser Wahl ausgibt, in der Bezugsflaeche des
+        ''' Referenzprogramms liegt: seine vier Kanten als Anteil ihrer Breite und Hoehe (0 und 1,
+        ''' wenn beide deckungsgleich sind). Nothing, wenn beide deckungsgleich sind oder die
+        ''' Masse der Datei nicht bekannt sind.
+        '''
+        ''' Die Zuschnittfelder einer Beistelldatei zaehlen von dieser Bezugsflaeche: dem ganzen
+        ''' Sensorbild ohne Rand. Ein Seitenverhaeltnis aus dem Kameramenue ist dort nur ein
+        ''' vorbelegter Zuschnitt darauf; unser Bild mit dem Schalter dafuer ist dieser Ausschnitt
+        ''' selbst. Gemessen an einer 16:9-Aufnahme auf einem 4:3-Sensor: unser Bild liegt bei
+        ''' 0,1245 bis 0,8755 der Hoehe.
+        '''
+        ''' Der Rand der Bezugsflaeche ist der Sensorrand der Tabelle. Kennt sie die Kamera nicht,
+        ''' gilt der schmalste Rand des Kamera-Ausschnitts ringsum: an der gemessenen Kamera laesst
+        ''' der Ausschnitt quer zu seinem Format genau den Sensorrand stehen.</summary>
+        Public Shared Function ShownFrameInReferenceArea(path As String, cropSensorEdge As Boolean, cropCameraAspect As Boolean) As (Left As Double, Top As Double, Right As Double, Bottom As Double)?
+            Dim edges = EdgesFor(path)
+            Dim fullWidth, fullHeight As Integer
+            SyncLock _sensorEdgeLock
+                If Not String.Equals(_sensorEdgePath, path, StringComparison.Ordinal) Then Return Nothing
+                fullWidth = _sensorEdgeFullWidth
+                fullHeight = _sensorEdgeFullHeight
+            End SyncLock
+            Return ShownFrameInReferenceArea(fullWidth, fullHeight, edges.Sensor, edges.CameraAspect, cropSensorEdge, cropCameraAspect)
+        End Function
+
+        ''' <summary>Die Rechnung von <see cref="ShownFrameInReferenceArea(String, Boolean, Boolean)"/>
+        ''' ohne Datei: Masse des ganzen entwickelten Bildes und die beiden Raender in seiner Lage.</summary>
+        Public Shared Function ShownFrameInReferenceArea(fullWidth As Integer, fullHeight As Integer,
+                                                         sensor As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?,
+                                                         cameraAspect As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?,
+                                                         cropSensorEdge As Boolean, cropCameraAspect As Boolean) As (Left As Double, Top As Double, Right As Double, Bottom As Double)?
+            If fullWidth <= 0 OrElse fullHeight <= 0 Then Return Nothing
+            Dim none = (Left:=0, Top:=0, Right:=0, Bottom:=0)
+            Dim reference = none
+            If sensor.HasValue Then
+                reference = sensor.Value
+            ElseIf cameraAspect.HasValue Then
+                Dim a = cameraAspect.Value
+                Dim narrowest = Math.Min(Math.Min(a.Left, a.Right), Math.Min(a.Top, a.Bottom))
+                reference = (narrowest, narrowest, narrowest, narrowest)
+            End If
+            Dim shown = If(cropCameraAspect AndAlso cameraAspect.HasValue, cameraAspect.Value,
+                           If(cropSensorEdge AndAlso sensor.HasValue, sensor.Value, none))
+            Dim referenceWidth = fullWidth - reference.Left - reference.Right
+            Dim referenceHeight = fullHeight - reference.Top - reference.Bottom
+            If referenceWidth < 16 OrElse referenceHeight < 16 Then Return Nothing
+            Dim left = (shown.Left - reference.Left) / CDbl(referenceWidth)
+            Dim top = (shown.Top - reference.Top) / CDbl(referenceHeight)
+            Dim right = (fullWidth - shown.Right - reference.Left) / CDbl(referenceWidth)
+            Dim bottom = (fullHeight - shown.Bottom - reference.Top) / CDbl(referenceHeight)
+            If right - left < 0.01 OrElse bottom - top < 0.01 Then Return Nothing
+            Const Same As Double = 0.000001
+            If Math.Abs(left) < Same AndAlso Math.Abs(top) < Same AndAlso
+               Math.Abs(right - 1) < Same AndAlso Math.Abs(bottom - 1) < Same Then Return Nothing
+            Return (left, top, right, bottom)
+        End Function
+
         ''' <summary>Beide Raender aus einem einzigen open_file, fuer die letzte Datei gemerkt.</summary>
         Private Shared Function EdgesFor(path As String) As (Sensor As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?,
                                                              CameraAspect As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?)
@@ -1173,9 +1233,12 @@ Namespace Services
 
             Dim sensorResult As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)? = Nothing
             Dim aspectResult As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)? = Nothing
+            Dim fullWidth = 0, fullHeight = 0
             Dim facts = ReadFileMetadata(path)
             If facts IsNot Nothing AndAlso facts.Flip >= 0 Then
-                Dim squarePixels = (facts.OrientedWidth = facts.Width AndAlso facts.OrientedHeight = facts.Height) OrElse
+                fullWidth = facts.OrientedWidth
+                fullHeight = facts.OrientedHeight
+                Dim squarePixels =(facts.OrientedWidth = facts.Width AndAlso facts.OrientedHeight = facts.Height) OrElse
                                    (facts.OrientedWidth = facts.Height AndAlso facts.OrientedHeight = facts.Width)
                 If squarePixels Then
                     Dim sensor = CameraSensorCropTable.Lookup(facts.NormalizedMake, facts.NormalizedModel, facts.Width, facts.Height)
@@ -1197,6 +1260,8 @@ Namespace Services
                 _sensorEdgeWriteTime = writeTime
                 _sensorEdge = sensorResult
                 _cameraAspectEdge = aspectResult
+                _sensorEdgeFullWidth = fullWidth
+                _sensorEdgeFullHeight = fullHeight
             End SyncLock
             Return (sensorResult, aspectResult)
         End Function

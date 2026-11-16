@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.85
 
 ### Changes
 
@@ -22,6 +22,10 @@
   colour on which the stroke starts, the magic eraser removes an area of similar colour
   with one click. Both work in the photo and on a picture layer.
 
+- With subfolders included, the gallery now also stacks pictures that belong together but lie
+  in different folders: a series spread over folders, or a RAW file with its JPEG in a subfolder.
+  A copy of the same picture in another folder is not taken for a second shot.
+
 - The Export button has moved from the bar at the bottom of the gallery into the folder panel,
   below Import.
 
@@ -39,6 +43,12 @@
 
 - A crop that was also rotated arrived wrong when it was taken over from an XMP file: the
   rotation was dropped and the frame sat in the wrong place. Both now arrive as they were set.
+
+- A crop taken over from an XMP file cut away too much on a RAW file shot with an aspect ratio
+  chosen in the camera, for example 16:9. It now matches.
+
+- FerrumPix did not start on a system without any sans-serif font. It now takes a font that is
+  installed.
 
 - In the editor the histogram of the info panel stayed at "calculating" when the panel was closed
   while the picture loaded and opened afterwards. It now appears.

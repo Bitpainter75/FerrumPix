@@ -112,6 +112,28 @@
 
   <releases>
 
+    <release version="0.9.85-1" date="2026-11-16">
+      <description>
+        <p>This update brings hierarchical keywords, full 16-bit processing for TIFF files, an edge-aware brush and two new erasers. It also fixes a crash during RAW development:</p>
+        <p xml:lang="de">Dieses Update bringt hierarchische Stichwörter, die vollständige 16-Bit-Verarbeitung von TIFF-Dateien, einen Pinsel mit Kantenerkennung und zwei neue Radierer. Außerdem wurde ein Absturz bei der RAW-Entwicklung behoben:</p>
+        <ul>
+          <li>Keywords can now be organised into hierarchies, such as Dogs and Cats under Animals. A new "Arrange Keywords" button at the bottom of the folder panel opens a dialog where you can organise them. The keyword list in the gallery displays them as a tree, and selecting a parent keyword like Animals also finds photos tagged only with Dogs or Cats. Keyword hierarchies imported from other applications are preserved.</li>
+          <li xml:lang="de">Stichwörter lassen sich jetzt hierarchisch organisieren, zum Beispiel Hunde und Katzen unter Tiere. Über die neue Schaltfläche „Stichwörter ordnen“ unten im Ordnerbereich öffnest du einen Dialog, in dem du sie entsprechend anordnen kannst. Die Stichwortliste in der Galerie zeigt die Hierarchie als Baum an. Wenn du ein übergeordnetes Stichwort wie Tiere auswählst, werden auch Fotos gefunden, die nur mit Hunde oder Katzen verschlagwortet sind. Stichworthierarchien aus anderen Programmen bleiben beim Import erhalten.</li>
+
+          <li>16-bit TIFF files, such as scanned images, now retain their full bit depth throughout editing. Save As, Export and batch operations offer 16-bit output for these files, just as they do for RAW photos, and adjustments are processed at full 16-bit precision.</li>
+          <li xml:lang="de">TIFF-Dateien mit 16 Bit pro Kanal, etwa eingescannte Bilder, behalten jetzt auch bei der Bearbeitung ihre volle Farbtiefe. Bei Speichern unter, Exportieren und der Stapelverarbeitung steht für diese Dateien wie bei RAW-Fotos die Ausgabe mit 16 Bit zur Verfügung. Auch die Bildanpassungen werden mit voller 16-Bit-Genauigkeit berechnet.</li>
+
+          <li>The brush for selections and masks now has an edge-aware option that keeps your strokes within object boundaries. This makes it much easier to paint along areas such as the sky or a jacket without going over the edges. The Image Brush also has two new erasers: one removes only the color you start painting on, while the other removes a connected area of similar color with a single click.</li>
+          <li xml:lang="de">Der Pinsel für Auswahlen und Masken bietet jetzt eine Kantenerkennung, die Pinselstriche an Objektgrenzen stoppt. So kannst du beispielsweise entlang des Himmels oder einer Jacke malen, ohne über die Kanten hinauszugeraten. Im Bildpinsel gibt es außerdem zwei neue Radierer: Einer entfernt nur die Farbe, auf der du den Pinselstrich beginnst, der andere löscht mit einem Klick einen zusammenhängenden Bereich mit ähnlicher Farbe.</li>
+
+          <li>When subfolders are included in the gallery, photos that belong together can now be stacked even if they're stored in different folders. This works for photo series spread across folders as well as RAW+JPEG pairs where the JPEG is in a subfolder. On smaller screens, the editor toolbar no longer has a scrollbar overlapping its tools, and the Export, Import and Convert dialogs are now wider.</li>
+          <li xml:lang="de">Wenn du in der Galerie auch Unterordner einbeziehst, lassen sich zusammengehörige Fotos jetzt selbst dann stapeln, wenn sie in verschiedenen Ordnern liegen. Das funktioniert sowohl bei Bildserien, die auf mehrere Ordner verteilt sind, als auch bei RAW+JPEG-Paaren, deren JPEG im Unterordner liegt. Auf kleineren Bildschirmen verdeckt außerdem keine Bildlaufleiste mehr die Werkzeuge im Editor, und die Dialoge für Exportieren, Importieren und Umwandeln sind jetzt breiter.</li>
+
+          <li>Fixed a crash that could cause FerrumPix to close without warning while developing a RAW file, as well as a startup issue on systems without any sans-serif fonts installed. Crops imported from XMP files now include their rotation and correctly match RAW photos taken with an aspect ratio selected in the camera. If the system trash refuses a file, FerrumPix now explains why and offers to delete it permanently instead.</li>
+          <li xml:lang="de">Ein Fehler wurde behoben, durch den sich FerrumPix während der RAW-Entwicklung ohne Vorwarnung beenden konnte. Auch auf Systemen ohne installierte serifenlose Schriftart startet das Programm jetzt wieder. Zuschnitte aus XMP-Dateien werden nun einschließlich ihrer Drehung übernommen und passen auch bei RAW-Fotos, die mit einem an der Kamera eingestellten Seitenverhältnis aufgenommen wurden. Wenn der Papierkorb des Systems eine Datei nicht annimmt, zeigt FerrumPix jetzt den Grund an und bietet an, sie stattdessen endgültig zu löschen.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.84-1" date="2026-11-15">
       <description>
         <p>This update adds 16-bit export for RAW photos, makes the gallery smoother and many editing operations faster, and reduces memory usage:</p>

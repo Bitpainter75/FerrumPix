@@ -105,6 +105,25 @@ Namespace Controls
             Next
         End Function
 
+        ''' <summary>Die Schriftfamilie fuer die ganze Oberflaeche: <paramref name="preferred"/>, wenn
+        ''' sie Glyphen liefert, sonst die Standardfamilie des Systems, sonst die erste installierte
+        ''' Schrift, die es tut. Nothing, wenn die bevorzugte traegt oder gar keine zu bekommen ist;
+        ''' der Aufrufer laesst die Einstellung dann, wie sie ist.
+        '''
+        ''' Die Liste des Erscheinungsbilds nennt serifenlose Schriften und am Ende "sans-serif".
+        ''' Auf einem System ohne eine einzige serifenlose Schrift traegt keiner dieser Namen, und
+        ''' auch die Standardfamilie nicht: der erste Textblock warf dann beim ersten Layout, und
+        ''' die Anwendung endete vor dem Fenster (Nutzerbefund, System nur mit einer Festbreitenschrift).</summary>
+        Friend Function ResolveFallbackFamily(preferred As FontFamily) As FontFamily
+            If preferred IsNot Nothing AndAlso CanRender(New Typeface(preferred)) Then Return Nothing
+            For Each family In Candidates(Nothing)
+                If family Is Nothing Then Continue For
+                If String.Equals(family.Name, FontFamily.Default.Name, StringComparison.Ordinal) Then Continue For
+                If CanRender(New Typeface(family)) Then Return family
+            Next
+            Return Nothing
+        End Function
+
         Private Function CanRender(candidate As Typeface) As Boolean
             Try
                 Dim glyphs As GlyphTypeface = Nothing

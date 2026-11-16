@@ -11280,7 +11280,7 @@ Namespace ViewModels
             ' JPEG vorher herausnimmt, soll nicht entscheiden, ob das RAW als markiert gilt.
             Dim pairs As Dictionary(Of ImageItem, ImageItem) = Nothing
             If _filterRejected <> "Show" AndAlso _stacksEnabled AndAlso Not IsSimilarView Then
-                pairs = ImageStackService.PairPartners(filtered)
+                pairs = ImageStackService.PairPartners(filtered, StacksAcrossFolders)
             End If
 
             ' Steckt der Text als Katalogsuche im Knoten, hat die schon gesiebt - nach ihren eigenen
@@ -11573,6 +11573,16 @@ Namespace ViewModels
             End Select
         End Function
 
+        ''' <summary>Stapel auch ueber Ordner hinweg? Nur wenn die Galerie einen Ordner samt allem
+        ''' darunter zeigt: dann gehoeren ein RAW oben und sein JPEG im Unterordner zusammen, ebenso
+        ''' die Aufnahmen einer Serie, die auf Ordner verteilt liegen. In Trefferlisten und Suchen
+        ''' bleibt es beim Ordner, dort stehen Bilder aus dem ganzen Bestand nebeneinander.</summary>
+        Private ReadOnly Property StacksAcrossFolders As Boolean
+            Get
+                Return _includeSubfolders AndAlso CanIncludeSubfolders
+            End Get
+        End Property
+
         Private Function ApplyStacks(filtered As List(Of ImageItem), sorted As IEnumerable(Of ImageItem)) As List(Of ImageItem)
             For Each old In _stacks
                 For Each file In old.AllFiles()
@@ -11581,7 +11591,7 @@ Namespace ViewModels
             Next
             ' In der Aehnlichkeitsansicht keine Stapel: dort sollen die Aufnahmen einer Serie gerade
             ' einzeln nebeneinander stehen.
-            _stacks = If(_stacksEnabled AndAlso Not IsSimilarView, ImageStackService.Build(filtered), New List(Of ImageStack)())
+            _stacks = If(_stacksEnabled AndAlso Not IsSimilarView, ImageStackService.Build(filtered, StacksAcrossFolders), New List(Of ImageStack)())
             If _stacks.Count = 0 Then Return sorted.ToList()
 
             Dim focused = IsStackFocused
@@ -11858,7 +11868,7 @@ Namespace ViewModels
             If _focusedStackPaths Is Nothing Then Return filtered
             Dim remaining = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
                                                         _focusedStackPaths.Contains(i.FilePath)).ToList()
-            If Not ImageStackService.Build(remaining).Any(Function(s) s.IsBurst) Then
+            If Not ImageStackService.Build(remaining, StacksAcrossFolders).Any(Function(s) s.IsBurst) Then
                 _focusedStackPaths = Nothing
                 RaiseStackFocusChanged()
                 Dim last = remaining.FirstOrDefault(Function(i) i.IsRawFile)
@@ -11874,7 +11884,7 @@ Namespace ViewModels
                 Return filtered
             End If
             Dim result = filtered.Where(Function(i) i.IsImage AndAlso _focusedStackPaths.Contains(i.FilePath)).ToList()
-            Dim shots = ImageStackService.Build(result).Sum(Function(s) s.Shots.Count)
+            Dim shots = ImageStackService.Build(result, StacksAcrossFolders).Sum(Function(s) s.Shots.Count)
             _stackFocusText = String.Format(Globalization.CultureInfo.CurrentCulture,
                                             LocalizationService.T("Serie mit {0} Aufnahmen"), If(shots > 0, shots, result.Count))
             Me.RaisePropertyChanged(NameOf(StackFocusText))
@@ -11956,15 +11966,17 @@ Namespace ViewModels
             If Not _stacksEnabled Then Return result
             Dim item = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso PathIdentity.Comparer.Equals(i.FilePath, path))
             If item Is Nothing Then Return result
-            ' Nur die Dateien gleichen Namens im selben Ordner kommen als Partner in Frage; die
-            ' Paarregel selbst (Zeit, Kamera, genau ein RAW) entscheidet der Dienst.
+            ' Nur die Dateien gleichen Namens kommen als Partner in Frage, im selben Ordner oder,
+            ' mit einbezogenen Unterordnern, im ganzen gezeigten Baum; die Paarregel selbst (Zeit,
+            ' Kamera, genau ein RAW) entscheidet der Dienst.
             Dim folder = IO.Path.GetDirectoryName(path)
             Dim stem = IO.Path.GetFileNameWithoutExtension(path)
+            Dim across = StacksAcrossFolders
             Dim sameName = _allItems.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath) AndAlso
                                                        String.Equals(IO.Path.GetFileNameWithoutExtension(i.FilePath), stem, StringComparison.OrdinalIgnoreCase) AndAlso
-                                                       PathIdentity.Comparer.Equals(IO.Path.GetDirectoryName(i.FilePath), folder))
+                                                       (across OrElse PathIdentity.Comparer.Equals(IO.Path.GetDirectoryName(i.FilePath), folder)))
             Dim partner As ImageItem = Nothing
-            If ImageStackService.PairPartners(sameName).TryGetValue(item, partner) AndAlso
+            If ImageStackService.PairPartners(sameName, across).TryGetValue(item, partner) AndAlso
                Not String.IsNullOrEmpty(partner.FilePath) Then result.Add(partner.FilePath)
             Return result
         End Function

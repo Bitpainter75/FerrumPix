@@ -63,6 +63,22 @@ Namespace Services
             Public BottomPercent As Single
         End Structure
 
+        ''' <summary>Rechnet die Kanten eines Zuschnitts von der Bezugsflaeche des Referenzprogramms
+        ''' auf das Bild um, das der Editor zeigt. <paramref name="frame"/> nennt, wo dieses Bild in
+        ''' der Bezugsflaeche liegt (RawDecodeService.ShownFrameInReferenceArea); ohne ihn sind
+        ''' beide deckungsgleich, und die Werte bleiben. Die Ergebnisse koennen ausserhalb von 0
+        ''' bis 1 liegen, wenn der Zuschnitt ueber unser Bild hinausreicht; begrenzt wird beim
+        ''' Uebernehmen.</summary>
+        Public Shared Function CropInFrame(left As Double, top As Double, right As Double, bottom As Double,
+                                           frame As (Left As Double, Top As Double, Right As Double, Bottom As Double)?) As (Left As Double, Top As Double, Right As Double, Bottom As Double)
+            If Not frame.HasValue Then Return (left, top, right, bottom)
+            Dim f = frame.Value
+            Dim width = f.Right - f.Left
+            Dim height = f.Bottom - f.Top
+            If width <= 0 OrElse height <= 0 Then Return (left, top, right, bottom)
+            Return ((left - f.Left) / width, (top - f.Top) / height, (right - f.Left) / width, (bottom - f.Top) / height)
+        End Function
+
         ''' <summary>Rechnet den gedrehten Zuschnitt einer Beistelldatei in unsere zwei Schritte um.
         '''
         ''' WIE DIE FELDER GEMEINT SIND (gegen das Referenzprogramm gemessen, an zwei Bildern mit
