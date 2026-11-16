@@ -11802,4 +11802,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>每次更改时，将星级、色标以及保留或已拒绝的标记直接写入 JPEG、PNG 和 WebP 文件本身，以便其他程序立即看到。关闭此开关时，它们只保存在目录中，直到通过元数据菜单写入文件。</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>只能从单张已冲洗的 RAW 或 PSD 图片复制调整</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>尚未复制任何调整</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

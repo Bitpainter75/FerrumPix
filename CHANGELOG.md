@@ -1,93 +1,19 @@
 ## Unreleased
 
+### Changes
+
+- CTRL+SHIFT+C copies the adjustments of a picture and CTRL+SHIFT+V pastes them, in the gallery
+  onto the whole selection and in the editor onto the open picture. Both were only in the menu
+  before.
+
+- Every search field has a small cross that empties it as soon as something is typed in it.
+
 ### Fixes
+
+- With a search text left in the keyword list of the gallery, the list was empty and said that
+  no keywords were assigned. It now says that nothing matches.
 
 - In the Flatpak, a file the user may not write to could not be moved to the trash on a second
   drive, although the file manager could do it. FerrumPix now puts it into the trash of that
   drive itself, where the file manager finds and restores it.
-
-## 0.9.85
-
-### Changes
-
-- Keywords can be arranged under one another, for example Dogs and Cats under Animals. The new
-  button "Arrange keywords" at the bottom of the folder panel opens a dialog in which a keyword is
-  dragged onto another one. The keyword list of the gallery then shows them as a tree, and
-  choosing Animals also finds the pictures that only carry Dogs. Typing "Animals > Dogs" into the
-  keyword field arranges a keyword while assigning it, and keyword paths from other programs are
-  taken over as this order. The pictures themselves keep their plain keywords.
-
-- TIFF files with 16 bit per channel, such as scans, now keep their depth: Save as, export and the
-  batch dialogs offer 16 bit for them as for raw files, and the adjustments are calculated at full
-  depth. Colours of such a file with an embedded colour profile are also read more accurately.
-
-- The brush for selections and masks can stop at edges. With the new option "Stop at edges" a
-  stroke only covers what resembles the colour under the centre of the brush, so painting along a
-  sky or a jacket no longer runs over the edge. A tolerance sets how strict it is, and the result
-  appears when the stroke is released.
-
-- Two new erasers in the image brush. The background eraser removes under the brush only the
-  colour on which the stroke starts, the magic eraser removes an area of similar colour
-  with one click. Both work in the photo and on a picture layer.
-
-- With subfolders included, the gallery now also stacks pictures that belong together but lie
-  in different folders: a series spread over folders, or a RAW file with its JPEG in a subfolder.
-  A copy of the same picture in another folder is not taken for a second shot.
-
-- A new setting under Catalog, "Write rating, color label and pick mark into the image file",
-  writes these into JPEG, PNG and WebP files at every change, so other programs see them at
-  once. It is off by default; without it they are written with "Write catalog data to the files"
-  as before.
-
-- The Export button has moved from the bar at the bottom of the gallery into the folder panel,
-  below Import.
-
-- The dialogs for exporting, importing, Save as, resizing, converting, filters and watermarks are
-  wider.
-
-- On a small screen the scrollbar of the tool bar in the editor lay over the tools. It is gone:
-  the mouse wheel still scrolls the bar, and a small arrow at the top and at the bottom shows
-  that there are more tools in that direction.
-
-### Fixes
-
-- FerrumPix could close without warning while a RAW file was being developed, mostly after it
-  had been idle for a moment. This no longer happens.
-
-- A crop that was also rotated arrived wrong when it was taken over from an XMP file: the
-  rotation was dropped and the frame sat in the wrong place. Both now arrive as they were set.
-
-- A crop taken over from an XMP file cut away too much on a RAW file shot with an aspect ratio
-  chosen in the camera, for example 16:9. It now matches.
-
-- A rating written into a JPEG file left the fields in which Windows keeps the rating at their
-  old value, so Windows and its photo gallery could go on showing the old stars. They now
-  follow.
-
-- FerrumPix did not start on a system without any sans-serif font. It now takes a font that is
-  installed.
-
-- In the editor the histogram of the info panel stayed at "calculating" when the panel was closed
-  while the picture loaded and opened afterwards. It now appears.
-
-- Typing part of a name at a face and then clicking the full name in the list of suggestions
-  assigned the typed part, for example "Dad" instead of "Daddy (me)", and further steps could
-  rename the whole person. The clicked suggestion now counts. Before a name typed at one face
-  renames a whole person with several faces or removes their name, FerrumPix asks.
-
-- A single face could not be assigned from the people area: the hint at the unknown bin pointed to
-  the info sidebar, which the preview behind the eye does not have. The preview now has a name
-  field with suggestions that assigns exactly this face.
-
-- The scrollbar in the dialogs no longer lies over the right edge of the fields. In the export
-  dialog it covered the arrow of the dropdowns, which made them hard to hit. It now has its own
-  strip beside the content.
-
-- When the trash of the system refuses a file, for example on a second drive that has no trash,
-  FerrumPix now shows the reason the system gives and asks whether to delete the file for good
-  instead. Before, it only said that the trash was not available, and in German in every language.
-
-- With the keyword list of the gallery open, clearing the selection left only the keywords of the
-  pictures shown before in the list. The list is complete again.
-
 

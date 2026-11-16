@@ -11844,4 +11844,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Kirjoittaa tähdet, värimerkinnän ja valintamerkin säilytä tai hylätty jokaisen muutoksen yhteydessä itse JPEG-, PNG- ja WebP-tiedostoon, jotta muut ohjelmat näkevät ne heti. Ilman kytkintä ne ovat vain luettelossa, kunnes ne kirjoitetaan tiedostoihin Metatiedot-valikosta.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Säädöt voi kopioida vain yhdestä kehitetystä RAW- tai PSD-kuvasta</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>Säätöjä ei ole kopioitu</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

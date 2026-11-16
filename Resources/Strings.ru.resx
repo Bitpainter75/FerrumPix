@@ -11844,4 +11844,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>При каждом изменении записывает звёзды, цветную метку и отметку оставить или отклонено прямо в файл JPEG, PNG или WebP, чтобы другие программы видели их сразу. Без переключателя они хранятся только в каталоге, пока не будут записаны в файлы через меню Метаданные.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Коррекции можно скопировать только с одного проявленного изображения RAW или PSD</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>Коррекции не скопированы</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

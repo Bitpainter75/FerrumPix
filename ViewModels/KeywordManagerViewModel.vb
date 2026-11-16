@@ -154,9 +154,19 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Es gibt gar keine Stichwörter. Mit Suchtext ist eine leere Liste etwas anderes,
+        ''' siehe <see cref="HasNoMatches"/>.</summary>
         Public ReadOnly Property HasNoRows As Boolean
             Get
-                Return Rows.Count = 0
+                Return Rows.Count = 0 AndAlso If(_searchText, "").Trim().Length = 0
+            End Get
+        End Property
+
+        ''' <summary>Die Liste ist leer, weil kein Stichwort zum Suchtext passt. Eigene Meldung:
+        ''' "Keine Stichwörter vergeben" liess es so aussehen, als gäbe es keine.</summary>
+        Public ReadOnly Property HasNoMatches As Boolean
+            Get
+                Return Rows.Count = 0 AndAlso If(_searchText, "").Trim().Length > 0
             End Get
         End Property
 
@@ -216,6 +226,7 @@ Namespace ViewModels
                 Rows.Add(row)
             Next
             Me.RaisePropertyChanged(NameOf(HasNoRows))
+            Me.RaisePropertyChanged(NameOf(HasNoMatches))
         End Sub
 
         ''' <summary>Wählt eine Zeile. Ein zweiter Klick auf die gewählte Zeile hebt die Auswahl

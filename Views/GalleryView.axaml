@@ -599,8 +599,15 @@
                                         </ItemsRepeater>
                                     </ScrollViewer>
 
+                                    <!-- Zwei Meldungen: mit Suchtext ist eine leere Liste kein Bestand
+                                         ohne Stichwörter, sondern eine Suche ohne Treffer. -->
                                     <TextBlock Text="Keine Stichwörter vergeben"
-                                               IsVisible="{Binding !TagFilterOptions.Count}"
+                                               IsVisible="{Binding ShowsNoTagFilterEntries}"
+                                               Foreground="{DynamicResource FP.Text.Muted}"
+                                               FontSize="{DynamicResource FP.Font.Small}"
+                                               Margin="10,8,10,10"/>
+                                    <TextBlock Text="Keine Treffer"
+                                               IsVisible="{Binding ShowsNoTagFilterMatches}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"
                                                Margin="10,8,10,10"/>

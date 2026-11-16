@@ -8752,6 +8752,13 @@ Namespace Views
                             End If
                         End If
                     Case Key.C
+                        ' MIT SHIFT: die Anpassungen des Bildes in die Ablage, derselbe Befehl wie
+                        ' im Menü. Vor allem anderen, weil er weder Auswahl noch Ebene meint.
+                        If Not isTextInputFocused AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                            vm.CopyCurrentAdjustments()
+                            e.Handled = True
+                            Return
+                        End If
                         If Not isTextInputFocused AndAlso vm.IsFrameAnnotationSelected Then
                             e.Handled = True
                             Return
@@ -8798,6 +8805,12 @@ Namespace Views
                             CutSelectionToSystemClipboardAsync(vm)
                         End If
                     Case Key.V
+                        ' MIT SHIFT: die kopierten Anpassungen auf dieses Bild, siehe Key.C.
+                        If Not isTextInputFocused AndAlso e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                            vm.PasteCopiedAdjustments()
+                            e.Handled = True
+                            Return
+                        End If
                         If Not isTextInputFocused AndAlso vm.IsFrameAnnotationSelected Then
                             e.Handled = True
                             Return

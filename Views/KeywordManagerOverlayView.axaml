@@ -168,6 +168,10 @@
                                            IsVisible="{Binding HasNoRows}"
                                            Foreground="{DynamicResource FP.Text.Muted}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Text="Keine Treffer"
+                                           IsVisible="{Binding HasNoMatches}"
+                                           Foreground="{DynamicResource FP.Text.Muted}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Panel>
                         </Border>
                     </StackPanel>

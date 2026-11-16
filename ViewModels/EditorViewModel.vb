@@ -18050,7 +18050,10 @@ Namespace ViewModels
                 ' mit halb gelesenen Werten ins Bild gehen.
                 gespeichert = Nothing
             End Try
-            If gespeichert Is Nothing Then Return
+            If gespeichert Is Nothing Then
+                StatusText = LocalizationService.T("Es sind keine Anpassungen kopiert")
+                Return
+            End If
 
             PushUndo()
             ' Auf dem AKTUELLEN Stand aufsetzen und nur die Pixel-Anpassungen ersetzen: Geometrie,

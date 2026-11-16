@@ -11848,4 +11848,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Menulis bintang, label warna, dan tanda pertahankan atau ditolak ke berkas JPEG, PNG, dan WebP itu sendiri pada setiap perubahan, agar program lain langsung melihatnya. Tanpa sakelar ini semuanya hanya ada di katalog sampai ditulis ke berkas lewat menu Metadata.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Penyesuaian hanya dapat disalin dari satu gambar RAW atau PSD yang sudah diolah</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>Belum ada penyesuaian yang disalin</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

@@ -11822,4 +11822,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Schreibt Sterne, Farbetikett und die Markierung behalten oder verworfen bei jeder Änderung in JPEG, PNG und WebP selbst, damit andere Programme sie sofort sehen. Ohne den Schalter stehen sie nur im Katalog, bis sie über das Menü Metadaten in die Dateien geschrieben werden.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Anpassungen lassen sich nur von einem einzelnen entwickelten RAW- oder PSD-Bild kopieren</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>Es sind keine Anpassungen kopiert</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>STRG+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>STRG+SHIFT+V</value>
+  </data>
 </root>

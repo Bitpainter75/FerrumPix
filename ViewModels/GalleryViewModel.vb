@@ -6053,8 +6053,26 @@ Namespace ViewModels
                 If showsTree AndAlso entry.IsHiddenByCollapse Then Continue For
                 TagFilterOptions.Add(entry)
             Next
+            Me.RaisePropertyChanged(NameOf(ShowsNoTagFilterEntries))
+            Me.RaisePropertyChanged(NameOf(ShowsNoTagFilterMatches))
             RefreshTagFilterState()
         End Sub
+
+        ''' <summary>Die Stichwortliste ist leer, und es wird nichts gesucht: es gibt keine.</summary>
+        Public ReadOnly Property ShowsNoTagFilterEntries As Boolean
+            Get
+                Return TagFilterOptions.Count = 0 AndAlso If(_tagFilterSearch, "").Trim().Length = 0
+            End Get
+        End Property
+
+        ''' <summary>Die Stichwortliste ist leer, weil nichts zum Suchtext passt. Eigene Meldung:
+        ''' mit "Keine Stichwörter vergeben" sah ein stehen gebliebener Suchtext aus, als wären
+        ''' alle Stichwörter verschwunden (Nutzerbefund).</summary>
+        Public ReadOnly Property ShowsNoTagFilterMatches As Boolean
+            Get
+                Return TagFilterOptions.Count = 0 AndAlso If(_tagFilterSearch, "").Trim().Length > 0
+            End Get
+        End Property
 
         ''' <summary>Passt die Zeile zum Suchtext?
         '''
@@ -14837,7 +14855,12 @@ Namespace ViewModels
 
         Private Sub CopyAdjustmentsFromSelected()
             Dim items = GetSelectedImageItems()
-            If items.Count <> 1 OrElse Not HasCopyableAdjustments(items(0)) Then Return
+            If items.Count <> 1 OrElse Not HasCopyableAdjustments(items(0)) Then
+                ' Das Menü bietet den Befehl dann gar nicht an; über die Tasten kommt man trotzdem
+                ' hierher, und ohne Meldung sähe es aus, als wäre kopiert worden.
+                StatusText = LocalizationService.T("Anpassungen lassen sich nur von einem einzelnen entwickelten RAW- oder PSD-Bild kopieren")
+                Return
+            End If
             Dim recipe As ImageAdjustments = Nothing
             Dim state = RawSidecarService.ReadRecipe(items(0).FilePath, recipe)
             If state <> RawSidecarService.SidecarReadResult.Read OrElse recipe Is Nothing Then
@@ -14860,7 +14883,10 @@ Namespace ViewModels
                 ' Beschädigte Ablage (von Hand bearbeitete Einstellungsdatei): lieber nichts tun.
                 template = Nothing
             End Try
-            If template Is Nothing Then Return
+            If template Is Nothing Then
+                StatusText = LocalizationService.T("Es sind keine Anpassungen kopiert")
+                Return
+            End If
 
             Dim targets = GetSelectedImageItems().Where(AddressOf CanPasteAdjustments).
                 Where(Function(i) File.Exists(i.FilePath)).ToList()

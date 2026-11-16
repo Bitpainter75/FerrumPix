@@ -11823,4 +11823,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Writes stars, color label and the mark keep or rejected into JPEG, PNG and WebP themselves at every change, so that other programs see them at once. Without the switch they are only in the catalog until they are written to the files from the Metadata menu.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Adjustments can only be copied from a single developed RAW or PSD picture</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>No adjustments have been copied</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

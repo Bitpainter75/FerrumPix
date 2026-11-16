@@ -1481,6 +1481,13 @@ Namespace Views
                         ' "Kopie" UND "Kopie 2" im Ordner.
                         Case Key.C
                             e.Handled = True
+                            ' MIT SHIFT: die Anpassungen des markierten Bildes in die Ablage, derselbe
+                            ' Befehl wie "Anpassungen kopieren" im Kontextmenü. Ohne SHIFT bleiben es
+                            ' die Dateien selbst.
+                            If e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                                vm.Gallery?.CopyAdjustmentsCommand.Execute(Nothing)
+                                Return
+                            End If
                             Await CopyGallerySelectionToClipboard(vm, False)
                             Return
                         Case Key.X
@@ -1489,6 +1496,11 @@ Namespace Views
                             Return
                         Case Key.V
                             e.Handled = True
+                            ' MIT SHIFT: die kopierten Anpassungen auf die ganze Auswahl.
+                            If e.KeyModifiers.HasFlag(KeyModifiers.Shift) Then
+                                vm.Gallery?.PasteAdjustmentsCommand.Execute(Nothing)
+                                Return
+                            End If
                             Await PasteClipboardIntoGallery(vm)
                             Return
                     End Select

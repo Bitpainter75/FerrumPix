@@ -11804,4 +11804,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Escribe las estrellas, la etiqueta de color y la marca conservar o rechazada en el propio archivo JPEG, PNG o WebP con cada cambio, para que otros programas las vean de inmediato. Sin el interruptor solo están en el catálogo hasta que se escriben en los archivos desde el menú Metadatos.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Los ajustes solo se pueden copiar de una única imagen RAW o PSD revelada</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>No hay ajustes copiados</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+MAYÚS+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+MAYÚS+V</value>
+  </data>
 </root>

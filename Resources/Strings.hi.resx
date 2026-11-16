@@ -11848,4 +11848,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>हर बदलाव पर सितारे, रंग लेबल और रखें या अस्वीकृत का निशान सीधे JPEG, PNG और WebP फ़ाइल में लिखता है, ताकि दूसरे प्रोग्राम उन्हें तुरंत देख सकें। स्विच के बिना वे केवल कैटलॉग में रहते हैं, जब तक उन्हें मेटाडेटा मेनू से फ़ाइलों में न लिखा जाए।</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>समायोजन केवल एक विकसित RAW या PSD तस्वीर से कॉपी किए जा सकते हैं</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>कोई समायोजन कॉपी नहीं किया गया है</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

@@ -11844,4 +11844,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Zapisuje hvězdičky, barevný štítek a označení ponechat nebo odmítnuto při každé změně přímo do souborů JPEG, PNG a WebP, aby je jiné programy viděly hned. Bez přepínače jsou jen v katalogu, dokud se do souborů nezapíšou přes nabídku Metadata.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>Úpravy lze kopírovat jen z jednoho vyvolaného obrázku RAW nebo PSD</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>Nejsou zkopírovány žádné úpravy</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>

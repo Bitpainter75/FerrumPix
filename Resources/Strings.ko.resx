@@ -11848,4 +11848,16 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>변경할 때마다 별, 색 라벨, 유지 또는 거부됨 표시를 JPEG, PNG, WebP 파일 자체에 써서 다른 프로그램이 바로 볼 수 있게 합니다. 이 스위치가 꺼져 있으면 메타데이터 메뉴에서 파일에 쓸 때까지 카탈로그에만 남습니다.</value>
   </data>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
+    <value>조정은 현상된 RAW 또는 PSD 사진 한 장에서만 복사할 수 있습니다</value>
+  </data>
+  <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
+    <value>복사된 조정이 없습니다</value>
+  </data>
+  <data name="STRG_SHIFT_C_a65af3c5" xml:space="preserve">
+    <value>CTRL+SHIFT+C</value>
+  </data>
+  <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
+    <value>CTRL+SHIFT+V</value>
+  </data>
 </root>
