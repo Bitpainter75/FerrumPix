@@ -1,3 +1,11 @@
+## Unreleased
+
+### Fixes
+
+- In the Flatpak, a file the user may not write to could not be moved to the trash on a second
+  drive, although the file manager could do it. FerrumPix now puts it into the trash of that
+  drive itself, where the file manager finds and restores it.
+
 ## 0.9.85
 
 ### Changes

@@ -32,13 +32,32 @@ Namespace Services
                 ElseIf OperatingSystem.IsMacOS() Then
                     Return RunTrashTool(MacOsCommand(path), reason)
                 Else
-                    Return RunTrashTool(GioCommand(path), reason)
+                    If RunTrashTool(GioCommand(path), reason) Then Return True
+                    Return MoveToVolumeTrash(path, reason)
                 End If
             Catch ex As Exception
                 ' Auch ein fehlendes Programm (gio nicht installiert) landet hier und ist ein Grund.
                 reason = If(ex.Message, "").Trim()
+                If OperatingSystem.IsLinux() Then Return MoveToVolumeTrash(path, reason)
                 Return False
             End Try
+        End Function
+
+        ''' <summary>Der Rueckfall unter Linux, wenn das Papierkorb-Programm ablehnt: der Papierkorb
+        ''' des Laufwerks, von FerrumPix selbst bedient (siehe <see cref="VolumeTrash"/>). Gilt er
+        ''' hier nicht oder scheitert er ebenfalls, bleibt der Grund des Systems stehen: der ist
+        ''' es, den der Nutzer in seinem System wiederfindet.</summary>
+        Private Shared Function MoveToVolumeTrash(path As String, ByRef reason As String) As Boolean
+            Dim ownReason As String = Nothing
+            If Not VolumeTrash.TryMove(path, ownReason) Then
+                If Not String.IsNullOrEmpty(ownReason) Then
+                    DiagnosticLogService.LogAlways("Trash.Volume", "own trash folder not usable: " & ownReason)
+                End If
+                Return False
+            End If
+            DiagnosticLogService.LogAlways("Trash.Volume", "system trash refused (" & reason & "), moved into the trash folder of the drive")
+            reason = ""
+            Return True
         End Function
 
         ''' <summary>Startet das Papierkorb-Programm und liest seine Fehlerausgabe. Beide Ströme
