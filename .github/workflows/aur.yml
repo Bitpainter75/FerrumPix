@@ -36,7 +36,11 @@ jobs:
           git clone ssh://aur@aur.archlinux.org/ferrumpix-bin.git packaging/AUR
 
       # makepkg laeuft nicht als root; die Identitaet entspricht der manuellen Veroeffentlichung.
+      # Das Token meldet die Abfrage des Release an der API an; ohne es teilt sich der Laeufer das
+      # Kontingent seiner Adresse mit anderen. su ohne -l reicht die Umgebung an builder weiter.
       - name: AUR veroeffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           useradd -m builder
           chown -R builder:builder .
