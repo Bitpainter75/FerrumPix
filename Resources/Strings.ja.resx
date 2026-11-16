@@ -6009,9 +6009,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>選択範囲をマスクに変換</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>未分類の入れ物は人物ではないため、名前は付けられません。そこから 1 人分の顔を割り当てるには、画像の情報パネルで名前を入力します。</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>モデルによるノイズ除去</value>
   </data>
@@ -7721,9 +7718,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>名前は画像の情報パネルで付けます</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>未分類の入れ物は人物ではないため、名前は付けられません。そこから 1 人分の顔を割り当てるには、画像の情報パネルで名前を入力します。</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>ビューアーだけに適用されます。画像が表示領域より大きいときだけ縮小するか、常に表示領域に合わせるかを選びます。</value>
@@ -11768,5 +11762,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>作成</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>輪郭で止める</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>ストロークは、ブラシの中心の下の色に近く、そこにつながっている部分だけを覆います。結果は離したときに表示されます</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>ブラシの中心の下の色からどれだけ離れた色まで含めるか。高いほど広く覆い、低いほど早く止まります</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>背景消しゴム</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>マジック消しゴム</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>マジック消しゴム：クリック1回で近い色の領域を消します</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>クリック1回で、クリックした色に近い領域を消します。</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>どれだけ離れた色まで消すか。高いほど多く消します</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>ポインターの下の位置につながっている部分だけを消します。チェックを外すと、一致する色がすべて消えます。マジック消しゴムでは画像全体が対象です</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>ブラシ用に画像を読み込んでいます…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>ブラシ用に画像の内容を読み込めませんでした</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>画像はまだ計算中です。少ししてからもう一度クリックしてください</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>この場所には消すものがありません</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>これは誰ですか？</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>割り当てる</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>名前を削除</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>人物全体の名前を削除しますか？</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>人物全体の名前を変更しますか？</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} には顔が {1} 件あります。名前はこの顔だけでなく、すべての顔から削除されます。</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} には顔が {1} 件あります。この顔だけでなく、人物全体の名前が {2} になります。</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>未分類の入れ物は人物ではないため、名前は付けられません。そこから 1 人分の顔を割り当てるには、タイルの目のアイコンを使うか、画像の情報パネルで名前を入力します。</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>背景消しゴム：ブラシの下で、ストロークの開始位置の色だけを消します</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>ブラシの下で、ストロークの開始位置の色だけを消します。背景から描き始めてください。その後はブラシが被写体にかかってもかまいません。</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>開始位置の色を保持</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>ストロークの開始位置の色が、ストローク全体に適用されます。チェックを外すと、ブラシの中心の下の色が常に使われ、中心が通った部分も消えます</value>
   </data>
 </root>

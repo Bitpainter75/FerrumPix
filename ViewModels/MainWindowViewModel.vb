@@ -4440,8 +4440,8 @@ Namespace ViewModels
                 ' Die Stapel-Dialoge teilen sich mit „Exportieren nach“ umfangreiche Formulare
                 ' und den Speichern-unter-Block; Einlesen zeigt Quelle und Ziel als Pfade. Alle
                 ' gehen in DERSELBEN Breite auf, damit ein langer Zielordner lesbar bleibt, die
-                ' Schalterzeilen Luft haben und die Dialoge beim Wechsel nicht springen
-                ' (Nutzerwunsch). Vorher 840, Einlesen 680.
+                ' Schalterzeilen Luft haben und die Dialoge beim Wechsel nicht springen.
+                ' Vorher 840, Einlesen 680.
                 '
                 ' NICHT SCHMALER ALS 840: bei 780 blieben von den fünfzehn Größen-Vorgaben genau
                 ' zwei Bildpunkte zu wenig, und die letzte („32") rutschte allein in eine zweite
@@ -6835,6 +6835,17 @@ Namespace ViewModels
         ''' fehlgeschlagenes Löschen holt sie über den Abgleich in <paramref name="afterDelete"/> zurück.</param>
         Public Async Sub RequestDeletePaths(paths As IEnumerable(Of String), Optional afterDelete As Action = Nothing,
                                             Optional beforeDelete As Action = Nothing) Implements IViewerHost.RequestDeletePaths, IEditorHost.RequestDeletePaths
+            ' Eine Ausnahme in einem Async Sub landet beim Dispatcher und beendet den Prozess. Der
+            ' Ablauf steht deshalb in einer eigenen Funktion, und hier wird abgefangen.
+            Try
+                Await RequestDeletePathsCoreAsync(paths, afterDelete, beforeDelete)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Delete.RequestDeletePaths", ex)
+            End Try
+        End Sub
+
+        Private Async Function RequestDeletePathsCoreAsync(paths As IEnumerable(Of String), afterDelete As Action,
+                                                           beforeDelete As Action) As Task
             Dim angefragt = If(paths, Enumerable.Empty(Of String)()).ToList()
             Dim pathList = angefragt.
                 Where(Function(p) Not String.IsNullOrEmpty(p) AndAlso (IO.File.Exists(p) OrElse IO.Directory.Exists(p))).
@@ -6931,7 +6942,7 @@ Namespace ViewModels
                                          LocalizationService.T("Löschen fehlgeschlagen"))
                 Await ShowMessageAsync(title, String.Join(Environment.NewLine, failures))
             End If
-        End Sub
+        End Function
 
         ''' <summary>Ein Element, das der Papierkorb des Systems nicht genommen hat, mit dem Grund,
         ''' den das System nennt (leer, wenn es keinen nennt).</summary>

@@ -6009,9 +6009,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Omvandla markeringen till en mask</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>Samlingskorgen är ingen person och tar därför inte emot något namn. Ett enskilt ansikte ur den tilldelar man i infopanelen vid bilden.</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>Brusreducering med modell</value>
   </data>
@@ -7721,9 +7718,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>Namn sätts i infopanelen vid bilden</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>Samlingskorgen är ingen person och tar därför inte emot något namn. Ett enskilt ansikte ur den tilldelar man i infopanelen vid bilden.</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>Gäller endast visaren: förminska bara när bilden är större än visningsytan, eller skala alltid till ytan.</value>
@@ -11768,5 +11762,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>Skapa</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>Stanna vid kanter</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>Draget täcker bara det som liknar färgen under penselns mitt och hänger ihop med den. Resultatet visas när du släpper</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>Hur mycket en färg får avvika från den under penselns mitt. Högre täcker mer, lägre stannar tidigare</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>Bakgrundssuddgummi</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>Magiskt suddgummi</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>Magiskt suddgummi: ett klick tar bort ytan med liknande färg</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>Ett klick tar bort ytan som liknar den klickade färgen.</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>Hur mycket en färg får avvika och ändå tas bort. Högre tar bort mer</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>Tar bara bort det som hänger ihop med stället under pekaren. Utan bock försvinner varje passande färg, med det magiska suddgummit i hela bilden</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>Bilden läses för penseln…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>Bildinnehållet kunde inte läsas för penseln</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>Bilden beräknas fortfarande, klicka igen om en stund</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>Det finns inget att sudda på det här stället</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>Vem är det här?</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>Tilldela</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>Ta bort namnet</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>Ta bort namnet för hela personen?</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>Byta namn på hela personen?</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} har {1} ansikten. Namnet tas bort från alla, inte bara från det här ansiktet.</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} har {1} ansikten. Hela personen heter sedan {2}, inte bara det här ansiktet.</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>Samlingskorgen är ingen person och tar därför inte emot något namn. Ett enskilt ansikte ur den tilldelar man via ögat på dess ruta eller i infopanelen vid bilden.</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>Bakgrundssuddgummi: tar under penseln bara bort färgen som draget börjar på</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>Tar under penseln bara bort färgen som draget börjar på. Börja på bakgrunden; sedan får penseln nå över motivet.</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>Behåll färgen från början</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>Färgen som draget börjar på gäller för hela draget. Utan bock gäller fortlöpande färgen under penselns mitt, och draget tar med det som mitten rör sig över</value>
   </data>
 </root>

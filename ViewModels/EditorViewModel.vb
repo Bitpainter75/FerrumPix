@@ -456,6 +456,8 @@ Namespace ViewModels
                 {"ReplaceColor", New PaintToolState With {.Hardness = 30, .Size = 80}},
                 {"RedEye", New PaintToolState With {.Size = 40}},
                 {"Restore", New PaintToolState With {.Hardness = 30, .Size = 80}},
+                {"BackgroundEraser", New PaintToolState With {.Hardness = 100, .Size = 80}},
+                {"MagicEraser", New PaintToolState()},
                 {"Blur", New PaintToolState()},
                 {"Repair", New PaintToolState()},
                 {"Clone", New PaintToolState()}
@@ -18411,7 +18413,7 @@ Namespace ViewModels
                                                                    End If
 
                                                                    Select Case normalizedToolName
-                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "redeye", "restore", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
+                                                                       Case "brush", "pinsel", "eraser", "radiergummi", "imagebrush", "bildpinsel", "dodge", "burn", "sponge", "replacecolor", "redeye", "restore", "backgrounderaser", "magiceraser", "blur", "verwischen", "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche", "clone", "stempel"
                                                                            SetPaintMode(toolName)
                                                                            Return
                                                                        Case "text", "image", "bild", "qr", "qrcode", "qr-code", "watermark", "wasserzeichen"
@@ -22264,6 +22266,8 @@ Namespace ViewModels
             ' Noch laufende Zauberstab-Arbeit gehört ebenfalls zum alten Dokument. Der Worker darf
             ' fertiglaufen, sein Resultat wird anhand dieser Generation aber nicht mehr übernommen.
             Interlocked.Increment(_magicWandGeneration)
+            ' Das Vergleichsbild des Pinsels gehoert ebenfalls zum alten Dokument.
+            ReleaseBrushGuideImage()
             Dim tempDir = _selectionAssetTempDir
             _selectionAssetTempDir = ""
             _selectionClipboardPath = Nothing
@@ -28387,7 +28391,7 @@ Namespace ViewModels
             End If
             ' Rote Augen sind ein Klick, kein Zug (RemoveRedEyeAt). Kaeme hier doch ein Zug an, darf
             ' er nicht als Pinselstrich durchfallen und Farbe auftragen.
-            If IsRedEyeMode Then Return
+            If IsRedEyeMode OrElse IsMagicEraserMode Then Return
 
             ' RADIEREN AUF EINER EBENE MIT BILD GEHT IN IHRE BILDPUNKTE, genau wie Pinsel und
             ' Retusche: gemerkt wird das Ergebnis, nicht der Zug. Früher ging der Radierer auf jeder
@@ -32186,7 +32190,7 @@ Namespace ViewModels
                     Case "eraser", "radiergummi"
                         CurrentTool = EditorTool.Draw
                         IsEraserMode = True
-                    Case "dodge", "burn", "sponge", "replacecolor", "redeye", "restore"
+                    Case "dodge", "burn", "sponge", "replacecolor", "redeye", "restore", "backgrounderaser", "magiceraser"
                         ' Die Arten des Bildpinsels neben dem Radierer: vier mit Zug, Rote Augen mit
                         ' Klick, der Protokollpinsel malt in die Maske einer Protokollebene.
                         CurrentTool = EditorTool.Draw
@@ -32238,6 +32242,7 @@ Namespace ViewModels
             Select Case normalized
                 Case "brush", "pinsel", "eraser", "radiergummi",
                      "dodge", "burn", "sponge", "replacecolor", "imagebrush", "bildpinsel",
+                     "backgrounderaser", "magiceraser",
                      "blur", "verwischen",
                      "repair", "reparatur", "reparaturpinsel", "heal", "heilen", "retusche",
                      "clone", "stempel"
@@ -32284,7 +32289,7 @@ Namespace ViewModels
                     state.Opacity = _brushOpacity
                     state.Flow = _brushFlow
                     state.EraserFillColor = _eraserFillColor
-                Case "Dodge", "Burn", "Sponge", "ReplaceColor", "Restore"
+                Case "Dodge", "Burn", "Sponge", "ReplaceColor", "Restore", "BackgroundEraser"
                     state.Size = _brushSize
                     state.Hardness = _brushHardness
                     state.Opacity = _brushOpacity
@@ -32326,7 +32331,7 @@ Namespace ViewModels
                     BrushOpacity = state.Opacity
                     BrushFlow = state.Flow
                     EraserFillColor = state.EraserFillColor
-                Case "Dodge", "Burn", "Sponge", "ReplaceColor", "Restore"
+                Case "Dodge", "Burn", "Sponge", "ReplaceColor", "Restore", "BackgroundEraser"
                     BrushSize = state.Size
                     BrushHardness = state.Hardness
                     BrushOpacity = state.Opacity

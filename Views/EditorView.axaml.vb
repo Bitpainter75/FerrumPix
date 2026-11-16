@@ -3174,6 +3174,17 @@ Namespace Views
                     e.Handled = True
                     Return
                 End If
+                ' MAGISCHER RADIERER (Art des Bildpinsels): ebenfalls ein Klick. Er nimmt die Flaeche
+                ' aehnlicher Farbe an der Stelle weg; ein Klick neben das Bild tut nichts.
+                If vm.IsMagicEraserMode Then
+                    Dim clickPos = e.GetPosition(canvas)
+                    If imageRect.Contains(clickPos) Then
+                        vm.MagicEraseAt((clickPos.X - imageRect.Left) / imageRect.Width * 100.0,
+                                        (clickPos.Y - imageRect.Top) / imageRect.Height * 100.0)
+                    End If
+                    e.Handled = True
+                    Return
+                End If
                 _hideBrushPreviewAfterBake = False
                 _brushPoints.Clear()
                 _brushPressures.Clear()
@@ -4364,6 +4375,9 @@ Namespace Views
             Dim showCursor = imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso
                               (vm.CurrentTool = EditorTool.Draw OrElse vm.CurrentTool = EditorTool.Retouch OrElse
                                IsMaskBrushActive(vm) OrElse ShowsLiquify(vm))
+            ' Der magische Radierer arbeitet ohne Pinselkreis: ein Kreis unter dem Zeiger saehe aus,
+            ' als begrenze er den Klick.
+            If vm.IsMagicEraserMode Then showCursor = False
             cursor.IsVisible = showCursor
             If Not showCursor Then Return
 
@@ -9003,6 +9017,10 @@ Namespace Views
         ''' DER KREIS UNTER DEM ZEIGER ZIEHT SOFORT NACH. Er wurde nur bei einer Mausbewegung neu
         ''' bemessen; beim Tippen stand er still, und die Groesse schien sich nicht zu aendern.</summary>
         Private Sub AdjustActiveToolSize(vm As EditorViewModel, direction As Integer)
+            ' Der magische Radierer hat keine Groesse: sein Klick nimmt die ganze Flaeche. Rad und
+            ' Tasten stellen dort nichts, sonst wuerde unbemerkt die Groesse der anderen Arten
+            ' verstellt.
+            If vm.IsMagicEraserMode Then Return
             If vm.CurrentTool = EditorTool.Draw OrElse IsMaskBrushActive(vm) Then
                 vm.BrushSize = vm.BrushSize + direction * SizeStep(vm.BrushSize, direction)
             ElseIf vm.CurrentTool = EditorTool.Retouch Then

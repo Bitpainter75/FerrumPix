@@ -916,6 +916,15 @@ Namespace ViewModels
                                                              _brushStrokePressures)
             If stroke Is Nothing Then Return True
             dirty = ClampRectToBitmap(dirty, _objectPaintSize.Width, _objectPaintSize.Height)
+            If tone IsNot Nothing Then
+                ' Die beiden Radierer nach Farbe brauchen die Punkte im Bild der Ebene: der
+                ' Hintergrund-Radierer fuer seine Tupfer, der magische den ersten als Klickpunkt.
+                tone.StrokePoints = imagePoints.Select(Function(p) New SKPoint(CSng(p.X), CSng(p.Y))).ToList()
+                tone.StrokeRadius = CSng(Math.Max(1.0, options.StrokeWidth / 2.0))
+                ' Der magische Radierer kann ueberall im Bild der Ebene etwas wegnehmen, nicht nur
+                ' unter dem Klick.
+                If tone.Kind = "MagicEraser" Then dirty = New SKRectI(0, 0, _objectPaintSize.Width, _objectPaintSize.Height)
+            End If
             If dirty.Width <= 0 OrElse dirty.Height <= 0 Then Return True
 
             ' Auswahl: nur innerhalb darf gemalt und radiert werden. Die Deckung wird im Raster des
@@ -1261,13 +1270,23 @@ Namespace ViewModels
                 Dim before As SKBitmap = Nothing
                 If coverage IsNot Nothing OrElse lockTransparent Then before = ImageProcessor.CopyRegion(copy, dirty)
                 Try
-                    If tone IsNot Nothing Then
+                    If tone IsNot Nothing AndAlso tone.Kind = "MagicEraser" Then
+                        ' Magischer Radierer: kein Strich, der Klick nimmt die Flaeche aehnlicher
+                        ' Farbe weg. Findet er nichts (Klick auf eine durchsichtige Stelle oder
+                        ' neben das Bild), bleibt die Kopie, wie sie ist.
+                        If tone.StrokePoints IsNot Nothing AndAlso tone.StrokePoints.Count > 0 Then
+                            Dim seedX = CInt(Math.Floor(tone.StrokePoints(0).X))
+                            Dim seedY = CInt(Math.Floor(tone.StrokePoints(0).Y))
+                            Dim found As SKRectI
+                            Dim weights = ImageProcessor.BuildMagicEraseWeights(copy, seedX, seedY, tone.Tolerance,
+                                                                                tone.Contiguous, found)
+                            If weights IsNot Nothing Then ImageProcessor.EraseByWeights(copy, found, weights, copy.Width, 0, 0)
+                        End If
+                    ElseIf tone IsNot Nothing Then
                         ' Bildpinsel: die Deckung des Strichs, und darunter wird umgerechnet - dieselbe
-                        ' Rechnung wie im Foto (ImageProcessor.ApplyToneBrush).
+                        ' Rechnung wie im Foto (EditorViewModel.ApplyToneBrushKind).
                         Dim strokeCoverage = ImageProcessor.BuildStrokeCoverage(renderAnnotation, dirty, copy.Width, copy.Height)
-                        If strokeCoverage Is Nothing OrElse
-                           Not ImageProcessor.ApplyToneBrush(copy, dirty, strokeCoverage, tone.Kind, tone.Range,
-                                                             tone.Saturate, tone.Color, tone.ProtectTones) Then
+                        If strokeCoverage Is Nothing OrElse Not ApplyToneBrushKind(copy, dirty, strokeCoverage, tone) Then
                             copy.Dispose()
                             Return Nothing
                         End If

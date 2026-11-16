@@ -78,6 +78,33 @@ Namespace Views
             e.Handled = True
         End Sub
 
+        ''' <summary>Ein Klick in die Zeile mit dem Namensfeld gehoert dem Feld und schliesst die
+        ''' Vorschau nicht.</summary>
+        Private Sub OnPreviewInputPointerPressed(sender As Object, e As PointerPressedEventArgs)
+            e.Handled = True
+        End Sub
+
+        ''' <summary>Die Eingabetaste ordnet zu. Steht die Vorschlagsliste offen, hat der Rahmen die
+        ''' Taste schon fuer die Auswahl verbraucht: der erste Druck waehlt den Vorschlag, der zweite
+        ''' ordnet zu.</summary>
+        Private Sub OnPreviewNameKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+            AssignPreviewFace()
+            e.Handled = True
+        End Sub
+
+        Private Sub OnAssignPreviewFaceClick(sender As Object, e As RoutedEventArgs)
+            AssignPreviewFace()
+            e.Handled = True
+        End Sub
+
+        Private Sub AssignPreviewFace()
+            Dim box = Me.FindControl(Of AutoCompleteBox)("PreviewNameBox")
+            Dim vm = TryCast(Me.DataContext, PeopleViewModel)
+            If box Is Nothing OrElse vm Is Nothing Then Return
+            vm.AssignPreviewFace(If(box.Text, ""))
+        End Sub
+
         Public Shadows Sub OnKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key <> Key.Escape Then Return
             Dim vmVorschau = TryCast(DataContext, PeopleViewModel)
@@ -141,9 +168,20 @@ Namespace Views
         Private Sub OnPersonNameCommitted(sender As Object, e As RoutedEventArgs)
             Dim box = TryCast(sender, AutoCompleteBox)
             If box Is Nothing Then Return
-            ' EINEN DURCHLAUF SPAETER - siehe InfoSidebarView, dort ausfuehrlich begruendet: der
-            ' Klick auf einen Vorschlag traegt seinen Text erst NACH dem Fokusverlust ein.
-            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() CommitPersonName(box))
+            ' EINEN DURCHLAUF SPAETER, wenn der neue Fokus feststeht, und dann nach der gemeinsamen
+            ' Regel (PersonNameField): ein angeklickter Vorschlag gilt statt des getippten Texts,
+            ' und solange die Liste offen ist oder der Fokus wieder im Feld steht, geschieht nichts.
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Sub()
+                    Dim suggestion As String = Nothing
+                    Select Case PersonNameField.AfterLostFocus(box, suggestion)
+                        Case PersonNameField.LostFocusAction.CommitSuggestion
+                            box.Text = suggestion
+                            CommitPersonName(box)
+                        Case PersonNameField.LostFocusAction.CommitText
+                            CommitPersonName(box)
+                    End Select
+                End Sub)
         End Sub
 
         ''' <summary>Die Eingabetaste uebernimmt. Steht die Vorschlagsliste offen, hat der Rahmen

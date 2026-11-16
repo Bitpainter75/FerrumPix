@@ -112,6 +112,26 @@
                                              Minimum="1" Maximum="100" Increment="1"
                                              FormatString="F0" />
                 </Grid>
+                <!-- Der Pinsel orientiert sich am Bildinhalt (EditorViewModelMask,
+                     MaskBrushFollowsContent). Dieselben zwei Bedienelemente stehen im
+                     Maskenwerkzeug; die Toleranz erscheint nur mit dem Haken. -->
+                <CheckBox Content="An Kanten halten"
+                          IsChecked="{Binding MaskBrushFollowsContent}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Der Strich deckt nur, was der Farbe unter der Pinselmitte ähnelt und mit ihr zusammenhängt. Das Ergebnis erscheint beim Loslassen" />
+                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center"
+                      IsVisible="{Binding MaskBrushFollowsContent}">
+                    <TextBlock Text="Toleranz" Foreground="{DynamicResource FP.Text.Secondary}"
+                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                               ToolTip.Tip="Wie weit eine Farbe von der unter der Pinselmitte abweichen darf. Höher deckt mehr, niedriger hält früher an" />
+                    <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="100"
+                                       DefaultValue="20"
+                                       Value="{Binding MaskBrushContentTolerance}" Margin="0,0" />
+                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                             Value="{Binding MaskBrushContentTolerance, Mode=TwoWay}"
+                                             Minimum="1" Maximum="100" Increment="1"
+                                             FormatString="F0" />
+                </Grid>
             </StackPanel>
 
             <StackPanel Spacing="8" IsVisible="{Binding IsSubjectSelectionMode}">

@@ -196,7 +196,7 @@
                                                  Classes="no-translate"
                                                  LostFocus="OnPersonNameCommitted"
                                                  KeyDown="OnPersonNameKeyDown"/>
-                                <TextBlock Text="Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man in der Info-Leiste am Bild zu."
+                                <TextBlock Text="Der Ablagekorb ist keine Person und nimmt deshalb keinen Namen an. Einen einzelnen Kopf daraus ordnet man über das Auge auf seiner Kachel zu oder in der Info-Leiste am Bild."
                                            IsVisible="{Binding SelectedPerson.IsUnknownBin}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
                                            FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
@@ -319,6 +319,30 @@
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource FP.Text.Primary}"
                                FontSize="{DynamicResource FP.Font.Body}"/>
+                    <!-- WER IST DAS (GitHub #144): der Name gilt GENAU dem Kopf, dessen Auge
+                         angeklickt wurde, nie der Gruppe (PeopleViewModel.AssignPreviewFace). Vorher
+                         gab es aus dem Personenbereich keinen Weg, einen einzelnen Kopf zuzuordnen;
+                         der Hinweis am Ablagekorb verwies auf eine Leiste, die es hier nicht gibt.
+                         Uebernommen wird mit der Eingabetaste oder dem Knopf, nicht beim Verlassen
+                         des Feldes. Der Rahmen faengt den Klick ab, der sonst die Vorschau schloesse. -->
+                    <Border Background="Transparent" Padding="8" HorizontalAlignment="Center"
+                            PointerPressed="OnPreviewInputPointerPressed">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Wer ist das?" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+                            <AutoCompleteBox Name="PreviewNameBox" Width="260"
+                                             Text="{Binding PreviewFaceName, Mode=OneWay}"
+                                             ItemsSource="{Binding PersonNameSuggestions}"
+                                             FilterMode="Contains"
+                                             MinimumPrefixLength="0"
+                                             PlaceholderText="Name eingeben"
+                                             Classes="no-translate"
+                                             KeyDown="OnPreviewNameKeyDown"/>
+                            <Button Classes="accent" Click="OnAssignPreviewFaceClick">
+                                <TextBlock Text="Zuordnen"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
                     <TextBlock Text="Klicken zum Schließen"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource FP.Text.Muted}"

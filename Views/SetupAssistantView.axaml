@@ -366,7 +366,7 @@
                                  Hoehengrenze: die Karte des Assistenten waechst bis 700 und zeigt alle Karten;
                                  gerollt wird nur, wenn das Fenster kleiner ist. -->
                             <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel Margin="-4,-4,10,0">
+                                <StackPanel Margin="-4,-4,16,0">
                                     <ItemsControl ItemsSource="{Binding ModelOptions}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate>

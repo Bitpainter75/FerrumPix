@@ -6009,9 +6009,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Turn the selection into a mask</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>The unknown bin is not a person and so it takes no name. To assign a single face out of it, type the name in the info sidebar next to the photo.</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>Denoise with model</value>
   </data>
@@ -7682,9 +7679,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>Names are given in the info sidebar next to the photo</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>The unknown bin is not a person and so it takes no name. To assign a single face out of it, type the name in the info sidebar next to the photo.</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>Applies to the viewer only: only shrink when the image is larger than the display area, or always scale to the area.</value>
@@ -11747,5 +11741,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>Create</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>Stop at edges</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>The stroke only covers what resembles the colour under the centre of the brush and is connected to it. The result appears on release</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>How far a colour may differ from the one under the centre of the brush. Higher covers more, lower stops sooner</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>Background eraser</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>Magic eraser</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>Magic eraser: one click removes the area of similar colour</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>One click removes the area that resembles the clicked colour.</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>How far a colour may differ and still be removed. Higher removes more</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>Only removes what is connected to the spot under the pointer. Unchecked, every matching colour is removed, with the magic eraser in the whole picture</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>Reading the picture for the brush…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>The picture content could not be read for the brush</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>The picture is still being calculated, please click again in a moment</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>There is nothing to erase at this spot</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>Who is this?</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>Assign</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>Remove name</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>Remove the name of the whole person?</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>Rename the whole person?</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} has {1} faces. The name is removed from all of them, not only from this face.</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} has {1} faces. The whole person is then called {2}, not only this face.</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>The unknown bin is not a person and so it takes no name. To assign a single face out of it, use the eye on its tile or type the name in the info sidebar next to the photo.</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>Background eraser: under the brush it only removes the colour on which the stroke starts</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>Under the brush it only removes the colour on which the stroke starts. Start on the background; after that the brush may reach over the subject.</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>Keep the colour of the start</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>The colour on which the stroke starts applies to the whole stroke. Unchecked, the colour under the centre of the brush applies continuously, and the stroke also removes whatever the centre moves over</value>
   </data>
 </root>

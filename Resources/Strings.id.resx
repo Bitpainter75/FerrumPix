@@ -6006,9 +6006,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Ubah seleksi menjadi masker</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>Wadah tak dikenal bukan seorang pribadi, jadi ia tidak menerima nama. Untuk menetapkan satu wajah dari sana, ketik namanya di bilah sisi info di sebelah foto.</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>Hilangkan derau dengan model</value>
   </data>
@@ -7721,9 +7718,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>Nama diberikan di bilah sisi info di sebelah foto</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>Wadah tak dikenal bukan seorang pribadi, jadi ia tidak menerima nama. Untuk menetapkan satu wajah dari sana, ketik namanya di bilah sisi info di sebelah foto.</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>Berlaku hanya untuk penampil: hanya perkecil bila gambar lebih besar daripada area tampilan, atau selalu skalakan ke area itu.</value>
@@ -11772,5 +11766,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>Buat</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>Berhenti di tepi</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>Goresan hanya menutupi bagian yang mirip dengan warna di bawah pusat kuas dan terhubung dengannya. Hasilnya muncul saat dilepas</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>Seberapa jauh warna boleh berbeda dari warna di bawah pusat kuas. Lebih tinggi menutupi lebih banyak, lebih rendah berhenti lebih cepat</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>Penghapus latar</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>Penghapus ajaib</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>Penghapus ajaib: satu klik menghapus area dengan warna serupa</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>Satu klik menghapus area yang mirip dengan warna yang diklik.</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>Seberapa jauh warna boleh berbeda dan tetap dihapus. Lebih tinggi menghapus lebih banyak</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>Hanya menghapus bagian yang terhubung dengan titik di bawah penunjuk. Tanpa centang, setiap warna yang cocok dihapus, pada penghapus ajaib di seluruh gambar</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>Membaca gambar untuk kuas…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>Isi gambar tidak dapat dibaca untuk kuas</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>Gambar masih dihitung, klik lagi sebentar lagi</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>Tidak ada yang bisa dihapus di titik ini</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>Siapa ini?</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>Tetapkan</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>Hapus nama</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>Hapus nama seluruh orang ini?</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>Ganti nama seluruh orang ini?</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} memiliki {1} wajah. Nama dihapus dari semuanya, bukan hanya dari wajah ini.</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} memiliki {1} wajah. Setelah itu seluruh orang ini bernama {2}, bukan hanya wajah ini.</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>Wadah tak dikenal bukan seorang pribadi, jadi ia tidak menerima nama. Untuk menetapkan satu wajah dari sana, gunakan ikon mata pada ubinnya atau ketik namanya di bilah sisi info di sebelah foto.</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>Penghapus latar: di bawah kuas hanya menghapus warna tempat goresan dimulai</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>Di bawah kuas hanya menghapus warna tempat goresan dimulai. Mulailah di latar; setelah itu kuas boleh melewati subjek.</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>Pertahankan warna awal</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>Warna tempat goresan dimulai berlaku untuk seluruh goresan. Tanpa centang, warna di bawah pusat kuas berlaku terus-menerus, dan goresan ikut menghapus apa pun yang dilewati pusatnya</value>
   </data>
 </root>

@@ -6006,9 +6006,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>चयन को मास्क में बदलें</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>अनजान डिब्बा कोई व्यक्ति नहीं है, इसलिए वह नाम नहीं लेता। उसमें से किसी एक चेहरे को सौंपने के लिए तस्वीर के बगल की सूचना बगल पट्टी में नाम लिखें।</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>मॉडल से शोर हटाएँ</value>
   </data>
@@ -7721,9 +7718,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>नाम तस्वीर के बगल की सूचना बगल पट्टी में दिए जाते हैं</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>अनजान डिब्बा कोई व्यक्ति नहीं है, इसलिए वह नाम नहीं लेता। उसमें से किसी एक चेहरे को सौंपने के लिए तस्वीर के बगल की सूचना बगल पट्टी में नाम लिखें।</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>केवल दर्शक पर लागू: छवि प्रदर्शन क्षेत्र से बड़ी हो तभी छोटा करें, या हमेशा क्षेत्र के अनुसार आकार बदलें।</value>
@@ -11772,5 +11766,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>बनाएँ</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>किनारों पर रुकें</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>स्ट्रोक केवल वही ढकता है जो ब्रश के केंद्र के नीचे के रंग जैसा है और उससे जुड़ा है। परिणाम छोड़ने पर दिखता है</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>कोई रंग ब्रश के केंद्र के नीचे के रंग से कितना अलग हो सकता है। अधिक मान ज़्यादा ढकता है, कम मान जल्दी रुकता है</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>पृष्ठभूमि इरेज़र</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>जादुई इरेज़र</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>जादुई इरेज़र: एक क्लिक मिलते-जुलते रंग का क्षेत्र हटा देता है</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>एक क्लिक उस क्षेत्र को हटा देता है जो क्लिक किए गए रंग जैसा है।</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>कोई रंग कितना अलग होकर भी हटाया जाएगा। अधिक मान ज़्यादा हटाता है</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>केवल वही हटाता है जो पॉइंटर के नीचे की जगह से जुड़ा है। बिना चिह्न के हर मेल खाता रंग हट जाता है, जादुई इरेज़र में पूरी छवि में</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>ब्रश के लिए छवि पढ़ी जा रही है…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>ब्रश के लिए छवि की सामग्री पढ़ी नहीं जा सकी</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>छवि की गणना अभी चल रही है, कृपया थोड़ी देर में फिर क्लिक करें</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>इस जगह मिटाने के लिए कुछ नहीं है</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>यह कौन है?</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>सौंपें</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>नाम हटाएँ</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>पूरे व्यक्ति का नाम हटाएँ?</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>पूरे व्यक्ति का नाम बदलें?</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} के {1} चेहरे हैं। नाम केवल इस चेहरे से नहीं, सभी से हटाया जाएगा।</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} के {1} चेहरे हैं। इसके बाद केवल यह चेहरा नहीं, पूरा व्यक्ति {2} कहलाएगा।</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>अनजान डिब्बा कोई व्यक्ति नहीं है, इसलिए वह नाम नहीं लेता। उसमें से किसी एक चेहरे को सौंपने के लिए उसकी टाइल पर आँख का उपयोग करें या तस्वीर के बगल की सूचना बगल पट्टी में नाम लिखें।</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>पृष्ठभूमि इरेज़र: ब्रश के नीचे केवल वही रंग हटाता है जिस पर स्ट्रोक शुरू होता है</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>ब्रश के नीचे केवल वही रंग हटाता है जिस पर स्ट्रोक शुरू होता है। पृष्ठभूमि पर शुरू करें; उसके बाद ब्रश विषय के ऊपर जा सकता है।</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>शुरुआत का रंग बनाए रखें</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>जिस रंग पर स्ट्रोक शुरू होता है, वही पूरे स्ट्रोक के लिए लागू रहता है। बिना चिह्न के ब्रश के केंद्र के नीचे का रंग लगातार लागू होता है, और केंद्र जिस पर से गुज़रता है वह भी हट जाता है</value>
   </data>
 </root>

@@ -6009,9 +6009,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Gjør merkingen om til en maske</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>Samlekurven er ingen person og tar derfor ikke imot noe navn. Et enkelt ansikt derfra tilordner man i infopanelet ved bildet.</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>Støyreduksjon med modell</value>
   </data>
@@ -7721,9 +7718,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>Navn gis i infopanelet ved bildet</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>Samlekurven er ingen person og tar derfor ikke imot noe navn. Et enkelt ansikt derfra tilordner man i infopanelet ved bildet.</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>Gjelder bare viseren: forminsk bare når bildet er større enn visningsflaten, eller skaler alltid til flaten.</value>
@@ -11768,5 +11762,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>Opprett</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>Stopp ved kanter</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>Strøket dekker bare det som ligner fargen under midten av penselen og henger sammen med den. Resultatet vises når du slipper</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>Hvor mye en farge kan avvike fra den under midten av penselen. Høyere dekker mer, lavere stopper tidligere</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>Bakgrunnsviskelær</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>Magisk viskelær</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>Magisk viskelær: ett klikk fjerner flaten med lignende farge</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>Ett klikk fjerner flaten som ligner fargen du klikker på.</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>Hvor mye en farge kan avvike og likevel bli fjernet. Høyere fjerner mer</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>Fjerner bare det som henger sammen med stedet under pekeren. Uten hake forsvinner hver passende farge, med det magiske viskelæret i hele bildet</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>Bildet leses for penselen…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>Bildeinnholdet kunne ikke leses for penselen</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>Bildet beregnes fortsatt, klikk igjen om et øyeblikk</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>Det er ingenting å viske ut på dette stedet</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>Hvem er dette?</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>Tilordne</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>Fjern navnet</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>Fjerne navnet for hele personen?</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>Gi hele personen nytt navn?</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} har {1} ansikter. Navnet fjernes fra alle, ikke bare fra dette ansiktet.</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} har {1} ansikter. Hele personen heter deretter {2}, ikke bare dette ansiktet.</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>Samlekurven er ingen person og tar derfor ikke imot noe navn. Et enkelt ansikt derfra tilordner man via øyet på flisen eller i infopanelet ved bildet.</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>Bakgrunnsviskelær: fjerner under penselen bare fargen som strøket begynner på</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>Fjerner under penselen bare fargen som strøket begynner på. Start på bakgrunnen; etterpå kan penselen gå inn over motivet.</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>Hold på fargen fra starten</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>Fargen som strøket begynner på, gjelder for hele strøket. Uten hake gjelder fortløpende fargen under midten av penselen, og strøket tar med det midten beveger seg over</value>
   </data>
 </root>

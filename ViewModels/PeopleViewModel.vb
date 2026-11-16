@@ -153,7 +153,9 @@ Namespace ViewModels
             _previewToken += 1
             Dim token = _previewToken
             PreviewImage = Nothing
+            _previewEntry = entry
             PreviewTitle = IO.Path.GetFileName(path)
+            Me.RaisePropertyChanged(NameOf(PreviewFaceName))
             Try
                 ' UEBER DIESELBE STELLE WIE DIE KACHEL (FacePanelService): ein Serverbild hat keine
                 ' Datei, und der Weg zu seinem Bild gehoert genau einmal aufgeschrieben.
@@ -169,9 +171,55 @@ Namespace ViewModels
 
         Public Sub ClosePreview()
             _previewToken += 1
+            _previewEntry = Nothing
             PreviewImage = Nothing
             PreviewTitle = ""
+            Me.RaisePropertyChanged(NameOf(PreviewFaceName))
         End Sub
+
+        ''' <summary>Das Gesicht, dessen Auge angeklickt wurde. Die Vorschau zeigt das ganze Bild,
+        ''' der Name darunter gilt aber genau diesem einen Kopf.</summary>
+        Private _previewEntry As PersonFaceEntry
+
+        ''' <summary>Der Name, unter dem das Gesicht der Vorschau gerade laeuft: der der geoeffneten
+        ''' Gruppe, im Ablagekorb und in einer namenlosen Gruppe leer.</summary>
+        Public ReadOnly Property PreviewFaceName As String
+            Get
+                If _previewEntry Is Nothing OrElse _selectedPerson Is Nothing OrElse _selectedPerson.IsUnknownBin Then Return ""
+                Return If(_selectedPerson.Name, "")
+            End Get
+        End Property
+
+        ''' <summary>Ordnet das Gesicht der Vorschau einer Person zu (GitHub #144). Vorher gab es aus
+        ''' dem Personenbereich keinen Weg dorthin: der Hinweis am Ablagekorb verwies auf die
+        ''' Infoleiste am Bild, die Vorschau hinter dem Auge hat aber keine.
+        '''
+        ''' NUR DIESES GESICHT, nie die Gruppe: heisst schon jemand so, wandert es dorthin, sonst
+        ''' entsteht eine neue Person mit diesem Namen. Die Gruppe benennt man mit dem Feld ueber
+        ''' der Wand. Deshalb nicht ueber ApplyPersonName, das an einer namenlosen Gruppe die
+        ''' ganze Gruppe benennt.</summary>
+        ''' <returns>True, wenn das Gesicht jetzt bei der genannten Person liegt.</returns>
+        Public Function AssignPreviewFace(name As String) As Boolean
+            Dim entry = _previewEntry
+            Dim clean = If(name, "").Trim()
+            If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.FaceId) OrElse clean.Length = 0 Then Return False
+            If _selectedPerson IsNot Nothing AndAlso Not _selectedPerson.IsUnknownBin AndAlso
+               String.Equals(If(_selectedPerson.Name, ""), clean, StringComparison.OrdinalIgnoreCase) Then
+                ' Es liegt schon bei dieser Person.
+                ClosePreview()
+                Return True
+            End If
+            Try
+                If Not LibraryService.Instance.AssignFaceToName(entry.FaceId, clean) Then Return False
+            Catch ex As Exception
+                DiagnosticLogService.LogException("People.AssignPreviewFace", ex)
+                Return False
+            End Try
+            ClosePreview()
+            RemoveFaceFromOpenGroup(entry.FaceId)
+            RefreshNameSuggestions()
+            Return True
+        End Function
 
         Public ReadOnly Property HasPeopleFeature As Boolean
             Get
@@ -515,6 +563,13 @@ Namespace ViewModels
                 DiagnosticLogService.LogException("People.DetachFace", ex)
                 Return
             End Try
+            RemoveFaceFromOpenGroup(faceId)
+        End Sub
+
+        ''' <summary>Ein Gesicht gehoert nicht mehr zur geoeffneten Gruppe (herausgeloest oder einer
+        ''' anderen Person zugeordnet): seine Kachel verschwindet, Aushaengeschild, Anzahl und
+        ''' Blaettern ziehen nach.</summary>
+        Private Sub RemoveFaceFromOpenGroup(faceId As String)
             ' Aus BEIDEN Listen: die Seite zeigt nur einen Ausschnitt, die Gesamtliste traegt den
             ' Rest - bliebe es dort stehen, waere es beim naechsten Blaettern wieder da.
             Dim weg = _allFaces.FirstOrDefault(Function(f) String.Equals(f.FaceId, faceId, StringComparison.Ordinal))

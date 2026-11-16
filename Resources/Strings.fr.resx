@@ -6011,9 +6011,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>Convertir la sélection en masque</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>La corbeille n'est pas une personne et n'accepte donc aucun nom. Pour attribuer un visage isolé qui s'y trouve, saisissez le nom dans la barre d'informations à côté de la photo.</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>Débruiter avec un modèle</value>
   </data>
@@ -7681,9 +7678,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>Les noms se donnent dans le panneau d'informations à côté de la photo</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>La corbeille n'est pas une personne et n'accepte donc aucun nom. Pour attribuer un visage isolé qui s'y trouve, saisissez le nom dans le panneau d'informations à côté de la photo.</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>S'applique uniquement à la visionneuse : réduire seulement si l'image est plus grande que la zone d'affichage, ou toujours l'adapter à la zone.</value>
@@ -11728,5 +11722,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>Créer</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>S'arrêter aux contours</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>Le trait ne couvre que ce qui ressemble à la couleur sous le centre du pinceau et y est relié. Le résultat apparaît au relâchement</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>De combien une couleur peut s'écarter de celle sous le centre du pinceau. Plus haut couvre davantage, plus bas s'arrête plus tôt</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>Gomme d'arrière-plan</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>Gomme magique</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>Gomme magique : un clic enlève la zone de couleur semblable</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>Un clic enlève la zone qui ressemble à la couleur cliquée.</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>De combien une couleur peut s'écarter tout en étant enlevée. Plus haut enlève davantage</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>N'enlève que ce qui est relié au point sous le pointeur. Sans la coche, toute couleur correspondante est enlevée, avec la gomme magique dans toute l'image</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>Lecture de l'image pour le pinceau…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>Le contenu de l'image n'a pas pu être lu pour le pinceau</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>L'image est encore en cours de calcul, cliquez de nouveau dans un instant</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>Il n'y a rien à gommer à cet endroit</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>Qui est-ce ?</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>Attribuer</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>Retirer le nom</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>Retirer le nom de toute la personne ?</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>Renommer toute la personne ?</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} compte {1} visages. Le nom est retiré de tous, pas seulement de ce visage.</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} compte {1} visages. Toute la personne s'appelle ensuite {2}, pas seulement ce visage.</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>La corbeille n'est pas une personne et n'accepte donc aucun nom. Pour attribuer un visage isolé qui s'y trouve, utilisez l'œil sur sa vignette ou saisissez le nom dans le panneau d'informations à côté de la photo.</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>Gomme d'arrière-plan : sous le pinceau, n'enlève que la couleur sur laquelle le trait commence</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>Sous le pinceau, n'enlève que la couleur sur laquelle le trait commence. Commencez sur l'arrière-plan ; ensuite le pinceau peut déborder sur le sujet.</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>Conserver la couleur du départ</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>La couleur sur laquelle le trait commence vaut pour tout le trait. Sans la coche, c'est en continu la couleur sous le centre du pinceau qui vaut, et le trait emporte aussi ce sur quoi passe le centre</value>
   </data>
 </root>

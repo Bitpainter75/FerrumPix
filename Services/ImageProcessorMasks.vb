@@ -4730,6 +4730,232 @@ RasterTeil:
             End Using
         End Function
 
+        ''' <summary>Anteil der Toleranz, ueber den ein Punkt knapp jenseits der Grenze noch
+        ''' teilweise zaehlt. Ein gerader Abfall, keine Kurve.</summary>
+        Private Const ContentMatchFringe As Double = 0.25
+
+        ''' <summary>
+        ''' Der Farbvergleich eines Pinsels, der sich am Bildinhalt orientiert: je Bildpunkt in
+        ''' <paramref name="rect"/> ein Gewicht 0..255, wie weit er zu dem gehoert, worueber der
+        ''' Strich gefuehrt wurde. Zurueck kommt ein Feld in der Groesse des Rechtecks, zeilenweise.
+        '''
+        ''' Der Strich wird in TUPFER zerlegt, einen halben Radius auseinander, der erste am
+        ''' Ansatz. Jeder Tupfer nimmt EINE Farbe, die unter seiner Mitte (Mittel aus drei mal
+        ''' drei Punkten, damit Rauschen sie nicht verzieht), und vergleicht jeden Punkt in seinem
+        ''' Kreis damit: groesster Kanalabstand, dieselbe Metrik wie der Zauberstab. Bis zur
+        ''' Toleranz zaehlt ein Punkt voll, ein Viertel der Toleranz weiter faellt er gerade auf
+        ''' null. Mit <paramref name="contiguous"/> zaehlt nur, was im Kreis mit der Mitte
+        ''' zusammenhaengt (vierfach): der Strich laeuft dann nicht ueber eine Kante hinweg auf
+        ''' eine gleichfarbige Flaeche dahinter. Punkte im Saum bekommen ihr Gewicht, tragen die
+        ''' Flaeche aber nicht weiter.
+        '''
+        ''' Ueberlappende Tupfer addieren sich nicht: je Punkt gilt das groesste Gewicht, das
+        ''' irgendein Tupfer ihm gab. Ein Tupfer, dessen Mitte ausserhalb des Bildes oder auf
+        ''' einem durchsichtigen Punkt liegt, traegt nichts bei.
+        '''
+        ''' <paramref name="guide"/> ist das Bild, an dem verglichen wird, in den Koordinaten von
+        ''' <paramref name="rect"/> und der Strichpunkte (Bgra8888 oder Rgba8888). Bei einem
+        ''' vormultiplizierten Bild wird an den geraden Farben verglichen; ein durchsichtiger
+        ''' Punkt gehoert nie dazu. Mit <paramref name="fixedSample"/> gilt diese eine Farbe fuer
+        ''' alle Tupfer statt der unter der jeweiligen Mitte.
+        '''
+        ''' BEWUSST SO SCHLICHT: eine abgetastete Farbe je Tupfer und eine feste Grenze. Kein
+        ''' Farbmodell aus mehreren Proben, keine Statistik, keine Korrektur der Farbe an der
+        ''' Kante - das ist die lange veroeffentlichte Form dieses Pinsels, und dabei bleibt es.
+        ''' </summary>
+        Friend Shared Function BuildContentMatchWeights(guide As SKBitmap, rect As SKRectI,
+                                                        pts As IReadOnlyList(Of SKPoint), radius As Single,
+                                                        tolerance As Single, contiguous As Boolean,
+                                                        Optional fixedSample As SKColor? = Nothing) As Byte()
+            If guide Is Nothing OrElse pts Is Nothing OrElse pts.Count = 0 OrElse radius <= 0 Then Return Nothing
+            If guide.ColorType <> SKColorType.Bgra8888 AndAlso guide.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            Dim area = SKRectI.Intersect(rect, New SKRectI(0, 0, guide.Width, guide.Height))
+            If rect.Width <= 0 OrElse rect.Height <= 0 OrElse area.Width <= 0 OrElse area.Height <= 0 Then Return Nothing
+            Dim basePtr = guide.GetPixels()
+            If basePtr = IntPtr.Zero Then Return Nothing
+
+            Dim w = rect.Width, h = rect.Height
+            Dim redFirst = guide.ColorType = SKColorType.Rgba8888
+            Dim premul = guide.AlphaType = SKAlphaType.Premul
+
+            ' Den Ausschnitt EINMAL in gerade Farben holen: die Tupfer lesen jeden Punkt mehrfach.
+            ' Vier Bytes je Punkt in fester Folge R, G, B, A; ausserhalb des Bildes bleibt A null.
+            Dim px(w * h * 4 - 1) As Byte
+            Dim row(area.Width * 4 - 1) As Byte
+            For y = area.Top To area.Bottom - 1
+                Marshal.Copy(IntPtr.Add(basePtr, y * guide.RowBytes + area.Left * 4), row, 0, row.Length)
+                Dim target = ((y - rect.Top) * w + (area.Left - rect.Left)) * 4
+                For x = 0 To area.Width - 1
+                    Dim o = x * 4
+                    Dim a = CInt(row(o + 3))
+                    If a = 0 Then Continue For
+                    Dim r = CInt(row(If(redFirst, o, o + 2))), g = CInt(row(o + 1)), b = CInt(row(If(redFirst, o + 2, o)))
+                    If premul AndAlso a < 255 Then
+                        r = Math.Min(255, (r * 255 + a \ 2) \ a)
+                        g = Math.Min(255, (g * 255 + a \ 2) \ a)
+                        b = Math.Min(255, (b * 255 + a \ 2) \ a)
+                    End If
+                    Dim t = target + o
+                    px(t) = CByte(r) : px(t + 1) = CByte(g) : px(t + 2) = CByte(b) : px(t + 3) = CByte(a)
+                Next
+            Next
+
+            Dim tol = Math.Max(0.0, Math.Min(1.0, tolerance)) * 255.0
+            Dim fringe = tol * ContentMatchFringe
+            Dim limit = tol + fringe
+
+            ' Die Mitten der Tupfer entlang des Strichs.
+            Dim spacing = Math.Max(1.0, radius * 0.5)
+            Dim centers As New List(Of SKPoint) From {pts(0)}
+            Dim carried = 0.0
+            For i = 1 To pts.Count - 1
+                Dim ax = CDbl(pts(i - 1).X), ay = CDbl(pts(i - 1).Y)
+                Dim dx = pts(i).X - ax, dy = pts(i).Y - ay
+                Dim length = Math.Sqrt(dx * dx + dy * dy)
+                If length <= 0 Then Continue For
+                Dim at = spacing - carried
+                While at <= length
+                    centers.Add(New SKPoint(CSng(ax + dx * at / length), CSng(ay + dy * at / length)))
+                    at += spacing
+                End While
+                carried = length - (at - spacing)
+            Next
+            ' Das Ende des Strichs bekommt seinen eigenen Tupfer, sonst bleibt dort bis zu ein
+            ' halber Radius ohne Vergleich und damit ohne Deckung.
+            If pts.Count > 1 Then centers.Add(pts(pts.Count - 1))
+
+            Dim weights(w * h - 1) As Byte
+            Dim seen As Integer() = If(contiguous, New Integer(w * h - 1) {}, Nothing)
+            Dim stack As Integer() = If(contiguous, New Integer(1023) {}, Nothing)
+            Dim r2 = CDbl(radius) * radius
+            Dim reach = CInt(Math.Ceiling(radius))
+
+            For dab = 0 To centers.Count - 1
+                Dim cx = centers(dab).X - rect.Left, cy = centers(dab).Y - rect.Top
+                Dim cxi = CInt(Math.Floor(cx)), cyi = CInt(Math.Floor(cy))
+                If cxi < 0 OrElse cyi < 0 OrElse cxi >= w OrElse cyi >= h Then Continue For
+
+                Dim sr, sg, sb As Integer
+                If fixedSample.HasValue Then
+                    sr = fixedSample.Value.Red : sg = fixedSample.Value.Green : sb = fixedSample.Value.Blue
+                Else
+                    If px((cyi * w + cxi) * 4 + 3) = 0 Then Continue For
+                    Dim sumR = 0, sumG = 0, sumB = 0, count = 0
+                    For yy = Math.Max(0, cyi - 1) To Math.Min(h - 1, cyi + 1)
+                        For xx = Math.Max(0, cxi - 1) To Math.Min(w - 1, cxi + 1)
+                            Dim o = (yy * w + xx) * 4
+                            If px(o + 3) = 0 Then Continue For
+                            sumR += px(o) : sumG += px(o + 1) : sumB += px(o + 2) : count += 1
+                        Next
+                    Next
+                    If count = 0 Then Continue For
+                    sr = (sumR + count \ 2) \ count : sg = (sumG + count \ 2) \ count : sb = (sumB + count \ 2) \ count
+                End If
+
+                Dim x0 = Math.Max(0, cxi - reach), x1 = Math.Min(w - 1, cxi + reach)
+                Dim y0 = Math.Max(0, cyi - reach), y1 = Math.Min(h - 1, cyi + reach)
+
+                If Not contiguous Then
+                    For yy = y0 To y1
+                        Dim ddy = yy + 0.5 - cy
+                        For xx = x0 To x1
+                            Dim ddx = xx + 0.5 - cx
+                            If ddx * ddx + ddy * ddy > r2 Then Continue For
+                            Dim idx = yy * w + xx
+                            Dim weight = ContentMatchWeight(px, idx * 4, sr, sg, sb, tol, fringe, limit)
+                            If weight > weights(idx) Then weights(idx) = weight
+                        Next
+                    Next
+                    Continue For
+                End If
+
+                ' Zusammenhaengend: von der Mitte aus fluten. Bei der Probe unter der Mitte zaehlt die
+                ' Mitte selbst immer, auch wenn das Mittel der Probe sie knapp verfehlt - sonst
+                ' entstuende dort gar nichts.
+                Dim mark = dab + 1
+                Dim top = 0
+                Dim startIdx = cyi * w + cxi
+                stack(top) = startIdx : top += 1
+                seen(startIdx) = mark
+                Dim first = True
+                While top > 0
+                    top -= 1
+                    Dim idx = stack(top)
+                    Dim xx = idx Mod w, yy = idx \ w
+                    Dim weight = ContentMatchWeight(px, idx * 4, sr, sg, sb, tol, fringe, limit)
+                    If first Then
+                        ' Nur bei der Probe unter der Mitte: dort ist die Mitte die Probe. Mit einer
+                        ' festen Farbe zaehlt die Mitte wie jeder Punkt, und passt sie nicht, traegt
+                        ' dieser Tupfer nichts bei.
+                        If Not fixedSample.HasValue AndAlso px(idx * 4 + 3) <> 0 Then weight = 255
+                        first = False
+                    End If
+                    If weight = 0 Then Continue While
+                    If weight > weights(idx) Then weights(idx) = weight
+                    ' Der Saum traegt die Flaeche nicht weiter.
+                    If weight < 255 Then Continue While
+                    If top + 4 > stack.Length Then Array.Resize(stack, stack.Length * 2)
+                    If xx > x0 AndAlso seen(idx - 1) <> mark AndAlso InsideDab(xx - 1, yy, cx, cy, r2) Then
+                        seen(idx - 1) = mark : stack(top) = idx - 1 : top += 1
+                    End If
+                    If xx < x1 AndAlso seen(idx + 1) <> mark AndAlso InsideDab(xx + 1, yy, cx, cy, r2) Then
+                        seen(idx + 1) = mark : stack(top) = idx + 1 : top += 1
+                    End If
+                    If yy > y0 AndAlso seen(idx - w) <> mark AndAlso InsideDab(xx, yy - 1, cx, cy, r2) Then
+                        seen(idx - w) = mark : stack(top) = idx - w : top += 1
+                    End If
+                    If yy < y1 AndAlso seen(idx + w) <> mark AndAlso InsideDab(xx, yy + 1, cx, cy, r2) Then
+                        seen(idx + w) = mark : stack(top) = idx + w : top += 1
+                    End If
+                End While
+            Next
+            Return weights
+        End Function
+
+        Private Shared Function InsideDab(x As Integer, y As Integer, cx As Single, cy As Single, r2 As Double) As Boolean
+            Dim dx = x + 0.5 - cx, dy = y + 0.5 - cy
+            Return dx * dx + dy * dy <= r2
+        End Function
+
+        ''' <summary>Gewicht eines Punktes gegen die Probe: voll bis zur Toleranz, danach gerade auf
+        ''' null bis zum Ende des Saums. <paramref name="px"/> traegt R, G, B, A ab
+        ''' <paramref name="offset"/>.</summary>
+        Private Shared Function ContentMatchWeight(px As Byte(), offset As Integer, sr As Integer, sg As Integer,
+                                                   sb As Integer, tol As Double, fringe As Double, limit As Double) As Byte
+            If px(offset + 3) = 0 Then Return 0
+            Dim distance = Math.Max(Math.Abs(CInt(px(offset)) - sr),
+                                    Math.Max(Math.Abs(CInt(px(offset + 1)) - sg), Math.Abs(CInt(px(offset + 2)) - sb)))
+            If distance <= tol Then Return 255
+            If fringe <= 0 OrElse distance >= limit Then Return 0
+            Return CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(255.0 * (limit - distance) / fringe)))))
+        End Function
+
+        ''' <summary>Daempft einen Alpha8-Stempel je Punkt mit dem Gewicht aus
+        ''' <see cref="BuildContentMatchWeights"/> (gleiche Groesse, zeilenweise). Der Stempel traegt
+        ''' Form, weiche Kante und Deckkraft des Strichs, das Gewicht sagt, wo der Inhalt dazugehoert.</summary>
+        Friend Shared Function ApplyContentWeightsToStamp(stamp As SKBitmap, weights As Byte()) As Boolean
+            If stamp Is Nothing OrElse weights Is Nothing OrElse stamp.ColorType <> SKColorType.Alpha8 Then Return False
+            Dim w = stamp.Width, h = stamp.Height
+            If weights.Length < w * h Then Return False
+            Dim pixels = stamp.GetPixels()
+            If pixels = IntPtr.Zero Then Return False
+            Dim row(w - 1) As Byte
+            For y = 0 To h - 1
+                Dim rowPtr = IntPtr.Add(pixels, y * stamp.RowBytes)
+                Marshal.Copy(rowPtr, row, 0, w)
+                Dim o = y * w
+                For x = 0 To w - 1
+                    If row(x) = 0 Then Continue For
+                    Dim weight = CInt(weights(o + x))
+                    If weight = 255 Then Continue For
+                    row(x) = CByte((row(x) * weight + 127) \ 255)
+                Next
+                Marshal.Copy(row, 0, rowPtr, w)
+            Next
+            stamp.NotifyPixelsChanged()
+            Return True
+        End Function
+
         ''' <summary>Wo die Kontur zur Auswahlkante liegt.</summary>
         Public Enum SelectionStrokePosition
             Inside

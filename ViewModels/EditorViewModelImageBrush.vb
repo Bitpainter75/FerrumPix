@@ -34,7 +34,8 @@ Namespace ViewModels
         ''' <summary>Die Arten neben dem Radierer. "RedEye" ist dabei, rechnet aber nicht mit einem Zug:
         ''' ein Klick entfernt rote Augen im Pinselkreis (RemoveRedEyeAt). Frueher war das ein Schalter
         ''' im Retusche-Werkzeug; hier steht es bei den Arten, die das vorhandene Bild aendern.</summary>
-        Private Shared ReadOnly ToneModes As String() = {"Dodge", "Burn", "Sponge", "ReplaceColor", "RedEye", "Restore"}
+        Private Shared ReadOnly ToneModes As String() = {"Dodge", "Burn", "Sponge", "ReplaceColor", "RedEye", "Restore",
+                                                         "BackgroundEraser", "MagicEraser"}
 
         ''' <summary>Was ein Zug des Bildpinsels zum Umrechnen braucht, auf dem UI-Faden
         ''' eingefroren: der Hintergrund darf die Felder des Werkzeugs nicht lesen, und wer mitten im
@@ -45,6 +46,18 @@ Namespace ViewModels
             Public Property Saturate As Boolean
             Public Property Color As SKColor
             Public Property ProtectTones As Boolean = True
+            ''' <summary>Die beiden Radierer nach Farbe: Toleranz 0 bis 1 und ob nur zaehlt, was
+            ''' zusammenhaengt.</summary>
+            Public Property Tolerance As Single
+            Public Property Contiguous As Boolean = True
+            ''' <summary>Hintergrund-Radierer: die Farbe am Ansatz des Zuges gilt fuer den ganzen Zug.</summary>
+            Public Property SampleOnce As Boolean = True
+            ''' <summary>Die Punkte des Zuges in Bildpunkten des ZIELBILDS (Arbeitsbild oder Bild der
+            ''' Ebene) und der Radius des Pinsels dort. Der Hintergrund-Radierer braucht sie fuer
+            ''' seine Tupfer, der magische Radierer den ersten als Klickpunkt. Gesetzt von dem, der
+            ''' den Zug ins Zielbild umrechnet.</summary>
+            Public Property StrokePoints As List(Of SKPoint)
+            Public Property StrokeRadius As Single
         End Class
 
         Private Function CurrentToneBrushSettings() As ToneBrushSettings
@@ -52,8 +65,99 @@ Namespace ViewModels
             If Not SKColor.TryParse(_replaceColor, replaceWith) Then replaceWith = New SKColor(58, 123, 213)
             Return New ToneBrushSettings With {.Kind = _toneMode, .Range = _toneRange,
                                                .Saturate = _spongeSaturate, .Color = replaceWith,
-                                               .ProtectTones = _protectTones}
+                                               .ProtectTones = _protectTones,
+                                               .Tolerance = CSng(_eraserTolerance / 100.0),
+                                               .Contiguous = _eraserContiguous,
+                                               .SampleOnce = _eraserSampleOnce}
         End Function
+
+        ' ── Hintergrund-Radierer und magischer Radierer ─────────────────────────
+        '
+        ' Zwei weitere Arten des Bildpinsels. Der Hintergrund-Radierer ist ein Zug und geht den Weg
+        ' der uebrigen Arten (AddToneStroke), nur nimmt er Deckung weg, wo die Farbe der unter der
+        ' Pinselmitte aehnelt. Der magische Radierer ist ein Klick wie Rote Augen (MagicEraseAt).
+        ' Beide wirken im Foto und auf einer markierten Bild-Ebene und teilen sich Toleranz und
+        ' den Haken "Zusammenhaengend"; gespeichert wird beides nicht.
+
+        ' 15 wie beim Zauberstab. Mit 30 fiel an echten Fotos fast alles in Reichweite weg, auch
+        ' Baeume und Daecher neben dem Himmel (Probe am Bestand).
+        Private _eraserTolerance As Double = 15
+        Private _eraserContiguous As Boolean = True
+        ' Ab Werk an. Fortlaufend abgetastet nahm der Zug alles weg, worueber die Pinselmitte
+        ' wanderte, und wirkte wie ein unsauberer Radierer (Nutzerbefund).
+        Private _eraserSampleOnce As Boolean = True
+
+        ''' <summary>Hintergrund-Radierer: die Farbe, auf der der Zug beginnt, gilt fuer den ganzen
+        ''' Zug. Ohne den Haken nimmt jeder Tupfer die Farbe unter der Pinselmitte.</summary>
+        Public Property EraserSampleOnce As Boolean
+            Get
+                Return _eraserSampleOnce
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_eraserSampleOnce, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property IsBackgroundEraserMode As Boolean
+            Get
+                Return _currentTool = EditorTool.Draw AndAlso _toneMode = "BackgroundEraser"
+            End Get
+        End Property
+
+        ''' <summary>Der magische Radierer: ein Klick ins Bild ist ein fertiger Schritt, kein Zug.</summary>
+        Public ReadOnly Property IsMagicEraserMode As Boolean
+            Get
+                Return _currentTool = EditorTool.Draw AndAlso _toneMode = "MagicEraser"
+            End Get
+        End Property
+
+        ''' <summary>Einer der beiden Radierer nach Farbe: blendet Toleranz und "Zusammenhaengend" ein.</summary>
+        Public ReadOnly Property IsColorEraserMode As Boolean
+            Get
+                Return IsBackgroundEraserMode OrElse IsMagicEraserMode
+            End Get
+        End Property
+
+        ''' <summary>Eine Art, die mit einem Klick arbeitet (Rote Augen, magischer Radierer): die
+        ''' Regler eines Zuges (Haerte, Staerke, Fluss, Glaetten) haben dort nichts zu stellen.</summary>
+        Public ReadOnly Property IsClickBrushMode As Boolean
+            Get
+                Return IsRedEyeMode OrElse IsMagicEraserMode
+            End Get
+        End Property
+
+        ''' <summary>Der magische Radierer hat keinen Pinselkreis: sein Klick nimmt die ganze Flaeche
+        ''' aehnlicher Farbe, unbegrenzt. Der Groessenregler ist dort ausgeblendet, der Kreis unter
+        ''' dem Zeiger ebenso, und Mausrad und Tasten stellen nichts (EditorView).</summary>
+        Public ReadOnly Property ShowImageBrushSize As Boolean
+            Get
+                Return Not IsMagicEraserMode
+            End Get
+        End Property
+
+        ''' <summary>Wie weit eine Farbe abweichen darf, in Prozent (0..100), auf der Skala des
+        ''' Zauberstabs. Beim Hintergrund-Radierer gegen die Farbe unter der Pinselmitte, beim
+        ''' magischen gegen die angeklickte.</summary>
+        Public Property EraserTolerance As Double
+            Get
+                Return _eraserTolerance
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_eraserTolerance, Math.Max(0, Math.Min(100, value)))
+            End Set
+        End Property
+
+        ''' <summary>Nur was zusammenhaengt: beim Hintergrund-Radierer mit der Pinselmitte, beim
+        ''' magischen mit dem Klick. Ohne den Haken zaehlt jede passende Farbe unter der Spitze
+        ''' bzw. im ganzen Bild.</summary>
+        Public Property EraserContiguous As Boolean
+            Get
+                Return _eraserContiguous
+            End Get
+            Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_eraserContiguous, value)
+            End Set
+        End Property
 
         ''' <summary>Die Art, wenn der Bildpinsel aktiv ist ("Eraser" oder eine der vier), sonst leer.</summary>
         Public ReadOnly Property ImageBrushMode As String
@@ -75,7 +179,8 @@ Namespace ViewModels
         ''' nicht Rote Augen).</summary>
         Public ReadOnly Property IsToneBrushMode As Boolean
             Get
-                Return _currentTool = EditorTool.Draw AndAlso _toneMode <> "" AndAlso _toneMode <> "RedEye"
+                Return _currentTool = EditorTool.Draw AndAlso _toneMode <> "" AndAlso _toneMode <> "RedEye" AndAlso
+                       _toneMode <> "MagicEraser"
             End Get
         End Property
 
@@ -214,6 +319,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(IsReplaceColorMode))
             Me.RaisePropertyChanged(NameOf(IsRestoreBrushMode))
             Me.RaisePropertyChanged(NameOf(IsRedEyeMode))
+            Me.RaisePropertyChanged(NameOf(IsBackgroundEraserMode))
+            Me.RaisePropertyChanged(NameOf(IsMagicEraserMode))
+            Me.RaisePropertyChanged(NameOf(IsColorEraserMode))
+            Me.RaisePropertyChanged(NameOf(IsClickBrushMode))
+            Me.RaisePropertyChanged(NameOf(ShowImageBrushSize))
             Me.RaisePropertyChanged(NameOf(IsBrushPaintMode))
             Me.RaisePropertyChanged(NameOf(IsEraserPaintMode))
             Me.RaisePropertyChanged(NameOf(ShowBrushStrokeAdjustments))
@@ -232,6 +342,8 @@ Namespace ViewModels
                 Case "ReplaceColor" : Return LocalizationService.T("Farbe ersetzen")
                 Case "RedEye" : Return LocalizationService.T("Rote Augen entfernen")
                 Case "Restore" : Return LocalizationService.T("Protokollpinsel")
+                Case "BackgroundEraser" : Return LocalizationService.T("Hintergrund-Radierer")
+                Case "MagicEraser" : Return LocalizationService.T("Magischer Radierer")
                 Case Else : Return ""
             End Select
         End Function
@@ -244,6 +356,8 @@ Namespace ViewModels
                 Case "ReplaceColor" : Return "swap.svg"
                 Case "RedEye" : Return "eye.svg"
                 Case "Restore" : Return "clock-counter-clockwise.svg"
+                Case "BackgroundEraser" : Return "selection-background.svg"
+                Case "MagicEraser" : Return "sparkle.svg"
                 Case Else : Return "eraser.svg"
             End Select
         End Function
@@ -260,6 +374,8 @@ Namespace ViewModels
         Private Sub AddToneStroke(normalized As List(Of Avalonia.Point))
             ' Rote Augen kennen keinen Zug; der Klick geht in der Ansicht an RemoveRedEyeAt.
             If _toneMode = "RedEye" Then Return
+            ' Der magische Radierer ebenso: der Klick geht an MagicEraseAt.
+            If _toneMode = "MagicEraser" Then Return
             If _toneMode = "Restore" Then
                 AddRestoreStroke(normalized)
                 Return
@@ -277,6 +393,7 @@ Namespace ViewModels
             Dim baseH = GetBaseHeight()
             Dim mapped = MapStrokeToWorkingPixels(normalized)
             If mapped.Points.Count < 2 Then Return
+            Dim erasesByColor = _toneMode = "BackgroundEraser"
 
             ' Der Umriss mit Groesse, Haerte, Deckkraft und Fluss des Werkzeugs, in deckendem Weiss:
             ' gebraucht wird nur seine Deckung. Schatten und Schein gehoeren dem Malpinsel.
@@ -302,6 +419,10 @@ Namespace ViewModels
             Dim undoEntry = _lastPushedUndoEntry
             Dim renderAnn = stroke.ToRenderAnnotation()
             Dim tone = CurrentToneBrushSettings()
+            If erasesByColor Then
+                tone.StrokePoints = mapped.Points.Select(Function(p) New SKPoint(CSng(p.X), CSng(p.Y))).ToList()
+                tone.StrokeRadius = CSng(Math.Max(1.0, options.StrokeWidth / 2.0))
+            End If
 
             _hasChanges = True
             RaiseResetButtonStateChanged()
@@ -317,9 +438,7 @@ Namespace ViewModels
                                 If selectionCoverage IsNot Nothing Then before = ImageProcessor.CopyRegion(full, dirtyFull)
                                 Try
                                     Dim coverage = ImageProcessor.BuildStrokeCoverage(renderAnn, dirtyFull, full.Width, full.Height)
-                                    If coverage Is Nothing OrElse
-                                       Not ImageProcessor.ApplyToneBrush(full, dirtyFull, coverage, tone.Kind, tone.Range,
-                                                                         tone.Saturate, tone.Color, tone.ProtectTones) Then
+                                    If coverage Is Nothing OrElse Not ApplyToneBrushKind(full, dirtyFull, coverage, tone) Then
                                         Throw New InvalidOperationException("Bildpinsel konnte nicht angewendet werden")
                                     End If
                                     If selectionCoverage IsNot Nothing AndAlso
@@ -329,7 +448,7 @@ Namespace ViewModels
                                 Finally
                                     before?.Dispose()
                                 End Try
-                            End Sub)
+                            End Sub, punchesAlpha:=erasesByColor)
                     Finally
                         selectionCoverage?.Dispose()
                     End Try
@@ -341,6 +460,132 @@ Namespace ViewModels
                         Return
                     End If
                     If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    ' Das Arbeitsbild hat jetzt Loecher: der Grund hinter dem Bild muss das
+                    ' Schachbrett zeigen, wie nach dem Radiergummi. Ohne diese Meldung erschien der
+                    ' Ausschnitt erst beim naechsten Werkzeugwechsel (Nutzerbefund).
+                    If erasesByColor Then Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
+                    SchedulePreviewUpdate()
+                End Sub)
+        End Sub
+
+        ''' <summary>Rechnet eine Art des Bildpinsels unter der Deckung eines Zuges, im Foto wie im
+        ''' Bild einer Ebene. EINE Stelle fuer die Weiche zwischen den Arten, die Farben umrechnen
+        ''' (ImageProcessor.ApplyToneBrush), und dem Hintergrund-Radierer, der Deckung wegnimmt.</summary>
+        Friend Shared Function ApplyToneBrushKind(target As SKBitmap, region As SKRectI, coverage As Byte(),
+                                                  tone As ToneBrushSettings) As Boolean
+            If tone Is Nothing Then Return False
+            If tone.Kind = "BackgroundEraser" Then
+                Return ImageProcessor.ApplyBackgroundEraser(target, region, coverage, tone.StrokePoints, tone.StrokeRadius,
+                                                            tone.Tolerance, tone.Contiguous, tone.SampleOnce)
+            End If
+            Return ImageProcessor.ApplyToneBrush(target, region, coverage, tone.Kind, tone.Range,
+                                                 tone.Saturate, tone.Color, tone.ProtectTones)
+        End Function
+
+        ''' <summary>Der magische Radierer: ein Klick nimmt die Flaeche weg, die der angeklickten
+        ''' Farbe aehnelt, im Foto oder auf der markierten Bild-Ebene. Ein Schritt mit eigenem
+        ''' Rueckgaengig; eine Auswahl begrenzt ihn wie jeden Pinsel.
+        '''
+        ''' Im Foto wird die Flaeche VOR dem Einreihen bestimmt: erst dann steht das Rechteck fest,
+        ''' das sich aendert, und nur dieses geht in den Rueckgaengig-Schritt statt des ganzen
+        ''' Bildes. Dazu darf keine Aenderung am Arbeitsbild mehr in der Warteschlange stehen, sonst
+        ''' wuerde an einem Stand verglichen, der gleich nicht mehr gilt.</summary>
+        Public Sub MagicEraseAt(xPercent As Double, yPercent As Double)
+            If Not CanUsePixelTools Then Return
+            Dim tone = CurrentToneBrushSettings()
+            Dim label = LocalizationService.T("Magischer Radierer")
+
+            Dim imageObject = FindStrokeTargetImageAnnotation()
+            If imageObject IsNot Nothing Then
+                ' Auf der Ebene laeuft der Klick ueber den Weg eines Zuges: zwei Punkte an derselben
+                ' Stelle, der erste ist der Klick. Dort wird ohnehin das ganze Bild der Ebene neu
+                ' geschrieben.
+                Dim clickPoints As New List(Of Avalonia.Point) From {
+                    New Avalonia.Point(xPercent, yPercent), New Avalonia.Point(xPercent + 0.001, yPercent)}
+                If Not TryPaintStrokeIntoImageAnnotation(imageObject, clickPoints, isEraser:=False,
+                                                         tone:=tone, toneLabel:=label) Then
+                    StatusText = LocalizationService.T("Malen fehlgeschlagen")
+                End If
+                Return
+            End If
+
+            If Not _workingImage.IsInitialized Then Return
+            If _pendingWorkingCommits > 0 Then
+                StatusText = LocalizationService.T("Das Bild wird noch gerechnet, bitte gleich noch einmal klicken")
+                Return
+            End If
+            Dim wip = DisplayPercentToWorkingImagePercent(xPercent, yPercent, allowOutside:=False)
+            If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return
+            Dim seedX = CInt(Math.Floor(PercentXToPixels(wip.X)))
+            Dim seedY = CInt(Math.Floor(PercentYToPixels(wip.Y)))
+            Dim fullWidth = _workingImage.FullWidth
+            seedX = Math.Max(0, Math.Min(fullWidth - 1, seedX))
+            seedY = Math.Max(0, Math.Min(_workingImage.FullHeight - 1, seedY))
+
+            Dim bounds As SKRectI = SKRectI.Empty
+            Dim weights = _workingImage.WithFull(
+                Function(full)
+                    Dim found As SKRectI
+                    Dim result = ImageProcessor.BuildMagicEraseWeights(full, seedX, seedY, tone.Tolerance, tone.Contiguous, found)
+                    bounds = found
+                    Return result
+                End Function)
+            If weights Is Nothing OrElse bounds.Width <= 0 OrElse bounds.Height <= 0 Then
+                StatusText = LocalizationService.T("An dieser Stelle gibt es nichts zu radieren")
+                Return
+            End If
+
+            Dim anyCoverage = False
+            Dim selectionCoverage = BuildSelectionCoverageForWorkingRect(bounds, anyCoverage)
+            If selectionCoverage IsNot Nothing AndAlso Not anyCoverage Then
+                selectionCoverage.Dispose()
+                Return
+            End If
+            If bounds.Width <= 0 OrElse bounds.Height <= 0 Then
+                selectionCoverage?.Dispose()
+                Return
+            End If
+
+            PushUndo(label)
+            Dim undoEntry = _lastPushedUndoEntry
+            _hasChanges = True
+            RaiseResetButtonStateChanged()
+            _previewTimer.Stop()
+            _previewPending = False
+            Dim rect = bounds
+
+            EnqueueWorkingCommit(
+                Function()
+                    Try
+                        Return _workingImage.CommitRegion(rect,
+                            Sub(full)
+                                Dim before As SKBitmap = Nothing
+                                If selectionCoverage IsNot Nothing Then before = ImageProcessor.CopyRegion(full, rect)
+                                Try
+                                    If Not ImageProcessor.EraseByWeights(full, rect, weights, fullWidth, 0, 0) Then
+                                        Throw New InvalidOperationException("Magischer Radierer konnte nicht angewendet werden")
+                                    End If
+                                    If selectionCoverage IsNot Nothing AndAlso
+                                       Not ImageProcessor.RestoreOutsideCoverage(full, before, selectionCoverage, rect) Then
+                                        Throw New InvalidOperationException("Auswahlgrenze konnte nicht angewendet werden")
+                                    End If
+                                Finally
+                                    before?.Dispose()
+                                End Try
+                            End Sub, punchesAlpha:=True)
+                    Finally
+                        selectionCoverage?.Dispose()
+                    End Try
+                End Function,
+                Sub(patch)
+                    If patch Is Nothing Then
+                        StatusText = LocalizationService.T("Malen fehlgeschlagen")
+                        SchedulePreviewUpdate()
+                        Return
+                    End If
+                    If undoEntry IsNot Nothing Then undoEntry.Patch = patch
+                    ' Wie beim Hintergrund-Radierer: der Grund hinter dem Bild zeigt jetzt das Schachbrett.
+                    Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
                     SchedulePreviewUpdate()
                 End Sub)
         End Sub

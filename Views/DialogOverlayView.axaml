@@ -19,9 +19,18 @@
             <Grid RowDefinitions="*,Auto" Grid.IsSharedSizeScope="True">
                 <!-- Der Rumpf scrollt, der Knopfbalken bleibt stehen: mit mehreren
                      aufgeklappten Sektionen (Export-Dialog) wuchs die Karte sonst ueber den
-                     Bildschirm hinaus und "Anwenden" war nicht mehr erreichbar. -->
+                     Bildschirm hinaus und "Anwenden" war nicht mehr erreichbar.
+
+                     DIE BILDLAUFLEISTE HAT IHREN EIGENEN STREIFEN: sie liegt in der Vorlage UEBER
+                     dem Inhalt, 13 breit, und deckte damit den rechten Rand der Auswahlfelder
+                     samt ihrem Pfeil zu (GitHub #145). Der Rollbereich reicht deshalb 16 in die
+                     Polsterung der Karte hinein und gibt dem Inhalt dieselben 16 als Polsterung
+                     zurueck: der Inhalt bleibt so breit wie der Knopfbalken darunter, die Leiste
+                     steht rechts daneben. -->
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
+                              VerticalScrollBarVisibility="Auto"
+                              Margin="0,0,-16,0"
+                              Padding="0,0,16,0">
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                         <TextBlock Classes="no-translate" Text="{Binding DialogTitle}"
                                    FontSize="{DynamicResource FP.Font.Heading}"

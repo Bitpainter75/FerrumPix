@@ -48,7 +48,9 @@
                       ColumnDefinitions="500,*"
                       ColumnSpacing="28">
 
-                    <ScrollViewer Grid.Column="0" Height="420" VerticalScrollBarVisibility="Auto">
+                    <!-- 16 rechts fuer die Bildlaufleiste, die ueber dem Inhalt liegt: drei Kacheln
+                         je Zeile (474) passen weiter in die verbleibenden 484. -->
+                    <ScrollViewer Grid.Column="0" Height="420" VerticalScrollBarVisibility="Auto" Padding="0,0,16,0">
                         <StackPanel Spacing="14">
                             <TextBlock Text="Fotoformate"
                                        FontWeight="SemiBold"

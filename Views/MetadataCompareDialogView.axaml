@@ -100,7 +100,7 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer MaxHeight="480" HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
+        <ScrollViewer MaxHeight="480" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
             <ItemsControl ItemsSource="{Binding Rows}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

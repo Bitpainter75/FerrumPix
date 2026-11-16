@@ -9721,18 +9721,6 @@ Namespace ViewModels
             Dim ignored = LoadFolderImagesAsync(folderPath)
         End Sub
 
-        ''' <summary>
-        ''' Liest einen Ordner ein. Alles, was sofort sichtbar sein muss - Suche abbrechen, Sammlungen
-        ''' leeren, Beobachter umhängen - passiert synchron auf dem UI-Thread; das Aufzählen des
-        ''' Verzeichnisses, die Katalogabfrage und der Aufbau der ImageItem-Objekte laufen im Hintergrund.
-        ''' Vorher stand das Fenster still, bis alles fertig war: auf einer Netzwerkfreigabe oder einem
-        ''' schlafenden USB-Laufwerk sekundenlang.
-        '''
-        ''' Der Abbruch-Token stammt aus BeginNewFolderThumbnailScope und wird vom nächsten Ordner-Laden
-        ''' storniert. Zwei schnelle Klicks im Baum dürfen sonst dazu führen, dass die langsamere Antwort
-        ''' die schnellere überschreibt - deshalb wird beim Eintreffen sowohl der Token als auch der
-        ''' inzwischen aktuelle Ordner geprüft.
-        ''' </summary>
         ''' <summary>Zaehlt die Filterlisten neu, sobald die Bilder eines Ordners in der Ansicht
         ''' stehen. Nur im Umfang "Ordner": dort zaehlen die Listen ueber die Bilder der Ansicht.
         '''
@@ -9759,6 +9747,18 @@ Namespace ViewModels
             RefreshFilterListsForCurrentSource()
         End Sub
 
+        ''' <summary>
+        ''' Liest einen Ordner ein. Alles, was sofort sichtbar sein muss - Suche abbrechen, Sammlungen
+        ''' leeren, Beobachter umhängen - passiert synchron auf dem UI-Thread; das Aufzählen des
+        ''' Verzeichnisses, die Katalogabfrage und der Aufbau der ImageItem-Objekte laufen im Hintergrund.
+        ''' Vorher stand das Fenster still, bis alles fertig war: auf einer Netzwerkfreigabe oder einem
+        ''' schlafenden USB-Laufwerk sekundenlang.
+        '''
+        ''' Der Abbruch-Token stammt aus BeginNewFolderThumbnailScope und wird vom nächsten Ordner-Laden
+        ''' storniert. Zwei schnelle Klicks im Baum dürfen sonst dazu führen, dass die langsamere Antwort
+        ''' die schnellere überschreibt - deshalb wird beim Eintreffen sowohl der Token als auch der
+        ''' inzwischen aktuelle Ordner geprüft.
+        ''' </summary>
         Public Async Function LoadFolderImagesAsync(folderPath As String) As Task
             CancelActiveSearch()
             ClearVirtualFolderState()

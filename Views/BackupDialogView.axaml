@@ -75,7 +75,9 @@
                        Foreground="{DynamicResource FP.Text.Muted}"
                        FontSize="{DynamicResource FP.Font.Small}"
                        TextWrapping="Wrap"/>
-            <ScrollViewer MaxHeight="180" HorizontalScrollBarVisibility="Disabled">
+            <!-- 16 rechts: die Bildlaufleiste liegt ueber dem Inhalt und deckte sonst den Rand
+                 der Textfelder zu. -->
+            <ScrollViewer MaxHeight="180" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
                 <ItemsControl ItemsSource="{Binding DialogRestoreRemaps}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>

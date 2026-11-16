@@ -62,7 +62,23 @@ Namespace Views
             '
             ' Das Stichwortfeld daneben hat diese Handler nicht und war deshalb nie betroffen -
             ' genau daran liess sich die Ursache festmachen.
-            Avalonia.Threading.Dispatcher.UIThread.Post(Sub() CommitPersonName(box))
+            '
+            ' EIN DURCHLAUF AUFSCHUB REICHT NICHT (GitHub #143): zwischen Druecken und Loslassen der
+            ' Maustaste liegen viele Durchlaeufe, und "Dad" wurde uebernommen, obwohl "Daddy (me)"
+            ' angeklickt war. Deshalb wird nachgesehen, wohin der Fokus ging (PersonNameField): liegt
+            ' er auf einem Vorschlag, gilt dieser; steht die Liste offen oder der Fokus wieder im
+            ' Feld, geschieht nichts.
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                Sub()
+                    Dim suggestion As String = Nothing
+                    Select Case PersonNameField.AfterLostFocus(box, suggestion)
+                        Case PersonNameField.LostFocusAction.CommitSuggestion
+                            box.Text = suggestion
+                            CommitPersonName(box)
+                        Case PersonNameField.LostFocusAction.CommitText
+                            CommitPersonName(box)
+                    End Select
+                End Sub)
         End Sub
 
         ''' <summary>ENTER im Stichwortfeld fuegt hinzu wie der Knopf daneben; das Feld leert sich
@@ -125,8 +141,12 @@ Namespace Views
             e.Handled = True
         End Sub
 
-        Private Sub CommitPersonName(box As AutoCompleteBox)
-            If box Is Nothing Then Return
+        ''' <summary>Laeuft gerade eine Uebernahme samt Rueckfrage? Die Rueckfrage nimmt dem Feld den
+        ''' Fokus, und das loeste sonst dieselbe Uebernahme ein zweites Mal aus.</summary>
+        Private _personNameCommitRunning As Boolean
+
+        Private Async Sub CommitPersonName(box As AutoCompleteBox)
+            If box Is Nothing OrElse _personNameCommitRunning Then Return
             ' Der Datenkontext der Zeile statt des Tags: gebraucht werden BEIDE Ids. Die Person sagt,
             ' welche Gruppe den Namen bekommt, das Gesicht, was der Benutzer angefasst hat - und
             ' Angefasstes bleibt bei einem erneuten Durchlauf stehen.
@@ -134,15 +154,60 @@ Namespace Views
             If entry Is Nothing OrElse String.IsNullOrWhiteSpace(entry.Id) Then Return
             ' Nichts geaendert, nichts zu tun. Ohne das lief bei JEDEM Verlassen des Feldes ein
             ' Schreibvorgang samt Neuaufbau der Zeilen - auch beim blossen Durchtabben.
-            If String.Equals(If(entry.Name, ""), If(box.Text, ""), StringComparison.Ordinal) Then Return
+            Dim newName = If(box.Text, "")
+            If String.Equals(If(entry.Name, ""), newName, StringComparison.Ordinal) Then Return
 
             ' Die Leiste kennt drei Datenkontexte - Galerie, Betrachter und Editor. Alle drei sagen
             ' ueber IInfoSidebarPanel zu, was hier gebraucht wird; eine Fallunterscheidung je Modus
             ' braucht es deshalb nicht.
             Dim panel = TryCast(Me.DataContext, IInfoSidebarPanel)
             If panel Is Nothing Then Return
-            panel.RenamePerson(entry.Id, If(box.Text, ""), entry.FaceId)
+
+            _personNameCommitRunning = True
+            Try
+                ' DAS FELD STEHT AN EINEM GESICHT, der Name kann aber die GANZE PERSON treffen: ein
+                ' neuer Name an einer benannten Gruppe benennt sie um, ein geleertes Feld nimmt allen
+                ' ihren Gesichtern den Namen. Das ist gewollt (ein Tippfehler wird so geradegezogen),
+                ' aber nie still: aus einem abgeschnittenen Text wurde sonst der Name einer ganzen
+                ' Sammlung (GitHub #143). Gefragt wird nur, wenn mehr als dieses eine Gesicht
+                ' betroffen ist.
+                If Not Await ConfirmGroupRenameAsync(entry, newName) Then
+                    box.Text = If(entry.Name, "")
+                    Return
+                End If
+                panel.RenamePerson(entry.Id, newName, entry.FaceId)
+            Finally
+                _personNameCommitRunning = False
+            End Try
         End Sub
+
+        ''' <summary>Fragt nach, bevor ein Name an einem Gesicht eine ganze benannte Person umbenennt
+        ''' oder ihr den Namen nimmt. True heisst: weitermachen (auch dann, wenn gar nicht gefragt
+        ''' werden musste oder kein Fenster zum Fragen da ist).</summary>
+        Private Async Function ConfirmGroupRenameAsync(entry As PersonFaceEntry, newName As String) As Threading.Tasks.Task(Of Boolean)
+            Dim affected = 0
+            Try
+                affected = FerrumPix.Services.LibraryService.Instance.CountFacesRenamedBy(entry.Id, newName)
+            Catch ex As Exception
+                FerrumPix.Services.DiagnosticLogService.LogException("InfoSidebar.ConfirmGroupRename", ex)
+            End Try
+            If affected <= 1 Then Return True
+            Dim host = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
+            If host Is Nothing Then Return True
+            Dim clean = newName.Trim()
+            If clean.Length = 0 Then
+                Return Await host.ShowConfirmAsync(
+                    FerrumPix.Services.LocalizationService.T("Namen der ganzen Person entfernen?"),
+                    String.Format(FerrumPix.Services.LocalizationService.T("{0} hat {1} Gesichter. Der Name wird bei allen entfernt, nicht nur bei diesem Gesicht."),
+                                  entry.Name, affected),
+                    "Namen entfernen")
+            End If
+            Return Await host.ShowConfirmAsync(
+                FerrumPix.Services.LocalizationService.T("Ganze Person umbenennen?"),
+                String.Format(FerrumPix.Services.LocalizationService.T("{0} hat {1} Gesichter. Die ganze Person heißt danach {2}, nicht nur dieses Gesicht."),
+                              entry.Name, affected, clean),
+                "Umbenennen")
+        End Function
 
         ''' <summary>Loest ein falsch zugeordnetes Gesicht aus seiner Person.
         '''

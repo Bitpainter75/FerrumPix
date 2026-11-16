@@ -13,6 +13,15 @@
   batch dialogs offer 16 bit for them as for raw files, and the adjustments are calculated at full
   depth. Colours of such a file with an embedded colour profile are also read more accurately.
 
+- The brush for selections and masks can stop at edges. With the new option "Stop at edges" a
+  stroke only covers what resembles the colour under the centre of the brush, so painting along a
+  sky or a jacket no longer runs over the edge. A tolerance sets how strict it is, and the result
+  appears when the stroke is released.
+
+- Two new erasers in the image brush. The background eraser removes under the brush only the
+  colour on which the stroke starts, the magic eraser removes an area of similar colour
+  with one click. Both work in the photo and on a picture layer.
+
 - The Export button has moved from the bar at the bottom of the gallery into the folder panel,
   below Import.
 
@@ -20,6 +29,19 @@
   wider.
 
 ### Fixes
+
+- Typing part of a name at a face and then clicking the full name in the list of suggestions
+  assigned the typed part, for example "Dad" instead of "Daddy (me)", and further steps could
+  rename the whole person. The clicked suggestion now counts. Before a name typed at one face
+  renames a whole person with several faces or removes their name, FerrumPix asks.
+
+- A single face could not be assigned from the people area: the hint at the unknown bin pointed to
+  the info sidebar, which the preview behind the eye does not have. The preview now has a name
+  field with suggestions that assigns exactly this face.
+
+- The scrollbar in the dialogs no longer lies over the right edge of the fields. In the export
+  dialog it covered the arrow of the dropdowns, which made them hard to hit. It now has its own
+  strip beside the content.
 
 - When the trash of the system refuses a file, for example on a second drive that has no trash,
   FerrumPix now shows the reason the system gives and asks whether to delete the file for good

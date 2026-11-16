@@ -163,12 +163,31 @@
                     </DataTemplate>
                 </Expander.HeaderTemplate>
                 <StackPanel Spacing="2" Margin="0,8,0,0">
-                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+                    <!-- UMBRECHEND: neun Arten passen nicht in eine Zeile des Panels (295 breit, eine
+                         Art braucht 34 und 6 Abstand). Die beiden Radierer nach Farbe stehen gleich
+                         hinter dem Radiergummi, zu dem sie gehoeren. -->
+                    <WrapPanel ItemSpacing="6" LineSpacing="6" Margin="0,0,0,8">
                         <Button Classes="ghost" Padding="8,6"
                                 Command="{Binding SetToolCommand}" CommandParameter="Eraser"
                                 Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=Eraser}"
                                 ToolTip.Tip="Radiergummi: nimmt Bild weg oder malt die Hintergrundfarbe">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eraser.svg" Width="18" Height="18" />
+                        </Button>
+                        <!-- HINTERGRUND-RADIERER: ein Zug, der nur wegnimmt, was der Farbe unter der
+                             Pinselmitte aehnelt (EditorViewModelImageBrush, ApplyToneBrushKind). -->
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="BackgroundEraser"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=BackgroundEraser}"
+                                ToolTip.Tip="Hintergrund-Radierer: nimmt unter dem Pinsel nur die Farbe weg, auf der der Zug beginnt">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/selection-background.svg" Width="18" Height="18" />
+                        </Button>
+                        <!-- MAGISCHER RADIERER: kein Zug, ein Klick nimmt die Flaeche aehnlicher Farbe
+                             weg (EditorViewModel.MagicEraseAt). -->
+                        <Button Classes="ghost" Padding="8,6"
+                                Command="{Binding SetToolCommand}" CommandParameter="MagicEraser"
+                                Classes.active="{Binding ImageBrushMode, Converter={StaticResource StringEqualsConverter}, ConverterParameter=MagicEraser}"
+                                ToolTip.Tip="Magischer Radierer: ein Klick nimmt die Fläche ähnlicher Farbe weg">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sparkle.svg" Width="18" Height="18" />
                         </Button>
                         <Button Classes="ghost" Padding="8,6"
                                 Command="{Binding SetToolCommand}" CommandParameter="Dodge"
@@ -210,8 +229,8 @@
                                 ToolTip.Tip="Protokollpinsel: malt das Ursprungsbild zurück">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clock-counter-clockwise.svg" Width="18" Height="18" />
                         </Button>
-                    </StackPanel>
-                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
+                    </WrapPanel>
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding ShowImageBrushSize}">
                         <TextBlock Text="Größe" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
                         <icons:RoundSlider Grid.Column="1" Minimum="1" Maximum="3000"
@@ -232,9 +251,41 @@
                                Foreground="{DynamicResource FP.Text.Muted}"
                                FontSize="{DynamicResource FP.Font.Caption}"
                                TextWrapping="Wrap" Margin="0,2,0,0" />
-                    <!-- Haerte, Deckkraft, Fluss und Glaetten gehoeren zu einem Zug; Rote Augen ist ein
-                         Klick mit fester Wirkung und braucht sie nicht. -->
-                    <StackPanel Spacing="2" IsVisible="{Binding !IsRedEyeMode}">
+                    <TextBlock Text="Nimmt unter dem Pinsel nur die Farbe weg, auf der der Zug beginnt. Auf dem Hintergrund ansetzen, danach darf der Pinsel über das Motiv reichen."
+                               IsVisible="{Binding IsBackgroundEraserMode}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}"
+                               TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <TextBlock Text="Ein Klick nimmt die Fläche weg, die der angeklickten Farbe ähnelt."
+                               IsVisible="{Binding IsMagicEraserMode}"
+                               Foreground="{DynamicResource FP.Text.Muted}"
+                               FontSize="{DynamicResource FP.Font.Caption}"
+                               TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <!-- Die beiden Radierer nach Farbe teilen sich Toleranz und den Haken. -->
+                    <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsColorEraserMode}">
+                        <TextBlock Text="Toleranz" Foreground="{DynamicResource FP.Text.Secondary}"
+                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                   ToolTip.Tip="Wie weit eine Farbe abweichen darf, um mit wegzufallen. Höher nimmt mehr weg" />
+                        <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
+                                           DefaultValue="15"
+                                           Value="{Binding EraserTolerance}" Margin="0,0" />
+                        <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                 Value="{Binding EraserTolerance, Mode=TwoWay}"
+                                                 Minimum="0" Maximum="100" Increment="1"
+                                                 FormatString="F0" />
+                    </Grid>
+                    <CheckBox Content="Zusammenhängend" IsChecked="{Binding EraserContiguous}"
+                              IsVisible="{Binding IsColorEraserMode}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Nimmt nur weg, was mit der Stelle unter dem Zeiger zusammenhängt. Ohne Haken fällt jede passende Farbe weg, beim magischen Radierer im ganzen Bild" />
+                    <!-- Nur der Hintergrund-Radierer: welche Farbe als Mass gilt. Ab Werk die am Ansatz. -->
+                    <CheckBox Content="Farbe am Ansatz festhalten" IsChecked="{Binding EraserSampleOnce}"
+                              IsVisible="{Binding IsBackgroundEraserMode}"
+                              FontSize="{DynamicResource FP.Font.Small}"
+                              ToolTip.Tip="Die Farbe, auf der der Zug beginnt, gilt für den ganzen Zug. Ohne Haken gilt fortlaufend die Farbe unter der Pinselmitte, und der Zug nimmt mit, worüber die Mitte wandert" />
+                    <!-- Haerte, Deckkraft, Fluss und Glaetten gehoeren zu einem Zug; Rote Augen und der
+                         magische Radierer sind ein Klick mit fester Wirkung und brauchen sie nicht. -->
+                    <StackPanel Spacing="2" IsVisible="{Binding !IsClickBrushMode}">
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Härte" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />

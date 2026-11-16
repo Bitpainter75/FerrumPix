@@ -1164,6 +1164,75 @@ Namespace Services
             Return PersonNameOutcome.GroupNamed
         End Function
 
+        ''' <summary>Wie viele Gesichter ein Name an EINEM Gesicht mit umbenennen wuerde, weil er
+        ''' nach den Regeln von <see cref="ApplyPersonName"/> die ganze BENANNTE Gruppe trifft
+        ''' (Fall 2, oder ein geleertes Feld). Null, wenn nur dieses Gesicht betroffen ist oder gar
+        ''' nichts geschieht: die Gruppe hat noch keinen Namen, der Name bleibt gleich, er gehoert
+        ''' einer anderen Person (dann wandert nur das Gesicht), oder es ist der Ablagekorb.
+        '''
+        ''' Fuer die Rueckfrage in der Infoleiste (GitHub #143): dort steht das Feld an einem
+        ''' einzelnen Gesicht, und ein abgeschnittener Text benannte sonst still die ganze Person
+        ''' um.</summary>
+        Public Function CountFacesRenamedBy(personId As String, name As String) As Integer
+            If String.IsNullOrWhiteSpace(personId) Then Return 0
+            Dim clean = If(name, "").Trim()
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Name, IsUnknownBin FROM Person WHERE Id=$id"
+                    cmd.Parameters.AddWithValue("$id", personId)
+                    Using reader = cmd.ExecuteReader()
+                        If Not reader.Read() Then Return 0
+                        Dim currentName = If(reader.IsDBNull(0), "", reader.GetString(0))
+                        If currentName.Length = 0 Then Return 0
+                        If Not reader.IsDBNull(1) AndAlso reader.GetInt32(1) <> 0 Then Return 0
+                        If String.Equals(currentName, clean, StringComparison.OrdinalIgnoreCase) Then Return 0
+                    End Using
+                End Using
+                If clean.Length > 0 Then
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "SELECT COUNT(*) FROM Person WHERE Name=$n COLLATE NOCASE AND Id<>$id"
+                        cmd.Parameters.AddWithValue("$n", clean)
+                        cmd.Parameters.AddWithValue("$id", personId)
+                        If Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture) > 0 Then Return 0
+                    End Using
+                End If
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT COUNT(*) FROM Face WHERE PersonId=$id"
+                    cmd.Parameters.AddWithValue("$id", personId)
+                    Return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Ordnet GENAU DIESES Gesicht der Person mit diesem Namen zu; heisst noch niemand
+        ''' so, entsteht sie. Die Gruppe, in der es lag, behaelt Namen und uebrige Gesichter. Das
+        ''' Gesicht gilt danach als von Hand gesetzt.
+        '''
+        ''' Anders als <see cref="ApplyPersonName"/> benennt das nie eine Gruppe: gedacht fuer
+        ''' Stellen, an denen ausdruecklich ein einzelner Kopf gemeint ist, etwa die Vorschau im
+        ''' Personenbereich.</summary>
+        ''' <returns>False, wenn Gesicht oder Name fehlen.</returns>
+        Public Function AssignFaceToName(faceId As String, name As String) As Boolean
+            Dim clean = If(name, "").Trim()
+            If String.IsNullOrWhiteSpace(faceId) OrElse clean.Length = 0 Then Return False
+            Dim affectedPath = GetPathForFace(faceId)
+            If String.IsNullOrEmpty(affectedPath) Then Return False
+            Dim targetId As String = Nothing
+            Using conn = New SqliteConnection(_connectionString)
+                conn.Open()
+                Using cmd = conn.CreateCommand()
+                    cmd.CommandText = "SELECT Id FROM Person WHERE Name=$n COLLATE NOCASE LIMIT 1"
+                    cmd.Parameters.AddWithValue("$n", clean)
+                    Dim r = cmd.ExecuteScalar()
+                    If r IsNot Nothing AndAlso Not TypeOf r Is DBNull Then targetId = CStr(r)
+                End Using
+            End Using
+            MoveFaceToPerson(faceId, If(targetId, CreateNamedPerson(clean)))
+            SyncFaceRegionsToXmp({affectedPath})
+            Return True
+        End Function
+
         ''' <summary>Schreibt die benannten Gesichter dieser Bilder in ihre XMP-Beistelldatei.
         '''
         ''' WARUM ÜBERHAUPT: ohne das bleiben die Personen in FerrumPix eingesperrt. Ein Stichwort

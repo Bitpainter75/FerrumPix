@@ -1108,6 +1108,235 @@ Namespace Services
             Return True
         End Function
 
+        ' ── Bildpinsel: Hintergrund-Radierer und magischer Radierer ───────────────
+        '
+        ' Beide nehmen Deckung weg, aber nur dort, wo die Farbe passt. Der Hintergrund-Radierer ist
+        ' ein Zug: jeder Tupfer vergleicht mit der Farbe unter seiner Mitte
+        ' (BuildContentMatchWeights, derselbe Vergleich wie beim Auswahlpinsel, der an Kanten
+        ' haelt). Der magische Radierer ist ein Klick: er nimmt die Flaeche, die der angeklickten
+        ' Farbe aehnelt. An der Farbe der Punkte, die bleiben, aendert keiner von beiden etwas.
+
+        ''' <summary>Ein Zug des Hintergrund-Radierers im Rechteck <paramref name="region"/>.
+        ''' <paramref name="coverage"/> ist die Deckung des Strichs (Groesse des Rechtecks),
+        ''' <paramref name="points"/> sind seine Punkte in Bildpunkten des Bildes. Verglichen wird
+        ''' am Bild VOR dem Zug: die Gewichte entstehen, bevor ein Punkt geaendert ist.
+        '''
+        ''' Mit <paramref name="sampleOnce"/> gilt fuer den ganzen Zug EINE Farbe: die an seinem
+        ''' Ansatz (am ersten Punkt des Zuges, der auf einem deckenden Bildpunkt liegt). Der Pinsel
+        ''' darf danach ueber alles gefuehrt werden, weg faellt nur diese Farbe. Ohne den Schalter
+        ''' nimmt jeder Tupfer die Farbe unter seiner Mitte, und wandert die Mitte ueber etwas
+        ''' anderes, faellt auch das weg.</summary>
+        Friend Shared Function ApplyBackgroundEraser(full As SKBitmap, region As SKRectI, coverage As Byte(),
+                                                     points As IReadOnlyList(Of SKPoint), radius As Single,
+                                                     tolerance As Single, contiguous As Boolean,
+                                                     Optional sampleOnce As Boolean = False) As Boolean
+            If full Is Nothing OrElse coverage Is Nothing OrElse points Is Nothing OrElse points.Count = 0 Then Return False
+            If coverage.Length < region.Width * region.Height Then Return False
+            Dim fixedSample As SKColor? = Nothing
+            If sampleOnce Then
+                fixedSample = SampleStrokeStartColor(full, points)
+                ' Der Zug beruehrt keinen deckenden Bildpunkt: es gibt nichts zu radieren.
+                If Not fixedSample.HasValue Then Return True
+            End If
+            Dim weights = BuildContentMatchWeights(full, region, points, radius, tolerance, contiguous, fixedSample)
+            If weights Is Nothing Then Return False
+            For i = 0 To region.Width * region.Height - 1
+                weights(i) = CByte((CInt(weights(i)) * CInt(coverage(i)) + 127) \ 255)
+            Next
+            Return EraseByWeights(full, region, weights, region.Width, region.Left, region.Top)
+        End Function
+
+        ''' <summary>Die Farbe am Ansatz eines Zuges: das Mittel aus drei mal drei Bildpunkten um den
+        ''' ersten Punkt des Zuges, der im Bild auf einem deckenden Bildpunkt liegt, an den geraden
+        ''' Farben. Nothing, wenn kein Punkt des Zuges einen trifft.</summary>
+        Private Shared Function SampleStrokeStartColor(image As SKBitmap, points As IReadOnlyList(Of SKPoint)) As SKColor?
+            For Each point In points
+                Dim cx = CInt(Math.Floor(point.X)), cy = CInt(Math.Floor(point.Y))
+                If cx < 0 OrElse cy < 0 OrElse cx >= image.Width OrElse cy >= image.Height Then Continue For
+                If image.GetPixel(cx, cy).Alpha = 0 Then Continue For
+                Dim sumR = 0, sumG = 0, sumB = 0, count = 0
+                For y = Math.Max(0, cy - 1) To Math.Min(image.Height - 1, cy + 1)
+                    For x = Math.Max(0, cx - 1) To Math.Min(image.Width - 1, cx + 1)
+                        ' GetPixel liefert die gerade Farbe, auch aus einem vormultiplizierten Bild.
+                        Dim c = image.GetPixel(x, y)
+                        If c.Alpha = 0 Then Continue For
+                        sumR += c.Red : sumG += c.Green : sumB += c.Blue : count += 1
+                    Next
+                Next
+                If count = 0 Then Continue For
+                Return New SKColor(CByte((sumR + count \ 2) \ count), CByte((sumG + count \ 2) \ count),
+                                   CByte((sumB + count \ 2) \ count))
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Nimmt im Rechteck <paramref name="rect"/> Deckung weg: bei Gewicht 255 ganz,
+        ''' darunter anteilig. <paramref name="weights"/> ist ein Feld mit
+        ''' <paramref name="weightsWidth"/> Punkten je Zeile, dessen linke obere Ecke im Bild bei
+        ''' (<paramref name="originX"/>, <paramref name="originY"/>) liegt. Im vormultiplizierten
+        ''' Bild gehen die Farbkanaele im selben Mass mit, die gerade Farbe bleibt also.</summary>
+        Friend Shared Function EraseByWeights(full As SKBitmap, rect As SKRectI, weights As Byte(),
+                                              weightsWidth As Integer, originX As Integer, originY As Integer) As Boolean
+            If full Is Nothing OrElse weights Is Nothing OrElse weightsWidth <= 0 Then Return False
+            If full.ColorType <> SKColorType.Bgra8888 AndAlso full.ColorType <> SKColorType.Rgba8888 Then Return False
+            If full.AlphaType = SKAlphaType.Opaque Then Return False
+            Dim area = SKRectI.Intersect(rect, New SKRectI(0, 0, full.Width, full.Height))
+            If area.Width <= 0 OrElse area.Height <= 0 Then Return False
+            Dim premul = full.AlphaType = SKAlphaType.Premul
+            Dim basePtr = full.GetPixels()
+            If basePtr = IntPtr.Zero Then Return False
+            Dim row(area.Width * 4 - 1) As Byte
+            For y = area.Top To area.Bottom - 1
+                Dim weightRow = (y - originY) * weightsWidth - originX
+                Dim rowPtr = IntPtr.Add(basePtr, y * full.RowBytes + area.Left * 4)
+                Dim loaded = False
+                For x = area.Left To area.Right - 1
+                    Dim weight = CInt(weights(weightRow + x))
+                    If weight = 0 Then Continue For
+                    If Not loaded Then
+                        Marshal.Copy(rowPtr, row, 0, row.Length)
+                        loaded = True
+                    End If
+                    Dim o = (x - area.Left) * 4
+                    Dim keep = 255 - weight
+                    If premul Then
+                        row(o) = CByte((row(o) * keep + 127) \ 255)
+                        row(o + 1) = CByte((row(o + 1) * keep + 127) \ 255)
+                        row(o + 2) = CByte((row(o + 2) * keep + 127) \ 255)
+                    End If
+                    row(o + 3) = CByte((row(o + 3) * keep + 127) \ 255)
+                Next
+                If loaded Then Marshal.Copy(row, 0, rowPtr, row.Length)
+            Next
+            full.NotifyPixelsChanged()
+            Return True
+        End Function
+
+        ''' <summary>Der magische Radierer: je Bildpunkt des GANZEN Bildes ein Gewicht 0..255, wie
+        ''' weit er der Farbe am Klickpunkt gleicht (zeilenweise, Breite des Bildes).
+        ''' <paramref name="bounds"/> erhaelt das Rechteck, in dem ueberhaupt etwas steht.
+        '''
+        ''' Derselbe Abstand wie beim Zauberstab (groesster Kanalabstand), an den geraden Farben.
+        ''' Bis zur Toleranz zaehlt ein Punkt voll; ein Viertel der Toleranz weiter faellt er
+        ''' gerade auf null, damit die Kante nicht gezackt ausfaellt. Mit
+        ''' <paramref name="contiguous"/> nur die Flaeche, die mit dem Klick zusammenhaengt
+        ''' (vierfach; der Saum zaehlt mit, traegt die Flaeche aber nicht weiter), sonst jede
+        ''' passende Farbe im Bild. Ein durchsichtiger Punkt gehoert nie dazu, und ein Klick auf
+        ''' einen durchsichtigen Punkt ergibt nichts.
+        '''
+        ''' <paramref name="radius"/> ist der Pinselkreis um den Klick: nur darin faellt etwas weg,
+        ''' mit und ohne Zusammenhang. Null oder weniger heisst unbegrenzt.</summary>
+        Friend Shared Function BuildMagicEraseWeights(image As SKBitmap, seedX As Integer, seedY As Integer,
+                                                      tolerance As Single, contiguous As Boolean,
+                                                      ByRef bounds As SKRectI,
+                                                      Optional radius As Single = 0) As Byte()
+            bounds = SKRectI.Empty
+            If image Is Nothing Then Return Nothing
+            If image.ColorType <> SKColorType.Bgra8888 AndAlso image.ColorType <> SKColorType.Rgba8888 Then Return Nothing
+            Dim w = image.Width, h = image.Height
+            If seedX < 0 OrElse seedY < 0 OrElse seedX >= w OrElse seedY >= h Then Return Nothing
+            Dim stride = image.RowBytes
+            If image.GetPixels() = IntPtr.Zero Then Return Nothing
+            Dim buf(stride * h - 1) As Byte
+            Marshal.Copy(image.GetPixels(), buf, 0, buf.Length)
+            Dim redFirst = image.ColorType = SKColorType.Rgba8888
+            Dim premul = image.AlphaType = SKAlphaType.Premul
+
+            Dim sr, sg, sb As Integer
+            If Not StraightColorAt(buf, seedY * stride + seedX * 4, redFirst, premul, sr, sg, sb) Then Return Nothing
+
+            Dim tol = Math.Max(0.0, Math.Min(1.0, tolerance)) * 255.0
+            Dim fringe = tol * ContentMatchFringe
+            Dim limit = tol + fringe
+            Dim weights(w * h - 1) As Byte
+            Dim minX = w, minY = h, maxX = -1, maxY = -1
+
+            ' Der Pinselkreis um den Klick, gemessen bis zur Mitte des Bildpunkts.
+            Dim limited = radius > 0
+            Dim r2 = CDbl(radius) * radius
+            Dim reach = If(limited, CInt(Math.Ceiling(radius)), 0)
+            Dim left = If(limited, Math.Max(0, seedX - reach), 0)
+            Dim right = If(limited, Math.Min(w - 1, seedX + reach), w - 1)
+            Dim top = If(limited, Math.Max(0, seedY - reach), 0)
+            Dim bottom = If(limited, Math.Min(h - 1, seedY + reach), h - 1)
+
+            If Not contiguous Then
+                For y = top To bottom
+                    For x = left To right
+                        If limited AndAlso CDbl(x - seedX) * (x - seedX) + CDbl(y - seedY) * (y - seedY) > r2 Then Continue For
+                        Dim weight = MagicEraseWeight(buf, y * stride + x * 4, redFirst, premul, sr, sg, sb, tol, fringe, limit)
+                        If weight = 0 Then Continue For
+                        weights(y * w + x) = weight
+                        If x < minX Then minX = x
+                        If x > maxX Then maxX = x
+                        If y < minY Then minY = y
+                        If y > maxY Then maxY = y
+                    Next
+                Next
+            Else
+                ' 0 = unbesucht, 1 = eingereiht oder entschieden.
+                Dim seen(w * h - 1) As Byte
+                Dim stack As New Stack(Of Integer)()
+                stack.Push(seedY * w + seedX)
+                seen(seedY * w + seedX) = 1
+                While stack.Count > 0
+                    Dim idx = stack.Pop()
+                    Dim x = idx Mod w, y = idx \ w
+                    If limited AndAlso CDbl(x - seedX) * (x - seedX) + CDbl(y - seedY) * (y - seedY) > r2 Then Continue While
+                    Dim weight = MagicEraseWeight(buf, y * stride + x * 4, redFirst, premul, sr, sg, sb, tol, fringe, limit)
+                    If weight = 0 Then Continue While
+                    weights(idx) = weight
+                    If x < minX Then minX = x
+                    If x > maxX Then maxX = x
+                    If y < minY Then minY = y
+                    If y > maxY Then maxY = y
+                    If weight < 255 Then Continue While
+                    If x > 0 AndAlso seen(idx - 1) = 0 Then
+                        seen(idx - 1) = 1 : stack.Push(idx - 1)
+                    End If
+                    If x < w - 1 AndAlso seen(idx + 1) = 0 Then
+                        seen(idx + 1) = 1 : stack.Push(idx + 1)
+                    End If
+                    If y > 0 AndAlso seen(idx - w) = 0 Then
+                        seen(idx - w) = 1 : stack.Push(idx - w)
+                    End If
+                    If y < h - 1 AndAlso seen(idx + w) = 0 Then
+                        seen(idx + w) = 1 : stack.Push(idx + w)
+                    End If
+                End While
+            End If
+
+            If maxX < minX Then Return Nothing
+            bounds = New SKRectI(minX, minY, maxX + 1, maxY + 1)
+            Return weights
+        End Function
+
+        ''' <summary>Die gerade Farbe eines Punktes aus dem rohen Puffer. False bei einem
+        ''' durchsichtigen Punkt.</summary>
+        Private Shared Function StraightColorAt(buf As Byte(), offset As Integer, redFirst As Boolean, premul As Boolean,
+                                                ByRef r As Integer, ByRef g As Integer, ByRef b As Integer) As Boolean
+            Dim a = CInt(buf(offset + 3))
+            If a = 0 Then Return False
+            r = buf(If(redFirst, offset, offset + 2)) : g = buf(offset + 1) : b = buf(If(redFirst, offset + 2, offset))
+            If premul AndAlso a < 255 Then
+                r = Math.Min(255, (r * 255 + a \ 2) \ a)
+                g = Math.Min(255, (g * 255 + a \ 2) \ a)
+                b = Math.Min(255, (b * 255 + a \ 2) \ a)
+            End If
+            Return True
+        End Function
+
+        Private Shared Function MagicEraseWeight(buf As Byte(), offset As Integer, redFirst As Boolean, premul As Boolean,
+                                                 sr As Integer, sg As Integer, sb As Integer,
+                                                 tol As Double, fringe As Double, limit As Double) As Byte
+            Dim r, g, b As Integer
+            If Not StraightColorAt(buf, offset, redFirst, premul, r, g, b) Then Return 0
+            Dim distance = Math.Max(Math.Abs(r - sr), Math.Max(Math.Abs(g - sg), Math.Abs(b - sb)))
+            If distance <= tol Then Return 255
+            If fringe <= 0 OrElse distance >= limit Then Return 0
+            Return CByte(Math.Max(0, Math.Min(255, CInt(Math.Round(255.0 * (limit - distance) / fringe)))))
+        End Function
+
     End Class
 
 End Namespace

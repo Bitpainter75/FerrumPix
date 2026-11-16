@@ -6009,9 +6009,6 @@
   <data name="Auswahl_in_eine_Maske_umwandeln_1c064ce0" xml:space="preserve">
     <value>将选区转换为蒙版</value>
   </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_d91fc04d" xml:space="preserve">
-    <value>未知归类不是人物，因此不接受名称。若要为其中的单张面孔指定归属，请在照片旁的信息栏中输入名称。</value>
-  </data>
   <data name="Entrauschen_mit_Modell_0a868da4" xml:space="preserve">
     <value>用模型降噪</value>
   </data>
@@ -7679,9 +7676,6 @@
   </data>
   <data name="Namen_werden_in_der_Info_Leiste_am_Bild_vergeben_a8ed6d58" xml:space="preserve">
     <value>在照片的信息面板中为人物命名</value>
-  </data>
-  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_974c7af0" xml:space="preserve">
-    <value>未知归类不是人物，因此不接受名称。若要为其中的单张面孔指定归属，请在照片旁的信息面板中输入名称。</value>
   </data>
   <data name="Gilt_nur_f_r_den_Viewer_nur_verkleinern_wenn_das_ad77cfc8" xml:space="preserve">
     <value>仅适用于查看器：可选择仅在图像大于显示区域时缩小，或始终缩放至显示区域。</value>
@@ -11726,5 +11720,80 @@
   </data>
   <data name="Anlegen_846460c3" xml:space="preserve">
     <value>创建</value>
+  </data>
+  <data name="An_Kanten_halten_3cc3dcbb" xml:space="preserve">
+    <value>在边缘处停止</value>
+  </data>
+  <data name="Der_Strich_deckt_nur_was_der_Farbe_unter_der_Pin_f28c1787" xml:space="preserve">
+    <value>笔触只覆盖与画笔中心下方颜色相近且与之相连的部分。松开后显示结果</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_von_der_unter_der_Pinselmitt_202b0760" xml:space="preserve">
+    <value>颜色与画笔中心下方颜色允许相差多少。数值越高覆盖越多，越低越早停止</value>
+  </data>
+  <data name="Hintergrund_Radierer_f595a5b0" xml:space="preserve">
+    <value>背景橡皮擦</value>
+  </data>
+  <data name="Magischer_Radierer_44d24b16" xml:space="preserve">
+    <value>魔术橡皮擦</value>
+  </data>
+  <data name="Magischer_Radierer_ein_Klick_nimmt_die_Fl_che_hn_e6b5ac86" xml:space="preserve">
+    <value>魔术橡皮擦：单击即可擦除颜色相近的区域</value>
+  </data>
+  <data name="Ein_Klick_nimmt_die_Fl_che_weg_die_der_angeklick_0d8c1bb9" xml:space="preserve">
+    <value>单击即可擦除与所点颜色相近的区域。</value>
+  </data>
+  <data name="Wie_weit_eine_Farbe_abweichen_darf_um_mit_wegzuf_101c9723" xml:space="preserve">
+    <value>颜色相差多少仍会被擦除。数值越高擦除越多</value>
+  </data>
+  <data name="Nimmt_nur_weg_was_mit_der_Stelle_unter_dem_Zeige_0eed4b19" xml:space="preserve">
+    <value>只擦除与指针下方位置相连的部分。取消勾选后，所有相符的颜色都会被擦除，魔术橡皮擦则作用于整幅图像</value>
+  </data>
+  <data name="Bild_wird_f_r_den_Pinsel_gelesen_1d817af3" xml:space="preserve">
+    <value>正在为画笔读取图像…</value>
+  </data>
+  <data name="Der_Bildinhalt_lie_sich_f_r_den_Pinsel_nicht_les_ac4930eb" xml:space="preserve">
+    <value>无法为画笔读取图像内容</value>
+  </data>
+  <data name="Das_Bild_wird_noch_gerechnet_bitte_gleich_noch_e_540ba63c" xml:space="preserve">
+    <value>图像仍在计算，请稍后再单击一次</value>
+  </data>
+  <data name="An_dieser_Stelle_gibt_es_nichts_zu_radieren_8e98ac7f" xml:space="preserve">
+    <value>此处没有可擦除的内容</value>
+  </data>
+  <data name="Wer_ist_das_da60ecdd" xml:space="preserve">
+    <value>这是谁？</value>
+  </data>
+  <data name="Zuordnen_f88d196e" xml:space="preserve">
+    <value>指定</value>
+  </data>
+  <data name="Namen_entfernen_151b28fd" xml:space="preserve">
+    <value>移除名称</value>
+  </data>
+  <data name="Namen_der_ganzen_Person_entfernen_d6f21590" xml:space="preserve">
+    <value>要移除整个人物的名称吗？</value>
+  </data>
+  <data name="Ganze_Person_umbenennen_49ff59cb" xml:space="preserve">
+    <value>要重命名整个人物吗？</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Der_Name_wird_bei_allen_entfer_3ba52469" xml:space="preserve">
+    <value>{0} 有 {1} 张面孔。名称将从所有面孔上移除，而不只是这一张。</value>
+  </data>
+  <data name="0_hat_1_Gesichter_Die_ganze_Person_hei_t_danach__162be0af" xml:space="preserve">
+    <value>{0} 有 {1} 张面孔。之后整个人物都将命名为 {2}，而不只是这张面孔。</value>
+  </data>
+  <data name="Der_Ablagekorb_ist_keine_Person_und_nimmt_deshal_ced4c281" xml:space="preserve">
+    <value>未知归类不是人物，因此不接受名称。若要为其中的单张面孔指定归属，请使用其缩略图上的眼睛图标，或在照片旁的信息面板中输入名称。</value>
+  </data>
+  <data name="Hintergrund_Radierer_nimmt_unter_dem_Pinsel_nur__718d46fa" xml:space="preserve">
+    <value>背景橡皮擦：只擦除画笔下与笔触起点处相同的颜色</value>
+  </data>
+  <data name="Nimmt_unter_dem_Pinsel_nur_die_Farbe_weg_auf_der_ff10722d" xml:space="preserve">
+    <value>只擦除画笔下与笔触起点处相同的颜色。请从背景开始，之后画笔可以盖到主体上。</value>
+  </data>
+  <data name="Farbe_am_Ansatz_festhalten_3a5e62ad" xml:space="preserve">
+    <value>保持起点处的颜色</value>
+  </data>
+  <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
+    <value>笔触起点处的颜色适用于整条笔触。取消勾选后，将持续采用画笔中心下方的颜色，笔触也会擦除中心经过的内容</value>
   </data>
 </root>

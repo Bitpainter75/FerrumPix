@@ -123,6 +123,9 @@ Namespace ViewModels
                 ' (rot vs. Ameisen) steuert NICHT mehr der Modus, sondern die Art der Auswahl
                 ' (ActiveSelectionIsMask) - so bleibt eine Masken-Ebene auch außerhalb des Pinsels rot.
                 If v = "Brush" AndAlso _selectionCombineMode = "New" Then SelectionCombineMode = "Add"
+                ' Das Vergleichsbild des Pinsels ist so gross wie das Dokument: ausserhalb des
+                ' Pinsels wird es nicht gebraucht.
+                If v <> "Brush" Then ReleaseBrushGuideImage()
                 If v = "LuminanceRange" Then
                     Dim ignored = RedrawLuminanceRangeMask(isMask:=False, captureUndo:=True)
                 End If
@@ -1213,6 +1216,12 @@ Namespace ViewModels
         ''' die sie über ihre Parametertypen suchen.</summary>
         Public Sub CommitMaskBrushStroke(xsPercent As Double(), ysPercent As Double(),
                                          pressures As IReadOnlyList(Of Single))
+            If _maskBrushFollowsContent Then
+                ' Der Strich braucht das Bild, an dem er sich orientiert; das wird beim ersten Zug
+                ' im Hintergrund gerechnet. Der Aufrufer wartet nicht darauf.
+                Dim pending = CommitMaskBrushStrokeGuidedAsync(xsPercent, ysPercent, pressures)
+                Return
+            End If
             SetMaskBrushPressures(pressures, If(xsPercent Is Nothing, 0, xsPercent.Length))
             Try
                 CommitMaskBrushStrokeCore(xsPercent, ysPercent)
@@ -1223,7 +1232,146 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub CommitMaskBrushStrokeCore(xsPercent As Double(), ysPercent As Double())
+        ' ── Der Pinsel, der sich am Bildinhalt orientiert ───────────────────────
+        '
+        ' Derselbe Auswahl- und Maskenpinsel, nur deckt der Strich nicht mehr blind: jeder Tupfer
+        ' nimmt die Farbe unter seiner Mitte und deckt in seinem Kreis nur, was ihr aehnelt und
+        ' mit der Mitte zusammenhaengt (ImageProcessor.BuildContentMatchWeights). Der Stempel
+        ' bleibt, was er war (Form, weiche Kante, Deckkraft, Stiftdruck) und wird mit diesem
+        ' Gewicht gedaempft; alles danach laeuft den bekannten Weg, fuer Auswahl, Maske,
+        ' Verlaufskorrektur und Ebenenmaske gleich.
+        '
+        ' VERGLICHEN WIRD AM FOTO MIT SEINEN REGLERN, ohne Maskenebenen, ohne Auswahl-Skopus und
+        ' ohne Objekte. Mit den Maskenebenen aenderte jeder Strich an einer Maske das Bild, an
+        ' dem der naechste sich orientiert, und es waere nach jedem Strich neu zu rechnen (bei
+        ' 45 MP Sekunden). So wird es einmal gerechnet und gilt, bis sich Foto, Regler oder
+        ' Geometrie aendern.
+        '
+        ' GERECHNET WIRD BEIM LOSLASSEN, nicht waehrend des Zuges: die Vorschau unter dem Zeiger
+        ' zeigt den ganzen Strich, das Ergebnis danach nur den Teil, der zum Inhalt gehoert.
+
+        Private _maskBrushFollowsContent As Boolean = False
+        Private _maskBrushContentTolerance As Double = 20
+        Private _brushGuideImage As SKBitmap
+        Private _brushGuideKey As String = ""
+        Private ReadOnly _brushGuideGate As New SemaphoreSlim(1, 1)
+
+        ''' <summary>Der Auswahl- und Maskenpinsel haelt an Kanten: er deckt nur, was der Farbe
+        ''' unter der Pinselmitte aehnelt. Eine Einstellung des Werkzeugs wie
+        ''' <see cref="MaskBrushOpacity"/>, nicht gespeichert und nicht im Rueckgaengig-Verlauf.</summary>
+        Public Property MaskBrushFollowsContent As Boolean
+            Get
+                Return _maskBrushFollowsContent
+            End Get
+            Set(value As Boolean)
+                If _maskBrushFollowsContent = value Then Return
+                Me.RaiseAndSetIfChanged(_maskBrushFollowsContent, value)
+                If Not value Then ReleaseBrushGuideImage()
+            End Set
+        End Property
+
+        ''' <summary>Wie weit eine Farbe von der unter der Pinselmitte abweichen darf, in Prozent
+        ''' (1..100), auf der Skala des Zauberstabs. Getrennt von dessen Toleranz: ein Wert, der
+        ''' fuer einen Klick passt, ist fuer einen Strich entlang einer Kante meist zu knapp.</summary>
+        Public Property MaskBrushContentTolerance As Double
+            Get
+                Return _maskBrushContentTolerance
+            End Get
+            Set(value As Double)
+                Me.RaiseAndSetIfChanged(_maskBrushContentTolerance, Math.Max(1, Math.Min(100, value)))
+            End Set
+        End Property
+
+        ''' <summary>Gibt das gemerkte Vergleichsbild frei. Es ist so gross wie das Dokument und
+        ''' bleibt deshalb nur, solange der Pinsel es braucht: weg beim Ausschalten, beim Verlassen
+        ''' des Pinsels und beim Bildwechsel.</summary>
+        Private Sub ReleaseBrushGuideImage()
+            Dim old = _brushGuideImage
+            _brushGuideImage = Nothing
+            _brushGuideKey = ""
+            old?.Dispose()
+        End Sub
+
+        ''' <summary>Das Rezept, mit dem das Vergleichsbild gerechnet wird: das Foto mit seinen
+        ''' Reglern und seiner Geometrie, ohne alles, was ein Pinselstrich selbst veraendert.</summary>
+        Private Function BuildBrushGuideRecipe() As ImageAdjustments
+            Dim recipe = GetCurrentAdjustments().Clone()
+            recipe.Masks = New List(Of ImageMask)()
+            recipe.MaskedAdjustmentLayers = New List(Of MaskedAdjustmentLayer)()
+            recipe.Annotations = New List(Of ImageAnnotation)()
+            recipe.AnnotationGroups = New List(Of AnnotationGroup)()
+            recipe.SelectionScopeEnabled = False
+            Return recipe
+        End Function
+
+        ''' <summary>Liefert das Vergleichsbild in der Groesse des Dokuments und rechnet es, wenn
+        ''' es fehlt oder nicht mehr zum Bildstand passt. Nothing, wenn es sich nicht rechnen
+        ''' laesst. Aufrufer halten <c>_brushGuideGate</c>.</summary>
+        Private Async Function EnsureBrushGuideImageAsync(bw As Integer, bh As Integer) As Task(Of SKBitmap)
+            Dim recipe = BuildBrushGuideRecipe()
+            Dim key = String.Join("|", _currentImagePath, bw, bh, _workingImage.Version, _pixelLayerHidden,
+                                  ImageProcessor.ComputeBaseKey(recipe))
+            If _brushGuideImage IsNot Nothing AndAlso String.Equals(_brushGuideKey, key, StringComparison.Ordinal) Then
+                Return _brushGuideImage
+            End If
+            ReleaseBrushGuideImage()
+            StatusText = LocalizationService.T("Bild wird für den Pinsel gelesen…")
+            Dim sourcePath = RenderSourcePath
+            Dim workingImage = CloneWorkingFullForRender()
+            Dim rendered = Await Task.Run(Function() ImageProcessor.RenderDisplayImage(sourcePath, recipe, workingImage))
+            If rendered Is Nothing Then Return Nothing
+            If rendered.Width <> bw OrElse rendered.Height <> bh Then
+                ' Der Strich rechnet in den Koordinaten des Dokuments; ein Bild anderer Groesse
+                ' wuerde an der falschen Stelle verglichen.
+                DiagnosticLogService.LogAlways("Editor.BrushGuide",
+                    $"sizeMismatch rendered={rendered.Width}x{rendered.Height} document={bw}x{bh}")
+                rendered.Dispose()
+                Return Nothing
+            End If
+            _brushGuideImage = rendered
+            _brushGuideKey = key
+            Return rendered
+        End Function
+
+        ''' <summary>Der Abschluss eines Strichs mit <see cref="MaskBrushFollowsContent"/>: erst das
+        ''' Vergleichsbild, dann derselbe Weg wie ohne. Striche laufen nacheinander; ein Strich,
+        ''' dessen Bild inzwischen gewechselt wurde, verfaellt.</summary>
+        Friend Async Function CommitMaskBrushStrokeGuidedAsync(xsPercent As Double(), ysPercent As Double(),
+                                                               pressures As IReadOnlyList(Of Single)) As Task
+            Dim requestedDocument = _currentImagePath
+            Dim frozenPressures = pressures?.ToArray()
+            Await _brushGuideGate.WaitAsync()
+            Try
+                Dim selectionSize = GetAnnotationDisplayPixelSize()
+                Dim guide As SKBitmap = Nothing
+                If selectionSize.Width > 0 AndAlso selectionSize.Height > 0 AndAlso
+                   Not String.IsNullOrWhiteSpace(_currentImagePath) Then
+                    guide = Await EnsureBrushGuideImageAsync(selectionSize.Width, selectionSize.Height)
+                End If
+                If Not String.Equals(requestedDocument, _currentImagePath, PathIdentity.Comparison) Then
+                    PublishMaskBrushOverlay()
+                    Return
+                End If
+                If guide Is Nothing Then
+                    ' Ohne Vergleichsbild gaebe es nur den blinden Strich, und der saehe aus, als
+                    ' hielte der Pinsel nicht an Kanten. Dann lieber keiner und ein Wort dazu.
+                    StatusText = LocalizationService.T("Der Bildinhalt ließ sich für den Pinsel nicht lesen")
+                    PublishMaskBrushOverlay()
+                    Return
+                End If
+                SetMaskBrushPressures(frozenPressures, If(xsPercent Is Nothing, 0, xsPercent.Length))
+                Try
+                    CommitMaskBrushStrokeCore(xsPercent, ysPercent, guide)
+                Finally
+                    _maskBrushPressures = Nothing
+                End Try
+            Finally
+                _brushGuideGate.Release()
+            End Try
+        End Function
+
+        Private Sub CommitMaskBrushStrokeCore(xsPercent As Double(), ysPercent As Double(),
+                                              Optional guide As SKBitmap = Nothing)
             If xsPercent Is Nothing OrElse ysPercent Is Nothing OrElse xsPercent.Length = 0 OrElse xsPercent.Length <> ysPercent.Length Then
                 PublishMaskBrushOverlay()
                 Return
@@ -1256,6 +1404,13 @@ Namespace ViewModels
             PushUndo(LocalizationService.T("Maske gemalt"))
             Using stamp = ImageProcessor.BuildSoftBrushStampMask(pts, radius, softness, rectPx, MaskBrushStrokeAlpha(),
                                                                  _maskBrushPressures)
+                If stamp IsNot Nothing AndAlso guide IsNot Nothing Then
+                    ' Der Kreis des Vergleichs reicht so weit wie der Stempel samt weicher Kante.
+                    Dim weights = ImageProcessor.BuildContentMatchWeights(guide, rectPx, pts, radius + softness,
+                                                                          CSng(_maskBrushContentTolerance / 100.0),
+                                                                          contiguous:=True)
+                    If weights IsNot Nothing Then ImageProcessor.ApplyContentWeightsToStamp(stamp, weights)
+                End If
                 If stamp IsNot Nothing Then
                     Dim gradient = SelectedGradientMask
                     ' MEHRTEILIGE Maske: der Strich geht DIREKT in den ANGEFASSTEN Bestandteil (die
