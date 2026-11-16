@@ -40,6 +40,9 @@
 - A crop that was also rotated arrived wrong when it was taken over from an XMP file: the
   rotation was dropped and the frame sat in the wrong place. Both now arrive as they were set.
 
+- In the editor the histogram of the info panel stayed at "calculating" when the panel was closed
+  while the picture loaded and opened afterwards. It now appears.
+
 - Typing part of a name at a face and then clicking the full name in the list of suggestions
   assigned the typed part, for example "Dad" instead of "Daddy (me)", and further steps could
   rename the whole person. The clicked suggestion now counts. Before a name typed at one face

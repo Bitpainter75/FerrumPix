@@ -33199,6 +33199,14 @@ Namespace ViewModels
         ''' Hintergrund ausgefallen ist. Aus der Szene, wenn eine dasteht - der Weg ueber die Datei
         ''' kostet einen vollen Decode.</summary>
         Private Sub EnsureScopeUpToDate()
+            ' Ein Ort ist sichtbar und hat kein Bild: dann fehlt es, was immer der Merker sagt. Der
+            ' Merker allein reicht nicht, weil ihn auch ein Lauf loescht, der nur die Zahlen der
+            ' Tonwertkurve gerechnet hat - bei zugeklappter Leiste geladen und sie danach
+            ' aufgeklappt, blieb sie sonst bei "wird berechnet" stehen.
+            If (IsSidebarScopeVisible AndAlso InfoPanel.ScopeImage Is Nothing) OrElse
+               (IsScopeInAdjustmentPanelsVisible AndAlso PanelScopeImage Is Nothing) Then
+                _scopeDirty = True
+            End If
             If Not IsSceneAnalysisLive OrElse Not _scopeDirty Then Return
             Dim scene = _sceneSk
             If scene IsNot Nothing AndAlso scene.Width > 0 AndAlso scene.Height > 0 Then
