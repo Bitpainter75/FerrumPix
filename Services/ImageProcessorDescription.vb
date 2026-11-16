@@ -49,9 +49,13 @@ Namespace Services
         ''' nicht sicher lesen; die Datei ist unveraendert.</exception>
         ''' <exception cref="IOException">Das Schreiben ist gescheitert; die Datei ist unveraendert
         ''' (WriteFileAtomic).</exception>
+        ''' <param name="exifRating">Im JPEG: die Bewertung in Sternen, wenn sie zu den geschriebenen
+        ''' Angaben gehoert. Die Felder, in denen Windows sie in den Aufnahmedaten fuehrt, ziehen
+        ''' dann mit, soweit sie vorhanden sind.</param>
         Friend Shared Function EditXmpInFile(path As String, createPacket As Boolean,
                                              edit As Func(Of IEnumerable(Of XElement), XElement, Boolean),
-                                             Optional iptcReplacements As Dictionary(Of Integer, List(Of String)) = Nothing) As Boolean
+                                             Optional iptcReplacements As Dictionary(Of Integer, List(Of String)) = Nothing,
+                                             Optional exifRating As Integer? = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Throw New FileNotFoundException("Datei nicht gefunden", path)
             Dim xmpBuilder As Func(Of Byte(), Byte()) = Function(existing) BuildEditedXmpPacket(existing, createPacket, edit)
             ' Bewusst OHNE Fangnetz: "nichts zu aendern" (False) und "geht nicht" (Ausnahme) muss
@@ -62,7 +66,7 @@ Namespace Services
                     If iptcReplacements IsNot Nothing AndAlso iptcReplacements.Count > 0 Then
                         iptcBuilder = Function(existing) BuildPhotoshopIptcPayload(existing, iptcReplacements)
                     End If
-                    Return RewriteJpegXmpAndIptc(path, xmpBuilder, iptcBuilder)
+                    Return RewriteJpegXmpAndIptc(path, xmpBuilder, iptcBuilder, exifRating)
                 Case ".png"
                     Return RewritePngXmp(path, xmpBuilder)
                 Case ".webp"

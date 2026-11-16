@@ -734,7 +734,10 @@ Namespace Services
             ' Katalog (Rating/Label/Stichworte) optional zusätzlich ins XMP-Sidecar - gegated über die
             ' Einstellung SyncCatalogToXmp (siehe SyncCatalogToXmpSidecar). .fpxmp bleibt primär.
             SyncCatalogToFpxmp(filePath)
-            If syncToXmp Then SyncCatalogToXmpSidecar(filePath)
+            If syncToXmp Then
+                SyncCatalogToXmpSidecar(filePath)
+                CatalogMarkFileWriter.Queue(filePath)
+            End If
             RaiseEvent AttributesChanged(Me, New CatalogAttributeChange({filePath}) With {.Rating = rating})
         End Sub
 
@@ -833,6 +836,7 @@ Namespace Services
             If syncToXmp Then
                 For Each path In list
                     SyncCatalogToXmpSidecar(path)
+                    CatalogMarkFileWriter.Queue(path)
                 Next
             End If
             RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.ColorLabel = value})
@@ -894,6 +898,7 @@ Namespace Services
             If syncToXmp Then
                 For Each path In list
                     SyncCatalogToXmpSidecar(path)
+                    CatalogMarkFileWriter.Queue(path)
                 Next
             End If
             RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.PickState = value})
@@ -931,6 +936,7 @@ Namespace Services
             If syncToXmp Then
                 For Each path In list
                     SyncCatalogToXmpSidecar(path)
+                    CatalogMarkFileWriter.Queue(path)
                 Next
             End If
             RaiseEvent AttributesChanged(Me, New CatalogAttributeChange(list) With {.Rating = rating})

@@ -11838,4 +11838,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Färgen som draget börjar på gäller för hela draget. Utan bock gäller fortlöpande färgen under penselns mitt, och draget tar med det som mitten rör sig över</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Skriv betyg, färgetikett och markering till bildfilen</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Skriver stjärnor, färgetikett och markeringen behåll eller avvisad vid varje ändring till själva JPEG-, PNG- och WebP-filen, så att andra program ser dem direkt. Utan reglaget finns de bara i katalogen tills de skrivs till filerna från menyn Metadata.</value>
+  </data>
 </root>

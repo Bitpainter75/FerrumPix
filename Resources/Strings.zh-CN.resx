@@ -11796,4 +11796,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>笔触起点处的颜色适用于整条笔触。取消勾选后，将持续采用画笔中心下方的颜色，笔触也会擦除中心经过的内容</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>将评级、色标和标记写入图像文件</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>每次更改时，将星级、色标以及保留或已拒绝的标记直接写入 JPEG、PNG 和 WebP 文件本身，以便其他程序立即看到。关闭此开关时，它们只保存在目录中，直到通过元数据菜单写入文件。</value>
+  </data>
 </root>

@@ -501,6 +501,16 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding WriteKeywordsToFileIptc}" OnContent="" OffContent="" VerticalAlignment="Center"/>
                             </Grid>
+                            <!-- Bewertung, Etikett und Markierung IN die Bilddatei, bei jeder
+                                 bewussten Aenderung (CatalogMarkFileWriter). Ab Werk aus: ohne den
+                                 Schalter aendert ein Stern keine Datei des Bestands. -->
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                    <TextBlock Text="Bewertung, Farbetikett und Markierung in die Bilddatei schreiben" FontSize="{DynamicResource FP.Font.Body}"/>
+                                    <TextBlock Text="Schreibt Sterne, Farbetikett und die Markierung behalten oder verworfen bei jeder Änderung in JPEG, PNG und WebP selbst, damit andere Programme sie sofort sehen. Ohne den Schalter stehen sie nur im Katalog, bis sie über das Menü Metadaten in die Dateien geschrieben werden." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding WriteMarksToFile}" OnContent="" OffContent="" VerticalAlignment="Center"/>
+                            </Grid>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">

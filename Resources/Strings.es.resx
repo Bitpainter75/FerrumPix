@@ -11798,4 +11798,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>El color sobre el que empieza el trazo vale para todo el trazo. Sin marcar, vale de forma continua el color bajo el centro del pincel, y el trazo se lleva también aquello por lo que pasa el centro</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Escribir valoración, etiqueta de color y marca en el archivo de imagen</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Escribe las estrellas, la etiqueta de color y la marca conservar o rechazada en el propio archivo JPEG, PNG o WebP con cada cambio, para que otros programas las vean de inmediato. Sin el interruptor solo están en el catálogo hasta que se escriben en los archivos desde el menú Metadatos.</value>
+  </data>
 </root>

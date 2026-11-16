@@ -221,9 +221,13 @@ Namespace Services
         ''' bzw. diese Funktion, und zwar bevor ein Byte geschrieben ist. Wuerde nur der andere Block
         ''' neu geschrieben, stuende in der Datei ein neuer Wert neben einem alten, und je nach Leser
         ''' gewaenne der alte. Die Aufrufer fangen die Ausnahme und melden False.</summary>
+        ''' <param name="exifRating">Die Bewertung in Sternen, wenn sie mitgeschrieben wird: die
+        ''' beiden Felder, in denen Windows sie zusaetzlich in den Aufnahmedaten fuehrt, ziehen
+        ''' dann mit (siehe PatchExifRating). Nothing laesst die Aufnahmedaten unangetastet.</param>
         Private Shared Function RewriteJpegXmpAndIptc(path As String,
                                                       xmpBuilder As Func(Of Byte(), Byte()),
-                                                      iptcBuilder As Func(Of Byte(), Byte())) As Boolean
+                                                      iptcBuilder As Func(Of Byte(), Byte()),
+                                                      Optional exifRating As Integer? = Nothing) As Boolean
             Dim segments As New List(Of JpegHeaderSegment)()
             Dim headerEnd As Long = 0
             If Not ReadJpegHeaderSegments(path, segments, headerEnd) Then Throw New InvalidDataException("JPEG-Kopf nicht lesbar: " & path)
@@ -259,7 +263,16 @@ Namespace Services
                     Throw New InvalidDataException("IPTC passt nicht mehr in ein Segment: " & path)
                 End If
             End If
-            If newXmp Is Nothing AndAlso newApp13 Is Nothing Then Return False
+            Dim exifSignature = Encoding.ASCII.GetBytes("Exif" & ChrW(0) & ChrW(0))
+            Dim exifIndex = segments.FindIndex(Function(s) s.Marker = &HE1 AndAlso StartsWithBytes(s.Payload, exifSignature))
+            ' Die Bewertung in den Aufnahmedaten: an Ort und Stelle, gleiche Laenge, nur wenn die
+            ' Felder schon da sind und etwas anderes sagen.
+            Dim newExif As Byte() = Nothing
+            If exifRating.HasValue AndAlso exifIndex >= 0 Then
+                Dim patched = DirectCast(segments(exifIndex).Payload.Clone(), Byte())
+                If PatchExifRating(patched, exifSignature.Length, exifRating.Value) Then newExif = patched
+            End If
+            If newXmp Is Nothing AndAlso newApp13 Is Nothing AndAlso newExif Is Nothing Then Return False
 
             ' Der neue Kopf: vorhandene Segmente an ihrem Platz ersetzen, fehlende hinter EXIF
             ' (sonst hinter die fuehrenden APP0) einsetzen. Jeder Eintrag ist entweder neu
@@ -268,8 +281,6 @@ Namespace Services
             Dim inserted As New List(Of Byte())()
             If newXmp IsNot Nothing AndAlso xmpIndex < 0 Then inserted.Add(BuildJpegSegment(&HE1, newXmp))
             If newApp13 IsNot Nothing AndAlso app13Index < 0 Then inserted.Add(BuildJpegSegment(&HED, newApp13))
-            Dim exifSignature = Encoding.ASCII.GetBytes("Exif" & ChrW(0) & ChrW(0))
-            Dim exifIndex = segments.FindIndex(Function(s) s.Marker = &HE1 AndAlso StartsWithBytes(s.Payload, exifSignature))
             Dim leadingApp0 = 0
             While leadingApp0 < segments.Count AndAlso segments(leadingApp0).Marker = &HE0
                 leadingApp0 += 1
@@ -286,6 +297,8 @@ Namespace Services
                     output.Add((BuildJpegSegment(&HE1, newXmp), -1))
                 ElseIf i = app13Index AndAlso newApp13 IsNot Nothing Then
                     output.Add((BuildJpegSegment(&HED, newApp13), -1))
+                ElseIf i = exifIndex AndAlso newExif IsNot Nothing Then
+                    output.Add((BuildJpegSegment(&HE1, newExif), -1))
                 Else
                     output.Add((Nothing, i))
                 End If
@@ -316,6 +329,57 @@ Namespace Services
                         source.CopyTo(destination, 64 * 1024)
                     End Using
                 End Sub)
+        End Function
+
+        ''' <summary>Die Bewertung in Prozent, wie die Bildverwaltung von Windows sie neben den
+        ''' Sternen fuehrt: 1, 25, 50, 75 und 99 fuer einen bis fuenf Sterne, 0 fuer keine.</summary>
+        Friend Shared Function RatingToPercent(stars As Integer) As Integer
+            Select Case stars
+                Case Is <= 0 : Return 0
+                Case 1 : Return 1
+                Case 2 : Return 25
+                Case 3 : Return 50
+                Case 4 : Return 75
+                Case Else : Return 99
+            End Select
+        End Function
+
+        ''' <summary>Zieht die Bewertung in den Aufnahmedaten nach: Windows fuehrt sie dort in zwei
+        ''' eigenen Feldern des ersten Verzeichnisses, 0x4746 in Sternen und 0x4749 in Prozent.
+        ''' Blieben sie stehen, waehrend das XMP einen neuen Wert bekommt, truege die Datei zwei
+        ''' Bewertungen, und je nach Leser gewaenne die alte.
+        '''
+        ''' Nur VORHANDENE Felder vom Typ SHORT mit einem Wert: der passt in die vier Byte des
+        ''' Eintrags selbst, die Laenge des Blocks aendert sich also nicht. Angelegt wird nichts;
+        ''' eine Datei ohne diese Felder traegt die Bewertung allein im XMP, und das lesen alle.</summary>
+        ''' <returns>True, wenn sich ein Byte geaendert hat.</returns>
+        Private Shared Function PatchExifRating(segment As Byte(), tiffStart As Integer, stars As Integer) As Boolean
+            Dim changed = False
+            Try
+                If segment.Length < tiffStart + 8 Then Return False
+                Dim littleEndian = segment(tiffStart) = AscW("I"c) AndAlso segment(tiffStart + 1) = AscW("I"c)
+                Dim bigEndian = segment(tiffStart) = AscW("M"c) AndAlso segment(tiffStart + 1) = AscW("M"c)
+                If Not littleEndian AndAlso Not bigEndian Then Return False
+                Dim ifd0 = CLng(tiffStart) + ReadUInt32Endian(segment, tiffStart + 4, littleEndian)
+                If ifd0 < 0 OrElse ifd0 + 2 > segment.Length Then Return False
+                Dim count = ReadUInt16Endian(segment, CInt(ifd0), littleEndian)
+                Dim wantedStars = Math.Max(0, Math.Min(5, stars))
+                For i = 0 To count - 1
+                    Dim entry = CInt(ifd0) + 2 + i * 12
+                    If entry + 12 > segment.Length Then Exit For
+                    Dim tag = ReadUInt16Endian(segment, entry, littleEndian)
+                    If tag <> &H4746 AndAlso tag <> &H4749 Then Continue For
+                    If ReadUInt16Endian(segment, entry + 2, littleEndian) <> 3 OrElse
+                       ReadUInt32Endian(segment, entry + 4, littleEndian) <> 1UI Then Continue For
+                    Dim wanted = If(tag = &H4746, wantedStars, RatingToPercent(wantedStars))
+                    If ReadUInt16Endian(segment, entry + 8, littleEndian) = wanted Then Continue For
+                    WriteUInt16Endian(segment, entry + 8, wanted, littleEndian)
+                    changed = True
+                Next
+            Catch
+                Return False
+            End Try
+            Return changed
         End Function
 
         Private Shared Sub CopyKeywordBytes(source As Stream, destination As Stream, count As Integer, buffer As Byte())

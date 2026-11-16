@@ -11798,4 +11798,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Il colore su cui inizia il tratto vale per tutto il tratto. Senza spunta vale di continuo il colore sotto il centro del pennello, e il tratto porta via anche ciò su cui passa il centro</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Scrivi valutazione, etichetta colore e contrassegno nel file immagine</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Scrive le stelle, l'etichetta colore e il contrassegno mantieni o scartata nel file JPEG, PNG o WebP stesso a ogni modifica, così gli altri programmi li vedono subito. Senza l'interruttore restano solo nel catalogo finché non vengono scritti nei file dal menu Metadati.</value>
+  </data>
 </root>

@@ -548,6 +548,9 @@ Namespace Services
         ''' Exportieren und Konvertieren; KI-Stichwoerter nie (siehe KeywordFileWriter).
         Public Property WriteKeywordsToFileXmp As Boolean = False
         Public Property WriteKeywordsToFileIptc As Boolean = False
+        ''' Bewertung, Farbetikett und Markierung bei jeder bewussten Aenderung zusaetzlich IN die
+        ''' Bilddatei schreiben (JPEG, PNG, WebP; Standard AUS), siehe CatalogMarkFileWriter.
+        Public Property WriteMarksToFile As Boolean = False
         ''' Importieren: die zuletzt bestaetigte Wahl (CardImportService). Der Zielordner
         ''' ist nur noch ein Rueckfall: vorbelegt wird im Dialog der aktuelle Ordner der Galerie.
         Public Property ImportTargetFolder As String = ""

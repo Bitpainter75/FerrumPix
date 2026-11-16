@@ -11798,4 +11798,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>La couleur sur laquelle le trait commence vaut pour tout le trait. Sans la coche, c'est en continu la couleur sous le centre du pinceau qui vaut, et le trait emporte aussi ce sur quoi passe le centre</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Écrire la note, l'étiquette de couleur et le marquage dans le fichier image</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Écrit les étoiles, l'étiquette de couleur et le marquage conserver ou rejetée dans le fichier JPEG, PNG ou WebP lui-même à chaque modification, pour que les autres programmes les voient aussitôt. Sans cet interrupteur, ils ne figurent que dans le catalogue jusqu'à ce qu'ils soient écrits dans les fichiers depuis le menu Métadonnées.</value>
+  </data>
 </root>

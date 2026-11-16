@@ -11842,4 +11842,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Warna tempat goresan dimulai berlaku untuk seluruh goresan. Tanpa centang, warna di bawah pusat kuas berlaku terus-menerus, dan goresan ikut menghapus apa pun yang dilewati pusatnya</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Tulis peringkat, label warna, dan tanda ke berkas gambar</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Menulis bintang, label warna, dan tanda pertahankan atau ditolak ke berkas JPEG, PNG, dan WebP itu sendiri pada setiap perubahan, agar program lain langsung melihatnya. Tanpa sakelar ini semuanya hanya ada di katalog sampai ditulis ke berkas lewat menu Metadata.</value>
+  </data>
 </root>

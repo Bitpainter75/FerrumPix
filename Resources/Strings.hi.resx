@@ -11842,4 +11842,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>जिस रंग पर स्ट्रोक शुरू होता है, वही पूरे स्ट्रोक के लिए लागू रहता है। बिना चिह्न के ब्रश के केंद्र के नीचे का रंग लगातार लागू होता है, और केंद्र जिस पर से गुज़रता है वह भी हट जाता है</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>रेटिंग, रंग लेबल और निशान छवि फ़ाइल में लिखें</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>हर बदलाव पर सितारे, रंग लेबल और रखें या अस्वीकृत का निशान सीधे JPEG, PNG और WebP फ़ाइल में लिखता है, ताकि दूसरे प्रोग्राम उन्हें तुरंत देख सकें। स्विच के बिना वे केवल कैटलॉग में रहते हैं, जब तक उन्हें मेटाडेटा मेनू से फ़ाइलों में न लिखा जाए।</value>
+  </data>
 </root>

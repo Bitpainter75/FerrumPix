@@ -11838,4 +11838,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>ストロークの開始位置の色が、ストローク全体に適用されます。チェックを外すと、ブラシの中心の下の色が常に使われ、中心が通った部分も消えます</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>評価、カラーラベル、マークを画像ファイルに書き込む</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>変更のたびに、星、カラーラベル、残すまたは不採用のマークを JPEG、PNG、WebP ファイル自体に書き込み、他のプログラムですぐに見えるようにします。このスイッチがオフの場合は、メタデータメニューからファイルに書き込むまでカタログにだけ保存されます。</value>
+  </data>
 </root>

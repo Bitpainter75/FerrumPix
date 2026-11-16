@@ -11842,4 +11842,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Darbenin başladığı renk, darbenin tamamı için geçerlidir. İşaret kaldırılırsa sürekli olarak fırça merkezinin altındaki renk geçerli olur ve darbe, merkezin üzerinden geçtiği yerleri de siler</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Derecelendirmeyi, renk etiketini ve işareti görüntü dosyasına yaz</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Yıldızları, renk etiketini ve koru ya da reddedildi işaretini her değişiklikte JPEG, PNG ve WebP dosyasının kendisine yazar; böylece diğer programlar bunları hemen görür. Anahtar kapalıyken, Üstveri menüsünden dosyalara yazılana kadar yalnızca katalogda dururlar.</value>
+  </data>
 </root>

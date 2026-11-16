@@ -26,6 +26,11 @@
   in different folders: a series spread over folders, or a RAW file with its JPEG in a subfolder.
   A copy of the same picture in another folder is not taken for a second shot.
 
+- A new setting under Catalog, "Write rating, color label and pick mark into the image file",
+  writes these into JPEG, PNG and WebP files at every change, so other programs see them at
+  once. It is off by default; without it they are written with "Write catalog data to the files"
+  as before.
+
 - The Export button has moved from the bar at the bottom of the gallery into the folder panel,
   below Import.
 
@@ -46,6 +51,10 @@
 
 - A crop taken over from an XMP file cut away too much on a RAW file shot with an aspect ratio
   chosen in the camera, for example 16:9. It now matches.
+
+- A rating written into a JPEG file left the fields in which Windows keeps the rating at their
+  old value, so Windows and its photo gallery could go on showing the old stars. They now
+  follow.
 
 - FerrumPix did not start on a system without any sans-serif font. It now takes a font that is
   installed.

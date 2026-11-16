@@ -11838,4 +11838,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Väri, josta veto alkaa, koskee koko vetoa. Ilman valintaa käytetään jatkuvasti siveltimen keskikohdan alla olevaa väriä, ja veto poistaa myös sen, minkä yli keskikohta kulkee</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Kirjoita arvio, värimerkintä ja valintamerkki kuvatiedostoon</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Kirjoittaa tähdet, värimerkinnän ja valintamerkin säilytä tai hylätty jokaisen muutoksen yhteydessä itse JPEG-, PNG- ja WebP-tiedostoon, jotta muut ohjelmat näkevät ne heti. Ilman kytkintä ne ovat vain luettelossa, kunnes ne kirjoitetaan tiedostoihin Metatiedot-valikosta.</value>
+  </data>
 </root>

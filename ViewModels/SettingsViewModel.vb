@@ -37,6 +37,7 @@ Namespace ViewModels
         Private _createXmpSidecarIfMissing As Boolean = False
         Private _writeKeywordsToFileXmp As Boolean = False
         Private _writeKeywordsToFileIptc As Boolean = False
+        Private _writeMarksToFile As Boolean = False
         Private _developRawThumbnails As Boolean = False
         Private _developRawInViewer As Boolean = False
         Private _developRawInViewerWithoutRecipe As Boolean = False
@@ -241,6 +242,7 @@ Namespace ViewModels
         Private _savedCreateXmpSidecarIfMissing As Boolean = False
         Private _savedWriteKeywordsToFileXmp As Boolean = False
         Private _savedWriteKeywordsToFileIptc As Boolean = False
+        Private _savedWriteMarksToFile As Boolean = False
         Private _savedDevelopRawThumbnails As Boolean = False
         Private _savedDevelopRawInViewer As Boolean = False
         Private _savedDevelopRawInViewerWithoutRecipe As Boolean = False
@@ -824,6 +826,19 @@ Namespace ViewModels
             Set(value As Boolean)
                 If _writeKeywordsToFileIptc = value Then Return
                 Me.RaiseAndSetIfChanged(_writeKeywordsToFileIptc, value)
+                SavePerformanceSettings()
+            End Set
+        End Property
+
+        ''' <summary>Bewertung, Farbetikett und Markierung bei jeder Aenderung auch IN die Bilddatei
+        ''' (JPEG, PNG, WebP), siehe CatalogMarkFileWriter. Standard AUS.</summary>
+        Public Property WriteMarksToFile As Boolean
+            Get
+                Return _writeMarksToFile
+            End Get
+            Set(value As Boolean)
+                If _writeMarksToFile = value Then Return
+                Me.RaiseAndSetIfChanged(_writeMarksToFile, value)
                 SavePerformanceSettings()
             End Set
         End Property
@@ -5208,6 +5223,7 @@ Namespace ViewModels
             _createXmpSidecarIfMissing = _appSettings.CreateXmpSidecarIfMissing
             _writeKeywordsToFileXmp = _appSettings.WriteKeywordsToFileXmp
             _writeKeywordsToFileIptc = _appSettings.WriteKeywordsToFileIptc
+            _writeMarksToFile = _appSettings.WriteMarksToFile
             _developRawThumbnails = _appSettings.DevelopRawThumbnails
             _developRawInViewer = _appSettings.DevelopRawInViewer
             _developRawInViewerWithoutRecipe = _appSettings.DevelopRawInViewerWithoutRecipe
@@ -5670,6 +5686,7 @@ Namespace ViewModels
             _savedCreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
             _savedWriteKeywordsToFileXmp = _writeKeywordsToFileXmp
             _savedWriteKeywordsToFileIptc = _writeKeywordsToFileIptc
+            _savedWriteMarksToFile = _writeMarksToFile
             _savedDevelopRawThumbnails = _developRawThumbnails
             _savedDevelopRawInViewer = _developRawInViewer
             _savedDevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe
@@ -5894,6 +5911,7 @@ Namespace ViewModels
             CreateXmpSidecarIfMissing = _savedCreateXmpSidecarIfMissing
             WriteKeywordsToFileXmp = _savedWriteKeywordsToFileXmp
             WriteKeywordsToFileIptc = _savedWriteKeywordsToFileIptc
+            WriteMarksToFile = _savedWriteMarksToFile
             DevelopRawThumbnails = _savedDevelopRawThumbnails
             DevelopRawInViewer = _savedDevelopRawInViewer
             DevelopRawInViewerWithoutRecipe = _savedDevelopRawInViewerWithoutRecipe
@@ -6060,6 +6078,7 @@ Namespace ViewModels
             CreateXmpSidecarIfMissing = False
             WriteKeywordsToFileXmp = False
             WriteKeywordsToFileIptc = False
+            WriteMarksToFile = False
             DevelopRawThumbnails = False
             DevelopRawInViewer = False
             DevelopRawInViewerWithoutRecipe = False
@@ -6569,6 +6588,7 @@ Namespace ViewModels
                                           s.CreateXmpSidecarIfMissing = _createXmpSidecarIfMissing
                                           s.WriteKeywordsToFileXmp = _writeKeywordsToFileXmp
                                           s.WriteKeywordsToFileIptc = _writeKeywordsToFileIptc
+                                          s.WriteMarksToFile = _writeMarksToFile
                                           s.DevelopRawThumbnails = _developRawThumbnails
                                           s.DevelopRawInViewer = _developRawInViewer
                                           s.DevelopRawInViewerWithoutRecipe = _developRawInViewerWithoutRecipe

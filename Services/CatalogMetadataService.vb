@@ -98,6 +98,8 @@ Namespace Services
 
         Private Shared ReadOnly XmpNs As XNamespace = "http://ns.adobe.com/xap/1.0/"
         Private Shared ReadOnly XmpDmNs As XNamespace = "http://ns.adobe.com/xmp/1.0/DynamicMedia/"
+        ''' Der Namensraum, in dem die Bildverwaltung von Windows die Bewertung in Prozent fuehrt.
+        Private Shared ReadOnly MicrosoftPhotoNs As XNamespace = "http://ns.microsoft.com/photo/1.0/"
         Private Shared ReadOnly DcNs As XNamespace = "http://purl.org/dc/elements/1.1/"
         Private Shared ReadOnly LrNs As XNamespace = "http://ns.adobe.com/lightroom/1.0/"
         Private Shared ReadOnly RdfNs As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -239,8 +241,9 @@ Namespace Services
             If (fields And CatalogField.Keywords) <> 0 Then iptc = New Dictionary(Of Integer, List(Of String)) From {{25, keywords}}
             Dim edit As Func(Of IEnumerable(Of XElement), XElement, Boolean) =
                 Function(descriptions, target) ApplyToXmp(descriptions, target, values, fields)
+            Dim exifRating As Integer? = If((fields And CatalogField.Rating) <> 0, CType(values.Rating, Integer?), Nothing)
             Return MetadataFileWriter.Write(imagePath,
-                                            Function() ImageProcessor.EditXmpInFile(imagePath, createsValues, edit, iptc),
+                                            Function() ImageProcessor.EditXmpInFile(imagePath, createsValues, edit, iptc, exifRating),
                                             edit, createsValues, "CatalogMetadata")
         End Function
 
@@ -255,9 +258,21 @@ Namespace Services
             Dim changed = False
             If (fields And CatalogField.Rating) <> 0 Then
                 changed = RemoveEverywhere(all, XmpNs + "Rating") Or changed
+                ' Die Bildverwaltung von Windows fuehrt die Bewertung zusaetzlich in Prozent. Stand
+                ' das Feld da, zieht es mit; bliebe es stehen, truege die Datei zwei Bewertungen,
+                ' und Windows zeigte weiter die alte. Angelegt wird es nicht: ohne dieses Feld liest
+                ' auch Windows xmp:Rating.
+                Dim hadPercent = RemoveEverywhere(all, MicrosoftPhotoNs + "Rating")
+                changed = hadPercent Or changed
                 If values.Rating <> 0 Then
+                    Dim stars = Math.Max(0, Math.Min(5, values.Rating))
                     EnsurePrefix(target, "xmp", XmpNs)
-                    target.SetAttributeValue(XmpNs + "Rating", Math.Max(0, Math.Min(5, values.Rating)).ToString(CultureInfo.InvariantCulture))
+                    target.SetAttributeValue(XmpNs + "Rating", stars.ToString(CultureInfo.InvariantCulture))
+                    If hadPercent Then
+                        EnsurePrefix(target, "MicrosoftPhoto", MicrosoftPhotoNs)
+                        target.SetAttributeValue(MicrosoftPhotoNs + "Rating",
+                                                 ImageProcessor.RatingToPercent(stars).ToString(CultureInfo.InvariantCulture))
+                    End If
                     changed = True
                 End If
             End If
@@ -314,7 +329,10 @@ Namespace Services
         Private Shared Function XmpNamesFor(what As MetadataRemovalFields) As List(Of XName)
             Dim names As New List(Of XName)()
             Dim everything = (what And MetadataRemovalFields.Everything) <> 0
-            If everything OrElse (what And MetadataRemovalFields.Rating) <> 0 Then names.Add(XmpNs + "Rating")
+            If everything OrElse (what And MetadataRemovalFields.Rating) <> 0 Then
+                names.Add(XmpNs + "Rating")
+                names.Add(MicrosoftPhotoNs + "Rating")
+            End If
             If everything OrElse (what And MetadataRemovalFields.ColorLabel) <> 0 Then names.Add(XmpNs + "Label")
             If everything OrElse (what And MetadataRemovalFields.PickState) <> 0 Then names.Add(XmpDmNs + "good")
             If everything OrElse (what And MetadataRemovalFields.Keywords) <> 0 Then

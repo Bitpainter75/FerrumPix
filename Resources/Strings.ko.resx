@@ -11842,4 +11842,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>획이 시작된 지점의 색이 획 전체에 적용됩니다. 선택을 해제하면 브러시 중심 아래의 색이 계속 적용되어, 중심이 지나가는 부분도 함께 지워집니다</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>등급, 색 라벨, 표시를 이미지 파일에 쓰기</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>변경할 때마다 별, 색 라벨, 유지 또는 거부됨 표시를 JPEG, PNG, WebP 파일 자체에 써서 다른 프로그램이 바로 볼 수 있게 합니다. 이 스위치가 꺼져 있으면 메타데이터 메뉴에서 파일에 쓸 때까지 카탈로그에만 남습니다.</value>
+  </data>
 </root>

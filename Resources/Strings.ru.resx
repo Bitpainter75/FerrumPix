@@ -11838,4 +11838,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Цвет, с которого начинается мазок, действует для всего мазка. Без флажка постоянно берётся цвет под центром кисти, и мазок убирает также то, над чем проходит центр</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Записывать оценку, цветную метку и отметку в файл изображения</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>При каждом изменении записывает звёзды, цветную метку и отметку оставить или отклонено прямо в файл JPEG, PNG или WebP, чтобы другие программы видели их сразу. Без переключателя они хранятся только в каталоге, пока не будут записаны в файлы через меню Метаданные.</value>
+  </data>
 </root>

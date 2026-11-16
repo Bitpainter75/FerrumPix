@@ -11816,4 +11816,10 @@
   <data name="Die_Farbe_auf_der_der_Zug_beginnt_gilt_f_r_den_g_ebc67d00" xml:space="preserve">
     <value>Die Farbe, auf der der Zug beginnt, gilt für den ganzen Zug. Ohne Haken gilt fortlaufend die Farbe unter der Pinselmitte, und der Zug nimmt mit, worüber die Mitte wandert</value>
   </data>
+  <data name="Bewertung_Farbetikett_und_Markierung_in_die_Bild_f6e7dde4" xml:space="preserve">
+    <value>Bewertung, Farbetikett und Markierung in die Bilddatei schreiben</value>
+  </data>
+  <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
+    <value>Schreibt Sterne, Farbetikett und die Markierung behalten oder verworfen bei jeder Änderung in JPEG, PNG und WebP selbst, damit andere Programme sie sofort sehen. Ohne den Schalter stehen sie nur im Katalog, bis sie über das Menü Metadaten in die Dateien geschrieben werden.</value>
+  </data>
 </root>
