@@ -11834,4 +11834,40 @@
   <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
     <value>STRG+SHIFT+V</value>
   </data>
+  <data name="Varianten_d2204a72" xml:space="preserve">
+    <value>Varianten</value>
+  </data>
+  <data name="Neue_Variante_6d4b10f9" xml:space="preserve">
+    <value>Neue Variante</value>
+  </data>
+  <data name="Neue_Variante_ohne_Anpassungen_55402b8d" xml:space="preserve">
+    <value>Neue Variante ohne Anpassungen</value>
+  </data>
+  <data name="Variante_umbenennen_0e818775" xml:space="preserve">
+    <value>Variante umbenennen</value>
+  </data>
+  <data name="Variante_l_schen_1768aae8" xml:space="preserve">
+    <value>Variante löschen</value>
+  </data>
+  <data name="Variante_0_77b9508b" xml:space="preserve">
+    <value>Variante {0}</value>
+  </data>
+  <data name="Name_der_Variante_48a511fb" xml:space="preserve">
+    <value>Name der Variante</value>
+  </data>
+  <data name="Eine_Variante_mit_diesem_Namen_gibt_es_schon_3cb116c0" xml:space="preserve">
+    <value>Eine Variante mit diesem Namen gibt es schon.</value>
+  </data>
+  <data name="Die_Variante_0_wird_gel_scht_Das_l_sst_sich_nich_3b2e3352" xml:space="preserve">
+    <value>Die Variante {0} wird gelöscht. Das lässt sich nicht zurücknehmen.</value>
+  </data>
+  <data name="Variante_0_ec217018" xml:space="preserve">
+    <value>Variante: {0}</value>
+  </data>
+  <data name="Gespeicherte_Anpassungen_23453e97" xml:space="preserve">
+    <value>Gespeicherte Anpassungen</value>
+  </data>
+  <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
+    <value>{0} Variante(n) werden mit gelöscht.</value>
+  </data>
 </root>

@@ -20,10 +20,16 @@
                 Padding="22">
             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Drucken"
-                               FontSize="{DynamicResource FP.Font.Heading}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource FP.Text.Primary}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/printer.svg"
+                                       Width="22" Height="22"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="Drucken"
+                                   FontSize="{DynamicResource FP.Font.Heading}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource FP.Text.Primary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock Text="Die Auswahl wird als PDF aufbereitet und im Standardprogramm geöffnet - dort erscheint der gewohnte Druckdialog des Systems."
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                TextWrapping="Wrap"/>

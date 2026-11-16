@@ -32,9 +32,18 @@
                               Margin="0,0,-16,0"
                               Padding="0,0,16,0">
                     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                        <TextBlock Classes="no-translate" Text="{Binding DialogTitle}"
-                                   FontSize="{DynamicResource FP.Font.Heading}"
-                                   FontWeight="SemiBold"/>
+                        <!-- Vor der Ueberschrift das Symbol der Aktion, wie es im Menue steht
+                             (ViewModels/DialogIcons.vb). -->
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="{Binding DialogIconSource}"
+                                           IsVisible="{Binding DialogIconSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           Width="22" Height="22"
+                                           VerticalAlignment="Center"/>
+                            <TextBlock Classes="no-translate" Text="{Binding DialogTitle}"
+                                       FontSize="{DynamicResource FP.Font.Heading}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                         <TextBlock Grid.Row="1"
                                    Text="{Binding DialogMessage}"
                                    Foreground="{DynamicResource FP.Text.Secondary}"

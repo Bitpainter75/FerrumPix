@@ -35,10 +35,16 @@
                 Padding="22">
             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Neues Bild"
-                               FontSize="{DynamicResource FP.Font.Heading}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource FP.Text.Primary}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"
+                                       Width="22" Height="22"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="Neues Bild"
+                                   FontSize="{DynamicResource FP.Font.Heading}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource FP.Text.Primary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock Text="Wähle eine Vorgabe oder trage eigene Maße ein."
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                TextWrapping="Wrap"/>

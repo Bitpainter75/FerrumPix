@@ -11860,4 +11860,40 @@
   <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
     <value>CTRL+SHIFT+V</value>
   </data>
+  <data name="Varianten_d2204a72" xml:space="preserve">
+    <value>वेरिएंट</value>
+  </data>
+  <data name="Neue_Variante_6d4b10f9" xml:space="preserve">
+    <value>नया वेरिएंट</value>
+  </data>
+  <data name="Neue_Variante_ohne_Anpassungen_55402b8d" xml:space="preserve">
+    <value>बिना समायोजन का नया वेरिएंट</value>
+  </data>
+  <data name="Variante_umbenennen_0e818775" xml:space="preserve">
+    <value>वेरिएंट का नाम बदलें</value>
+  </data>
+  <data name="Variante_l_schen_1768aae8" xml:space="preserve">
+    <value>वेरिएंट हटाएँ</value>
+  </data>
+  <data name="Variante_0_77b9508b" xml:space="preserve">
+    <value>वेरिएंट {0}</value>
+  </data>
+  <data name="Name_der_Variante_48a511fb" xml:space="preserve">
+    <value>वेरिएंट का नाम</value>
+  </data>
+  <data name="Eine_Variante_mit_diesem_Namen_gibt_es_schon_3cb116c0" xml:space="preserve">
+    <value>इस नाम का वेरिएंट पहले से मौजूद है।</value>
+  </data>
+  <data name="Die_Variante_0_wird_gel_scht_Das_l_sst_sich_nich_3b2e3352" xml:space="preserve">
+    <value>वेरिएंट {0} हटा दिया जाएगा। इसे वापस नहीं लिया जा सकता।</value>
+  </data>
+  <data name="Variante_0_ec217018" xml:space="preserve">
+    <value>वेरिएंट: {0}</value>
+  </data>
+  <data name="Gespeicherte_Anpassungen_23453e97" xml:space="preserve">
+    <value>सहेजे गए समायोजन</value>
+  </data>
+  <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
+    <value>इसके साथ {0} वेरिएंट भी हटा दिए जाएँगे।</value>
+  </data>
 </root>

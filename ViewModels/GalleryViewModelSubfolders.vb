@@ -216,7 +216,8 @@ Namespace ViewModels
                                     Continue For
                                 End Try
                                 If files.Length = 0 Then Continue For
-                                batch.AddRange(BuildFileItems(files, folder, thumbnailToken, needsMetaRefresh))
+                                batch.AddRange(WithVariantItems(BuildFileItems(files, folder, thumbnailToken, needsMetaRefresh),
+                                                                folder, Nothing, thumbnailToken))
                             Else
                                 ' Ein Unterordner, den nur noch der Katalog kennt: seine Bilder
                                 ' kommen von dort, wie in der Ansicht des Ordners selbst.

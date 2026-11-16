@@ -112,6 +112,28 @@
 
   <releases>
 
+    <release version="0.9.86-1" date="2026-11-17">
+      <description>
+        <p>This update lets you create multiple editing variants of a single RAW photo, copy and paste adjustments in the viewer and editor, and brings clearer dialogs with icons and search fields that are easier to clear:</p>
+        <p xml:lang="de">Mit diesem Update kannst du mehrere Bearbeitungsvarianten eines RAW-Fotos erstellen, Anpassungen auch im Betrachter und Editor kopieren und einfügen und dich über übersichtlichere Dialoge mit Symbolen und leichter zu leerenden Suchfeldern freuen:</p>
+        <ul>
+          <li>A single RAW photo can now have multiple editing variants, such as a colour version and a black-and-white version. Each variant has its own rating, colour label, pick mark and keywords, and appears as a separate photo in the gallery, filmstrip, fullscreen view and viewer comparison. When exporting, each variant gets its own file. All variants are stored together in a single sidecar file next to the original RAW. Renaming or deleting a variant never changes the original file, and if you delete the Standard variant, the next one takes its place.</li>
+          <li xml:lang="de">Für ein einzelnes RAW-Foto kannst du jetzt mehrere Bearbeitungsvarianten anlegen, zum Beispiel eine Farbversion und eine in Schwarzweiß. Jede Variante hat ihre eigene Bewertung, ihr eigenes Farbetikett, ihre eigene Markierung und eigene Stichwörter. In der Galerie, im Filmstreifen, in der Vollbildansicht und beim Bildvergleich erscheint sie jeweils als eigenständiges Foto. Beim Exportieren erhält jede Variante eine eigene Datei. Alle Varianten werden gemeinsam in einer einzigen Beistelldatei neben dem ursprünglichen RAW gespeichert. Wenn du eine Variante umbenennst oder löschst, bleibt die Originaldatei unverändert. Löschst du die Variante Standard, übernimmt die nächste ihren Platz.</li>
+
+          <li>In the editor, the Adjust tool has been renamed Light. Saved adjustments have moved to the Filters panel, which now also contains a new Variants section. Here you can switch between variants of the current photo, create new ones, rename them or delete them. The window title shows which variant you're currently editing.</li>
+          <li xml:lang="de">Im Editor wurde das Werkzeug Anpassen in Licht umbenannt. Die gespeicherten Anpassungen findest du jetzt im Filterbereich. Dort gibt es auch den neuen Abschnitt Varianten, in dem du zwischen den Varianten des aktuellen Fotos wechseln, neue anlegen sowie vorhandene umbenennen oder löschen kannst. Im Fenstertitel siehst du, welche Variante du gerade bearbeitest.</li>
+
+          <li>You can now copy adjustments from one photo and paste them onto others in the gallery, viewer and editor alike. The shortcuts are the same everywhere: Ctrl+Shift+C to copy and Ctrl+Shift+V to paste.</li>
+          <li xml:lang="de">Du kannst die Anpassungen eines Fotos jetzt sowohl in der Galerie als auch im Betrachter und Editor kopieren und auf andere Fotos übertragen. Die Tastenkürzel sind überall gleich: Strg+Umschalt+C zum Kopieren und Strg+Umschalt+V zum Einfügen.</li>
+
+          <li>Dialogs now show an icon matching the action next to their heading, making them easier to recognise at a glance. Every search field also has a small clear button (×) so you can remove the search text with a single click.</li>
+          <li xml:lang="de">Dialoge zeigen jetzt neben ihrer Überschrift ein passendes Symbol, sodass du ihren Zweck auf einen Blick erkennst. Außerdem hat jedes Suchfeld eine kleine Schaltfläche (×), mit der du den Suchtext per Klick entfernen kannst.</li>
+
+          <li>Fixed an issue where the gallery incorrectly showed "No keywords assigned" when a search in the keyword list returned no matches. In the Flatpak version, files without write permission can now also be moved to the trash on a second drive.</li>
+          <li xml:lang="de">Ein Fehler wurde behoben, durch den die Galerie fälschlicherweise „Keine Stichwörter vergeben“ anzeigte, wenn eine Suche in der Stichwortliste keine Treffer lieferte. In der Flatpak-Version lassen sich außerdem Dateien ohne Schreibberechtigung jetzt auch auf einem zweiten Laufwerk in den Papierkorb verschieben.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.85-1" date="2026-11-16">
       <description>
         <p>This update brings hierarchical keywords, full 16-bit processing for TIFF files, an edge-aware brush and two new erasers. It also fixes a crash during RAW development:</p>

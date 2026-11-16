@@ -5175,7 +5175,7 @@ Namespace ViewModels
                                           ElseIf Not String.IsNullOrEmpty(_nextcloudSourcePseudoPath) Then
                                               LibraryService.Instance.SetRating(_nextcloudSourcePseudoPath, value, syncToXmp:=False)
                                           ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                              LibraryService.Instance.SetRating(_currentImagePath, value, syncToXmp:=True)
+                                              LibraryService.Instance.SetRating(CurrentItemPath, value, syncToXmp:=True)
                                           End If
                                       End Sub
 
@@ -5187,7 +5187,7 @@ Namespace ViewModels
                                                 ' Den Favoriten kennt dieser Server als Eigenschaft AN DER DATEI.
                                                 Dim ignored = NextcloudService.SetFavoriteAsync(_nextcloudSourcePath, value)
                                             ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                LibraryService.Instance.SetFavorite(_currentImagePath, value)
+                                                LibraryService.Instance.SetFavorite(CurrentItemPath, value)
                                             End If
                                         End Sub
 
@@ -5202,7 +5202,7 @@ Namespace ViewModels
                                               ElseIf Not String.IsNullOrEmpty(_nextcloudSourcePseudoPath) Then
                                                   LibraryService.Instance.SetColorLabelForMany({_nextcloudSourcePseudoPath}, value)
                                               ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                                  LibraryService.Instance.SetColorLabelForMany({_currentImagePath}, value, syncToXmp:=True)
+                                                  LibraryService.Instance.SetColorLabelForMany({CurrentItemPath}, value, syncToXmp:=True)
                                               End If
                                           End Sub
 
@@ -5222,7 +5222,7 @@ Namespace ViewModels
                                            ' den Katalog, wo es niemand wiederfindet.
                                            Dim ignored = NextcloudService.SetTagByPathAsync(_nextcloudSourcePath, tag, gesetzt)
                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                           LibraryService.Instance.SetTags(_currentImagePath, InfoPanel.Tags, syncToXmp:=True)
+                                           LibraryService.Instance.SetTags(CurrentItemPath, InfoPanel.Tags, syncToXmp:=True)
                                        End If
                                    End Sub
         End Sub
@@ -5299,6 +5299,30 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' Welche Variante des Bildes geoeffnet ist. _currentImagePath fuehrt die DATEI; die Kennung
+        ' einer zusaetzlichen Variante steht daneben und gilt nur fuer genau diesen Pfad. Wechselt
+        ' der Editor zu einer anderen Datei, gilt dort von selbst wieder die Standardvariante.
+        Private _variantOfPath As String = ""
+        Private _variantId As String = ""
+
+        ''' <summary>Der Rezept- und Katalogschluessel zu einem Pfad: fuer die Datei, deren
+        ''' zusaetzliche Variante geoeffnet ist, der Schluessel dieser Variante
+        ''' (Services.VariantKey), fuer jede andere der Pfad selbst. Gilt schon waehrend des Ladens,
+        ''' bevor der Pfad der geoeffneten Datei gesetzt ist.</summary>
+        Private Function ItemPathFor(path As String) As String
+            If _variantId.Length = 0 OrElse Not String.Equals(path, _variantOfPath, PathIdentity.Comparison) Then Return path
+            Return VariantKey.Make(path, _variantId)
+        End Function
+
+        ''' <summary>Das geoeffnete Bild samt Variante: der Pfad, bei einer zusaetzlichen Variante ihr
+        ''' Schluessel. Was Rezept oder Katalogdaten meint, nimmt diesen Wert; was die Datei
+        ''' anfasst, <see cref="CurrentImagePath"/>.</summary>
+        Public ReadOnly Property CurrentItemPath As String
+            Get
+                Return ItemPathFor(_currentImagePath)
+            End Get
+        End Property
+
         Public Property CurrentImagePath As String
             Get
                 Return _currentImagePath
@@ -5312,6 +5336,7 @@ Namespace ViewModels
                 ' nicht mehr, aber es hielte bis zur naechsten Maske seinen Speicher.
                 ReleaseRangeSampleImage()
                 Me.RaisePropertyChanged(NameOf(CurrentFileName))
+                RaiseVariantState()
                 _mainVm?.RefreshWindowTitle()
                 Me.RaisePropertyChanged(NameOf(IsRawDeveloped))
                 Me.RaisePropertyChanged(NameOf(RawSensorEdgeCropAvailable))
@@ -5960,11 +5985,11 @@ Namespace ViewModels
                     Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
                     Case EditorTool.Warp : Return LocalizationService.T("Verzerren")
                     Case EditorTool.Light : Return LocalizationService.T("Beleuchtung")
-                    Case EditorTool.Adjust : Return LocalizationService.T("Anpassen")
+                    Case EditorTool.Adjust : Return LocalizationService.T("Licht")
                     Case EditorTool.Color : Return LocalizationService.T("Farbe")
                     Case EditorTool.Details : Return LocalizationService.T("Details")
                     Case EditorTool.Effects, EditorTool.Frame : Return LocalizationService.T("Effekte")
-                    Case EditorTool.Filters : Return LocalizationService.T("Filter")
+                    Case EditorTool.Filters : Return LocalizationService.T("Anpassungen")
                     Case EditorTool.AllAdjustments : Return LocalizationService.T("Anpassungen")
                     Case EditorTool.Move : Return LocalizationService.T("Verschieben")
                     Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
@@ -17894,6 +17919,13 @@ Namespace ViewModels
 
         Public ReadOnly Property CopyAdjustmentsCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCommand As ICommand
+        ''' <summary>Die Varianten des Bildes, auf das das Menü zeigt, über denselben Ablauf wie in
+        ''' der Galerie (<see cref="ChangeVariantCurrentAsync"/>).</summary>
+        Public ReadOnly Property SwitchVariantCommand As ICommand
+        Public ReadOnly Property NewVariantCommand As ICommand
+        Public ReadOnly Property NewVariantFromStartValuesCommand As ICommand
+        Public ReadOnly Property RenameVariantCommand As ICommand
+        Public ReadOnly Property DeleteVariantCommand As ICommand
         Public ReadOnly Property SaveAdjustmentPresetCommand As ICommand
         Public ReadOnly Property DeleteAdjustmentPresetCommand As ICommand
         Public ReadOnly Property ApplyAdjustmentPresetCommand As ICommand
@@ -18505,6 +18537,11 @@ Namespace ViewModels
                                                          End Function)
             CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() CopyCurrentAdjustments())
             PasteAdjustmentsCommand = ReactiveCommand.Create(Sub() PasteCopiedAdjustments())
+            SwitchVariantCommand = ReactiveCommand.CreateFromTask(Of Object)(Function(parameter) ShowVariantAsync(TryCast(parameter, String)))
+            NewVariantCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromCurrent))
+            NewVariantFromStartValuesCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromStartValues))
+            RenameVariantCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.Rename))
+            DeleteVariantCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.Delete))
             SaveAdjustmentPresetCommand = ReactiveCommand.Create(Sub() SaveCurrentAdjustmentPreset())
             DeleteAdjustmentPresetCommand = ReactiveCommand.Create(Sub() DeleteSelectedAdjustmentPreset())
             ApplyAdjustmentPresetCommand = ReactiveCommand.Create(Sub() ApplySelectedAdjustmentPreset())
@@ -19155,7 +19192,7 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return
                 Dim gallery = _mainVm?.Gallery
                 If gallery Is Nothing Then Return
-                Dim item = New ImageItem(path)
+                Dim item = New ImageItem(ItemPathFor(path))
                 If Not item.IsImage Then Return
                 ablauf(gallery, New List(Of ImageItem) From {item})
             Catch ex As Exception
@@ -19177,7 +19214,7 @@ Namespace ViewModels
                 If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return
                 Dim gallery = _mainVm?.Gallery
                 If gallery Is Nothing Then Return
-                Dim item = New ImageItem(path)
+                Dim item = New ImageItem(ItemPathFor(path))
                 If Not item.IsImage Then Return
                 Await ablauf(gallery, New List(Of ImageItem) From {item})
             Catch ex As Exception
@@ -19192,6 +19229,79 @@ Namespace ViewModels
             InfoPanel.RefreshPlace()
             RefreshContextActions()
         End Sub
+
+        ''' <summary>Öffnet eine andere Variante der geöffneten Datei: die mit dieser Kennung, leer
+        ''' für die Standardvariante. Vorher kommt die Speicherfrage, denn ungespeicherte Regler
+        ''' gehören in die Variante, die gerade offen ist, oder werden verworfen. In die Datei
+        ''' geschrieben wird beim Wechsel selbst nichts.
+        '''
+        ''' Führt "Speichern" in der Frage zu einer anderen Datei (ein Bild mit Objekten wird zur
+        ''' .fpx), ist das geöffnete Dokument nicht mehr die Aufnahme, und es bleibt dabei.</summary>
+        Private Async Function ShowVariantAsync(variantId As String) As Task
+            Try
+                Dim path = _currentImagePath
+                If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return
+                variantId = If(variantId, "")
+                If String.Equals(variantId, VariantKey.IdOf(CurrentItemPath), StringComparison.OrdinalIgnoreCase) Then Return
+                If HasUnsavedChanges Then
+                    If Not Await ConfirmSaveBeforeLeavingAsync("") Then Return
+                    If Not PathIdentity.AreSame(path, _currentImagePath) Then Return
+                End If
+                _variantOfPath = path
+                _variantId = variantId
+                Await ReloadCurrentDocumentAsync()
+                RefreshContextActions()
+                _mainVm?.RefreshWindowTitle()
+                Dim name = RawSidecarService.VariantName(CurrentItemPath)
+                StatusText = String.Format(LocalizationService.T("Variante: {0}"),
+                                           If(name.Length = 0, GalleryViewModel.DefaultVariantName(), name))
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.Variants", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Function
+
+        ''' <summary>Legt neben dem gemeinten Bild eine Variante an, benennt seine Variante um oder
+        ''' löscht sie, mit dem Ablauf der Galerie. Der arbeitet auf der DATEI: eine neue Variante
+        ''' geht vom GESPEICHERTEN Stand aus. Ist das gemeinte Bild das geöffnete, kommt deshalb
+        ''' vor dem Anlegen und dem Löschen die Speicherfrage. Danach öffnet der Editor die
+        ''' Variante, um die es ging: die neue, nach dem Löschen die Standardvariante.</summary>
+        Private Async Function ChangeVariantCurrentAsync(change As GalleryViewModel.VariantAction) As Task
+            Try
+                Dim path = TargetPath()
+                If String.IsNullOrWhiteSpace(path) Then Return
+                Dim isOpenDocument = PathIdentity.AreSame(path, _currentImagePath)
+                Dim changesRecipe = change <> GalleryViewModel.VariantAction.Rename
+                Dim hadChanges = isOpenDocument AndAlso changesRecipe AndAlso HasUnsavedChanges
+                If hadChanges Then
+                    If Not Await ConfirmSaveBeforeLeavingAsync("") Then Return
+                    If Not PathIdentity.AreSame(path, _currentImagePath) Then Return
+                End If
+                Dim affected As String = Nothing
+                Await WithCurrentImageAsync(Async Function(g, i)
+                                                affected = Await g.ChangeVariantForImageItemAsync(i(0), change,
+                                                                                                  Sub(text) StatusText = text)
+                                            End Function)
+                RefreshContextActions()
+                If Not isOpenDocument Then Return
+                ' Der Name der Variante steht im Fenstertitel.
+                If affected IsNot Nothing Then _mainVm?.RefreshWindowTitle()
+                If affected IsNot Nothing AndAlso changesRecipe Then
+                    _variantOfPath = path
+                    _variantId = VariantKey.IdOf(affected)
+                    Await ReloadCurrentDocumentAsync()
+                    RefreshContextActions()
+                    _mainVm?.RefreshWindowTitle()
+                ElseIf hadChanges Then
+                    ' Auch ohne Änderung neu laden, wenn die Frage gestellt wurde: "Nicht speichern"
+                    ' hat die Regler zurückgesetzt, und ein abgebrochener Namensdialog ließe sie so stehen.
+                    Await ReloadCurrentDocumentAsync()
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.Variants", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Function
 
         Private Async Function SetPlaceCurrentAsync() As Task
             Await WithCurrentImageAsync(Async Function(g, i)
@@ -19340,6 +19450,11 @@ Namespace ViewModels
                                                     .CopyAdjustments = CopyAdjustmentsCommand,
                                                     .PasteAdjustments = PasteAdjustmentsCommand,
                                                     .AdjustmentsFromOpenDocument = True,
+                                                    .SwitchVariant = SwitchVariantCommand,
+                                                    .NewVariant = NewVariantCommand,
+                                                    .NewVariantFromStartValues = NewVariantFromStartValuesCommand,
+                                                    .RenameVariant = RenameVariantCommand,
+                                                    .DeleteVariant = DeleteVariantCommand,
                                                     .ConvertTo = ConvertCurrentCommand,
                                                     .ExportTo = ExportCurrentCommand,
                                                     .Print = PrintCommand,
@@ -19377,10 +19492,89 @@ Namespace ViewModels
 
         Public Sub RefreshContextActions()
             Me.RaisePropertyChanged(NameOf(ContextActions))
+            RaiseVariantState()
         End Sub
+
+        ''' <summary>Die Gruppe "Varianten" im Anpassen-Panel neu melden: sie leitet sich aus der
+        ''' Begleitdatei und der geoeffneten Variante ab und meldet nie von selbst.</summary>
+        Private Sub RaiseVariantState()
+            Me.RaisePropertyChanged(NameOf(CanShowVariants))
+            Me.RaisePropertyChanged(NameOf(VariantChoices))
+            Me.RaisePropertyChanged(NameOf(CanRenameOpenVariant))
+            Me.RaisePropertyChanged(NameOf(CanDeleteOpenVariant))
+        End Sub
+
+        ''' <summary>Kann das geoeffnete Bild Varianten tragen? Eine lokale RAW, die als RAW
+        ''' geoeffnet ist; ein Projektbuendel und die Arbeitskopie eines Serverbildes nicht.</summary>
+        Public ReadOnly Property CanShowVariants As Boolean
+            Get
+                If String.IsNullOrEmpty(_currentImagePath) OrElse Not String.IsNullOrEmpty(_currentFpxPath) Then Return False
+                Return RawPreviewService.IsSupportedRaw(_currentImagePath) AndAlso Not LibraryService.IsServerTempPath(_currentImagePath)
+            End Get
+        End Property
+
+        ''' <summary>Die Varianten des geoeffneten Bildes fuer die Liste im Panel: "Standard" und die
+        ''' zusaetzlichen, die geoeffnete mit Haken. Ein Klick oeffnet die andere.</summary>
+        Public ReadOnly Property VariantChoices As IReadOnlyList(Of AppAction)
+            Get
+                Dim result As New List(Of AppAction)()
+                If Not CanShowVariants Then Return result
+                Try
+                    Dim shownId = VariantKey.IdOf(CurrentItemPath)
+                    result.Add(FooterMenuCatalog.VariantEntry(GalleryViewModel.DefaultVariantName(), shownId.Length = 0, SwitchVariantCommand, ""))
+                    For Each sidecarVariant In RawSidecarService.ReadVariants(_currentImagePath)
+                        result.Add(FooterMenuCatalog.VariantEntry(sidecarVariant.Name,
+                                                                  String.Equals(sidecarVariant.Id, shownId, StringComparison.OrdinalIgnoreCase),
+                                                                  SwitchVariantCommand, sidecarVariant.Id))
+                    Next
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Editor.Variants", ex)
+                End Try
+                Return result
+            End Get
+        End Property
+
+        ''' <summary>Umbenennen laesst sich nur eine zusaetzliche Variante; "Standard" hat keinen
+        ''' eigenen Namen.</summary>
+        Public ReadOnly Property CanRenameOpenVariant As Boolean
+            Get
+                Return CanShowVariants AndAlso VariantKey.IsVariant(CurrentItemPath)
+            End Get
+        End Property
+
+        ''' <summary>Loeschen laesst sich jede Variante, solange die Datei mehr als eine hat.</summary>
+        Public ReadOnly Property CanDeleteOpenVariant As Boolean
+            Get
+                Return CanShowVariants AndAlso
+                       (VariantKey.IsVariant(CurrentItemPath) OrElse RawSidecarService.ReadVariants(_currentImagePath).Count > 0)
+            End Get
+        End Property
+
+        ''' <summary>Die Knoepfe der Gruppe "Varianten": dieselben Ablaeufe wie im Kontextmenue,
+        ''' aber immer fuer das GEOEFFNETE Bild, auch wenn das Menue zuletzt auf einer Kachel des
+        ''' Filmstreifens stand.</summary>
+        Public ReadOnly Property NewVariantOfOpenImageCommand As ICommand =
+            ReactiveCommand.CreateFromTask(Function() ChangeOpenVariantAsync(GalleryViewModel.VariantAction.AddFromCurrent))
+        Public ReadOnly Property NewVariantFromStartValuesOfOpenImageCommand As ICommand =
+            ReactiveCommand.CreateFromTask(Function() ChangeOpenVariantAsync(GalleryViewModel.VariantAction.AddFromStartValues))
+        Public ReadOnly Property RenameVariantOfOpenImageCommand As ICommand =
+            ReactiveCommand.CreateFromTask(Function() ChangeOpenVariantAsync(GalleryViewModel.VariantAction.Rename))
+        Public ReadOnly Property DeleteVariantOfOpenImageCommand As ICommand =
+            ReactiveCommand.CreateFromTask(Function() ChangeOpenVariantAsync(GalleryViewModel.VariantAction.Delete))
+
+        Private Function ChangeOpenVariantAsync(change As GalleryViewModel.VariantAction) As Task
+            ContextTargetPath = ""
+            Return ChangeVariantCurrentAsync(change)
+        End Function
 
         Private Sub RenameCurrent()
             If String.IsNullOrWhiteSpace(_currentImagePath) Then Return
+            ' Eine zusaetzliche Variante hat ihren eigenen Namen; der der Datei gehoert allen.
+            If VariantKey.IsVariant(CurrentItemPath) Then
+                ContextTargetPath = ""
+                RenameVariantCommand.Execute(Nothing)
+                Return
+            End If
             _mainVm?.RequestRenamePath(_currentImagePath, Sub(neuerPfad) CurrentImagePath = neuerPfad)
         End Sub
 
@@ -19393,6 +19587,14 @@ Namespace ViewModels
 
         Private Sub DeleteCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Ist eine zusaetzliche Variante geoeffnet, loescht das Loeschen DIESE VERSION und nicht
+            ' die Datei mit allen anderen, wie an ihrer Kachel in der Galerie.
+            If VariantKey.IsVariant(CurrentItemPath) OrElse
+               (RawPreviewService.IsSupportedRaw(_currentImagePath) AndAlso RawSidecarService.ReadVariants(_currentImagePath).Count > 0) Then
+                ContextTargetPath = ""
+                DeleteVariantCommand.Execute(Nothing)
+                Return
+            End If
             Dim deletedPath = _currentImagePath
             ' Mit ungespeicherter Bearbeitung gibt RequestDeletePaths das Bild erst nach gelungenem
             ' Loeschen frei; scheitert es, steht der Editor unveraendert da.
@@ -19462,7 +19664,7 @@ Namespace ViewModels
                                 String.Equals(AppSettingsService.NormalizeEditorHomeTarget(_mainVm?.Settings?.EditorHomeTarget),
                                               "Gallery", StringComparison.Ordinal)
             If _entryMode = AppMode.Gallery OrElse homeToGallery Then
-                If Not String.IsNullOrEmpty(_currentImagePath) Then _mainVm.Gallery?.SelectItemByPath(_currentImagePath)
+                If Not String.IsNullOrEmpty(_currentImagePath) Then _mainVm.Gallery?.SelectItemByPath(CurrentItemPath)
                 _mainVm.CurrentMode = AppMode.Gallery
                 Return
             End If
@@ -19489,7 +19691,7 @@ Namespace ViewModels
             Dim editorIsImmich = _immichSourceAlbumId IsNot Nothing OrElse ImmichService.IsImmichTempPath(_currentImagePath)
             If editorIsImmich AndAlso viewer IsNot Nothing AndAlso viewer.IsImmichSession Then
                 If Not String.IsNullOrEmpty(_currentImagePath) AndAlso IO.File.Exists(_currentImagePath) Then
-                    viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                    viewer.OpenImage(CurrentItemPath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                 Else
                     viewer.ReloadCurrentImageFromDisk()
                 End If
@@ -19502,7 +19704,7 @@ Namespace ViewModels
                 ' frueher und las die Datei IMMER noch einmal, nach dem Speichern sogar doppelt
                 ' (Nutzerbefund HEIC). Nach einer Aenderung braucht es nur die neue Kachel.
                 Dim unchanged = _mainVm.Viewer.ShowsUnchanged(_currentImagePath)
-                _mainVm.Viewer.OpenImage(_currentImagePath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
+                _mainVm.Viewer.OpenImage(CurrentItemPath, _folderPaths.ToList(), _thumbCacheScopeId, _thumbCacheScopeName)
                 If Not unchanged Then _mainVm.Viewer.RefreshCurrentFilmstripThumbnail()
                 _mainVm.CurrentMode = AppMode.Viewer
             Else
@@ -19758,11 +19960,11 @@ Namespace ViewModels
 
         Private Shared Function SwitcherToolName(tool As EditorTool) As String
             Select Case tool
-                Case EditorTool.Adjust : Return LocalizationService.T("Anpassen")
+                Case EditorTool.Adjust : Return LocalizationService.T("Licht")
                 Case EditorTool.Color : Return LocalizationService.T("Farbe")
                 Case EditorTool.Details : Return LocalizationService.T("Details")
                 Case EditorTool.Effects : Return LocalizationService.T("Effekte")
-                Case EditorTool.Filters : Return LocalizationService.T("Filter")
+                Case EditorTool.Filters : Return LocalizationService.T("Anpassungen")
                 Case EditorTool.AllAdjustments : Return LocalizationService.T("Anpassungen")
                 Case EditorTool.Transform : Return LocalizationService.T("Transformieren")
                 Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
@@ -19832,7 +20034,7 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Eine SVG-Grafik wird nicht als Bild geöffnet. Auf das Bild ziehen, dann wird sie als Ebene eingesetzt.")
                 Return
             End If
-            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, PathIdentity.Comparison))
+            Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.ItemPath, PathIdentity.Comparison))
             If idx < 0 Then Return
             If Not Await ConfirmSaveBeforeLeavingAsync("dieses Bild öffnest") Then Return
             _currentIndex = idx
@@ -19843,7 +20045,9 @@ Namespace ViewModels
             ' das schadet nicht.
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             MarkCurrentFilmstripItem()
-            Await LoadImageContent(item.FilePath)
+            ' Der EINTRAG der Kachel, nicht der Pfad ihrer Datei: sonst oeffnete die Kachel einer
+            ' zusaetzlichen Variante die Standardvariante.
+            Await LoadImageContent(_folderPaths(idx))
         End Function
 
         ''' Wird vom Mausrad-Handler auf dem Filmstrip (schnelles Scrollen -> viele Events kurz
@@ -19944,9 +20148,14 @@ Namespace ViewModels
         End Function
 
         Private Async Function LoadImageContentCore(path As String) As Task
-            If String.IsNullOrEmpty(path) OrElse Not File.Exists(path) Then
-                If Not String.IsNullOrEmpty(path) Then
-                    _folderPaths.RemoveAll(Function(p) String.Equals(p, path, PathIdentity.Comparison))
+            ' Herein kommt ein EINTRAG des Streifens: der Pfad einer Datei oder der Schluessel einer
+            ' zusaetzlichen Variante. Geoeffnet wird die Datei, die Variante steht daneben.
+            Dim entry = path
+            Dim entryVariantId As String = Nothing
+            path = VariantKey.Split(entry, entryVariantId)
+            If String.IsNullOrEmpty(path) OrElse Not RawSidecarService.VariantExists(entry) Then
+                If Not String.IsNullOrEmpty(entry) Then
+                    _folderPaths.RemoveAll(Function(p) String.Equals(p, entry, PathIdentity.Comparison))
                 End If
 
                 If _folderPaths.Count = 0 Then
@@ -19976,6 +20185,8 @@ Namespace ViewModels
                 Await LoadImageContent(_folderPaths(fallbackIndex))
                 Return
             End If
+            _variantOfPath = path
+            _variantId = If(entryVariantId, "")
 
             ' JEDES Format, dessen Oeffnen wirklich Zeit kostet - nicht nur .fpx, RAW und PSD.
             ' Hier stand die engere Liste, und beim Wechsel aus dem Filmstreifen auf ein TIFF war
@@ -20033,7 +20244,7 @@ Namespace ViewModels
                 ' Rezept-Begleitdatei (.fpxmp): die zuletzt gespeicherten Regler kommen wie beim
                 ' .fpx-Laden wieder an. Beim Blättern meldet eine unlesbare Datei sich in der
                 ' Statuszeile statt mit einem Fenster mitten in der Pfeiltaste.
-                Dim readState = RawSidecarService.ReadRecipe(path, fpxAdjustments)
+                Dim readState = RawSidecarService.ReadRecipe(ItemPathFor(path), fpxAdjustments)
                 If readState = RawSidecarService.SidecarReadResult.Unreadable Then
                     fpxAdjustments = Nothing
                     StatusText = UnreadableSidecarNotice(path)
@@ -20232,7 +20443,8 @@ Namespace ViewModels
             End If
             ' Aus demselben Grund den Anzeigenamen: bei Immich steht er in keinem Pfad, und ohne ihn
             ' hiesse das Bild nach der Rueckkehr aus den Einstellungen wieder nach seiner Kennung.
-            Dim ignoriert = Await OpenImageAsync(pfad, If(pfade.Count > 0, pfade, Nothing),
+            ' Mit der Variante, die geoeffnet ist: sonst oeffnete das Neuladen wieder die Standardvariante.
+            Dim ignoriert = Await OpenImageAsync(ItemPathFor(pfad), If(pfade.Count > 0, pfade, Nothing),
                                                  _thumbCacheScopeId, _thumbCacheScopeName, _forceSaveAsOnly,
                                                  nextcloudSource:=herkunft,
                                                  displayFileName:=_sourceDisplayFileName)
@@ -20296,7 +20508,7 @@ Namespace ViewModels
             ' einer RAW.
             Dim sidecar As ImageAdjustments = Nothing
             If RawSidecarService.Exists(psdSource) AndAlso
-               RawSidecarService.ReadRecipe(psdSource, sidecar) = RawSidecarService.SidecarReadResult.Unreadable Then
+               RawSidecarService.ReadRecipe(ItemPathFor(psdSource), sidecar) = RawSidecarService.SidecarReadResult.Unreadable Then
                 ' Wie bei der RAW: gemeldet statt still übergangen, beim Blättern in der Statuszeile.
                 sidecar = Nothing
                 If mayAskAboutText Then
@@ -20432,13 +20644,22 @@ Namespace ViewModels
         ''' beiden Serverquellen also. Ohne ihn stuende der Name der Temp-Datei in der Fusszeile.</summary>
         Public Async Function OpenImageAsync(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional forceSaveAsOnly As Boolean = False, Optional immichAlbumId As String = Nothing, Optional nextcloudSource As Models.NextcloudOrigin = Nothing, Optional deferFolderContext As Boolean = False, Optional displayFileName As String = Nothing,
                                              Optional showLoadingState As Boolean = False) As Task(Of Boolean)
+            ' Der Schluessel einer zusaetzlichen Variante (Services.VariantKey): geoeffnet wird die
+            ' Datei, gelesen und gespeichert das Rezept dieser Variante.
+            Dim openVariantId As String = Nothing
+            imagePath = VariantKey.Split(imagePath, openVariantId)
             If String.IsNullOrEmpty(imagePath) OrElse Not File.Exists(imagePath) Then Return False
             ' Dasselbe von aussen: waehrend der Editor noch aufbaut, wird kein zweites Dokument
             ' daruebergelegt - auch nicht aus der Galerie oder dem Betrachter.
             If IsDocumentLoadRunning Then Return False
-            If Not String.IsNullOrEmpty(_currentImagePath) AndAlso Not String.Equals(_currentImagePath, imagePath, PathIdentity.Comparison) Then
+            Dim otherVariant = String.Equals(_currentImagePath, imagePath, PathIdentity.Comparison) AndAlso
+                               Not String.Equals(VariantKey.IdOf(CurrentItemPath), openVariantId, StringComparison.OrdinalIgnoreCase)
+            If Not String.IsNullOrEmpty(_currentImagePath) AndAlso
+               (otherVariant OrElse Not String.Equals(_currentImagePath, imagePath, PathIdentity.Comparison)) Then
                 If Not Await ConfirmSaveBeforeLeavingAsync("ein anderes Bild öffnest") Then Return False
             End If
+            _variantOfPath = imagePath
+            _variantId = If(openVariantId, "")
             ' DAS STARTWERKZEUG VOR DEM LADEN SETZEN, nicht erst beim Betreten des Modus. Der
             ' Moduswechsel folgt diesem Aufruf, und bis dahin galt das alte Werkzeug; nach dem
             ' Programmstart ist das der Zuschnitt. Dessen Vorschau zeigt das ganze Bild ohne
@@ -20513,7 +20734,7 @@ Namespace ViewModels
                 ' wird GEMELDET, nicht still übergangen: das Bild öffnet dann ohne seine Bearbeitung,
                 ' und ohne Hinweis hielte man die Bearbeitung für verloren. Überschrieben wird sie
                 ' nicht, das Speichern lässt eine unlesbare Datei stehen und meldet den Fehler.
-                Dim readState = RawSidecarService.ReadRecipe(imagePath, fpxAdjustments)
+                Dim readState = RawSidecarService.ReadRecipe(ItemPathFor(imagePath), fpxAdjustments)
                 If readState = RawSidecarService.SidecarReadResult.Unreadable Then
                     fpxAdjustments = Nothing
                     Await _mainVm.ShowMessageAsync(LocalizationService.T("Bearbeitung nicht lesbar"),
@@ -20785,16 +21006,16 @@ Namespace ViewModels
         Private Sub LoadLibraryMeta(imagePath As String)
             ' Auch beim direkten Oeffnen ohne Galerie-Scan zuerst den portablen .fpxmp-Katalog
             ' einlesen; das Panel spiegelt danach denselben Stand wie die Sidecar.
-            LibraryService.Instance.ImportFpxmpCatalogData(imagePath)
+            LibraryService.Instance.ImportFpxmpCatalogData(ItemPathFor(imagePath))
             ' Das Panel auf dieses Bild stellen: Personen und Ort holt es selbst.
             InfoPanel.ShowItem(EnsureInfoItem(imagePath))
             ' Ueber ApplyOwnedState, nicht ueber die Eigenschaften: die Werte kommen gerade aus dem
             ' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.
-            InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(imagePath),
-                                      LibraryService.Instance.GetFavorite(imagePath),
-                                      LibraryService.Instance.GetColorLabel(imagePath),
-                                      LibraryService.Instance.GetPickState(imagePath))
-            InfoPanel.ApplyOwnedTags(LibraryService.Instance.GetTags(imagePath))
+            InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(ItemPathFor(imagePath)),
+                                      LibraryService.Instance.GetFavorite(ItemPathFor(imagePath)),
+                                      LibraryService.Instance.GetColorLabel(ItemPathFor(imagePath)),
+                                      LibraryService.Instance.GetPickState(ItemPathFor(imagePath)))
+            InfoPanel.ApplyOwnedTags(LibraryService.Instance.GetTags(ItemPathFor(imagePath)))
             RaiseFooterColorLabelState()
         End Sub
 
@@ -20803,11 +21024,12 @@ Namespace ViewModels
         ''' (ueber ApplyOwnedState, also ohne sie zurueckzuschreiben).</summary>
         Friend Sub RefreshCatalogState(changedPaths As IReadOnlyCollection(Of String))
             If String.IsNullOrEmpty(_currentImagePath) OrElse changedPaths Is Nothing Then Return
-            If Not changedPaths.Any(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison)) Then Return
-            InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(_currentImagePath),
-                                      LibraryService.Instance.GetFavorite(_currentImagePath),
-                                      LibraryService.Instance.GetColorLabel(_currentImagePath),
-                                      LibraryService.Instance.GetPickState(_currentImagePath))
+            ' Die Pfade duerfen Schluessel zusaetzlicher Varianten sein; gefragt ist, ob die DATEI betroffen ist.
+            If Not changedPaths.Any(Function(p) String.Equals(VariantKey.FileOf(p), _currentImagePath, PathIdentity.Comparison)) Then Return
+            InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(CurrentItemPath),
+                                      LibraryService.Instance.GetFavorite(CurrentItemPath),
+                                      LibraryService.Instance.GetColorLabel(CurrentItemPath),
+                                      LibraryService.Instance.GetPickState(CurrentItemPath))
             RaiseFooterColorLabelState()
         End Sub
 
@@ -20906,16 +21128,27 @@ Namespace ViewModels
 
             Try
                 If allPaths IsNot Nothing Then
+                    ' Die Liste fuehrt EINTRAEGE: den Pfad einer Datei oder den Schluessel einer
+                    ' zusaetzlichen Variante (Services.VariantKey). Jede Variante ist im Streifen
+                    ' ein eigenes Bild; eine, die es nicht mehr gibt, faellt hier heraus.
                     _folderPaths = allPaths.
                         Where(Function(p) Not String.IsNullOrEmpty(p)).
-                        Where(Function(p) CanParticipateInEditorFilmstrip(p)).
+                        Where(Function(p) CanParticipateInEditorFilmstrip(VariantKey.FileOf(p))).
+                        Where(Function(p) Not VariantKey.IsVariant(p) OrElse RawSidecarService.VariantExists(p)).
                         Distinct(PathIdentity.Comparer).
                         ToList()
+                    ' Eine Variante, die die Liste nicht fuehrt (gerade angelegt): hinter ihre Datei.
+                    Dim openEntry = ItemPathFor(imagePath)
+                    If VariantKey.IsVariant(openEntry) AndAlso
+                       Not _folderPaths.Any(Function(p) String.Equals(p, openEntry, PathIdentity.Comparison)) Then
+                        Dim last = _folderPaths.FindLastIndex(Function(p) String.Equals(VariantKey.FileOf(p), imagePath, PathIdentity.Comparison))
+                        If last >= 0 Then _folderPaths.Insert(last + 1, openEntry)
+                    End If
 
                     FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)))
                     RefreshFilmstripItemBadges()
 
-                    _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, PathIdentity.Comparison))
+                    _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, openEntry, PathIdentity.Comparison))
                     If _currentIndex < 0 Then _currentIndex = 0
                     Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
                     MarkCurrentFilmstripItem()
@@ -20940,10 +21173,11 @@ Namespace ViewModels
         ''' <summary>Liest die im Editor bearbeitbaren Dateien eines Ordners. Reines Lesen ohne
         ''' Zustand, damit derselbe Aufruf auch auf einem Hintergrund-Thread laufen kann.</summary>
         Private Shared Function ScanEditorFolderPaths(folder As String) As List(Of String)
-            Return Directory.GetFiles(folder).
+            ' Hinter jede RAW die Eintraege ihrer zusaetzlichen Varianten, wie im Betrachter.
+            Return ViewerViewModel.WithVariantEntries(Directory.GetFiles(folder).
                 Where(Function(f) CanParticipateInEditorFilmstrip(f)).
                 OrderBy(Function(f) IO.Path.GetFileName(f)).
-                ToList()
+                ToList())
         End Function
 
         ''' <summary>Übernimmt eine fertige Ordnerliste in den Filmstreifen. Aus LoadFilmstripContext
@@ -20953,7 +21187,8 @@ Namespace ViewModels
             FilmstripItems.ReplaceAll(_folderPaths.Select(Function(path) ImageItem.CreateLightweight(path)))
             RefreshFilmstripItemBadges()
 
-            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, PathIdentity.Comparison))
+            Dim openEntry = ItemPathFor(imagePath)
+            _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, openEntry, PathIdentity.Comparison))
             If _currentIndex < 0 Then _currentIndex = 0
             Me.RaisePropertyChanged(NameOf(CurrentFilmstripIndex))
             MarkCurrentFilmstripItem()
@@ -20975,7 +21210,7 @@ Namespace ViewModels
             If Not String.Equals(IO.Path.GetDirectoryName(savedPath), IO.Path.GetDirectoryName(_currentImagePath),
                                  StringComparison.OrdinalIgnoreCase) Then Return
             If _folderPaths.Any(Function(p) String.Equals(p, savedPath, PathIdentity.Comparison)) Then Return
-            Dim sourceIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison))
+            Dim sourceIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, CurrentItemPath, PathIdentity.Comparison))
             Dim insertAt = If(sourceIndex < 0, _folderPaths.Count, sourceIndex + 1)
             _folderPaths.Insert(insertAt, savedPath)
             Dim item = ImageItem.CreateLightweight(savedPath, Nothing, _thumbCacheScopeId, _thumbCacheScopeName)
@@ -20992,12 +21227,13 @@ Namespace ViewModels
         Public Sub RefreshFilmstripItemBadges()
             If Not ShowFilmstripItemBadges OrElse FilmstripItems Is Nothing Then Return
 
+            ' Nach dem Schluessel der Kachel: eine zusaetzliche Variante traegt eigene Katalogdaten.
             Dim catalog = LibraryService.Instance.GetMetaForPaths(
-                FilmstripItems.Where(Function(item) item IsNot Nothing).Select(Function(item) item.FilePath))
+                FilmstripItems.Where(Function(item) item IsNot Nothing).Select(Function(item) item.ItemPath))
             For Each item In FilmstripItems
                 If item Is Nothing Then Continue For
                 Dim meta As LibraryImageMeta = Nothing
-                If catalog.TryGetValue(item.FilePath, meta) Then
+                If catalog.TryGetValue(item.ItemPath, meta) Then
                     item.Rating = meta.Rating
                     item.IsFavorite = meta.IsFavorite
                     item.ColorLabel = meta.ColorLabel
@@ -24366,7 +24602,8 @@ Namespace ViewModels
             ' Der Vermerk "bearbeitet" aus dem Vergleich mit den Startwerten der Datei: wer alles
             ' zuruecksetzt und speichert, nimmt ihn damit wieder weg.
             Dim sidecarAdjustments = GetCurrentAdjustments()
-            If Not RawSidecarService.TryWrite(RenderSourcePath, sidecarAdjustments,
+            ' In die Variante, die geoeffnet ist: die Standardvariante der Datei oder eine zusaetzliche.
+            If Not RawSidecarService.TryWrite(ItemPathFor(RenderSourcePath), sidecarAdjustments,
                                               edited:=RawSidecarService.IsEditedRecipe(RenderSourcePath, sidecarAdjustments)) Then
                 DiagnosticLogService.LogAlways("Editor.Save",
                     $"sidecarRejected writeFailed source={IO.Path.GetFileName(RenderSourcePath)}")
@@ -25611,7 +25848,7 @@ Namespace ViewModels
                 ' "Transformieren" steht, zeigte er auf die falsche Haelfte.
                 Case EditorTool.Warp : Return outline & "perspective.svg"
                 Case EditorTool.Light : Return outline & "flashlight.svg"
-                Case EditorTool.Adjust : Return outline & "plus-minus.svg"
+                Case EditorTool.Adjust : Return outline & "sun.svg"
                 Case EditorTool.Color : Return outline & "intersect-three.svg"
                 Case EditorTool.Details : Return outline & "sliders-horizontal.svg"
                 Case EditorTool.Effects, EditorTool.Frame : Return outline & "sparkle.svg"

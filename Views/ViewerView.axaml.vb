@@ -264,6 +264,10 @@ Namespace Views
         Private Function StageItem(vm As ViewerViewModel) As ImageItem
             Dim path = vm?.CurrentImagePath
             If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            ' Der Filmstreifen fuehrt Dateien. Eine gezeigte zusaetzliche Variante ist ihr eigenes
+            ' Element, sonst boete das Menue an, was fuer die Standardvariante gilt.
+            Dim itemPath = vm.CurrentItemPath
+            If Services.VariantKey.IsVariant(itemPath) Then Return If(IO.File.Exists(path), New ImageItem(itemPath), Nothing)
             Dim aus = vm.FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
                                                            PathIdentity.AreSame(i.FilePath, path))
             If aus IsNot Nothing Then Return aus

@@ -372,7 +372,8 @@ Namespace Views
         Private Shared Function StageItem(vm As EditorViewModel) As ImageItem
             Dim path = vm?.CurrentImagePath
             If String.IsNullOrWhiteSpace(path) OrElse Not IO.File.Exists(path) Then Return Nothing
-            Return New ImageItem(path)
+            ' Mit der Variante, die geoeffnet ist: das Menue richtet sich danach.
+            Return New ImageItem(vm.CurrentItemPath)
         End Function
 
         ''' <summary>Die Eintraege kommen als Daten und tragen ihre Beschriftung bereits uebersetzt.

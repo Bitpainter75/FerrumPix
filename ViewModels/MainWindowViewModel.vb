@@ -516,9 +516,15 @@ Namespace ViewModels
         ''' bieten dieselben Eigenschaften, die Galerie hat kein einzelnes Bild.</summary>
         Public ReadOnly Property WindowTitleFileName As String
             Get
+                ' Hinter dem Namen steht in Klammern, welche Variante der Datei zu sehen ist, sobald
+                ' sie mehr als eine hat (GalleryViewModel.VariantTitle).
                 Select Case CurrentMode
-                    Case AppMode.Viewer : Return If(Viewer?.CurrentFileName, "")
-                    Case AppMode.Editor : Return If(Editor?.CurrentFileName, "")
+                    Case AppMode.Viewer
+                        Return Models.ImageItem.VariantFileName(If(Viewer?.CurrentFileName, ""),
+                                                                GalleryViewModel.VariantTitle(Viewer?.CurrentItemPath))
+                    Case AppMode.Editor
+                        Return Models.ImageItem.VariantFileName(If(Editor?.CurrentFileName, ""),
+                                                                GalleryViewModel.VariantTitle(Editor?.CurrentItemPath))
                     Case Else : Return ""
                 End Select
             End Get
@@ -1122,10 +1128,20 @@ Namespace ViewModels
                     If Not Await ConfirmViewerLeaveAsync("zur Galerie wechselst") Then Return
                 End If
                 If String.IsNullOrEmpty(sourcePath) AndAlso Viewer IsNot Nothing Then
-                    sourcePath = Viewer.CurrentImagePath
+                    sourcePath = Viewer.CurrentItemPath
                 End If
 
                 If Not String.IsNullOrEmpty(sourcePath) Then
+                    ' Der Schluessel einer zusaetzlichen Variante waehlt IHRE Kachel. Steht die nicht
+                    ' in der Ansicht, geht es mit der Datei weiter: gesucht, geoeffnet und geprueft
+                    ' wird ab hier der Pfad.
+                    If Services.VariantKey.IsVariant(sourcePath) Then
+                        If Gallery IsNot Nothing AndAlso Gallery.SelectImageInCurrentView(sourcePath) Then
+                            CurrentMode = AppMode.Gallery
+                            Return
+                        End If
+                        sourcePath = Services.VariantKey.FileOf(sourcePath)
+                    End If
                     ' Nicht nur gespeicherte Suchen, auch ein normaler Ordner kann aktuell durch
                     ' Favoriten-, Bewertungs- oder Dateitypfilter eingeschränkt sein. Ist das Bild
                     ' bereits in dieser Ansicht, darf der Rückweg den Ordner nicht neu öffnen -
@@ -1178,7 +1194,7 @@ Namespace ViewModels
                     Return
                 ElseIf CurrentMode = AppMode.Gallery AndAlso Gallery.SelectedItem IsNot Nothing AndAlso (Gallery.SelectedItem.IsImage OrElse Gallery.SelectedItem.IsVideoFile) Then
                     _previousModeBeforeFullscreen = AppMode.Gallery
-                    OpenImageInViewer(Gallery.SelectedItem.FilePath, Gallery.Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
+                    OpenImageInViewer(Gallery.SelectedItem.ItemPath, Gallery.Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.ItemPath).ToList(),
                                       cacheScopeId:=Gallery.CurrentThumbnailCacheScopeId, cacheScopeName:=Gallery.CurrentThumbnailCacheScopeName)
                 ElseIf CurrentMode = AppMode.Editor AndAlso Editor.IsNewDocument Then
                     ' Ein nie gespeichertes neues Bild hat auf der Platte nur seine LEERE Temp-Datei -
@@ -1470,6 +1486,19 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 Me.RaiseAndSetIfChanged(_dialogTitle, value)
+            End Set
+        End Property
+
+        Private _dialogIconSource As String = ""
+
+        ''' <summary>Das Symbol vor der Überschrift des Dialogs, als Quelle für SvgIcon; leer ohne
+        ''' eines. Es folgt der Aktion, zu der der Dialog gehört (siehe DialogIcons).</summary>
+        Public Property DialogIconSource As String
+            Get
+                Return _dialogIconSource
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_dialogIconSource, If(value, ""))
             End Set
         End Property
 
@@ -6399,6 +6428,7 @@ Namespace ViewModels
             _dialogCompletion = New TaskCompletionSource(Of String)()
             DialogKind = kind
             DialogTitle = LocalizationService.T(titleText)
+            DialogIconSource = DialogIcons.SourceFor(kind, titleText, Not String.IsNullOrEmpty(cancelText))
             DialogMessage = LocalizationService.T(messageText)
             DialogInputText = initialText
             DialogConfirmText = LocalizationService.T(confirmText)
@@ -6882,6 +6912,16 @@ Namespace ViewModels
                 Dim message = If(pathList.Count = 1,
                                  $"{IO.Path.GetFileName(pathList(0))} {verb}?",
                                  String.Format(LocalizationService.T("{0} Elemente {1}?"), pathList.Count, verb))
+                ' Mit einer RAW oder PSD gehen ihre zusaetzlichen Varianten: sie stehen alle in der
+                ' einen Begleitdatei, die mit der Datei geloescht wird. Das soll niemand erst
+                ' danach merken.
+                Dim variantCount = Await Task.Run(Function() pathList.
+                    Where(Function(p) IO.File.Exists(p) AndAlso RawSidecarService.IsSidecarFormat(p)).
+                    Sum(Function(p) RawSidecarService.ReadVariants(p).Count))
+                If variantCount > 0 Then
+                    message &= Environment.NewLine & Environment.NewLine &
+                               String.Format(LocalizationService.T("{0} Variante(n) werden mit gelöscht."), variantCount)
+                End If
                 Dim confirmText = If(useTrash, "In den Papierkorb", "Löschen")
                 If Not Await ShowConfirmAsync("Löschen", message, confirmText, "Abbrechen") Then Return
             End If

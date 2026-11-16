@@ -68,6 +68,17 @@ Namespace ViewModels
         ''' in die Datei: Kopieren gibt es dort auch ohne gespeichertes Rezept, Einfügen in jedes
         ''' geöffnete Bild und ohne Rückfrage, weil es sich zurücknehmen lässt.</summary>
         Public Property AdjustmentsFromOpenDocument As Boolean
+        ''' <summary>Die Varianten EINER Aufnahme (RAW oder PSD), alle in ihrer Begleitdatei:
+        ''' daneben eine anlegen (aus dem Stand des Bildes oder ohne Anpassungen), die Variante des
+        ''' Bildes umbenennen oder löschen. Galerie, Betrachter und Editor bieten sie an.
+        ''' SwitchVariant nur Betrachter und Editor: dort ist ein Bild zu sehen, und das Menü
+        ''' wechselt, welche Variante davon (Parameter: ihre Kennung, leer für die Standardvariante).
+        ''' In der Galerie ist jede Variante eine eigene Kachel.</summary>
+        Public Property SwitchVariant As ICommand
+        Public Property NewVariant As ICommand
+        Public Property NewVariantFromStartValues As ICommand
+        Public Property RenameVariant As ICommand
+        Public Property DeleteVariant As ICommand
         Public Property ConvertTo As ICommand
         Public Property ExportTo As ICommand
         Public Property RemoveMetadata As ICommand
@@ -116,7 +127,7 @@ Namespace ViewModels
             For Each item In locals
                 item.PickState = state
             Next
-            Dim paths = locals.Select(Function(i) i.FilePath).ToList()
+            Dim paths = locals.Select(Function(i) i.ItemPath).ToList()
             If paths.Count > 0 Then Services.LibraryService.Instance.SetPickStateForMany(paths, state, syncToXmp:=True)
             Return paths
         End Function

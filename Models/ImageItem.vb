@@ -114,6 +114,55 @@ Namespace Models
             End Set
         End Property
 
+        Private _variantId As String = ""
+        Private _variantName As String = Nothing
+
+        ''' <summary>Die Kennung der zusaetzlichen Variante, die diese Kachel zeigt; leer fuer die
+        ''' Standardvariante, also die Datei selbst. <see cref="FilePath"/> ist in beiden Faellen der
+        ''' Pfad der Datei.</summary>
+        Public ReadOnly Property VariantId As String
+            Get
+                Return _variantId
+            End Get
+        End Property
+
+        Public ReadOnly Property IsVariant As Boolean
+            Get
+                Return _variantId.Length > 0
+            End Get
+        End Property
+
+        ''' <summary>Woran dieses Element zu erkennen ist: der Pfad der Datei, bei einer
+        ''' zusaetzlichen Variante ihr Schluessel (Services.VariantKey). Das ist die Zeichenkette, die
+        ''' an Betrachter, Editor, Katalog, Begleitdatei und Kachelspeicher geht, wenn DIESE Kachel
+        ''' gemeint ist und nicht bloss ihre Datei.</summary>
+        Public ReadOnly Property ItemPath As String
+            Get
+                Return Services.VariantKey.Make(_filePath, _variantId)
+            End Get
+        End Property
+
+        ''' <summary>Der Name der zusaetzlichen Variante; leer fuer die Standardvariante.</summary>
+        Public Property VariantName As String
+            Get
+                If _variantName Is Nothing Then
+                    _variantName = If(_variantId.Length = 0, "", Services.RawSidecarService.VariantName(ItemPath))
+                End If
+                Return _variantName
+            End Get
+            Set(value As String)
+                _variantName = If(value, "")
+                If _variantId.Length > 0 Then FileName = VariantFileName(IO.Path.GetFileName(_filePath), _variantName)
+            End Set
+        End Property
+
+        ''' <summary>Der Name unter der Kachel einer zusaetzlichen Variante: der der Datei, dahinter
+        ''' der der Variante in Klammern. So steht sie in jeder Sortierung nach Namen direkt hinter
+        ''' ihrer Datei.</summary>
+        Public Shared Function VariantFileName(fileName As String, variantName As String) As String
+            Return If(String.IsNullOrEmpty(variantName), fileName, fileName & " (" & variantName & ")")
+        End Function
+
         Private _extensionLower As String = Nothing
 
         ''' <summary>Die Dateiendung, einmal kleingeschrieben. Der RAW-Filter der Galerie rief sonst
@@ -784,7 +833,7 @@ Namespace Models
         Public Function ResolveIsEdited() As Boolean
             ' Offline liegt die Beistelldatei auf dem Laufwerk, das fehlt: dort wird nicht gefragt.
             Dim value = _immichAssetId Is Nothing AndAlso _nextcloudFileId Is Nothing AndAlso Not IsOffline AndAlso
-                        Services.RawSidecarService.IsEditedFile(FilePath)
+                        Services.RawSidecarService.IsEditedFile(ItemPath)
             If Not _isEdited.HasValue OrElse _isEdited.Value <> value Then
                 _isEdited = value
                 If Dispatcher.UIThread.CheckAccess() Then
@@ -1118,6 +1167,57 @@ Namespace Models
             XmpMetadataSummary = scanned.XmpMetadataSummary
             IccMetadataSummary = scanned.IccMetadataSummary
         End Sub
+
+        ''' <summary>Stehen neben dieser Datei Kacheln zusaetzlicher Varianten? Gesetzt beim Anlegen
+        ''' einer solchen Kachel. Wer die Dateiangaben dieser Kachel nachtraegt, weiss daran, dass er
+        ''' sie an weitere Kacheln weitergeben muss, ohne dafuer die ganze Liste abzusuchen.</summary>
+        Public Property HasVariantItems As Boolean
+
+        ''' <summary>Gibt die Angaben der DATEI (Groesse, Daten, Aufnahmedaten, Ort) an die Kachel
+        ''' einer zusaetzlichen Variante weiter. Bewertung, Favorit, Etikett, Markierung und
+        ''' Stichwoerter gehoeren der Variante und bleiben, wie sie dort stehen.</summary>
+        Public Sub CopyFileDataTo(target As ImageItem)
+            If target Is Nothing OrElse target Is Me Then Return
+            Dim favorite = target.IsFavorite
+            Dim rating = target.Rating
+            Dim pick = target.PickState
+            Dim label = target.ColorLabel
+            Dim tags = target.Tags
+            target.AdoptScannedState(Me)
+            target.IsFavorite = favorite
+            target.Rating = rating
+            target.PickState = pick
+            target.ColorLabel = label
+            If Not SameTags(target.Tags, tags) Then target.Tags = If(tags, New List(Of String)())
+        End Sub
+
+        ''' <summary>Die Kachel einer zusaetzlichen Variante: die Dateiangaben der Datei, dazu die
+        ''' eigenen Katalogdaten der Variante. Die stehen in der Begleitdatei und werden von dort in
+        ''' den Katalog uebernommen (LibraryService.ImportFpxmpCatalogData), wie bei der Datei selbst.
+        ''' Liest die Begleitdatei, gehoert also in den Hintergrund.</summary>
+        Public Shared Function CreateVariantOf(fileItem As ImageItem, variantId As String, variantName As String,
+                                               thumbnailCancellationToken As CancellationToken) As ImageItem
+            Dim item = New ImageItem()
+            item._variantName = If(variantName, "")
+            item.InitializePath(Services.VariantKey.Make(fileItem.FilePath, variantId), False)
+            item._thumbnailCancellationToken = thumbnailCancellationToken
+            item._thumbnailCacheScopeId = fileItem._thumbnailCacheScopeId
+            item._thumbnailCacheScopeName = fileItem._thumbnailCacheScopeName
+            item.AdoptScannedState(fileItem)
+            Try
+                Dim key = item.ItemPath
+                LibraryService.Instance.ImportFpxmpCatalogData(key)
+                item.Rating = LibraryService.Instance.GetRating(key)
+                item.IsFavorite = LibraryService.Instance.GetFavorite(key)
+                item.ColorLabel = LibraryService.Instance.GetColorLabel(key)
+                item.PickState = LibraryService.Instance.GetPickState(key)
+                item.Tags = LibraryService.Instance.GetTags(key)
+            Catch
+                ' Katalog nicht erreichbar: die Kachel steht dann ohne eigene Angaben da.
+            End Try
+            fileItem.HasVariantItems = True
+            Return item
+        End Function
 
         ''' <summary>Tragen beide Listen dieselben Stichwoerter in derselben Reihenfolge? Ohne
         ''' Zwischenliste, weil das je Bild eines Ordners gefragt wird. Nothing gilt als leer.</summary>
@@ -1706,8 +1806,15 @@ Namespace Models
         End Sub
 
         Private Sub InitializePath(filePath As String, loadFileInfo As Boolean)
+            ' Der Schluessel einer zusaetzlichen Variante (Services.VariantKey) wird hier zerlegt:
+            ' der Pfad bleibt der der Datei, die Kennung steht daneben. Betrachter und Editor bauen
+            ' ihre Elemente aus Zeichenketten und kommen so ohne eigenen Weg zur richtigen Kachel.
+            Dim variantId As String = Nothing
+            filePath = Services.VariantKey.Split(filePath, variantId)
+            _variantId = If(variantId, "")
             Me.FilePath = filePath
-            FileName = Path.GetFileName(filePath)
+            FileName = If(_variantId.Length = 0, Path.GetFileName(filePath),
+                          VariantFileName(Path.GetFileName(filePath), VariantName))
             If loadFileInfo Then EnsureFileInfoLoaded()
         End Sub
 
@@ -2607,7 +2714,7 @@ Namespace Models
                     ' Kachelweg ohnehin fuer die Drehung, und neu geladen wird nach jedem Speichern.
                     RefreshEditedState()
                     Dim isExact As Boolean = False
-                    bmp = ThumbnailCacheService.LoadCached(FilePath, DateModified, FileSize, True, isExact, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName)
+                    bmp = ThumbnailCacheService.LoadCached(ItemPath, DateModified, FileSize, True, isExact, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName)
                     cachedWasExact = isExact
                     ' Noch nichts im Speicher, und die Datei traegt ein eigenes Vorschaubild (HEIC
                     ' vom Telefon): das sofort als Platzhalter, das scharfe Bild spaeter im
@@ -2620,7 +2727,7 @@ Namespace Models
                         isPlaceholder = bmp IsNot Nothing
                     End If
                     If bmp Is Nothing Then
-                        bmp = ThumbnailCacheService.CreateOrUpdate(FilePath, DateModified, FileSize, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName, AddressOf IsStillWantedForThumbnail)
+                        bmp = ThumbnailCacheService.CreateOrUpdate(ItemPath, DateModified, FileSize, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName, AddressOf IsStillWantedForThumbnail)
                         cachedWasExact = True
                     End If
                 Catch ex As OperationCanceledException
@@ -2677,7 +2784,7 @@ Namespace Models
                     Dim replacement As Bitmap = Nothing
                     Try
                         If token.IsCancellationRequested Then Return
-                        replacement = ThumbnailCacheService.CreateOrUpdate(FilePath, DateModified, FileSize, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName, AddressOf IsStillWantedForThumbnail)
+                        replacement = ThumbnailCacheService.CreateOrUpdate(ItemPath, DateModified, FileSize, token, _thumbnailCacheScopeId, _thumbnailCacheScopeName, AddressOf IsStillWantedForThumbnail)
                     Catch ex As OperationCanceledException
                         Throw
                     Catch

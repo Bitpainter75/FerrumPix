@@ -557,14 +557,14 @@
                     </Button>
                     <Button Classes="tool-btn-row"
                             IsVisible="{Binding ShowsToolAdjust}"
-                            ToolTip.Tip="Anpassen"
+                            ToolTip.Tip="Licht"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Adjust"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Adjust}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus-minus.svg"
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sun.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Anpassen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <TextBlock Text="Licht" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="tool-btn-row"
@@ -606,14 +606,14 @@
                     </Button>
                     <Button Classes="tool-btn-row"
                             IsVisible="{Binding ShowsToolFilter}"
-                            ToolTip.Tip="Filter"
+                            ToolTip.Tip="Anpassungen"
                             Command="{Binding SetToolCommand}"
                             CommandParameter="Filters"
                             Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Filters}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/palette.svg"
                                            Width="18" Height="18" />
-                            <TextBlock Text="Filter" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                            <TextBlock Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
                     </StackPanel>
@@ -1617,101 +1617,6 @@
                                                            VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
-                                        <!-- Auswahlliste und Namensfeld untereinander und gleich
-                                             breit: sie gehören zusammen (was ist gewählt / wie soll
-                                             es heißen). Die Knöpfe stehen darunter in EINER Reihe zu
-                                             gleichen Teilen. -->
-                                        <ComboBox ItemsSource="{Binding AdjustmentPresetNames}"
-                                                  SelectedItem="{Binding SelectedAdjustmentPresetName}"
-                                                  PlaceholderText="Keine Anpassung gespeichert"
-                                                  MinHeight="32"
-                                                  FontSize="{DynamicResource FP.Font.Small}"
-                                                  HorizontalAlignment="Stretch" />
-                                        <TextBox Text="{Binding AdjustmentPresetNameDraft}"
-                                                 PlaceholderText="Name"
-                                                 MinHeight="32"
-                                                 FontSize="{DynamicResource FP.Font.Small}"
-                                                 HorizontalAlignment="Stretch" />
-                                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
-                                            <Button Classes="ghost"
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Center"
-                                                    Padding="4,5"
-                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
-                                                    Command="{Binding ApplyAdjustmentPresetCommand}"
-                                                    ToolTip.Tip="Die gewählte Anpassung auf dieses Bild anwenden">
-                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg"
-                                                                   Width="18" Height="18" />
-                                                    <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextWrapping="Wrap" TextAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                            <Button Grid.Column="1"
-                                                    Classes="ghost"
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Center"
-                                                    Padding="4,5"
-                                                    IsEnabled="{Binding CanSaveAdjustmentPreset}"
-                                                    Command="{Binding SaveAdjustmentPresetCommand}"
-                                                    ToolTip.Tip="Die aktuellen Regler unter diesem Namen merken - ein gleichnamiger Eintrag wird ersetzt">
-                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/floppy-disk.svg"
-                                                                   Width="18" Height="18" />
-                                                    <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextWrapping="Wrap" TextAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                            <Button Grid.Column="2"
-                                                    Classes="ghost"
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Center"
-                                                    Padding="4,5"
-                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
-                                                    Command="{Binding DeleteAdjustmentPresetCommand}">
-                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
-                                                                   Width="18" Height="18" />
-                                                    <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextWrapping="Wrap" TextAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
-                                        <!-- Die Ablage OHNE Namen: von diesem Bild kopieren, auf
-                                             dieses einfügen. Dieselbe Ablage wie in Galerie und
-                                             Betrachter und wie STRG+SHIFT+C und STRG+SHIFT+V.
-                                             Einfügen ist nicht gesperrt, wenn nichts kopiert ist:
-                                             kopiert wird auch in der Galerie, und der Editor
-                                             erführe davon nichts. Die Statuszeile sagt es dann. -->
-                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-                                            <Button Classes="ghost"
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Center"
-                                                    Padding="4,5"
-                                                    Command="{Binding CopyAdjustmentsCommand}"
-                                                    ToolTip.Tip="Anpassungen kopieren">
-                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/files.svg"
-                                                                   Width="18" Height="18" />
-                                                    <TextBlock Text="Kopieren" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextWrapping="Wrap" TextAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                            <Button Grid.Column="1"
-                                                    Classes="ghost"
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Center"
-                                                    Padding="4,5"
-                                                    Command="{Binding PasteAdjustmentsCommand}"
-                                                    ToolTip.Tip="Anpassungen einfügen">
-                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
-                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clipboard-text.svg"
-                                                                   Width="18" Height="18" />
-                                                    <TextBlock Text="Einfügen" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextWrapping="Wrap" TextAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
                                     </StackPanel>
                                 </Expander>
                             </Border>
@@ -1986,6 +1891,243 @@
                                     </MultiBinding>
                                 </Border.IsVisible>
                                 <panels:TiltShiftPanel />
+                            </Border>
+
+                            <!-- Die gespeicherten Anpassungen: ein Stand der Regler unter einem Namen,
+                                 dazu die Ablage ohne Namen (kopieren, einfuegen). Im Filter-Panel,
+                                 weil ein gespeicherter Stand wie ein Look angewendet wird. Die
+                                 automatische Bildverbesserung bleibt im Anpassen-Panel. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowFilterAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="saved-adjustments"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <Expander Header="Gespeicherte Anpassungen" icons:ExpanderState.Key="saved-adjustments">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                                        VerticalAlignment="Center"
+                                                        AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                                <icons:SvgIcon
+                                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/floppy-disk.svg"
+                                                    Width="18" Height="18" />
+                                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                                        <!-- Auswahlliste und Namensfeld untereinander und gleich
+                                             breit: sie gehören zusammen (was ist gewählt / wie soll
+                                             es heißen). Die Knöpfe stehen darunter in EINER Reihe zu
+                                             gleichen Teilen. -->
+                                        <ComboBox ItemsSource="{Binding AdjustmentPresetNames}"
+                                                  SelectedItem="{Binding SelectedAdjustmentPresetName}"
+                                                  PlaceholderText="Keine Anpassung gespeichert"
+                                                  MinHeight="32"
+                                                  FontSize="{DynamicResource FP.Font.Small}"
+                                                  HorizontalAlignment="Stretch" />
+                                        <TextBox Text="{Binding AdjustmentPresetNameDraft}"
+                                                 PlaceholderText="Name"
+                                                 MinHeight="32"
+                                                 FontSize="{DynamicResource FP.Font.Small}"
+                                                 HorizontalAlignment="Stretch" />
+                                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                            <Button Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
+                                                    Command="{Binding ApplyAdjustmentPresetCommand}"
+                                                    ToolTip.Tip="Die gewählte Anpassung auf dieses Bild anwenden">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Anwenden" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1"
+                                                    Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    IsEnabled="{Binding CanSaveAdjustmentPreset}"
+                                                    Command="{Binding SaveAdjustmentPresetCommand}"
+                                                    ToolTip.Tip="Die aktuellen Regler unter diesem Namen merken - ein gleichnamiger Eintrag wird ersetzt">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/floppy-disk.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Speichern" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="2"
+                                                    Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    IsEnabled="{Binding CanApplyAdjustmentPreset}"
+                                                    Command="{Binding DeleteAdjustmentPresetCommand}">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                        <!-- Die Ablage OHNE Namen: von diesem Bild kopieren, auf
+                                             dieses einfügen. Dieselbe Ablage wie in Galerie und
+                                             Betrachter und wie STRG+SHIFT+C und STRG+SHIFT+V.
+                                             Einfügen ist nicht gesperrt, wenn nichts kopiert ist:
+                                             kopiert wird auch in der Galerie, und der Editor
+                                             erführe davon nichts. Die Statuszeile sagt es dann. -->
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                                            <Button Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    Command="{Binding CopyAdjustmentsCommand}"
+                                                    ToolTip.Tip="Anpassungen kopieren">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/files.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Kopieren" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1"
+                                                    Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    Command="{Binding PasteAdjustmentsCommand}"
+                                                    ToolTip.Tip="Anpassungen einfügen">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/clipboard-text.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Einfügen" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                    </StackPanel>
+                                </Expander>
+                            </Border>
+
+                            <!-- Die Varianten der geoeffneten RAW: jede mit eigenem Rezept und eigenen
+                                 Katalogdaten in der einen Begleitdatei. Die Liste wechselt, welche
+                                 geoeffnet ist (die geoeffnete traegt den Haken), darunter Anlegen,
+                                 Umbenennen und Loeschen. Dieselben Ablaeufe wie im Kontextmenue.
+                                 Nur im Filter-Panel, wie die gespeicherten Anpassungen. -->
+                            <Border Classes="adjustment-group" Margin="0,7,0,0">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowFilterAdjustments"/>
+                                        <Binding Path="CanShowVariants"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="variants"/>
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <Expander Header="Varianten" icons:ExpanderState.Key="variants">
+                                    <Expander.HeaderTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="8"
+                                                        VerticalAlignment="Center"
+                                                        AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                                                <icons:SvgIcon
+                                                    Source="avares://FerrumPix/Assets/Icons/phosphor/regular/stack.svg"
+                                                    Width="18" Height="18" />
+                                                <TextBlock Text="{Binding}" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </Expander.HeaderTemplate>
+                                    <StackPanel Spacing="6">
+                                        <ItemsControl ItemsSource="{Binding VariantChoices}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Classes="ghost"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            Padding="6,5"
+                                                            Command="{Binding Command}"
+                                                            CommandParameter="{Binding Parameter}">
+                                                        <Grid ColumnDefinitions="22,*">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/check.svg"
+                                                                           IsVisible="{Binding IconSource, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                                           Width="16" Height="16"
+                                                                           HorizontalAlignment="Left"
+                                                                           VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Classes="no-translate"
+                                                                       Text="{Binding Label}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Grid ColumnDefinitions="*" >
+                                            <Button Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    Command="{Binding NewVariantOfOpenImageCommand}"
+                                                    ToolTip.Tip="Neue Variante">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/plus.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Neue Variante" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                                            <Button Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    IsEnabled="{Binding CanRenameOpenVariant}"
+                                                    Command="{Binding RenameVariantOfOpenImageCommand}"
+                                                    ToolTip.Tip="Variante umbenennen">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/pencil-simple.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Umbenennen" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="1"
+                                                    Classes="ghost"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Padding="4,5"
+                                                    IsEnabled="{Binding CanDeleteOpenVariant}"
+                                                    Command="{Binding DeleteVariantOfOpenImageCommand}"
+                                                    ToolTip.Tip="Variante löschen">
+                                                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/trash.svg"
+                                                                   Width="18" Height="18" />
+                                                    <TextBlock Text="Löschen" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextWrapping="Wrap" TextAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                        <Button Classes="ghost"
+                                                HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Center"
+                                                Padding="4,5"
+                                                Command="{Binding NewVariantFromStartValuesOfOpenImageCommand}">
+                                            <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/image.svg"
+                                                               Width="18" Height="18" />
+                                                <TextBlock Text="Neue Variante ohne Anpassungen" FontSize="{DynamicResource FP.Font.Small}"
+                                                           TextWrapping="Wrap" TextAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Expander>
                             </Border>
 
                             <Border Classes="adjustment-group" Margin="0,7,0,0"

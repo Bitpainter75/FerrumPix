@@ -160,7 +160,11 @@ Namespace Services
         Friend Shared Function PathKey(path As String) As String
             If String.IsNullOrEmpty(path) OrElse Not PathIdentity.IgnoresCase Then Return path
             If path.Contains("://", StringComparison.Ordinal) Then Return path
-            Return PathIdentity.Normalize(path)
+            ' Der Schluessel einer Variante (VariantKey): die Datei in Katalogform, die Kennung
+            ' dahinter unveraendert. Sie ist kein Teil des Pfades und ginge durch GetFullPath nicht.
+            Dim variantId As String = Nothing
+            Dim file = VariantKey.Split(path, variantId)
+            Return VariantKey.Make(PathIdentity.Normalize(file), variantId)
         End Function
 
         ''' <summary>Schreibt einen bestehenden Katalog einmalig auf <see cref="PathKey"/> um. Laeuft
@@ -781,6 +785,24 @@ Namespace Services
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("Library.CopyEntryMeta", ex)
+            End Try
+        End Sub
+
+        ''' <summary>Entfernt die Katalogzeile einer geloeschten zusaetzlichen Variante. Nur fuer den
+        ''' Schluessel einer Variante: die Zeilen einer Datei raeumt das Aufraeumen des Katalogs.</summary>
+        Public Sub DeleteVariantEntry(variantKey As String)
+            If Not Services.VariantKey.IsVariant(variantKey) Then Return
+            Try
+                Using conn = New SqliteConnection(_connectionString)
+                    conn.Open()
+                    Using cmd = conn.CreateCommand()
+                        cmd.CommandText = "DELETE FROM ImageMeta WHERE FilePath=$p"
+                        cmd.Parameters.AddWithValue("$p", PathKey(variantKey))
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Library.DeleteVariantEntry", ex)
             End Try
         End Sub
 
@@ -1661,6 +1683,9 @@ Namespace Services
         ''' damit XMP nicht als Nebenwirkung entsteht.</summary>
         Private Sub SyncCatalogToXmpSidecar(filePath As String)
             If String.IsNullOrWhiteSpace(filePath) Then Return
+            ' Die XMP-Beistelldatei gehoert der Datei und traegt die Angaben der Standardvariante.
+            ' Die einer zusaetzlichen Variante stehen allein in der .fpxmp.
+            If VariantKey.IsVariant(filePath) Then Return
             Try
                 Dim settings = AppSettingsService.Load()
                 If Not settings.SyncCatalogToXmp Then Return
@@ -2105,7 +2130,10 @@ Namespace Services
                                 del.Transaction = tx
                                 del.CommandText =
                                     $"DELETE FROM {table} WHERE FilePath = $newExact " &
-                                    "OR (FilePath >= $newPrefix AND FilePath < $newUpper)"
+                                    "OR (FilePath >= $newPrefix AND FilePath < $newUpper) " &
+                                    "OR (FilePath >= $newVariants AND FilePath < $newVariantsUpper)"
+                                del.Parameters.AddWithValue("$newVariants", target & VariantRowsFrom)
+                                del.Parameters.AddWithValue("$newVariantsUpper", target & VariantRowsTo)
                                 del.Parameters.AddWithValue("$newExact", target)
                                 del.Parameters.AddWithValue("$newPrefix", target & Path.DirectorySeparatorChar)
                                 del.Parameters.AddWithValue("$newUpper", target & ChrW(AscW(Path.DirectorySeparatorChar) + 1))
@@ -2118,7 +2146,10 @@ Namespace Services
                                 ' oberste Ebene.
                                 upd.CommandText =
                                     $"UPDATE {table} SET FilePath = $target || substr(FilePath, $cut) " &
-                                    "WHERE FilePath >= $prefix AND FilePath < $upper"
+                                    "WHERE (FilePath >= $prefix AND FilePath < $upper) " &
+                                    "OR (FilePath >= $variants AND FilePath < $variantsUpper)"
+                                upd.Parameters.AddWithValue("$variants", source & VariantRowsFrom)
+                                upd.Parameters.AddWithValue("$variantsUpper", source & VariantRowsTo)
                                 upd.Parameters.AddWithValue("$target", target)
                                 upd.Parameters.AddWithValue("$cut", source.Length + 1)
                                 upd.Parameters.AddWithValue("$prefix", prefix)
@@ -2143,6 +2174,12 @@ Namespace Services
             InvalidateAiTagPresence()
             Return moved
         End Function
+
+        ''' <summary>Der Bereich des Primaerschluessels, in dem die Zeilen der zusaetzlichen Varianten
+        ''' EINER Datei stehen: ihr Pfad, dahinter die Marke des Schluessels (siehe VariantKey). Sie
+        ''' wandern, weichen und werden kopiert wie die Zeile der Datei selbst.</summary>
+        Private Const VariantRowsFrom As String = "?variant="
+        Private Const VariantRowsTo As String = "?variant>"
 
         ''' <summary>Die Katalogzeilen einer Quelle auf ein Ziel KOPIEREN, nachdem eine Kopie ein
         ''' vorhandenes Ziel überschrieben hat: Bewertung, Favorit, Etikett, Stichwörter, Personen
@@ -2180,7 +2217,10 @@ Namespace Services
                                 del.Transaction = tx
                                 del.CommandText =
                                     $"DELETE FROM {table} WHERE FilePath = $exact " &
-                                    "OR (FilePath >= $prefix AND FilePath < $upper)"
+                                    "OR (FilePath >= $prefix AND FilePath < $upper) " &
+                                    "OR (FilePath >= $variants AND FilePath < $variantsUpper)"
+                                del.Parameters.AddWithValue("$variants", target & VariantRowsFrom)
+                                del.Parameters.AddWithValue("$variantsUpper", target & VariantRowsTo)
                                 del.Parameters.AddWithValue("$exact", target)
                                 del.Parameters.AddWithValue("$prefix", target & separator)
                                 del.Parameters.AddWithValue("$upper", target & upperChar)
@@ -2209,7 +2249,10 @@ Namespace Services
                                 ins.CommandText =
                                     $"INSERT INTO {table} ({String.Join(", ", columns.Select(Function(c) """" & c & """"))}) " &
                                     $"SELECT {String.Join(", ", selected)} FROM {table} " &
-                                    "WHERE FilePath = $source OR (FilePath >= $sprefix AND FilePath < $supper)"
+                                    "WHERE FilePath = $source OR (FilePath >= $sprefix AND FilePath < $supper) " &
+                                    "OR (FilePath >= $svariants AND FilePath < $svariantsUpper)"
+                                ins.Parameters.AddWithValue("$svariants", source & VariantRowsFrom)
+                                ins.Parameters.AddWithValue("$svariantsUpper", source & VariantRowsTo)
                                 ins.Parameters.AddWithValue("$source", source)
                                 ins.Parameters.AddWithValue("$target", target)
                                 ins.Parameters.AddWithValue("$cut", source.Length + 1)
@@ -2933,7 +2976,7 @@ Namespace Services
                                 ' A completed enumeration already proved that this image exists.
                                 ' Avoid a second network metadata roundtrip for every unchanged row.
                                 If filesSeenByIndex IsNot Nothing AndAlso filesSeenByIndex.Contains(p) Then Continue While
-                                If Not File.Exists(p) AndAlso volumes.UnreachableRootOf(p).Length = 0 Then
+                                If Not RawSidecarService.VariantExists(p) AndAlso volumes.UnreachableRootOf(VariantKey.FileOf(p)).Length = 0 Then
                                     orphans += 1
                                     orphanPaths?.Add(p)
                                 End If
@@ -3031,8 +3074,10 @@ Namespace Services
                         progress?.Invoke(checkedCount, allPaths.Count)
                         Continue For
                     End If
-                    If Not File.Exists(p) Then
-                        Dim root = volumes.UnreachableRootOf(p)
+                    ' Die Zeile einer zusaetzlichen Variante ist verwaist, wenn die Datei fehlt ODER
+                    ' die Variante in ihrer Begleitdatei nicht mehr steht.
+                    If Not RawSidecarService.VariantExists(p) Then
+                        Dim root = volumes.UnreachableRootOf(VariantKey.FileOf(p))
                         If root.Length = 0 Then
                             orphans.Add(p)
                         Else

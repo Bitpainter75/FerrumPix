@@ -78,6 +78,153 @@ Namespace ViewModels
         ''' Pfade statt Stellen, weil sich die Ordnerliste während der Diashow ändern kann.</summary>
         Private ReadOnly _slideshowShuffleQueue As New Queue(Of String)()
         Private _folderPaths As New List(Of String)()
+
+        ' Welche Variante des gezeigten Bildes zu sehen ist. Die Liste oben und _currentImagePath
+        ' fuehren DATEIEN; die Kennung einer zusaetzlichen Variante steht daneben und gilt nur,
+        ' solange die Datei dieselbe ist. Jeder Wechsel zu einer anderen Datei zeigt deshalb von
+        ' selbst wieder die Standardvariante, ohne dass jede Stelle, die den Pfad setzt, daran
+        ' denken muss.
+        Private _variantOfPath As String = ""
+        Private _variantId As String = ""
+
+        ''' <summary>Die Kennung der zusaetzlichen Variante, die gerade gezeigt wird; leer fuer die
+        ''' Standardvariante.</summary>
+        Private ReadOnly Property CurrentVariantId As String
+            Get
+                If _variantId.Length = 0 OrElse Not String.Equals(_variantOfPath, _currentImagePath, PathIdentity.Comparison) Then Return ""
+                Return _variantId
+            End Get
+        End Property
+
+        ''' <summary>Das gezeigte Bild samt Variante: der Pfad, bei einer zusaetzlichen Variante ihr
+        ''' Schluessel (Services.VariantKey). Was Rezept oder Katalogdaten des gezeigten Bildes
+        ''' meint, nimmt diesen Wert; was die Datei anfasst, <see cref="CurrentImagePath"/>.</summary>
+        Public ReadOnly Property CurrentItemPath As String
+            Get
+                Return VariantKey.Make(_currentImagePath, CurrentVariantId)
+            End Get
+        End Property
+
+        ' EINTRAEGE. Die Liste des Betrachters (_folderPaths), das angeheftete Bild und die beiden
+        ' Flaechen des Vergleichs fuehren EINTRAEGE: den Pfad einer Datei oder den Schluessel einer
+        ' zusaetzlichen Variante (Services.VariantKey). So ist jede Variante im Filmstreifen, beim
+        ' Blaettern, im Vollbild und im Vergleich ein eigenes Bild. Ein Eintrag ist kein Pfad auf
+        ' der Platte: wer die Datei anfasst, nimmt VariantKey.FileOf; Katalog und Begleitdatei
+        ' verstehen den Eintrag selbst. _currentImagePath bleibt die DATEI des gezeigten Eintrags.
+
+        ''' <summary>Gibt es, was dieser Eintrag meint: die Datei, bei einer zusaetzlichen Variante
+        ''' auch diese? Fuer einen gewoehnlichen Pfad dasselbe wie File.Exists.</summary>
+        Private Shared Function EntryExists(entry As String) As Boolean
+            Return RawSidecarService.VariantExists(entry)
+        End Function
+
+        ''' <summary>Der Name eines Eintrags, wie er angezeigt wird: der der Datei, dahinter in
+        ''' Klammern die Variante, sobald die Datei mehr als eine hat.</summary>
+        Private Shared Function EntryName(entry As String) As String
+            If String.IsNullOrEmpty(entry) Then Return ""
+            Return ImageItem.VariantFileName(IO.Path.GetFileName(VariantKey.FileOf(entry)), GalleryViewModel.VariantTitle(entry))
+        End Function
+
+        ''' <summary>Macht einen Eintrag zum gezeigten Bild: die Datei als aktueller Pfad, die
+        ''' Variante daneben. Die EINE Stelle dafuer, damit Pfad und Variante nie auseinanderlaufen.</summary>
+        Private Sub SetCurrentEntry(entry As String)
+            Dim variantId As String = Nothing
+            Dim file = VariantKey.Split(entry, variantId)
+            _currentImagePath = file
+            _variantOfPath = file
+            _variantId = If(variantId, "")
+            CurrentImagePath = file
+            CurrentFileName = IO.Path.GetFileName(If(file, ""))
+        End Sub
+
+        ''' <summary>Loescht, was ein Eintrag meint. Eine Datei ohne zusaetzliche Variante geht den
+        ''' gewoehnlichen Weg (Papierkorb, Rueckfrage). Sonst wird die VARIANTE geloescht, mit dem
+        ''' Ablauf der Galerie: die Datei bleibt, und war es die Standardvariante, rueckt die erste
+        ''' zusaetzliche auf. <paramref name="afterDelete"/> kommt in jedem Fall, auch nach einem
+        ''' Abbruch; ob der Eintrag noch da ist, sagt danach <see cref="EntryExists"/>.</summary>
+        Private Sub DeleteEntry(entry As String, afterDelete As Action)
+            Dim file = VariantKey.FileOf(entry)
+            If Not VariantKey.IsVariant(entry) AndAlso RawSidecarService.ReadVariants(file).Count = 0 Then
+                _mainVm.RequestDeletePaths({file}, afterDelete)
+                Return
+            End If
+            Dim ignored = DeleteVariantEntryAsync(entry, afterDelete)
+        End Sub
+
+        Private Async Function DeleteVariantEntryAsync(entry As String, afterDelete As Action) As Task
+            Try
+                Dim gallery = _mainVm?.Gallery
+                If gallery Is Nothing Then Return
+                Dim refused As String = Nothing
+                Dim before = RawSidecarService.ReadVariants(VariantKey.FileOf(entry)).Select(Function(v) v.Id).ToList()
+                Dim affected = Await gallery.ChangeVariantForImageItemAsync(New ImageItem(entry), GalleryViewModel.VariantAction.Delete,
+                                                                           Sub(text) refused = text)
+                If refused IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Varianten"), refused)
+                If affected Is Nothing Then Return
+                ' Eintraege, die es nicht mehr gibt, fallen aus der Liste: der geloeschte, oder
+                ' nach dem Loeschen der Standardvariante der der aufgerueckten.
+                Dim standardDeleted = Not VariantKey.IsVariant(entry)
+                If standardDeleted Then
+                    Dim stillThere = RawSidecarService.ReadVariants(VariantKey.FileOf(entry)).Select(Function(v) v.Id).ToList()
+                    Dim promotedId = before.FirstOrDefault(Function(id) Not stillThere.Contains(id))
+                    If promotedId IsNot Nothing Then AfterStandardVariantDeleted(entry, VariantKey.Make(entry, promotedId))
+                    Return
+                End If
+                afterDelete?.Invoke()
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Viewer.Variants", ex)
+            End Try
+        End Function
+
+        ''' <summary>Die Standardvariante einer Datei wurde geloescht und eine zusaetzliche ist
+        ''' aufgerueckt: ihr bisheriger Eintrag faellt weg, und was den Eintrag der Datei zeigt,
+        ''' laedt neu, denn dort steht jetzt ein anderes Bild.</summary>
+        Private Sub AfterStandardVariantDeleted(fileEntry As String, promotedEntry As String)
+            Dim sameAs = Function(a As String, b As String) String.Equals(a, b, PathIdentity.Comparison)
+            Dim shownWasPromoted = sameAs(CurrentItemPath, promotedEntry)
+            _folderPaths.RemoveAll(Function(p) sameAs(p, promotedEntry))
+            If _isCompareMode Then
+                If sameAs(_compareLeftPath, promotedEntry) Then _compareLeftPath = fileEntry
+                If sameAs(_compareRightPath, promotedEntry) Then _compareRightPath = fileEntry
+                If sameAs(_pinnedPath, promotedEntry) Then _pinnedPath = fileEntry
+                If sameAs(_compareLeftPath, _compareRightPath) Then
+                    ' Beide Flaechen zeigten Standard und die aufgerueckte: jetzt ist es dasselbe Bild.
+                    ExitCompare(zurueckZumFokus:=False)
+                    OpenImage(fileEntry, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+                    Return
+                End If
+                LoadFilmstrip(reuseItems:=True)
+                SetPinnedPath(_pinnedPath)
+                ImageItem.ReloadThumbnailsFor(FilmstripItems, fileEntry)
+                LoadCompareMarkers()
+                LoadCompareImages()
+                ShowDataOfFocusedPane()
+                For Each n In {NameOf(CompareLeftFileName), NameOf(CompareRightFileName), NameOf(PinnedFileName), NameOf(PositionText)}
+                    Me.RaisePropertyChanged(n)
+                Next
+                Return
+            End If
+            If shownWasPromoted OrElse sameAs(CurrentItemPath, fileEntry) Then
+                _variantId = "?"   ' erzwingt das Neuladen in OpenImage: dieselbe Datei, anderes Bild
+                OpenImage(fileEntry, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+            Else
+                LoadFilmstrip(reuseItems:=True)
+            End If
+        End Sub
+
+        ''' <summary>Der Katalog- und Rezeptschluessel zu einem Pfad: fuer das gezeigte Bild der
+        ''' seiner Variante, fuer jedes andere der Pfad selbst.</summary>
+        Private Function ItemPathFor(path As String) As String
+            If CurrentVariantId.Length > 0 AndAlso String.Equals(path, _currentImagePath, PathIdentity.Comparison) Then Return CurrentItemPath
+            Return path
+        End Function
+
+        ''' <summary>Die Katalogzeilen, an die eine Angabe zum gezeigten Bild geht: bei einer
+        ''' zusaetzlichen Variante nur ihre eigene, sonst die Datei samt dem Partner ihres Stapels.</summary>
+        Private Function CatalogTargets() As List(Of String)
+            If CurrentVariantId.Length > 0 Then Return New List(Of String) From {CurrentItemPath}
+            Return WithGalleryPartners(_currentImagePath)
+        End Function
         ''' <summary>Bindet einen NACHGEREICHTEN Ordnerkontext an das Bild, für das er gesucht wurde.
         ''' Der Zähler steigt bei jedem Öffnen; trifft ein Suchergebnis mit altem Stand ein, wird es
         ''' verworfen, statt die inzwischen gültige Liste zu überschreiben.</summary>
@@ -615,7 +762,7 @@ Namespace ViewModels
                    Not _suppressRotationDirty AndAlso
                    Not _isImmichSession AndAlso
                    Not String.IsNullOrEmpty(_currentImagePath) AndAlso
-                   File.Exists(_currentImagePath) Then
+                   EntryExists(_currentImagePath) Then
                     _hasPendingRotationSave = normalized <> 0
                 End If
                 If _isFitToWindow Then
@@ -1054,6 +1201,11 @@ Namespace ViewModels
                                                     .ApplyFilter = ApplyFilterCurrentCommand,
                                                     .CopyAdjustments = CopyAdjustmentsCurrentCommand,
                                                     .PasteAdjustments = PasteAdjustmentsCurrentCommand,
+                                                    .SwitchVariant = SwitchVariantCurrentCommand,
+                                                    .NewVariant = NewVariantCurrentCommand,
+                                                    .NewVariantFromStartValues = NewVariantFromStartValuesCurrentCommand,
+                                                    .RenameVariant = RenameVariantCurrentCommand,
+                                                    .DeleteVariant = DeleteVariantCurrentCommand,
                                                     .ConvertTo = ConvertCurrentCommand,
                                                     .ExportTo = ExportCurrentCommand,
                                                     .Print = PrintCommand,
@@ -1100,6 +1252,12 @@ Namespace ViewModels
         ''' dieselbe Ablage und derselbe Ablauf wie in der Galerie, für das Bild auf der Bühne.</summary>
         Public ReadOnly Property CopyAdjustmentsCurrentCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCurrentCommand As ICommand
+        ''' <summary>Die Varianten des gezeigten Bildes, über denselben Ablauf wie in der Galerie.</summary>
+        Public ReadOnly Property SwitchVariantCurrentCommand As ICommand
+        Public ReadOnly Property NewVariantCurrentCommand As ICommand
+        Public ReadOnly Property NewVariantFromStartValuesCurrentCommand As ICommand
+        Public ReadOnly Property RenameVariantCurrentCommand As ICommand
+        Public ReadOnly Property DeleteVariantCurrentCommand As ICommand
         Public ReadOnly Property RenameCurrentCommand As ICommand
         Public ReadOnly Property CopyPathCommand As ICommand
         Public ReadOnly Property OpenFileManagerCommand As ICommand
@@ -1200,7 +1358,7 @@ Namespace ViewModels
             RotateLeftCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle - 90)
             RotateRightCommand = ReactiveCommand.Create(Sub() RotationAngle = RotationAngle + 90)
             FlipHorizontalCommand = ReactiveCommand.Create(Sub() ScaleX = ScaleX * -1)
-            BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.BackToGallery(_currentImagePath))
+            BackToGalleryCommand = ReactiveCommand.Create(Sub() _mainVm.BackToGallery(CurrentItemPath))
             DeleteCurrentCommand = ReactiveCommand.Create(Sub() DeleteCurrent())
             ' CreateFromTask: der Befehl bleibt bis zum Ende des Laufs gesperrt (siehe ResizeCurrentAsync).
             ResizeCurrentCommand = ReactiveCommand.CreateFromTask(Function() ResizeCurrentAsync())
@@ -1213,6 +1371,11 @@ Namespace ViewModels
             ApplyFilterCurrentCommand = ReactiveCommand.Create(Sub() WithCurrentImage(Sub(g, i) g.ApplyFilterToImageItems(i)))
             CopyAdjustmentsCurrentCommand = ReactiveCommand.CreateFromTask(Function() CopyAdjustmentsCurrentAsync())
             PasteAdjustmentsCurrentCommand = ReactiveCommand.CreateFromTask(Function() PasteAdjustmentsCurrentAsync())
+            SwitchVariantCurrentCommand = ReactiveCommand.Create(Of Object)(Sub(parameter) ShowVariant(TryCast(parameter, String)))
+            NewVariantCurrentCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromCurrent))
+            NewVariantFromStartValuesCurrentCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.AddFromStartValues))
+            RenameVariantCurrentCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.Rename))
+            DeleteVariantCurrentCommand = ReactiveCommand.CreateFromTask(Function() ChangeVariantCurrentAsync(GalleryViewModel.VariantAction.Delete))
             RenameCurrentCommand = ReactiveCommand.Create(Sub() RenameCurrent())
             ' Metadaten: dieselben Ablaeufe wie in der Galerie, angewandt auf das angezeigte Bild.
             ' Die schreibenden bleiben als CreateFromTask bis zum Ende gesperrt.
@@ -1319,7 +1482,7 @@ Namespace ViewModels
                                          End If
                                          Dim ignored = SetImmichRatingAsync(_currentImmichAssetId, value, _currentIndex, previous)
                                      ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                         For Each target In WithGalleryPartners(_currentImagePath)
+                                         For Each target In CatalogTargets()
                                              LibraryService.Instance.SetRating(target, value, syncToXmp:=True)
                                          Next
                                      End If
@@ -1340,7 +1503,7 @@ Namespace ViewModels
                                            item.IsFavorite = value
                                            Dim ignored = SetNextcloudFavoriteAsync(item, value)
                                        ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                           For Each target In WithGalleryPartners(_currentImagePath)
+                                           For Each target In CatalogTargets()
                                                LibraryService.Instance.SetFavorite(target, value)
                                            Next
                                        End If
@@ -1355,7 +1518,7 @@ Namespace ViewModels
                                                  LibraryService.Instance.SetColorLabelForMany({meta.FilePath}, value)
                                              End If
                                          ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                             LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(_currentImagePath), value, syncToXmp:=True)
+                                             LibraryService.Instance.SetColorLabelForMany(CatalogTargets(), value, syncToXmp:=True)
                                          End If
                                      End Sub
 
@@ -1371,7 +1534,7 @@ Namespace ViewModels
                                       ' unter dem TEMP-Pfad der geholten Kopie - also ins Leere.
                                       Dim ignored = SetServerTagAsync(tag, gesetzt, immich:=False)
                                   ElseIf Not String.IsNullOrEmpty(_currentImagePath) Then
-                                      LibraryService.Instance.SetTags(_currentImagePath, InfoPanel.Tags, syncToXmp:=True)
+                                      LibraryService.Instance.SetTags(CurrentItemPath, InfoPanel.Tags, syncToXmp:=True)
                                   End If
                               End Sub
         End Sub
@@ -1618,7 +1781,7 @@ Namespace ViewModels
             ' In einer Serversitzung zeigt der Betrachter den Namen vom Server (CurrentFileName),
             ' waehrend _currentImagePath auf die Arbeitskopie zeigt. Der Editor bekommt denselben
             ' Namen, sonst hiesse dasselbe Bild dort ploetzlich anders.
-            Await _mainVm.OpenImageInEditor(_currentImagePath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName,
+            Await _mainVm.OpenImageInEditor(CurrentItemPath, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName,
                                             forceSaveAsOnly:=saveAsOnly,
                                             immichAlbumId:=_immichSourceAlbumId,
                                             nextcloudSource:=origin,
@@ -1754,7 +1917,7 @@ Namespace ViewModels
                 ' der Vergleich laedt genau darueber.
                 If _isImmichSession Then Return False
                 If String.IsNullOrEmpty(_currentImagePath) Then Return False
-                Return File.Exists(_currentImagePath)
+                Return EntryExists(_currentImagePath)
             End Get
         End Property
 
@@ -1765,7 +1928,7 @@ Namespace ViewModels
             _pinnedPath = If(path, "")
             For Each item In FilmstripItems
                 item.IsCompareAnchor = _pinnedPath.Length > 0 AndAlso
-                                       String.Equals(item.FilePath, _pinnedPath, PathIdentity.Comparison)
+                                       String.Equals(item.ItemPath, _pinnedPath, PathIdentity.Comparison)
             Next
         End Sub
 
@@ -1777,7 +1940,7 @@ Namespace ViewModels
 
         Public ReadOnly Property PinnedFileName As String
             Get
-                Return IO.Path.GetFileName(If(_pinnedPath, ""))
+                Return EntryName(_pinnedPath)
             End Get
         End Property
 
@@ -1790,14 +1953,14 @@ Namespace ViewModels
                 SetPinnedPath("")
                 ExitCompare()
             Else
-                Dim path = If(_isCompareMode, _compareLeftPath, _currentImagePath)
-                If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+                Dim path = If(_isCompareMode, _compareLeftPath, CurrentItemPath)
+                If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
                 ' Das angeheftete Bild bleibt links; rechts steht sofort der naechste Kandidat der
                 ' aktuellen Reihe. Zwei gleiche Bilder nebeneinander zeigen keinen Unterschied und
                 ' zwangen bisher erst zu einem weiteren Tastendruck. Gibt es keinen zweiten Pfad,
                 ' bleibt der bisherige sichtbare Anheft-Zustand als Rueckfall erhalten.
                 Dim nextPath = NextPathFrom(_currentIndex + 1, path)
-                If Not String.IsNullOrWhiteSpace(nextPath) AndAlso File.Exists(nextPath) Then
+                If Not String.IsNullOrWhiteSpace(nextPath) AndAlso EntryExists(nextPath) Then
                     ActivateCompare(path, nextPath)
                     Return
                 End If
@@ -1877,13 +2040,13 @@ Namespace ViewModels
 
         Public ReadOnly Property CompareLeftFileName As String
             Get
-                Return IO.Path.GetFileName(If(_compareLeftPath, ""))
+                Return EntryName(_compareLeftPath)
             End Get
         End Property
 
         Public ReadOnly Property CompareRightFileName As String
             Get
-                Return IO.Path.GetFileName(If(_compareRightPath, ""))
+                Return EntryName(_compareRightPath)
             End Get
         End Property
 
@@ -1942,10 +2105,8 @@ Namespace ViewModels
         Private Sub ShowDataOfFocusedPane()
             Dim path = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
             If String.IsNullOrEmpty(path) Then Return
-            _currentImagePath = path
-            CurrentImagePath = path
-            CurrentFileName = IO.Path.GetFileName(path)
-            BeginInfoPanelSwitch(path)
+            SetCurrentEntry(path)
+            BeginInfoPanelSwitch(_currentImagePath)
             ' Der Dateiname allein reicht nicht: Sterne, Herz und Farbetikett in der Fusszeile
             ' gehoeren zum SELBEN Bild wie der Name daneben. Ohne das zeigte die Fusszeile die
             ' Bewertung der zuletzt in der Einzelansicht geoeffneten Datei, waehrend links der
@@ -1966,7 +2127,8 @@ Namespace ViewModels
         ''' Galerie oder im Editor. Betrifft es das gezeigte Bild, liest der Betrachter sie neu.</summary>
         Friend Sub RefreshCatalogState(changedPaths As IReadOnlyCollection(Of String))
             If _isImmichSession OrElse String.IsNullOrEmpty(_currentImagePath) OrElse changedPaths Is Nothing Then Return
-            If Not changedPaths.Any(Function(p) String.Equals(p, _currentImagePath, PathIdentity.Comparison)) Then Return
+            ' Die Pfade duerfen Schluessel zusaetzlicher Varianten sein; gefragt ist, ob die DATEI betroffen ist.
+            If Not changedPaths.Any(Function(p) String.Equals(VariantKey.FileOf(p), _currentImagePath, PathIdentity.Comparison)) Then Return
             ApplyCatalogAttributes(_currentImagePath)
         End Sub
 
@@ -1977,6 +2139,7 @@ Namespace ViewModels
         ''' Ueber ApplyOwnedState, nicht ueber die Eigenschaften: die Werte kommen gerade aus dem
         ''' Katalog, und der Weg ueber die Setter schriebe sie sofort wieder dorthin zurueck.</summary>
         Private Sub ApplyCatalogAttributes(imagePath As String)
+            imagePath = ItemPathFor(imagePath)
             _currentPickState = LibraryService.Instance.GetPickState(imagePath)
             InfoPanel.ApplyOwnedState(LibraryService.Instance.GetRating(imagePath),
                                       LibraryService.Instance.GetFavorite(imagePath),
@@ -2029,7 +2192,7 @@ Namespace ViewModels
             Dim target = If(_currentPickState = state, 0, state)
             _currentPickState = target
             RaisePickState()
-            LibraryService.Instance.SetPickStateForMany(WithGalleryPartners(_currentImagePath), target, syncToXmp:=True)
+            LibraryService.Instance.SetPickStateForMany(CatalogTargets(), target, syncToXmp:=True)
         End Sub
 
         ''' <summary>Der Pfad samt seinem RAW+JPEG-Partner, sobald in der Galerie Stapel eingeschaltet
@@ -2058,7 +2221,7 @@ Namespace ViewModels
             If Not _isCompareMode Then Return
             FocusedComparePane = pane
             Dim path = If(_focusedComparePane = 1, _compareRightPath, _compareLeftPath)
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             If Not CanEdit Then Return
             EditCommand.Execute(Nothing)
         End Sub
@@ -2070,7 +2233,7 @@ Namespace ViewModels
                                Optional cacheScopeId As String = Nothing,
                                Optional cacheScopeName As String = Nothing)
             If String.IsNullOrWhiteSpace(leftPath) OrElse String.IsNullOrWhiteSpace(rightPath) Then Return
-            If Not File.Exists(leftPath) OrElse Not File.Exists(rightPath) Then Return
+            If Not EntryExists(leftPath) OrElse Not EntryExists(rightPath) Then Return
 
             OpenImage(leftPath, allPaths, cacheScopeId, cacheScopeName)
             ActivateCompare(leftPath, rightPath)
@@ -2316,7 +2479,7 @@ Namespace ViewModels
         ''' der Galerie-Kachel.</summary>
         Public Sub SetCompareRating(pane As Integer, sterne As Integer)
             Dim path = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightRating, _compareLeftRating)
             Dim newValue = If(bisher = sterne, 0, Math.Max(0, Math.Min(5, sterne)))
             For Each target In WithGalleryPartners(path)
@@ -2331,7 +2494,7 @@ Namespace ViewModels
         ''' noch einmal nimmt die Markierung zurueck.</summary>
         Public Sub ToggleComparePickState(pane As Integer, state As Integer)
             Dim path = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightPick, _compareLeftPick)
             LibraryService.Instance.SetPickStateForMany(WithGalleryPartners(path), If(bisher = state, 0, state), syncToXmp:=True)
             LoadCompareMarkers()
@@ -2340,7 +2503,7 @@ Namespace ViewModels
 
         Public Sub ToggleCompareFavorite(pane As Integer)
             Dim path = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             Dim bisher = If(pane = 1, _compareRightFavorite, _compareLeftFavorite)
             For Each target In WithGalleryPartners(path)
                 LibraryService.Instance.SetFavorite(target, Not bisher)
@@ -2353,7 +2516,7 @@ Namespace ViewModels
         ''' entfernt es wieder, genau wie im Infopanel.</summary>
         Public Sub SetCompareRightColorLabel(hex As String)
             Dim path = _compareRightPath
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             Dim wanted = If(hex, "")
             Dim value = If(String.Equals(_compareRightColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
             LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(path), value, syncToXmp:=True)
@@ -2363,7 +2526,7 @@ Namespace ViewModels
 
         Public Sub SetCompareLeftColorLabel(hex As String)
             Dim path = _compareLeftPath
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
             Dim wanted = If(hex, "")
             Dim value = If(String.Equals(_compareLeftColorLabel, wanted, StringComparison.OrdinalIgnoreCase), "", wanted)
             LibraryService.Instance.SetColorLabelForMany(WithGalleryPartners(path), value, syncToXmp:=True)
@@ -2378,19 +2541,21 @@ Namespace ViewModels
         Public Sub DeleteComparePane(pane As Integer)
             If Not _isCompareMode Then Return
             Dim path = PathOfPane(pane)
-            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
-            _mainVm.RequestDeletePaths({path}, Sub() AfterDeleteInCompare(pane, path))
+            If String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
+            DeleteEntry(path, Sub() AfterDeleteInCompare(pane, path))
         End Sub
 
         Private Sub AfterDeleteInCompare(pane As Integer, geloescht As String)
             ' Liess sich die Datei nicht loeschen, bleibt alles stehen: der Rueckruf kommt auch nach
             ' einem Fehlschlag, und die Flaechen zeigten sonst ein Nachruecken fuer ein Bild, das
             ' weiter auf der Platte liegt.
-            If File.Exists(geloescht) Then Return
+            If EntryExists(geloescht) Then Return
             ' Die Stelle in der Liste MERKEN, bevor der Pfad herausfaellt - "das naechste Bild" ist
             ' genau das, was danach an dieser Stelle steht.
             Dim stelle = _folderPaths.FindIndex(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison))
-            _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison))
+            ' Mit einer Datei gehen auch die Eintraege ihrer zusaetzlichen Varianten.
+            _folderPaths.RemoveAll(Function(p) String.Equals(p, geloescht, PathIdentity.Comparison) OrElse Not EntryExists(p) AndAlso
+                                               String.Equals(VariantKey.FileOf(p), VariantKey.FileOf(geloescht), PathIdentity.Comparison))
             LoadFilmstrip(reuseItems:=True)
 
             ' Beide Flaechen zeigten dasselbe Bild (direkt nach dem Anheften) - dann ist nach dem
@@ -2548,7 +2713,7 @@ Namespace ViewModels
         ''' Die linke bleibt stehen, damit sie als Bezug taugt.</summary>
         Public Sub SetCompareRight(path As String)
             If Not _isCompareMode OrElse String.IsNullOrWhiteSpace(path) Then Return
-            If Not File.Exists(path) Then Return
+            If Not EntryExists(path) Then Return
             If String.Equals(path, _compareRightPath, PathIdentity.Comparison) Then Return
             _compareRightPath = path
             Me.RaisePropertyChanged(NameOf(CompareRightFileName))
@@ -2634,7 +2799,15 @@ Namespace ViewModels
         Public Sub OpenImage(imagePath As String, Optional allPaths As List(Of String) = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional deferFolderContext As Boolean = False)
             _isImmichSession = False
             _immichSourceAlbumId = Nothing
-            If Not File.Exists(imagePath) Then Return
+            ' Der Schluessel einer zusaetzlichen Variante (Services.VariantKey): die Datei wird
+            ' geoeffnet, die Variante daneben gemerkt. In der Liste ist jede Variante ein eigener
+            ' Eintrag.
+            Dim openEntry = imagePath
+            Dim openVariantId As String = Nothing
+            imagePath = VariantKey.Split(imagePath, openVariantId)
+            If Not EntryExists(imagePath) Then Return
+            Dim sameVariant = String.Equals(imagePath, _currentImagePath, PathIdentity.Comparison) AndAlso
+                              String.Equals(openVariantId, CurrentVariantId, StringComparison.OrdinalIgnoreCase)
             ' Jedes Öffnen entwertet einen noch laufenden, nachgereichten Ordnerkontext.
             _folderContextToken += 1
             ' Ein normales Oeffnen beendet einen laufenden Vergleich - sonst zeigt der Betrachter
@@ -2647,6 +2820,8 @@ Namespace ViewModels
             _thumbCacheScopeId = If(allPaths IsNot Nothing, cacheScopeId, Nothing)
             _thumbCacheScopeName = If(allPaths IsNot Nothing, cacheScopeName, Nothing)
             _currentImagePath = imagePath
+            _variantOfPath = imagePath
+            _variantId = If(openVariantId, "")
             CurrentImagePath = imagePath
             CurrentFileName = IO.Path.GetFileName(imagePath)
             ResetViewerRotation()
@@ -2659,20 +2834,28 @@ Namespace ViewModels
                     Where(Function(p) Not String.IsNullOrEmpty(p)).
                     Distinct(PathIdentity.Comparer).
                     ToList()
-                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, imagePath, PathIdentity.Comparison))
+                _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, openEntry, PathIdentity.Comparison))
+                ' Eine Variante, die die Liste nicht fuehrt (gerade angelegt): hinter ihre Datei.
+                If _currentIndex < 0 AndAlso VariantKey.IsVariant(openEntry) Then
+                    Dim last = _folderPaths.FindLastIndex(Function(p) String.Equals(VariantKey.FileOf(p), imagePath, PathIdentity.Comparison))
+                    If last >= 0 Then
+                        _folderPaths.Insert(last + 1, openEntry)
+                        _currentIndex = last + 1
+                    End If
+                End If
                 LoadFilmstrip()
             ElseIf deferFolderContext Then
                 ' Leer starten, damit das Bild sofort kommt - die Liste trifft gleich ein.
                 _folderPaths = New List(Of String)()
                 _currentIndex = 0
                 LoadFilmstrip()
-                LoadFolderContextDeferred(IO.Path.GetDirectoryName(imagePath), imagePath, _folderContextToken)
+                LoadFolderContextDeferred(IO.Path.GetDirectoryName(imagePath), openEntry, _folderContextToken)
             Else
                 Dim folder = IO.Path.GetDirectoryName(imagePath)
-                LoadFolderContext(folder, imagePath)
+                LoadFolderContext(folder, openEntry)
             End If
 
-            If Not IsShowingUnchanged(imagePath) Then LoadBitmap()
+            If Not sameVariant OrElse Not IsShowingUnchanged(imagePath) Then LoadBitmap()
             If _isFitToWindow Then UpdateFitZoom()
             UpdateStatus()
             LoadInfoPanelData(imagePath)
@@ -2703,7 +2886,7 @@ Namespace ViewModels
         End Function
 
         Public Sub ReloadCurrentImageFromDisk(Optional evictCurrentThumbnail As Boolean = True)
-            If String.IsNullOrEmpty(_currentImagePath) OrElse Not File.Exists(_currentImagePath) Then Return
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not EntryExists(_currentImagePath) Then Return
 
             If evictCurrentThumbnail Then RefreshCurrentFilmstripThumbnail()
 
@@ -2849,7 +3032,8 @@ Namespace ViewModels
                     End If
                 End If
                 If bmp Is Nothing Then
-                    Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token))
+                    Dim recipeKey = ItemPathFor(path)
+                    Dim decoded = Await Task.Run(Function() DecodeViewerBitmapUnlessStale(path, reduced, token, recipeKey))
                     bmp = decoded.Bitmap
                     rawDeveloped = decoded.RawDeveloped
                 End If
@@ -2907,7 +3091,9 @@ Namespace ViewModels
             Else
                 nextPath = _folderPaths((_currentIndex + 1) Mod _folderPaths.Count)
             End If
-            If String.IsNullOrEmpty(nextPath) OrElse VideoPreviewService.IsSupportedVideo(nextPath) OrElse Not File.Exists(nextPath) Then Return Nothing
+            If String.IsNullOrEmpty(nextPath) OrElse VideoPreviewService.IsSupportedVideo(nextPath) OrElse Not EntryExists(nextPath) Then Return Nothing
+            ' Eine zusaetzliche Variante wird nicht vorgeladen: das Vorgeladene haengt am Pfad der Datei.
+            If VariantKey.IsVariant(nextPath) Then Return Nothing
             Return nextPath
         End Function
 
@@ -3075,7 +3261,7 @@ Namespace ViewModels
             Dim sidecarTicks = 0L
             Try
                 Dim sidecar = RawSidecarService.SidecarPathFor(path)
-                If Not String.IsNullOrEmpty(sidecar) AndAlso File.Exists(sidecar) Then sidecarTicks = File.GetLastWriteTimeUtc(sidecar).Ticks
+                If Not String.IsNullOrEmpty(sidecar) AndAlso EntryExists(sidecar) Then sidecarTicks = File.GetLastWriteTimeUtc(sidecar).Ticks
             Catch
             End Try
             ' Alles, was das gezeigte Bild veraendert: Datei, Rezept, Groesse der RAW-Entwicklung und
@@ -3142,8 +3328,15 @@ Namespace ViewModels
         ''' Nur fuer eine RAW, die entwickelt wird: alles andere ist schnell genug, und eine
         ''' eingebettete Vorschau soll nicht hinter Hintergrundarbeit (Gesichter, Kacheln) an der
         ''' Schleuse warten.</summary>
-        Private Function DecodeViewerBitmapUnlessStale(path As String, reduced As Boolean, token As Integer) As (Bitmap As Bitmap, RawDeveloped As Boolean)
-            If Not WillDevelopRawInViewer(path) Then Return DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced)
+        Private Function DecodeViewerBitmapUnlessStale(path As String, reduced As Boolean, token As Integer,
+                                                       Optional recipeKey As String = Nothing) As (Bitmap As Bitmap, RawDeveloped As Boolean)
+            ' Eine zusaetzliche Variante wird immer entwickelt: die Vorschau der Kamera zeigte fuer
+            ' jede Variante dasselbe Bild.
+            Dim isVariant = VariantKey.IsVariant(recipeKey)
+            If Not isVariant AndAlso Not WillDevelopRawInViewer(path) Then Return DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced)
+            If isVariant AndAlso Not RawPreviewService.IsSupportedRaw(path) Then
+                Return DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced, recipeKey:=recipeKey)
+            End If
             Return DecodeGate.Run(
                 Function() As (Bitmap As Bitmap, RawDeveloped As Boolean)
                     If token <> System.Threading.Volatile.Read(_bitmapLoadToken) Then
@@ -3154,7 +3347,7 @@ Namespace ViewModels
                     ' (RawDecodeService.RunWhileWanted), statt das naechste Bild warten zu lassen.
                     Return RawDecodeService.RunWhileWanted(
                         Function() token = System.Threading.Volatile.Read(_bitmapLoadToken),
-                        Function() DecodeViewerBitmapWithState(path, reducedRawDecode:=reduced))
+                        Function() DecodeViewerBitmapWithState(path, alwaysDevelop:=isVariant, reducedRawDecode:=reduced, recipeKey:=recipeKey))
                 End Function)
         End Function
 
@@ -3203,9 +3396,18 @@ Namespace ViewModels
         ''' <summary>Wie <see cref="DecodeViewerBitmap"/>, sagt aber dazu, ob LibRaw das Bild
         ''' entwickelt hat. Faellt die Entwicklung aus, kommt die eingebettete Vorschau und damit
         ''' False - die Einstellung allein belegt die Entwicklung nicht.</summary>
+        ''' <param name="recipeKey">Woher Rezept und Drehung kommen, wenn nicht aus der
+        ''' Standardvariante der Datei: der Schluessel einer zusaetzlichen Variante.</param>
         Friend Shared Function DecodeViewerBitmapWithState(path As String, Optional alwaysDevelop As Boolean = False,
-                                                           Optional reducedRawDecode As Boolean = False) As (Bitmap As Bitmap, RawDeveloped As Boolean)
-            If Not RawPreviewService.IsSupportedRaw(path) Then Return (DecodeNonRawViewerBitmap(path), False)
+                                                           Optional reducedRawDecode As Boolean = False,
+                                                           Optional recipeKey As String = Nothing) As (Bitmap As Bitmap, RawDeveloped As Boolean)
+            ' Der Pfad darf selbst der Schluessel einer zusaetzlichen Variante sein (die Flaechen
+            ' des Vergleichs reichen ihre Eintraege herein): dann ist er die Quelle des Rezepts,
+            ' gelesen wird die Datei dahinter, und entwickelt wird immer.
+            If String.IsNullOrEmpty(recipeKey) Then recipeKey = path
+            path = VariantKey.FileOf(path)
+            If VariantKey.IsVariant(recipeKey) Then alwaysDevelop = True
+            If Not RawPreviewService.IsSupportedRaw(path) Then Return (DecodeNonRawViewerBitmap(path, recipeKey), False)
             ' Entwickelte Vorschau statt der schnellen eingebetteten: im Vergleich immer, sonst
             ' bei aktiver Einstellung und vorhandener .fpxmp - oder bei der zweiten Einstellung
             ' auch ohne Rezept. ApplyAdjustments liefert bereits orientiert + mit
@@ -3218,7 +3420,7 @@ Namespace ViewModels
                 ' Ohne Begleitdatei die Vorgabewerte: entwickelt wird trotzdem, nur eben ohne
                 ' Rezept. Genau das ist im Vergleich und beim Schalter fuer unbearbeitete
                 ' RAWs gewollt.
-                Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(path), Nothing)
+                Dim adj = If(RawSidecarService.Exists(path), RawSidecarService.TryRead(recipeKey), Nothing)
                 If adj Is Nothing Then adj = ImageAdjustments.ForUneditedRaw(path)
                 Try
                     Dim developed = ImageProcessor.ApplyAdjustments(path, adj, preferReducedRawDecode:=reducedRawDecode)
@@ -3234,12 +3436,12 @@ Namespace ViewModels
                 ' Gedrehte RAWs tragen ihre Drehung im Sidecar (die Datei selbst wird nie
                 ' neu geschrieben) - beim Anzeigen also wieder drauflegen.
                 Return (If(preview IsNot Nothing,
-                           ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(path), rawContainerPath:=path),
+                           ImageOrientationService.LoadOrientedAvaloniaBitmap(preview, RawSidecarService.ReadRotationDegrees(recipeKey), rawContainerPath:=path),
                            Nothing), False)
             End Using
         End Function
 
-        Private Shared Function DecodeNonRawViewerBitmap(path As String) As Bitmap
+        Private Shared Function DecodeNonRawViewerBitmap(path As String, Optional recipeKey As String = Nothing) As Bitmap
             If SvgPreviewService.IsSupportedSvg(path) Then
                 Using preview = SvgPreviewService.ExtractPreview(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
@@ -3247,7 +3449,7 @@ Namespace ViewModels
             End If
             If PsdPreviewService.IsSupportedPsd(path) Then
                 ' Wie RAW: eine gedrehte PSD traegt ihre Drehung im Sidecar, nicht in den Pixeln.
-                Return ImageOrientationService.ForeignToAvaloniaBitmap(path, RawSidecarService.ReadRotationDegrees(path))
+                Return ImageOrientationService.ForeignToAvaloniaBitmap(path, RawSidecarService.ReadRotationDegrees(If(recipeKey, path)))
             End If
             ' ICO, TIFF, HEIF und JPEG XL kennt SkiaSharp nicht; der Rueckfall unten lieferte deshalb
             ' nichts, und der Betrachter blieb leer, waehrend Galerie und Editor das Bild zeigten
@@ -3527,6 +3729,21 @@ Namespace ViewModels
             End Try
         End Sub
 
+        ''' <summary>Stellt hinter jede Datei die Eintraege ihrer zusaetzlichen Varianten, wie die
+        ''' Galerie es mit den Kacheln tut. Gelesen werden nur Begleitdateien, die es gibt.</summary>
+        Friend Shared Function WithVariantEntries(paths As List(Of String)) As List(Of String)
+            If paths Is Nothing OrElse paths.Count = 0 Then Return paths
+            Dim result As New List(Of String)(paths.Count)
+            For Each path In paths
+                result.Add(path)
+                If Not RawPreviewService.IsSupportedRaw(path) Then Continue For
+                For Each sidecarVariant In RawSidecarService.ReadVariants(path)
+                    result.Add(VariantKey.Make(path, sidecarVariant.Id))
+                Next
+            Next
+            Return result
+        End Function
+
         ''' <summary>Liest die blätterbaren Dateien eines Ordners. Reines Lesen ohne Zustand, damit
         ''' derselbe Aufruf sowohl sofort als auch auf einem Hintergrund-Thread laufen kann.</summary>
         Private Shared Function ScanFolderImagePaths(folder As String) As List(Of String)
@@ -3541,7 +3758,7 @@ Namespace ViewModels
 
         Private Sub LoadFolderContext(folder As String, currentPath As String)
             Try
-                _folderPaths = ScanFolderImagePaths(folder)
+                _folderPaths = WithVariantEntries(ScanFolderImagePaths(folder))
                 _currentIndex = _folderPaths.FindIndex(Function(p) String.Equals(p, currentPath, PathIdentity.Comparison))
                 If _currentIndex < 0 Then _currentIndex = 0
                 LoadFilmstrip()
@@ -3564,7 +3781,7 @@ Namespace ViewModels
         Private Async Sub LoadFolderContextDeferred(folder As String, currentPath As String, token As Integer)
             Try
                 If String.IsNullOrEmpty(folder) OrElse Not Directory.Exists(folder) Then Return
-                Dim paths = Await Task.Run(Function() ScanFolderImagePaths(folder))
+                Dim paths = Await Task.Run(Function() WithVariantEntries(ScanFolderImagePaths(folder)))
                 If token <> _folderContextToken Then Return
 
                 _folderPaths = paths
@@ -3601,7 +3818,7 @@ Namespace ViewModels
             Dim reusable As New Dictionary(Of String, ImageItem)(StringComparer.Ordinal)
             If reuseItems Then
                 For Each filmItem In previous
-                    If filmItem IsNot Nothing AndAlso Not String.IsNullOrEmpty(filmItem.FilePath) Then reusable.TryAdd(filmItem.FilePath, filmItem)
+                    If filmItem IsNot Nothing AndAlso Not String.IsNullOrEmpty(filmItem.FilePath) Then reusable.TryAdd(filmItem.ItemPath, filmItem)
                 Next
             End If
             Dim kept As New HashSet(Of ImageItem)()
@@ -3656,8 +3873,9 @@ Namespace ViewModels
 
             Dim localPaths = FilmstripItems.
                 Where(Function(item) item IsNot Nothing AndAlso Not item.IsRemoteAsset).
-                Select(Function(item) item.FilePath).
+                Select(Function(item) item.ItemPath).
                 ToList()
+            ' Nach dem Schluessel der Kachel: eine zusaetzliche Variante traegt eigene Katalogdaten.
             Dim catalog = LibraryService.Instance.GetMetaForPaths(localPaths)
 
             For index = 0 To FilmstripItems.Count - 1
@@ -3673,7 +3891,7 @@ Namespace ViewModels
                 End If
 
                 Dim meta As LibraryImageMeta = Nothing
-                If catalog.TryGetValue(item.FilePath, meta) Then
+                If catalog.TryGetValue(item.ItemPath, meta) Then
                     item.Rating = meta.Rating
                     item.IsFavorite = meta.IsFavorite
                     item.ColorLabel = meta.ColorLabel
@@ -3752,7 +3970,7 @@ Namespace ViewModels
             InfoPanel.ShowItem(EnsureInfoItem(imagePath))
 
             If Not preserveExistingTags Then
-                InfoPanel.ApplyOwnedTags(LibraryService.Instance.GetTags(imagePath))
+                InfoPanel.ApplyOwnedTags(LibraryService.Instance.GetTags(ItemPathFor(imagePath)))
             End If
 
             If Not loadHistogram Then
@@ -3954,7 +4172,7 @@ Namespace ViewModels
 
         Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
             If Not _hasPendingRotationSave OrElse NormalizeRotationAngle(_rotationAngle) = 0 Then Return True
-            If String.IsNullOrEmpty(_currentImagePath) OrElse Not File.Exists(_currentImagePath) Then
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not EntryExists(_currentImagePath) Then
                 ResetViewerRotation()
                 Return True
             End If
@@ -4015,7 +4233,7 @@ Namespace ViewModels
                                         Return ImageProcessor.SaveImage(source, temp, adj, 95, preserveMetadata,
                                                                         missingSource:=ImageProcessor.MissingSourceMetadata.Fail)
                                     End Function)
-                If ok AndAlso File.Exists(temp) Then
+                If ok AndAlso EntryExists(temp) Then
                     File.Copy(temp, source, True)
                     ExifService.Invalidate(source)
                     LoadBitmap()
@@ -4028,7 +4246,7 @@ Namespace ViewModels
                 errorMessage = ex.Message
             Finally
                 Try
-                    If File.Exists(temp) Then File.Delete(temp)
+                    If EntryExists(temp) Then File.Delete(temp)
                 Catch
                 End Try
             End Try
@@ -4070,6 +4288,8 @@ Namespace ViewModels
         ''' in Pixel zu backen. Ein schon vorhandenes Rezept (aus dem Editor) bleibt vollständig
         ''' erhalten - es kommt nur ein Drehschritt dazu.</summary>
         Private Async Function SaveRotationToSidecarAsync(source As String, angle As Integer) As Task(Of Boolean)
+            ' Gedreht wird die Variante, die zu sehen ist.
+            Dim recipeTarget = ItemPathFor(source)
             Dim ok = False
             Dim errorMessage As String = Nothing
             Try
@@ -4091,7 +4311,7 @@ Namespace ViewModels
                                         Dim startValues = If(RawSidecarService.Exists(source), Nothing, makeStartValues())
                                         ' Gedreht ist bearbeitet (RawSidecarService.IsEditedFile).
                                         Return RawSidecarService.TryModifyRecipe(
-                                            source,
+                                            recipeTarget,
                                             Function() If(startValues, makeStartValues()),
                                             Sub(adj) AppendRotationStep(adj, angle),
                                             edited:=True)
@@ -4188,8 +4408,9 @@ Namespace ViewModels
                 LoadImmichAt(idx)
                 Return
             End If
+            ' Ein EINTRAG: der Pfad einer Datei oder der Schluessel einer zusaetzlichen Variante.
             Dim nextPath = _folderPaths(idx)
-            If String.IsNullOrEmpty(nextPath) OrElse Not File.Exists(nextPath) Then
+            If String.IsNullOrEmpty(nextPath) OrElse Not EntryExists(nextPath) Then
                 _folderPaths.RemoveAll(Function(p) String.Equals(p, nextPath, PathIdentity.Comparison))
                 If _folderPaths.Count = 0 Then
                     InvalidatePendingBitmapLoad() : CurrentImage = Nothing
@@ -4199,12 +4420,10 @@ Namespace ViewModels
                 End If
                 If idx >= _folderPaths.Count Then idx = _folderPaths.Count - 1
                 nextPath = _folderPaths(idx)
-                If String.IsNullOrEmpty(nextPath) OrElse Not File.Exists(nextPath) Then Return
+                If String.IsNullOrEmpty(nextPath) OrElse Not EntryExists(nextPath) Then Return
             End If
 
-            _currentImagePath = nextPath
-            CurrentImagePath = _currentImagePath
-            CurrentFileName = IO.Path.GetFileName(_currentImagePath)
+            SetCurrentEntry(nextPath)
             CurrentIndex = idx
             BeginInfoPanelSwitch(_currentImagePath)
             ResetViewerRotation()
@@ -4274,8 +4493,8 @@ Namespace ViewModels
                 If item Is Nothing Then Return
                 ' Ein Klick auf das angeheftete Bild im Filmstreifen tut nichts: es ist gedimmt, weil
                 ' es im Vergleich nicht rechts neben sich selbst stehen kann.
-                If IsCompareAnchorPath(item.FilePath) Then Return
-                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.FilePath, PathIdentity.Comparison))
+                If IsCompareAnchorPath(item.ItemPath) Then Return
+                Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, item.ItemPath, PathIdentity.Comparison))
                 If idx >= 0 Then Await CommitNavigateAsync(idx)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -4315,19 +4534,22 @@ Namespace ViewModels
                 Return
             End If
             If String.IsNullOrEmpty(_currentImagePath) Then Return
-            Dim deletedPath = _currentImagePath
-            _mainVm.RequestDeletePaths({deletedPath}, Sub()
+            ' Geloescht wird der gezeigte EINTRAG: eine Variante, solange die Datei mehrere hat,
+            ' sonst die Datei (DeleteEntry).
+            Dim deletedPath = CurrentItemPath
+            DeleteEntry(deletedPath, Sub()
                                                            ' Der Rueckruf kommt auch, wenn das Loeschen
                                                            ' scheiterte (Papierkorb nicht erreichbar,
                                                            ' keine Rechte). Dann ist die Datei noch da:
                                                            ' sie bleibt im Streifen und wird neu geladen,
                                                            ' denn vor dem Loeschen wurde ihr Bild freigegeben.
-                                                           If File.Exists(deletedPath) Then
+                                                           If EntryExists(deletedPath) Then
                                                                Dim stillAt = _folderPaths.FindIndex(Function(p) String.Equals(p, deletedPath, PathIdentity.Comparison))
-                                                               If stillAt >= 0 AndAlso String.Equals(_currentImagePath, deletedPath, PathIdentity.Comparison) Then LoadPathAt(stillAt)
+                                                               If stillAt >= 0 AndAlso String.Equals(CurrentItemPath, deletedPath, PathIdentity.Comparison) Then LoadPathAt(stillAt)
                                                                Return
                                                            End If
-                                                           _folderPaths.Remove(deletedPath)
+                                                           _folderPaths.RemoveAll(Function(p) String.Equals(p, deletedPath, PathIdentity.Comparison) OrElse Not EntryExists(p) AndAlso
+                                                                                              String.Equals(VariantKey.FileOf(p), VariantKey.FileOf(deletedPath), PathIdentity.Comparison))
                                                            If _currentIndex >= _folderPaths.Count Then _currentIndex = _folderPaths.Count - 1
                                                            If _currentIndex >= 0 Then
                                                                LoadFilmstrip(reuseItems:=True)
@@ -4526,7 +4748,7 @@ Namespace ViewModels
         ''' <summary>Der Pfad, auf den sich eine Menueaktion bezieht.</summary>
         Private Function TargetPath() As String
             Dim target = If(ContextTargetPath, "")
-            If target <> "" AndAlso IO.File.Exists(target) Then Return target
+            If target <> "" AndAlso EntryExists(target) Then Return target
             Return _currentImagePath
         End Function
 
@@ -4540,11 +4762,15 @@ Namespace ViewModels
                 Dim gallery = _mainVm?.Gallery
                 If gallery Is Nothing Then Return
 
-                Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                             PathIdentity.AreSame(i.FilePath, path))
+                ' Der Filmstreifen fuehrt Dateien. Wird eine zusaetzliche Variante gezeigt, ist sie
+                ' gemeint und bekommt ihr eigenes Element.
+                Dim itemPath = ItemPathFor(path)
+                Dim item = If(VariantKey.IsVariant(itemPath), Nothing,
+                              FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                                PathIdentity.AreSame(i.FilePath, path)))
                 If item Is Nothing Then
-                    If Not File.Exists(path) Then Return
-                    item = New ImageItem(path)
+                    If Not EntryExists(path) Then Return
+                    item = New ImageItem(itemPath)
                 End If
                 If Not item.IsImage Then Return
 
@@ -4564,11 +4790,15 @@ Namespace ViewModels
                 Dim gallery = _mainVm?.Gallery
                 If gallery Is Nothing Then Return
 
-                Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                             PathIdentity.AreSame(i.FilePath, path))
+                ' Der Filmstreifen fuehrt Dateien. Wird eine zusaetzliche Variante gezeigt, ist sie
+                ' gemeint und bekommt ihr eigenes Element.
+                Dim itemPath = ItemPathFor(path)
+                Dim item = If(VariantKey.IsVariant(itemPath), Nothing,
+                              FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
+                                                                PathIdentity.AreSame(i.FilePath, path)))
                 If item Is Nothing Then
-                    If Not File.Exists(path) Then Return
-                    item = New ImageItem(path)
+                    If Not EntryExists(path) Then Return
+                    item = New ImageItem(itemPath)
                 End If
                 If Not item.IsImage Then Return
 
@@ -4624,6 +4854,50 @@ Namespace ViewModels
             If pasted Then ReloadCurrentImageFromDisk()
             If refused IsNot Nothing AndAlso _mainVm IsNot Nothing Then
                 Await _mainVm.ShowMessageAsync(LocalizationService.T("Anpassungen einfügen"), refused)
+            End If
+        End Function
+
+        ''' <summary>Zeigt eine andere Variante der gezeigten Datei: die mit dieser Kennung, leer
+        ''' fuer die Standardvariante. Geschrieben wird dabei nichts.</summary>
+        Private Sub ShowVariant(variantId As String)
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not EntryExists(_currentImagePath) Then Return
+            variantId = If(variantId, "")
+            If String.Equals(variantId, CurrentVariantId, StringComparison.OrdinalIgnoreCase) Then Return
+            OpenImage(VariantKey.Make(_currentImagePath, variantId), _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+            RefreshContextActions()
+        End Sub
+
+        ''' <summary>Legt neben dem gezeigten Bild eine Variante an, benennt die gezeigte um oder
+        ''' löscht sie, mit dem Ablauf der Galerie. Danach zeigt der Betrachter die Variante, um
+        ''' die es ging: die neue, die umbenannte, nach dem Löschen die Standardvariante. Eine
+        ''' Ablehnung kommt als Meldung, weil der Betrachter keine Statuszeile hat.</summary>
+        Private Async Function ChangeVariantCurrentAsync(change As GalleryViewModel.VariantAction) As Task
+            ' Loeschen ist EIN Weg, ob ueber das Menue oder ueber ENTF: er nimmt den Eintrag aus der
+            ' Liste und blaettert weiter (DeleteCurrent, DeleteEntry).
+            If change = GalleryViewModel.VariantAction.Delete Then
+                DeleteCurrent()
+                Return
+            End If
+            Dim refused As String = Nothing
+            Dim affected As String = Nothing
+            Await WithCurrentImageAsync(Async Function(g, i)
+                                            affected = Await g.ChangeVariantForImageItemAsync(i(0), change,
+                                                                                              Sub(text) refused = text)
+                                        End Function)
+            If affected IsNot Nothing AndAlso PathIdentity.AreSame(VariantKey.FileOf(affected), _currentImagePath) Then
+                ' Auch nach dem Umbenennen: der Name steht in der Titelzeile. Die gemerkte Kennung
+                ' faellt vorher weg, damit das Oeffnen das Bild sicher neu laedt.
+                _variantId = ""
+                OpenImage(affected, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+                ' Eine neue Variante legt man an, um sie zu bearbeiten: es geht gleich mit ihr in
+                ' den Editor.
+                If change <> GalleryViewModel.VariantAction.Rename AndAlso _mainVm IsNot Nothing Then
+                    Await _mainVm.OpenImageInEditor(affected, EditorFilmstripPaths(), _thumbCacheScopeId, _thumbCacheScopeName)
+                End If
+            End If
+            RefreshContextActions()
+            If refused IsNot Nothing AndAlso _mainVm IsNot Nothing Then
+                Await _mainVm.ShowMessageAsync(LocalizationService.T("Varianten"), refused)
             End If
         End Function
 
@@ -4751,12 +5025,12 @@ Namespace ViewModels
             ' einem Abbruch oder einem gescheiterten Schreiben aber nicht.
             InfoPanel.Refresh()
             RefreshContextActions()
-            If changedCount = 0 OrElse String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return
+            If changedCount = 0 OrElse String.IsNullOrWhiteSpace(path) OrElse Not EntryExists(path) Then Return
 
             Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
                                                          PathIdentity.AreSame(i.FilePath, path))
             item?.EvictThumbnail()
-            OpenImage(path, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+            OpenImage(ItemPathFor(path), _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
         End Function
 
         ''' <summary>Strg+R im Betrachter: derselbe "Bildgröße ändern"-Ablauf wie in der Galerie, nur für
@@ -4776,16 +5050,16 @@ Namespace ViewModels
                 Dim item = FilmstripItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
                                                              PathIdentity.AreSame(i.FilePath, _currentImagePath))
                 If item Is Nothing Then
-                    If Not File.Exists(_currentImagePath) Then Return
+                    If Not EntryExists(_currentImagePath) Then Return
                     item = New ImageItem(_currentImagePath)
                 End If
                 If Not item.IsImage Then Return
 
                 Await gallery.ResizeImageItemsAsync(New List(Of ImageItem) From {item})
 
-                If File.Exists(_currentImagePath) Then
+                If EntryExists(_currentImagePath) Then
                     item.EvictThumbnail()
-                    OpenImage(_currentImagePath, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
+                    OpenImage(CurrentItemPath, _folderPaths, _thumbCacheScopeId, _thumbCacheScopeName)
                 End If
             Catch ex As Exception
                 DiagnosticLogService.LogException("ViewerViewModel.ResizeCurrent", ex)
@@ -4795,10 +5069,21 @@ Namespace ViewModels
 
         Private Sub RenameCurrent()
             If String.IsNullOrEmpty(_currentImagePath) Then Return
+            ' Eine zusaetzliche Variante hat ihren eigenen Namen; der der Datei gehoert allen.
+            If CurrentVariantId.Length > 0 Then
+                RenameVariantCurrentCommand.Execute(Nothing)
+                Return
+            End If
             Dim oldPath = _currentImagePath
             _mainVm.RequestRenamePath(oldPath, Sub(newPath)
-                                                   Dim idx = _folderPaths.FindIndex(Function(p) String.Equals(p, oldPath, PathIdentity.Comparison))
-                                                   If idx >= 0 Then _folderPaths(idx) = newPath
+                                                   ' Alle Eintraege der Datei ziehen um, auch die ihrer
+                                                   ' zusaetzlichen Varianten.
+                                                   For idx = 0 To _folderPaths.Count - 1
+                                                       Dim entryId As String = Nothing
+                                                       If String.Equals(VariantKey.Split(_folderPaths(idx), entryId), oldPath, PathIdentity.Comparison) Then
+                                                           _folderPaths(idx) = VariantKey.Make(newPath, entryId)
+                                                       End If
+                                                   Next
                                                    LoadFilmstrip()
                                                    OpenImage(newPath, _folderPaths)
                                                End Sub)
@@ -4828,7 +5113,7 @@ Namespace ViewModels
         ''' einem Immich-Asset ist _currentImagePath bereits die lokale Temp-Kopie, es braucht also
         ''' keine gesonderte Auflösung wie in der Galerie.</summary>
         Private Sub PrintCurrent()
-            If String.IsNullOrEmpty(_currentImagePath) OrElse Not IO.File.Exists(_currentImagePath) Then Return
+            If String.IsNullOrEmpty(_currentImagePath) OrElse Not EntryExists(_currentImagePath) Then Return
             _mainVm?.ShowPrintDialog(New List(Of String) From {_currentImagePath})
         End Sub
 

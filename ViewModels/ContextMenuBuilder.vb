@@ -203,6 +203,7 @@ Namespace ViewModels
                 End If
                 AddIfOffered(adjustmentChildren, commands.ApplyWatermark, FooterMenuCatalog.ApplyWatermark(commands.ApplyWatermark))
                 AddGroup(list, adjustmentChildren, AddressOf FooterMenuCatalog.Adjustments)
+                AddVariants(list, first, singleItemActions, commands)
                 AddIfOffered(list, commands.ResizeImage, FooterMenuCatalog.ResizeImage(commands.ResizeImage))
             End If
             If showExport Then
@@ -445,6 +446,47 @@ Namespace ViewModels
             TidySeparators(children)
             Return children
         End Function
+
+        ''' <summary>Das Untermenue "Varianten" fuer EINE lokale RAW oder PSD: Anlegen einer weiteren
+        ''' Variante neben dem Bild, und fuer eine zusaetzliche Variante Umbenennen und Loeschen. Die
+        ''' Standardvariante ist die Datei selbst: sie hat keinen eigenen Namen, und geloescht wird
+        ''' sie mit der Datei.
+        '''
+        ''' In der Galerie ist jede Variante eine eigene Kachel, dort steht keine Liste. Betrachter
+        ''' und Editor zeigen EIN Bild und reichen SwitchVariant herein: oben stehen dann
+        ''' "Standard" und die zusaetzlichen Varianten, die gezeigte mit Haken, und ein Klick
+        ''' wechselt, welche zu sehen ist.
+        '''
+        ''' Gelesen wird die Begleitdatei beim Oeffnen des Menues, eine kleine Datei fuer ein Bild.</summary>
+        Private Shared Sub AddVariants(list As List(Of Object), first As ImageItem, singleItemActions As Boolean,
+                                       commands As MenuCommands)
+            If Not singleItemActions OrElse commands.NewVariant Is Nothing Then Return
+            If Not GalleryViewModel.CanHaveVariants(first) Then Return
+            Dim children As New List(Of Object)()
+            If commands.SwitchVariant IsNot Nothing Then
+                children.Add(FooterMenuCatalog.VariantEntry(GalleryViewModel.DefaultVariantName(), Not first.IsVariant,
+                                                       commands.SwitchVariant, ""))
+                For Each sidecarVariant In RawSidecarService.ReadVariants(first.FilePath)
+                    children.Add(FooterMenuCatalog.VariantEntry(sidecarVariant.Name,
+                                                           String.Equals(sidecarVariant.Id, first.VariantId, StringComparison.OrdinalIgnoreCase),
+                                                           commands.SwitchVariant, sidecarVariant.Id))
+                Next
+            End If
+            Divider(children)
+            AddIfOffered(children, commands.NewVariant, FooterMenuCatalog.NewVariant(commands.NewVariant))
+            AddIfOffered(children, commands.NewVariantFromStartValues,
+                         FooterMenuCatalog.NewVariantFromStartValues(commands.NewVariantFromStartValues))
+            If first.IsVariant Then
+                AddIfOffered(children, commands.RenameVariant, FooterMenuCatalog.RenameVariant(commands.RenameVariant))
+            End If
+            ' Loeschen laesst sich auch die Standardvariante, solange es eine zusaetzliche gibt:
+            ' dann rueckt die erste auf, und die Datei bleibt.
+            If first.IsVariant OrElse RawSidecarService.ReadVariants(first.FilePath).Count > 0 Then
+                AddIfOffered(children, commands.DeleteVariant, FooterMenuCatalog.DeleteVariant(commands.DeleteVariant))
+            End If
+            TidySeparators(children)
+            list.Add(FooterMenuCatalog.Variants(children))
+        End Sub
 
         ''' Nimmt den Eintrag nur auf, wenn der Bereich das Kommando ueberhaupt anbietet.
         Private Shared Sub AddIfOffered(list As List(Of Object), command As Object, entry As AppAction)

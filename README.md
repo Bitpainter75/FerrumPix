@@ -32,7 +32,7 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Use FerrumPix in a web browser: let it run on the computer where your photos are and work with it from the sofa.
 - Work in your own language: twenty-one are built in, and the symbol search finds shapes by their name in each of them.
 
-Your originals are never changed behind your back, and nothing at all is written until you save. Saving a RAW or a Photoshop file puts your edits in a small sidecar beside it, because those two are never written to; everything else is written the way you asked for it.
+Your originals are never changed behind your back, and nothing at all is written until you save. Saving a RAW or a Photoshop file puts your edits in a small sidecar beside it, because those two are never written to; everything else is written the way you asked for it. For a RAW file that sidecar can hold several variants of the edit, say one in colour and one in black and white. Each variant is a picture of its own in the gallery, with its own rating and keywords, and is exported on its own.
 
 ## Gallery
 

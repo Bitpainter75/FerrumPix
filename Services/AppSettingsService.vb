@@ -1965,6 +1965,8 @@ Namespace Services
                     ("bokeh", "Tiefen-Unschärfe"),
                     ("fog", "Nebel nach Tiefe"),
                     ("tiltshift", "Tilt-Shift"),
+                    ("saved-adjustments", "Gespeicherte Anpassungen"),
+                    ("variants", "Varianten"),
                     ("filter", "Filter"),
                     ("lut", "LUT (.cube)"),
                     ("xmp-preset", "XMP-Preset"),
@@ -1991,7 +1993,7 @@ Namespace Services
                                             "gradient-map", "calibration"}),
                     ("Details", New String() {"details", "rauschen", "sharpen", "vignette"}),
                     ("Effects", New String() {"frame", "grain", "posterize", "threshold", "bokeh", "fog", "tiltshift"}),
-                    ("Filters", New String() {"filter", "lut", "xmp-preset"})}
+                    ("Filters", New String() {"saved-adjustments", "variants", "filter", "lut", "xmp-preset"})}
             End Get
         End Property
 
@@ -2026,6 +2028,7 @@ Namespace Services
                     New String() {"calibration"},
                     New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen"}, New String() {"vignette"},
                     New String() {"frame"}, New String() {"grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"bokeh"}, New String() {"fog"}, New String() {"tiltshift"},
+                    New String() {"saved-adjustments"}, New String() {"variants"},
                     New String() {"filter"}, New String() {"xmp-preset"}, New String() {"lut"}}
             End Get
         End Property

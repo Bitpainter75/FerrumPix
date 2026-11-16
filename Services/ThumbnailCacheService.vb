@@ -254,6 +254,9 @@ Namespace Services
         ''' Galerie zu sehen sein. Dieselbe Frage fuer Schluessel und Schreibweg, sonst suchte der
         ''' Leser eine Kachel, die der Schreiber nie anlegt.</summary>
         Private Shared Function DevelopsThumbnail(filePath As String) As Boolean
+            ' Eine zusaetzliche Variante wird immer entwickelt gezeigt: die Vorschau der Kamera
+            ' saehe fuer alle Varianten einer Aufnahme gleich aus.
+            If AmbientVariantId.Length > 0 Then Return True
             Return DevelopRawThumbnailsActive() OrElse RawSidecarService.ReadDevelopedThumbnail(filePath)
         End Function
 
@@ -273,7 +276,8 @@ Namespace Services
             If Not DevelopsThumbnail(filePath) Then Return ""
             Try
                 Return "_dev" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture) &
-                       If(DevelopedRawBaseVersion = 1, "", $"_b{DevelopedRawBaseVersion}")
+                       If(DevelopedRawBaseVersion = 1, "", $"_b{DevelopedRawBaseVersion}") &
+                       If(AmbientVariantId.Length = 0, "", "_ver" & AmbientVariantId)
             Catch
                 Return ""
             End Try
@@ -286,7 +290,7 @@ Namespace Services
         Private Shared Function TryRenderDevelopedRawSource(filePath As String, width As Integer) As MemoryStream
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.IsAvailable Then Return Nothing
             If Not DevelopsThumbnail(filePath) Then Return Nothing
-            Dim adj = RawSidecarService.TryRead(filePath)
+            Dim adj = RawSidecarService.TryRead(VariantKey.Make(filePath, AmbientVariantId))
             If adj Is Nothing Then Return Nothing
             Try
                 Dim d, p, e As Long
@@ -383,6 +387,63 @@ Namespace Services
             Return CreateOrUpdate(filePath, lastWriteTime, fileSize, cancellationToken, cacheScopeId, cacheScopeName)
         End Function
 
+        ''' <summary>Die Kennung der zusaetzlichen Variante, deren Kachel dieser Faden gerade liest
+        ''' oder schreibt; leer fuer die Standardvariante. Die Einstiege <see cref="LoadCached"/> und
+        ''' <see cref="CreateOrUpdate"/> nehmen statt eines Pfades auch den Schluessel einer Variante
+        ''' (VariantKey) und merken sie hier, solange ihr Aufruf laeuft: alle Wege darunter rechnen
+        ''' auf demselben Faden und fragen an drei Stellen danach (Name der Kachel, Drehung, Rezept),
+        ''' statt dass jede Funktion dazwischen einen weiteren Parameter durchreicht.</summary>
+        <ThreadStatic>
+        Private Shared _ambientVariantId As String
+
+        Private Shared ReadOnly Property AmbientVariantId As String
+            Get
+                Return If(_ambientVariantId, "")
+            End Get
+        End Property
+
+        ''' <summary>Der Namensanfang aller Kacheln eines Bildes. Fuer eine zusaetzliche Variante ein
+        ''' eigener: sonst raeumte die Kachel der einen Variante die der anderen als veraltet weg,
+        ''' und eine noch fehlende zeigte solange die der Nachbarvariante.</summary>
+        Private Shared Function ImageHashFor(filePath As String) As String
+            Return HashText(VariantKey.Make(NormalizePath(filePath), AmbientVariantId))
+        End Function
+
+        ''' <summary>Die Kachel aus dem Speicher; <paramref name="filePath"/> darf der Schluessel
+        ''' einer zusaetzlichen Variante sein.</summary>
+        Public Shared Function LoadCached(filePath As String,
+                                          lastWriteTime As DateTime,
+                                          fileSize As Long,
+                                          allowStale As Boolean,
+                                          ByRef isExact As Boolean,
+                                          Optional cancellationToken As CancellationToken = Nothing,
+                                          Optional cacheScopeId As String = Nothing,
+                                          Optional cacheScopeName As String = Nothing) As Bitmap
+            Dim previous = _ambientVariantId
+            Try
+                Dim variantId As String = Nothing
+                Dim file = VariantKey.Split(filePath, variantId)
+                _ambientVariantId = variantId
+                Return LoadCachedCore(file, lastWriteTime, fileSize, allowStale, isExact, cancellationToken, cacheScopeId, cacheScopeName)
+            Finally
+                _ambientVariantId = previous
+            End Try
+        End Function
+
+        ''' <summary>Die Kachel neu rechnen und ablegen; <paramref name="filePath"/> darf der
+        ''' Schluessel einer zusaetzlichen Variante sein.</summary>
+        Public Shared Function CreateOrUpdate(filePath As String, lastWriteTime As DateTime, fileSize As Long, Optional cancellationToken As CancellationToken = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional isStillWanted As Func(Of Boolean) = Nothing) As Bitmap
+            Dim previous = _ambientVariantId
+            Try
+                Dim variantId As String = Nothing
+                Dim file = VariantKey.Split(filePath, variantId)
+                _ambientVariantId = variantId
+                Return CreateOrUpdateCore(file, lastWriteTime, fileSize, cancellationToken, cacheScopeId, cacheScopeName, isStillWanted)
+            Finally
+                _ambientVariantId = previous
+            End Try
+        End Function
+
         ' SVG/GIF/ICO-Quelldateien sind selbst schon winzig - das Dekodieren kostet kaum mehr als
         ' der Cache-Datei-Zugriff, daher lohnt sich für sie kein Thumbnail-Cache-Eintrag.
         Private Shared ReadOnly UncachedExtensions As String() = {".svg", ".gif", ".ico"}
@@ -474,7 +535,7 @@ Namespace Services
             Dim folderDisplayPath = ResolveCacheDisplayPath(filePath, Nothing, Nothing)
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
             Dim folderCachePath = GetFolderCachePathById(folderId)
-            Dim imageHash = HashText(NormalizePath(filePath))
+            Dim imageHash = ImageHashFor(filePath)
             Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
@@ -514,7 +575,7 @@ Namespace Services
             If Not enabled Then Return ""
             Try
                 Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
-                Dim imageHash = HashText(NormalizePath(filePath))
+                Dim imageHash = ImageHashFor(filePath)
                 Dim cachePath = IO.Path.Combine(GetFolderCachePathById(folderId),
                                                 BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width))
                 Return If(File.Exists(cachePath), cachePath, "")
@@ -523,7 +584,7 @@ Namespace Services
             End Try
         End Function
 
-        Public Shared Function LoadCached(filePath As String,
+        Private Shared Function LoadCachedCore(filePath As String,
                                           lastWriteTime As DateTime,
                                           fileSize As Long,
                                           allowStale As Boolean,
@@ -546,7 +607,7 @@ Namespace Services
 
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
             Dim folderCachePath = GetFolderCachePathById(folderId)
-            Dim imageHash = HashText(NormalizePath(filePath))
+            Dim imageHash = ImageHashFor(filePath)
             Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
@@ -608,7 +669,7 @@ Namespace Services
             Try
                 Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
                 Dim folderCachePath = GetFolderCachePathById(folderId)
-                Dim imageHash = HashText(NormalizePath(filePath))
+                Dim imageHash = ImageHashFor(filePath)
                 Return If(FindAnyCachedThumbnail(folderId, folderCachePath, imageHash), "")
             Catch
                 Return ""
@@ -666,7 +727,7 @@ Namespace Services
                 If Not info.Exists Then Return Nothing
                 Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), Nothing)
                 Dim folderCachePath = GetFolderCachePathById(folderId)
-                Dim imageHash = HashText(NormalizePath(filePath))
+                Dim imageHash = ImageHashFor(filePath)
                 Dim cacheFileName = BuildCacheFileName(filePath, imageHash, info.LastWriteTime, info.Length, quality, width)
                 Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
@@ -706,7 +767,7 @@ Namespace Services
         ''' abgefragt wird (z.B. "wurde das Element inzwischen weggescrollt?") - erlaubt einem
         ''' Worker, eine bereits nicht mehr benötigte Regenerierung früh und billig abzubrechen,
         ''' statt den vollen Decode+Resize+Encode-Durchlauf zu Ende zu bringen.</summary>
-        Public Shared Function CreateOrUpdate(filePath As String, lastWriteTime As DateTime, fileSize As Long, Optional cancellationToken As CancellationToken = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional isStillWanted As Func(Of Boolean) = Nothing) As Bitmap
+        Private Shared Function CreateOrUpdateCore(filePath As String, lastWriteTime As DateTime, fileSize As Long, Optional cancellationToken As CancellationToken = Nothing, Optional cacheScopeId As String = Nothing, Optional cacheScopeName As String = Nothing, Optional isStillWanted As Func(Of Boolean) = Nothing) As Bitmap
             cancellationToken.ThrowIfCancellationRequested()
             If String.IsNullOrEmpty(filePath) OrElse Not File.Exists(filePath) Then Return Nothing
             If ShouldSkipCache(filePath) Then Return DecodeDirect(filePath, cancellationToken)
@@ -720,7 +781,7 @@ Namespace Services
             Dim folderDisplayPath = ResolveCacheDisplayPath(filePath, cacheScopeId, cacheScopeName)
             Dim folderId = ResolveCacheId(IO.Path.GetDirectoryName(filePath), cacheScopeId)
             Dim folderCachePath = GetFolderCachePathById(folderId)
-            Dim imageHash = HashText(NormalizePath(filePath))
+            Dim imageHash = ImageHashFor(filePath)
             Dim cacheFileName = BuildCacheFileName(filePath, imageHash, lastWriteTime, fileSize, quality, width)
             Dim cachePath = IO.Path.Combine(folderCachePath, cacheFileName)
 
@@ -1363,7 +1424,7 @@ Namespace Services
         ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben.</summary>
         Private Shared Function SidecarRotationFor(filePath As String) As Integer
             If Not RawSidecarService.IsSidecarFormat(filePath) Then Return 0
-            Return RawSidecarService.ReadRotationDegrees(filePath)
+            Return RawSidecarService.ReadRotationDegrees(VariantKey.Make(filePath, AmbientVariantId))
         End Function
 
         ''' <summary>Teil des Cache-Dateinamens, der die Sidecar-Drehung abbildet ("" bei 0 Grad,

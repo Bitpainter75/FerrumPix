@@ -118,7 +118,7 @@ Namespace ViewModels
         End Function
 
         Public Shared Function ApplyFilter(c As ICommand) As AppAction
-            Return Build("Anpassungen anwenden", "funnel", c)
+            Return Build("Anpassungen anwenden", "palette", c)
         End Function
 
         ''' <summary>Das Untermenue "Anpassungen": was eine Bearbeitung auf die Bilder legt, also
@@ -133,6 +133,35 @@ Namespace ViewModels
 
         Public Shared Function PasteAdjustments(c As ICommand) As AppAction
             Return Build("Anpassungen einfügen", "clipboard-text", c)
+        End Function
+
+        ''' <summary>Das Untermenue "Varianten": die Varianten der Aufnahme, darunter Anlegen,
+        ''' Umbenennen und Loeschen.</summary>
+        Public Shared Function Variants(children As IReadOnlyList(Of Object)) As AppAction
+            Return New AppAction(LocalizationService.T("Varianten"), "stack", Nothing, Nothing, children)
+        End Function
+
+        ''' <summary>Eine Variante der Aufnahme im Menue von Betrachter und Editor. Der Name stammt
+        ''' vom Nutzer und wird nicht uebersetzt; die gezeigte traegt den Haken, die anderen kein
+        ''' Symbol. Der Parameter ist die Kennung der Variante, leer fuer die Standardvariante.</summary>
+        Public Shared Function VariantEntry(name As String, isShown As Boolean, c As ICommand, variantId As String) As AppAction
+            Return New AppAction(name, If(isShown, "check", ""), c, If(variantId, ""))
+        End Function
+
+        Public Shared Function NewVariant(c As ICommand) As AppAction
+            Return Build("Neue Variante", "plus", c)
+        End Function
+
+        Public Shared Function NewVariantFromStartValues(c As ICommand) As AppAction
+            Return Build("Neue Variante ohne Anpassungen", "image", c)
+        End Function
+
+        Public Shared Function RenameVariant(c As ICommand) As AppAction
+            Return Build("Variante umbenennen", "pencil-simple", c)
+        End Function
+
+        Public Shared Function DeleteVariant(c As ICommand) As AppAction
+            Return Build("Variante löschen", "trash", c)
         End Function
 
         Public Shared Function ConvertTo(c As ICommand) As AppAction

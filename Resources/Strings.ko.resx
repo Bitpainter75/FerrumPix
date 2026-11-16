@@ -11860,4 +11860,40 @@
   <data name="STRG_SHIFT_V_b274c543" xml:space="preserve">
     <value>CTRL+SHIFT+V</value>
   </data>
+  <data name="Varianten_d2204a72" xml:space="preserve">
+    <value>변형</value>
+  </data>
+  <data name="Neue_Variante_6d4b10f9" xml:space="preserve">
+    <value>새 변형</value>
+  </data>
+  <data name="Neue_Variante_ohne_Anpassungen_55402b8d" xml:space="preserve">
+    <value>조정 없는 새 변형</value>
+  </data>
+  <data name="Variante_umbenennen_0e818775" xml:space="preserve">
+    <value>변형 이름 바꾸기</value>
+  </data>
+  <data name="Variante_l_schen_1768aae8" xml:space="preserve">
+    <value>변형 삭제</value>
+  </data>
+  <data name="Variante_0_77b9508b" xml:space="preserve">
+    <value>변형 {0}</value>
+  </data>
+  <data name="Name_der_Variante_48a511fb" xml:space="preserve">
+    <value>변형 이름</value>
+  </data>
+  <data name="Eine_Variante_mit_diesem_Namen_gibt_es_schon_3cb116c0" xml:space="preserve">
+    <value>이 이름의 변형이 이미 있습니다.</value>
+  </data>
+  <data name="Die_Variante_0_wird_gel_scht_Das_l_sst_sich_nich_3b2e3352" xml:space="preserve">
+    <value>변형 {0}을(를) 삭제합니다. 이 작업은 되돌릴 수 없습니다.</value>
+  </data>
+  <data name="Variante_0_ec217018" xml:space="preserve">
+    <value>변형: {0}</value>
+  </data>
+  <data name="Gespeicherte_Anpassungen_23453e97" xml:space="preserve">
+    <value>저장된 조정</value>
+  </data>
+  <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
+    <value>변형 {0}개도 함께 삭제됩니다.</value>
+  </data>
 </root>

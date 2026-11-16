@@ -34,7 +34,7 @@ Namespace Services
     ''' auseinanderlaufen: der Viewer las den Sidecar bedingungslos, der Editor nur bei aktiver
     ''' Einstellung, womit dieselbe Datei je nach Ansicht anders gedreht aussah.
     ''' </summary>
-    Public NotInheritable Class RawSidecarService
+    Partial Public NotInheritable Class RawSidecarService
 
         Private Sub New()
         End Sub
@@ -44,11 +44,19 @@ Namespace Services
         ''' beide sollen trotzdem Reglerwerte behalten koennen.</summary>
         Public Shared Function IsSidecarFormat(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            Return RawPreviewService.IsSupportedRaw(path) OrElse PsdPreviewService.IsSupportedPsd(path)
+            ' Auch fuer den Schluessel einer Variante: gefragt ist das Format der Datei dahinter.
+            Dim file = VariantKey.FileOf(path)
+            Return RawPreviewService.IsSupportedRaw(file) OrElse PsdPreviewService.IsSupportedPsd(file)
         End Function
 
         Public Const Extension As String = ".fpxmp"
         Private Const FormatVersion As Integer = 2
+        ''' <summary>Die Nummer einer Datei, die mehr als eine Variante traegt (siehe
+        ''' RawSidecarServiceVariants.vb). Eine Datei mit nur einer bleibt bei
+        ''' <see cref="FormatVersion"/> und damit fuer aeltere Fassungen lesbar; eine mit mehreren
+        ''' gilt dort als unlesbar und wird deshalb nicht angefasst. Sonst schriebe eine aeltere
+        ''' Fassung sie beim naechsten Stern ohne die geparkten Varianten zurueck.</summary>
+        Private Const VariantsFormatVersion As Integer = 3
         Private Shared ReadOnly Ns As XNamespace = "https://github.com/Bitpainter75/FerrumPix/ns/recipe/1.0"
         Private Shared ReadOnly _writeLock As New Object()
 
@@ -67,9 +75,10 @@ Namespace Services
         End Class
 
         ''' <summary>"foto.cr2" -> "foto.cr2.fpxmp" (voller Name bleibt erhalten, damit
-        ''' foto.cr2 und foto.dng nie um denselben Sidecar konkurrieren).</summary>
+        ''' foto.cr2 und foto.dng nie um denselben Sidecar konkurrieren). Der Schluessel einer
+        ''' Variante fuehrt zur Begleitdatei ihrer Datei: alle Varianten teilen sich die eine.</summary>
         Public Shared Function SidecarPathFor(rawPath As String) As String
-            Return rawPath & Extension
+            Return VariantKey.FileOf(rawPath) & Extension
         End Function
 
         Public Shared Function Exists(rawPath As String) As Boolean
@@ -94,6 +103,11 @@ Namespace Services
                                         Optional edited As Boolean? = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             Try
+                Dim variantId As String = Nothing
+                Dim file = VariantKey.Split(rawPath, variantId)
+                If variantId.Length > 0 Then
+                    Return WriteVariantRecipe(file, variantId, adjustments, edited) = ModifyRecipeResult.Written
+                End If
                 SyncLock _writeLock
                     Dim existing As ImageAdjustments = Nothing
                     Dim state = ReadRecipe(rawPath, existing)
@@ -134,6 +148,17 @@ Namespace Services
             ' Lesen und Schreiben unter DERSELBEN Sperre: sonst kann ein anderer Schreiber dieser
             ' Anwendung die Datei zwischen beiden aendern, und sie wuerde mit dem alten Rezept ersetzt.
             SyncLock _writeLock
+                Dim variantId As String = Nothing
+                Dim file = VariantKey.Split(rawPath, variantId)
+                If variantId.Length > 0 Then
+                    Return WriteVariantCatalog(file, variantId, New RawSidecarCatalogData With {
+                        .Rating = Math.Max(0, Math.Min(5, rating)),
+                        .IsFavorite = isFavorite,
+                        .ColorLabel = If(colorLabel, "").Trim(),
+                        .Keywords = NormalizeKeywords(keywords),
+                        .HasKeywords = True,
+                        .PickState = LibraryService.NormalizePickState(pickState)})
+                End If
                 Dim adjustments As ImageAdjustments = Nothing
                 Dim state = ReadRecipe(rawPath, adjustments)
                 If state = SidecarReadResult.Unreadable Then Return False
@@ -206,6 +231,14 @@ Namespace Services
                     If adjustments Is Nothing Then Return ModifyRecipeResult.Failed
                     modify(adjustments)
                     If decideEdited IsNot Nothing Then edited = decideEdited(adjustments)
+                    Dim variantId As String = Nothing
+                    Dim file = VariantKey.Split(rawPath, variantId)
+                    If variantId.Length > 0 Then
+                        ' Eine Variante ohne Begleitdatei gibt es nicht; "fehlt" heisst hier, dass
+                        ' es nichts zu aendern gibt.
+                        If state <> SidecarReadResult.Read Then Return ModifyRecipeResult.Failed
+                        Return WriteVariantRecipe(file, variantId, adjustments, edited)
+                    End If
                     Dim catalog = LibraryService.Instance.GetSidecarCatalogData(rawPath)
                     Dim written = TryWriteCore(rawPath, adjustments, catalog, developedThumbnail, edited,
                                                requireAbsent:=state = SidecarReadResult.Missing)
@@ -226,12 +259,17 @@ Namespace Services
                                              edited As Boolean?,
                                              Optional requireAbsent As Boolean = False,
                                              Optional description As ImageDescription = Nothing,
-                                             Optional imported As ForeignCatalogService.ImportedMetadata = Nothing) As Boolean
+                                             Optional imported As ForeignCatalogService.ImportedMetadata = Nothing,
+                                             Optional variants As VariantSet = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse adjustments Is Nothing Then Return False
             SyncLock _writeLock
                 Dim temp As String = Nothing
                 Dim target As String = Nothing
                 Try
+                    ' Die geparkten Varianten kennt kein anderer Schreiber (Rezept, Sterne,
+                    ' Stichwoerter): ohne Vorgabe bleibt der Block der vorhandenen Datei stehen.
+                    Dim keepVariants = If(variants, ReadVariantSet(rawPath))
+                    Dim variantsBlock = VariantsNode(keepVariants)
                     Dim keepDescription = If(description, TryReadDescription(rawPath))
                     Dim keepImported = If(imported, TryReadImported(rawPath))
                     Dim keepDevelopedThumbnail = If(developedThumbnail.HasValue, developedThumbnail.Value,
@@ -249,35 +287,24 @@ Namespace Services
                     Dim sidecarAdj = adjustments.Clone()
                     sidecarAdj.BakedOperationsApplied = False
                     Dim json = FpxService.SerializeAdjustments(sidecarAdj)
-                    Dim keywordsNode = New XElement(Ns + "keywords")
-                    For Each keyword In NormalizeKeywords(catalog?.Keywords)
-                        keywordsNode.Add(New XElement(Ns + "keyword", keyword))
-                    Next
-                    Dim safeRating = Math.Max(0, Math.Min(5, If(catalog Is Nothing, 0, catalog.Rating.GetValueOrDefault())))
-                    Dim isFavorite = catalog IsNot Nothing AndAlso catalog.IsFavorite.GetValueOrDefault()
-                    Dim catalogNode = New XElement(Ns + "catalog",
-                        New XElement(Ns + "rating", safeRating.ToString(Globalization.CultureInfo.InvariantCulture)),
-                        New XElement(Ns + "favorite", If(isFavorite, "true", "false")),
-                        New XElement(Ns + "colorLabel", If(catalog?.ColorLabel, "").Trim()),
-                        New XElement(Ns + "pick", LibraryService.NormalizePickState(
-                            If(catalog Is Nothing, 0, catalog.PickState.GetValueOrDefault())).ToString(Globalization.CultureInfo.InvariantCulture)),
-                        keywordsNode)
+                    Dim catalogBlock = CatalogNode(catalog)
                     Dim doc = New XDocument(
                         New XDeclaration("1.0", "utf-8", Nothing),
                         New XElement(Ns + "recipe",
-                            New XAttribute("version", FormatVersion),
+                            New XAttribute("version", If(variantsBlock Is Nothing, FormatVersion, VariantsFormatVersion)),
                             New XAttribute("generator", "FerrumPix"),
                             If(keepDevelopedThumbnail, New XAttribute(DevelopedThumbnailAttribute, "true"), Nothing),
                             If(keepEdited.HasValue, New XAttribute(EditedAttribute, If(keepEdited.Value, "true", "false")), Nothing),
                             New XElement(Ns + "source",
                                 New XAttribute("fileName", Path.GetFileName(rawPath))),
                             New XElement(Ns + "savedUtc", DateTime.UtcNow.ToString("O")),
-                            catalogNode,
+                            catalogBlock,
                             DescriptionNode(keepDescription),
                             ImportedNode(keepImported),
                             New XElement(Ns + "adjustments",
                                 New XAttribute("format", "fpx-json"),
-                                New XCData(json))))
+                                New XCData(json)),
+                            variantsBlock))
 
                     target = SidecarPathFor(rawPath)
                     ' Eine Nachbardatei je Vorgang: eine feste ".tmp" teilten sich zwei Instanzen, die
@@ -296,8 +323,7 @@ Namespace Services
                     ' Den gemerkten Drehwinkel verwerfen, statt auf einen geaenderten Zeitstempel zu
                     ' hoffen: zwei Schreibvorgaenge kurz hintereinander koennen auf grob aufloesenden
                     ' Dateisystemen dieselbe mtime tragen.
-                    Dim ignored As CachedDisplayFacts = Nothing
-                    _displayFactsCache.TryRemove(target, ignored)
+                    ForgetDisplayFacts(target)
                     Return True
                 Catch ex As Exception
                     If requireAbsent AndAlso target IsNot Nothing AndAlso File.Exists(target) Then
@@ -316,6 +342,37 @@ Namespace Services
                 End Try
             End SyncLock
         End Function
+
+        ''' <summary>Der Katalogblock, wie er in der Datei steht: fuer die Standardvariante unter dem
+        ''' Wurzelelement, fuer jede zusaetzliche Variante in ihrem Eintrag.</summary>
+        Private Shared Function CatalogNode(catalog As RawSidecarCatalogData) As XElement
+            Dim keywordsNode = New XElement(Ns + "keywords")
+            For Each keyword In NormalizeKeywords(catalog?.Keywords)
+                keywordsNode.Add(New XElement(Ns + "keyword", keyword))
+            Next
+            Dim safeRating = Math.Max(0, Math.Min(5, If(catalog Is Nothing, 0, catalog.Rating.GetValueOrDefault())))
+            Dim isFavorite = catalog IsNot Nothing AndAlso catalog.IsFavorite.GetValueOrDefault()
+            Return New XElement(Ns + "catalog",
+                New XElement(Ns + "rating", safeRating.ToString(Globalization.CultureInfo.InvariantCulture)),
+                New XElement(Ns + "favorite", If(isFavorite, "true", "false")),
+                New XElement(Ns + "colorLabel", If(catalog?.ColorLabel, "").Trim()),
+                New XElement(Ns + "pick", LibraryService.NormalizePickState(
+                    If(catalog Is Nothing, 0, catalog.PickState.GetValueOrDefault())).ToString(Globalization.CultureInfo.InvariantCulture)),
+                keywordsNode)
+        End Function
+
+        ''' <summary>Die gemerkten Werte dieser Begleitdatei verwerfen, die der Standardvariante und
+        ''' die jeder zusaetzlichen: statt auf einen geaenderten Zeitstempel zu hoffen.</summary>
+        Private Shared Sub ForgetDisplayFacts(sidecar As String)
+            Dim ignored As CachedDisplayFacts = Nothing
+            _displayFactsCache.TryRemove(sidecar, ignored)
+            For Each key In _displayFactsCache.Keys
+                If key.Length > sidecar.Length AndAlso key.StartsWith(sidecar, PathIdentity.Comparison) AndAlso
+                   VariantKey.IsVariant(key) Then _displayFactsCache.TryRemove(key, ignored)
+            Next
+            Dim ignoredList As CachedVariantList = Nothing
+            _variantListCache.TryRemove(sidecar, ignoredList)
+        End Sub
 
         Private Shared Function NormalizeKeywords(keywords As IEnumerable(Of String)) As List(Of String)
             Return If(keywords, Enumerable.Empty(Of String)()).
@@ -1027,8 +1084,10 @@ Namespace Services
                 Return Nothing
             End Try
 
+            ' Jede Variante hat ihre eigenen Werte, alle haengen am Zeitstempel der einen Datei.
+            Dim factsKey = VariantKey.Make(sidecar, VariantKey.IdOf(rawPath))
             Dim cached As CachedDisplayFacts = Nothing
-            If _displayFactsCache.TryGetValue(sidecar, cached) AndAlso cached.StampTicks = stampTicks Then Return cached
+            If _displayFactsCache.TryGetValue(factsKey, cached) AndAlso cached.StampTicks = stampTicks Then Return cached
 
             Dim developedThumbnail As Boolean
             Dim editedAttribute As Boolean? = Nothing
@@ -1058,7 +1117,7 @@ Namespace Services
                 degrees = ImageOrientationService.NormalizeQuarterTurn(degrees)
             End If
             Dim facts = New CachedDisplayFacts(stampTicks, degrees, developedThumbnail, editedAttribute)
-            _displayFactsCache(sidecar) = facts
+            _displayFactsCache(factsKey) = facts
             Return facts
         End Function
 
@@ -1096,7 +1155,8 @@ Namespace Services
         ''' (ImageAdjustments.ForUneditedRaw, mit Grundbelichtung und Kamerakalibrierung), sonst ein
         ''' neutrales Rezept.</summary>
         Public Shared Function StartValuesFor(path As String) As ImageAdjustments
-            Return If(RawPreviewService.IsSupportedRaw(path), ImageAdjustments.ForUneditedRaw(path), New ImageAdjustments())
+            Dim file = VariantKey.FileOf(path)
+            Return If(RawPreviewService.IsSupportedRaw(file), ImageAdjustments.ForUneditedRaw(file), New ImageAdjustments())
         End Function
 
         ''' <summary>Ist diese Datei bearbeitet? Ein Projektbuendel (.fpx) immer; eine RAW oder PSD,
@@ -1285,12 +1345,29 @@ Namespace Services
                                         Globalization.CultureInfo.InvariantCulture, version) Then
                     Return SidecarReadResult.Unreadable
                 End If
-                If version < 1 OrElse version > FormatVersion Then Return SidecarReadResult.Unreadable
+                If version < 1 OrElse version > VariantsFormatVersion Then Return SidecarReadResult.Unreadable
+                ' Ein Variantsblock, den wir nicht verstehen, macht die ganze Datei unlesbar: sonst
+                ' schriebe der naechste Schreiber sie ohne ihn zurueck.
+                Dim ignoredVariants As VariantSet = Nothing
+                If Not TryParseVariants(root, ignoredVariants) Then Return SidecarReadResult.Unreadable
                 Dim adjustmentsNode = root.Element(Ns + "adjustments")
                 If adjustmentsNode Is Nothing Then Return SidecarReadResult.Unreadable
-                adjustments = FpxService.DeserializeAdjustments(adjustmentsNode.Value)
+                Dim variantId As String = Nothing
+                Dim file = VariantKey.Split(rawPath, variantId)
+                Dim json = adjustmentsNode.Value
+                If variantId.Length > 0 Then
+                    ' Gemeint ist eine zusaetzliche Variante: ihr Rezept, ihr Vermerk. Gibt es sie
+                    ' nicht (mehr), ist das fuer einen Schreiber "nicht anfassen" und fuer einen
+                    ' Leser "kein Rezept".
+                    Dim entry = ignoredVariants?.Find(variantId)
+                    If entry Is Nothing Then Return SidecarReadResult.Unreadable
+                    json = entry.Json
+                    edited = entry.Edited
+                    developedThumbnail = True
+                End If
+                adjustments = FpxService.DeserializeAdjustments(json)
                 ' Ein Entrauschen aus der Zeit der 8-Bit-Modelle geht bei einer RAW in die RAW-Stufe.
-                DenoiseModelService.MigrateLegacyRecipe(adjustments, rawPath)
+                DenoiseModelService.MigrateLegacyRecipe(adjustments, file)
                 Return If(adjustments Is Nothing, SidecarReadResult.Unreadable, SidecarReadResult.Read)
             Catch
                 adjustments = Nothing
@@ -1359,6 +1436,8 @@ Namespace Services
         Public Shared Function TryWriteDescription(rawPath As String,
                                                    changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) OrElse changes Is Nothing Then Return False
+            ' Titel und Beschreibung gehoeren der Aufnahme, nicht einer Variante.
+            rawPath = VariantKey.FileOf(rawPath)
             Try
                 SyncLock _writeLock
                     Dim adjustments As ImageAdjustments = Nothing
@@ -1485,6 +1564,7 @@ Namespace Services
         ''' Fehlt die .fpxmp, entsteht sie wie beim Titel mit neutralem Rezept.</summary>
         Public Shared Function TryImportMetadataFromForeignCatalog(rawPath As String) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            rawPath = VariantKey.FileOf(rawPath)
             Try
                 Dim entry = ForeignCatalogService.Lookup(rawPath)
                 If entry Is Nothing Then Return False
@@ -1520,8 +1600,14 @@ Namespace Services
                 Dim root = doc.Root
                 If root Is Nothing OrElse root.Name <> Ns + "recipe" Then Return Nothing
                 Dim version = CInt(root.Attribute("version")?.Value)
-                If version < 1 OrElse version > FormatVersion Then Return Nothing
+                If version < 1 OrElse version > VariantsFormatVersion Then Return Nothing
                 Dim catalogNode = root.Element(Ns + "catalog")
+                Dim variantId = VariantKey.IdOf(rawPath)
+                If variantId.Length > 0 Then
+                    Dim variants As VariantSet = Nothing
+                    If Not TryParseVariants(root, variants) OrElse variants Is Nothing Then Return Nothing
+                    catalogNode = variants.Find(variantId)?.Catalog
+                End If
                 If catalogNode Is Nothing Then Return Nothing
 
                 Dim result As New RawSidecarCatalogData()

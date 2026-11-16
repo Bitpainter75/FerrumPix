@@ -812,7 +812,7 @@ Namespace ViewModels
             Try
                 byPath = LibraryService.Instance.GetMetaForPaths(
                     _items.Where(Function(i) i IsNot Nothing AndAlso Not String.IsNullOrEmpty(i.FilePath)).
-                           Select(Function(i) i.FilePath))
+                           Select(Function(i) i.ItemPath))
             Catch ex As Exception
                 DiagnosticLogService.LogException("InfoPanel.LoadSummaryTags", ex)
             End Try
@@ -824,7 +824,7 @@ Namespace ViewModels
                 Dim own As List(Of String) = Nothing
                 Dim meta As LibraryImageMeta = Nothing
                 If byPath IsNot Nothing AndAlso Not String.IsNullOrEmpty(entry?.FilePath) AndAlso
-                   byPath.TryGetValue(entry.FilePath, meta) Then own = meta.Tags
+                   byPath.TryGetValue(entry.ItemPath, meta) Then own = meta.Tags
                 If own Is Nothing OrElse own.Count = 0 Then own = If(entry?.Tags?.ToList(), New List(Of String)())
                 If common Is Nothing Then
                     common = own.ToList()
@@ -848,7 +848,7 @@ Namespace ViewModels
         Private Function TagsOf(entry As ImageItem) As List(Of String)
             If entry Is Nothing OrElse String.IsNullOrEmpty(entry.FilePath) Then Return New List(Of String)()
             Try
-                Dim fromCatalog = LibraryService.Instance.GetTags(entry.FilePath)
+                Dim fromCatalog = LibraryService.Instance.GetTags(entry.ItemPath)
                 If fromCatalog IsNot Nothing AndAlso fromCatalog.Count > 0 Then Return fromCatalog.ToList()
             Catch ex As Exception
                 DiagnosticLogService.LogException("InfoPanel.LoadTags", ex)
@@ -1747,7 +1747,7 @@ Namespace ViewModels
                 Finally
                     _isWritingItems = False
                 End Try
-                LibraryService.Instance.SetPickStateForMany(affected.Select(Function(i) i.FilePath), target, syncToXmp:=True)
+                LibraryService.Instance.SetPickStateForMany(affected.Select(Function(i) i.ItemPath), target, syncToXmp:=True)
             End If
             RaisePickStateChanged()
         End Sub

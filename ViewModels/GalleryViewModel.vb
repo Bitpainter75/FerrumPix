@@ -2003,6 +2003,13 @@ Namespace ViewModels
         ''' die der Editor kopiert; und die Ablage auf die Auswahl einfügen.</summary>
         Public ReadOnly Property CopyAdjustmentsCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCommand As ICommand
+        ''' <summary>Die Varianten an der EINEN markierten Kachel: daneben eine anlegen, die Variante
+        ''' der Kachel umbenennen oder löschen. Gewechselt wird in der Galerie nicht, jede Variante
+        ''' ist dort eine eigene Kachel.</summary>
+        Public ReadOnly Property NewVariantCommand As ICommand
+        Public ReadOnly Property NewVariantFromStartValuesCommand As ICommand
+        Public ReadOnly Property RenameVariantCommand As ICommand
+        Public ReadOnly Property DeleteVariantCommand As ICommand
         Public ReadOnly Property RemoveMetadataSelectedCommand As ICommand
         Public ReadOnly Property IncreaseThumbnailSizeCommand As ICommand
         Public ReadOnly Property DecreaseThumbnailSizeCommand As ICommand
@@ -2408,6 +2415,10 @@ Namespace ViewModels
             ApplyFilterSelectedCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then ApplyFilterSelected())
             CopyAdjustmentsCommand = ReactiveCommand.Create(Sub() If Not RefuseOfflineSelection() Then CopyAdjustmentsFromSelected())
             PasteAdjustmentsCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, PasteAdjustmentsToSelectedAsync()))
+            NewVariantCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.AddFromCurrent)))
+            NewVariantFromStartValuesCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.AddFromStartValues)))
+            RenameVariantCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.Rename)))
+            DeleteVariantCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, ChangeVariantOfSelectedAsync(VariantAction.Delete)))
             RemoveMetadataSelectedCommand = ReactiveCommand.CreateFromTask(Function() If(RefuseOfflineSelection(), Task.CompletedTask, RemoveMetadataSelectedAsync()))
             IncreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize += 24)
             DecreaseThumbnailSizeCommand = ReactiveCommand.Create(Sub() ThumbnailSize -= 24)
@@ -2489,8 +2500,10 @@ Namespace ViewModels
         ''' ist - für die Rückkehr aus dem Editor auf das zuletzt bearbeitete Bild.</summary>
         Public Sub SelectItemByPath(path As String)
             If String.IsNullOrEmpty(path) Then Return
+            ' Der Pfad darf der Schluessel einer zusaetzlichen Variante sein: dann ist IHRE Kachel
+            ' gemeint, mit einem gewoehnlichen Pfad die der Datei selbst.
             Dim item = Items.FirstOrDefault(Function(i) i IsNot Nothing AndAlso
-                                                String.Equals(i.FilePath, path, PathIdentity.Comparison))
+                                                String.Equals(i.ItemPath, path, PathIdentity.Comparison))
             If item IsNot Nothing Then SelectOnly(item)
         End Sub
 
@@ -3300,7 +3313,7 @@ Namespace ViewModels
                                        Me.RaisePropertyChanged(NameOf(SelectedRating))
                                    End Sub)
             Else
-                LibraryService.Instance.SetRating(item.FilePath, rating, syncToXmp:=True)
+                LibraryService.Instance.SetRating(item.ItemPath, rating, syncToXmp:=True)
             End If
         End Sub
 
@@ -3318,7 +3331,7 @@ Namespace ViewModels
             For Each item In items
                 item.Rating = rating
             Next
-            Dim localPaths = items.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.FilePath).ToList()
+            Dim localPaths = items.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.ItemPath).ToList()
             If localPaths.Count > 0 Then LibraryService.Instance.SetRatingForMany(localPaths, rating, syncToXmp:=True)
             For Each item In items.Where(Function(i) i.IsImmichAsset)
                 PersistRating(item, rating, beforePerItem(item))
@@ -3349,7 +3362,7 @@ Namespace ViewModels
             For Each item In items
                 item.ColorLabel = If(colorLabel, "")
             Next
-            LibraryService.Instance.SetColorLabelForMany(items.Select(Function(i) i.FilePath), If(colorLabel, ""), syncToXmp:=True)
+            LibraryService.Instance.SetColorLabelForMany(items.Select(Function(i) i.ItemPath), If(colorLabel, ""), syncToXmp:=True)
             If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 
@@ -3380,7 +3393,7 @@ Namespace ViewModels
                     ' anders als der Pfad im Dateibaum braucht sie kein Nachladen.
                     Dim ignored = WriteNextcloudTagAsync(item, tag, add)
                 Else
-                    LibraryService.Instance.SetTags(item.FilePath, If(item.Tags, New List(Of String)()), syncToXmp:=True)
+                    LibraryService.Instance.SetTags(item.ItemPath, If(item.Tags, New List(Of String)()), syncToXmp:=True)
                 End If
             Next
             RefreshTagFilterOptions()
@@ -3443,7 +3456,7 @@ Namespace ViewModels
                                        Me.RaisePropertyChanged(NameOf(SelectedIsFavorite))
                                    End Sub)
             Else
-                LibraryService.Instance.SetFavorite(item.FilePath, value)
+                LibraryService.Instance.SetFavorite(item.ItemPath, value)
             End If
         End Sub
 
@@ -3501,7 +3514,7 @@ Namespace ViewModels
                 item.Rating = targetRating
             Next
             ' Lokale gebündelt (ein DB-/XMP-Durchlauf), Immich-Items einzeln an den Server.
-            Dim localPaths = images.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.FilePath).ToList()
+            Dim localPaths = images.Where(Function(i) Not i.IsImmichAsset).Select(Function(i) i.ItemPath).ToList()
             If localPaths.Count > 0 Then LibraryService.Instance.SetRatingForMany(localPaths, targetRating, syncToXmp:=True)
             For Each im In images.Where(Function(i) i.IsImmichAsset)
                 PersistRating(im, targetRating, vorherProItem(im))
@@ -3531,7 +3544,7 @@ Namespace ViewModels
             For Each item In images
                 item.ColorLabel = target
             Next
-            LibraryService.Instance.SetColorLabelForMany(images.Select(Function(i) i.FilePath), target, syncToXmp:=True)
+            LibraryService.Instance.SetColorLabelForMany(images.Select(Function(i) i.ItemPath), target, syncToXmp:=True)
             If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 
@@ -3555,7 +3568,7 @@ Namespace ViewModels
             For Each t In targets
                 t.ColorLabel = target
             Next
-            LibraryService.Instance.SetColorLabelForMany(targets.Select(Function(t) t.FilePath), target, syncToXmp:=True)
+            LibraryService.Instance.SetColorLabelForMany(targets.Select(Function(t) t.ItemPath), target, syncToXmp:=True)
             If _filterColorLabels.Count > 0 Then FilterAndSort()
         End Sub
 
@@ -5344,10 +5357,11 @@ Namespace ViewModels
                 Dim locals = Items.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsRemoteAsset AndAlso
                                                      Not String.IsNullOrEmpty(i.FilePath)).ToList()
                 If locals.Count = 0 Then Return
-                Dim metaByPath = LibraryService.Instance.GetMetaForPaths(locals.Select(Function(i) i.FilePath))
+                ' Nach dem Schluessel der Kachel: eine zusaetzliche Variante traegt eigene Katalogdaten.
+                Dim metaByPath = LibraryService.Instance.GetMetaForPaths(locals.Select(Function(i) i.ItemPath))
                 For Each item In locals
                     Dim meta As LibraryImageMeta = Nothing
-                    If Not metaByPath.TryGetValue(item.FilePath, meta) Then Continue For
+                    If Not metaByPath.TryGetValue(item.ItemPath, meta) Then Continue For
                     If item.Rating <> meta.Rating Then item.Rating = meta.Rating
                     If item.IsFavorite <> meta.IsFavorite Then item.IsFavorite = meta.IsFavorite
                     If item.PickState <> meta.PickState Then item.PickState = meta.PickState
@@ -5375,7 +5389,7 @@ Namespace ViewModels
             Dim immichStem = If(ImmichService.IsImmichTempPath(imagePath), IO.Path.GetFileNameWithoutExtension(imagePath), Nothing)
             Dim nextcloudId = NextcloudService.FileIdFromTempPath(imagePath)
             Dim item = Items.FirstOrDefault(Function(i) i.IsImage AndAlso (
-                String.Equals(i.FilePath, imagePath, PathIdentity.Comparison) OrElse
+                String.Equals(i.ItemPath, imagePath, PathIdentity.Comparison) OrElse
                 (i.IsRemoteAsset AndAlso Not String.IsNullOrEmpty(i.RemoteLocalPath) AndAlso String.Equals(i.RemoteLocalPath, imagePath, PathIdentity.Comparison)) OrElse
                 (i.IsImmichAsset AndAlso immichStem IsNot Nothing AndAlso String.Equals(i.ImmichAssetId, immichStem, StringComparison.OrdinalIgnoreCase)) OrElse
                 (i.IsNextcloudAsset AndAlso nextcloudId.Length > 0 AndAlso String.Equals(i.NextcloudFileId, nextcloudId, StringComparison.OrdinalIgnoreCase))))
@@ -9995,9 +10009,11 @@ Namespace ViewModels
             If _allItems.Count = 0 Then Return scanItems
 
             Dim vorhanden As New Dictionary(Of String, ImageItem)(PathIdentity.Comparer)
+            ' Nach dem Schluessel der Kachel, nicht nach dem Pfad der Datei: eine zusaetzliche
+            ' Variante teilt sich den Pfad mit ihrer Datei und ist trotzdem eine eigene Kachel.
             For Each item In _allItems
                 If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) Then Continue For
-                If Not vorhanden.ContainsKey(item.FilePath) Then vorhanden(item.FilePath) = item
+                If Not vorhanden.ContainsKey(item.ItemPath) Then vorhanden(item.ItemPath) = item
             Next
 
             Dim merged As New List(Of ImageItem)(scanItems.Count)
@@ -10006,7 +10022,7 @@ Namespace ViewModels
                 ' Gleicher Pfad reicht NICHT: aus einem Ordner kann eine Datei geworden sein und
                 ' umgekehrt. Dann ist es trotz gleichen Namens ein anderes Element.
                 If frisch IsNot Nothing AndAlso Not String.IsNullOrEmpty(frisch.FilePath) AndAlso
-                   vorhanden.TryGetValue(frisch.FilePath, alt) AndAlso alt IsNot Nothing AndAlso
+                   vorhanden.TryGetValue(frisch.ItemPath, alt) AndAlso alt IsNot Nothing AndAlso
                    alt.IsFolder = frisch.IsFolder AndAlso
                    alt.IsParentFolderEntry = frisch.IsParentFolderEntry Then
                     ' Ordnerkacheln tragen keine Bild- oder Katalogwerte; sie bleiben, wie sie sind.
@@ -10162,7 +10178,8 @@ Namespace ViewModels
             Dim needsMetaRefresh As New List(Of ImageItem)()
             Dim files = PerformanceTraceService.Measure("Ordner: Dateien auflisten",
                                                         Function() EnumerateImageFiles(folderPath))
-            items.AddRange(BuildFileItems(files, folderPath, thumbnailToken, needsMetaRefresh, catalogMetaByPath))
+            items.AddRange(WithVariantItems(BuildFileItems(files, folderPath, thumbnailToken, needsMetaRefresh, catalogMetaByPath),
+                                            folderPath, Nothing, thumbnailToken))
 
             Return New FolderScanResult With {.Items = items, .NeedsMetaRefresh = needsMetaRefresh}
         End Function
@@ -10284,6 +10301,12 @@ Namespace ViewModels
                                                                                                           item.IptcMetadataSummary = iptcSummary
                                                                                                           item.XmpMetadataSummary = xmpSummary
                                                                                                           item.IccMetadataSummary = iccSummary
+                                                                                                         ' Die Kacheln zusaetzlicher Varianten zeigen dieselbe Datei.
+                                                                                                         If item.HasVariantItems Then
+                                                                                                             For Each variantTile In _allItems.Where(Function(v) v IsNot Nothing AndAlso v.IsVariant AndAlso PathIdentity.AreSame(v.FilePath, item.FilePath)).ToList()
+                                                                                                                 item.CopyFileDataTo(variantTile)
+                                                                                                             Next
+                                                                                                         End If
                                                                                                               End Sub)
                                                                                                       End Sub)
                                                            Catch
@@ -10446,9 +10469,11 @@ Namespace ViewModels
             End If
 
             Dim existing = New Dictionary(Of String, ImageItem)(PathIdentity.Comparer)
+            ' Nach dem Schluessel der Kachel: unter dem Pfad einer Datei steht so immer ihre
+            ' Standardvariante, jede zusaetzliche unter ihrem eigenen Schluessel.
             For Each item In _allItems
-                If item IsNot Nothing AndAlso Not item.IsParentFolderEntry AndAlso Not existing.ContainsKey(item.FilePath) Then
-                    existing(item.FilePath) = item
+                If item IsNot Nothing AndAlso Not item.IsParentFolderEntry AndAlso Not existing.ContainsKey(item.ItemPath) Then
+                    existing(item.ItemPath) = item
                 End If
             Next
 
@@ -10652,15 +10677,21 @@ Namespace ViewModels
                 Dim newItemsByPath = folderNewItems.ToDictionary(Function(i) i.FilePath, PathIdentity.Comparer)
                 rescanned.AddRange(BuildFileItems(changedFiles, syncFolder, thumbnailToken, changedMetaRefresh))
 
+                Dim folderItems As New List(Of ImageItem)(files.Length)
                 For Each file In files
                     Dim keptFile As ImageItem = Nothing
                     If existing.TryGetValue(file.FullName, keptFile) Then
-                        rebuilt.Add(keptFile)
+                        folderItems.Add(keptFile)
                     Else
                         Dim added As ImageItem = Nothing
-                        If newItemsByPath.TryGetValue(file.FullName, added) Then rebuilt.Add(added)
+                        If newItemsByPath.TryGetValue(file.FullName, added) Then folderItems.Add(added)
                     End If
                 Next
+                ' Die zusaetzlichen Varianten stehen in den Begleitdateien, nicht im Ordner: sie
+                ' kommen hinter ihre Datei. Eine neue Variante ist eine neue Kachel.
+                Dim withVariants = WithVariantItems(folderItems, syncFolder, existing, thumbnailToken)
+                newItems.AddRange(withVariants.Where(Function(i) i.IsVariant AndAlso Not existing.ContainsKey(i.ItemPath)))
+                rebuilt.AddRange(withVariants)
             Next
 
             ' Die Bilder der Unterordner aus dem Katalog: was schon als Kachel dasteht, bleibt
@@ -10901,6 +10932,49 @@ Namespace ViewModels
                 If needsRefreshFlags(i) Then itemsNeedingMetaRefresh.Add(results(i))
             Next
             Return built
+        End Function
+
+        ''' <summary>Stellt hinter jede Datei die Kacheln ihrer zusaetzlichen Varianten.
+        '''
+        ''' Die Liste herein traegt eine Kachel je Datei, wie sie aus dem Ordner kommt. Welche Datei
+        ''' weitere Varianten hat, steht in ihrer Begleitdatei (RawSidecarService.ReadVariants): der
+        ''' Ordner wird dafuer EINMAL nach Begleitdateien aufgelistet, gelesen werden nur die, die
+        ''' es gibt, und davon nur die mit Varianten. Laeuft im Hintergrund.
+        '''
+        ''' Eine Variante, die schon als Kachel dasteht (<paramref name="existing"/>, nach
+        ''' Schluessel), bleibt dieselbe Kachel. Eine neue bekommt die Dateiangaben ihrer Datei und
+        ''' ihre eigenen Katalogdaten aus der Begleitdatei.</summary>
+        Private Shared Function WithVariantItems(fileItems As List(Of ImageItem), folderPath As String,
+                                                 existing As Dictionary(Of String, ImageItem),
+                                                 thumbnailToken As CancellationToken) As List(Of ImageItem)
+            If fileItems Is Nothing OrElse fileItems.Count = 0 Then Return If(fileItems, New List(Of ImageItem)())
+            Dim recipes As HashSet(Of String)
+            Try
+                recipes = New HashSet(Of String)(
+                    Directory.EnumerateFiles(folderPath, "*" & RawSidecarService.Extension), PathIdentity.Comparer)
+            Catch
+                Return fileItems
+            End Try
+            If recipes.Count = 0 Then Return fileItems
+            Dim result As New List(Of ImageItem)(fileItems.Count)
+            For Each item In fileItems
+                If item Is Nothing OrElse item.IsVariant Then Continue For
+                result.Add(item)
+                If item.IsFolder OrElse item.IsRemoteAsset OrElse item.IsOffline Then Continue For
+                If Not recipes.Contains(RawSidecarService.SidecarPathFor(item.FilePath)) Then Continue For
+                If Not RawPreviewService.IsSupportedRaw(item.FilePath) Then Continue For
+                For Each sidecarVariant In RawSidecarService.ReadVariants(item.FilePath)
+                    Dim key = VariantKey.Make(item.FilePath, sidecarVariant.Id)
+                    Dim kept As ImageItem = Nothing
+                    If existing IsNot Nothing AndAlso existing.TryGetValue(key, kept) AndAlso kept IsNot Nothing Then
+                        kept.VariantName = sidecarVariant.Name
+                        result.Add(kept)
+                    Else
+                        result.Add(ImageItem.CreateVariantOf(item, sidecarVariant.Id, sidecarVariant.Name, thumbnailToken))
+                    End If
+                Next
+            Next
+            Return result
         End Function
 
         Private Function BeginNewFolderThumbnailScope() As CancellationToken
@@ -11285,7 +11359,7 @@ Namespace ViewModels
             ' Kette einen Merkposten mit sich, der beim zweiten Durchlaufen alles verwuerfe.
             Dim gesehenePfade As New HashSet(Of String)(PathIdentity.Comparer)
             filtered = filtered.
-                Where(Function(i) i IsNot Nothing AndAlso gesehenePfade.Add(If(i.FilePath, ""))).
+                Where(Function(i) i IsNot Nothing AndAlso gesehenePfade.Add(If(i.ItemPath, ""))).
                 ToList()
 
             ' Mit Stapeln ist ein RAW+JPEG-Paar EINE Kachel und wird als Ganzes beurteilt: traegt
@@ -11580,7 +11654,7 @@ Namespace ViewModels
             For Each item In items
                 item.PickState = state
             Next
-            LibraryService.Instance.SetPickStateForMany(items.Select(Function(i) i.FilePath), state, syncToXmp:=True)
+            LibraryService.Instance.SetPickStateForMany(items.Select(Function(i) i.ItemPath), state, syncToXmp:=True)
             If _filterRejected <> "Show" Then FilterAndSort()
         End Sub
 
@@ -12909,8 +12983,8 @@ Namespace ViewModels
                 If gewaehlt.Any(Function(i) i.IsRemoteAsset) OrElse RefuseOffline(gewaehlt) Then Return
                 ' Der Filmstreifen bekommt nur, was sich laden laesst: nichts von einem nicht
                 ' erreichbaren Laufwerk (gemischte Listen, siehe GalleryViewModelOffline).
-                _mainVm.OpenCompareInViewer(gewaehlt(0).FilePath, gewaehlt(1).FilePath,
-                                            Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
+                _mainVm.OpenCompareInViewer(gewaehlt(0).ItemPath, gewaehlt(1).ItemPath,
+                                            Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.ItemPath).ToList(),
                                             cacheScopeId:=CurrentThumbnailCacheScopeId,
                                             cacheScopeName:=CurrentThumbnailCacheScopeName)
             Catch ex As Exception
@@ -12935,10 +13009,10 @@ Namespace ViewModels
                         Await OpenRemoteItemInViewerAsync(first)
                         Return
                     End If
-                    _mainVm.OpenImageInViewer(first.FilePath, Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
+                    _mainVm.OpenImageInViewer(first.ItemPath, Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.ItemPath).ToList(),
                                               cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
                 ElseIf SelectedItem IsNot Nothing AndAlso (SelectedItem.IsImage OrElse SelectedItem.IsVideoFile) Then
-                    _mainVm.OpenImageInViewer(SelectedItem.FilePath, Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
+                    _mainVm.OpenImageInViewer(SelectedItem.ItemPath, Items.Where(Function(i) (i.IsImage OrElse i.IsVideoFile) AndAlso Not i.IsOffline).Select(Function(i) i.ItemPath).ToList(),
                                               cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
                 ElseIf SelectedItem IsNot Nothing AndAlso SelectedItem.IsParentFolderEntry Then
                     NavigateToParent()
@@ -12959,7 +13033,7 @@ Namespace ViewModels
                     Await OpenRemoteItemInEditorAsync(image)
                     Return
                 End If
-                Await _mainVm.OpenImageInEditor(image.FilePath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile AndAlso Not i.IsOffline).Select(Function(i) i.FilePath).ToList(),
+                Await _mainVm.OpenImageInEditor(image.ItemPath, Items.Where(Function(i) i.IsImage AndAlso i.CanEditFile AndAlso Not i.IsOffline).Select(Function(i) i.ItemPath).ToList(),
                                                 cacheScopeId:=CurrentThumbnailCacheScopeId, cacheScopeName:=CurrentThumbnailCacheScopeName)
             Catch ex As Exception
                 ' Absicherung: eine Ausnahme in einem Async Sub landet sonst beim Dispatcher
@@ -13024,7 +13098,55 @@ Namespace ViewModels
             Return Task.CompletedTask
         End Function
 
+        ''' <summary>Löscht die markierten zusätzlichen Varianten, jede mit ihrer Rückfrage, und
+        ''' danach, was von der Auswahl sonst noch zu löschen ist. Bleibt eine Variante markiert
+        ''' (Rückfrage verneint), endet der Ablauf dort, statt noch einmal zu fragen.</summary>
+        Private Async Function DeleteVariantTilesAsync(tiles As List(Of ImageItem)) As Task
+            Try
+                For Each tile In tiles
+                    ' Eine verneinte Rueckfrage beendet den Ablauf: sonst fragte er fuer dieselbe
+                    ' Kachel gleich noch einmal.
+                    If Await ChangeVariantForImageItemAsync(tile, VariantAction.Delete) Is Nothing Then Return
+                Next
+                ' Was sonst noch markiert war, sind ganze Dateien. Die Kacheln der Dateien, an
+                ' denen gerade Varianten geloescht wurden, gehoeren NICHT dazu: die Kachel der
+                ' Standardvariante steht nach dem Aufruecken noch da und zeigt jetzt die naechste.
+                Dim handled = New HashSet(Of String)(tiles.Select(Function(t) t.FilePath), PathIdentity.Comparer)
+                Dim rest = GetSelectedImageItems().
+                    Where(Function(i) Not handled.Contains(i.FilePath)).
+                    Select(Function(i) i.FilePath).ToList()
+                If rest.Count > 0 Then DeletePaths(rest)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.Variants", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
+            End Try
+        End Function
+
         Public Sub DeleteSelected()
+            ' GELOESCHT WIRD, WAS MARKIERT IST. Die Kachel einer Variante loescht diese Variante,
+            ' auch die der Standardvariante: dann bleibt die Datei, und die erste zusaetzliche
+            ' Variante rueckt auf. Die Datei selbst geht erst, wenn ALLE ihre Kacheln markiert
+            ' sind, und immer, wenn sie keine zusaetzliche Variante hat.
+            Dim selectedImages = GetSelectedImageItems()
+            Dim variantFiles = New HashSet(Of String)(
+                _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsVariant).Select(Function(i) i.FilePath), PathIdentity.Comparer)
+            If variantFiles.Count > 0 Then
+                Dim selectedSet = New HashSet(Of ImageItem)(selectedImages)
+                Dim partlySelected = New HashSet(Of String)(
+                    _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso variantFiles.Contains(i.FilePath) AndAlso
+                                                Not selectedSet.Contains(i)).
+                              Select(Function(i) i.FilePath), PathIdentity.Comparer)
+                ' Erst die zusaetzlichen Varianten, dann die Standardvariante: sonst rueckte eine
+                ' auf, die gleich danach selbst geloescht wird.
+                Dim variantTiles = selectedImages.
+                    Where(Function(t) partlySelected.Contains(t.FilePath)).
+                    OrderBy(Function(t) If(t.IsVariant, 0, 1)).
+                    ToList()
+                If variantTiles.Count > 0 Then
+                    Dim ignoredVariants = DeleteVariantTilesAsync(variantTiles)
+                    Return
+                End If
+            End If
             ' Eine zugeklappte Serie wird nicht als Ganzes geloescht: hinter der Kachel liegen
             ' Aufnahmen, die man nicht sieht. Geloescht wird in der Serienansicht, Bild fuer Bild.
             If GetSelectedImageItems().Any(Function(i) i.IsCollapsedBurst) Then
@@ -13391,6 +13513,12 @@ Namespace ViewModels
 
             Dim target As String = Nothing
             If SelectedItems.Count = 1 Then
+                ' Die Kachel einer zusaetzlichen Variante benennt die Variante um; der Name der
+                ' Datei gehoert allen ihren Varianten.
+                If SelectedItems(0).IsVariant Then
+                    RenameVariantCommand.Execute(Nothing)
+                    Return
+                End If
                 If Not SelectedItems(0).IsParentFolderEntry Then
                     target = SelectedItems(0).FilePath
                 End If
@@ -14053,6 +14181,54 @@ Namespace ViewModels
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Duplizieren fehlgeschlagen"), errorMessage)
         End Function
 
+        ''' <summary>Der Schluessel der zusaetzlichen Variante, deren Datei dieser Faden gerade im
+        ''' Stapel schreibt; Nothing fuer die Standardvariante. Die Schreiber des Stapels bekommen
+        ''' den PFAD der Quelle, denn sie lesen die Datei. Welche Variante der Datei gemeint ist,
+        ''' steht hier, solange <see cref="WriteForItemPath"/> den Schreiber ruft, und
+        ''' <see cref="BatchBaseAdjustments"/> fragt danach.</summary>
+        <ThreadStatic>
+        Private Shared _batchVariantKey As String
+
+        ''' <summary>Ruft den Schreiber des Stapels fuer eine Kachel: mit dem Pfad ihrer Datei, und
+        ''' fuer eine zusaetzliche Variante mit deren Rezept als Grundlage.</summary>
+        ''' <param name="itemPath">Der Pfad oder der Schluessel einer Variante (VariantKey).</param>
+        Private Shared Function WriteForItemPath(itemPath As String, target As String,
+                                                 writer As Func(Of String, String, Boolean)) As Boolean
+            Dim file = VariantKey.FileOf(itemPath)
+            If Not VariantKey.IsVariant(itemPath) Then Return writer(file, target)
+            _batchVariantKey = itemPath
+            Try
+                Return writer(file, target)
+            Finally
+                _batchVariantKey = Nothing
+            End Try
+        End Function
+
+        ''' <summary>Woher das Rezept zu dieser Quelle kommt: aus der Variante, die der Stapel gerade
+        ''' schreibt, sonst aus der Datei selbst.</summary>
+        Private Shared Function BatchRecipeSource(sourcePath As String) As String
+            Dim key = _batchVariantKey
+            If key IsNot Nothing AndAlso PathIdentity.AreSame(VariantKey.FileOf(key), sourcePath) Then Return key
+            Return sourcePath
+        End Function
+
+        ''' <summary>Die Namensbildung des Stapels fuer Quellen, die auch Schluessel einer Variante
+        ''' sein duerfen: der Name kommt wie sonst aus dem Pfad der Datei, bei einer zusaetzlichen
+        ''' Variante steht ihr Name in Klammern dahinter. Sonst schriebe der Export zwei Varianten
+        ''' derselben Aufnahme unter denselben Namen.</summary>
+        Private Shared Function VariantAwareNameBuilder(nameBuilder As Func(Of String, String),
+                                                        nameSuffix As String) As Func(Of String, String)
+            Return Function(source)
+                       Dim variantId As String = Nothing
+                       Dim file = VariantKey.Split(source, variantId)
+                       Dim stem = If(nameBuilder Is Nothing, Nothing, nameBuilder(file))
+                       If variantId.Length = 0 Then Return stem
+                       If String.IsNullOrWhiteSpace(stem) Then stem = IO.Path.GetFileNameWithoutExtension(file) & If(nameSuffix, "")
+                       Dim name = String.Join("_", RawSidecarService.VariantName(source).Split(IO.Path.GetInvalidFileNameChars())).Trim()
+                       Return If(name.Length = 0, stem & " (" & variantId & ")", stem & " (" & name & ")")
+                   End Function
+        End Function
+
         ''' <summary>Der Ausgangspunkt einer Stapel-Bearbeitung fuer EINE Quelle.
         '''
         ''' Liegt neben einer RAW- oder PSD-Datei ein .fpxmp-Rezept, IST das die Grundlage: der
@@ -14064,7 +14240,7 @@ Namespace ViewModels
         ''' Rezept - ein zweites Mal angewandt kaeme die Bearbeitung doppelt.</summary>
         Private Shared Function BatchBaseAdjustments(sourcePath As String) As ImageAdjustments
             If RawSidecarService.IsSidecarFormat(sourcePath) AndAlso RawSidecarService.Exists(sourcePath) Then
-                Dim rezept = RawSidecarService.TryRead(sourcePath)
+                Dim rezept = RawSidecarService.TryRead(BatchRecipeSource(sourcePath))
                 If rezept IsNot Nothing Then Return rezept
             End If
             ' Eine RAW ohne Rezept kommt mit denselben Startwerten aus dem Stapel wie aus dem Editor -
@@ -14173,18 +14349,22 @@ Namespace ViewModels
                                                    isAutoEnhance As Boolean,
                                                    Optional replacePixelAdjustments As Boolean = False,
                                                    Optional denoise As DenoiseModelService.DenoiseRequest = Nothing) As RawSidecarService.ModifyRecipeResult
+            ' Der Schluessel einer zusaetzlichen Variante (VariantKey) meint IHR Rezept. Alles, was
+            ' die Datei liest oder misst, nimmt den Pfad.
+            Dim recipeKey = source
+            source = VariantKey.FileOf(source)
             RawSidecarService.TryImportFromXmpSidecar(source)
             Dim isRaw = RawPreviewService.IsSupportedRaw(source)
             Dim makeStartValues = Function() If(isRaw, ImageAdjustments.ForUneditedRaw(source), New ImageAdjustments())
             Dim existing As ImageAdjustments = Nothing
-            Dim state = RawSidecarService.ReadRecipe(source, existing)
+            Dim state = RawSidecarService.ReadRecipe(recipeKey, existing)
             If state = RawSidecarService.SidecarReadResult.Unreadable Then Return RawSidecarService.ModifyRecipeResult.Unreadable
             Dim startValues = If(state = RawSidecarService.SidecarReadResult.Missing, makeStartValues(), Nothing)
             ' Bearbeitet ist das Bild danach nur, wenn es das schon war oder das fertige Rezept von
             ' den Startwerten abweicht, wie beim Speichern im Editor (IsEditedRecipe). Fest auf True
             ' stand ein Bild nach einer wirkungslosen Vorlage im Filter "bearbeitet". Die Startwerte
             ' vorab, nicht unter der Sperre: bei einer RAW oeffnen sie LibRaw.
-            Dim wasEdited = RawSidecarService.IsEditedFile(source)
+            Dim wasEdited = RawSidecarService.IsEditedFile(recipeKey)
             Dim reference = If(startValues, makeStartValues())
 
             Dim measured As ImageAdjustments = Nothing
@@ -14204,7 +14384,7 @@ Namespace ViewModels
             Dim denoiseStrength = BatchRecipeDenoiseStrength(source, If(existing, startValues), denoise)
 
             Return RawSidecarService.TryModifyRecipeDetailed(
-                source,
+                recipeKey,
                 Function() If(startValues, makeStartValues()),
                 Sub(adj)
                     ' Vorlage und Messung setzen nur Pixelregler; stimmt der Stand, ist das Kopieren
@@ -14707,7 +14887,11 @@ Namespace ViewModels
             If result.Overwrite Then
                 Dim localPaths = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
                 ' RAW und PSD bekommen ihr Rezept, alle anderen neue Bilddaten - in einem Lauf.
-                Dim recipePaths = localPaths.Where(AddressOf RawSidecarService.IsSidecarFormat).ToList()
+                ' Mit dem Schluessel der Kachel: eine zusaetzliche Variante bekommt die Anpassungen
+                ' in IHR Rezept, nicht in das der Standardvariante.
+                Dim recipePaths = localItems.
+                    Where(Function(i) File.Exists(i.FilePath) AndAlso RawSidecarService.IsSidecarFormat(i.FilePath)).
+                    Select(Function(i) i.ItemPath).ToList()
                 Dim pixelPaths = localPaths.Where(Function(p) Not RawSidecarService.IsSidecarFormat(p)).ToList()
                 changedCount = Await RewriteImagesInPlaceAsync(pixelPaths, writer)
                 changedCount += Await WriteRecipesInPlaceAsync(recipePaths, adjustmentsTemplate, isAutoEnhance,
@@ -14869,7 +15053,7 @@ Namespace ViewModels
                 Return
             End If
             Dim recipe As ImageAdjustments = Nothing
-            Dim state = RawSidecarService.ReadRecipe(items(0).FilePath, recipe)
+            Dim state = RawSidecarService.ReadRecipe(items(0).ItemPath, recipe)
             If state <> RawSidecarService.SidecarReadResult.Read OrElse recipe Is Nothing Then
                 StatusText = LocalizationService.T("Die Begleitdatei ließ sich nicht lesen.")
                 Return
@@ -14908,7 +15092,8 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Auf diese Bilder lassen sich keine Anpassungen einfügen.")
                 Return
             End If
-            Dim recipePaths = targets.Where(AddressOf IsBatchRecipeWritable).Select(Function(i) i.FilePath).ToList()
+            ' Mit dem Schluessel der Kachel, siehe WriteRecipeInPlace.
+            Dim recipePaths = targets.Where(AddressOf IsBatchRecipeWritable).Select(Function(i) i.ItemPath).ToList()
             Dim pixelPaths = targets.Where(Function(i) Not IsBatchRecipeWritable(i)).Select(Function(i) i.FilePath).ToList()
             If pixelPaths.Count > 0 Then
                 Dim confirmed = Await _mainVm.ShowConfirmAsync(
@@ -14934,11 +15119,259 @@ Namespace ViewModels
                                                                   replacePixelAdjustments:=True)
                 changedCount += Await RewriteImagesInPlaceAsync(pixelPaths, writer)
                 StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount, targets.Count)
-                RefreshAfterBatchFileRewrite(recipePaths.Concat(pixelPaths))
+                RefreshAfterBatchFileRewrite(recipePaths.Select(Function(p) VariantKey.FileOf(p)).Concat(pixelPaths))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Gallery.PasteAdjustments", ex)
             Finally
                 EndBatchRun()
+            End Try
+        End Function
+
+        ''' <summary>Was sich an den Varianten einer Aufnahme tun lässt
+        ''' (<see cref="ChangeVariantForImageItemAsync"/>).</summary>
+        Public Enum VariantAction
+            AddFromCurrent
+            AddFromStartValues
+            Rename
+            Delete
+        End Enum
+
+        ''' <summary>Kann dieses Bild mehrere Varianten tragen? Nur, was seine Bearbeitung in der
+        ''' Begleitdatei hält: eine lokale RAW oder PSD. Die Varianten liegen alle in dieser einen
+        ''' Datei (RawSidecarServiceVariants.vb).
+        '''
+        ''' Die Arbeitskopie eines Serverbildes zählt nicht: Betrachter und Editor reichen sie als
+        ''' gewöhnlichen Pfad herein, ihre Begleitdatei liegt aber nur im Temp-Ordner.</summary>
+        Public Shared Function CanHaveVariants(item As ImageItem) As Boolean
+            If item Is Nothing OrElse Not item.IsImage OrElse Not item.CanEditFile OrElse Not IsBatchRecipeWritable(item) Then Return False
+            ' Nur RAW. Eine PSD haelt ihre Bearbeitung zwar auch in der Begleitdatei, aber ihre
+            ' Kachel rechnet kein Rezept ein, und mit Ebenen laesst sie sich nur "unter" speichern.
+            If Not RawPreviewService.IsSupportedRaw(item.FilePath) Then Return False
+            Return Not ImmichService.IsImmichTempPath(item.FilePath) AndAlso Not NextcloudService.IsNextcloudTempPath(item.FilePath)
+        End Function
+
+        ''' <summary>Der Name der Bearbeitung, die die Datei selbst trägt. Er steht in keiner Datei;
+        ''' eine zusätzliche Variante darf nur nicht genauso heißen.</summary>
+        Public Shared Function DefaultVariantName() As String
+            Return LocalizationService.T("Standard")
+        End Function
+
+        ''' <summary>Wie die Variante hinter einem Pfad oder Schlüssel im Fenstertitel heißt: ihr
+        ''' Name, für die Datei selbst "Standard". Leer, solange die Datei keine zusätzliche Variante
+        ''' hat: dann gibt es nichts zu unterscheiden. Die Begleitdatei ist dafür nach Zeitstempel
+        ''' gemerkt (RawSidecarService.ReadVariants).</summary>
+        Public Shared Function VariantTitle(itemPath As String) As String
+            If String.IsNullOrEmpty(itemPath) OrElse Not RawSidecarService.IsSidecarFormat(itemPath) Then Return ""
+            Try
+                Dim name = RawSidecarService.VariantName(itemPath)
+                If name.Length > 0 Then Return name
+                Return If(RawSidecarService.ReadVariants(VariantKey.FileOf(itemPath)).Count > 0, DefaultVariantName(), "")
+            Catch
+                Return ""
+            End Try
+        End Function
+
+        ''' <summary>Der erste freie Name der Form "Variante 1", "Variante 2" und so weiter.</summary>
+        Private Shared Function FreeVariantName(variants As IReadOnlyList(Of RawSidecarService.SidecarVariant)) As String
+            Dim number = 1
+            Do
+                Dim candidate = String.Format(LocalizationService.T("Variante {0}"), number)
+                If Not VariantNameTaken(variants, candidate, Nothing) Then Return candidate
+                number += 1
+            Loop
+        End Function
+
+        ''' <summary>Heißt schon eine Variante so? "Standard" gilt als vergeben, die Variante mit der
+        ''' Kennung <paramref name="exceptId"/> zählt nicht mit (ihr eigener Name beim Umbenennen).</summary>
+        Private Shared Function VariantNameTaken(variants As IReadOnlyList(Of RawSidecarService.SidecarVariant),
+                                                 name As String, exceptId As String) As Boolean
+            If String.Equals(name, DefaultVariantName(), StringComparison.OrdinalIgnoreCase) Then Return True
+            Return variants.Any(Function(v) Not String.Equals(v.Id, exceptId, StringComparison.OrdinalIgnoreCase) AndAlso
+                                            String.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Fragt den Namen einer Variante ab. Nothing heißt: abgebrochen oder abgelehnt.</summary>
+        Private Async Function AskVariantNameAsync(title As String, suggestion As String,
+                                                   variants As IReadOnlyList(Of RawSidecarService.SidecarVariant),
+                                                   exceptId As String,
+                                                   reportError As Action(Of String)) As Task(Of String)
+            Dim entered = Await _mainVm.ShowInputAsync(AppDialogKind.Input, title,
+                                                       LocalizationService.T("Name der Variante"), suggestion)
+            Dim name = RawSidecarService.NormalizeVariantName(entered)
+            If name.Length = 0 Then Return Nothing
+            If VariantNameTaken(variants, name, exceptId) Then
+                reportError(LocalizationService.T("Eine Variante mit diesem Namen gibt es schon."))
+                Return Nothing
+            End If
+            Return name
+        End Function
+
+        ''' <summary>Legt neben einer Kachel eine weitere Variante an, benennt die Variante einer
+        ''' Kachel um oder löscht sie. Öffentlich, weil Betrachter und Editor denselben Ablauf für
+        ''' ihr Bild auslösen: eine Umsetzung, nicht drei.
+        '''
+        ''' Jede Variante ist eine eigene Kachel. Die neue geht von der Kachel aus, auf der sie
+        ''' angelegt wird (deren Rezept oder die Startwerte, immer deren Katalogdaten). Umbenennen
+        ''' und Löschen gibt es nur für zusätzliche Varianten: die Standardvariante ist die Datei
+        ''' selbst, und die löscht das gewöhnliche Löschen samt allen Varianten.</summary>
+        ''' <param name="reportError">Wohin eine Ablehnung geht. Ohne Vorgabe in die Statuszeile der
+        ''' Galerie; der Betrachter hat keine und zeigt eine Meldung.</param>
+        ''' <returns>Der Schlüssel der Kachel, um die es danach geht: die neue Variante, die
+        ''' umbenannte, nach dem Löschen die Datei. Nothing, wenn nichts geändert wurde.</returns>
+        Public Async Function ChangeVariantForImageItemAsync(item As ImageItem, change As VariantAction,
+                                                             Optional reportError As Action(Of String) = Nothing) As Task(Of String)
+            If Not CanHaveVariants(item) OrElse Not File.Exists(item.FilePath) Then Return Nothing
+            If reportError Is Nothing Then reportError = Sub(text) StatusText = text
+            Dim path = item.FilePath
+            Dim key = item.ItemPath
+            Dim variants = Await Task.Run(Function() RawSidecarService.ReadVariants(path))
+            Dim result As RawSidecarService.ModifyRecipeResult
+            Dim affected As String = Nothing
+            Dim removedKey As String = Nothing
+            Select Case change
+                Case VariantAction.AddFromCurrent, VariantAction.AddFromStartValues
+                    Dim name = Await AskVariantNameAsync(LocalizationService.T("Neue Variante"),
+                                                         FreeVariantName(variants), variants, Nothing, reportError)
+                    If name Is Nothing Then Return Nothing
+                    Dim fromCurrent = change = VariantAction.AddFromCurrent
+                    Dim newKey As String = Nothing
+                    result = Await Task.Run(
+                        Function()
+                            ' Wie vor jedem Schreiben eines Rezepts: eine fremde Entwicklung neben
+                            ' der Datei wird erst übernommen, sonst fehlte sie der Standardvariante.
+                            RawSidecarService.TryImportFromXmpSidecar(path)
+                            Return RawSidecarService.TryAddVariant(key, name, DefaultVariantName(), fromCurrent,
+                                                                   Function() RawSidecarService.StartValuesFor(path), newKey)
+                        End Function)
+                    affected = newKey
+                Case VariantAction.Rename
+                    If Not item.IsVariant Then Return Nothing
+                    Dim current = item.VariantName
+                    Dim name = Await AskVariantNameAsync(LocalizationService.T("Variante umbenennen"),
+                                                         current, variants, item.VariantId, reportError)
+                    If name Is Nothing OrElse String.Equals(name, current, StringComparison.Ordinal) Then Return Nothing
+                    result = Await Task.Run(Function() RawSidecarService.TryRenameVariant(key, name, DefaultVariantName()))
+                    affected = key
+                Case VariantAction.Delete
+                    ' Die Standardvariante lässt sich löschen, solange es eine zusätzliche gibt:
+                    ' die Datei bleibt, und die erste zusätzliche rückt auf. Ohne zusätzliche ist
+                    ' sie die Datei selbst, und die löscht das gewöhnliche Löschen.
+                    If Not item.IsVariant AndAlso variants.Count = 0 Then Return Nothing
+                    Dim confirmed = Await _mainVm.ShowConfirmAsync(
+                        LocalizationService.T("Variante löschen"),
+                        String.Format(LocalizationService.T("Die Variante {0} wird gelöscht. Das lässt sich nicht zurücknehmen."),
+                                      If(item.IsVariant, item.VariantName, DefaultVariantName())),
+                        "Löschen", "Abbrechen")
+                    If Not confirmed Then Return Nothing
+                    Dim promotedKey As String = Nothing
+                    result = Await Task.Run(Function() RawSidecarService.TryDeleteVariant(key, promotedKey))
+                    removedKey = If(item.IsVariant, key, promotedKey)
+                    affected = path
+                Case Else
+                    Return Nothing
+            End Select
+
+            Select Case result
+                Case RawSidecarService.ModifyRecipeResult.Unreadable
+                    reportError(LocalizationService.T("Die Begleitdatei ließ sich nicht lesen."))
+                    Return Nothing
+                Case RawSidecarService.ModifyRecipeResult.Failed
+                    reportError(LocalizationService.T("Begleitdatei konnte nicht geschrieben werden"))
+                    Return Nothing
+            End Select
+
+            Select Case change
+                Case VariantAction.Rename
+                    Dim renamed = Await Task.Run(Function() RawSidecarService.VariantName(key))
+                    For Each tile In VariantTiles(key)
+                        tile.VariantName = renamed
+                    Next
+                    StatusText = String.Format(LocalizationService.T("Variante: {0}"), renamed)
+                Case VariantAction.Delete
+                    ' Weg ist die Kachel der gelöschten Variante. Wurde die Standardvariante
+                    ' gelöscht, ist das die Kachel der AUFGERÜCKTEN: ihre Angaben stehen jetzt an
+                    ' der Datei, und deren Kachel zeigt sie.
+                    Dim promoted = Not item.IsVariant
+                    Dim goneKey = removedKey
+                    Await Task.Run(Sub()
+                                       If promoted Then LibraryService.Instance.ImportFpxmpCatalogData(path)
+                                       LibraryService.Instance.DeleteVariantEntry(goneKey)
+                                   End Sub)
+                    If promoted Then
+                        For Each tile In _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVariant AndAlso
+                                                                     PathIdentity.AreSame(i.FilePath, path)).ToList()
+                            tile.Rating = LibraryService.Instance.GetRating(path)
+                            tile.IsFavorite = LibraryService.Instance.GetFavorite(path)
+                            tile.ColorLabel = LibraryService.Instance.GetColorLabel(path)
+                            tile.PickState = LibraryService.Instance.GetPickState(path)
+                            tile.Tags = LibraryService.Instance.GetTags(path)
+                            tile.ResolveIsEdited()
+                        Next
+                    End If
+                    Dim gone = _allItems.Where(Function(i) i IsNot Nothing AndAlso String.Equals(i.ItemPath, goneKey, PathIdentity.Comparison)).ToList()
+                    If gone.Count > 0 Then
+                        For Each tile In gone
+                            _allItems.Remove(tile)
+                        Next
+                        PruneSelection(New HashSet(Of ImageItem)(_allItems))
+                        FilterAndSort()
+                    End If
+                    RefreshAfterBatchFileRewrite({path})
+                Case Else
+                    Await AddVariantTileAsync(path, affected)
+                    RefreshAfterBatchFileRewrite({path})
+                    StatusText = String.Format(LocalizationService.T("Variante: {0}"),
+                                               Await Task.Run(Function() RawSidecarService.VariantName(affected)))
+            End Select
+            ImageItem.ReloadThumbnailsFor(_mainVm.Viewer?.FilmstripItems, path)
+            ImageItem.ReloadThumbnailsFor(_mainVm.Editor?.FilmstripItems, path)
+            RefreshContextActions()
+            Return affected
+        End Function
+
+        ''' <summary>Alle Kacheln, die diese Variante zeigen: in der Galerie und in den Filmstreifen
+        ''' von Betrachter und Editor.</summary>
+        Private Function VariantTiles(key As String) As List(Of ImageItem)
+            Dim strips = If(_mainVm.Viewer?.FilmstripItems, Enumerable.Empty(Of ImageItem)()).
+                Concat(If(_mainVm.Editor?.FilmstripItems, Enumerable.Empty(Of ImageItem)()))
+            Return _allItems.Concat(strips).
+                Where(Function(i) i IsNot Nothing AndAlso i.IsVariant AndAlso String.Equals(i.ItemPath, key, PathIdentity.Comparison)).
+                Distinct().ToList()
+        End Function
+
+        ''' <summary>Stellt die Kachel einer gerade angelegten Variante hinter die letzte Kachel
+        ''' ihrer Datei. Steht die Datei gar nicht in der Galerie (der Betrachter zeigt einen
+        ''' anderen Ordner), geschieht nichts: der nächste Aufbau der Ordnerliste bringt sie.</summary>
+        Private Async Function AddVariantTileAsync(path As String, newKey As String) As Task
+            If String.IsNullOrEmpty(newKey) Then Return
+            Dim fileTile = _allItems.FirstOrDefault(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso Not i.IsVariant AndAlso
+                                                                PathIdentity.AreSame(i.FilePath, path))
+            If fileTile Is Nothing Then Return
+            If _allItems.Any(Function(i) i IsNot Nothing AndAlso String.Equals(i.ItemPath, newKey, PathIdentity.Comparison)) Then Return
+            Dim token = _thumbnailLoadCts.Token
+            Dim tile = Await Task.Run(Function() ImageItem.CreateVariantOf(fileTile, VariantKey.IdOf(newKey),
+                                                                           RawSidecarService.VariantName(newKey), token))
+            Dim last = _allItems.FindLastIndex(Function(i) i IsNot Nothing AndAlso i.IsImage AndAlso PathIdentity.AreSame(i.FilePath, path))
+            If last < 0 OrElse token.IsCancellationRequested Then Return
+            _allItems.Insert(last + 1, tile)
+            FilterAndSort()
+        End Function
+
+        ''' <summary>Dasselbe für die Auswahl der Galerie: nur für genau EIN Bild.</summary>
+        Private Async Function ChangeVariantOfSelectedAsync(change As VariantAction) As Task
+            Try
+                Dim items = GetSelectedImageItems()
+                If items.Count <> 1 Then Return
+                Dim affected = Await ChangeVariantForImageItemAsync(items(0), change)
+                ' Eine neue Variante legt man an, um sie zu bearbeiten: es geht gleich mit ihr in
+                ' den Editor.
+                If affected IsNot Nothing AndAlso
+                   (change = VariantAction.AddFromCurrent OrElse change = VariantAction.AddFromStartValues) Then
+                    Await _mainVm.OpenImageInEditor(affected)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Gallery.Variants", ex)
+                StatusText = LocalizationService.T("Aktion fehlgeschlagen")
             End Try
         End Function
 
@@ -15587,14 +16020,17 @@ Namespace ViewModels
                 ' Eine Ordnervorlage (GitHub #102) gilt je Bild: "{folder}/export" legt den Unterordner
                 ' neben JEDEM Bild an, auch wenn die Auswahl aus mehreren Ordnern stammt. Ohne
                 ' Platzhalter und absolut ist es der Ordner selbst, wie bisher.
-                Dim sourceFolder = If(remoteSources, pictures, If(Path.GetDirectoryName(source), ""))
+                ' Die Quelle darf der Schluessel einer zusaetzlichen Variante sein (VariantKey); Ordner
+                ' und Rueckfrage richten sich nach ihrer Datei.
+                Dim sourceFile = VariantKey.FileOf(source)
+                Dim sourceFolder = If(remoteSources, pictures, If(Path.GetDirectoryName(sourceFile), ""))
                 Dim folderForSource = MainWindowViewModel.AnchorTargetFolder(
-                    _mainVm.ExpandTargetFolderTemplate(targetFolder, source, sourceFolder), sourceFolder)
+                    _mainVm.ExpandTargetFolderTemplate(targetFolder, sourceFile, sourceFolder), sourceFolder)
                 If Not Directory.Exists(folderForSource) Then Directory.CreateDirectory(folderForSource)
                 Dim target = CreateBatchTargetFolderPath(source, folderForSource, outputExtension(source),
                                                          nameSuffix, nameBuilder, makeUnique:=False)
                 If File.Exists(target) OrElse claimed.Contains(target) Then
-                    target = Await ResolveConflictTargetAsync(target, source)
+                    target = Await ResolveConflictTargetAsync(target, sourceFile)
                     If String.IsNullOrEmpty(target) Then Continue For   ' übersprungen
                 End If
                 claimed.Add(target)
@@ -15752,9 +16188,13 @@ Namespace ViewModels
                     Dim sourceExt = IO.Path.GetExtension(item.FilePath)
                     Dim targetExt = outputExtension(item.FilePath)
                     If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
-                    candidates.Add(item.FilePath)
+                    ' Mit dem Schluessel der Kachel: jede zusaetzliche Variante ist eine eigene
+                    ' Quelle mit eigenem Rezept, eigenem Zielnamen und eigenen Katalogdaten.
+                    candidates.Add(item.ItemPath)
                 Next
-                Dim pairs = Await ResolveBatchTargetsAsync(candidates, targetFolder, outputExtension, nameSuffix, nameBuilder)
+                Dim pairs = Await ResolveBatchTargetsAsync(candidates, targetFolder,
+                                                           Function(source) outputExtension(VariantKey.FileOf(source)),
+                                                           nameSuffix, VariantAwareNameBuilder(nameBuilder, nameSuffix))
                 If pairs.Count = 0 Then Return 0
 
                 ' ES DAUERT, UND ZWAR SICHTBAR. Ein Stapel mit Modell-Hochskalierung rechnet je Bild
@@ -15767,7 +16207,7 @@ Namespace ViewModels
                         If BatchWasCancelled() Then Exit For
                         Dim sourcePath = pair.Key
                         Dim target = pair.Value
-                        If writer(sourcePath, target) AndAlso File.Exists(target) Then
+                        If WriteForItemPath(sourcePath, target, writer) AndAlso File.Exists(target) Then
                             savedCount += 1
                             ' Katalog-Metadaten (Bewertung/Favorit/Etikett/Stichworte) wandern zur
                             ' Kopie mit - das Original behält seine.
@@ -15810,9 +16250,10 @@ Namespace ViewModels
                     Dim targetExt = outputExtension(item.FilePath)
                     If skipSameExtension AndAlso String.Equals(sourceExt, targetExt, StringComparison.OrdinalIgnoreCase) Then Continue For
 
-                    Dim outputPath = CreateImmichBatchOutputPath(item.FilePath, targetExt, nameSuffix, nameBuilder)
+                    Dim outputPath = CreateImmichBatchOutputPath(item.ItemPath, targetExt, nameSuffix,
+                                                                 VariantAwareNameBuilder(nameBuilder, nameSuffix))
                     Try
-                        Dim ok = Await Task.Run(Function() writer(item.FilePath, outputPath))
+                        Dim ok = Await Task.Run(Function() WriteForItemPath(item.ItemPath, outputPath, writer))
                         If Not ok OrElse Not File.Exists(outputPath) Then Continue For
 
                         Dim newAssetId = Await ImmichService.UploadAssetAsync(outputPath)
@@ -15879,10 +16320,13 @@ Namespace ViewModels
                         ReportBatchFileDone()
                         Continue For
                     End If
-                    Dim outputPath = NextcloudBatchOutputPath(item, source, targetExt, nameSuffix, nameBuilder)
+                    ' Eine zusaetzliche Variante geht mit ihrem Schluessel in Namensbildung und Schreiber.
+                    Dim sourceKey = If(item.IsVariant, item.ItemPath, source)
+                    Dim outputPath = NextcloudBatchOutputPath(item, sourceKey, targetExt, nameSuffix,
+                                                              If(item.IsVariant, VariantAwareNameBuilder(nameBuilder, nameSuffix), nameBuilder))
                     Try
                         Dim schreiber = If(item.IsRemoteAsset AndAlso remoteWriter IsNot Nothing, remoteWriter, writer)
-                        Dim ok = Await Task.Run(Function() schreiber(source, outputPath))
+                        Dim ok = Await Task.Run(Function() WriteForItemPath(sourceKey, outputPath, schreiber))
                         If Not ok OrElse Not File.Exists(outputPath) Then
                             failed.Add(item.FileName)
                             Continue For
