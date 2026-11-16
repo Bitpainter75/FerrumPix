@@ -442,14 +442,39 @@ Namespace Services
                 Dim attempts As New List(Of String)(candidates)
                 attempts.AddRange(HomebrewCandidates(candidates))
                 attempts.AddRange(BundledCandidates(candidates))
-                For Each candidate In BundledLibraryOrder.Arrange(attempts)
-                    If NativeLibrary.TryLoad(candidate, handle) Then
-                        loadedName = If(BundledLibraryOrder.IsBundledPath(candidate, AppContext.BaseDirectory),
-                                     Path.GetFileName(candidate), candidate)
-                        Exit For
-                    End If
-                    handle = IntPtr.Zero
-                Next
+                '
+                ' Geladen wird auf einem EIGENEN Faden, der bis zum Ende des Prozesses bestehen
+                ' bleibt. Die mitgelieferte Bibliothek traegt ihre OpenMP-Laufzeit statisch in sich
+                ' und meldet beim Laden den ladenden Faden dort an. Endet dieser Faden, baut sich
+                ' die Laufzeit ab und gibt ihre Schloesser frei; der Code der Bibliothek haelt den
+                ' Zeiger auf das Schloss seiner Speicherverwaltung aber weiter fest. Der naechste
+                ' Aufruf greift dann in freigegebenen Speicher, und sobald dort ein Bildpuffer
+                ' liegt, endet der Prozess mit einem Speicherzugriffsfehler. Der erste Aufruf kommt
+                ' aus dem Fadenvorrat, dessen Faeden nach kurzer Ruhe abgebaut werden.
+                Dim loadedHandle As IntPtr = IntPtr.Zero
+                Dim loadDone As New Threading.ManualResetEventSlim(False)
+                Dim loader As New Threading.Thread(
+                    Sub()
+                        Try
+                            For Each candidate In BundledLibraryOrder.Arrange(attempts)
+                                Dim candidateHandle As IntPtr
+                                If NativeLibrary.TryLoad(candidate, candidateHandle) Then
+                                    loadedHandle = candidateHandle
+                                    loadedName = If(BundledLibraryOrder.IsBundledPath(candidate, AppContext.BaseDirectory),
+                                                 Path.GetFileName(candidate), candidate)
+                                    Exit For
+                                End If
+                            Next
+                        Finally
+                            loadDone.Set()
+                        End Try
+                        If loadedHandle <> IntPtr.Zero Then Threading.Thread.Sleep(Threading.Timeout.Infinite)
+                    End Sub)
+                loader.IsBackground = True
+                loader.Name = "LibRaw loader"
+                loader.Start()
+                loadDone.Wait()
+                handle = loadedHandle
 
                 If handle = IntPtr.Zero Then Return
 
