@@ -261,6 +261,18 @@ Namespace Services
             Return "System"
         End Function
 
+        ''' <summary>Texte, die eine Standardvorlage nicht aus ihrem Baum, sondern aus einem
+        ''' Schluessel der Anwendung liest: die Platzhalter des Datumsfelds ohne gewaehltes Datum.
+        ''' Der Baumdurchlauf erreicht sie nicht, weil das Feld sie bei jedem Leeren neu aus dem
+        ''' Schluessel holt. Gesetzt beim Start und nach jedem Sprachwechsel.</summary>
+        Public Shared Sub ApplyTemplateTexts()
+            Dim app = Application.Current
+            If app Is Nothing Then Return
+            app.Resources("StringDatePickerDayText") = T("Tag")
+            app.Resources("StringDatePickerMonthText") = T("Monat")
+            app.Resources("StringDatePickerYearText") = T("Jahr")
+        End Sub
+
         Public Shared Function T(text As String) As String
             If String.IsNullOrEmpty(text) Then Return text
 

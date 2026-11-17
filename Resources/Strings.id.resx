@@ -11899,4 +11899,13 @@
   <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
     <value>{0} varian ikut dihapus.</value>
   </data>
+  <data name="Tag_982963c1" xml:space="preserve">
+    <value>Hari</value>
+  </data>
+  <data name="Monat_da13625e" xml:space="preserve">
+    <value>Bulan</value>
+  </data>
+  <data name="Jahr_956a6e5a" xml:space="preserve">
+    <value>Tahun</value>
+  </data>
 </root>

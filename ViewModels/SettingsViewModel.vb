@@ -1801,12 +1801,21 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Baut die Liste EINMAL und zieht danach nur die Namen nach. Der Neuaufbau nach
+        ''' einem Sprachwechsel laeuft, waehrend die Auswahlliste ihre Wahl gerade hierher
+        ''' schreibt: ein Leeren der Liste nahm ihr dabei den gewaehlten Eintrag, und die Meldung
+        ''' danach kam mitten im eigenen Schreiben nicht mehr an - das Feld stand leer da.</summary>
         Private Sub BuildLanguageOptions()
-            LanguageOptions.Clear()
             For Each sp In LocalizationService.Languages
-                LanguageOptions.Add(New LanguageOption With {
-                    .Key = sp.Key,
-                    .Name = If(sp.Key = "System", LocalizationService.T("Systemsprache"), sp.Name)})
+                Dim key = sp.Key
+                Dim name = If(key = "System", LocalizationService.T("Systemsprache"), sp.Name)
+                Dim existing = LanguageOptions.FirstOrDefault(
+                    Function(o) String.Equals(o.Key, key, StringComparison.Ordinal))
+                If existing Is Nothing Then
+                    LanguageOptions.Add(New LanguageOption With {.Key = key, .Name = name})
+                Else
+                    existing.Name = name
+                End If
             Next
             Me.RaisePropertyChanged(NameOf(SelectedLanguage))
         End Sub
@@ -1827,7 +1836,8 @@ Namespace ViewModels
         End Property
 
         Private Sub BuildDateFormatOptions()
-            DateFormatOptions.Clear()
+            ' Am selben Eintrag nachziehen statt leeren, aus demselben Grund wie bei den Sprachen:
+            ' die Wahl eines Formats ruft diesen Aufbau, waehrend die Liste ihre Wahl schreibt.
             ' Der 31. als Beispiel: Tag und Monat sind daran nicht zu verwechseln.
             Dim sample As New DateTime(2026, 12, 31, 18, 30, 0)
             Dim current = LocalizationService.DateFormatMode
@@ -1835,11 +1845,17 @@ Namespace ViewModels
                 For Each mode In LocalizationService.DateFormatModes
                     LocalizationService.DateFormatMode = mode
                     Dim example = LocalizationService.FormatDateTime(sample)
-                    DateFormatOptions.Add(New DateFormatOption With {
-                        .Key = mode,
-                        .Name = If(mode = "System",
-                                   String.Format(LocalizationService.T("Wie im System ({0})"), example),
-                                   example)})
+                    Dim key = mode
+                    Dim name = If(mode = "System",
+                                  String.Format(LocalizationService.T("Wie im System ({0})"), example),
+                                  example)
+                    Dim existing = DateFormatOptions.FirstOrDefault(
+                        Function(o) String.Equals(o.Key, key, StringComparison.Ordinal))
+                    If existing Is Nothing Then
+                        DateFormatOptions.Add(New DateFormatOption With {.Key = key, .Name = name})
+                    Else
+                        existing.Name = name
+                    End If
                 Next
             Finally
                 LocalizationService.DateFormatMode = current
@@ -7137,6 +7153,17 @@ Namespace ViewModels
             ("SystemControlHighlightListLowBrush", "FP.Bg.Hover"),
             ("SystemControlHighlightListMediumBrush", "FP.Sel.Bg"),
             ("SystemControlHighlightListHighBrush", "FP.Sel.Hover"),
+            ("DatePickerFlyoutPresenterBackground", "FP.Bg.Elevated"),
+            ("DatePickerFlyoutPresenterBorderBrush", "FP.Border.Normal"),
+            ("DatePickerFlyoutPresenterHighlightFill", "FP.Sel.Bg"),
+            ("DatePickerFlyoutPresenterSpacerFill", "FP.Border.Normal"),
+            ("DateTimePickerFlyoutButtonBackgroundPointerOver", "FP.Bg.Hover"),
+            ("DateTimePickerFlyoutButtonBackgroundPressed", "FP.Sel.Bg"),
+            ("DateTimePickerFlyoutButtonBorderBrush", "FP.Border.Normal"),
+            ("DateTimePickerFlyoutButtonBorderBrushPointerOver", "FP.Border.Strong"),
+            ("DateTimePickerFlyoutButtonBorderBrushPressed", "FP.Border.Strong"),
+            ("DateTimePickerFlyoutButtonForegroundPointerOver", "FP.Text.Primary"),
+            ("DateTimePickerFlyoutButtonForegroundPressed", "FP.Text.Primary"),
             ("CheckBoxCheckGlyphForegroundChecked", "FP.OnAccent"),
             ("CheckBoxCheckGlyphForegroundCheckedPointerOver", "FP.OnAccent"),
             ("CheckBoxCheckGlyphForegroundCheckedPressed", "FP.OnAccent"),
@@ -7754,8 +7781,23 @@ Namespace ViewModels
 
     ''' <summary>Ein Eintrag in der Sprachauswahl.</summary>
     Public Class LanguageOption
+        Inherits ReactiveObject
+
+        Private _name As String = ""
+
         Public Property Key As String = ""
-        Public Property Name As String = ""
+
+        ''' <summary>Meldet seine Aenderung: der Systemeintrag traegt seinen Namen aus der
+        ''' Uebersetzung und wird nach einem Sprachwechsel am selben Eintrag umbenannt.</summary>
+        Public Property Name As String
+            Get
+                Return _name
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_name, If(value, ""))
+            End Set
+        End Property
+
         Public Overrides Function ToString() As String
             Return Name
         End Function
@@ -7763,8 +7805,23 @@ Namespace ViewModels
 
     ''' <summary>Ein Eintrag in der Auswahl der Datumsformate.</summary>
     Public Class DateFormatOption
+        Inherits ReactiveObject
+
+        Private _name As String = ""
+
         Public Property Key As String = ""
-        Public Property Name As String = ""
+
+        ''' <summary>Meldet seine Aenderung: das Beispiel im Namen haengt an Sprache und Format und
+        ''' wird am selben Eintrag nachgezogen.</summary>
+        Public Property Name As String
+            Get
+                Return _name
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_name, If(value, ""))
+            End Set
+        End Property
+
         Public Overrides Function ToString() As String
             Return Name
         End Function

@@ -19,7 +19,9 @@ Namespace ViewModels
             ' Ohne Namen vom System ist der Schluessel ein Ersatz aus der Aufloesung - der steht in
             ' der Zeile darunter ohnehin, oben steht dann ein lesbarer Hinweis statt "screen-...".
             ScreenName = If(hasSystemName, screenKey, LocalizationService.T("Bildschirm ohne Namen"))
-            ProfilePath = If(profilePath, "")
+            ' MIT "Me.": Parameter und Eigenschaft heissen gleich, und ohne den Zusatz landet die
+            ' Zuweisung im Parameter - die Eigenschaft bliebe Nothing.
+            Me.ProfilePath = If(profilePath, "")
             Dim parts As New List(Of String) From {
                 String.Format(LocalizationService.T("{0} x {1} Bildpunkte"), width, height)
             }
@@ -27,12 +29,12 @@ Namespace ViewModels
             If isCurrent Then parts.Add(LocalizationService.T("Das Fenster steht hier"))
             Detail = String.Join(", ", parts)
 
-            If ProfilePath.Length = 0 Then
+            If Me.ProfilePath.Length = 0 Then
                 ProfileText = LocalizationService.T("Kein Profil")
             Else
-                ProfileText = Path.GetFileName(ProfilePath)
-                Dim loaded = DisplayProfileService.Load(ProfilePath)
-                StatusText = If(loaded.Filter Is Nothing, loaded.ErrorText, "")
+                ProfileText = Path.GetFileName(Me.ProfilePath)
+                Dim loaded = DisplayProfileService.Load(Me.ProfilePath)
+                StatusText = If(loaded.Filter Is Nothing, If(loaded.ErrorText, ""), "")
             End If
             RemoveCommand = ReactiveCommand.Create(Sub() remove?.Invoke(Me))
         End Sub

@@ -3586,9 +3586,12 @@
                                                     <!-- BEARBEITET wie an der Galeriekachel (Einstellung des Filmstreifens). -->
                                                     <Panel IsVisible="{Binding DataContext.ShowFilmstripEditedBadge, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                                         <Border Classes="filmstrip-edited-badge" IsVisible="{Binding IsEdited}">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#D0000000" BlurRadius="4" OffsetX="0" OffsetY="1"/>
+                                                            </Border.Effect>
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/sliders.svg"
-                                                                           Width="14" Height="14"
-                                                                           IconBrush="{DynamicResource FP.OnAccent}"
+                                                                           Width="18" Height="18"
+                                                                           IconBrush="White"
                                                                            HorizontalAlignment="Center"
                                                                            VerticalAlignment="Center"/>
                                                         </Border>

@@ -406,6 +406,10 @@ Public Class App
             End If
 
             LocalizationService.LanguageMode = AppSettingsService.Load().LanguageMode
+            ' Ausdruecklich und nicht nur ueber das Ereignis: steht die Sprache schon auf dem
+            ' gespeicherten Wert, meldet der Setter keinen Wechsel.
+            LocalizationService.ApplyTemplateTexts()
+            AddHandler LocalizationService.LanguageChanged, Sub(s, a) LocalizationService.ApplyTemplateTexts()
             LocalizationService.DateFormatMode = AppSettingsService.Load().DateFormatMode
             ' Zeichentablett-Modus VOR dem ersten Fenster anhaengen: die Stile setzen ClickMode, und
             ' ein spaeter angehaengter Stil muesste alles noch einmal durchstilen.

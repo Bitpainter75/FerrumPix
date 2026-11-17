@@ -11895,4 +11895,13 @@
   <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
     <value>{0} variant(er) tas bort samtidigt.</value>
   </data>
+  <data name="Tag_982963c1" xml:space="preserve">
+    <value>Dag</value>
+  </data>
+  <data name="Monat_da13625e" xml:space="preserve">
+    <value>Månad</value>
+  </data>
+  <data name="Jahr_956a6e5a" xml:space="preserve">
+    <value>År</value>
+  </data>
 </root>

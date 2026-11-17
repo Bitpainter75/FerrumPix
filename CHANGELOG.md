@@ -2,8 +2,6 @@
 
 ### Changes
 
-- The filter of the gallery can now narrow the pictures down to a period of the shooting date,
-  from a day, up to a day, or both. It sits below the color labels.
 
 ## 0.9.86
 
@@ -50,7 +48,21 @@
 
 - Every search field has a small cross that empties it as soon as something is typed in it.
 
+- The filter of the gallery can now narrow the pictures down to a period of the shooting date,
+  from a day, up to a day, or both. It sits below the color labels.
+
+- The mark for an edited picture in the filmstrips now sits in the lower right corner and looks
+  like the marks on the left.
+
 ### Fixes
+
+- Opening the display profiles in the settings could close FerrumPix.
+
+- After choosing a language or a date format in the settings or in the setup assistant, the
+  selection box was empty.
+
+- The opened date picker did not follow the theme, and its placeholders for day, month and year
+  were not translated.
 
 - A RAW file edited and saved in the editor kept the preview of the camera as its tile in the
   gallery and the filmstrips, unless developed previews were switched on in the settings. The

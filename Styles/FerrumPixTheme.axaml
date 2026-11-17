@@ -87,6 +87,23 @@
         <Thickness x:Key="MenuFlyoutPresenterThemePadding">6</Thickness>
         <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
 
+        <!-- DIE AUFGEKLAPPTE DATUMSAUSWAHL ist ebenfalls ein eigenes Popup und liest nur diese
+             Schluessel: Flaeche, Rahmen, das Band ueber dem gewaehlten Tag, die Trennlinien und die
+             beiden Knoepfe darunter. Ohne sie stand sie im Grau des Standarderscheinungsbilds da.
+             Je Thema nachgezogen wie die uebrigen (SettingsViewModel.MirroredBrushKeys). -->
+        <SolidColorBrush x:Key="DatePickerFlyoutPresenterBackground" Color="#192128"/>
+        <SolidColorBrush x:Key="DatePickerFlyoutPresenterBorderBrush" Color="#26313B"/>
+        <SolidColorBrush x:Key="DatePickerFlyoutPresenterHighlightFill" Color="#24303A"/>
+        <SolidColorBrush x:Key="DatePickerFlyoutPresenterSpacerFill" Color="#26313B"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonBackground" Color="Transparent"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonBackgroundPointerOver" Color="#1F2830"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonBackgroundPressed" Color="#24303A"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonBorderBrush" Color="#26313B"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonBorderBrushPointerOver" Color="#34414C"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonBorderBrushPressed" Color="#34414C"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonForegroundPointerOver" Color="#E7ECF0"/>
+        <SolidColorBrush x:Key="DateTimePickerFlyoutButtonForegroundPressed" Color="#E7ECF0"/>
+
         <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#192128"/>
         <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#26313B"/>
         <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent"/>
@@ -2026,16 +2043,16 @@
     </Style>
     <!-- Dasselbe Zeichen im Filmstreifen (Einstellung, ab Werk aus): kleiner, weil die Kachel dort
          nur 100 hoch ist, und kein Knopf, damit ein Klick wie ueberall im Streifen die Kachel waehlt. -->
+    <!-- Unten rechts, als Gegenstueck zur Pille mit Etikett, Sternen und Markierung unten links:
+         dieselbe Polsterung, derselbe Radius und derselbe Rand zur Kachel, die Hoehe ergibt sich
+         wie dort aus dem Symbol. Auch die Flaeche ist dieselbe: dunkel hinterlegt, das Symbol weiss. -->
     <Style Selector="Border.filmstrip-edited-badge">
-        <Setter Property="Width" Value="22"/>
-        <Setter Property="Height" Value="20"/>
-        <Setter Property="CornerRadius" Value="10"/>
-        <Setter Property="Background" Value="{DynamicResource FP.Accent}"/>
-        <Setter Property="BorderBrush" Value="#40FFFFFF"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="Margin" Value="0,5,0,0"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="Background" Value="#B8000000"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="Margin" Value="5"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
     <Style Selector="Border.thumb-card.wall:pointerover Button.edited-badge">
