@@ -53,6 +53,26 @@ Namespace Services
             End Get
         End Property
 
+        Public ReadOnly Property IsChoice As Boolean
+            Get
+                Return String.Equals(Kind, ExtensionControlKinds.Choice, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Die Moeglichkeiten einer Auswahlliste: je ein Zahlenwert, den der Shader
+        ''' bekommt, und eine Beschriftung. Im Rezept steht der Wert, nicht die Stelle in der Liste:
+        ''' so darf der Autor die Liste umstellen, ohne dass alte Bilder etwas anderes waehlen.</summary>
+        Public Property Options As New List(Of ExtensionChoiceOption)()
+
+        ''' <summary>Ein Hilfetext zum Bedienelement, als Tooltip; leer heisst keiner.</summary>
+        Public Property Tips As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+        Public ReadOnly Property Tip As String
+            Get
+                Return ExtensionService.Localized(Tips, "")
+            End Get
+        End Property
+
         ''' <summary>Regler oder Schalter: ein Wert als Zahl.</summary>
         Public ReadOnly Property IsNumber As Boolean
             Get
@@ -70,6 +90,8 @@ Namespace Services
         Public Function Clamp(value As Double) As Double
             If Not Double.IsFinite(value) Then Return DefaultValue
             If IsToggle Then Return If(value >= 0.5, 1.0, 0.0)
+            ' Eine Auswahl kennt nur ihre Werte; was keiner ist, wird zur Vorgabe.
+            If IsChoice Then Return If(Options.Any(Function(o) o.Value = value), value, DefaultValue)
             ' Auf die Nachkommastellen der Datei gerundet: der Regler selbst liefert beliebige
             ' Zwischenwerte, das Zahlenfeld zeigt aber nur so viele Stellen. Ohne Rundung rechnete
             ' das Bild mit 37,41, waehrend 37 dastuende, und das Rezept truege lauter krumme Werte.
@@ -90,6 +112,18 @@ Namespace Services
         End Property
     End Class
 
+    ''' <summary>Eine Moeglichkeit einer Auswahlliste.</summary>
+    Public NotInheritable Class ExtensionChoiceOption
+        Public Property Value As Double
+        Public Property Labels As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+        Public ReadOnly Property Label As String
+            Get
+                Return ExtensionService.Localized(Labels, Value.ToString(Globalization.CultureInfo.InvariantCulture))
+            End Get
+        End Property
+    End Class
+
     Public NotInheritable Class ExtensionControlKinds
         Public Const Slider As String = "slider"
         Public Const Toggle As String = "toggle"
@@ -97,8 +131,10 @@ Namespace Services
         Public Const Color As String = "color"
         ''' <summary>Eine Kurve, im Shader eine Funktion float key(float x) von 0 bis 1.</summary>
         Public Const Curve As String = "curve"
+        ''' <summary>Eine Auswahlliste, im Shader der Zahlenwert der gewaehlten Moeglichkeit.</summary>
+        Public Const Choice As String = "choice"
 
-        Public Shared ReadOnly Property All As String() = {Slider, Toggle, Color, Curve}
+        Public Shared ReadOnly Property All As String() = {Slider, Toggle, Color, Curve, Choice}
 
         Private Sub New()
         End Sub
@@ -165,6 +201,8 @@ Namespace Services
         ''' 16-Bit-Ausgabe (siehe ImageProcessor.BuildExtensionEffects).</summary>
         Friend Property Effect As SKRuntimeEffect
         Friend Property DeepEffect As SKRuntimeEffect
+        ''' <summary>Verlangt die Rechnung die Lage im Bild (effect mit zwei Eingaben)?</summary>
+        Public Property UsesPosition As Boolean
 
         Public ReadOnly Property Name As String
             Get
@@ -686,7 +724,7 @@ Namespace Services
                         index += 1
                         If control.TrackSource.Length = 0 Then Continue For
                         Dim source = result.FindControl(control.TrackSource)
-                        If source Is Nothing OrElse Not source.IsNumber OrElse source.IsToggle Then
+                        If source Is Nothing OrElse Not source.IsNumber OrElse source.IsToggle OrElse source.IsChoice Then
                             Return $"control {index}: ""track"" refers to ""{control.TrackSource}"", which is not a slider of this extension"
                         End If
                     Next
@@ -749,6 +787,8 @@ Namespace Services
             If result.Labels.Count = 0 Then Return """label"" is missing"
             problem = ReadTexts(item, "section", result.Sections)
             If problem.Length > 0 Then Return problem
+            problem = ReadTexts(item, "tip", result.Tips)
+            If problem.Length > 0 Then Return problem
 
             Dim element As JsonElement
             If result.IsColor Then
@@ -763,6 +803,33 @@ Namespace Services
                     Dim curveProblem = ReadCurvePoints(element, points)
                     If curveProblem.Length > 0 Then Return """default"" of a curve: " & curveProblem
                     result.DefaultCurve = points
+                End If
+            ElseIf result.IsChoice Then
+                If Not item.TryGetProperty("options", element) OrElse element.ValueKind <> JsonValueKind.Array Then
+                    Return """options"" must be a list of { ""value"": number, ""label"": text }"
+                End If
+                For Each optionItem In element.EnumerateArray()
+                    If optionItem.ValueKind <> JsonValueKind.Object Then Return "every option must be an object"
+                    Dim optionValue As Double
+                    If Not ReadNumber(optionItem, "value", optionValue) Then Return "every option needs a ""value"" as a number"
+                    If result.Options.Any(Function(o) o.Value = optionValue) Then Return "two options have the same ""value"""
+                    Dim choice As New ExtensionChoiceOption With {.Value = optionValue}
+                    Dim optionProblem = ReadTexts(optionItem, "label", choice.Labels)
+                    If optionProblem.Length > 0 Then Return "option: " & optionProblem
+                    If choice.Labels.Count = 0 Then Return "every option needs a ""label"""
+                    result.Options.Add(choice)
+                Next
+                If result.Options.Count < 2 OrElse result.Options.Count > 32 Then Return "a choice needs 2 to 32 options"
+                result.Minimum = result.Options.Min(Function(o) o.Value)
+                result.Maximum = result.Options.Max(Function(o) o.Value)
+                result.DefaultValue = result.Options(0).Value
+                If item.TryGetProperty("default", element) Then
+                    Dim standard As Double
+                    If element.ValueKind <> JsonValueKind.Number OrElse Not element.TryGetDouble(standard) OrElse
+                       Not result.Options.Any(Function(o) o.Value = standard) Then
+                        Return """default"" of a choice must be the ""value"" of one of its options"
+                    End If
+                    result.DefaultValue = standard
                 End If
             ElseIf result.IsToggle Then
                 result.Minimum = 0 : result.Maximum = 1
@@ -880,6 +947,13 @@ Namespace Services
                     Dim curveProblem = ReadCurvePoints(pair.Value, points)
                     If curveProblem.Length > 0 Then Return $"""{pair.Name}"": {curveProblem}"
                     result.Entry.Curves(pair.Name) = points
+                ElseIf control.IsChoice Then
+                    Dim number As Double
+                    If pair.Value.ValueKind <> JsonValueKind.Number OrElse Not pair.Value.TryGetDouble(number) OrElse
+                       Not control.Options.Any(Function(o) o.Value = number) Then
+                        Return $"""{pair.Name}"" must be the ""value"" of one of its options"
+                    End If
+                    result.Entry.Values(pair.Name) = number
                 ElseIf control.IsToggle Then
                     If pair.Value.ValueKind <> JsonValueKind.True AndAlso pair.Value.ValueKind <> JsonValueKind.False Then
                         Return $"""{pair.Name}"" must be true or false"

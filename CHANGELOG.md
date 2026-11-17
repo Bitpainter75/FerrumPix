@@ -8,6 +8,10 @@
 - A sidecar file with picture variants that contains something this version does not know,
   for example from a newer FerrumPix, is no longer rewritten without it. It is left as it is.
 
+- Extensions can offer a choice from a list and a help text for each control, and can work with
+  the position in the picture, for vignettes and gradients of their own. A fourth example shows
+  this: a light falloff, round or from one side.
+
 - Extensions can be hidden in the editor with the eye in the settings, and in the editor each
   extension has the eye to compare and the reset button in its header like the other groups. A
   slider goes back to its default with a double click, color fields and curves have their own

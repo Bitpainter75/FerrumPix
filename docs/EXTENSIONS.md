@@ -39,9 +39,10 @@ hand and choose **Reload**:
 
 ## What an extension can and cannot do
 
-An extension sees **one pixel at a time**: its color goes in, a new color comes out. That is
-enough for black and white conversions, toning, color looks, curves and everything else that
-works pixel by pixel. It is not enough for anything that needs the neighbors of a pixel, such as
+An extension sees **one pixel at a time**: its color goes in, a new color comes out, and if it
+asks for it, also where the pixel lies in the picture. That is enough for black and white
+conversions, toning, color looks, curves, vignettes, gradients and everything else that works
+pixel by pixel. It is not enough for anything that needs the neighbors of a pixel, such as
 blurring, sharpening or grain.
 
 The function runs as a shader, on the graphics card when FerrumPix uses it and otherwise on the
@@ -59,7 +60,7 @@ do with them.
 
 ## Examples
 
-Three complete extensions come with this guide, in [`docs/extensions`](extensions):
+Four complete extensions come with this guide, in [`docs/extensions`](extensions):
 
 - [`spoilerhead.silicon-bonk.json`](extensions/spoilerhead.silicon-bonk.json) turns a finished
   color picture into black and white. Hue and Luminance work like a color filter in front of the
@@ -71,6 +72,9 @@ Three complete extensions come with this guide, in [`docs/extensions`](extension
 - [`example.curve-toning.json`](extensions/example.curve-toning.json) shapes the brightness with
   a curve and tones shadows and highlights with two colors. It shows a curve, color fields and
   presets (Sepia, Selenium, Cold).
+- [`example.light-falloff.json`](extensions/example.light-falloff.json) darkens or brightens the
+  picture towards its edges, round or from one side. It shows a choice, help texts and the
+  position in the picture.
 
 The first two are ports of earlier work by Spoilerhead (Silicon Bonk based on an idea by Bernd
 Gruber) and show sections, toggles, constants and helper functions. Load them to try them out,
@@ -124,7 +128,7 @@ A file may be at most 256 KB. Comments (`//` and `/* */`) and trailing commas ar
 
 ### Texts in several languages
 
-Every text field (`name`, `description`, `label`, `section`) is either plain text, which counts as
+Every text field (`name`, `description`, `label`, `section`, `tip`) is either plain text, which counts as
 English, or an object with one text per language code:
 
 ```json
@@ -145,12 +149,32 @@ ja ko id tr th hi`.
 | Field | Meaning |
 |---|---|
 | `key` | The name under which the shader sees the value. Starts with a lower case letter, then letters and digits, at most 32 characters. Names of the shader language (`color`, `float3`, `if` and so on) and names starting with `fp` are reserved. |
-| `type` | `slider` (default), `toggle`, `color` or `curve`. |
+| `type` | `slider` (default), `toggle`, `choice`, `color` or `curve`. |
 | `min`, `max`, `default` | Range and starting value of a slider. A toggle takes `"default": true` or `false`, a color `"#RRGGBB"` (default `#808080`), a curve a list of points (default `[[0, 0], [1, 1]]`). |
 | `decimals` | Decimal places of a slider: 0, 1 or 2. Default 0, whole numbers. The value is rounded to them, so `"decimals": 2` with a range from 0 to 1 gives steps of 0.01. |
 | `track` | Optional color track of a slider, see below. |
 | `label` | The text next to the control. |
 | `section` | Optional heading shown above this control, to group the controls that follow. |
+| `tip` | Optional help text, shown when the pointer rests on the label. One or two sentences on what the control does. |
+
+### Choices
+
+A **choice** shows a list to pick one of several options, for a film type, a shape or a mode:
+
+```json
+{ "key": "shape", "type": "choice", "default": 0, "label": "Shape",
+  "options": [
+    { "value": 0, "label": "Round" },
+    { "value": 1, "label": { "en": "From the top", "de": "Von oben" } },
+    { "value": 2, "label": "From the left" }
+  ] }
+```
+
+Each option has a number and a label, 2 to 32 of them, no number twice. The shader gets the
+number of the chosen option, and the picture stores that number, not the place in the list. You
+may therefore reorder the options or add new ones later without old pictures choosing something
+else. `default` is the number of an option; without it the first option is the default. Compare
+with a margin in the shader, `if (shape < 0.5)` rather than `if (shape == 0.0)`.
 
 ### Color fields and curves
 
@@ -217,9 +241,10 @@ set right now. The other slider must be a hue slider from 0 to 360 of the same e
 
 ### In the shader
 
-In the shader every slider and toggle is a `float` with the value of the control as shown in the
-editor: a slider from -50 to 200 gives you -50 to 200, a toggle gives 0 or 1. Values outside the
-range never reach the shader; FerrumPix clamps them.
+In the shader every slider, toggle and choice is a `float` with the value of the control as shown
+in the editor: a slider from -50 to 200 gives you -50 to 200, a toggle gives 0 or 1, a choice the
+number of the chosen option. Values outside the range never reach the shader; FerrumPix clamps
+them.
 
 A color field is a `float3` with red, green and blue from 0 to 1 (sRGB). A curve is a function
 with the name of its key, `float toneCurve(float x)`, for x from 0 to 1. Inside it reads a table
@@ -248,6 +273,25 @@ float3 effect(float3 color)
 care of transparent pixels). Return the new color in the same form. Results outside 0 to 1 are
 clipped.
 
+### The position in the picture
+
+If the effect depends on where a pixel lies, as a vignette or a gradient does, define the
+function with a second parameter instead:
+
+```glsl
+float3 effect(float3 color, float2 pos)
+```
+
+`pos` runs from 0 to 1 across the picture: `(0, 0)` is the top left corner, `(1, 1)` the bottom
+right. It always refers to the whole finished picture, after cropping and rotating, the same for
+the preview, the zoomed view and the export, so an effect looks the same in all of them. On an
+object it refers to the object.
+
+`fpSize` (a `float2`) gives the size of the picture in pixels, but only use it for the aspect
+ratio, `fpSize.x / fpSize.y`, for example to make a vignette round instead of oval. The number of
+pixels itself differs between preview and export; an effect that counts pixels would look
+different in each.
+
 You may define constants and further functions above `effect`. The usual functions are available:
 `mix`, `clamp`, `pow`, `sin`, `dot`, `fract`, `floor`, `min`, `max`, `abs`, `step`,
 `smoothstep`, `length` and the others of GLSL. The examples write vectors as `float3`.
@@ -269,8 +313,8 @@ number counted in your shader, so `line 2` is the second line of your `shader` t
 
 - **Neutral by default.** Whenever possible, the default values should leave the picture as it
   is. Then switching an extension on does not surprise anyone, and resetting means "as before".
-- **Every pixel independently.** The function must give the same result for the same color,
-  whatever else is in the picture. FerrumPix may calculate the picture in bands or tiles, on the
+- **Every pixel independently.** The function must give the same result for the same color and
+  position, whatever else is in the picture. FerrumPix may calculate the picture in bands or tiles, on the
   graphics card or on the processor; with a pure function all of them agree.
 - **Precision.** Calculate in `float`. FerrumPix gives you full precision for 16 bit exports.
 - **Speed.** The function runs for every pixel of every preview. A few dozen operations are

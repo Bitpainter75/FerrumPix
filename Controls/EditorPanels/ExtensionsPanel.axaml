@@ -83,7 +83,7 @@
                                                 <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsSlider}">
                                                     <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
                                                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding TipOrLabel}" />
                                                     <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
                                                                        Value="{Binding Value}" DefaultValue="{Binding DefaultValue}"
                                                                        ColorTrack="{Binding ColorTrack}" Margin="0,0" />
@@ -93,11 +93,21 @@
                                                                              Increment="{Binding Increment}" FormatString="{Binding FormatString}" />
                                                 </Grid>
                                                 <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" IsVisible="{Binding IsToggle}"
+                                                          ToolTip.Tip="{Binding TipOrLabel}"
                                                           FontSize="{DynamicResource FP.Font.Small}" />
+                                                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" IsVisible="{Binding IsChoice}">
+                                                    <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding TipOrLabel}" />
+                                                    <ComboBox Grid.Column="1" ItemsSource="{Binding OptionLabels}"
+                                                              SelectedItem="{Binding SelectedOptionLabel}"
+                                                              FontSize="{DynamicResource FP.Font.Small}" Margin="6,0,0,0"
+                                                              HorizontalAlignment="Stretch" />
+                                                </Grid>
                                                 <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center" IsVisible="{Binding IsColor}">
                                                     <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
                                                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
-                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding TipOrLabel}" />
                                                     <icons:ColorPickerButton Grid.Column="1"
                                                                              SelectedColor="{Binding ColorValue, Mode=TwoWay}" />
                                                     <Button Grid.Column="2" Classes="icon-btn group-reset" Width="24" Height="24" Padding="0" Margin="4,0,0,0"
@@ -109,7 +119,7 @@
                                                 <StackPanel Spacing="2" IsVisible="{Binding IsCurve}">
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
-                                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" ToolTip.Tip="{Binding TipOrLabel}" />
                                                         <Button Grid.Column="1" Classes="icon-btn group-reset" Width="24" Height="24" Padding="0"
                                                                 Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"

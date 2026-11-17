@@ -74,7 +74,7 @@ float3 fpRgbToHsl(float3 c) {
 half4 main(float2 p) {
     float4 b = toBytes(src.eval(p));
     if (b.a <= 0.0) return half4(0.0);
-    float3 c = clamp(effect(b.rgb / b.a), 0.0, 1.0);
+    float3 c = clamp(FP_EFFECT_CALL(b.rgb / b.a), 0.0, 1.0);
     return writePremul(floor(c * 255.0 + 0.5), b.a);
 }
 "
@@ -85,7 +85,7 @@ half4 main(float2 p) {
 half4 main(float2 p) {
     float4 s = float4(src.eval(p));
     if (s.a <= 0.0) return half4(0.0);
-    float3 c = clamp(effect(s.rgb / s.a), 0.0, 1.0);
+    float3 c = clamp(FP_EFFECT_CALL(s.rgb / s.a), 0.0, 1.0);
     return half4(half3(c * s.a), half(s.a));
 }
 "
@@ -126,15 +126,37 @@ half4 main(float2 p) {
             Dim prefixLines = prefix.Count(Function(c) c = ControlChars.Lf)
             Dim body = definition.ShaderSource.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf) & vbLf
 
+            ' DIE LAGE IM BILD bekommt nur, wer sie verlangt: effect(float3 color, float2 pos). Sie
+            ' laeuft von 0 bis 1 ueber das Bild, das die Kette gerade rechnet; das ist immer das
+            ' ganze Bild (auch das Zoom-Detail rechnet es ganz und schneidet erst danach aus), bei
+            ' einem Objekt das Objekt. Ueber einem Ausschnitt rechnet eine Erweiterung nie
+            ' (LayerAdjustmentsAreCropSafe). Damit ein Effekt in Vorschau und Ausgabe gleich
+            ' aussieht, gibt es die Lage nur als Anteil, die Groesse nur fuers Seitenverhaeltnis.
+            definition.UsesPosition = PositionSignature.IsMatch(body)
+
+            If definition.UsesPosition Then
+                Dim positionHead = "uniform float2 fpSize;" & vbLf &
+                                   "float2 fpPosOf(float2 p) { return p / max(fpSize, float2(1.0)); }" & vbLf
+                prefix &= positionHead
+                prefixLines += 2
+            End If
+            Dim mainNormal = ExtensionShaderMain.Replace("FP_EFFECT_CALL(b.rgb / b.a)",
+                If(definition.UsesPosition, "effect(b.rgb / b.a, fpPosOf(p))", "effect(b.rgb / b.a)"))
+            Dim mainDeep = ExtensionShaderMainDeep.Replace("FP_EFFECT_CALL(s.rgb / s.a)",
+                If(definition.UsesPosition, "effect(s.rgb / s.a, fpPosOf(p))", "effect(s.rgb / s.a)"))
             Dim errors As String = ""
-            Dim effect = CompiledExtensionShader(prefix & body & ExtensionShaderMain, errors)
+            Dim effect = CompiledExtensionShader(prefix & body & mainNormal, errors)
             If effect Is Nothing Then Return ExtensionShaderErrors(errors, prefixLines)
-            Dim deepEffect = CompiledExtensionShader(prefix & body & ExtensionShaderMainDeep, errors)
+            Dim deepEffect = CompiledExtensionShader(prefix & body & mainDeep, errors)
             If deepEffect Is Nothing Then Return ExtensionShaderErrors(errors, prefixLines)
             definition.Effect = effect
             definition.DeepEffect = deepEffect
             Return ""
         End Function
+
+        ''' <summary>Erkennt die Rechnung mit Lage: float3 effect(float3 name, float2 name).</summary>
+        Private Shared ReadOnly PositionSignature As New Regex("float3\s+effect\s*\(\s*float3\s+\w+\s*,\s*float2\s+\w+\s*\)",
+                                                               RegexOptions.CultureInvariant)
 
         ' ── Die uebersetzten Shader ───────────────────────────────────────────────
         '
@@ -198,7 +220,7 @@ half4 main(float2 p) {
                     Return "error: " & If(line >= 1, "line " & line.ToString(Globalization.CultureInfo.InvariantCulture), "frame") & ":"
                 End Function)
             If text.Contains("'effect'") Then
-                text &= vbLf & "The shader must define: float3 effect(float3 color)"
+                text &= vbLf & "The shader must define: float3 effect(float3 color), or float3 effect(float3 color, float2 pos) for the position in the picture"
             End If
             Return text
         End Function
@@ -211,7 +233,12 @@ half4 main(float2 p) {
             Public ReadOnly Colors As New List(Of (Key As String, Value As Single()))()
             Public ReadOnly Curves As New List(Of (ChildName As String, Table As SKImage))()
 
-            Public Sub SetUniforms(uniforms As SKRuntimeEffectUniforms)
+            ''' <summary>Verlangt die Rechnung die Lage im Bild? Dann braucht sie die Groesse des
+            ''' Bildes, das gerade gerechnet wird.</summary>
+            Public UsesPosition As Boolean
+
+            Public Sub SetUniforms(uniforms As SKRuntimeEffectUniforms, width As Integer, height As Integer)
+                If UsesPosition Then uniforms("fpSize") = New Single() {CSng(width), CSng(height)}
                 For Each value In Floats
                     uniforms(value.Key) = value.Value
                 Next
@@ -232,7 +259,7 @@ half4 main(float2 p) {
         ''' Erweiterung, und fuer alles, was es nicht nennt, die Vorgabe. Ein Wert unter einem
         ''' Schluessel, den die Erweiterung nicht (mehr) kennt, zaehlt nicht.</summary>
         Friend Shared Function ExtensionInputsFor(definition As ExtensionDefinition, entry As ExtensionEntry) As ExtensionInputs
-            Dim inputs As New ExtensionInputs()
+            Dim inputs As New ExtensionInputs With {.UsesPosition = definition.UsesPosition}
             For Each control In definition.Controls
                 If control.IsColor Then
                     Dim text As String = Nothing
@@ -313,7 +340,7 @@ half4 main(float2 p) {
                                                inputs As ExtensionInputs) As Func(Of GRContext, SKImage, SKSurface)
             Return Function(gr, image)
                        Dim u = New SKRuntimeEffectUniforms(definition.Effect)
-                       inputs.SetUniforms(u)
+                       inputs.SetUniforms(u, image.Width, image.Height)
                        Dim children = New List(Of (Name As String, Image As SKImage)) From {("src", image)}
                        For Each curve In inputs.Curves
                            children.Add((curve.ChildName, curve.Table))
@@ -358,7 +385,7 @@ half4 main(float2 p) {
                                     Return
                                 End If
                                 Dim uniforms = New SKRuntimeEffectUniforms(effect)
-                                inputs.SetUniforms(uniforms)
+                                inputs.SetUniforms(uniforms, width, height)
                                 Dim children = New SKRuntimeEffectChildren(effect)
                                 Dim tables As New List(Of SKShader)()
                                 For Each curve In inputs.Curves

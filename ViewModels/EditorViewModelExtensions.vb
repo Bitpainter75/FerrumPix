@@ -64,13 +64,46 @@ Namespace ViewModels
 
         Public ReadOnly Property IsSlider As Boolean
             Get
-                Return Control.IsNumber AndAlso Not Control.IsToggle
+                Return Control.IsNumber AndAlso Not Control.IsToggle AndAlso Not Control.IsChoice
             End Get
         End Property
 
         Public ReadOnly Property IsColor As Boolean
             Get
                 Return Control.IsColor
+            End Get
+        End Property
+
+        Public ReadOnly Property IsChoice As Boolean
+            Get
+                Return Control.IsChoice
+            End Get
+        End Property
+
+        ''' <summary>Die Beschriftungen der Auswahlliste, in der Reihenfolge der Datei.</summary>
+        Public ReadOnly Property OptionLabels As IReadOnlyList(Of String)
+            Get
+                Return Control.Options.Select(Function(o) o.Label).ToList()
+            End Get
+        End Property
+
+        ''' <summary>Die gewaehlte Moeglichkeit, ueber ihre Beschriftung; dahinter steht ihr Wert.</summary>
+        Public Property SelectedOptionLabel As String
+            Get
+                Return Control.Options.FirstOrDefault(Function(o) o.Value = _value)?.Label
+            End Get
+            Set(label As String)
+                Dim choice = Control.Options.FirstOrDefault(Function(o) String.Equals(o.Label, label, StringComparison.Ordinal))
+                If choice IsNot Nothing Then Value = choice.Value
+            End Set
+        End Property
+
+        ''' <summary>Der Hilfetext als Tooltip; ohne Hilfetext die Beschriftung, damit eine
+        ''' abgeschnittene Beschriftung lesbar bleibt.</summary>
+        Public ReadOnly Property TipOrLabel As String
+            Get
+                Dim tip = Control.Tip
+                Return If(tip.Length > 0, Label & vbLf & tip, Label)
             End Get
         End Property
 
@@ -189,6 +222,7 @@ Namespace ViewModels
                 _value = clamped
                 Me.RaisePropertyChanged(NameOf(Value))
                 Me.RaisePropertyChanged(NameOf(IsChecked))
+                Me.RaisePropertyChanged(NameOf(SelectedOptionLabel))
                 _owner.AfterChange()
             End Set
         End Property
@@ -268,6 +302,7 @@ Namespace ViewModels
                 _value = clamped
                 Me.RaisePropertyChanged(NameOf(Value))
                 Me.RaisePropertyChanged(NameOf(IsChecked))
+                Me.RaisePropertyChanged(NameOf(SelectedOptionLabel))
             End If
         End Sub
 

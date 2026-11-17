@@ -1,0 +1,55 @@
+{
+  "format": 1,
+  "id": "example.light-falloff",
+  "version": 1,
+  "name": {
+    "en": "Light falloff",
+    "de": "Lichtabfall"
+  },
+  "description": {
+    "en": "Darkens or brightens the picture towards its edges, round like a vignette or as a gradient from one side. An example of a choice, help texts and the position in the picture.",
+    "de": "Dunkelt das Bild zu den Rändern hin ab oder hellt es auf, rund wie eine Vignette oder als Verlauf von einer Seite. Ein Beispiel für eine Auswahlliste, Hilfetexte und die Lage im Bild."
+  },
+  "author": "FerrumPix",
+  "license": "MIT",
+  "stage": "before-grain",
+  "controls": [
+    { "key": "shape", "type": "choice", "default": 0,
+      "label": { "en": "Shape", "de": "Form" },
+      "tip": { "en": "Where the light falls off: towards all edges or from one side.",
+               "de": "Wohin das Licht abfällt: zu allen Rändern oder von einer Seite her." },
+      "options": [
+        { "value": 0, "label": { "en": "Round", "de": "Rund" } },
+        { "value": 1, "label": { "en": "From the top", "de": "Von oben" } },
+        { "value": 2, "label": { "en": "From the left", "de": "Von links" } }
+      ] },
+    { "key": "amount", "type": "slider", "min": -100, "max": 100, "default": 0, "track": "black-white",
+      "label": { "en": "Amount", "de": "Stärke" },
+      "tip": { "en": "Negative darkens, positive brightens. 100 is one stop at the edge.",
+               "de": "Negativ dunkelt ab, positiv hellt auf. 100 ist eine Blende am Rand." } },
+    { "key": "size", "type": "slider", "min": 1, "max": 100, "default": 50,
+      "label": { "en": "Reach", "de": "Reichweite" },
+      "tip": { "en": "How far the falloff reaches into the picture.",
+               "de": "Wie weit der Abfall ins Bild hineinreicht." } }
+  ],
+  "shader": [
+    "float3 effect(float3 color, float2 pos) {",
+    "    // pos runs from 0 to 1 across the picture, fpSize gives its aspect ratio.",
+    "    float aspect = fpSize.x / fpSize.y;",
+    "    float edge;",
+    "    if (shape < 0.5) {",
+    "        // Round: 0 in the middle, 1 in the corners, in the shape of the picture.",
+    "        float2 q = (pos - 0.5) * float2(aspect, 1.0);",
+    "        edge = length(q) / (0.5 * sqrt(aspect * aspect + 1.0));",
+    "    } else if (shape < 1.5) {",
+    "        edge = 1.0 - pos.y;",
+    "    } else {",
+    "        edge = 1.0 - pos.x;",
+    "    }",
+    "    float weight = smoothstep(1.0 - size / 100.0, 1.0, edge);",
+    "    // In linear light, so that one stop is one stop.",
+    "    float3 lin = fpToLinear(color) * exp2(amount / 100.0 * weight);",
+    "    return fpToSrgb(lin);",
+    "}"
+  ]
+}
