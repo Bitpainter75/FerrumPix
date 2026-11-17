@@ -847,6 +847,7 @@ Namespace ViewModels
                 Me.RaiseAndSetIfChanged(_filterFavorite, value)
                 Me.RaisePropertyChanged(NameOf(IsFilterFavoriteAll))
                 Me.RaisePropertyChanged(NameOf(IsFilterFavoriteOnly))
+                Me.RaisePropertyChanged(NameOf(IsFilterFavoriteNone))
                 Me.RaisePropertyChanged(NameOf(HasActiveFilter))
                 Me.RaisePropertyChanged(NameOf(FilterLabel))
                 FilterAndSortInteractive()
@@ -1012,6 +1013,12 @@ Namespace ViewModels
                 Return _filterFavorite = "Only"
             End Get
         End Property
+        ''' Das Gegenstueck zu "Nur Favoriten": alles, was kein Favorit ist.
+        Public ReadOnly Property IsFilterFavoriteNone As Boolean
+            Get
+                Return _filterFavorite = "None"
+            End Get
+        End Property
         Public ReadOnly Property IsFilterRatingAll As Boolean
             Get
                 Return _filterRatings.Count = 0
@@ -1063,6 +1070,214 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' ── Filter nach Aufnahmedaten: Kamera, Objektiv, Brennweite, ISO ──────────────────
+        ' Vier Gruppen im Filter der Galerie. Innerhalb einer Gruppe gilt ODER (zwei Kameras
+        ' gewaehlt: Bilder der einen oder der anderen), zwischen den Gruppen UND. Angeboten wird,
+        ' was der gezeigte Bestand wirklich traegt; die Werte kommen von den Kacheln, also aus dem
+        ' Katalog, und ein Bild ohne Aufnahmedaten faellt unter keinen Wert. Gemerkt wird die
+        ' Auswahl nur fuer die Sitzung: eine Kamera aus dem einen Ordner sagt ueber den naechsten
+        ' nichts.
+
+        Public Const ShotFilterCamera As String = "Camera"
+        Public Const ShotFilterLens As String = "Lens"
+        Public Const ShotFilterFocal As String = "Focal"
+        Public Const ShotFilterIso As String = "Iso"
+
+        ''' Obere Grenzen der Bereiche; der letzte ist nach oben offen.
+        Private Shared ReadOnly FocalBounds As Integer() = {24, 50, 100, 200}
+        Private Shared ReadOnly IsoBounds As Integer() = {200, 800, 3200}
+        Private Const OpenRangeKey As String = "max"
+
+        Private ReadOnly _shotFilters As New Dictionary(Of String, HashSet(Of String))(StringComparer.Ordinal) From {
+            {ShotFilterCamera, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)},
+            {ShotFilterLens, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)},
+            {ShotFilterFocal, New HashSet(Of String)(StringComparer.Ordinal)},
+            {ShotFilterIso, New HashSet(Of String)(StringComparer.Ordinal)}}
+
+        Public ReadOnly Property CameraFilterOptions As New ObservableCollection(Of ShotFilterOption)()
+        Public ReadOnly Property LensFilterOptions As New ObservableCollection(Of ShotFilterOption)()
+        Public ReadOnly Property FocalFilterOptions As New ObservableCollection(Of ShotFilterOption)()
+        Public ReadOnly Property IsoFilterOptions As New ObservableCollection(Of ShotFilterOption)()
+
+        Public ReadOnly Property HasCameraFilterOptions As Boolean
+            Get
+                Return CameraFilterOptions.Count > 0
+            End Get
+        End Property
+        Public ReadOnly Property HasLensFilterOptions As Boolean
+            Get
+                Return LensFilterOptions.Count > 0
+            End Get
+        End Property
+        Public ReadOnly Property HasFocalFilterOptions As Boolean
+            Get
+                Return FocalFilterOptions.Count > 0
+            End Get
+        End Property
+        Public ReadOnly Property HasIsoFilterOptions As Boolean
+            Get
+                Return IsoFilterOptions.Count > 0
+            End Get
+        End Property
+        ''' <summary>Gibt es ueberhaupt Aufnahmedaten zum Filtern? Sonst faellt die Spalte weg.</summary>
+        Public ReadOnly Property HasShotFilterOptions As Boolean
+            Get
+                ' Auch mit einem Suchtext, der gerade nichts trifft: sonst verschwaende die Spalte
+                ' samt dem Suchfeld, in das man tippt.
+                Return _shotDataPresent OrElse HasFocalFilterOptions OrElse HasIsoFilterOptions
+            End Get
+        End Property
+
+        Private _shotDataPresent As Boolean
+        Private _shotFilterSearch As String = ""
+
+        ''' <summary>Der Suchtext ueber den Listen von Kamera und Objektiv: beide zeigen nur noch,
+        ''' was ihn enthaelt. Gewaehlte Werte bleiben stehen, damit sie sich abwaehlen lassen. Er
+        ''' siebt nur die Listen, nicht die Bilder.</summary>
+        Public Property ShotFilterSearch As String
+            Get
+                Return _shotFilterSearch
+            End Get
+            Set(value As String)
+                value = If(value, "")
+                If String.Equals(_shotFilterSearch, value, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_shotFilterSearch, value)
+                RefreshShotFilterOptions()
+            End Set
+        End Property
+
+        ''' <summary>Die Ueberschriften der vier Gruppen, aus den vorhandenen Texten und in
+        ''' Grossbuchstaben wie die uebrigen Gruppen des Filters.</summary>
+        Public ReadOnly Property CameraFilterHeading As String
+            Get
+                Return LocalizationService.T("Kamera").ToUpper(Globalization.CultureInfo.CurrentUICulture)
+            End Get
+        End Property
+        Public ReadOnly Property LensFilterHeading As String
+            Get
+                Return LocalizationService.T("Objektiv").ToUpper(Globalization.CultureInfo.CurrentUICulture)
+            End Get
+        End Property
+        Public ReadOnly Property FocalFilterHeading As String
+            Get
+                Return LocalizationService.T("Brennweite").ToUpper(Globalization.CultureInfo.CurrentUICulture)
+            End Get
+        End Property
+        Public ReadOnly Property IsoFilterHeading As String
+            Get
+                Return LocalizationService.T("ISO").ToUpper(Globalization.CultureInfo.CurrentUICulture)
+            End Get
+        End Property
+
+        Private ReadOnly Property HasShotFilter As Boolean
+            Get
+                Return _shotFilters.Values.Any(Function(keys) keys.Count > 0)
+            End Get
+        End Property
+
+        ''' <summary>In welchen Bereich ein Wert faellt: die obere Grenze als Schluessel, ueber der
+        ''' letzten der offene Bereich.</summary>
+        Private Shared Function RangeKey(value As Double, bounds As Integer()) As String
+            For Each bound In bounds
+                If value <= bound Then Return bound.ToString(Globalization.CultureInfo.InvariantCulture)
+            Next
+            Return OpenRangeKey
+        End Function
+
+        Private Shared Function RangeLabel(key As String, bounds As Integer(), unit As String) As String
+            Dim suffix = If(unit.Length = 0, "", " " & unit)
+            If key = OpenRangeKey Then Return "> " & bounds(bounds.Length - 1).ToString(Globalization.CultureInfo.CurrentCulture) & suffix
+            Dim index = Array.FindIndex(bounds, Function(b) b.ToString(Globalization.CultureInfo.InvariantCulture) = key)
+            If index <= 0 Then Return "<= " & key & suffix
+            Return (bounds(index - 1) + 1).ToString(Globalization.CultureInfo.CurrentCulture) & " - " & key & suffix
+        End Function
+
+        ''' <summary>Der Wert eines Bildes in einer Gruppe; leer, wenn es dazu keine Angabe traegt.</summary>
+        Private Shared Function ShotFilterValue(item As ImageItem, kind As String) As String
+            Select Case kind
+                Case ShotFilterCamera : Return If(item.ExifCamera, "").Trim()
+                Case ShotFilterLens : Return If(item.ExifLens, "").Trim()
+                Case ShotFilterFocal
+                    Return If(item.ExifFocalLength.HasValue AndAlso item.ExifFocalLength.Value > 0,
+                              RangeKey(Math.Round(item.ExifFocalLength.Value), FocalBounds), "")
+                Case Else
+                    Return If(item.ExifIso.HasValue AndAlso item.ExifIso.Value > 0, RangeKey(item.ExifIso.Value, IsoBounds), "")
+            End Select
+        End Function
+
+        ''' <summary>Besteht ein Bild den Filter nach Aufnahmedaten? Ordner bleiben immer stehen.</summary>
+        Private Function PassesShotFilter(item As ImageItem) As Boolean
+            If item.IsFolder Then Return True
+            For Each group In _shotFilters
+                If group.Value.Count = 0 Then Continue For
+                If Not group.Value.Contains(ShotFilterValue(item, group.Key)) Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Waehlt einen Wert an oder ab.</summary>
+        Public Sub ToggleShotFilter(kind As String, key As String)
+            Dim keys As HashSet(Of String) = Nothing
+            If String.IsNullOrEmpty(key) OrElse Not _shotFilters.TryGetValue(If(kind, ""), keys) Then Return
+            If Not keys.Remove(key) Then keys.Add(key)
+            RefreshShotFilterOptions()
+            Me.RaisePropertyChanged(NameOf(HasActiveFilter))
+            Me.RaisePropertyChanged(NameOf(FilterLabel))
+            FilterAndSortInteractive()
+        End Sub
+
+        ''' <summary>Baut die vier Listen aus dem gezeigten Bestand. Ein gewaehlter Wert bleibt in der
+        ''' Liste, auch wenn ihn kein Bild mehr traegt, damit er sich wieder abwaehlen laesst. Eine
+        ''' Liste wird nur ersetzt, wenn sie sich aendert: das laeuft nach jedem Filterlauf.</summary>
+        Public Sub RefreshShotFilterOptions()
+            Dim images = _allItems.Where(Function(i) i IsNot Nothing AndAlso i.IsImage).ToList()
+            _shotDataPresent = False
+            ReplaceShotOptions(CameraFilterOptions, BuildNameOptions(images, ShotFilterCamera))
+            ReplaceShotOptions(LensFilterOptions, BuildNameOptions(images, ShotFilterLens))
+            ReplaceShotOptions(FocalFilterOptions, BuildRangeOptions(images, ShotFilterFocal, FocalBounds, "mm"))
+            ReplaceShotOptions(IsoFilterOptions, BuildRangeOptions(images, ShotFilterIso, IsoBounds, ""))
+            ' Die Ueberschriften mit: sie folgen der Sprache und melden sonst nie.
+            For Each name In {NameOf(HasCameraFilterOptions), NameOf(HasLensFilterOptions), NameOf(HasFocalFilterOptions),
+                              NameOf(HasIsoFilterOptions), NameOf(HasShotFilterOptions),
+                              NameOf(CameraFilterHeading), NameOf(LensFilterHeading), NameOf(FocalFilterHeading),
+                              NameOf(IsoFilterHeading)}
+                Me.RaisePropertyChanged(name)
+            Next
+        End Sub
+
+        Private Function BuildNameOptions(images As List(Of ImageItem), kind As String) As List(Of ShotFilterOption)
+            Dim selected = _shotFilters(kind)
+            Dim search = _shotFilterSearch.Trim()
+            Dim present = images.Select(Function(i) ShotFilterValue(i, kind)).Where(Function(v) v.Length > 0).ToList()
+            If present.Count > 0 Then _shotDataPresent = True
+            Return present.
+                Where(Function(v) search.Length = 0 OrElse v.Contains(search, StringComparison.CurrentCultureIgnoreCase)).
+                Concat(selected).
+                Distinct(StringComparer.OrdinalIgnoreCase).
+                OrderBy(Function(v) v, StringComparer.CurrentCultureIgnoreCase).
+                Select(Function(v) New ShotFilterOption(kind, v, v, selected.Contains(v))).ToList()
+        End Function
+
+        Private Function BuildRangeOptions(images As List(Of ImageItem), kind As String, bounds As Integer(),
+                                           unit As String) As List(Of ShotFilterOption)
+            Dim selected = _shotFilters(kind)
+            Dim present = New HashSet(Of String)(images.Select(Function(i) ShotFilterValue(i, kind)).Where(Function(v) v.Length > 0),
+                                                 StringComparer.Ordinal)
+            present.UnionWith(selected)
+            Dim order = bounds.Select(Function(b) b.ToString(Globalization.CultureInfo.InvariantCulture)).Concat({OpenRangeKey})
+            Return order.Where(Function(key) present.Contains(key)).
+                Select(Function(key) New ShotFilterOption(kind, key, RangeLabel(key, bounds, unit), selected.Contains(key))).ToList()
+        End Function
+
+        Private Shared Sub ReplaceShotOptions(target As ObservableCollection(Of ShotFilterOption), fresh As List(Of ShotFilterOption))
+            If target.Count = fresh.Count AndAlso
+               target.Zip(fresh, Function(a, b) a.Key = b.Key AndAlso a.IsSelected = b.IsSelected AndAlso a.Label = b.Label).All(Function(same) same) Then Return
+            target.Clear()
+            For Each entry In fresh
+                target.Add(entry)
+            Next
+        End Sub
+
         ''' <summary>Endungen, die im aktuellen Galeriebestand tatsächlich vorkommen. Ordner und
         ''' Gruppenköpfe gehören nicht dazu; ein gewählter Typ bleibt sichtbar, damit er wieder
         ''' abgewählt werden kann.</summary>
@@ -1085,7 +1300,7 @@ Namespace ViewModels
             Get
                 Return _filterFavorite <> "All" OrElse _filterRatings.Count > 0 OrElse
                        _filterFileType <> "All" OrElse _filterColorLabels.Count > 0 OrElse
-                       _filterRejected <> "Show" OrElse _filterEdited <> "All"
+                       _filterRejected <> "Show" OrElse _filterEdited <> "All" OrElse HasShotFilter OrElse IsSimilarView
             End Get
         End Property
 
@@ -1106,8 +1321,14 @@ Namespace ViewModels
             _filterColorLabels.Clear()
             _filterRejected = "Show"
             _filterEdited = "All"
+            For Each keys In _shotFilters.Values
+                keys.Clear()
+            Next
+            RefreshShotFilterOptions()
+            ' Die Ansicht der aehnlichen Bilder wird im Filter eingeschaltet und hier mit beendet.
+            If IsSimilarView Then CloseSimilarView()
             SaveFileBrowserSettings()
-            For Each name In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly),
+            For Each name In {NameOf(IsFilterFavoriteAll), NameOf(IsFilterFavoriteOnly), NameOf(IsFilterFavoriteNone),
                               NameOf(IsFilterRejectedShow), NameOf(IsFilterRejectedHide), NameOf(IsFilterRejectedOnly),
                               NameOf(IsFilterKeptOnly),
                               NameOf(IsFilterEditedAll), NameOf(IsFilterEditedOnly), NameOf(IsFilterEditedHide),
@@ -8028,6 +8249,7 @@ Namespace ViewModels
             If Not skipPersonQuery AndAlso Not MatchesPersonQuery(meta.FilePath, node.PersonQueries) Then Return False
             If Not MatchesPlaceQuery(meta, node.PlaceQueries) Then Return False
             If favoriteMode = "Only" AndAlso Not meta.IsFavorite Then Return False
+            If favoriteMode = "None" AndAlso meta.IsFavorite Then Return False
             If favoriteMode = "Not" AndAlso meta.IsFavorite Then Return False
             ' Markierung und Etikett: angehakte Werte sind eine ODER-Liste (behalten oder
             ' verworfen, rot oder gelb), leer heisst egal.
@@ -11383,6 +11605,8 @@ Namespace ViewModels
 
             If _filterFavorite = "Only" Then
                 filtered = filtered.Where(Function(i) i.IsFolder OrElse i.IsFavorite)
+            ElseIf _filterFavorite = "None" Then
+                filtered = filtered.Where(Function(i) i.IsFolder OrElse Not i.IsFavorite)
             End If
 
             Dim picked = Function(i As ImageItem) As Boolean
@@ -11429,6 +11653,9 @@ Namespace ViewModels
                     String.Equals(i.ExtensionLower, extension, StringComparison.OrdinalIgnoreCase))
             End If
 
+            ' Kamera, Objektiv, Brennweite, ISO (siehe PassesShotFilter).
+            If HasShotFilter Then filtered = filtered.Where(Function(i) PassesShotFilter(i))
+
             Return filtered.ToList()
         End Function
 
@@ -11442,6 +11669,7 @@ Namespace ViewModels
             ' Raster jede sichtbare Kachel zurueckgeben und neu holen.
             PerformanceTraceService.Measure("Galerie: Liste austauschen", Sub() Items.ReplaceAllMinimal(stacked))
             PerformanceTraceService.Measure("Galerie: Dateitypen der Filterleiste", AddressOf RefreshFileTypeFilterOptions)
+            PerformanceTraceService.Measure("Galerie: Aufnahmedaten der Filterleiste", AddressOf RefreshShotFilterOptions)
             If DisplayItems.Count = 0 Then
                 ResetDisplayWindow()
             Else

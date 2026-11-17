@@ -58,7 +58,14 @@
                                    Width="18" Height="18"/>
                 </Button>
                 <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Text="Personen verwalten" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+                    <!-- Vor der Ueberschrift das Symbol des Knopfes, der die Ansicht oeffnet. -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/users.svg"
+                                       Width="24" Height="24"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="Personen verwalten" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock Text="{Binding PeopleSummaryText}" Classes="no-translate"
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

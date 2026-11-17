@@ -11890,6 +11890,9 @@
   <data name="Variante_0_ec217018" xml:space="preserve">
     <value>변형: {0}</value>
   </data>
+  <data name="Kamera_oder_Objektiv_suchen_dc8b92ca" xml:space="preserve">
+    <value>카메라 또는 렌즈 검색</value>
+  </data>
   <data name="Gespeicherte_Anpassungen_23453e97" xml:space="preserve">
     <value>저장된 조정</value>
   </data>

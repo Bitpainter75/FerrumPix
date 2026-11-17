@@ -344,6 +344,14 @@ Namespace Views
             Return Nothing
         End Function
 
+        ''' <summary>Ein Wert im Filter nach Aufnahmedaten (Kamera, Objektiv, Brennweite, ISO): an-
+        ''' oder abwaehlen.</summary>
+        Private Sub OnShotFilterItemClick(sender As Object, e As RoutedEventArgs)
+            Dim entry = TryCast(TryCast(sender, Button)?.DataContext, ShotFilterOption)
+            If entry Is Nothing Then Return
+            GetVm()?.ToggleShotFilter(entry.Kind, entry.Key)
+        End Sub
+
         ''' <summary>Dateityp-Zeilen liegen im Flyout außerhalb des normalen Vorfahrenbaums.
         ''' Der direkte Klickweg ist deshalb zuverlässiger als eine Command-Bindung zum ViewModel.</summary>
         Private Sub OnFileTypeFilterItemClick(sender As Object, e As RoutedEventArgs)

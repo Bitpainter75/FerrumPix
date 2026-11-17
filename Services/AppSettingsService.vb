@@ -2756,6 +2756,7 @@ Namespace Services
 
         Public Shared Function NormalizeGalleryFilterFavorite(value As String) As String
             If String.Equals(value, "Only", StringComparison.OrdinalIgnoreCase) Then Return "Only"
+            If String.Equals(value, "None", StringComparison.OrdinalIgnoreCase) Then Return "None"
             Return "All"
         End Function
 

@@ -89,10 +89,17 @@
                 Padding="22">
             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="16">
                 <StackPanel Spacing="8">
-                    <TextBlock Text="Stichwörter ordnen"
-                               FontSize="{DynamicResource FP.Font.Heading}"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource FP.Text.Primary}"/>
+                    <!-- Vor der Ueberschrift das Symbol des Knopfes, der den Dialog oeffnet. -->
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/tag.svg"
+                                       Width="22" Height="22"
+                                       VerticalAlignment="Center"/>
+                        <TextBlock Text="Stichwörter ordnen"
+                                   FontSize="{DynamicResource FP.Font.Heading}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource FP.Text.Primary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                     <TextBlock Text="Hänge Stichwörter untereinander, etwa Hunde und Katzen unter Tiere. Wer in der Galerie Tiere wählt, findet dann auch die Bilder mit Hunde. An den Bildern selbst ändert sich nichts."
                                Foreground="{DynamicResource FP.Text.Secondary}"
                                TextWrapping="Wrap"/>

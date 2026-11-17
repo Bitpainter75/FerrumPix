@@ -205,16 +205,6 @@
                      drei Panels, die sich zu- und abschalten. -->
 
                 <StackPanel x:Name="ToolbarRightButtons" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <!-- Links neben Rückgängig: der Weg zurück zum Original steht bei den Knöpfen,
-                         die Bearbeitungsschritte zurücknehmen. -->
-                    <Button Classes="icon-btn"
-                            Width="34" Height="34"
-                            IsEnabled="{Binding HasDocument}"
-                            Command="{Binding ResetAllAdjustmentsCommand}"
-                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-counter-clockwise.svg"
-                                       Width="20" Height="20" />
-                    </Button>
                     <Button Classes="icon-btn" Width="34" Height="34"
                             IsEnabled="{Binding CanUndo}"
                             Command="{Binding UndoCommand}"
@@ -260,6 +250,18 @@
                                            Width="20" Height="20" />
                             <TextBlock Text="Speichern unter" IsVisible="{Binding AreToolbarLabelsVisible}" />
                         </StackPanel>
+                    </Button>
+                    <!-- Zwischen "Speichern unter" und "Löschen", NICHT neben Rückgängig: dort lag
+                         er direkt unter dem Zeiger, wenn man nur einen Schritt zurück wollte, und
+                         setzte stattdessen alles zurück. Hier steht er bei den Knöpfen, die das
+                         ganze Dokument betreffen. -->
+                    <Button Classes="icon-btn"
+                            Width="34" Height="34"
+                            IsEnabled="{Binding HasDocument}"
+                            Command="{Binding ResetAllAdjustmentsCommand}"
+                            ToolTip.Tip="Alle Bearbeitungen zurücksetzen">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-counter-clockwise.svg"
+                                       Width="20" Height="20" />
                     </Button>
                     <Button Classes="icon-btn"
                             Width="34" Height="34"

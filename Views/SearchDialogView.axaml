@@ -74,7 +74,9 @@
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
         </StackPanel>
 
-        <!-- Favorit, Markierung und Etikett als SYMBOLE wie in der Infoleiste: im Akzentton
+        <!-- Die Favoritensymbole sind dieselben wie im Filter der Galerie: das gefuellte Herz fuer
+             "Nur Favoriten", das leere fuer "Ohne Favoriten".
+             Favorit, Markierung und Etikett als SYMBOLE wie in der Infoleiste: im Akzentton
              angehakt (danach wird gesucht), sonst neutral (egal). Ein Klick auf ein angehaktes
              Symbol nimmt es zurueck. Mehrere Markierungen oder Etiketten sind eine ODER-Liste. -->
         <Grid Grid.Row="4" ColumnDefinitions="200,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10"
@@ -84,18 +86,18 @@
                 <Button Classes="icon-btn" Width="30" Height="30" Click="OnFavoriteClick" Tag="Only"
                         ToolTip.Tip="Nur Favoriten">
                     <Grid Width="20" Height="20">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/heart-fill.svg"
                                        Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsDialogSearchFavoriteOnly}"/>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/heart-fill.svg"
                                        Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsDialogSearchFavoriteOnly}"/>
                     </Grid>
                 </Button>
                 <Button Classes="icon-btn" Width="30" Height="30" Click="OnFavoriteClick" Tag="Not"
                         ToolTip.Tip="Ohne Favoriten">
                     <Grid Width="20" Height="20">
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart-break.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
                                        Width="20" Height="20" Classes="fav-heart" IsVisible="{Binding !IsDialogSearchFavoriteNot}"/>
-                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart-break.svg"
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg"
                                        Width="20" Height="20" Classes="fav-heart active" IsVisible="{Binding IsDialogSearchFavoriteNot}"/>
                     </Grid>
                 </Button>

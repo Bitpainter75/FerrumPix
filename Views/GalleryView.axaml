@@ -71,6 +71,11 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
+        <!-- Der Filter steht in drei Spalten. Ein Flyout ist ab Werk hoechstens 456 breit und
+             schnitte die dritte Spalte ab. -->
+        <Style Selector="FlyoutPresenter.filter-flyout">
+            <Setter Property="MaxWidth" Value="920"/>
+        </Style>
         <Style Selector="TreeViewItem">
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
         </Style>
@@ -631,9 +636,19 @@
                         <Button.Flyout>
                             <Flyout Placement="BottomEdgeAlignedRight"
                                     VerticalOffset="2"
+                                    FlyoutPresenterClasses="filter-flyout"
                                     Opened="OnLocalizedFlyoutOpened">
                                 <StackPanel Spacing="1" MinWidth="248">
 
+                                    <!-- DREI SPALTEN nebeneinander statt einer langen Liste: links, was man
+                                         dem Bild selbst gibt (Favorit, Bewertung, Etikett), in der Mitte
+                                         Ansicht und Stand (ähnliche Bilder, Stapel, behalten, bearbeitet,
+                                         Dateityp), rechts die Aufnahmedaten (Kamera, Objektiv, Brennweite,
+                                         ISO). Die rechte Spalte gibt es nur, wenn der Bestand
+                                         Aufnahmedaten trägt. "Alle Filter zurücksetzen" steht darunter
+                                         über die ganze Breite. -->
+                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                        <StackPanel Spacing="1" Width="272">
                                         <!-- FAVORITEN -->
                                         <TextBlock Text="FAVORITEN" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource FP.Text.Muted}"
@@ -642,7 +657,10 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterFavoriteCommand}" CommandParameter="All">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <Border Width="18" Height="18"/>
+                                                    <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterFavoriteAll}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -651,8 +669,23 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterFavoriteCommand}" CommandParameter="Only">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Nur Favoriten" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/fill/heart-fill.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Nur Favoriten" VerticalAlignment="Center"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterFavoriteOnly}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Command="{Binding SetFilterFavoriteCommand}" CommandParameter="None">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Kein Favorit" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterFavoriteNone}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
                                         </Button>
@@ -845,9 +878,9 @@
                                                 </Grid>
                                             </Button>
                                         </StackPanel>
-
-                                        <Separator Margin="4,6"/>
-
+                                        </StackPanel>
+                                        <Border Width="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
+                                        <StackPanel Spacing="1" Width="272">
                                         <!-- AEHNLICHE BILDER: rechnet Fingerabdruecke und zeigt die
                                              Gruppen in einer eigenen Ansicht (GalleryViewModelSimilar). -->
                                         <TextBlock Text="ÄHNLICHE BILDER" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
@@ -855,8 +888,12 @@
                                                    Margin="10,4,10,4"/>
                                         <Button Classes="ghost" HorizontalAlignment="Stretch"
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
-                                                Command="{Binding OpenSimilarViewCommand}">
-                                            <TextBlock Text="Ähnliche Bilder zeigen" VerticalAlignment="Center"/>
+                                                Command="{Binding ToggleSimilarViewCommand}">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Ähnliche Bilder zeigen" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSimilarView}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
                                         </Button>
                                         <Separator Margin="4,6"/>
 
@@ -889,7 +926,10 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRejectedCommand}" CommandParameter="Show">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <Border Width="18" Height="18"/>
+                                                    <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedShow}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -898,7 +938,10 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRejectedCommand}" CommandParameter="Hide">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Verworfene ausblenden" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-slash.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Verworfene ausblenden" VerticalAlignment="Center"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedHide}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -907,7 +950,10 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRejectedCommand}" CommandParameter="Only">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Nur verworfene" VerticalAlignment="Center"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterRejectedOnly}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -916,7 +962,10 @@
                                                 HorizontalContentAlignment="Stretch" Padding="10,8"
                                                 Command="{Binding SetFilterRejectedCommand}" CommandParameter="Kept">
                                             <Grid ColumnDefinitions="*,20">
-                                                <TextBlock Text="Nur behaltene" VerticalAlignment="Center"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Nur behaltene" VerticalAlignment="Center"/>
+                                                </StackPanel>
                                                 <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterKeptOnly}"
                                                            Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
                                             </Grid>
@@ -1005,6 +1054,116 @@
                                                 </DataTemplate>
                                             </ItemsRepeater.ItemTemplate>
                                         </ItemsRepeater>
+                                        </StackPanel>
+                                        <Border Width="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"
+                                                IsVisible="{Binding HasShotFilterOptions}"/>
+                                        <StackPanel Spacing="1" Width="272" IsVisible="{Binding HasShotFilterOptions}">
+                                            <!-- EIN Suchfeld fuer Kamera und Objektiv: beide Listen zeigen nur
+                                                 noch, was den Text enthaelt. Es siebt die Listen, nicht die Bilder. -->
+                                            <Border Background="{DynamicResource FP.Bg.Input}"
+                                                    BorderBrush="{DynamicResource FP.Border.Normal}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="10,6"
+                                                    Margin="10,2,10,6">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/magnifying-glass.svg"
+                                                                   Width="18" Height="18" VerticalAlignment="Center" Opacity="0.65"/>
+                                                    <TextBox Grid.Column="1"
+                                                             Classes="search-input"
+                                                             BorderThickness="0"
+                                                             Padding="0"
+                                                             Text="{Binding ShotFilterSearch}"
+                                                             PlaceholderText="Kamera oder Objektiv suchen"
+                                                             Margin="8,0,0,0"
+                                                             VerticalContentAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                            <StackPanel Spacing="1" IsVisible="{Binding HasCameraFilterOptions}">
+                                                <TextBlock Text="{Binding CameraFilterHeading}" Classes="no-translate" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" Margin="10,4,10,4"/>
+                                                <ItemsRepeater ItemsSource="{Binding CameraFilterOptions}">
+                                                    <ItemsRepeater.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type models:ShotFilterOption}">
+                                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                    Click="OnShotFilterItemClick">
+                                                                <Grid ColumnDefinitions="*,20">
+                                                                    <TextBlock Text="{Binding Label}" Classes="no-translate" VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                               Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                                </Grid>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsRepeater.ItemTemplate>
+                                                </ItemsRepeater>
+                                            </StackPanel>
+                                            <Separator Margin="4,6" IsVisible="{Binding HasLensFilterOptions}"/>
+                                            <StackPanel Spacing="1" IsVisible="{Binding HasLensFilterOptions}">
+                                                <TextBlock Text="{Binding LensFilterHeading}" Classes="no-translate" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" Margin="10,4,10,4"/>
+                                                <ItemsRepeater ItemsSource="{Binding LensFilterOptions}">
+                                                    <ItemsRepeater.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type models:ShotFilterOption}">
+                                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                    Click="OnShotFilterItemClick">
+                                                                <Grid ColumnDefinitions="*,20">
+                                                                    <TextBlock Text="{Binding Label}" Classes="no-translate" VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                               Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                                </Grid>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsRepeater.ItemTemplate>
+                                                </ItemsRepeater>
+                                            </StackPanel>
+                                            <Separator Margin="4,6" IsVisible="{Binding HasFocalFilterOptions}"/>
+                                            <StackPanel Spacing="1" IsVisible="{Binding HasFocalFilterOptions}">
+                                                <TextBlock Text="{Binding FocalFilterHeading}" Classes="no-translate" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" Margin="10,4,10,4"/>
+                                                <ItemsRepeater ItemsSource="{Binding FocalFilterOptions}">
+                                                    <ItemsRepeater.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type models:ShotFilterOption}">
+                                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                    Click="OnShotFilterItemClick">
+                                                                <Grid ColumnDefinitions="*,20">
+                                                                    <TextBlock Text="{Binding Label}" Classes="no-translate" VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                               Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                                </Grid>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsRepeater.ItemTemplate>
+                                                </ItemsRepeater>
+                                            </StackPanel>
+                                            <Separator Margin="4,6" IsVisible="{Binding HasIsoFilterOptions}"/>
+                                            <StackPanel Spacing="1" IsVisible="{Binding HasIsoFilterOptions}">
+                                                <TextBlock Text="{Binding IsoFilterHeading}" Classes="no-translate" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource FP.Text.Secondary}" Margin="10,4,10,4"/>
+                                                <ItemsRepeater ItemsSource="{Binding IsoFilterOptions}">
+                                                    <ItemsRepeater.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type models:ShotFilterOption}">
+                                                            <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                                    Click="OnShotFilterItemClick">
+                                                                <Grid ColumnDefinitions="*,20">
+                                                                    <TextBlock Text="{Binding Label}" Classes="no-translate" VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsSelected}"
+                                                                               Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                                                </Grid>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsRepeater.ItemTemplate>
+                                                </ItemsRepeater>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
 
                                         <!-- Zurücksetzen -->
                                         <Separator Margin="4,6" IsVisible="{Binding HasActiveFilter}"/>

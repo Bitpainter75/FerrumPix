@@ -11886,6 +11886,9 @@
   <data name="Variante_0_ec217018" xml:space="preserve">
     <value>バリエーション: {0}</value>
   </data>
+  <data name="Kamera_oder_Objektiv_suchen_dc8b92ca" xml:space="preserve">
+    <value>カメラまたはレンズを検索</value>
+  </data>
   <data name="Gespeicherte_Anpassungen_23453e97" xml:space="preserve">
     <value>保存した調整</value>
   </data>

@@ -343,9 +343,33 @@ Namespace ViewModels
                 End Sub)
         End Sub
 
+        Private _toggleSimilarViewCommand As ICommand
+
+        ''' <summary>Der Eintrag im Filter der Galerie: schaltet die Ansicht der aehnlichen Bilder ein
+        ''' und wieder aus. Dort traegt er einen Haken, solange sie laeuft, wie jede andere Wahl des
+        ''' Filters.</summary>
+        Public ReadOnly Property ToggleSimilarViewCommand As ICommand
+            Get
+                If _toggleSimilarViewCommand Is Nothing Then
+                    _toggleSimilarViewCommand = ReactiveCommand.CreateFromTask(
+                        Function() As Task
+                            If IsSimilarView Then
+                                CloseSimilarView()
+                                Return Task.CompletedTask
+                            End If
+                            Return OpenSimilarViewAsync()
+                        End Function)
+                End If
+                Return _toggleSimilarViewCommand
+            End Get
+        End Property
+
         Private Sub RaiseSimilarViewChanged()
             Me.RaisePropertyChanged(NameOf(IsSimilarView))
             Me.RaisePropertyChanged(NameOf(SimilarViewText))
+            ' Die Ansicht zaehlt im Filter als gesetzt: "Alle Filter zuruecksetzen" beendet sie.
+            Me.RaisePropertyChanged(NameOf(HasActiveFilter))
+            Me.RaisePropertyChanged(NameOf(FilterLabel))
             Me.RaisePropertyChanged(NameOf(CanNavigateBack))
             Me.RaisePropertyChanged(NameOf(CanNavigateForward))
             Me.RaisePropertyChanged(NameOf(HasBreadcrumbParent))

@@ -21233,7 +21233,14 @@ Namespace ViewModels
             For Each item In FilmstripItems
                 If item Is Nothing Then Continue For
                 Dim meta As LibraryImageMeta = Nothing
-                If catalog.TryGetValue(item.ItemPath, meta) Then
+                catalog.TryGetValue(item.ItemPath, meta)
+                ' Eine zusaetzliche Variante ohne Katalogzeile (ihre Kachel stand noch in keiner
+                ' Galerie): ihre Angaben stehen in der Begleitdatei und kommen von dort.
+                If meta Is Nothing AndAlso item.IsVariant Then
+                    LibraryService.Instance.ImportFpxmpCatalogData(item.ItemPath)
+                    LibraryService.Instance.GetMetaForPaths({item.ItemPath}).TryGetValue(item.ItemPath, meta)
+                End If
+                If meta IsNot Nothing Then
                     item.Rating = meta.Rating
                     item.IsFavorite = meta.IsFavorite
                     item.ColorLabel = meta.ColorLabel

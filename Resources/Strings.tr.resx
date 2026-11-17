@@ -11890,6 +11890,9 @@
   <data name="Variante_0_ec217018" xml:space="preserve">
     <value>Varyant: {0}</value>
   </data>
+  <data name="Kamera_oder_Objektiv_suchen_dc8b92ca" xml:space="preserve">
+    <value>Kamera veya objektif ara</value>
+  </data>
   <data name="Gespeicherte_Anpassungen_23453e97" xml:space="preserve">
     <value>Kaydedilen ayarlamalar</value>
   </data>

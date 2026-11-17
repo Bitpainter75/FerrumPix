@@ -26,6 +26,13 @@
   between them, and creates, renames and deletes them. The automatic enhancement stays in the
   Light panel. Both groups can be hidden and reordered in the settings like the others.
 
+- The filter of the gallery is laid out in three columns and can now filter by camera, lens,
+  focal length and ISO. It offers what the pictures on screen actually carry, several values of
+  a group can be chosen at once, and the column is left out where no picture has shooting data.
+
+- In the editor, the button that resets all edits has moved between Save as and Delete, away
+  from Undo, where it was hit by mistake.
+
 - Every dialog shows the symbol of its action in front of its heading, the same one the menu
   uses, and so do the groups in the export dialog.
 
