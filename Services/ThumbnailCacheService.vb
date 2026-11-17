@@ -249,15 +249,16 @@ Namespace Services
         End Function
 
         ''' <summary>Wird die Kachel DIESER Datei entwickelt? Ja, wenn die Einstellung an ist, oder
-        ''' wenn die .fpxmp den Vermerk dafuer traegt (RawSidecarService.ReadDevelopedThumbnail):
-        ''' dann hat der Stapel "Anpassungen anwenden" ein Rezept geschrieben, und das soll in der
-        ''' Galerie zu sehen sein. Dieselbe Frage fuer Schluessel und Schreibweg, sonst suchte der
-        ''' Leser eine Kachel, die der Schreiber nie anlegt.</summary>
+        ''' wenn die .fpxmp es verlangt (RawSidecarService.ShowsDevelopedThumbnail): sie fuehrt die
+        ''' Datei als bearbeitet, oder sie traegt den Vermerk, den der Stapel "Anpassungen anwenden"
+        ''' setzt. Eine Bearbeitung soll in der Galerie zu sehen sein, nicht die Vorschau der
+        ''' Kamera. Dieselbe Frage fuer Schluessel und Schreibweg, sonst suchte der Leser eine
+        ''' Kachel, die der Schreiber nie anlegt.</summary>
         Private Shared Function DevelopsThumbnail(filePath As String) As Boolean
             ' Eine zusaetzliche Variante wird immer entwickelt gezeigt: die Vorschau der Kamera
             ' saehe fuer alle Varianten einer Aufnahme gleich aus.
             If AmbientVariantId.Length > 0 Then Return True
-            Return DevelopRawThumbnailsActive() OrElse RawSidecarService.ReadDevelopedThumbnail(filePath)
+            Return DevelopRawThumbnailsActive() OrElse RawSidecarService.ShowsDevelopedThumbnail(filePath)
         End Function
 
         ''' <summary>Fassung der RAW-Basisstufe fuer entwickelte Kacheln. Erhoehen, wenn sich die

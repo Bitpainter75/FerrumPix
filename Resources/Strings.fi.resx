@@ -7917,8 +7917,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Näytä merkinnät filminauhassa</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>Näyttää tähtiluokituksen, suosikin ja värimerkinnän katselimen ja muokkaimen filminauhan ruuduissa.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>Näyttää tähtiluokituksen, suosikin, värimerkinnän sekä säilytä- ja hylkää-merkinnät katselimen ja muokkaimen filminauhan ruuduissa.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Poistetaanko {0} '{1}' luettelosta? Itse tiedosto säilytetään.</value>

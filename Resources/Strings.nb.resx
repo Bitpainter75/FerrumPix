@@ -7917,8 +7917,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Vis markeringer i filmstripen</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>Viser stjernerangering, favoritt og fargeetikett på filmstrip-rutene i visningen og redigeringen.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>Viser stjernerangering, favoritt, fargeetikett og merkene behold og forkast på filmstrip-rutene i visningen og redigeringen.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Fjerne {0} '{1}' fra listen? Selve filen beholdes.</value>

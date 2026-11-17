@@ -3549,6 +3549,11 @@
                                                             </StackPanel>
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/heart.svg" Width="18" Height="18" IconBrush="White"
                                                                            IsVisible="{Binding IsFavorite}"/>
+                                                            <!-- Behalten und Verworfen, dieselben Symbole wie an der Kachel. -->
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-up.svg" Width="18" Height="18" IconBrush="White"
+                                                                           IsVisible="{Binding IsPicked}"/>
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/thumbs-down.svg" Width="18" Height="18" IconBrush="White"
+                                                                           IsVisible="{Binding IsRejected}"/>
                                                         </StackPanel>
                                                     </Border>
                                                     <!-- BEARBEITET wie an der Galeriekachel (Einstellung des Filmstreifens). -->

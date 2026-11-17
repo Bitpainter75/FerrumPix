@@ -7917,8 +7917,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>フィルムストリップにマーカーを表示</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>ビューアーとエディターのフィルムストリップのタイルに、星評価、お気に入り、カラーラベルを表示します。</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>ビューアーとエディターのフィルムストリップのタイルに、星評価、お気に入り、カラーラベル、採用と不採用のマークを表示します。</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>{0}「{1}」をリストから削除しますか？ ファイル自体は保持されます。</value>

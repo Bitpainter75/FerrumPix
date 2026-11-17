@@ -7878,8 +7878,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Show markers in filmstrip</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>Shows star rating, favorite, and color label on filmstrip tiles in the viewer and editor.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>Shows star rating, favorite, color label, and the keep and reject marks on filmstrip tiles in the viewer and editor.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Remove {0} '{1}' from the list? The file itself will be kept.</value>

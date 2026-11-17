@@ -80,7 +80,7 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Markierungen im Filmstreifen anzeigen" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Zeigt Sternbewertung, Favorit und Farbetikett auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Zeigt Sternbewertung, Favorit, Farbetikett sowie Behalten und Verworfen auf den Filmstreifen-Kacheln im Viewer und Editor." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding FilmstripItemBadgesVisible}"

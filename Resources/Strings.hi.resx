@@ -7917,8 +7917,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>फ़िल्मपट्टी में चिह्न दिखाएँ</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>दर्शक और संपादक की फ़िल्मपट्टी की टाइलों पर तारे, पसंदीदा और रंग लेबल दिखाता है।</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>दर्शक और संपादक की फ़िल्मपट्टी की टाइलों पर तारे, पसंदीदा, रंग लेबल तथा रखें और अस्वीकार के चिह्न दिखाता है।</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>सूची से {0} '{1}' हटाएँ? फ़ाइल स्वयं बनी रहेगी।</value>

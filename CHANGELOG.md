@@ -28,6 +28,9 @@
 
 - The Lighting tool of the editor now sits below Mask, above Text.
 
+- With the marks in the filmstrip switched on in the settings, the filmstrips now also show
+  whether a picture is kept or rejected.
+
 - The filter of the gallery is laid out in three columns and can now filter by camera, lens,
   focal length and ISO. It offers what the pictures on screen actually carry, several values of
   a group can be chosen at once, and the column is left out where no picture has shooting data.
@@ -42,9 +45,9 @@
 
 ### Fixes
 
-- Adjustments pasted in the editor and then saved did not show on the tile of a RAW file in
-  the gallery and the filmstrips, which kept the preview of the camera. The tile now shows
-  them, as it does after pasting in the gallery.
+- A RAW file edited and saved in the editor kept the preview of the camera as its tile in the
+  gallery and the filmstrips, unless developed previews were switched on in the settings. The
+  tile of an edited RAW file now always shows the edit.
 
 - With a search text left in the keyword list of the gallery, the list was empty and said that
   no keywords were assigned. It now says that nothing matches.

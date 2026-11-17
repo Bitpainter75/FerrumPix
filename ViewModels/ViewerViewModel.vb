@@ -3887,6 +3887,7 @@ Namespace ViewModels
                     item.Rating = source.Rating
                     item.IsFavorite = source.IsFavorite
                     item.ColorLabel = source.ColorLabel
+                    item.PickState = source.PickState
                     Continue For
                 End If
 
@@ -3902,6 +3903,7 @@ Namespace ViewModels
                     item.Rating = meta.Rating
                     item.IsFavorite = meta.IsFavorite
                     item.ColorLabel = meta.ColorLabel
+                    item.PickState = meta.PickState
                 End If
             Next
         End Sub
@@ -4050,9 +4052,12 @@ Namespace ViewModels
                 _infoItem = _immichSessionItems(_currentIndex)
                 Return _infoItem
             End If
+            ' Mit der Variante, die zu sehen ist: das Panel schreibt Markierung und Stichwoerter
+            ' ueber dieses Element, und die gehoeren der Variante, nicht der Datei.
+            Dim infoPath = ItemPathFor(imagePath)
             If _infoItem Is Nothing OrElse
-               Not String.Equals(_infoItem.FilePath, imagePath, PathIdentity.Comparison) Then
-                _infoItem = ImageItem.CreateLightweight(imagePath)
+               Not String.Equals(_infoItem.ItemPath, infoPath, PathIdentity.Comparison) Then
+                _infoItem = ImageItem.CreateLightweight(infoPath)
             End If
             Return _infoItem
         End Function

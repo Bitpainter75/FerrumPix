@@ -7917,8 +7917,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>แสดงเครื่องหมายในแถบฟิล์ม</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>แสดงดาวคะแนน รายการโปรด และป้ายสี บนไทล์ในแถบฟิล์มของตัวแสดงภาพและตัวแก้ไข</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>แสดงดาวคะแนน รายการโปรด ป้ายสี และเครื่องหมายเก็บไว้และคัดออก บนไทล์ในแถบฟิล์มของตัวแสดงภาพและตัวแก้ไข</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>ลบ {0} '{1}' ออกจากรายการหรือไม่ ตัวไฟล์เองจะยังอยู่</value>

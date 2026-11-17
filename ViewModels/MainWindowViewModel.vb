@@ -713,8 +713,10 @@ Namespace ViewModels
                 Dim refresh = Sub(items As IEnumerable(Of ImageItem))
                                   If items Is Nothing Then Return
                                   For Each item In items
+                                      ' Nach dem Schluessel der Kachel: eine zusaetzliche Variante
+                                      ' traegt eigene Angaben, die der Datei gehen sie nichts an.
                                       If item Is Nothing OrElse String.IsNullOrEmpty(item.FilePath) OrElse
-                                         Not wanted.Contains(item.FilePath) Then Continue For
+                                         Not wanted.Contains(item.ItemPath) Then Continue For
                                       If change.Rating.HasValue Then item.Rating = change.Rating.Value
                                       If change.IsFavorite.HasValue Then item.IsFavorite = change.IsFavorite.Value
                                       If change.ColorLabel IsNot Nothing Then item.ColorLabel = change.ColorLabel

@@ -1073,6 +1073,18 @@ Namespace Services
             Return If(ReadDisplayFacts(rawPath)?.DevelopedThumbnail, False)
         End Function
 
+        ''' <summary>Wird die Kachel dieser Datei entwickelt gezeigt, auch mit ausgeschalteter
+        ''' Einstellung? Ja mit dem Vermerk dafuer (<see cref="ReadDevelopedThumbnail"/>) UND fuer jede
+        ''' Datei, deren Begleitdatei sie als bearbeitet fuehrt: wer ein Bild bearbeitet und
+        ''' speichert, will die Bearbeitung an der Kachel sehen, nicht die Vorschau der Kamera.
+        '''
+        ''' Nur der Vermerk "bearbeitet", wie er in der Datei steht. Eine aeltere Begleitdatei ohne ihn
+        ''' wird hier nicht mit den Startwerten verglichen: das oeffnete je Kachel die RAW.</summary>
+        Public Shared Function ShowsDevelopedThumbnail(rawPath As String) As Boolean
+            Dim facts = ReadDisplayFacts(rawPath)
+            Return facts IsNot Nothing AndAlso (facts.DevelopedThumbnail OrElse facts.EditedAttribute.GetValueOrDefault())
+        End Function
+
         Private Shared Function ReadDisplayFacts(rawPath As String) As CachedDisplayFacts
             If String.IsNullOrWhiteSpace(rawPath) Then Return Nothing
             Dim sidecar = SidecarPathFor(rawPath)

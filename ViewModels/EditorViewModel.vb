@@ -21096,9 +21096,12 @@ Namespace ViewModels
         ''' echten Bildwechsel neu gebaut: das Panel erkennt an DIESER Instanz, dass es dasselbe
         ''' Bild ist, und laesst Personen, Ort und Stichwoerter dann stehen.</summary>
         Private Function EnsureInfoItem(imagePath As String) As ImageItem
+            ' Mit der Variante, die geoeffnet ist: das Panel schreibt Markierung und Stichwoerter
+            ' ueber dieses Element, und die gehoeren der Variante, nicht der Datei.
+            Dim infoPath = ItemPathFor(imagePath)
             If _infoItem Is Nothing OrElse
-               Not String.Equals(_infoItem.FilePath, imagePath, PathIdentity.Comparison) Then
-                _infoItem = ImageItem.CreateLightweight(imagePath)
+               Not String.Equals(_infoItem.ItemPath, infoPath, PathIdentity.Comparison) Then
+                _infoItem = ImageItem.CreateLightweight(infoPath)
                 ' Bei einer Immich-Temp-Kopie sofort der zuletzt gespeicherte Ort aus dem Index -
                 ' der Serverabruf laeuft erst danach an, und ohne diesen Stand bliebe die Zeile bis
                 ' zu seiner Antwort leer.
@@ -21254,6 +21257,7 @@ Namespace ViewModels
                     item.Rating = meta.Rating
                     item.IsFavorite = meta.IsFavorite
                     item.ColorLabel = meta.ColorLabel
+                    item.PickState = meta.PickState
                 End If
             Next
         End Sub

@@ -7917,8 +7917,8 @@
   <data name="Markierungen_im_Filmstreifen_anzeigen_ec895448" xml:space="preserve">
     <value>Показывать метки на ленте кадров</value>
   </data>
-  <data name="Zeigt_Sternbewertung_Favorit_und_Farbetikett_auf_9b2b2dc8" xml:space="preserve">
-    <value>Показывает оценку звёздами, избранное и цветовую метку на миниатюрах ленты в просмотрщике и редакторе.</value>
+  <data name="Zeigt_Sternbewertung_Favorit_Farbetikett_sowie_B_51187ebf" xml:space="preserve">
+    <value>Показывает оценку звёздами, избранное, цветовую метку и отметки «оставить» и «отклонить» на миниатюрах ленты в просмотрщике и редакторе.</value>
   </data>
   <data name="Soll_0_1_aus_der_Liste_entfernt_werden_Die_Datei_1869746d" xml:space="preserve">
     <value>Удалить {0} '{1}' из списка? Сам файл будет сохранён.</value>
