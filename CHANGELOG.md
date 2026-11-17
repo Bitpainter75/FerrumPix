@@ -26,6 +26,8 @@
   between them, and creates, renames and deletes them. The automatic enhancement stays in the
   Light panel. Both groups can be hidden and reordered in the settings like the others.
 
+- The Lighting tool of the editor now sits below Mask, above Text.
+
 - The filter of the gallery is laid out in three columns and can now filter by camera, lens,
   focal length and ISO. It offers what the pictures on screen actually carry, several values of
   a group can be chosen at once, and the column is left out where no picture has shooting data.
@@ -39,6 +41,10 @@
 - Every search field has a small cross that empties it as soon as something is typed in it.
 
 ### Fixes
+
+- Adjustments pasted in the editor and then saved did not show on the tile of a RAW file in
+  the gallery and the filmstrips, which kept the preview of the camera. The tile now shows
+  them, as it does after pasting in the gallery.
 
 - With a search text left in the keyword list of the gallery, the list was empty and said that
   no keywords were assigned. It now says that nothing matches.

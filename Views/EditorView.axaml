@@ -527,17 +527,6 @@
                             <TextBlock Text="Verzerren" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="tool-btn-row"
-                            ToolTip.Tip="Beleuchtung: Lichter und Schatten frei auf dem Bild"
-                            Command="{Binding SetToolCommand}"
-                            CommandParameter="Light"
-                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Light}">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg"
-                                           Width="18" Height="18" />
-                            <TextBlock Text="Beleuchtung" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
-                        </StackPanel>
-                    </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="{Binding ToolGroupRowAdjust}" Spacing="2">
@@ -648,6 +637,19 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mask-happy.svg"
                                            Width="18" Height="18" />
                             <TextBlock Text="Maske" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                        </StackPanel>
+                    </Button>
+                    <!-- Die Beleuchtung steht bei Auswahl und Maske: auch sie wirkt auf einen Ort im
+                         Bild, nicht auf das ganze. -->
+                    <Button Classes="tool-btn-row"
+                            ToolTip.Tip="Beleuchtung: Lichter und Schatten frei auf dem Bild"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Light"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Light}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/flashlight.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Beleuchtung" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
 

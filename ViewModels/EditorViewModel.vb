@@ -5305,6 +5305,10 @@ Namespace ViewModels
         Private _variantOfPath As String = ""
         Private _variantId As String = ""
 
+        ' Im geoeffneten Bild wurden Anpassungen eingefuegt, die noch nicht gespeichert sind: das
+        ' naechste Speichern in die Begleitdatei setzt den Vermerk fuer die entwickelte Kachel.
+        Private _markDevelopedThumbnailOnSave As Boolean
+
         ''' <summary>Der Rezept- und Katalogschluessel zu einem Pfad: fuer die Datei, deren
         ''' zusaetzliche Variante geoeffnet ist, der Schluessel dieser Variante
         ''' (Services.VariantKey), fuer jede andere der Pfad selbst. Gilt schon waehrend des Ladens,
@@ -18094,6 +18098,10 @@ Namespace ViewModels
             target.CopyPixelAdjustmentsFrom(gespeichert)
             ApplyAdjustments(target)
             _hasChanges = True
+            ' Wie beim Einfuegen in der Galerie: die Kachel soll danach zeigen, was eingefuegt
+            ' wurde, auch wenn die Einstellung fuer entwickelte RAW-Kacheln aus ist. Der Vermerk
+            ' dafuer geht beim Speichern in die Begleitdatei (TrySaveSidecar).
+            _markDevelopedThumbnailOnSave = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             RaiseResetButtonStateChanged()
             NameHistoryStep(LocalizationService.T("Anpassungen eingefügt"))
@@ -20187,6 +20195,7 @@ Namespace ViewModels
             End If
             _variantOfPath = path
             _variantId = If(entryVariantId, "")
+            _markDevelopedThumbnailOnSave = False
 
             ' JEDES Format, dessen Oeffnen wirklich Zeit kostet - nicht nur .fpx, RAW und PSD.
             ' Hier stand die engere Liste, und beim Wechsel aus dem Filmstreifen auf ein TIFF war
@@ -20660,6 +20669,7 @@ Namespace ViewModels
             End If
             _variantOfPath = imagePath
             _variantId = If(openVariantId, "")
+            _markDevelopedThumbnailOnSave = False
             ' DAS STARTWERKZEUG VOR DEM LADEN SETZEN, nicht erst beim Betreten des Modus. Der
             ' Moduswechsel folgt diesem Aufruf, und bis dahin galt das alte Werkzeug; nach dem
             ' Programmstart ist das der Zuschnitt. Dessen Vorschau zeigt das ganze Bild ohne
@@ -24611,6 +24621,7 @@ Namespace ViewModels
             Dim sidecarAdjustments = GetCurrentAdjustments()
             ' In die Variante, die geoeffnet ist: die Standardvariante der Datei oder eine zusaetzliche.
             If Not RawSidecarService.TryWrite(ItemPathFor(RenderSourcePath), sidecarAdjustments,
+                                              developedThumbnail:=If(_markDevelopedThumbnailOnSave, CType(True, Boolean?), Nothing),
                                               edited:=RawSidecarService.IsEditedRecipe(RenderSourcePath, sidecarAdjustments)) Then
                 DiagnosticLogService.LogAlways("Editor.Save",
                     $"sidecarRejected writeFailed source={IO.Path.GetFileName(RenderSourcePath)}")
@@ -24618,6 +24629,7 @@ Namespace ViewModels
                 Return False
             End If
             _hasChanges = False
+            _markDevelopedThumbnailOnSave = False
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
             ' Die Quelldatei ist unveraendert - ohne diesen Anstoss behielten Galerie und
             ' Filmstreifen ihre alte Kachel, obwohl das Rezept (z.B. eine Drehung) jetzt anders ist.
