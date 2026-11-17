@@ -430,6 +430,15 @@ Namespace Services
                 If child.Attributes().Any(Function(a) Not a.IsNamespaceDeclaration AndAlso
                                                       a.Name <> VariantIdAttribute AndAlso a.Name <> VariantNameAttribute AndAlso
                                                       a.Name <> EditedAttribute) Then Return False
+                ' Auch das Rezept selbst: VariantsNode schreibt es neu als
+                ' <adjustments format="fpx-json"> mit dem Text darin. Ein weiteres Attribut, ein
+                ' anderes Format oder ein Kindelement ginge dabei verloren.
+                Dim adjustmentsNode = child.Element(Ns + "adjustments")
+                If adjustmentsNode IsNot Nothing Then
+                    If adjustmentsNode.Attributes().Any(Function(a) Not a.IsNamespaceDeclaration AndAlso a.Name <> "format") Then Return False
+                    If Not String.Equals(adjustmentsNode.Attribute("format")?.Value, "fpx-json", StringComparison.Ordinal) Then Return False
+                    If adjustmentsNode.Elements().Any() Then Return False
+                End If
                 Dim id = If(child.Attribute(VariantIdAttribute)?.Value, "").Trim()
                 Dim name = NormalizeVariantName(child.Attribute(VariantNameAttribute)?.Value)
                 Dim json = child.Element(Ns + "adjustments")?.Value
