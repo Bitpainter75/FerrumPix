@@ -1815,36 +1815,112 @@ Namespace Services
             Dim safeRating = Math.Max(0, Math.Min(5, rating)).ToString(CultureInfo.InvariantCulture)
 
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return False
-                Dim description = GetOrCreateSidecarDescription(doc)
-                If description Is Nothing Then Return False
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return False
+                    Dim description = GetOrCreateSidecarDescription(doc)
+                    If description Is Nothing Then Return False
 
-                description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
-                description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
+                    description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
+                    description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
 
-                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
+                    Return WriteXmpSidecarAtomic(sidecarPath, doc)
+                End SyncLock
             Catch
                 Return False
             End Try
         End Function
 
-        ''' <summary>Schreibt den Sidecar-Inhalt atomar (temp-Datei + Move) und serialisiert über
-        ''' <see cref="_sidecarWriteLock"/>. Schützt fremde XMP-Beistelldateien vor Abschneiden bei
-        ''' Abbruch/voller Platte und vor verschränkten Schreibern.</summary>
-        Private Shared Function WriteXmpSidecarAtomic(sidecarPath As String, content As String) As Boolean
+        ''' <summary>Der Stand einer Beistelldatei in dem Augenblick, in dem ein Schreiber sie
+        ''' gelesen hat. Haengt als Anmerkung am gelesenen Dokument, damit der Schreibschritt weiss,
+        ''' worauf seine Aenderung aufsetzt.</summary>
+        Friend NotInheritable Class SidecarSnapshot
+            ''' <summary>Der Inhalt Byte fuer Byte; Nothing, wenn es die Datei beim Lesen nicht gab.</summary>
+            Public Property Bytes As Byte()
+        End Class
+
+        ''' <summary>Der Inhalt einer Beistelldatei fuer einen Schreiber, oder Nothing, wenn es sie
+        ''' nicht gibt. Jeder andere Fehler (keine Rechte, Freigabe weg) fliegt weiter: daraus darf
+        ''' kein "gibt es nicht" werden, sonst entstuende eine neue Datei ueber einer vorhandenen.</summary>
+        Friend Shared Function ReadSidecarSnapshot(sidecarPath As String) As SidecarSnapshot
+            Try
+                Return New SidecarSnapshot With {.Bytes = System.IO.File.ReadAllBytes(sidecarPath)}
+            Catch ex As System.IO.FileNotFoundException
+                Return New SidecarSnapshot()
+            Catch ex As System.IO.DirectoryNotFoundException
+                Return New SidecarSnapshot()
+            End Try
+        End Function
+
+        ''' <summary>Schreibt das Dokument einer Beistelldatei atomar (temp-Datei + Move) und
+        ''' serialisiert über <see cref="_sidecarWriteLock"/>. Schützt fremde XMP-Beistelldateien vor
+        ''' Abschneiden bei Abbruch/voller Platte und vor verschränkten Schreibern. Das Dokument
+        ''' muss aus <see cref="OpenOrCreateSidecarDocument"/> stammen: von dort traegt es den
+        ''' gelesenen Stand, gegen den <see cref="ReplaceSidecarIfUnchanged"/> prueft.</summary>
+        Private Shared Function WriteXmpSidecarAtomic(sidecarPath As String, doc As XDocument) As Boolean
+            Dim before = doc.Annotation(Of SidecarSnapshot)()
+            If before Is Nothing Then Return False
             SyncLock _sidecarWriteLock
                 Dim tempPath = sidecarPath & ".tmp"
                 Try
-                    System.IO.File.WriteAllText(tempPath, content, New UTF8Encoding(False))
-                    System.IO.File.Move(tempPath, sidecarPath, overwrite:=True)
-                    Return True
+                    System.IO.File.WriteAllText(tempPath, doc.ToString(SaveOptions.DisableFormatting), New UTF8Encoding(False))
+                    Return ReplaceSidecarIfUnchanged(tempPath, sidecarPath, before)
                 Catch
                     Try
                         If System.IO.File.Exists(tempPath) Then System.IO.File.Delete(tempPath)
                     Catch
                     End Try
                     Return False
+                End Try
+            End SyncLock
+        End Function
+
+        ''' <summary>Setzt die fertig geschriebene Nachbardatei an die Stelle der Beistelldatei,
+        ''' aber nur, wenn diese noch so dasteht, wie der Schreiber sie gelesen hat.
+        '''
+        ''' Eine XMP-Beistelldatei gehoert oft einem ANDEREN Programm, das zur selben Zeit laeuft
+        ''' (ein Entwickler, eine Bildverwaltung, ein Abgleich mit einem Server). Zwischen unserem
+        ''' Lesen und unserem Schreiben kann es sie geaendert haben; wer dann einfach ersetzt, nimmt
+        ''' dessen Aenderung zurueck, ohne dass es jemand merkt. Deshalb wird unmittelbar vor dem
+        ''' Ersetzen noch einmal gelesen und Byte fuer Byte verglichen. Weicht der Inhalt ab, ist die
+        ''' Datei inzwischen verschwunden oder ist dort, wo keine lag, eine entstanden, bleibt alles
+        ''' liegen, wie es ist, und der Schreibvorgang meldet sich als gescheitert. Die Nachbardatei
+        ''' wird in jedem Fall verbraucht oder geloescht.
+        '''
+        ''' Ein Rest bleibt: zwischen dem Vergleich und dem Umbenennen liegt noch ein Augenblick.
+        ''' Eine neue Datei entsteht dagegen ueber ein Umbenennen, das kein vorhandenes Ziel
+        ''' ersetzt, dort gibt es diesen Rest nicht.</summary>
+        Friend Shared Function ReplaceSidecarIfUnchanged(tempPath As String, sidecarPath As String,
+                                                         before As SidecarSnapshot) As Boolean
+            SyncLock _sidecarWriteLock
+                Try
+                    If before Is Nothing Then Throw New ArgumentNullException(NameOf(before))
+                    If before.Bytes Is Nothing Then
+                        Try
+                            System.IO.File.Move(tempPath, sidecarPath, overwrite:=False)
+                            Return True
+                        Catch ex As System.IO.IOException When System.IO.File.Exists(sidecarPath)
+                            DiagnosticLogService.LogAlways("Xmp.SidecarChanged",
+                                "Beistelldatei ist inzwischen entstanden, nicht ueberschrieben: " & IO.Path.GetFileName(sidecarPath))
+                            Return False
+                        End Try
+                    End If
+
+                    Dim current = ReadSidecarSnapshot(sidecarPath).Bytes
+                    If current Is Nothing OrElse Not current.SequenceEqual(before.Bytes) Then
+                        DiagnosticLogService.LogAlways("Xmp.SidecarChanged",
+                            If(current Is Nothing, "Beistelldatei ist inzwischen verschwunden, nicht neu angelegt: ",
+                               "Beistelldatei wurde inzwischen von aussen geaendert, nicht ueberschrieben: ") &
+                            IO.Path.GetFileName(sidecarPath))
+                        Return False
+                    End If
+                    System.IO.File.Move(tempPath, sidecarPath, overwrite:=True)
+                    Return True
+                Finally
+                    Try
+                        If System.IO.File.Exists(tempPath) Then System.IO.File.Delete(tempPath)
+                    Catch
+                    End Try
                 End Try
             End SyncLock
         End Function
@@ -1894,58 +1970,60 @@ Namespace Services
             Dim safeRating = Math.Max(0, Math.Min(5, rating)).ToString(CultureInfo.InvariantCulture)
 
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return False
-                Dim description = GetOrCreateSidecarDescription(doc)
-                If description Is Nothing Then Return False
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return False
+                    Dim description = GetOrCreateSidecarDescription(doc)
+                    If description Is Nothing Then Return False
 
-                description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
-                ' Eine 0 nur dort, wo schon eine Bewertung stand, die sie zuruecknimmt. Ohne Sterne im
-                ' Katalog (oft nur: noch nicht eingelesen) bekaeme eine neue Beistelldatei sonst eine
-                ' 0, die fuer andere Programme den Sternen der Bilddatei widerspricht.
-                Dim hadRating = description.Attribute(xmpNamespace + "Rating") IsNot Nothing OrElse
-                                doc.Descendants(xmpNamespace + "Rating").Any()
-                If safeRating <> "0" OrElse hadRating Then
-                    description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
-                End If
+                    description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)
+                    ' Eine 0 nur dort, wo schon eine Bewertung stand, die sie zuruecknimmt. Ohne Sterne im
+                    ' Katalog (oft nur: noch nicht eingelesen) bekaeme eine neue Beistelldatei sonst eine
+                    ' 0, die fuer andere Programme den Sternen der Bilddatei widerspricht.
+                    Dim hadRating = description.Attribute(xmpNamespace + "Rating") IsNot Nothing OrElse
+                                    doc.Descendants(xmpNamespace + "Rating").Any()
+                    If safeRating <> "0" OrElse hadRating Then
+                        description.SetAttributeValue(xmpNamespace + "Rating", safeRating)
+                    End If
 
-                ' xmp:Label: bekanntes Farbwort setzen, sonst vorhandenes Attribut entfernen (nicht raten).
-                If Not String.IsNullOrEmpty(colorLabelWord) Then
-                    description.SetAttributeValue(xmpNamespace + "Label", colorLabelWord)
-                Else
-                    description.SetAttributeValue(xmpNamespace + "Label", Nothing)
-                End If
+                    ' xmp:Label: bekanntes Farbwort setzen, sonst vorhandenes Attribut entfernen (nicht raten).
+                    If Not String.IsNullOrEmpty(colorLabelWord) Then
+                        description.SetAttributeValue(xmpNamespace + "Label", colorLabelWord)
+                    Else
+                        description.SetAttributeValue(xmpNamespace + "Label", Nothing)
+                    End If
 
-                If pickState.HasValue Then
-                    Dim xmpDmNamespace As XNamespace = "http://ns.adobe.com/xmp/1.0/DynamicMedia/"
-                    Select Case LibraryService.NormalizePickState(pickState.Value)
-                        Case 1
-                            description.SetAttributeValue(XNamespace.Xmlns + "xmpDM", xmpDmNamespace.NamespaceName)
-                            description.SetAttributeValue(xmpDmNamespace + "good", "True")
-                        Case -1
-                            description.SetAttributeValue(XNamespace.Xmlns + "xmpDM", xmpDmNamespace.NamespaceName)
-                            description.SetAttributeValue(xmpDmNamespace + "good", "False")
-                        Case Else
-                            description.SetAttributeValue(xmpDmNamespace + "good", Nothing)
-                    End Select
-                End If
+                    If pickState.HasValue Then
+                        Dim xmpDmNamespace As XNamespace = "http://ns.adobe.com/xmp/1.0/DynamicMedia/"
+                        Select Case LibraryService.NormalizePickState(pickState.Value)
+                            Case 1
+                                description.SetAttributeValue(XNamespace.Xmlns + "xmpDM", xmpDmNamespace.NamespaceName)
+                                description.SetAttributeValue(xmpDmNamespace + "good", "True")
+                            Case -1
+                                description.SetAttributeValue(XNamespace.Xmlns + "xmpDM", xmpDmNamespace.NamespaceName)
+                                description.SetAttributeValue(xmpDmNamespace + "good", "False")
+                            Case Else
+                                description.SetAttributeValue(xmpDmNamespace + "good", Nothing)
+                        End Select
+                    End If
 
-                ' dc:subject als rdf:Bag neu aufbauen (vorhandenes ersetzen); leere Liste entfernt es.
-                Dim existingSubject = description.Element(dcNamespace + "subject")
-                If existingSubject IsNot Nothing Then existingSubject.Remove()
-                Dim tagList = If(keywords, Enumerable.Empty(Of String)()).
-                    Select(Function(k) If(k, "").Trim()).Where(Function(k) k.Length > 0).
-                    Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-                If tagList.Count > 0 Then
-                    description.SetAttributeValue(XNamespace.Xmlns + "dc", dcNamespace.NamespaceName)
-                    Dim bag = New XElement(rdfNamespace + "Bag")
-                    For Each tag In tagList
-                        bag.Add(New XElement(rdfNamespace + "li", tag))
-                    Next
-                    description.Add(New XElement(dcNamespace + "subject", bag))
-                End If
+                    ' dc:subject als rdf:Bag neu aufbauen (vorhandenes ersetzen); leere Liste entfernt es.
+                    Dim existingSubject = description.Element(dcNamespace + "subject")
+                    If existingSubject IsNot Nothing Then existingSubject.Remove()
+                    Dim tagList = If(keywords, Enumerable.Empty(Of String)()).
+                        Select(Function(k) If(k, "").Trim()).Where(Function(k) k.Length > 0).
+                        Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                    If tagList.Count > 0 Then
+                        description.SetAttributeValue(XNamespace.Xmlns + "dc", dcNamespace.NamespaceName)
+                        Dim bag = New XElement(rdfNamespace + "Bag")
+                        For Each tag In tagList
+                            bag.Add(New XElement(rdfNamespace + "li", tag))
+                        Next
+                        description.Add(New XElement(dcNamespace + "subject", bag))
+                    End If
 
-                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
+                    Return WriteXmpSidecarAtomic(sidecarPath, doc)
+                End SyncLock
             Catch
                 Return False
             End Try
@@ -1977,28 +2055,30 @@ Namespace Services
             Dim xmlNamespace As XNamespace = "http://www.w3.org/XML/1998/namespace"
 
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return ""
-                Dim description = GetOrCreateSidecarDescription(doc)
-                If description Is Nothing Then Return ""
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return ""
+                    Dim description = GetOrCreateSidecarDescription(doc)
+                    If description Is Nothing Then Return ""
 
-                description.SetAttributeValue(XNamespace.Xmlns + "dc", dcNamespace.NamespaceName)
-                ' Beide Schreibweisen des alten Wertes weg, bevor der neue kommt: als Element UND
-                ' als Attribut. Bliebe eines davon stehen, laese ein Programm je nach Vorliebe den
-                ' alten Hinweis - derselbe Fehler, den es bei den Koordinaten schon gab.
-                description.SetAttributeValue(dcNamespace + "rights", Nothing)
-                For Each stale In description.Elements(dcNamespace + "rights").ToList()
-                    stale.Remove()
-                Next
+                    description.SetAttributeValue(XNamespace.Xmlns + "dc", dcNamespace.NamespaceName)
+                    ' Beide Schreibweisen des alten Wertes weg, bevor der neue kommt: als Element UND
+                    ' als Attribut. Bliebe eines davon stehen, laese ein Programm je nach Vorliebe den
+                    ' alten Hinweis - derselbe Fehler, den es bei den Koordinaten schon gab.
+                    description.SetAttributeValue(dcNamespace + "rights", Nothing)
+                    For Each stale In description.Elements(dcNamespace + "rights").ToList()
+                        stale.Remove()
+                    Next
 
-                description.Add(New XElement(dcNamespace + "rights",
-                                             New XElement(rdfNamespace + "Alt",
-                                                          New XElement(rdfNamespace + "li",
-                                                                       New XAttribute(xmlNamespace + "lang", "x-default"),
-                                                                       text))))
+                    description.Add(New XElement(dcNamespace + "rights",
+                                                 New XElement(rdfNamespace + "Alt",
+                                                              New XElement(rdfNamespace + "li",
+                                                                           New XAttribute(xmlNamespace + "lang", "x-default"),
+                                                                           text))))
 
-                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
-                Return sidecarPath
+                    If Not WriteXmpSidecarAtomic(sidecarPath, doc) Then Return ""
+                    Return sidecarPath
+                End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.WriteXmpCopyrightSidecar", ex)
                 Return ""
@@ -2016,23 +2096,25 @@ Namespace Services
                 sidecarPath = IO.Path.ChangeExtension(imagePath, ".xmp")
             End If
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                Dim description = GetOrCreateSidecarDescription(doc)
-                If description Is Nothing Then Return ""
-                Dim exifNs As XNamespace = "http://ns.adobe.com/exif/1.0/"
-                Dim xmpNs As XNamespace = "http://ns.adobe.com/xap/1.0/"
-                Dim iso = capturedAt.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)
-                description.SetAttributeValue(XNamespace.Xmlns + "exif", exifNs.NamespaceName)
-                description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNs.NamespaceName)
-                description.SetAttributeValue(exifNs + "DateTimeOriginal", iso)
-                description.SetAttributeValue(exifNs + "DateTimeDigitized", iso)
-                description.SetAttributeValue(xmpNs + "CreateDate", iso)
-                ' "Geaendert am" traegt DENSELBEN Wert. Wer eine falsch gestellte Kamerauhr
-                ' nachzieht, will das Bild danach an einer Stelle in der Zeit haben, nicht an zwei -
-                ' und die Galerie kann nach beiden sortieren.
-                description.SetAttributeValue(xmpNs + "ModifyDate", iso)
-                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
-                Return sidecarPath
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    Dim description = GetOrCreateSidecarDescription(doc)
+                    If description Is Nothing Then Return ""
+                    Dim exifNs As XNamespace = "http://ns.adobe.com/exif/1.0/"
+                    Dim xmpNs As XNamespace = "http://ns.adobe.com/xap/1.0/"
+                    Dim iso = capturedAt.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture)
+                    description.SetAttributeValue(XNamespace.Xmlns + "exif", exifNs.NamespaceName)
+                    description.SetAttributeValue(XNamespace.Xmlns + "xmp", xmpNs.NamespaceName)
+                    description.SetAttributeValue(exifNs + "DateTimeOriginal", iso)
+                    description.SetAttributeValue(exifNs + "DateTimeDigitized", iso)
+                    description.SetAttributeValue(xmpNs + "CreateDate", iso)
+                    ' "Geaendert am" traegt DENSELBEN Wert. Wer eine falsch gestellte Kamerauhr
+                    ' nachzieht, will das Bild danach an einer Stelle in der Zeit haben, nicht an zwei -
+                    ' und die Galerie kann nach beiden sortieren.
+                    description.SetAttributeValue(xmpNs + "ModifyDate", iso)
+                    If Not WriteXmpSidecarAtomic(sidecarPath, doc) Then Return ""
+                    Return sidecarPath
+                End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.WriteXmpCaptureDateSidecar", ex)
                 Return ""
@@ -2100,17 +2182,19 @@ Namespace Services
             End If
 
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return ""
-                Dim target = GetOrCreateSidecarDescription(doc)
-                If target Is Nothing Then Return ""
-                Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                Dim changed = edit(doc.Descendants(rdfNamespace + "Description").ToList(), target)
-                ' Eine vorhandene Datei, an der sich nichts aendert, bleibt Byte fuer Byte liegen;
-                ' eine neue wird nur angelegt, wenn wirklich etwas hineinkommt.
-                If Not changed Then Return If(existed, sidecarPath, "")
-                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
-                Return sidecarPath
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return ""
+                    Dim target = GetOrCreateSidecarDescription(doc)
+                    If target Is Nothing Then Return ""
+                    Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                    Dim changed = edit(doc.Descendants(rdfNamespace + "Description").ToList(), target)
+                    ' Eine vorhandene Datei, an der sich nichts aendert, bleibt Byte fuer Byte liegen;
+                    ' eine neue wird nur angelegt, wenn wirklich etwas hineinkommt.
+                    If Not changed Then Return If(existed, sidecarPath, "")
+                    If Not WriteXmpSidecarAtomic(sidecarPath, doc) Then Return ""
+                    Return sidecarPath
+                End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.EditXmpSidecar", ex)
                 Return ""
@@ -2334,22 +2418,24 @@ Namespace Services
 
             Dim dcNamespace As XNamespace = "http://purl.org/dc/elements/1.1/"
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return False
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return False
 
-                Dim removed = False
-                For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
-                    If description.Attribute(dcNamespace + "rights") IsNot Nothing Then
-                        description.SetAttributeValue(dcNamespace + "rights", Nothing)
-                        removed = True
-                    End If
-                    For Each child In description.Elements(dcNamespace + "rights").ToList()
-                        child.Remove()
-                        removed = True
+                    Dim removed = False
+                    For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
+                        If description.Attribute(dcNamespace + "rights") IsNot Nothing Then
+                            description.SetAttributeValue(dcNamespace + "rights", Nothing)
+                            removed = True
+                        End If
+                        For Each child In description.Elements(dcNamespace + "rights").ToList()
+                            child.Remove()
+                            removed = True
+                        Next
                     Next
-                Next
-                If Not removed Then Return False
-                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
+                    If Not removed Then Return False
+                    Return WriteXmpSidecarAtomic(sidecarPath, doc)
+                End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.RemoveXmpCopyrightSidecar", ex)
                 Return False
@@ -2380,39 +2466,41 @@ Namespace Services
             Dim exifNamespace As XNamespace = "http://ns.adobe.com/exif/1.0/"
 
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return ""
-                Dim description = GetOrCreateSidecarDescription(doc)
-                If description Is Nothing Then Return ""
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return ""
+                    Dim description = GetOrCreateSidecarDescription(doc)
+                    If description Is Nothing Then Return ""
 
-                description.SetAttributeValue(XNamespace.Xmlns + "exif", exifNamespace.NamespaceName)
-                description.SetAttributeValue(exifNamespace + "GPSVersionID", "2.3.0.0")
-                description.SetAttributeValue(exifNamespace + "GPSLatitude", FormatXmpCoordinate(latitude, "N", "S"))
-                description.SetAttributeValue(exifNamespace + "GPSLongitude", FormatXmpCoordinate(longitude, "E", "W"))
-                description.SetAttributeValue(exifNamespace + "GPSMapDatum", "WGS-84")
+                    description.SetAttributeValue(XNamespace.Xmlns + "exif", exifNamespace.NamespaceName)
+                    description.SetAttributeValue(exifNamespace + "GPSVersionID", "2.3.0.0")
+                    description.SetAttributeValue(exifNamespace + "GPSLatitude", FormatXmpCoordinate(latitude, "N", "S"))
+                    description.SetAttributeValue(exifNamespace + "GPSLongitude", FormatXmpCoordinate(longitude, "E", "W"))
+                    description.SetAttributeValue(exifNamespace + "GPSMapDatum", "WGS-84")
 
-                If altitudeMeters.HasValue AndAlso Not Double.IsNaN(altitudeMeters.Value) AndAlso
-                   Not Double.IsInfinity(altitudeMeters.Value) Then
-                    ' Unter dem Meeresspiegel sagt das Vorzeichenfeld, der Betrag bleibt positiv.
-                    Dim centimeters = CLng(Math.Round(Math.Abs(altitudeMeters.Value) * 100.0))
-                    description.SetAttributeValue(exifNamespace + "GPSAltitudeRef", If(altitudeMeters.Value < 0.0, "1", "0"))
-                    description.SetAttributeValue(exifNamespace + "GPSAltitude",
-                                                  centimeters.ToString(CultureInfo.InvariantCulture) & "/100")
-                Else
-                    description.SetAttributeValue(exifNamespace + "GPSAltitudeRef", Nothing)
-                    description.SetAttributeValue(exifNamespace + "GPSAltitude", Nothing)
-                End If
+                    If altitudeMeters.HasValue AndAlso Not Double.IsNaN(altitudeMeters.Value) AndAlso
+                       Not Double.IsInfinity(altitudeMeters.Value) Then
+                        ' Unter dem Meeresspiegel sagt das Vorzeichenfeld, der Betrag bleibt positiv.
+                        Dim centimeters = CLng(Math.Round(Math.Abs(altitudeMeters.Value) * 100.0))
+                        description.SetAttributeValue(exifNamespace + "GPSAltitudeRef", If(altitudeMeters.Value < 0.0, "1", "0"))
+                        description.SetAttributeValue(exifNamespace + "GPSAltitude",
+                                                      centimeters.ToString(CultureInfo.InvariantCulture) & "/100")
+                    Else
+                        description.SetAttributeValue(exifNamespace + "GPSAltitudeRef", Nothing)
+                        description.SetAttributeValue(exifNamespace + "GPSAltitude", Nothing)
+                    End If
 
-                ' Dieselben Felder koennen als KINDELEMENT dastehen (so schreibt exiftool). Blieben
-                ' sie stehen, laese ein Programm je nach Vorliebe den alten Wert.
-                For Each name In {"GPSVersionID", "GPSLatitude", "GPSLongitude", "GPSMapDatum", "GPSAltitude", "GPSAltitudeRef"}
-                    For Each stale In description.Elements(exifNamespace + name).ToList()
-                        stale.Remove()
+                    ' Dieselben Felder koennen als KINDELEMENT dastehen (so schreibt exiftool). Blieben
+                    ' sie stehen, laese ein Programm je nach Vorliebe den alten Wert.
+                    For Each name In {"GPSVersionID", "GPSLatitude", "GPSLongitude", "GPSMapDatum", "GPSAltitude", "GPSAltitudeRef"}
+                        For Each stale In description.Elements(exifNamespace + name).ToList()
+                            stale.Remove()
+                        Next
                     Next
-                Next
 
-                If Not WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting)) Then Return ""
-                Return sidecarPath
+                    If Not WriteXmpSidecarAtomic(sidecarPath, doc) Then Return ""
+                    Return sidecarPath
+                End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.WriteXmpGpsSidecar", ex)
                 Return ""
@@ -2432,25 +2520,27 @@ Namespace Services
             Dim names = {"GPSVersionID", "GPSLatitude", "GPSLongitude", "GPSMapDatum",
                          "GPSAltitude", "GPSAltitudeRef", "GPSTimeStamp", "GPSDateStamp"}
             Try
-                Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
-                If doc Is Nothing Then Return False
+                SyncLock _sidecarWriteLock
+                    Dim doc = OpenOrCreateSidecarDocument(sidecarPath)
+                    If doc Is Nothing Then Return False
 
-                Dim removed = False
-                For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
-                    For Each name In names
-                        If description.Attribute(exifNamespace + name) IsNot Nothing Then
-                            description.SetAttributeValue(exifNamespace + name, Nothing)
-                            removed = True
-                        End If
-                        For Each child In description.Elements(exifNamespace + name).ToList()
-                            child.Remove()
-                            removed = True
+                    Dim removed = False
+                    For Each description In doc.Descendants().Where(Function(e) e.Name.LocalName = "Description").ToList()
+                        For Each name In names
+                            If description.Attribute(exifNamespace + name) IsNot Nothing Then
+                                description.SetAttributeValue(exifNamespace + name, Nothing)
+                                removed = True
+                            End If
+                            For Each child In description.Elements(exifNamespace + name).ToList()
+                                child.Remove()
+                                removed = True
+                            Next
                         Next
                     Next
-                Next
 
-                If Not removed Then Return False
-                Return WriteXmpSidecarAtomic(sidecarPath, doc.ToString(SaveOptions.DisableFormatting))
+                    If Not removed Then Return False
+                    Return WriteXmpSidecarAtomic(sidecarPath, doc)
+                End SyncLock
             Catch ex As Exception
                 DiagnosticLogService.LogException("Exif.RemoveXmpGpsSidecar", ex)
                 Return False
@@ -2473,24 +2563,36 @@ Namespace Services
 
         ''' <summary>Das XMP-Dokument einer Beistelldatei: das vorhandene einlesen, sonst ein leeres
         ''' Geruest. Nothing, wenn eine vorhandene Datei kein lesbares XML ist - die wird dann NICHT
-        ''' ueberschrieben, sondern in Ruhe gelassen.</summary>
+        ''' ueberschrieben, sondern in Ruhe gelassen.
+        '''
+        ''' Das Dokument traegt den gelesenen Stand als <see cref="SidecarSnapshot"/> mit sich; der
+        ''' Schreibschritt ersetzt die Datei nur, wenn sie dann noch genau so dasteht. Gelesen wird
+        ''' deshalb EINMAL als Bytes und daraus der Text, nicht zweimal von der Platte.</summary>
         Private Shared Function OpenOrCreateSidecarDocument(sidecarPath As String) As XDocument
             Dim xNamespace As XNamespace = "adobe:ns:meta/"
             Dim rdfNamespace As XNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
             Dim xmpNamespace As XNamespace = "http://ns.adobe.com/xap/1.0/"
 
-            If System.IO.File.Exists(sidecarPath) Then
-                Return XDocument.Parse(System.IO.File.ReadAllText(sidecarPath, Encoding.UTF8), LoadOptions.PreserveWhitespace)
+            Dim before = ReadSidecarSnapshot(sidecarPath)
+            Dim doc As XDocument
+            If before.Bytes IsNot Nothing Then
+                ' Wie File.ReadAllText mit UTF-8 als Vorgabe: eine Bytereihenfolge-Marke geht vor.
+                Using reader As New System.IO.StreamReader(New System.IO.MemoryStream(before.Bytes), Encoding.UTF8,
+                                                           detectEncodingFromByteOrderMarks:=True)
+                    doc = XDocument.Parse(reader.ReadToEnd(), LoadOptions.PreserveWhitespace)
+                End Using
+            Else
+                doc = New XDocument(
+                    New XDeclaration("1.0", "utf-8", "yes"),
+                    New XElement(xNamespace + "xmpmeta",
+                        New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
+                        New XElement(rdfNamespace + "RDF",
+                            New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
+                            New XElement(rdfNamespace + "Description",
+                                New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
             End If
-
-            Return New XDocument(
-                New XDeclaration("1.0", "utf-8", "yes"),
-                New XElement(xNamespace + "xmpmeta",
-                    New XAttribute(XNamespace.Xmlns + "x", xNamespace.NamespaceName),
-                    New XElement(rdfNamespace + "RDF",
-                        New XAttribute(XNamespace.Xmlns + "rdf", rdfNamespace.NamespaceName),
-                        New XElement(rdfNamespace + "Description",
-                            New XAttribute(XNamespace.Xmlns + "xmp", xmpNamespace.NamespaceName)))))
+            doc.AddAnnotation(before)
+            Return doc
         End Function
 
         ''' <summary>Der rdf:Description-Knoten, in den die Werte gehoeren; fehlende Ebenen werden

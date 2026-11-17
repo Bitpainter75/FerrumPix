@@ -132,7 +132,10 @@ Namespace Services
                         ToList()
             SyncLock ExifService._sidecarWriteLock
                 Try
-                    Dim existed = File.Exists(sidecarPath)
+                    ' Der gelesene Stand, gegen den das Ersetzen am Ende prueft (siehe
+                    ' ExifService.ReplaceSidecarIfUnchanged): gelesen wird einmal als Bytes.
+                    Dim snapshot = ExifService.ReadSidecarSnapshot(sidecarPath)
+                    Dim existed = snapshot.Bytes IsNot Nothing
                     ' Ohne Datei und ohne Namen gibt es nichts zu schreiben; eine leere Beistelldatei
                     ' anzulegen waere eine Datei im Bestand ohne Inhalt.
                     If Not existed AndAlso named.Count = 0 Then Return True
@@ -140,7 +143,14 @@ Namespace Services
                     ' danach Knoten fuer Knoten so da wie vorher. Zeichengleich bleibt nicht alles,
                     ' was der Schreiber neu setzt: ein leeres Element bekommt vor "/>" ein
                     ' Leerzeichen, Attribute stehen in doppelten Anfuehrungszeichen.
-                    Dim doc = If(existed, XDocument.Load(sidecarPath, LoadOptions.PreserveWhitespace), NewSidecar())
+                    Dim doc As XDocument
+                    If existed Then
+                        Using content As New MemoryStream(snapshot.Bytes)
+                            doc = XDocument.Load(content, LoadOptions.PreserveWhitespace)
+                        End Using
+                    Else
+                        doc = NewSidecar()
+                    End If
 
                     Dim changed = False
                     Dim regionsElement = doc.Descendants(MwgRsNs + "Regions").FirstOrDefault()
@@ -203,8 +213,7 @@ Namespace Services
                     ' liesse sonst eine halbe Beistelldatei zurueck - mitsamt Bewertung und Stichworten.
                     Dim temp = sidecarPath & ".neu"
                     doc.Save(temp, SaveOptions.DisableFormatting)
-                    File.Move(temp, sidecarPath, overwrite:=True)
-                    Return True
+                    Return ExifService.ReplaceSidecarIfUnchanged(temp, sidecarPath, snapshot)
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Xmp.RegionenSchreiben", ex)
                     Return False

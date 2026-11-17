@@ -1,6 +1,6 @@
 # Nikon-Objektivkennungen: sieben Kennbytes aus dem LensData-Block und das LensType-Byte, als Hex.
-# Quelle: ExifTool 13.63, lib/Image/ExifTool/Nikon.pm, Tabelle %nikonLensIDs
-# SHA-256 der Quelldatei: 8cb754e109e41a7d108359b841db9128f6076760b3e4e10299bf8414067b1edd
+# Quelle: ExifTool 13.64, lib/Image/ExifTool/Nikon.pm, Tabelle %nikonLensIDs
+# SHA-256 der Quelldatei: 1f3c4fcfb4898e331a113bb8a6b320c93e727a6b9572cdb6a367e648c7eb28ce
 # ExifTool: Copyright 2003-2026 Phil Harvey. Freie Software unter denselben Bedingungen wie Perl
 # (Artistic License oder GNU GPL); FerrumPix verwendet die Tabelle unter der GNU GPL.
 # 603 Kennungen mit genau einem Objektiv. Mehrdeutige fehlen mit Absicht.
