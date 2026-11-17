@@ -13,8 +13,7 @@
   section Extensions. As soon as one is loaded, the editor shows the Extensions tool in the
   Adjustments group, with one group of sliders per extension. Pictures keep the settings of an
   extension even where it is not installed. How to write one is described in
-  docs/EXTENSIONS.md, together with two examples.
-  
+  docs/EXTENSIONS.md, together with four examples.
 - Extensions can offer a choice from a list and a help text for each control, and can work with
   the position in the picture, for vignettes and gradients of their own. A fourth example shows
   this: a light falloff, round or from one side.
