@@ -1,3 +1,10 @@
+## Unreleased
+
+### Changes
+
+- The filter of the gallery can now narrow the pictures down to a period of the shooting date,
+  from a day, up to a day, or both. It sits below the color labels.
+
 ## 0.9.86
 
 ### Changes

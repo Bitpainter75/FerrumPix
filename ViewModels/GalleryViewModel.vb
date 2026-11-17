@@ -1070,6 +1070,75 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' ── Filter nach dem Aufnahmedatum: ein Zeitraum von, bis oder beides ─────────────
+        ' Gemessen wird das Aufnahmedatum der Kachel (aus dem Katalog), in ganzen Tagen: "bis"
+        ' schliesst seinen Tag ein. Ein Bild ohne Aufnahmedatum faellt aus jedem Zeitraum heraus.
+        ' Gemerkt wird der Zeitraum nur fuer die Sitzung.
+        Private _filterDateFrom As DateTimeOffset?
+        Private _filterDateTo As DateTimeOffset?
+
+        Public Property FilterDateFrom As DateTimeOffset?
+            Get
+                Return _filterDateFrom
+            End Get
+            Set(value As DateTimeOffset?)
+                If Nullable.Equals(_filterDateFrom, value) Then Return
+                Me.RaiseAndSetIfChanged(_filterDateFrom, value)
+                OnDateFilterChanged()
+            End Set
+        End Property
+
+        Public Property FilterDateTo As DateTimeOffset?
+            Get
+                Return _filterDateTo
+            End Get
+            Set(value As DateTimeOffset?)
+                If Nullable.Equals(_filterDateTo, value) Then Return
+                Me.RaiseAndSetIfChanged(_filterDateTo, value)
+                OnDateFilterChanged()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFilterDateAll As Boolean
+            Get
+                Return Not _filterDateFrom.HasValue AndAlso Not _filterDateTo.HasValue
+            End Get
+        End Property
+
+        ''' <summary>Die Ueberschrift der Gruppe, aus dem vorhandenen Text und gross geschrieben wie
+        ''' die uebrigen Gruppen des Filters.</summary>
+        Public ReadOnly Property DateFilterHeading As String
+            Get
+                Return LocalizationService.T("Aufnahmedatum").ToUpper(Globalization.CultureInfo.CurrentUICulture)
+            End Get
+        End Property
+
+        ''' <summary>"Alle": nimmt den Zeitraum zurueck.</summary>
+        Public Sub ClearDateFilter()
+            If IsFilterDateAll Then Return
+            _filterDateFrom = Nothing
+            _filterDateTo = Nothing
+            Me.RaisePropertyChanged(NameOf(FilterDateFrom))
+            Me.RaisePropertyChanged(NameOf(FilterDateTo))
+            OnDateFilterChanged()
+        End Sub
+
+        Private Sub OnDateFilterChanged()
+            Me.RaisePropertyChanged(NameOf(IsFilterDateAll))
+            Me.RaisePropertyChanged(NameOf(HasActiveFilter))
+            Me.RaisePropertyChanged(NameOf(FilterLabel))
+            FilterAndSortInteractive()
+        End Sub
+
+        Private Function PassesDateFilter(item As ImageItem) As Boolean
+            If item.IsFolder Then Return True
+            If Not item.ExifDateTaken.HasValue Then Return False
+            Dim day = item.ExifDateTaken.Value.Date
+            If _filterDateFrom.HasValue AndAlso day < _filterDateFrom.Value.Date Then Return False
+            If _filterDateTo.HasValue AndAlso day > _filterDateTo.Value.Date Then Return False
+            Return True
+        End Function
+
         ' ── Filter nach Aufnahmedaten: Kamera, Objektiv, Brennweite, ISO ──────────────────
         ' Vier Gruppen im Filter der Galerie. Innerhalb einer Gruppe gilt ODER (zwei Kameras
         ' gewaehlt: Bilder der einen oder der anderen), zwischen den Gruppen UND. Angeboten wird,
@@ -1300,7 +1369,8 @@ Namespace ViewModels
             Get
                 Return _filterFavorite <> "All" OrElse _filterRatings.Count > 0 OrElse
                        _filterFileType <> "All" OrElse _filterColorLabels.Count > 0 OrElse
-                       _filterRejected <> "Show" OrElse _filterEdited <> "All" OrElse HasShotFilter OrElse IsSimilarView
+                       _filterRejected <> "Show" OrElse _filterEdited <> "All" OrElse HasShotFilter OrElse IsSimilarView OrElse
+                       Not IsFilterDateAll
             End Get
         End Property
 
@@ -1325,6 +1395,11 @@ Namespace ViewModels
                 keys.Clear()
             Next
             RefreshShotFilterOptions()
+            _filterDateFrom = Nothing
+            _filterDateTo = Nothing
+            For Each name In {NameOf(FilterDateFrom), NameOf(FilterDateTo), NameOf(IsFilterDateAll)}
+                Me.RaisePropertyChanged(name)
+            Next
             ' Die Ansicht der aehnlichen Bilder wird im Filter eingeschaltet und hier mit beendet.
             If IsSimilarView Then CloseSimilarView()
             SaveFileBrowserSettings()
@@ -11655,6 +11730,7 @@ Namespace ViewModels
 
             ' Kamera, Objektiv, Brennweite, ISO (siehe PassesShotFilter).
             If HasShotFilter Then filtered = filtered.Where(Function(i) PassesShotFilter(i))
+            If Not IsFilterDateAll Then filtered = filtered.Where(Function(i) PassesDateFilter(i))
 
             Return filtered.ToList()
         End Function

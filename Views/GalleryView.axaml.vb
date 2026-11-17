@@ -344,6 +344,11 @@ Namespace Views
             Return Nothing
         End Function
 
+        ''' <summary>"Alle" beim Aufnahmedatum: nimmt den Zeitraum zurueck.</summary>
+        Private Sub OnDateFilterAllClick(sender As Object, e As RoutedEventArgs)
+            GetVm()?.ClearDateFilter()
+        End Sub
+
         ''' <summary>Ein Wert im Filter nach Aufnahmedaten (Kamera, Objektiv, Brennweite, ISO): an-
         ''' oder abwaehlen.</summary>
         Private Sub OnShotFilterItemClick(sender As Object, e As RoutedEventArgs)

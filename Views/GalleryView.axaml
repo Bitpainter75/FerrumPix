@@ -878,6 +878,33 @@
                                                 </Grid>
                                             </Button>
                                         </StackPanel>
+
+                                        <Separator Margin="4,6"/>
+
+                                        <!-- AUFNAHMEDATUM: ein Zeitraum von, bis oder beides, in ganzen Tagen. "Alle"
+                                             nimmt ihn zurueck. Bilder ohne Aufnahmedatum fallen aus jedem Zeitraum. -->
+                                        <TextBlock Text="{Binding DateFilterHeading}" Classes="no-translate" FontSize="{DynamicResource FP.Font.Caption}" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource FP.Text.Muted}"
+                                                   Margin="10,4,10,4"/>
+                                        <Button Classes="ghost" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Stretch" Padding="10,8"
+                                                Click="OnDateFilterAllClick">
+                                            <Grid ColumnDefinitions="*,20">
+                                                <TextBlock Text="Alle" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="✓" IsVisible="{Binding IsFilterDateAll}"
+                                                           Foreground="{DynamicResource FP.Accent}" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                            </Grid>
+                                        </Button>
+                                        <!-- Dasselbe Datumsfeld wie im Dialog "Aufnahmedatum setzen" (capture-date-picker):
+                                             Feldflaeche, Rahmen und Hoehe wie die Eingabefelder der Anwendung. -->
+                                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="8" ColumnSpacing="12" Margin="10,2,10,6">
+                                            <TextBlock Text="Von" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                            <DatePicker Grid.Column="1" Classes="capture-date-picker"
+                                                        SelectedDate="{Binding FilterDateFrom, Mode=TwoWay}"/>
+                                            <TextBlock Grid.Row="1" Text="Bis" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
+                                            <DatePicker Grid.Row="1" Grid.Column="1" Classes="capture-date-picker"
+                                                        SelectedDate="{Binding FilterDateTo, Mode=TwoWay}"/>
+                                        </Grid>
                                         </StackPanel>
                                         <Border Width="1" Background="{DynamicResource FP.Border.Normal}" Margin="0,4"/>
                                         <StackPanel Spacing="1" Width="272">
