@@ -41,6 +41,8 @@ The native FerrumPix tools adapt Spoilerhead's ART CTL ports. They process in th
 
 Grain is added before Fat Toni so it receives the same toning as the image, as grain would in a toned darkroom print, rather than sitting on top as a neutral texture.
 
+With GPU image processing enabled, both tools can run on the graphics card alongside grain. The CPU path remains available automatically when GPU processing is unavailable, and continues to handle 16-bit output.
+
 Start with a finished color edit. Enable Silicon Bonk with Residual Color at zero, adjust Hue/Luminance, then refine Midpoint and Contrast. Enable Fat Toni if you want toning. Finally, try a little Residual Color for a richer, partially colored result. Early users developed this workflow by refining the monochrome conversion and toning together, then letting a little original color shine through.
 
 ### Saved settings

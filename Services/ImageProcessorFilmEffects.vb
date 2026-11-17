@@ -114,7 +114,7 @@ Namespace Services
         Private Shared Function FatToniBlend(tone As Double, value As Double, contrast As Double) As Double
             Dim screen = 1.0 - (1.0 - tone) * (1.0 - value)
             Dim overlay = value * screen + (1.0 - value) * tone * value
-            ' Contrast intentionally extrapolates above 100, matching the supplied CTL.
+            ' Blend the CTL's soft mix and overlay using the shared 0..100 contrast range.
             Return overlay * contrast + FilmClip(value + tone - 0.5) * (1.0 - contrast)
         End Function
 
