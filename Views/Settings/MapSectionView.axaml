@@ -5,14 +5,18 @@
              xmlns:vm="clr-namespace:FerrumPix.ViewModels"
              xmlns:views="clr-namespace:FerrumPix.Views"
              x:Class="FerrumPix.Views.Settings.MapSectionView">
+                    <!-- Aufbau wie die uebrigen Bereiche: links Beschriftung, rechts das Bedienelement.
+                         Das Feld des Kachelservers fuellt die Zeile zwischen Beschriftung und Knopf,
+                         ohne Hoechstbreite: ein Textfeld mit Hoechstbreite und Stretch setzt Avalonia
+                         mittig in die freie Spalte. -->
                     <StackPanel Spacing="14">
                         <StackPanel Spacing="2">
                             <TextBlock Text="Kartenansicht" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
-                            <TextBlock Text="Zeigt die Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet, ab Werk von OpenStreetMap; der Server erfährt dabei, welchen Ausschnitt Sie ansehen. Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap" MaxWidth="660" HorizontalAlignment="Left"/>
+                            <TextBlock Text="Zeigt die Fotos in der Galerie auf einer Karte. Die Kartenkacheln kommen aus dem Internet, ab Werk von OpenStreetMap; der Server erfährt dabei, welchen Ausschnitt Sie ansehen. Einmal geladene Kacheln bleiben auf diesem Gerät gespeichert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Text="Einschalten" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
+                            <TextBlock Text="Einschalten" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" Margin="0,0,40,0"/>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding MapViewEnabled}"
                                           OnContent=""
@@ -20,15 +24,15 @@
                                           VerticalAlignment="Center"/>
                         </Grid>
 
-                        <StackPanel Spacing="8" IsVisible="{Binding MapViewEnabled}">
-                            <TextBlock Text="Kachelserver" FontSize="{DynamicResource FP.Font.Body}"/>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Classes="no-translate"
+                        <StackPanel Spacing="6" IsVisible="{Binding MapViewEnabled}">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Text="Kachelserver" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center" Margin="0,0,24,0"/>
+                                <TextBox Grid.Column="1" Classes="no-translate"
                                          Text="{Binding MapTileUrl, UpdateSourceTrigger=LostFocus}"
-                                         MaxWidth="660"
                                          HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Center"
                                          FontSize="{DynamicResource FP.Font.Body}"/>
-                                <Button Grid.Column="1" Classes="ghost" Padding="12,7" Margin="8,0,0,0"
+                                <Button Grid.Column="2" Classes="ghost" Padding="12,7" Margin="8,0,0,0" VerticalAlignment="Center"
                                         Command="{Binding ResetMapTileUrlCommand}">Zurücksetzen</Button>
                             </Grid>
                             <TextBlock Classes="no-translate"
@@ -36,24 +40,27 @@
                                        IsVisible="{Binding MapTileUrlError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                        Foreground="{DynamicResource FP.Accent}"
                                        FontSize="{DynamicResource FP.Font.Body}"
-                                       TextWrapping="Wrap"/>
+                                       TextWrapping="Wrap"
+                                       HorizontalAlignment="Right"/>
                         </StackPanel>
 
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Kartenspeicher" FontSize="{DynamicResource FP.Font.Body}"/>
-                            <SelectableTextBlock Classes="no-translate"
-                                                 Text="{Binding MapCacheFolder}"
-                                                 Foreground="{DynamicResource FP.Text.Secondary}"
-                                                 FontSize="{DynamicResource FP.Font.Body}"
-                                                 TextWrapping="Wrap"/>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Classes="ghost" Padding="12,7" Command="{Binding ClearMapCacheCommand}">Cache leeren</Button>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Kartenspeicher" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <SelectableTextBlock Classes="no-translate"
+                                                     Text="{Binding MapCacheFolder}"
+                                                     Foreground="{DynamicResource FP.Text.Secondary}"
+                                                     FontSize="{DynamicResource FP.Font.Body}"
+                                                     TextWrapping="Wrap"/>
                                 <TextBlock Classes="no-translate"
                                            Text="{Binding MapCacheMessage}"
-                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding MapCacheMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                            Foreground="{DynamicResource FP.Text.Secondary}"
-                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                                           FontSize="{DynamicResource FP.Font.Body}"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
-                        </StackPanel>
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                    Command="{Binding ClearMapCacheCommand}">Cache leeren</Button>
+                        </Grid>
                     </StackPanel>
 </UserControl>

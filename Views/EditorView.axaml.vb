@@ -2588,25 +2588,10 @@ Namespace Views
                 Return
             End If
 
-            ' Im Trackpad-Modus ist Ziehen auf einem Bild, das größer als die Bühne ist, das
-            ' direkte Verschieben. Ein Modifikator hält die gewöhnliche Werkzeug-Geste verfügbar:
-            ' Umschalt war das bisher schon; Strg und Alt sind es jetzt ebenso, weil sie einen
-            ' Pinselzug führen können.
-            If IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
-               Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
-               Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) AndAlso
-               vm IsNot Nothing AndAlso CanTrackpadPan(canvas, vm) Then
-                Dim pos = e.GetPosition(canvas)
-                _panStartX = pos.X
-                _panStartY = pos.Y
-                _panStartOffsetX = _panX
-                _panStartOffsetY = _panY
-                _isPanDragging = True
-                e.Pointer.Capture(canvas)
-                e.Handled = True
-                Return
-            End If
-
+            ' Verschoben wird nur über den Knopf Verschieben, die LEERTASTE oder die rechte
+            ' Maustaste, auch im Trackpad-Modus. Machte der Trackpad-Modus jeden Zug auf einem
+            ' vergrößerten Bild zum Verschieben, kam dort kein Klick mehr bei Auswahl und
+            ' Werkzeugen an, und der Knopf änderte nichts.
             If _isPanMode Then
                 Dim pos = e.GetPosition(canvas)
                 _panStartX = pos.X
@@ -8177,13 +8162,6 @@ Namespace Views
         Private Function IsTrackpadMode() As Boolean
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             Return mainVm IsNot Nothing AndAlso mainVm.Settings IsNot Nothing AndAlso mainVm.Settings.TrackpadMode
-        End Function
-
-        Private Function CanTrackpadPan(canvas As Canvas, vm As EditorViewModel) As Boolean
-            Dim displaySize = GetEffectiveDisplaySize(vm)
-            Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
-            Return displaySize.Width * scale > canvas.Bounds.Width + 1 OrElse
-                   displaySize.Height * scale > canvas.Bounds.Height + 1
         End Function
 
         ''' <summary>Wie im Viewer: beim Oeffnen des Tooltips die Katalogwerte fuer genau dieses

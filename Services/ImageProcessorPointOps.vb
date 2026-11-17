@@ -1215,21 +1215,45 @@ Namespace Services
         ''' Darunter wird ein Verlauf so flach, dass er im 8-Bit-Bild zur Flaeche wird.</summary>
         Private Const ToneZoneMinSlope As Double = 0.2
 
-        ''' <summary>Gegenseitige Daempfung von Lichter und Tiefen. Gesetzt zusammen verliert jeder
-        ''' der beiden beim Referenzprogramm einen Teil seiner Wirkung, um so mehr, je groesser der
-        ''' andere Betrag gegen den eigenen ist. Gemessen mit Diagnostics/Reglereichung/daempfung.py
-        ''' an 57 Bildern (Lichter/Tiefen -50/+50, -100/+100, -100/+50, -50/+100, +50/-50) und den
-        ''' Werten eines Kanalkurven-Presets an 27 Bildern: Lichter verlieren 10 bis 42 %, Tiefen 6 bis 34 %, wir
-        ''' vorher 1 bis 6 %. Angepasst als Anteil je Verhaeltnis der Betraege, gedeckelt.</summary>
+        ''' <summary>Gegenseitige Daempfung von Lichter und Tiefen in GEGENSINNIGER Stellung. Gesetzt
+        ''' zusammen verliert jeder der beiden beim Referenzprogramm einen Teil seiner Wirkung, um so
+        ''' mehr, je groesser der andere Betrag gegen den eigenen ist. Gemessen mit
+        ''' Diagnostics/Reglereichung/daempfung.py an 57 Bildern (Lichter/Tiefen -50/+50, -100/+100,
+        ''' -100/+50, -50/+100, +50/-50) und den Werten eines Kanalkurven-Presets an 27 Bildern: Lichter
+        ''' verlieren 10 bis 42 %, Tiefen 6 bis 34 %, wir vorher 1 bis 6 %. Angepasst als Anteil je
+        ''' Verhaeltnis der Betraege, gedeckelt.</summary>
         Private Const HighlightsDampingPerRatio As Double = 0.24
         Private Const ShadowsDampingPerRatio As Double = 0.19
         Private Const ToneZoneDampingMax As Double = 0.6
+        ''' <summary>Gegenseitige Verstaerkung in GLEICHSINNIGER Stellung: beide heben oder beide senken,
+        ''' dann gewinnt jeder beim Referenzprogramm Wirkung dazu, statt sie zu verlieren. Gemessen mit
+        ''' daempfung.py an denselben 57 Bildern: bei gleichen Betraegen (+50/+50 bis -100/-100)
+        ''' gewinnen Lichter 29 bis 40 %, Tiefen 22 bis 37 %; bei ungleichen (+100/+50, +50/+100,
+        ''' -100/-50, -50/-100) beide nur 9 bis 21 %. Die Verstaerkung waechst deshalb mit dem
+        ''' Verhaeltnis des kleineren zum groesseren Betrag, fuer beide Regler gleich. Je Richtung eigene
+        ''' Werte, weil beim Senken die Lichter mehr gewinnen als die Tiefen, beim Heben umgekehrt. Die
+        ''' Werte liegen ueber dem Ziel, weil ein verstaerkter Hub nicht voll im Bild ankommt (Lichter
+        ''' nach oben stossen an Weiss).</summary>
+        Private Const HighlightsBoostRaise As Double = 0.6
+        Private Const ShadowsBoostRaise As Double = 0.45
+        Private Const HighlightsBoostLower As Double = 0.43
+        Private Const ShadowsBoostLower As Double = 0.28
         ''' Nur fuer die Reglereichung (Messschalter REGLER_DAEMPFUNG=0), in der Anwendung immer an.
         Private Shared ToneZoneDampingEnabled As Boolean = True
 
         Private Shared Function ToneZoneDamping(perRatio As Double, own As Double, other As Double) As Double
             If Not ToneZoneDampingEnabled OrElse own = 0.0 OrElse other = 0.0 Then Return 0.0
             Return Math.Min(ToneZoneDampingMax, perRatio * Math.Abs(other) / Math.Abs(own))
+        End Function
+
+        ''' <summary>Der Faktor auf den Hub eines der beiden Regler, wenn der andere mitwirkt: unter 1
+        ''' bei verschiedenen Vorzeichen (Daempfung), ueber 1 bei gleichen (Verstaerkung).</summary>
+        Private Shared Function ToneZoneInterplay(dampingPerRatio As Double, boostRaise As Double,
+                                                  boostLower As Double, own As Double, other As Double) As Double
+            If Not ToneZoneDampingEnabled OrElse own = 0.0 OrElse other = 0.0 Then Return 1.0
+            If Math.Sign(own) <> Math.Sign(other) Then Return 1.0 - ToneZoneDamping(dampingPerRatio, own, other)
+            Dim boost = If(own > 0.0, boostRaise, boostLower)
+            Return 1.0 + boost * Math.Min(Math.Abs(own), Math.Abs(other)) / Math.Max(Math.Abs(own), Math.Abs(other))
         End Function
 
         ''' <summary>Der Hub von Kontrast, Lichter, Tiefen, Weiss und Schwarz am Eingangston
@@ -1251,10 +1275,13 @@ Namespace Services
                                 ToneSliderCurves.LiftFromCurves(reference.ShadowCurves, adj.ShadowsLevel, d0),
                                 ToneSliderCurves.LiftByBrightShare("Shadows", adj.ShadowsLevel, d0, reference.BrightShare,
                                                                    reference.MedianL))
-            ' Zusammen gesetzt daempfen sich beide (ToneZoneDamping).
+            ' Zusammen gesetzt daempfen sich beide gegensinnig und verstaerken sich gleichsinnig
+            ' (ToneZoneInterplay).
             If adj.Highlights <> 0 AndAlso adj.ShadowsLevel <> 0 Then
-                highlightLift *= 1.0 - ToneZoneDamping(HighlightsDampingPerRatio, adj.Highlights, adj.ShadowsLevel)
-                shadowLift *= 1.0 - ToneZoneDamping(ShadowsDampingPerRatio, adj.ShadowsLevel, adj.Highlights)
+                highlightLift *= ToneZoneInterplay(HighlightsDampingPerRatio, HighlightsBoostRaise, HighlightsBoostLower,
+                                                   adj.Highlights, adj.ShadowsLevel)
+                shadowLift *= ToneZoneInterplay(ShadowsDampingPerRatio, ShadowsBoostRaise, ShadowsBoostLower,
+                                                adj.ShadowsLevel, adj.Highlights)
             End If
             If part = ToneZonePart.ShadowsLocal Then Return shadowLift
             If part = ToneZonePart.HighlightsLocal Then Return highlightLift
