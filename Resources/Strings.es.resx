@@ -10022,8 +10022,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Máscara</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: refuerza los bordes y crea halos claros y oscuros. Deconvolution: deshace el desenfoque, el detalle fino vuelve a ser nítido sin halos. Allí, Detalle indica el número de pasadas.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: refuerza los bordes y crea halos claros y oscuros. Deconvolution: deshace el desenfoque, el detalle fino vuelve a ser nítido sin halos. Allí, Detalle indica el número de pasadas. High Pass: realza el detalle más fino con un paso alto fusionado como Luz lineal. Allí, Radio va de 0,3 a 2,0 píxeles y Detalle no tiene efecto.</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>Reducción de ruido</value>
@@ -11863,5 +11863,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>Año</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>Extensiones</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>Cargar extensión</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>Volver a leer</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>No hay ninguna extensión cargada.</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>Una extensión es un archivo que describe una herramienta con sus propios controles. Cuando hay una cargada, el editor muestra la herramienta Extensiones en el grupo Ajustes.</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>Versión {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>incluida</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>No cargada:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>Cargada: {0}. La herramienta Extensiones del editor muestra sus controles.</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>Las imágenes que la usan conservan sus ajustes. Vuelven a aplicarse en cuanto la extensión se cargue de nuevo.</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>Esta imagen se ajustó con la versión {0}, está cargada la versión {1}.</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>Esta imagen usa extensiones que aquí no están cargadas. Sus ajustes se conservan:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>No se volvió a cargar:</value>
   </data>
 </root>

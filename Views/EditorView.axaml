@@ -607,6 +607,19 @@
                             <TextBlock Text="Anpassungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
                         </StackPanel>
                     </Button>
+                    <!-- Nur mit mindestens einer geladenen Erweiterung (Einstellungen, Erweiterungen). -->
+                    <Button Classes="tool-btn-row"
+                            IsVisible="{Binding ShowsToolExtensions}"
+                            ToolTip.Tip="Erweiterungen"
+                            Command="{Binding SetToolCommand}"
+                            CommandParameter="Extensions"
+                            Classes.active="{Binding CurrentTool, Converter={StaticResource EditorToolEqualsConverter}, ConverterParameter=Extensions}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg"
+                                           Width="18" Height="18" />
+                            <TextBlock Text="Erweiterungen" FontSize="{DynamicResource FP.Font.Body}" IsVisible="{Binding AreToolSidebarLabelsVisible}" />
+                        </StackPanel>
+                    </Button>
                     </StackPanel>
 
                     <StackPanel Grid.Row="{Binding ToolGroupRowTools}" Spacing="2">
@@ -1454,6 +1467,11 @@
 
                             <panels:LightSourcesPanel Margin="0,7,0,0"
                                                       IsVisible="{Binding ShowLightControls}" />
+
+                            <!-- Die Erweiterungen: je geladener eine Gruppe, die das Panel selbst
+                                 rahmt (EditorViewModelExtensions.vb). -->
+                            <panels:ExtensionsPanel Margin="0,7,0,0"
+                                                    IsVisible="{Binding ShowExtensionAdjustments}" />
 
                             <!-- DrawPanel bringt seine eigenen adjustment-group-Rahmen mit (Farbe, Pinsel,
                                  Werkzeug getrennt), daher hier kein umschließender Rahmen. -->

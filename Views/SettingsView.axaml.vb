@@ -103,6 +103,7 @@ Namespace Views
             ("NextcloudSection", Function() New Settings.NextcloudSectionView()),
             ("ExternalProgramsSection", Function() New Settings.ExternalProgramsSectionView()),
             ("ModelsSection", Function() New Settings.ModelsSectionView()),
+            ("ExtensionsSection", Function() New Settings.ExtensionsSectionView()),
             ("MapSection", Function() New Settings.MapSectionView()),
             ("PeopleSection", Function() New Settings.PeopleSectionView()),
             ("CatalogSection", Function() New Settings.CatalogSectionView()),
@@ -260,6 +261,30 @@ Namespace Views
                 End Sub
             AddHandler DisplayProfileService.Changed,
                 Sub(s, e) TryCast(DataContext, SettingsViewModel)?.RefreshDisplayProfiles()
+        End Sub
+
+        ''' <summary>Eine Erweiterungsdatei waehlen und aufnehmen. Der Auswahldialog haengt am
+        ''' TopLevel, deshalb hier und nicht im ViewModel.</summary>
+        Friend Async Sub OnInstallExtensionClick(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(DataContext, SettingsViewModel)
+            If vm Is Nothing Then Return
+            Try
+                Dim topLevel As TopLevel = TopLevel.GetTopLevel(Me)
+                If topLevel Is Nothing Then Return
+                Dim files = Await topLevel.StorageProvider.OpenFilePickerAsync(New FilePickerOpenOptions With {
+                    .Title = LocalizationService.T("Erweiterung laden"),
+                    .AllowMultiple = True,
+                    .FileTypeFilter = {New FilePickerFileType(LocalizationService.T("Erweiterungen")) With {.Patterns = {"*.json", "*.JSON"}}}
+                })
+                If files Is Nothing Then Return
+                For Each file In files
+                    Dim path = file?.Path?.LocalPath
+                    If Not String.IsNullOrEmpty(path) Then vm.InstallExtension(path)
+                Next
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Settings.InstallExtension", ex)
+            End Try
+            e.Handled = True
         End Sub
 
         ''' <summary>Ein ICC-Profil fuer einen Bildschirm waehlen. Der Auswahldialog haengt am

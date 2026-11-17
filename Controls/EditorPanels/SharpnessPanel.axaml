@@ -63,10 +63,13 @@
                         <TextBlock Text="Details" Foreground="{DynamicResource FP.Text.Secondary}"
                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                    ToolTip.Tip="Hebt die feinen Details bei der Schärfung stärker hervor." />
+                        <!-- Beim Hochpass stellt Details nichts; der Regler steht dann still. -->
                         <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100"
-                                           Value="{Binding SharpenDetail}" Margin="0,0" />
+                                           Value="{Binding SharpenDetail}" Margin="0,0"
+                                           IsEnabled="{Binding SharpenDetailApplies}" />
                         <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                                 Value="{Binding SharpenDetail, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                                 Value="{Binding SharpenDetail, Mode=TwoWay}" Minimum="0" Maximum="100"
+                                                 IsEnabled="{Binding SharpenDetailApplies}" />
                     </Grid>
                     <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center">
                         <TextBlock Text="Maskieren" Foreground="{DynamicResource FP.Text.Secondary}"
@@ -88,7 +91,7 @@
                                   Margin="6,0,0,0"
                                   HorizontalAlignment="Stretch"
                                   DropDownOpened="OnMatchWidthDropDownOpened"
-                                  ToolTip.Tip="Unsharp Mask: verstärkt Kanten und legt dabei helle und dunkle Säume an. Deconvolution: rechnet die Unschärfe zurück, feine Zeichnung wird ohne Säume wieder steil. Details steht dort für die Zahl der Durchläufe." />
+                                  ToolTip.Tip="Unsharp Mask: verstärkt Kanten und legt dabei helle und dunkle Säume an. Deconvolution: rechnet die Unschärfe zurück, feine Zeichnung wird ohne Säume wieder steil. Details steht dort für die Zahl der Durchläufe. High Pass: hebt die feinste Zeichnung über einen Hochpass, gemischt wie mit Lineares Licht. Der Radius reicht dort von 0,3 bis 2,0 Punkten, Details wirkt nicht." />
                     </Grid>
                 </StackPanel>
             </Expander>

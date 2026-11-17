@@ -1,0 +1,194 @@
+Imports System
+Imports System.Collections.ObjectModel
+Imports System.Globalization
+Imports System.Linq
+Imports System.Threading.Tasks
+Imports System.Windows.Input
+Imports FerrumPix.Services
+Imports ReactiveUI
+
+Namespace ViewModels
+
+    ''' <summary>Eine Zeile im Bereich "Erweiterungen" der Einstellungen: eine geladene Erweiterung
+    ''' oder eine Datei, die nicht geladen werden konnte.</summary>
+    Public NotInheritable Class ExtensionRow
+        Public Property Definition As ExtensionDefinition
+        Public Property Name As String = ""
+        Public Property Details As String = ""
+        Public Property ErrorText As String = ""
+        Public Property CanRemove As Boolean
+        Public Property RemoveText As String = ""
+        Public Property CanMoveUp As Boolean
+        Public Property CanMoveDown As Boolean
+        Public Property MoveUpText As String = ""
+        Public Property MoveDownText As String = ""
+
+        Public ReadOnly Property IsLoaded As Boolean
+            Get
+                Return Definition IsNot Nothing
+            End Get
+        End Property
+
+        Public ReadOnly Property HasError As Boolean
+            Get
+                Return ErrorText.Length > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property HasDetails As Boolean
+            Get
+                Return Details.Length > 0
+            End Get
+        End Property
+    End Class
+
+    ' Die Verwaltung der Erweiterungen in den Einstellungen: laden, entfernen, neu einlesen, und
+    ' was nicht geladen werden konnte, samt Grund. Das Werkzeug im Editor folgt dem Bestand ueber
+    ' ExtensionService.Changed.
+    Partial Public Class SettingsViewModel
+
+        Private _extensionsHooked As Boolean
+        Private _extensionMessage As String = ""
+        Private _removeExtensionCommand As ICommand
+        Private _reloadExtensionsCommand As ICommand
+        Private _moveExtensionUpCommand As ICommand
+        Private _moveExtensionDownCommand As ICommand
+
+        ''' <summary>Schiebt eine Erweiterung in der Reihenfolge der Gruppen im Werkzeug nach oben.
+        ''' Sofort wirksam und gespeichert, wie Laden und Entfernen.</summary>
+        Public ReadOnly Property MoveExtensionUpCommand As ICommand
+            Get
+                If _moveExtensionUpCommand Is Nothing Then
+                    _moveExtensionUpCommand = ReactiveCommand.Create(Of ExtensionRow)(
+                        Sub(row) If row?.Definition IsNot Nothing Then ExtensionService.MoveInOrder(row.Definition.Id, -1))
+                End If
+                Return _moveExtensionUpCommand
+            End Get
+        End Property
+
+        Public ReadOnly Property MoveExtensionDownCommand As ICommand
+            Get
+                If _moveExtensionDownCommand Is Nothing Then
+                    _moveExtensionDownCommand = ReactiveCommand.Create(Of ExtensionRow)(
+                        Sub(row) If row?.Definition IsNot Nothing Then ExtensionService.MoveInOrder(row.Definition.Id, 1))
+                End If
+                Return _moveExtensionDownCommand
+            End Get
+        End Property
+
+        Public ReadOnly Property ExtensionRows As New ObservableCollection(Of ExtensionRow)()
+
+        Public ReadOnly Property HasExtensionRows As Boolean
+            Get
+                EnsureExtensionsHooked()
+                Return ExtensionRows.Count > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property ExtensionFolder As String
+            Get
+                Return ExtensionService.UserFolder
+            End Get
+        End Property
+
+        ''' <summary>Was das letzte Laden ergeben hat, oder leer.</summary>
+        Public Property ExtensionMessage As String
+            Get
+                Return _extensionMessage
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_extensionMessage, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(HasExtensionMessage))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasExtensionMessage As Boolean
+            Get
+                Return _extensionMessage.Length > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property RemoveExtensionCommand As ICommand
+            Get
+                If _removeExtensionCommand Is Nothing Then
+                    _removeExtensionCommand = ReactiveCommand.CreateFromTask(Of ExtensionRow)(AddressOf RemoveExtensionAsync)
+                End If
+                Return _removeExtensionCommand
+            End Get
+        End Property
+
+        Public ReadOnly Property ReloadExtensionsCommand As ICommand
+            Get
+                If _reloadExtensionsCommand Is Nothing Then
+                    _reloadExtensionsCommand = ReactiveCommand.Create(
+                        Sub()
+                            Dim notes = ExtensionService.RefreshFromSources()
+                            ExtensionMessage = If(notes.Count = 0, "",
+                                                  LocalizationService.T("Nicht neu geladen:") & " " & String.Join("; ", notes))
+                        End Sub)
+                End If
+                Return _reloadExtensionsCommand
+            End Get
+        End Property
+
+        Private Sub EnsureExtensionsHooked()
+            If _extensionsHooked Then Return
+            _extensionsHooked = True
+            AddHandler ExtensionService.Changed,
+                Sub(s, e) Avalonia.Threading.Dispatcher.UIThread.Post(AddressOf RebuildExtensionRows)
+            RebuildExtensionRows()
+        End Sub
+
+        Private Sub RebuildExtensionRows()
+            ExtensionRows.Clear()
+            Dim loaded = ExtensionService.All
+            For Each definition In loaded
+                Dim parts As New List(Of String) From {
+                    String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Fassung {0}"), definition.Version)}
+                If definition.Author.Length > 0 Then parts.Add(definition.Author)
+                If definition.License.Length > 0 Then parts.Add(definition.License)
+                If definition.IsBundled Then parts.Add(LocalizationService.T("mitgeliefert"))
+                Dim details = String.Join(", ", parts)
+                If definition.Description.Length > 0 Then details = definition.Description & vbLf & details
+                ExtensionRows.Add(New ExtensionRow With {
+                    .Definition = definition, .Name = definition.Name, .Details = details,
+                    .CanRemove = Not definition.IsBundled, .RemoveText = LocalizationService.T("Entfernen"),
+                    .CanMoveUp = ExtensionRows.Count > 0, .CanMoveDown = ExtensionRows.Count < loaded.Count - 1,
+                    .MoveUpText = LocalizationService.T("Nach oben"), .MoveDownText = LocalizationService.T("Nach unten")})
+            Next
+            For Each failure In ExtensionService.Failures
+                ExtensionRows.Add(New ExtensionRow With {
+                    .Name = IO.Path.GetFileName(failure.FilePath),
+                    .ErrorText = LocalizationService.T("Nicht geladen:") & " " & failure.ErrorText})
+            Next
+            Me.RaisePropertyChanged(NameOf(HasExtensionRows))
+        End Sub
+
+        ''' <summary>Nimmt eine Erweiterungsdatei auf, aufgerufen nach dem Dateiwaehler der Seite.</summary>
+        Public Sub InstallExtension(path As String)
+            If String.IsNullOrWhiteSpace(path) Then Return
+            Dim result = ExtensionService.Install(path)
+            If result.Succeeded Then
+                ExtensionMessage = String.Format(CultureInfo.CurrentCulture,
+                                                 LocalizationService.T("Geladen: {0}. Das Werkzeug Erweiterungen im Editor zeigt ihre Regler."),
+                                                 result.Definition.Name)
+            Else
+                ExtensionMessage = LocalizationService.T("Nicht geladen:") & " " & result.ErrorText
+            End If
+        End Sub
+
+        Private Async Function RemoveExtensionAsync(row As ExtensionRow) As Task
+            If row Is Nothing OrElse row.Definition Is Nothing OrElse Not row.CanRemove Then Return
+            If _mainVm IsNot Nothing Then
+                Dim confirmed = Await _mainVm.ShowConfirmAsync(
+                    LocalizationService.T("Entfernen"),
+                    row.Name & vbLf & LocalizationService.T("Bilder, die sie nutzen, behalten ihre Einstellungen. Sie wirken wieder, sobald die Erweiterung erneut geladen ist."),
+                    LocalizationService.T("Entfernen"), LocalizationService.T("Abbrechen"))
+                If Not confirmed Then Return
+            End If
+            ExtensionMessage = If(ExtensionService.Remove(row.Definition.Id), "", LocalizationService.T("Entfernen fehlgeschlagen"))
+        End Function
+
+    End Class
+
+End Namespace

@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.ExtensionsPanel">
+    <!-- Das Werkzeug "Erweiterungen": je geladener Erweiterung eine Gruppe mit ihren Reglern. Die
+         Gruppen entstehen erst zur Laufzeit, der Baumdurchlauf der Uebersetzung erreicht sie also
+         nicht: jeder feste Text kommt deshalb uebersetzt aus dem ViewModel, die Texte der
+         Erweiterung bringt sie selbst in ihren Sprachen mit (ExtensionService.Localized). -->
+    <StackPanel Spacing="7">
+        <Border Classes="adjustment-group" IsVisible="{Binding HasMissingExtensions}">
+            <TextBlock Text="{Binding MissingExtensionsText}" TextWrapping="Wrap" Margin="8"
+                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" />
+        </Border>
+        <ItemsControl ItemsSource="{Binding ExtensionPanels}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="7" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Classes="adjustment-group">
+                        <Expander Header="{Binding Name}" IsExpanded="True">
+                            <Expander.HeaderTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg"
+                                                       Width="18" Height="18" />
+                                        <TextBlock Text="{Binding}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Expander.HeaderTemplate>
+                            <StackPanel Spacing="2" Margin="0,8,0,0">
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                                    <CheckBox Content="{Binding EnabledLabel}" IsChecked="{Binding IsEnabled}"
+                                              FontSize="{DynamicResource FP.Font.Small}" />
+                                    <Button Grid.Column="1" Classes="icon-btn" Width="28" Height="28" Padding="0"
+                                            Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                                       Width="16" Height="16" />
+                                    </Button>
+                                </Grid>
+                                <TextBlock Text="{Binding Description}" IsVisible="{Binding HasDescription}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"
+                                           Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding VersionNote}" IsVisible="{Binding HasVersionNote}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource FP.Accent}" FontSize="{DynamicResource FP.Font.Small}"
+                                           Margin="0,0,0,6" />
+                                <ItemsControl ItemsSource="{Binding Controls}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Section}" IsVisible="{Binding HasSection}"
+                                                           FontWeight="SemiBold" FontSize="{DynamicResource FP.Font.Small}"
+                                                           Margin="0,8,0,2" />
+                                                <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding IsSlider}">
+                                                    <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                                                    <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                                                                       Value="{Binding Value}" ColorTrack="{Binding ColorTrack}" Margin="0,0" />
+                                                    <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                                                             Value="{Binding Value, Mode=TwoWay}"
+                                                                             Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                                                                             Increment="{Binding Increment}" FormatString="{Binding FormatString}" />
+                                                </Grid>
+                                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" IsVisible="{Binding IsToggle}"
+                                                          FontSize="{DynamicResource FP.Font.Small}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Expander>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

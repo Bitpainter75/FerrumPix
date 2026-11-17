@@ -5995,6 +5995,7 @@ Namespace ViewModels
                     Case EditorTool.Effects, EditorTool.Frame : Return LocalizationService.T("Effekte")
                     Case EditorTool.Filters : Return LocalizationService.T("Anpassungen")
                     Case EditorTool.AllAdjustments : Return LocalizationService.T("Anpassungen")
+                    Case EditorTool.Extensions : Return LocalizationService.T("Erweiterungen")
                     Case EditorTool.Move : Return LocalizationService.T("Verschieben")
                     Case EditorTool.Selection : Return LocalizationService.T("Auswahl")
                     Case EditorTool.Mask : Return LocalizationService.T("Maske")
@@ -7213,26 +7214,44 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Die beiden Schaerfverfahren, unter ihren Fachnamen und deshalb unuebersetzt wie
+        ''' <summary>Die drei Schaerfverfahren, unter ihren Fachnamen und deshalb unuebersetzt wie
         ''' beim Entrauschen. Die Unschaerfemaske steht vorn, weil sie die Vorgabe ist.</summary>
         Public ReadOnly Property SharpenMethodOptions As IReadOnlyList(Of String)
             Get
-                Return New String() {"Unsharp Mask", "Deconvolution"}
+                Return New String() {"Unsharp Mask", "Deconvolution", "High Pass"}
             End Get
         End Property
 
         Public Property SharpenMethodLabel As String
             Get
-                Return If(_sharpenMethod = SharpenMethod.Deconvolution, "Deconvolution", "Unsharp Mask")
+                Select Case _sharpenMethod
+                    Case SharpenMethod.Deconvolution : Return "Deconvolution"
+                    Case SharpenMethod.HighPass : Return "High Pass"
+                    Case Else : Return "Unsharp Mask"
+                End Select
             End Get
             Set(value As String)
-                Dim method = If(String.Equals(value, "Deconvolution", StringComparison.OrdinalIgnoreCase),
-                                SharpenMethod.Deconvolution, SharpenMethod.UnsharpMask)
+                Dim method = SharpenMethod.UnsharpMask
+                If String.Equals(value, "Deconvolution", StringComparison.OrdinalIgnoreCase) Then
+                    method = SharpenMethod.Deconvolution
+                ElseIf String.Equals(value, "High Pass", StringComparison.OrdinalIgnoreCase) Then
+                    method = SharpenMethod.HighPass
+                End If
                 If _sharpenMethod = method Then Return
                 CaptureUndoState(NameOf(SharpenMethodLabel))
                 Me.RaiseAndSetIfChanged(_sharpenMethod, method)
+                Me.RaisePropertyChanged(NameOf(SharpenDetailApplies))
                 SchedulePreviewForCurrentTarget()
             End Set
+        End Property
+
+        ''' <summary>Ob der Regler Details beim gewaehlten Verfahren etwas stellt. Der Hochpass ist
+        ''' eine ungeformte Rechnung aus Staerke und Radius; der Regler steht dort still, statt
+        ''' sich bewegen zu lassen und nichts zu tun.</summary>
+        Public ReadOnly Property SharpenDetailApplies As Boolean
+            Get
+                Return _sharpenMethod <> SharpenMethod.HighPass
+            End Get
         End Property
 
         ''' <summary>Die vier Verfahren, unter ihren Fachnamen und deshalb unuebersetzt - wie schon
@@ -19925,8 +19944,9 @@ Namespace ViewModels
         Private Function SwitcherTools() As List(Of EditorTool)
             ' Im Kompaktmodus steht fuer die Anpassungen nur das eine Werkzeug im Kreis.
             Dim adjustTools = If(IsCompactAdjustments,
-                                 {EditorTool.AllAdjustments},
-                                 {EditorTool.Adjust, EditorTool.Color, EditorTool.Details, EditorTool.Effects, EditorTool.Filters})
+                                 {EditorTool.AllAdjustments, EditorTool.Extensions},
+                                 {EditorTool.Adjust, EditorTool.Color, EditorTool.Details, EditorTool.Effects, EditorTool.Filters,
+                                  EditorTool.Extensions})
             Dim groups As New Dictionary(Of String, EditorTool())(StringComparer.OrdinalIgnoreCase) From {
                 {"Adjust", adjustTools},
                 {"Transform", {EditorTool.Transform, EditorTool.Resize, EditorTool.Warp}},
@@ -19953,6 +19973,7 @@ Namespace ViewModels
                 Case EditorTool.Effects : Return ShowsToolEffects
                 Case EditorTool.Filters : Return ShowsToolFilter
                 Case EditorTool.AllAdjustments : Return ShowsToolAllAdjustments
+                Case EditorTool.Extensions : Return ShowsToolExtensions
                 Case Else : Return True
             End Select
         End Function
@@ -19974,6 +19995,7 @@ Namespace ViewModels
                 Case EditorTool.Effects : Return LocalizationService.T("Effekte")
                 Case EditorTool.Filters : Return LocalizationService.T("Anpassungen")
                 Case EditorTool.AllAdjustments : Return LocalizationService.T("Anpassungen")
+                Case EditorTool.Extensions : Return LocalizationService.T("Erweiterungen")
                 Case EditorTool.Transform : Return LocalizationService.T("Transformieren")
                 Case EditorTool.Resize : Return LocalizationService.T("Bildgröße")
                 Case EditorTool.Warp : Return LocalizationService.T("Verzerren")
@@ -25877,6 +25899,7 @@ Namespace ViewModels
                 Case EditorTool.Effects, EditorTool.Frame : Return outline & "sparkle.svg"
                 Case EditorTool.Filters : Return outline & "palette.svg"
                 Case EditorTool.AllAdjustments : Return outline & "sliders.svg"
+                Case EditorTool.Extensions : Return outline & "puzzle-piece.svg"
                 Case EditorTool.Move : Return outline & "cursor.svg"
                 Case EditorTool.Selection : Return outline & "selection.svg"
                 Case EditorTool.Mask : Return outline & "mask-happy.svg"
@@ -26733,6 +26756,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenDetailApplies))
             ' Details, Schärfe, Weichzeichnen und Rauschen vollständig. Hier fehlten Struktur,
             ' Dunst, Staub und Kratzer, Glühen, Rauschen, das grobe Farbrauschen und drei Regler
             ' der Schärfe: nach Rückgängig, Wiederholen oder dem Auge einer Gruppe stand das Bild
@@ -27114,6 +27138,7 @@ Namespace ViewModels
             _calibrationShadowTint = 0
             ResetColorCorrectionsInternal()
             ResetEffectCorrectionsInternal()
+            ResetExtensionValues()
             _vignetteTransition = 55
             _vignetteRoundness = 0
             _vignetteFeather = 70
@@ -27220,6 +27245,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenDetailApplies))
             RaiseEffectsPropertiesChanged()
             RaiseExtendedAdjustmentProperties()
             ' Raises fuer die oben ergaenzten Felder (Details/Weissabgleich/Kalibrierung/Auswahl) -
@@ -31616,6 +31642,7 @@ Namespace ViewModels
             ResetDetailInternal()
             ResetEffectsInternal()
             ResetEffectCorrectionsInternal()
+            ResetExtensionValues()
             ResetFilterInternal()
             RaiseResetButtonStateChanged()
             SchedulePreviewUpdate()
@@ -31689,6 +31716,10 @@ Namespace ViewModels
                     SchedulePreviewUpdate()
                 Case EditorTool.Filters
                     ResetFilterInternal()
+                Case EditorTool.Extensions
+                    ResetExtensionValues()
+                    RaiseResetButtonStateChanged()
+                    SchedulePreviewUpdate()
                 Case EditorTool.AllAdjustments
                     ' Dasselbe wie die fuenf Einzelwerkzeuge zusammen, nicht das Zuruecksetzen des
                     ' ganzen Bildes (Case Else): Geometrie, Retusche und Ebenen bleiben.
@@ -31832,6 +31863,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
             Me.RaisePropertyChanged(NameOf(SharpenMasking))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenDetailApplies))
             RaiseResetButtonStateChanged()
             SchedulePreviewForCurrentTarget()
         End Sub
@@ -31944,6 +31976,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(SharpenDetail))
             Me.RaisePropertyChanged(NameOf(SharpenMasking))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenDetailApplies))
             Me.RaisePropertyChanged(NameOf(NoiseReduction))
             Me.RaisePropertyChanged(NameOf(NoiseReductionDetail))
             Me.RaisePropertyChanged(NameOf(Blur))
@@ -32321,6 +32354,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ColorNoiseAmount))
             Me.RaisePropertyChanged(NameOf(NoiseReductionMethodLabel))
             Me.RaisePropertyChanged(NameOf(SharpenMethodLabel))
+            Me.RaisePropertyChanged(NameOf(SharpenDetailApplies))
             Me.RaisePropertyChanged(NameOf(DustScratches))
             Me.RaisePropertyChanged(NameOf(Haze))
             Me.RaisePropertyChanged(NameOf(AddNoise))
@@ -32383,6 +32417,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowEffectsAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFrameAdjustments))
             Me.RaisePropertyChanged(NameOf(ShowFilterAdjustments))
+            Me.RaisePropertyChanged(NameOf(ShowExtensionAdjustments))
             ' Das Analysebild im Anpassungspanel haengt an genau diesen fuenf Schaltern - und mit
             ' ihm der Rechenweg: wer vom Zuschneiden zu den Reglern wechselt, macht es erst
             ' sichtbar, und dann muss auch eines dastehen.
@@ -33853,6 +33888,9 @@ Namespace ViewModels
         ''' eine davon offen. Ohne den Modus steht es nirgends in der Leiste. Am Ende der Liste, damit
         ''' sich die Zahlen der uebrigen Werkzeuge nicht verschieben.</summary>
         AllAdjustments
+        ''' <summary>ERWEITERUNGEN: je geladener Erweiterung eine Gruppe mit ihren Reglern
+        ''' (EditorViewModelExtensions.vb). Steht nur in der Leiste, wenn eine geladen ist.</summary>
+        Extensions
     End Enum
 
     Public Enum LayersPanelTab

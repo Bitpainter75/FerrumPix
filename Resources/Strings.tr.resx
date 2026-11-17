@@ -10066,8 +10066,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Maskeleme</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: kenarları güçlendirir ve açık ile koyu haleler oluşturur. Deconvolution: bulanıklığı geri hesaplar, ince ayrıntılar haleler olmadan yeniden keskinleşir. Orada Ayrıntı geçiş sayısını belirler.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: kenarları güçlendirir ve açık ile koyu haleler oluşturur. Deconvolution: bulanıklığı geri hesaplar, ince ayrıntılar haleler olmadan yeniden keskinleşir. Orada Ayrıntı geçiş sayısını belirler. High Pass: en ince ayrıntıyı Doğrusal Işık gibi karıştırılan bir yüksek geçirgenle öne çıkarır. Orada Yarıçap 0,3 ile 2,0 nokta arasındadır ve Ayrıntı etkisizdir.</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>Gürültü Azaltma</value>
@@ -11907,5 +11907,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>Yıl</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>Uzantılar</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>Uzantı yükle</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>Yeniden oku</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>Yüklü uzantı yok.</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>Uzantı, kendi kaydırıcıları olan bir aracı tanımlayan bir dosyadır. Bir uzantı yüklendiğinde düzenleyici Ayarlamalar grubunda Uzantılar aracını gösterir.</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>Sürüm {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>birlikte gelir</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>Yüklenmedi:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>Yüklendi: {0}. Düzenleyicideki Uzantılar aracı kaydırıcılarını gösterir.</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>Onu kullanan resimler ayarlarını korur. Uzantı yeniden yüklenir yüklenmez yeniden etkili olurlar.</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>Bu resim {0} sürümüyle ayarlandı, yüklü olan {1} sürümü.</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>Bu resim burada yüklü olmayan uzantılar kullanıyor. Ayarları korunur:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>Yeniden yüklenmedi:</value>
   </data>
 </root>

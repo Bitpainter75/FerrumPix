@@ -10062,8 +10062,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>マスク</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask：エッジを強調し、明るい縁と暗い縁を付けます。Deconvolution：ぼけを逆算し、細部が縁なしで再びくっきりします。そこではディテールが処理回数を表します。</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask：エッジを強調し、明るい縁と暗い縁を付けます。Deconvolution：ぼけを逆算し、細部が縁なしで再びくっきりします。そこではディテールが処理回数を表します。High Pass：リニアライトのように合成したハイパスで、最も細かいディテールを引き立てます。そこでは半径は 0.3 から 2.0 ポイントで、ディテールは効きません。</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>ノイズ軽減</value>
@@ -11903,5 +11903,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>年</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>拡張機能</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>拡張機能を読み込む</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>再読み込み</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>拡張機能は読み込まれていません。</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>拡張機能は、独自のスライダーを持つツールを記述したファイルです。読み込むと、エディターの調整グループに拡張機能ツールが表示されます。</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>バージョン {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>同梱</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>読み込まれていません：</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>読み込みました：{0}。エディターの拡張機能ツールにスライダーが表示されます。</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>これを使っている画像は設定を保持します。拡張機能を再び読み込むと、再び反映されます。</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>この画像はバージョン {0} で設定されました。読み込まれているのはバージョン {1} です。</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>この画像は、ここで読み込まれていない拡張機能を使っています。その設定は保持されます：</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>再読み込みされませんでした：</value>
   </data>
 </root>

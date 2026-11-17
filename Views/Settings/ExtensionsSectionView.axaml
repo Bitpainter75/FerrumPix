@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Views.Settings.ExtensionsSectionView">
+    <StackPanel Spacing="14">
+        <StackPanel Spacing="2">
+            <TextBlock Text="Erweiterungen" FontSize="{DynamicResource FP.Font.Title}" FontWeight="SemiBold"/>
+            <TextBlock Text="Eine Erweiterung ist eine Datei, die ein Werkzeug mit eigenen Reglern beschreibt. Ist eine geladen, steht im Editor das Werkzeug Erweiterungen in der Gruppe Anpassungen."
+                       Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" MaxWidth="660" HorizontalAlignment="Left"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Classes="accent" Padding="12,7" Click="OnInstallExtensionClick">
+                <TextBlock Text="Erweiterung laden" FontSize="{DynamicResource FP.Font.Small}"/>
+            </Button>
+            <Button Classes="ghost" Padding="12,7" Command="{Binding ReloadExtensionsCommand}">
+                <TextBlock Text="Neu einlesen" FontSize="{DynamicResource FP.Font.Small}"/>
+            </Button>
+        </StackPanel>
+        <TextBlock Classes="no-translate" Text="{Binding ExtensionMessage}" IsVisible="{Binding HasExtensionMessage}"
+                   TextWrapping="Wrap" FontSize="{DynamicResource FP.Font.Small}" MaxWidth="660" HorizontalAlignment="Left"/>
+        <TextBlock Text="Keine Erweiterung geladen." IsVisible="{Binding !HasExtensionRows}"
+                   Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
+        <ItemsControl ItemsSource="{Binding ExtensionRows}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Classes="adjustment-group" Margin="0,0,0,8">
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Classes="no-translate" Text="{Binding Details}" IsVisible="{Binding HasDetails}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                <TextBlock Classes="no-translate" Text="{Binding ErrorText}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource FP.Accent}" FontSize="{DynamicResource FP.Font.Small}"/>
+                            </StackPanel>
+                            <!-- Die Reihenfolge der Gruppen im Werkzeug Erweiterungen. -->
+                            <Button Grid.Column="1" Classes="icon-btn" Width="28" Height="28" Padding="0" VerticalAlignment="Center"
+                                    IsVisible="{Binding IsLoaded}" IsEnabled="{Binding CanMoveUp}"
+                                    ToolTip.Tip="{Binding MoveUpText}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.MoveExtensionUpCommand}"
+                                    CommandParameter="{Binding}">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-up.svg" Width="16" Height="16"/>
+                            </Button>
+                            <Button Grid.Column="2" Classes="icon-btn" Width="28" Height="28" Padding="0" VerticalAlignment="Center"
+                                    IsVisible="{Binding IsLoaded}" IsEnabled="{Binding CanMoveDown}"
+                                    ToolTip.Tip="{Binding MoveDownText}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.MoveExtensionDownCommand}"
+                                    CommandParameter="{Binding}">
+                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-down.svg" Width="16" Height="16"/>
+                            </Button>
+                            <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                    IsVisible="{Binding CanRemove}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.RemoveExtensionCommand}"
+                                    CommandParameter="{Binding}">
+                                <TextBlock Classes="no-translate" Text="{Binding RemoveText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="no-translate" Text="{Binding ExtensionFolder}" Foreground="{DynamicResource FP.Text.Muted}"
+                   FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+    </StackPanel>
+</UserControl>

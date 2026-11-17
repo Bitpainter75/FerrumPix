@@ -632,7 +632,10 @@ Namespace Services
             ' Ohne gespeicherte Basis-/Dichtefarbe misst Filmnegativ aus dem Bild. Ein
             ' lokaler Ausschnitt hätte andere Werte; auch mit gesetzten Farben bleibt es
             ' bewusst außerhalb der Whitelist (siehe Erläuterung oben).
-            Return a.Vignette = 0 AndAlso
+            ' Eine Erweiterung ist eine fremde Rechnung; ob sie ueber einem Ausschnitt dasselbe
+            ' ergibt, laesst sich hier nicht pruefen, also bleibt sie draussen.
+            Return String.IsNullOrEmpty(a.ExtensionSettings) AndAlso
+                   a.Vignette = 0 AndAlso
                    a.TiltShiftAmount = 0 AndAlso
                    a.Grain = 0 AndAlso
                    a.DustScratches = 0 AndAlso

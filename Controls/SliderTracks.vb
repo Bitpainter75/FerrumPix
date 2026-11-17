@@ -1,3 +1,5 @@
+Imports System.Collections.Generic
+Imports System.Linq
 Imports Avalonia
 Imports Avalonia.Media
 
@@ -57,6 +59,18 @@ Namespace Controls
             Return Gradient(New HsvColor(1.0, hueDegrees, 0.7, 0.25).ToRgb(),
                             New HsvColor(1.0, hueDegrees, 0.7, 0.62).ToRgb(),
                             New HsvColor(1.0, hueDegrees, 0.35, 1.0).ToRgb())
+        End Function
+
+        ''' <summary>Der ganze Farbkreis von links nach rechts, rot bis rot.</summary>
+        Public Shared ReadOnly Property FullHue As IBrush = HueSpan(180.0, 180.0)
+
+        ''' <summary>Schwarz nach Weiss.</summary>
+        Public Shared ReadOnly Property BlackToWhite As IBrush = Gradient(Color.Parse("#1E2226"), Color.Parse("#F2F4F6"))
+
+        ''' <summary>Eine Spur aus beliebigen Farben, gleichmaessig verteilt. Fuer die Erweiterungen,
+        ''' die ihre Spur in der Datei nennen.</summary>
+        Public Shared Function FromColors(colors As IEnumerable(Of Color)) As IBrush
+            Return Gradient(colors.ToArray())
         End Function
 
         Private Shared Function Gradient(ParamArray colors As Color()) As IBrush

@@ -10066,8 +10066,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>การมาสก์</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: เสริมขอบและสร้างขอบสว่างและมืด Deconvolution: คำนวณความเบลอย้อนกลับ รายละเอียดละเอียดกลับมาคมชัดโดยไม่มีขอบ ตรงนั้นรายละเอียดหมายถึงจำนวนรอบ</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: เสริมขอบและสร้างขอบสว่างและมืด Deconvolution: คำนวณความเบลอย้อนกลับ รายละเอียดละเอียดกลับมาคมชัดโดยไม่มีขอบ ตรงนั้นรายละเอียดหมายถึงจำนวนรอบ High Pass: ดึงรายละเอียดที่ละเอียดที่สุดด้วยไฮพาสที่ผสมแบบแสงเชิงเส้น ตรงนั้นรัศมีอยู่ระหว่าง 0.3 ถึง 2.0 จุด และรายละเอียดไม่มีผล</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>การลดนอยส์</value>
@@ -11907,5 +11907,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>ปี</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>ส่วนขยาย</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>โหลดส่วนขยาย</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>อ่านใหม่</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>ยังไม่ได้โหลดส่วนขยาย</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>ส่วนขยายคือไฟล์ที่อธิบายเครื่องมือพร้อมแถบเลื่อนของตัวเอง เมื่อโหลดแล้ว ตัวแก้ไขจะแสดงเครื่องมือส่วนขยายในกลุ่มการปรับแต่ง</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>เวอร์ชัน {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>ติดมาด้วย</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>ไม่ได้โหลด:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>โหลดแล้ว: {0} เครื่องมือส่วนขยายในตัวแก้ไขจะแสดงแถบเลื่อน</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>ภาพที่ใช้ส่วนขยายนี้จะเก็บการตั้งค่าไว้ และจะมีผลอีกครั้งเมื่อโหลดส่วนขยายใหม่</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>ภาพนี้ตั้งค่าด้วยเวอร์ชัน {0} แต่ที่โหลดอยู่คือเวอร์ชัน {1}</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>ภาพนี้ใช้ส่วนขยายที่ไม่ได้โหลดไว้ที่นี่ การตั้งค่าของส่วนขยายเหล่านั้นยังคงอยู่:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>ไม่ได้โหลดใหม่:</value>
   </data>
 </root>

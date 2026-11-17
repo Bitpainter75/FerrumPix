@@ -178,6 +178,15 @@
                 </Button>
                 <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                         Padding="14,10"
+                        Tag="ExtensionsSection"
+                        Click="OnSectionNavClick">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg" Width="18" Height="18"/>
+                        <TextBlock Text="Erweiterungen"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Padding="14,10"
                         Tag="MapSection"
                         Click="OnSectionNavClick">
                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -319,6 +328,12 @@
                 </Border>
 
                 <Border x:Name="ModelsSection" Classes="section" IsVisible="{Binding ModelRuntimeAvailable}">
+                </Border>
+
+                <!-- ERWEITERUNGEN: Dateien mit eigenen Reglern und eigener Farbrechnung. Laden,
+                     Entfernen und Fehler stehen hier; das Werkzeug im Editor erscheint erst, wenn
+                     eine geladen ist (ExtensionService, EditorViewModelExtensions.vb). -->
+                <Border x:Name="ExtensionsSection" Classes="section">
                 </Border>
 
                 <!-- KARTENANSICHT. Ein eigener Abschnitt und nicht bei den Modellen: der ist ohne

@@ -10062,8 +10062,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Маскирование</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: усиливает края и создаёт светлые и тёмные ореолы. Deconvolution: обращает размытие, мелкие детали снова становятся чёткими без ореолов. Детализация там задаёт число проходов.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: усиливает края и создаёт светлые и тёмные ореолы. Deconvolution: обращает размытие, мелкие детали снова становятся чёткими без ореолов. Детализация там задаёт число проходов. High Pass: подчёркивает самые мелкие детали фильтром высоких частот, смешанным как Линейный свет. Радиус там составляет от 0,3 до 2,0 точки, а Детализация не действует.</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>Подавление шумов</value>
@@ -11903,5 +11903,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>Год</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>Расширения</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>Загрузить расширение</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>Перечитать</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>Расширения не загружены.</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>Расширение это файл, описывающий инструмент с собственными ползунками. Когда загружено хотя бы одно, в редакторе в группе Коррекция появляется инструмент Расширения.</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>Версия {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>в комплекте</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>Не загружено:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>Загружено: {0}. Инструмент Расширения в редакторе показывает его ползунки.</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>Снимки, которые его используют, сохраняют свои настройки. Они снова подействуют, как только расширение будет загружено снова.</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>Этот снимок настроен в версии {0}, загружена версия {1}.</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>Этот снимок использует расширения, которые здесь не загружены. Их настройки сохраняются:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>Не загружено заново:</value>
   </data>
 </root>

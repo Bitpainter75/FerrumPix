@@ -10066,8 +10066,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>마스킹</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: 가장자리를 강화하고 밝고 어두운 테두리를 만듭니다. Deconvolution: 흐림을 역으로 계산하여 미세한 디테일이 테두리 없이 다시 선명해집니다. 여기서 세부는 반복 횟수를 뜻합니다.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: 가장자리를 강화하고 밝고 어두운 테두리를 만듭니다. Deconvolution: 흐림을 역으로 계산하여 미세한 디테일이 테두리 없이 다시 선명해집니다. 여기서 세부는 반복 횟수를 뜻합니다. High Pass: 선형 라이트처럼 혼합한 하이 패스로 가장 미세한 디테일을 살립니다. 여기서 반경은 0.3에서 2.0포인트까지이며 세부는 작용하지 않습니다.</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>노이즈 감소</value>
@@ -11907,5 +11907,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>연도</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>확장</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>확장 불러오기</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>다시 읽기</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>불러온 확장이 없습니다.</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>확장은 자체 슬라이더를 가진 도구를 설명하는 파일입니다. 하나라도 불러오면 편집기의 조정 그룹에 확장 도구가 나타납니다.</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>버전 {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>기본 포함</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>불러오지 못함:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>불러옴: {0}. 편집기의 확장 도구에 슬라이더가 표시됩니다.</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>이를 사용하는 사진은 설정을 유지합니다. 확장을 다시 불러오면 다시 적용됩니다.</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>이 사진은 버전 {0}으로 설정되었고, 불러온 것은 버전 {1}입니다.</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>이 사진은 여기서 불러오지 않은 확장을 사용합니다. 해당 설정은 유지됩니다:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>다시 불러오지 못함:</value>
   </data>
 </root>

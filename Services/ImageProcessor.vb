@@ -3406,12 +3406,18 @@ Namespace Services
                                            Function(d) ApplyVignetteDeep(d, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
             End If
 
+            ' Die Erweiterungen haben zwei feste Stellen, vor und hinter der Koernung: davor wird
+            ' das Ergebnis gekoernt, dahinter rechnet die Erweiterung das Korn mit (etwa beim Tonen).
+            processed = ApplyExtensionStages(session, processed, owned, adj, ExtensionStages.BeforeGrain)
+
             If adj.Grain > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Koernung",
                                            GrainOnGpu(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
                                            Function(s) ApplyGrain(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
                                            Function(d) ApplyGrainDeep(d, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F))
             End If
+
+            processed = ApplyExtensionStages(session, processed, owned, adj, ExtensionStages.AfterGrain)
             If adj.AddNoise > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen hinzufuegen", AddNoiseOnGpu(adj.AddNoise / 100.0F),
                                            Function(s) ApplyAddNoise(s, adj.AddNoise / 100.0F),
@@ -5129,6 +5135,8 @@ Namespace Services
             tone.TiltShiftAmount = neutral.TiltShiftAmount : tone.TiltShiftAngle = neutral.TiltShiftAngle
             tone.TiltShiftCenterX = neutral.TiltShiftCenterX : tone.TiltShiftCenterY = neutral.TiltShiftCenterY
             tone.TiltShiftFocus = neutral.TiltShiftFocus : tone.TiltShiftTransition = neutral.TiltShiftTransition
+            ' Die Erweiterungen rechnen um die Koernung herum, gehoeren also zu den Detailstufen.
+            tone.ExtensionSettings = neutral.ExtensionSettings
             tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
             tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
             tone.AddNoise = neutral.AddNoise
@@ -5357,6 +5365,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.TiltShiftAmount, adj.TiltShiftCenterX, adj.TiltShiftCenterY, adj.TiltShiftAngle,
                 adj.TiltShiftFocus, adj.TiltShiftTransition,
                 LightSourcesKey(adj),
+                ExtensionsKey(adj),
                 adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
@@ -7069,7 +7078,155 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             If method = SharpenMethod.Deconvolution Then
                 Return ApplyDeconvolutionSharpening(source, amount, radiusAmount, detailAmount, maskingAmount)
             End If
+            If method = SharpenMethod.HighPass Then Return ApplyHighPassSharpening(source, amount, radiusAmount, maskingAmount)
             Return ApplyUnsharpMask(source, amount, radiusAmount, detailAmount, maskingAmount)
+        End Function
+
+        ' ── Der Hochpass ──────────────────────────────────────────────────────────────────
+        '
+        ' DAS VERFAHREN DER EBENENPROGRAMME: Ebene kopieren, Hochpassfilter mit kleinem Radius
+        ' darauf, mit "Lineares Licht" ueber das Bild mischen. Der Hochpass ist Bild minus
+        ' Weichzeichnung um Grau 0,5; Lineares Licht rechnet Bild + 2 * Ebene - 1. Zusammen bleibt
+        ' Bild + 2 * (Bild - Weichzeichnung). Das wird hier in einem Schritt gerechnet, ohne die
+        ' graue Zwischenebene und ohne deren Rundung auf 8 Bit.
+        '
+        ' AUF DER HELLIGKEIT wie die beiden anderen Verfahren (das entspricht der entsaettigten
+        ' Hochpass-Ebene): je Kanal gerechnet hoebe der Schritt Farbsaeume und Farbrauschen mit an.
+        '
+        ' NICHT GEFORMT UND NICHT GEEICHT: kein Hof-Massstab, keine schwaecheren dunklen Hoefe, keine
+        ' Stuetzstellen aus einer Referenz. Wer dieses Verfahren waehlt, will genau die rohe Rechnung.
+        ' Der Regler Details hat hier deshalb nichts zu stellen.
+
+        ''' <summary>Sigma der Weichzeichnung bei Radius 0 und der Zuwachs bis Radius 100: 0,3 bis
+        ''' 2,0 Punkte. Die feine Zeichnung, fuer die das Verfahren da ist, liegt bei 0,3 bis 0,5.
+        ''' Nicht tiefer: bei 0,2 traegt der Nachbarpunkt vier Millionstel, der Hochpass ist dann
+        ''' null und der Regler haette eine Stellung, an der nichts geschieht (gemessen).</summary>
+        Private Const HighPassSigmaBase As Single = 0.3F
+        Private Const HighPassSigmaRange As Single = 1.7F
+        ''' <summary>Staerke 100 ist "Lineares Licht" bei voller Deckkraft: der Hochpass doppelt.</summary>
+        Private Const HighPassGainScale As Single = 2.0F
+        ''' <summary>Weiteste Reichweite des Kerns in Punkten. Bis Sigma 1,6 sind das 2,5 Sigma, bei
+        ''' 2,0 noch 2 Sigma. Fest, weil der Shader dieselben neun mal neun Punkte liest.</summary>
+        Friend Const HighPassReach As Integer = 4
+
+        ''' <summary>Sigma und Verstaerkung des Hochpasses fuer Schaerfe als Anteil von 100 (0 bis
+        ''' 1,5) und den Radiusregler als Anteil von 100.</summary>
+        Friend Shared Function HighPassParameters(amount As Single, radiusAmount As Single) As (Sigma As Single, Gain As Single)
+            Return (HighPassSigmaBase + Clamp(radiusAmount, 0, 1) * HighPassSigmaRange,
+                    Clamp(amount, 0, 1.5F) * HighPassGainScale)
+        End Function
+
+        ''' <summary>Die Gewichte der Weichzeichnung des Hochpasses: Gaussglocke fuer die Mitte und
+        ''' die Abstaende 1 bis <see cref="HighPassReach"/>, jenseits von 2,5 Sigma null, Summe
+        ''' ueber beide Seiten 1. Prozessor, tiefes Bild und Shader bekommen dieselben fuenf Zahlen.</summary>
+        Friend Shared Function HighPassWeights(sigma As Single) As Single()
+            Dim weights(HighPassReach) As Single
+            Dim reach = Math.Min(HighPassReach, CInt(Math.Ceiling(2.5 * sigma)))
+            Dim sum = 0.0
+            For i = 0 To reach
+                Dim value = Math.Exp(-(i * i) / (2.0 * sigma * sigma))
+                weights(i) = CSng(value)
+                sum += If(i = 0, value, 2.0 * value)
+            Next
+            For i = 0 To reach
+                weights(i) = CSng(weights(i) / sum)
+            Next
+            Return weights
+        End Function
+
+        ''' <summary>Weichzeichnet eine Ebene mit den Gewichten aus <see cref="HighPassWeights"/>:
+        ''' erst je Zeile, dann je Spalte, Rand fortgesetzt. Der Shader summiert in derselben Folge.</summary>
+        Friend Shared Function HighPassBlurPlane(plane As Single(), width As Integer, height As Integer,
+                                                 weights As Single()) As Single()
+            Dim rows(width * height - 1) As Single
+            Dim result(width * height - 1) As Single
+            ForEachRow(width, height,
+                Sub(y)
+                    Dim at = y * width
+                    For x = 0 To width - 1
+                        Dim sum = weights(0) * plane(at + x)
+                        For i = 1 To HighPassReach
+                            sum += weights(i) * (plane(at + Math.Max(x - i, 0)) + plane(at + Math.Min(x + i, width - 1)))
+                        Next
+                        rows(at + x) = sum
+                    Next
+                End Sub)
+            ForEachRow(width, height,
+                Sub(y)
+                    Dim at = y * width
+                    For x = 0 To width - 1
+                        Dim sum = weights(0) * rows(at + x)
+                        For i = 1 To HighPassReach
+                            sum += weights(i) * (rows(Math.Max(y - i, 0) * width + x) + rows(Math.Min(y + i, height - 1) * width + x))
+                        Next
+                        result(at + x) = sum
+                    Next
+                End Sub)
+            Return result
+        End Function
+
+        ''' <summary>Schaerfen ueber den Hochpass: die Rec.-709-Luma minus ihre Weichzeichnung, mit
+        ''' der Verstaerkung aus <see cref="HighPassParameters"/> gleich auf alle drei Kanaele
+        ''' addiert. Die Maskierung gewichtet wie bei der Unschaerfemaske
+        ''' (<see cref="SharpenEdgeFactor"/>), damit die ALT-Vorschau auch hier stimmt.</summary>
+        Private Shared Function ApplyHighPassSharpening(source As SKBitmap, amount As Single, radiusAmount As Single,
+                                                        maskingAmount As Single) As SKBitmap
+            Dim p = HighPassParameters(amount, radiusAmount)
+            Dim gain = p.Gain
+            Dim masking = Clamp(maskingAmount, 0, 1)
+            Dim result = New SKBitmap(source.Width, source.Height, source.ColorType, source.AlphaType)
+
+            Dim srcBuf As Byte() = Nothing, dstBuf As Byte() = Nothing
+            Dim stride, ri, gi, bi, ai As Integer
+            Dim sLen = 0
+            Try
+                If Not TryRentRgbaLikeBuffer(source, srcBuf, sLen, stride, ri, gi, bi, ai) Then Return result
+                dstBuf = PlanePool(Of Byte).Rent(sLen)
+                If stride <> source.Width * 4 Then Array.Clear(dstBuf, 0, sLen)
+                Dim w = source.Width, h = source.Height
+
+                Dim lumaPlane(w * h - 1) As Single
+                ForEachRow(w, h,
+                    Sub(y)
+                        Dim rowOffset = y * stride
+                        Dim at = y * w
+                        For x = 0 To w - 1
+                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                            ReadUnpremultiplied(srcBuf, rowOffset + x * 4, ri, gi, bi, ai, cr, cg, cb, a)
+                            lumaPlane(at + x) = 0.2126F * cr + 0.7152F * cg + 0.0722F * cb
+                        Next
+                    End Sub)
+                Dim blurred = HighPassBlurPlane(lumaPlane, w, h, HighPassWeights(p.Sigma))
+
+                ForEachRow(w, h,
+                    Sub(y)
+                        Dim rowOffset = y * stride
+                        Dim at = y * w
+                        Dim upRow = If(y > 0, (y - 1) * stride, rowOffset)
+                        Dim downRow = If(y < h - 1, (y + 1) * stride, rowOffset)
+                        For x = 0 To w - 1
+                            Dim o = rowOffset + x * 4
+                            Dim cr As Integer, cg As Integer, cb As Integer, a As Integer
+                            ReadUnpremultiplied(srcBuf, o, ri, gi, bi, ai, cr, cg, cb, a)
+
+                            Dim pixelGain = gain
+                            If masking > 0 Then
+                                Dim edge = SharpenEdgeFactor(srcBuf, rowOffset, upRow, downRow, x, w, ri, gi, bi, ai)
+                                pixelGain = gain * ((1.0F - masking) + masking * edge)
+                            End If
+
+                            Dim delta = pixelGain * (lumaPlane(at + x) - blurred(at + x))
+                            WritePremultiplied(dstBuf, o, ri, gi, bi, ai,
+                                ClampToByte(cr + delta), ClampToByte(cg + delta), ClampToByte(cb + delta), a)
+                        Next
+                    End Sub)
+
+                Runtime.InteropServices.Marshal.Copy(dstBuf, 0, result.GetPixels(), sLen)
+                Return result
+            Finally
+                ReturnPooledBuffer(srcBuf)
+                ReturnPooledBuffer(dstBuf)
+            End Try
         End Function
 
         ' ── Die Unschärfemaske, an der Referenz geeicht ────────────────────────────────────
@@ -7420,6 +7577,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             unsharpened.SharpenMethod = SharpenMethod.UnsharpMask
             unsharpened.Vignette = 0
             unsharpened.TiltShiftAmount = 0
+            unsharpened.ExtensionSettings = ""
             unsharpened.Grain = 0
             unsharpened.AddNoise = 0
             Return unsharpened

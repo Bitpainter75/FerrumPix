@@ -10041,8 +10041,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Masking</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: strengthens edges and adds light and dark halos. Deconvolution: reverses the blur, fine detail becomes crisp again without halos. There, Detail sets the number of passes.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: strengthens edges and adds light and dark halos. Deconvolution: reverses the blur, fine detail becomes crisp again without halos. There, Detail sets the number of passes. High Pass: lifts the finest detail with a high pass blended like Linear Light. There, Radius runs from 0.3 to 2.0 pixels and Detail has no effect.</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>Noise Reduction</value>
@@ -11882,5 +11882,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>Year</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>Extensions</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>Load extension</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>No extension loaded.</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>An extension is a file that describes a tool with its own sliders. Once one is loaded, the editor shows the Extensions tool in the Adjustments group.</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>included</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>Not loaded:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>Loaded: {0}. The Extensions tool in the editor shows its sliders.</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>Pictures that use it keep their settings. They take effect again as soon as the extension is loaded again.</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>This picture was set with version {0}, version {1} is loaded.</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>This picture uses extensions that are not loaded here. Their settings are kept:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>Not reloaded:</value>
   </data>
 </root>

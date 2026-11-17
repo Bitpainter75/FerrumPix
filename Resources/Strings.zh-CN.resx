@@ -10020,8 +10020,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>蒙版</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask：增强边缘，同时产生亮暗光晕。Deconvolution：反算模糊，细节重新清晰且没有光晕。此时细节表示处理次数。</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask：增强边缘，同时产生亮暗光晕。Deconvolution：反算模糊，细节重新清晰且没有光晕。此时细节表示处理次数。High Pass：用按线性光混合的高反差保留突出最细的细节。此时半径为 0.3 到 2.0 点，细节不起作用。</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>减少杂色</value>
@@ -11861,5 +11861,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>年</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>扩展</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>加载扩展</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>重新读取</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>未加载任何扩展。</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>扩展是一个描述带有自有滑块的工具的文件。加载后，编辑器会在调整组中显示扩展工具。</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>随附</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>未加载：</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>已加载：{0}。编辑器中的扩展工具会显示其滑块。</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>使用它的图片会保留其设置。扩展重新加载后，这些设置会再次生效。</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>此图片使用版本 {0} 设置，当前加载的是版本 {1}。</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>此图片使用了此处未加载的扩展。它们的设置会被保留：</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>未重新加载：</value>
   </data>
 </root>

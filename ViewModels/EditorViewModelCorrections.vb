@@ -411,6 +411,7 @@ Namespace ViewModels
 
         ''' <summary>Schreibt die Werte aller sechs Gruppen ins Rezept.</summary>
         Private Sub WriteCorrectionsInto(adj As ImageAdjustments)
+            WriteExtensionsInto(adj)
             Dim m = _channelMixer
             adj.ChannelMixerRedRed = CSng(m(0)) : adj.ChannelMixerRedGreen = CSng(m(1))
             adj.ChannelMixerRedBlue = CSng(m(2)) : adj.ChannelMixerRedConstant = CSng(m(3))
@@ -437,6 +438,7 @@ Namespace ViewModels
         ''' <summary>Uebernimmt die Werte aller sechs Gruppen aus dem Rezept und meldet sie der
         ''' Oberflaeche. Die gewaehlte Ausgabe und der gewaehlte Farbbereich bleiben stehen.</summary>
         Private Sub ReadCorrectionsFrom(adj As ImageAdjustments)
+            ReadExtensionsFrom(adj)
             Dim values = {adj.ChannelMixerRedRed, adj.ChannelMixerRedGreen, adj.ChannelMixerRedBlue, adj.ChannelMixerRedConstant,
                           adj.ChannelMixerGreenRed, adj.ChannelMixerGreenGreen, adj.ChannelMixerGreenBlue, adj.ChannelMixerGreenConstant,
                           adj.ChannelMixerBlueRed, adj.ChannelMixerBlueGreen, adj.ChannelMixerBlueBlue, adj.ChannelMixerBlueConstant,
@@ -474,6 +476,8 @@ Namespace ViewModels
         ''' <summary>Der Name eines Handgriffs in der Historie, oder Nothing, wenn er nicht hierher
         ''' gehoert. Gruppe und Regler gehen einzeln durch die Uebersetzung.</summary>
         Private Function CorrectionHistoryLabel(propertyName As String) As String
+            Dim extensionLabel = ExtensionHistoryLabel(propertyName)
+            If extensionLabel IsNot Nothing Then Return extensionLabel
             Select Case propertyName
                 Case NameOf(ChannelMixerMonochrome) : Return CombineHistoryLabel("Kanalmixer", "Monochrom")
                 Case NameOf(ChannelMixerRed), NameOf(ChannelMixerGreen), NameOf(ChannelMixerBlue), NameOf(ChannelMixerConstant)
@@ -497,6 +501,9 @@ Namespace ViewModels
         ''' <summary>Das Symbol eines Handgriffs in der Historie: das des Werkzeugs, in dem er sitzt.</summary>
         Private Shared Function CorrectionHistoryIcon(propertyName As String) As String
             Const outline = "avares://FerrumPix/Assets/Icons/phosphor/regular/"
+            If propertyName IsNot Nothing AndAlso propertyName.StartsWith(ExtensionHistoryPrefix, StringComparison.Ordinal) Then
+                Return outline & "puzzle-piece.svg"
+            End If
             Select Case propertyName
                 Case NameOf(ChannelMixerMonochrome), NameOf(ChannelMixerRed), NameOf(ChannelMixerGreen),
                      NameOf(ChannelMixerBlue), NameOf(ChannelMixerConstant),

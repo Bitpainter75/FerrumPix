@@ -10062,8 +10062,8 @@
   <data name="Maskieren_e4d7a7d4" xml:space="preserve">
     <value>Maskering</value>
   </data>
-  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_d09c3b4a" xml:space="preserve">
-    <value>Unsharp Mask: förstärker kanter och lägger ljusa och mörka halor. Deconvolution: räknar tillbaka oskärpan, fina detaljer blir skarpa igen utan halor. Detalj anger där antalet genomgångar.</value>
+  <data name="Unsharp_Mask_verst_rkt_Kanten_und_legt_dabei_hel_f24a50c5" xml:space="preserve">
+    <value>Unsharp Mask: förstärker kanter och lägger ljusa och mörka halor. Deconvolution: räknar tillbaka oskärpan, fina detaljer blir skarpa igen utan halor. Detalj anger där antalet genomgångar. High Pass: lyfter de finaste detaljerna med ett högpassfilter blandat som Linjärt ljus. Radie går där från 0,3 till 2,0 punkter, Detalj har ingen verkan.</value>
   </data>
   <data name="Rauschreduzierung_03a92e86" xml:space="preserve">
     <value>Brusreducering</value>
@@ -11903,5 +11903,44 @@
   </data>
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>År</value>
+  </data>
+  <data name="Erweiterungen_d58efa5e" xml:space="preserve">
+    <value>Tillägg</value>
+  </data>
+  <data name="Erweiterung_laden_7f1b993b" xml:space="preserve">
+    <value>Läs in tillägg</value>
+  </data>
+  <data name="Neu_einlesen_7c812c52" xml:space="preserve">
+    <value>Läs in igen</value>
+  </data>
+  <data name="Keine_Erweiterung_geladen_bdef2669" xml:space="preserve">
+    <value>Inget tillägg inläst.</value>
+  </data>
+  <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
+    <value>Ett tillägg är en fil som beskriver ett verktyg med egna reglage. När ett är inläst visar redigeraren verktyget Tillägg i gruppen Justeringar.</value>
+  </data>
+  <data name="Fassung_0_6d62d634" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="mitgeliefert_23d772be" xml:space="preserve">
+    <value>medföljer</value>
+  </data>
+  <data name="Nicht_geladen_910c9114" xml:space="preserve">
+    <value>Inte inläst:</value>
+  </data>
+  <data name="Geladen_0_Das_Werkzeug_Erweiterungen_im_Editor_z_5acab5e6" xml:space="preserve">
+    <value>Inläst: {0}. Verktyget Tillägg i redigeraren visar dess reglage.</value>
+  </data>
+  <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
+    <value>Bilder som använder det behåller sina inställningar. De verkar igen så snart tillägget läses in på nytt.</value>
+  </data>
+  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+    <value>Den här bilden ställdes in med version {0}, version {1} är inläst.</value>
+  </data>
+  <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
+    <value>Den här bilden använder tillägg som inte är inlästa här. Deras inställningar behålls:</value>
+  </data>
+  <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
+    <value>Inte inläst igen:</value>
   </data>
 </root>

@@ -1372,7 +1372,69 @@ Namespace Services
             If method = SharpenMethod.Deconvolution Then
                 Return ApplyDeconvolutionSharpeningDeep(deep, amount, radiusAmount, detailAmount, maskingAmount)
             End If
+            If method = SharpenMethod.HighPass Then Return ApplyHighPassSharpeningDeep(deep, amount, radiusAmount, maskingAmount)
             Return ApplyUnsharpMaskDeep(deep, amount, radiusAmount, detailAmount, maskingAmount)
+        End Function
+
+        ''' <summary>Derselbe Hochpass wie <see cref="ApplyHighPassSharpening"/> auf dem tiefen Bild:
+        ''' Rec.-709-Luma minus ihre Weichzeichnung (<see cref="HighPassBlurPlane"/>), derselbe
+        ''' Betrag auf alle drei Kanaele, mit der Maskierung nach der Kantenstaerke. Wer die eine
+        ''' Fassung aendert, aendert die andere mit.</summary>
+        Private Shared Function ApplyHighPassSharpeningDeep(deep As SKBitmap, amount As Single, radiusAmount As Single,
+                                                            maskingAmount As Single) As SKBitmap
+            Dim p = HighPassParameters(amount, radiusAmount)
+            Dim gain = p.Gain
+            Dim masking = Clamp(maskingAmount, 0, 1)
+            Dim w = deep.Width, h = deep.Height
+            Dim sourcePixels = deep.GetPixels()
+            If sourcePixels = IntPtr.Zero OrElse w <= 0 OrElse h <= 0 Then Return Nothing
+            Dim premul = deep.AlphaType = SKAlphaType.Premul
+
+            Dim luma(w * h - 1) As Single
+            Dim edgeLuma As Single() = If(masking > 0, New Single(w * h - 1) {}, Nothing)
+            Parallel.For(0, h,
+                Sub(y)
+                    Dim row(w * 4 - 1) As Short
+                    ReadDeepRow(deep, sourcePixels, y, row)
+                    Dim at = y * w
+                    For x = 0 To w - 1
+                        Dim cr As Single, cg As Single, cb As Single, a As Integer
+                        ReadDeepUnpremultiplied(row, x * 4, premul, cr, cg, cb, a)
+                        luma(at + x) = 0.2126F * cr + 0.7152F * cg + 0.0722F * cb
+                        If edgeLuma IsNot Nothing Then edgeLuma(at + x) = 0.299F * cr + 0.587F * cg + 0.114F * cb
+                    Next
+                End Sub)
+            Dim blurred = HighPassBlurPlane(luma, w, h, HighPassWeights(p.Sigma))
+
+            Dim result = NewDeepBitmap(w, h, deep.AlphaType)
+            If result Is Nothing Then Return Nothing
+            Dim targetPixels = result.GetPixels()
+            Parallel.For(0, h,
+                Sub(y)
+                    Dim row(w * 4 - 1) As Short
+                    ReadDeepRow(deep, sourcePixels, y, row)
+                    Dim at = y * w
+                    Dim u1 = Math.Max(y - 1, 0) * w, d1 = Math.Min(y + 1, h - 1) * w
+                    For x = 0 To w - 1
+                        Dim o = x * 4
+                        Dim cr As Single, cg As Single, cb As Single, a As Integer
+                        ReadDeepUnpremultiplied(row, o, premul, cr, cg, cb, a)
+
+                        Dim pixelGain = gain
+                        If edgeLuma IsNot Nothing Then
+                            Dim left = at + Math.Max(x - 1, 0), right = at + Math.Min(x + 1, w - 1)
+                            Dim edge = Clamp((Math.Abs(edgeLuma(left) - edgeLuma(right)) +
+                                              Math.Abs(edgeLuma(u1 + x) - edgeLuma(d1 + x))) / SharpenEdgeFullScale, 0, 1)
+                            edge = edge * edge * (3.0F - 2.0F * edge)
+                            pixelGain = gain * ((1.0F - masking) + masking * edge)
+                        End If
+
+                        Dim delta = pixelGain * (luma(at + x) - blurred(at + x))
+                        WriteDeepPremultiplied(row, o, premul, cr + delta, cg + delta, cb + delta, a)
+                    Next
+                    WriteDeepRow(result, targetPixels, y, row)
+                End Sub)
+            Return result
         End Function
 
         ''' <summary>Schaerfen durch Zurueckrechnen auf dem tiefen Bild, wie

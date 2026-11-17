@@ -57,6 +57,10 @@ Namespace Services
         ''' <summary>Richardson-Lucy auf der Helligkeit: rechnet die Unschaerfe zurueck, statt
         ''' Kanten zu ueberzeichnen. Siehe ImageProcessorFilters.ApplyDeconvolutionSharpening.</summary>
         Deconvolution = 1
+        ''' <summary>Hochpass, ueber das Bild gemischt wie mit "Lineares Licht": die Helligkeit minus
+        ''' ihre sehr kleine Weichzeichnung, doppelt aufaddiert. Hebt die feinste Zeichnung, ohne
+        ''' Formung und ohne Eichung. Siehe ImageProcessor.ApplyHighPassSharpening.</summary>
+        HighPass = 2
     End Enum
 
     ''' <summary>Die Objektabbildung eines Rezepts in ihrer einfachsten Form: Mittelpunkt auf
@@ -1296,6 +1300,11 @@ Namespace Services
         Public Property CanvasBackgroundColor As String = "#00000000"
         Public Property FilterPreset As String = "Keine"
         Public Property FilterStrength As Single = 100
+        ''' <summary>Die Erweiterungen dieses Rezepts mit ihren Reglerwerten, in der festen Form von
+        ''' <see cref="ExtensionRecipe"/>; leer heisst keine. Eine Zeichenkette und keine Liste,
+        ''' weil das Rezept ueber seine Eigenschaften kopiert und mit der Vorgabe verglichen wird
+        ''' (PixelAdjustmentProperties), siehe dort.</summary>
+        Public Property ExtensionSettings As String = ""
         Public Property LutPath As String = ""
         Public Property LutStrength As Single = 100
         Public Property RetouchSpots As New System.Collections.Generic.List(Of RetouchSpot)()
@@ -2046,6 +2055,7 @@ Namespace Services
                 .CanvasBackgroundColor = CanvasBackgroundColor,
                 .FilterPreset = FilterPreset,
                 .FilterStrength = FilterStrength,
+                .ExtensionSettings = ExtensionSettings,
                 .LutPath = LutPath,
                 .LutStrength = LutStrength,
                 .RetouchSpots = RetouchSpots.Select(Function(s) s.Clone()).ToList(),

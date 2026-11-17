@@ -3057,6 +3057,7 @@ half4 main(float2 p) {
         Private Shared Function SharpnessOnGpu(amount As Single, radiusAmount As Single, detailAmount As Single,
                                                maskingAmount As Single, method As SharpenMethod) As Func(Of GRContext, SKImage, SKSurface)
             If method = SharpenMethod.Deconvolution Then Return DeconvolutionOnGpu(amount, radiusAmount, detailAmount, maskingAmount)
+            If method = SharpenMethod.HighPass Then Return HighPassOnGpu(amount, radiusAmount, maskingAmount)
             Dim p = SharpenParameters(amount, radiusAmount, detailAmount)
             Dim sigma = p.Sigma
             Dim inner = SharpenInnerWeights(p.InnerSigma)
@@ -3080,6 +3081,71 @@ half4 main(float2 p) {
                        End Using
                    End Function
         End Function
+
+        ''' <summary>Der Hochpass auf der Karte, in EINEM Durchgang: der Shader weichzeichnet die
+        ''' Luma selbst ueber neun mal neun Punkte, mit den Gewichten des Prozessors
+        ''' (<see cref="HighPassWeights"/>) und in derselben Summenfolge, erst je Zeile, dann ueber
+        ''' die Zeilen. Rechnet wie ApplyHighPassSharpening.</summary>
+        Private Shared Function HighPassOnGpu(amount As Single, radiusAmount As Single,
+                                              maskingAmount As Single) As Func(Of GRContext, SKImage, SKSurface)
+            Dim p = HighPassParameters(amount, radiusAmount)
+            Dim weights = HighPassWeights(p.Sigma)
+            Dim masking = Clamp(maskingAmount, 0, 1)
+            Return Function(gr, image)
+                       Dim effect = StageEffect("Hochpass", HighPassShader)
+                       Dim u = New SKRuntimeEffectUniforms(effect)
+                       u("center") = weights(0)
+                       u("side") = New Single() {weights(1), weights(2), weights(3), weights(4)}
+                       u("gain") = p.Gain
+                       u("masking") = masking
+                       Return DrawStage(gr, image.Width, image.Height, effect, u, ("src", image))
+                   End Function
+        End Function
+
+        Private Const HighPassShader As String = "
+uniform shader src;
+uniform float center;
+uniform float4 side;
+uniform float gain;
+uniform float masking;
+float lumaAt(float2 q) {
+    float3 v = unpremulBytes(toBytes(src.eval(q)));
+    return 0.299 * v.r + 0.587 * v.g + 0.114 * v.b;
+}
+float luma709At(float2 q) {
+    float3 v = unpremulBytes(toBytes(src.eval(q)));
+    return 0.2126 * v.r + 0.7152 * v.g + 0.0722 * v.b;
+}
+// Die Weichzeichnung einer Zeile wie im Prozessor: Mitte, dann die Paare je Abstand. Den Rand
+// setzt das Klemmen des Kindes fort.
+float blurRow(float2 q) {
+    return center * luma709At(q) +
+           side.x * (luma709At(q + float2(-1.0, 0.0)) + luma709At(q + float2(1.0, 0.0))) +
+           side.y * (luma709At(q + float2(-2.0, 0.0)) + luma709At(q + float2(2.0, 0.0))) +
+           side.z * (luma709At(q + float2(-3.0, 0.0)) + luma709At(q + float2(3.0, 0.0))) +
+           side.w * (luma709At(q + float2(-4.0, 0.0)) + luma709At(q + float2(4.0, 0.0)));
+}
+half4 main(float2 p) {
+    float4 c = toBytes(src.eval(p));
+    float3 cc = unpremulBytes(c);
+    float pixelGain = gain;
+    if (masking > 0.0) {
+        // SharpenEdgeFactor
+        float edge = clamp((abs(lumaAt(p + float2(-1.0, 0.0)) - lumaAt(p + float2(1.0, 0.0))) +
+                            abs(lumaAt(p + float2(0.0, -1.0)) - lumaAt(p + float2(0.0, 1.0)))) / 48.0, 0.0, 1.0);
+        edge = edge * edge * (3.0 - 2.0 * edge);
+        pixelGain = gain * ((1.0 - masking) + masking * edge);
+    }
+    float blurred = center * blurRow(p) +
+                    side.x * (blurRow(p + float2(0.0, -1.0)) + blurRow(p + float2(0.0, 1.0))) +
+                    side.y * (blurRow(p + float2(0.0, -2.0)) + blurRow(p + float2(0.0, 2.0))) +
+                    side.z * (blurRow(p + float2(0.0, -3.0)) + blurRow(p + float2(0.0, 3.0))) +
+                    side.w * (blurRow(p + float2(0.0, -4.0)) + blurRow(p + float2(0.0, 4.0)));
+    float delta = pixelGain * (luma709At(p) - blurred);
+    float3 o = float3(clampByte(cc.r + delta), clampByte(cc.g + delta), clampByte(cc.b + delta));
+    return writePremul(o, c.a);
+}
+"
 
         Private Const UnsharpMaskShader As String = "
 uniform shader src;

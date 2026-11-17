@@ -693,6 +693,13 @@ Namespace Services
         ''' <see cref="AppSettingsService.CompactGroupBlocks"/> (erster Schluessel eines Blocks).
         ''' Leer heisst: wie im Panel. Die Einzelwerkzeuge behalten ihre Reihenfolge.</summary>
         Public Property EditorCompactGroupOrder As String = ""
+        ''' <summary>Die Reihenfolge der Gruppen im Werkzeug Erweiterungen: Kennungen mit Komma.
+        ''' Was hier nicht steht, folgt nach Name. Gesetzt in den Einstellungen, sofort gespeichert
+        ''' wie Laden und Entfernen (ExtensionService.MoveInOrder).</summary>
+        Public Property ExtensionOrder As String = ""
+        ''' <summary>Woher jede Erweiterung geladen wurde: Kennung nach Pfad der Ursprungsdatei.
+        ''' "Neu einlesen" holt sie von dort erneut (ExtensionService.RefreshFromSources).</summary>
+        Public Property ExtensionSources As New Dictionary(Of String, String)()
         ''' Werkzeug, das beim Betreten des Editors aktiv ist: "Selection" (Auswahl) oder
         ''' "Adjust" (Anpassen). Ab Werk steht der Editor direkt bei den Anpassungen.
         Public Property EditorStartupTool As String = "Adjust"
@@ -3053,6 +3060,22 @@ Namespace Services
                        Else
                            s.DisplayProfiles(screenKey) = profilePath
                        End If
+                   End Sub)
+        End Sub
+
+        Public Shared Sub SaveExtensionOrder(value As String)
+            Update(Sub(s) s.ExtensionOrder = If(value, ""))
+        End Sub
+
+        ''' <summary>Setzt oder entfernt (<paramref name="sourcePath"/> leer) den Ursprung einer
+        ''' Erweiterung. Immer ein NEUES Woerterbuch: das alte kann noch im Zwischenspeicher von
+        ''' Load haengen, und ein Aendern an Ort und Stelle aenderte dort mit.</summary>
+        Public Shared Sub SaveExtensionSource(id As String, sourcePath As String)
+            If String.IsNullOrEmpty(id) Then Return
+            Update(Sub(s)
+                       Dim copy = New Dictionary(Of String, String)(If(s.ExtensionSources, New Dictionary(Of String, String)()), StringComparer.Ordinal)
+                       If String.IsNullOrEmpty(sourcePath) Then copy.Remove(id) Else copy(id) = sourcePath
+                       s.ExtensionSources = copy
                    End Sub)
         End Sub
 
