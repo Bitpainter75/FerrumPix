@@ -971,6 +971,10 @@ Namespace Views
             ' sagte das nicht: ein Werkzeug, das nicht reagiert, sah wie ein Fehler aus
             ' (Nutzerbefund). Deshalb Hand als Zeiger.
             UpdatePanModeCursor()
+            If DiagnosticLogService.IsVerboseEnabled Then
+                DiagnosticLogService.LogAlways("Editor.StagePress",
+                    $"Knopf Verschieben {If(_isPanMode, "an", "aus")}: zoom={SliderToZoom(_zoomSliderValue):0}% trackpadMode={IsTrackpadMode()}")
+            End If
         End Sub
 
         ''' Die Hand steht, solange der Modus gilt, ob per Knopf oder per LEERTASTE. Die
@@ -2549,6 +2553,7 @@ Namespace Views
             Dim pointerPoint = e.GetCurrentPoint(Nothing)
 
             If pointerPoint.Properties.IsRightButtonPressed Then
+                TraceStagePress("rechte Taste: Verschieben", e, canvas, vm)
                 Dim pos = e.GetPosition(canvas)
                 _panStartX = pos.X
                 _panStartY = pos.Y
@@ -2560,7 +2565,11 @@ Namespace Views
                 Return
             End If
 
-            If Not pointerPoint.Properties.IsLeftButtonPressed Then Return
+            If Not pointerPoint.Properties.IsLeftButtonPressed Then
+                TraceStagePress("weder linke noch rechte Taste: nichts", e, canvas, vm)
+                Return
+            End If
+            TraceStagePress("linke Taste", e, canvas, vm)
 
             ' Der Nachdruck einer eben beendeten Pipette loest kein Werkzeug aus (siehe
             ' IsPressRightAfterPick).
@@ -2588,11 +2597,28 @@ Namespace Views
                 Return
             End If
 
-            ' Verschoben wird nur über den Knopf Verschieben, die LEERTASTE oder die rechte
-            ' Maustaste, auch im Trackpad-Modus. Machte der Trackpad-Modus jeden Zug auf einem
-            ' vergrößerten Bild zum Verschieben, kam dort kein Klick mehr bei Auswahl und
-            ' Werkzeugen an, und der Knopf änderte nichts.
+            ' Im Trackpad-Modus ist Ziehen auf einem Bild, das größer als die Bühne ist, das
+            ' direkte Verschieben. Ein Modifikator hält die gewöhnliche Werkzeug-Geste verfügbar:
+            ' Umschalt war das bisher schon; Strg und Alt sind es jetzt ebenso, weil sie einen
+            ' Pinselzug führen können.
+            If IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) AndAlso
+               vm IsNot Nothing AndAlso CanTrackpadPan(canvas, vm) Then
+                TraceStagePress("Trackpad-Modus: Verschieben statt Werkzeug", e, canvas, vm)
+                Dim pos = e.GetPosition(canvas)
+                _panStartX = pos.X
+                _panStartY = pos.Y
+                _panStartOffsetX = _panX
+                _panStartOffsetY = _panY
+                _isPanDragging = True
+                e.Pointer.Capture(canvas)
+                e.Handled = True
+                Return
+            End If
+
             If _isPanMode Then
+                TraceStagePress("Knopf Verschieben oder LEERTASTE: Verschieben statt Werkzeug", e, canvas, vm)
                 Dim pos = e.GetPosition(canvas)
                 _panStartX = pos.X
                 _panStartY = pos.Y
@@ -2606,6 +2632,11 @@ Namespace Views
 
             If vm IsNot Nothing Then
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
+                If imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso
+                   Not imageRect.Contains(e.GetPosition(canvas)) AndAlso
+                   Not BrushCircleTouchesImage(e.GetPosition(canvas), imageRect, vm) Then
+                    TraceStagePress("neben dem Bild", e, canvas, vm)
+                End If
                 If imageRect.Width > 0 AndAlso imageRect.Height > 0 AndAlso
                    Not imageRect.Contains(e.GetPosition(canvas)) AndAlso
                    Not BrushCircleTouchesImage(e.GetPosition(canvas), imageRect, vm) Then
@@ -2691,6 +2722,7 @@ Namespace Views
                        Not startsPerspectiveCornerOutside AndAlso Not startsGridPointOutside AndAlso
                        Not startsLinesOutside AndAlso Not startsEnvelopeOutside AndAlso
                        Not startsPathPointOutside Then
+                        TraceStagePress("neben dem Bild: Markierung aufgehoben, Werkzeug bekommt nichts", e, canvas, vm)
                         ClearEditorSelections(vm)
                         e.Handled = True
                         Return
@@ -2757,6 +2789,7 @@ Namespace Views
                     Dim handleRect = GetTextOverlayRect()
                     Dim handleMode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), handleRect, OverlayHitRotation(vm)), TextDragMode.None))
                     If handleMode <> TextDragMode.None AndAlso handleMode <> TextDragMode.Move Then
+                        TraceStagePress($"Griff des markierten Objekts ({handleMode})", e, canvas, vm)
                         OnTextOverlayPointerPressed(overlayForHandles, e)
                         Return
                     End If
@@ -2936,6 +2969,7 @@ Namespace Views
             End If
 
             If vm IsNot Nothing AndAlso (vm.CurrentTool = EditorTool.Selection OrElse vm.CurrentTool = EditorTool.Mask) Then
+                TraceStagePress("Auswahl oder Maske bekommt den Druck", e, canvas, vm)
                 Dim imageRect = GetDisplayedImageRect(canvas, vm)
                 If imageRect.Width <= 0 OrElse imageRect.Height <= 0 Then Return
                 Dim rawPos = e.GetPosition(canvas)
@@ -3013,6 +3047,7 @@ Namespace Views
                     ' gemeint und wird vor dem Ebenenwechsel abgewählt. Auf FREIER Fläche darf
                     ' derselbe erste Druck dagegen einen neuen Auswahlrahmen anfangen; dort wird
                     ' erst ein Klick ohne Zug beim Loslassen als Abwählen gewertet.
+                    TraceStagePress($"Auswahlwerkzeug, Objekttreffer {hitIndex} bei {xPct:0.0} %, {yPct:0.0} % (in Auswahl {pressInsideSelection})", e, canvas, vm)
                     If hitIndex >= 0 AndAlso vm.HasActiveSelection Then
                         vm.ClearSelection()
                         _selectionClickOutsideActiveSelection = False
@@ -3044,6 +3079,7 @@ Namespace Views
                         ' bisher die Auswahl auf (das entscheidet die Zugschwelle beim Loslassen). Eine
                         ' vorhandene Auswahl hat Vorrang und wird direkt an ihrer Form verschoben.
                         ' Die Bühne verschiebt man hier weiterhin mit der RECHTEN Maustaste.
+                        TraceStagePress("Auswahlwerkzeug: Objektrahmen aufziehen", e, canvas, vm)
                         BeginObjectMarquee(e.GetPosition(canvas))
                         e.Pointer.Capture(canvas)
                         e.Handled = True
@@ -3069,6 +3105,7 @@ Namespace Views
                 Dim clickedInsideSelection = vm.HasActiveSelection AndAlso Not rangeClickMode AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
                 If clickedInsideSelection Then
                     If vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New" Then
+                        TraceStagePress($"in der bestehenden Auswahl: Auswahl verschieben (Verknuepfung {vm.SelectionCombineMode})", e, canvas, vm)
                         _isSelectionMoveDragging = True
                         _selectionMoveLastPoint = pos
                         vm.BeginSelectionMoveTransaction()
@@ -3098,6 +3135,8 @@ Namespace Views
                 ' sie noch bis zum ersten Zwischenstand stehen zu lassen sieht aus, als kaeme die
                 ' neue zur alten hinzu.
                 If _selectionDragReplacesExisting Then HideCurrentSelectionOverlay()
+                TraceStagePress($"Auswahlwerkzeug Modus {vm.SelectionMode} (Verknuepfung {vm.SelectionCombineMode}, " &
+                                $"daneben={_selectionClickOutsideActiveSelection}, ersetzt={_selectionDragReplacesExisting})", e, canvas, vm)
                 Select Case vm.SelectionMode
                     Case "Move"
                         ' Verschieben betrifft nur die vorhandene Auswahl (siehe oben). Auf freier
@@ -7007,6 +7046,8 @@ Namespace Views
 
         Public Sub OnTextOverlayPointerPressed(sender As Object, e As PointerPressedEventArgs)
             Dim pointerPoint = e.GetCurrentPoint(Nothing)
+            TraceStagePress($"Rahmen des markierten Objekts (rechts={pointerPoint.Properties.IsRightButtonPressed})", e,
+                            Me.FindControl(Of Canvas)("PreviewCanvas"), TryCast(DataContext, EditorViewModel))
             If pointerPoint.Properties.IsRightButtonPressed Then
                 ClearEditorSelections(TryCast(DataContext, EditorViewModel))
                 e.Handled = True
@@ -7022,6 +7063,12 @@ Namespace Views
             ' an. Unbehandelt steigt das Ereignis zur Bühne auf (OnSliderPointerPressed), und die
             ' nimmt die Farbe dort auf, wo geklickt wurde.
             If vm.IsPickingColorFromImage Then Return
+            ' MIT DEM KNOPF VERSCHIEBEN ODER DER LEERTASTE gehört der Zug dem Ausschnitt, auch auf
+            ' dem markierten Objekt. Der Rahmen nahm ihn sonst als Verschieben des Objekts, und
+            ' vergrößert, wo das Objekt den Ausschnitt oft ganz füllt, änderte der Knopf damit
+            ' scheinbar nichts (Nutzerbefund). Unbehandelt steigt der Druck zur Bühne auf, deren
+            ' Zweig für den Knopf ihn als Verschieben des Ausschnitts nimmt.
+            If _isPanMode Then Return
             ' Ebenso der Nachdruck einer eben beendeten Pipette: er begaenne sonst ein Verschieben.
             If IsPressRightAfterPick(e, canvas) Then
                 e.Handled = True
@@ -7315,6 +7362,12 @@ Namespace Views
             ' oder Griffzeiger: der Klick geht an sie (OnTextOverlayPointerPressed).
             If vm.IsPickingColorFromImage Then
                 overlay.Cursor = GetPipetteCursor()
+                Return
+            End If
+            ' Mit dem Knopf Verschieben oder der LEERTASTE verschiebt auch ein Zug auf dem Objekt
+            ' den Ausschnitt (OnTextOverlayPointerPressed), der Zeiger sagt das wie auf der Buehne.
+            If _isPanMode Then
+                overlay.Cursor = New Cursor(StandardCursorType.Hand)
                 Return
             End If
             Dim mode = NoHandlesWhileWarping(vm, If(SelectionAcceptsDrag(vm), GetTextDragMode(e.GetPosition(canvas), GetTextOverlayRect(), OverlayHitRotation(vm)), TextDragMode.None))
@@ -8162,6 +8215,38 @@ Namespace Views
         Private Function IsTrackpadMode() As Boolean
             Dim mainVm = TryCast(TopLevel.GetTopLevel(Me)?.DataContext, MainWindowViewModel)
             Return mainVm IsNot Nothing AndAlso mainVm.Settings IsNot Nothing AndAlso mainVm.Settings.TrackpadMode
+        End Function
+
+        ''' <summary>Diagnosepunkt fuer einen Druck auf die Buehne: welcher Zweig ihn bekommt und unter
+        ''' welchen Bedingungen (Werkzeug und Modus, Zoom, Trackpad-Modus, Verschieben-Knopf,
+        ''' Modifikatoren, Geraet). Nur bei eingeschaltetem Diagnoseprotokoll, Marker
+        ''' Editor.StagePress. Gedacht fuer Meldungen, nach denen ein Klick im vergroesserten Bild
+        ''' nicht beim Werkzeug ankommt.</summary>
+        Private Sub TraceStagePress(stepName As String, e As PointerEventArgs, canvas As Canvas, vm As EditorViewModel)
+            If Not DiagnosticLogService.IsVerboseEnabled Then Return
+            Try
+                Dim tool = If(vm Is Nothing, "-", vm.CurrentTool.ToString())
+                Dim mode = If(vm Is Nothing, "-", $"selection={vm.SelectionMode} maskMove={vm.IsMaskMoveMode} maskObject={vm.IsMaskObjectMode}")
+                Dim trackpadPan = vm IsNot Nothing AndAlso canvas IsNot Nothing AndAlso CanTrackpadPan(canvas, vm)
+                Dim pos = If(canvas Is Nothing, New Point(), e.GetPosition(canvas))
+                Dim imageRect = If(vm Is Nothing OrElse canvas Is Nothing, New Rect(), GetDisplayedImageRect(canvas, vm))
+                DiagnosticLogService.LogAlways("Editor.StagePress",
+                    $"{stepName}: tool={tool} {mode} zoom={SliderToZoom(_zoomSliderValue):0}% " &
+                    $"trackpadMode={IsTrackpadMode()} trackpadPan={trackpadPan} panButton={_isPanMode} spacePan={_spacePanActive} " &
+                    $"mods={e.KeyModifiers} device={e.Pointer.Type} pos={pos.X:0},{pos.Y:0} " &
+                    $"image={imageRect.X:0},{imageRect.Y:0},{imageRect.Width:0}x{imageRect.Height:0} " &
+                    $"canvas={If(canvas Is Nothing, "-", $"{canvas.Bounds.Width:0}x{canvas.Bounds.Height:0}")} " &
+                    $"annotation={If(vm IsNot Nothing AndAlso vm.HasSelectedAnnotation, "markiert", "keine")}")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.StagePress", ex)
+            End Try
+        End Sub
+
+        Private Function CanTrackpadPan(canvas As Canvas, vm As EditorViewModel) As Boolean
+            Dim displaySize = GetEffectiveDisplaySize(vm)
+            Dim scale = SliderToZoom(_zoomSliderValue) / 100.0
+            Return displaySize.Width * scale > canvas.Bounds.Width + 1 OrElse
+                   displaySize.Height * scale > canvas.Bounds.Height + 1
         End Function
 
         ''' <summary>Wie im Viewer: beim Oeffnen des Tooltips die Katalogwerte fuer genau dieses

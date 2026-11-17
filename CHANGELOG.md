@@ -2,12 +2,12 @@
 
 ### Changes
 
+- With the Move button on the editor stage, or while holding SPACE, dragging on a selected object now
+  moves the view as everywhere else, instead of moving or selecting the object. Zoomed in, where a
+  selected object often fills the view, the button seemed to do nothing.
+
 - Highlights and Shadows set in the same direction, both up or both down, now strengthen each
   other instead of holding each other back. Pictures edited that way look stronger than before.
-
-- In trackpad mode, dragging on an enlarged picture in the editor no longer always moves the view.
-  Clicks reach the selection and the tools again, and the Move button and SPACE decide whether you
-  move the view, as without trackpad mode.
 
 - In the automatic object selection, a click inside an existing selection now selects the
   object you clicked instead of starting to move the selection.
