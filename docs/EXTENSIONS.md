@@ -39,8 +39,8 @@ hand and choose **Reload**:
 
 | System | Folder |
 |---|---|
-| Linux and macOS | `~/.config/FerrumPix/Erweiterungen` |
-| Windows | `%APPDATA%\FerrumPix\Erweiterungen` |
+| Linux and macOS | `~/.config/FerrumPix/Extensions` |
+| Windows | `%APPDATA%\FerrumPix\Extensions` |
 
 ## What an extension can and cannot do
 

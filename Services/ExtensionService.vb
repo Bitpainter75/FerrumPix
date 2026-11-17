@@ -267,7 +267,7 @@ Namespace Services
     ''' eine feste Programmierschnittstelle und vertruege sich mit keinem der Paketwege.
     '''
     ''' ZWEI ORTE: der Ordner des Nutzers (<see cref="UserFolder"/>) und ein Ordner
-    ''' "Erweiterungen" neben dem Programm fuer Mitgeliefertes. Bei gleicher Kennung gewinnt der
+    ''' "Extensions" neben dem Programm fuer Mitgeliefertes. Bei gleicher Kennung gewinnt der
     ''' Nutzer, wie bei den Modellen.
     '''
     ''' EINE DATEI MIT FEHLER WIRD UEBERSPRUNGEN, nicht halb geladen: sie steht mit ihrem Fehler in
@@ -300,14 +300,36 @@ Namespace Services
                 Dim override = Environment.GetEnvironmentVariable("FERRUMPIX_EXTENSIONS")
                 If Not String.IsNullOrWhiteSpace(override) Then Return override
                 Return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                                    "FerrumPix", "Erweiterungen")
+                                    "FerrumPix", "Extensions")
             End Get
         End Property
+
+        ''' <summary>Der fruehere Name des Ordners, vor der Veroeffentlichung. Ein Ordner unter
+        ''' diesem Namen zieht beim Einlesen einmal um (MigrateLegacyFolder).</summary>
+        Private Const LegacyFolderName As String = "Erweiterungen"
+
+        ''' <summary>Zieht den Ordner unter dem frueheren deutschen Namen auf den englischen um,
+        ''' wenn es den neuen noch nicht gibt. Gibt es beide, bleibt der alte liegen und wird nicht
+        ''' gelesen: zusammenfuehren hiesse entscheiden, welche Datei gilt. Nicht bei gesetztem
+        ''' FERRUMPIX_EXTENSIONS, das ist ein Ordner der Pruefungen oder des Nutzers.</summary>
+        Private Shared Sub MigrateLegacyFolder()
+            If Not String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("FERRUMPIX_EXTENSIONS")) Then Return
+            Try
+                Dim legacy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                                          "FerrumPix", LegacyFolderName)
+                If Directory.Exists(legacy) AndAlso Not Directory.Exists(UserFolder) Then
+                    Directory.Move(legacy, UserFolder)
+                    DiagnosticLogService.LogAlways("Extensions.Folder", legacy & " -> " & UserFolder)
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Extensions.Folder", ex)
+            End Try
+        End Sub
 
         ''' <summary>Der Ordner neben dem Programm, fuer Mitgeliefertes.</summary>
         Public Shared ReadOnly Property BundledFolder As String
             Get
-                Return Path.Combine(AppContext.BaseDirectory, "Erweiterungen")
+                Return Path.Combine(AppContext.BaseDirectory, "Extensions")
             End Get
         End Property
 
@@ -538,6 +560,7 @@ Namespace Services
         End Sub
 
         Private Shared Sub LoadAll()
+            MigrateLegacyFolder()
             Dim definitions As New List(Of ExtensionDefinition)()
             Dim failures As New List(Of ExtensionLoadResult)()
             ' Erst der Nutzer, dann das Mitgelieferte: wer zuerst kommt, behaelt die Kennung.
