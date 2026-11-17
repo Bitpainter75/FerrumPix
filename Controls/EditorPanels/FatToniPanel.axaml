@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:FerrumPix.Services"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.FatToniPanel">
     <Expander Header="Fat Toni (Split Toning)" icons:ExpanderState.Key="fattoni"
@@ -44,85 +45,85 @@
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniHighlightHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniHighlightHue}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniHighlightHue}}"
                                    Value="{Binding FatToniHighlightHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniHighlightHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+                                         Value="{Binding FatToniHighlightHue, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniHighlightHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniHighlightHue}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Sättigung">
                 <TextBlock Text="Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniHighlightSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniHighlightSaturation}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniHighlightSaturation}}"
                                    Value="{Binding FatToniHighlightSaturation}" ColorTrack="{Binding FatToniHighlightSaturationTrack}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniHighlightSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                         Value="{Binding FatToniHighlightSaturation, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniHighlightSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniHighlightSaturation}}" />
             </Grid>
             <TextBlock Text="Tiefen" FontWeight="SemiBold" Margin="0,8,0,3" />
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniShadowHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniShadowHue}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniShadowHue}}"
                                    Value="{Binding FatToniShadowHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniShadowHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+                                         Value="{Binding FatToniShadowHue, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniShadowHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniShadowHue}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Sättigung">
                 <TextBlock Text="Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniShadowSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniShadowSaturation}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniShadowSaturation}}"
                                    Value="{Binding FatToniShadowSaturation}" ColorTrack="{Binding FatToniShadowSaturationTrack}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniShadowSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                         Value="{Binding FatToniShadowSaturation, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniShadowSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniShadowSaturation}}" />
             </Grid>
             <TextBlock Text="Basis" ToolTip.Tip="Basisfarbe wie farbiges Papier beim Drucken." FontWeight="SemiBold" Margin="0,8,0,3" />
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniBaseHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniBaseHue}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniBaseHue}}"
                                    Value="{Binding FatToniBaseHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniBaseHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+                                         Value="{Binding FatToniBaseHue, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniBaseHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniBaseHue}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Sättigung">
                 <TextBlock Text="Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniBaseSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniBaseSaturation}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniBaseSaturation}}"
                                    Value="{Binding FatToniBaseSaturation}" ColorTrack="{Binding FatToniBaseSaturationTrack}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniBaseSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                         Value="{Binding FatToniBaseSaturation, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniBaseSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniBaseSaturation}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Luminanz">
                 <TextBlock Text="Luminanz" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="100"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniBaseLuminance}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniBaseLuminance}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniBaseLuminance}}"
                                    Value="{Binding FatToniBaseLuminance}" ColorTrack="{Binding FatToniBaseLuminanceTrack}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniBaseLuminance, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                         Value="{Binding FatToniBaseLuminance, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniBaseLuminance}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniBaseLuminance}}" />
             </Grid>
             <TextBlock Text="Mischung" FontWeight="SemiBold" Margin="0,8,0,3" />
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Balance zwischen Tiefen- und Lichterton verschieben.">
                 <TextBlock Text="Mittelpunkt" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniMidpoint}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniMidpoint}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniMidpoint}}"
                                    Value="{Binding FatToniMidpoint}" ColorTrack="{x:Static icons:SliderTracks.BlackToWhite}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniMidpoint, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                                         Value="{Binding FatToniMidpoint, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniMidpoint}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniMidpoint}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Tiefen- und Lichtertöne stärker voneinander trennen.">
                 <TextBlock Text="Trennung" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniSeparation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniSeparation}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniSeparation}}"
                                    Value="{Binding FatToniSeparation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniSeparation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                         Value="{Binding FatToniSeparation, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniSeparation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniSeparation}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Kontrast">
                 <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="85"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniContrast}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniContrast}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.FatToniContrast}}"
                                    Value="{Binding FatToniContrast}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding FatToniContrast, Mode=TwoWay}" Minimum="0" Maximum="100" />
+                                         Value="{Binding FatToniContrast, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.FatToniContrast}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.FatToniContrast}}" />
             </Grid>
         </StackPanel>
     </Expander>

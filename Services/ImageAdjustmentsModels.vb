@@ -1089,24 +1089,146 @@ Namespace Services
         ''' <summary>Laenge des Uebergangs von scharf nach voll unscharf, 0 bis 100.</summary>
         Public Property TiltShiftTransition As Single = 40
         ' Explicit bypass preserves older recipes: CTL defaults themselves are creative looks.
-        Public Property SiliconBonkEnabled As Boolean = False
-        Public Property SiliconBonkHue As Single = 45
-        Public Property SiliconBonkLuma As Single = 0
-        Public Property SiliconBonkSaturation As Single = 0
-        Public Property SiliconBonkMidpoint As Single = 0
-        Public Property SiliconBonkContrast As Single = 0
-        Public Property SiliconBonkPreserveDetails As Boolean = False
-        Public Property FatToniEnabled As Boolean = False
-        Public Property FatToniHighlightHue As Single = 0
-        Public Property FatToniHighlightSaturation As Single = 0
-        Public Property FatToniShadowHue As Single = 0
-        Public Property FatToniShadowSaturation As Single = 0
-        Public Property FatToniSeparation As Single = 50
-        Public Property FatToniMidpoint As Single = 0
-        Public Property FatToniContrast As Single = 85
-        Public Property FatToniBaseHue As Single = 0
-        Public Property FatToniBaseSaturation As Single = 0
-        Public Property FatToniBaseLuminance As Single = 100
+        ' Numeric setters also validate deserialized and programmatically built recipes, so the
+        ' current limits apply before settings ever reach the editor or renderer.
+        Public Property SiliconBonkEnabled As Boolean = FilmEffectParameters.SiliconBonkEnabledDefault
+        Private _siliconBonkHue As Single = FilmEffectParameters.SiliconBonkHue.DefaultValue
+        Public Property SiliconBonkHue As Single
+            Get
+                Return _siliconBonkHue
+            End Get
+            Set(value As Single)
+                _siliconBonkHue = FilmEffectParameters.SiliconBonkHue.ClampValue(value)
+            End Set
+        End Property
+        Private _siliconBonkLuma As Single = FilmEffectParameters.SiliconBonkLuma.DefaultValue
+        Public Property SiliconBonkLuma As Single
+            Get
+                Return _siliconBonkLuma
+            End Get
+            Set(value As Single)
+                _siliconBonkLuma = FilmEffectParameters.SiliconBonkLuma.ClampValue(value)
+            End Set
+        End Property
+        Private _siliconBonkSaturation As Single = FilmEffectParameters.SiliconBonkSaturation.DefaultValue
+        Public Property SiliconBonkSaturation As Single
+            Get
+                Return _siliconBonkSaturation
+            End Get
+            Set(value As Single)
+                _siliconBonkSaturation = FilmEffectParameters.SiliconBonkSaturation.ClampValue(value)
+            End Set
+        End Property
+        Private _siliconBonkMidpoint As Single = FilmEffectParameters.SiliconBonkMidpoint.DefaultValue
+        Public Property SiliconBonkMidpoint As Single
+            Get
+                Return _siliconBonkMidpoint
+            End Get
+            Set(value As Single)
+                _siliconBonkMidpoint = FilmEffectParameters.SiliconBonkMidpoint.ClampValue(value)
+            End Set
+        End Property
+        Private _siliconBonkContrast As Single = FilmEffectParameters.SiliconBonkContrast.DefaultValue
+        Public Property SiliconBonkContrast As Single
+            Get
+                Return _siliconBonkContrast
+            End Get
+            Set(value As Single)
+                _siliconBonkContrast = FilmEffectParameters.SiliconBonkContrast.ClampValue(value)
+            End Set
+        End Property
+        Public Property SiliconBonkPreserveDetails As Boolean = FilmEffectParameters.SiliconBonkPreserveDetailsDefault
+        Public Property FatToniEnabled As Boolean = FilmEffectParameters.FatToniEnabledDefault
+        Private _fatToniHighlightHue As Single = FilmEffectParameters.FatToniHighlightHue.DefaultValue
+        Public Property FatToniHighlightHue As Single
+            Get
+                Return _fatToniHighlightHue
+            End Get
+            Set(value As Single)
+                _fatToniHighlightHue = FilmEffectParameters.FatToniHighlightHue.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniHighlightSaturation As Single = FilmEffectParameters.FatToniHighlightSaturation.DefaultValue
+        Public Property FatToniHighlightSaturation As Single
+            Get
+                Return _fatToniHighlightSaturation
+            End Get
+            Set(value As Single)
+                _fatToniHighlightSaturation = FilmEffectParameters.FatToniHighlightSaturation.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniShadowHue As Single = FilmEffectParameters.FatToniShadowHue.DefaultValue
+        Public Property FatToniShadowHue As Single
+            Get
+                Return _fatToniShadowHue
+            End Get
+            Set(value As Single)
+                _fatToniShadowHue = FilmEffectParameters.FatToniShadowHue.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniShadowSaturation As Single = FilmEffectParameters.FatToniShadowSaturation.DefaultValue
+        Public Property FatToniShadowSaturation As Single
+            Get
+                Return _fatToniShadowSaturation
+            End Get
+            Set(value As Single)
+                _fatToniShadowSaturation = FilmEffectParameters.FatToniShadowSaturation.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniSeparation As Single = FilmEffectParameters.FatToniSeparation.DefaultValue
+        Public Property FatToniSeparation As Single
+            Get
+                Return _fatToniSeparation
+            End Get
+            Set(value As Single)
+                _fatToniSeparation = FilmEffectParameters.FatToniSeparation.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniMidpoint As Single = FilmEffectParameters.FatToniMidpoint.DefaultValue
+        Public Property FatToniMidpoint As Single
+            Get
+                Return _fatToniMidpoint
+            End Get
+            Set(value As Single)
+                _fatToniMidpoint = FilmEffectParameters.FatToniMidpoint.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniContrast As Single = FilmEffectParameters.FatToniContrast.DefaultValue
+        Public Property FatToniContrast As Single
+            Get
+                Return _fatToniContrast
+            End Get
+            Set(value As Single)
+                _fatToniContrast = FilmEffectParameters.FatToniContrast.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniBaseHue As Single = FilmEffectParameters.FatToniBaseHue.DefaultValue
+        Public Property FatToniBaseHue As Single
+            Get
+                Return _fatToniBaseHue
+            End Get
+            Set(value As Single)
+                _fatToniBaseHue = FilmEffectParameters.FatToniBaseHue.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniBaseSaturation As Single = FilmEffectParameters.FatToniBaseSaturation.DefaultValue
+        Public Property FatToniBaseSaturation As Single
+            Get
+                Return _fatToniBaseSaturation
+            End Get
+            Set(value As Single)
+                _fatToniBaseSaturation = FilmEffectParameters.FatToniBaseSaturation.ClampValue(value)
+            End Set
+        End Property
+        Private _fatToniBaseLuminance As Single = FilmEffectParameters.FatToniBaseLuminance.DefaultValue
+        Public Property FatToniBaseLuminance As Single
+            Get
+                Return _fatToniBaseLuminance
+            End Get
+            Set(value As Single)
+                _fatToniBaseLuminance = FilmEffectParameters.FatToniBaseLuminance.ClampValue(value)
+            End Set
+        End Property
 
         Public Property Grain As Single = 0
         ''' <summary>Körnungsgröße, 0-100. 0 = feinstes Korn (1 px, bisheriges Verhalten); höher =

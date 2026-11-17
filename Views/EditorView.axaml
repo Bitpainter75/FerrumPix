@@ -1797,7 +1797,6 @@
                                                   IsVisible="{Binding ShowDetailAdjustments}" />
 
                             <panels:SiliconBonkPanel Margin="0,7,0,0" IsVisible="{Binding ShowEffectsAdjustments}" />
-                            <panels:FatToniPanel Margin="0,7,0,0" IsVisible="{Binding ShowEffectsAdjustments}" />
 
                             <!-- EFFEKTE: eigenes Werkzeug. Was hier steht, fuegt dem Bild etwas hinzu,
                                  was vorher nicht da war - die Details darueber holen nur heraus, was
@@ -1853,6 +1852,8 @@
                             <!-- KÖRNUNG (rahmt sich selbst) -->
                             <panels:EffectsPanel Margin="0,7,0,0"
                                                  IsVisible="{Binding ShowEffectsAdjustments}" />
+
+                            <panels:FatToniPanel Margin="0,7,0,0" IsVisible="{Binding ShowEffectsAdjustments}" />
 
                             <!-- Tontrennung und Schwellenwert: Pixelregler wie die Farbkorrekturen
                                  (EditorViewModelCorrections.vb), gerechnet am Ende der Punktkette. -->

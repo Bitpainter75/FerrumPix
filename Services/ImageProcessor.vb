@@ -3406,17 +3406,11 @@ Namespace Services
                                            Function(d) ApplyVignetteDeep(d, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
             End If
 
-            ' Creative CTL ports are deliberately after the vignette and before grain.
-            ' Grain must remain unmodified by the monochrome conversion and split toning.
+            ' Convert to monochrome before adding grain, then tone both image and grain.
+            ' This keeps the grain part of the toned print rather than a neutral overlay.
             If adj.SiliconBonkEnabled Then
                 Dim transform = SiliconBonkPixel(adj)
                 processed = RunDetailStage(session, processed, owned, "Pixel: SiliconBonk", Nothing,
-                                           Function(s) ApplyFilmEffect(s, transform),
-                                           Function(d) ApplyFilmEffect(d, transform))
-            End If
-            If adj.FatToniEnabled Then
-                Dim transform = FatToniPixel(adj)
-                processed = RunDetailStage(session, processed, owned, "Pixel: FatToni", Nothing,
                                            Function(s) ApplyFilmEffect(s, transform),
                                            Function(d) ApplyFilmEffect(d, transform))
             End If
@@ -3427,6 +3421,13 @@ Namespace Services
                                            Function(s) ApplyGrain(s, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
                                            Function(d) ApplyGrainDeep(d, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F))
             End If
+            If adj.FatToniEnabled Then
+                Dim transform = FatToniPixel(adj)
+                processed = RunDetailStage(session, processed, owned, "Pixel: FatToni", Nothing,
+                                           Function(s) ApplyFilmEffect(s, transform),
+                                           Function(d) ApplyFilmEffect(d, transform))
+            End If
+
             If adj.AddNoise > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Rauschen hinzufuegen", AddNoiseOnGpu(adj.AddNoise / 100.0F),
                                            Function(s) ApplyAddNoise(s, adj.AddNoise / 100.0F),

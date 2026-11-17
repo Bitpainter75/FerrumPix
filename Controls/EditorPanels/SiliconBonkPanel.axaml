@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:FerrumPix.Services"
              xmlns:icons="clr-namespace:FerrumPix.Controls"
              x:Class="FerrumPix.Controls.EditorPanels.SiliconBonkPanel">
     <Expander Header="Silicon Bonk (Adaptive Black&amp;White)" icons:ExpanderState.Key="siliconbonk"
@@ -43,42 +44,42 @@
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
                 <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="45"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkHue}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.SiliconBonkHue}}"
                                    Value="{Binding SiliconBonkHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding SiliconBonkHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+                                         Value="{Binding SiliconBonkHue, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkHue}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkHue}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Luminanzverstärkung">
                 <TextBlock Text="Luminanz" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkLuma}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkLuma}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.SiliconBonkLuma}}"
                                    Value="{Binding SiliconBonkLuma}" ColorTrack="{Binding SiliconBonkLumaTrack}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding SiliconBonkLuma, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                                         Value="{Binding SiliconBonkLuma, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkLuma}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkLuma}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Restfarbe beibehalten; bei null wird das Bild schwarzweiß.">
                 <TextBlock Text="Restfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkSaturation}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.SiliconBonkSaturation}}"
                                    Value="{Binding SiliconBonkSaturation}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding SiliconBonkSaturation, Mode=TwoWay}" Minimum="0" Maximum="200" />
+                                         Value="{Binding SiliconBonkSaturation, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkSaturation}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkSaturation}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Mitteltöne aufhellen oder abdunkeln.">
                 <TextBlock Text="Mittelpunkt" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkMidpoint}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkMidpoint}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.SiliconBonkMidpoint}}"
                                    Value="{Binding SiliconBonkMidpoint}" ColorTrack="{x:Static icons:SliderTracks.BlackToWhite}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding SiliconBonkMidpoint, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+                                         Value="{Binding SiliconBonkMidpoint, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkMidpoint}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkMidpoint}}" />
             </Grid>
             <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Kontrast">
                 <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
                            VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
-                <icons:RoundSlider Grid.Column="1" Minimum="-50" Maximum="200" DefaultValue="0"
+                <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkContrast}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkContrast}}" DefaultValue="{Binding DefaultValue, Source={x:Static services:FilmEffectParameters.SiliconBonkContrast}}"
                                    Value="{Binding SiliconBonkContrast}" Margin="0,0" />
                 <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
-                                         Value="{Binding SiliconBonkContrast, Mode=TwoWay}" Minimum="-50" Maximum="200" />
+                                         Value="{Binding SiliconBonkContrast, Mode=TwoWay}" Minimum="{Binding Minimum, Source={x:Static services:FilmEffectParameters.SiliconBonkContrast}}" Maximum="{Binding Maximum, Source={x:Static services:FilmEffectParameters.SiliconBonkContrast}}" />
             </Grid>
             <CheckBox ToolTip.Tip="Lichter abdunkeln, um Details bei hohem Kontrast zu erhalten." Content="Lichter/Details erhalten" IsChecked="{Binding SiliconBonkPreserveDetails}" />
         </StackPanel>
