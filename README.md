@@ -306,10 +306,6 @@ The AppImage carries update information, so tools that manage AppImages find new
 | App bundle | Intel Macs | -osx-x64-unsigned.app.zip |
 | App bundle | Apple Silicon | -osx-arm64-unsigned.app.zip |
 
-### Experimental
-
-The ARM64 and macOS builds are untested. If you try one, please let me know whether it works.
-
 The macOS builds are unsigned, so macOS blocks them the first time with "FerrumPix" Not Opened.
 That does not mean the ZIP is broken. You only have to allow it once:
 
