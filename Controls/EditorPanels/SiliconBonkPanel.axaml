@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.SiliconBonkPanel">
+    <Expander Header="Silicon Bonk (Adaptive Black&amp;White)" icons:ExpanderState.Key="siliconbonk"
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=siliconbonk}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/aperture.svg"
+                            Width="18" Height="18" />
+                        <TextBlock Grid.Column="1" Text="{Binding}" FontWeight="SemiBold" Margin="8,0,0,0" TextWrapping="Wrap" />
+                    </Grid>
+                    <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
+                    <Button Grid.Column="1"
+                            Classes="icon-btn group-compare"
+                            Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=siliconbonk}"
+                            IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Width="28" Height="28" Padding="0"
+                            Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="siliconbonk"
+                            ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
+                        <icons:SvgIcon Width="16" Height="16" />
+                    </Button>
+                    <Button Grid.Column="2"
+                            Classes="icon-btn group-reset"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetSiliconBonkCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                            Width="16" Height="16" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+            <CheckBox ToolTip.Tip="Aktiviert" Content="Aktiviert" IsChecked="{Binding SiliconBonkEnabled}" />
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
+                <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="45"
+                                   Value="{Binding SiliconBonkHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SiliconBonkHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Luminanzverstärkung">
+                <TextBlock Text="Luminanz" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                                   Value="{Binding SiliconBonkLuma}" ColorTrack="{Binding SiliconBonkLumaTrack}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SiliconBonkLuma, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Restfarbe beibehalten; bei null wird das Bild schwarzweiß.">
+                <TextBlock Text="Restfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="200" DefaultValue="0"
+                                   Value="{Binding SiliconBonkSaturation}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SiliconBonkSaturation, Mode=TwoWay}" Minimum="0" Maximum="200" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Mitteltöne aufhellen oder abdunkeln.">
+                <TextBlock Text="Mittelpunkt" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                                   Value="{Binding SiliconBonkMidpoint}" ColorTrack="{x:Static icons:SliderTracks.BlackToWhite}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SiliconBonkMidpoint, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Kontrast">
+                <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-50" Maximum="200" DefaultValue="0"
+                                   Value="{Binding SiliconBonkContrast}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding SiliconBonkContrast, Mode=TwoWay}" Minimum="-50" Maximum="200" />
+            </Grid>
+            <CheckBox ToolTip.Tip="Lichter abdunkeln, um Details bei hohem Kontrast zu erhalten." Content="Lichter/Details erhalten" IsChecked="{Binding SiliconBonkPreserveDetails}" />
+        </StackPanel>
+    </Expander>
+</UserControl>

@@ -632,7 +632,8 @@ Namespace Services
             ' Ohne gespeicherte Basis-/Dichtefarbe misst Filmnegativ aus dem Bild. Ein
             ' lokaler Ausschnitt hätte andere Werte; auch mit gesetzten Farben bleibt es
             ' bewusst außerhalb der Whitelist (siehe Erläuterung oben).
-            Return a.Vignette = 0 AndAlso
+            Return Not a.SiliconBonkEnabled AndAlso Not a.FatToniEnabled AndAlso
+                   a.Vignette = 0 AndAlso
                    a.TiltShiftAmount = 0 AndAlso
                    a.Grain = 0 AndAlso
                    a.DustScratches = 0 AndAlso

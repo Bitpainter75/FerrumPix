@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:FerrumPix.Controls"
+             x:Class="FerrumPix.Controls.EditorPanels.FatToniPanel">
+    <Expander Header="Fat Toni (Split Toning)" icons:ExpanderState.Key="fattoni"
+        IsVisible="{Binding HiddenAdjustmentGroups, Converter={StaticResource NotInListConverter}, ConverterParameter=fattoni}">
+        <Expander.HeaderTemplate>
+            <DataTemplate>
+                <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/aperture.svg"
+                            Width="18" Height="18" />
+                        <TextBlock Grid.Column="1" Text="{Binding}" FontWeight="SemiBold" Margin="8,0,0,0" TextWrapping="Wrap" />
+                    </Grid>
+                    <!-- Gruppenvergleich, beschrieben in LightPanel.axaml -->
+                    <Button Grid.Column="1"
+                            Classes="icon-btn group-compare"
+                            Classes.comparing="{Binding DataContext.ComparingAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InListConverter}, ConverterParameter=fattoni}"
+                            IsVisible="{Binding DataContext.CanCompareAdjustmentGroups, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            Width="28" Height="28" Padding="0"
+                            Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="fattoni"
+                            ToolTip.Tip="Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen">
+                        <icons:SvgIcon Width="16" Height="16" />
+                    </Button>
+                    <Button Grid.Column="2"
+                            Classes="icon-btn group-reset"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Command="{Binding DataContext.ResetFatToniCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            ToolTip.Tip="Zurücksetzen">
+                        <icons:SvgIcon
+                            Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                            Width="16" Height="16" />
+                    </Button>
+                </Grid>
+            </DataTemplate>
+        </Expander.HeaderTemplate>
+        <StackPanel Spacing="2" Margin="0,8,0,0">
+            <CheckBox ToolTip.Tip="Aktiviert" Content="Aktiviert" IsChecked="{Binding FatToniEnabled}" />
+            <TextBlock Text="Lichter" FontWeight="SemiBold" Margin="0,8,0,3" />
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
+                <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="0"
+                                   Value="{Binding FatToniHighlightHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniHighlightHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Sättigung">
+                <TextBlock Text="Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                   Value="{Binding FatToniHighlightSaturation}" ColorTrack="{Binding FatToniHighlightSaturationTrack}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniHighlightSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <TextBlock Text="Tiefen" FontWeight="SemiBold" Margin="0,8,0,3" />
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
+                <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="0"
+                                   Value="{Binding FatToniShadowHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniShadowHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Sättigung">
+                <TextBlock Text="Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                   Value="{Binding FatToniShadowSaturation}" ColorTrack="{Binding FatToniShadowSaturationTrack}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniShadowSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <TextBlock Text="Basis" ToolTip.Tip="Basisfarbe wie farbiges Papier beim Drucken." FontWeight="SemiBold" Margin="0,8,0,3" />
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Farbton">
+                <TextBlock Text="Farbton" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="360" DefaultValue="0"
+                                   Value="{Binding FatToniBaseHue}" ColorTrack="{x:Static icons:SliderTracks.Hue}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniBaseHue, Mode=TwoWay}" Minimum="0" Maximum="360" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Sättigung">
+                <TextBlock Text="Sättigung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                   Value="{Binding FatToniBaseSaturation}" ColorTrack="{Binding FatToniBaseSaturationTrack}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniBaseSaturation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Luminanz">
+                <TextBlock Text="Luminanz" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="100"
+                                   Value="{Binding FatToniBaseLuminance}" ColorTrack="{Binding FatToniBaseLuminanceTrack}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniBaseLuminance, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <TextBlock Text="Mischung" FontWeight="SemiBold" Margin="0,8,0,3" />
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Balance zwischen Tiefen- und Lichterton verschieben.">
+                <TextBlock Text="Mittelpunkt" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="-100" Maximum="100" DefaultValue="0"
+                                   Value="{Binding FatToniMidpoint}" ColorTrack="{x:Static icons:SliderTracks.BlackToWhite}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniMidpoint, Mode=TwoWay}" Minimum="-100" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Tiefen- und Lichtertöne stärker voneinander trennen.">
+                <TextBlock Text="Trennung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="50"
+                                   Value="{Binding FatToniSeparation}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniSeparation, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" ToolTip.Tip="Kontrast">
+                <TextBlock Text="Kontrast" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="85"
+                                   Value="{Binding FatToniContrast}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FatToniContrast, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
+        </StackPanel>
+    </Expander>
+</UserControl>

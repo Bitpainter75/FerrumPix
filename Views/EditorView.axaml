@@ -1796,6 +1796,9 @@
                             <panels:VignettePanel Margin="0,7,0,0"
                                                   IsVisible="{Binding ShowDetailAdjustments}" />
 
+                            <panels:SiliconBonkPanel Margin="0,7,0,0" IsVisible="{Binding ShowEffectsAdjustments}" />
+                            <panels:FatToniPanel Margin="0,7,0,0" IsVisible="{Binding ShowEffectsAdjustments}" />
+
                             <!-- EFFEKTE: eigenes Werkzeug. Was hier steht, fuegt dem Bild etwas hinzu,
                                  was vorher nicht da war - die Details darueber holen nur heraus, was
                                  in der Aufnahme steckt. -->

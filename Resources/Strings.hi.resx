@@ -11899,4 +11899,52 @@
   <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
     <value>इसके साथ {0} वेरिएंट भी हटा दिए जाएँगे।</value>
   </data>
+  <data name="Aktiviert_06015500" xml:space="preserve">
+    <value>सक्रिय</value>
+  </data>
+  <data name="Lichter_Details_erhalten_33353024" xml:space="preserve">
+    <value>हाइलाइट/विवरण बनाए रखें</value>
+  </data>
+  <data name="Trennung_39a84be8" xml:space="preserve">
+    <value>पृथक्करण</value>
+  </data>
+  <data name="Mittelpunkt_30f397c0" xml:space="preserve">
+    <value>मध्यबिंदु</value>
+  </data>
+  <data name="Basis_83d956f4" xml:space="preserve">
+    <value>आधार</value>
+  </data>
+  <data name="Restfarbe_9fd4a431" xml:space="preserve">
+    <value>अवशिष्ट रंग</value>
+  </data>
+  <data name="Mischung_b3f2f6b2" xml:space="preserve">
+    <value>मिश्रण</value>
+  </data>
+  <data name="Silicon_Bonk_Adaptive_Black_White_8fc24d0a" xml:space="preserve">
+    <value>Silicon Bonk (अनुकूली श्वेत-श्याम)</value>
+  </data>
+  <data name="Fat_Toni_Split_Toning_61a071ab" xml:space="preserve">
+    <value>Fat Toni (विभाजित टोनिंग)</value>
+  </data>
+  <data name="Luminanzverst_rkung_b2993a29" xml:space="preserve">
+    <value>चमक में वृद्धि</value>
+  </data>
+  <data name="Restfarbe_beibehalten_bei_null_wird_das_Bild_sch_cb51e3b7" xml:space="preserve">
+    <value>कुछ रंग बनाए रखें; शून्य पर चित्र श्वेत-श्याम होगा।</value>
+  </data>
+  <data name="Mittelt_ne_aufhellen_oder_abdunkeln_59706022" xml:space="preserve">
+    <value>मध्य टोन को हल्का या गहरा करें।</value>
+  </data>
+  <data name="Balance_zwischen_Tiefen_und_Lichterton_verschieb_c2ae795c" xml:space="preserve">
+    <value>छाया और हाइलाइट टोन का संतुलन बदलें।</value>
+  </data>
+  <data name="Tiefen_und_Lichtert_ne_st_rker_voneinander_trenn_f6f38716" xml:space="preserve">
+    <value>छाया और हाइलाइट टोन के बीच अंतर बढ़ाएँ।</value>
+  </data>
+  <data name="Lichter_abdunkeln_um_Details_bei_hohem_Kontrast__fad70fe2" xml:space="preserve">
+    <value>उच्च कंट्रास्ट पर विवरण बनाए रखने के लिए हाइलाइट गहरे करें।</value>
+  </data>
+  <data name="Basisfarbe_wie_farbiges_Papier_beim_Drucken_948fa32e" xml:space="preserve">
+    <value>आधार रंग, जैसे मुद्रण में रंगीन कागज़।</value>
+  </data>
 </root>

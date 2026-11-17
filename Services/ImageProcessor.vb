@@ -3406,6 +3406,21 @@ Namespace Services
                                            Function(d) ApplyVignetteDeep(d, vignetteAmount, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather, adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle))
             End If
 
+            ' Creative CTL ports are deliberately after the vignette and before grain.
+            ' Grain must remain unmodified by the monochrome conversion and split toning.
+            If adj.SiliconBonkEnabled Then
+                Dim transform = SiliconBonkPixel(adj)
+                processed = RunDetailStage(session, processed, owned, "Pixel: SiliconBonk", Nothing,
+                                           Function(s) ApplyFilmEffect(s, transform),
+                                           Function(d) ApplyFilmEffect(d, transform))
+            End If
+            If adj.FatToniEnabled Then
+                Dim transform = FatToniPixel(adj)
+                processed = RunDetailStage(session, processed, owned, "Pixel: FatToni", Nothing,
+                                           Function(s) ApplyFilmEffect(s, transform),
+                                           Function(d) ApplyFilmEffect(d, transform))
+            End If
+
             If adj.Grain > 0 Then
                 processed = RunDetailStage(session, processed, owned, "Pixel: Koernung",
                                            GrainOnGpu(processed, adj.Grain / 100.0F, adj.GrainSize / 100.0F, adj.GrainFrequency / 100.0F, adj.GrainColor / 100.0F),
@@ -5129,6 +5144,24 @@ Namespace Services
             tone.TiltShiftAmount = neutral.TiltShiftAmount : tone.TiltShiftAngle = neutral.TiltShiftAngle
             tone.TiltShiftCenterX = neutral.TiltShiftCenterX : tone.TiltShiftCenterY = neutral.TiltShiftCenterY
             tone.TiltShiftFocus = neutral.TiltShiftFocus : tone.TiltShiftTransition = neutral.TiltShiftTransition
+            tone.SiliconBonkEnabled = neutral.SiliconBonkEnabled
+            tone.SiliconBonkHue = neutral.SiliconBonkHue
+            tone.SiliconBonkLuma = neutral.SiliconBonkLuma
+            tone.SiliconBonkSaturation = neutral.SiliconBonkSaturation
+            tone.SiliconBonkMidpoint = neutral.SiliconBonkMidpoint
+            tone.SiliconBonkContrast = neutral.SiliconBonkContrast
+            tone.SiliconBonkPreserveDetails = neutral.SiliconBonkPreserveDetails
+            tone.FatToniEnabled = neutral.FatToniEnabled
+            tone.FatToniHighlightHue = neutral.FatToniHighlightHue
+            tone.FatToniHighlightSaturation = neutral.FatToniHighlightSaturation
+            tone.FatToniShadowHue = neutral.FatToniShadowHue
+            tone.FatToniShadowSaturation = neutral.FatToniShadowSaturation
+            tone.FatToniSeparation = neutral.FatToniSeparation
+            tone.FatToniMidpoint = neutral.FatToniMidpoint
+            tone.FatToniContrast = neutral.FatToniContrast
+            tone.FatToniBaseHue = neutral.FatToniBaseHue
+            tone.FatToniBaseSaturation = neutral.FatToniBaseSaturation
+            tone.FatToniBaseLuminance = neutral.FatToniBaseLuminance
             tone.Grain = neutral.Grain : tone.GrainSize = neutral.GrainSize
             tone.GrainFrequency = neutral.GrainFrequency : tone.GrainColor = neutral.GrainColor
             tone.AddNoise = neutral.AddNoise
@@ -5354,6 +5387,11 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.PosterizeLevels, adj.ThresholdLevel,
                                 adj.Vibrance, adj.Vignette, adj.VignetteTransition, adj.VignetteRoundness, adj.VignetteFeather,
                 adj.VignetteCenterX, adj.VignetteCenterY, adj.VignetteStyle,
+                adj.SiliconBonkEnabled, adj.SiliconBonkHue, adj.SiliconBonkLuma, adj.SiliconBonkSaturation,
+                adj.SiliconBonkMidpoint, adj.SiliconBonkContrast, adj.SiliconBonkPreserveDetails, adj.FatToniEnabled,
+                adj.FatToniHighlightHue, adj.FatToniHighlightSaturation, adj.FatToniShadowHue, adj.FatToniShadowSaturation,
+                adj.FatToniSeparation, adj.FatToniMidpoint, adj.FatToniContrast, adj.FatToniBaseHue,
+                adj.FatToniBaseSaturation, adj.FatToniBaseLuminance,
                 adj.TiltShiftAmount, adj.TiltShiftCenterX, adj.TiltShiftCenterY, adj.TiltShiftAngle,
                 adj.TiltShiftFocus, adj.TiltShiftTransition,
                 LightSourcesKey(adj),
@@ -7420,6 +7458,8 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
             unsharpened.SharpenMethod = SharpenMethod.UnsharpMask
             unsharpened.Vignette = 0
             unsharpened.TiltShiftAmount = 0
+            unsharpened.SiliconBonkEnabled = False
+            unsharpened.FatToniEnabled = False
             unsharpened.Grain = 0
             unsharpened.AddNoise = 0
             Return unsharpened

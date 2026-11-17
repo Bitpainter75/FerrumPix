@@ -760,3 +760,14 @@ package jpegsrc.v9f:
 
 The full README of the source package is included with every package that
 bundles LibRaw, as licenses/libraw/LICENSE.libjpeg.txt.
+
+
+SiliconBonk and FatToni
+----------------------
+Original Bibble 5 / AfterShot Pro plugins by Spoilerhead (2011-2012).
+https://github.com/spoilerhead/asp_plugins/tree/master/SiliconBonk
+https://github.com/spoilerhead/asp_plugins/tree/master/FatToni
+The upstream LICENSEs file offers GPLv2+ or LGPLv2+ for both plugins.
+ART CTL ports V0.02: Copyright (C) Spoilerhead 2026.
+FerrumPix adapts the supplied CTL formulas as native VB stages under its GPLv3 license.
+No original plugin artwork or slider bitmap resources are included.

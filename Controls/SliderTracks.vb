@@ -59,6 +59,11 @@ Namespace Controls
                             New HsvColor(1.0, hueDegrees, 0.35, 1.0).ToRgb())
         End Function
 
+        ' Midpoint controls move from dark to light, independently of the selected hue.
+        Public Shared ReadOnly Property BlackToWhite As IBrush = Gradient(Colors.Black, Colors.White)
+
+        Public Shared ReadOnly Property Hue As IBrush = HueSpan(180.0, 180.0)
+
         Private Shared Function Gradient(ParamArray colors As Color()) As IBrush
             Dim brush As New LinearGradientBrush With {
                 .StartPoint = New RelativePoint(0, 0.5, RelativeUnit.Relative),

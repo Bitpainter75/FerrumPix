@@ -75,6 +75,8 @@ Namespace ViewModels
                 Case "gradient-map" : Return ("Verlaufsumsetzung", Sub() NeutralizeCorrectionGroup(AddressOf ResetGradientMapValues))
                 Case "posterize" : Return ("Tontrennung", Sub() NeutralizeCorrectionGroup(AddressOf ResetPosterizeValues))
                 Case "threshold" : Return ("Schwellenwert", Sub() NeutralizeCorrectionGroup(AddressOf ResetThresholdValues))
+                Case "siliconbonk" : Return ("Silicon Bonk (Adaptive Black&White)", Sub() NeutralizeCorrectionGroup(AddressOf ResetSiliconBonkValues))
+                Case "fattoni" : Return ("Fat Toni (Split Toning)", Sub() NeutralizeCorrectionGroup(AddressOf ResetFatToniValues))
                 Case "tiltshift" : Return ("Tilt-Shift", Sub() NeutralizeCorrectionGroup(AddressOf ResetTiltShiftValues))
                 Case "sharpen" : Return ("Schärfen", AddressOf ResetSharpenGroupInternal)
                 Case "rauschen" : Return ("Rauschreduzierung", AddressOf ResetNoiseSlidersInternal)

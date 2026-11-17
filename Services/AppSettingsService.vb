@@ -1958,6 +1958,8 @@ Namespace Services
                     ("rauschen", "Rauschreduzierung"),
                     ("sharpen", "Schärfen"),
                     ("vignette", "Vignette"),
+                    ("siliconbonk", "Silicon Bonk (Adaptive Black&White)"),
+                    ("fattoni", "Fat Toni (Split Toning)"),
                     ("frame", "Rahmen"),
                     ("grain", "Körnung"),
                     ("posterize", "Tontrennung"),
@@ -1992,7 +1994,7 @@ Namespace Services
                     ("Color", New String() {"color", "hsl", "color-grading", "channel-mixer",
                                             "gradient-map", "calibration"}),
                     ("Details", New String() {"details", "rauschen", "sharpen", "vignette"}),
-                    ("Effects", New String() {"frame", "grain", "posterize", "threshold", "bokeh", "fog", "tiltshift"}),
+                    ("Effects", New String() {"siliconbonk", "fattoni", "frame", "grain", "posterize", "threshold", "bokeh", "fog", "tiltshift"}),
                     ("Filters", New String() {"saved-adjustments", "variants", "filter", "lut", "xmp-preset"})}
             End Get
         End Property
@@ -2027,7 +2029,7 @@ Namespace Services
                     New String() {"color"}, New String() {"hsl"}, New String() {"color-grading"}, New String() {"channel-mixer"}, New String() {"gradient-map"},
                     New String() {"calibration"},
                     New String() {"details"}, New String() {"rauschen"}, New String() {"sharpen"}, New String() {"vignette"},
-                    New String() {"frame"}, New String() {"grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"bokeh"}, New String() {"fog"}, New String() {"tiltshift"},
+                    New String() {"siliconbonk"}, New String() {"fattoni"}, New String() {"frame"}, New String() {"grain"}, New String() {"posterize"}, New String() {"threshold"}, New String() {"bokeh"}, New String() {"fog"}, New String() {"tiltshift"},
                     New String() {"saved-adjustments"}, New String() {"variants"},
                     New String() {"filter"}, New String() {"xmp-preset"}, New String() {"lut"}}
             End Get
@@ -2044,6 +2046,14 @@ Namespace Services
                 Dim id = part.Trim()
                 If ids.Contains(id) AndAlso Not result.Contains(id) Then result.Add(id)
             Next
+            ' Existing installations already saved a complete order before these tools existed.
+            ' Insert only missing film tools beside the vignette; keep deliberate custom orders.
+            If result.Contains("vignette") AndAlso Not result.Contains("siliconbonk") Then
+                result.Insert(result.IndexOf("vignette") + 1, "siliconbonk")
+            End If
+            If result.Contains("siliconbonk") AndAlso Not result.Contains("fattoni") Then
+                result.Insert(result.IndexOf("siliconbonk") + 1, "fattoni")
+            End If
             For Each id In ids
                 If Not result.Contains(id) Then result.Add(id)
             Next

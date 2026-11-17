@@ -11855,4 +11855,52 @@
   <data name="0_Variante_n_werden_mit_gel_scht_9a5de642" xml:space="preserve">
     <value>Verranno eliminate anche {0} variante/i.</value>
   </data>
+  <data name="Aktiviert_06015500" xml:space="preserve">
+    <value>Attivato</value>
+  </data>
+  <data name="Lichter_Details_erhalten_33353024" xml:space="preserve">
+    <value>Preserva alte luci/dettagli</value>
+  </data>
+  <data name="Trennung_39a84be8" xml:space="preserve">
+    <value>Separazione</value>
+  </data>
+  <data name="Mittelpunkt_30f397c0" xml:space="preserve">
+    <value>Punto medio</value>
+  </data>
+  <data name="Basis_83d956f4" xml:space="preserve">
+    <value>Base</value>
+  </data>
+  <data name="Restfarbe_9fd4a431" xml:space="preserve">
+    <value>Colore residuo</value>
+  </data>
+  <data name="Mischung_b3f2f6b2" xml:space="preserve">
+    <value>Miscelazione</value>
+  </data>
+  <data name="Silicon_Bonk_Adaptive_Black_White_8fc24d0a" xml:space="preserve">
+    <value>Silicon Bonk (Bianco e nero adattivo)</value>
+  </data>
+  <data name="Fat_Toni_Split_Toning_61a071ab" xml:space="preserve">
+    <value>Fat Toni (Divisione toni)</value>
+  </data>
+  <data name="Luminanzverst_rkung_b2993a29" xml:space="preserve">
+    <value>Aumento della luminanza</value>
+  </data>
+  <data name="Restfarbe_beibehalten_bei_null_wird_das_Bild_sch_cb51e3b7" xml:space="preserve">
+    <value>Mantieni un po’ di colore; zero produce il bianco e nero.</value>
+  </data>
+  <data name="Mittelt_ne_aufhellen_oder_abdunkeln_59706022" xml:space="preserve">
+    <value>Schiarisci o scurisci i toni medi.</value>
+  </data>
+  <data name="Balance_zwischen_Tiefen_und_Lichterton_verschieb_c2ae795c" xml:space="preserve">
+    <value>Sposta il bilanciamento tra i toni delle ombre e delle alte luci.</value>
+  </data>
+  <data name="Tiefen_und_Lichtert_ne_st_rker_voneinander_trenn_f6f38716" xml:space="preserve">
+    <value>Aumenta la separazione tra i toni delle ombre e delle alte luci.</value>
+  </data>
+  <data name="Lichter_abdunkeln_um_Details_bei_hohem_Kontrast__fad70fe2" xml:space="preserve">
+    <value>Scurisci le alte luci per preservare i dettagli ad alto contrasto.</value>
+  </data>
+  <data name="Basisfarbe_wie_farbiges_Papier_beim_Drucken_948fa32e" xml:space="preserve">
+    <value>Colore di base, come carta colorata in stampa.</value>
+  </data>
 </root>
