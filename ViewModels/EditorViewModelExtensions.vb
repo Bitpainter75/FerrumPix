@@ -684,8 +684,6 @@ Namespace ViewModels
             RefreshExtensionPanels()
         End Sub
 
-        ''' <summary>Der Name eines Handgriffs an einer Erweiterung in der Historie, oder Nothing,
-        ''' wenn das Kennzeichen keines ist.</summary>
         ''' <summary>Der Schluessel einer Erweiterung im Gruppenvergleich (wie der Schluessel eines
         ''' Aufklappers bei den eingebauten Gruppen).</summary>
         Friend Const ExtensionGroupKeyPrefix As String = "ext:"
@@ -711,6 +709,8 @@ Namespace ViewModels
             Next
         End Sub
 
+        ''' <summary>Der Name eines Handgriffs an einer Erweiterung in der Historie, oder Nothing,
+        ''' wenn das Kennzeichen keines ist.</summary>
         Private Function ExtensionHistoryLabel(propertyName As String) As String
             If propertyName Is Nothing OrElse Not propertyName.StartsWith(ExtensionHistoryPrefix, StringComparison.Ordinal) Then Return Nothing
             Dim rest = propertyName.Substring(ExtensionHistoryPrefix.Length)

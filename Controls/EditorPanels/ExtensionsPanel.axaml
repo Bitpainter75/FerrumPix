@@ -100,7 +100,7 @@
                                                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
                                                     <icons:ColorPickerButton Grid.Column="1"
                                                                              SelectedColor="{Binding ColorValue, Mode=TwoWay}" />
-                                                    <Button Grid.Column="2" Classes="icon-btn" Width="24" Height="24" Padding="0" Margin="4,0,0,0"
+                                                    <Button Grid.Column="2" Classes="icon-btn group-reset" Width="24" Height="24" Padding="0" Margin="4,0,0,0"
                                                             Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
                                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
                                                                        Width="14" Height="14" />
@@ -110,7 +110,7 @@
                                                     <Grid ColumnDefinitions="*,Auto">
                                                         <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
                                                                    VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
-                                                        <Button Grid.Column="1" Classes="icon-btn" Width="24" Height="24" Padding="0"
+                                                        <Button Grid.Column="1" Classes="icon-btn group-reset" Width="24" Height="24" Padding="0"
                                                                 Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
                                                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
                                                                            Width="14" Height="14" />
