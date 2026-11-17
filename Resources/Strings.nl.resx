@@ -11904,4 +11904,52 @@
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>Jaar</value>
   </data>
+  <data name="Restfarbe_beibehalten_bei_null_wird_das_Bild_sch_cb51e3b7" xml:space="preserve">
+    <value>Behoud wat kleur; nul geeft zwart-wit.</value>
+  </data>
+  <data name="Aktiviert_06015500" xml:space="preserve">
+    <value>Ingeschakeld</value>
+  </data>
+  <data name="Luminanzverst_rkung_b2993a29" xml:space="preserve">
+    <value>Luminantieversterking</value>
+  </data>
+  <data name="Trennung_39a84be8" xml:space="preserve">
+    <value>Scheiding</value>
+  </data>
+  <data name="Balance_zwischen_Tiefen_und_Lichterton_verschieb_c2ae795c" xml:space="preserve">
+    <value>Verschuif de balans tussen schaduw- en hooglichttinten.</value>
+  </data>
+  <data name="Silicon_Bonk_Adaptive_Black_White_8fc24d0a" xml:space="preserve">
+    <value>Silicon Bonk (Adaptief zwart-wit)</value>
+  </data>
+  <data name="Basisfarbe_wie_farbiges_Papier_beim_Drucken_948fa32e" xml:space="preserve">
+    <value>Basiskleur, zoals gekleurd papier bij het afdrukken.</value>
+  </data>
+  <data name="Lichter_abdunkeln_um_Details_bei_hohem_Kontrast__fad70fe2" xml:space="preserve">
+    <value>Maak hooglichten donkerder om details bij hoog contrast te behouden.</value>
+  </data>
+  <data name="Mittelt_ne_aufhellen_oder_abdunkeln_59706022" xml:space="preserve">
+    <value>Maak middentonen lichter of donkerder.</value>
+  </data>
+  <data name="Mittelpunkt_30f397c0" xml:space="preserve">
+    <value>Middelpunt</value>
+  </data>
+  <data name="Tiefen_und_Lichtert_ne_st_rker_voneinander_trenn_f6f38716" xml:space="preserve">
+    <value>Vergroot de scheiding tussen schaduw- en hooglichttinten.</value>
+  </data>
+  <data name="Basis_83d956f4" xml:space="preserve">
+    <value>Basis</value>
+  </data>
+  <data name="Lichter_Details_erhalten_33353024" xml:space="preserve">
+    <value>Hooglichten/details behouden</value>
+  </data>
+  <data name="Mischung_b3f2f6b2" xml:space="preserve">
+    <value>Mengen</value>
+  </data>
+  <data name="Restfarbe_9fd4a431" xml:space="preserve">
+    <value>Restkleur</value>
+  </data>
+  <data name="Fat_Toni_Split_Toning_61a071ab" xml:space="preserve">
+    <value>Fat Toni (Gesplitste tinten)</value>
+  </data>
 </root>

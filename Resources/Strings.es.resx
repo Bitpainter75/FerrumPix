@@ -11864,4 +11864,52 @@
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>Año</value>
   </data>
+  <data name="Restfarbe_beibehalten_bei_null_wird_das_Bild_sch_cb51e3b7" xml:space="preserve">
+    <value>Conservar algo de color; cero produce blanco y negro.</value>
+  </data>
+  <data name="Aktiviert_06015500" xml:space="preserve">
+    <value>Activado</value>
+  </data>
+  <data name="Luminanzverst_rkung_b2993a29" xml:space="preserve">
+    <value>Aumento de luminancia</value>
+  </data>
+  <data name="Trennung_39a84be8" xml:space="preserve">
+    <value>Separación</value>
+  </data>
+  <data name="Balance_zwischen_Tiefen_und_Lichterton_verschieb_c2ae795c" xml:space="preserve">
+    <value>Cambiar el equilibrio entre tonos de sombras y luces.</value>
+  </data>
+  <data name="Silicon_Bonk_Adaptive_Black_White_8fc24d0a" xml:space="preserve">
+    <value>Silicon Bonk (Blanco y negro adaptativo)</value>
+  </data>
+  <data name="Basisfarbe_wie_farbiges_Papier_beim_Drucken_948fa32e" xml:space="preserve">
+    <value>Color base, como papel de color al imprimir.</value>
+  </data>
+  <data name="Lichter_abdunkeln_um_Details_bei_hohem_Kontrast__fad70fe2" xml:space="preserve">
+    <value>Oscurecer las luces para conservar detalles con alto contraste.</value>
+  </data>
+  <data name="Mittelt_ne_aufhellen_oder_abdunkeln_59706022" xml:space="preserve">
+    <value>Aclarar u oscurecer los tonos medios.</value>
+  </data>
+  <data name="Mittelpunkt_30f397c0" xml:space="preserve">
+    <value>Punto medio</value>
+  </data>
+  <data name="Tiefen_und_Lichtert_ne_st_rker_voneinander_trenn_f6f38716" xml:space="preserve">
+    <value>Aumentar la separación entre tonos de sombras y luces.</value>
+  </data>
+  <data name="Basis_83d956f4" xml:space="preserve">
+    <value>Base</value>
+  </data>
+  <data name="Lichter_Details_erhalten_33353024" xml:space="preserve">
+    <value>Conservar luces/detalles</value>
+  </data>
+  <data name="Mischung_b3f2f6b2" xml:space="preserve">
+    <value>Mezcla</value>
+  </data>
+  <data name="Restfarbe_9fd4a431" xml:space="preserve">
+    <value>Color residual</value>
+  </data>
+  <data name="Fat_Toni_Split_Toning_61a071ab" xml:space="preserve">
+    <value>Fat Toni (Virado dividido)</value>
+  </data>
 </root>

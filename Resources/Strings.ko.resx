@@ -11908,4 +11908,52 @@
   <data name="Jahr_956a6e5a" xml:space="preserve">
     <value>연도</value>
   </data>
+  <data name="Restfarbe_beibehalten_bei_null_wird_das_Bild_sch_cb51e3b7" xml:space="preserve">
+    <value>색상을 일부 유지합니다. 0이면 흑백이 됩니다.</value>
+  </data>
+  <data name="Aktiviert_06015500" xml:space="preserve">
+    <value>활성화</value>
+  </data>
+  <data name="Luminanzverst_rkung_b2993a29" xml:space="preserve">
+    <value>휘도 증가</value>
+  </data>
+  <data name="Trennung_39a84be8" xml:space="preserve">
+    <value>분리</value>
+  </data>
+  <data name="Balance_zwischen_Tiefen_und_Lichterton_verschieb_c2ae795c" xml:space="preserve">
+    <value>그림자와 하이라이트 톤의 균형을 조정합니다.</value>
+  </data>
+  <data name="Silicon_Bonk_Adaptive_Black_White_8fc24d0a" xml:space="preserve">
+    <value>Silicon Bonk (적응형 흑백)</value>
+  </data>
+  <data name="Basisfarbe_wie_farbiges_Papier_beim_Drucken_948fa32e" xml:space="preserve">
+    <value>인쇄할 때 색지를 사용하는 것과 같은 기본 색상입니다.</value>
+  </data>
+  <data name="Lichter_abdunkeln_um_Details_bei_hohem_Kontrast__fad70fe2" xml:space="preserve">
+    <value>높은 대비에서 디테일을 유지하도록 하이라이트를 어둡게 합니다.</value>
+  </data>
+  <data name="Mittelt_ne_aufhellen_oder_abdunkeln_59706022" xml:space="preserve">
+    <value>중간톤을 밝게 또는 어둡게 합니다.</value>
+  </data>
+  <data name="Mittelpunkt_30f397c0" xml:space="preserve">
+    <value>중간점</value>
+  </data>
+  <data name="Tiefen_und_Lichtert_ne_st_rker_voneinander_trenn_f6f38716" xml:space="preserve">
+    <value>그림자와 하이라이트 톤의 분리를 강화합니다.</value>
+  </data>
+  <data name="Basis_83d956f4" xml:space="preserve">
+    <value>기본</value>
+  </data>
+  <data name="Lichter_Details_erhalten_33353024" xml:space="preserve">
+    <value>하이라이트/디테일 유지</value>
+  </data>
+  <data name="Mischung_b3f2f6b2" xml:space="preserve">
+    <value>혼합</value>
+  </data>
+  <data name="Restfarbe_9fd4a431" xml:space="preserve">
+    <value>잔여 색상</value>
+  </data>
+  <data name="Fat_Toni_Split_Toning_61a071ab" xml:space="preserve">
+    <value>Fat Toni (분할 토닝)</value>
+  </data>
 </root>
