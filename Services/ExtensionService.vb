@@ -339,21 +339,40 @@ Namespace Services
         Public Shared ReadOnly Property Shown As IReadOnlyList(Of ExtensionDefinition)
             Get
                 Dim hidden = ReadHidden()
-                Return All.Where(Function(d) Not hidden.Contains(d.Id)).ToList()
+                Dim shownIds = ReadShown()
+                Return All.Where(Function(d) Not IsHidden(d, hidden, shownIds)).ToList()
             End Get
         End Property
 
+        ''' <summary>Steht die Erweiterung NICHT im Werkzeug? Mitgelieferte sind ab Werk
+        ''' ausgeblendet und erscheinen erst, wenn der Nutzer sie einblendet (ShownExtensions); wer
+        ''' nichts einschaltet, sieht das Werkzeug nicht. Die eigenen Erweiterungen des Nutzers
+        ''' sind sichtbar, bis er sie ausblendet (HiddenExtensions). Eine eigene Kopie mit der
+        ''' Kennung einer mitgelieferten zaehlt als eigene.</summary>
         Public Shared Function IsHidden(id As String) As Boolean
-            Return ReadHidden().Contains(If(id, ""))
+            Dim definition = Find(id)
+            Return IsHidden(definition, ReadHidden(), ReadShown())
+        End Function
+
+        Private Shared Function IsHidden(definition As ExtensionDefinition, hidden As HashSet(Of String), shown As HashSet(Of String)) As Boolean
+            If definition Is Nothing Then Return False
+            If definition.IsBundled Then Return Not shown.Contains(definition.Id)
+            Return hidden.Contains(definition.Id)
         End Function
 
         ''' <summary>Blendet eine Erweiterung im Werkzeug aus oder wieder ein, sofort gespeichert wie
         ''' Laden, Entfernen und die Reihenfolge. Das Bild aendert sich dadurch nicht.</summary>
         Public Shared Sub SetHidden(id As String, hidden As Boolean)
             If String.IsNullOrWhiteSpace(id) Then Return
-            Dim ids = ReadHidden()
-            If hidden Then ids.Add(id) Else ids.Remove(id)
-            AppSettingsService.SaveHiddenExtensions(String.Join(",", ids.OrderBy(Function(k) k, StringComparer.Ordinal)))
+            If Find(id)?.IsBundled = True Then
+                Dim shownIds = ReadShown()
+                If hidden Then shownIds.Remove(id) Else shownIds.Add(id)
+                AppSettingsService.SaveShownExtensions(String.Join(",", shownIds.OrderBy(Function(k) k, StringComparer.Ordinal)))
+            Else
+                Dim ids = ReadHidden()
+                If hidden Then ids.Add(id) Else ids.Remove(id)
+                AppSettingsService.SaveHiddenExtensions(String.Join(",", ids.OrderBy(Function(k) k, StringComparer.Ordinal)))
+            End If
             Interlocked.Increment(_panelOrderRevision)
             RaiseEvent Changed(Nothing, EventArgs.Empty)
         End Sub
@@ -364,6 +383,16 @@ Namespace Services
                 text = If(AppSettingsService.Load().HiddenExtensions, "")
             Catch ex As Exception
                 DiagnosticLogService.LogException("Extensions.Hidden", ex)
+            End Try
+            Return New HashSet(Of String)(text.Split(","c).Select(Function(t) t.Trim()).Where(Function(t) t.Length > 0), StringComparer.Ordinal)
+        End Function
+
+        Private Shared Function ReadShown() As HashSet(Of String)
+            Dim text = ""
+            Try
+                text = If(AppSettingsService.Load().ShownExtensions, "")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Extensions.Shown", ex)
             End Try
             Return New HashSet(Of String)(text.Split(","c).Select(Function(t) t.Trim()).Where(Function(t) t.Length > 0), StringComparer.Ordinal)
         End Function
@@ -534,6 +563,19 @@ Namespace Services
                     definitions.Add(loaded.Definition)
                 Next
             Next
+            ' Zuletzt die in der Bibliothek: mitgeliefert wie der Ordner neben dem Programm, und wie
+            ' dort gewinnt eine Datei des Nutzers mit derselben Kennung. So kann ein Autor seine
+            ' Erweiterung weiterentwickeln, ohne auf eine neue Fassung von FerrumPix zu warten.
+            For Each embedded In LoadEmbedded()
+                If Not embedded.Succeeded Then
+                    failures.Add(embedded)
+                    DiagnosticLogService.LogAlways("Extensions.Load", embedded.FilePath & ": " & embedded.ErrorText)
+                    Continue For
+                End If
+                If definitions.Any(Function(d) String.Equals(d.Id, embedded.Definition.Id, StringComparison.Ordinal)) Then Continue For
+                embedded.Definition.IsBundled = True
+                definitions.Add(embedded.Definition)
+            Next
             _definitions = definitions
             _failures = failures
             Interlocked.Increment(_revision)
@@ -627,6 +669,37 @@ Namespace Services
             "break", "continue", "discard", "switch", "case", "default"}
 
         ''' <summary>Liest und prueft eine Datei, ohne sie in den Bestand aufzunehmen.</summary>
+        ''' <summary>Der Anfang der Namen, unter denen die mitgelieferten Erweiterungen in der
+        ''' Bibliothek liegen (FerrumPix.vbproj).</summary>
+        Private Const EmbeddedPrefix As String = "FerrumPix.Extensions."
+
+        ''' <summary>Die mitgelieferten Erweiterungen aus der Bibliothek, in der Reihenfolge ihrer
+        ''' Namen. Sie haben keine Datei: FilePath bleibt leer, Entfernen geht nicht.</summary>
+        Private Shared Function LoadEmbedded() As List(Of ExtensionLoadResult)
+            Dim results As New List(Of ExtensionLoadResult)()
+            ' Fuer Pruefungen, die einen leeren Bestand brauchen, wie FERRUMPIX_EXTENSIONS fuer den
+            ' Ordner des Nutzers.
+            If Environment.GetEnvironmentVariable("FERRUMPIX_NO_BUNDLED_EXTENSIONS") = "1" Then Return results
+            Dim assembly = GetType(ExtensionService).Assembly
+            Dim names = assembly.GetManifestResourceNames().
+                Where(Function(n) n.StartsWith(EmbeddedPrefix, StringComparison.Ordinal) AndAlso
+                                  n.EndsWith(FileExtension, StringComparison.Ordinal)).
+                OrderBy(Function(n) n, StringComparer.Ordinal)
+            For Each name In names
+                Dim result As New ExtensionLoadResult With {.FilePath = name.Substring(EmbeddedPrefix.Length)}
+                Try
+                    Using stream = assembly.GetManifestResourceStream(name), reader As New StreamReader(stream, Encoding.UTF8)
+                        result = LoadText(reader.ReadToEnd(), "")
+                        result.FilePath = name.Substring(EmbeddedPrefix.Length)
+                    End Using
+                Catch ex As Exception
+                    result.ErrorText = ex.Message
+                End Try
+                results.Add(result)
+            Next
+            Return results
+        End Function
+
         Public Shared Function LoadFile(filePath As String) As ExtensionLoadResult
             Dim result As New ExtensionLoadResult With {.FilePath = filePath}
             Try
@@ -639,8 +712,24 @@ Namespace Services
                     result.ErrorText = $"file is larger than {MaxFileBytes \ 1024} KB"
                     Return result
                 End If
+                Return LoadText(File.ReadAllText(filePath, Encoding.UTF8), filePath)
+            Catch ex As Exception
+                result.ErrorText = ex.Message
+            End Try
+            Return result
+        End Function
+
+        ''' <summary>Der Text einer Erweiterung, geprueft und mit uebersetzten Shadern. filePath ist
+        ''' die Datei, aus der er kam, oder leer fuer eine mitgelieferte aus der Bibliothek.</summary>
+        Private Shared Function LoadText(json As String, filePath As String) As ExtensionLoadResult
+            Dim result As New ExtensionLoadResult With {.FilePath = filePath}
+            Try
+                If Encoding.UTF8.GetByteCount(json) > MaxFileBytes Then
+                    result.ErrorText = $"file is larger than {MaxFileBytes \ 1024} KB"
+                    Return result
+                End If
                 Dim definition As ExtensionDefinition = Nothing
-                Dim problem = ParseDefinition(File.ReadAllText(filePath, Encoding.UTF8), definition)
+                Dim problem = ParseDefinition(json, definition)
                 If problem.Length > 0 Then
                     result.ErrorText = problem
                     Return result

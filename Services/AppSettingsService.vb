@@ -701,6 +701,10 @@ Namespace Services
         ''' rechnen in Bildern weiter, wie ausgeblendete Anpassungsgruppen
         ''' (HiddenAdjustmentGroups); ausgeblendet ist nur das Bedienen.</summary>
         Public Property HiddenExtensions As String = ""
+        ''' <summary>Mitgelieferte Erweiterungen, die der Nutzer ins Werkzeug geholt hat: Kennungen
+        ''' mit Komma. Mitgelieferte sind ab Werk ausgeblendet, damit das Werkzeug nur erscheint,
+        ''' wer es will (ExtensionService.IsHidden).</summary>
+        Public Property ShownExtensions As String = ""
         ''' <summary>Woher jede Erweiterung geladen wurde: Kennung nach Pfad der Ursprungsdatei.
         ''' "Neu einlesen" holt sie von dort erneut (ExtensionService.RefreshFromSources).</summary>
         Public Property ExtensionSources As New Dictionary(Of String, String)()
@@ -3069,6 +3073,10 @@ Namespace Services
 
         Public Shared Sub SaveHiddenExtensions(value As String)
             Update(Sub(s) s.HiddenExtensions = If(value, ""))
+        End Sub
+
+        Public Shared Sub SaveShownExtensions(value As String)
+            Update(Sub(s) s.ShownExtensions = If(value, ""))
         End Sub
 
         Public Shared Sub SaveExtensionOrder(value As String)

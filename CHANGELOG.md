@@ -17,6 +17,10 @@
   Many thanks to Spoilerhead, whose black and white conversion Silicon Bonk and split toning
   Fat Toni gave the reason for extensions and are among the examples.
 
+- FerrumPix comes with four extensions: the black and white conversion Silicon Bonk, the split
+  toning Fat Toni, a toning with a curve and a light falloff. They are hidden at first; the eye
+  in the settings, section Extensions, brings them into the editor.
+
 - Extensions run in a fixed order that the extension files set, no longer in the order they were
   switched on, so two pictures with the same settings always look the same. An extension can
   link to its description, which the settings show as a button.

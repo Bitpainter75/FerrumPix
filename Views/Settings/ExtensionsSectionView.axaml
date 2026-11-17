@@ -33,20 +33,20 @@
                                            Foreground="{DynamicResource FP.Accent}" FontSize="{DynamicResource FP.Font.Small}"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <!-- Die Beschreibung der Erweiterung im Browser; der Tooltip zeigt das Ziel
-                                 vor dem Klick. Nur https, siehe ExtensionService.IsSafeWebAddress. -->
-                            <Button Classes="ghost" Padding="12,7" VerticalAlignment="Center"
-                                    IsVisible="{Binding HasUrl}" ToolTip.Tip="{Binding Url}"
-                                    Command="{Binding $parent[ItemsControl].DataContext.OpenExtensionUrlCommand}"
-                                    CommandParameter="{Binding}">
-                                <TextBlock Classes="no-translate" Text="{Binding UrlText}" FontSize="{DynamicResource FP.Font.Small}"/>
-                            </Button>
-                            <Button Classes="ghost" Padding="12,7" VerticalAlignment="Center"
-                                    IsVisible="{Binding CanRemove}"
-                                    Command="{Binding $parent[ItemsControl].DataContext.RemoveExtensionCommand}"
-                                    CommandParameter="{Binding}">
-                                <TextBlock Classes="no-translate" Text="{Binding RemoveText}" FontSize="{DynamicResource FP.Font.Small}"/>
-                            </Button>
+                                <!-- Die Beschreibung der Erweiterung im Browser; der Tooltip zeigt das Ziel
+                                     vor dem Klick. Nur https, siehe ExtensionService.IsSafeWebAddress. -->
+                                <Button Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                        IsVisible="{Binding HasUrl}" ToolTip.Tip="{Binding Url}"
+                                        Command="{Binding $parent[ItemsControl].DataContext.OpenExtensionUrlCommand}"
+                                        CommandParameter="{Binding}">
+                                    <TextBlock Classes="no-translate" Text="{Binding UrlText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                </Button>
+                                <Button Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                                        IsVisible="{Binding CanRemove}"
+                                        Command="{Binding $parent[ItemsControl].DataContext.RemoveExtensionCommand}"
+                                        CommandParameter="{Binding}">
+                                    <TextBlock Classes="no-translate" Text="{Binding RemoveText}" FontSize="{DynamicResource FP.Font.Small}"/>
+                                </Button>
                             </StackPanel>
                         </Grid>
                     </Border>

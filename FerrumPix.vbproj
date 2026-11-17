@@ -90,5 +90,9 @@
     <EmbeddedResource Include="Resources\SonyAMountLensIds.tsv" />
     <EmbeddedResource Include="Resources\PentaxLensIds.tsv" />
     <EmbeddedResource Include="Resources\CanonLensTypes.tsv" />
+    <!-- Die mitgelieferten Erweiterungen, dieselben Dateien wie die Beispiele der Anleitung. In
+         der Bibliothek statt neben dem Programm: so kommen sie mit jedem Paket mit, ohne dass ein
+         Paketweg (Flatpak, AppImage, macOS, Setup) sie eigens ablegen muss. -->
+    <EmbeddedResource Include="docs\extensions\*.json" LogicalName="FerrumPix.Extensions.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>
