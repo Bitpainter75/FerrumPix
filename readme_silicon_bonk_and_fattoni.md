@@ -37,9 +37,15 @@ Try warm highlights with cool shadows, or keep both subtle for a restrained prin
 
 The native FerrumPix tools adapt Spoilerhead's ART CTL ports. They process in this order:
 
-**Vignette → Silicon Bonk → Fat Toni → Grain**
+**Vignette → Silicon Bonk → Grain → Fat Toni**
+
+Grain is added before Fat Toni so it receives the same toning as the image, as grain would in a toned darkroom print, rather than sitting on top as a neutral texture.
 
 Start with a finished color edit. Enable Silicon Bonk with Residual Color at zero, adjust Hue/Luminance, then refine Midpoint and Contrast. Enable Fat Toni if you want toning. Finally, try a little Residual Color for a richer, partially colored result. Early users developed this workflow by refining the monochrome conversion and toning together, then letting a little original color shine through.
+
+### Saved settings
+
+The current limits apply everywhere, including loaded recipes and exports. Silicon Bonk Contrast is limited to −50…200 and Fat Toni Contrast to 0…100. Older out-of-range values are clamped to these limits; non-finite values use the defaults.
 
 ## References
 

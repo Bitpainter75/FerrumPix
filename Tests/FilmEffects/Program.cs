@@ -39,11 +39,11 @@ static class Program
             double Next(double lo, double hi) => i % 8 == 0 ? lo : i % 8 == 1 ? hi : lo + random.NextDouble() * (hi - lo);
             a.SiliconBonkHue = (float)Next(0, 360); a.SiliconBonkLuma = (float)Next(-100, 100);
             a.SiliconBonkSaturation = (float)Next(0, 200); a.SiliconBonkMidpoint = (float)Next(-100, 100);
-            a.SiliconBonkContrast = (float)Next(-100, 1000); a.SiliconBonkPreserveDetails = i % 2 == 0;
+            a.SiliconBonkContrast = (float)Next(-50, 200); a.SiliconBonkPreserveDetails = i % 2 == 0;
             a.FatToniHighlightHue = (float)Next(0, 360); a.FatToniHighlightSaturation = (float)Next(0, 100);
             a.FatToniShadowHue = (float)Next(0, 360); a.FatToniShadowSaturation = (float)Next(0, 100);
             a.FatToniSeparation = (float)Next(0, 100); a.FatToniMidpoint = (float)Next(-100, 100);
-            a.FatToniContrast = (float)Next(-100, 1000); a.FatToniBaseHue = (float)Next(0, 360);
+            a.FatToniContrast = (float)Next(0, 100); a.FatToniBaseHue = (float)Next(0, 360);
             a.FatToniBaseSaturation = (float)Next(0, 100); a.FatToniBaseLuminance = (float)Next(0, 100);
             double r = random.NextDouble(), g = random.NextDouble(), b = random.NextDouble();
             if (i % 9 == 0) r = g = b = i % 18 == 0 ? 0 : 1;
@@ -96,12 +96,14 @@ static class Program
                     Check(after[i] <= after[i + 3] && after[i + 1] <= after[i + 3] && after[i + 2] <= after[i + 3], "Invalid premultiplied pixel");
             }
         }
-        // Deep values deliberately fall between 8-bit steps. Both stages must retain precision.
+        // Active grain must be toned, while deep values retain precision between 8-bit steps.
+        adj.Grain = 30; adj.GrainSize = 20; adj.GrainFrequency = 40;
         using var deep = new SKBitmap(16, 8, SKColorType.Rgba16161616, SKAlphaType.Unpremul);
         var samples = Enumerable.Range(0, 128).SelectMany(i => new ushort[] { (ushort)(1234 + i * 211), (ushort)(4567 + i * 73), (ushort)(14567 + i * 89), 65535 }).ToArray();
         Marshal.Copy(samples.Select(v => unchecked((short)v)).ToArray(), 0, deep.GetPixels(), samples.Length);
         using var first = (SKBitmap)Call("ApplyFilmEffect", deep, Call("SiliconBonkPixel", adj));
-        using var second = (SKBitmap)Call("ApplyFilmEffect", first, Call("FatToniPixel", adj));
+        using var grained = (SKBitmap)Call("ApplyGrainDeep", first, .3f, .2f, .4f, 0f);
+        using var second = (SKBitmap)Call("ApplyFilmEffect", grained, Call("FatToniPixel", adj));
         var output = new short[samples.Length]; Marshal.Copy(second.GetPixels(), output, 0, output.Length);
         Check(output.Where((_, i) => i % 4 != 3).Any(v => (ushort)v % 257 != 0), "Deep output collapsed to 8 bits");
         using var shallow = (SKBitmap)Call("ShallowFromDeep", deep, SKColorType.Bgra8888, SKAlphaType.Unpremul);
@@ -112,8 +114,22 @@ static class Program
         var processedDeep = (SKBitmap)Call("DeepOf", processed);
         Check(processedDeep != null, "Deep companion lost in actual stage chain");
         var actual = new short[output.Length]; Marshal.Copy(processedDeep!.GetPixels(), actual, 0, actual.Length);
-        Check(actual.SequenceEqual(output), "Actual chain does not run SiliconBonk then FatToni");
+        Check(actual.SequenceEqual(output), "Actual chain does not run SiliconBonk, Grain, then FatToni");
         Call("DropDeep", processed); Call("DropDeep", shallow);
+        using var tonedBeforeGrain = (SKBitmap)Call("ApplyFilmEffect", first, Call("FatToniPixel", adj));
+        using var oldOrder = (SKBitmap)Call("ApplyGrainDeep", tonedBeforeGrain, .3f, .2f, .4f, 0f);
+        var oldSamples = new short[output.Length]; Marshal.Copy(oldOrder.GetPixels(), oldSamples, 0, oldSamples.Length);
+        Check(!oldSamples.SequenceEqual(output), "Fixture cannot distinguish toned grain from a neutral overlay");
+        using var ordinary = Pixels(SKAlphaType.Unpremul);
+        using var mono = (SKBitmap)Call("ApplyFilmEffect", ordinary, Call("SiliconBonkPixel", adj));
+        using var grain8 = (SKBitmap)Call("ApplyGrain", mono, .3f, .2f, .4f, 0f);
+        using var expected8 = (SKBitmap)Call("ApplyFilmEffect", grain8, Call("FatToniPixel", adj));
+        object[] args8 = { ordinary, adj, false };
+        using var actual8 = (SKBitmap)typeof(ImageProcessor).GetMethod("ApplyDetailAdjustmentStagesCore", Hidden)!.Invoke(null, args8)!;
+        var bytesExpected = new byte[expected8.ByteCount]; var bytesActual = new byte[actual8.ByteCount];
+        Marshal.Copy(expected8.GetPixels(), bytesExpected, 0, bytesExpected.Length);
+        Marshal.Copy(actual8.GetPixels(), bytesActual, 0, bytesActual.Length);
+        Check(bytesExpected.SequenceEqual(bytesActual), "8-bit preview does not tone the grain after SiliconBonk");
     }
 
     static void RecipesAndCaches()
@@ -136,14 +152,57 @@ static class Program
         Check(!preSharpen.SiliconBonkEnabled && !preSharpen.FatToniEnabled, "Late effects leak into sharpen mask");
         var upgraded = AppSettingsService.NormalizeEditorCompactGroupOrder("light,vignette,grain").Split(',');
         var at = Array.IndexOf(upgraded, "vignette");
-        Check(upgraded[at + 1] == "siliconbonk" && upgraded[at + 2] == "fattoni" && upgraded[at + 3] == "grain", "Existing compact layout did not insert film tools in order");
+        Check(upgraded[at + 1] == "siliconbonk" && upgraded[at + 2] == "grain" && upgraded[at + 3] == "fattoni", "Existing compact layout did not insert film tools in order");
         var custom = AppSettingsService.NormalizeEditorCompactGroupOrder("fattoni,grain,siliconbonk,vignette");
         Check(custom.StartsWith("fattoni,grain,siliconbonk,vignette"), "Custom compact order was overwritten");
     }
 
+    static void ParameterCompatibility()
+    {
+        var defaults = new ImageAdjustments();
+        foreach (var field in typeof(FilmEffectParameters).GetFields(BindingFlags.Public | BindingFlags.Static)
+                     .Where(f => f.FieldType == typeof(FilmParameterDefinition)))
+        {
+            var definition = (FilmParameterDefinition)field.GetValue(null)!;
+            Check(Equals(typeof(ImageAdjustments).GetProperty(field.Name)!.GetValue(defaults), definition.DefaultValue),
+                "Recipe default differs from shared definition: " + field.Name);
+            Check(definition.ClampValue(double.NaN) == definition.DefaultValue &&
+                  definition.ClampValue(double.PositiveInfinity) == definition.DefaultValue,
+                "Non-finite parameter did not use its default: " + field.Name);
+        }
+        var sb = FilmEffectParameters.SiliconBonkContrast;
+        var ft = FilmEffectParameters.FatToniContrast;
+        Check(sb.ClampValue(500) == 200 && sb.ClampValue(-100) == -50, "SB current contrast limits not enforced");
+        Check(ft.ClampValue(200) == 100 && ft.ClampValue(-50) == 0, "FT current contrast limits not enforced");
+        var fpx = typeof(ImageProcessor).Assembly.GetType("FerrumPix.Services.FpxService")!;
+        var method = fpx.GetMethod("DeserializeAdjustments", Hidden)!;
+        var loaded = (ImageAdjustments)method.Invoke(null, new object[] {
+            "{\"SiliconBonkEnabled\":true,\"SiliconBonkContrast\":500,\"FatToniContrast\":-50,\"SiliconBonkLuma\":900}" })!;
+        Check(loaded.SiliconBonkContrast == 200 && loaded.FatToniContrast == 0, "Recipe loader retained out-of-range contrast");
+        Check(loaded.SiliconBonkLuma == 100, "Recipe loader retained out-of-range luminance");
+        var nested = (ImageAdjustments)method.Invoke(null, new object[] {
+            "{\"Annotations\":[{\"Adjustments\":{\"FatToniContrast\":200,\"FatToniBaseSaturation\":900}}]," +
+            "\"MaskedAdjustmentLayers\":[{\"Adjustments\":{\"SiliconBonkContrast\":500,\"SiliconBonkHue\":900}}]}" })!;
+        Check(nested.Annotations[0].Adjustments.FatToniContrast == 100 &&
+              nested.Annotations[0].Adjustments.FatToniBaseSaturation == 100, "Object recipe bypassed current limits");
+        Check(nested.MaskedAdjustmentLayers[0].Adjustments.SiliconBonkContrast == 200 &&
+              nested.MaskedAdjustmentLayers[0].Adjustments.SiliconBonkHue == 360, "Masked-layer recipe bypassed current limits");
+        // Recipes constructed directly in memory must obey the same contract as loaded files.
+        var invalid = Recipe(); invalid.SiliconBonkContrast = 500; invalid.FatToniContrast = -50;
+        Check(invalid.SiliconBonkContrast == 200 && invalid.FatToniContrast == 0, "Programmatically built recipe bypassed current limits");
+        var bounded = invalid.Clone(); bounded.SiliconBonkContrast = 200; bounded.FatToniContrast = 0;
+        foreach (var group in new[] { "SiliconBonk", "FatToni" })
+        {
+            object[] bad = { .2, .4, .6 }, good = { .2, .4, .6 };
+            ((Delegate)Call(group + "Pixel", invalid)).DynamicInvoke(bad);
+            ((Delegate)Call(group + "Pixel", bounded)).DynamicInvoke(good);
+            Check(bad.SequenceEqual(good), "Renderer bypassed limits for " + group);
+        }
+    }
+
     static void Main(string[] args)
     {
-        FormulaParity(); BitmapAndDeep(); RecipesAndCaches();
+        FormulaParity(); BitmapAndDeep(); RecipesAndCaches(); ParameterCompatibility();
         Console.WriteLine($"Passed {checks} checks: CTL parity, alpha, deep precision/order, recipes and caches.");
         if (args.Length == 2 && args[0] == "--preview") Preview.Render(args[1], Recipe());
     }

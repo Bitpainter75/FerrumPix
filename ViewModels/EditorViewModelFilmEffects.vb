@@ -7,7 +7,7 @@ Imports FerrumPix.Services
 Namespace ViewModels
     Partial Public Class EditorViewModel
 
-        Private _siliconBonkEnabled As Boolean = False
+        Private _siliconBonkEnabled As Boolean = FilmEffectParameters.SiliconBonkEnabledDefault
         Public Property SiliconBonkEnabled As Boolean
             Get
                 Return _siliconBonkEnabled
@@ -22,14 +22,14 @@ Namespace ViewModels
             End Set
         End Property
 
-        Private _siliconBonkHue As Double = 45
+        Private _siliconBonkHue As Double = FilmEffectParameters.SiliconBonkHue.DefaultValue
         Public Property SiliconBonkHue As Double
             Get
                 Return _siliconBonkHue
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_siliconBonkHue, Math.Max(0, Math.Min(360, value)), NameOf(SiliconBonkHue))
+                SetUndoableDouble(_siliconBonkHue, FilmEffectParameters.SiliconBonkHue.ClampValue(value), NameOf(SiliconBonkHue))
                 Me.RaisePropertyChanged(NameOf(SiliconBonkLumaTrack))
             End Set
         End Property
@@ -40,51 +40,51 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _siliconBonkLuma As Double = 0
+        Private _siliconBonkLuma As Double = FilmEffectParameters.SiliconBonkLuma.DefaultValue
         Public Property SiliconBonkLuma As Double
             Get
                 Return _siliconBonkLuma
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_siliconBonkLuma, Math.Max(-100, Math.Min(100, value)), NameOf(SiliconBonkLuma))
+                SetUndoableDouble(_siliconBonkLuma, FilmEffectParameters.SiliconBonkLuma.ClampValue(value), NameOf(SiliconBonkLuma))
             End Set
         End Property
 
-        Private _siliconBonkSaturation As Double = 0
+        Private _siliconBonkSaturation As Double = FilmEffectParameters.SiliconBonkSaturation.DefaultValue
         Public Property SiliconBonkSaturation As Double
             Get
                 Return _siliconBonkSaturation
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_siliconBonkSaturation, Math.Max(0, Math.Min(200, value)), NameOf(SiliconBonkSaturation))
+                SetUndoableDouble(_siliconBonkSaturation, FilmEffectParameters.SiliconBonkSaturation.ClampValue(value), NameOf(SiliconBonkSaturation))
             End Set
         End Property
 
-        Private _siliconBonkMidpoint As Double = 0
+        Private _siliconBonkMidpoint As Double = FilmEffectParameters.SiliconBonkMidpoint.DefaultValue
         Public Property SiliconBonkMidpoint As Double
             Get
                 Return _siliconBonkMidpoint
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_siliconBonkMidpoint, Math.Max(-100, Math.Min(100, value)), NameOf(SiliconBonkMidpoint))
+                SetUndoableDouble(_siliconBonkMidpoint, FilmEffectParameters.SiliconBonkMidpoint.ClampValue(value), NameOf(SiliconBonkMidpoint))
             End Set
         End Property
 
-        Private _siliconBonkContrast As Double = 0
+        Private _siliconBonkContrast As Double = FilmEffectParameters.SiliconBonkContrast.DefaultValue
         Public Property SiliconBonkContrast As Double
             Get
                 Return _siliconBonkContrast
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_siliconBonkContrast, Math.Max(-50, Math.Min(200, value)), NameOf(SiliconBonkContrast))
+                SetUndoableDouble(_siliconBonkContrast, FilmEffectParameters.SiliconBonkContrast.ClampValue(value), NameOf(SiliconBonkContrast))
             End Set
         End Property
 
-        Private _siliconBonkPreserveDetails As Boolean = False
+        Private _siliconBonkPreserveDetails As Boolean = FilmEffectParameters.SiliconBonkPreserveDetailsDefault
         Public Property SiliconBonkPreserveDetails As Boolean
             Get
                 Return _siliconBonkPreserveDetails
@@ -110,17 +110,17 @@ Namespace ViewModels
         End Property
 
         Private Sub ResetSiliconBonkValues()
-            _siliconBonkEnabled = False
-            _siliconBonkHue = 45
-            _siliconBonkLuma = 0
-            _siliconBonkSaturation = 0
-            _siliconBonkMidpoint = 0
-            _siliconBonkContrast = 0
-            _siliconBonkPreserveDetails = False
+            _siliconBonkEnabled = FilmEffectParameters.SiliconBonkEnabledDefault
+            _siliconBonkHue = FilmEffectParameters.SiliconBonkHue.DefaultValue
+            _siliconBonkLuma = FilmEffectParameters.SiliconBonkLuma.DefaultValue
+            _siliconBonkSaturation = FilmEffectParameters.SiliconBonkSaturation.DefaultValue
+            _siliconBonkMidpoint = FilmEffectParameters.SiliconBonkMidpoint.DefaultValue
+            _siliconBonkContrast = FilmEffectParameters.SiliconBonkContrast.DefaultValue
+            _siliconBonkPreserveDetails = FilmEffectParameters.SiliconBonkPreserveDetailsDefault
             RaiseFilmEffectsChanged()
         End Sub
 
-        Private _fatToniEnabled As Boolean = False
+        Private _fatToniEnabled As Boolean = FilmEffectParameters.FatToniEnabledDefault
         Public Property FatToniEnabled As Boolean
             Get
                 Return _fatToniEnabled
@@ -135,14 +135,14 @@ Namespace ViewModels
             End Set
         End Property
 
-        Private _fatToniHighlightHue As Double = 0
+        Private _fatToniHighlightHue As Double = FilmEffectParameters.FatToniHighlightHue.DefaultValue
         Public Property FatToniHighlightHue As Double
             Get
                 Return _fatToniHighlightHue
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniHighlightHue, Math.Max(0, Math.Min(360, value)), NameOf(FatToniHighlightHue))
+                SetUndoableDouble(_fatToniHighlightHue, FilmEffectParameters.FatToniHighlightHue.ClampValue(value), NameOf(FatToniHighlightHue))
                 Me.RaisePropertyChanged(NameOf(FatToniHighlightSaturationTrack))
             End Set
         End Property
@@ -153,25 +153,25 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _fatToniHighlightSaturation As Double = 0
+        Private _fatToniHighlightSaturation As Double = FilmEffectParameters.FatToniHighlightSaturation.DefaultValue
         Public Property FatToniHighlightSaturation As Double
             Get
                 Return _fatToniHighlightSaturation
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniHighlightSaturation, Math.Max(0, Math.Min(100, value)), NameOf(FatToniHighlightSaturation))
+                SetUndoableDouble(_fatToniHighlightSaturation, FilmEffectParameters.FatToniHighlightSaturation.ClampValue(value), NameOf(FatToniHighlightSaturation))
             End Set
         End Property
 
-        Private _fatToniShadowHue As Double = 0
+        Private _fatToniShadowHue As Double = FilmEffectParameters.FatToniShadowHue.DefaultValue
         Public Property FatToniShadowHue As Double
             Get
                 Return _fatToniShadowHue
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniShadowHue, Math.Max(0, Math.Min(360, value)), NameOf(FatToniShadowHue))
+                SetUndoableDouble(_fatToniShadowHue, FilmEffectParameters.FatToniShadowHue.ClampValue(value), NameOf(FatToniShadowHue))
                 Me.RaisePropertyChanged(NameOf(FatToniShadowSaturationTrack))
             End Set
         End Property
@@ -182,58 +182,58 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _fatToniShadowSaturation As Double = 0
+        Private _fatToniShadowSaturation As Double = FilmEffectParameters.FatToniShadowSaturation.DefaultValue
         Public Property FatToniShadowSaturation As Double
             Get
                 Return _fatToniShadowSaturation
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniShadowSaturation, Math.Max(0, Math.Min(100, value)), NameOf(FatToniShadowSaturation))
+                SetUndoableDouble(_fatToniShadowSaturation, FilmEffectParameters.FatToniShadowSaturation.ClampValue(value), NameOf(FatToniShadowSaturation))
             End Set
         End Property
 
-        Private _fatToniSeparation As Double = 50
+        Private _fatToniSeparation As Double = FilmEffectParameters.FatToniSeparation.DefaultValue
         Public Property FatToniSeparation As Double
             Get
                 Return _fatToniSeparation
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniSeparation, Math.Max(0, Math.Min(100, value)), NameOf(FatToniSeparation))
+                SetUndoableDouble(_fatToniSeparation, FilmEffectParameters.FatToniSeparation.ClampValue(value), NameOf(FatToniSeparation))
             End Set
         End Property
 
-        Private _fatToniMidpoint As Double = 0
+        Private _fatToniMidpoint As Double = FilmEffectParameters.FatToniMidpoint.DefaultValue
         Public Property FatToniMidpoint As Double
             Get
                 Return _fatToniMidpoint
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniMidpoint, Math.Max(-100, Math.Min(100, value)), NameOf(FatToniMidpoint))
+                SetUndoableDouble(_fatToniMidpoint, FilmEffectParameters.FatToniMidpoint.ClampValue(value), NameOf(FatToniMidpoint))
             End Set
         End Property
 
-        Private _fatToniContrast As Double = 85
+        Private _fatToniContrast As Double = FilmEffectParameters.FatToniContrast.DefaultValue
         Public Property FatToniContrast As Double
             Get
                 Return _fatToniContrast
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniContrast, Math.Max(0, Math.Min(100, value)), NameOf(FatToniContrast))
+                SetUndoableDouble(_fatToniContrast, FilmEffectParameters.FatToniContrast.ClampValue(value), NameOf(FatToniContrast))
             End Set
         End Property
 
-        Private _fatToniBaseHue As Double = 0
+        Private _fatToniBaseHue As Double = FilmEffectParameters.FatToniBaseHue.DefaultValue
         Public Property FatToniBaseHue As Double
             Get
                 Return _fatToniBaseHue
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniBaseHue, Math.Max(0, Math.Min(360, value)), NameOf(FatToniBaseHue))
+                SetUndoableDouble(_fatToniBaseHue, FilmEffectParameters.FatToniBaseHue.ClampValue(value), NameOf(FatToniBaseHue))
                 Me.RaisePropertyChanged(NameOf(FatToniBaseSaturationTrack))
                 Me.RaisePropertyChanged(NameOf(FatToniBaseLuminanceTrack))
             End Set
@@ -251,25 +251,25 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private _fatToniBaseSaturation As Double = 0
+        Private _fatToniBaseSaturation As Double = FilmEffectParameters.FatToniBaseSaturation.DefaultValue
         Public Property FatToniBaseSaturation As Double
             Get
                 Return _fatToniBaseSaturation
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniBaseSaturation, Math.Max(0, Math.Min(100, value)), NameOf(FatToniBaseSaturation))
+                SetUndoableDouble(_fatToniBaseSaturation, FilmEffectParameters.FatToniBaseSaturation.ClampValue(value), NameOf(FatToniBaseSaturation))
             End Set
         End Property
 
-        Private _fatToniBaseLuminance As Double = 100
+        Private _fatToniBaseLuminance As Double = FilmEffectParameters.FatToniBaseLuminance.DefaultValue
         Public Property FatToniBaseLuminance As Double
             Get
                 Return _fatToniBaseLuminance
             End Get
             Set(value As Double)
                 If Not Double.IsFinite(value) Then Return
-                SetUndoableDouble(_fatToniBaseLuminance, Math.Max(0, Math.Min(100, value)), NameOf(FatToniBaseLuminance))
+                SetUndoableDouble(_fatToniBaseLuminance, FilmEffectParameters.FatToniBaseLuminance.ClampValue(value), NameOf(FatToniBaseLuminance))
             End Set
         End Property
 
@@ -284,17 +284,17 @@ Namespace ViewModels
         End Property
 
         Private Sub ResetFatToniValues()
-            _fatToniEnabled = False
-            _fatToniHighlightHue = 0
-            _fatToniHighlightSaturation = 0
-            _fatToniShadowHue = 0
-            _fatToniShadowSaturation = 0
-            _fatToniSeparation = 50
-            _fatToniMidpoint = 0
-            _fatToniContrast = 85
-            _fatToniBaseHue = 0
-            _fatToniBaseSaturation = 0
-            _fatToniBaseLuminance = 100
+            _fatToniEnabled = FilmEffectParameters.FatToniEnabledDefault
+            _fatToniHighlightHue = FilmEffectParameters.FatToniHighlightHue.DefaultValue
+            _fatToniHighlightSaturation = FilmEffectParameters.FatToniHighlightSaturation.DefaultValue
+            _fatToniShadowHue = FilmEffectParameters.FatToniShadowHue.DefaultValue
+            _fatToniShadowSaturation = FilmEffectParameters.FatToniShadowSaturation.DefaultValue
+            _fatToniSeparation = FilmEffectParameters.FatToniSeparation.DefaultValue
+            _fatToniMidpoint = FilmEffectParameters.FatToniMidpoint.DefaultValue
+            _fatToniContrast = FilmEffectParameters.FatToniContrast.DefaultValue
+            _fatToniBaseHue = FilmEffectParameters.FatToniBaseHue.DefaultValue
+            _fatToniBaseSaturation = FilmEffectParameters.FatToniBaseSaturation.DefaultValue
+            _fatToniBaseLuminance = FilmEffectParameters.FatToniBaseLuminance.DefaultValue
             RaiseFilmEffectsChanged()
         End Sub
 
@@ -321,23 +321,23 @@ Namespace ViewModels
 
         Private Sub ReadFilmEffectsFrom(adj As ImageAdjustments)
             _siliconBonkEnabled = adj.SiliconBonkEnabled
-            _siliconBonkHue = adj.SiliconBonkHue
-            _siliconBonkLuma = adj.SiliconBonkLuma
-            _siliconBonkSaturation = adj.SiliconBonkSaturation
-            _siliconBonkMidpoint = adj.SiliconBonkMidpoint
-            _siliconBonkContrast = adj.SiliconBonkContrast
+            _siliconBonkHue = FilmEffectParameters.SiliconBonkHue.ClampValue(adj.SiliconBonkHue)
+            _siliconBonkLuma = FilmEffectParameters.SiliconBonkLuma.ClampValue(adj.SiliconBonkLuma)
+            _siliconBonkSaturation = FilmEffectParameters.SiliconBonkSaturation.ClampValue(adj.SiliconBonkSaturation)
+            _siliconBonkMidpoint = FilmEffectParameters.SiliconBonkMidpoint.ClampValue(adj.SiliconBonkMidpoint)
+            _siliconBonkContrast = FilmEffectParameters.SiliconBonkContrast.ClampValue(adj.SiliconBonkContrast)
             _siliconBonkPreserveDetails = adj.SiliconBonkPreserveDetails
             _fatToniEnabled = adj.FatToniEnabled
-            _fatToniHighlightHue = adj.FatToniHighlightHue
-            _fatToniHighlightSaturation = adj.FatToniHighlightSaturation
-            _fatToniShadowHue = adj.FatToniShadowHue
-            _fatToniShadowSaturation = adj.FatToniShadowSaturation
-            _fatToniSeparation = adj.FatToniSeparation
-            _fatToniMidpoint = adj.FatToniMidpoint
-            _fatToniContrast = adj.FatToniContrast
-            _fatToniBaseHue = adj.FatToniBaseHue
-            _fatToniBaseSaturation = adj.FatToniBaseSaturation
-            _fatToniBaseLuminance = adj.FatToniBaseLuminance
+            _fatToniHighlightHue = FilmEffectParameters.FatToniHighlightHue.ClampValue(adj.FatToniHighlightHue)
+            _fatToniHighlightSaturation = FilmEffectParameters.FatToniHighlightSaturation.ClampValue(adj.FatToniHighlightSaturation)
+            _fatToniShadowHue = FilmEffectParameters.FatToniShadowHue.ClampValue(adj.FatToniShadowHue)
+            _fatToniShadowSaturation = FilmEffectParameters.FatToniShadowSaturation.ClampValue(adj.FatToniShadowSaturation)
+            _fatToniSeparation = FilmEffectParameters.FatToniSeparation.ClampValue(adj.FatToniSeparation)
+            _fatToniMidpoint = FilmEffectParameters.FatToniMidpoint.ClampValue(adj.FatToniMidpoint)
+            _fatToniContrast = FilmEffectParameters.FatToniContrast.ClampValue(adj.FatToniContrast)
+            _fatToniBaseHue = FilmEffectParameters.FatToniBaseHue.ClampValue(adj.FatToniBaseHue)
+            _fatToniBaseSaturation = FilmEffectParameters.FatToniBaseSaturation.ClampValue(adj.FatToniBaseSaturation)
+            _fatToniBaseLuminance = FilmEffectParameters.FatToniBaseLuminance.ClampValue(adj.FatToniBaseLuminance)
             RaiseFilmEffectsChanged()
         End Sub
 

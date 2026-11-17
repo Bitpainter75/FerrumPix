@@ -37,11 +37,11 @@ Namespace Services
         End Function
 
         Private Shared Function SiliconBonkPixel(adj As ImageAdjustments) As FilmPixel
-            Dim hue = adj.SiliconBonkHue / 360.0
-            Dim luma = adj.SiliconBonkLuma / 100.0
-            Dim saturation = adj.SiliconBonkSaturation / 100.0
-            Dim mids = adj.SiliconBonkMidpoint / 100.0
-            Dim contrast = adj.SiliconBonkContrast / 100.0
+            Dim hue = FilmEffectParameters.SiliconBonkHue.ClampValue(adj.SiliconBonkHue) / 360.0
+            Dim luma = FilmEffectParameters.SiliconBonkLuma.ClampValue(adj.SiliconBonkLuma) / 100.0
+            Dim saturation = FilmEffectParameters.SiliconBonkSaturation.ClampValue(adj.SiliconBonkSaturation) / 100.0
+            Dim mids = FilmEffectParameters.SiliconBonkMidpoint.ClampValue(adj.SiliconBonkMidpoint) / 100.0
+            Dim contrast = FilmEffectParameters.SiliconBonkContrast.ClampValue(adj.SiliconBonkContrast) / 100.0
             Dim linearContrast = If(contrast > 1.0, 1.0 + 2.0 * (contrast - 1.0) ^ 2, 1.0)
             contrast = Math.Min(contrast, 1.0)
             Dim preserve = adj.SiliconBonkPreserveDetails
@@ -119,11 +119,11 @@ Namespace Services
         End Function
 
         Private Shared Function FatToniPixel(adj As ImageAdjustments) As FilmPixel
-            Dim high = FilmHsl(adj.FatToniHighlightHue, adj.FatToniHighlightSaturation, 50.0)
-            Dim low = FilmHsl(adj.FatToniShadowHue, adj.FatToniShadowSaturation, 50.0)
-            Dim basis = FilmHsl(adj.FatToniBaseHue, adj.FatToniBaseSaturation, adj.FatToniBaseLuminance)
-            Dim mids = adj.FatToniMidpoint / 200.0, separation = adj.FatToniSeparation / 200.0
-            Dim contrast = adj.FatToniContrast / 100.0
+            Dim high = FilmHsl(FilmEffectParameters.FatToniHighlightHue.ClampValue(adj.FatToniHighlightHue), FilmEffectParameters.FatToniHighlightSaturation.ClampValue(adj.FatToniHighlightSaturation), 50.0)
+            Dim low = FilmHsl(FilmEffectParameters.FatToniShadowHue.ClampValue(adj.FatToniShadowHue), FilmEffectParameters.FatToniShadowSaturation.ClampValue(adj.FatToniShadowSaturation), 50.0)
+            Dim basis = FilmHsl(FilmEffectParameters.FatToniBaseHue.ClampValue(adj.FatToniBaseHue), FilmEffectParameters.FatToniBaseSaturation.ClampValue(adj.FatToniBaseSaturation), FilmEffectParameters.FatToniBaseLuminance.ClampValue(adj.FatToniBaseLuminance))
+            Dim mids = FilmEffectParameters.FatToniMidpoint.ClampValue(adj.FatToniMidpoint) / 200.0, separation = FilmEffectParameters.FatToniSeparation.ClampValue(adj.FatToniSeparation) / 200.0
+            Dim contrast = FilmEffectParameters.FatToniContrast.ClampValue(adj.FatToniContrast) / 100.0
             Return Sub(ByRef r As Double, ByRef g As Double, ByRef b As Double)
                        r = FilmDomain(r) : g = FilmDomain(g) : b = FilmDomain(b)
                        Dim a = FilmClip((r + g + b) / 3.0 + mids)
