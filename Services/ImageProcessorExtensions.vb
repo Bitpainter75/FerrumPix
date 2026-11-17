@@ -105,18 +105,65 @@ half4 main(float2 p) {
             Dim prefixLines = prefix.Count(Function(c) c = ControlChars.Lf)
             Dim body = definition.ShaderSource.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf) & vbLf
 
-            Dim errors As String = Nothing
-            Dim effect = SKRuntimeEffect.CreateShader(prefix & body & ExtensionShaderMain, errors)
+            Dim errors As String = ""
+            Dim effect = CompiledExtensionShader(prefix & body & ExtensionShaderMain, errors)
             If effect Is Nothing Then Return ExtensionShaderErrors(errors, prefixLines)
-            Dim deepEffect = SKRuntimeEffect.CreateShader(prefix & body & ExtensionShaderMainDeep, errors)
-            If deepEffect Is Nothing Then
-                effect.Dispose()
-                Return ExtensionShaderErrors(errors, prefixLines)
-            End If
+            Dim deepEffect = CompiledExtensionShader(prefix & body & ExtensionShaderMainDeep, errors)
+            If deepEffect Is Nothing Then Return ExtensionShaderErrors(errors, prefixLines)
             definition.Effect = effect
             definition.DeepEffect = deepEffect
             Return ""
         End Function
+
+        ' ── Die uebersetzten Shader ───────────────────────────────────────────────
+        '
+        ' JEDER SHADERTEXT WIRD EINMAL UEBERSETZT und danach wiederverwendet. Ein SKRuntimeEffect
+        ' haelt nativen Speicher. Vorher entstanden bei jedem Laden zwei neue, auch beim Pruefen
+        ' einer Datei vor dem Installieren und beim Neu einlesen, und die alten blieben liegen:
+        ' wiederholtes "Neu einlesen" liess den Speicher wachsen.
+        '
+        ' FREIGEGEBEN WIRD NICHTS. Ein Effekt kann noch in einer laufenden Vorschau oder auf der
+        ' Karte stecken, waehrend der Bestand neu eingelesen wird; ihn dann freizugeben, liesse
+        ' Skia auf freigegebenem Speicher rechnen. Wachsen kann der Bestand nur mit jedem NEUEN
+        ' Shadertext, also mit jeder Aenderung an einer Erweiterung: bei einem Autor, der seine
+        ' Datei immer wieder aendert, ein paar Kilobyte je Fassung, und nach einem Neustart weg.
+
+        Private Shared ReadOnly _extensionShaders As New Dictionary(Of String, SKRuntimeEffect)(StringComparer.Ordinal)
+        Private Shared ReadOnly _extensionShaderErrors As New Dictionary(Of String, String)(StringComparer.Ordinal)
+
+        ''' <summary>Der uebersetzte Shader zu diesem Text, beim ersten Mal uebersetzt. Nothing mit
+        ''' der Meldung des Uebersetzers, wenn er nicht uebersetzt; auch die bleibt gemerkt, damit
+        ''' eine kaputte Datei nicht bei jedem Neu einlesen von vorn uebersetzt wird.</summary>
+        Private Shared Function CompiledExtensionShader(source As String, ByRef errors As String) As SKRuntimeEffect
+            SyncLock _extensionShaders
+                Dim effect As SKRuntimeEffect = Nothing
+                If _extensionShaders.TryGetValue(source, effect) Then Return effect
+                Dim known As String = Nothing
+                If _extensionShaderErrors.TryGetValue(source, known) Then
+                    errors = known
+                    Return Nothing
+                End If
+                Dim message As String = Nothing
+                effect = SKRuntimeEffect.CreateShader(source, message)
+                If effect Is Nothing Then
+                    _extensionShaderErrors(source) = If(message, "")
+                    errors = If(message, "")
+                    Return Nothing
+                End If
+                _extensionShaders(source) = effect
+                Return effect
+            End SyncLock
+        End Function
+
+        ''' <summary>Wie viele Shader der Erweiterungen uebersetzt vorliegen. Fuer die Pruefung, dass
+        ''' Neu einlesen keine neuen anlegt.</summary>
+        Friend Shared ReadOnly Property ExtensionShaderCount As Integer
+            Get
+                SyncLock _extensionShaders
+                    Return _extensionShaders.Count
+                End SyncLock
+            End Get
+        End Property
 
         ''' <summary>Die Meldung des Uebersetzers mit Zeilennummern im Text des Autors. Fehlt die
         ''' Funktion "effect" ganz, sagt der Uebersetzer nur, dass der Rahmen sie nicht findet;

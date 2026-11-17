@@ -11903,4 +11903,10 @@
   <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
     <value>Non rechargée :</value>
   </data>
+  <data name="Reihenfolge_im_Werkzeug_Erweiterungen_c3941374" xml:space="preserve">
+    <value>Ordre dans l’outil Extensions</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
+    <value>Définit l’ordre des extensions dans l’éditeur. Les images n’en sont pas modifiées.</value>
+  </data>
 </root>

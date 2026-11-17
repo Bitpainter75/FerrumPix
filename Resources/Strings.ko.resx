@@ -11947,4 +11947,10 @@
   <data name="Nicht_neu_geladen_2798feab" xml:space="preserve">
     <value>다시 불러오지 못함:</value>
   </data>
+  <data name="Reihenfolge_im_Werkzeug_Erweiterungen_c3941374" xml:space="preserve">
+    <value>확장 도구의 순서</value>
+  </data>
+  <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
+    <value>편집기에서 확장의 순서를 정합니다. 이로 인해 사진이 바뀌지는 않습니다.</value>
+  </data>
 </root>

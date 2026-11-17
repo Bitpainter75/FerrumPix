@@ -24,7 +24,7 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Classes="adjustment-group" Margin="0,0,0,8">
-                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}"/>
                                 <TextBlock Classes="no-translate" Text="{Binding Details}" IsVisible="{Binding HasDetails}" TextWrapping="Wrap"
@@ -32,22 +32,7 @@
                                 <TextBlock Classes="no-translate" Text="{Binding ErrorText}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
                                            Foreground="{DynamicResource FP.Accent}" FontSize="{DynamicResource FP.Font.Small}"/>
                             </StackPanel>
-                            <!-- Die Reihenfolge der Gruppen im Werkzeug Erweiterungen. -->
-                            <Button Grid.Column="1" Classes="icon-btn" Width="28" Height="28" Padding="0" VerticalAlignment="Center"
-                                    IsVisible="{Binding IsLoaded}" IsEnabled="{Binding CanMoveUp}"
-                                    ToolTip.Tip="{Binding MoveUpText}"
-                                    Command="{Binding $parent[ItemsControl].DataContext.MoveExtensionUpCommand}"
-                                    CommandParameter="{Binding}">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-up.svg" Width="16" Height="16"/>
-                            </Button>
-                            <Button Grid.Column="2" Classes="icon-btn" Width="28" Height="28" Padding="0" VerticalAlignment="Center"
-                                    IsVisible="{Binding IsLoaded}" IsEnabled="{Binding CanMoveDown}"
-                                    ToolTip.Tip="{Binding MoveDownText}"
-                                    Command="{Binding $parent[ItemsControl].DataContext.MoveExtensionDownCommand}"
-                                    CommandParameter="{Binding}">
-                                <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-down.svg" Width="16" Height="16"/>
-                            </Button>
-                            <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
+                            <Button Grid.Column="1" Classes="ghost" Padding="12,7" VerticalAlignment="Center"
                                     IsVisible="{Binding CanRemove}"
                                     Command="{Binding $parent[ItemsControl].DataContext.RemoveExtensionCommand}"
                                     CommandParameter="{Binding}">
@@ -58,6 +43,56 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
+        <!-- Reihenfolge der Gruppen im Werkzeug, aufgebaut wie die Reihenfolge im kompakten
+             Anpassungsmodus (EditorSectionView). Sie gilt nur der Anzeige. -->
+        <StackPanel Spacing="8" IsVisible="{Binding HasExtensionOrderItems}">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                    <TextBlock Text="Reihenfolge im Werkzeug Erweiterungen" FontSize="{DynamicResource FP.Font.Body}"/>
+                    <TextBlock Text="Legt fest, in welcher Reihenfolge die Erweiterungen im Editor stehen. Die Bilder ändern sich dadurch nicht."
+                               Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="ghost" Padding="10,4" VerticalAlignment="Center"
+                        Command="{Binding ResetExtensionOrderCommand}">Zurücksetzen</Button>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding ExtensionOrderItems}" HorizontalAlignment="Stretch">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource FP.Bg.Input}"
+                                BorderBrush="{DynamicResource FP.Border.Normal}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10,6"
+                                Margin="0,0,0,6"
+                                AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
+                                HorizontalAlignment="Stretch">
+                            <Grid ColumnDefinitions="*,Auto,Auto">
+                                <TextBlock Classes="no-translate" Text="{Binding Name}"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,24,0"
+                                           TextWrapping="Wrap"
+                                           FontSize="{DynamicResource FP.Font.Body}"/>
+                                <Button Grid.Column="1"
+                                        Classes="ghost"
+                                        Padding="10,4"
+                                        Margin="0,0,4,0"
+                                        ToolTip.Tip="Nach oben"
+                                        IsEnabled="{Binding CanMoveUp}"
+                                        Command="{Binding DataContext.MoveExtensionUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">▲</Button>
+                                <Button Grid.Column="2"
+                                        Classes="ghost"
+                                        Padding="10,4"
+                                        ToolTip.Tip="Nach unten"
+                                        IsEnabled="{Binding CanMoveDown}"
+                                        Command="{Binding DataContext.MoveExtensionDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">▼</Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
         <TextBlock Classes="no-translate" Text="{Binding ExtensionFolder}" Foreground="{DynamicResource FP.Text.Muted}"
                    FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
     </StackPanel>

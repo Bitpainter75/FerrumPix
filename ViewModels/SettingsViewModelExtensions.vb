@@ -78,6 +78,27 @@ Namespace ViewModels
 
         Public ReadOnly Property ExtensionRows As New ObservableCollection(Of ExtensionRow)()
 
+        ''' <summary>Die geladenen Erweiterungen in der Reihenfolge der Gruppen im Werkzeug.</summary>
+        Public ReadOnly Property ExtensionOrderItems As New ObservableCollection(Of ExtensionRow)()
+
+        Public ReadOnly Property HasExtensionOrderItems As Boolean
+            Get
+                EnsureExtensionsHooked()
+                Return ExtensionOrderItems.Count > 1
+            End Get
+        End Property
+
+        Private _resetExtensionOrderCommand As ICommand
+
+        Public ReadOnly Property ResetExtensionOrderCommand As ICommand
+            Get
+                If _resetExtensionOrderCommand Is Nothing Then
+                    _resetExtensionOrderCommand = ReactiveCommand.Create(Sub() ExtensionService.ResetOrder())
+                End If
+                Return _resetExtensionOrderCommand
+            End Get
+        End Property
+
         Public ReadOnly Property HasExtensionRows As Boolean
             Get
                 EnsureExtensionsHooked()
@@ -141,6 +162,7 @@ Namespace ViewModels
 
         Private Sub RebuildExtensionRows()
             ExtensionRows.Clear()
+            ExtensionOrderItems.Clear()
             Dim loaded = ExtensionService.All
             For Each definition In loaded
                 Dim parts As New List(Of String) From {
@@ -156,12 +178,16 @@ Namespace ViewModels
                     .CanMoveUp = ExtensionRows.Count > 0, .CanMoveDown = ExtensionRows.Count < loaded.Count - 1,
                     .MoveUpText = LocalizationService.T("Nach oben"), .MoveDownText = LocalizationService.T("Nach unten")})
             Next
+            For Each row In ExtensionRows
+                ExtensionOrderItems.Add(row)
+            Next
             For Each failure In ExtensionService.Failures
                 ExtensionRows.Add(New ExtensionRow With {
                     .Name = IO.Path.GetFileName(failure.FilePath),
                     .ErrorText = LocalizationService.T("Nicht geladen:") & " " & failure.ErrorText})
             Next
             Me.RaisePropertyChanged(NameOf(HasExtensionRows))
+            Me.RaisePropertyChanged(NameOf(HasExtensionOrderItems))
         End Sub
 
         ''' <summary>Nimmt eine Erweiterungsdatei auf, aufgerufen nach dem Dateiwaehler der Seite.</summary>

@@ -288,6 +288,13 @@ Namespace Services
 
         Private Shared _panelOrderRevision As Long
 
+        ''' <summary>Zurueck zur Reihenfolge nach Name.</summary>
+        Public Shared Sub ResetOrder()
+            AppSettingsService.SaveExtensionOrder("")
+            Interlocked.Increment(_panelOrderRevision)
+            RaiseEvent Changed(Nothing, EventArgs.Empty)
+        End Sub
+
         ''' <summary>Zaehlt bei jeder Aenderung des Bestands UND der Reihenfolge hoch. Die Gruppen im
         ''' Werkzeug bauen sich daran neu; der Schluessel der Bildkette haengt nur an
         ''' <see cref="Revision"/>, denn die Reihenfolge der Gruppen aendert kein Bild.</summary>

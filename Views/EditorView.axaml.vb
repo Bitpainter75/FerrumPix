@@ -3075,7 +3075,12 @@ Namespace Views
                     ' verschiebt die AUSWAHL, und ohne Auswahl gibt es nichts zu verschieben.
                     ' Die Buehne bewegt man mit der rechten Maustaste, der Leertaste oder dem Knopf.
                 End If
-                Dim rangeClickMode = vm.SelectionMode = "MagicWand" OrElse vm.SelectionMode = "ColorRange" OrElse vm.SelectionMode = "LuminanceRange"
+                ' Die Modi, in denen EIN KLICK die Auswahl bildet und nichts aufgezogen wird. Die
+                ' Objektauswahl gehoert dazu: ohne sie begann ein Klick in eine bestehende Auswahl
+                ' bei "Neu" ein Verschieben statt das angeklickte Objekt zu waehlen, und ein Klick
+                ' daneben stand beim Loslassen als Abwaehlen an, waehrend das Modell noch rechnete.
+                Dim rangeClickMode = vm.SelectionMode = "MagicWand" OrElse vm.SelectionMode = "ColorRange" OrElse
+                                     vm.SelectionMode = "LuminanceRange" OrElse vm.SelectionMode = "Subject"
                 Dim clickedInsideSelection = vm.HasActiveSelection AndAlso Not rangeClickMode AndAlso IsPointInsideSelection(rawPos, imageRect, vm)
                 If clickedInsideSelection Then
                     If vm.SelectionMode = "Move" OrElse vm.SelectionCombineMode = "New" Then

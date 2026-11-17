@@ -415,10 +415,21 @@ Namespace Services
             Dim node = If(root?.Element(Ns + VariantsElement), root?.Element(Ns + "versions"))
             If node Is Nothing Then Return True
             Dim parsed As New VariantSet()
+            ' WAS WIR NICHT KENNEN, MACHT DEN BLOCK UNLESBAR, statt uebergangen zu werden. Der Block
+            ' wird beim Schreiben aus den gelesenen Eintraegen NEU gebaut (VariantsNode); ein
+            ' uebergangenes Element, etwa aus einer neueren Fassung, waere beim naechsten Speichern
+            ' still verloren. Als unlesbar laesst jeder Schreiber die Datei stehen.
+            If node.Attributes().Any(Function(a) Not a.IsNamespaceDeclaration) Then Return False
             ' Auch der Elementname "version": so schrieb eine Vorabfassung die Eintraege, bevor sie
             ' Varianten hiessen. Gelesen wird beides, geschrieben nur noch "variant"; beim naechsten
             ' Schreiben traegt die Datei den neuen Namen.
-            For Each child In node.Elements().Where(Function(e) e.Name = Ns + VariantElement OrElse e.Name = Ns + "version")
+            If node.Elements().Any(Function(e) e.Name <> Ns + VariantElement AndAlso e.Name <> Ns + "version") Then Return False
+            For Each child In node.Elements()
+                If child.Elements().Any(Function(e) e.Name <> Ns + "adjustments" AndAlso e.Name <> Ns + "catalog") OrElse
+                   child.Elements(Ns + "adjustments").Count() > 1 OrElse child.Elements(Ns + "catalog").Count() > 1 Then Return False
+                If child.Attributes().Any(Function(a) Not a.IsNamespaceDeclaration AndAlso
+                                                      a.Name <> VariantIdAttribute AndAlso a.Name <> VariantNameAttribute AndAlso
+                                                      a.Name <> EditedAttribute) Then Return False
                 Dim id = If(child.Attribute(VariantIdAttribute)?.Value, "").Trim()
                 Dim name = NormalizeVariantName(child.Attribute(VariantNameAttribute)?.Value)
                 Dim json = child.Element(Ns + "adjustments")?.Value

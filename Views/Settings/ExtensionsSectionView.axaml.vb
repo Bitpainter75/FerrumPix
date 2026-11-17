@@ -14,6 +14,10 @@ Namespace Views.Settings
         Private Sub OnInstallExtensionClick(sender As Object, e As RoutedEventArgs)
             Owner?.OnInstallExtensionClick(sender, e)
         End Sub
+
+        Private Sub OnLocalizedItemAttachedToVisualTree(sender As Object, e As Avalonia.VisualTreeAttachmentEventArgs)
+            Owner?.OnLocalizedItemAttachedToVisualTree(sender, e)
+        End Sub
     End Class
 
 End Namespace
