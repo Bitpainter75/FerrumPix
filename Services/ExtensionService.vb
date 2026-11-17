@@ -65,11 +65,11 @@ Namespace Services
         Public Property Options As New List(Of ExtensionChoiceOption)()
 
         ''' <summary>Ein Hilfetext zum Bedienelement, als Tooltip; leer heisst keiner.</summary>
-        Public Property Tips As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        Public Property Hints As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
-        Public ReadOnly Property Tip As String
+        Public ReadOnly Property Hint As String
             Get
-                Return ExtensionService.Localized(Tips, "")
+                Return ExtensionService.Localized(Hints, "")
             End Get
         End Property
 
@@ -186,7 +186,10 @@ Namespace Services
         Public Property Descriptions As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
         Public Property Author As String = ""
         Public Property License As String = ""
+        ''' <summary>Wo die Beschreibung liegt; nur eine Adresse mit https (IsSafeWebAddress).</summary>
         Public Property Url As String = ""
+        ''' <summary>Die Stelle in der Kette innerhalb der Stufe: kleinere Zahl zuerst.</summary>
+        Public Property Priority As Integer
         Public Property Stage As String = ExtensionStages.BeforeGrain
         Public Property Controls As New List(Of ExtensionControl)()
         Public Property ShaderSource As String = ""
@@ -697,6 +700,27 @@ Namespace Services
                 result.Author = ReadString(root, "author")
                 result.License = ReadString(root, "license")
                 result.Url = ReadString(root, "url")
+                If result.Url.Length > 0 AndAlso Not IsSafeWebAddress(result.Url) Then
+                    Return """url"" must be a web address starting with https://"
+                End If
+
+                ' Die Art der Erweiterung. Bisher gibt es nur den Shader; das Feld haelt Platz fuer
+                ' andere Arten frei, ohne dass Format 1 sich aendern muss.
+                Dim kind = ReadString(root, "type")
+                If kind.Length > 0 AndAlso kind <> "shader" Then
+                    Return """type"" must be ""shader"", the only kind this version knows"
+                End If
+
+                ' Die Reihenfolge in der Kette: kleinere Zahl zuerst, bei gleicher Zahl nach Kennung.
+                ' Sie haengt allein an den Dateien, nicht am Bild und nicht am Rechner: zwei Bilder
+                ' mit denselben Einstellungen sehen gleich aus.
+                If root.TryGetProperty("priority", element) Then
+                    Dim priority As Integer
+                    If element.ValueKind <> JsonValueKind.Number OrElse Not element.TryGetInt32(priority) Then
+                        Return """priority"" must be a whole number"
+                    End If
+                    result.Priority = priority
+                End If
 
                 Dim stage = ReadString(root, "stage")
                 If stage.Length = 0 Then stage = ExtensionStages.BeforeGrain
@@ -787,7 +811,7 @@ Namespace Services
             If result.Labels.Count = 0 Then Return """label"" is missing"
             problem = ReadTexts(item, "section", result.Sections)
             If problem.Length > 0 Then Return problem
-            problem = ReadTexts(item, "tip", result.Tips)
+            problem = ReadTexts(item, "hint", result.Hints)
             If problem.Length > 0 Then Return problem
 
             Dim element As JsonElement
@@ -890,6 +914,20 @@ Namespace Services
             End If
             control = result
             Return ""
+        End Function
+
+        ''' <summary>Ist das eine Webadresse, die sich gefahrlos oeffnen laesst?</summary>
+        ''' <remarks>Geoeffnet wird ueber die Shell (ShellOpenService), und die startet alles: einen
+        ''' Pfad, ein Programm, file:, smb: oder das Protokoll eines anderen Programms. Eine fremde
+        ''' Datei duerfte so beim Klick etwas ausfuehren. Erlaubt ist deshalb nur eine vollstaendige
+        ''' https-Adresse mit Rechnernamen und ohne Zugangsdaten. Geprueft beim Laden UND beim
+        ''' Oeffnen.</remarks>
+        Public Shared Function IsSafeWebAddress(address As String) As Boolean
+            If String.IsNullOrWhiteSpace(address) OrElse address.Length > 2048 Then Return False
+            Dim uri As Uri = Nothing
+            If Not Uri.TryCreate(address.Trim(), UriKind.Absolute, uri) Then Return False
+            Return uri.Scheme = Uri.UriSchemeHttps AndAlso uri.Host.Length > 0 AndAlso
+                   uri.UserInfo.Length = 0 AndAlso Not address.Any(Function(c) Char.IsControl(c) OrElse Char.IsWhiteSpace(c))
         End Function
 
         Private Shared Function ReadString(parent As JsonElement, name As String) As String

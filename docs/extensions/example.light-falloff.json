@@ -16,7 +16,7 @@
   "controls": [
     { "key": "shape", "type": "choice", "default": 0,
       "label": { "en": "Shape", "de": "Form" },
-      "tip": { "en": "Where the light falls off: towards all edges or from one side.",
+      "hint": { "en": "Where the light falls off: towards all edges or from one side.",
                "de": "Wohin das Licht abfällt: zu allen Rändern oder von einer Seite her." },
       "options": [
         { "value": 0, "label": { "en": "Round", "de": "Rund" } },
@@ -25,11 +25,11 @@
       ] },
     { "key": "amount", "type": "slider", "min": -100, "max": 100, "default": 0, "track": "black-white",
       "label": { "en": "Amount", "de": "Stärke" },
-      "tip": { "en": "Negative darkens, positive brightens. 100 is one stop at the edge.",
+      "hint": { "en": "Negative darkens, positive brightens. 100 is one stop at the edge.",
                "de": "Negativ dunkelt ab, positiv hellt auf. 100 ist eine Blende am Rand." } },
     { "key": "size", "type": "slider", "min": 1, "max": 100, "default": 50,
       "label": { "en": "Reach", "de": "Reichweite" },
-      "tip": { "en": "How far the falloff reaches into the picture.",
+      "hint": { "en": "How far the falloff reaches into the picture.",
                "de": "Wie weit der Abfall ins Bild hineinreicht." } }
   ],
   "shader": [

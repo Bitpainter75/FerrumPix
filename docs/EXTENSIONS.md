@@ -118,8 +118,11 @@ extension on for this picture.
 | `version` | yes | A whole number from 1. Raise it whenever the calculation changes, see below. |
 | `name` | yes | The name in the editor. Text, or one text per language. |
 | `description` | no | One or two sentences shown in the editor and in the settings. |
-| `author`, `license`, `url` | no | Shown in the settings. Please always state a license. |
+| `type` | no | The kind of extension. Only `shader` for now, which is also the default. |
+| `author`, `license` | no | Shown in the settings. Please always state a license. |
+| `url` | no | Where a longer description lives, for example a README in your repository. The settings show it as a link. It must be a full web address starting with `https://`; anything else is refused when the file is loaded. |
 | `stage` | no | Where in the processing the extension runs, see below. Default `before-grain`. |
+| `priority` | no | The order within the stage, see below. A whole number, default 0. |
 | `controls` | no | The sliders, switches, color fields and curves, at most 32. |
 | `presets` | no | Named sets of values to choose from, at most 32, see below. |
 | `shader` | yes | The calculation, as one text or as a list of lines. |
@@ -128,7 +131,7 @@ A file may be at most 256 KB. Comments (`//` and `/* */`) and trailing commas ar
 
 ### Texts in several languages
 
-Every text field (`name`, `description`, `label`, `section`, `tip`) is either plain text, which counts as
+Every text field (`name`, `description`, `label`, `section`, `hint`) is either plain text, which counts as
 English, or an object with one text per language code:
 
 ```json
@@ -155,7 +158,7 @@ ja ko id tr th hi`.
 | `track` | Optional color track of a slider, see below. |
 | `label` | The text next to the control. |
 | `section` | Optional heading shown above this control, to group the controls that follow. |
-| `tip` | Optional help text, shown when the pointer rests on the label. One or two sentences on what the control does. |
+| `hint` | Optional help text, shown when the pointer rests on the label. One or two sentences on what the control does. |
 
 ### Choices
 
@@ -257,8 +260,12 @@ of 256 values with 16 bit each and interpolates linearly between them.
 | `before-grain` | After all other adjustments, before grain. The picture gets its grain afterwards. Right for black and white conversions and color looks. |
 | `after-grain` | After grain. The grain is changed along with the picture, for example toned. Right for toning. |
 
-Within the same stage, extensions run in the order in which they were switched on for the
-picture.
+Within the same stage, extensions run by `priority`, the lower number first, and with the same
+number by their `id`. The order depends only on the files, never on the picture or the order in
+which extensions were switched on, so two pictures with the same settings always look the same.
+Leave generous gaps, for example `-1000` for something that should run early and `1000` for
+something that should run late, so that others can fit in between. The order of the groups in
+the settings only affects the display, not the processing.
 
 ## The shader
 

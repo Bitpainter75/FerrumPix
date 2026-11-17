@@ -342,11 +342,9 @@ half4 main(float2 p) {
         Private Shared Function ApplyExtensionStages(session As GpuDetailSession, processed As SKBitmap, ByRef owned As Boolean,
                                                      adj As ImageAdjustments, stage As String) As SKBitmap
             If String.IsNullOrEmpty(adj.ExtensionSettings) Then Return processed
-            For Each entry In ExtensionRecipe.Parse(adj.ExtensionSettings)
-                If Not entry.Enabled Then Continue For
-                Dim definition = ExtensionService.Find(entry.Id)
-                If definition Is Nothing OrElse definition.Effect Is Nothing Then Continue For
-                If Not String.Equals(definition.Stage, stage, StringComparison.Ordinal) Then Continue For
+            For Each run In ExtensionRunOrder(adj, stage)
+                Dim entry = run.Entry
+                Dim definition = run.Definition
                 ' Die Eingaben leben so lange wie die Kette sie braucht: laeuft die Stufe auf der
                 ' Karte, kann ihr Gegenstueck auf dem Prozessor noch spaeter nachgerechnet werden
                 ' (BringDetailSessionHome). Sie halten deshalb nichts Natives; die Kurventabellen
@@ -358,6 +356,26 @@ half4 main(float2 p) {
                                            Function(d) RunExtensionOnBitmap(d, definition.DeepEffect, inputs))
             Next
             Return processed
+        End Function
+
+        ''' <summary>Was in dieser Stufe laeuft, in der Reihenfolge der Kette: nach der Zahl
+        ''' "priority" der Dateien, bei gleicher Zahl nach Kennung.</summary>
+        ''' <remarks>NICHT in der Reihenfolge des Rezepts: dort stehen die Eintraege so, wie sie
+        ''' eingeschaltet wurden, und zwei Bilder mit denselben sichtbaren Einstellungen saehen
+        ''' sonst verschieden aus. Auch nicht nach der Reihenfolge der Gruppen in den Einstellungen:
+        ''' die liegt je Rechner und gilt nur der Anzeige.</remarks>
+        Friend Shared Function ExtensionRunOrder(adj As ImageAdjustments, stage As String) As List(Of (Entry As ExtensionEntry, Definition As ExtensionDefinition))
+            Dim runs As New List(Of (Entry As ExtensionEntry, Definition As ExtensionDefinition))()
+            If adj Is Nothing OrElse String.IsNullOrEmpty(adj.ExtensionSettings) Then Return runs
+            For Each entry In ExtensionRecipe.Parse(adj.ExtensionSettings)
+                If Not entry.Enabled Then Continue For
+                Dim definition = ExtensionService.Find(entry.Id)
+                If definition Is Nothing OrElse definition.Effect Is Nothing Then Continue For
+                If Not String.Equals(definition.Stage, stage, StringComparison.Ordinal) Then Continue For
+                runs.Add((entry, definition))
+            Next
+            Return runs.OrderBy(Function(r) r.Definition.Priority).
+                        ThenBy(Function(r) r.Definition.Id, StringComparer.Ordinal).ToList()
         End Function
 
         Private Shared Function ExtensionOnGpu(definition As ExtensionDefinition,

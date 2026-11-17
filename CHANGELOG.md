@@ -17,6 +17,10 @@
   Many thanks to Spoilerhead, whose black and white conversion Silicon Bonk and split toning
   Fat Toni gave the reason for extensions and are among the examples.
 
+- Extensions run in a fixed order that the extension files set, no longer in the order they were
+  switched on, so two pictures with the same settings always look the same. An extension can
+  link to its description, which the settings show as a button.
+
 - Extensions can offer a choice from a list and a help text for each control, and can work with
   the position in the picture, for vignettes and gradients of their own. A fourth example shows
   this: a light falloff, round or from one side.

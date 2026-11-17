@@ -23,6 +23,15 @@ Namespace ViewModels
         Public Property IsShown As Boolean = True
         Public Property MoveUpText As String = ""
         Public Property MoveDownText As String = ""
+        ''' <summary>Wo die Beschreibung liegt, und der Text des Links dazu.</summary>
+        Public Property Url As String = ""
+        Public Property UrlText As String = ""
+
+        Public ReadOnly Property HasUrl As Boolean
+            Get
+                Return ExtensionService.IsSafeWebAddress(Url)
+            End Get
+        End Property
 
         Public ReadOnly Property IsLoaded As Boolean
             Get
@@ -147,6 +156,23 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Oeffnet die Beschreibung einer Erweiterung im Browser. Die Adresse wird hier
+        ''' noch einmal geprueft: die Shell oeffnet sonst auch Dateien und Programme.</summary>
+        Public ReadOnly Property OpenExtensionUrlCommand As ICommand
+            Get
+                If _openExtensionUrlCommand Is Nothing Then
+                    _openExtensionUrlCommand = ReactiveCommand.Create(Of ExtensionRow)(
+                        Sub(row)
+                            If row Is Nothing OrElse Not ExtensionService.IsSafeWebAddress(row.Url) Then Return
+                            ShellOpenService.Open(row.Url.Trim(), "Extensions.Url")
+                        End Sub)
+                End If
+                Return _openExtensionUrlCommand
+            End Get
+        End Property
+
+        Private _openExtensionUrlCommand As ICommand
+
         Public ReadOnly Property RemoveExtensionCommand As ICommand
             Get
                 If _removeExtensionCommand Is Nothing Then
@@ -195,7 +221,8 @@ Namespace ViewModels
                     .CanRemove = Not definition.IsBundled, .RemoveText = LocalizationService.T("Entfernen"),
                     .CanMoveUp = ExtensionRows.Count > 0, .CanMoveDown = ExtensionRows.Count < loaded.Count - 1,
                     .MoveUpText = LocalizationService.T("Nach oben"), .MoveDownText = LocalizationService.T("Nach unten"),
-                    .IsShown = Not ExtensionService.IsHidden(definition.Id)})
+                    .IsShown = Not ExtensionService.IsHidden(definition.Id),
+                    .Url = definition.Url, .UrlText = LocalizationService.T("Beschreibung")})
             Next
             For Each row In ExtensionRows
                 ExtensionOrderItems.Add(row)

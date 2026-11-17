@@ -100,10 +100,10 @@ Namespace ViewModels
 
         ''' <summary>Der Hilfetext als Tooltip; ohne Hilfetext die Beschriftung, damit eine
         ''' abgeschnittene Beschriftung lesbar bleibt.</summary>
-        Public ReadOnly Property TipOrLabel As String
+        Public ReadOnly Property HintOrLabel As String
             Get
-                Dim tip = Control.Tip
-                Return If(tip.Length > 0, Label & vbLf & tip, Label)
+                Dim hint = Control.Hint
+                Return If(hint.Length > 0, Label & vbLf & hint, Label)
             End Get
         End Property
 
