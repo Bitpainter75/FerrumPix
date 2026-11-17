@@ -66,13 +66,30 @@
                                 Margin="0,0,0,6"
                                 AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree"
                                 HorizontalAlignment="Stretch">
-                            <Grid ColumnDefinitions="*,Auto,Auto">
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                                 <TextBlock Classes="no-translate" Text="{Binding Name}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,24,0"
                                            TextWrapping="Wrap"
                                            FontSize="{DynamicResource FP.Font.Body}"/>
+                                <!-- Das Auge blendet die Erweiterung im Werkzeug aus oder ein, mit
+                                     Akzent = sichtbar, wie bei den Gruppen des Kompaktmodus. -->
                                 <Button Grid.Column="1"
+                                        Classes="ghost"
+                                        Classes.active="{Binding IsShown}"
+                                        Padding="8,4"
+                                        Margin="0,0,8,0"
+                                        ToolTip.Tip="Im Editor zeigen oder ausblenden"
+                                        Command="{Binding DataContext.ToggleExtensionVisibilityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Panel>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye.svg" Width="18" Height="18"
+                                                       IsVisible="{Binding IsShown}"/>
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/eye-closed.svg" Width="18" Height="18"
+                                                       IsVisible="{Binding !IsShown}"/>
+                                    </Panel>
+                                </Button>
+                                <Button Grid.Column="2"
                                         Classes="ghost"
                                         Padding="10,4"
                                         Margin="0,0,4,0"
@@ -80,7 +97,7 @@
                                         IsEnabled="{Binding CanMoveUp}"
                                         Command="{Binding DataContext.MoveExtensionUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}">▲</Button>
-                                <Button Grid.Column="2"
+                                <Button Grid.Column="3"
                                         Classes="ghost"
                                         Padding="10,4"
                                         ToolTip.Tip="Nach unten"

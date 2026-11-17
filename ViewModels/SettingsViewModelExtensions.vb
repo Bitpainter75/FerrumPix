@@ -20,6 +20,7 @@ Namespace ViewModels
         Public Property RemoveText As String = ""
         Public Property CanMoveUp As Boolean
         Public Property CanMoveDown As Boolean
+        Public Property IsShown As Boolean = True
         Public Property MoveUpText As String = ""
         Public Property MoveDownText As String = ""
 
@@ -53,6 +54,22 @@ Namespace ViewModels
         Private _reloadExtensionsCommand As ICommand
         Private _moveExtensionUpCommand As ICommand
         Private _moveExtensionDownCommand As ICommand
+        Private _toggleExtensionVisibilityCommand As ICommand
+
+        ''' <summary>Blendet eine Erweiterung im Werkzeug aus oder ein, wie das Auge der Gruppen im
+        ''' kompakten Anpassungsmodus. Sie rechnet in Bildern weiter.</summary>
+        Public ReadOnly Property ToggleExtensionVisibilityCommand As ICommand
+            Get
+                If _toggleExtensionVisibilityCommand Is Nothing Then
+                    _toggleExtensionVisibilityCommand = ReactiveCommand.Create(Of ExtensionRow)(
+                        Sub(row)
+                            If row?.Definition Is Nothing Then Return
+                            ExtensionService.SetHidden(row.Definition.Id, row.IsShown)
+                        End Sub)
+                End If
+                Return _toggleExtensionVisibilityCommand
+            End Get
+        End Property
 
         ''' <summary>Schiebt eine Erweiterung in der Reihenfolge der Gruppen im Werkzeug nach oben.
         ''' Sofort wirksam und gespeichert, wie Laden und Entfernen.</summary>
@@ -84,7 +101,8 @@ Namespace ViewModels
         Public ReadOnly Property HasExtensionOrderItems As Boolean
             Get
                 EnsureExtensionsHooked()
-                Return ExtensionOrderItems.Count > 1
+                ' Ab EINER Erweiterung: das Auge zum Ausblenden braucht keine zweite.
+                Return ExtensionOrderItems.Count > 0
             End Get
         End Property
 
@@ -176,7 +194,8 @@ Namespace ViewModels
                     .Definition = definition, .Name = definition.Name, .Details = details,
                     .CanRemove = Not definition.IsBundled, .RemoveText = LocalizationService.T("Entfernen"),
                     .CanMoveUp = ExtensionRows.Count > 0, .CanMoveDown = ExtensionRows.Count < loaded.Count - 1,
-                    .MoveUpText = LocalizationService.T("Nach oben"), .MoveDownText = LocalizationService.T("Nach unten")})
+                    .MoveUpText = LocalizationService.T("Nach oben"), .MoveDownText = LocalizationService.T("Nach unten"),
+                    .IsShown = Not ExtensionService.IsHidden(definition.Id)})
             Next
             For Each row In ExtensionRows
                 ExtensionOrderItems.Add(row)

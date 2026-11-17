@@ -41,6 +41,30 @@ Namespace Services
             End Get
         End Property
 
+        Public ReadOnly Property IsColor As Boolean
+            Get
+                Return String.Equals(Kind, ExtensionControlKinds.Color, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurve As Boolean
+            Get
+                Return String.Equals(Kind, ExtensionControlKinds.Curve, StringComparison.Ordinal)
+            End Get
+        End Property
+
+        ''' <summary>Regler oder Schalter: ein Wert als Zahl.</summary>
+        Public ReadOnly Property IsNumber As Boolean
+            Get
+                Return Not IsColor AndAlso Not IsCurve
+            End Get
+        End Property
+
+        ''' <summary>Die Vorgabe einer Farbe als "#RRGGBB".</summary>
+        Public Property DefaultColor As String = "#808080"
+        ''' <summary>Die Vorgabe einer Kurve: Stuetzpunkte von 0 bis 1, nach X steigend.</summary>
+        Public Property DefaultCurve As New List(Of (X As Double, Y As Double)) From {(0.0, 0.0), (1.0, 1.0)}
+
         ''' <summary>Ein Wert in den Grenzen dieses Elements; alles, was keine Zahl ist, wird zur
         ''' Vorgabe. Ein Schalter kennt nur 0 und 1.</summary>
         Public Function Clamp(value As Double) As Double
@@ -69,6 +93,12 @@ Namespace Services
     Public NotInheritable Class ExtensionControlKinds
         Public Const Slider As String = "slider"
         Public Const Toggle As String = "toggle"
+        ''' <summary>Eine Farbe, im Shader ein float3 von 0 bis 1 (sRGB).</summary>
+        Public Const Color As String = "color"
+        ''' <summary>Eine Kurve, im Shader eine Funktion float key(float x) von 0 bis 1.</summary>
+        Public Const Curve As String = "curve"
+
+        Public Shared ReadOnly Property All As String() = {Slider, Toggle, Color, Curve}
 
         Private Sub New()
         End Sub
@@ -124,6 +154,8 @@ Namespace Services
         Public Property Stage As String = ExtensionStages.BeforeGrain
         Public Property Controls As New List(Of ExtensionControl)()
         Public Property ShaderSource As String = ""
+        ''' <summary>Benannte Wertesaetze, die die Gruppe als Auswahl anbietet.</summary>
+        Public Property Presets As New List(Of ExtensionPreset)()
         ''' <summary>Die Datei, aus der sie stammt.</summary>
         Public Property FilePath As String = ""
         ''' <summary>Liegt sie im Ordner neben dem Programm (mitgeliefert) statt im Ordner des
@@ -149,6 +181,21 @@ Namespace Services
         Public Function FindControl(key As String) As ExtensionControl
             Return Controls.FirstOrDefault(Function(c) String.Equals(c.Key, key, StringComparison.Ordinal))
         End Function
+    End Class
+
+    ''' <summary>Ein benannter Wertesatz einer Erweiterung: wer ihn waehlt, setzt alle
+    ''' Bedienelemente, die er nennt, und alle uebrigen auf ihre Vorgabe. So ergibt dieselbe
+    ''' Voreinstellung immer dasselbe Bild, gleich was vorher eingestellt war.</summary>
+    Public NotInheritable Class ExtensionPreset
+        Public Property Names As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+        ''' <summary>Werte der Regler und Schalter, Farben und Kurven, wie im Rezept.</summary>
+        Public Property Entry As New ExtensionEntry()
+
+        Public ReadOnly Property Name As String
+            Get
+                Return ExtensionService.Localized(Names, "")
+            End Get
+        End Property
     End Class
 
     ''' <summary>Was beim Laden einer Erweiterungsdatei herauskam: die Erweiterung oder der Grund,
@@ -245,6 +292,40 @@ Namespace Services
                 End SyncLock
             End Get
         End Property
+
+        ''' <summary>Die Erweiterungen, die im Werkzeug erscheinen: alle ausser den ausgeblendeten,
+        ''' in derselben Reihenfolge wie <see cref="All"/>.</summary>
+        Public Shared ReadOnly Property Shown As IReadOnlyList(Of ExtensionDefinition)
+            Get
+                Dim hidden = ReadHidden()
+                Return All.Where(Function(d) Not hidden.Contains(d.Id)).ToList()
+            End Get
+        End Property
+
+        Public Shared Function IsHidden(id As String) As Boolean
+            Return ReadHidden().Contains(If(id, ""))
+        End Function
+
+        ''' <summary>Blendet eine Erweiterung im Werkzeug aus oder wieder ein, sofort gespeichert wie
+        ''' Laden, Entfernen und die Reihenfolge. Das Bild aendert sich dadurch nicht.</summary>
+        Public Shared Sub SetHidden(id As String, hidden As Boolean)
+            If String.IsNullOrWhiteSpace(id) Then Return
+            Dim ids = ReadHidden()
+            If hidden Then ids.Add(id) Else ids.Remove(id)
+            AppSettingsService.SaveHiddenExtensions(String.Join(",", ids.OrderBy(Function(k) k, StringComparer.Ordinal)))
+            Interlocked.Increment(_panelOrderRevision)
+            RaiseEvent Changed(Nothing, EventArgs.Empty)
+        End Sub
+
+        Private Shared Function ReadHidden() As HashSet(Of String)
+            Dim text = ""
+            Try
+                text = If(AppSettingsService.Load().HiddenExtensions, "")
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Extensions.Hidden", ex)
+            End Try
+            Return New HashSet(Of String)(text.Split(","c).Select(Function(t) t.Trim()).Where(Function(t) t.Length > 0), StringComparer.Ordinal)
+        End Function
 
         ''' <summary>Die gespeicherte Reihenfolge als Liste von Kennungen.</summary>
         Private Shared Function ReadOrder() As List(Of String)
@@ -605,9 +686,22 @@ Namespace Services
                         index += 1
                         If control.TrackSource.Length = 0 Then Continue For
                         Dim source = result.FindControl(control.TrackSource)
-                        If source Is Nothing OrElse source.IsToggle Then
+                        If source Is Nothing OrElse Not source.IsNumber OrElse source.IsToggle Then
                             Return $"control {index}: ""track"" refers to ""{control.TrackSource}"", which is not a slider of this extension"
                         End If
+                    Next
+                End If
+
+                If root.TryGetProperty("presets", element) Then
+                    If element.ValueKind <> JsonValueKind.Array Then Return """presets"" must be a list"
+                    If element.GetArrayLength() > 32 Then Return "more than 32 presets"
+                    Dim presetIndex = 0
+                    For Each item In element.EnumerateArray()
+                        presetIndex += 1
+                        Dim preset As ExtensionPreset = Nothing
+                        problem = ReadPreset(item, result, preset)
+                        If problem.Length > 0 Then Return $"preset {presetIndex}: {problem}"
+                        result.Presets.Add(preset)
                     Next
                 End If
 
@@ -645,8 +739,8 @@ Namespace Services
 
             Dim kind = ReadString(item, "type")
             If kind.Length = 0 Then kind = ExtensionControlKinds.Slider
-            If kind <> ExtensionControlKinds.Slider AndAlso kind <> ExtensionControlKinds.Toggle Then
-                Return $"""type"" must be ""{ExtensionControlKinds.Slider}"" or ""{ExtensionControlKinds.Toggle}"""
+            If Not ExtensionControlKinds.All.Contains(kind) Then
+                Return """type"" must be one of " & String.Join(", ", ExtensionControlKinds.All.Select(Function(k) """" & k & """"))
             End If
             result.Kind = kind
 
@@ -657,7 +751,20 @@ Namespace Services
             If problem.Length > 0 Then Return problem
 
             Dim element As JsonElement
-            If result.IsToggle Then
+            If result.IsColor Then
+                If item.TryGetProperty("default", element) Then
+                    Dim color = If(element.ValueKind = JsonValueKind.String, If(element.GetString(), "").Trim(), "")
+                    If Not TrackColorPattern.IsMatch(color) Then Return """default"" of a color must be written as ""#RRGGBB"""
+                    result.DefaultColor = color.ToUpperInvariant()
+                End If
+            ElseIf result.IsCurve Then
+                If item.TryGetProperty("default", element) Then
+                    Dim points As List(Of (X As Double, Y As Double)) = Nothing
+                    Dim curveProblem = ReadCurvePoints(element, points)
+                    If curveProblem.Length > 0 Then Return """default"" of a curve: " & curveProblem
+                    result.DefaultCurve = points
+                End If
+            ElseIf result.IsToggle Then
                 result.Minimum = 0 : result.Maximum = 1
                 If item.TryGetProperty("default", element) Then
                     If element.ValueKind <> JsonValueKind.True AndAlso element.ValueKind <> JsonValueKind.False Then
@@ -723,6 +830,71 @@ Namespace Services
             If parent.TryGetProperty(name, element) AndAlso element.ValueKind = JsonValueKind.String Then
                 Return If(element.GetString(), "").Trim()
             End If
+            Return ""
+        End Function
+
+        ''' <summary>Eine Kurve als Liste von Punkten [x, y], beide von 0 bis 1, x streng steigend,
+        ''' 2 bis 16 Punkte. Liefert leer bei Erfolg.</summary>
+        Friend Shared Function ReadCurvePoints(element As JsonElement, ByRef points As List(Of (X As Double, Y As Double))) As String
+            points = Nothing
+            If element.ValueKind <> JsonValueKind.Array Then Return "must be a list of points [x, y]"
+            Dim result As New List(Of (X As Double, Y As Double))()
+            For Each point In element.EnumerateArray()
+                If point.ValueKind <> JsonValueKind.Array OrElse point.GetArrayLength() <> 2 Then Return "every point must be [x, y]"
+                Dim x, y As Double
+                If point(0).ValueKind <> JsonValueKind.Number OrElse Not point(0).TryGetDouble(x) OrElse
+                   point(1).ValueKind <> JsonValueKind.Number OrElse Not point(1).TryGetDouble(y) Then Return "every point must be [x, y] with numbers"
+                If Not Double.IsFinite(x) OrElse Not Double.IsFinite(y) OrElse x < 0 OrElse x > 1 OrElse y < 0 OrElse y > 1 Then
+                    Return "x and y must lie between 0 and 1"
+                End If
+                If result.Count > 0 AndAlso x <= result(result.Count - 1).X Then Return "x must rise from point to point"
+                result.Add((x, y))
+            Next
+            If result.Count < 2 OrElse result.Count > 16 Then Return "a curve needs 2 to 16 points"
+            points = result
+            Return ""
+        End Function
+
+        ''' <summary>Eine Voreinstellung: Name und Werte, jeder Wert passend zur Art seines
+        ''' Bedienelements und in dessen Grenzen.</summary>
+        Private Shared Function ReadPreset(item As JsonElement, definition As ExtensionDefinition, ByRef preset As ExtensionPreset) As String
+            preset = Nothing
+            If item.ValueKind <> JsonValueKind.Object Then Return "must be an object"
+            Dim result As New ExtensionPreset()
+            Dim problem = ReadTexts(item, "name", result.Names)
+            If problem.Length > 0 Then Return problem
+            If result.Names.Count = 0 Then Return """name"" is missing"
+            Dim element As JsonElement
+            If Not item.TryGetProperty("values", element) OrElse element.ValueKind <> JsonValueKind.Object Then
+                Return """values"" must be an object with one value per key"
+            End If
+            For Each pair In element.EnumerateObject()
+                Dim control = definition.FindControl(pair.Name)
+                If control Is Nothing Then Return $"""{pair.Name}"" is not a control of this extension"
+                If control.IsColor Then
+                    Dim color = If(pair.Value.ValueKind = JsonValueKind.String, If(pair.Value.GetString(), "").Trim(), "")
+                    If Not TrackColorPattern.IsMatch(color) Then Return $"""{pair.Name}"" must be a color ""#RRGGBB"""
+                    result.Entry.Colors(pair.Name) = color.ToUpperInvariant()
+                ElseIf control.IsCurve Then
+                    Dim points As List(Of (X As Double, Y As Double)) = Nothing
+                    Dim curveProblem = ReadCurvePoints(pair.Value, points)
+                    If curveProblem.Length > 0 Then Return $"""{pair.Name}"": {curveProblem}"
+                    result.Entry.Curves(pair.Name) = points
+                ElseIf control.IsToggle Then
+                    If pair.Value.ValueKind <> JsonValueKind.True AndAlso pair.Value.ValueKind <> JsonValueKind.False Then
+                        Return $"""{pair.Name}"" must be true or false"
+                    End If
+                    result.Entry.Values(pair.Name) = If(pair.Value.ValueKind = JsonValueKind.True, 1.0, 0.0)
+                Else
+                    Dim number As Double
+                    If pair.Value.ValueKind <> JsonValueKind.Number OrElse Not pair.Value.TryGetDouble(number) Then
+                        Return $"""{pair.Name}"" must be a number"
+                    End If
+                    If number < control.Minimum OrElse number > control.Maximum Then Return $"""{pair.Name}"" lies outside ""min"" and ""max"""
+                    result.Entry.Values(pair.Name) = number
+                End If
+            Next
+            preset = result
             Return ""
         End Function
 

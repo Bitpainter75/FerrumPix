@@ -11949,4 +11949,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>エディターでの拡張機能の順序を決めます。画像はこれによって変わりません。</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>プリセット</value>
+  </data>
 </root>

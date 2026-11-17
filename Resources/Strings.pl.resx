@@ -11949,4 +11949,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Określa kolejność rozszerzeń w edytorze. Zdjęcia się przez to nie zmieniają.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Ustawienie wstępne</value>
+  </data>
 </root>

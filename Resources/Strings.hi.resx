@@ -11953,4 +11953,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>एडिटर में एक्सटेंशन का क्रम तय करता है। इससे तस्वीरें नहीं बदलतीं।</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>प्रीसेट</value>
+  </data>
 </root>

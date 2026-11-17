@@ -11908,4 +11908,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Define a ordem das extensões no editor. As imagens não mudam por isso.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Predefinição</value>
+  </data>
 </root>

@@ -11949,4 +11949,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Určuje pořadí rozšíření v editoru. Snímky se tím nezmění.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Předvolba</value>
+  </data>
 </root>

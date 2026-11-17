@@ -98,7 +98,28 @@ half4 main(float2 p) {
             head.Append(StageShaderCommon)
             head.Append("uniform shader src;").Append(vbLf)
             For Each control In definition.Controls
-                head.Append("uniform float ").Append(control.Key).Append(";").Append(vbLf)
+                If control.IsColor Then
+                    head.Append("uniform float3 ").Append(control.Key).Append(";").Append(vbLf)
+                ElseIf control.IsCurve Then
+                    ' DIE KURVE IST EINE TABELLE mit 256 Stuetzwerten in einem Bild von 256 mal 1
+                    ' Punkten, je Wert 16 Bit verteilt auf Rot und Gruen (ExtensionCurveImage). Ein
+                    ' Feld als Uniform ginge nicht: die Shadersprache erlaubt dort keinen Zugriff
+                    ' ueber einen gerechneten Index. Fuer den Autor ist sie eine Funktion mit dem
+                    ' Namen des Schluessels, linear zwischen den Stuetzwerten.
+                    Dim k = control.Key
+                    head.Append("uniform shader fpCurveTable_").Append(k).Append(";").Append(vbLf)
+                    head.Append("float fpCurveAt_").Append(k).Append("(float i) {").Append(vbLf)
+                    head.Append("    half4 c = fpCurveTable_").Append(k).Append(".eval(float2(i + 0.5, 0.5));").Append(vbLf)
+                    head.Append("    return (floor(float(c.r) * 255.0 + 0.5) * 256.0 + floor(float(c.g) * 255.0 + 0.5)) / 65535.0;").Append(vbLf)
+                    head.Append("}").Append(vbLf)
+                    head.Append("float ").Append(k).Append("(float x) {").Append(vbLf)
+                    head.Append("    float t = clamp(x, 0.0, 1.0) * 255.0;").Append(vbLf)
+                    head.Append("    float i = floor(t);").Append(vbLf)
+                    head.Append("    return mix(fpCurveAt_").Append(k).Append("(i), fpCurveAt_").Append(k).Append("(min(i + 1.0, 255.0)), t - i);").Append(vbLf)
+                    head.Append("}").Append(vbLf)
+                Else
+                    head.Append("uniform float ").Append(control.Key).Append(";").Append(vbLf)
+                End If
             Next
             head.Append(ExtensionShaderHelpers)
             Dim prefix = head.ToString()
@@ -182,16 +203,71 @@ half4 main(float2 p) {
             Return text
         End Function
 
-        ''' <summary>Die Werte der Regler fuer einen Lauf: was das Rezept nennt, in den Grenzen der
+        ''' <summary>Was ein Lauf einer Erweiterung bekommt: Zahlen, Farben und die Tabellen der
+        ''' Kurven. Die Tabellen sind Bilder im Speicher; Skia laedt sie fuer die Karte selbst hoch.</summary>
+        Friend NotInheritable Class ExtensionInputs
+            Implements IDisposable
+            Public ReadOnly Floats As New List(Of (Key As String, Value As Single))()
+            Public ReadOnly Colors As New List(Of (Key As String, Value As Single()))()
+            Public ReadOnly Curves As New List(Of (ChildName As String, Table As SKImage))()
+
+            Public Sub SetUniforms(uniforms As SKRuntimeEffectUniforms)
+                For Each value In Floats
+                    uniforms(value.Key) = value.Value
+                Next
+                For Each value In Colors
+                    uniforms(value.Key) = value.Value
+                Next
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                For Each curve In Curves
+                    curve.Table.Dispose()
+                Next
+                Curves.Clear()
+            End Sub
+        End Class
+
+        ''' <summary>Die Werte fuer einen Lauf: was das Rezept nennt, in den Grenzen der
         ''' Erweiterung, und fuer alles, was es nicht nennt, die Vorgabe. Ein Wert unter einem
         ''' Schluessel, den die Erweiterung nicht (mehr) kennt, zaehlt nicht.</summary>
-        Friend Shared Function ExtensionUniformValues(definition As ExtensionDefinition, entry As ExtensionEntry) As (Key As String, Value As Single)()
-            Return definition.Controls.Select(
-                Function(control)
+        Friend Shared Function ExtensionInputsFor(definition As ExtensionDefinition, entry As ExtensionEntry) As ExtensionInputs
+            Dim inputs As New ExtensionInputs()
+            For Each control In definition.Controls
+                If control.IsColor Then
+                    Dim text As String = Nothing
+                    If entry Is Nothing OrElse Not entry.Colors.TryGetValue(control.Key, text) Then text = control.DefaultColor
+                    Dim color = SKColor.Parse(text)
+                    inputs.Colors.Add((control.Key, New Single() {color.Red / 255.0F, color.Green / 255.0F, color.Blue / 255.0F}))
+                ElseIf control.IsCurve Then
+                    Dim points As List(Of (X As Double, Y As Double)) = Nothing
+                    If entry Is Nothing OrElse Not entry.Curves.TryGetValue(control.Key, points) Then points = control.DefaultCurve
+                    inputs.Curves.Add(("fpCurveTable_" & control.Key, ExtensionCurveImage(points)))
+                Else
                     Dim value As Double
                     If entry Is Nothing OrElse Not entry.Values.TryGetValue(control.Key, value) Then value = control.DefaultValue
-                    Return (control.Key, CSng(control.Clamp(value)))
-                End Function).ToArray()
+                    inputs.Floats.Add((control.Key, CSng(control.Clamp(value))))
+                End If
+            Next
+            Return inputs
+        End Function
+
+        ''' <summary>Die Tabelle einer Kurve: 256 Werte der Kurve an x = i / 255, je Wert 16 Bit,
+        ''' das hohe Byte in Rot, das niedrige in Gruen, deckend. Dieselbe Kurvenform wie die
+        ''' Tonwertkurve (EvaluateCurveSpline: steigend bleibt steigend, ohne Ueberschwingen).</summary>
+        Friend Shared Function ExtensionCurveImage(points As List(Of (X As Double, Y As Double))) As SKImage
+            Dim info = New SKImageInfo(256, 1, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+            Dim bytes(256 * 4 - 1) As Byte
+            For i = 0 To 255
+                Dim y = Math.Max(0.0, Math.Min(1.0, EvaluateCurveSpline(points, i / 255.0)))
+                Dim v = CInt(Math.Round(y * 65535.0))
+                bytes(i * 4) = CByte(v >> 8)
+                bytes(i * 4 + 1) = CByte(v And &HFF)
+                bytes(i * 4 + 2) = 0
+                bytes(i * 4 + 3) = 255
+            Next
+            ' Die Daten gehoeren danach dem Bild (Skia zaehlt die Verweise).
+            Return SKImage.FromPixels(info, SKData.CreateCopy(bytes), info.RowBytes)
         End Function
 
         ''' <summary>Laeuft in diesem Rezept eine Erweiterung, die auf diesem Rechner auch vorliegt?</summary>
@@ -220,23 +296,29 @@ half4 main(float2 p) {
                 Dim definition = ExtensionService.Find(entry.Id)
                 If definition Is Nothing OrElse definition.Effect Is Nothing Then Continue For
                 If Not String.Equals(definition.Stage, stage, StringComparison.Ordinal) Then Continue For
-                Dim values = ExtensionUniformValues(definition, entry)
+                ' Die Eingaben leben so lange wie die Kette sie braucht: laeuft die Stufe auf der
+                ' Karte, kann ihr Gegenstueck auf dem Prozessor noch spaeter nachgerechnet werden
+                ' (BringDetailSessionHome). Die Kurventabellen sind je ein Kilobyte und gehen mit
+                ' dem Speicherbereiniger.
+                Dim inputs = ExtensionInputsFor(definition, entry)
                 processed = RunDetailStage(session, processed, owned, "Pixel: Erweiterung " & definition.Id,
-                                           ExtensionOnGpu(definition, values),
-                                           Function(s) If(RunExtensionOnBitmap(s, definition.Effect, values), CopyBitmap(s)),
-                                           Function(d) RunExtensionOnBitmap(d, definition.DeepEffect, values))
+                                           ExtensionOnGpu(definition, inputs),
+                                           Function(s) If(RunExtensionOnBitmap(s, definition.Effect, inputs), CopyBitmap(s)),
+                                           Function(d) RunExtensionOnBitmap(d, definition.DeepEffect, inputs))
             Next
             Return processed
         End Function
 
         Private Shared Function ExtensionOnGpu(definition As ExtensionDefinition,
-                                               values As (Key As String, Value As Single)()) As Func(Of GRContext, SKImage, SKSurface)
+                                               inputs As ExtensionInputs) As Func(Of GRContext, SKImage, SKSurface)
             Return Function(gr, image)
                        Dim u = New SKRuntimeEffectUniforms(definition.Effect)
-                       For Each value In values
-                           u(value.Key) = value.Value
+                       inputs.SetUniforms(u)
+                       Dim children = New List(Of (Name As String, Image As SKImage)) From {("src", image)}
+                       For Each curve In inputs.Curves
+                           children.Add((curve.ChildName, curve.Table))
                        Next
-                       Return DrawStage(gr, image.Width, image.Height, definition.Effect, u, ("src", image))
+                       Return DrawStage(gr, image.Width, image.Height, definition.Effect, u, children.ToArray())
                    End Function
         End Function
 
@@ -251,7 +333,7 @@ half4 main(float2 p) {
         ''' Bildpunkt, die Baender beruehren einander also nicht. Nothing, wenn Skia fuer dieses
         ''' Format keine Zeichenflaeche hergibt; die Stufe gilt dann als nicht gerechnet.</summary>
         Friend Shared Function RunExtensionOnBitmap(source As SKBitmap, effect As SKRuntimeEffect,
-                                                    values As (Key As String, Value As Single)()) As SKBitmap
+                                                    inputs As ExtensionInputs) As SKBitmap
             If source Is Nothing OrElse effect Is Nothing Then Return Nothing
             Dim info = source.Info
             Dim result = New SKBitmap(info)
@@ -276,10 +358,15 @@ half4 main(float2 p) {
                                     Return
                                 End If
                                 Dim uniforms = New SKRuntimeEffectUniforms(effect)
-                                For Each value In values
-                                    uniforms(value.Key) = value.Value
-                                Next
+                                inputs.SetUniforms(uniforms)
                                 Dim children = New SKRuntimeEffectChildren(effect)
+                                Dim tables As New List(Of SKShader)()
+                                For Each curve In inputs.Curves
+                                    Dim table = curve.Table.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
+                                                                     New SKSamplingOptions(SKFilterMode.Nearest))
+                                    tables.Add(table)
+                                    children(curve.ChildName) = table
+                                Next
                                 Using child = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
                                                              New SKSamplingOptions(SKFilterMode.Nearest)),
                                       canvas As New SKCanvas(target)
@@ -292,6 +379,9 @@ half4 main(float2 p) {
                                         canvas.DrawRect(0, top, width, bottom - top, paint)
                                     End Using
                                 End Using
+                                For Each table In tables
+                                    table.Dispose()
+                                Next
                             End Using
                         End Sub)
                 End Using

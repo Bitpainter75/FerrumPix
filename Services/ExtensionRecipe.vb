@@ -18,11 +18,21 @@ Namespace Services
         Public Property Enabled As Boolean = True
         ''' <summary>Reglerwerte nach Schluessel. Ein Schalter steht als 0 oder 1.</summary>
         Public Property Values As New SortedDictionary(Of String, Double)(StringComparer.Ordinal)
+        ''' <summary>Farben nach Schluessel als "#RRGGBB".</summary>
+        Public Property Colors As New SortedDictionary(Of String, String)(StringComparer.Ordinal)
+        ''' <summary>Kurven nach Schluessel: Stuetzpunkte von 0 bis 1, nach X steigend.</summary>
+        Public Property Curves As New SortedDictionary(Of String, List(Of (X As Double, Y As Double)))(StringComparer.Ordinal)
 
         Public Function Clone() As ExtensionEntry
             Dim copy = New ExtensionEntry With {.Id = Id, .Version = Version, .Enabled = Enabled}
             For Each pair In Values
                 copy.Values(pair.Key) = pair.Value
+            Next
+            For Each pair In Colors
+                copy.Colors(pair.Key) = pair.Value
+            Next
+            For Each pair In Curves
+                copy.Curves(pair.Key) = pair.Value.ToList()
             Next
             Return copy
         End Function
@@ -52,6 +62,8 @@ Namespace Services
 
         Private Sub New()
         End Sub
+
+        Private Shared ReadOnly ColorPattern As New Text.RegularExpressions.Regex("^#[0-9A-Fa-f]{6}$")
 
         Public Shared Function Parse(text As String) As List(Of ExtensionEntry)
             Dim result As New List(Of ExtensionEntry)()
@@ -87,6 +99,18 @@ Namespace Services
                                 End If
                             Next
                         End If
+                        If item.TryGetProperty("colors", element) AndAlso element.ValueKind = JsonValueKind.Object Then
+                            For Each value In element.EnumerateObject()
+                                Dim color = If(value.Value.ValueKind = JsonValueKind.String, If(value.Value.GetString(), "").Trim(), "")
+                                If ColorPattern.IsMatch(color) Then entry.Colors(value.Name) = color.ToUpperInvariant()
+                            Next
+                        End If
+                        If item.TryGetProperty("curves", element) AndAlso element.ValueKind = JsonValueKind.Object Then
+                            For Each value In element.EnumerateObject()
+                                Dim points As List(Of (X As Double, Y As Double)) = Nothing
+                                If ExtensionService.ReadCurvePoints(value.Value, points).Length = 0 Then entry.Curves(value.Name) = points
+                            Next
+                        End If
                         result.Add(entry)
                     Next
                 End Using
@@ -115,6 +139,29 @@ Namespace Services
                             writer.WriteRawValue(pair.Value.ToString("R", CultureInfo.InvariantCulture))
                         Next
                         writer.WriteEndObject()
+                        ' Farben und Kurven nur, wenn es welche gibt: ein Eintrag aus Reglern allein
+                        ' bleibt zeichengleich mit der Form, die es vor ihnen gab.
+                        If entry.Colors.Count > 0 Then
+                            writer.WriteStartObject("colors")
+                            For Each pair In entry.Colors
+                                writer.WriteString(pair.Key, pair.Value)
+                            Next
+                            writer.WriteEndObject()
+                        End If
+                        If entry.Curves.Count > 0 Then
+                            writer.WriteStartObject("curves")
+                            For Each pair In entry.Curves
+                                writer.WriteStartArray(pair.Key)
+                                For Each point In pair.Value
+                                    writer.WriteStartArray()
+                                    writer.WriteRawValue(point.X.ToString("R", CultureInfo.InvariantCulture))
+                                    writer.WriteRawValue(point.Y.ToString("R", CultureInfo.InvariantCulture))
+                                    writer.WriteEndArray()
+                                Next
+                                writer.WriteEndArray()
+                            Next
+                            writer.WriteEndObject()
+                        End If
                         writer.WriteEndObject()
                     Next
                     writer.WriteEndArray()

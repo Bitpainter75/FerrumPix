@@ -11928,4 +11928,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Sets the order of the extensions in the editor. The pictures do not change because of it.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Preset</value>
+  </data>
 </root>

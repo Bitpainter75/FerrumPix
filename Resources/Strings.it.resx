@@ -11909,4 +11909,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Stabilisce l’ordine delle estensioni nell’editor. Le immagini non cambiano per questo.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Preimpostazione</value>
+  </data>
 </root>

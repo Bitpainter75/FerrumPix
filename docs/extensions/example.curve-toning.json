@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "id": "example.curve-toning",
+  "version": 1,
+  "name": {
+    "en": "Curve and toning",
+    "de": "Kurve und Tonung"
+  },
+  "description": {
+    "en": "Shapes the brightness with a curve and tones shadows and highlights with two colors. An example of curves, color fields and presets.",
+    "de": "Formt die Helligkeit mit einer Kurve und tont Tiefen und Lichter mit zwei Farben. Ein Beispiel für Kurven, Farbfelder und Voreinstellungen."
+  },
+  "author": "FerrumPix",
+  "license": "MIT",
+  "stage": "after-grain",
+  "controls": [
+    { "key": "toneCurve", "type": "curve", "default": [[0, 0], [1, 1]],
+      "label": { "en": "Brightness curve", "de": "Helligkeitskurve" } },
+    { "key": "shadowColor", "type": "color", "default": "#808080",
+      "section": { "en": "Toning", "de": "Tonung" },
+      "label": { "en": "Shadows", "de": "Tiefen" } },
+    { "key": "highlightColor", "type": "color", "default": "#808080",
+      "label": { "en": "Highlights", "de": "Lichter" } },
+    { "key": "amount", "type": "slider", "min": 0, "max": 100, "default": 50,
+      "label": { "en": "Amount", "de": "Stärke" } }
+  ],
+  "presets": [
+    { "name": { "en": "Sepia", "de": "Sepia" },
+      "values": { "shadowColor": "#5A3A1E", "highlightColor": "#F2DFC0", "amount": 60,
+                  "toneCurve": [[0, 0.04], [0.5, 0.5], [1, 0.97]] } },
+    { "name": { "en": "Selenium", "de": "Selen" },
+      "values": { "shadowColor": "#4A2E3A", "highlightColor": "#E8E2DC", "amount": 45,
+                  "toneCurve": [[0, 0], [0.25, 0.2], [0.75, 0.8], [1, 1]] } },
+    { "name": { "en": "Cold", "de": "Kalt" },
+      "values": { "shadowColor": "#24364F", "highlightColor": "#DCE6F0", "amount": 55 } }
+  ],
+  "shader": [
+    "float3 effect(float3 color) {",
+    "    // The curve works on the brightness and moves all three channels alike.",
+    "    float y = fpLuma(color);",
+    "    float shaped = toneCurve(y);",
+    "    float3 graded = clamp(color + (shaped - y), 0.0, 1.0);",
+    "",
+    "    // The toning color between the two fields, after the brightness; only its color",
+    "    // counts, not its brightness. Two gray fields therefore change nothing.",
+    "    float3 tint = mix(shadowColor, highlightColor, smoothstep(0.0, 1.0, shaped));",
+    "    return clamp(graded + (tint - fpLuma(tint)) * (amount / 100.0), 0.0, 1.0);",
+    "}"
+  ]
+}

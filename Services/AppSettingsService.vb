@@ -697,6 +697,10 @@ Namespace Services
         ''' Was hier nicht steht, folgt nach Name. Gesetzt in den Einstellungen, sofort gespeichert
         ''' wie Laden und Entfernen (ExtensionService.MoveInOrder).</summary>
         Public Property ExtensionOrder As String = ""
+        ''' <summary>Erweiterungen, die im Werkzeug nicht erscheinen: Kennungen mit Komma. Sie
+        ''' rechnen in Bildern weiter, wie ausgeblendete Anpassungsgruppen
+        ''' (HiddenAdjustmentGroups); ausgeblendet ist nur das Bedienen.</summary>
+        Public Property HiddenExtensions As String = ""
         ''' <summary>Woher jede Erweiterung geladen wurde: Kennung nach Pfad der Ursprungsdatei.
         ''' "Neu einlesen" holt sie von dort erneut (ExtensionService.RefreshFromSources).</summary>
         Public Property ExtensionSources As New Dictionary(Of String, String)()
@@ -3061,6 +3065,10 @@ Namespace Services
                            s.DisplayProfiles(screenKey) = profilePath
                        End If
                    End Sub)
+        End Sub
+
+        Public Shared Sub SaveHiddenExtensions(value As String)
+            Update(Sub(s) s.HiddenExtensions = If(value, ""))
         End Sub
 
         Public Shared Sub SaveExtensionOrder(value As String)

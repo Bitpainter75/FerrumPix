@@ -23,22 +23,49 @@
                         <Expander Header="{Binding Name}" IsExpanded="True">
                             <Expander.HeaderTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg"
-                                                       Width="18" Height="18" />
-                                        <TextBlock Text="{Binding}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
+                                    <!-- Kopf wie bei den eingebauten Gruppen: Auge fuer den Vergleich,
+                                         Zuruecksetzen der ganzen Gruppe. Die Gruppe selbst ist der
+                                         DataContext des Aufklappers; der Vergleich laeuft ueber den
+                                         Befehl des Editors mit ihrem Schluessel. -->
+                                    <Grid ColumnDefinitions="*,Auto,Auto" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/puzzle-piece.svg"
+                                                           Width="18" Height="18" />
+                                            <TextBlock Text="{Binding}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Classes="icon-btn group-compare"
+                                                Classes.comparing="{Binding DataContext.IsComparing, RelativeSource={RelativeSource AncestorType=Expander}}"
+                                                Width="28" Height="28" Padding="0"
+                                                Command="{Binding DataContext.ToggleAdjustmentGroupCompareCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding DataContext.GroupKey, RelativeSource={RelativeSource AncestorType=Expander}}"
+                                                ToolTip.Tip="{Binding DataContext.CompareLabel, RelativeSource={RelativeSource AncestorType=Expander}}">
+                                            <icons:SvgIcon Width="16" Height="16" />
+                                        </Button>
+                                        <Button Grid.Column="2"
+                                                Classes="icon-btn group-reset"
+                                                Width="28" Height="28" Padding="0"
+                                                Command="{Binding DataContext.ResetCommand, RelativeSource={RelativeSource AncestorType=Expander}}"
+                                                ToolTip.Tip="{Binding DataContext.ResetLabel, RelativeSource={RelativeSource AncestorType=Expander}}">
+                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                                           Width="16" Height="16" />
+                                        </Button>
+                                    </Grid>
                                 </DataTemplate>
                             </Expander.HeaderTemplate>
                             <StackPanel Spacing="2" Margin="0,8,0,0">
-                                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
-                                    <CheckBox Content="{Binding EnabledLabel}" IsChecked="{Binding IsEnabled}"
-                                              FontSize="{DynamicResource FP.Font.Small}" />
-                                    <Button Grid.Column="1" Classes="icon-btn" Width="28" Height="28" Padding="0"
-                                            Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
-                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
-                                                       Width="16" Height="16" />
-                                    </Button>
+                                <CheckBox Content="{Binding EnabledLabel}" IsChecked="{Binding IsEnabled}"
+                                          FontSize="{DynamicResource FP.Font.Small}" Margin="0,0,0,4" />
+                                <!-- Voreinstellungen der Erweiterung: die Wahl uebernimmt den Wertesatz
+                                     als einen Schritt, danach steht die Auswahl wieder leer. -->
+                                <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" Margin="0,0,0,6"
+                                      IsVisible="{Binding HasPresets}">
+                                    <TextBlock Text="{Binding PresetLabel}" Foreground="{DynamicResource FP.Text.Secondary}"
+                                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding PresetNames}"
+                                              SelectedItem="{Binding SelectedPresetName}"
+                                              FontSize="{DynamicResource FP.Font.Small}" Margin="6,0,0,0"
+                                              HorizontalAlignment="Stretch" />
                                 </Grid>
                                 <TextBlock Text="{Binding Description}" IsVisible="{Binding HasDescription}" TextWrapping="Wrap"
                                            Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}"
@@ -58,7 +85,8 @@
                                                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
                                                     <icons:RoundSlider Grid.Column="1" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
-                                                                       Value="{Binding Value}" ColorTrack="{Binding ColorTrack}" Margin="0,0" />
+                                                                       Value="{Binding Value}" DefaultValue="{Binding DefaultValue}"
+                                                                       ColorTrack="{Binding ColorTrack}" Margin="0,0" />
                                                     <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
                                                                              Value="{Binding Value, Mode=TwoWay}"
                                                                              Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
@@ -66,6 +94,30 @@
                                                 </Grid>
                                                 <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" IsVisible="{Binding IsToggle}"
                                                           FontSize="{DynamicResource FP.Font.Small}" />
+                                                <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center" IsVisible="{Binding IsColor}">
+                                                    <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                               VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
+                                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                                                    <icons:ColorPickerButton Grid.Column="1"
+                                                                             SelectedColor="{Binding ColorValue, Mode=TwoWay}" />
+                                                    <Button Grid.Column="2" Classes="icon-btn" Width="24" Height="24" Padding="0" Margin="4,0,0,0"
+                                                            Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
+                                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                                                       Width="14" Height="14" />
+                                                    </Button>
+                                                </Grid>
+                                                <StackPanel Spacing="2" IsVisible="{Binding IsCurve}">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Text="{Binding Label}" Foreground="{DynamicResource FP.Text.Secondary}"
+                                                                   VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                                                        <Button Grid.Column="1" Classes="icon-btn" Width="24" Height="24" Padding="0"
+                                                                Command="{Binding ResetCommand}" ToolTip.Tip="{Binding ResetLabel}">
+                                                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-clockwise.svg"
+                                                                           Width="14" Height="14" />
+                                                        </Button>
+                                                    </Grid>
+                                                    <icons:CurveEditor Height="160" Points="{Binding CurvePoints}" />
+                                                </StackPanel>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

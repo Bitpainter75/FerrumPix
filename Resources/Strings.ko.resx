@@ -11953,4 +11953,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>편집기에서 확장의 순서를 정합니다. 이로 인해 사진이 바뀌지는 않습니다.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>사전 설정</value>
+  </data>
 </root>

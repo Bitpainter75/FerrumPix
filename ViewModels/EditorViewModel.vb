@@ -12934,7 +12934,7 @@ Namespace ViewModels
             Select Case tool
                 Case EditorTool.Selection, EditorTool.Mask, EditorTool.Adjust, EditorTool.Color,
                      EditorTool.Filters, EditorTool.Details, EditorTool.Effects, EditorTool.Draw,
-                     EditorTool.AllAdjustments
+                     EditorTool.AllAdjustments, EditorTool.Extensions
                     Return True
                 Case Else
                     Return False
@@ -19911,6 +19911,7 @@ Namespace ViewModels
             ' kommt ins Kompaktwerkzeug. Umgekehrt geht es vom Kompaktwerkzeug nach "Anpassen".
             Dim jetzt = _currentTool
             If IsCompactAdjustments AndAlso IsObjectAdjustTool(jetzt) AndAlso jetzt <> EditorTool.AllAdjustments AndAlso
+               jetzt <> EditorTool.Extensions AndAlso
                ShowsToolAllAdjustments Then
                 CurrentTool = EditorTool.AllAdjustments
             ElseIf jetzt = EditorTool.AllAdjustments AndAlso Not IsCompactAdjustments AndAlso ShowsToolAdjust Then
@@ -30455,9 +30456,13 @@ Namespace ViewModels
         ''' „Rahmen" gehört bewusst NICHT dazu - der Rahmen sitzt an den Bildkanten; ein Rahmen um ein Objekt
         ''' wäre eine eigene, neue Funktion.</summary>
         Public Shared Function IsObjectAdjustTool(tool As EditorTool) As Boolean
+            ' Die Erweiterungen gehoeren dazu: ihre Einstellungen sind Pixelanpassungen wie die
+            ' uebrigen und wirken mit demselben Wechsel auf eine markierte Korrekturebene, eine
+            ' Auswahl oder ein Objekt.
             Return tool = EditorTool.Adjust OrElse tool = EditorTool.Color OrElse
                    tool = EditorTool.Details OrElse tool = EditorTool.Effects OrElse
-                   tool = EditorTool.Filters OrElse tool = EditorTool.AllAdjustments
+                   tool = EditorTool.Filters OrElse tool = EditorTool.AllAdjustments OrElse
+                   tool = EditorTool.Extensions
         End Function
 
         ''' <summary>Werkzeuge, in denen ein markiertes Objekt das Ziel ist (drehen/spiegeln oder anpassen).

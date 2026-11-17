@@ -11953,4 +11953,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Menentukan urutan ekstensi di editor. Gambar tidak berubah karenanya.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Prasetel</value>
+  </data>
 </root>

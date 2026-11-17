@@ -11927,4 +11927,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Legt fest, in welcher Reihenfolge die Erweiterungen im Editor stehen. Die Bilder ändern sich dadurch nicht.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Voreinstellung</value>
+  </data>
 </root>

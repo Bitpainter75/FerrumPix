@@ -11907,4 +11907,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>设置扩展在编辑器中的顺序。图片不会因此改变。</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>预设</value>
+  </data>
 </root>

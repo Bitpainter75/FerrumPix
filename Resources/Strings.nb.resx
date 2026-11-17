@@ -11949,4 +11949,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Bestemmer rekkefølgen på utvidelsene i redigeringsprogrammet. Bildene endres ikke av det.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Forhåndsinnstilling</value>
+  </data>
 </root>

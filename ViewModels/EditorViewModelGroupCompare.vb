@@ -81,7 +81,7 @@ Namespace ViewModels
                 Case "details" : Return ("Details", AddressOf ResetDetailGroupInternal)
                 Case "vignette" : Return ("Vignette", AddressOf ResetVignetteGroupInternal)
                 Case "grain" : Return ("Körnung", AddressOf ResetGrainGroupInternal)
-                Case Else : Return (Nothing, Nothing)
+                Case Else : Return ExtensionCompareStep(groupKey)
             End Select
         End Function
 
@@ -237,6 +237,7 @@ Namespace ViewModels
             If String.Equals(list, _comparingAdjustmentGroups, StringComparison.Ordinal) Then Return
             _comparingAdjustmentGroups = list
             Me.RaisePropertyChanged(NameOf(ComparingAdjustmentGroups))
+            RefreshExtensionCompareFlags()
         End Sub
 
         Private Shared Function GroupCompareStillNeutral(compare As AdjustmentGroupCompare, current As ImageAdjustments) As Boolean

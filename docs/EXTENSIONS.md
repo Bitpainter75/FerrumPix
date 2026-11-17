@@ -20,8 +20,14 @@ an extension you only edit your own file and choose Reload. If that file is no l
 the copy in the extension folder is used. If it is there but cannot be loaded, the last good
 copy stays and the reason is shown.
 
-The arrows next to each extension set the order of the groups in the editor. The order only
-affects the display, not the picture.
+The list below sets the order of the groups in the editor with the arrows, and the eye hides an
+extension in the editor. Neither changes a picture: a hidden extension keeps working in the
+pictures that use it, it only does not show its sliders.
+
+In the editor, each group has the same buttons as the built in ones: the eye compares the
+picture without the extension, the arrow resets the whole group. A slider goes back to its
+default with a double click and compares with it on a right click; color fields and curves have
+a small reset button of their own. Every change is a step in the history, with Undo and Redo.
 
 The extension folder is shown at the bottom of the section. You can also copy files there by
 hand and choose **Reload**:
@@ -43,13 +49,17 @@ processor. A shader cannot open files, reach the network or read anything except
 given. An extension is therefore safe to try: the worst it can do is give your picture an odd
 color.
 
+An extension works where the other adjustments work: on the whole picture, on a mask or
+selection layer, and on a single object. Select the layer or object, open the Extensions tool,
+and the sliders change that layer only, just like Light or Color would.
+
 The settings of an extension are stored with the picture, in the same sidecar file as every
 other edit. They are not written into XMP presets, because no other program would know what to
 do with them.
 
 ## Examples
 
-Two complete extensions come with this guide, in [`docs/extensions`](extensions):
+Three complete extensions come with this guide, in [`docs/extensions`](extensions):
 
 - [`spoilerhead.silicon-bonk.json`](extensions/spoilerhead.silicon-bonk.json) turns a finished
   color picture into black and white. Hue and Luminance work like a color filter in front of the
@@ -58,9 +68,13 @@ Two complete extensions come with this guide, in [`docs/extensions`](extensions)
   shadows separately and can tint the base like a paper color. It runs after grain, so the grain
   is toned too.
 
-Both are ports of earlier work by Spoilerhead (Silicon Bonk based on an idea by Bernd Gruber) and
-show sections, toggles, constants and helper functions. Load them to try them out, or use them
-as a starting point.
+- [`example.curve-toning.json`](extensions/example.curve-toning.json) shapes the brightness with
+  a curve and tones shadows and highlights with two colors. It shows a curve, color fields and
+  presets (Sepia, Selenium, Cold).
+
+The first two are ports of earlier work by Spoilerhead (Silicon Bonk based on an idea by Bernd
+Gruber) and show sections, toggles, constants and helper functions. Load them to try them out,
+or use them as a starting point.
 
 ## A first extension
 
@@ -102,7 +116,8 @@ extension on for this picture.
 | `description` | no | One or two sentences shown in the editor and in the settings. |
 | `author`, `license`, `url` | no | Shown in the settings. Please always state a license. |
 | `stage` | no | Where in the processing the extension runs, see below. Default `before-grain`. |
-| `controls` | no | The sliders and switches, at most 32. |
+| `controls` | no | The sliders, switches, color fields and curves, at most 32. |
+| `presets` | no | Named sets of values to choose from, at most 32, see below. |
 | `shader` | yes | The calculation, as one text or as a list of lines. |
 
 A file may be at most 256 KB. Comments (`//` and `/* */`) and trailing commas are allowed.
@@ -130,12 +145,50 @@ ja ko id tr th hi`.
 | Field | Meaning |
 |---|---|
 | `key` | The name under which the shader sees the value. Starts with a lower case letter, then letters and digits, at most 32 characters. Names of the shader language (`color`, `float3`, `if` and so on) and names starting with `fp` are reserved. |
-| `type` | `slider` (default) or `toggle`. |
-| `min`, `max`, `default` | Range and starting value of a slider. A toggle takes `"default": true` or `false`. |
+| `type` | `slider` (default), `toggle`, `color` or `curve`. |
+| `min`, `max`, `default` | Range and starting value of a slider. A toggle takes `"default": true` or `false`, a color `"#RRGGBB"` (default `#808080`), a curve a list of points (default `[[0, 0], [1, 1]]`). |
 | `decimals` | Decimal places of a slider: 0, 1 or 2. Default 0, whole numbers. The value is rounded to them, so `"decimals": 2` with a range from 0 to 1 gives steps of 0.01. |
 | `track` | Optional color track of a slider, see below. |
 | `label` | The text next to the control. |
 | `section` | Optional heading shown above this control, to group the controls that follow. |
+
+### Color fields and curves
+
+A **color** field shows a color button with the color picker of FerrumPix:
+
+```json
+{ "key": "shadowColor", "type": "color", "default": "#5A3A1E", "label": "Shadows" }
+```
+
+A **curve** shows a curve field like the tone curve, where points are added with a click, moved
+by dragging and removed with a right click. Points are written as `[x, y]` from 0 to 1, x rising,
+2 to 16 of them. FerrumPix draws the curve through them the same way as the tone curve: rising
+points give a rising curve without overshooting.
+
+```json
+{ "key": "toneCurve", "type": "curve", "default": [[0, 0], [0.5, 0.55], [1, 1]],
+  "label": "Brightness curve" }
+```
+
+Neither of them takes `min`, `max`, `decimals` or `track`.
+
+### Presets
+
+`presets` offers named sets of values as a choice at the top of the group. Choosing one sets
+every control it names to its value and every other control to its default, and switches the
+extension on, as one step that Undo takes back. Values are written like in the controls: numbers
+for sliders, `true` or `false` for toggles, `"#RRGGBB"` for colors and lists of points for
+curves.
+
+```json
+"presets": [
+  { "name": { "en": "Sepia", "de": "Sepia" },
+    "values": { "shadowColor": "#5A3A1E", "highlightColor": "#F2DFC0", "amount": 60,
+                "toneCurve": [[0, 0.04], [0.5, 0.5], [1, 0.97]] } },
+  { "name": "Cold",
+    "values": { "shadowColor": "#24364F", "highlightColor": "#DCE6F0" } }
+]
+```
 
 ### Color tracks
 
@@ -164,9 +217,13 @@ set right now. The other slider must be a hue slider from 0 to 360 of the same e
 
 ### In the shader
 
-In the shader every control is a `float` with the value of the control as shown in the editor:
-a slider from -50 to 200 gives you -50 to 200, a toggle gives 0 or 1. Values outside the range
-never reach the shader; FerrumPix clamps them.
+In the shader every slider and toggle is a `float` with the value of the control as shown in the
+editor: a slider from -50 to 200 gives you -50 to 200, a toggle gives 0 or 1. Values outside the
+range never reach the shader; FerrumPix clamps them.
+
+A color field is a `float3` with red, green and blue from 0 to 1 (sRGB). A curve is a function
+with the name of its key, `float toneCurve(float x)`, for x from 0 to 1. Inside it reads a table
+of 256 values with 16 bit each and interpolates linearly between them.
 
 ### Where the extension runs
 

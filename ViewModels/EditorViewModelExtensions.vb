@@ -9,19 +9,25 @@ Imports ReactiveUI
 
 Namespace ViewModels
 
-    ''' <summary>Ein Bedienelement einer Erweiterung im Panel: Regler oder Schalter, mit dem Wert,
-    ''' den das Bild gerade traegt. Jede Aenderung geht an das Panel der Erweiterung, das sie ins
-    ''' Rezept schreibt.</summary>
+    ''' <summary>Ein Bedienelement einer Erweiterung im Panel: Regler, Schalter, Farbe oder Kurve,
+    ''' mit dem Wert, den das Bild gerade traegt. Jede Aenderung geht an das Panel der
+    ''' Erweiterung, das sie ins Rezept schreibt.</summary>
     Public NotInheritable Class ExtensionControlViewModel
         Inherits ReactiveObject
 
         Private ReadOnly _owner As ExtensionPanelViewModel
         Private _value As Double
+        Private _color As String
+        Private _curve As List(Of (X As Double, Y As Double))
+        ''' <summary>Die Punkte des Kurvenfelds, 0 bis 255 wie bei der Tonwertkurve.</summary>
+        Private ReadOnly _curvePoints As New ObservableCollection(Of Avalonia.Point)()
+        Private _loading As Boolean
 
-        Friend Sub New(owner As ExtensionPanelViewModel, control As ExtensionControl, value As Double)
+        Friend Sub New(owner As ExtensionPanelViewModel, control As ExtensionControl, entry As ExtensionEntry)
             _owner = owner
             Me.Control = control
-            _value = control.Clamp(value)
+            LoadFrom(entry)
+            AddHandler _curvePoints.CollectionChanged, AddressOf OnCurvePointsChanged
         End Sub
 
         Public ReadOnly Property Control As ExtensionControl
@@ -58,7 +64,19 @@ Namespace ViewModels
 
         Public ReadOnly Property IsSlider As Boolean
             Get
-                Return Not Control.IsToggle
+                Return Control.IsNumber AndAlso Not Control.IsToggle
+            End Get
+        End Property
+
+        Public ReadOnly Property IsColor As Boolean
+            Get
+                Return Control.IsColor
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCurve As Boolean
+            Get
+                Return Control.IsCurve
             End Get
         End Property
 
@@ -67,6 +85,36 @@ Namespace ViewModels
                 Return Control.Minimum
             End Get
         End Property
+
+        ''' <summary>Die Vorgabe des Reglers aus der Datei: Doppelklick setzt ihn darauf zurueck,
+        ''' Rechtsklick vergleicht mit ihr, wie bei den eingebauten Reglern.</summary>
+        Public ReadOnly Property DefaultValue As Double
+            Get
+                Return Control.DefaultValue
+            End Get
+        End Property
+
+        Public ReadOnly Property ResetLabel As String
+            Get
+                Return LocalizationService.T("Zurücksetzen")
+            End Get
+        End Property
+
+        ''' <summary>Setzt eine Farbe oder Kurve auf die Vorgabe der Datei, als ein Handgriff.</summary>
+        Public ReadOnly Property ResetCommand As ICommand
+            Get
+                If _resetCommand Is Nothing Then _resetCommand = ReactiveCommand.Create(AddressOf ResetToDefault)
+                Return _resetCommand
+            End Get
+        End Property
+        Private _resetCommand As ICommand
+
+        Private Sub ResetToDefault()
+            If IsDefault Then Return
+            _owner.BeforeChange(Me)
+            LoadFrom(Nothing)
+            _owner.AfterChange()
+        End Sub
 
         Public ReadOnly Property Maximum As Double
             Get
@@ -154,25 +202,103 @@ Namespace ViewModels
             End Set
         End Property
 
-        ''' <summary>Setzt den Wert, ohne ihn als Handgriff zu melden: beim Lesen eines Rezepts,
-        ''' beim Rueckgaengig und beim Zuruecksetzen.</summary>
-        Friend Sub SetSilently(newValue As Double)
-            Dim clamped = Control.Clamp(newValue)
-            If clamped = _value Then Return
-            _value = clamped
-            Me.RaisePropertyChanged(NameOf(Value))
-            Me.RaisePropertyChanged(NameOf(IsChecked))
+        ''' <summary>Die Farbe fuer den Farbwaehler.</summary>
+        Public Property ColorValue As Avalonia.Media.Color
+            Get
+                Return Avalonia.Media.Color.Parse(_color)
+            End Get
+            Set(newValue As Avalonia.Media.Color)
+                Dim text = String.Format(CultureInfo.InvariantCulture, "#{0:X2}{1:X2}{2:X2}", newValue.R, newValue.G, newValue.B)
+                If String.Equals(text, _color, StringComparison.Ordinal) Then Return
+                _owner.BeforeChange(Me)
+                _color = text
+                Me.RaisePropertyChanged(NameOf(ColorValue))
+                _owner.AfterChange()
+            End Set
+        End Property
+
+        ''' <summary>Die Punkte fuer das Kurvenfeld (0 bis 255). Das Feld aendert sie an Ort und
+        ''' Stelle; OnCurvePointsChanged nimmt jede Aenderung als Handgriff.</summary>
+        Public ReadOnly Property CurvePoints As ObservableCollection(Of Avalonia.Point)
+            Get
+                Return _curvePoints
+            End Get
+        End Property
+
+        Private Sub OnCurvePointsChanged(sender As Object, e As System.Collections.Specialized.NotifyCollectionChangedEventArgs)
+            If _loading Then Return
+            ' Das Rezept traegt noch den alten Stand (erst AfterChange schreibt den neuen): der
+            ' Rueckgaengig-Punkt, den BeforeChange anlegt, haelt also wirklich das Vorher fest.
+            _owner.BeforeChange(Me)
+            _curve = _curvePoints.Select(Function(p) (Math.Max(0.0, Math.Min(1.0, p.X / 255.0)),
+                                                      Math.Max(0.0, Math.Min(1.0, p.Y / 255.0)))).
+                                  OrderBy(Function(p) p.Item1).ToList()
+            _owner.AfterChange()
+        End Sub
+
+        ''' <summary>Uebernimmt den Wert aus einem Rezept (Nothing: die Vorgabe), ohne ihn als
+        ''' Handgriff zu melden: beim Lesen eines Rezepts, beim Rueckgaengig und beim Zuruecksetzen.</summary>
+        Friend Sub LoadFrom(entry As ExtensionEntry)
+            If Control.IsColor Then
+                Dim text As String = Nothing
+                If entry Is Nothing OrElse Not entry.Colors.TryGetValue(Control.Key, text) Then text = Control.DefaultColor
+                If Not String.Equals(text, _color, StringComparison.Ordinal) Then
+                    _color = text
+                    Me.RaisePropertyChanged(NameOf(ColorValue))
+                End If
+            ElseIf Control.IsCurve Then
+                Dim points As List(Of (X As Double, Y As Double)) = Nothing
+                If entry Is Nothing OrElse Not entry.Curves.TryGetValue(Control.Key, points) Then points = Control.DefaultCurve
+                If _curve IsNot Nothing AndAlso _curve.SequenceEqual(points) Then Return
+                _curve = points.ToList()
+                _loading = True
+                Try
+                    _curvePoints.Clear()
+                    For Each p In _curve
+                        _curvePoints.Add(New Avalonia.Point(p.X * 255.0, p.Y * 255.0))
+                    Next
+                Finally
+                    _loading = False
+                End Try
+            Else
+                Dim value As Double
+                If entry Is Nothing OrElse Not entry.Values.TryGetValue(Control.Key, value) Then value = Control.DefaultValue
+                Dim clamped = Control.Clamp(value)
+                If clamped = _value Then Return
+                _value = clamped
+                Me.RaisePropertyChanged(NameOf(Value))
+                Me.RaisePropertyChanged(NameOf(IsChecked))
+            End If
+        End Sub
+
+        ''' <summary>Schreibt den Wert in einen Eintrag des Rezepts.</summary>
+        Friend Sub WriteTo(entry As ExtensionEntry)
+            If Control.IsColor Then
+                entry.Colors(Control.Key) = _color
+            ElseIf Control.IsCurve Then
+                ' Auf vier Stellen gerundet: das Feld liefert krumme Punkte, und die feste Form des
+                ' Rezepts sollte nicht von Gleitkommastaub abhaengen.
+                entry.Curves(Control.Key) = _curve.Select(Function(p) (Math.Round(p.X, 4), Math.Round(p.Y, 4))).ToList()
+            Else
+                entry.Values(Control.Key) = _value
+            End If
         End Sub
 
         Friend ReadOnly Property IsDefault As Boolean
             Get
+                If Control.IsColor Then Return String.Equals(_color, Control.DefaultColor, StringComparison.Ordinal)
+                If Control.IsCurve Then
+                    Return _curve.Count = Control.DefaultCurve.Count AndAlso
+                           _curve.Zip(Control.DefaultCurve).All(Function(z) Math.Abs(z.First.X - z.Second.X) < 0.0001 AndAlso
+                                                                           Math.Abs(z.First.Y - z.Second.Y) < 0.0001)
+                End If
                 Return _value = Control.DefaultValue
             End Get
         End Property
     End Class
 
     ''' <summary>Eine Erweiterung als Gruppe im Werkzeug "Erweiterungen": ihr Ein-Schalter, ihre
-    ''' Bedienelemente und Zuruecksetzen.</summary>
+    ''' Bedienelemente, ihre Voreinstellungen und Zuruecksetzen.</summary>
     Public NotInheritable Class ExtensionPanelViewModel
         Inherits ReactiveObject
 
@@ -188,12 +314,7 @@ Namespace ViewModels
             _onAfterChange = onAfterChange
             _isEnabled = entry IsNot Nothing AndAlso entry.Enabled
             _savedVersion = If(entry Is Nothing, definition.Version, entry.Version)
-            Controls = definition.Controls.Select(
-                Function(control)
-                    Dim value As Double
-                    If entry Is Nothing OrElse Not entry.Values.TryGetValue(control.Key, value) Then value = control.DefaultValue
-                    Return New ExtensionControlViewModel(Me, control, value)
-                End Function).ToList()
+            Controls = definition.Controls.Select(Function(control) New ExtensionControlViewModel(Me, control, entry)).ToList()
             ' Spuren, die einem Farbtonregler folgen, an ihn haengen. Beide leben so lange wie die
             ' Gruppe, ein Abmelden braucht es nicht.
             For Each dependent In Controls.Where(Function(c) c.Control.TrackSource.Length > 0)
@@ -244,6 +365,79 @@ Namespace ViewModels
                 Return LocalizationService.T("Zurücksetzen")
             End Get
         End Property
+
+        ''' <summary>Der Schluessel im Gruppenvergleich, Parameter des Auges im Gruppenkopf.</summary>
+        Public ReadOnly Property GroupKey As String
+            Get
+                Return EditorViewModel.ExtensionGroupKeyPrefix & Definition.Id
+            End Get
+        End Property
+
+        Private _isComparing As Boolean
+
+        ''' <summary>Steht die Erweiterung im Vergleich? Gesetzt vom Editor
+        ''' (RefreshExtensionCompareFlags).</summary>
+        Public Property IsComparing As Boolean
+            Get
+                Return _isComparing
+            End Get
+            Friend Set(value As Boolean)
+                Me.RaiseAndSetIfChanged(_isComparing, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property CompareLabel As String
+            Get
+                Return LocalizationService.T("Gruppe vorübergehend ausblenden, um vorher und nachher zu vergleichen")
+            End Get
+        End Property
+
+        Public ReadOnly Property PresetLabel As String
+            Get
+                Return LocalizationService.T("Voreinstellung")
+            End Get
+        End Property
+
+        ' ── Voreinstellungen ─────────────────────────────────────────────────
+
+        Public ReadOnly Property HasPresets As Boolean
+            Get
+                Return Definition.Presets.Count > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property PresetNames As IReadOnlyList(Of String)
+            Get
+                Return Definition.Presets.Select(Function(p) p.Name).ToList()
+            End Get
+        End Property
+
+        ''' <summary>Die Auswahl der Voreinstellung. Gewaehlt wird einmal: der Wertesatz wird
+        ''' uebernommen, danach steht die Auswahl wieder leer, denn wer einen Regler weiterbewegt,
+        ''' hat die Voreinstellung schon verlassen.</summary>
+        Public Property SelectedPresetName As String
+            Get
+                Return Nothing
+            End Get
+            Set(value As String)
+                If String.IsNullOrEmpty(value) Then Return
+                Dim preset = Definition.Presets.FirstOrDefault(Function(p) String.Equals(p.Name, value, StringComparison.Ordinal))
+                If preset IsNot Nothing Then ApplyPreset(preset)
+                Avalonia.Threading.Dispatcher.UIThread.Post(Sub() Me.RaisePropertyChanged(NameOf(SelectedPresetName)))
+            End Set
+        End Property
+
+        ''' <summary>Setzt die Werte einer Voreinstellung als EIN Handgriff: was sie nennt, auf ihren
+        ''' Wert, alles andere auf die Vorgabe, und schaltet die Erweiterung ein.</summary>
+        Friend Sub ApplyPreset(preset As ExtensionPreset)
+            _onBeforeChange(Me, "")
+            Dim entry = preset.Entry.Clone()
+            entry.Id = Definition.Id
+            entry.Version = Definition.Version
+            entry.Enabled = True
+            ApplyEntry(entry)
+            _onAfterChange()
+        End Sub
 
         ''' <summary>Rechnet die Erweiterung fuer dieses Bild?</summary>
         Public Property IsEnabled As Boolean
@@ -311,20 +505,18 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(VersionNote))
             End If
             For Each control In Controls
-                Dim value As Double
-                If entry Is Nothing OrElse Not entry.Values.TryGetValue(control.Key, value) Then value = control.Control.DefaultValue
-                control.SetSilently(value)
+                control.LoadFrom(entry)
             Next
         End Sub
 
         ''' <summary>Der Eintrag fuers Rezept, oder Nothing, wenn die Erweiterung aus ist und alle
-        ''' Regler auf ihrer Vorgabe stehen: dann hat sie am Bild nichts verloren, und ein Bild, an
+        ''' Elemente auf ihrer Vorgabe stehen: dann hat sie am Bild nichts verloren, und ein Bild, an
         ''' dem niemand etwas eingestellt hat, zaehlt nicht als bearbeitet.</summary>
         Friend Function ToEntry() As ExtensionEntry
             If Not _isEnabled AndAlso Controls.All(Function(c) c.IsDefault) Then Return Nothing
             Dim entry = New ExtensionEntry With {.Id = Definition.Id, .Version = Definition.Version, .Enabled = _isEnabled}
             For Each control In Controls
-                entry.Values(control.Key) = control.Value
+                control.WriteTo(entry)
             Next
             Return entry
         End Function
@@ -351,7 +543,7 @@ Namespace ViewModels
                 ' Die Leiste fragt das als Erstes, auch bevor ein Bild offen ist: ab hier folgt sie
                 ' dem Bestand.
                 EnsureExtensionServiceHooked()
-                Return ExtensionService.All.Count > 0
+                Return ExtensionService.Shown.Count > 0
             End Get
         End Property
 
@@ -424,7 +616,7 @@ Namespace ViewModels
             If revision <> _extensionPanelRevision Then
                 _extensionPanelRevision = revision
                 ExtensionPanels.Clear()
-                For Each definition In ExtensionService.All
+                For Each definition In ExtensionService.Shown
                     Dim entry = entries.FirstOrDefault(Function(e) String.Equals(e.Id, definition.Id, StringComparison.Ordinal))
                     ExtensionPanels.Add(New ExtensionPanelViewModel(definition, entry, AddressOf OnExtensionChanging, AddressOf OnExtensionChanged))
                 Next
@@ -435,6 +627,7 @@ Namespace ViewModels
             End If
             Me.RaisePropertyChanged(NameOf(HasMissingExtensions))
             Me.RaisePropertyChanged(NameOf(MissingExtensionsText))
+            RefreshExtensionCompareFlags()
         End Sub
 
         ''' <summary>Kennzeichen eines Handgriffs an einer Erweiterung fuer die Historie:
@@ -493,6 +686,31 @@ Namespace ViewModels
 
         ''' <summary>Der Name eines Handgriffs an einer Erweiterung in der Historie, oder Nothing,
         ''' wenn das Kennzeichen keines ist.</summary>
+        ''' <summary>Der Schluessel einer Erweiterung im Gruppenvergleich (wie der Schluessel eines
+        ''' Aufklappers bei den eingebauten Gruppen).</summary>
+        Friend Const ExtensionGroupKeyPrefix As String = "ext:"
+
+        ''' <summary>Der Gruppenvergleich einer Erweiterung: sie wird ausgeschaltet und beim zweiten
+        ''' Klick zurueckgeholt. Alle Erweiterungen eines Bildes stehen in EINEM Feld des Rezepts;
+        ''' aendert sich waehrenddessen eine andere, endet der Vergleich, wie bei den eingebauten
+        ''' Gruppen, wenn ein Wert von anderer Seite kommt.</summary>
+        Private Function ExtensionCompareStep(groupKey As String) As (Header As String, Neutralize As Action)
+            Dim key = If(groupKey, "")
+            If Not key.StartsWith(ExtensionGroupKeyPrefix, StringComparison.Ordinal) Then Return (Nothing, Nothing)
+            Dim id = key.Substring(ExtensionGroupKeyPrefix.Length)
+            Dim panel = ExtensionPanels.FirstOrDefault(Function(p) String.Equals(p.Definition.Id, id, StringComparison.Ordinal))
+            If panel Is Nothing Then Return (Nothing, Nothing)
+            Return (panel.Name, Sub() panel.IsEnabled = False)
+        End Function
+
+        ''' <summary>Die Augen der Gruppen nachziehen, nachdem sich die Liste der Vergleiche geaendert hat.</summary>
+        Private Sub RefreshExtensionCompareFlags()
+            Dim comparing = If(_comparingAdjustmentGroups, "").Split(","c)
+            For Each panel In ExtensionPanels
+                panel.IsComparing = comparing.Contains(panel.GroupKey)
+            Next
+        End Sub
+
         Private Function ExtensionHistoryLabel(propertyName As String) As String
             If propertyName Is Nothing OrElse Not propertyName.StartsWith(ExtensionHistoryPrefix, StringComparison.Ordinal) Then Return Nothing
             Dim rest = propertyName.Substring(ExtensionHistoryPrefix.Length)

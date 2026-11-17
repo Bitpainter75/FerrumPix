@@ -11949,4 +11949,7 @@
   <data name="Legt_fest_in_welcher_Reihenfolge_die_Erweiterung_b457f05c" xml:space="preserve">
     <value>Bestämmer ordningen på tilläggen i redigeraren. Bilderna ändras inte av det.</value>
   </data>
+  <data name="Voreinstellung_eee51be2" xml:space="preserve">
+    <value>Förinställning</value>
+  </data>
 </root>
