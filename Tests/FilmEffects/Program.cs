@@ -200,10 +200,21 @@ static class Program
         }
     }
 
-    static void Main(string[] args)
+    [STAThread]
+    static int Main(string[] args)
     {
-        FormulaParity(); BitmapAndDeep(); RecipesAndCaches(); ParameterCompatibility();
-        Console.WriteLine($"Passed {checks} checks: CTL parity, alpha, deep precision/order, recipes and caches.");
-        if (args.Length == 2 && args[0] == "--preview") Preview.Render(args[1], Recipe());
+        try
+        {
+            FormulaParity(); BitmapAndDeep(); RecipesAndCaches(); ParameterCompatibility();
+            Console.WriteLine($"Passed {checks} checks: CTL parity, alpha, deep precision/order, recipes and caches.");
+            GpuChecks.Run(args.Contains("--gpu-device"));
+            if (args.Length == 2 && args[0] == "--preview") Preview.Render(args[1], Recipe());
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            // Report failures to automation without leaving a Windows crash dialog holding DLLs.
+            Console.Error.WriteLine(ex); return 1;
+        }
     }
 }

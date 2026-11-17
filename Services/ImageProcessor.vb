@@ -3410,7 +3410,7 @@ Namespace Services
             ' This keeps the grain part of the toned print rather than a neutral overlay.
             If adj.SiliconBonkEnabled Then
                 Dim transform = SiliconBonkPixel(adj)
-                processed = RunDetailStage(session, processed, owned, "Pixel: SiliconBonk", Nothing,
+                processed = RunDetailStage(session, processed, owned, "Pixel: SiliconBonk", SiliconBonkOnGpu(adj),
                                            Function(s) ApplyFilmEffect(s, transform),
                                            Function(d) ApplyFilmEffect(d, transform))
             End If
@@ -3423,7 +3423,7 @@ Namespace Services
             End If
             If adj.FatToniEnabled Then
                 Dim transform = FatToniPixel(adj)
-                processed = RunDetailStage(session, processed, owned, "Pixel: FatToni", Nothing,
+                processed = RunDetailStage(session, processed, owned, "Pixel: FatToni", FatToniOnGpu(adj),
                                            Function(s) ApplyFilmEffect(s, transform),
                                            Function(d) ApplyFilmEffect(d, transform))
             End If
