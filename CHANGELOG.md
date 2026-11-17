@@ -8,6 +8,13 @@
 - A sidecar file with picture variants that contains something this version does not know,
   for example from a newer FerrumPix, is no longer rewritten without it. It is left as it is.
 
+- FerrumPix can now load extensions: small files that add a tool with its own sliders, for
+  example a black and white conversion or a toning. They are loaded and removed in the settings,
+  section Extensions. As soon as one is loaded, the editor shows the Extensions tool in the
+  Adjustments group, with one group of sliders per extension. Pictures keep the settings of an
+  extension even where it is not installed. How to write one is described in
+  docs/EXTENSIONS.md, together with two examples.
+  
 - Extensions can offer a choice from a list and a help text for each control, and can work with
   the position in the picture, for vignettes and gradients of their own. A fourth example shows
   this: a light falloff, round or from one side.
@@ -20,13 +27,6 @@
 - Extensions can offer color fields, curves and presets, and they work on mask and selection
   layers and on objects like the other adjustments. A third example shows a brightness curve
   with toning in two colors and the presets Sepia, Selenium and Cold.
-
-- FerrumPix can now load extensions: small files that add a tool with its own sliders, for
-  example a black and white conversion or a toning. They are loaded and removed in the settings,
-  section Extensions. As soon as one is loaded, the editor shows the Extensions tool in the
-  Adjustments group, with one group of sliders per extension. Pictures keep the settings of an
-  extension even where it is not installed. How to write one is described in
-  docs/EXTENSIONS.md, together with two examples.
 
 - Sharpening has a third method, High Pass. It works like a high pass layer blended in linear
   light, done in one step, and brings out the finest detail. Strength 100 equals that blend at

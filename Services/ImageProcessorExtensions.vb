@@ -102,7 +102,7 @@ half4 main(float2 p) {
                     head.Append("uniform float3 ").Append(control.Key).Append(";").Append(vbLf)
                 ElseIf control.IsCurve Then
                     ' DIE KURVE IST EINE TABELLE mit 256 Stuetzwerten in einem Bild von 256 mal 1
-                    ' Punkten, je Wert 16 Bit verteilt auf Rot und Gruen (ExtensionCurveImage). Ein
+                    ' Punkten, je Wert 16 Bit verteilt auf Rot und Gruen (ExtensionCurveTable). Ein
                     ' Feld als Uniform ginge nicht: die Shadersprache erlaubt dort keinen Zugriff
                     ' ueber einen gerechneten Index. Fuer den Autor ist sie eine Funktion mit dem
                     ' Namen des Schluessels, linear zwischen den Stuetzwerten.
@@ -226,12 +226,17 @@ half4 main(float2 p) {
         End Function
 
         ''' <summary>Was ein Lauf einer Erweiterung bekommt: Zahlen, Farben und die Tabellen der
-        ''' Kurven. Die Tabellen sind Bilder im Speicher; Skia laedt sie fuer die Karte selbst hoch.</summary>
+        ''' Kurven.</summary>
+        ''' <remarks>Die Tabellen liegen hier als verwalteter Speicher, nicht als SKImage. Die
+        ''' Eingaben leben so lange wie die Kette sie braucht, und das weiss niemand genau: laeuft die
+        ''' Stufe auf der Karte, kann ihr Gegenstueck auf dem Prozessor spaeter noch nachgerechnet
+        ''' werden (BringDetailSessionHome), oder nie. Ein natives Bild hier blieb deshalb bis zur
+        ''' Finalisierung liegen, je Vorschau eines, beim Reglerzug in Mengen. Jeder Lauf baut sich
+        ''' seine Bilder aus der Tabelle (CurveImages) und gibt sie nach dem Zeichnen frei.</remarks>
         Friend NotInheritable Class ExtensionInputs
-            Implements IDisposable
             Public ReadOnly Floats As New List(Of (Key As String, Value As Single))()
             Public ReadOnly Colors As New List(Of (Key As String, Value As Single()))()
-            Public ReadOnly Curves As New List(Of (ChildName As String, Table As SKImage))()
+            Public ReadOnly Curves As New List(Of (ChildName As String, Table As Byte()))()
 
             ''' <summary>Verlangt die Rechnung die Lage im Bild? Dann braucht sie die Groesse des
             ''' Bildes, das gerade gerechnet wird.</summary>
@@ -247,13 +252,24 @@ half4 main(float2 p) {
                 Next
             End Sub
 
-            Public Sub Dispose() Implements IDisposable.Dispose
+            ''' <summary>Je Kurve ein frisches Bild ihrer Tabelle. Der Aufrufer gibt sie frei
+            ''' (DisposeCurveImages), sobald gezeichnet ist.</summary>
+            Public Function CurveImages() As List(Of (Name As String, Image As SKImage))
+                Dim images As New List(Of (Name As String, Image As SKImage))(Curves.Count)
                 For Each curve In Curves
-                    curve.Table.Dispose()
+                    images.Add((curve.ChildName, ExtensionCurveImageFromTable(curve.Table)))
                 Next
-                Curves.Clear()
-            End Sub
+                Return images
+            End Function
         End Class
+
+        Private Shared Sub DisposeCurveImages(images As List(Of (Name As String, Image As SKImage)))
+            If images Is Nothing Then Return
+            For Each item In images
+                item.Image?.Dispose()
+            Next
+            images.Clear()
+        End Sub
 
         ''' <summary>Die Werte fuer einen Lauf: was das Rezept nennt, in den Grenzen der
         ''' Erweiterung, und fuer alles, was es nicht nennt, die Vorgabe. Ein Wert unter einem
@@ -269,7 +285,7 @@ half4 main(float2 p) {
                 ElseIf control.IsCurve Then
                     Dim points As List(Of (X As Double, Y As Double)) = Nothing
                     If entry Is Nothing OrElse Not entry.Curves.TryGetValue(control.Key, points) Then points = control.DefaultCurve
-                    inputs.Curves.Add(("fpCurveTable_" & control.Key, ExtensionCurveImage(points)))
+                    inputs.Curves.Add(("fpCurveTable_" & control.Key, ExtensionCurveTable(points)))
                 Else
                     Dim value As Double
                     If entry Is Nothing OrElse Not entry.Values.TryGetValue(control.Key, value) Then value = control.DefaultValue
@@ -282,8 +298,11 @@ half4 main(float2 p) {
         ''' <summary>Die Tabelle einer Kurve: 256 Werte der Kurve an x = i / 255, je Wert 16 Bit,
         ''' das hohe Byte in Rot, das niedrige in Gruen, deckend. Dieselbe Kurvenform wie die
         ''' Tonwertkurve (EvaluateCurveSpline: steigend bleibt steigend, ohne Ueberschwingen).</summary>
-        Friend Shared Function ExtensionCurveImage(points As List(Of (X As Double, Y As Double))) As SKImage
-            Dim info = New SKImageInfo(256, 1, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+
+
+        ''' <summary>Die Tabelle einer Kurve als Bildpunkte von 256 mal 1, je Wert 16 Bit auf Rot
+        ''' und Gruen verteilt, im verwalteten Speicher.</summary>
+        Private Shared Function ExtensionCurveTable(points As List(Of (X As Double, Y As Double))) As Byte()
             Dim bytes(256 * 4 - 1) As Byte
             For i = 0 To 255
                 Dim y = Math.Max(0.0, Math.Min(1.0, EvaluateCurveSpline(points, i / 255.0)))
@@ -293,7 +312,12 @@ half4 main(float2 p) {
                 bytes(i * 4 + 2) = 0
                 bytes(i * 4 + 3) = 255
             Next
-            ' Die Daten gehoeren danach dem Bild (Skia zaehlt die Verweise).
+            Return bytes
+        End Function
+
+        Private Shared Function ExtensionCurveImageFromTable(bytes As Byte()) As SKImage
+            Dim info = New SKImageInfo(256, 1, SKColorType.Rgba8888, SKAlphaType.Unpremul)
+            ' Eine Kopie der Daten gehoert danach dem Bild (Skia zaehlt die Verweise).
             Return SKImage.FromPixels(info, SKData.CreateCopy(bytes), info.RowBytes)
         End Function
 
@@ -325,8 +349,8 @@ half4 main(float2 p) {
                 If Not String.Equals(definition.Stage, stage, StringComparison.Ordinal) Then Continue For
                 ' Die Eingaben leben so lange wie die Kette sie braucht: laeuft die Stufe auf der
                 ' Karte, kann ihr Gegenstueck auf dem Prozessor noch spaeter nachgerechnet werden
-                ' (BringDetailSessionHome). Die Kurventabellen sind je ein Kilobyte und gehen mit
-                ' dem Speicherbereiniger.
+                ' (BringDetailSessionHome). Sie halten deshalb nichts Natives; die Kurventabellen
+                ' sind je ein Kilobyte verwalteter Speicher.
                 Dim inputs = ExtensionInputsFor(definition, entry)
                 processed = RunDetailStage(session, processed, owned, "Pixel: Erweiterung " & definition.Id,
                                            ExtensionOnGpu(definition, inputs),
@@ -341,11 +365,14 @@ half4 main(float2 p) {
             Return Function(gr, image)
                        Dim u = New SKRuntimeEffectUniforms(definition.Effect)
                        inputs.SetUniforms(u, image.Width, image.Height)
-                       Dim children = New List(Of (Name As String, Image As SKImage)) From {("src", image)}
-                       For Each curve In inputs.Curves
-                           children.Add((curve.ChildName, curve.Table))
-                       Next
-                       Return DrawStage(gr, image.Width, image.Height, definition.Effect, u, children.ToArray())
+                       Dim tables = inputs.CurveImages()
+                       Try
+                           Dim children = New List(Of (Name As String, Image As SKImage)) From {("src", image)}
+                           children.AddRange(tables)
+                           Return DrawStage(gr, image.Width, image.Height, definition.Effect, u, children.ToArray())
+                       Finally
+                           DisposeCurveImages(tables)
+                       End Try
                    End Function
         End Function
 
@@ -372,6 +399,7 @@ half4 main(float2 p) {
             Dim width = info.Width, height = info.Height, rowBytes = result.RowBytes
             Dim bands = Math.Max(1, Math.Min(Environment.ProcessorCount, height \ ExtensionBandMinRows))
             Dim failed = False
+            Dim curveImages = inputs.CurveImages()
             Try
                 Using image = SKImage.FromBitmap(source)
                     Parallel.For(0, bands,
@@ -388,11 +416,11 @@ half4 main(float2 p) {
                                 inputs.SetUniforms(uniforms, width, height)
                                 Dim children = New SKRuntimeEffectChildren(effect)
                                 Dim tables As New List(Of SKShader)()
-                                For Each curve In inputs.Curves
-                                    Dim table = curve.Table.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
+                                For Each curve In curveImages
+                                    Dim table = curve.Image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
                                                                      New SKSamplingOptions(SKFilterMode.Nearest))
                                     tables.Add(table)
-                                    children(curve.ChildName) = table
+                                    children(curve.Name) = table
                                 Next
                                 Using child = image.ToShader(SKShaderTileMode.Clamp, SKShaderTileMode.Clamp,
                                                              New SKSamplingOptions(SKFilterMode.Nearest)),
@@ -415,6 +443,8 @@ half4 main(float2 p) {
             Catch ex As Exception
                 DiagnosticLogService.LogException("Extensions.Run", ex)
                 failed = True
+            Finally
+                DisposeCurveImages(curveImages)
             End Try
             If failed Then
                 result.Dispose()
