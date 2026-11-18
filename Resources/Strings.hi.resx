@@ -11962,9 +11962,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>कॉपी के रूप में सहेजें</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>पुल रिक्वेस्ट</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>एक्सटेंशन डाउनलोड करें</value>
   </data>
@@ -11983,7 +11980,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>एक्सटेंशन डाउनलोड हो रहे हैं…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>FerrumPix की निर्देशिका से एक्सटेंशन। हर एक पुल रिक्वेस्ट के रूप में आया, जहाँ उसका विवरण और उदाहरण चित्र हैं। केवल चुने हुए ही डाउनलोड होते हैं।</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>FerrumPix की निर्देशिका से एक्सटेंशन। हर एक पुल रिक्वेस्ट के रूप में आया, जहाँ उसका विवरण और उदाहरण चित्र हैं।</value>
   </data>
 </root>

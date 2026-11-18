@@ -3,14 +3,16 @@
              x:Class="FerrumPix.Views.ExtensionDownloadDialogView">
 
     <!-- Erweiterungen herunterladen (MainWindowViewModelExtensionDownload): je Eintrag des Index
-         ein Haken, Name, Beschreibung, Fassung und Autor, der Zustand auf diesem Rechner und der
-         Link zum Pull Request. Eine installierte Erweiterung in derselben Fassung laesst sich nicht
-         anhaken, eine Aktualisierung steht oben und ist vorgehakt. -->
-    <ItemsControl ItemsSource="{Binding DialogExtensionRows}" MaxHeight="420">
+         Beispielbild, Name, Beschreibung, Fassung und Autor, der Link zur Beschreibung im Pull
+         Request und ein Knopf, der sofort holt. Aktualisierungen stehen oben. -->
+    <ItemsControl ItemsSource="{Binding DialogExtensionRows}" MaxHeight="520">
         <ItemsControl.Template>
             <ControlTemplate>
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                    <ItemsPresenter/>
+                <!-- Die Leiste steht dauerhaft und hat ihren eigenen Rand: eingeblendet beim
+                     Darueberfahren legte sie sich ueber die Knoepfe am rechten Rand. -->
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                              AllowAutoHide="False">
+                    <ItemsPresenter Margin="0,0,18,0"/>
                 </ScrollViewer>
             </ControlTemplate>
         </ItemsControl.Template>
@@ -18,14 +20,11 @@
             <DataTemplate>
                 <Border Classes="adjustment-group" Margin="0,0,0,8"
                         AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
-                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
-                        <CheckBox VerticalAlignment="Top"
-                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                  IsEnabled="{Binding CanCheck}"/>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                         <!-- Das Beispielbild aus dem Index, oft ein Ausschnitt aus dem Pull Request. -->
-                        <Image Grid.Column="1" Width="120" MaxHeight="120" VerticalAlignment="Top"
+                        <Image Width="180" MaxHeight="180" VerticalAlignment="Top"
                                Stretch="Uniform" Source="{Binding Preview}" IsVisible="{Binding HasPreview}"/>
-                        <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Classes="no-translate" Text="{Binding Name}" TextWrapping="Wrap"
                                        FontSize="{DynamicResource FP.Font.Body}"/>
                             <TextBlock Classes="no-translate" Text="{Binding Description}" IsVisible="{Binding HasDescription}"
@@ -36,15 +35,30 @@
                             <TextBlock Classes="no-translate" Text="{Binding StateText}" IsVisible="{Binding HasStateText}"
                                        Foreground="{DynamicResource FP.Accent}"
                                        TextWrapping="Wrap" FontSize="{DynamicResource FP.Font.Small}"/>
+                            <TextBlock Classes="no-translate" Text="{Binding Message}" IsVisible="{Binding HasMessage}"
+                                       Foreground="{DynamicResource FP.Accent}"
+                                       TextWrapping="Wrap" FontSize="{DynamicResource FP.Font.Small}"/>
                         </StackPanel>
-                        <!-- Der Tooltip zeigt das Ziel vor dem Klick. -->
-                        <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Top"
-                                IsVisible="{Binding HasPullRequest}"
-                                ToolTip.Tip="{Binding Entry.PullRequest}"
-                                Command="{Binding $parent[ItemsControl].DataContext.OpenExtensionPullRequestCommand}"
-                                CommandParameter="{Binding}">
-                            <TextBlock Text="Pull Request" FontSize="{DynamicResource FP.Font.Small}"/>
-                        </Button>
+                        <!-- Rechts die beiden Knoepfe: die Beschreibung steht im Pull Request, mit dem
+                             die Erweiterung kam (der Tooltip zeigt das Ziel vor dem Klick), und der
+                             Knopf zum Holen, der je nach Zustand Herunterladen, Aktualisieren oder
+                             gesperrt Installiert heisst. -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                            <Button Classes="ghost" Padding="12,7"
+                                    IsVisible="{Binding HasPullRequest}"
+                                    ToolTip.Tip="{Binding Entry.PullRequest}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.OpenExtensionPullRequestCommand}"
+                                    CommandParameter="{Binding}">
+                                <TextBlock Text="Beschreibung" FontSize="{DynamicResource FP.Font.Small}"/>
+                            </Button>
+                            <Button Classes="accent" Padding="12,7" MinWidth="120"
+                                    IsEnabled="{Binding CanDownload}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.DownloadExtensionRowCommand}"
+                                    CommandParameter="{Binding}">
+                                <TextBlock Classes="no-translate" Text="{Binding ButtonText}" HorizontalAlignment="Center"
+                                           FontSize="{DynamicResource FP.Font.Small}"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
                 </Border>
             </DataTemplate>

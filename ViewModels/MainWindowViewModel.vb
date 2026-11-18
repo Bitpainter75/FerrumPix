@@ -3437,6 +3437,7 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.Backup AndAlso
                        _dialogKind <> AppDialogKind.Restore AndAlso
                        _dialogKind <> AppDialogKind.Shortcuts AndAlso
+                       _dialogKind <> AppDialogKind.ExtensionDownload AndAlso
                        _dialogKind <> AppDialogKind.SaveAs
             End Get
         End Property
@@ -3898,7 +3899,6 @@ Namespace ViewModels
                 If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
                 If _dialogKind = AppDialogKind.Import Then Return IsDialogImportPrimaryEnabled()
                 If _dialogKind = AppDialogKind.Backup OrElse _dialogKind = AppDialogKind.Restore Then Return IsBackupDialogPrimaryEnabled()
-                If _dialogKind = AppDialogKind.ExtensionDownload Then Return IsExtensionDownloadPrimaryEnabled()
                 If BatchFilterHasNothingToDo() Then Return False
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
@@ -4467,6 +4467,9 @@ Namespace ViewModels
                 ' Beschriftungsspalte von 200; "ist nicht leer" und die langen Feldnamen brauchen
                 ' mehr als die 820 von vorher.
                 If DialogShowsSearch Then Return 980
+                ' Erweiterungen herunterladen: Beispielbild, Beschreibung und Knopf nebeneinander;
+                ' schmaler bricht die Beschreibung in viele kurze Zeilen.
+                If DialogShowsExtensionDownload Then Return 960
                 ' Die Tastenkuerzel brauchen die Breite fuer ihre zwei Spalten (Taste 230, Wirkung).
                 If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse
                    DialogShowsShortcuts Then Return 820

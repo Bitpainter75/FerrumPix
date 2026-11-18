@@ -11958,9 +11958,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>Opslaan als kopie</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>Pull request</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>Extensies downloaden</value>
   </data>
@@ -11979,7 +11976,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>Extensies worden gedownload…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>Extensies uit de map van FerrumPix. Elke extensie kwam als pull request, waar de beschrijving en voorbeeldafbeeldingen staan. Alleen wat is aangevinkt wordt gedownload.</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>Extensies uit de map van FerrumPix. Elke extensie kwam als pull request, waar de beschrijving en voorbeeldafbeeldingen staan.</value>
   </data>
 </root>

@@ -11,56 +11,29 @@ Imports ReactiveUI
 Namespace ViewModels
 
     ''' <summary>Eine Zeile im Dialog "Erweiterungen herunterladen": ein Eintrag des Index samt
-    ''' Zustand auf diesem Rechner und Haken.</summary>
+    ''' Zustand auf diesem Rechner und eigenem Knopf zum Herunterladen oder Aktualisieren.</summary>
     Public Class ExtensionDownloadRow
         Inherits ReactiveObject
 
-        Private _isChecked As Boolean
-        Private ReadOnly _changed As Action
+        Private _state As ExtensionCatalogService.InstallState
+        Private _isBusy As Boolean
+        Private _message As String = ""
         Private _preview As Avalonia.Media.Imaging.Bitmap
 
-        ''' <summary>Das Beispielbild aus dem Index, nachgeladen, sobald der Dialog steht. Gehoert der
-        ''' Zeile; der Dialog gibt es beim Schliessen frei.</summary>
-        Public Property Preview As Avalonia.Media.Imaging.Bitmap
-            Get
-                Return _preview
-            End Get
-            Set(value As Avalonia.Media.Imaging.Bitmap)
-                Me.RaiseAndSetIfChanged(_preview, value)
-                Me.RaisePropertyChanged(NameOf(HasPreview))
-            End Set
-        End Property
-
-        Public ReadOnly Property HasPreview As Boolean
-            Get
-                Return _preview IsNot Nothing
-            End Get
-        End Property
-
-        Public Sub New(entry As ExtensionCatalogEntry, state As ExtensionCatalogService.InstallState, isChecked As Boolean, changed As Action)
+        Public Sub New(entry As ExtensionCatalogEntry, state As ExtensionCatalogService.InstallState, Optional formerlyShipped As Boolean = False)
             Me.Entry = entry
-            Me.State = state
-            _isChecked = isChecked
-            _changed = changed
+            _state = state
+            Me.FormerlyShipped = formerlyShipped
             Dim parts As New List(Of String) From {
                 String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Fassung {0}"), entry.Version)}
             If entry.Author.Length > 0 Then parts.Add(entry.Author)
             Details = String.Join(", ", parts)
-            Select Case state
-                Case ExtensionCatalogService.InstallState.Installed
-                    StateText = LocalizationService.T("Installiert")
-                Case ExtensionCatalogService.InstallState.UpdateAvailable
-                    StateText = String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Aktualisierung von Fassung {0}"),
-                                              ExtensionService.Find(entry.Id)?.Version)
-                Case Else
-                    StateText = ""
-            End Select
         End Sub
 
         Public ReadOnly Property Entry As ExtensionCatalogEntry
-        Public ReadOnly Property State As ExtensionCatalogService.InstallState
         Public ReadOnly Property Details As String
-        Public ReadOnly Property StateText As String
+        ''' <summary>War in 0.9.87 mitgeliefert, eingeblendet und fehlt jetzt; steht deshalb oben.</summary>
+        Public ReadOnly Property FormerlyShipped As Boolean
 
         Public ReadOnly Property Name As String
             Get
@@ -80,50 +53,123 @@ Namespace ViewModels
             End Get
         End Property
 
-        Public ReadOnly Property HasStateText As Boolean
-            Get
-                Return StateText.Length > 0
-            End Get
-        End Property
-
-        Public ReadOnly Property IsUpdate As Boolean
-            Get
-                Return State = ExtensionCatalogService.InstallState.UpdateAvailable
-            End Get
-        End Property
-
-        ''' <summary>Eine schon installierte Erweiterung in derselben Fassung gibt es nichts zu holen.</summary>
-        Public ReadOnly Property CanCheck As Boolean
-            Get
-                Return State <> ExtensionCatalogService.InstallState.Installed
-            End Get
-        End Property
-
         Public ReadOnly Property HasPullRequest As Boolean
             Get
                 Return Entry.PullRequest.Length > 0
             End Get
         End Property
 
-        Public Property IsChecked As Boolean
+        Public Property State As ExtensionCatalogService.InstallState
             Get
-                Return _isChecked
+                Return _state
+            End Get
+            Set(value As ExtensionCatalogService.InstallState)
+                Me.RaiseAndSetIfChanged(_state, value)
+                RaiseStateDependents()
+            End Set
+        End Property
+
+        Public Property IsBusy As Boolean
+            Get
+                Return _isBusy
             End Get
             Set(value As Boolean)
-                If Not CanCheck Then value = False
-                Me.RaiseAndSetIfChanged(_isChecked, value)
-                _changed?.Invoke()
+                Me.RaiseAndSetIfChanged(_isBusy, value)
+                RaiseStateDependents()
             End Set
+        End Property
+
+        ''' <summary>Was beim letzten Herunterladen schiefging; leer sonst.</summary>
+        Public Property Message As String
+            Get
+                Return _message
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_message, If(value, ""))
+                Me.RaisePropertyChanged(NameOf(HasMessage))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasMessage As Boolean
+            Get
+                Return _message.Length > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsUpdate As Boolean
+            Get
+                Return _state = ExtensionCatalogService.InstallState.UpdateAvailable
+            End Get
+        End Property
+
+        ''' <summary>Der Knopf ist frei, solange es etwas zu holen gibt und nicht schon geholt wird.</summary>
+        Public ReadOnly Property CanDownload As Boolean
+            Get
+                Return Not _isBusy AndAlso _state <> ExtensionCatalogService.InstallState.Installed
+            End Get
+        End Property
+
+        Public ReadOnly Property ButtonText As String
+            Get
+                If _isBusy Then Return LocalizationService.T("Wird geladen…")
+                Select Case _state
+                    Case ExtensionCatalogService.InstallState.Installed : Return LocalizationService.T("Installiert")
+                    Case ExtensionCatalogService.InstallState.UpdateAvailable : Return LocalizationService.T("Aktualisieren")
+                    Case Else : Return LocalizationService.T("Herunterladen")
+                End Select
+            End Get
+        End Property
+
+        ''' <summary>Unter dem Namen: bei einer Aktualisierung die vorhandene Fassung.</summary>
+        Public ReadOnly Property StateText As String
+            Get
+                If _state <> ExtensionCatalogService.InstallState.UpdateAvailable Then Return ""
+                Return String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Aktualisierung von Fassung {0}"),
+                                     ExtensionService.Find(Entry.Id)?.Version)
+            End Get
+        End Property
+
+        Public ReadOnly Property HasStateText As Boolean
+            Get
+                Return StateText.Length > 0
+            End Get
+        End Property
+
+        Private Sub RaiseStateDependents()
+            Me.RaisePropertyChanged(NameOf(IsUpdate))
+            Me.RaisePropertyChanged(NameOf(CanDownload))
+            Me.RaisePropertyChanged(NameOf(ButtonText))
+            Me.RaisePropertyChanged(NameOf(StateText))
+            Me.RaisePropertyChanged(NameOf(HasStateText))
+        End Sub
+
+        ''' <summary>Das Beispielbild aus dem Index, nachgeladen, sobald der Dialog steht. Gehoert der
+        ''' Zeile; der Dialog gibt es beim Schliessen frei.</summary>
+        Public Property Preview As Avalonia.Media.Imaging.Bitmap
+            Get
+                Return _preview
+            End Get
+            Set(value As Avalonia.Media.Imaging.Bitmap)
+                Me.RaiseAndSetIfChanged(_preview, value)
+                Me.RaisePropertyChanged(NameOf(HasPreview))
+            End Set
+        End Property
+
+        Public ReadOnly Property HasPreview As Boolean
+            Get
+                Return _preview IsNot Nothing
+            End Get
         End Property
     End Class
 
     ''' <summary>Der Dialog "Erweiterungen herunterladen" (ExtensionCatalogService): der Index aus
-    ''' dem Repository als Liste zum Anhaken, mit Zustand je Eintrag (neu, installiert, Aktualisierung)
-    ''' und dem Link zum Pull Request, in dem die Erweiterung beschrieben ist.
+    ''' dem Repository als Liste, je Eintrag Beispielbild, Beschreibung, Zustand auf diesem Rechner,
+    ''' ein Knopf zur Beschreibung im Pull Request und ein Knopf, der sie sofort holt oder
+    ''' aktualisiert. Der Dialog selbst hat nur "Schließen".
     '''
-    ''' Vorgehakt sind die Aktualisierungen und die Erweiterungen, die ein Nutzer in 0.9.87 aus dem
-    ''' Lieferumfang eingeblendet hatte und die seitdem fehlen (AppSettings.ShownExtensions); sonst
-    ''' nichts, geholt wird nur, was der Nutzer ausdruecklich will.</summary>
+    ''' Oben stehen die Aktualisierungen und die Erweiterungen, die ein Nutzer in 0.9.87 aus dem
+    ''' Lieferumfang eingeblendet hatte und die seitdem fehlen (AppSettings.ShownExtensions); geholt
+    ''' wird nur auf den Knopf hin.</summary>
     Partial Public Class MainWindowViewModel
 
         Public ReadOnly Property DialogExtensionRows As New ObservableCollection(Of ExtensionDownloadRow)()
@@ -135,6 +181,7 @@ Namespace ViewModels
         End Property
 
         Private _openExtensionPullRequestCommand As ICommand
+        Private _downloadExtensionRowCommand As ICommand
 
         ''' <summary>Oeffnet den Pull Request einer Erweiterung im Browser. Nur Adressen, die der
         ''' Index als Pull Request von FerrumPix angenommen hat.</summary>
@@ -151,8 +198,33 @@ Namespace ViewModels
             End Get
         End Property
 
-        Private Function IsExtensionDownloadPrimaryEnabled() As Boolean
-            Return DialogExtensionRows.Any(Function(r) r.IsChecked)
+        ''' <summary>Holt die Erweiterung einer Zeile oder aktualisiert sie.</summary>
+        Public ReadOnly Property DownloadExtensionRowCommand As ICommand
+            Get
+                If _downloadExtensionRowCommand Is Nothing Then
+                    _downloadExtensionRowCommand = ReactiveCommand.CreateFromTask(Of ExtensionDownloadRow)(AddressOf DownloadExtensionRowAsync)
+                End If
+                Return _downloadExtensionRowCommand
+            End Get
+        End Property
+
+        Friend Async Function DownloadExtensionRowAsync(row As ExtensionDownloadRow) As Task
+            If row Is Nothing OrElse Not row.CanDownload Then Return
+            row.IsBusy = True
+            row.Message = ""
+            Try
+                Dim result = Await ExtensionCatalogService.DownloadAsync(row.Entry)
+                If result.Succeeded Then
+                    row.State = ExtensionCatalogService.StateOf(row.Entry)
+                Else
+                    row.Message = LocalizationService.T("Nicht geladen:") & " " & result.ErrorText
+                End If
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Extensions.Download", ex)
+                row.Message = LocalizationService.T("Nicht geladen:") & " " & ex.Message
+            Finally
+                row.IsBusy = False
+            End Try
         End Function
 
         ''' <summary>Baut die Zeilen aus dem Index. Getrennt vom Dialog, damit der Pruefstand sie
@@ -162,18 +234,32 @@ Namespace ViewModels
             Dim formerlyShown = New HashSet(Of String)(
                 If(AppSettingsService.Load().ShownExtensions, "").Split(","c).Select(Function(t) t.Trim()).Where(Function(t) t.Length > 0),
                 StringComparer.Ordinal)
-            Dim refresh As Action = Sub() Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
-            ' Aktualisierungen zuerst, dann was noch fehlt, zuletzt das Vorhandene; je nach Name.
-            For Each entry In entries.
-                OrderBy(Function(e) StateOrder(ExtensionCatalogService.StateOf(e))).
-                ThenBy(Function(e) e.Name, StringComparer.CurrentCultureIgnoreCase)
-                Dim state = ExtensionCatalogService.StateOf(entry)
-                Dim preselect = state = ExtensionCatalogService.InstallState.UpdateAvailable OrElse
-                                (state = ExtensionCatalogService.InstallState.NotInstalled AndAlso formerlyShown.Contains(entry.Id))
-                DialogExtensionRows.Add(New ExtensionDownloadRow(entry, state, preselect, refresh))
+            Dim rows = entries.Select(
+                Function(e)
+                    Dim state = ExtensionCatalogService.StateOf(e)
+                    Return New ExtensionDownloadRow(e, state,
+                        state = ExtensionCatalogService.InstallState.NotInstalled AndAlso formerlyShown.Contains(e.Id))
+                End Function)
+            ' Aktualisierungen und frueher Mitgeliefertes zuerst, dann was noch fehlt, zuletzt das
+            ' Vorhandene; je nach Name. Die Beispiele der Anleitung (Kennung "example.") stehen
+            ' ganz unten, gleich in welchem Zustand: sie zeigen, wie man schreibt, und sind keine
+            ' Werkzeuge, die man sucht.
+            For Each row In rows.OrderBy(Function(r) IsGuideExample(r)).
+                                 ThenBy(Function(r) RowOrder(r)).
+                                 ThenBy(Function(r) r.Name, StringComparer.CurrentCultureIgnoreCase)
+                DialogExtensionRows.Add(row)
             Next
-            refresh()
         End Sub
+
+        Private Shared Function IsGuideExample(row As ExtensionDownloadRow) As Boolean
+            Return row.Entry.Id.StartsWith("example.", StringComparison.Ordinal)
+        End Function
+
+        Private Shared Function RowOrder(row As ExtensionDownloadRow) As Integer
+            If row.IsUpdate OrElse row.FormerlyShipped Then Return 0
+            If row.State = ExtensionCatalogService.InstallState.NotInstalled Then Return 1
+            Return 2
+        End Function
 
         ''' <summary>Laedt die Beispielbilder nach, eines nach dem anderen. Ein Bild, das ankommt,
         ''' nachdem der Dialog zu ist, gehoert niemandem mehr und wird gleich freigegeben. Async Sub:
@@ -216,15 +302,7 @@ Namespace ViewModels
             Next
         End Sub
 
-        Private Shared Function StateOrder(state As ExtensionCatalogService.InstallState) As Integer
-            Select Case state
-                Case ExtensionCatalogService.InstallState.UpdateAvailable : Return 0
-                Case ExtensionCatalogService.InstallState.NotInstalled : Return 1
-                Case Else : Return 2
-            End Select
-        End Function
-
-        ''' <summary>Index holen, Dialog zeigen, Gewaehltes holen und pruefen, Ergebnis melden.</summary>
+        ''' <summary>Index holen, Dialog zeigen; geholt wird je Zeile auf ihren Knopf hin.</summary>
         Public Async Function ShowExtensionDownloadDialogAsync() As Task
             Dim entries As List(Of ExtensionCatalogEntry) = Nothing
             Dim problem As String = Nothing
@@ -245,36 +323,11 @@ Namespace ViewModels
 
             FillExtensionDownloadRows(entries)
             LoadExtensionPreviews(DialogExtensionRows.ToList())
-            Dim answer = Await ShowDialogAsync(AppDialogKind.ExtensionDownload,
-                                               "Erweiterungen herunterladen",
-                                               "Erweiterungen aus dem Verzeichnis von FerrumPix. Jede kam als Pull Request, dort stehen Beschreibung und Beispielbilder. Geholt wird nur, was einen Haken hat.",
-                                               "", "Herunterladen", "Schließen")
-            Dim chosen = DialogExtensionRows.Where(Function(r) r.IsChecked).Select(Function(r) r.Entry).ToList()
+            Await ShowDialogAsync(AppDialogKind.ExtensionDownload,
+                                  "Erweiterungen herunterladen",
+                                  "Erweiterungen aus dem Verzeichnis von FerrumPix. Jede kam als Pull Request, dort stehen Beschreibung und Beispielbilder.",
+                                  "", "Schließen", "")
             ReleaseExtensionRows()
-            If answer Is Nothing OrElse chosen.Count = 0 Then Return
-
-            Dim loaded As New List(Of String)()
-            Dim failed As New List(Of String)()
-            Try
-                BeginBusyOverlay(LocalizationService.T("Erweiterungen werden heruntergeladen…"))
-                For Each entry In chosen
-                    Dim result = Await ExtensionCatalogService.DownloadAsync(entry)
-                    If result.Succeeded Then loaded.Add(entry.Name) Else failed.Add(entry.Name & ": " & result.ErrorText)
-                Next
-            Catch ex As Exception
-                DiagnosticLogService.LogException("Extensions.Download", ex)
-                failed.Add(ex.Message)
-            Finally
-                EndBusyOverlay()
-            End Try
-            Dim lines As New List(Of String)()
-            If loaded.Count > 0 Then
-                lines.Add(String.Format(CultureInfo.CurrentCulture,
-                                        LocalizationService.T("Geladen: {0}. Das Werkzeug Erweiterungen im Editor zeigt ihre Regler."),
-                                        String.Join(", ", loaded)))
-            End If
-            If failed.Count > 0 Then lines.Add(LocalizationService.T("Nicht geladen:") & " " & String.Join("; ", failed))
-            Await ShowMessageAsync(LocalizationService.T("Erweiterungen herunterladen"), String.Join(vbLf, lines))
         End Function
 
     End Class

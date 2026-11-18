@@ -12,11 +12,11 @@ sliders and a reset button. Without any extension the tool does not appear at al
 
 FerrumPix does not come with extensions. Open **Settings**, section **Extensions**, and choose
 **Download extensions**: the list shows every extension in the FerrumPix directory with a short
-description, a sample picture where there is one, and a link to the pull request it came with.
-Tick the ones you want and choose **Download**. An extension you already have shows as
-installed; when the directory has a newer version, it shows as an update, is listed first and is
-ticked already. Nothing is downloaded until you choose it, and every file is checked against the
-checksum in the directory and then like any other extension.
+description, a sample picture where there is one, and a **Description** button that opens the
+pull request it came with. **Download** next to an extension installs it right away. An
+extension you already have shows as installed; when the directory has a newer version, it is
+listed first and its button says **Update**. Every file is checked against the checksum in the
+directory and then like any other extension.
 
 To install a file you have yourself, choose **Load extension**. FerrumPix checks the
 file completely before it copies it into its extension folder. If something is wrong, the file is

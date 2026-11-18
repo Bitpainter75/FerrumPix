@@ -11936,9 +11936,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>Als Kopie speichern</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>Pull Request</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>Erweiterungen herunterladen</value>
   </data>
@@ -11957,7 +11954,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>Erweiterungen werden heruntergeladen…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>Erweiterungen aus dem Verzeichnis von FerrumPix. Jede kam als Pull Request, dort stehen Beschreibung und Beispielbilder. Geholt wird nur, was einen Haken hat.</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>Erweiterungen aus dem Verzeichnis von FerrumPix. Jede kam als Pull Request, dort stehen Beschreibung und Beispielbilder.</value>
   </data>
 </root>

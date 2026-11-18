@@ -11958,9 +11958,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>Tallenna kopiona</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>Pull request</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>Lataa laajennuksia</value>
   </data>
@@ -11979,7 +11976,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>Laajennuksia ladataan…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>Laajennuksia FerrumPixin hakemistosta. Jokainen tuli pull requestina, josta löytyvät kuvaus ja esimerkkikuvat. Vain valitut ladataan.</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>Laajennuksia FerrumPixin hakemistosta. Jokainen tuli pull requestina, josta löytyvät kuvaus ja esimerkkikuvat.</value>
   </data>
 </root>

@@ -11916,9 +11916,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>另存为副本</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>拉取请求</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>下载扩展</value>
   </data>
@@ -11937,7 +11934,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>正在下载扩展…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>来自 FerrumPix 目录的扩展。每个扩展都以拉取请求的形式提交，说明和示例图片都在那里。只下载已勾选的项目。</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>来自 FerrumPix 目录的扩展。每个扩展都以拉取请求的形式提交，说明和示例图片都在那里。</value>
   </data>
 </root>

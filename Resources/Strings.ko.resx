@@ -11962,9 +11962,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>사본으로 저장</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>풀 리퀘스트</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>확장 기능 다운로드</value>
   </data>
@@ -11983,7 +11980,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>확장 기능을 다운로드하는 중…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>FerrumPix 디렉터리의 확장 기능입니다. 각각 풀 리퀘스트로 들어왔으며 설명과 예시 사진은 그곳에 있습니다. 체크한 것만 다운로드됩니다.</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>FerrumPix 디렉터리의 확장 기능입니다. 각각 풀 리퀘스트로 들어왔으며 설명과 예시 사진은 그곳에 있습니다.</value>
   </data>
 </root>

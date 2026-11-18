@@ -11958,9 +11958,6 @@
   <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
     <value>コピーとして保存</value>
   </data>
-  <data name="Pull_Request_b442febb" xml:space="preserve">
-    <value>プルリクエスト</value>
-  </data>
   <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
     <value>拡張機能をダウンロード</value>
   </data>
@@ -11979,7 +11976,7 @@
   <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
     <value>拡張機能をダウンロードしています…</value>
   </data>
-  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
-    <value>FerrumPix のディレクトリにある拡張機能です。それぞれプルリクエストとして届き、説明とサンプル画像はそこにあります。チェックしたものだけがダウンロードされます。</value>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
+    <value>FerrumPix のディレクトリにある拡張機能です。それぞれプルリクエストとして届き、説明とサンプル画像はそこにあります。</value>
   </data>
 </root>
