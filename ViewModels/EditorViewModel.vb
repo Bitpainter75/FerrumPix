@@ -31,12 +31,30 @@ Namespace ViewModels
         '''
         ''' Bis zum 2026-09-10 war das die feste Breite. Seitdem laesst sich der Rand ziehen; die
         ''' Zahl bleibt die Untergrenze, damit Beschriftung, Regler und Zahlenfeld nebeneinander
-        ''' passen.</summary>
-        Public Const AdjustmentsPanelMinWidth As Double = 350.0
+        ''' passen. Seit der breiteren Vorgabe (460) liegt sie bei 400 statt 350: schmaler wird die
+        ''' Spur der Regler so kurz, dass sie zu stark wirken; eine gespeicherte Breite darunter hebt
+        ''' ClampAdjustmentsPanelWidth beim Lesen an.</summary>
+        Public Const AdjustmentsPanelMinWidth As Double = 400.0
 
         ''' <summary>Breite eines neuen Anpassungspanels. Die Mindestbreite bleibt darunter, damit
-        ''' bestehende, bewusst schmal gezogene Einstellungen unveraendert weiter funktionieren.</summary>
-        Public Const AdjustmentsPanelDefaultWidth As Double = 380.0
+        ''' bestehende, bewusst schmal gezogene Einstellungen unveraendert weiter funktionieren.
+        '''
+        ''' 460 statt 380: bei 380 blieben der Spur eines Reglers nach Beschriftung (92) und
+        ''' Zahlenfeld (44) gut 200 Punkte, auf -100 bis +100 also etwa eine Stufe je Bildpunkt, und
+        ''' Nutzer empfanden die Regler als zu stark. Mit 460 wird die Spur rund 80 Punkte laenger.</summary>
+        Public Const AdjustmentsPanelDefaultWidth As Double = 460.0
+
+        ''' <summary>Die fruehere Vorgabe. Wer nie gezogen hat, traegt sie in seiner
+        ''' Einstellungsdatei, denn die Vorgabe wird mitgespeichert; ein gezogener Rand landet
+        ''' praktisch nie genau hier.</summary>
+        Public Const AdjustmentsPanelFormerDefaultWidth As Double = 380.0
+
+        ''' <summary>Beim Laden der Einstellungen: die fruehere Vorgabe wird zur heutigen, alles andere
+        ''' bleibt, wie es ist. Sonst kaeme die breitere Vorgabe nur bei neuen Installationen an.</summary>
+        Public Shared Function MigrateAdjustmentsPanelWidth(value As Double) As Double
+            If value = AdjustmentsPanelFormerDefaultWidth Then Return AdjustmentsPanelDefaultWidth
+            Return value
+        End Function
 
         ''' <summary>Und die Obergrenze. Ein Panel, das die halbe Bühne einnimmt, hilft beim
         ''' Feineinstellen nicht mehr - dort sieht man nicht mehr, was man einstellt. Gemessen an

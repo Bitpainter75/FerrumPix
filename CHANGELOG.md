@@ -2,6 +2,9 @@
 
 ### Changes
 
+- The adjustments panel in the editor is wider by default, so the sliders have a longer track and
+  react more finely. It can still be dragged wider at its edge.
+
 - Extensions are now downloaded in the settings, section Extensions, with Download extensions.
   The list shows every extension in the FerrumPix directory with a short description, a sample
   picture, a button to its description and a button that downloads it right away. Extensions you
