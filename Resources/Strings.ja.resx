@@ -9975,9 +9975,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>これらの画像には調整を貼り付けられません。</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>{0} 個の JPG、PNG、WebP ファイルが上書きされます。RAW と PSD ファイルは調整をサイドカーファイルに記録します。</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>選別</value>
   </data>
@@ -11954,5 +11951,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>グラフィックカードが {0} 秒以内に応答しませんでした</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} 件の JPG、PNG、WebP ファイルにはサイドカーファイルがないため、調整はピクセルに書き込まれます。コピーの場合は、名前を付けて保存のパターンで名付けた新しいファイルが隣に作られ、元のファイルはそのまま残ります。RAW と PSD ファイルは調整をサイドカーファイルに保存します。</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>コピーとして保存</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>プルリクエスト</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>拡張機能をダウンロード</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>インストール済み</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>バージョン {0} からの更新</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>拡張機能の一覧を読み込んでいます…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>拡張機能の一覧を読み込めませんでした。</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>拡張機能をダウンロードしています…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>FerrumPix のディレクトリにある拡張機能です。それぞれプルリクエストとして届き、説明とサンプル画像はそこにあります。チェックしたものだけがダウンロードされます。</value>
   </data>
 </root>

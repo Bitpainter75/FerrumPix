@@ -132,6 +132,10 @@
                                                 Margin="0,16,0,0"
                                                 IsVisible="{Binding DialogShowsBackupOrRestore}"/>
 
+                        <views:ExtensionDownloadDialogView Grid.Row="3"
+                                                           Margin="0,16,0,0"
+                                                           IsVisible="{Binding DialogShowsExtensionDownload}"/>
+
                         <!-- Aufnahmedatum: ZWEI Wege in einem Dialog. Der feste Wert ist für Bilder,
                              deren Zeit fehlt oder ganz falsch ist; das Verschieben für eine falsch
                              gestellte Kamerauhr, wo die Abstände zwischen den Aufnahmen stimmen und

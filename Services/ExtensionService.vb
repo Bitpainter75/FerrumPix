@@ -280,6 +280,8 @@ Namespace Services
         ''' <summary>Fassung des Dateiformats, die diese Anwendung liest.</summary>
         Public Const FormatVersion As Integer = 1
         Private Const MaxFileBytes As Integer = 256 * 1024
+        ''' <summary>Die groesste Erweiterungsdatei, die gelesen wird.</summary>
+        Public Const MaxFileSize As Integer = MaxFileBytes
         Private Const MaxControls As Integer = 32
 
         Private Shared ReadOnly _lock As New Object()
@@ -564,19 +566,6 @@ Namespace Services
                     definitions.Add(loaded.Definition)
                 Next
             Next
-            ' Zuletzt die in der Bibliothek: mitgeliefert wie der Ordner neben dem Programm, und wie
-            ' dort gewinnt eine Datei des Nutzers mit derselben Kennung. So kann ein Autor seine
-            ' Erweiterung weiterentwickeln, ohne auf eine neue Fassung von FerrumPix zu warten.
-            For Each embedded In LoadEmbedded()
-                If Not embedded.Succeeded Then
-                    failures.Add(embedded)
-                    DiagnosticLogService.LogAlways("Extensions.Load", embedded.FilePath & ": " & embedded.ErrorText)
-                    Continue For
-                End If
-                If definitions.Any(Function(d) String.Equals(d.Id, embedded.Definition.Id, StringComparison.Ordinal)) Then Continue For
-                embedded.Definition.IsBundled = True
-                definitions.Add(embedded.Definition)
-            Next
             _definitions = definitions
             _failures = failures
             Interlocked.Increment(_revision)
@@ -589,17 +578,7 @@ Namespace Services
             Dim loaded = LoadFile(sourcePath)
             If Not loaded.Succeeded Then Return loaded
             Try
-                Directory.CreateDirectory(UserFolder)
-                Dim target = Path.Combine(UserFolder, loaded.Definition.Id & FileExtension)
-                ' Eine fruehere Datei derselben Kennung unter anderem Namen weicht, sonst laege
-                ' die Erweiterung zweimal im Ordner und die aeltere koennte gewinnen.
-                For Each existing In Directory.GetFiles(UserFolder, "*" & FileExtension)
-                    If PathIdentity.Equals(existing, target) Then Continue For
-                    Dim other = LoadFile(existing)
-                    If other.Succeeded AndAlso String.Equals(other.Definition.Id, loaded.Definition.Id, StringComparison.Ordinal) Then
-                        File.Delete(existing)
-                    End If
-                Next
+                Dim target = PrepareTarget(loaded.Definition.Id)
                 If Not PathIdentity.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(target)) Then
                     ImageProcessor.WriteAllBytesAtomic(target, File.ReadAllBytes(sourcePath))
                     ' Der Ursprung, damit "Neu einlesen" ihn wieder findet.
@@ -613,6 +592,47 @@ Namespace Services
             Reload()
             loaded.Definition = If(Find(loaded.Definition.Id), loaded.Definition)
             Return loaded
+        End Function
+
+        ''' <summary>Nimmt eine heruntergeladene Erweiterung auf (ExtensionCatalogService). Geprueft
+        ''' wird genau wie bei <see cref="Install"/>; dazu muss die Datei die Kennung tragen, unter
+        ''' der sie im Index steht, sonst ersetzte ein Eintrag still eine fremde Erweiterung. Einen
+        ''' Ursprung fuer "Neu einlesen" gibt es nicht: die Quelle ist der Index, und ein frueher
+        ''' gemerkter Ursprung derselben Kennung wird vergessen.</summary>
+        Public Shared Function InstallDownloaded(json As String, expectedId As String) As ExtensionLoadResult
+            Dim loaded = LoadText(If(json, ""), "")
+            If Not loaded.Succeeded Then Return loaded
+            If Not String.Equals(loaded.Definition.Id, expectedId, StringComparison.Ordinal) Then
+                Return New ExtensionLoadResult With {.ErrorText = $"the file has the id ""{loaded.Definition.Id}"" instead of ""{expectedId}"""}
+            End If
+            Try
+                Dim target = PrepareTarget(loaded.Definition.Id)
+                ImageProcessor.WriteAllBytesAtomic(target, Encoding.UTF8.GetBytes(json))
+                AppSettingsService.SaveExtensionSource(loaded.Definition.Id, "")
+                loaded.FilePath = target
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Extensions.InstallDownloaded", ex)
+                Return New ExtensionLoadResult With {.ErrorText = ex.Message}
+            End Try
+            Reload()
+            loaded.Definition = If(Find(loaded.Definition.Id), loaded.Definition)
+            Return loaded
+        End Function
+
+        ''' <summary>Der Zielpfad im Ordner des Nutzers. Eine fruehere Datei derselben Kennung unter
+        ''' anderem Namen weicht, sonst laege die Erweiterung zweimal im Ordner und die aeltere
+        ''' koennte gewinnen.</summary>
+        Private Shared Function PrepareTarget(id As String) As String
+            Directory.CreateDirectory(UserFolder)
+            Dim target = Path.Combine(UserFolder, id & FileExtension)
+            For Each existing In Directory.GetFiles(UserFolder, "*" & FileExtension)
+                If PathIdentity.Equals(existing, target) Then Continue For
+                Dim other = LoadFile(existing)
+                If other.Succeeded AndAlso String.Equals(other.Definition.Id, id, StringComparison.Ordinal) Then
+                    File.Delete(existing)
+                End If
+            Next
+            Return target
         End Function
 
         ''' <summary>Entfernt eine Erweiterung des Nutzers. Rezepte, die sie nennen, behalten ihren
@@ -669,35 +689,10 @@ Namespace Services
             "vec2", "vec3", "vec4", "float2", "float3", "float4", "half2", "half3", "half4", "mat2", "mat3", "mat4",
             "break", "continue", "discard", "switch", "case", "default"}
 
-        ''' <summary>Der Anfang der Namen, unter denen die mitgelieferten Erweiterungen in der
-        ''' Bibliothek liegen (FerrumPix.vbproj).</summary>
-        Private Const EmbeddedPrefix As String = "FerrumPix.Extensions."
-
-        ''' <summary>Die mitgelieferten Erweiterungen aus der Bibliothek, in der Reihenfolge ihrer
-        ''' Namen. Sie haben keine Datei: FilePath bleibt leer, Entfernen geht nicht.</summary>
-        Private Shared Function LoadEmbedded() As List(Of ExtensionLoadResult)
-            Dim results As New List(Of ExtensionLoadResult)()
-            ' Fuer Pruefungen, die einen leeren Bestand brauchen, wie FERRUMPIX_EXTENSIONS fuer den
-            ' Ordner des Nutzers.
-            If Environment.GetEnvironmentVariable("FERRUMPIX_NO_BUNDLED_EXTENSIONS") = "1" Then Return results
-            Dim assembly = GetType(ExtensionService).Assembly
-            Dim names = assembly.GetManifestResourceNames().
-                Where(Function(n) n.StartsWith(EmbeddedPrefix, StringComparison.Ordinal) AndAlso
-                                  n.EndsWith(FileExtension, StringComparison.Ordinal)).
-                OrderBy(Function(n) n, StringComparer.Ordinal)
-            For Each name In names
-                Dim result As New ExtensionLoadResult With {.FilePath = name.Substring(EmbeddedPrefix.Length)}
-                Try
-                    Using stream = assembly.GetManifestResourceStream(name), reader As New StreamReader(stream, Encoding.UTF8)
-                        result = LoadText(reader.ReadToEnd(), "")
-                        result.FilePath = name.Substring(EmbeddedPrefix.Length)
-                    End Using
-                Catch ex As Exception
-                    result.ErrorText = ex.Message
-                End Try
-                results.Add(result)
-            Next
-            Return results
+        ''' <summary>Taugt die Zeichenkette als Kennung einer Erweiterung? Dieselbe Regel wie beim
+        ''' Lesen der Datei, fuer den Index der Erweiterungen.</summary>
+        Public Shared Function IsValidId(id As String) As Boolean
+            Return Not String.IsNullOrEmpty(id) AndAlso id.Length <= 64 AndAlso IdPattern.IsMatch(id)
         End Function
 
         ''' <summary>Liest und prueft eine Datei, ohne sie in den Bestand aufzunehmen.</summary>

@@ -9979,9 +9979,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>이 사진들에는 조정을 붙여 넣을 수 없습니다.</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>JPG, PNG 또는 WebP 파일 {0}개를 덮어씁니다. RAW 및 PSD 파일은 조정이 사이드카 파일에 저장됩니다.</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>골라내기</value>
   </data>
@@ -11958,5 +11955,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>그래픽 카드가 {0}초 안에 응답하지 않았습니다</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>JPG, PNG 또는 WebP 파일 {0}개에는 사이드카 파일이 없어서 조정이 픽셀에 적용됩니다. 사본으로 하면 다른 이름으로 저장의 이름 패턴에 따라 옆에 새 파일이 만들어지고 원본은 그대로 남습니다. RAW와 PSD 파일은 조정을 사이드카 파일에 저장합니다.</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>사본으로 저장</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>풀 리퀘스트</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>확장 기능 다운로드</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>설치됨</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>버전 {0}에서 업데이트</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>확장 기능 목록을 불러오는 중…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>확장 기능 목록을 불러올 수 없습니다.</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>확장 기능을 다운로드하는 중…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>FerrumPix 디렉터리의 확장 기능입니다. 각각 풀 리퀘스트로 들어왔으며 설명과 예시 사진은 그곳에 있습니다. 체크한 것만 다운로드됩니다.</value>
   </data>
 </root>

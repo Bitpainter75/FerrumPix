@@ -9934,9 +9934,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>Não é possível colar ajustes nestas imagens.</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>{0} ficheiro(s) JPG, PNG ou WebP serão substituídos. Os ficheiros RAW e PSD recebem os ajustes no seu ficheiro complementar.</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Triagem</value>
   </data>
@@ -11913,5 +11910,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>a placa não respondeu em {0} segundos</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} arquivo(s) JPG, PNG ou WebP não têm arquivo complementar, então os ajustes vão para os pixels. Como cópia, um novo arquivo é criado ao lado, com o nome segundo o padrão de Salvar como, e o original permanece. Arquivos RAW e PSD recebem os ajustes no seu arquivo complementar.</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>Salvar como cópia</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>Pull request</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>Baixar extensões</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>Instalada</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>Atualização da versão {0}</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>Carregando a lista de extensões…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>Não foi possível carregar a lista de extensões.</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>Baixando extensões…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>Extensões do diretório do FerrumPix. Cada uma chegou como pull request, onde estão a descrição e imagens de exemplo. Só é baixado o que estiver marcado.</value>
   </data>
 </root>

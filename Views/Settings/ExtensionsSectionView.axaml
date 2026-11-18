@@ -9,7 +9,11 @@
                        Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap" MaxWidth="660" HorizontalAlignment="Left"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Classes="accent" Padding="12,7" Click="OnInstallExtensionClick">
+            <!-- Der Index der Erweiterungen im Repository; mitgeliefert wird keine. -->
+            <Button Classes="accent" Padding="12,7" Command="{Binding DownloadExtensionsCommand}">
+                <TextBlock Text="Erweiterungen herunterladen" FontSize="{DynamicResource FP.Font.Small}"/>
+            </Button>
+            <Button Classes="ghost" Padding="12,7" Click="OnInstallExtensionClick">
                 <TextBlock Text="Erweiterung laden" FontSize="{DynamicResource FP.Font.Small}"/>
             </Button>
             <Button Classes="ghost" Padding="12,7" Command="{Binding ReloadExtensionsCommand}">

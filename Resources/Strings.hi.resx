@@ -9979,9 +9979,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>इन तस्वीरों पर समायोजन चिपकाए नहीं जा सकते।</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>{0} JPG, PNG या WebP फ़ाइल(ें) ओवरराइट होंगी। RAW और PSD फ़ाइलों के समायोजन उनकी साइडकार फ़ाइल में जाते हैं।</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>छाँटें</value>
   </data>
@@ -11958,5 +11955,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>ग्राफ़िक्स कार्ड ने {0} सेकंड में जवाब नहीं दिया</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} JPG, PNG या WebP फ़ाइल(ों) की कोई साइडकार फ़ाइल नहीं है, इसलिए समायोजन उनके पिक्सेल में जाते हैं। कॉपी के रूप में बगल में एक नई फ़ाइल बनती है, जिसका नाम इस रूप में सहेजें के पैटर्न से बनता है, और मूल फ़ाइल वैसी ही रहती है। RAW और PSD फ़ाइलों को समायोजन उनकी साइडकार फ़ाइल में मिलते हैं।</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>कॉपी के रूप में सहेजें</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>पुल रिक्वेस्ट</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>एक्सटेंशन डाउनलोड करें</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>इंस्टॉल है</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>संस्करण {0} से अपडेट</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>एक्सटेंशन की सूची लोड हो रही है…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>एक्सटेंशन की सूची लोड नहीं हो सकी।</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>एक्सटेंशन डाउनलोड हो रहे हैं…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>FerrumPix की निर्देशिका से एक्सटेंशन। हर एक पुल रिक्वेस्ट के रूप में आया, जहाँ उसका विवरण और उदाहरण चित्र हैं। केवल चुने हुए ही डाउनलोड होते हैं।</value>
   </data>
 </root>

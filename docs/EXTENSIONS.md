@@ -10,7 +10,15 @@ sliders and a reset button. Without any extension the tool does not appear at al
 
 ## Installing an extension
 
-Open **Settings**, section **Extensions**, and choose **Load extension**. FerrumPix checks the
+FerrumPix does not come with extensions. Open **Settings**, section **Extensions**, and choose
+**Download extensions**: the list shows every extension in the FerrumPix directory with a short
+description, a sample picture where there is one, and a link to the pull request it came with.
+Tick the ones you want and choose **Download**. An extension you already have shows as
+installed; when the directory has a newer version, it shows as an update, is listed first and is
+ticked already. Nothing is downloaded until you choose it, and every file is checked against the
+checksum in the directory and then like any other extension.
+
+To install a file you have yourself, choose **Load extension**. FerrumPix checks the
 file completely before it copies it into its extension folder. If something is wrong, the file is
 not loaded and the section shows the reason, including the line number of a shader error. The
 same section lists every loaded extension and removes the ones you no longer want.
@@ -23,11 +31,6 @@ copy stays and the reason is shown.
 The list below sets the order of the groups in the editor with the arrows, and the eye hides an
 extension in the editor. Neither changes a picture: a hidden extension keeps working in the
 pictures that use it, it only does not show its sliders.
-
-FerrumPix comes with the four examples of this guide. They are hidden at first, so the editor
-only shows the Extensions tool to those who want it: click the eye next to one to bring it into
-the editor. They cannot be removed. If you load your own file with the id of one of them, yours
-is used instead, so you can try a newer version without waiting for a FerrumPix release.
 
 In the editor, each group has the same buttons as the built in ones: the eye compares the
 picture without the extension, the arrow resets the whole group. A slider goes back to its
@@ -65,8 +68,8 @@ do with them.
 
 ## Examples
 
-Four complete extensions come with this guide, in [`docs/extensions`](extensions), and with
-FerrumPix itself, hidden until you show them in the settings:
+The extensions of the directory are complete examples, in [`docs/extensions`](extensions); all of
+them can be downloaded in the settings. Four of them:
 
 - [`spoilerhead.silicon-bonk.json`](extensions/spoilerhead.silicon-bonk.json) turns a finished
   color picture into black and white. Hue and Luminance work like a color filter in front of the
@@ -359,5 +362,14 @@ installed again, it takes effect again.
 ## Sharing
 
 An extension is one file, so sharing it is easy: publish it wherever you like. Please put the
-license in the file and in your repository. If you would like your extension to ship with
-FerrumPix, open an issue with a link to it.
+license in the file.
+
+To bring it into the FerrumPix directory, so that everyone can download it in the settings, open
+a pull request that adds your file to [`docs/extensions`](extensions). Describe in the pull
+request what the extension does and add a picture before and after: the download dialog links
+to the pull request, and a crop of the picture becomes the sample shown there. You do not need
+to touch [`index.json`](extensions/index.json); it is updated after the merge, with the checksum
+of your file.
+
+For a new version, open another pull request that changes your file and raises `version`. Users
+who have it see the update in the download dialog.

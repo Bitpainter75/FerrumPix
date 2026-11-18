@@ -1,0 +1,109 @@
+{
+  "format": 1,
+  "extensions": [
+    {
+      "id": "example.curve-toning",
+      "file": "example.curve-toning.json",
+      "version": 1,
+      "author": "FerrumPix",
+      "name": {
+        "en": "Curve and toning",
+        "de": "Kurve und Tonung"
+      },
+      "description": {
+        "en": "Shapes the brightness with a curve and tones shadows and highlights with two colors. An example of curves, color fields and presets.",
+        "de": "Formt die Helligkeit mit einer Kurve und tont Tiefen und Lichter mit zwei Farben. Ein Beispiel für Kurven, Farbfelder und Voreinstellungen."
+      },
+      "pullRequest": "",
+      "sha256": "0cbc65addf890f59da14860870f66575a1af051524c221cfe746a4e6a16be962"
+    },
+    {
+      "id": "example.light-falloff",
+      "file": "example.light-falloff.json",
+      "version": 1,
+      "author": "FerrumPix",
+      "name": {
+        "en": "Light falloff",
+        "de": "Lichtabfall"
+      },
+      "description": {
+        "en": "Darkens or brightens the picture towards its edges, round like a vignette or as a gradient from one side. An example of a choice, help texts and the position in the picture.",
+        "de": "Dunkelt das Bild zu den Rändern hin ab oder hellt es auf, rund wie eine Vignette oder als Verlauf von einer Seite. Ein Beispiel für eine Auswahlliste, Hilfetexte und die Lage im Bild."
+      },
+      "pullRequest": "",
+      "sha256": "e0c73337923be814685d852210e791557712d27a6e87cf754abd3ca385e62806"
+    },
+    {
+      "id": "spoilerhead.fat-toni",
+      "file": "spoilerhead.fat-toni.json",
+      "version": 1,
+      "author": "Spoilerhead",
+      "name": {
+        "en": "Fat Toni (Split Toning)",
+        "de": "Fat Toni (Teiltonung)"
+      },
+      "description": {
+        "en": "Tones highlights and shadows separately and can tint the base like a paper color. Works on black and white and on color pictures.",
+        "de": "Tont Lichter und Tiefen getrennt und kann den Grund wie eine Papierfarbe einfärben. Wirkt auf Schwarzweiß- und auf Farbbilder."
+      },
+      "pullRequest": "https://github.com/Bitpainter75/FerrumPix/pull/152",
+      "sha256": "e3d8896dd51bf2803da1f03859170268684ec2cd328faa398955237f8414cb4a",
+      "image": "images/spoilerhead.fat-toni.jpg",
+      "imageSha256": "c9e5469dad671dd20dc336f0b75fb2979bd8326842204d79a5c9bfe82fed6313"
+    },
+    {
+      "id": "spoilerhead.gradfilter",
+      "file": "spoilerhead.gradfilter.json",
+      "version": 2,
+      "author": "Spoilerhead",
+      "name": {
+        "en": "Highlight Preserving Graduated Filter",
+        "de": "Verlaufsfilter mit Lichtererhaltung"
+      },
+      "description": {
+        "en": "A graduated density and color filter with a filtered side, a clear side and a rotatable transition. Preserves highlights using the same approach as Highlight Preserving Vignette.",
+        "de": "Ein Grau- und Farbverlaufsfilter mit gefilterter und klarer Seite sowie drehbarem Übergang. Erhält Lichter nach demselben Verfahren wie die Vignette mit Lichterschutz."
+      },
+      "pullRequest": "https://github.com/Bitpainter75/FerrumPix/pull/155",
+      "sha256": "4872e016d103379d1819c742ac59c3d617dd68e7b76e7620f8fc9f57f0e32213",
+      "image": "images/spoilerhead.gradfilter.jpg",
+      "imageSha256": "e0fa10bfa80afb5d75bb4212c783906617f2c5915755d97a4ea48aa7a7820154"
+    },
+    {
+      "id": "spoilerhead.silicon-bonk",
+      "file": "spoilerhead.silicon-bonk.json",
+      "version": 1,
+      "author": "Spoilerhead, original concept by Bernd Gruber (grubernd)",
+      "name": {
+        "en": "Silicon Bonk (Adaptive Black & White)",
+        "de": "Silicon Bonk (Adaptives Schwarzweiß)"
+      },
+      "description": {
+        "en": "Turns a finished color picture into black and white. Hue and Luminance work like a color filter in front of the lens.",
+        "de": "Macht aus einem fertigen Farbbild ein Schwarzweißbild. Farbton und Luminanz wirken wie ein Farbfilter vor dem Objektiv."
+      },
+      "pullRequest": "https://github.com/Bitpainter75/FerrumPix/pull/152",
+      "sha256": "aed4bedce2307832c5369280ed65eadeb319ff2f5c3072f33171b3764a07a55d",
+      "image": "images/spoilerhead.silicon-bonk.jpg",
+      "imageSha256": "c9e5469dad671dd20dc336f0b75fb2979bd8326842204d79a5c9bfe82fed6313"
+    },
+    {
+      "id": "spoilerhead.vignette",
+      "file": "spoilerhead.vignette.json",
+      "version": 1,
+      "author": "Spoilerhead",
+      "name": {
+        "en": "Highlight Preserving Vignette",
+        "de": "Vignette mit Lichterschutz"
+      },
+      "description": {
+        "en": "Darkens the corners by a chosen exposure in EV, with an adjustable untouched center and protection for bright highlights.",
+        "de": "Dunkelt die Ecken um einen gewählten EV-Wert ab, mit einstellbarem unverändertem Zentrum und Schutz für helle Lichter."
+      },
+      "pullRequest": "https://github.com/Bitpainter75/FerrumPix/pull/154",
+      "sha256": "a288cb0beaa1bdaaa36fc29a5d81357d0c736bf2db3b5e4c4a67bc5ad0f271af",
+      "image": "images/spoilerhead.vignette.jpg",
+      "imageSha256": "b3121134588750b913663b4fb1ca56eee0bcbed4f41840a4697212add1c39c94"
+    }
+  ]
+}

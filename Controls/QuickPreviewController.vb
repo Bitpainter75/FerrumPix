@@ -64,6 +64,15 @@ Namespace Controls
             Return overlay IsNot Nothing AndAlso overlay.IsVisible
         End Function
 
+        ''' <summary>Was in den Decode des Betrachters geht: die Kachel einer zusaetzlichen Variante
+        ''' mit ihrem SCHLUESSEL, nicht mit dem Pfad der Datei. Mit dem Pfad kaemen Rezept und Drehung
+        ''' der Standardvariante, und auf das richtige Vorschaubild folgte nach dem Decode das Bild
+        ''' einer anderen Variante. Ein Serverbild hat keine Varianten, dort gilt die geholte Kopie.</summary>
+        Friend Shared Function DecodeKey(item As ImageItem, localPath As String) As String
+            If item Is Nothing OrElse item.IsRemoteAsset OrElse Not item.IsVariant Then Return localPath
+            Return item.ItemPath
+        End Function
+
         Private Sub ReleaseOwned(image As Avalonia.Controls.Image)
             If _ownedBitmap Is Nothing Then Return
             If image IsNot Nothing AndAlso ReferenceEquals(image.Source, _ownedBitmap) Then image.Source = Nothing
@@ -97,9 +106,10 @@ Namespace Controls
                 ' Entwickelt wird dabei IMMER halb: die Schnellvorschau zoomt nicht, und auf
                 ' Fenstergroesse ist der Unterschied nicht zu sehen.
                 Dim decodePath = path
+                Dim recipeKey = DecodeKey(item, path)
                 bmp = Await Task.Run(Function()
                                          If RawPreviewService.IsSupportedRaw(decodePath) Then
-                                             Return FerrumPix.ViewModels.ViewerViewModel.DecodeViewerBitmap(decodePath, reducedRawDecode:=True)
+                                             Return FerrumPix.ViewModels.ViewerViewModel.DecodeViewerBitmap(recipeKey, reducedRawDecode:=True)
                                          End If
                                          Return ImageOrientationService.LoadOrientedAvaloniaBitmapAuto(decodePath)
                                      End Function)

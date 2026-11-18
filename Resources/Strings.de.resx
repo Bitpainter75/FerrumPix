@@ -9953,9 +9953,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>Auf diese Bilder lassen sich keine Anpassungen einfügen.</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>{0} JPG-, PNG- oder WebP-Datei(en) werden dabei überschrieben. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei.</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Aussortieren</value>
   </data>
@@ -11932,5 +11929,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>die Karte hat innerhalb von {0} Sekunden nicht geantwortet</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} JPG-, PNG- oder WebP-Datei(en) haben keine Begleitdatei, die Anpassungen gehen dort in die Bildpunkte. Als Kopie entsteht daneben eine neue Datei nach dem Namensmuster von Speichern unter, das Original bleibt. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei.</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>Als Kopie speichern</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>Pull Request</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>Erweiterungen herunterladen</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>Aktualisierung von Fassung {0}</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>Liste der Erweiterungen wird geladen…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>Die Liste der Erweiterungen ließ sich nicht laden.</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>Erweiterungen werden heruntergeladen…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>Erweiterungen aus dem Verzeichnis von FerrumPix. Jede kam als Pull Request, dort stehen Beschreibung und Beispielbilder. Geholt wird nur, was einen Haken hat.</value>
   </data>
 </root>

@@ -15399,12 +15399,10 @@ Namespace ViewModels
             ' Mit dem Schluessel der Kachel, siehe WriteRecipeInPlace.
             Dim recipePaths = targets.Where(AddressOf IsBatchRecipeWritable).Select(Function(i) i.ItemPath).ToList()
             Dim pixelPaths = targets.Where(Function(i) Not IsBatchRecipeWritable(i)).Select(Function(i) i.FilePath).ToList()
+            Dim pixelTarget = MainWindowViewModel.PastePixelTarget.Overwrite
             If pixelPaths.Count > 0 Then
-                Dim confirmed = Await _mainVm.ShowConfirmAsync(
-                    LocalizationService.T("Anpassungen einfügen"),
-                    String.Format(LocalizationService.T("{0} JPG-, PNG- oder WebP-Datei(en) werden dabei überschrieben. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei."), pixelPaths.Count),
-                    "Überschreiben", "Abbrechen")
-                If Not confirmed Then Return
+                pixelTarget = Await _mainVm.ShowPastePixelTargetsAsync(pixelPaths.Count)
+                If pixelTarget = MainWindowViewModel.PastePixelTarget.Cancelled Then Return
             End If
 
             Dim cancel = BeginBatchRun(targets.Count)
@@ -15421,7 +15419,15 @@ Namespace ViewModels
                              End Function
                 Dim changedCount = Await WriteRecipesInPlaceAsync(recipePaths, template, isAutoEnhance:=False,
                                                                   replacePixelAdjustments:=True)
-                changedCount += Await RewriteImagesInPlaceAsync(pixelPaths, writer)
+                If pixelTarget = MainWindowViewModel.PastePixelTarget.Copy Then
+                    ' Die Namen entstehen hier, das Freimachen eines belegten Namens erst beim
+                    ' Schreiben: zwei Quellen können auf denselben Namen kommen.
+                    Dim pattern = AppSettingsService.Load().EditorSaveAsNamePattern
+                    Dim names = pixelPaths.ToDictionary(Function(p) p, Function(p) _mainVm.ExpandTargetNamePattern(pattern, p, 1), PathIdentity.Comparer)
+                    changedCount += Await WriteImageCopiesAsync(pixelPaths, writer, Function(source) PasteCopyPath(source, names(source)))
+                Else
+                    changedCount += Await RewriteImagesInPlaceAsync(pixelPaths, writer)
+                End If
                 StatusText = BatchResultText(LocalizationService.T("{0} von {1} Datei(en) angepasst"), changedCount, targets.Count)
                 RefreshAfterBatchFileRewrite(recipePaths.Select(Function(p) VariantKey.FileOf(p)).Concat(pixelPaths))
             Catch ex As Exception
@@ -16171,6 +16177,60 @@ Namespace ViewModels
             End Try
             If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildverarbeitung fehlgeschlagen"), errorMessage)
             Return changedCount
+        End Function
+
+        ''' <summary>Wie <see cref="RewriteImagesInPlaceAsync"/>, aber in eine NEUE Datei neben dem
+        ''' Original, das unberührt bleibt. Geschrieben wird erst unter einem versteckten Namen und
+        ''' dann umbenannt: ein abgebrochener Lauf hinterlässt keine halbe Datei unter dem Zielnamen,
+        ''' und der Name wird erst beim Umbenennen festgelegt, so dass auch zwei Quellen mit
+        ''' demselben Ergebnisnamen nebeneinander ankommen.</summary>
+        Private Async Function WriteImageCopiesAsync(sources As List(Of String), writer As Func(Of String, String, Boolean),
+                                                     targetFor As Func(Of String, String)) As Task(Of Integer)
+            Dim changedCount = 0
+            Dim errorMessage As String = Nothing
+            Try
+                _mainVm.BeginBusyOverlay(BatchProgressText())
+                Await Task.Run(Sub()
+                    For Each source In sources
+                        If BatchWasCancelled() Then Exit For
+                        Dim ext = IO.Path.GetExtension(source)
+                        Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-{Guid.NewGuid():N}{ext}")
+                        Try
+                            If File.Exists(source) AndAlso writer(source, temp) AndAlso File.Exists(temp) Then
+                                File.Move(temp, MakeUniquePath(targetFor(source)))
+                                changedCount += 1
+                            End If
+                        Finally
+                            Try
+                                If File.Exists(temp) Then File.Delete(temp)
+                            Catch
+                            End Try
+                        End Try
+                        ReportBatchFileDone()
+                    Next
+                End Sub)
+            Catch ex As Exception
+                errorMessage = ex.Message
+            Finally
+                _mainVm.EndBusyOverlay()
+            End Try
+            If errorMessage IsNot Nothing Then Await _mainVm.ShowMessageAsync(LocalizationService.T("Bildverarbeitung fehlgeschlagen"), errorMessage)
+            Return changedCount
+        End Function
+
+        ''' <summary>Wohin die Kopie beim Einfügen von Anpassungen geht: in den Ordner der Quelle, unter
+        ''' dem Namen aus dem Muster von "Speichern unter" (ab Werk {name}_fx) und mit der Endung der
+        ''' Quelle. Ergibt das Muster nichts oder genau den Namen der Quelle, hängt "_fx" an; das
+        ''' Original wird so nie das Ziel. Den Zähler für einen belegten Namen setzt erst
+        ''' <see cref="MakeUniquePath"/> beim Schreiben.</summary>
+        Friend Shared Function PasteCopyPath(source As String, expandedName As String) As String
+            Dim stem = IO.Path.GetFileNameWithoutExtension(source)
+            Dim name = If(expandedName, "").Trim()
+            For Each invalid In IO.Path.GetInvalidFileNameChars()
+                name = name.Replace(invalid, "_"c)
+            Next
+            If name.Length = 0 OrElse String.Equals(name, stem, StringComparison.OrdinalIgnoreCase) Then name = stem & "_fx"
+            Return IO.Path.Combine(IO.Path.GetDirectoryName(source), name & IO.Path.GetExtension(source))
         End Function
 
         ''' <summary>Die Quelldatei eines Elements für den Stapel: lokal der eigene Pfad, bei einem

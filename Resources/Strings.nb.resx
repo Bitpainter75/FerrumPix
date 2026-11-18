@@ -9975,9 +9975,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>Justeringer kan ikke limes inn på disse bildene.</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>{0} JPG-, PNG- eller WebP-fil(er) blir overskrevet. RAW- og PSD-filer får justeringene i sidecar-filen sin.</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Sorter ut</value>
   </data>
@@ -11954,5 +11951,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>kortet svarte ikke innen {0} sekunder</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} JPG-, PNG- eller WebP-fil(er) har ingen sidefil, så justeringene går inn i pikslene. Som kopi lages en ny fil ved siden av, navngitt etter mønsteret fra Lagre som, og originalen blir værende. RAW- og PSD-filer får justeringene i sidefilen sin.</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>Lagre som kopi</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>Pull request</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>Last ned utvidelser</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>Installert</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>Oppdatering fra versjon {0}</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>Listen over utvidelser lastes…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>Listen over utvidelser kunne ikke lastes.</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>Utvidelser lastes ned…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>Utvidelser fra FerrumPix-katalogen. Hver kom som en pull request, der beskrivelse og eksempelbilder ligger. Bare det som er krysset av, lastes ned.</value>
   </data>
 </root>

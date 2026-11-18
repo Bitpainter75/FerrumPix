@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Views.ExtensionDownloadDialogView">
+
+    <!-- Erweiterungen herunterladen (MainWindowViewModelExtensionDownload): je Eintrag des Index
+         ein Haken, Name, Beschreibung, Fassung und Autor, der Zustand auf diesem Rechner und der
+         Link zum Pull Request. Eine installierte Erweiterung in derselben Fassung laesst sich nicht
+         anhaken, eine Aktualisierung steht oben und ist vorgehakt. -->
+    <ItemsControl ItemsSource="{Binding DialogExtensionRows}" MaxHeight="420">
+        <ItemsControl.Template>
+            <ControlTemplate>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <ItemsPresenter/>
+                </ScrollViewer>
+            </ControlTemplate>
+        </ItemsControl.Template>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <Border Classes="adjustment-group" Margin="0,0,0,8"
+                        AttachedToVisualTree="OnLocalizedItemAttachedToVisualTree">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+                        <CheckBox VerticalAlignment="Top"
+                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanCheck}"/>
+                        <!-- Das Beispielbild aus dem Index, oft ein Ausschnitt aus dem Pull Request. -->
+                        <Image Grid.Column="1" Width="120" MaxHeight="120" VerticalAlignment="Top"
+                               Stretch="Uniform" Source="{Binding Preview}" IsVisible="{Binding HasPreview}"/>
+                        <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Classes="no-translate" Text="{Binding Name}" TextWrapping="Wrap"
+                                       FontSize="{DynamicResource FP.Font.Body}"/>
+                            <TextBlock Classes="no-translate" Text="{Binding Description}" IsVisible="{Binding HasDescription}"
+                                       TextWrapping="Wrap" Foreground="{DynamicResource FP.Text.Secondary}"
+                                       FontSize="{DynamicResource FP.Font.Small}"/>
+                            <TextBlock Classes="no-translate" Text="{Binding Details}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}"/>
+                            <TextBlock Classes="no-translate" Text="{Binding StateText}" IsVisible="{Binding HasStateText}"
+                                       Foreground="{DynamicResource FP.Accent}"
+                                       TextWrapping="Wrap" FontSize="{DynamicResource FP.Font.Small}"/>
+                        </StackPanel>
+                        <!-- Der Tooltip zeigt das Ziel vor dem Klick. -->
+                        <Button Grid.Column="3" Classes="ghost" Padding="12,7" VerticalAlignment="Top"
+                                IsVisible="{Binding HasPullRequest}"
+                                ToolTip.Tip="{Binding Entry.PullRequest}"
+                                Command="{Binding $parent[ItemsControl].DataContext.OpenExtensionPullRequestCommand}"
+                                CommandParameter="{Binding}">
+                            <TextBlock Text="Pull Request" FontSize="{DynamicResource FP.Font.Small}"/>
+                        </Button>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+</UserControl>

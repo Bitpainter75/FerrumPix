@@ -9975,9 +9975,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>Na tyto obrázky nelze vložit úpravy.</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>Bude přepsáno {0} souborů JPG, PNG nebo WebP. Soubory RAW a PSD dostanou úpravy do svého doprovodného souboru.</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Vytřídit</value>
   </data>
@@ -11954,5 +11951,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>karta neodpověděla do {0} sekund</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} souborů JPG, PNG nebo WebP nemá doprovodný soubor, úpravy se proto zapíší do jejich pixelů. Jako kopie vznikne vedle nový soubor pojmenovaný podle vzoru z Uložit jako a originál zůstane. Soubory RAW a PSD dostanou úpravy do svého doprovodného souboru.</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>Uložit jako kopii</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>Pull request</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>Stáhnout rozšíření</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>Nainstalováno</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>Aktualizace z verze {0}</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>Načítá se seznam rozšíření…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>Seznam rozšíření se nepodařilo načíst.</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>Stahují se rozšíření…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>Rozšíření z adresáře FerrumPix. Každé přišlo jako pull request, kde najdete popis a ukázkové obrázky. Stáhne se jen to, co je zaškrtnuté.</value>
   </data>
 </root>

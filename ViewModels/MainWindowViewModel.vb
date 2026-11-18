@@ -3385,6 +3385,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackup))
                 Me.RaisePropertyChanged(NameOf(DialogShowsRestore))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackupOrRestore))
+                Me.RaisePropertyChanged(NameOf(DialogShowsExtensionDownload))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
@@ -3897,6 +3898,7 @@ Namespace ViewModels
                 If _dialogKind = AppDialogKind.ModelDownload Then Return IsModelDialogPrimaryEnabled
                 If _dialogKind = AppDialogKind.Import Then Return IsDialogImportPrimaryEnabled()
                 If _dialogKind = AppDialogKind.Backup OrElse _dialogKind = AppDialogKind.Restore Then Return IsBackupDialogPrimaryEnabled()
+                If _dialogKind = AppDialogKind.ExtensionDownload Then Return IsExtensionDownloadPrimaryEnabled()
                 If BatchFilterHasNothingToDo() Then Return False
                 If NeedsFilterChoice() Then Return Not String.IsNullOrWhiteSpace(_dialogSelectedFilterChoice)
                 Return True
@@ -5288,6 +5290,26 @@ Namespace ViewModels
                                                LocalizationService.T(confirmText), LocalizationService.T(cancelText))
             Return result IsNot Nothing
         End Function
+
+        ''' <summary>Die Rückfrage vor dem Einfügen von Anpassungen in Dateien ohne Begleitdatei
+        ''' (JPG, PNG, WebP): dort gehen sie in die Bildpunkte. Die Kopie steht vorn, weil sie nichts
+        ''' kaputt machen kann; Überschreiben ist die zweite Wahl.</summary>
+        Public Async Function ShowPastePixelTargetsAsync(fileCount As Integer) As Task(Of PastePixelTarget)
+            Dim result = Await ShowDialogAsync(AppDialogKind.Message, LocalizationService.T("Anpassungen einfügen"),
+                                               String.Format(LocalizationService.T("{0} JPG-, PNG- oder WebP-Datei(en) haben keine Begleitdatei, die Anpassungen gehen dort in die Bildpunkte. Als Kopie entsteht daneben eine neue Datei nach dem Namensmuster von Speichern unter, das Original bleibt. RAW- und PSD-Dateien bekommen die Anpassungen in ihre Begleitdatei."), fileCount),
+                                               "",
+                                               LocalizationService.T("Als Kopie speichern"), LocalizationService.T("Abbrechen"),
+                                               LocalizationService.T("Überschreiben"))
+            If result Is Nothing Then Return PastePixelTarget.Cancelled
+            If String.Equals(result, "Secondary", StringComparison.Ordinal) Then Return PastePixelTarget.Overwrite
+            Return PastePixelTarget.Copy
+        End Function
+
+        Public Enum PastePixelTarget
+            Cancelled
+            Copy
+            Overwrite
+        End Enum
 
         Public Async Function ShowSaveChangesAsync(titleText As String, messageText As String) As Task(Of SaveChangesDialogResult) Implements IEditorHost.ShowSaveChangesAsync
             Dim result = Await ShowDialogAsync(AppDialogKind.Message, titleText, messageText, "",

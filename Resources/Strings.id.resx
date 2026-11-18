@@ -9979,9 +9979,6 @@
   <data name="Auf_diese_Bilder_lassen_sich_keine_Anpassungen_e_4d61eb65" xml:space="preserve">
     <value>Penyesuaian tidak dapat ditempel ke gambar-gambar ini.</value>
   </data>
-  <data name="0_JPG_PNG_oder_WebP_Datei_en_werden_dabei_bersch_b54ffa11" xml:space="preserve">
-    <value>{0} file JPG, PNG, atau WebP akan ditimpa. File RAW dan PSD mendapat penyesuaian di file pendampingnya.</value>
-  </data>
   <data name="Aussortieren_84f2a0fb" xml:space="preserve">
     <value>Pilah</value>
   </data>
@@ -11958,5 +11955,35 @@
   </data>
   <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
     <value>kartu grafis tidak merespons dalam {0} detik</value>
+  </data>
+  <data name="0_JPG_PNG_oder_WebP_Datei_en_haben_keine_Begleit_ff06400e" xml:space="preserve">
+    <value>{0} file JPG, PNG atau WebP tidak memiliki file sidecar, jadi penyesuaian masuk ke pikselnya. Sebagai salinan, file baru dibuat di sebelahnya dengan nama menurut pola Simpan sebagai, dan aslinya tetap. File RAW dan PSD mendapat penyesuaian di file sidecar-nya.</value>
+  </data>
+  <data name="Als_Kopie_speichern_044b2c8e" xml:space="preserve">
+    <value>Simpan sebagai salinan</value>
+  </data>
+  <data name="Pull_Request_b442febb" xml:space="preserve">
+    <value>Pull request</value>
+  </data>
+  <data name="Erweiterungen_herunterladen_a30faa56" xml:space="preserve">
+    <value>Unduh ekstensi</value>
+  </data>
+  <data name="Installiert_ff9a9955" xml:space="preserve">
+    <value>Terpasang</value>
+  </data>
+  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+    <value>Pembaruan dari versi {0}</value>
+  </data>
+  <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
+    <value>Memuat daftar ekstensi…</value>
+  </data>
+  <data name="Die_Liste_der_Erweiterungen_lie_sich_nicht_laden_5d198aa2" xml:space="preserve">
+    <value>Daftar ekstensi tidak dapat dimuat.</value>
+  </data>
+  <data name="Erweiterungen_werden_heruntergeladen_dc56dc3a" xml:space="preserve">
+    <value>Mengunduh ekstensi…</value>
+  </data>
+  <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__aa0d9151" xml:space="preserve">
+    <value>Ekstensi dari direktori FerrumPix. Masing-masing datang sebagai pull request, tempat deskripsi dan gambar contohnya berada. Hanya yang dicentang yang diunduh.</value>
   </data>
 </root>

@@ -172,6 +172,18 @@ Namespace ViewModels
         End Property
 
         Private _openExtensionUrlCommand As ICommand
+        Private _downloadExtensionsCommand As ICommand
+
+        ''' <summary>Oeffnet den Dialog "Erweiterungen herunterladen" (MainWindowViewModelExtensionDownload).</summary>
+        Public ReadOnly Property DownloadExtensionsCommand As ICommand
+            Get
+                If _downloadExtensionsCommand Is Nothing Then
+                    _downloadExtensionsCommand = ReactiveCommand.CreateFromTask(
+                        Function() If(_mainVm Is Nothing, Task.CompletedTask, _mainVm.ShowExtensionDownloadDialogAsync()))
+                End If
+                Return _downloadExtensionsCommand
+            End Get
+        End Property
 
         Public ReadOnly Property RemoveExtensionCommand As ICommand
             Get
