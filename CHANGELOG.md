@@ -18,6 +18,10 @@
 
 ### Fixes
 
+- The mouse wheel moved every slider of an extension by 1, so a slider from 0 to 1 went from one
+  end to the other in two steps. Sliders with decimals now move by about a hundredth of their
+  range.
+
 - The quick preview with SPACE showed the default version of a RAW after a moment instead of the
   variant whose tile was selected, for example the colour picture instead of the black and white
   variant.

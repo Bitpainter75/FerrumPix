@@ -175,6 +175,20 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>Schritt je Raste des Mausrads. Ohne Nachkommastellen 1 wie bei den eingebauten
+        ''' Reglern. Mit Nachkommastellen ein Hundertstel des Bereichs, auf die Stellen der Datei
+        ''' gerundet und nie kleiner als deren letzte Stelle: ohne eigene Angabe ging der Regler um 1,
+        ''' auf 0 bis 1 also in zwei Rasten von einem Ende zum anderen, und bei 0 bis 10 Blenden in
+        ''' Hundertsteln hiesse die letzte Stelle tausend Rasten.</summary>
+        Public ReadOnly Property WheelIncrement As Double
+            Get
+                If Control.Decimals <= 0 Then Return 1.0
+                Dim smallest = Math.Pow(10, -Control.Decimals)
+                Dim rangeStep = Math.Round((Control.Maximum - Control.Minimum) / 100.0, Control.Decimals, MidpointRounding.AwayFromZero)
+                Return Math.Max(smallest, rangeStep)
+            End Get
+        End Property
+
         Private _colorTrack As Avalonia.Media.IBrush
         Private _colorTrackBuilt As Boolean
 
