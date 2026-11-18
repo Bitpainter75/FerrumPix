@@ -105,7 +105,7 @@ Namespace Controls
             ' Zustand nicht kollidieren.
             Dim saved = SavedOrDefault(expander, key)
             ' Entsteht eine Gruppe, waehrend der Kompaktmodus sie verwaltet, gilt SEIN Stand.
-            If SuspendedKeys.Contains(key) AndAlso CompactStateOf IsNot Nothing Then saved = CompactStateOf(key)
+            If IsSuspended(key) AndAlso CompactStateOf IsNot Nothing Then saved = CompactStateOf(key)
             ApplyWithoutSaving(expander, saved)
         End Sub
 
@@ -123,7 +123,7 @@ Namespace Controls
             If GetExpandWhen(expander).HasValue Then Return
             Dim key = GetKey(expander)
             If String.IsNullOrEmpty(key) Then Return
-            If SuspendedKeys.Contains(key) Then
+            If IsSuspended(key) Then
                 CompactSave?.Invoke(key, expander.IsExpanded)
                 Return
             End If
@@ -136,6 +136,19 @@ Namespace Controls
         ''' und sein Auf- und Zuklappen soll dort nichts veraendern. Er merkt sich seinen Stand
         ''' selbst (<see cref="CompactStateOf"/>, <see cref="CompactSave"/>).</summary>
         Public Shared ReadOnly SuspendedKeys As New HashSet(Of String)(StringComparer.Ordinal)
+
+        ''' <summary>Steht der Schluessel in <see cref="SuspendedKeys"/>? Ein Eintrag mit "*" am Ende gilt
+        ''' fuer jeden Schluessel mit diesem Anfang: die Gruppen der Erweiterungen ("extension:" und
+        ''' ihre Kennung) entstehen zur Laufzeit, auch waehrend der Kompaktmodus sie verwaltet.</summary>
+        Public Shared Function IsSuspended(key As String) As Boolean
+            If String.IsNullOrEmpty(key) Then Return False
+            If SuspendedKeys.Contains(key) Then Return True
+            For Each entry In SuspendedKeys
+                If entry.EndsWith("*", StringComparison.Ordinal) AndAlso
+                   key.StartsWith(entry.Substring(0, entry.Length - 1), StringComparison.Ordinal) Then Return True
+            Next
+            Return False
+        End Function
 
         ''' <summary>Setzt gerade der Code den Zustand, nicht der Nutzer? Das Ereignis Expanding kommt
         ''' in beiden Faellen, und wer nur auf den Klick antworten will, fragt hier.</summary>

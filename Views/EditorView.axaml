@@ -1469,9 +1469,17 @@
                                                       IsVisible="{Binding ShowLightControls}" />
 
                             <!-- Die Erweiterungen: je geladener eine Gruppe, die das Panel selbst
-                                 rahmt (EditorViewModelExtensions.vb). -->
-                            <panels:ExtensionsPanel Margin="0,7,0,0"
-                                                    IsVisible="{Binding ShowExtensionAdjustments}" />
+                                 rahmt (EditorViewModelExtensions.vb). Im Kompaktwerkzeug ein Block
+                                 wie die uebrigen: sortierbar ueber sein Tag, ausblendbar wie eine
+                                 Gruppe, seine Gruppen klappen mit den anderen zu. -->
+                            <panels:ExtensionsPanel Margin="0,7,0,0" Tag="extensions">
+                                <panels:ExtensionsPanel.IsVisible>
+                                    <MultiBinding Converter="{StaticResource AllTrueConverter}">
+                                        <Binding Path="ShowExtensionAdjustments"/>
+                                        <Binding Path="HiddenAdjustmentGroups" Converter="{StaticResource NotInListConverter}" ConverterParameter="extensions"/>
+                                    </MultiBinding>
+                                </panels:ExtensionsPanel.IsVisible>
+                            </panels:ExtensionsPanel>
 
                             <!-- DrawPanel bringt seine eigenen adjustment-group-Rahmen mit (Farbe, Pinsel,
                                  Werkzeug getrennt), daher hier kein umschließender Rahmen. -->

@@ -1,22 +1,35 @@
-## Unreleased
+## 0.9.88
 
 ### Changes
 
 - Dragging a slider in the editor is faster on RAW files: while the slider moves, the picture is
   calculated smaller, and as soon as it rests for a moment, it is calculated in full size, still
   before you let go. With the graphics card switched on, tone, colour and detail sliders also no
-  longer send the whole picture to the card at every step. The sliders of extensions update the
-  picture while you drag them instead of only after a pause.
+  longer send the whole picture to the card at every step.
 
 - Two new frame types: Keyline draws a solid border with a fine line along its inner edge, in a
   colour and width of its own, and 35mm film draws a film strip with sprocket holes, running
   across or upright as you choose.
 
+- Changing a frame responds faster, and so does the analysis picture while objects lie on the
+  picture.
+
+- In the compact adjustments mode, extensions appear as a group of their own inside Adjustments
+  instead of as a separate tool.
+
+- The groups of extensions remember whether they were open or closed, like the other groups.
+
+- The Extensions tool shows the analysis picture and the clipping warning like the other
+  adjustment tools.
+
 - The search field in the settings stands out with an accent frame, and CTRL+F jumps to it.
 
 - Opening a RAW in the editor right after selecting it no longer waits for the analysis picture
-  of the info panel, and dragging objects in the editor runs more smoothly. The graphics card
-  speed comparison is remembered instead of being repeated in every session.
+  of the info panel.
+
+- Moving, rotating and resizing several objects at once in the editor runs more smoothly.
+
+- The graphics card speed comparison is remembered instead of being repeated in every session.
 
 - The adjustments panel in the editor is wider by default, so the sliders have a longer track and
   react more finely. It can still be dragged wider at its edge.
@@ -40,6 +53,8 @@
   diagnostics.log one below the other; the text can be selected and copied.
 
 ### Fixes
+
+- The sliders of extensions updated the picture only after a pause; now it follows while you drag.
 
 - In trackpad mode, a zoomed in picture in the editor took every click to move the view, so
   objects could not be selected, deselected or created and the Move button had no effect. Now the

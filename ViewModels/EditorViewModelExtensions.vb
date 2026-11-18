@@ -389,6 +389,16 @@ Namespace ViewModels
         End Sub
 
         Public ReadOnly Property Definition As ExtensionDefinition
+
+        ''' <summary>Unter diesem Schluessel merkt sich die Gruppe, ob sie auf- oder zugeklappt ist
+        ''' (ExpanderState), wie die eingebauten Gruppen. Die Kennung der Erweiterung, mit eigenem
+        ''' Vorsatz, damit sie nie auf den Schluessel einer eingebauten Gruppe faellt.</summary>
+        Public ReadOnly Property ExpanderKey As String
+            Get
+                Return "extension:" & Definition.Id
+            End Get
+        End Property
+
         Public ReadOnly Property Controls As IReadOnlyList(Of ExtensionControlViewModel)
         Public ReadOnly Property ResetCommand As ICommand
 
@@ -599,15 +609,23 @@ Namespace ViewModels
         Public ReadOnly Property ShowsToolExtensions As Boolean
             Get
                 ' Die Leiste fragt das als Erstes, auch bevor ein Bild offen ist: ab hier folgt sie
-                ' dem Bestand.
+                ' dem Bestand. Im Kompaktmodus stehen die Erweiterungen als Block im Werkzeug
+                ' "Anpassungen", und wer die Gruppe ausgeblendet hat, saehe ein leeres Werkzeug.
                 EnsureExtensionServiceHooked()
-                Return ExtensionService.Shown.Count > 0
+                Return Not IsCompactAdjustments AndAlso ExtensionService.Shown.Count > 0 AndAlso HasVisibleExtensionGroup()
             End Get
         End Property
 
+        Private Function HasVisibleExtensionGroup() As Boolean
+            Return Not HiddenAdjustmentGroups.Split(","c).Any(
+                Function(k) String.Equals(k.Trim(), "extensions", StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Das Panel der Erweiterungen steht im eigenen Werkzeug und, als Block, im
+        ''' Kompaktwerkzeug.</summary>
         Public ReadOnly Property ShowExtensionAdjustments As Boolean
             Get
-                Return _currentTool = EditorTool.Extensions
+                Return _currentTool = EditorTool.Extensions OrElse _currentTool = EditorTool.AllAdjustments
             End Get
         End Property
 

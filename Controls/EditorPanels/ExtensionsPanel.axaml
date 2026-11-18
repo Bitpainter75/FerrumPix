@@ -20,7 +20,9 @@
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border Classes="adjustment-group">
-                        <Expander Header="{Binding Name}" IsExpanded="True">
+                        <!-- Auf- und Zuklappen wird gemerkt wie bei den eingebauten Gruppen; ohne
+                             gemerkten Stand offen (ExpanderState, Standard aufgeklappt). -->
+                        <Expander Header="{Binding Name}" icons:ExpanderState.Key="{Binding ExpanderKey}">
                             <Expander.HeaderTemplate>
                                 <DataTemplate>
                                     <!-- Kopf wie bei den eingebauten Gruppen: Auge fuer den Vergleich,

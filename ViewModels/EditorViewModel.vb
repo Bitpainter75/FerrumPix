@@ -20059,7 +20059,7 @@ Namespace ViewModels
             For Each n In {NameOf(ShowsToolAdjust), NameOf(ShowsToolColor),
                            NameOf(ShowsToolDetails), NameOf(ShowsToolEffects),
                            NameOf(ShowsToolFilter), NameOf(ShowsToolAllAdjustments),
-                           NameOf(IsCompactAdjustments)}
+                           NameOf(ShowsToolExtensions), NameOf(IsCompactAdjustments)}
                 Me.RaisePropertyChanged(n)
             Next
             ' Steht man gerade IN einem Werkzeug, das eben verschwunden ist, muss man da raus -
@@ -20067,8 +20067,8 @@ Namespace ViewModels
             ' Mit dem Kompaktmodus verschwinden die fuenf Einzelwerkzeuge; wer in einem davon steht,
             ' kommt ins Kompaktwerkzeug. Umgekehrt geht es vom Kompaktwerkzeug nach "Anpassen".
             Dim jetzt = _currentTool
+            ' Die Erweiterungen gehoeren dazu: im Kompaktmodus sind sie ein Block des Werkzeugs.
             If IsCompactAdjustments AndAlso IsObjectAdjustTool(jetzt) AndAlso jetzt <> EditorTool.AllAdjustments AndAlso
-               jetzt <> EditorTool.Extensions AndAlso
                ShowsToolAllAdjustments Then
                 CurrentTool = EditorTool.AllAdjustments
             ElseIf jetzt = EditorTool.AllAdjustments AndAlso Not IsCompactAdjustments AndAlso ShowsToolAdjust Then
@@ -20078,7 +20078,8 @@ Namespace ViewModels
                (jetzt = EditorTool.Details AndAlso Not ShowsToolDetails) OrElse
                (jetzt = EditorTool.Effects AndAlso Not ShowsToolEffects) OrElse
                (jetzt = EditorTool.Filters AndAlso Not ShowsToolFilter) OrElse
-               (jetzt = EditorTool.AllAdjustments AndAlso Not ShowsToolAllAdjustments) Then
+               (jetzt = EditorTool.AllAdjustments AndAlso Not ShowsToolAllAdjustments) OrElse
+               (jetzt = EditorTool.Extensions AndAlso Not ShowsToolExtensions) Then
                 CurrentTool = EditorTool.Selection
             End If
             RaiseToolSwitcherChanged()
@@ -20101,8 +20102,9 @@ Namespace ViewModels
         ''' beim Entwickeln der Reihe nach durchgeht.</summary>
         Private Function SwitcherTools() As List(Of EditorTool)
             ' Im Kompaktmodus steht fuer die Anpassungen nur das eine Werkzeug im Kreis.
+            ' Die Erweiterungen sind dort ein Block des einen Werkzeugs, keine eigene Station.
             Dim adjustTools = If(IsCompactAdjustments,
-                                 {EditorTool.AllAdjustments, EditorTool.Extensions},
+                                 {EditorTool.AllAdjustments},
                                  {EditorTool.Adjust, EditorTool.Color, EditorTool.Details, EditorTool.Effects, EditorTool.Filters,
                                   EditorTool.Extensions})
             Dim groups As New Dictionary(Of String, EditorTool())(StringComparer.OrdinalIgnoreCase) From {
@@ -31979,7 +31981,7 @@ Namespace ViewModels
                     RaiseResetButtonStateChanged()
                     SchedulePreviewUpdate()
                 Case EditorTool.AllAdjustments
-                    ' Dasselbe wie die fuenf Einzelwerkzeuge zusammen, nicht das Zuruecksetzen des
+                    ' Dasselbe wie die fuenf Einzelwerkzeuge und die Erweiterungen zusammen, nicht das Zuruecksetzen des
                     ' ganzen Bildes (Case Else): Geometrie, Retusche und Ebenen bleiben.
                     ResetLightInternal()
                     ResetCurvePoints()
@@ -31992,6 +31994,7 @@ Namespace ViewModels
                     ResetEffectsInternal()
                     ResetEffectCorrectionsInternal()
                     ResetFilterInternal()
+                    ResetExtensionValues()
                     RaiseResetButtonStateChanged()
                     SchedulePreviewUpdate()
                 Case EditorTool.Retouch

@@ -491,6 +491,8 @@ Namespace ViewModels
             Return OverlaySceneRenderer.ComputeCompositorStartIndex(adj) < adj.Annotations.Count
         End Function
 
+        Private Const ScopeCompositeMaxEdge As Single = 1600
+
         ''' <summary>Die Szene, wie sie auf dem Schirm steht: das Bild samt der Objekte, die der
         ''' Kompositor erst beim Blit darüberlegt. Für Histogramm, Waveform und Parade - sie sollen
         ''' zeigen, was man sieht. Die Szene allein enthält nur das Foto und den gebackenen Block;
@@ -505,12 +507,26 @@ Namespace ViewModels
             Dim scene = _sceneSk
             If scene Is Nothing OrElse scene.Width <= 0 OrElse scene.Height <= 0 Then Return Nothing
             If Not HasCompositorObjects() Then Return Nothing
-            Dim composite = New SKBitmap(New SKImageInfo(scene.Width, scene.Height, SKColorType.Rgba8888, SKAlphaType.Premul))
+            ' VERKLEINERT GEMISCHT: das Analysebild ist 600x300 Punkte gross, die Mischung lief aber
+            ' in voller Szenengroesse auf dem Anzeigefaden. Mit einem Rahmen, der das ganze Bild
+            ' deckt, kostete das bei 3840x2560 je Aenderung 87 ms (Diagnoseprotokoll). 1600 Punkte an
+            ' der langen Seite reichen auch fuer die Spalten der Waveform; Histogramm und Parade
+            ' zaehlen Anteile, nicht Bildpunkte.
+            Dim scale = Math.Min(1.0F, ScopeCompositeMaxEdge / CSng(Math.Max(scene.Width, scene.Height)))
+            Dim compositeWidth = Math.Max(1, CInt(Math.Round(scene.Width * scale)))
+            Dim compositeHeight = Math.Max(1, CInt(Math.Round(scene.Height * scale)))
+            Dim composite = New SKBitmap(New SKImageInfo(compositeWidth, compositeHeight, SKColorType.Rgba8888, SKAlphaType.Premul))
             Try
                 Dim drawn As Integer
                 Using canvas = New SKCanvas(composite)
                     canvas.Clear(SKColors.Transparent)
-                    ImageProcessor.DrawBitmapShared(canvas, scene, 0, 0)
+                    canvas.Scale(compositeWidth / CSng(scene.Width), compositeHeight / CSng(scene.Height))
+                    Using paint = New SKPaint With {.IsAntialias = True}
+                        Using image = SKImage.FromBitmap(scene)
+                            canvas.DrawImage(image, New SKRect(0, 0, scene.Width, scene.Height),
+                                             New SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), paint)
+                        End Using
+                    End Using
                     drawn = OverlaySceneRenderer.DrawCachedAnnotations(canvas, GetCompositorBlitAdjustments(),
                                                                         scene.Width, scene.Height, _annotationBitmapCache)
                 End Using

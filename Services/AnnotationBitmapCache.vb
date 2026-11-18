@@ -56,6 +56,59 @@ Namespace Services
                     Return New SKRect(-ObjectX, -ObjectY, Image.Width - ObjectX, Image.Height - ObjectY)
                 End Get
             End Property
+
+            Private _clearInterior As SKRectI?
+
+            ''' <summary>Ein Rechteck in Bitmap-Pixeln, in dem das Bild NACHWEISLICH ganz durchsichtig
+            ''' ist, oder leer. Fuer den Rahmen: er deckt das ganze Bild, traegt aber nur einen Rand,
+            ''' und ohne das zeichnete jeder Blit die leere Mitte mit (bei 3840x2560 je Blit mehrere
+            ''' Millionen Punkte). Einmal je Eintrag gesucht: von der Mitte aus auf Mittelzeile und
+            ''' Mittelspalte bis zum ersten sichtbaren Punkt, danach wird das ganze Rechteck geprueft.
+            ''' Ein Rand aus Symbolen oder Wellen, der irgendwo weiter hineinragt, faellt dabei auf, und
+            ''' das Rechteck bleibt leer.</summary>
+            Public Function ClearInterior() As SKRectI
+                If _clearInterior.HasValue Then Return _clearInterior.Value
+                _clearInterior = FindClearInterior(Image)
+                Return _clearInterior.Value
+            End Function
+
+            Private Shared Function FindClearInterior(image As SKImage) As SKRectI
+                If image Is Nothing OrElse image.Width < 16 OrElse image.Height < 16 Then Return SKRectI.Empty
+                Using pixmap = image.PeekPixels()
+                    If pixmap Is Nothing OrElse pixmap.ColorType <> SKColorType.Rgba8888 AndAlso pixmap.ColorType <> SKColorType.Bgra8888 Then
+                        Return SKRectI.Empty
+                    End If
+                    ' Zeilenweise in ein eigenes Feld: ein Span liesse sich in VB nicht in einer
+                    ' Lambda halten (der Typ der Huelle waere ungueltig und braeche das Laden).
+                    Dim rowBytes = pixmap.RowBytes
+                    Dim w = pixmap.Width, h = pixmap.Height
+                    Dim basis = pixmap.GetPixels()
+                    Dim row(rowBytes - 1) As Byte
+                    Dim column(h - 1) As Byte
+                    Dim cx = w \ 2, cy = h \ 2
+                    ' Alpha steht in beiden Formaten im vierten Byte.
+                    Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basis, cy * rowBytes), row, 0, rowBytes)
+                    For y = 0 To h - 1
+                        column(y) = Runtime.InteropServices.Marshal.ReadByte(basis, y * rowBytes + cx * 4 + 3)
+                    Next
+                    If row(cx * 4 + 3) <> 0 Then Return SKRectI.Empty
+                    Dim left = cx, right = cx, top = cy, bottom = cy
+                    While left > 0 AndAlso row((left - 1) * 4 + 3) = 0 : left -= 1 : End While
+                    While right < w - 1 AndAlso row((right + 1) * 4 + 3) = 0 : right += 1 : End While
+                    While top > 0 AndAlso column(top - 1) = 0 : top -= 1 : End While
+                    While bottom < h - 1 AndAlso column(bottom + 1) = 0 : bottom += 1 : End While
+                    ' Zwei Punkte Abstand zum ersten sichtbaren: die Kantenglaettung des Rands.
+                    Dim rect = New SKRectI(left + 2, top + 2, right - 1, bottom - 1)
+                    If rect.Width < 8 OrElse rect.Height < 8 Then Return SKRectI.Empty
+                    For y = rect.Top To rect.Bottom - 1
+                        Runtime.InteropServices.Marshal.Copy(IntPtr.Add(basis, y * rowBytes), row, 0, rowBytes)
+                        For x = rect.Left To rect.Right - 1
+                            If row(x * 4 + 3) <> 0 Then Return SKRectI.Empty
+                        Next
+                    Next
+                    Return rect
+                End Using
+            End Function
         End Class
 
         ' 256 MB Budget: bei 36 Kacheln zu je ~430x430 Bitmap-Pixeln (~0,7 MB) ist das reichlich,

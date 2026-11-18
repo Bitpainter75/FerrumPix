@@ -299,6 +299,19 @@ Namespace Services
                 canvas.Save()
                 If Math.Abs(renderAnnotation.RotationDegrees) > 0.01F Then
                     canvas.RotateDegrees(renderAnnotation.RotationDegrees, rect.MidX, rect.MidY)
+                ElseIf kind = "frame" Then
+                    ' DIE LEERE MITTE DES RAHMENS NICHT ZEICHNEN. Er deckt das ganze Bild, und jeder
+                    ' Blit zeichnete seine durchsichtige Mitte mit (Diagnoseprotokoll: Blit 80 ms
+                    ' bei 3840x2560 je Rahmenaenderung). Ausgespart wird nur, was im Bitmap
+                    ' nachweislich durchsichtig ist (Entry.ClearInterior), das Ergebnis ist also gleich.
+                    Dim hole = entry.ClearInterior()
+                    If Not hole.IsEmpty Then
+                        Dim sx = dest.Width / entry.Image.Width
+                        Dim sy = dest.Height / entry.Image.Height
+                        canvas.ClipRect(New SKRect(dest.Left + (hole.Left + 1) * sx, dest.Top + (hole.Top + 1) * sy,
+                                                   dest.Left + (hole.Right - 1) * sx, dest.Top + (hole.Bottom - 1) * sy),
+                                        SKClipOperation.Difference)
+                    End If
                 End If
                 ' LINEAR abtasten: ohne Sampling zeichnet Skia das gedrehte Bild mit
                 ' Naechster-Nachbar-Abtastung, und jede Kante wird zur Treppe

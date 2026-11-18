@@ -4921,7 +4921,19 @@ Namespace Views
         ''' Anpassungswerkzeuge (AppSettingsService.ToolGroups). Das Analysebild darueber gehoert
         ''' nicht dazu, es behaelt seinen eigenen Zustand.</summary>
         Private Shared ReadOnly CompactGroupKeys As HashSet(Of String) = New HashSet(Of String)(
-            AppSettingsService.ToolGroups.SelectMany(Function(w) w.Gruppen), StringComparer.Ordinal)
+            AppSettingsService.ToolGroups.SelectMany(Function(w) w.Gruppen).
+                Concat({ExtensionGroupKeys}), StringComparer.Ordinal)
+
+        ''' <summary>Die Gruppen der Erweiterungen, als ein Eintrag fuer ExpanderState.SuspendedKeys:
+        ''' ihre Schluessel ("extension:" und Kennung) entstehen erst zur Laufzeit.</summary>
+        Private Const ExtensionGroupKeys As String = "extension:*"
+
+        ''' <summary>Verwaltet der Kompaktmodus diese Gruppe? Die festen Gruppen der fuenf Werkzeuge und
+        ''' jede Gruppe einer Erweiterung.</summary>
+        Private Shared Function IsCompactGroupKey(key As String) As Boolean
+            If String.IsNullOrEmpty(key) Then Return False
+            Return CompactGroupKeys.Contains(key) OrElse key.StartsWith("extension:", StringComparison.Ordinal)
+        End Function
 
         Private _compactGroupsActive As Boolean
         ''' <summary>Mit automatischem Zuklappen: die eine offene Gruppe.</summary>
@@ -4945,7 +4957,7 @@ Namespace Views
             Dim stack = Me.FindControl(Of Panel)("AdjustmentsStackPanel")
             If stack Is Nothing Then Return New List(Of Expander)()
             Return stack.GetLogicalDescendants().OfType(Of Expander)().
-                Where(Function(x) CompactGroupKeys.Contains(If(ExpanderState.GetKey(x), ""))).ToList()
+                Where(Function(x) IsCompactGroupKey(ExpanderState.GetKey(x))).ToList()
         End Function
 
         ''' <summary>Die Reihenfolge der Kinder von AdjustmentsStackPanel, wie das XAML sie anlegt.
@@ -5051,7 +5063,7 @@ Namespace Views
             If Not _compactGroupsActive OrElse ExpanderState.IsApplying Then Return
             Dim opened = TryCast(e.Source, Expander)
             Dim key = If(opened Is Nothing, "", If(ExpanderState.GetKey(opened), ""))
-            If Not CompactGroupKeys.Contains(key) Then Return
+            If Not IsCompactGroupKey(key) Then Return
             ' Ohne automatisches Zuklappen tut der Klick nur das Seine; gespeichert wird ueber
             ' ExpanderState.CompactSave.
             If Not _compactAutoCollapse Then Return
