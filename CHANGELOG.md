@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.87
 
 ### Changes
 
@@ -14,6 +14,10 @@
   docs/EXTENSIONS.md, together with four examples.
   Many thanks to Spoilerhead, whose black and white conversion Silicon Bonk and split toning
   Fat Toni gave the reason for extensions and are among the examples.
+
+- FerrumPix comes with four extensions: the black and white conversion Silicon Bonk, the split
+  toning Fat Toni, a toning with a curve and a light falloff. They are hidden at first; the eye
+  in the settings, section Extensions, brings them into the editor.
 
 - Extensions run in a fixed order that the extension files set, no longer in the order they were
   switched on, so two pictures with the same settings always look the same. An extension can
@@ -40,6 +44,11 @@
   the other program wrote it instead of replacing it with its own version.
 
 ### Fixes  
+
+- On some Windows computers, Denoise with model and the check of the graphics card in the
+  performance settings hung without end since 0.9.86-3. The models run on the graphics card as
+  in 0.9.86-2 again. If a graphics card ever stops answering, FerrumPix now gives up after a
+  minute, remembers it and lets the models run on the processor instead.
 
 - With the Move button on the editor stage, or while holding SPACE, dragging on a selected object now
   moves the view as everywhere else, instead of moving or selecting the object. Zoomed in, where a

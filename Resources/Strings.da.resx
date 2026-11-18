@@ -11952,4 +11952,7 @@
   <data name="Voreinstellung_eee51be2" xml:space="preserve">
     <value>Forudindstilling</value>
   </data>
+  <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
+    <value>kortet svarede ikke inden for {0} sekunder</value>
+  </data>
 </root>

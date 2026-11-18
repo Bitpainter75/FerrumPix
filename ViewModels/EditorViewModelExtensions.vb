@@ -87,14 +87,23 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Die gewaehlte Moeglichkeit, ueber ihre Beschriftung; dahinter steht ihr Wert.</summary>
-        Public Property SelectedOptionLabel As String
+        ''' <summary>Die gewaehlte Moeglichkeit, ueber ihre Stelle in der Liste; dahinter steht ihr Wert.
+        '''
+        ''' UEBER DIE STELLE, NICHT UEBER DIE BESCHRIFTUNG: die Datei verlangt nur verschiedene
+        ''' Werte, nicht verschiedene Beschriftungen, und zwei Moeglichkeiten koennen in einer Sprache
+        ''' gleich heissen. Ueber die Beschriftung gebunden waehlte die Liste dann immer die erste,
+        ''' und der Wert der zweiten war im Editor nicht zu erreichen.</summary>
+        Public Property SelectedOptionIndex As Integer
             Get
-                Return Control.Options.FirstOrDefault(Function(o) o.Value = _value)?.Label
+                Dim options = Control.Options
+                For i = 0 To options.Count - 1
+                    If options(i).Value = _value Then Return i
+                Next
+                Return -1
             End Get
-            Set(label As String)
-                Dim choice = Control.Options.FirstOrDefault(Function(o) String.Equals(o.Label, label, StringComparison.Ordinal))
-                If choice IsNot Nothing Then Value = choice.Value
+            Set(index As Integer)
+                If index < 0 OrElse index >= Control.Options.Count Then Return
+                Value = Control.Options(index).Value
             End Set
         End Property
 
@@ -222,7 +231,7 @@ Namespace ViewModels
                 _value = clamped
                 Me.RaisePropertyChanged(NameOf(Value))
                 Me.RaisePropertyChanged(NameOf(IsChecked))
-                Me.RaisePropertyChanged(NameOf(SelectedOptionLabel))
+                Me.RaisePropertyChanged(NameOf(SelectedOptionIndex))
                 _owner.AfterChange()
             End Set
         End Property
@@ -302,7 +311,7 @@ Namespace ViewModels
                 _value = clamped
                 Me.RaisePropertyChanged(NameOf(Value))
                 Me.RaisePropertyChanged(NameOf(IsChecked))
-                Me.RaisePropertyChanged(NameOf(SelectedOptionLabel))
+                Me.RaisePropertyChanged(NameOf(SelectedOptionIndex))
             End If
         End Sub
 

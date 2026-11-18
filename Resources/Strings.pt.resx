@@ -11911,4 +11911,7 @@
   <data name="Voreinstellung_eee51be2" xml:space="preserve">
     <value>Predefinição</value>
   </data>
+  <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
+    <value>a placa não respondeu em {0} segundos</value>
+  </data>
 </root>

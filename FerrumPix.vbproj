@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>FerrumPix</RootNamespace>
     <AssemblyName>FerrumPix</AssemblyName>
-    <Version>0.9.86</Version>
-    <AssemblyVersion>0.9.86.0</AssemblyVersion>
-    <FileVersion>0.9.86.0</FileVersion>
-    <InformationalVersion>0.9.86-2</InformationalVersion>
+    <Version>0.9.87</Version>
+    <AssemblyVersion>0.9.87.0</AssemblyVersion>
+    <FileVersion>0.9.87.0</FileVersion>
+    <InformationalVersion>0.9.87-1</InformationalVersion>
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
@@ -35,13 +35,18 @@
     <PackageReference Include="Avalonia.Headless" Version="12.1.6" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
     <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.32.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
     <!-- Die Grafikbeschleunigung fuer die gelernten Modelle: EINE Bibliothek je System, die
          darunter Vulkan, Direct3D oder Metal nimmt. Es gibt sie fuer win-x64, win-arm64,
          linux-x64, linux-arm64 und osx-arm64; osx-x64 bekommt sie nicht mitgeliefert und
          rechnet weiter auf dem Prozessor - GpuAccelerationService faengt das ab. Kostet rund
-         zehn Megabyte im Paket. -->
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.6.0" />
+         zehn Megabyte im Paket.
+         Gehalten auf 0.5.0 (und ONNX Runtime auf 1.31.1, der Stand, mit dem sie lief): 0.6.0
+         bringt unter Windows eine Vorabversion der D3D12 Agility SDK mit, die den
+         Entwicklermodus verlangt. Damit kam auf einer GeForce GTX 1060 schon die Probe nicht
+         mehr zurueck, und das Entrauschen mit Modell hing ohne Abbruch. Erst wieder anheben,
+         wenn eine Fassung die Agility SDK nicht mehr als Vorabversion mitbringt. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.EP.WebGpu" Version="0.5.0" />
     <PackageReference Include="ReactiveUI.Avalonia" Version="12.1.7" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15" />
     <PackageReference Include="QRCoder" Version="1.8.1" />
@@ -90,5 +95,9 @@
     <EmbeddedResource Include="Resources\SonyAMountLensIds.tsv" />
     <EmbeddedResource Include="Resources\PentaxLensIds.tsv" />
     <EmbeddedResource Include="Resources\CanonLensTypes.tsv" />
+    <!-- Die mitgelieferten Erweiterungen, dieselben Dateien wie die Beispiele der Anleitung. In
+         der Bibliothek statt neben dem Programm: so kommen sie mit jedem Paket mit, ohne dass ein
+         Paketweg (Flatpak, AppImage, macOS, Setup) sie eigens ablegen muss. -->
+    <EmbeddedResource Include="docs\extensions\*.json" LogicalName="FerrumPix.Extensions.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

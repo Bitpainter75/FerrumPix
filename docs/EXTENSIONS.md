@@ -24,6 +24,11 @@ The list below sets the order of the groups in the editor with the arrows, and t
 extension in the editor. Neither changes a picture: a hidden extension keeps working in the
 pictures that use it, it only does not show its sliders.
 
+FerrumPix comes with the four examples of this guide. They are hidden at first, so the editor
+only shows the Extensions tool to those who want it: click the eye next to one to bring it into
+the editor. They cannot be removed. If you load your own file with the id of one of them, yours
+is used instead, so you can try a newer version without waiting for a FerrumPix release.
+
 In the editor, each group has the same buttons as the built in ones: the eye compares the
 picture without the extension, the arrow resets the whole group. A slider goes back to its
 default with a double click and compares with it on a right click; color fields and curves have
@@ -60,8 +65,8 @@ do with them.
 
 ## Examples
 
-Four complete extensions come with this guide, in [`docs/extensions`](extensions). Download one
-and load it in the settings, section Extensions:
+Four complete extensions come with this guide, in [`docs/extensions`](extensions), and with
+FerrumPix itself, hidden until you show them in the settings:
 
 - [`spoilerhead.silicon-bonk.json`](extensions/spoilerhead.silicon-bonk.json) turns a finished
   color picture into black and white. Hue and Luminance work like a color filter in front of the

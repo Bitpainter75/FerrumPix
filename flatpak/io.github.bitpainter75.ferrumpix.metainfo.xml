@@ -112,6 +112,28 @@
 
   <releases>
 
+    <release version="0.9.87-1" date="2026-11-18">
+      <description>
+        <p>This update introduces extensions that add their own editing tools, a new High Pass sharpening method, and improved interaction between Highlights and Shadows:</p>
+        <p xml:lang="de">Dieses Update bringt Erweiterungen mit eigenen Bearbeitungswerkzeugen, eine neue Hochpass-Methode zum Schärfen und ein verbessertes Zusammenspiel von Lichtern und Tiefen:</p>
+        <ul>
+          <li>FerrumPix now supports extensions: small files that add editing tools with their own sliders, color controls, curves and presets, such as black-and-white conversion or toning effects. You can load, hide and arrange them under Settings → Extensions. They work on entire photos, mask and selection layers, and objects. Photos retain their extension settings even if the extension isn't installed. Four extensions are included with FerrumPix, initially hidden: Silicon Bonk for black-and-white conversion, Fat Toni for split toning, a curve-based toning effect and a light falloff effect.</li>
+          <li xml:lang="de">FerrumPix unterstützt jetzt Erweiterungen: kleine Dateien, die eigene Bearbeitungswerkzeuge mit Reglern, Farbeinstellungen, Kurven und Voreinstellungen hinzufügen, etwa für Schwarzweißumwandlungen oder Tonungseffekte. Unter Einstellungen → Erweiterungen kannst du sie laden, ausblenden und anordnen. Sie lassen sich auf ganze Fotos, Masken- und Auswahlebenen sowie Objekte anwenden. Die Einstellungen einer Erweiterung bleiben im Foto erhalten, auch wenn die Erweiterung nicht installiert ist. Vier Erweiterungen sind bereits enthalten, zunächst aber ausgeblendet: Silicon Bonk für Schwarzweißumwandlungen, Fat Toni für Teiltonungen, eine Tonung mit Kurven und ein Lichtabfall-Effekt.</li>
+
+          <li>Sharpening now offers a third method, High Pass. It produces the effect of a high-pass layer blended using Linear Light, but processes everything in a single step to bring out even the finest details.</li>
+          <li xml:lang="de">Beim Schärfen gibt es jetzt eine dritte Methode: Hochpass. Sie erzeugt den Effekt einer Hochpass-Ebene mit dem Mischmodus „Lineares Licht“, berechnet ihn aber in einem einzigen Schritt und hebt selbst feinste Details hervor.</li>
+
+          <li>Highlights and Shadows now reinforce each other when adjusted in the same direction. Increasing both or decreasing both produces a stronger combined effect instead of the adjustments partially cancelling each other out.</li>
+          <li xml:lang="de">Lichter und Tiefen verstärken sich jetzt gegenseitig, wenn du beide in dieselbe Richtung verschiebst. Werden beide erhöht oder beide abgesenkt, ergänzen sich ihre Wirkungen, statt sich teilweise gegenseitig aufzuheben.</li>
+
+          <li>If another application modifies a photo's sidecar file while FerrumPix is saving to it, FerrumPix now preserves the other application's changes rather than overwriting them.</li>
+          <li xml:lang="de">Wenn ein anderes Programm die Beistelldatei eines Fotos genau während eines Speichervorgangs in FerrumPix verändert, bleiben dessen Änderungen jetzt erhalten, statt überschrieben zu werden.</li>
+
+          <li>Fixed an issue on some Windows computers where model-based denoising or GPU detection could hang indefinitely. If the graphics card stops responding, the models now fall back to CPU processing after one minute. When the Move tool is active or Space is held down, dragging over a selected object now pans the view instead of moving the object. Sidecar files containing variants created by a newer FerrumPix version are no longer rewritten in a way that discards unrecognised data.</li>
+          <li xml:lang="de">Ein Fehler wurde behoben, durch den auf manchen Windows-Rechnern das modellbasierte Entrauschen oder die Grafikkartenprüfung dauerhaft hängen bleiben konnte. Antwortet die Grafikkarte nicht mehr, werden die Modelle nach einer Minute auf dem Prozessor ausgeführt. Wenn das Werkzeug Verschieben aktiv ist oder du die Leertaste gedrückt hältst, verschiebt das Ziehen über einem ausgewählten Objekt jetzt die Ansicht statt des Objekts. Beistelldateien mit Varianten aus einer neueren FerrumPix-Version werden außerdem nicht mehr so überschrieben, dass unbekannte Daten verloren gehen.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.86-1" date="2026-11-17">
       <description>
         <p>This update lets you create multiple editing variants of a single RAW photo, copy and paste adjustments in the viewer and editor, and brings clearer dialogs with icons and search fields that are easier to clear:</p>

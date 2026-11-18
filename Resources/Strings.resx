@@ -11931,4 +11931,7 @@
   <data name="Voreinstellung_eee51be2" xml:space="preserve">
     <value>Preset</value>
   </data>
+  <data name="die_Karte_hat_innerhalb_von_0_Sekunden_nicht_gea_4fb11704" xml:space="preserve">
+    <value>the card did not answer within {0} seconds</value>
+  </data>
 </root>

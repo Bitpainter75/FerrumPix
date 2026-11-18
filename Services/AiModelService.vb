@@ -957,32 +957,42 @@ Namespace Services
                     ' scheiterte, sonst landete das Ergebnis bei der inzwischen gewaehlten.
                     Dim appliedTo As String = ""
                     Dim attemptedOn As String = ""
+                    ' Haengt das Anlegen auf der Karte, gehoeren die Optionen dem haengenden Faden
+                    ' und werden hier nicht freigegeben (GpuAccelerationService.CreateSessionWithin).
+                    Dim options As SessionOptions = Nothing
+                    Dim abandoned = False
                     Try
-                        Using options = BuildOptions(threads)
-                            ' Vermerkt wird die Karte, die WIRKLICH angehaengt wurde, nicht das
-                            ' vorhin gelesene Ziel: dazwischen kann eine andere gewaehlt worden
-                            ' sein. Stuende hier das alte Ziel, liefe die Sitzung auf Karte B und
-                            ' waere als A eingetragen - und wer daran seine Kachelgroesse bemisst,
-                            ' bekaeme die grosse Kachel auf der kleinen Karte.
-                            If GpuAccelerationService.TryApply(options, appliedTo, attemptedOn) Then
-                                If IsBlockedOn(fileName, appliedTo) Then
-                                    ' Angehaengt, aber an einer (umgewaehlten) Karte, auf der sie
-                                    ' selbst oder dieses Modell gesperrt ist: Prozessor. Das ist KEIN
-                                    ' neuer Fehler der Karte und wird nicht gemerkt; sonst sperrte ein
-                                    ' gesperrtes Modell die ganze Karte.
-                                    appliedTo = ""
-                                Else
-                                    created = New InferenceSession(filePath, options)
-                                    builtWith = appliedTo
-                                    GpuAccelerationService.NoteSuccess(appliedTo)
-                                End If
-                            ElseIf attemptedOn.Length > 0 Then
-                                ' Das Anhaengen selbst ist gescheitert, etwa nach einem Treiberwechsel.
-                                ' Gemerkt, sonst stuende in den Einstellungen weiter "laeuft", und
-                                ' jeder folgende Aufbau versuchte die Karte erneut.
-                                GpuAccelerationService.NoteFailure(attemptedOn, "")
+                        options = BuildOptions(threads)
+                        ' Vermerkt wird die Karte, die WIRKLICH angehaengt wurde, nicht das
+                        ' vorhin gelesene Ziel: dazwischen kann eine andere gewaehlt worden
+                        ' sein. Stuende hier das alte Ziel, liefe die Sitzung auf Karte B und
+                        ' waere als A eingetragen - und wer daran seine Kachelgroesse bemisst,
+                        ' bekaeme die grosse Kachel auf der kleinen Karte.
+                        If GpuAccelerationService.TryApply(options, appliedTo, attemptedOn) Then
+                            If IsBlockedOn(fileName, appliedTo) Then
+                                ' Angehaengt, aber an einer (umgewaehlten) Karte, auf der sie
+                                ' selbst oder dieses Modell gesperrt ist: Prozessor. Das ist KEIN
+                                ' neuer Fehler der Karte und wird nicht gemerkt; sonst sperrte ein
+                                ' gesperrtes Modell die ganze Karte.
+                                appliedTo = ""
+                            Else
+                                created = GpuAccelerationService.CreateSessionWithin(filePath, options, appliedTo, abandoned)
+                                builtWith = appliedTo
+                                GpuAccelerationService.NoteSuccess(appliedTo)
                             End If
-                        End Using
+                        ElseIf attemptedOn.Length > 0 Then
+                            ' Das Anhaengen selbst ist gescheitert, etwa nach einem Treiberwechsel.
+                            ' Gemerkt, sonst stuende in den Einstellungen weiter "laeuft", und
+                            ' jeder folgende Aufbau versuchte die Karte erneut.
+                            GpuAccelerationService.NoteFailure(attemptedOn, "")
+                        End If
+                    Catch ex As TimeoutException When abandoned
+                        ' Die Karte kam nicht zurueck. Das ist ein Fehler der KARTE, und den hat
+                        ' CreateSessionWithin schon gemerkt; das Modell bleibt ungesperrt. Gleich
+                        ' darunter laeuft derselbe Weg ueber den Prozessor.
+                        DiagnosticLogService.LogAlways("KiModell",
+                            $"nicht auf der Grafikkarte, keine Antwort: {Path.GetFileName(filePath)}")
+                        created = Nothing
                     Catch ex As Exception
                         ' Die Karte hat DIESES Modell nicht genommen. Das kostet Zeit, aber keine
                         ' Funktion: gleich darunter laeuft derselbe Weg ueber den Prozessor.
@@ -997,6 +1007,8 @@ Namespace Services
                         DiagnosticLogService.LogAlways("KiModell",
                             $"nicht auf der Grafikkarte: {Path.GetFileName(filePath)} - {ex.Message}")
                         created = Nothing
+                    Finally
+                        If Not abandoned Then options?.Dispose()
                     End Try
                 End If
                 Try

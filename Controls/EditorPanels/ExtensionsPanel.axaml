@@ -100,7 +100,7 @@
                                                                VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}"
                                                                TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding HintOrLabel}" />
                                                     <ComboBox Grid.Column="1" ItemsSource="{Binding OptionLabels}"
-                                                              SelectedItem="{Binding SelectedOptionLabel}"
+                                                              SelectedIndex="{Binding SelectedOptionIndex}"
                                                               FontSize="{DynamicResource FP.Font.Small}" Margin="6,0,0,0"
                                                               HorizontalAlignment="Stretch" />
                                                 </Grid>
