@@ -7905,8 +7905,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Camada de máscara criada a partir do caminho</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
-    <value>Ativa gestos de trackpad: zoom com dois dedos no visualizador, deslize horizontal para navegar e arraste para mover uma imagem ampliada. Se recortar arrastando estiver ativado no visualizador, SHIFT+arrastar seleciona aí um recorte. Os controlos do rato mantêm-se inalterados quando este modo está desativado.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_cc6858f7" xml:space="preserve">
+    <value>Ativa gestos de trackpad: zoom com dois dedos no visualizador, deslize horizontal para navegar e arraste para mover uma imagem ampliada. Se recortar arrastando estiver ativado no visualizador, SHIFT+arrastar seleciona aí um recorte. Os controlos do rato mantêm-se inalterados quando este modo está desativado. No editor, arrastar desloca a vista apenas nas ferramentas de ajuste; seleção, máscaras, objetos e pincéis mantêm o próprio arrasto.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Novo local desta pasta</value>
@@ -9052,8 +9052,8 @@
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>Depois trace na imagem uma linha ao longo de uma aresta que deva ficar horizontal ou vertical</value>
   </data>
-  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
-    <value>Pesquisar nas definições</value>
+  <data name="Einstellungen_durchsuchen_STRG_F_06f9eea5" xml:space="preserve">
+    <value>Pesquisar nas definições (CTRL+F)</value>
   </data>
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Nenhuma definição encontrada</value>
@@ -11961,5 +11961,17 @@
   </data>
   <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
     <value>Não foi possível limpar o registro.</value>
+  </data>
+  <data name="Keyline_02908208" xml:space="preserve">
+    <value>Filete</value>
+  </data>
+  <data name="Kleinbildfilm_af00e8a2" xml:space="preserve">
+    <value>Filme 35 mm</value>
+  </data>
+  <data name="Linienfarbe_281b71e1" xml:space="preserve">
+    <value>Cor da linha</value>
+  </data>
+  <data name="Linienbreite_b9c0eb00" xml:space="preserve">
+    <value>Espessura da linha</value>
   </data>
 </root>

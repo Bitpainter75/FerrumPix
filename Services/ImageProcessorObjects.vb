@@ -1731,7 +1731,10 @@ Namespace Services
                                       annotation.FrameCornerRadiusPercent / 100.0F, annotation.FrameEffect,
                                       gradient, annotation.FrameSymbol, annotation.FrameSymbolSpacingPercent,
                                       annotation.FrameSymbolRotate, stroke, annotation.StrokeWidth,
-                                      annotation.FrameMarginPercent / 100.0F)
+                                      annotation.FrameMarginPercent / 100.0F,
+                                      FrameKeylineColorFor(annotation, fill, alphaFactor),
+                                      annotation.FrameKeylineWidthPercent / 100.0F,
+                                      annotation.FrameFilmOrientation)
                 Case "rectangle", "rect", "selectionfill"
                     DrawShape(canvas, rect, fill, stroke, strokeWidth, False, gradient)
                 Case "roundedrectangle", "rounded-rectangle"
@@ -2210,6 +2213,20 @@ Namespace Services
                 rounded?.Dispose()
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>Die Farbe der feinen Linie des Rahmens "Keyline": die eigene, sonst im Kontrast
+        ''' zur Rahmenfarbe. Die Deckkraft des Objekts gilt wie fuer die Rahmenfarbe.</summary>
+        Friend Shared Function FrameKeylineColorFor(annotation As ImageAnnotation, frameFill As SKColor, alphaFactor As Single) As SKColor
+            If annotation IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(annotation.FrameKeylineColor) Then
+                Return ApplyAlpha(ParseColor(annotation.FrameKeylineColor, SKColors.Black), alphaFactor)
+            End If
+            Return If(FrameKeylineIsDark(frameFill), SKColors.Black, SKColors.White).WithAlpha(frameFill.Alpha)
+        End Function
+
+        ''' <summary>Ist der Rahmen hell genug fuer eine dunkle Linie? Relative Helligkeit nach BT.709.</summary>
+        Friend Shared Function FrameKeylineIsDark(frameFill As SKColor) As Boolean
+            Return 0.2126 * frameFill.Red + 0.7152 * frameFill.Green + 0.0722 * frameFill.Blue >= 128
         End Function
 
         Private Shared Function ApplyAlpha(color As SKColor, factor As Single) As SKColor
@@ -3725,7 +3742,7 @@ Namespace Services
             Return spans
         End Function
 
-        Private Shared Function ParseColor(value As String, fallback As SKColor) As SKColor
+        Friend Shared Function ParseColor(value As String, fallback As SKColor) As SKColor
             If String.IsNullOrWhiteSpace(value) Then Return fallback
             Dim text = value.Trim().TrimStart("#"c)
             Try

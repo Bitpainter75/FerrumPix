@@ -7904,8 +7904,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>已从路径创建蒙版图层</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
-    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。如果在查看器中开启了拖动裁剪，在那里按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_cc6858f7" xml:space="preserve">
+    <value>启用触控板手势：在查看器中双指缩放，水平滑动浏览，拖动平移放大的图像。如果在查看器中开启了拖动裁剪，在那里按住 SHIFT 拖动可选择裁剪区域。关闭此模式时鼠标操作保持不变。 在编辑器中，只有调整工具里拖动才会平移视图；选区、蒙版、对象和画笔保留各自的拖动操作。</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>此文件夹的新位置</value>
@@ -9051,8 +9051,8 @@
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>然后在图像上沿一条应水平或垂直的边缘画一条线</value>
   </data>
-  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
-    <value>搜索设置</value>
+  <data name="Einstellungen_durchsuchen_STRG_F_06f9eea5" xml:space="preserve">
+    <value>搜索设置 (CTRL+F)</value>
   </data>
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>未找到设置</value>
@@ -11960,5 +11960,17 @@
   </data>
   <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
     <value>无法清空日志。</value>
+  </data>
+  <data name="Keyline_02908208" xml:space="preserve">
+    <value>细线框</value>
+  </data>
+  <data name="Kleinbildfilm_af00e8a2" xml:space="preserve">
+    <value>35毫米胶片</value>
+  </data>
+  <data name="Linienfarbe_281b71e1" xml:space="preserve">
+    <value>线条颜色</value>
+  </data>
+  <data name="Linienbreite_b9c0eb00" xml:space="preserve">
+    <value>线条宽度</value>
   </data>
 </root>

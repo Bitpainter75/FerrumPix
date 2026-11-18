@@ -190,6 +190,16 @@ Namespace Services
         Private Shared _toneCacheBitmap As SKBitmap = Nothing
         Private Shared _toneCacheKey As String = Nothing
 
+        ''' <summary>Eine fortlaufende Nummer je Quellbitmap, solange sie lebt. Der Hashwert des Objekts
+        ''' taugt dafuer nicht: er ist nicht eindeutig, und ein neues Bild mit gleichem Rezept bekaeme
+        ''' sonst die Textur des alten (Weg 4).</summary>
+        Private Shared ReadOnly _sourceIdentities As New Runtime.CompilerServices.ConditionalWeakTable(Of SKBitmap, Object)()
+        Private Shared _nextSourceIdentity As Long = 0
+
+        Friend Shared Function SourceIdentity(source As SKBitmap) As Long
+            Return CLng(_sourceIdentities.GetValue(source, Function(b) Interlocked.Increment(_nextSourceIdentity)))
+        End Function
+
         ''' <summary>Meldet, dass die Bildpunkte der Vorschauquelle sich geaendert haben, ohne dass
         ''' eine neue Bitmap entstanden ist.</summary>
         Public Shared Sub MarkBaseSourceChanged()
@@ -3041,6 +3051,9 @@ Namespace Services
             ' seine Eingabe gleich blieb. Auch hier eine Abschrift, die der Kette gehoert.
             Dim noiseKey As String = Nothing
             Dim noiseStamp As Long = 0
+            ' Vor der Geometrie gelesen, wie beim Farbrauschen: aendert sich die Quelle waehrend des
+            ' Laufs, traegt das Ergebnis den alten Stempel und wird nie wiederverwendet.
+            Dim stampAtStart = Interlocked.Read(_baseSourceStamp)
             Dim noiseFromCache = False
             If cachedTone Is Nothing AndAlso useColorNoiseCache AndAlso ColorNoiseCacheApplies(adj) Then
                 noiseKey = ComputeColorNoiseCacheKey(adj)
@@ -3089,13 +3102,41 @@ Namespace Services
                         processed = ApplyColorNoiseStageCore(processed, adj, owned)
                         If noiseKey IsNot Nothing Then RememberColorNoiseState(source, noiseStamp, noiseKey, processed)
                     End If
-                    processed = ApplyPointChainStageCore(processed, adj, owned)
+                    ' Der Inhalt, auf dem die Punktkette jetzt rechnet, ist durch Quelle, Zeitstempel und
+                    ' Rezept bis zum Farbrauschen bestimmt: mit diesem Namen darf ihre Textur auf der Karte
+                    ' liegen bleiben (_pointChainSourceKey, Weg 4).
+                    ' Auch ohne Farbrauschminderung: der Schluessel des Farbrauschens beschreibt das Rezept bis
+                    ' vor die Kette ohnehin. Nur wo der Aufrufer eine gleichbleibende Quelle zusagt
+                    ' (useColorNoiseCache), denn nur dort meldet MarkBaseSourceChanged eine Aenderung
+                    ' ihrer Bildpunkte. Gemessen: eine RAW mit Farbrauschen 0 lud bei jedem Schritt hoch.
+                    Dim chainKey = noiseKey
+                    Dim chainStamp = noiseStamp
+                    If chainKey Is Nothing AndAlso cachedTone Is Nothing AndAlso useColorNoiseCache Then
+                        chainKey = ComputeColorNoiseCacheKey(adj)
+                        chainStamp = stampAtStart
+                    End If
+                    _pointChainSourceKey = If(chainKey Is Nothing, Nothing,
+                        $"{SourceIdentity(source)}|{processed.Width}x{processed.Height}|{chainStamp}|{chainKey}")
+                    Try
+                        processed = ApplyPointChainStageCore(processed, adj, owned)
+                    Finally
+                        _pointChainSourceKey = Nothing
+                    End Try
                     ' Die Abschrift nur fuer den, der sie haben will (keepBuiltTone): ohne den
                     ' Schalter landete sie in der verworfenen Vorgabe des optionalen ByRef-Parameters,
                     ' eine Vollkopie je Aufruf, die erst der Finalizer freigab.
                     If selectionBaseline Is Nothing AndAlso keepBuiltTone Then builtTone = CloneBitmap(processed)
                 End If
-                processed = ApplyDetailAdjustmentStagesCore(processed, adj, owned)
+                ' Der Name des Bilds vor den Detailstufen: Quelle, Stempel und Rezept bis einschliesslich
+                ' der Tonstufe (wie der Tonspeicher). Nur wo der Aufrufer eine gleichbleibende Quelle
+                ' zusagt; dann bleibt seine Textur auf der Karte liegen (GpuDetailSession).
+                _detailSourceKey = If(useColorNoiseCache,
+                    $"{SourceIdentity(source)}|{processed.Width}x{processed.Height}|{stampAtStart}|{ComputeToneCacheKey(adj)}", Nothing)
+                Try
+                    processed = ApplyDetailAdjustmentStagesCore(processed, adj, owned)
+                Finally
+                    _detailSourceKey = Nothing
+                End Try
 
                 ' Auswahl-Skopus: Anpassungen nur INNERHALB der aktiven Auswahl wirken lassen. Maske,
                 ' Vergleichsstand und angepasstes Bild liegen hier gemeinsam im gerenderten Display-Raum.
@@ -3238,7 +3279,11 @@ Namespace Services
             ' Tonregler, Kurven und Farbe arbeiten danach auf dem beleuchteten Bild. Bei einem
             ' Filmnegativ danach, denn vor der Umkehr wuerde ein Licht abdunkeln.
             Dim lightsFirst = HasActiveLightSources(adj) AndAlso Not adj.NegativeEnabled
-            If lightsFirst Then processed = ApplyLightingStage(processed, adj, owned)
+            If lightsFirst Then
+                processed = ApplyLightingStage(processed, adj, owned)
+                ' Die Lichter aendern das Ausgangsbild der Kette: es hat keinen Namen mehr.
+                _pointChainSourceKey = Nothing
+            End If
 
             processed = ReplaceBitmapOwned(processed, PerformanceTraceService.Measure(
                 "Pixel: Punktkette (Ton/Farbe)", Function() ApplyPointOpChain(processed, adj, toneReference)), owned)

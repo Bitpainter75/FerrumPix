@@ -7906,8 +7906,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Livello maschera creato dal tracciato</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
-    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Se ritaglia trascinando è attivo nel visualizzatore, SHIFT+trascina vi seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_cc6858f7" xml:space="preserve">
+    <value>Attiva i gesti del trackpad: zoom con due dita nel visualizzatore, scorrimento orizzontale per sfogliare e trascinamento per spostare un'immagine ingrandita. Se ritaglia trascinando è attivo nel visualizzatore, SHIFT+trascina vi seleziona un ritaglio. I controlli del mouse restano invariati quando questa modalità è disattivata. Nell'editor, il trascinamento sposta la vista solo negli strumenti di regolazione; selezione, maschere, oggetti e pennelli mantengono il proprio trascinamento.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Nuova posizione di questa cartella</value>
@@ -9053,8 +9053,8 @@
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>Poi traccia sull'immagine una linea lungo un bordo che deve essere orizzontale o verticale</value>
   </data>
-  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
-    <value>Cerca nelle impostazioni</value>
+  <data name="Einstellungen_durchsuchen_STRG_F_06f9eea5" xml:space="preserve">
+    <value>Cerca nelle impostazioni (CTRL+F)</value>
   </data>
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Nessuna impostazione trovata</value>
@@ -11962,5 +11962,17 @@
   </data>
   <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
     <value>Impossibile svuotare il registro.</value>
+  </data>
+  <data name="Keyline_02908208" xml:space="preserve">
+    <value>Filetto</value>
+  </data>
+  <data name="Kleinbildfilm_af00e8a2" xml:space="preserve">
+    <value>Pellicola 35 mm</value>
+  </data>
+  <data name="Linienfarbe_281b71e1" xml:space="preserve">
+    <value>Colore linea</value>
+  </data>
+  <data name="Linienbreite_b9c0eb00" xml:space="preserve">
+    <value>Spessore linea</value>
   </data>
 </root>

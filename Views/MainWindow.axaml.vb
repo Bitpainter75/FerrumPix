@@ -241,14 +241,19 @@ Namespace Views
             Dim host = Me.FindControl(Of Panel)("MainContentHost")
             If vm Is Nothing OrElse host Is Nothing OrElse vm.Editor Is Nothing Then Return
             If _modeViews.ContainsKey(vm.Editor) Then Return
-            Dim view = _viewLocator.Build(vm.Editor)
+            ' MESSPUNKTE: beim ersten Oeffnen stand der Anzeigefaden bis 1,9 s, ohne dass ein
+            ' Messpunkt offen war. Hier entsteht die Ansicht des Editors.
+            Dim view = PerformanceTraceService.Measure("Editor oeffnen: Ansicht bauen", Function() _viewLocator.Build(vm.Editor))
             If view Is Nothing Then Return
-            view.DataContext = vm.Editor
-            view.Opacity = 0
-            view.IsHitTestVisible = False
-            _modeViews(vm.Editor) = view
-            _preparedViews.Add(view)
-            host.Children.Add(view)
+            PerformanceTraceService.Measure("Editor oeffnen: Ansicht einhaengen",
+                Sub()
+                    view.DataContext = vm.Editor
+                    view.Opacity = 0
+                    view.IsHitTestVisible = False
+                    _modeViews(vm.Editor) = view
+                    _preparedViews.Add(view)
+                    host.Children.Add(view)
+                End Sub)
             ApplyLocalization()
         End Sub
 
@@ -582,10 +587,15 @@ Namespace Views
         Private Sub ApplyLocalization()
             Dispatcher.UIThread.Post(
                 Sub()
-                    PlatformShortcutService.RestoreMacPresentation(Me)
-                    LocalizationService.ApplyTo(Me)
-                    LocalizationService.ApplyToVisualTree(Me)
-                    PlatformShortcutService.ApplyMacPresentation(Me)
+                    ' Messpunkt: das Uebersetzen laeuft ueber das GANZE Fenster samt Galerie, auch wenn
+                    ' nur eine neue Ansicht dazukam (Verdacht beim ersten Oeffnen des Editors).
+                    PerformanceTraceService.Measure("Fenster: Uebersetzung anwenden",
+                        Sub()
+                            PlatformShortcutService.RestoreMacPresentation(Me)
+                            LocalizationService.ApplyTo(Me)
+                            LocalizationService.ApplyToVisualTree(Me)
+                            PlatformShortcutService.ApplyMacPresentation(Me)
+                        End Sub)
                 End Sub,
                 DispatcherPriority.Loaded)
         End Sub

@@ -23,6 +23,11 @@ Namespace Services
 
             Private _surface As SKSurface
             Private _info As SKImageInfo
+            ''' <summary>Der Name des Ausgangsbilds (_detailSourceKey beim Anlegen) und das Bitmap, fuer
+            ''' das er gilt. Nur das erste Hochladen GENAU dieses Bitmaps darf die gemerkte Textur
+            ''' nehmen; nach einer Stufe auf dem Prozessor ist das Bild ein anderes.</summary>
+            Private _key As String
+            Private _keySource As SKBitmap
             Private _uploadSample As GpuResultSample
             Private ReadOnly _raster As Boolean
 
@@ -54,7 +59,7 @@ Namespace Services
                 If Not GpuImageService.IsAvailable Then Return Nothing
                 If LastGpuCheck.State = GpuCheckState.Untested Then CheckGpuImageProcessing()
                 If LastGpuCheck.State <> GpuCheckState.Works Then Return Nothing
-                Return New GpuDetailSession(raster:=False)
+                Return New GpuDetailSession(raster:=False) With {._key = _detailSourceKey, ._keySource = source}
             End Function
 
             ''' <summary>Auf dem GPU-Faden, oder im Pruefmodus direkt hier mit Skia auf dem Prozessor
@@ -87,7 +92,17 @@ Namespace Services
                 ' Hinauf geht eine eigene Kopie, nicht current: kehrt TryRun nach Ablauf der Frist
                 ' zurueck, gibt der Aufrufer current frei, waehrend der Auftrag noch liest.
                 Dim info = current.Info
-                Dim uploadImage = If(_surface Is Nothing AndAlso handover Is Nothing, SnapshotForGpu(current), Nothing)
+                ' DAS AUSGANGSBILD BLEIBT AUF DER KARTE (wie bei der Punktkette): beim Ziehen an einem
+                ' Detailregler kommt es aus dem Tonspeicher und ist bei jedem Schritt dasselbe. Gemessen
+                ' kosteten Kopie und Hochladen je Schritt 18 ms. Nur fuer das erste Hochladen des
+                ' benannten Bitmaps; die Uebergabe der Punktkette geht vor (sie liegt schon oben).
+                Dim keyed = _surface Is Nothing AndAlso handover Is Nothing AndAlso Not _raster AndAlso
+                            _key IsNot Nothing AndAlso Object.ReferenceEquals(current, _keySource)
+                Dim key = If(keyed, _key, Nothing)
+                Dim tryResident = keyed AndAlso ResidentDetailSourceMatches(key)
+                Dim uploadImage = If(_surface Is Nothing AndAlso handover Is Nothing AndAlso Not tryResident,
+                    PerformanceTraceService.Measure("Pixel: Detailstufen, Kopie fuer die Karte", Function() SnapshotForGpu(current)), Nothing)
+                Dim residentMissing = False
                 ' Der Auftrag schreibt nicht in _surface, sondern gibt die neue Flaeche zurueck:
                 ' kommt er erst nach Ablauf der Frist zurueck, gibt der Dienst sie auf dem GPU-Faden
                 ' frei, und die Sitzung bleibt bei ihrem alten Stand.
@@ -96,8 +111,34 @@ Namespace Services
                 Dim done = Run(
                     Function(gr)
                         Dim surface = before
+                        If surface Is Nothing AndAlso tryResident Then
+                            ' Die gemerkte Textur gehoert der Ablage: sie geht nur lesend in die Stufe.
+                            Dim resident = TakeResidentDetailSource(gr, key)
+                            If resident Is Nothing Then
+                                residentMissing = True
+                                Return Nothing
+                            End If
+                            Dim fromResident = stage(gr, resident)
+                            If fromResident Is Nothing Then Throw New InvalidOperationException("Zielflaeche auf der Grafikkarte nicht anlegbar.")
+                            Return fromResident
+                        End If
+                        If surface Is Nothing AndAlso handover Is Nothing AndAlso key IsNot Nothing Then
+                            ' Hochladen und merken. EIN Schnappschuss fuer beides: SkiaSharp liefert fuer
+                            ' denselben nativen Schnappschuss dasselbe verwaltete Bild, ein Using um die
+                            ' Stufe gaebe also genau die gemerkte Textur frei (Absturz im naechsten Lauf).
+                            Dim uploaded = PerformanceTraceService.Measure("Pixel: Detailstufen, Hochladen", Function() Upload(gr, uploadImage))
+                            Try
+                                Dim kept = uploaded.Snapshot()
+                                StoreResidentDetailSource(gr, key, kept)
+                                Dim fromUpload = stage(gr, kept)
+                                If fromUpload Is Nothing Then Throw New InvalidOperationException("Zielflaeche auf der Grafikkarte nicht anlegbar.")
+                                Return fromUpload
+                            Finally
+                                uploaded.Dispose()
+                            End Try
+                        End If
                         If surface Is Nothing Then
-                            surface = If(handover, Upload(gr, uploadImage))
+                            surface = If(handover, PerformanceTraceService.Measure("Pixel: Detailstufen, Hochladen", Function() Upload(gr, uploadImage)))
                             handover = Nothing
                         End If
                         Try
@@ -115,6 +156,11 @@ Namespace Services
                     End Function, nextSurface, uploadImage)
                 ' Kam der Lauf gar nicht erst an (Karte verloren), liegt die Uebergabe noch hier.
                 If handover IsNot Nothing Then DisposeOnGpu(handover)
+                If done AndAlso residentMissing Then
+                    ' Die gemerkte Textur war inzwischen eine andere: noch einmal mit Kopie.
+                    _key = Nothing
+                    Return TryApply(current, stage)
+                End If
                 If Not done OrElse nextSurface Is Nothing Then Return False
                 If before Is Nothing Then _info = info
                 _surface = nextSurface
@@ -189,6 +235,46 @@ Namespace Services
                 Return surface
             End Function
         End Class
+
+        ''' <summary>Der Name des Bilds, mit dem die Detailstufen beginnen, wenn er sich angeben laesst:
+        ''' Quelle, Zeitstempel und Rezept bis einschliesslich der Tonstufe. Gesetzt fuer die Dauer
+        ''' EINES Durchlaufs auf dem rechnenden Faden (ProcessBitmapBaseBeforeMaskedLayers).</summary>
+        <ThreadStatic> Friend Shared _detailSourceKey As String
+
+        ''' <summary>Die zuletzt hochgeladene Textur der Detailstufen, ihr Name und ihr Kontext. Es liegt
+        ''' hoechstens EINE; angefasst wird sie nur auf dem GPU-Faden.</summary>
+        Private Shared _residentDetailSource As SKImage
+        Private Shared _residentDetailKey As String
+        Private Shared _residentDetailContext As GRContext
+        Private Shared ReadOnly _residentDetailLock As New Object()
+
+        Private Shared Function ResidentDetailSourceMatches(key As String) As Boolean
+            SyncLock _residentDetailLock
+                Return _residentDetailSource IsNot Nothing AndAlso String.Equals(_residentDetailKey, key, StringComparison.Ordinal)
+            End SyncLock
+        End Function
+
+        ''' <summary>Die gemerkte Textur, wenn sie zu Name und Kontext passt; sonst Nothing.</summary>
+        Private Shared Function TakeResidentDetailSource(gr As GRContext, key As String) As SKImage
+            SyncLock _residentDetailLock
+                If _residentDetailSource IsNot Nothing AndAlso Object.ReferenceEquals(_residentDetailContext, gr) AndAlso
+                   String.Equals(_residentDetailKey, key, StringComparison.Ordinal) Then Return _residentDetailSource
+            End SyncLock
+            Return Nothing
+        End Function
+
+        ''' <summary>Merkt die Textur; die vorige geht weg, wenn sie im selben Kontext entstand.</summary>
+        Private Shared Sub StoreResidentDetailSource(gr As GRContext, key As String, texture As SKImage)
+            If texture Is Nothing Then Return
+            Dim previous As SKImage = Nothing
+            SyncLock _residentDetailLock
+                If _residentDetailSource IsNot Nothing AndAlso Object.ReferenceEquals(_residentDetailContext, gr) Then previous = _residentDetailSource
+                _residentDetailSource = texture
+                _residentDetailKey = key
+                _residentDetailContext = gr
+            End SyncLock
+            previous?.Dispose()
+        End Sub
 
         ''' <summary>Pruefmodus fuer den Pruefstand: die Stufen-Shader laufen ueber Skia auf dem
         ''' Prozessor statt auf der Karte, damit ihr Vergleich mit den Prozessor-Stufen ohne

@@ -34,7 +34,10 @@ Namespace Services
                                             Optional symbolRotate As Boolean = False,
                                             Optional symbolStrokeColor As SKColor = Nothing,
                                             Optional symbolStrokeWidth As Single = 0,
-                                            Optional marginPercent As Single = 0)
+                                            Optional marginPercent As Single = 0,
+                                            Optional keylineColor As SKColor = Nothing,
+                                            Optional keylineWidthPercent As Single = 0.0025F,
+                                            Optional filmOrientation As String = "Automatisch")
             If canvas Is Nothing Then Return
             If bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
             ' Staerke, Rundung und Abstand beziehen sich auf die kuerzere Seite des GANZEN Rechtecks,
@@ -73,6 +76,21 @@ Namespace Services
                     StampFrameSymbols(canvas, boundsWidth, boundsHeight, thickness, radius, normalized,
                                       symbol, symbolSpacingPercent, symbolRotate, color, gradientShader,
                                       symbolStrokeColor, symbolStrokeWidth)
+                    Return
+                End If
+
+                If normalized = "keyline" Then
+                    ' Die Linie misst sich wie Staerke und Abstand an der kuerzeren Seite, nicht an der
+                    ' Staerke: sonst wuchs mit dem Rand auch die Linie.
+                    Dim keylineWidth = If(keylineWidthPercent <= 0, 0.0F,
+                                          Math.Max(1.0F, shortSide * Clamp(keylineWidthPercent, 0, 0.02F)))
+                    DrawKeylineFrame(canvas, boundsWidth, boundsHeight, thickness, radius, strokePaintColor,
+                                     gradientShader, keylineColor, keylineWidth)
+                    Return
+                End If
+                If normalized = "kleinbildfilm" Then
+                    Dim horizontal = FilmRunsHorizontally(filmOrientation, boundsWidth, boundsHeight)
+                    DrawFilmStripFrame(canvas, boundsWidth, boundsHeight, thickness, radius, strokePaintColor, gradientShader, horizontal)
                     Return
                 End If
 
@@ -128,6 +146,95 @@ Namespace Services
                 End Using
             Finally
                 gradientShader?.Dispose()
+                canvas.Restore()
+            End Try
+        End Sub
+
+        ''' <summary>Rahmen "Keyline": ein voller Rand in der Rahmenfarbe und an seiner Innenkante, wo
+        ''' er auf das Bild trifft, eine feine Linie in eigener Farbe und Breite, wie bei einem
+        ''' Passepartout mit Zierlinie. Breiter als der Rand wird die Linie nicht.</summary>
+        Private Shared Sub DrawKeylineFrame(canvas As SKCanvas, width As Single, height As Single, thickness As Single,
+                                            radius As Single, color As SKColor, gradientShader As SKShader,
+                                            keylineColor As SKColor, lineWidth As Single)
+            Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
+                If gradientShader IsNot Nothing Then paint.Shader = gradientShader
+                Dim inset = thickness / 2.0F
+                Dim rect = New SKRect(inset, inset, width - inset, height - inset)
+                If radius > 0 Then canvas.DrawRoundRect(rect, radius, radius, paint) Else canvas.DrawRect(rect, paint)
+            End Using
+            If keylineColor.Alpha = 0 OrElse lineWidth <= 0 Then Return
+            lineWidth = Math.Min(lineWidth, thickness)
+            ' Ganz im Rand, buendig mit seiner Innenkante: die Linie verdeckt kein Bild.
+            Dim lineInset = thickness - lineWidth / 2.0F
+            Dim lineRect = New SKRect(lineInset, lineInset, width - lineInset, height - lineInset)
+            If lineRect.Width <= 0 OrElse lineRect.Height <= 0 Then Return
+            Using linePaint = New SKPaint With {.Color = keylineColor, .Style = SKPaintStyle.Stroke, .StrokeWidth = lineWidth, .IsAntialias = True}
+                Dim lineRadius = Math.Max(0.0F, radius - lineInset)
+                If lineRadius > 0 Then canvas.DrawRoundRect(lineRect, lineRadius, lineRadius, linePaint) Else canvas.DrawRect(lineRect, linePaint)
+            End Using
+        End Sub
+
+        ''' <summary>Laeuft der Filmstreifen waagerecht (Lochreihen oben und unten)? "Automatisch" legt
+        ''' sie an die langen Seiten, bei einem quadratischen Bild waagerecht.</summary>
+        Friend Shared Function FilmRunsHorizontally(orientation As String, width As Single, height As Single) As Boolean
+            Select Case If(orientation, "").Trim().ToLowerInvariant()
+                Case "querformat" : Return True
+                Case "hochformat" : Return False
+                Case Else : Return width >= height
+            End Select
+        End Function
+
+        ''' <summary>Rahmen "Kleinbildfilm": ein Filmstreifen in der Rahmenfarbe. Entlang seiner
+        ''' Laufrichtung (FilmRunsHorizontally) ein Rand in voller Staerke mit einer Reihe gerundeter
+        ''' Perforationsloecher, quer dazu ein schmaler Steg. Die Loecher sind ausgestanzt: durch sie scheint, was unter dem Rahmen
+        ''' liegt. Die Masse folgen dem Kleinbildfilm (Rand 5,5 mm, Loch 2,8 auf 2,0 mm, Teilung
+        ''' 4,75 mm), bezogen auf die Staerke als Randbreite.</summary>
+        Private Shared Sub DrawFilmStripFrame(canvas As SKCanvas, width As Single, height As Single, thickness As Single,
+                                              radius As Single, color As SKColor, gradientShader As SKShader,
+                                              landscape As Boolean)
+            Dim shortBand = thickness * 0.45F
+            Dim inner = If(landscape,
+                           New SKRect(shortBand, thickness, width - shortBand, height - thickness),
+                           New SKRect(thickness, shortBand, width - thickness, height - shortBand))
+            If inner.Width <= 0 OrElse inner.Height <= 0 Then Return
+            canvas.SaveLayer()
+            Try
+                Using band = New SKPath With {.FillType = SKPathFillType.EvenOdd}
+                    Dim outer = New SKRect(0, 0, width, height)
+                    If radius > 0 Then band.AddRoundRect(outer, radius, radius) Else band.AddRect(outer)
+                    band.AddRect(inner)
+                    Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                        If gradientShader IsNot Nothing Then paint.Shader = gradientShader
+                        canvas.DrawPath(band, paint)
+                    End Using
+                End Using
+
+                ' Quer zum Streifen 0,51 der Randbreite, laengs 0,36, Teilung 0,86, Ecken 0,09.
+                Dim across = thickness * 0.51F
+                Dim along = thickness * 0.36F
+                Dim pitch = thickness * 0.86F
+                Dim corner = thickness * 0.09F
+                Dim length = If(landscape, width, height)
+                Dim count = Math.Max(1, CInt(Math.Floor(length / pitch)))
+                ' Gleichmaessig auf die Laenge verteilt, die Reihe mittig: an beiden Enden gleich viel Rand.
+                Dim start = (length - count * pitch) / 2.0F + (pitch - along) / 2.0F
+                Dim offsetAcross = (thickness - across) / 2.0F
+                Using hole = New SKPaint With {.BlendMode = SKBlendMode.Clear, .Style = SKPaintStyle.Fill, .IsAntialias = True}
+                    For i = 0 To count - 1
+                        Dim position = start + i * pitch
+                        Dim first As SKRect, second As SKRect
+                        If landscape Then
+                            first = New SKRect(position, offsetAcross, position + along, offsetAcross + across)
+                            second = New SKRect(position, height - offsetAcross - across, position + along, height - offsetAcross)
+                        Else
+                            first = New SKRect(offsetAcross, position, offsetAcross + across, position + along)
+                            second = New SKRect(width - offsetAcross - across, position, width - offsetAcross, position + along)
+                        End If
+                        canvas.DrawRoundRect(first, corner, corner, hole)
+                        canvas.DrawRoundRect(second, corner, corner, hole)
+                    Next
+                End Using
+            Finally
                 canvas.Restore()
             End Try
         End Sub

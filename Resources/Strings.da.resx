@@ -7946,8 +7946,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Maskelag oprettet ud fra stien</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
-    <value>Aktiverer trackpadbevægelser: zoom med to fingre i fremviseren, stryg vandret for at bladre og træk for at panorere et forstørret billede. Er beskær ved at trække slået til i fremviseren, vælger SHIFT+træk der et beskæringsområde. Musebetjeningen forbliver uændret, når tilstanden er slået fra.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_cc6858f7" xml:space="preserve">
+    <value>Aktiverer trackpadbevægelser: zoom med to fingre i fremviseren, stryg vandret for at bladre og træk for at panorere et forstørret billede. Er beskær ved at trække slået til i fremviseren, vælger SHIFT+træk der et beskæringsområde. Musebetjeningen forbliver uændret, når tilstanden er slået fra. I editoren flytter træk kun i justeringsværktøjerne; markering, masker, objekter og pensler beholder deres eget træk.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Ny placering af denne mappe</value>
@@ -9093,8 +9093,8 @@
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>Tegn derefter en linje på billedet langs en kant, der skal stå vandret eller lodret</value>
   </data>
-  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
-    <value>Søg i indstillinger</value>
+  <data name="Einstellungen_durchsuchen_STRG_F_06f9eea5" xml:space="preserve">
+    <value>Søg i indstillinger (CTRL+F)</value>
   </data>
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Ingen indstilling fundet</value>
@@ -12002,5 +12002,17 @@
   </data>
   <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
     <value>Loggen kunne ikke ryddes.</value>
+  </data>
+  <data name="Keyline_02908208" xml:space="preserve">
+    <value>Keyline</value>
+  </data>
+  <data name="Kleinbildfilm_af00e8a2" xml:space="preserve">
+    <value>35 mm film</value>
+  </data>
+  <data name="Linienfarbe_281b71e1" xml:space="preserve">
+    <value>Linjefarve</value>
+  </data>
+  <data name="Linienbreite_b9c0eb00" xml:space="preserve">
+    <value>Linjebredde</value>
   </data>
 </root>

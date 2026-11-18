@@ -7946,8 +7946,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Maskerlaag uit het pad gemaakt</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
-    <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. Staat bijsnijden door slepen in de viewer aan, dan selecteert SHIFT+slepen daar een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_cc6858f7" xml:space="preserve">
+    <value>Schakelt trackpadgebaren in: zoomen met twee vingers in de viewer, horizontaal vegen om te bladeren en slepen om een ingezoomde afbeelding te pannen. Staat bijsnijden door slepen in de viewer aan, dan selecteert SHIFT+slepen daar een uitsnede. De muisbediening blijft ongewijzigd zolang deze modus uit staat. In de editor verschuift slepen alleen in de aanpassingsgereedschappen; selectie, maskers, objecten en penselen houden hun eigen sleepbeweging.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Nieuwe locatie van deze map</value>
@@ -9093,8 +9093,8 @@
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>Trek daarna op de afbeelding een lijn langs een rand die waterpas of loodrecht moet staan</value>
   </data>
-  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
-    <value>Instellingen doorzoeken</value>
+  <data name="Einstellungen_durchsuchen_STRG_F_06f9eea5" xml:space="preserve">
+    <value>Instellingen doorzoeken (CTRL+F)</value>
   </data>
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>Geen instelling gevonden</value>
@@ -12002,5 +12002,17 @@
   </data>
   <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
     <value>Het logboek kon niet worden geleegd.</value>
+  </data>
+  <data name="Keyline_02908208" xml:space="preserve">
+    <value>Keyline</value>
+  </data>
+  <data name="Kleinbildfilm_af00e8a2" xml:space="preserve">
+    <value>35mm-film</value>
+  </data>
+  <data name="Linienfarbe_281b71e1" xml:space="preserve">
+    <value>Lijnkleur</value>
+  </data>
+  <data name="Linienbreite_b9c0eb00" xml:space="preserve">
+    <value>Lijndikte</value>
   </data>
 </root>

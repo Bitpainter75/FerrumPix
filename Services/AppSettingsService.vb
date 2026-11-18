@@ -855,6 +855,14 @@ Namespace Services
         ''' aendern; deshalb ueberschreibt JEDE Probe den Eintrag, auch die beim Modelllauf.</summary>
         Public Property GpuProbeResults As New Dictionary(Of String, String)()
 
+        ''' <summary>Der Tempovergleich der Bildbearbeitung zwischen Karte und Prozessor
+        ''' (ImageProcessor.MeasureGpuSpeed), je Karte und FerrumPix-Version: "gpuMs,cpuMs". Der
+        ''' Vergleich rechnet ein Probebild sechsmal und lief in jeder Sitzung genau waehrend des
+        ''' ersten Decodes; sein Ergebnis aendert sich zwischen zwei Sitzungen praktisch nie. Ein
+        ''' neuer Treiber geht dabei durch, eine neue Version von FerrumPix misst neu, und "Pruefen" in
+        ''' den Einstellungen misst immer.</summary>
+        Public Property GpuSpeedResults As New Dictionary(Of String, String)()
+
         ''' <summary>Farbe und Tonwerte auf der Grafikkarte rechnen, in Vorschau, Export und
         ''' Stapel. AB WERK AUS: der Weg ist unter Linux belegt, unter Windows und macOS nicht
         ''' geprueft. Wer ihn einschaltet, bekommt beim ersten Einsatz eine Selbstpruefung gegen
@@ -3050,6 +3058,14 @@ Namespace Services
 
         Public Shared Sub SavePsdTextImport(value As String)
             Update(Sub(s) s.PsdTextImport = NormalizePsdTextImport(value))
+        End Sub
+
+        Public Shared Sub SaveGpuSpeedResult(key As String, value As String)
+            If String.IsNullOrEmpty(key) Then Return
+            Update(Sub(s)
+                       If s.GpuSpeedResults Is Nothing Then s.GpuSpeedResults = New Dictionary(Of String, String)()
+                       s.GpuSpeedResults(key) = If(value, "")
+                   End Sub)
         End Sub
 
         Public Shared Sub SaveGpuProbeResult(deviceKey As String, result As String)

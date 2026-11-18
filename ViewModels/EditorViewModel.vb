@@ -1365,6 +1365,13 @@ Namespace ViewModels
         ' Der Takt fuer einzelne Schritte ohne Zug (Rad, Zahlenfeld, Pfeiltasten) - siehe
         ' NoteSliderStepPreview. Erst bei Bedarf angelegt, es gibt Sitzungen ohne einen solchen Griff.
         Private _sliderStepIdleTimer As DispatcherTimer
+        ' STUFENWEISE VERFEINERN (siehe NoteSliderDragChange): darf der laufende Zug ueberhaupt
+        ' verkleinert rechnen, steht er gerade in voller Vorschaugroesse still, und der Zeitgeber
+        ' fuer die Pause. Erst bei Bedarf angelegt.
+        Private _sliderDragReducible As Boolean
+        Private _sliderDragRefined As Boolean
+        Private _sliderRefineTimer As DispatcherTimer
+        Private _sliderRefining As Boolean
         Private _previewRenderCts As CancellationTokenSource
         Private _previewRequestId As Integer
         ''' Zaehlt JEDE angemeldete Aenderung - siehe MarkPreviewPending. Getrennt von
@@ -1484,6 +1491,10 @@ Namespace ViewModels
         ''' laenger als der Vorschautakt von 90 ms, damit ein Rad, das in Schueben laeuft, nicht
         ''' zwischen kleiner und voller Aufloesung hin und her springt.</summary>
         Private Const SliderStepIdleMs As Double = 400.0
+
+        ''' <summary>So lange muss ein gezogener Regler stillstehen, bevor der Zug schon in voller
+        ''' Vorschaugroesse nachrechnet (<see cref="NoteSliderDragChange"/>).</summary>
+        Private Const SliderRefineIdleMs As Double = 150.0
         ''' <summary>Deutlich traeger als die Vorschau: das Analysebild ist eine Begleitanzeige, und
         ''' es bei jedem der 90-Millisekunden-Schritte mitzurechnen waere verschenkte Arbeit an einer
         ''' Stelle, die niemand so schnell abliest.</summary>
@@ -3466,6 +3477,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BorderSize))
             Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
             Me.RaisePropertyChanged(NameOf(BorderEffect))
+            Me.RaisePropertyChanged(NameOf(ShowFrameKeylineControls))
+            Me.RaisePropertyChanged(NameOf(FrameKeylineColorValue))
+            Me.RaisePropertyChanged(NameOf(FrameKeylineWidth))
+            Me.RaisePropertyChanged(NameOf(ShowFrameFilmControls))
+            Me.RaisePropertyChanged(NameOf(FrameFilmOrientation))
             Me.RaisePropertyChanged(NameOf(BorderColor))
             Me.RaisePropertyChanged(NameOf(BorderColorValue))
             Me.RaisePropertyChanged(NameOf(ShowAnnotationAspectLock))
@@ -6234,7 +6250,8 @@ Namespace ViewModels
             Get
                 Select Case _currentTool
                     Case EditorTool.Adjust, EditorTool.Color, EditorTool.Details,
-                         EditorTool.Effects, EditorTool.Filters, EditorTool.AllAdjustments
+                         EditorTool.Effects, EditorTool.Filters, EditorTool.AllAdjustments,
+                         EditorTool.Extensions
                         Return _currentTool.ToString()
                     Case Else
                         Return ""
@@ -6243,7 +6260,7 @@ Namespace ViewModels
         End Property
 
         ''' <summary>Steht ein Schalter der Clipping-Warnung gerade auf dem Schirm? Der Symbolknopf
-        ''' sitzt im Analysepanel, bei allen fuenf Werkzeugen mit Reglern; ist das Analysepanel aus
+        ''' sitzt im Analysepanel, bei allen Werkzeugen mit Reglern; ist das Analysepanel aus
         ''' (ab Werk), sitzt er stattdessen in der Kopfzeile von Licht. Dazu kommt der Haken im
         ''' Licht-Panel. Ohne Analysepanel gibt es sie also nur im Anpassen-Werkzeug. Die Taste J und der Werkzeugwechsel fragen genau das: eine
         ''' Warnung, deren Schalter man nicht sieht, soll weder angehen noch stehen bleiben.</summary>
@@ -6255,8 +6272,9 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Steht das Analysebild im Anpassungspanel? Nur bei den fuenf Werkzeugen, zu
-        ''' denen es etwas zu sagen hat: Anpassen, Farbe, Details, Effekte, Filter. Beim Zuschneiden
+        ''' <summary>Steht das Analysebild im Anpassungspanel? Nur bei den Werkzeugen, zu denen es
+        ''' etwas zu sagen hat: Anpassen, Farbe, Details, Effekte, Filter und Erweiterungen (deren
+        ''' Regler sind Pixelanpassungen wie die uebrigen). Beim Zuschneiden
         ''' oder Retuschieren waere es ein Kasten, der Platz kostet und keine Frage beantwortet.
         ''' Videos haben keines (siehe InfoPanelViewModel.HasScope).</summary>
         Public ReadOnly Property IsScopeInAdjustmentPanelsVisible As Boolean
@@ -6265,7 +6283,7 @@ Namespace ViewModels
                 If Not InfoPanel.IsSingleImage Then Return False
                 If VideoPreviewService.IsSupportedVideo(_currentImagePath) Then Return False
                 Return ShowLightAdjustments OrElse ShowColorAdjustments OrElse ShowDetailAdjustments OrElse
-                       ShowEffectsAdjustments OrElse ShowFilterAdjustments
+                       ShowEffectsAdjustments OrElse ShowFilterAdjustments OrElse ShowExtensionAdjustments
             End Get
         End Property
 
@@ -8548,7 +8566,7 @@ Namespace ViewModels
 
         Public ReadOnly Property BorderEffectOptions As IReadOnlyList(Of String)
             Get
-                Return New String() {"Einfach", "Gestrichelt", "Gezackt", "Doppelt", "Punktiert", "Wellig"}
+                Return New String() {"Einfach", "Gestrichelt", "Gezackt", "Doppelt", "Punktiert", "Wellig", "Keyline", "Kleinbildfilm"}
             End Get
         End Property
 
@@ -8561,6 +8579,72 @@ Namespace ViewModels
                 SetFrameValue(NameOf(BorderEffect),
                               Function(f) String.Equals(f.FrameEffect, target, StringComparison.Ordinal),
                               Sub(f) f.FrameEffect = target)
+                Me.RaisePropertyChanged(NameOf(ShowFrameKeylineControls))
+                Me.RaisePropertyChanged(NameOf(ShowFrameFilmControls))
+            End Set
+        End Property
+
+        ''' <summary>Die Ausrichtung gibt es nur beim Rahmen "Kleinbildfilm".</summary>
+        Public ReadOnly Property ShowFrameFilmControls As Boolean
+            Get
+                Return String.Equals(FindFrameAnnotation()?.FrameEffect, "Kleinbildfilm", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        Public ReadOnly Property FrameFilmOrientationOptions As IReadOnlyList(Of String)
+            Get
+                Return New String() {"Automatisch", "Querformat", "Hochformat"}
+            End Get
+        End Property
+
+        Public Property FrameFilmOrientation As String
+            Get
+                Return If(FindFrameAnnotation()?.FrameFilmOrientation, "Automatisch")
+            End Get
+            Set(value As String)
+                Dim target = If(String.IsNullOrWhiteSpace(value), "Automatisch", value)
+                SetFrameValue(NameOf(FrameFilmOrientation),
+                              Function(f) String.Equals(f.FrameFilmOrientation, target, StringComparison.Ordinal),
+                              Sub(f) f.FrameFilmOrientation = target)
+            End Set
+        End Property
+
+        ''' <summary>Die Linienfarbe gibt es nur beim Rahmen "Keyline".</summary>
+        Public ReadOnly Property ShowFrameKeylineControls As Boolean
+            Get
+                Return String.Equals(FindFrameAnnotation()?.FrameEffect, "Keyline", StringComparison.OrdinalIgnoreCase)
+            End Get
+        End Property
+
+        ''' <summary>Farbe der feinen Linie beim Rahmen "Keyline". Ohne eigene Wahl zeigt sie die
+        ''' Kontrastfarbe, mit der auch gezeichnet wird; erst ein Griff an der Farbe legt sie fest.</summary>
+        Public Property FrameKeylineColorValue As Avalonia.Media.Color
+            Get
+                Dim frame = FindFrameAnnotation()
+                If frame IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(frame.FrameKeylineColor) Then
+                    Return ParseAvaloniaColorOrDefault(frame.FrameKeylineColor, Avalonia.Media.Colors.Black)
+                End If
+                Dim fill = ImageProcessor.ParseColor(If(frame?.FillColor, "#FFFFFFFF"), SKColors.White)
+                Return If(ImageProcessor.FrameKeylineIsDark(fill), Avalonia.Media.Colors.Black, Avalonia.Media.Colors.White)
+            End Get
+            Set(value As Avalonia.Media.Color)
+                Dim target = NormalizeAvaloniaColor(ColorToHex(value), "#FF000000")
+                SetFrameValue(NameOf(FrameKeylineColorValue),
+                              Function(f) String.Equals(f.FrameKeylineColor, target, StringComparison.Ordinal),
+                              Sub(f) f.FrameKeylineColor = target)
+            End Set
+        End Property
+
+        ''' <summary>Breite der Keyline in Prozent der kuerzeren Bildseite, 0 bis 2.</summary>
+        Public Property FrameKeylineWidth As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.FrameKeylineWidthPercent, 0.25F))
+            End Get
+            Set(value As Double)
+                Dim target = CSng(Math.Max(0, Math.Min(2, value)))
+                SetFrameValue(NameOf(FrameKeylineWidth),
+                              Function(f) Math.Abs(f.FrameKeylineWidthPercent - target) < 0.0001F,
+                              Sub(f) f.FrameKeylineWidthPercent = target)
             End Set
         End Property
 
@@ -8584,6 +8668,8 @@ Namespace ViewModels
             End Get
             Set(value As Avalonia.Media.Color)
                 BorderColor = ColorToHex(value)
+                ' Ohne eigene Linienfarbe folgt die Keyline im Kontrast der Rahmenfarbe.
+                Me.RaisePropertyChanged(NameOf(FrameKeylineColorValue))
             End Set
         End Property
 
@@ -15260,6 +15346,40 @@ Namespace ViewModels
             AfterGroupTransform(beforeRect:=before)
         End Sub
 
+        ''' <summary>Beim Zug einer Mehrfachauswahl steht das volle Laden des Objektpanels noch aus.</summary>
+        Private _annotationPanelReloadPending As Boolean
+
+        ''' <summary>Nur Lage, Groesse und Drehung des markierten Objekts in die Puffer des Panels,
+        ''' gerechnet wie in LoadSelectedAnnotationIntoEditor. Fuer die Zuege einer Mehrfachauswahl;
+        ''' die Drehung geht am Setter vorbei, der bei einer Mehrfachauswahl sonst selbst dreht.</summary>
+        Private Sub LoadSelectedAnnotationPlacementOnly()
+            If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
+            Dim a = _annotations(_selectedAnnotationIndex)
+            If a Is Nothing Then Return
+            PerformanceTraceService.Measure("Editor: Objektpanel, nur Lage",
+                Sub()
+                    Dim rotation = Math.Round(Math.Max(-180, Math.Min(180, StoredAnnotationRotationToDisplay(a))), 1)
+                    Me.RaiseAndSetIfChanged(_annotationRotation, rotation, NameOf(AnnotationRotation))
+                    Me.RaisePropertyChanged(NameOf(StraightenDegrees))
+                    Dim displayRect = StoredAnnotationRectToDisplayPercent(a)
+                    Dim editorPos = ComputeAnnotationOffsetPercent(a.Kind, displayRect.X, displayRect.Y,
+                                                                   displayRect.Width, displayRect.Height, _annotationAnchor)
+                    _annotationXPercent = editorPos.X
+                    _annotationYPercent = editorPos.Y
+                    _annotationWidthPercent = displayRect.Width
+                    _annotationHeightPercent = displayRect.Height
+                    Me.RaisePropertyChanged(NameOf(AnnotationXPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationYPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationWidthPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationHeightPercent))
+                    Me.RaisePropertyChanged(NameOf(AnnotationXPixels))
+                    Me.RaisePropertyChanged(NameOf(AnnotationYPixels))
+                    Me.RaisePropertyChanged(NameOf(AnnotationWidthPixels))
+                    Me.RaisePropertyChanged(NameOf(AnnotationHeightPixels))
+                    RaiseAnnotationPositionControlProperties()
+                End Sub)
+        End Sub
+
         ''' <summary>Nachbereitung jeder Gruppen-Transformation: Anker zurück in die Editor-Puffer (das
         ''' Eigenschaften-Panel zeigt weiter den Anker), Szene nachziehen. Das Dirty-Rect ist die
         ''' Vereinigung aus ALTER und NEUER Lage aller Mitglieder - die alte Lage steckt bereits in
@@ -15277,12 +15397,31 @@ Namespace ViewModels
             ' der alten Lage für aktuell.
             _annotationModelVersion += 1
 
-            _isLoadingAnnotation = True
-            Try
-                LoadSelectedAnnotationIntoEditor()
-            Finally
-                _isLoadingAnnotation = False
-            End Try
+            ' WAEHREND EINES ZUGS NUR DIE LAGE. Das volle Laden fasst das ganze Objektpanel an (Text,
+            ' Farben, Schrift, Pinsel, Wasserzeichen, Schatten), und jede dieser Meldungen erneuert
+            ' Bindungen. Je Mausbewegung lief es bei einer Mehrfachauswahl, und der Anzeigefaden
+            ' stand dabei immer wieder 250 bis 1100 ms (Diagnoseprotokoll, vier Objekte gedreht).
+            ' Am Zug aendern sich nur Lage, Groesse und Drehung; der Rest kommt beim Loslassen
+            ' (EndSelectedAnnotationPlacementEdit).
+            If _annotationPlacementEditActive Then
+                ' Mit gesetztem Ladeschalter wie beim vollen Laden: ein Regler, der nach geaenderten
+                ' Grenzen seinen Wert zurueckschreibt, landete sonst bei einer Mehrfachauswahl wieder
+                ' in SetSelectionBoxComponent und damit hier (gemessen: rund 680 Laeufe je Sekunde).
+                _isLoadingAnnotation = True
+                Try
+                    LoadSelectedAnnotationPlacementOnly()
+                Finally
+                    _isLoadingAnnotation = False
+                End Try
+                _annotationPanelReloadPending = True
+            Else
+                _isLoadingAnnotation = True
+                Try
+                    PerformanceTraceService.Measure("Editor: Objektpanel laden", Sub() LoadSelectedAnnotationIntoEditor())
+                Finally
+                    _isLoadingAnnotation = False
+                End Try
+            End If
             RaiseResetButtonStateChanged()
             ' AUCH waehrend des Zuges rendern - ohne diesen Render sieht man Drehen und
             ' Groessenaendern einer Mehrfachauswahl im gebackenen Block erst beim Loslassen. Der
@@ -21673,7 +21812,31 @@ Namespace ViewModels
             ' auch eine neue sichtbare Szenenversion.
             _sceneContentVersion += 1
             InvalidateZoomDetail()
-            BlitSceneRegionToDisplay(blitRect)
+            ' GEBUENDELT statt je Mausbewegung: das Rechteck wird gemerkt, und EIN Blit zeichnet die
+            ' Vereinigung, sobald die wartenden Eingaben verarbeitet sind (Background liegt in
+            ' Avalonia unter Input). Vorher lief je Bewegung ein Blit von 8 bis 10 ms synchron, beim
+            ' Ziehen eines Objekts 30 bis 45 in einem Messfenster, und der Anzeigefaden stand bis
+            ' 1,4 s (Protokoll, offener Messpunkt "Editor: Blit").
+            _compositorBlitPendingRect = ImageProcessor.UnionRects(_compositorBlitPendingRect, blitRect)
+            If Not _compositorBlitPosted Then
+                _compositorBlitPosted = True
+                Dispatcher.UIThread.Post(AddressOf FlushCompositorBlit, DispatcherPriority.Background)
+            End If
+        End Sub
+
+        ''' <summary>Was die Bewegungen seit dem letzten Blit beruehrt haben, und ob ein Blit schon
+        ''' eingereiht ist (<see cref="CompositorBlitOrSchedule"/>).</summary>
+        Private _compositorBlitPendingRect As SKRectI = SKRectI.Empty
+        Private _compositorBlitPosted As Boolean
+
+        ''' <summary>Zeichnet, was sich seit dem letzten Blit angesammelt hat. Auch von aussen
+        ''' gerufen, wo ein Zug endet und die Anzeige sofort stimmen muss.</summary>
+        Friend Sub FlushCompositorBlit()
+            _compositorBlitPosted = False
+            Dim pending = _compositorBlitPendingRect
+            _compositorBlitPendingRect = SKRectI.Empty
+            If pending.IsEmpty Then Return
+            BlitSceneRegionToDisplay(pending)
         End Sub
 
 
@@ -22125,6 +22288,16 @@ Namespace ViewModels
                 If a IsNot Nothing Then a.MaskAnchor = Nothing
             Next
             LogMaskFollowState("dragEnde")
+            ' Das beim Zug aufgeschobene volle Laden des Objektpanels (AfterGroupTransform).
+            If _annotationPanelReloadPending Then
+                _annotationPanelReloadPending = False
+                _isLoadingAnnotation = True
+                Try
+                    PerformanceTraceService.Measure("Editor: Objektpanel laden", Sub() LoadSelectedAnnotationIntoEditor())
+                Finally
+                    _isLoadingAnnotation = False
+                End Try
+            End If
             ' Aufzeichnen wieder freigeben (siehe PushUndo beim Zug-Start). Läuft auch über den
             ' PointerCaptureLost-Weg, damit ein abgebrochener Zug das Undo nicht dauerhaft stilllegt.
             _suppressUndoCapture = False
@@ -22841,15 +23014,24 @@ Namespace ViewModels
         ''' <see cref="SliderPreviewMaxDimension"/>.</param>
         Public Sub BeginSliderPreviewDrag(Optional scaleSensitive As Boolean = False)
             _sliderDragActive = True
-            ' Der gezogene Regler ist nur die eine Haelfte. Die andere ist, was sonst noch im Rezept
-            ' steht: eine aktive massstabsabhaengige Stufe verbietet die verkleinerte Quelle auch
-            ' dann, wenn gerade an der Belichtung gezogen wird.
-            If scaleSensitive OrElse HasScaleSensitiveStages() Then
-                ' Keine verkleinerte Quelle - aber der Takt laeuft, und das Loslassen zieht nach.
+            ' Wer einen massstabsabhaengigen Regler selbst zieht (Schaerfe, Koernung, Rauschen),
+            ' will dessen Wirkung sehen: dann keine verkleinerte Quelle, der Takt laeuft, und das
+            ' Loslassen zieht nach.
+            '
+            ' EINE AKTIVE MASSSTABSABHAENGIGE STUFE IM REZEPT SPERRT DAGEGEN NICHT MEHR. Eine RAW
+            ' ohne Rezept startet mit Schaerfe und Farbrauschen, die Sperre griff also bei fast jeder
+            ' RAW, und jeder Schritt an Belichtung oder Farbe rechnete das volle Vorschaubild (bei
+            ' 4K um 100 ms). Jetzt rechnet der Zug klein, solange der Regler sich bewegt, und
+            ' steht er kurz still, in voller Groesse (NoteSliderDragChange). Schaerfe und Koernung
+            ' sehen nur waehrend der Bewegung etwas anders aus.
+            If scaleSensitive Then
+                _sliderDragReducible = False
                 _sliderPreviewDragActive = False
                 _sliderPreviewRequestedMaxDimension = 0
                 Return
             End If
+            _sliderDragReducible = True
+            _sliderDragRefined = False
             If _sliderPreviewDragActive AndAlso
                _sliderPreviewRequestedMaxDimension = SliderPreviewMaxDimension Then Return
             _sliderPreviewDragActive = True
@@ -22868,6 +23050,9 @@ Namespace ViewModels
         ''' am meisten auf. Ein ueberzaehliger Render je Reglerzug kostet dagegen nichts.</para></summary>
         Public Sub EndSliderPreviewDrag()
             _sliderStepIdleTimer?.Stop()
+            _sliderRefineTimer?.Stop()
+            _sliderDragReducible = False
+            _sliderDragRefined = False
             If Not _sliderDragActive AndAlso Not _sliderPreviewDragActive Then Return
             _sliderDragActive = False
             _sliderPreviewDragActive = False
@@ -22899,6 +23084,50 @@ Namespace ViewModels
             End If
             _sliderStepIdleTimer.Stop()
             _sliderStepIdleTimer.Start()
+        End Sub
+
+        ''' <summary>STUFENWEISE VERFEINERN: gerufen bei jeder Aenderung waehrend eines Zugs. Bewegt
+        ''' sich der Regler, rechnet der Zug auf der kleinen Quelle; stand er zuletzt in voller Groesse
+        ''' still, geht es zurueck auf die kleine. Bleibt er <see cref="SliderRefineIdleMs"/> lang
+        ''' stehen, rechnet <see cref="RefineSliderDrag"/> in voller Vorschaugroesse nach, noch
+        ''' waehrend die Taste gedrueckt ist. Beim Loslassen ist das Bild dann meist schon fertig.</summary>
+        Private Sub NoteSliderDragChange()
+            If Not _sliderDragReducible Then Return
+            If _sliderDragRefined Then
+                _sliderDragRefined = False
+                _sliderPreviewDragActive = True
+                _sliderPreviewRequestedMaxDimension = SliderPreviewMaxDimension
+                EnsureSliderPreviewSource()
+            End If
+            ' Nachgerechnet wird nur, wenn die kleine Quelle sichtbar anders aussieht: mit einer
+            ' massstabsabhaengigen Stufe im Rezept. Ohne sie bleibt es beim Nachzug beim Loslassen.
+            If Not HasScaleSensitiveStages() Then
+                _sliderRefineTimer?.Stop()
+                Return
+            End If
+            If _sliderRefineTimer Is Nothing Then
+                _sliderRefineTimer = New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(SliderRefineIdleMs)}
+                AddHandler _sliderRefineTimer.Tick, Sub() RefineSliderDrag()
+            End If
+            _sliderRefineTimer.Stop()
+            _sliderRefineTimer.Start()
+        End Sub
+
+        ''' <summary>Der Regler steht still: in voller Vorschaugroesse nachrechnen, der Zug bleibt
+        ''' dabei offen. Die naechste Bewegung schaltet zurueck (<see cref="NoteSliderDragChange"/>).</summary>
+        Private Sub RefineSliderDrag()
+            _sliderRefineTimer?.Stop()
+            If Not _sliderDragActive OrElse Not _sliderDragReducible OrElse _sliderDragRefined Then Return
+            _sliderDragRefined = True
+            _sliderPreviewDragActive = False
+            _sliderPreviewRequestedMaxDimension = 0
+            _sliderRefining = True
+            Try
+                MarkPreviewPending()
+                RestartPreviewTimer(1.0)
+            Finally
+                _sliderRefining = False
+            End Try
         End Sub
 
         ''' <summary>Aktiviert die kleine, proportional skalierte Live-Quelle für Bild-Regler.
@@ -23188,6 +23417,10 @@ Namespace ViewModels
         Private Sub MarkPreviewPending()
             _previewPending = True
             Interlocked.Increment(_previewChangeId)
+            ' Jede echte Aenderung waehrend eines Zugs: zurueck auf die kleine Quelle, die Pause
+            ' beginnt neu (NoteSliderDragChange). Nicht beim Nachrechnen selbst (_sliderRefining),
+            ' und nicht an der Kette am Ende eines Renders, die nur RestartPreviewTimer ruft.
+            If _sliderDragActive AndAlso Not _sliderRefining Then NoteSliderDragChange()
             ' Seit wann eine Aenderung auf ihr Bild wartet - fuer den Messpunkt "Regler bis Bild".
             ' Nur der ERSTE noch nicht gezeigte Stand zaehlt: er wartet am laengsten.
             If PerformanceTraceService.IsActive AndAlso _previewPendingSinceTicks = 0 Then
@@ -30286,12 +30519,14 @@ Namespace ViewModels
             Dim isMask = _activeSelectionIsMask
             Dim isGradient = SelectedGradientMask IsNot Nothing
             Dim hadOverlay = _selectionMaskPreviewImage IsNot Nothing
+            ' Die Spur nur, wenn ein Overlay zu sehen ist: ohne eines gibt es nichts zu erklaeren, und
+            ' bei einem Objektzug liefen sonst Hunderte Zeilen je Sekunde ins Protokoll.
             If Not IsObjectAdjustTool(tool) Then
-                TraceMask(Function() $"Overlay bleibt: Werkzeug={tool} ist kein Anpassungswerkzeug")
+                If hadOverlay Then TraceMask(Function() $"Overlay bleibt: Werkzeug={tool} ist kein Anpassungswerkzeug")
                 Return
             End If
             If Not isMask AndAlso Not isGradient Then
-                TraceMask(Function() $"Overlay bleibt: weder Maske noch Verlauf (Werkzeug={tool}, Bild={hadOverlay})")
+                If hadOverlay Then TraceMask(Function() $"Overlay bleibt: weder Maske noch Verlauf (Werkzeug={tool}, Bild={hadOverlay})")
                 Return
             End If
             HideMaskOverlay()
@@ -32095,6 +32330,11 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(BorderCornerRadius))
             Me.RaisePropertyChanged(NameOf(FrameMargin))
             Me.RaisePropertyChanged(NameOf(BorderEffect))
+            Me.RaisePropertyChanged(NameOf(ShowFrameKeylineControls))
+            Me.RaisePropertyChanged(NameOf(FrameKeylineColorValue))
+            Me.RaisePropertyChanged(NameOf(FrameKeylineWidth))
+            Me.RaisePropertyChanged(NameOf(ShowFrameFilmControls))
+            Me.RaisePropertyChanged(NameOf(FrameFilmOrientation))
             Me.RaisePropertyChanged(NameOf(BorderColor))
             Me.RaisePropertyChanged(NameOf(BorderColorValue))
             Me.RaisePropertyChanged(NameOf(BorderColorBrush))

@@ -1453,8 +1453,8 @@
                             <!-- Das Analysebild steht GANZ OBEN, wenn es hierher gestellt wurde
                                  (Einstellungen, Ansicht): es ist die Antwort auf die Regler
                                  darunter, und wer sie zieht, sieht beim Scrollen nach unten immer
-                                 noch den Kopf des Panels. Sichtbar nur bei den fuenf Werkzeugen,
-                                 zu denen es etwas zu sagen hat. -->
+                                 noch den Kopf des Panels. Sichtbar nur bei den Werkzeugen mit
+                                 Reglern (IsScopeInAdjustmentPanelsVisible), die Erweiterungen eingeschlossen. -->
                             <Border Classes="adjustment-group" Margin="0,7,0,0"
                                     IsVisible="{Binding IsScopeInAdjustmentPanelsVisible}">
                                 <panels:ScopePanel />

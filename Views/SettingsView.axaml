@@ -27,9 +27,11 @@
                      hier links. Die Mechanik steht in SettingsSearch. -->
                 <!-- Gebaut wie die Suchleiste der Galerie: Lupe, Feld, und ein X zum Leeren, das
                      nur bei Text erscheint. -->
+                <!-- Mit Akzentrahmen: als schlichtes Feld wurde die Suche uebersehen, ein Nutzer
+                     wuenschte sich eine, die schon da war (Forum). STRG+F holt sie (OnKeyDown). -->
                 <Border DockPanel.Dock="Top"
                         Background="{DynamicResource FP.Bg.Input}"
-                        BorderBrush="{DynamicResource FP.Border.Normal}"
+                        BorderBrush="{DynamicResource FP.Accent}"
                         BorderThickness="1"
                         CornerRadius="8"
                         Padding="12,8"
@@ -44,7 +46,7 @@
                                  Padding="0"
                                  Height="20"
                                  Margin="10,0,0,2"
-                                 PlaceholderText="Einstellungen durchsuchen"
+                                 PlaceholderText="Einstellungen durchsuchen (STRG+F)"
                                  VerticalContentAlignment="Center"
                                  TextChanged="OnSettingsSearchChanged"/>
                         <Button Grid.Column="2"

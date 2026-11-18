@@ -7906,8 +7906,8 @@
   <data name="Maskenebene_aus_Pfad_erstellt_35a0168f" xml:space="preserve">
     <value>Capa de máscara creada a partir del trazado</value>
   </data>
-  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_52ef08a9" xml:space="preserve">
-    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. Si recortar arrastrando está activado en el visor, SHIFT+arrastrar selecciona allí un recorte. Los controles del ratón no cambian mientras este modo está desactivado.</value>
+  <data name="Aktiviert_Trackpad_Gesten_Zwei_Finger_Zoom_im_Vi_cc6858f7" xml:space="preserve">
+    <value>Activa gestos de trackpad: zoom con dos dedos en el visor, deslizar horizontalmente para navegar y arrastrar para desplazar una imagen ampliada. Si recortar arrastrando está activado en el visor, SHIFT+arrastrar selecciona allí un recorte. Los controles del ratón no cambian mientras este modo está desactivado. En el editor, arrastrar desplaza solo en las herramientas de ajuste; la selección, las máscaras, los objetos y los pinceles conservan su propio arrastre.</value>
   </data>
   <data name="Neuer_Ort_f_r_diesen_Ordner_e8ac91d4" xml:space="preserve">
     <value>Nueva ubicación de esta carpeta</value>
@@ -9053,8 +9053,8 @@
   <data name="Danach_auf_dem_Bild_eine_Linie_entlang_einer_Kan_c143c99c" xml:space="preserve">
     <value>Después traza en la imagen una línea a lo largo de un borde que deba quedar horizontal o vertical</value>
   </data>
-  <data name="Einstellungen_durchsuchen_05a177da" xml:space="preserve">
-    <value>Buscar en los ajustes</value>
+  <data name="Einstellungen_durchsuchen_STRG_F_06f9eea5" xml:space="preserve">
+    <value>Buscar en los ajustes (CTRL+F)</value>
   </data>
   <data name="Keine_Einstellung_gefunden_a346579b" xml:space="preserve">
     <value>No se encontró ningún ajuste</value>
@@ -11962,5 +11962,17 @@
   </data>
   <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
     <value>No se pudo vaciar el registro.</value>
+  </data>
+  <data name="Keyline_02908208" xml:space="preserve">
+    <value>Filete interior</value>
+  </data>
+  <data name="Kleinbildfilm_af00e8a2" xml:space="preserve">
+    <value>Película de 35 mm</value>
+  </data>
+  <data name="Linienfarbe_281b71e1" xml:space="preserve">
+    <value>Color de línea</value>
+  </data>
+  <data name="Linienbreite_b9c0eb00" xml:space="preserve">
+    <value>Ancho de línea</value>
   </data>
 </root>

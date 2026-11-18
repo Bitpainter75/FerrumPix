@@ -345,6 +345,9 @@ Namespace Services
         Private _frameSymbolSpacingPercent As Single = 50
         Private _frameMarginPercent As Single = 0
         Private _frameSymbolRotate As Boolean = False
+        Private _frameKeylineColor As String = ""
+        Private _frameKeylineWidthPercent As Single = 0.25F
+        Private _frameFilmOrientation As String = "Automatisch"
         Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
         Private _opacity As Single = 100
@@ -883,8 +886,8 @@ Namespace Services
             End Set
         End Property
 
-        ''' <summary>Art des Rahmens: "Einfach", "Doppelt", "Gestrichelt", "Punktiert", "Gezackt"
-        ''' oder "Wellig".</summary>
+        ''' <summary>Art des Rahmens: "Einfach", "Doppelt", "Gestrichelt", "Punktiert", "Gezackt",
+        ''' "Wellig", "Keyline" oder "Kleinbildfilm".</summary>
         Public Property FrameEffect As String
             Get
                 Return _frameEffect
@@ -938,6 +941,40 @@ Namespace Services
             End Get
             Set(value As Boolean)
                 SetField(_frameSymbolRotate, value)
+            End Set
+        End Property
+
+        ''' <summary>Farbe der feinen Linie beim Rahmen "Keyline", als #AARRGGBB. Leer heisst: im
+        ''' Kontrast zur Rahmenfarbe (Schwarz auf hellem, Weiss auf dunklem Rahmen).</summary>
+        Public Property FrameKeylineColor As String
+            Get
+                Return _frameKeylineColor
+            End Get
+            Set(value As String)
+                SetField(_frameKeylineColor, If(value, ""))
+            End Set
+        End Property
+
+        ''' <summary>Laufrichtung des Filmstreifens beim Rahmen "Kleinbildfilm": "Querformat" setzt die
+        ''' Lochreihen oben und unten, "Hochformat" links und rechts, "Automatisch" an die langen Seiten.</summary>
+        Public Property FrameFilmOrientation As String
+            Get
+                Return _frameFilmOrientation
+            End Get
+            Set(value As String)
+                SetField(_frameFilmOrientation, If(String.IsNullOrWhiteSpace(value), "Automatisch", value))
+            End Set
+        End Property
+
+        ''' <summary>Breite der feinen Linie beim Rahmen "Keyline", in Prozent der kuerzeren Bildseite
+        ''' wie Staerke und Randabstand. Unabhaengig von der Staerke: die bestimmt nur den Rand.
+        ''' 0 heisst: keine Linie.</summary>
+        Public Property FrameKeylineWidthPercent As Single
+            Get
+                Return _frameKeylineWidthPercent
+            End Get
+            Set(value As Single)
+                SetField(_frameKeylineWidthPercent, Math.Max(0.0F, Math.Min(2.0F, value)))
             End Set
         End Property
 
@@ -1533,6 +1570,9 @@ Namespace Services
                 .FrameSymbolSpacingPercent = FrameSymbolSpacingPercent,
                 .FrameMarginPercent = FrameMarginPercent,
                 .FrameSymbolRotate = FrameSymbolRotate,
+                .FrameKeylineColor = FrameKeylineColor,
+                .FrameKeylineWidthPercent = FrameKeylineWidthPercent,
+                .FrameFilmOrientation = FrameFilmOrientation,
                 .Warp = Warp?.Clone(),
                 .OwnWarp = OwnWarp?.Clone(),
                 .ImagePath = ImagePath,

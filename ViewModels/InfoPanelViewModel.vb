@@ -1114,7 +1114,23 @@ Namespace ViewModels
                          End If
                          ' Das Bild, das der Betrachter zeigen wuerde - bei RAW mit Rezept, wie in
                          ' Lightroom (siehe ViewerViewModel.BuildScopeImageAsShown).
-                         Dim histogram = ViewerViewModel.BuildScopeImageAsShown(path, 600, 300)
+                         ' IN DER KLAMMER RunWhileWanted: oeffnet der Nutzer jetzt den Editor (der
+                         ' Doppelklick hat das Bild eben erst ausgewaehlt), meldet sich die Galerie
+                         ' ab, und ein schon laufender LibRaw-Lauf bricht ab, statt am Decode-Tor vor
+                         ' dem Editor fertig zu rechnen. Im Protokoll wartete der Editor so bis 335 ms
+                         ' (RawDecodeService.Zeiten warten=), obwohl die Pruefung oben schon galt.
+                         Dim scopeClock = Diagnostics.Stopwatch.StartNew()
+                         Dim histogram = RawDecodeService.RunWhileWanted(
+                             Function() token = _loadToken AndAlso IsPanelLive,
+                             Function() ViewerViewModel.BuildScopeImageAsShown(path, 600, 300))
+                         ' Ob der Abbruch gegriffen hat, steht sonst nirgends: im Protokoll sah ein
+                         ' zu Ende gerechneter Lauf genauso aus wie einer, der zu spaet kam.
+                         If RawPreviewService.IsSupportedRaw(path) Then
+                             Dim stillWanted = token = _loadToken AndAlso IsPanelLive
+                             DiagnosticLogService.LogAlways("InfoPanel.ScopeImage",
+                                 $"{If(histogram Is Nothing AndAlso Not stillWanted, "abgebrochen", If(stillWanted, "fertig", "fertig, aber nicht mehr gebraucht"))} " &
+                                 $"nach {scopeClock.ElapsedMilliseconds} ms file={IO.Path.GetFileName(path)}")
+                         End If
                          Dispatcher.UIThread.Post(Sub()
                                                       If token <> _loadToken OrElse
                                                          scopeGeneration <> ScopeSelectionViewModel.Generation Then

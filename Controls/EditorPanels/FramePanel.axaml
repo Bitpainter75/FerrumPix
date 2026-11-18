@@ -88,6 +88,43 @@
                         </ComboBox.ItemTemplate>
                       </ComboBox>
             </Grid>
+            <!-- Nur beim Rahmen "Keyline": die Farbe der feinen Linie an der Innenkante. Ohne eigene
+                 Wahl steht hier die Kontrastfarbe, mit der auch gezeichnet wird. -->
+            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center" IsVisible="{Binding ShowFrameKeylineControls}">
+                <TextBlock Text="Linienfarbe" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:ColorPickerButton Grid.Column="1" Margin="6,0,0,0"
+                                         SelectedColor="{Binding FrameKeylineColorValue, Mode=TwoWay}" />
+            </Grid>
+            <!-- Nur beim Kleinbildfilm: in welcher Richtung der Streifen laeuft. -->
+            <Grid ColumnDefinitions="92,*" VerticalAlignment="Center" IsVisible="{Binding ShowFrameFilmControls}">
+                <TextBlock Text="Ausrichtung" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding FrameFilmOrientationOptions}"
+                          SelectedItem="{Binding FrameFilmOrientation}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          Margin="6,0,0,0"
+                          HorizontalAlignment="Stretch"
+                          DropDownOpened="OnMatchWidthDropDownOpened">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource TranslateConverter}}"
+                                       VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+            <!-- Unabhaengig von der Groesse oben, die nur den Rand bestimmt. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding ShowFrameKeylineControls}">
+                <TextBlock Text="Linienbreite" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="2" DefaultValue="0.25"
+                                   Value="{Binding FrameKeylineWidth}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FrameKeylineWidth, Mode=TwoWay}" Minimum="0" Maximum="2"
+                                         Increment="0.05" FormatString="F2" />
+            </Grid>
             <!-- Rahmen aus Symbolen: die Rahmenart oben bleibt der PFAD, auf dem sie sitzen -
                  gerade, wellig, gezackt oder in zwei Reihen. Die Groesse oben ist ihre Groesse. -->
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">

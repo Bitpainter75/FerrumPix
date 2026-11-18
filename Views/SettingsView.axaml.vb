@@ -627,6 +627,17 @@ Namespace Views
                 Return
             End If
 
+            ' STRG+F holt die Suche, wie in der Galerie.
+            If e.Key = Key.F AndAlso e.KeyModifiers = KeyModifiers.Control Then
+                Dim search = Me.FindControl(Of TextBox)("SettingsSearchBox")
+                If search IsNot Nothing Then
+                    search.Focus()
+                    search.SelectAll()
+                    e.Handled = True
+                End If
+                Return
+            End If
+
             If e.KeyModifiers <> KeyModifiers.None Then Return
             Dim sv = Me.FindControl(Of ScrollViewer)("SettingsScrollViewer")
             If sv Is Nothing OrElse sv.Viewport.Height <= 0 Then Return

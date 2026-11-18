@@ -114,17 +114,57 @@ Namespace Services
         ''' "Pruefen" in den Einstellungen. Weicht die Karte ab, sperrt sie den Weg fuer diese
         ''' Sitzung: eine Karte, die anders rechnet, ist schlechter als keine. Das Ergebnis steht
         ''' immer im Diagnoseprotokoll, ein Fehlschlag zusaetzlich in der Fehlerdatei.</summary>
-        Friend Shared Function CheckGpuImageProcessing() As GpuCheckResult
+        ''' <param name="measureSpeed">Den Tempovergleich auch dann rechnen, wenn er fuer diese Karte und
+        ''' Version schon gemerkt ist: so beim "Pruefen" in den Einstellungen. Beim ersten Einsatz in
+        ''' einer Sitzung gilt der gemerkte Stand (<see cref="GpuSpeedKey"/>).</param>
+        Friend Shared Function CheckGpuImageProcessing(Optional measureSpeed As Boolean = False) As GpuCheckResult
             Dim result As GpuCheckResult
+            Dim remembered = False
             SyncLock _gpuCheckLock
                 _gpuCheck = RunGpuCheck()
+                If _gpuCheck.State = GpuCheckState.Works AndAlso Not measureSpeed Then
+                    remembered = ApplyRememberedGpuSpeed(_gpuCheck)
+                End If
                 result = _gpuCheck
             End SyncLock
             RaiseEvent GpuCheckChanged(Nothing, EventArgs.Empty)
-            If result.State = GpuCheckState.Works Then
+            If result.State = GpuCheckState.Works AndAlso Not remembered Then
                 Dim ignored = Task.Run(Sub() MeasureGpuSpeed(result))
             End If
             Return result
+        End Function
+
+        ''' <summary>Unter welchem Schluessel der Tempovergleich gemerkt wird: die Karte, wie der
+        ''' Treiber sie nennt, und die Version von FerrumPix. Eine neue Version misst neu, weil sich
+        ''' die Kette und damit die Kosten aendern koennen.</summary>
+        Friend Shared Function GpuSpeedKey(renderer As String) As String
+            Dim version = If(Reflection.CustomAttributeExtensions.GetCustomAttribute(Of Reflection.AssemblyInformationalVersionAttribute)(
+                Reflection.Assembly.GetExecutingAssembly())?.InformationalVersion, "")
+            Return If(renderer, "") & "|" & version
+        End Function
+
+        ''' <summary>Uebernimmt einen gemerkten Tempovergleich in das Ergebnis der Selbstpruefung,
+        ''' samt der Entscheidung "langsamer als der Prozessor". False, wenn keiner vorliegt.</summary>
+        Private Shared Function ApplyRememberedGpuSpeed(ByRef check As GpuCheckResult) As Boolean
+            Dim stored As String = Nothing
+            Try
+                Dim all = AppSettingsService.Load().GpuSpeedResults
+                If all Is Nothing OrElse Not all.TryGetValue(GpuSpeedKey(check.Renderer), stored) Then Return False
+            Catch
+                Return False
+            End Try
+            Dim parts = If(stored, "").Split(","c)
+            Dim gpuMs, cpuMs As Integer
+            If parts.Length <> 2 OrElse Not Integer.TryParse(parts(0), gpuMs) OrElse Not Integer.TryParse(parts(1), cpuMs) OrElse
+               gpuMs <= 0 OrElse cpuMs <= 0 Then Return False
+            check.GpuMilliseconds = gpuMs
+            check.CpuMilliseconds = cpuMs
+            If gpuMs > cpuMs * GpuSlowerFactor Then
+                check.State = GpuCheckState.Slower
+                check.Detail = $"{check.Renderer} rechnet richtig, aber langsamer als der Prozessor ({gpuMs} gegen {cpuMs} ms am Probebild)."
+            End If
+            DiagnosticLogService.LogAlways("GpuImage", $"Tempovergleich gemerkt: Grafikkarte {gpuMs} ms, Prozessor {cpuMs} ms")
+            Return True
         End Function
 
         ''' <summary>Vergleicht nach bestandener Selbstpruefung das Tempo: ein Probebild von rund 3 MP
@@ -185,6 +225,7 @@ Namespace Services
                             _gpuCheck.Detail = $"{_gpuCheck.Renderer} rechnet richtig, aber langsamer als der Prozessor ({gpuMs} gegen {cpuMs} ms am Probebild)."
                         End If
                     End SyncLock
+                    AppSettingsService.SaveGpuSpeedResult(GpuSpeedKey(checkedWith.Renderer), $"{gpuMs},{cpuMs}")
                     DiagnosticLogService.LogAlways("GpuImage",
                         $"Tempovergleich am Probebild {W}x{H}: Grafikkarte {gpuMs} ms, Prozessor {cpuMs} ms" &
                         If(slower, "; die Karte ist langsamer, die Bildbearbeitung rechnet auf dem Prozessor", ""))
@@ -367,18 +408,29 @@ Namespace Services
             ReleasePointOpHandover()
             ' Bild und zurueckgehaltene Flaeche kommen ZUSAMMEN als Ergebnis zurueck: kehrt der
             ' Auftrag erst nach Ablauf der Frist zurueck, gibt der Dienst beide auf dem GPU-Faden frei.
-            Dim rendered As (Bitmap As SKBitmap, Surface As SKSurface) = Nothing
-            Dim snapshot = SnapshotForGpu(source)
-            If Not PerformanceTraceService.Measure("Pixel: Punktkette (Grafikkarte)",
-                    Function() GpuImageService.TryRun(Function(gr)
-                                                          Dim surface As SKSurface = Nothing
-                                                          Dim bitmap = RenderPointOpShaderOnGpu(gr, snapshot, chain, localBase, True, surface, gpuGrid)
-                                                          Return (bitmap, surface)
-                                                      End Function, rendered, snapshot,
-                                                      Sub(late)
-                                                          late.Bitmap?.Dispose()
-                                                          late.Surface?.Dispose()
-                                                      End Sub)) Then
+            Dim rendered As (Bitmap As SKBitmap, Surface As SKSurface, NeedsUpload As Boolean) = Nothing
+            ' DAS AUSGANGSBILD BLEIBT AUF DER KARTE (Weg 4), solange sein Inhalt derselbe ist: der
+            ' Schluessel kommt aus dem Zwischenspeicher nach Geometrie und Farbrauschen
+            ' (_pointChainSourceKey, gesetzt in ProcessBitmapBaseBeforeMaskedLayers). Gemessen kostete
+            ' ein Render der Punktkette 57 ms, davon Kopie 13 und Hochladen 18, das Rechnen 4.
+            ' Beim Ziehen an Belichtung oder Farbe aendert sich das Ausgangsbild nicht; dann
+            ' entfallen Hochladen und, ohne Fuehrung des Farbmischers, auch die Kopie.
+            Dim key = _pointChainSourceKey
+            Dim needsGuide = chain.Hsl IsNot Nothing
+            Dim tryResident = key IsNot Nothing AndAlso ResidentPointSourceMatches(key)
+            Dim snapshot As SKImage = Nothing
+            If Not tryResident OrElse needsGuide Then
+                snapshot = PerformanceTraceService.Measure("Pixel: Punktkette, Kopie fuer die Karte", Function() SnapshotForGpu(source))
+            End If
+            Dim info = source.Info
+            Dim ran = PerformanceTraceService.Measure("Pixel: Punktkette (Grafikkarte)",
+                Function() RunPointChainOnGpu(snapshot, info, chain, localBase, gpuGrid, key, tryResident, rendered))
+            If ran AndAlso rendered.NeedsUpload Then
+                ' Die gemerkte Textur war inzwischen eine andere: noch einmal mit Kopie.
+                snapshot = SnapshotForGpu(source)
+                ran = RunPointChainOnGpu(snapshot, info, chain, localBase, gpuGrid, key, False, rendered)
+            End If
+            If Not ran Then
                 NoteGpuFallback("Punktkette, Lauf auf der Grafikkarte gescheitert (Fehlerdatei)")
                 Return Nothing
             End If
@@ -872,6 +924,78 @@ half4 main(float2 p) {
                                    End Function, ignored)
         End Sub
 
+        ''' <summary>Der Inhalt des Ausgangsbilds der Punktkette, wenn er sich benennen laesst: Quelle,
+        ''' Zeitstempel und Rezept bis zum Farbrauschen. Gesetzt fuer die Dauer EINES Durchlaufs auf
+        ''' dem rechnenden Faden; Nothing heisst: nicht benennbar, also jedes Mal hochladen.</summary>
+        <ThreadStatic> Friend Shared _pointChainSourceKey As String
+
+        ''' <summary>Die auf der Karte liegende Textur des letzten Ausgangsbilds, ihr Schluessel und der
+        ''' Kontext, in dem sie entstand. Angefasst wird die Textur nur auf dem GPU-Faden.</summary>
+        Private Shared _residentPointSource As SKImage
+        Private Shared _residentPointKey As String
+        Private Shared _residentPointContext As GRContext
+        Private Shared ReadOnly _residentPointLock As New Object()
+
+        Private Shared Function ResidentPointSourceMatches(key As String) As Boolean
+            SyncLock _residentPointLock
+                Return _residentPointSource IsNot Nothing AndAlso String.Equals(_residentPointKey, key, StringComparison.Ordinal)
+            End SyncLock
+        End Function
+
+        ''' <summary>Ein Lauf der Punktkette auf der Karte, mit gemerkter oder frisch hochgeladener
+        ''' Textur. NeedsUpload im Ergebnis: die gemerkte Textur passte nicht mehr, der Aufrufer
+        ''' ruft mit Kopie noch einmal. Ein leeres Bild darf hier nie herauskommen, das sperrte die
+        ''' Karte (JudgeGpuResult).</summary>
+        Private Shared Function RunPointChainOnGpu(snapshot As SKImage, info As SKImageInfo, chain As PointOpChain,
+                                                   localBase As LocalToneBase, gpuGrid As LocalToneGrid, key As String,
+                                                   useResident As Boolean,
+                                                   ByRef rendered As (Bitmap As SKBitmap, Surface As SKSurface, NeedsUpload As Boolean)) As Boolean
+            Return GpuImageService.TryRun(
+                Function(gr)
+                    Dim texture As SKImage = Nothing
+                    Dim ownsTexture = False
+                    If useResident Then
+                        SyncLock _residentPointLock
+                            If _residentPointSource IsNot Nothing AndAlso Object.ReferenceEquals(_residentPointContext, gr) AndAlso
+                               String.Equals(_residentPointKey, key, StringComparison.Ordinal) Then texture = _residentPointSource
+                        End SyncLock
+                        If texture Is Nothing Then Return (Bitmap:=CType(Nothing, SKBitmap), Surface:=CType(Nothing, SKSurface), NeedsUpload:=True)
+                    Else
+                        texture = PerformanceTraceService.Measure("Pixel: Punktkette, Hochladen", Function() snapshot.ToTextureImage(gr))
+                        If texture Is Nothing Then Throw New InvalidOperationException("Textur auf der Grafikkarte nicht anlegbar.")
+                        If key IsNot Nothing Then
+                            StoreResidentPointSource(gr, key, texture)
+                        Else
+                            ownsTexture = True
+                        End If
+                    End If
+                    Try
+                        Dim surface As SKSurface = Nothing
+                        Dim bitmap = RenderPointOpShaderOnGpu(gr, snapshot, chain, localBase, True, surface, gpuGrid, texture, info)
+                        Return (Bitmap:=bitmap, Surface:=surface, NeedsUpload:=False)
+                    Finally
+                        If ownsTexture Then texture.Dispose()
+                    End Try
+                End Function, rendered, snapshot,
+                Sub(late)
+                    late.Bitmap?.Dispose()
+                    late.Surface?.Dispose()
+                End Sub)
+        End Function
+
+        ''' <summary>Merkt die Textur; die vorige geht weg, wenn sie im selben Kontext entstand. Eine
+        ''' aus einem verlorenen Kontext wird nur vergessen, nicht freigegeben.</summary>
+        Private Shared Sub StoreResidentPointSource(gr As GRContext, key As String, texture As SKImage)
+            Dim previous As SKImage = Nothing
+            SyncLock _residentPointLock
+                If _residentPointSource IsNot Nothing AndAlso Object.ReferenceEquals(_residentPointContext, gr) Then previous = _residentPointSource
+                _residentPointSource = texture
+                _residentPointKey = key
+                _residentPointContext = gr
+            End SyncLock
+            previous?.Dispose()
+        End Sub
+
         ''' <summary>Eine eigene Kopie der Bildpunkte fuer einen Auftrag der Karte, angelegt auf dem
         ''' rufenden Faden. Sie geht als <c>owned</c> an <see cref="GpuImageService.TryRun"/>, das sie
         ''' freigibt, wenn der Auftrag endet: kehrt TryRun nach Ablauf der Frist zurueck, darf der
@@ -892,10 +1016,15 @@ half4 main(float2 p) {
         Private Shared Function RenderPointOpShaderOnGpu(gr As GRContext, source As SKImage, chain As PointOpChain,
                                                          localBase As LocalToneBase, keepSurface As Boolean,
                                                          ByRef kept As SKSurface,
-                                                         Optional gpuGrid As LocalToneGrid = Nothing) As SKBitmap
+                                                         Optional gpuGrid As LocalToneGrid = Nothing,
+                                                         Optional sourceTexture As SKImage = Nothing,
+                                                         Optional sourceInfo As SKImageInfo? = Nothing) As SKBitmap
             kept = Nothing
             Dim effect = PointOpEffect()
-            Dim gpuInfo = New SKImageInfo(source.Width, source.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
+            ' Mit gemerkter Textur kann die Kopie fehlen (source Nothing): Masse und Format kommen
+            ' dann aus sourceInfo, die Textur liegt schon auf der Karte und gehoert dem Aufrufer.
+            Dim srcInfo = If(sourceInfo, source.Info)
+            Dim gpuInfo = New SKImageInfo(srcInfo.Width, srcInfo.Height, SKColorType.Rgba8888, SKAlphaType.Premul)
             ' Die Basis von der Karte, wenn ein Raster mitkam; kann sie das nicht, glaettet der
             ' Prozessor hier dasselbe Raster.
             Dim smoothedOnGpu = If(gpuGrid Is Nothing, Nothing,
@@ -906,8 +1035,10 @@ half4 main(float2 p) {
                   baseImage = If(smoothedOnGpu, BuildLocalBaseImage(localBase)),
                   cubeA = BuildCubeImage(chain, 0), cubeB = BuildCubeImage(chain, 1),
                   guide = BuildGuideImage(source, chain)
-                Using image = source.ToTextureImage(gr),
-                      gpuTable = table.ToTextureImage(gr), gpuDither = dither.ToTextureImage(gr),
+                Dim uploaded As SKImage = If(sourceTexture Is Nothing,
+                    PerformanceTraceService.Measure("Pixel: Punktkette, Hochladen", Function() source.ToTextureImage(gr)), Nothing)
+                Dim image = If(sourceTexture, uploaded)
+                Using uploadedOwner As SKImage = uploaded, gpuTable = table.ToTextureImage(gr), gpuDither = dither.ToTextureImage(gr),
                       gpuBase = baseImage.ToTextureImage(gr),
                       gpuCubeA = cubeA.ToTextureImage(gr), gpuCubeB = cubeB.ToTextureImage(gr),
                       gpuGuide = guide.ToTextureImage(gr)
@@ -918,16 +1049,21 @@ half4 main(float2 p) {
                            gpuGuide Is Nothing OrElse surface Is Nothing Then
                             Throw New InvalidOperationException("Textur oder Zielflaeche auf der Grafikkarte nicht anlegbar.")
                         End If
-                        Using shader = PointOpShader(effect, chain, image, gpuTable, gpuDither, gpuBase, gpuCubeA, gpuCubeB, gpuGuide, localBase,
-                                                     source.AlphaType = SKAlphaType.Premul)
-                            Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
-                                surface.Canvas.DrawRect(0, 0, source.Width, source.Height, paint)
-                            End Using
-                        End Using
-                        gr.Flush()
-                        gr.Submit(True)
-                        Dim result = New SKBitmap(New SKImageInfo(source.Width, source.Height, source.ColorType, source.AlphaType))
-                        If Not surface.ReadPixels(result.Info, result.GetPixels(), result.RowBytes, 0, 0) Then
+                        PerformanceTraceService.Measure("Pixel: Punktkette, Rechnen auf der Karte",
+                            Sub()
+                                Using shader = PointOpShader(effect, chain, image, gpuTable, gpuDither, gpuBase, gpuCubeA, gpuCubeB, gpuGuide, localBase,
+                                                             srcInfo.AlphaType = SKAlphaType.Premul)
+                                    Using paint = New SKPaint With {.Shader = shader, .BlendMode = SKBlendMode.Src}
+                                        surface.Canvas.DrawRect(0, 0, srcInfo.Width, srcInfo.Height, paint)
+                                    End Using
+                                End Using
+                                gr.Flush()
+                                gr.Submit(True)
+                            End Sub)
+                        Dim result = New SKBitmap(New SKImageInfo(srcInfo.Width, srcInfo.Height, srcInfo.ColorType, srcInfo.AlphaType))
+                        Dim drawn = surface
+                        If Not PerformanceTraceService.Measure("Pixel: Punktkette, Zuruecklesen",
+                                Function() drawn.ReadPixels(result.Info, result.GetPixels(), result.RowBytes, 0, 0)) Then
                             result.Dispose()
                             Throw New InvalidOperationException("Zuruecklesen von der Grafikkarte gescheitert.")
                         End If

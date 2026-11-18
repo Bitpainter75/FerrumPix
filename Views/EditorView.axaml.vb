@@ -1513,7 +1513,12 @@ Namespace Views
                 If TypeOf ancestor Is SharpnessPanel OrElse TypeOf ancestor Is NoisePanel OrElse
                    TypeOf ancestor Is DetailsPanel OrElse TypeOf ancestor Is EffectsPanel OrElse
                    TypeOf ancestor Is VignettePanel OrElse
-                   TypeOf ancestor Is BokehPanel OrElse TypeOf ancestor Is LensCorrectionPanel Then
+                   TypeOf ancestor Is BokehPanel OrElse TypeOf ancestor Is LensCorrectionPanel OrElse
+                   TypeOf ancestor Is ExtensionsPanel Then
+                    ' DIE ERWEITERUNGEN gehoeren hierher, weil niemand weiss, ob ihr Shader in
+                    ' Bildpunkten rechnet (ein Radius in Punkten etwa): dann volle Groesse. Ohne den
+                    ' Eintrag liefen sie ganz ohne Zugmodus, der Render wartete auf eine Pause, und
+                    ' zwischen Regler und Bild lagen bis zu 2,4 s bei einem Render von 42 ms.
                     Return SliderKind.ScaleSensitive
                 End If
                 If TypeOf ancestor Is LightPanel OrElse TypeOf ancestor Is ColorPanel OrElse

@@ -4002,7 +4002,7 @@ Namespace ViewModels
             _gpuImageCheckBusy = True
             Me.RaisePropertyChanged(NameOf(GpuImageProcessingStatusText))
             Try
-                Await Task.Run(Sub() ImageProcessor.CheckGpuImageProcessing())
+                Await Task.Run(Sub() ImageProcessor.CheckGpuImageProcessing(measureSpeed:=True))
             Catch ex As Exception
                 DiagnosticLogService.LogException("Settings.CheckGpuImageProcessing", ex)
             Finally
