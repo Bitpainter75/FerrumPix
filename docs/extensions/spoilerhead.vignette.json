@@ -1,0 +1,88 @@
+{
+  "format": 1,
+  "id": "spoilerhead.vignette",
+  "version": 1,
+  "name": { "en": "Highlight Preserving Vignette", "de": "Vignette mit Lichterschutz" },
+  "description": {
+    "en": "Darkens the corners by a chosen exposure in EV, with an adjustable untouched center and protection for bright highlights.",
+    "de": "Dunkelt die Ecken um einen gewählten EV-Wert ab, mit einstellbarem unverändertem Zentrum und Schutz für helle Lichter."
+  },
+  "author": "Spoilerhead",
+  "license": "GPL-2.0-or-later",
+
+  "stage": "before-grain",
+  "priority": -1000,
+
+  "controls": [
+    { "key": "strengthEv", "type": "slider", "min": 0, "max": 10, "default": 0, "decimals": 2, "track": ["#FFFFFF", "#000000"],
+      "section": { "en": "Vignette", "de": "Vignette" },
+      "label": { "en": "Strength (EV)", "de": "Stärke (EV)" },
+      "hint": { "en": "Darkening in stops at the image corners, before highlight protection. Zero leaves the picture unchanged; 1 applies -1 EV and halves the light, 10 applies -10 EV and leaves 1/1024.",
+                "de": "Abdunklung in Blendenstufen in den Bildecken vor dem Lichterschutz. Null lässt das Bild unverändert; 1 wendet -1 EV an und halbiert das Licht, 10 wendet -10 EV an und lässt 1/1024 übrig." } },
+
+    { "key": "innerRadiusFraction", "type": "slider", "min": 0, "max": 0.99, "default": 0.33, "decimals": 2, "track": "black-white",
+      "label": { "en": "Inner radius", "de": "Innerer Radius" },
+      "hint": { "en": "Where darkening starts, as a fraction of the center-to-corner distance. 0.33 leaves the central 33% of that radius untouched. The limit stays below one so the falloff always reaches the corners.",
+                "de": "Beginn der Abdunklung als Anteil des Abstands von der Mitte zur Ecke. 0,33 lässt die inneren 33% dieses Radius unverändert. Die Grenze bleibt unter eins, damit der Verlauf stets die Ecken erreicht." } },
+
+    { "key": "preserveAmount", "type": "slider", "min": 0, "max": 1, "default": 0.85, "decimals": 2, "track": "black-white",
+      "section": { "en": "Highlight preservation", "de": "Lichtererhaltung" },
+      "label": { "en": "Preservation", "de": "Erhaltung" },
+      "hint": { "en": "How much darkening is removed where the protection mask reaches full strength. Zero disables protection; one leaves fully protected highlights unchanged.",
+                "de": "Wie stark die Abdunklung dort zurückgenommen wird, wo die Schutzmaske ihre volle Stärke erreicht. Null schaltet den Schutz aus; eins lässt vollständig geschützte Lichter unverändert." } },
+
+    { "key": "highlightThreshEv", "type": "slider", "min": -10, "max": 0, "default": -1, "decimals": 2, "track": "black-white",
+      "label": { "en": "Threshold (EV)", "de": "Schwellenwert (EV)" },
+      "hint": { "en": "Protection starts above this luminance relative to white: -1 EV is half its linear luminance. Lower values protect more of the picture; 0 EV disables protection entirely.",
+                "de": "Der Schutz beginnt oberhalb dieser Luminanz relativ zu Weiß: -1 EV ist dessen halbe lineare Luminanz. Niedrigere Werte schützen größere Bildteile; 0 EV schaltet den Schutz vollständig aus." } },
+
+    { "key": "preservationRolloffEv", "type": "slider", "min": 0.01, "max": 5, "default": 1, "decimals": 2,
+      "label": { "en": "Rolloff", "de": "Übergang" },
+      "hint": { "en": "Width in EV of the smoothstep transition above Threshold. Full protection is reached at Threshold plus Rolloff. Wider transitions are gentler; if their end lies above 0 EV, white is only partly protected. Narrow transitions can emphasize noise.",
+                "de": "Breite in EV des Smoothstep-Übergangs oberhalb des Schwellenwerts. Bei Schwellenwert plus Übergangsbreite wird der volle Schutz erreicht. Breitere Übergänge sind sanfter; liegt ihr Ende über 0 EV, wird Weiß nur teilweise geschützt. Schmale Übergänge können Rauschen betonen." } }
+  ],
+
+  "shader": [
+    "// FerrumPix supplies straight sRGB RGB in [0,1]; the host handles alpha and output storage.",
+    "// Geometry and exposure use normalized coordinates, so the effect scales with the image.",
+    "float3 effect(float3 color, float2 pos) {",
+    "    // Preserve exact identity at zero strength rather than round-tripping the transfer functions.",
+    "    if (strengthEv <= 0.0) return color;",
+    "",
+    "    // Exposure is a ratio of light: convert once using the host's piecewise sRGB transfer function.",
+    "    float3 linearRGB = fpToLinear(color);",
+    "",
+    "    // Aspect correction keeps equal-distance contours circular in image pixels. Dividing by",
+    "    // the half diagonal places every geometric corner at radius one, regardless of aspect.",
+    "    float2 uv = pos * 2.0 - 1.0;",
+    "    float aspect = fpSize.x / fpSize.y;",
+    "    uv.x *= aspect;",
+    "    float radius = length(uv) / sqrt(aspect * aspect + 1.0);",
+    "",
+    "    // Leave the inner disk untouched and ease towards the selected corner exposure. The",
+    "    // inner-radius control stays below one so smoothstep always has distinct endpoints.",
+    "    float falloff = smoothstep(innerRadiusFraction, 1.0, radius);",
+    "    float vignetteMultiplier = exp2(-strengthEv * falloff);",
+    "",
+    "    // Classify highlights from the incoming linear luminance, before any darkening. Zero EV",
+    "    // explicitly disables preservation, including white: a white-only step would amplify",
+    "    // tiny input differences into a sharp boundary. Keep the mask zero in that case.",
+    "    float preservationMask = 0.0;",
+    "    if (highlightThreshEv < 0.0) {",
+    "        float luminance = fpLuma(linearRGB);",
+    "        float protectionStart = exp2(highlightThreshEv);",
+    "        float protectionEnd = exp2(highlightThreshEv + preservationRolloffEv);",
+    "",
+    "        // Controls specify the endpoints in EV; interpolation remains smoothstep in linear",
+    "        // luminance. A positive rolloff keeps the endpoints distinct. Let the upper endpoint",
+    "        // exceed white when requested: clamping it would silently shorten the chosen rolloff.",
+    "        preservationMask = smoothstep(protectionStart, protectionEnd, luminance);",
+    "    }",
+    "",
+    "    // Restore the selected fraction of lost linear light by blending the multiplier towards",
+    "    // one. Strength describes the unprotected corner exposure; preservation reduces it.",
+    "    float finalMultiplier = mix(vignetteMultiplier, 1.0, preservationMask * preserveAmount);",
+    "    return fpToSrgb(linearRGB * finalMultiplier);",
+    "}"
+  ]
+}
