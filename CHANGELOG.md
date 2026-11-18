@@ -2,18 +2,9 @@
 
 ### Changes
 
-- With the Move button on the editor stage, or while holding SPACE, dragging on a selected object now
-  moves the view as everywhere else, instead of moving or selecting the object. Zoomed in, where a
-  selected object often fills the view, the button seemed to do nothing.
-
-- Highlights and Shadows set in the same direction, both up or both down, now strengthen each
-  other instead of holding each other back. Pictures edited that way look stronger than before.
-
-- In the automatic object selection, a click inside an existing selection now selects the
-  object you clicked instead of starting to move the selection.
-
-- A sidecar file with picture variants that contains something this version does not know,
-  for example from a newer FerrumPix, is no longer rewritten without it. It is left as it is.
+- Sharpening has a third method, High Pass. It works like a high pass layer blended in linear
+  light, done in one step, and brings out the finest detail. Strength 100 equals that blend at
+  full opacity, and Radius reaches down to very small values.
 
 - FerrumPix can now load extensions: small files that add a tool with its own sliders, for
   example a black and white conversion or a toning. They are loaded and removed in the settings,
@@ -41,12 +32,18 @@
   layers and on objects like the other adjustments. A third example shows a brightness curve
   with toning in two colors and the presets Sepia, Selenium and Cold.
 
-- Sharpening has a third method, High Pass. It works like a high pass layer blended in linear
-  light, done in one step, and brings out the finest detail. Strength 100 equals that blend at
-  full opacity, and Radius reaches down to very small values.
-
+- Highlights and Shadows set in the same direction, both up or both down, now strengthen each
+  other instead of holding each other back.
+  
 - When another program changes the XMP sidecar of a picture at the very moment FerrumPix is
   about to save a rating, keywords or other details into it, FerrumPix now leaves the file as
   the other program wrote it instead of replacing it with its own version.
 
+### Fixes  
 
+- With the Move button on the editor stage, or while holding SPACE, dragging on a selected object now
+  moves the view as everywhere else, instead of moving or selecting the object. Zoomed in, where a
+  selected object often fills the view, the button seemed to do nothing.
+
+- A sidecar file with picture variants that contains something this version does not know,
+  for example from a newer FerrumPix, is no longer rewritten without it. It is left as it is.
