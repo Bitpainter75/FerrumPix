@@ -2316,9 +2316,6 @@
   <data name="Schatten_Ton_b89e4f42" xml:space="preserve">
     <value>어두운 곳 색조</value>
   </data>
-  <data name="Schreibt_Details_zu_Vorschau_Wiedergabe_Fehlern__7ef8054a" xml:space="preserve">
-    <value>미리보기와 재생 오류에 관한 자세한 내용을 %LocalAppData%/FerrumPix/logs/diagnostics.log에 기록합니다. 문제를 찾을 때만 켜세요.</value>
-  </data>
   <data name="Schriftgrad_922569af" xml:space="preserve">
     <value>글꼴 배율</value>
   </data>
@@ -4986,7 +4983,7 @@
   <data name="Wird_geladen_17fac8ea" xml:space="preserve">
     <value>내려받는 중…</value>
   </data>
-  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
+  <data name="Eine_neuere_Version_liegt_bereit_5aaf97f1" xml:space="preserve">
     <value>새 버전이 있습니다</value>
   </data>
   <data name="Vorhanden_a8282ce8" xml:space="preserve">
@@ -6606,7 +6603,7 @@
   <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
     <value>사용할 수 있는 새 버전:</value>
   </data>
-  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
+  <data name="Ver_ffentlichte_Version_herunterladen_b4173d5e" xml:space="preserve">
     <value>공개된 버전 내려받기</value>
   </data>
   <data name="Auswahl_gel_scht_eb97789d" xml:space="preserve">
@@ -10363,7 +10360,7 @@
   <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
     <value>이 파일은 FerrumPix 백업이 아닙니다.</value>
   </data>
-  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_8f6df52d" xml:space="preserve">
     <value>이 백업은 더 새로운 FerrumPix 버전에서 만들어져 여기서 복원할 수 없습니다.</value>
   </data>
   <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
@@ -11920,7 +11917,7 @@
   <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
     <value>확장은 자체 슬라이더를 가진 도구를 설명하는 파일입니다. 하나라도 불러오면 편집기의 조정 그룹에 확장 도구가 나타납니다.</value>
   </data>
-  <data name="Fassung_0_6d62d634" xml:space="preserve">
+  <data name="Version_0_4b0a3f2d" xml:space="preserve">
     <value>버전 {0}</value>
   </data>
   <data name="mitgeliefert_23d772be" xml:space="preserve">
@@ -11935,7 +11932,7 @@
   <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
     <value>이를 사용하는 사진은 설정을 유지합니다. 확장을 다시 불러오면 다시 적용됩니다.</value>
   </data>
-  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+  <data name="Dieses_Bild_wurde_mit_Version_0_eingestellt_gela_5f2bdc3a" xml:space="preserve">
     <value>이 사진은 버전 {0}으로 설정되었고, 불러온 것은 버전 {1}입니다.</value>
   </data>
   <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
@@ -11968,7 +11965,7 @@
   <data name="Installiert_ff9a9955" xml:space="preserve">
     <value>설치됨</value>
   </data>
-  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+  <data name="Aktualisierung_von_Version_0_292fff26" xml:space="preserve">
     <value>버전 {0}에서 업데이트</value>
   </data>
   <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
@@ -11982,5 +11979,32 @@
   </data>
   <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
     <value>FerrumPix 디렉터리의 확장 기능입니다. 각각 풀 리퀘스트로 들어왔으며 설명과 예시 사진은 그곳에 있습니다.</value>
+  </data>
+  <data name="In_die_Zwischenablage_kopieren_383cd1e2" xml:space="preserve">
+    <value>클립보드에 복사</value>
+  </data>
+  <data name="Ordner_ffnen_94398021" xml:space="preserve">
+    <value>폴더 열기</value>
+  </data>
+  <data name="Kopiert_fa853e05" xml:space="preserve">
+    <value>복사됨</value>
+  </data>
+  <data name="Schreibt_Details_zur_Fehlersuche_nach_diagnostic_8513b7b3" xml:space="preserve">
+    <value>문제 해결을 위한 세부 정보를 아래 폴더의 diagnostics.log에 기록합니다. 오류는 항상 그곳의 errors.log에 기록됩니다. 필요할 때만 켜세요.</value>
+  </data>
+  <data name="Protokoll_anzeigen_ab937136" xml:space="preserve">
+    <value>로그 보기</value>
+  </data>
+  <data name="Die_letzten_Eintr_ge_aus_errors_log_und_diagnost_1cdbf866" xml:space="preserve">
+    <value>폴더 {0}에 있는 errors.log와 diagnostics.log의 최근 항목입니다. 텍스트를 선택하고 복사할 수 있습니다.</value>
+  </data>
+  <data name="Das_Protokoll_ist_noch_leer_ca22391c" xml:space="preserve">
+    <value>로그가 아직 비어 있습니다.</value>
+  </data>
+  <data name="Protokoll_leeren_2db23711" xml:space="preserve">
+    <value>로그 비우기</value>
+  </data>
+  <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
+    <value>로그를 비울 수 없습니다.</value>
   </data>
 </root>

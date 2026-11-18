@@ -16,6 +16,10 @@
   instead of overwriting it. The copy is named by the pattern of Save as, for example
   picture_fx.jpg. Overwriting is still offered as the second choice.
 
+- Settings, section Performance, show where the diagnostics log is kept on this system, with
+  buttons to open the folder and to show the log. The log window shows errors.log and
+  diagnostics.log one below the other; the text can be selected and copied.
+
 ### Fixes
 
 - The mouse wheel moved every slider of an extension by 1, so a slider from 0 to 1 went from one

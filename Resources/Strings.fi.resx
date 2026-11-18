@@ -2316,9 +2316,6 @@
   <data name="Schatten_Ton_b89e4f42" xml:space="preserve">
     <value>Varjojen sävy</value>
   </data>
-  <data name="Schreibt_Details_zu_Vorschau_Wiedergabe_Fehlern__7ef8054a" xml:space="preserve">
-    <value>Kirjoittaa esikatselun ja toiston virheiden tiedot tiedostoon %LocalAppData%/FerrumPix/logs/diagnostics.log. Ota käyttöön vain tarvittaessa vikoja etsittäessä.</value>
-  </data>
   <data name="Schriftgrad_922569af" xml:space="preserve">
     <value>Fonttikoko</value>
   </data>
@@ -4986,7 +4983,7 @@
   <data name="Wird_geladen_17fac8ea" xml:space="preserve">
     <value>Ladataan…</value>
   </data>
-  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
+  <data name="Eine_neuere_Version_liegt_bereit_5aaf97f1" xml:space="preserve">
     <value>Uudempi versio on saatavilla</value>
   </data>
   <data name="Vorhanden_a8282ce8" xml:space="preserve">
@@ -6609,7 +6606,7 @@
   <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
     <value>Päivitys saatavilla:</value>
   </data>
-  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
+  <data name="Ver_ffentlichte_Version_herunterladen_b4173d5e" xml:space="preserve">
     <value>Lataa julkaistu versio</value>
   </data>
   <data name="Auswahl_gel_scht_eb97789d" xml:space="preserve">
@@ -10359,7 +10356,7 @@
   <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
     <value>Tiedosto ei ole FerrumPix-varmuuskopio.</value>
   </data>
-  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_8f6df52d" xml:space="preserve">
     <value>Varmuuskopio on uudemmasta FerrumPix-versiosta, eikä sitä voi palauttaa tässä.</value>
   </data>
   <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
@@ -11916,7 +11913,7 @@
   <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
     <value>Laajennus on tiedosto, joka kuvaa työkalun omine liukusäätimineen. Kun jokin on ladattu, editori näyttää Laajennukset-työkalun Säädöt-ryhmässä.</value>
   </data>
-  <data name="Fassung_0_6d62d634" xml:space="preserve">
+  <data name="Version_0_4b0a3f2d" xml:space="preserve">
     <value>Versio {0}</value>
   </data>
   <data name="mitgeliefert_23d772be" xml:space="preserve">
@@ -11931,7 +11928,7 @@
   <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
     <value>Sitä käyttävät kuvat säilyttävät asetuksensa. Ne vaikuttavat taas heti, kun laajennus ladataan uudelleen.</value>
   </data>
-  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+  <data name="Dieses_Bild_wurde_mit_Version_0_eingestellt_gela_5f2bdc3a" xml:space="preserve">
     <value>Tämä kuva säädettiin versiolla {0}, ladattuna on versio {1}.</value>
   </data>
   <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
@@ -11964,7 +11961,7 @@
   <data name="Installiert_ff9a9955" xml:space="preserve">
     <value>Asennettu</value>
   </data>
-  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+  <data name="Aktualisierung_von_Version_0_292fff26" xml:space="preserve">
     <value>Päivitys versiosta {0}</value>
   </data>
   <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
@@ -11978,5 +11975,32 @@
   </data>
   <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
     <value>Laajennuksia FerrumPixin hakemistosta. Jokainen tuli pull requestina, josta löytyvät kuvaus ja esimerkkikuvat.</value>
+  </data>
+  <data name="In_die_Zwischenablage_kopieren_383cd1e2" xml:space="preserve">
+    <value>Kopioi leikepöydälle</value>
+  </data>
+  <data name="Ordner_ffnen_94398021" xml:space="preserve">
+    <value>Avaa kansio</value>
+  </data>
+  <data name="Kopiert_fa853e05" xml:space="preserve">
+    <value>Kopioitu</value>
+  </data>
+  <data name="Schreibt_Details_zur_Fehlersuche_nach_diagnostic_8513b7b3" xml:space="preserve">
+    <value>Kirjoittaa vianetsinnän tiedot tiedostoon diagnostics.log alla olevaan kansioon; virheet kirjoitetaan sinne aina tiedostoon errors.log. Ota käyttöön vain tarvittaessa.</value>
+  </data>
+  <data name="Protokoll_anzeigen_ab937136" xml:space="preserve">
+    <value>Näytä loki</value>
+  </data>
+  <data name="Die_letzten_Eintr_ge_aus_errors_log_und_diagnost_1cdbf866" xml:space="preserve">
+    <value>Viimeisimmät merkinnät tiedostoista errors.log ja diagnostics.log kansiossa {0}. Tekstin voi valita ja kopioida.</value>
+  </data>
+  <data name="Das_Protokoll_ist_noch_leer_ca22391c" xml:space="preserve">
+    <value>Loki on vielä tyhjä.</value>
+  </data>
+  <data name="Protokoll_leeren_2db23711" xml:space="preserve">
+    <value>Tyhjennä loki</value>
+  </data>
+  <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
+    <value>Lokia ei voitu tyhjentää.</value>
   </data>
 </root>

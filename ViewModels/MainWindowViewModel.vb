@@ -3386,6 +3386,7 @@ Namespace ViewModels
                 Me.RaisePropertyChanged(NameOf(DialogShowsRestore))
                 Me.RaisePropertyChanged(NameOf(DialogShowsBackupOrRestore))
                 Me.RaisePropertyChanged(NameOf(DialogShowsExtensionDownload))
+                Me.RaisePropertyChanged(NameOf(DialogShowsDiagnosticLog))
                 Me.RaisePropertyChanged(NameOf(IsDialogPrimaryEnabled))
                 Me.RaisePropertyChanged(NameOf(IsDialogBatchOverwriteAvailable))
                 Me.RaisePropertyChanged(NameOf(IsDialogNamePatternVisible))
@@ -3438,6 +3439,7 @@ Namespace ViewModels
                        _dialogKind <> AppDialogKind.Restore AndAlso
                        _dialogKind <> AppDialogKind.Shortcuts AndAlso
                        _dialogKind <> AppDialogKind.ExtensionDownload AndAlso
+                       _dialogKind <> AppDialogKind.DiagnosticLog AndAlso
                        _dialogKind <> AppDialogKind.SaveAs
             End Get
         End Property
@@ -4470,6 +4472,8 @@ Namespace ViewModels
                 ' Erweiterungen herunterladen: Beispielbild, Beschreibung und Knopf nebeneinander;
                 ' schmaler bricht die Beschreibung in viele kurze Zeilen.
                 If DialogShowsExtensionDownload Then Return 960
+                ' Das Protokoll: lange Zeilen, die nicht umbrechen sollen.
+                If DialogShowsDiagnosticLog Then Return 960
                 ' Die Tastenkuerzel brauchen die Breite fuer ihre zwei Spalten (Taste 230, Wirkung).
                 If DialogShowsFileConflict OrElse DialogShowsBatchRename OrElse
                    DialogShowsShortcuts Then Return 820

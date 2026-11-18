@@ -43,6 +43,9 @@ Namespace ViewModels
         ''' <summary>Erweiterungen aus dem Index herunterladen
         ''' (MainWindowViewModelExtensionDownload.vb).</summary>
         ExtensionDownload
+        ''' <summary>Das Ende der Protokolldatei zum Markieren und Kopieren
+        ''' (MainWindowViewModelDiagnosticLog.vb).</summary>
+        DiagnosticLog
     End Enum
 
     ''' <summary>Wo "Metadaten entfernen" wirkt. Jede Stelle fuer sich waehlbar.</summary>

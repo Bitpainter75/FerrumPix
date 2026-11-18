@@ -116,6 +116,64 @@ Namespace Services
             End Get
         End Property
 
+        ''' <summary>Die ausfuehrliche Protokolldatei, fuer die Anzeige in den Einstellungen. Der
+        ''' Pfad haengt am System (unter Windows %LocalAppData%, unter macOS
+        ''' ~/Library/Application Support, unter Linux ~/.local/share); ein fester Text dafuer
+        ''' fuehrte auf dem Mac in den falschen Ordner (Nutzermeldung).</summary>
+        Public Shared ReadOnly Property LogFilePath As String
+            Get
+                Return LogPath
+            End Get
+        End Property
+
+        ''' <summary>Das Ende der ausfuehrlichen Protokolldatei als Text, hoechstens
+        ''' <paramref name="maxBytes"/>. Beginnt der Ausschnitt mitten in einer Zeile, faellt der
+        ''' Rest dieser Zeile weg. Leer, wenn es die Datei nicht gibt. Unter derselben Sperre wie das
+        ''' Schreiben, damit keine halbe Zeile mitkommt.</summary>
+        Public Shared Function ReadTail(maxBytes As Integer) As String
+            Return ReadTailOf(LogPath, maxBytes)
+        End Function
+
+        ''' <summary>Die Fehlerdatei des Normalbetriebs; sie wird auch ohne Diagnoseprotokoll
+        ''' geschrieben.</summary>
+        Public Shared ReadOnly Property ErrorLogFilePath As String
+            Get
+                Return ErrorLogPath
+            End Get
+        End Property
+
+        ''' <summary>Wie <see cref="ReadTail"/>, fuer die Fehlerdatei.</summary>
+        Public Shared Function ReadErrorTail(maxBytes As Integer) As String
+            Return ReadTailOf(ErrorLogPath, maxBytes)
+        End Function
+
+        Private Shared Function ReadTailOf(path As String, maxBytes As Integer) As String
+            SyncLock _writeLock
+                Try
+                    If Not File.Exists(path) Then Return ""
+                    Using stream As New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete)
+                        Dim start = Math.Max(0L, stream.Length - Math.Max(1, maxBytes))
+                        stream.Position = start
+                        Dim buffer(CInt(stream.Length - start) - 1) As Byte
+                        Dim read = 0
+                        While read < buffer.Length
+                            Dim n = stream.Read(buffer, read, buffer.Length - read)
+                            If n <= 0 Then Exit While
+                            read += n
+                        End While
+                        Dim offset = 0
+                        If start > 0 Then
+                            Dim newline = Array.IndexOf(buffer, CByte(10), 0, read)
+                            If newline >= 0 Then offset = newline + 1
+                        End If
+                        Return System.Text.Encoding.UTF8.GetString(buffer, offset, read - offset)
+                    End Using
+                Catch ex As Exception
+                    Return ex.Message
+                End Try
+            End SyncLock
+        End Function
+
         ''' <summary>Schreibt eine Info-Zeile - nur bei eingeschaltetem EnableDiagnosticLogging.</summary>
         Public Shared Sub LogAlways(area As String, message As String)
             If Not IsVerboseEnabled Then Return
@@ -217,6 +275,25 @@ Namespace Services
         ''' <summary>Deckelt die Fehlerdatei: ist sie voll, wird sie EINMAL zur .1 und neu begonnen.
         ''' Kein Ringpuffer mit vielen Ständen - eine Vorgängerfassung reicht, um einen Fehler zu
         ''' verfolgen, und mehr als 2 MB soll das Protokoll nie belegen.</summary>
+        ''' <summary>Leert beide Protokolle und loescht die Vorgaengerfassung der Fehlerdatei, auf
+        ''' Wunsch des Nutzers, etwa bevor er einen Fehler fuer ein Protokoll nachstellt. Geleert,
+        ''' nicht geloescht: so bleibt die Datei da, wo der Nutzer sie gerade sucht. Unter der
+        ''' Schreibsperre, damit keine halbe Zeile stehen bleibt.</summary>
+        ''' <returns>Leer, oder der Grund, warum es nicht ging.</returns>
+        Public Shared Function Clear() As String
+            SyncLock _writeLock
+                Try
+                    For Each path In {LogPath, ErrorLogPath}
+                        If File.Exists(path) Then File.WriteAllText(path, "")
+                    Next
+                    If File.Exists(ErrorLogPath & ".1") Then File.Delete(ErrorLogPath & ".1")
+                    Return ""
+                Catch ex As Exception
+                    Return ex.Message
+                End Try
+            End SyncLock
+        End Function
+
         Private Shared Sub RotateIfTooLarge()
             Try
                 Dim info = New FileInfo(ErrorLogPath)

@@ -196,7 +196,20 @@
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Fehlerdiagnose-Protokoll" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Schreibt Details zur Fehlersuche nach diagnostics.log im Ordner darunter, Fehler stehen dort immer in errors.log. Nur bei Bedarf einschalten." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <!-- Der echte Pfad dieses Systems statt eines festen Textes: der nannte
+                                     den Windows-Pfad, und auf dem Mac suchte ein Nutzer in der
+                                     falschen Bibliothek. -->
+                                <TextBlock Classes="no-translate" Text="{Binding DiagnosticLogFolder}"
+                                           Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                                    <Button Classes="ghost" Padding="12,7" Command="{Binding ShowDiagnosticLogCommand}">
+                                        <TextBlock Text="Protokoll anzeigen" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                    <Button Classes="ghost" Padding="12,7" Command="{Binding OpenDiagnosticLogFolderCommand}">
+                                        <TextBlock Text="Ordner öffnen" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </StackPanel>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EnableDiagnosticLogging}"

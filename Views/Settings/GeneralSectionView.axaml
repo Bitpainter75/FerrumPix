@@ -26,7 +26,7 @@
                                 <Button Classes="ghost" Padding="10,4" VerticalAlignment="Center"
                                         IsVisible="{Binding IsUpdateAvailable}"
                                         Click="OnReleasePageClick"
-                                        ToolTip.Tip="Veröffentlichte Fassung herunterladen">
+                                        ToolTip.Tip="Veröffentlichte Version herunterladen">
                                     <StackPanel Orientation="Horizontal" Spacing="7">
                                         <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/arrow-square-out.svg" Width="18" Height="18"
                                                        IconBrush="{DynamicResource FP.Accent}"/>

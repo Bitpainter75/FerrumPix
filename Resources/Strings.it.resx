@@ -2318,9 +2318,6 @@
   <data name="Schatten_Ton_b89e4f42" xml:space="preserve">
     <value>Tonalità delle ombre</value>
   </data>
-  <data name="Schreibt_Details_zu_Vorschau_Wiedergabe_Fehlern__7ef8054a" xml:space="preserve">
-    <value>Scrive i dettagli sugli errori di anteprima e riproduzione in %LocalAppData%/FerrumPix/logs/diagnostics.log. Attivare solo per la risoluzione dei problemi.</value>
-  </data>
   <data name="Schriftgrad_922569af" xml:space="preserve">
     <value>Dimensione carattere</value>
   </data>
@@ -4988,7 +4985,7 @@
   <data name="Wird_geladen_17fac8ea" xml:space="preserve">
     <value>Scaricamento…</value>
   </data>
-  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
+  <data name="Eine_neuere_Version_liegt_bereit_5aaf97f1" xml:space="preserve">
     <value>È disponibile una versione più recente</value>
   </data>
   <data name="Vorhanden_a8282ce8" xml:space="preserve">
@@ -6611,7 +6608,7 @@
   <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
     <value>Aggiornamento disponibile:</value>
   </data>
-  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
+  <data name="Ver_ffentlichte_Version_herunterladen_b4173d5e" xml:space="preserve">
     <value>Scarica la versione pubblicata</value>
   </data>
   <data name="Auswahl_gel_scht_eb97789d" xml:space="preserve">
@@ -10319,7 +10316,7 @@
   <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
     <value>Il file non è un backup di FerrumPix.</value>
   </data>
-  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_8f6df52d" xml:space="preserve">
     <value>Il backup proviene da una versione più recente di FerrumPix e non può essere ripristinato qui.</value>
   </data>
   <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
@@ -11876,7 +11873,7 @@
   <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
     <value>Un’estensione è un file che descrive uno strumento con i propri cursori. Quando ne è caricata una, l’editor mostra lo strumento Estensioni nel gruppo Regolazioni.</value>
   </data>
-  <data name="Fassung_0_6d62d634" xml:space="preserve">
+  <data name="Version_0_4b0a3f2d" xml:space="preserve">
     <value>Versione {0}</value>
   </data>
   <data name="mitgeliefert_23d772be" xml:space="preserve">
@@ -11891,7 +11888,7 @@
   <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
     <value>Le immagini che la usano mantengono le loro impostazioni. Tornano ad avere effetto appena l’estensione viene ricaricata.</value>
   </data>
-  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+  <data name="Dieses_Bild_wurde_mit_Version_0_eingestellt_gela_5f2bdc3a" xml:space="preserve">
     <value>Questa immagine è stata regolata con la versione {0}, è caricata la versione {1}.</value>
   </data>
   <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
@@ -11924,7 +11921,7 @@
   <data name="Installiert_ff9a9955" xml:space="preserve">
     <value>Installata</value>
   </data>
-  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+  <data name="Aktualisierung_von_Version_0_292fff26" xml:space="preserve">
     <value>Aggiornamento dalla versione {0}</value>
   </data>
   <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
@@ -11938,5 +11935,32 @@
   </data>
   <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
     <value>Estensioni dalla directory di FerrumPix. Ognuna è arrivata come pull request, dove si trovano descrizione e immagini di esempio.</value>
+  </data>
+  <data name="In_die_Zwischenablage_kopieren_383cd1e2" xml:space="preserve">
+    <value>Copia negli appunti</value>
+  </data>
+  <data name="Ordner_ffnen_94398021" xml:space="preserve">
+    <value>Apri cartella</value>
+  </data>
+  <data name="Kopiert_fa853e05" xml:space="preserve">
+    <value>Copiato</value>
+  </data>
+  <data name="Schreibt_Details_zur_Fehlersuche_nach_diagnostic_8513b7b3" xml:space="preserve">
+    <value>Scrive i dettagli per la ricerca degli errori in diagnostics.log nella cartella qui sotto; gli errori vengono sempre scritti lì in errors.log. Attivare solo se necessario.</value>
+  </data>
+  <data name="Protokoll_anzeigen_ab937136" xml:space="preserve">
+    <value>Mostra registro</value>
+  </data>
+  <data name="Die_letzten_Eintr_ge_aus_errors_log_und_diagnost_1cdbf866" xml:space="preserve">
+    <value>Le ultime voci di errors.log e diagnostics.log nella cartella {0}. Il testo può essere selezionato e copiato.</value>
+  </data>
+  <data name="Das_Protokoll_ist_noch_leer_ca22391c" xml:space="preserve">
+    <value>Il registro è ancora vuoto.</value>
+  </data>
+  <data name="Protokoll_leeren_2db23711" xml:space="preserve">
+    <value>Svuota registro</value>
+  </data>
+  <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
+    <value>Impossibile svuotare il registro.</value>
   </data>
 </root>

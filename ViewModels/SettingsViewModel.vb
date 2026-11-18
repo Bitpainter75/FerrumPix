@@ -6326,6 +6326,36 @@ Namespace ViewModels
         ''' AUSNAHMEN hängen NICHT an diesem Schalter: sie gehen immer nach logs/errors.log (auf 1 MB
         ''' gedeckelt, eine Vorgängerfassung). Seit die Async-Einstiegspunkte ihre Ausnahmen abfangen,
         ''' beendet ein Fehler die App nicht mehr - ohne diese Datei wäre er dafür spurlos weg.
+        Private _showDiagnosticLogCommand As ICommand
+        Private _openDiagnosticLogFolderCommand As ICommand
+
+        ''' <summary>Wo die Protokolle auf diesem System liegen.</summary>
+        Public ReadOnly Property DiagnosticLogFolder As String
+            Get
+                Return DiagnosticLogService.LogFolder
+            End Get
+        End Property
+
+        ''' <summary>Zeigt das Ende des Protokolls in einem Dialog (MainWindowViewModelDiagnosticLog).</summary>
+        Public ReadOnly Property ShowDiagnosticLogCommand As ICommand
+            Get
+                If _showDiagnosticLogCommand Is Nothing Then
+                    _showDiagnosticLogCommand = ReactiveCommand.CreateFromTask(
+                        Function() If(_mainVm Is Nothing, Task.CompletedTask, _mainVm.ShowDiagnosticLogDialogAsync()))
+                End If
+                Return _showDiagnosticLogCommand
+            End Get
+        End Property
+
+        Public ReadOnly Property OpenDiagnosticLogFolderCommand As ICommand
+            Get
+                If _openDiagnosticLogFolderCommand Is Nothing Then
+                    _openDiagnosticLogFolderCommand = ReactiveCommand.Create(Sub() MainWindowViewModel.OpenDiagnosticLogFolder())
+                End If
+                Return _openDiagnosticLogFolderCommand
+            End Get
+        End Property
+
         Public Property EnableDiagnosticLogging As Boolean
             Get
                 Return _enableDiagnosticLogging
@@ -7344,7 +7374,7 @@ Namespace ViewModels
                 Get
                     If _running Then Return LocalizationService.T("Wird geladen…")
                     If Not String.IsNullOrEmpty(_message) Then Return _message
-                    If IsUpdatable Then Return LocalizationService.T("Eine neuere Fassung liegt bereit")
+                    If IsUpdatable Then Return LocalizationService.T("Eine neuere Version liegt bereit")
                     If IsComplete Then Return LocalizationService.T("Vorhanden")
                     ' Ein Teilstand ist eine eigene Auskunft. Bei einer Gruppe aus lauter
                     ' Wahlmoeglichkeiten (Hochskalieren) ist er sogar der Normalfall.

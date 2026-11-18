@@ -523,7 +523,7 @@ Namespace ViewModels
             Get
                 If Not HasVersionNote Then Return ""
                 Return String.Format(CultureInfo.CurrentCulture,
-                                     LocalizationService.T("Dieses Bild wurde mit Fassung {0} eingestellt, geladen ist Fassung {1}."),
+                                     LocalizationService.T("Dieses Bild wurde mit Version {0} eingestellt, geladen ist Version {1}."),
                                      _savedVersion, Definition.Version)
             End Get
         End Property

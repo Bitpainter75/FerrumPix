@@ -25,7 +25,7 @@ Namespace ViewModels
             _state = state
             Me.FormerlyShipped = formerlyShipped
             Dim parts As New List(Of String) From {
-                String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Fassung {0}"), entry.Version)}
+                String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Version {0}"), entry.Version)}
             If entry.Author.Length > 0 Then parts.Add(entry.Author)
             Details = String.Join(", ", parts)
         End Sub
@@ -124,7 +124,7 @@ Namespace ViewModels
         Public ReadOnly Property StateText As String
             Get
                 If _state <> ExtensionCatalogService.InstallState.UpdateAvailable Then Return ""
-                Return String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Aktualisierung von Fassung {0}"),
+                Return String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Aktualisierung von Version {0}"),
                                      ExtensionService.Find(Entry.Id)?.Version)
             End Get
         End Property

@@ -227,7 +227,7 @@ Namespace Services
                         Return Nothing
                     End If
                     If manifest.FormatVersion > CurrentFormatVersion Then
-                        problem = LocalizationService.T("Die Sicherung stammt aus einer neueren FerrumPix-Fassung und lässt sich hier nicht zurückholen.")
+                        problem = LocalizationService.T("Die Sicherung stammt aus einer neueren FerrumPix-Version und lässt sich hier nicht zurückholen.")
                         Return Nothing
                     End If
                     Return manifest

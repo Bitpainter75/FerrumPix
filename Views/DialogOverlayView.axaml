@@ -132,6 +132,10 @@
                                                 Margin="0,16,0,0"
                                                 IsVisible="{Binding DialogShowsBackupOrRestore}"/>
 
+                        <views:DiagnosticLogDialogView Grid.Row="3"
+                                                       Margin="0,16,0,0"
+                                                       IsVisible="{Binding DialogShowsDiagnosticLog}"/>
+
                         <views:ExtensionDownloadDialogView Grid.Row="3"
                                                            Margin="0,16,0,0"
                                                            IsVisible="{Binding DialogShowsExtensionDownload}"/>

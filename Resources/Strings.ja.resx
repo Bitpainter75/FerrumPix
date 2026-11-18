@@ -2316,9 +2316,6 @@
   <data name="Schatten_Ton_b89e4f42" xml:space="preserve">
     <value>シャドウの色相</value>
   </data>
-  <data name="Schreibt_Details_zu_Vorschau_Wiedergabe_Fehlern__7ef8054a" xml:space="preserve">
-    <value>プレビューや再生のエラーの詳細を %LocalAppData%/FerrumPix/logs/diagnostics.log に書き出します。不具合を調べるときだけオンにしてください。</value>
-  </data>
   <data name="Schriftgrad_922569af" xml:space="preserve">
     <value>文字サイズ</value>
   </data>
@@ -4986,7 +4983,7 @@
   <data name="Wird_geladen_17fac8ea" xml:space="preserve">
     <value>ダウンロードしています…</value>
   </data>
-  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
+  <data name="Eine_neuere_Version_liegt_bereit_5aaf97f1" xml:space="preserve">
     <value>新しいバージョンがあります</value>
   </data>
   <data name="Vorhanden_a8282ce8" xml:space="preserve">
@@ -6609,7 +6606,7 @@
   <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
     <value>更新があります:</value>
   </data>
-  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
+  <data name="Ver_ffentlichte_Version_herunterladen_b4173d5e" xml:space="preserve">
     <value>公開されているバージョンをダウンロード</value>
   </data>
   <data name="Auswahl_gel_scht_eb97789d" xml:space="preserve">
@@ -10359,7 +10356,7 @@
   <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
     <value>このファイルは FerrumPix のバックアップではありません。</value>
   </data>
-  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_8f6df52d" xml:space="preserve">
     <value>このバックアップは新しいバージョンの FerrumPix で作成されたため、ここでは復元できません。</value>
   </data>
   <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
@@ -11916,7 +11913,7 @@
   <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
     <value>拡張機能は、独自のスライダーを持つツールを記述したファイルです。読み込むと、エディターの調整グループに拡張機能ツールが表示されます。</value>
   </data>
-  <data name="Fassung_0_6d62d634" xml:space="preserve">
+  <data name="Version_0_4b0a3f2d" xml:space="preserve">
     <value>バージョン {0}</value>
   </data>
   <data name="mitgeliefert_23d772be" xml:space="preserve">
@@ -11931,7 +11928,7 @@
   <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
     <value>これを使っている画像は設定を保持します。拡張機能を再び読み込むと、再び反映されます。</value>
   </data>
-  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
+  <data name="Dieses_Bild_wurde_mit_Version_0_eingestellt_gela_5f2bdc3a" xml:space="preserve">
     <value>この画像はバージョン {0} で設定されました。読み込まれているのはバージョン {1} です。</value>
   </data>
   <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
@@ -11964,7 +11961,7 @@
   <data name="Installiert_ff9a9955" xml:space="preserve">
     <value>インストール済み</value>
   </data>
-  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
+  <data name="Aktualisierung_von_Version_0_292fff26" xml:space="preserve">
     <value>バージョン {0} からの更新</value>
   </data>
   <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
@@ -11978,5 +11975,32 @@
   </data>
   <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
     <value>FerrumPix のディレクトリにある拡張機能です。それぞれプルリクエストとして届き、説明とサンプル画像はそこにあります。</value>
+  </data>
+  <data name="In_die_Zwischenablage_kopieren_383cd1e2" xml:space="preserve">
+    <value>クリップボードにコピー</value>
+  </data>
+  <data name="Ordner_ffnen_94398021" xml:space="preserve">
+    <value>フォルダーを開く</value>
+  </data>
+  <data name="Kopiert_fa853e05" xml:space="preserve">
+    <value>コピーしました</value>
+  </data>
+  <data name="Schreibt_Details_zur_Fehlersuche_nach_diagnostic_8513b7b3" xml:space="preserve">
+    <value>トラブルシューティング用の詳細を下のフォルダーの diagnostics.log に書き込みます。エラーはそこにある errors.log に常に書き込まれます。必要なときだけオンにしてください。</value>
+  </data>
+  <data name="Protokoll_anzeigen_ab937136" xml:space="preserve">
+    <value>ログを表示</value>
+  </data>
+  <data name="Die_letzten_Eintr_ge_aus_errors_log_und_diagnost_1cdbf866" xml:space="preserve">
+    <value>フォルダー {0} の errors.log と diagnostics.log の最新の記録です。テキストは選択してコピーできます。</value>
+  </data>
+  <data name="Das_Protokoll_ist_noch_leer_ca22391c" xml:space="preserve">
+    <value>ログはまだ空です。</value>
+  </data>
+  <data name="Protokoll_leeren_2db23711" xml:space="preserve">
+    <value>ログを消去</value>
+  </data>
+  <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
+    <value>ログを消去できませんでした。</value>
   </data>
 </root>

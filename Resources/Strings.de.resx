@@ -2318,9 +2318,6 @@
   <data name="Schatten_Ton_b89e4f42" xml:space="preserve">
     <value>Schatten Ton</value>
   </data>
-  <data name="Schreibt_Details_zu_Vorschau_Wiedergabe_Fehlern__7ef8054a" xml:space="preserve">
-    <value>Schreibt Details zu Vorschau-/Wiedergabe-Fehlern nach %LocalAppData%/FerrumPix/logs/diagnostics.log. Nur bei Bedarf zur Fehlersuche einschalten.</value>
-  </data>
   <data name="Schriftgrad_922569af" xml:space="preserve">
     <value>Schriftgrad</value>
   </data>
@@ -4988,8 +4985,8 @@
   <data name="Wird_geladen_17fac8ea" xml:space="preserve">
     <value>Wird geladen…</value>
   </data>
-  <data name="Eine_neuere_Fassung_liegt_bereit_72c86896" xml:space="preserve">
-    <value>Eine neuere Fassung liegt bereit</value>
+  <data name="Eine_neuere_Version_liegt_bereit_5aaf97f1" xml:space="preserve">
+    <value>Eine neuere Version liegt bereit</value>
   </data>
   <data name="Vorhanden_a8282ce8" xml:space="preserve">
     <value>Vorhanden</value>
@@ -6608,8 +6605,8 @@
   <data name="Aktualisierung_verf_gbar_c20b1333" xml:space="preserve">
     <value>Aktualisierung verfügbar:</value>
   </data>
-  <data name="Ver_ffentlichte_Fassung_herunterladen_08d01ad8" xml:space="preserve">
-    <value>Veröffentlichte Fassung herunterladen</value>
+  <data name="Ver_ffentlichte_Version_herunterladen_b4173d5e" xml:space="preserve">
+    <value>Veröffentlichte Version herunterladen</value>
   </data>
   <data name="Auswahl_gel_scht_eb97789d" xml:space="preserve">
     <value>Auswahl gelöscht</value>
@@ -10337,8 +10334,8 @@
   <data name="Die_Datei_ist_keine_FerrumPix_Sicherung_7251bad8" xml:space="preserve">
     <value>Die Datei ist keine FerrumPix-Sicherung.</value>
   </data>
-  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_13119971" xml:space="preserve">
-    <value>Die Sicherung stammt aus einer neueren FerrumPix-Fassung und lässt sich hier nicht zurückholen.</value>
+  <data name="Die_Sicherung_stammt_aus_einer_neueren_FerrumPix_8f6df52d" xml:space="preserve">
+    <value>Die Sicherung stammt aus einer neueren FerrumPix-Version und lässt sich hier nicht zurückholen.</value>
   </data>
   <data name="Nichts_ausgew_hlt_das_in_der_Sicherung_steckt_836eea81" xml:space="preserve">
     <value>Nichts ausgewählt, das in der Sicherung steckt.</value>
@@ -11894,8 +11891,8 @@
   <data name="Eine_Erweiterung_ist_eine_Datei_die_ein_Werkzeug_3fa0b852" xml:space="preserve">
     <value>Eine Erweiterung ist eine Datei, die ein Werkzeug mit eigenen Reglern beschreibt. Ist eine geladen, steht im Editor das Werkzeug Erweiterungen in der Gruppe Anpassungen.</value>
   </data>
-  <data name="Fassung_0_6d62d634" xml:space="preserve">
-    <value>Fassung {0}</value>
+  <data name="Version_0_4b0a3f2d" xml:space="preserve">
+    <value>Version {0}</value>
   </data>
   <data name="mitgeliefert_23d772be" xml:space="preserve">
     <value>mitgeliefert</value>
@@ -11909,8 +11906,8 @@
   <data name="Bilder_die_sie_nutzen_behalten_ihre_Einstellunge_e269635d" xml:space="preserve">
     <value>Bilder, die sie nutzen, behalten ihre Einstellungen. Sie wirken wieder, sobald die Erweiterung erneut geladen ist.</value>
   </data>
-  <data name="Dieses_Bild_wurde_mit_Fassung_0_eingestellt_gela_9d2dc52b" xml:space="preserve">
-    <value>Dieses Bild wurde mit Fassung {0} eingestellt, geladen ist Fassung {1}.</value>
+  <data name="Dieses_Bild_wurde_mit_Version_0_eingestellt_gela_5f2bdc3a" xml:space="preserve">
+    <value>Dieses Bild wurde mit Version {0} eingestellt, geladen ist Version {1}.</value>
   </data>
   <data name="Dieses_Bild_nutzt_Erweiterungen_die_hier_nicht_g_354d7288" xml:space="preserve">
     <value>Dieses Bild nutzt Erweiterungen, die hier nicht geladen sind. Ihre Einstellungen bleiben erhalten:</value>
@@ -11942,8 +11939,8 @@
   <data name="Installiert_ff9a9955" xml:space="preserve">
     <value>Installiert</value>
   </data>
-  <data name="Aktualisierung_von_Fassung_0_369e2186" xml:space="preserve">
-    <value>Aktualisierung von Fassung {0}</value>
+  <data name="Aktualisierung_von_Version_0_292fff26" xml:space="preserve">
+    <value>Aktualisierung von Version {0}</value>
   </data>
   <data name="Liste_der_Erweiterungen_wird_geladen_4dd84d31" xml:space="preserve">
     <value>Liste der Erweiterungen wird geladen…</value>
@@ -11956,5 +11953,32 @@
   </data>
   <data name="Erweiterungen_aus_dem_Verzeichnis_von_FerrumPix__0c2444bd" xml:space="preserve">
     <value>Erweiterungen aus dem Verzeichnis von FerrumPix. Jede kam als Pull Request, dort stehen Beschreibung und Beispielbilder.</value>
+  </data>
+  <data name="In_die_Zwischenablage_kopieren_383cd1e2" xml:space="preserve">
+    <value>In die Zwischenablage kopieren</value>
+  </data>
+  <data name="Ordner_ffnen_94398021" xml:space="preserve">
+    <value>Ordner öffnen</value>
+  </data>
+  <data name="Kopiert_fa853e05" xml:space="preserve">
+    <value>Kopiert</value>
+  </data>
+  <data name="Schreibt_Details_zur_Fehlersuche_nach_diagnostic_8513b7b3" xml:space="preserve">
+    <value>Schreibt Details zur Fehlersuche nach diagnostics.log im Ordner darunter, Fehler stehen dort immer in errors.log. Nur bei Bedarf einschalten.</value>
+  </data>
+  <data name="Protokoll_anzeigen_ab937136" xml:space="preserve">
+    <value>Protokoll anzeigen</value>
+  </data>
+  <data name="Die_letzten_Eintr_ge_aus_errors_log_und_diagnost_1cdbf866" xml:space="preserve">
+    <value>Die letzten Einträge aus errors.log und diagnostics.log im Ordner {0}. Der Text lässt sich markieren und kopieren.</value>
+  </data>
+  <data name="Das_Protokoll_ist_noch_leer_ca22391c" xml:space="preserve">
+    <value>Das Protokoll ist noch leer.</value>
+  </data>
+  <data name="Protokoll_leeren_2db23711" xml:space="preserve">
+    <value>Protokoll leeren</value>
+  </data>
+  <data name="Das_Protokoll_lie_sich_nicht_leeren_5d3662f0" xml:space="preserve">
+    <value>Das Protokoll ließ sich nicht leeren.</value>
   </data>
 </root>

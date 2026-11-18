@@ -222,7 +222,7 @@ Namespace ViewModels
             Dim loaded = ExtensionService.All
             For Each definition In loaded
                 Dim parts As New List(Of String) From {
-                    String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Fassung {0}"), definition.Version)}
+                    String.Format(CultureInfo.CurrentCulture, LocalizationService.T("Version {0}"), definition.Version)}
                 If definition.Author.Length > 0 Then parts.Add(definition.Author)
                 If definition.License.Length > 0 Then parts.Add(definition.License)
                 If definition.IsBundled Then parts.Add(LocalizationService.T("mitgeliefert"))
