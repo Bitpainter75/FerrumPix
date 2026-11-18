@@ -22,6 +22,11 @@
 
 ### Fixes
 
+- In trackpad mode, a zoomed in picture in the editor took every click to move the view, so
+  objects could not be selected, deselected or created and the Move button had no effect. Now the
+  Move button comes first, a click always goes to the tool, and dragging moves the view only in the
+  adjustment tools. Selection, masks, text, brushes and the other tools keep their own drag.
+
 - The mouse wheel moved every slider of an extension by 1, so a slider from 0 to 1 went from one
   end to the other in two steps. Sliders with decimals now move by about a hundredth of their
   range.

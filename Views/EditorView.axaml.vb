@@ -74,6 +74,16 @@ Namespace Views
         Private _isPanMode As Boolean = False
         Private _spacePanActive As Boolean = False
         Private _isPanDragging As Boolean = False
+        ''' <summary>Trackpad-Modus: ein Druck, ueber den erst die Bewegung entscheidet. Bewegt sich
+        ''' der Zeiger weiter als <see cref="TrackpadPanThreshold"/>, wird verschoben; endet er ohne
+        ''' Zug, wird der Druck beim Loslassen ans Werkzeug nachgereicht.</summary>
+        Private _trackpadPendingPress As PointerPressedEventArgs
+        Private _trackpadPendingSender As Object
+        Private _trackpadPendingStart As Avalonia.Point
+        ''' <summary>Waehrend der nachgereichte Druck laeuft: die Trackpad-Regel darf ihn nicht
+        ''' noch einmal anhalten.</summary>
+        Private _replayingTrackpadClick As Boolean
+        Private Const TrackpadPanThreshold As Double = 4.0
         Private _panStartX As Double = 0
         Private _panStartY As Double = 0
         Private _panStartOffsetX As Double = 0
@@ -675,6 +685,7 @@ Namespace Views
             End If
             _isPanDragging = False
             _isDraggingSlider = False
+            _trackpadPendingPress = Nothing
         End Sub
 
         ''' <summary>In welchen Werkzeugen zieht ein Zug auf freier Fläche ein OBJEKT-Auswahlrechteck?
@@ -2597,15 +2608,10 @@ Namespace Views
                 Return
             End If
 
-            ' Im Trackpad-Modus ist Ziehen auf einem Bild, das größer als die Bühne ist, das
-            ' direkte Verschieben. Ein Modifikator hält die gewöhnliche Werkzeug-Geste verfügbar:
-            ' Umschalt war das bisher schon; Strg und Alt sind es jetzt ebenso, weil sie einen
-            ' Pinselzug führen können.
-            If IsTrackpadMode() AndAlso Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
-               Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
-               Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) AndAlso
-               vm IsNot Nothing AndAlso CanTrackpadPan(canvas, vm) Then
-                TraceStagePress("Trackpad-Modus: Verschieben statt Werkzeug", e, canvas, vm)
+            ' Der Knopf Verschieben und die LEERTASTE kommen ZUERST, auch im Trackpad-Modus. Stand
+            ' die Trackpad-Regel davor, war der Knopf bei vergroessertem Bild wirkungslos.
+            If _isPanMode Then
+                TraceStagePress("Knopf Verschieben oder LEERTASTE: Verschieben statt Werkzeug", e, canvas, vm)
                 Dim pos = e.GetPosition(canvas)
                 _panStartX = pos.X
                 _panStartY = pos.Y
@@ -2617,14 +2623,22 @@ Namespace Views
                 Return
             End If
 
-            If _isPanMode Then
-                TraceStagePress("Knopf Verschieben oder LEERTASTE: Verschieben statt Werkzeug", e, canvas, vm)
-                Dim pos = e.GetPosition(canvas)
-                _panStartX = pos.X
-                _panStartY = pos.Y
-                _panStartOffsetX = _panX
-                _panStartOffsetY = _panY
-                _isPanDragging = True
+            ' Im Trackpad-Modus verschiebt Ziehen ein Bild, das groesser als die Buehne ist - aber
+            ' NUR in einem Werkzeug, das auf der Buehne selbst nichts zieht (TrackpadDragPans), und
+            ' erst, wenn sich der Zeiger wirklich bewegt. Ein Klick ohne Zug geht an das Werkzeug:
+            ' er wird beim Loslassen nachgereicht (OnSliderPointerReleased). Vorher nahm die Regel
+            ' JEDEN Druck in JEDEM Werkzeug, und vergroessert liess sich weder auswaehlen noch
+            ' abwaehlen noch ein Objekt anlegen (Nutzermeldung mit Protokoll, macOS und Linux).
+            ' SHIFT, STRG und ALT lassen den Druck wie bisher sofort zum Werkzeug durch.
+            If Not _replayingTrackpadClick AndAlso IsTrackpadMode() AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Shift) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Control) AndAlso
+               Not e.KeyModifiers.HasFlag(KeyModifiers.Alt) AndAlso
+               vm IsNot Nothing AndAlso TrackpadDragPans(vm) AndAlso CanTrackpadPan(canvas, vm) Then
+                TraceStagePress("Trackpad-Modus: Zug verschiebt, Klick geht ans Werkzeug", e, canvas, vm)
+                _trackpadPendingPress = e
+                _trackpadPendingSender = sender
+                _trackpadPendingStart = e.GetPosition(canvas)
                 e.Pointer.Capture(canvas)
                 e.Handled = True
                 Return
@@ -3440,6 +3454,26 @@ Namespace Views
         Private Sub OnSliderPointerMoved(sender As Object, e As PointerEventArgs)
             Dim pointerCanvas = TryCast(sender, Canvas)
             If pointerCanvas IsNot Nothing Then _lastCanvasPointer = e.GetPosition(pointerCanvas)
+            ' Trackpad-Modus: erst die Bewegung macht aus dem Druck ein Verschieben.
+            If _trackpadPendingPress IsNot Nothing Then
+                Dim stage = Me.FindControl(Of Canvas)("PreviewCanvas")
+                If stage Is Nothing OrElse Not e.GetCurrentPoint(stage).Properties.IsLeftButtonPressed Then
+                    _trackpadPendingPress = Nothing
+                    Return
+                End If
+                Dim now = e.GetPosition(stage)
+                If Math.Abs(now.X - _trackpadPendingStart.X) <= TrackpadPanThreshold AndAlso
+                   Math.Abs(now.Y - _trackpadPendingStart.Y) <= TrackpadPanThreshold Then
+                    e.Handled = True
+                    Return
+                End If
+                _trackpadPendingPress = Nothing
+                _panStartX = _trackpadPendingStart.X
+                _panStartY = _trackpadPendingStart.Y
+                _panStartOffsetX = _panX
+                _panStartOffsetY = _panY
+                _isPanDragging = True
+            End If
             If _isStraightenLineDragging AndAlso pointerCanvas IsNot Nothing Then
                 ' Wie bei den anderen Zuegen: ohne gedrueckte Taste ist die Geste vorbei (Stift
                 ' abgehoben, Loslassen verloren).
@@ -3868,6 +3902,21 @@ Namespace Views
         End Sub
 
         Private Sub OnSliderPointerReleased(sender As Object, e As PointerReleasedEventArgs)
+            ' Trackpad-Modus: ein Druck ohne Zug war ein Klick und geht jetzt ans Werkzeug, als kaeme
+            ' er gerade erst; das Loslassen darunter schliesst ab, was er begonnen hat.
+            If _trackpadPendingPress IsNot Nothing Then
+                Dim pending = _trackpadPendingPress
+                Dim pendingSender = _trackpadPendingSender
+                _trackpadPendingPress = Nothing
+                _trackpadPendingSender = Nothing
+                e.Pointer.Capture(Nothing)
+                _replayingTrackpadClick = True
+                Try
+                    OnSliderPointerPressed(pendingSender, pending)
+                Finally
+                    _replayingTrackpadClick = False
+                End Try
+            End If
             Dim releaseCanvas = TryCast(sender, Canvas)
             If _isStraightenLineDragging AndAlso releaseCanvas IsNot Nothing Then
                 FinishStraightenLine(e.GetPosition(releaseCanvas), e.Pointer)
@@ -8241,6 +8290,20 @@ Namespace Views
                 DiagnosticLogService.LogException("Editor.StagePress", ex)
             End Try
         End Sub
+
+        ''' <summary>Verschiebt im Trackpad-Modus ein ZUG in diesem Werkzeug den Ausschnitt? Nur in
+        ''' den reinen Anpassungswerkzeugen (EditorViewModel.IsObjectAdjustTool): dort zieht ein
+        ''' Druck auf der Buehne sonst nichts auf. Auswahl, Maske, Text und Objekte, Pinsel,
+        ''' Retusche, Transformieren, Verzerren, Beleuchtung und die uebrigen haben eigene Zuege und
+        ''' behalten sie; verschoben wird dort mit dem Knopf, der LEERTASTE oder der rechten Taste.
+        ''' Ein Maskenpinsel in einem Anpassungswerkzeug zieht ebenfalls selbst.</summary>
+        Friend Shared Function TrackpadDragPansIn(tool As EditorTool, maskBrushActive As Boolean) As Boolean
+            Return EditorViewModel.IsObjectAdjustTool(tool) AndAlso Not maskBrushActive
+        End Function
+
+        Private Function TrackpadDragPans(vm As EditorViewModel) As Boolean
+            Return TrackpadDragPansIn(vm.CurrentTool, IsMaskBrushActive(vm))
+        End Function
 
         Private Function CanTrackpadPan(canvas As Canvas, vm As EditorViewModel) As Boolean
             Dim displaySize = GetEffectiveDisplaySize(vm)

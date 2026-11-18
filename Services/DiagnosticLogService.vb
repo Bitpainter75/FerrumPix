@@ -272,9 +272,6 @@ Namespace Services
             Return True
         End Function
 
-        ''' <summary>Deckelt die Fehlerdatei: ist sie voll, wird sie EINMAL zur .1 und neu begonnen.
-        ''' Kein Ringpuffer mit vielen Ständen - eine Vorgängerfassung reicht, um einen Fehler zu
-        ''' verfolgen, und mehr als 2 MB soll das Protokoll nie belegen.</summary>
         ''' <summary>Leert beide Protokolle und loescht die Vorgaengerfassung der Fehlerdatei, auf
         ''' Wunsch des Nutzers, etwa bevor er einen Fehler fuer ein Protokoll nachstellt. Geleert,
         ''' nicht geloescht: so bleibt die Datei da, wo der Nutzer sie gerade sucht. Unter der
@@ -294,6 +291,9 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Deckelt die Fehlerdatei: ist sie voll, wird sie EINMAL zur .1 und neu begonnen.
+        ''' Kein Ringpuffer mit vielen Ständen - eine Vorgängerfassung reicht, um einen Fehler zu
+        ''' verfolgen, und mehr als 2 MB soll das Protokoll nie belegen.</summary>
         Private Shared Sub RotateIfTooLarge()
             Try
                 Dim info = New FileInfo(ErrorLogPath)
