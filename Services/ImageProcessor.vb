@@ -3138,7 +3138,7 @@ Namespace Services
                 _detailSourceKey = If(useColorNoiseCache,
                     $"{SourceIdentity(source)}|{processed.Width}x{processed.Height}|{stampAtStart}|{ComputeToneCacheKey(adj)}", Nothing)
                 Try
-                    processed = ApplyDetailAdjustmentStagesCore(processed, adj, owned)
+                    processed = ApplyDetailAdjustmentStagesCore(processed, adj, owned, DisplayOutputScale(source, adj))
                 Finally
                     _detailSourceKey = Nothing
                 End Try
@@ -3309,10 +3309,68 @@ Namespace Services
                 "Pixel: Lichtquellen", Function() ApplyLightSources(source, lights, ambient, token, knee)), owned)
         End Function
 
+        ''' <summary>Um wieviel das fertige Bild groesser ist als <paramref name="source"/>, wenn
+        ''' der Aufrufer die Schaerfe im Massstab der Ausgabe sehen will
+        ''' (<see cref="ImageAdjustments.SharpnessAtOutputScale"/>); sonst 1. Gemessen an der Quelle
+        ''' VOR der Geometrie gegen <see cref="ImageAdjustments.SourceWidthPixels"/>: Zuschnitt,
+        ''' Drehung und Bildgroesse wirken auf Vorschau und Ausgabe gleich.</summary>
+        Private Shared Function DisplayOutputScale(source As SKBitmap, adj As ImageAdjustments) As Double
+            If source Is Nothing OrElse adj Is Nothing OrElse Not adj.SharpnessAtOutputScale Then Return 1.0
+            If adj.SourceWidthPixels <= 0 OrElse adj.SourceHeightPixels <= 0 OrElse source.Width <= 0 OrElse source.Height <= 0 Then Return 1.0
+            Return Math.Max(1.0, Math.Max(adj.SourceWidthPixels / CDbl(source.Width), adj.SourceHeightPixels / CDbl(source.Height)))
+        End Function
+
+        ''' <summary>Die Exponenten der Daempfung je Verfahren ueber dem Radiusregler (0 bis 1):
+        ''' die Wirkung der Schaerfe auf einer um den Faktor f verkleinerten Quelle ist f hoch
+        ''' Exponent mal so kraeftig wie die Wirkung des geschaerften und danach flaechentreu
+        ''' verkleinerten Bildes. Gemessen an der Pruef-RAW (6024x4020) bei f 1,6, 2 und 2,67 als
+        ''' Verhaeltnis der Effektivwerte der Wirkung auf der Helligkeit, eingetragen der Wert bei
+        ''' f 2 (Unschaerfemaske bei Radius 0, 25, 50, 75 und 100, die beiden anderen bei 0, 50 und
+        ''' 100). Bei 1,6 und 2,67 weicht der Exponent der Unschaerfemaske um hoechstens 0,08 ab, der
+        ''' der beiden anderen um hoechstens 0,32 (Hochpass bei Radius 0). Pruefung: "Vorschau
+        ''' gegen Export: Schaerfe der RAW im Editor, Zoom-Detail und Szene gegen die Kopie".</summary>
+        Private Shared ReadOnly SharpnessScaleRadiiUnsharp As Single() = {0.0F, 0.25F, 0.5F, 0.75F, 1.0F}
+        Private Shared ReadOnly SharpnessScaleExponentsUnsharp As Single() = {0.79F, 0.63F, 0.62F, 0.6F, 0.38F}
+        Private Shared ReadOnly SharpnessScaleRadii As Single() = {0.0F, 0.5F, 1.0F}
+        Private Shared ReadOnly SharpnessScaleExponentsDeconvolution As Single() = {1.39F, 0.69F, 0.43F}
+        Private Shared ReadOnly SharpnessScaleExponentsHighPass As Single() = {2.38F, 1.2F, 0.77F}
+
+        ''' <summary>Der Faktor auf die Staerke der Schaerfe, damit eine um <paramref name="outputScale"/>
+        ''' verkleinerte Anzeige so kraeftig geschaerft aussieht wie das fertige Bild in dieser Groesse.
+        '''
+        ''' Die Schaerfe denkt in Bildpunkten: ihr Radius ist auf der kleinen Vorschau ein viel
+        ''' groberes Band als im fertigen Bild, und beim Verkleinern des fertigen Bildes geht ein
+        ''' grosser Teil ihrer Wirkung wieder verloren. Die Anzeige zeigte deshalb mehr Schaerfe, als
+        ''' der Export bekommt. Gewaehlt ist die Staerke und nicht der Radius: einen Radius unter
+        ''' einem halben Bildpunkt kann die Vorschau nicht darstellen, und die Staerke geht auf dem
+        ''' Prozessor, auf der Karte und in allen drei Verfahren durch denselben Regler. Abgeglichen
+        ''' ist der Gesamteindruck (Effektivwert der Wirkung), nicht jeder Bildpunkt: das feinere
+        ''' Band des fertigen Bildes hat die Vorschau nicht.
+        '''
+        ''' Bei 1 (Export, Kopie, Zoom-Detail bis zur Deckelgroesse) genau 1, die Kette rechnet dann
+        ''' bitgleich wie ohne Umrechnung.</summary>
+        Friend Shared Function SharpnessDisplayFactor(outputScale As Double, method As SharpenMethod,
+                                                      radiusAmount As Single) As Single
+            If outputScale <= 1.0001 Then Return 1.0F
+            Dim radius = Clamp(radiusAmount, 0, 1)
+            Dim exponent As Single
+            Select Case method
+                Case SharpenMethod.Deconvolution
+                    exponent = SharpenInterpolate(radius, SharpnessScaleRadii, SharpnessScaleExponentsDeconvolution)
+                Case SharpenMethod.HighPass
+                    exponent = SharpenInterpolate(radius, SharpnessScaleRadii, SharpnessScaleExponentsHighPass)
+                Case Else
+                    exponent = SharpenInterpolate(radius, SharpnessScaleRadiiUnsharp, SharpnessScaleExponentsUnsharp)
+            End Select
+            Return CSng(Math.Pow(outputScale, -exponent))
+        End Function
+
         ''' <summary>Die raeumlichen Detail- und Effektstufen. Ihr Ergebnis ist die Grundlage
         ''' des Detail-Caches vor den Maskenebenen.</summary>
+        ''' <param name="outputScale">Siehe <see cref="DisplayOutputScale"/>; 1 rechnet wie die Ausgabe.</param>
         Private Shared Function ApplyDetailAdjustmentStagesCore(source As SKBitmap, adj As ImageAdjustments,
-                                                                ByRef owned As Boolean) As SKBitmap
+                                                                ByRef owned As Boolean,
+                                                                Optional outputScale As Double = 1.0) As SKBitmap
             Dim processed = source
             ' Mit tiefem Bild (Ausgabe in 16 Bit) ohne Sitzung auf der Karte: die tiefen Stufen
             ' rechnen auf dem Prozessor, und ein Bild, das oben liegt, haette seinen Begleiter nicht bei sich.
@@ -3424,11 +3482,14 @@ Namespace Services
             End If
 
             If adj.Sharpness > 0 Then
+                ' In einer verkleinerten ANZEIGE gedaempft, sonst Faktor genau 1 (SharpnessDisplayFactor).
+                Dim sharpAmount = adj.Sharpness / 100.0F *
+                                  SharpnessDisplayFactor(outputScale, adj.SharpenMethod, adj.SharpenRadius / 100.0F)
                 processed = RunDetailStage(session, processed, owned, "Pixel: Schaerfe",
-                                           SharpnessOnGpu(adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
+                                           SharpnessOnGpu(sharpAmount, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
                                                           adj.SharpenMasking / 100.0F, adj.SharpenMethod),
-                                           Function(s) ApplySharpness(s, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod),
-                                           Function(d) ApplySharpnessDeep(d, adj.Sharpness / 100.0F, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
+                                           Function(s) ApplySharpness(s, sharpAmount, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F, adj.SharpenMasking / 100.0F, adj.SharpenMethod),
+                                           Function(d) ApplySharpnessDeep(d, sharpAmount, adj.SharpenRadius / 100.0F, adj.SharpenDetail / 100.0F,
                                                                           adj.SharpenMasking / 100.0F, adj.SharpenMethod))
             End If
 
@@ -5179,7 +5240,7 @@ Namespace Services
             tone.DustScratches = neutral.DustScratches : tone.Glow = neutral.Glow
             tone.Sharpness = neutral.Sharpness : tone.SharpenRadius = neutral.SharpenRadius
             tone.SharpenDetail = neutral.SharpenDetail : tone.SharpenMasking = neutral.SharpenMasking
-            tone.SharpenMethod = neutral.SharpenMethod
+            tone.SharpenMethod = neutral.SharpenMethod : tone.SharpnessAtOutputScale = neutral.SharpnessAtOutputScale
             tone.Vignette = neutral.Vignette : tone.VignetteTransition = neutral.VignetteTransition
             tone.VignetteRoundness = neutral.VignetteRoundness : tone.VignetteFeather = neutral.VignetteFeather
             tone.VignetteCenterX = neutral.VignetteCenterX : tone.VignetteCenterY = neutral.VignetteCenterY
@@ -5395,6 +5456,7 @@ Namespace Services
             Return String.Join("|", New Object() {
                 adj.Exposure, adj.ExposureInSource, adj.ChainExposureInRawStage(), adj.KneeInSource, adj.RampBlackShareInSource, If(adj.ShadowSaturationInSource IsNot Nothing, 1, 0), adj.Brightness, adj.Contrast, adj.Saturation, adj.Highlights, adj.ShadowsLevel,
                 adj.Whites, adj.Blacks, adj.Temperature, adj.Tint, adj.Sharpness, adj.SharpenRadius, adj.SharpenDetail,
+                adj.SharpnessAtOutputScale,
                 adj.WhiteBalanceModel, adj.WhiteBalanceAnchorX, adj.WhiteBalanceAnchorY, adj.WhiteBalanceCamera,
                 adj.WhiteBalanceKelvin, adj.WhiteBalanceKelvinTint,
                 adj.SharpenMasking, adj.SharpenMethod,

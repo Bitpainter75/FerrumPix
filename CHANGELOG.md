@@ -89,3 +89,8 @@
   variant whose tile was selected, for example the colour picture instead of the black and white
   variant.
 
+- A picture pasted as a layer in the editor looked softer than the photo it was copied from, also
+  in the saved picture. It now lies on the photo exactly as copied. The editor also shows
+  sharpening in a zoomed out view as strong as the finished picture has it at that size, instead
+  of stronger, so the preview tells you what the export gets.
+

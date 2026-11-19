@@ -773,6 +773,16 @@ Namespace Services
         <System.Text.Json.Serialization.JsonIgnore>
         Public Property ShadowSaturationInSource As Single() = Nothing
 
+        ''' <summary>Zeigt die Schaerfe so, wie das fertige Bild sie in dieser Groesse traegt.
+        ''' Gesetzt vom Editor fuer alles, was er nur anzeigt (Szene, Zoom-Detail, Reglerzug), nie
+        ''' fuer Export, Kopie oder Speichern. Ist die Quelle kleiner als
+        ''' <see cref="SourceWidthPixels"/>, wird die Staerke der Schaerfe nach dem Massstab
+        ''' gedaempft (ImageProcessor.SharpnessDisplayFactor); bei voller Groesse aendert sich
+        ''' nichts. Eine Eigenschaft der Anzeige, nicht des Looks: nicht gespeichert, nicht
+        ''' uebertragen.</summary>
+        <System.Text.Json.Serialization.JsonIgnore>
+        Public Property SharpnessAtOutputScale As Boolean = False
+
         ''' <summary>Rechnet die Kette ihre Belichtung wie die RAW-Stufe?
         ''' Siehe <see cref="SourceFollowsRawExposure"/>.</summary>
         Public Function ChainExposureInRawStage() As Boolean
@@ -1546,7 +1556,7 @@ Namespace Services
             "SourceWidthPixels", "SourceHeightPixels", "RecipeCoordinateVersion",
             "WhiteBalanceAnchorX", "WhiteBalanceAnchorY", "WhiteBalanceCamera", "WhiteBalanceModel", "WhiteBalanceMode",
             "RawHighlightRecovery", "RawSensorEdgeCrop", "RawCameraAspectCrop", "ExposureInSource", "SourceFollowsRawExposure", "KneeInSource",
-            "RampBlackShareInSource", "ShadowSaturationInSource", "RawModelDenoise", "RawModelDenoiseStrength",
+            "RampBlackShareInSource", "ShadowSaturationInSource", "SharpnessAtOutputScale", "RawModelDenoise", "RawModelDenoiseStrength",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
             "DefringePurple",
@@ -1932,6 +1942,7 @@ Namespace Services
                 .KneeInSource = KneeInSource,
                 .RampBlackShareInSource = RampBlackShareInSource,
                 .ShadowSaturationInSource = ShadowSaturationInSource,
+                .SharpnessAtOutputScale = SharpnessAtOutputScale,
                 .BakedOperationsApplied = BakedOperationsApplied,
                 .Brightness = Brightness,
                 .Contrast = Contrast,

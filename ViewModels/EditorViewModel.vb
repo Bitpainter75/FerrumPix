@@ -25233,6 +25233,7 @@ Namespace ViewModels
                 .KneeInSource = _workingImageKnee,
                 .RampBlackShareInSource = If(SourceFollowsRawExposure(), RawDecodeService.RampBlackShareForFile(RenderSourcePath), 0.0),
                 .ShadowSaturationInSource = If(SourceFollowsRawExposure(), RawDecodeService.ShadowSaturationForFile(RenderSourcePath), Nothing),
+                .SharpnessAtOutputScale = forPreview,
                 .FilterPreset = _filterPreset,
                 .FilterStrength = CSng(_filterStrength),
                 .LutPath = _lutPath,
