@@ -104,6 +104,46 @@ Namespace Services
             ("LEICA CAMERA AG", "LEICA Q2"),
             ("LEICA CAMERA AG", "LEICA SL3-P")}
 
+        ''' <summary>Die Geraete, deren Rueckkamera das Referenzprogramm bei FixVignetteRadial deckelt:
+        ''' iPhone 6s bis 11 Pro Max, die drei SE und drei iPad Pro. Der Name steht in
+        ''' UniqueCameraModel vor " back camera".</summary>
+        Private Shared ReadOnly LimitedBackCameras As String() = {
+            "iPhone8,1", "iPhone8,2", "iPhone8,4",
+            "iPhone9,1", "iPhone9,2", "iPhone9,3", "iPhone9,4",
+            "iPhone10,1", "iPhone10,2", "iPhone10,3", "iPhone10,4", "iPhone10,5", "iPhone10,6",
+            "iPhone11,2", "iPhone11,4", "iPhone11,6", "iPhone11,8",
+            "iPhone12,1", "iPhone12,3", "iPhone12,5", "iPhone12,8",
+            "iPhone14,6",
+            "iPad6,3", "iPad6,4", "iPad7,1", "iPad7,2", "iPad7,3", "iPad7,4"}
+
+        ''' <summary>Die Geraete darunter, deren Telekamera ebenfalls gedeckelt wird (" back telephoto
+        ''' camera").</summary>
+        Private Shared ReadOnly LimitedTelephotoCameras As String() = {
+            "iPhone9,2", "iPhone9,4",
+            "iPhone10,2", "iPhone10,3", "iPhone10,5", "iPhone10,6",
+            "iPhone11,2", "iPhone11,4", "iPhone11,6",
+            "iPhone12,3", "iPhone12,5"}
+
+        ''' <summary>Die hoechste Verstaerkung, die FixVignetteRadial der Kamera mit diesem
+        ''' UniqueCameraModel in der fernsten Ecke bekommt, oder 0 fuer keinen Deckel.
+        '''
+        ''' <para>WARUM: das Referenzprogramm begrenzt die Abschattung dieser aelteren Apple-Kameras auf
+        ''' 2,5 in der Ecke; ihre Listen tragen dort 3,1 bis 3,4, und ohne Deckel lagen unsere Ecken
+        ''' rund eine halbe Stufe ueber der Referenz. Entschieden wird allein nach UniqueCameraModel,
+        ''' nicht nach Marke oder Modell: unter einem anderen Namen wendet die Referenz dieselbe Liste
+        ''' voll an. Nicht gedeckelt sind iPhone 12 und spaeter, Ultraweitwinkel, Dual, Triple und
+        ''' Frontkamera.</para></summary>
+        Friend Shared Function VignetteCornerLimit(uniqueCameraModel As String) As Double
+            If String.IsNullOrEmpty(uniqueCameraModel) Then Return 0
+            Dim listed = Function(devices As String(), camera As String) As Boolean
+                             If Not uniqueCameraModel.EndsWith(camera, StringComparison.Ordinal) Then Return False
+                             Dim device = uniqueCameraModel.Substring(0, uniqueCameraModel.Length - camera.Length)
+                             Return devices.Contains(device, StringComparer.Ordinal)
+                         End Function
+            If listed(LimitedBackCameras, " back camera") OrElse listed(LimitedTelephotoCameras, " back telephoto camera") Then Return 2.5
+            Return 0
+        End Function
+
         ''' <summary>Die Objektivkorrektur aus OpcodeList3 einer DNG, oder Nothing (andere Kamera, keine
         ''' Liste, nichts Brauchbares darin).
         '''
@@ -177,6 +217,15 @@ Namespace Services
             Dim vignettingKnots As Double() = Nothing
             If list.VignetteK IsNot Nothing Then
                 Dim k = list.VignetteK
+                ' Deckel der aelteren Apple-Kameras: liegt die Verstaerkung in der fernsten Ecke
+                ' (r = 1) ueber dem Deckel, wird der Teil ueber 1 an jedem Radius gleich skaliert,
+                ' bis die Ecke den Deckel hat (VignetteCornerLimit).
+                Dim limit = VignetteCornerLimit(list.UniqueCameraModel)
+                Dim corner = 1.0 + k.Sum()
+                If limit > 1.0 AndAlso corner > limit Then
+                    Dim share = (limit - 1.0) / (corner - 1.0)
+                    k = k.Select(Function(v) v * share).ToArray()
+                End If
                 Dim light = SampleFormula(Function(r)
                                               Dim r2 = r * r
                                               Dim gain = 1.0 + r2 * (k(0) + r2 * (k(1) + r2 * (k(2) + r2 * (k(3) + r2 * k(4)))))

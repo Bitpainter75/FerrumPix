@@ -60,6 +60,10 @@
 
 ### Fixes
 
+- RAW files from older iPhones (6s to 11 Pro Max and the SE models) came out with corners that
+  were too bright, because the brightening of the corners stored in the file was applied in full.
+  It is now held to a limit, and the corners look as they should.
+
 - The sliders of extensions updated the picture only after a pause; now it follows while you drag.
 
 - In trackpad mode, a zoomed in picture in the editor took every click to move the view, so

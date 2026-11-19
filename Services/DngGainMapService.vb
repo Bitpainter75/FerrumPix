@@ -77,6 +77,7 @@ Namespace Services
         Private Const TagOpcodeList2 As Integer = 51009
         Private Const TagOpcodeList3 As Integer = 51022
         Private Const TagOrientation As Integer = 274
+        Private Const TagUniqueCameraModel As Integer = 50708
         Private Const PhotometricCfa As Integer = 32803
         Private Const OpcodeGainMap As Integer = 9
         Private Const OpcodeWarpRectilinear As Integer = 1
@@ -260,6 +261,10 @@ Namespace Services
             Public ActiveWidth, ActiveHeight As Integer
             ''' <summary>Die Drehung der Ausgabe in LibRaws Schreibweise (flip_index), aus Orientation.</summary>
             Public Flip As Integer
+            ''' <summary>UniqueCameraModel aus IFD0, ohne abschliessende Nullen und Leerzeichen; leer,
+            ''' wenn die Datei keines traegt. Danach richtet sich der Deckel der Abschattung
+            ''' (CameraLensCorrectionService.VignetteCornerLimit).</summary>
+            Public UniqueCameraModel As String = ""
             ''' <summary>Pruefsumme der Liste und der Drehung, fuer den Schluessel des Zwischenspeichers.</summary>
             Public Fingerprint As String = ""
 
@@ -305,6 +310,11 @@ Namespace Services
                     If first IsNot Nothing AndAlso first.TryGetValue(TagOrientation, orientationEntry) Then
                         Dim orientation = CInt(reader.ReadNumbers(orientationEntry)(0)) And 7
                         result.Flip = AscW("50132467"(orientation)) - AscW("0"c)
+                    End If
+                    Dim modelEntry As TiffEntry = Nothing
+                    If first IsNot Nothing AndAlso first.TryGetValue(TagUniqueCameraModel, modelEntry) Then
+                        Dim modelBytes = reader.ReadBytes(modelEntry)
+                        If modelBytes IsNot Nothing Then result.UniqueCameraModel = Text.Encoding.ASCII.GetString(modelBytes).TrimEnd(ChrW(0), " "c)
                     End If
 
                     Dim data = reader.ReadBytes(opcodeEntry)
