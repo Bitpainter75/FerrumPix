@@ -1234,12 +1234,19 @@ Namespace Services
         ''' Werte, weil beim Senken die Lichter mehr gewinnen als die Tiefen, beim Heben umgekehrt. Die
         ''' Werte liegen ueber dem Ziel, weil ein verstaerkter Hub nicht voll im Bild ankommt (Lichter
         ''' nach oben stossen an Weiss).</summary>
-        Private Const HighlightsBoostRaise As Double = 0.6
-        Private Const ShadowsBoostRaise As Double = 0.45
+        ''' Die beiden Werte beim Heben sind Felder statt Konstanten, damit die Reglereichung sie
+        ''' verstellen kann (Messschalter REGLER_ZUSCHLAG_HEBEN); die Anwendung setzt sie nie.
+        Private Shared HighlightsBoostRaise As Double = 0.6
+        Private Shared ShadowsBoostRaise As Double = 0.45
         Private Const HighlightsBoostLower As Double = 0.43
         Private Const ShadowsBoostLower As Double = 0.28
         ''' Nur fuer die Reglereichung (Messschalter REGLER_DAEMPFUNG=0), in der Anwendung immer an.
         Private Shared ToneZoneDampingEnabled As Boolean = True
+        ''' Nur fuer die Reglereichung (Messschalter REGLER_MONOTONIE=oben), in der Anwendung immer
+        ''' aus: bei gehobenen Lichtern nimmt BuildMonotoneToneZones den Ausgleich einer zu flachen
+        ''' Stelle nur von den Stellen ab der ersten zu flachen bis Weiss, nicht von der ganzen Kurve
+        ''' (OFFENE_PUNKTE.md, "Tiefen und Lichter beide nach oben").
+        Private Shared ToneZoneMonotoneAboveFirstFlat As Boolean = False
 
         Private Shared Function ToneZoneDamping(perRatio As Double, own As Double, other As Double) As Double
             If Not ToneZoneDampingEnabled OrElse own = 0.0 OrElse other = 0.0 Then Return 0.0
@@ -1398,6 +1405,17 @@ Namespace Services
                 End If
             Next
             If deficit <= 0.0 Then Return Nothing
+            ' Messschalter ToneZoneMonotoneAboveFirstFlat: bei gehobenen Lichtern kommt der
+            ' Ausgleich nur von den Stellen ab der ersten zu flachen, darunter bleibt die Kurve, wie
+            ' der Hub sie setzt. Ab Werk ist first 0 und alles rechnet wie zuvor.
+            Dim first = 0
+            If ToneZoneMonotoneAboveFirstFlat AndAlso adj.Highlights > 0.0F Then
+                first = Array.FindIndex(slopes, Function(s) s < ToneZoneMinSlope)
+                surplus = 0.0
+                For i = first To n - 1
+                    If slopes(i) >= ToneZoneMinSlope Then surplus += (slopes(i) - ToneZoneMinSlope) * stepSize
+                Next
+            End If
             ' Der Ueberschuss reicht immer: die Enden liegen mindestens ToneZoneMinSlope
             ' auseinander, solange kein Regler ueber 100 steht. Sonst so weit wie moeglich.
             Dim keep = If(surplus > deficit, (surplus - deficit) / surplus, 0.0)
@@ -1407,7 +1425,9 @@ Namespace Services
             table(0) = CSng(y)
             For i = 0 To n - 1
                 Dim s = slopes(i)
-                s = If(s < ToneZoneMinSlope, ToneZoneMinSlope, ToneZoneMinSlope + (s - ToneZoneMinSlope) * keep)
+                If i >= first Then
+                    s = If(s < ToneZoneMinSlope, ToneZoneMinSlope, ToneZoneMinSlope + (s - ToneZoneMinSlope) * keep)
+                End If
                 y += s * stepSize
                 table(i + 1) = CSng(y)
             Next
