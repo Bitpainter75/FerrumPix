@@ -3238,9 +3238,32 @@ Namespace Services
         ''' normalized_model), wahlweise mit der ISO dahinter; der Eintrag mit ISO geht vor. Ein
         ''' Eintrag mit ISO gilt NUR dort: an den uebrigen Stufen ist nichts gemessen, und dort
         ''' bleibt es bei LibRaw - ein geratener Wert waere schlimmer als ein gelegentlich falscher.
-        ''' Schwarzpunkt -1 heisst: bei LibRaw lassen. Kennt LibRaw eine Kamera eines Tages
-        ''' richtig, gehoert der Eintrag wieder heraus.</summary>
+        ''' Statt der ISO darf auch der Name von LibRaws Dekoder dahinter stehen (ohne Klammern);
+        ''' dieser Eintrag geht allen anderen vor. Schwarzpunkt -1 heisst: bei LibRaw lassen. Kennt
+        ''' LibRaw eine Kamera eines Tages richtig, gehoert der Eintrag wieder heraus.</summary>
         Friend Shared ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer)) = CameraBaselineTable.LevelOverrides
+
+        ''' <summary>Der Name von LibRaws Dekoder fuer die offene Datei, ohne die Klammern, die LibRaw
+        ''' anhaengt ("sony_arw6_load_raw"), oder leer. Gueltig nach open_file.
+        '''
+        ''' WOZU: die Sony ILCE-7M5 schreibt zwei Formate. Ihre verlustfrei komprimierten Dateien
+        ''' laufen ueber sony_ljpeg_load_raw mit Schwarz 512 und Weiss 16383, und das stimmt. Die
+        ''' Dateien im neuen komprimierten Format liest erst der Snapshot 202611, ueber
+        ''' sony_arw6_load_raw, mit Schwarz 1024 und Weiss 39002; das Referenzprogramm nimmt in
+        ''' derselben Skala 32800, das Bild kam rund 0,26 Blendenstufen zu dunkel. Modell und ISO
+        ''' trennen die beiden Faelle nicht, der Dekoder tut es.</summary>
+        Private Shared Function LevelDecoderName(handle As IntPtr) As String
+            If _getDecoderInfo Is Nothing Then Return ""
+            Try
+                Dim info As DecoderInfo
+                If _getDecoderInfo(handle, info) <> 0 OrElse info.Name = IntPtr.Zero Then Return ""
+                Dim name = If(Marshal.PtrToStringAnsi(info.Name), "").Trim()
+                If name.EndsWith("()", StringComparison.Ordinal) Then name = name.Substring(0, name.Length - 2)
+                Return If(IsPlausibleText(name), name, "")
+            Catch
+                Return ""
+            End Try
+        End Function
 
         ''' <summary>Setzt Schwarz- und Weisspunkt aus <see cref="LevelOverrides"/>, falls die Kamera
         ''' dort steht. Muss nach open_file und vor dcraw_process laufen.
@@ -3266,8 +3289,15 @@ Namespace Services
                 If other <> IntPtr.Zero Then iso = InRange(ReadSingle(other, ImgOtherIsoOffset), 1.0, 10000000.0)
             End If
             Dim levels As (Black As Integer, Range As Integer, White As Integer)
-            Dim entryKey = camera & "|" & CInt(Math.Round(iso)).ToString(Globalization.CultureInfo.InvariantCulture)
-            Dim found = iso > 0 AndAlso LevelOverrides.TryGetValue(entryKey, levels)
+            ' Ein Eintrag je Dekoder geht allen anderen vor: dieselbe Kamera schreibt je nach
+            ' Aufnahmeformat verschiedene Pegel (siehe LevelDecoderName).
+            Dim decoder = LevelDecoderName(handle)
+            Dim entryKey = camera & "|" & decoder
+            Dim found = decoder.Length > 0 AndAlso LevelOverrides.TryGetValue(entryKey, levels)
+            If Not found Then
+                entryKey = camera & "|" & CInt(Math.Round(iso)).ToString(Globalization.CultureInfo.InvariantCulture)
+                found = iso > 0 AndAlso LevelOverrides.TryGetValue(entryKey, levels)
+            End If
             Dim fromCanonLayout = False
             If Not found Then
                 entryKey = camera

@@ -64,6 +64,13 @@
   were too bright, because the brightening of the corners stored in the file was applied in full.
   It is now held to a limit, and the corners look as they should.
 
+- RAW files from the Sony A7 V in its new compressed format came out a little too dark, with
+  highlights that never reached full white. They now develop as bright as the camera's other
+  files.
+
+- With the base brightness matched to the camera model, the Hasselblad X2D II now gets a value of
+  its own; it had none after the switch to the newer raw library.
+
 - The sliders of extensions updated the picture only after a pause; now it follows while you drag.
 
 - In trackpad mode, a zoomed in picture in the editor took every click to move the view, so
