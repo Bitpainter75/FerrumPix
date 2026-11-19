@@ -1778,7 +1778,7 @@ Namespace Services
                         result.RawFrameHeight = frameHeight
                     End If
                 End If
-                Dim oriented = ReadOrientedSize(handle, result)
+                Dim oriented = ReadOrientedSize(handle, result, path)
                 result.OrientedWidth = oriented.Width
                 result.OrientedHeight = oriented.Height
 
@@ -1803,7 +1803,7 @@ Namespace Services
         ''' dafuer. Gelesen wird an festen Versaetzen, aber erst, nachdem vier Felder desselben
         ''' Blocks mit den Gettern der Bibliothek uebereinstimmen. Passt das nicht, kommt (0, 0) und
         ''' der Aufrufer bleibt bei seinem bisherigen Weg - keine falsche Groesse, sondern keine.</summary>
-        Private Shared Function ReadOrientedSize(handle As IntPtr, facts As FileMetadata) As (Width As Integer, Height As Integer)
+        Private Shared Function ReadOrientedSize(handle As IntPtr, facts As FileMetadata, path As String) As (Width As Integer, Height As Integer)
             If facts.Width <= 1 OrElse facts.Height <= 1 OrElse facts.RawFrameWidth <= 1 Then Return (0, 0)
             ' Fujis SuperCCD liegt um 45 Grad gedreht auf dem Sensor; der Decode dreht ihn zurueck,
             ' und die Masse dafuer stehen nur in LibRaws Innerem (fuji_width). Erkennbar ist er am
@@ -1831,23 +1831,121 @@ Namespace Services
             Dim flip = Marshal.ReadInt32(handle, SizesFlipOffset)
             If flip < 0 OrElse flip > 7 Then Return (0, 0)
             facts.Flip = flip
-            facts.CameraCrop = ReadCameraCrop(handle, facts.Width, facts.Height)
+            facts.CameraCrop = ReadCameraCrop(handle, facts.Width, facts.Height, path)
             ' Bit 4 ist das Vertauschen der Achsen: 5 und 6 sind die Hochkant-Drehungen.
             If (flip And 4) <> 0 Then Return (CInt(height), CInt(width))
             Return (CInt(width), CInt(height))
         End Function
 
-        ''' <summary>Der Ausschnitt der Kamera aus raw_inset_crops[0], oder Nothing. Gelesen erst,
-        ''' nachdem ReadOrientedSize den Aufbau des Blocks gegen die Getter bestaetigt hat, und nur
-        ''' angenommen, wenn er ganz im sichtbaren Bild liegt und nicht winzig ist.</summary>
-        Private Shared Function ReadCameraCrop(handle As IntPtr, width As Integer, height As Integer) As (Left As Integer, Top As Integer, Width As Integer, Height As Integer)?
-            Dim left = Marshal.ReadInt16(handle, SizesInsetCropOffset) And &HFFFF
-            Dim top = Marshal.ReadInt16(handle, SizesInsetCropOffset + 2) And &HFFFF
-            Dim cropWidth = Marshal.ReadInt16(handle, SizesInsetCropOffset + 4) And &HFFFF
-            Dim cropHeight = Marshal.ReadInt16(handle, SizesInsetCropOffset + 6) And &HFFFF
-            If cropWidth < width \ 4 OrElse cropHeight < height \ 4 Then Return Nothing
-            If left + cropWidth > width OrElse top + cropHeight > height Then Return Nothing
+        ''' <summary>Der Ausschnitt der Kamera, oder Nothing. Gelesen erst, nachdem ReadOrientedSize
+        ''' den Aufbau des Blocks gegen die Getter bestaetigt hat, und nur angenommen, wenn er ganz
+        ''' im sichtbaren Bild liegt und nicht winzig ist.
+        '''
+        ''' Ausser bei Fujifilm ist das raw_inset_crops[0], so wie es dasteht (Panasonic schreibt
+        ''' dort das gewaehlte Format). Bei einer RAF steht in [0] immer der 3:2-Rahmen
+        ''' (RawImageCropTopLeft, RawImageCroppedSize); das gewaehlte Format traegt die Datei nur
+        ''' als Verhaeltnis in RawImageAspectRatio (0x115). LibRaw schneidet daraus [1] mittig in
+        ''' [0], kennt aber nur 3:2, 4:3, 16:9 und 1:1. Deshalb gilt bei einer RAF [1], wenn
+        ''' gesetzt, sonst der Ausschnitt, den <see cref="CenteredAspectCrop"/> nach derselben
+        ''' Regel aus 0x115 schneidet (5:4 der X-T50). Beide zaehlen im Rahmen der Rohdaten,
+        ''' nicht im sichtbaren Bild: der Rand der Rohdaten (top_margin, left_margin) wird
+        ''' abgezogen (X-T50: [0] beginnt bei Zeile 24 der Rohdaten, sichtbar bei 18).
+        '''
+        ''' Bei den anderen Herstellern bleibt es bewusst beim bisherigen Weg ohne Abzug; am
+        ''' Bestand aendert sich dadurch nur das Ergebnis der RAFs mit anderem Format.</summary>
+        Private Shared Function ReadCameraCrop(handle As IntPtr, width As Integer, height As Integer, path As String) As (Left As Integer, Top As Integer, Width As Integer, Height As Integer)?
+            Dim chosen = ReadInsetCrop(handle, 0)
+            Dim fujifilmAspect As Double
+            If IsFujifilmRaw(path, fujifilmAspect) Then
+                Dim second = ReadInsetCrop(handle, 1)
+                If second.HasValue Then
+                    chosen = second
+                ElseIf chosen.HasValue AndAlso fujifilmAspect > 0 Then
+                    chosen = CenteredAspectCrop(chosen.Value, fujifilmAspect)
+                End If
+                If Not chosen.HasValue Then Return Nothing
+                Dim topMargin = Marshal.ReadInt16(handle, SizesTopMarginOffset) And &HFFFF
+                Dim leftMargin = Marshal.ReadInt16(handle, SizesLeftMarginOffset) And &HFFFF
+                Dim c = chosen.Value
+                chosen = (c.Left - leftMargin, c.Top - topMargin, c.Width, c.Height)
+            End If
+            If Not chosen.HasValue Then Return Nothing
+            Dim crop = chosen.Value
+            If crop.Left < 0 OrElse crop.Top < 0 Then Return Nothing
+            If crop.Width < width \ 4 OrElse crop.Height < height \ 4 Then Return Nothing
+            If crop.Left + crop.Width > width OrElse crop.Top + crop.Height > height Then Return Nothing
+            Return crop
+        End Function
+
+        ''' <summary>raw_inset_crops[index] im Rahmen der Rohdaten, oder Nothing, wenn LibRaw ihn
+        ''' nicht gesetzt hat (0xFFFF als Lage, wie nach dem Start) oder er leer ist.</summary>
+        Private Shared Function ReadInsetCrop(handle As IntPtr, index As Integer) As (Left As Integer, Top As Integer, Width As Integer, Height As Integer)?
+            Dim offset = SizesInsetCropOffset + index * SizesInsetCropSize
+            Dim left = Marshal.ReadInt16(handle, offset) And &HFFFF
+            Dim top = Marshal.ReadInt16(handle, offset + 2) And &HFFFF
+            Dim cropWidth = Marshal.ReadInt16(handle, offset + 4) And &HFFFF
+            Dim cropHeight = Marshal.ReadInt16(handle, offset + 6) And &HFFFF
+            If left = &HFFFF OrElse top = &HFFFF OrElse cropWidth = 0 OrElse cropHeight = 0 Then Return Nothing
             Return (left, top, cropWidth, cropHeight)
+        End Function
+
+        ''' <summary>Der Ausschnitt im Verhaeltnis aspect (Breite durch Hoehe), mittig in frame, nach
+        ''' LibRaws Regel fuer raw_inset_crops[1] (utils/open.cpp): weicht frame um nicht mehr als
+        ''' 2 Prozent ab, bleibt frame; ist das Format breiter, fallen oben und unten gleich viele
+        ''' Zeilen weg, sonst links und rechts gleich viele Spalten.</summary>
+        Private Shared Function CenteredAspectCrop(frame As (Left As Integer, Top As Integer, Width As Integer, Height As Integer),
+                                                   aspect As Double) As (Left As Integer, Top As Integer, Width As Integer, Height As Integer)
+            Dim frameAspect = frame.Width / CDbl(frame.Height)
+            Dim ratio = frameAspect / aspect
+            If ratio >= 0.98 AndAlso ratio <= 1.02 Then Return frame
+            If aspect > frameAspect Then
+                Dim newHeight = CInt(Math.Floor(frame.Width / aspect))
+                Return (frame.Left, frame.Top + (frame.Height - newHeight) \ 2, frame.Width, newHeight)
+            End If
+            Dim newWidth = CInt(Math.Floor(frame.Height * aspect))
+            Return (frame.Left + (frame.Width - newWidth) \ 2, frame.Top, newWidth, frame.Height)
+        End Function
+
+        ''' <summary>True bei einer RAF; aspect ist dann das gewaehlte Format aus RawImageAspectRatio
+        ''' (0x115 im Verzeichnis des RAF-Kopfes, Hoehe vor Breite) als Breite durch Hoehe, auf
+        ''' Tausendstel abgeschnitten wie LibRaws raw_aspect, oder 0, wenn das Feld fehlt.
+        ''' Das Verzeichnis beginnt an dem Versatz, der bei Byte 92 des Kopfes steht (big endian);
+        ''' jeder Eintrag ist Feld, Laenge und Daten.</summary>
+        Private Shared Function IsFujifilmRaw(path As String, ByRef aspect As Double) As Boolean
+            aspect = 0
+            If String.IsNullOrEmpty(path) Then Return False
+            Try
+                Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
+                    Dim head(95) As Byte
+                    If stream.Read(head, 0, head.Length) <> head.Length Then Return False
+                    If Text.Encoding.ASCII.GetString(head, 0, 16) <> "FUJIFILMCCD-RAW " Then Return False
+                    Dim directory = (CLng(head(92)) << 24) Or (CLng(head(93)) << 16) Or (CLng(head(94)) << 8) Or CLng(head(95))
+                    If directory <= 0 OrElse directory >= stream.Length Then Return True
+                    stream.Position = directory
+                    Dim entry(3) As Byte
+                    If stream.Read(entry, 0, 4) <> 4 Then Return True
+                    Dim count = (CLng(entry(0)) << 24) Or (CLng(entry(1)) << 16) Or (CLng(entry(2)) << 8) Or CLng(entry(3))
+                    For i = 1L To Math.Min(count, 256L)
+                        If stream.Read(entry, 0, 4) <> 4 Then Return True
+                        Dim tag = (CInt(entry(0)) << 8) Or CInt(entry(1))
+                        Dim size = (CInt(entry(2)) << 8) Or CInt(entry(3))
+                        If tag = RafAspectRatioTag AndAlso size >= 4 Then
+                            Dim value(3) As Byte
+                            If stream.Read(value, 0, 4) <> 4 Then Return True
+                            Dim h = (CInt(value(0)) << 8) Or CInt(value(1))
+                            Dim w = (CInt(value(2)) << 8) Or CInt(value(3))
+                            If h > 0 AndAlso w > 0 Then aspect = ((1000 * w) \ h) / 1000.0
+                            Return True
+                        End If
+                        stream.Position += size
+                    Next
+                End Using
+                Return True
+            Catch ex As IOException
+                Return False
+            Catch ex As UnauthorizedAccessException
+                Return False
+            End Try
         End Function
 
         ''' <summary>Ein Textfeld fester Laenge aus einer nativen Struktur. Gelesen wird bis zum
@@ -3418,7 +3516,8 @@ Namespace Services
         Private Const SizesPixelAspectOffset As Integer = 32
         Private Const SizesFlipOffset As Integer = 40
         ' Hinter dem Flip: mask[8][4] (128 Bytes), raw_aspect (ushort) bei 172, dann
-        ' raw_inset_crops[0] mit cleft, ctop, cwidth, cheight (je ushort) ab 174.
+        ' raw_inset_crops[2] mit je cleft, ctop, cwidth, cheight (ushort, 8 Bytes): [0] ab 174,
+        ' [1] ab 182 (libraw_types.h des Snapshots, libraw_image_sizes_t).
         Private Const SizesInsetCropOffset As Integer = 174
         ''' So weit wird nach libraw_rawdata_t gesucht. Unter Linux liegt es bei 193768, unter
         ''' Windows weiter vorn, weil long dort vier Bytes hat.
@@ -3435,6 +3534,9 @@ Namespace Services
         '''
         ''' GEMESSEN wird der Median ueber den oberen Rand (oder den linken, wenn oben keiner ist),
         ''' mit Abstand zum Bild, jede vierte Zeile und dritte Spalte. Plausibel ist er nur mit
+        Private Const SizesInsetCropSize As Integer = 8
+        ''' RawImageAspectRatio im Verzeichnis des RAF-Kopfes (Hoehe vor Breite, je ushort).
+        Private Const RafAspectRatioTag As Integer = &H115
         ''' genug Punkten, enger Streuung und weit unter dem Weisspunkt; ein Rand, der Licht
         ''' abbekommt, faellt damit heraus.</summary>
         Private Shared Function MeasureMaskedBlack(handle As IntPtr) As Integer

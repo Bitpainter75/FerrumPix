@@ -63,6 +63,10 @@
 
 ### Fixes
 
+- The switch Camera aspect ratio was never offered for Fujifilm RAW files. It now works there too:
+  unedited pictures taken in 16:9, 4:3, 1:1 or 5:4 open in the format chosen in the camera, and
+  the switch brings back the whole sensor.
+
 - RAW files from older iPhones (6s to 11 Pro Max and the SE models) came out with corners that
   were too bright, because the brightening of the corners stored in the file was applied in full.
   It is now held to a limit, and the corners look as they should.
