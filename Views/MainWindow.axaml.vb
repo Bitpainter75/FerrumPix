@@ -1430,10 +1430,10 @@ Namespace Views
                         Case Key.Escape, Key.Back
                             vm.ExitFullscreen()
                             e.Handled = True
-                        Case Key.Left, Key.PageUp
+                        Case Key.Left, Key.Up, Key.PageUp
                             vm.Viewer.PreviousCommand.Execute(Nothing)
                             e.Handled = True
-                        Case Key.Right, Key.PageDown
+                        Case Key.Right, Key.Down, Key.PageDown
                             vm.Viewer.NextCommand.Execute(Nothing)
                             e.Handled = True
                         Case Key.Home, Key.End

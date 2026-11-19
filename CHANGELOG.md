@@ -28,6 +28,9 @@
 - The Extensions tool shows the analysis picture and the clipping warning like the other
   adjustment tools.
 
+- In the viewer and in full screen, the UP and DOWN arrow keys page through the pictures like
+  LEFT and RIGHT.
+
 - The search field in the settings stands out with an accent frame, and CTRL+F jumps to it.
 
 - Opening a RAW in the editor right after selecting it no longer waits for the analysis picture

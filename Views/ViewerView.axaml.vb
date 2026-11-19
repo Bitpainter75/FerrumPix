@@ -454,11 +454,13 @@ Namespace Views
                 Return
             End If
 
+            ' HOCH und RUNTER blaettern wie LINKS und RECHTS: im Betrachter steht nur ein Bild, die
+            ' Pfeile haben keine zweite Richtung, nach der man sich bewegen koennte.
             Select Case e.Key
-                Case Key.Left, Key.PageUp
+                Case Key.Left, Key.Up, Key.PageUp
                     vm.PreviousCommand.Execute(Nothing)
                     e.Handled = True
-                Case Key.Right, Key.PageDown
+                Case Key.Right, Key.Down, Key.PageDown
                     vm.NextCommand.Execute(Nothing)
                     e.Handled = True
                 Case Key.Home, Key.End
