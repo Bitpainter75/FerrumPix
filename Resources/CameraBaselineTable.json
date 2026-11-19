@@ -356,9 +356,9 @@
     "NIKONZ63": -0.036,
     "NIKONZ7": 0.05,
     "NIKONZ72": 0.025,
-    "NIKONZ8": 0.0,
+    "NIKONZ8": 0.007,
     "NIKONZ9": 0.0,
-    "NIKONZF": 0.051,
+    "NIKONZF": 0.063,
     "NIKONZFC": -0.028,
     "OLYMPUSC5050Z": 0.8,
     "OLYMPUSC5060WZ": 0.755,
@@ -724,6 +724,15 @@
       "blueSaturation": -40,
       "shadowTint": 2
     },
+    "HASSELBLAD10022COATED63FR": {
+      "redHue": 3,
+      "redSaturation": -10,
+      "greenHue": 0,
+      "greenSaturation": -6,
+      "blueHue": -6,
+      "blueSaturation": -37,
+      "shadowTint": -3
+    },
     "HASSELBLAD5015COATED5FFF": {
       "redHue": 0,
       "redSaturation": -7,
@@ -741,6 +750,15 @@
       "blueHue": -10,
       "blueSaturation": -17,
       "shadowTint": 3
+    },
+    "NIKONZ8": {
+      "redHue": -3,
+      "redSaturation": -3,
+      "greenHue": 13,
+      "greenSaturation": 7,
+      "blueHue": -1,
+      "blueSaturation": -9,
+      "shadowTint": 0
     },
     "OLYMPUSE5": {
       "redHue": -3,
