@@ -1247,6 +1247,23 @@ Namespace Services
         ''' Stelle nur von den Stellen ab der ersten zu flachen bis Weiss, nicht von der ganzen Kurve
         ''' (OFFENE_PUNKTE.md, "Tiefen und Lichter beide nach oben").
         Private Shared ToneZoneMonotoneAboveFirstFlat As Boolean = False
+        ''' Nur fuer die Reglereichung (Messschalter REGLER_TIEFEN_TIEF), in der Anwendung immer 1
+        ''' und damit ohne Wirkung: beim Heben der Tiefen der Faktor auf ihren Hub in den tiefen
+        ''' Toenen, voll bis L ShadowsRaiseDeepFullL des Grauwerts, in L linear auf 1 bei
+        ''' ShadowsRaiseDeepEndL (OFFENE_PUNKTE.md, "Tiefen und Lichter beide nach oben").
+        Private Shared ShadowsRaiseDeepScale As Double = 1.0
+        Private Shared ShadowsRaiseDeepFullL As Double = 25.0
+        Private Shared ShadowsRaiseDeepEndL As Double = 45.0
+
+        ''' <summary>Der Faktor des Messschalters ShadowsRaiseDeepScale am Grauwert
+        ''' <paramref name="d0"/>.</summary>
+        Private Shared Function ShadowsRaiseDeepFactor(d0 As Double) As Double
+            Dim l = GrayVToLightness(Math.Max(0.0, Math.Min(1.0, d0)))
+            If l <= ShadowsRaiseDeepFullL Then Return ShadowsRaiseDeepScale
+            If l >= ShadowsRaiseDeepEndL Then Return 1.0
+            Return ShadowsRaiseDeepScale + (1.0 - ShadowsRaiseDeepScale) *
+                   (l - ShadowsRaiseDeepFullL) / (ShadowsRaiseDeepEndL - ShadowsRaiseDeepFullL)
+        End Function
 
         Private Shared Function ToneZoneDamping(perRatio As Double, own As Double, other As Double) As Double
             If Not ToneZoneDampingEnabled OrElse own = 0.0 OrElse other = 0.0 Then Return 0.0
@@ -1282,6 +1299,8 @@ Namespace Services
                                 ToneSliderCurves.LiftFromCurves(reference.ShadowCurves, adj.ShadowsLevel, d0),
                                 ToneSliderCurves.LiftByBrightShare("Shadows", adj.ShadowsLevel, d0, reference.BrightShare,
                                                                    reference.MedianL))
+            ' Messschalter ShadowsRaiseDeepScale; ab Werk 1, der Zweig laeuft dann nie.
+            If ShadowsRaiseDeepScale <> 1.0 AndAlso adj.ShadowsLevel > 0.0F Then shadowLift *= ShadowsRaiseDeepFactor(d0)
             ' Zusammen gesetzt daempfen sich beide gegensinnig und verstaerken sich gleichsinnig
             ' (ToneZoneInterplay).
             If adj.Highlights <> 0 AndAlso adj.ShadowsLevel <> 0 Then
