@@ -196,16 +196,22 @@ Namespace Controls
 
             Return Task.Run(Sub()
                                 Dim parsed As New List(Of KeyValuePair(Of String, SvgIconSource))()
-                                Try
-                                    For Each uri In AssetLoader.GetAssets(New Uri(Services.IconAssets.Regular), Nothing)
-                                        Dim source = uri.ToString()
-                                        If Not source.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
-                                        If Cache.ContainsKey(source) Then Continue For
-                                        Dim parsedSource = LoadSource(source)
-                                        If parsedSource IsNot Nothing Then parsed.Add(New KeyValuePair(Of String, SvgIconSource)(source, parsedSource))
-                                    Next
-                                Catch
-                                End Try
+                                ' MESSPUNKT: liegt beim ersten Oeffnen des Editors, ob das Zerlegen
+                                ' dort mit Speicherbereinigungen den Anzeigefaden anhaelt, zeigt erst
+                                ' der Vergleich mit dessen Stockungen.
+                                Services.PerformanceTraceService.Measure("Symbole: Vorladen, Zerlegen im Hintergrund",
+                                    Sub()
+                                        Try
+                                            For Each uri In AssetLoader.GetAssets(New Uri(Services.IconAssets.Regular), Nothing)
+                                                Dim source = uri.ToString()
+                                                If Not source.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) Then Continue For
+                                                If Cache.ContainsKey(source) Then Continue For
+                                                Dim parsedSource = LoadSource(source)
+                                                If parsedSource IsNot Nothing Then parsed.Add(New KeyValuePair(Of String, SvgIconSource)(source, parsedSource))
+                                            Next
+                                        Catch
+                                        End Try
+                                    End Sub)
 
                                 BuildOnUiThreadInSlices(parsed, 0)
                             End Sub)
@@ -235,6 +241,7 @@ Namespace Controls
                         End If
                         i += 1
                     End While
+                    Services.PerformanceTraceService.Record("Symbole: Vorladen, Scheibe auf dem Anzeigefaden", clock.Elapsed.TotalMilliseconds)
                     BuildOnUiThreadInSlices(parsed, i)
                 End Sub, DispatcherPriority.Background)
         End Sub
@@ -244,12 +251,16 @@ Namespace Controls
             Dim cached As SvgIconData = Nothing
             If Cache.TryGetValue(resolvedSource, cached) Then Return cached
 
-            Dim parsedSource = LoadSource(resolvedSource)
-            If parsedSource Is Nothing Then Return Nothing
-
-            Dim icon = BuildIcon(parsedSource)
-            If icon IsNot Nothing Then Cache(resolvedSource) = icon
-            Return icon
+            ' MESSPUNKT: Symbole, die noch nicht vorgeladen sind, werden hier beim ersten Zeichnen
+            ' auf dem Anzeigefaden gelesen und zerlegt.
+            Return Services.PerformanceTraceService.Measure("Symbole: beim Zeichnen nachladen",
+                Function() As SvgIconData
+                    Dim parsedSource = LoadSource(resolvedSource)
+                    If parsedSource Is Nothing Then Return Nothing
+                    Dim icon = BuildIcon(parsedSource)
+                    If icon IsNot Nothing Then Cache(resolvedSource) = icon
+                    Return icon
+                End Function)
         End Function
 
         ''' Nur Lesen und Zerlegen - erzeugt keine Avalonia-Objekte und darf daher auf jedem Faden laufen.

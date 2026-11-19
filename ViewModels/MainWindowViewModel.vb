@@ -979,20 +979,24 @@ Namespace ViewModels
                     Dim handed = Viewer.TakeFullSizeSourceForEditor(path)
                     If handed.Bitmap IsNot Nothing Then DecodedImageHandoff.Offer(path, handed.WriteTimeUtc, handed.Bitmap)
                 End If
-                ' Das Fenster haengt die Editor-Ansicht schon jetzt unsichtbar ein: Stile, Bindungen
-                ' und das erste Vermessen laufen dann, waehrend im Hintergrund dekodiert wird, statt
-                ' nach dem Decode auf dem Anzeigefaden (gemessen 0,7 s beim ersten Oeffnen).
-                If CurrentMode <> AppMode.Editor Then RaiseEvent EditorViewWanted(Me, EventArgs.Empty)
                 ' Galerie und Betrachter treten schon jetzt zurueck, nicht erst mit dem Moduswechsel
                 ' nach dem Decode. Sonst gilt ihre Info-Leiste waehrenddessen als sichtbar: der
                 ' Doppelklick hat das Bild dort eben ausgewaehlt, und 300 ms spaeter baut sie ihr
                 ' Analysebild ueber eine halbe Entwicklung derselben RAW. Die stand am Decode-Tor
                 ' VOR dem Editor, der darauf wartete (im Protokoll bis 0,5 s), und gesehen hat das
                 ' Analysebild niemand. Scheitert das Oeffnen, stellt Finally den Stand wieder her.
+                ' VOR dem Vorbereiten der Editor-Ansicht: das haelt beim ersten Oeffnen den
+                ' Anzeigefaden rund 1,4 s fest, und stand das Abtreten dahinter, rechnete das
+                ' Analysebild in dieser Zeit ungestoert zu Ende (im Protokoll "fertig, aber nicht
+                ' mehr gebraucht nach 1717 ms", der Editor wartete 400 ms am Decode-Tor).
                 If CurrentMode <> AppMode.Editor Then
                     Gallery?.SetViewActive(False)
                     Viewer?.SetViewActive(False)
                 End If
+                ' Das Fenster haengt die Editor-Ansicht schon jetzt unsichtbar ein: Stile, Bindungen
+                ' und das erste Vermessen laufen dann, waehrend im Hintergrund dekodiert wird, statt
+                ' nach dem Decode auf dem Anzeigefaden (gemessen 0,7 s beim ersten Oeffnen).
+                If CurrentMode <> AppMode.Editor Then RaiseEvent EditorViewWanted(Me, EventArgs.Empty)
                 Dim opened = Await Editor.OpenImageAsync(path, allPaths, cacheScopeId, cacheScopeName, forceSaveAsOnly, immichAlbumId, nextcloudSource,
                                                         displayFileName:=displayFileName)
                 If Not opened Then Return
