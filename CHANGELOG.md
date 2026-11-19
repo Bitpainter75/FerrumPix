@@ -1,3 +1,13 @@
+## Unreleased
+
+### Fixes
+
+- AVIF pictures open again on every platform: the gallery shows their thumbnails, and the viewer
+  and the editor show the picture. Before, they stayed empty.
+
+- The search field in the settings was too narrow for its hint, which was cut off. It now just
+  says Search; the shortcut CTRL+F shows when you point at the field.
+
 ## 0.9.88
 
 ### Changes
@@ -101,4 +111,3 @@
   in the saved picture. It now lies on the photo exactly as copied. The editor also shows
   sharpening in a zoomed out view as strong as the finished picture has it at that size, instead
   of stronger, so the preview tells you what the export gets.
-

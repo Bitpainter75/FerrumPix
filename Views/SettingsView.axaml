@@ -46,7 +46,8 @@
                                  Padding="0"
                                  Height="20"
                                  Margin="10,0,0,2"
-                                 PlaceholderText="Einstellungen durchsuchen (STRG+F)"
+                                 PlaceholderText="Suchen"
+                                 ToolTip.Tip="Einstellungen durchsuchen (STRG+F)"
                                  VerticalContentAlignment="Center"
                                  TextChanged="OnSettingsSearchChanged"/>
                         <Button Grid.Column="2"

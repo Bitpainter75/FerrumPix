@@ -6,8 +6,9 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>
-    ''' Liest HEIC/HEIF (und AVIF, sofern die Bibliothek den Codec mitbringt) über libheif -
-    ''' SkiaSharp kann beides nicht. Damit lassen sich iPhone-Fotos direkt ansehen und bearbeiten,
+    ''' Liest HEIC/HEIF und AVIF über libheif - SkiaSharp kann beides nicht. Die mitgelieferte
+    ''' libheif bringt für HEIC libde265 und für AVIF dav1d mit (packaging/libheif/dav1d.sh); fehlt
+    ''' einer Bibliothek der Dekoder, scheitert heif_decode_image, und die Datei bleibt leer. Damit lassen sich iPhone-Fotos direkt ansehen und bearbeiten,
     ''' statt sie vorher umwandeln zu müssen; geschrieben wird HEIC bewusst NICHT (siehe unten).
     '''
     ''' Auf macOS bringt das Betriebssystem den Dekoder selbst mit, dort ist HEIC das Standardformat
@@ -31,7 +32,7 @@ Namespace Services
     ''' WOHER DIE BIBLIOTHEK KOMMT, hängt von der Plattform ab:
     '''
     '''   Linux    AppImage, portables ZIP (und damit AUR), deb und rpm bringen eine eigene
-    '''            libheif.so.1 mit libde265 darin mit (packaging/libheif/build-linux.sh); sie geht
+    '''            libheif.so.1 mit libde265 und dav1d darin mit (packaging/libheif/build-linux.sh); sie geht
     '''            der des Systems vor (siehe BundledLibraryOrder), die nur noch Rueckfall ist. Der
     '''            Flatpak nimmt libheif aus seiner Laufzeit.
     '''   macOS    zuerst ImageIO (siehe oben). Als Rueckfall dahinter bringt das Mac-Paket eine
