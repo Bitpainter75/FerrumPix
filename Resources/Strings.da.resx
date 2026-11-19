@@ -12015,4 +12015,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Linjebredde</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>Fjern farvesøm</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>Fjerner violette farvesømme langs hårde, lyse kanter, som mange objektiver viser ved fuld blændeåbning. Kun farven fjernes, lysstyrken bliver. Virker også uden objektivprofil.</value>
+  </data>
 </root>

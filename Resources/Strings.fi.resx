@@ -12015,4 +12015,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Viivan leveys</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>Poista värireunus</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>Poistaa violetit värireunat terävistä, kirkkaista reunoista, joita moni objektiivi näyttää täydellä aukolla. Vain väri poistetaan, kirkkaus säilyy. Toimii myös ilman objektiiviprofiilia.</value>
+  </data>
 </root>

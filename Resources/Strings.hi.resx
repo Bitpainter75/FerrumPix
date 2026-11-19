@@ -12019,4 +12019,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>रेखा की चौड़ाई</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>रंगीन किनारा हटाएँ</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>कठोर, चमकीले किनारों पर बैंगनी रंगीन किनारे हटाता है, जैसे कई लेंस पूरे खुले एपर्चर पर दिखाते हैं। केवल रंग हटता है, चमक बनी रहती है। लेंस प्रोफ़ाइल के बिना भी काम करता है।</value>
+  </data>
 </root>

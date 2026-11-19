@@ -11974,4 +11974,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Espessura da linha</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>Remover franja de cor</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>Remove as franjas de cor violeta ao longo de bordas duras e claras, como muitas objetivas mostram na abertura máxima. Só a cor é retirada, o brilho fica. Funciona também sem perfil de objetiva.</value>
+  </data>
 </root>

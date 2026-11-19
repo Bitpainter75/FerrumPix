@@ -7508,6 +7508,9 @@ Namespace ViewModels
         ''' Decode, siehe RawDecodeServiceModelDenoise.vb.
         Private _rawModelDenoise As Boolean = False
         Private _rawModelDenoiseStrength As Single = 70
+        ''' Farbsaum entfernen (ImageAdjustments.DefringePurple). NICHT im Decode, sondern am Anfang
+        ''' der Pixelkette; ein Umschalten braucht deshalb nur ein Nachrendern.
+        Private _defringePurple As Boolean = False
 
         Private _lensDistortion As Boolean? = Nothing
         Private _lensTca As Boolean? = Nothing
@@ -8174,8 +8177,12 @@ Namespace ViewModels
             Dim hatteSchalter = _lensDistortion.HasValue OrElse _lensTca.HasValue OrElse _lensVignetting.HasValue OrElse
                                 _lensDistortionAmount <> 100 OrElse _lensTcaAmount <> 100 OrElse _lensVignettingAmount <> 100 OrElse
                                 _lensTcaRed <> 0 OrElse _lensTcaBlue <> 0 OrElse _rawSensorEdgeCrop <> SensorEdgeCropStart OrElse _rawCameraAspectCrop <> SensorEdgeCropStart
-            If Not hatteZuordnung AndAlso Not hatteSchalter Then Return
+            ' Der Farbsaum steht im selben Panel und geht mit zurueck, braucht aber keinen neuen
+            ' Decode: er allein rendert nur nach.
+            Dim hatteFarbsaum = _defringePurple
+            If Not hatteZuordnung AndAlso Not hatteSchalter AndAlso Not hatteFarbsaum Then Return
             CaptureUndoState("Objektivkorrektur")
+            _defringePurple = False
             _lensDistortion = Nothing
             _lensTca = Nothing
             _lensVignetting = Nothing
@@ -8192,7 +8199,11 @@ Namespace ViewModels
             End If
             RefreshLensCorrection()
             RaiseResetButtonStateChanged()
-            RebuildWorkingImageForLens()
+            If hatteZuordnung OrElse hatteSchalter Then
+                RebuildWorkingImageForLens()
+            Else
+                SchedulePreviewUpdate()
+            End If
         End Sub
 
         ''' <summary>Den Sensorrand einer RAW abschneiden, wie das Referenzprogramm es tut. Steht bei
@@ -8248,6 +8259,24 @@ Namespace ViewModels
                 If Not IsRawDeveloped Then Return False
                 Return RawDecodeService.CameraAspectEdgeFor(RenderSourcePath).HasValue
             End Get
+        End Property
+
+        ''' <summary>Farbsaum entfernen: nimmt die violetten Saeume an harten, hellen Kanten heraus
+        ''' (ImageProcessorDefringe.vb). Fuer jedes Format, auch ohne Objektivprofil. Die Stufe sitzt
+        ''' in der Pixelkette vor der Geometrie, nicht im Decode: umgeschaltet wird mit einem
+        ''' gewoehnlichen Nachrendern, die Zwischenspeicher tragen den Schalter im Schluessel.</summary>
+        Public Property DefringePurpleEnabled As Boolean
+            Get
+                Return _defringePurple
+            End Get
+            Set(value As Boolean)
+                If _defringePurple = value Then Return
+                CaptureUndoState(NameOf(DefringePurpleEnabled))
+                _defringePurple = value
+                Me.RaisePropertyChanged(NameOf(DefringePurpleEnabled))
+                RaiseResetButtonStateChanged()
+                SchedulePreviewUpdate()
+            End Set
         End Property
 
         ''' <summary>Der Startwert des Sensorrands, auf den die Zuruecksetzer gehen: bei einer RAW an,
@@ -8337,7 +8366,8 @@ Namespace ViewModels
                            NameOf(LensDistortionAmount), NameOf(LensTcaAmount),
                            NameOf(LensVignettingAmount), NameOf(LensTcaRed), NameOf(LensTcaBlue),
                            NameOf(RawSensorEdgeCropEnabled), NameOf(RawSensorEdgeCropAvailable),
-                           NameOf(RawCameraAspectCropEnabled), NameOf(RawCameraAspectCropAvailable)}
+                           NameOf(RawCameraAspectCropEnabled), NameOf(RawCameraAspectCropAvailable),
+                           NameOf(DefringePurpleEnabled)}
                 Me.RaisePropertyChanged(n)
             Next
         End Sub
@@ -25067,6 +25097,7 @@ Namespace ViewModels
                 .LensTcaAmount = CSng(_lensTcaAmount),
                 .LensTcaRed = CSng(_lensTcaRed),
                 .LensTcaBlue = CSng(_lensTcaBlue),
+                .DefringePurple = _defringePurple,
                 .LensVignettingAmount = CSng(_lensVignettingAmount),
                 .Brightness = CSng(_brightness),
                 .Contrast = CSng(_contrast),
@@ -25749,6 +25780,7 @@ Namespace ViewModels
                 Case NameOf(Highlights) : Return LocalizationService.T("Lichter")
                 Case NameOf(RawSensorEdgeCropEnabled) : Return LocalizationService.T("Sensorrand entfernen")
                 Case NameOf(RawCameraAspectCropEnabled) : Return LocalizationService.T("Seitenverhältnis der Kamera")
+                Case NameOf(DefringePurpleEnabled) : Return LocalizationService.T("Farbsaum entfernen")
                 Case NameOf(ShadowsLevel) : Return LocalizationService.T("Tiefen")
                 Case NameOf(Whites) : Return LocalizationService.T("Weiß")
                 Case NameOf(Blacks) : Return LocalizationService.T("Schwarz")
@@ -26686,6 +26718,7 @@ Namespace ViewModels
             _lensTcaBlue = adj.LensTcaBlue
             _lensVignettingAmount = adj.LensVignettingAmount
             _lensModel = If(adj.LensModel, "")
+            _defringePurple = adj.DefringePurple
             ' Ein Rezept mit Weißabgleich Modell 2 (etwa aus einem älteren Verlaufsschritt) zeigt
             ' sonst Zahlen, die in der heutigen Rechnung einen anderen Weißpunkt bedeuten.
             If adj.WhiteBalanceModel = 2 Then
@@ -27065,6 +27098,9 @@ Namespace ViewModels
             ' der Anzeige und im Infopanel auf dem Stand VOR dem Rueckgaengig stehen. Gemeldet am
             ' Hochskalieren, gilt aber fuer jeden Geometrieschritt.
             RaiseDisplayImageGeometryProperties()
+            ' Der Farbsaum sitzt in der Pixelkette, nicht im Decode: er meldet sich hier selbst,
+            ' auch wenn sich an der Objektivkorrektur nichts aendert.
+            Me.RaisePropertyChanged(NameOf(DefringePurpleEnabled))
             If lensChanged Then RefreshLensCorrection()
             If lensChanged Then
                 RebuildWorkingImageForLens()
@@ -27371,6 +27407,8 @@ Namespace ViewModels
             _lensTcaBlue = 0
             _lensModel = ""
             _lensFilter = ""
+            _defringePurple = False
+            Me.RaisePropertyChanged(NameOf(DefringePurpleEnabled))
             _perspectiveHorizontal = 0
             _perspectiveVertical = 0
             _perspectiveAspect = 0
@@ -32064,6 +32102,10 @@ Namespace ViewModels
             _rawSensorEdgeCrop = SensorEdgeCropStart
             _rawCameraAspectCrop = SensorEdgeCropStart
             _lensModel = ""
+            ' Der Farbsaum steht im Panel der Objektivkorrektur und geht mit ihr zurueck; er sitzt
+            ' in der Pixelkette, das Nachrendern am Ende genuegt.
+            _defringePurple = False
+            Me.RaisePropertyChanged(NameOf(DefringePurpleEnabled))
             _grain = 0
             _grainSize = 0
             _grainFrequency = 0
@@ -33213,6 +33255,10 @@ Namespace ViewModels
                 LensVignettingEnabled = False
             End If
             If ImportXmpChromaticAberration AndAlso extras.ChromaticAberrationOff Then LensTcaEnabled = False
+            ' Farbsaum entfernen haengt am selben Haken wie die Farbsaeume: beides sind Farbsaeume,
+            ' und wer sie aus einem Preset nicht will, will keinen von beiden.
+            If ImportXmpChromaticAberration AndAlso extras.HasPurpleDefringe Then DefringePurpleEnabled = True
+            If ImportXmpChromaticAberration AndAlso extras.PurpleDefringeOff Then DefringePurpleEnabled = False
             Return profileNotice
         End Function
 

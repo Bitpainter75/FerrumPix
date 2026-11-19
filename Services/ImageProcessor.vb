@@ -3075,6 +3075,11 @@ Namespace Services
             ' Quelle unveraendert zurueck (Copy-on-write) und der Messwert liegt bei null - genau
             ' das muss man wissen, bevor man einen Zwischenspeicher dafuer baut.
             If cachedTone Is Nothing AndAlso Not noiseFromCache Then
+                ' FARBSAUM ENTFERNEN VOR DER GEOMETRIE (ImageProcessorDefringe.vb): seine Fenster
+                ' stehen in Punkten der Quelle, und er gehoert wie die Objektivkorrektur dem Bild.
+                ' Er steht damit im Zwischenspeicher nach dem Farbrauschen und im Tonspeicher, deren
+                ' Schluessel ihn ueber ComputeBaseKeyCore tragen. Aus laesst die Quelle unberuehrt.
+                processed = ApplyDefringeStageOwned(processed, adj, owned)
                 PerformanceTraceService.Measure("Pixel: Geometrie",
                     Sub()
                         processed = ApplyGeometryPipelineOwned(processed, adj, owned)
@@ -3893,6 +3898,8 @@ Namespace Services
             If origin Is Nothing Then Return Nothing
             Dim result As SKBitmap = origin
             Dim resultOwned = False
+            ' Derselbe Eingang wie in ProcessBitmapBaseBeforeMaskedLayers: auch der Farbsaum.
+            result = ApplyDefringeStageOwned(result, adj, resultOwned)
             result = ApplyGeometryPipelineOwned(result, adj, resultOwned)
             result = ReplaceBitmapOwned(result, ApplyDocumentBackground(result, adj), resultOwned)
             If result.Width <> target.Width OrElse result.Height <> target.Height Then
@@ -5223,12 +5230,16 @@ Namespace Services
         Private Shared ReadOnly _colorNoiseStates As New List(Of ColorNoiseState)()
         Private Shared ReadOnly _colorNoiseStatesLock As New Object()
 
-        ''' <summary>Lohnt und taugt der Zwischenspeicher fuer dieses Rezept? Ohne Farbrauschen gibt
-        ''' es nichts zu sparen; mit aktivem Auswahl-Skopus braucht die Kette den Stand nach der
-        ''' Geometrie als Vergleich, und der liegt hier nicht vor.</summary>
+        ''' <summary>Lohnt und taugt der Zwischenspeicher fuer dieses Rezept? Ohne Farbrauschen und
+        ''' ohne Farbsaum gibt es nichts zu sparen; mit aktivem Auswahl-Skopus braucht die Kette den
+        ''' Stand nach der Geometrie als Vergleich, und der liegt hier nicht vor.
+        '''
+        ''' Der Farbsaum (ImageProcessorDefringe.vb) laeuft vor der Geometrie und steckt damit im
+        ''' gemerkten Stand: ohne ihn rechnete jeder Schritt an Belichtung oder Farbe die Stufe neu,
+        ''' gemessen rund 100 ms an einer Vorschau von 2560 Punkten.</summary>
         Private Shared Function ColorNoiseCacheApplies(adj As ImageAdjustments) As Boolean
             Return adj IsNot Nothing AndAlso Not adj.GlobalAdjustmentsHidden AndAlso
-                   adj.ColorNoiseReduction > 0 AndAlso Not SelectionScopeIsEnabled(adj)
+                   (adj.ColorNoiseReduction > 0 OrElse adj.DefringePurple) AndAlso Not SelectionScopeIsEnabled(adj)
         End Function
 
         ''' <summary>Schluessel des Zwischenspeichers nach dem Farbrauschen: die Detailstufen wie
@@ -5430,6 +5441,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 adj.CanvasWidth, adj.CanvasHeight, adj.LockCanvasAspect, adj.CanvasAnchor, adj.CanvasBackgroundColor,
                 GeometryOperationsKey(adj.GeometryOperations),
                 adj.SourceWidthPixels, adj.SourceHeightPixels,
+                adj.DefringePurple,
                 adj.FilterPreset, adj.FilterStrength, adj.LutPath, adj.LutStrength,
                 adj.SelectionScopeEnabled, selectionScopeKey,
                 adj.GlobalAdjustmentsHidden,

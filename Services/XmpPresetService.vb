@@ -48,6 +48,12 @@ Namespace Services
             Public Property LensCorrectionOff As Boolean
             ''' Das Preset schaltet die Farbsaumkorrektur ausdruecklich ab (AutoLateralCA="0").
             Public Property ChromaticAberrationOff As Boolean
+            ''' Das Preset entfernt violette Saeume (DefringePurpleAmount ueber 0). Die Staerke
+            ''' (0 bis 20) wird nicht uebernommen: der eigene Schalter kennt nur an und aus.
+            Public Property HasPurpleDefringe As Boolean
+            ''' Das Preset schaltet das Entfernen violetter Saeume ausdruecklich ab
+            ''' (DefringePurpleAmount="0").
+            Public Property PurpleDefringeOff As Boolean
             Public Property ProfileName As String = ""
             Public Property HasEmbeddedProfileReference As Boolean
         End Class
@@ -200,6 +206,14 @@ Namespace Services
             result.LensCorrectionOff = Not String.IsNullOrWhiteSpace(lensFlag) AndAlso Not result.HasLensCorrection
             Dim caFlag = GetXmpString(values, "AutoLateralCA")
             result.ChromaticAberrationOff = Not String.IsNullOrWhiteSpace(caFlag) AndAlso Not result.HasChromaticAberration
+            ' Der Laengsfehler: nur die violette Seite hat bei uns ein Gegenstueck (Farbsaum
+            ' entfernen). DefringeGreenAmount bleibt ohne Wirkung, ebenso die Farbtonbereiche
+            ' DefringePurpleHueLo/-Hi.
+            Dim purpleAmount As Double
+            If TryGetXmpDouble(values, "DefringePurpleAmount", purpleAmount) Then
+                result.HasPurpleDefringe = purpleAmount > 0.0001
+                result.PurpleDefringeOff = Not result.HasPurpleDefringe
+            End If
             Return result
         End Function
 

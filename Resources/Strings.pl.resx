@@ -12015,4 +12015,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Grubość linii</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>Usuń obwódkę barwną</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>Usuwa fioletowe obwódki barwne na ostrych, jasnych krawędziach, jakie wiele obiektywów pokazuje przy pełnym otworze. Usuwany jest tylko kolor, jasność pozostaje. Działa także bez profilu obiektywu.</value>
+  </data>
 </root>

@@ -2,6 +2,12 @@
 
 ### Changes
 
+- New switch Remove colour fringe in Lens correction: it takes out the purple fringes that many
+  lenses leave along hard, bright edges when shooting wide open. Only the colour goes, the
+  brightness stays, and colourful parts of the picture away from such edges are left alone. It
+  works for every file type, with or without a lens profile, and is off by default. A preset that
+  removes purple fringes switches it on when lens fringe corrections are imported.
+
 - Dragging a slider in the editor is faster on RAW files: while the slider moves, the picture is
   calculated smaller, and as soon as it rests for a moment, it is calculated in full size, still
   before you let go. With the graphics card switched on, tone, colour and detail sliders also no

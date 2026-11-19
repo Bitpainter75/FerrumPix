@@ -12019,4 +12019,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>ความหนาเส้น</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>ลบขอบสีเหลื่อม</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>ลบขอบสีม่วงตามขอบที่คมและสว่าง แบบที่เลนส์หลายตัวแสดงเมื่อเปิดรูรับแสงกว้างสุด ลบเฉพาะสี ความสว่างยังคงเดิม ใช้ได้แม้ไม่มีโปรไฟล์เลนส์</value>
+  </data>
 </root>

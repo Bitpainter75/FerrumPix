@@ -12015,4 +12015,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Lijndikte</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>Kleurrand verwijderen</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>Haalt paarse kleurranden langs harde, lichte randen weg, zoals veel objectieven die bij volle opening tonen. Alleen de kleur wordt verwijderd, de helderheid blijft. Werkt ook zonder objectiefprofiel.</value>
+  </data>
 </root>

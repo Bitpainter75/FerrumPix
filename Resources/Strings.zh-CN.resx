@@ -11973,4 +11973,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>线条宽度</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>去除色边</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>去除明亮硬边缘上的紫色色边，许多镜头在最大光圈下会出现这种色边。只去除颜色，亮度保持不变。没有镜头配置文件也能使用。</value>
+  </data>
 </root>

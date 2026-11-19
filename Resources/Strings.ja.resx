@@ -12015,4 +12015,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>線の太さ</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>色にじみを除去</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>多くのレンズが開放絞りで見せる、明るくくっきりした輪郭の紫の色にじみを取り除きます。取り除くのは色だけで、明るさはそのままです。レンズプロファイルがなくても働きます。</value>
+  </data>
 </root>

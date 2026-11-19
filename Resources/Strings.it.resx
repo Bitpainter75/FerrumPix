@@ -11975,4 +11975,10 @@
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Spessore linea</value>
   </data>
+  <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
+    <value>Rimuovi frangia di colore</value>
+  </data>
+  <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
+    <value>Rimuove le frange colorate viola lungo i bordi netti e chiari, come quelle che molti obiettivi mostrano a tutta apertura. Viene tolto solo il colore, la luminosità resta. Funziona anche senza profilo dell'obiettivo.</value>
+  </data>
 </root>

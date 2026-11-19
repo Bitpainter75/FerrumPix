@@ -1018,6 +1018,19 @@ Namespace Services
         Public Property LensTcaRed As Single = 0
         Public Property LensTcaBlue As Single = 0
 
+        ''' <summary>Farbsaum entfernen: der Laengsfehler, die violetten Saeume an harten, hellen
+        ''' Kanten (ImageProcessorDefringe.vb). Ab Werk aus, und aus rechnet die Kette bitgleich wie
+        ''' ohne die Stufe.
+        '''
+        ''' Anders als die Objektivkorrektur sitzt die Stufe nicht im Decode, sondern am Anfang der
+        ''' Pixelkette, vor der Geometrie. Sie gehoert aber wie jene dem BILD und nicht dem Look:
+        ''' sie steht deshalb unter den strukturellen Feldern, wandert nicht auf eine Maskenebene oder
+        ''' ein Objekt und wird beim Kopieren von Anpassungen nicht auf andere Fotos uebertragen.
+        '''
+        ''' Ein Preset mit crs:DefringePurpleAmount ueber 0 schaltet sie beim Import ein, mit 0 aus
+        ''' (siehe XmpPresetService.ImportExtras). Eine Staerke gibt es nicht.</summary>
+        Public Property DefringePurple As Boolean = False
+
         ''' <summary>Lichter aus den Rohdaten zurueckholen. Wie die Objektivkorrektur eine Angabe,
         ''' die den DECODE aendert und nicht die Reglerkette: LibRaw entklemmt dann die Lichter,
         ''' die Belichtungsrampe gleicht den Normierungsfaktor aus und rollt oben weich aus.
@@ -1536,6 +1549,7 @@ Namespace Services
             "RampBlackShareInSource", "ShadowSaturationInSource", "RawModelDenoise", "RawModelDenoiseStrength",
             "LensDistortion", "LensTca", "LensVignetting", "LensModel",
             "LensDistortionAmount", "LensTcaAmount", "LensVignettingAmount", "LensTcaRed", "LensTcaBlue",
+            "DefringePurple",
             "WorkingImageVersion", "WorkingImageHasTransparency", "WorkingImageExposure",
             "GeometryOperations",
             "BakedOperations", "BakedOperationsApplied",
@@ -1909,6 +1923,7 @@ Namespace Services
                 .LensVignettingAmount = LensVignettingAmount,
                 .LensTcaRed = LensTcaRed,
                 .LensTcaBlue = LensTcaBlue,
+                .DefringePurple = DefringePurple,
                 .WorkingImageVersion = WorkingImageVersion,
                 .WorkingImageHasTransparency = WorkingImageHasTransparency,
                 .WorkingImageExposure = WorkingImageExposure,

@@ -112,6 +112,31 @@
 
   <releases>
 
+    <release version="0.9.88-1" date="2026-11-19">
+      <description>
+        <p>This update makes editing RAW photos more responsive, adds two new frame styles and lets you download extensions directly from the settings:</p>
+        <p xml:lang="de">Dieses Update macht die RAW-Bearbeitung flüssiger, bringt zwei neue Rahmenarten und ermöglicht das Herunterladen von Erweiterungen direkt aus den Einstellungen:</p>
+        <ul>
+          <li>Adjusting sliders on RAW photos is now faster. While you drag a slider, FerrumPix processes a smaller preview to keep the image responsive. As soon as you pause briefly, it switches back to full resolution, even before you release the slider. With GPU processing enabled, the image also stays on the graphics card between updates while dragging.</li>
+          <li xml:lang="de">Das Verstellen von Reglern bei RAW-Fotos geht jetzt schneller. Während du einen Regler ziehst, berechnet FerrumPix eine kleinere Vorschau, damit das Bild flüssig reagiert. Sobald du kurz innehältst, wird es wieder in voller Auflösung berechnet, noch bevor du den Regler loslässt. Bei aktivierter GPU-Verarbeitung bleibt das Bild während des Ziehens außerdem zwischen den Aktualisierungen auf der Grafikkarte.</li>
+
+          <li>Two new frame styles are available: Keyline adds a solid border with a fine line along its inner edge, with separately adjustable colour and width. 35mm Film creates a filmstrip border with sprocket holes, in either landscape or portrait orientation.</li>
+          <li xml:lang="de">Es gibt zwei neue Rahmenarten: Keyline fügt einen durchgehenden Rand mit einer feinen Linie an der Innenkante hinzu, deren Farbe und Breite sich separat einstellen lassen. Kleinbildfilm erzeugt einen Filmstreifen mit Perforationslöchern, wahlweise im Quer- oder Hochformat.</li>
+
+          <li>Extensions can now be downloaded directly under Settings → Extensions instead of being bundled with FerrumPix. The directory lists available extensions with descriptions, sample images and a button to install them. When a newer version is available, you can update it from the same place. Two new extensions by Spoilerhead have been added: a vignette and a graduated filter that preserve bright highlights. In compact adjustments mode, extensions appear as a group within the Adjustments tool.</li>
+          <li xml:lang="de">Erweiterungen lassen sich jetzt unter Einstellungen → Erweiterungen direkt herunterladen, statt fest mit FerrumPix ausgeliefert zu werden. Das Verzeichnis zeigt die verfügbaren Erweiterungen mit Beschreibungen, Beispielbildern und einer Schaltfläche zum Installieren. Ist eine neuere Version verfügbar, kannst du sie dort auch aktualisieren. Neu hinzugekommen sind zwei Erweiterungen von Spoilerhead: eine Vignette und ein Verlaufsfilter, die helle Bildbereiche erhalten. Im kompakten Anpassungsmodus erscheinen Erweiterungen als eigene Gruppe innerhalb des Werkzeugs Anpassungen.</li>
+
+          <li>When pasting adjustments onto JPG, PNG or WebP images, you can now save a copy alongside the original instead of overwriting it.</li>
+          <li xml:lang="de">Wenn du Anpassungen auf JPG-, PNG- oder WebP-Bilder überträgst, kannst du jetzt eine Kopie neben dem Original speichern, statt es zu überschreiben.</li>
+
+          <li>The settings now show the location of the diagnostics log and let you open it in a window where you can select and copy its contents.</li>
+          <li xml:lang="de">In den Einstellungen siehst du jetzt, wo das Diagnoseprotokoll gespeichert ist. Du kannst es dort auch in einem Fenster öffnen und den Text markieren und kopieren.</li>
+
+          <li>Fixed an issue in trackpad mode where clicks on a zoomed-in image weren't passed to the active tool. You can now select and create objects normally while zoomed in.</li>
+          <li xml:lang="de">Ein Fehler im Trackpad-Modus wurde behoben, durch den Klicks auf ein vergrößertes Bild nicht beim aktiven Werkzeug ankamen. Auch bei vergrößerter Ansicht kannst du jetzt wieder wie gewohnt Objekte auswählen und erstellen.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.9.87-1" date="2026-11-18">
       <description>
         <p>This update introduces extensions that add their own editing tools, a new High Pass sharpening method, and improved interaction between Highlights and Shadows:</p>

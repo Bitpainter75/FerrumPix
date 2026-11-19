@@ -122,6 +122,13 @@
                           FontSize="{DynamicResource FP.Font.Small}"
                           ToolTip.Tip="Zeigt das Bild im Seitenverhältnis, das an der Kamera eingestellt war, etwa 3:2, 16:9 oder 1:1. Die RAW-Datei enthält trotzdem den ganzen Sensor; ausgeschaltet ist er wieder zu sehen. Am besten gleich zu Beginn entscheiden, schaltet man später um, passen bereits gesetzte Masken und eingefügte Objekte nicht mehr genau."/>
 
+                <!-- Der Laengsfehler (DefringePurpleEnabled): violette Saeume an harten, hellen
+                     Kanten. Wie die Regler darunter ausserhalb des Profilblocks, weil er ohne
+                     Objektivdaten auskommt und fuer jedes Format wirkt. Ab Werk aus. -->
+                <CheckBox Content="Farbsaum entfernen" IsChecked="{Binding DefringePurpleEnabled}"
+                          FontSize="{DynamicResource FP.Font.Small}"
+                          ToolTip.Tip="Nimmt violette Farbsäume an harten, hellen Kanten heraus, wie sie viele Objektive bei offener Blende zeigen. Nur die Farbe wird entfernt, die Helligkeit bleibt. Wirkt auch ohne Objektivprofil."/>
+
                 <!-- Feinkorrektur des Farbquerfehlers von Hand. BEWUSST ausserhalb des Blocks
                      darueber, der nur mit gefundenem Profil sichtbar ist: gerade wenn die Sammlung
                      das Objektiv nicht kennt oder es an dieser Brennweite schlecht trifft (Issue
