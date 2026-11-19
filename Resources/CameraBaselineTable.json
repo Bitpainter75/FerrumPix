@@ -747,12 +747,12 @@
       "shadowTint": 3
     },
     "NIKONZ8": {
-      "redHue": -3,
-      "redSaturation": -3,
-      "greenHue": 13,
-      "greenSaturation": 7,
+      "redHue": -2,
+      "redSaturation": -2,
+      "greenHue": 14,
+      "greenSaturation": 8,
       "blueHue": -1,
-      "blueSaturation": -9,
+      "blueSaturation": -11,
       "shadowTint": 0
     },
     "OLYMPUSE5": {
@@ -764,15 +764,6 @@
       "blueSaturation": -12,
       "shadowTint": -1
     },
-    "OLYMPUSE510": {
-      "redHue": -12,
-      "redSaturation": 4,
-      "greenHue": 3,
-      "greenSaturation": 9,
-      "blueHue": -2,
-      "blueSaturation": -13,
-      "shadowTint": 6
-    },
     "OLYMPUSOM1": {
       "redHue": -13,
       "redSaturation": 9,
@@ -781,6 +772,15 @@
       "blueHue": 6,
       "blueSaturation": -12,
       "shadowTint": 4
+    },
+    "OLYMPUSOM1MARKII": {
+      "redHue": -13,
+      "redSaturation": 10,
+      "greenHue": 10,
+      "greenSaturation": 6,
+      "blueHue": 6,
+      "blueSaturation": -21,
+      "shadowTint": 1
     },
     "PANASONICDCS1RM2": {
       "redHue": -13,
@@ -835,15 +835,6 @@
       "blueHue": 0,
       "blueSaturation": -9,
       "shadowTint": 3
-    },
-    "SONYILCE7M5": {
-      "redHue": -22,
-      "redSaturation": 5,
-      "greenHue": 4,
-      "greenSaturation": 7,
-      "blueHue": 2,
-      "blueSaturation": -6,
-      "shadowTint": 1
     }
   },
   "levelOverrides": {
