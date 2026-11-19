@@ -3338,7 +3338,13 @@ Namespace Services
         ''' bleibt es bei LibRaw - ein geratener Wert waere schlimmer als ein gelegentlich falscher.
         ''' Statt der ISO darf auch der Name von LibRaws Dekoder dahinter stehen (ohne Klammern);
         ''' dieser Eintrag geht allen anderen vor. Schwarzpunkt -1 heisst: bei LibRaw lassen. Kennt
-        ''' LibRaw eine Kamera eines Tages richtig, gehoert der Eintrag wieder heraus.</summary>
+        ''' LibRaw eine Kamera eines Tages richtig, gehoert der Eintrag wieder heraus.
+        '''
+        ''' EIN EINTRAG OHNE WERTE (Schwarz -1, weder Umfang noch Weiss) haelt eine Canon bei LibRaws
+        ''' Pegeln, statt sie ueber Canons ColorData laufen zu lassen. So die R-Serie (R5, R6, R7, R8,
+        ''' R10, R50, R50 V): Canons SpecularWhiteLevel liegt dort 0,14 bis 0,52 Blendenstufen unter
+        ''' dem Ende der Rohdaten, die gleichmaessig bis 16383 weiterlaufen; Adobe nimmt 16384 und
+        ''' behaelt die Zeichnung darueber, LibRaws 16383 ebenso.</summary>
         Friend Shared ReadOnly LevelOverrides As Dictionary(Of String, (Black As Integer, Range As Integer, White As Integer)) = CameraBaselineTable.LevelOverrides
 
         ''' <summary>Der Name von LibRaws Dekoder fuer die offene Datei, ohne die Klammern, die LibRaw
@@ -3405,13 +3411,17 @@ Namespace Services
                     ' hohen Weisspunkt (meist 16383 statt Canons SpecularWhiteLevel, den auch Adobe
                     ' uebernimmt): das Bild kam bis zu 0,8 Blendenstufen zu dunkel, und
                     ' Ausgefressenes wurde nie weiss. Gemessen an 96 Dateien von 40 Modellen.
-                    ' Unbekannte Fassung: es bleibt bei LibRaw.
+                    ' Unbekannte Fassung: es bleibt bei LibRaw. Wo Adobe Canons Wert nicht nimmt
+                    ' (R-Serie, 1D X Mark III), steht ein eigener Eintrag und dieser Weg greift nicht.
                     Dim canonLevels = CanonLevelsFromFile(handle, make, path)
                     If Not canonLevels.HasValue Then Return False
                     levels = (canonLevels.Value.Black, -1, canonLevels.Value.White)
                     fromCanonLayout = True
                 End If
             End If
+            ' Ein Eintrag ohne Werte haelt die Kamera bei LibRaw (siehe LevelOverrides): nichts wird
+            ' geschrieben, und die Pegelabfrage meldet wie ohne Eintrag nichts.
+            If levels.Black = -1 AndAlso levels.Range < 0 AndAlso levels.White < 0 Then Return False
 
             Dim base = FindParamsBase(handle)
             If base < 0 Then
@@ -3436,17 +3446,21 @@ Namespace Services
                 If CameraBaselineTable.LevelColorData.TryGetValue(entryKey, layout) Then
                     read = CanonColorData.TryReadLevels(path, layout.Version, layout.BlackWord, layout.WhiteWord)
                 End If
+                ' Ein Weisspunkt im Eintrag geht dem aus ColorData vor: beim EOS-1D X Mark III stimmt
+                ' Canons Sockel mit Adobe, Canons SpecularWhiteLevel (14008) liegt aber 0,2
+                ' Blendenstufen unter Adobes 16050 und schnitte Zeichnung ab.
                 If read.HasValue Then
                     black = read.Value.Black
-                    levels = (read.Value.Black, -1, read.Value.White)
+                    levels = (read.Value.Black, -1, If(levels.White >= 0, levels.White, read.Value.White))
                     fromColorData = True
                 Else
                     ' Rueckfall: der Block ist nicht lesbar oder hat eine andere Fassung. Der Rand
-                    ' liefert wenigstens den Sockel; der Weisspunkt bleibt dann bei LibRaw.
+                    ' liefert wenigstens den Sockel; der Weisspunkt bleibt dann bei LibRaw, sofern
+                    ' der Eintrag keinen eigenen nennt.
                     DiagnosticLogService.LogAlways("RawDecodeService.LevelOverride",
                         $"{make} {model}, ISO {iso:F0}: ColorData nicht lesbar - Sockel aus dem Rand")
                     black = MeasuredBlackMarker
-                    levels = (MeasuredBlackMarker, -1, -1)
+                    levels = (MeasuredBlackMarker, -1, levels.White)
                 End If
             End If
             If black = MeasuredBlackMarker Then
@@ -3496,7 +3510,8 @@ Namespace Services
         ''' Canons eigene Werte je Aufnahme, also fuer jede ISO-Stufe richtig. Die R6 Mark III
         ''' schreibt bei ISO 100 Sockel 512 und SpecularWhiteLevel 13995, bei ISO 1000 2048 und
         ''' 14351 (Adobe: 14351). Ist der Block nicht lesbar, faellt der Weg auf die Randmessung
-        ''' zurueck, der Weisspunkt bleibt dann bei LibRaw.</summary>
+        ''' zurueck, der Weisspunkt bleibt dann bei LibRaw. Nennt der Eintrag selbst einen
+        ''' Weisspunkt (white), gilt dieser in beiden Faellen statt Canons SpecularWhiteLevel.</summary>
         Public Const ColorDataBlackMarker As Integer = -3
 
         ' Aufbau des Anfangs von libraw_data_t (libraw_types.h): ein Zeiger, danach
@@ -3519,6 +3534,9 @@ Namespace Services
         ' raw_inset_crops[2] mit je cleft, ctop, cwidth, cheight (ushort, 8 Bytes): [0] ab 174,
         ' [1] ab 182 (libraw_types.h des Snapshots, libraw_image_sizes_t).
         Private Const SizesInsetCropOffset As Integer = 174
+        Private Const SizesInsetCropSize As Integer = 8
+        ''' RawImageAspectRatio im Verzeichnis des RAF-Kopfes (Hoehe vor Breite, je ushort).
+        Private Const RafAspectRatioTag As Integer = &H115
         ''' So weit wird nach libraw_rawdata_t gesucht. Unter Linux liegt es bei 193768, unter
         ''' Windows weiter vorn, weil long dort vier Bytes hat.
         Private Const RawdataSearchEnd As Integer = 400000
@@ -3534,9 +3552,6 @@ Namespace Services
         '''
         ''' GEMESSEN wird der Median ueber den oberen Rand (oder den linken, wenn oben keiner ist),
         ''' mit Abstand zum Bild, jede vierte Zeile und dritte Spalte. Plausibel ist er nur mit
-        Private Const SizesInsetCropSize As Integer = 8
-        ''' RawImageAspectRatio im Verzeichnis des RAF-Kopfes (Hoehe vor Breite, je ushort).
-        Private Const RafAspectRatioTag As Integer = &H115
         ''' genug Punkten, enger Streuung und weit unter dem Weisspunkt; ein Rand, der Licht
         ''' abbekommt, faellt damit heraus.</summary>
         Private Shared Function MeasureMaskedBlack(handle As IntPtr) As Integer

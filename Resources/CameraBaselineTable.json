@@ -18,7 +18,7 @@
     "CANONEOS1DSMARKII": -0.15,
     "CANONEOS1DSMARKIII": -0.15,
     "CANONEOS1DX": 0.301,
-    "CANONEOS1DXMARKIII": -0.064,
+    "CANONEOS1DXMARKIII": -0.174,
     "CANONEOS200D": -0.116,
     "CANONEOS20D": 0.024,
     "CANONEOS250D": 0.076,
@@ -69,18 +69,18 @@
     "CANONEOSM6": -0.014,
     "CANONEOSM6MARKII": 0.214,
     "CANONEOSR": -0.198,
-    "CANONEOSR10": -0.01,
+    "CANONEOSR10": -0.164,
     "CANONEOSR100": 0.505,
     "CANONEOSR3": 0.105,
-    "CANONEOSR5": -0.103,
-    "CANONEOSR50": 0.144,
-    "CANONEOSR50V": 0.026,
+    "CANONEOSR5": -0.238,
+    "CANONEOSR50": -0.094,
+    "CANONEOSR50V": -0.235,
     "CANONEOSR5MARKII": -0.296,
-    "CANONEOSR6": 0.058,
+    "CANONEOSR6": -0.038,
     "CANONEOSR6MARKII": -0.101,
     "CANONEOSR6MARKIII": -0.092,
-    "CANONEOSR7": -0.005,
-    "CANONEOSR8": 0.017,
+    "CANONEOSR7": -0.162,
+    "CANONEOSR8": -0.1,
     "CANONEOSR8MARKII": -0.096,
     "CANONEOSREBELT3": 0.018,
     "CANONEOSREBELT6I": 0.094,
@@ -693,12 +693,12 @@
       "shadowTint": 3
     },
     "CANONEOSR6": {
-      "redHue": 2,
+      "redHue": 3,
       "redSaturation": -5,
-      "greenHue": 17,
-      "greenSaturation": 6,
+      "greenHue": 21,
+      "greenSaturation": 10,
       "blueHue": -1,
-      "blueSaturation": -11,
+      "blueSaturation": -10,
       "shadowTint": 2
     },
     "CANONPOWERSHOTSX710HS": {
@@ -914,6 +914,41 @@
       "iso": 400,
       "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
     },
+    "Canon|EOS R10": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 11606 or 14338 depending on the shot, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (15 files, Canonpegel). Black from LibRaw matches Adobe within 1."
+    },
+    "Canon|EOS R5": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 14008 or 14888 depending on ISO, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (4 files, Canonpegel). Black from LibRaw matches Adobe within 1."
+    },
+    "Canon|EOS R50": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 11606 or 14338 depending on the shot, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (4 files, Canonpegel). Black from LibRaw matches Adobe within 1."
+    },
+    "Canon|EOS R50 V": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 511,
+      "librawRange": 15872,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 11708, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (1 file, Canonpegel: 0.69 percent of the area clipped at Canon's value, 0.04 at Adobe's). Black from LibRaw matches Adobe within 1."
+    },
+    "Canon|EOS R6": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 14008 or 14888 depending on ISO, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (28 files, Canonpegel). Black from LibRaw matches Adobe within 1."
+    },
     "Canon|EOS R6 Mark III": {
       "black": -3,
       "colorData": {
@@ -924,6 +959,32 @@
       "librawBlack": 59,
       "librawRange": 16324,
       "source": "Black and white from Canon's ColorData of each file (CTMD track, tag 0x4001, version 66: per-channel black at words 656-659, SpecularWhiteLevel at 661). LibRaw reads version 66 with the layout of version 48 (same length, 3778 words), 20 words off. Measured: black 512 and white 13995 at ISO 100, 2048 and 14351 at ISO 1000; Adobe's DNG of the ISO 1000 file carries WhiteLevel 14351. Fallback: black measured from the masked sensor border."
+    },
+    "Canon|EOS R7": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 13036 to 13660 depending on the shot, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (6 files, Canonpegel). Black from LibRaw matches Adobe within 1."
+    },
+    "Canon|EOS R8": {
+      "black": -1,
+      "range": -1,
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Keeps LibRaw's levels instead of Canon's ColorData: SpecularWhiteLevel 14008 or 14888 depending on ISO, while the raw data run on evenly up to 16383 and Adobe's DNG carries WhiteLevel 16384 (5 files, Canonpegel). Black from LibRaw matches Adobe within 1."
+    },
+    "Canon|EOS-1D X Mark III": {
+      "black": -3,
+      "white": 16050,
+      "colorData": {
+        "version": 32,
+        "black": 806,
+        "white": 811
+      },
+      "librawBlack": 512,
+      "librawRange": 15871,
+      "source": "Black from Canon's ColorData of each file (version 32, per-channel black at words 806-809), white fixed at 16050 like Adobe's DNG instead of Canon's SpecularWhiteLevel 14008 (word 811), which lies 0.2 EV lower and would clip detail (1 file, Canonpegel). Fallback: black measured from the masked sensor border, white stays 16050."
     },
     "Canon|EOS-1Ds Mark III|100": {
       "black": -1,
@@ -942,7 +1003,7 @@
       "source": "white too high in LibRaw for the new compressed format of the ILCE-7M5 (decoder sony_arw6_load_raw, read from LibRaw snapshot 202611 on): LibRaw 1024/39002, the reference DNG of three files 1024/32800 on the same raw scale (Grundbelichtung/rohvergleich.c: DNG = 1.00 x RAW + 0). The lossless files of the same camera (sony_ljpeg_load_raw, 512/16383) are right and keep LibRaw's values."
     }
   },
-  "levelOverridesDescription": "Black level and range above black for cameras LibRaw reads wrongly; always applied, independent of the base exposure setting. Key: normalized maker|model, optionally |ISO (the ISO entry wins and applies only at that ISO) or |decoder, the name of LibRaw's decoder without parentheses (the decoder entry wins over both, for cameras whose formats need different levels). black -1 keeps LibRaw's black level, black -2 measures it per file from the masked sensor border, black -3 reads black and white from Canon's ColorData of the file at the words given under colorData (falling back to the border). range is passed to LibRaw as user_sat, which LibRaw applies after black subtraction; instead of range an entry may give the raw white level (white), and the range is then white minus black. librawBlack and librawRange record what LibRaw reported for the measured file and are not read.",
+  "levelOverridesDescription": "Black level and range above black for cameras LibRaw reads wrongly; always applied, independent of the base exposure setting. Key: normalized maker|model, optionally |ISO (the ISO entry wins and applies only at that ISO) or |decoder, the name of LibRaw's decoder without parentheses (the decoder entry wins over both, for cameras whose formats need different levels). black -1 keeps LibRaw's black level, black -2 measures it per file from the masked sensor border, black -3 reads black and white from Canon's ColorData of the file at the words given under colorData (falling back to the border); a white given in the entry wins over the one from ColorData. An entry with black -1 and neither range nor white sets nothing: it keeps a Canon at LibRaw's levels instead of the ColorData rule below. range is passed to LibRaw as user_sat, which LibRaw applies after black subtraction; instead of range an entry may give the raw white level (white), and the range is then white minus black. librawBlack and librawRange record what LibRaw reported for the measured file and are not read.",
   "canonColorDataLayouts": {
     "7|1251": 715,
     "7|1337": 715,
@@ -969,7 +1030,7 @@
     "65|3778": 656,
     "66|3778": 656
   },
-  "canonColorDataLayoutsDescription": "Where Canon's ColorData (tag 0x4001; in CR2 in the maker notes, in CR3 in the CTMD track) holds the levels, keyed by version|length: the word of the first of four per-channel black levels; NormalWhiteLevel and SpecularWhiteLevel follow, the latter five words after the first black word. Used for every Canon without its own entry in levelOverrides, only for raw data with a colour filter array (not sRAW/mRAW). LibRaw 0.22.2 uses a higher white level for almost all of these (mostly 16383); Canon's SpecularWhiteLevel is what Adobe's DNG carries for most of them. Found by matching Adobe's and LibRaw's levels across 96 files of 40 models on 2026-09-27.",
+  "canonColorDataLayoutsDescription": "Where Canon's ColorData (tag 0x4001; in CR2 in the maker notes, in CR3 in the CTMD track) holds the levels, keyed by version|length: the word of the first of four per-channel black levels; NormalWhiteLevel and SpecularWhiteLevel follow, the latter five words after the first black word. Used for every Canon without its own entry in levelOverrides, only for raw data with a colour filter array (not sRAW/mRAW). LibRaw 0.22.2 uses a higher white level for almost all of these (mostly 16383); Canon's SpecularWhiteLevel is what Adobe's DNG carries for most of them. Not for the R5, R6, R7, R8, R10, R50 and R50 V (Adobe 16384) and the EOS-1D X Mark III (Adobe 16050), whose raw data run on above Canon's value; they have their own entries in levelOverrides. Found by matching Adobe's and LibRaw's levels across 96 files of 40 models on 2026-09-27.",
   "canonColorDataWhiteBalance": {
     "48|3778": 105,
     "64|4528": 105,

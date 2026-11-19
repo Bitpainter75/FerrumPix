@@ -75,6 +75,10 @@
   highlights that never reached full white. They now develop as bright as the camera's other
   files.
 
+- RAW files from the Canon EOS R5, R6, R7, R8, R10, R50, R50 V and EOS-1D X Mark III keep more
+  detail in bright highlights. The brightest parts were cut off too early and turned plain white,
+  although the file still held detail there.
+
 - With the base brightness matched to the camera model, the Hasselblad X2D II now gets a value of
   its own; it had none after the switch to the newer raw library.
 
