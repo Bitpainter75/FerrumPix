@@ -107,9 +107,30 @@ Namespace Services
                 response.EnsureSuccessStatusCode()
                 Dim length = response.Content.Headers.ContentLength
                 If length.HasValue AndAlso length.Value > maxBytes Then Throw New InvalidOperationException("the file is too large")
-                Dim bytes = Await response.Content.ReadAsByteArrayAsync(cancel)
-                If bytes.Length > maxBytes Then Throw New InvalidOperationException("the file is too large")
-                Return bytes
+                ' Die Angabe der Laenge kann fehlen oder falsch sein: gelesen wird deshalb der
+                ' Datenstrom selbst, und zwar nur bis zur Grenze.
+                Using body = Await response.Content.ReadAsStreamAsync(cancel)
+                    Return Await ReadLimitedAsync(body, maxBytes, cancel)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Liest einen Datenstrom bis zu seinem Ende, aber hoechstens <paramref name="maxBytes"/>
+        ''' Bytes. Kommt mehr, wirft es, sobald die Grenze ueberschritten ist, statt den Rest erst
+        ''' in den Speicher zu holen: ein Server ohne oder mit falscher Laengenangabe koennte sonst
+        ''' beliebig viel puffern lassen.</summary>
+        Friend Shared Async Function ReadLimitedAsync(body As IO.Stream, maxBytes As Integer, cancel As CancellationToken) As Task(Of Byte())
+            Dim buffer(81919) As Byte
+            Using collected As New IO.MemoryStream()
+                Do
+                    ' Ohne Rueckkehr in den Kontext des Aufrufers: der Rest der Schleife braucht ihn
+                    ' nicht, und ein Aufrufer, der blockierend wartet, verklemmte sich sonst.
+                    Dim read = Await body.ReadAsync(buffer.AsMemory(0, buffer.Length), cancel).ConfigureAwait(False)
+                    If read <= 0 Then Exit Do
+                    If collected.Length + read > maxBytes Then Throw New InvalidOperationException("the file is too large")
+                    collected.Write(buffer, 0, read)
+                Loop
+                Return collected.ToArray()
             End Using
         End Function
 
