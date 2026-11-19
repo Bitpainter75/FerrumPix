@@ -142,7 +142,7 @@ Eight features use an extra file: selecting an object by clicking it, working by
 
 Enlarging offers five models, from twice to four times, thorough or quick, one that keeps the grain and one for drawings, right in the image size tool of the editor. A switch in the same section lets the graphics card do the work, which finishes several times sooner with the same result.
 
-Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), [SCUNet](https://github.com/cszn/SCUNet) (Apache-2.0), [NAFNet](https://github.com/megvii-research/NAFNet) (MIT), [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (BSD-3-Clause), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models). Automatic image tags use [RAM++](https://github.com/xinyu1205/recognize-anything) (Apache-2.0), fetched straight from [its publisher](https://huggingface.co/anakhiu/ram-plus-onnx-int8). It is the largest of the files, so give it a moment. The one that compares faces is fetched straight from its publisher, the [ONNX Model Zoo](https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8): its weights come from [InsightFace](https://github.com/deepinsight/insightface), which limits them to non-commercial research, so it is not passed on with the others.
+Everything runs on your own machine - nothing is sent anywhere. The files come from [MobileSAM](https://github.com/ChaoningZhang/MobileSAM) (Apache-2.0), [MiDaS](https://github.com/isl-org/MiDaS) (MIT), [LaMa](https://github.com/advimman/lama) (Apache-2.0), [RawForge](https://github.com/rymuelle/RawForge) (MIT, trained on [RawNIND](https://doi.org/10.14428/DVN/DEQCIM), CC BY-SA 4.0), [NAFNet](https://github.com/megvii-research/NAFNet) (MIT), [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (BSD-3-Clause), the [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo) (MIT and Apache-2.0) and [GeoNames](https://www.geonames.org/) (CC BY 4.0), collected with their licences at [FerrumPix-Models](https://github.com/Bitpainter75/FerrumPix-Models). Automatic image tags use [RAM++](https://github.com/xinyu1205/recognize-anything) (Apache-2.0), fetched straight from [its publisher](https://huggingface.co/anakhiu/ram-plus-onnx-int8). It is the largest of the files, so give it a moment. The one that compares faces is fetched straight from its publisher, the [ONNX Model Zoo](https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8): its weights come from [InsightFace](https://github.com/deepinsight/insightface), which limits them to non-commercial research, so it is not passed on with the others.
 
 ## Immich
 
@@ -347,18 +347,17 @@ and notarization may be added.
 The packages are self-contained and bring the .NET runtime with them, so nothing has to be
 installed for that.
 
-libmpv (video) and libraw (RAW development) are needed rather than optional. The Linux
-packages ask for both, the Windows downloads bring them along, and the macOS
-downloads bring libraw; one installed with "brew install libraw" is used instead
-when it is there. Subtitles are not shown.
+libmpv (video) and LibRaw (RAW development) are needed rather than optional. Every
+package brings LibRaw along. libmpv comes with the Windows downloads and the Flatpak,
+the other Linux packages ask for it, and on macOS one installed with Homebrew is used.
+Subtitles are not shown.
 
-libheif opens HEIC and HEIF. The Windows downloads bring it along, on Linux it comes from
-your package manager (the packages recommend it), and macOS reads those files itself.
-Without it they simply stay closed and everything else works.
+libheif opens HEIC, HEIF and AVIF. Every package except the Flatpak brings it along,
+the Flatpak takes it from its runtime, and macOS tries its own reader first.
+Without it those files simply stay closed and everything else works.
 
-libjxl opens and saves JPEG XL. The Windows downloads bring it along, on Linux it comes from your package
-manager (the packages recommend it), and on macOS from Homebrew with
-"brew install jpeg-xl".
+libjxl opens and saves JPEG XL. Every package except the Flatpak brings it along, the
+Flatpak takes it from its runtime.
 
 ## Building from source
 
@@ -371,7 +370,7 @@ dotnet run --project FerrumPix.vbproj
 
 ## Licence
 
-FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), the Nikon, Sony, Pentax and Canon lens identifiers from [ExifTool](https://github.com/exiftool/exiftool) (GPL), [Phosphor Icons](https://github.com/phosphor-icons/core) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe. The map view, once switched on, shows tiles from [OpenStreetMap](https://www.openstreetmap.org/copyright); the map data is © OpenStreetMap contributors under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
+FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), the Nikon, Sony, Pentax and Canon lens identifiers from [ExifTool](https://github.com/exiftool/exiftool) (GPL), [Phosphor Icons](https://github.com/phosphor-icons/core) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0) and [dav1d](https://code.videolan.org/videolan/dav1d) (BSD-2-Clause), and [libjxl](https://github.com/libjxl/libjxl) (BSD-3-Clause). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe. The map view, once switched on, shows tiles from [OpenStreetMap](https://www.openstreetmap.org/copyright); the map data is © OpenStreetMap contributors under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
 
 Project website: [FerrumPix.app](https://ferrumpix.app/)
 

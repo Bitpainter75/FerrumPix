@@ -89,10 +89,13 @@ libraries are part of this package.
   SQLite itself, which that package bundles, is in the public domain.
   https://www.sqlite.org/copyright.html
 
-  Microsoft.ML.OnnxRuntime
+  Microsoft.ML.OnnxRuntime, Microsoft.ML.OnnxRuntime.EP.WebGpu
   Copyright (c) Microsoft Corporation
   MIT License
   https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+  The WebGPU plugin, which runs the models on the graphics card, contains Dawn
+  (BSD 3-Clause License, https://dawn.googlesource.com/dawn) and the further
+  components named in the ThirdPartyNotices.txt of its NuGet package.
 
   MetadataExtractor
   Copyright (c) Drew Noakes and contributors
@@ -209,7 +212,8 @@ next to the file it belongs to.
   MobileSAM - Apache License 2.0
   MiDaS - MIT License
   LaMa - Apache License 2.0
-  SCUNet - Apache License 2.0
+  TreeNet from RawForge - MIT License (trained on the RawNIND dataset of
+  UCLouvain, Creative Commons Attribution-ShareAlike 4.0)
   NAFNet - MIT License (with BasicSR, Apache License 2.0)
   Real-ESRGAN - BSD 3-Clause License
   YuNet (OpenCV Model Zoo) - MIT License
@@ -228,7 +232,8 @@ instead:
   Origin, the chain from the original project to this INT8 conversion, and the
   pinned revision are in the licences that travel with the model files.
 
-One file is not in that collection and is fetched from its publisher instead:
+One more file is not in that collection and is fetched from its publisher
+instead:
 
   ArcFace ResNet100 - https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8
 
@@ -261,7 +266,7 @@ https://operations.osmfoundation.org/policies/tiles/
 7. Optional external programs
 -----------------------------
 
-Not part of this package either, and not linked into it: a separate program that
+Not part of this package either, and not linked into it: separate programs that
 the application starts when the user asks it to.
 
   dnglab, for converting RAW files to DNG
@@ -271,6 +276,14 @@ the application starts when the user asks it to.
   It is run as a command line program, so none of its code becomes part of this
   application. No package ships it; it has to be installed separately, and where
   it is missing the conversion says so while everything else works unchanged.
+
+  G'MIC, for external image filters
+  Copyright (c) the G'MIC contributors (GREYC)
+  CeCILL License, compatible with the GNU General Public License
+  https://gmic.eu/
+  Run as a separate command line program, so none of its code becomes part of
+  this application. No package ships it; where it is missing, the G'MIC entry
+  in the editor has no effect while everything else works unchanged.
 
 
 ================================================================================

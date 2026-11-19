@@ -23,7 +23,7 @@
              Bereich, in dem "Neue Suche" angeklickt wurde. Nur Startordner und Umfang bleiben dem
              Dateisystem vorbehalten: auf einem Server gibt es keinen. -->
         <TextBlock Text="Allgemein" FontWeight="SemiBold"/>
-        <Grid Grid.Row="1" ColumnDefinitions="200,*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
+        <Grid Grid.Row="1" ColumnDefinitions="200,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="10" ColumnSpacing="8">
             <TextBlock Text="Name" VerticalAlignment="Center" Foreground="{DynamicResource FP.Text.Secondary}"/>
             <TextBox Grid.Column="1"
                      Grid.ColumnSpan="2"
@@ -40,15 +40,25 @@
                      Text="{Binding DialogSearchText, Mode=TwoWay}"
                      PlaceholderText="Beispiel: *.jpg *.png oder Meer Strand"
                      MinHeight="36"/>
-            <TextBlock Grid.Row="2" Text="Startordner (optional)" VerticalAlignment="Center"
+            <!-- Die Regeln des Suchtexts, siehe GalleryViewModel.ParseSearchText. Derselbe Text steht
+                 als Kurzhinweis am Suchfeld der Galerie. -->
+            <TextBlock Grid.Row="2"
+                       Grid.Column="1"
+                       Grid.ColumnSpan="2"
+                       Margin="0,-4,0,0"
+                       Text="Mehrere Wörter: eines davon genügt. +Wort muss vorkommen, -Wort darf nicht vorkommen."
+                       TextWrapping="Wrap"
+                       FontSize="{DynamicResource FP.Font.Small}"
+                       Foreground="{DynamicResource FP.Text.Secondary}"/>
+            <TextBlock Grid.Row="3" Text="Startordner (optional)" VerticalAlignment="Center"
                        IsVisible="{Binding IsDialogSourceLocal}"
                        Foreground="{DynamicResource FP.Text.Secondary}"/>
-            <TextBox Grid.Row="2"
+            <TextBox Grid.Row="3"
                      Grid.Column="1"
                      IsVisible="{Binding IsDialogSourceLocal}"
                      Text="{Binding DialogSearchRootFolder, Mode=TwoWay}"
                      MinHeight="36"/>
-            <Button Grid.Row="2"
+            <Button Grid.Row="3"
                     Grid.Column="2"
                     Width="38"
                     Height="36"

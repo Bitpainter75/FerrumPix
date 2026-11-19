@@ -274,6 +274,26 @@ Namespace ViewModels
             _deferredSceneRegionRects.Add(hull)
         End Sub
 
+        ''' <summary>Der Teil von <paramref name="rect"/>, der im Sichtfenster liegt; Empty, wenn
+        ''' dort keine Flaeche von ihm liegt. Ein leeres Sichtfenster heisst "alles sichtbar".
+        '''
+        ''' SKRectI.Intersect zaehlt eine gemeinsame KANTE als Schnitt und liefert dann ein Rechteck
+        ''' der Breite oder Hoehe null, und IsEmpty ist nur fuer (0, 0, 0, 0) wahr. Die vier
+        ''' Streifen, die AddRectDifference um das Sichtfenster herum vormerkt, beruehren es genau
+        ''' an seinen Kanten. Sie galten deshalb bei jedem Layout-Durchlauf als sichtbar, ihre
+        ''' flachen Schnitte vereinigten sich zum ganzen Sichtfenster, und das wurde neu gerendert.
+        ''' Jeder Render zaehlt die Szenenversion hoch und blendet das Zoom-Detail aus; sein
+        ''' naechstes Erscheinen loeste den naechsten Layout-Durchlauf aus. Unter starkem Zoom stand
+        ''' nach jeder Objektaenderung so fast nur noch die vergroesserte Szene da (Nutzerbefund:
+        ''' eine eingefuegte Ebene sah aus wie vor dem Schaerfen, Protokoll: zwei Regionen je 0,7 s
+        ''' ueber Minuten).</summary>
+        Private Shared Function VisibleSceneRegion(rect As SKRectI, viewport As SKRectI) As SKRectI
+            If viewport.IsEmpty Then Return rect
+            Dim visible = SKRectI.Intersect(rect, viewport)
+            If visible.Width <= 0 OrElse visible.Height <= 0 Then Return SKRectI.Empty
+            Return visible
+        End Function
+
         ''' <summary>Holt beim Schwenken ausschließlich die jetzt sichtbaren Teile bereits
         ''' aufgeschobener Szenenänderungen in die Render-Queue. Empty bedeutet wie beim Blit:
         ''' Sichtfenster unbekannt oder das gesamte Bild sichtbar, dann alles rendern.</summary>
@@ -282,7 +302,7 @@ Namespace ViewModels
             Dim viewport = ComputeBlitViewportRect()
             Dim remaining As New List(Of SKRectI)()
             For Each deferredRect In _deferredSceneRegionRects
-                Dim visible = If(viewport.IsEmpty, deferredRect, SKRectI.Intersect(deferredRect, viewport))
+                Dim visible = VisibleSceneRegion(deferredRect, viewport)
                 If visible.IsEmpty Then
                     remaining.Add(deferredRect)
                 Else
@@ -692,7 +712,7 @@ Namespace ViewModels
             End If
 
             Dim viewport = ComputeBlitViewportRect()
-            Dim visible = If(viewport.IsEmpty, dirtyRect, SKRectI.Intersect(dirtyRect, viewport))
+            Dim visible = VisibleSceneRegion(dirtyRect, viewport)
             If visible.IsEmpty Then
                 QueueDeferredSceneRegion(dirtyRect)
                 DiagnosticLogService.LogAlways("Editor.SceneRegion",

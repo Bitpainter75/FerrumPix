@@ -7383,7 +7383,10 @@ Namespace ViewModels
                     ' NEUE Pfade, und bei einem Filterklick sind fast alle schon bekannt. Ein Klick
                     ' im Filter-Popup startete damit genau die vollständige Serversuche, die dieser
                     ' Weg vermeiden soll.
-                    If textQuery.Length = 0 Then Return
+                    ' Mit Minus-Wörtern fragt der Server ohne sie; bleibt nichts übrig, gilt dasselbe
+                    ' wie ohne Text.
+                    Dim serverText = ServerSearchText(textQuery)
+                    If serverText.Length = 0 Then Return
                     ' Personen brauchen beim Server einen separaten Asset-Abruf je Person. Der
                     ' bleibt bewusst dem lokalen Katalog vorbehalten, damit ein Filter-Klick nicht
                     ' unbemerkt eine große Zahl Anfragen startet.
@@ -7391,7 +7394,7 @@ Namespace ViewModels
                     Dim page As Integer = 1
                     Dim added As New List(Of ImageItem)()
                     Do
-                        Dim response = Await ImmichService.SearchAsync(textQuery,
+                        Dim response = Await ImmichService.SearchAsync(serverText,
                             String.Equals(AppSettingsService.NormalizeSearchFavoriteMode(node.FavoriteMode), "Only", StringComparison.OrdinalIgnoreCase),
                             If(node.Ratings IsNot Nothing AndAlso node.Ratings.Count > 0, node.Ratings.Max(), 0), page, thumbnailToken)
                         If searchToken.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
@@ -7453,7 +7456,7 @@ Namespace ViewModels
                                                                   StatusText = String.Format(LocalizationService.T("{0} Treffer"), knownPaths.Count)
                                                               End Sub)
                     End If
-                ElseIf textQuery.Length > 0 AndAlso
+                ElseIf ServerSearchText(textQuery).Length > 0 AndAlso
                        (node.TagQueries Is Nothing OrElse node.TagQueries.Count = 0) AndAlso
                        (node.PersonQueries Is Nothing OrElse node.PersonQueries.Count = 0) AndAlso
                        (node.PlaceQueries Is Nothing OrElse node.PlaceQueries.Count = 0) Then
@@ -7462,7 +7465,7 @@ Namespace ViewModels
                     ' dabei ausschließlich die dazu passenden Cluster geladen, nie die Timeline
                     ' des kompletten Servers.
                     Dim added As New List(Of ImageItem)()
-                    For Each hit In Await NextcloudService.SearchFilesAsync(textQuery, cancellationToken:=thumbnailToken)
+                    For Each hit In Await NextcloudService.SearchFilesAsync(ServerSearchText(textQuery), cancellationToken:=thumbnailToken)
                         If searchToken.IsCancellationRequested OrElse thumbnailToken.IsCancellationRequested Then Return
                         Dim item = ImageItem.CreateNextcloudSearchItem(hit, thumbnailToken)
                         If item IsNot Nothing AndAlso knownPaths.Add(item.FilePath) Then added.Add(item)
@@ -7494,13 +7497,34 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Sucht Namen in Nextcloud-Clustern. Mehrere frei eingegebene Wörter sind wie
-        ''' bei der lokalen Suche eine ODER-Auswahl; Wildcards gelten dagegen nur für Dateinamen.</summary>
+        ''' bei der lokalen Suche eine ODER-Auswahl; Wildcards gelten dagegen nur für Dateinamen.
+        ''' Minus-Wörter fragen den Server nicht: sie grenzen erst die Prüfung je Bild ein.</summary>
         Private Shared Function GetClusterSearchTerms(textQuery As String) As List(Of String)
-            Return SplitSearchTerms(textQuery).
-                Where(Function(term) Not String.Equals(term, "OR", StringComparison.OrdinalIgnoreCase) AndAlso
-                                    Not String.Equals(term, "ODER", StringComparison.OrdinalIgnoreCase) AndAlso
-                                    term.IndexOfAny(New Char() {"*"c, "?"c}) < 0).
+            Return ServerSearchTerms(textQuery).
+                Where(Function(term) Not IsWildcardTerm(term)).
                 Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+        End Function
+
+        ''' <summary>Die Wörter, mit denen ein Server gefragt wird: alle ausser den Minus-Wörtern, ohne
+        ''' Vorzeichen und ohne OR/ODER. Ein Minus-Wort als Suchbegriff brächte genau die Bilder, die
+        ''' es ausschliessen soll; ob ein Servertreffer passt, entscheidet danach der Vergleich je Bild.</summary>
+        Private Shared Function ServerSearchTerms(textQuery As String) As List(Of String)
+            Return ParseSearchText(textQuery).Groups.SelectMany(Function(group) group).
+                Where(Function(term) term.Sign >= 0 AndAlso
+                                    Not String.Equals(term.Text, "OR", StringComparison.OrdinalIgnoreCase) AndAlso
+                                    Not String.Equals(term.Text, "ODER", StringComparison.OrdinalIgnoreCase)).
+                Select(Function(term) term.Text).ToList()
+        End Function
+
+        ''' <summary>Der Suchtext für eine Serverabfrage. Ohne Vorzeichen bleibt er unverändert, mit
+        ''' ihnen sind es die Wörter aus <see cref="ServerSearchTerms"/>; leer, wenn nur Minus-Wörter
+        ''' darin stehen.</summary>
+        Private Shared Function ServerSearchText(textQuery As String) As String
+            Dim query = ParseSearchText(textQuery)
+            If Not query.Groups.Any(Function(group) group.Any(Function(term) term.Sign <> 0)) Then
+                Return If(textQuery, "").Trim()
+            End If
+            Return String.Join(" ", ServerSearchTerms(textQuery))
         End Function
 
         ''' <summary>Gibt nur die IDs der Cluster zurück, deren sichtbarer Name zum Suchwort passt.
@@ -9068,30 +9092,48 @@ Namespace ViewModels
                 Return New List(Of String)()
             End If
 
-            Dim wildcardPatterns = GetWildcardPatterns(textQuery)
-            If wildcardPatterns.Count > 0 Then
-                Return wildcardPatterns.SelectMany(Function(pattern) GetImageWildcardEnumerationPatterns(pattern)).
-                    Distinct(StringComparer.Ordinal).ToList()
-            End If
-
-            Return New List(Of String)()
+            Dim eachRequired = False
+            Dim wildcardPatterns = GetWildcardPatterns(textQuery, eachRequired)
+            Dim result As New List(Of String)()
+            For Each pattern In wildcardPatterns
+                Dim enumeration = GetImageWildcardEnumerationPatterns(pattern)
+                ' Bei einer ODER-Liste muss JEDES Muster in die Vorauswahl, sonst fallen die
+                ' Treffer des fehlenden weg ("IMG_* *.png" verlor sonst IMG_0001.jpg). Ein Muster
+                ' ohne Bildendung laesst sich nicht aufzaehlen, also gibt es dann keine Vorauswahl.
+                ' Muss jedes Muster passen, genuegt dagegen jedes einzelne.
+                If enumeration.Count = 0 Then
+                    If eachRequired Then Continue For
+                    Return New List(Of String)()
+                End If
+                result.AddRange(enumeration)
+            Next
+            Return result.Distinct(StringComparer.Ordinal).ToList()
         End Function
 
-        ''' <summary>Die Eingabe als reine Dateimusterliste, oder leer.
+        ''' <summary>Die Dateimuster, die der Ordnerdurchlauf als Vorauswahl nehmen darf, oder leer.
         '''
-        ''' Sie gilt NUR, wenn jedes Wort ein Muster ist. Mehrere wirken dann als ODER:
+        ''' Ohne Vorzeichen gilt sie NUR, wenn jedes Wort ein Muster ist. Mehrere wirken dann als ODER:
         ''' <c>*.jpg *.png</c> heisst JPG oder PNG. Ein einzelnes Muster gehoert genauso dazu - es
         ''' fiel hier einmal heraus, und damit verlor <c>*.jpg</c> die gezielte Dateiauswahl: der
         ''' Suchlauf zaehlte danach jeden Bildpfad auf und schickte jeden davon durch die
-        ''' vollstaendige Bedingungspruefung samt Katalogzugriff.
+        ''' vollstaendige Bedingungspruefung samt Katalogzugriff. Ein Mischtext wie "urlaub *.jpg"
+        ''' faellt nicht hierunter.
         '''
-        ''' Ein Mischtext wie "urlaub *.jpg" faellt nicht hierunter; fuer ihn gilt die gewoehnliche
-        ''' Regel, nach der mehrere freie Woerter eine ODER-Auswahl bilden.</summary>
-        Private Shared Function GetWildcardPatterns(textQuery As String) As List(Of String)
-            Dim terms = SplitSearchTerms(textQuery)
-            Dim patterns = terms.Where(Function(term) term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0).ToList()
-            If patterns.Count = 0 OrElse patterns.Count <> terms.Count Then Return New List(Of String)()
-            Return patterns
+        ''' Mit Vorzeichen zaehlen nur die Muster mit Plus (<paramref name="eachRequired"/>): jedes
+        ''' davon muss passen. Ein Muster mit Minus hiesse als Aufzaehlungsmuster das Gegenteil
+        ''' dessen, was es meint, und bleibt der Pruefung je Bild ueberlassen.</summary>
+        Private Shared Function GetWildcardPatterns(textQuery As String, ByRef eachRequired As Boolean) As List(Of String)
+            eachRequired = False
+            Dim query = ParseSearchText(textQuery)
+            If query.HasExplicitOr Then Return New List(Of String)()
+            Dim terms = query.Groups(0)
+            If terms.Any(Function(term) term.Sign <> 0) Then
+                eachRequired = True
+                Return terms.Where(Function(term) term.Sign > 0 AndAlso IsWildcardTerm(term.Text)).
+                    Select(Function(term) term.Text).ToList()
+            End If
+            If terms.Count = 0 OrElse Not terms.All(Function(term) IsWildcardTerm(term.Text)) Then Return New List(Of String)()
+            Return terms.Select(Function(term) term.Text).ToList()
         End Function
 
         Private Function GetImageWildcardEnumerationPatterns(pattern As String) As List(Of String)
@@ -9230,10 +9272,7 @@ Namespace ViewModels
         ''' Wortvorrat. Neben dem kanonischen englischen Modellbegriff kommt die Anzeigeform dazu,
         ''' damit beispielsweise sowohl "dog" als auch "Hund" denselben Treffer finden.
         '''
-        ''' Unterstützt AND/OR-Verknüpfung mehrerer Suchbegriffe: " OR "/" ODER " (Groß-/Kleinschreibung
-        ''' egal) trennt Begriffs-GRUPPEN (mind. eine muss zutreffen), innerhalb einer Gruppe müssen
-        ''' alle durch Leerzeichen getrennten Begriffe zutreffen (AND) - Anführungszeichen erlauben
-        ''' Begriffe mit Leerzeichen. Wildcard (*/?) funktioniert weiterhin pro Einzelbegriff.</summary>
+        ''' Die Regeln des Suchtexts stehen bei <see cref="ParseSearchText"/>.</summary>
         Private Shared Function MatchesSavedSearchText(filePath As String, tags As IEnumerable(Of String),
                                                        describingText As String, textQuery As String) As Boolean
             If String.IsNullOrWhiteSpace(textQuery) Then Return True
@@ -9241,52 +9280,111 @@ Namespace ViewModels
             Dim haystack = fileName & " " & String.Join(" ", If(tags, Enumerable.Empty(Of String)())) &
                            " " & String.Join(" ", AiSearchTermsFor(filePath)) &
                            " " & If(describingText, "")
+            Return MatchesParsedSearchText(ParseSearchText(textQuery), fileName, haystack)
+        End Function
 
-            Dim wildcardPatterns = GetWildcardPatterns(textQuery)
-            If wildcardPatterns.Count > 0 Then
-                Return wildcardPatterns.Any(Function(pattern) MatchesSingleSearchTerm(pattern, fileName, haystack))
+        ''' <summary>Ein Suchbegriff samt Vorzeichen: 1 heisst "muss vorkommen" (<c>+Wort</c>), -1
+        ''' "darf nicht vorkommen" (<c>-Wort</c>), 0 ein freies Wort ohne Zeichen.</summary>
+        Private Structure SearchTerm
+            Public Text As String
+            Public Sign As Integer
+        End Structure
+
+        ''' <summary>Der zerlegte Suchtext: eine Gruppe, oder mehrere, wenn ein ausdrueckliches
+        ''' OR/ODER darin steht.</summary>
+        Private NotInheritable Class ParsedSearchText
+            Public ReadOnly Groups As New List(Of List(Of SearchTerm))()
+            Public HasExplicitOr As Boolean
+
+            Public ReadOnly Property IsEmpty As Boolean
+                Get
+                    Return Groups.All(Function(group) group.Count = 0)
+                End Get
+            End Property
+        End Class
+
+        Private Shared ReadOnly ExplicitOrPattern As New Regex("\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase)
+
+        ''' <summary>Zerlegt den freien Suchtext. Er gilt gegen Dateiname, Stichwoerter, KI-Begriffe
+        ''' und Katalogtexte, in dieser Reihenfolge der Regeln:
+        '''
+        ''' - <c>+Wort</c> muss vorkommen, <c>-Wort</c> darf nicht vorkommen. So sucht man Bilder mit
+        '''   ALLEN Stichwoertern: <c>+Urlaub +Strand -Regen</c>.
+        ''' - Freie Woerter ohne Zeichen sind eine ODER-Liste: "Meer Strand" findet Meer ODER Strand.
+        '''   Stehen sie neben Woertern mit Zeichen, muss zusaetzlich mindestens eines treffen.
+        ''' - Ein ausdrueckliches OR/ODER trennt Gruppen, von denen eine zutreffen muss; innerhalb einer
+        '''   Gruppe muessen dann ALLE freien Woerter treffen.
+        '''
+        ''' Ein Ausdruck in Anfuehrungszeichen bleibt zusammen, auch mit Zeichen davor
+        ''' (<c>+"New York"</c>). Ein einzelnes + oder - ist kein Zeichen, sondern Text, und ein
+        ''' Bindestrich mitten im Wort ebenso. Platzhalter (* und ?) gelten je Wort und nur fuer den
+        ''' Dateinamen, auch mit Zeichen (<c>-*.png</c>).</summary>
+        Private Shared Function ParseSearchText(textQuery As String) As ParsedSearchText
+            Dim result As New ParsedSearchText()
+            Dim text = If(textQuery, "").Trim()
+            result.HasExplicitOr = ExplicitOrPattern.IsMatch(text)
+            If result.HasExplicitOr Then
+                For Each group In ExplicitOrPattern.Split(text)
+                    result.Groups.Add(SplitSearchTerms(group))
+                Next
+            Else
+                result.Groups.Add(SplitSearchTerms(text))
             End If
-
-            ' Mehrere frei eingegebene Begriffe sind eine bequeme ODER-Liste: "Meer Strand"
-            ' findet daher Bilder mit Meer ODER Strand. Ein Begriff in Anführungszeichen bleibt
-            ' zusammen, und das explizite OR/ODER wird weiterhin unten gruppenweise ausgewertet.
-            Dim implicitOrTerms = GetImplicitOrSearchTerms(textQuery)
-            If implicitOrTerms.Count > 1 Then
-                Return implicitOrTerms.Any(Function(term) MatchesSingleSearchTerm(term, fileName, haystack))
-            End If
-
-            Dim groups = Regex.Split(textQuery.Trim(), "\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase)
-            For Each group In groups
-                If MatchesAllSearchTerms(group, fileName, haystack) Then Return True
-            Next
-            Return False
+            Return result
         End Function
 
         ''' <summary>Zerlegt eine Eingabe in ihre Suchbegriffe. Ein Ausdruck in Anfuehrungszeichen
         ''' bleibt zusammen, sonst trennen Leerzeichen. EINE Stelle fuer alle Aufrufer: mit einer
         ''' eigenen Fassung je Stelle zerfaellt derselbe Text irgendwann verschieden, und dann findet
         ''' die Vorauswahl der Dateien etwas anderes als der Vergleich je Bild.</summary>
-        Private Shared Function SplitSearchTerms(textQuery As String) As List(Of String)
-            Return Regex.Matches(If(textQuery, "").Trim(), """[^""]*""|\S+").
-                Cast(Of Match)().Select(Function(match) match.Value.Trim(""""c)).
-                Where(Function(term) Not String.IsNullOrWhiteSpace(term)).ToList()
-        End Function
-
-        Private Shared Function GetImplicitOrSearchTerms(textQuery As String) As List(Of String)
-            If Regex.IsMatch(If(textQuery, ""), "\s+(?:OR|ODER)\s+", RegexOptions.IgnoreCase) Then
-                Return New List(Of String)()
-            End If
-            Return SplitSearchTerms(textQuery)
-        End Function
-
-        Private Shared Function MatchesAllSearchTerms(group As String, fileName As String, haystack As String) As Boolean
-            Dim terms = SplitSearchTerms(group)
-            If terms.Count = 0 Then Return True
-
-            For Each term In terms
-                If Not MatchesSingleSearchTerm(term, fileName, haystack) Then Return False
+        Private Shared Function SplitSearchTerms(textQuery As String) As List(Of SearchTerm)
+            Dim terms As New List(Of SearchTerm)()
+            For Each match As Match In Regex.Matches(If(textQuery, "").Trim(), "[+-]?""[^""]*""|\S+")
+                Dim value = match.Value
+                Dim sign = 0
+                If value.Length > 1 AndAlso (value(0) = "+"c OrElse value(0) = "-"c) Then
+                    sign = If(value(0) = "+"c, 1, -1)
+                    value = value.Substring(1)
+                End If
+                value = value.Trim(""""c)
+                If String.IsNullOrWhiteSpace(value) Then Continue For
+                terms.Add(New SearchTerm With {.Text = value, .Sign = sign})
             Next
-            Return True
+            Return terms
+        End Function
+
+        Private Shared Function IsWildcardTerm(term As String) As Boolean
+            Return term.IndexOf("*"c) >= 0 OrElse term.IndexOf("?"c) >= 0
+        End Function
+
+        Private Shared Function MatchesParsedSearchText(query As ParsedSearchText, fileName As String, haystack As String) As Boolean
+            If query.IsEmpty Then Return True
+            Dim freeTermsAsAny = Not query.HasExplicitOr
+            Return query.Groups.Any(Function(group) MatchesSearchGroup(group, fileName, haystack, freeTermsAsAny))
+        End Function
+
+        ''' <summary>Eine Gruppe trifft, wenn jedes Plus-Wort vorkommt, kein Minus-Wort, und von den
+        ''' freien Woertern eines (<paramref name="freeTermsAsAny"/>) oder alle.</summary>
+        Private Shared Function MatchesSearchGroup(group As List(Of SearchTerm), fileName As String, haystack As String,
+                                                   freeTermsAsAny As Boolean) As Boolean
+            Dim hasFree = False
+            Dim freeHit = False
+            For Each term In group
+                Dim hit = MatchesSingleSearchTerm(term.Text, fileName, haystack)
+                If term.Sign > 0 Then
+                    If Not hit Then Return False
+                ElseIf term.Sign < 0 Then
+                    If hit Then Return False
+                Else
+                    hasFree = True
+                    If hit Then
+                        freeHit = True
+                    ElseIf Not freeTermsAsAny Then
+                        Return False
+                    End If
+                End If
+            Next
+            Return Not hasFree OrElse freeHit OrElse Not freeTermsAsAny
         End Function
 
         Private Shared Function MatchesSingleSearchTerm(term As String, fileName As String, haystack As String) As Boolean
@@ -11674,8 +11772,11 @@ Namespace ViewModels
 
             ' Steckt der Text als Katalogsuche im Knoten, hat die schon gesiebt - nach ihren eigenen
             ' Regeln, die dieser einfache Vergleich nicht kennt (siehe _catalogTextQuery).
-            If Not String.IsNullOrEmpty(_searchText) AndAlso _catalogTextQuery.Length = 0 Then
-                filtered = filtered.Where(Function(i) i.SearchText.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+            ' Es gelten dieselben Regeln wie dort (ParseSearchText): mehrere Wörter als ODER-Liste,
+            ' +Wort muss vorkommen, -Wort darf nicht. Zerlegt wird einmal, nicht je Bild.
+            If Not String.IsNullOrWhiteSpace(_searchText) AndAlso _catalogTextQuery.Length = 0 Then
+                Dim parsedSearch = ParseSearchText(_searchText)
+                filtered = filtered.Where(Function(i) MatchesParsedSearchText(parsedSearch, i.FileName, i.SearchText))
             End If
 
             If _filterFavorite = "Only" Then

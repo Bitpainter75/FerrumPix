@@ -831,7 +831,8 @@ Namespace ViewModels
                        _creatingAdjustmentLayer OrElse
                        _pendingLayerModelRuns > 0 OrElse _saving OrElse _fullImageModelRunning OrElse
                        _autoGeometryRunning OrElse _layerImportRunning OrElse _presetImportRunning OrElse
-                       _edgeBackgroundRunning OrElse _modelDenoiseRunning OrElse _modelDenoiseRebuilding
+                       _edgeBackgroundRunning OrElse _modelDenoiseRunning OrElse _modelDenoiseRebuilding OrElse
+                       _clipboardWorkCount > 0
             End Get
         End Property
 
@@ -14282,9 +14283,21 @@ Namespace ViewModels
 
             Dim targetPath = CreateSelectionAssetTempPath("full-copy")
             Dim adjustments = GetCurrentAdjustments()
-            Dim copied = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adjustments,
-                                                                              100, preserveMetadata:=False,
-                                                                              workingFull:=CloneWorkingFullForRender()))
+            Dim copyText = LocalizationService.T("Bild wird kopiert...")
+            StatusText = copyText
+            Dim copied As Boolean
+            Using BeginClipboardWork(copyText)
+                Try
+                    copied = Await Task.Run(Function() ImageProcessor.SaveImage(RenderSourcePath, targetPath, adjustments,
+                                                                                  100, preserveMetadata:=False,
+                                                                                  workingFull:=CloneWorkingFullForRender()))
+                Catch ex As Exception
+                    ' Etwa ein Dokumentwechsel mittendrin. Bisher lief die Ausnahme bis in die
+                    ' Oberflaeche durch; jetzt ist es ein gewoehnliches "fehlgeschlagen".
+                    DiagnosticLogService.LogException("Editor.CopyCurrentImage", ex)
+                    copied = False
+                End Try
+            End Using
             If Not copied Then
                 Try
                     If File.Exists(targetPath) Then File.Delete(targetPath)
@@ -14346,6 +14359,68 @@ Namespace ViewModels
             Return tempPath
         End Function
 
+        ' ── Warteanzeige fuer Kopieren und Einfuegen ─────────────────────────────
+        '
+        ' STRG+C rechnet das Bild in voller Groesse, bei einer grossen RAW mit Anpassungen eine
+        ' Sekunde und mehr, und STRG+V wartet darauf. Ohne Anzeige sah das aus wie ein Haenger. Es
+        ' ist DIESELBE Anzeige wie bei den anderen langen Wegen (IsBusy, nach der Viertelsekunde),
+        ' kein eigener Stil. Gezaehlt wird, weil sich Kopie, Ablage in der System-Zwischenablage
+        ' und ein wartendes Einfuegen ueberlappen; jede Stelle haelt ihren eigenen Anteil.
+
+        ''' <summary>Wie viele Kopier- und Einfuegeschritte gerade laufen. Zaehlt in IsBusy. Nur auf
+        ''' dem UI-Faden anfassen.</summary>
+        Private _clipboardWorkCount As Integer = 0
+
+        ''' <summary>Steigt bei jedem Dokumentwechsel. Ein Anteil aus der Zeit davor gibt beim Ende
+        ''' nichts mehr zurueck: der Zaehler ist dann schon auf null gestellt, und eine Kopie, die
+        ''' das alte Bild noch zu Ende rechnet, darf die Anzeige nicht unter null ziehen.</summary>
+        Private _clipboardWorkEpoch As Integer = 0
+
+        ''' <summary>Ein Anteil an der Warteanzeige. Dispose gibt ihn zurueck, ein zweites Dispose
+        ''' tut nichts. Gedacht fuer Using: so endet er auch bei Fehler oder Abbruch.</summary>
+        Private NotInheritable Class ClipboardWorkLease
+            Implements IDisposable
+
+            Private _owner As EditorViewModel
+            Private ReadOnly _epoch As Integer
+
+            Public Sub New(owner As EditorViewModel, epoch As Integer)
+                _owner = owner
+                _epoch = epoch
+            End Sub
+
+            Public Sub Dispose() Implements IDisposable.Dispose
+                Dim owner = _owner
+                _owner = Nothing
+                owner?.EndClipboardWork(_epoch)
+            End Sub
+        End Class
+
+        ''' <summary>Beginn eines Kopier- oder Einfuegeschritts. <paramref name="reason"/> wird der Text
+        ''' der Anzeige, aber nur, wenn nicht schon etwas anderes laeuft: dessen Grund gilt weiter.
+        ''' Leer laesst den Text, wie er ist (ein Einfuegen, das auf die Kopie wartet, behaelt deren
+        ''' Wort).</summary>
+        Public Function BeginClipboardWork(Optional reason As String = Nothing) As IDisposable
+            If Not String.IsNullOrEmpty(reason) AndAlso Not IsBusy Then SetBusyReason(reason)
+            _clipboardWorkCount += 1
+            RefreshBusyState()
+            Return New ClipboardWorkLease(Me, _clipboardWorkEpoch)
+        End Function
+
+        Private Sub EndClipboardWork(epoch As Integer)
+            If epoch <> _clipboardWorkEpoch OrElse _clipboardWorkCount <= 0 Then Return
+            _clipboardWorkCount -= 1
+            RefreshBusyState()
+        End Sub
+
+        ''' <summary>Beim Dokumentwechsel: alle Anteile verfallen, die Anzeige geht sofort weg.</summary>
+        Private Sub ResetClipboardWork()
+            _clipboardWorkEpoch += 1
+            If _clipboardWorkCount = 0 Then Return
+            _clipboardWorkCount = 0
+            RefreshBusyState()
+        End Sub
+
         ''' <summary>Die gerade laufende Kopie; Strg+V wartet auf sie (<see cref="WaitForSelectionCopyAsync"/>).</summary>
         Private _selectionCopyPending As Task(Of String) = Nothing
         ''' <summary>Zaehlt jede Kopie und jeden Dokumentwechsel. Eine Kopie, die fertig wird, nachdem
@@ -14388,7 +14463,10 @@ Namespace ViewModels
             StatusText = LocalizationService.T("Auswahl wird kopiert...")
             Dim placement = job.Placement
             Dim targetPath = job.TargetPath
-            Dim ok = Await Task.Run(Function() RenderSelectionCrop(job))
+            Dim ok As Boolean
+            Using BeginClipboardWork(LocalizationService.T("Auswahl wird kopiert..."))
+                ok = Await Task.Run(Function() RenderSelectionCrop(job))
+            End Using
             If generation <> Volatile.Read(_selectionCopyGeneration) Then Return Nothing
             If Not ok Then
                 StatusText = LocalizationService.T("Auswahl kopieren fehlgeschlagen")
@@ -22784,6 +22862,8 @@ Namespace ViewModels
             Interlocked.Increment(_selectionCopyGeneration)
             _selectionCopyPending = Nothing
             _fullImageClipboardPath = Nothing
+            ' Ihre Warteanzeige geht mit ihr, sonst stuende sie ueber dem neuen Bild.
+            ResetClipboardWork()
             ' Die Zwischenstände des Objekt-Malens liegen im selben Ordner und gehen mit ihm - und
             ' mit ihnen ihre Kopien im Speicher.
             _objectPaintFiles.Clear()

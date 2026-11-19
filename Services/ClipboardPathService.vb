@@ -31,6 +31,16 @@ Namespace Services
         ''' Wird beim internen Lesen zuerst geprüft, damit Kopieren/Einfügen von Immich-Items round-trippt.
         Private Shared ReadOnly InternalPathsFormat As DataFormat(Of String) = DataFormat.CreateStringApplicationFormat("FerrumPixInternalPaths")
 
+        ''' <summary>Fertige PNG-Bytes unter dem Namen, den X11 fuer Bilddaten anbietet. Unter X11
+        ''' kodiert Avalonia ein abgelegtes <c>DataFormat.Bitmap</c> bei JEDER Anfrage eines anderen
+        ''' Programms neu als PNG, und zwar synchron auf dem UI-Faden (dekompiliert:
+        ''' <c>SelectionDataProvider.TryGetDataAsBytes</c>, <c>Bitmap.Save</c> mit
+        ''' <c>PngBitmapEncoderOptions.Default</c>). Ein Verlauf der Zwischenablage wie der der
+        ''' Plasma-Oberflaeche fragt jedes neue Bild sofort ab; bei einem ganzen Foto stand die
+        ''' Oberflaeche dafuer Sekunden (Nutzerbefund: neun Sekunden bei 20 Megapixeln). Die Datei
+        ''' des Editors IST schon ein PNG; ihre Bytes gehen unveraendert hinaus, kodiert wird nichts.</summary>
+        Private Shared ReadOnly PngBytesFormat As DataFormat(Of Byte()) = DataFormat.CreateBytesPlatformFormat("image/png")
+
         ''' <summary>Die Bilddaten einer Datei für die Zwischenablage. Liegt dasselbe Bild im
         ''' Ebenenspeicher (der Editor legt eine kopierte Auswahl dort ab), wird es als Speicherkopie
         ''' übernommen statt die eben geschriebene Datei wieder zu dekodieren. Auf jedem Faden.</summary>
@@ -47,6 +57,37 @@ Namespace Services
                 End If
             End Using
             Return New Avalonia.Media.Imaging.Bitmap(path)
+        End Function
+
+        ''' <summary>Gehen die Bilddaten als fertige PNG-Bytes hinaus statt als Bitmap? Nur unter
+        ''' Linux, wo die Anwendung ueber X11 laeuft und dort das Neukodieren droht (siehe
+        ''' <see cref="PngBytesFormat"/>), und nur fuer eine Datei, die schon ein PNG ist. Die anderen
+        ''' Plattformen setzen ihre eigenen Formate aus dem Bitmap zusammen und behalten es.</summary>
+        Private Shared Function UsesPngBytesForImage(path As String) As Boolean
+            Return OperatingSystem.IsLinux() AndAlso
+                   String.Equals(IO.Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Die Bilddaten, die FerrumPix SELBST als PNG-Bytes abgelegt hat, wieder als Bitmap.
+        ''' Fuer das Einfuegen, wenn die Zwischendatei dazu nicht mehr existiert (Bildwechsel): mit dem
+        ''' Bitmap fand <c>TryGetBitmapAsync</c> sie, die Bytes muss jemand selbst lesen. Dekodiert
+        ''' wird im Hintergrund. Nothing, wenn keine solchen Bytes da sind.</summary>
+        Public Shared Async Function TryReadOwnPngBitmapAsync(clipboard As IClipboard) As Task(Of Avalonia.Media.Imaging.Bitmap)
+            If clipboard Is Nothing Then Return Nothing
+            Try
+                Dim transfer = Await clipboard.TryGetInProcessDataAsync()
+                If transfer Is Nothing OrElse Not transfer.Contains(PngBytesFormat) Then Return Nothing
+                Dim bytes = Await transfer.TryGetValueAsync(PngBytesFormat)
+                If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
+                Return Await Task.Run(Function()
+                                          Using stream = New IO.MemoryStream(bytes, writable:=False)
+                                              Return New Avalonia.Media.Imaging.Bitmap(stream)
+                                          End Using
+                                      End Function)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Clipboard.ReadOwnPng", ex)
+                Return Nothing
+            End Try
         End Function
 
         ''' <param name="includeImage">Legt zu EINER Bilddatei auch ihre Bilddaten in die
@@ -72,10 +113,15 @@ Namespace Services
             ' Die Bilddaten VORHER und im Hintergrund: bei einem vollen Foto ist das ein Bild mit
             ' Dutzenden Megapixeln, und das Dekodieren stand bisher auf dem UI-Faden.
             Dim imageData As Avalonia.Media.Imaging.Bitmap = Nothing
+            Dim pngBytes As Byte() = Nothing
             If includeImage AndAlso localPaths.Count = 1 AndAlso IO.File.Exists(localPaths(0)) Then
                 Dim imagePath = localPaths(0)
                 Try
-                    imageData = Await Task.Run(Function() LoadClipboardBitmap(imagePath))
+                    If UsesPngBytesForImage(imagePath) Then
+                        pngBytes = Await Task.Run(Function() IO.File.ReadAllBytes(imagePath))
+                    Else
+                        imageData = Await Task.Run(Function() LoadClipboardBitmap(imagePath))
+                    End If
                 Catch ex As Exception
                     DiagnosticLogService.LogException("Clipboard.CopyImage", ex)
                 End Try
@@ -89,6 +135,9 @@ Namespace Services
                     ' NICHT freigeben: die Zwischenablage liest die Daten erst, wenn ein
                     ' Programm sie anfragt.
                     If imageData IsNot Nothing Then firstItem.Set(DataFormat.Bitmap, imageData)
+                    ' NICHT zusaetzlich als Bitmap: X11 bediente "image/png" dann wieder aus dem
+                    ' Bitmap und kodierte doch auf dem UI-Faden (siehe PngBytesFormat).
+                    If pngBytes IsNot Nothing Then firstItem.Set(PngBytesFormat, pngBytes)
                 End Sub)
 
             If transfer.Items.Count = 0 Then

@@ -310,6 +310,7 @@
                                      Margin="10,0,0,2"
                                      Text="{Binding SearchText}"
                                      VerticalContentAlignment="Center"
+                                     ToolTip.Tip="Mehrere Wörter: eines davon genügt. +Wort muss vorkommen, -Wort darf nicht vorkommen."
                                      KeyDown="OnSearchBoxKeyDown"/>
                             <Button Grid.Column="2"
                                     Classes="ghost"

@@ -89,10 +89,13 @@ libraries are part of this package.
   SQLite itself, which that package bundles, is in the public domain.
   https://www.sqlite.org/copyright.html
 
-  Microsoft.ML.OnnxRuntime
+  Microsoft.ML.OnnxRuntime, Microsoft.ML.OnnxRuntime.EP.WebGpu
   Copyright (c) Microsoft Corporation
   MIT License
   https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+  The WebGPU plugin, which runs the models on the graphics card, contains Dawn
+  (BSD 3-Clause License, https://dawn.googlesource.com/dawn) and the further
+  components named in the ThirdPartyNotices.txt of its NuGet package.
 
   MetadataExtractor
   Copyright (c) Drew Noakes and contributors
@@ -123,9 +126,9 @@ libraries are part of this package.
   Copyright (c) 2008-2024 LibRaw LLC
   Used under the GNU Lesser General Public License, version 2.1
   https://www.libraw.org/about
-  Bundled on Windows, on macOS, in the AppImage and in the portable Linux ZIP.
-  The deb, rpm and AUR packages take it from the distribution, the Flatpak
-  builds it as its own module. License text: licenses/libraw/ in this package.
+  Bundled in every package: on Windows, on macOS and in the AppImage, the
+  portable Linux ZIP and the deb, rpm and AUR packages; the Flatpak builds it as
+  its own module. License text: licenses/libraw/ in this package.
 
   Corresponding source for the bundled LibRaw build is the unmodified LibRaw
   source named in licenses/libraw/, either a release from
@@ -151,14 +154,25 @@ libraries are part of this package.
   are in licenses/libraw/.
   This software is based in part on the work of the Independent JPEG Group.
 
+  libomp (LLVM OpenMP runtime)
+  Copyright (c) the LLVM Project contributors
+  Used under the Apache License 2.0 with LLVM Exceptions
+  https://github.com/llvm/llvm-project/tree/main/openmp
+  Statically linked and hidden in the bundled LibRaw on Linux and macOS, where
+  it spreads the RAW development over several cores. Version, source URL,
+  checksum and license text (LICENSE.libomp.txt) are in licenses/libraw/.
+
   libmpv (mpv)
   Copyright (c) the mpv developers
   Used under the GNU General Public License, version 2 or later
   https://github.com/mpv-player/mpv/blob/master/LICENSE.GPL
   Bundled on Windows and in the Flatpak. The other Linux packages take it from
-  the distribution package. On Windows, license texts and the exact build this
-  package ships, including its version, upstream commit and build options, are
-  in licenses/mpv/ in this package.
+  the distribution package; on macOS one installed with Homebrew is used. On
+  Windows, license texts and the exact build this package ships, including its
+  version, upstream commit and build options, are in licenses/mpv/ in this
+  package. The Windows build has FFmpeg, libass, libplacebo and further
+  libraries linked in, and brings Microsoft's d3dcompiler_43.dll along; the
+  build recipe named in licenses/mpv/ lists every one of them.
 
   Corresponding source for the bundled libmpv build is available from
   https://github.com/mpv-player/mpv at the commit named in licenses/mpv/.
@@ -192,15 +206,15 @@ libraries are part of this package.
   Copyright (c) struktur AG and the libheif contributors
   Used under the GNU Lesser General Public License, version 3 or later
   https://github.com/strukturag/libheif
-  Bundled on Windows, in the AppImage and in the portable Linux ZIP, where it
-  reads HEIC and HEIF files. The deb, rpm and AUR packages take it from the
-  distribution. On macOS it is bundled as well, as a fallback behind the reader
-  the system brings along. It is loaded dynamically and can be replaced by
-  overwriting libheif.dll or libheif.so.1; on macOS a libheif.dylib in the
-  system search path, /opt/homebrew/lib or /usr/local/lib is taken before the
-  bundled one. License texts and
-  the exact build this package ships, including versions, source checksums and
-  build options, are in licenses/libheif/ in this package.
+  Bundled on Windows and in every Linux package except the Flatpak (AppImage,
+  portable ZIP, deb, rpm and AUR), where it reads HEIC, HEIF and AVIF files.
+  The Flatpak takes it from its runtime. On macOS it is bundled as well, as a
+  fallback behind the reader the system brings along. It is loaded dynamically
+  and can be replaced by overwriting libheif.dll or libheif.so.1; on macOS a
+  libheif.dylib in the system search path, /opt/homebrew/lib or /usr/local/lib
+  is taken before the bundled one. License texts and the exact build this
+  package ships, including versions, source checksums and build options, are in
+  licenses/libheif/ in this package.
 
   libde265
   Copyright (c) struktur AG and the libde265 contributors
@@ -209,21 +223,30 @@ libraries are part of this package.
   Statically linked into the bundled libheif as its HEVC decoder. The encoder
   (x265) is deliberately left out, so this application ships no HEIC encoder.
 
-  Corresponding source for both is available from the URLs above at the versions
-  named in licenses/libheif/HERKUNFT.txt; packaging/libheif/build-windows.sh
-  (Windows), packaging/libheif/build-linux.sh (Linux) and
-  packaging/libheif/build-macos.sh (macOS) are the build recipes
+  dav1d
+  Copyright (c) VideoLAN and dav1d authors
+  Used under the BSD 2-Clause License; its x86inc.asm under the ISC License
+  https://code.videolan.org/videolan/dav1d
+  Statically linked into the bundled libheif as its AV1 decoder for AVIF files,
+  and not exported from it. Only the decoder is included, no AV1 encoder. AV1
+  is covered by the royalty-free patent license of the Alliance for Open Media.
+  Both license texts are in licenses/libheif/ in this package.
+
+  Corresponding source for libheif and libde265 is available from the URLs
+  above at the versions named in licenses/libheif/HERKUNFT.txt;
+  packaging/libheif/build-windows.sh (Windows), packaging/libheif/build-linux.sh
+  (Linux) and packaging/libheif/build-macos.sh (macOS) are the build recipes
   that produced these binaries.
 
   libjxl
   Copyright (c) the JPEG XL Project Authors
   Used under the BSD 3-Clause License, with the patent grant in PATENTS
   https://github.com/libjxl/libjxl
-  Bundled on Windows, in the AppImage and in the portable Linux ZIP, where it
-  reads and writes JPEG XL files. The deb, rpm and AUR packages take it from the
-  distribution, the Flatpak from its runtime. On macOS it is bundled as
-  libjxl.dylib. It is loaded dynamically and can be replaced by overwriting
-  jxl.dll or libjxl.so.0.13; on macOS a libjxl.dylib in the system search path,
+  Bundled on Windows and in every Linux package except the Flatpak (AppImage,
+  portable ZIP, deb, rpm and AUR), where it reads and writes JPEG XL files. The
+  Flatpak takes it from its runtime. On macOS it is bundled as libjxl.dylib.
+  It is loaded dynamically and can be replaced by overwriting jxl.dll or
+  libjxl.so.0.13; on macOS a libjxl.dylib in the system search path,
   /opt/homebrew/lib or /usr/local/lib is taken first. License texts
   and the exact build, including the upstream commits and build options, are in
   licenses/libjxl/ in this package.
@@ -243,7 +266,30 @@ libraries are part of this package.
   Library Exception
   https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
   Statically linked into the bundled LibRaw, libheif and libjxl libraries of the
-  AppImage and the portable Linux ZIP, so they need no C++ runtime from the system.
+  Linux packages (all except the Flatpak), so they need no C++ runtime from the
+  system.
+
+  Microsoft Visual C++ runtime (msvcp140*.dll, vcruntime140*.dll)
+  Copyright (c) Microsoft Corporation
+  Distributable Code under the Microsoft Software License Terms for Visual Studio
+  https://learn.microsoft.com/visualstudio/releases/2026/redistribution
+  Bundled on Windows only, unmodified and next to the application, because ONNX
+  Runtime needs a newer version than some Windows systems bring. Microsoft's
+  terms apply to these files, not the license of FerrumPix. Version, source and
+  checksums are in licenses/vcruntime/ in this package.
+
+  ANGLE (av_libglesv2.dll)
+  Copyright (c) the ANGLE Project Authors
+  BSD 3-Clause License
+  https://chromium.googlesource.com/angle/angle
+  Comes with Avalonia on Windows as its OpenGL ES layer over Direct3D.
+
+  DirectX Shader Compiler (dxcompiler.dll)
+  Copyright (c) Microsoft Corporation
+  Distributed by Microsoft inside the NuGet package of the WebGPU plugin
+  https://github.com/microsoft/DirectXShaderCompiler
+  Comes with the ONNX Runtime WebGPU plugin on Windows, which compiles its
+  shaders with it.
 
 
 4. Data and assets
@@ -285,7 +331,8 @@ next to the file it belongs to.
   MobileSAM - Apache License 2.0
   MiDaS - MIT License
   LaMa - Apache License 2.0
-  SCUNet - Apache License 2.0
+  TreeNet from RawForge - MIT License (trained on the RawNIND dataset of
+  UCLouvain, Creative Commons Attribution-ShareAlike 4.0)
   NAFNet - MIT License (with BasicSR, Apache License 2.0)
   Real-ESRGAN - BSD 3-Clause License
   YuNet (OpenCV Model Zoo) - MIT License
@@ -304,7 +351,8 @@ instead:
   Origin, the chain from the original project to this INT8 conversion, and the
   pinned revision are in the licences that travel with the model files.
 
-One file is not in that collection and is fetched from its publisher instead:
+One more file is not in that collection and is fetched from its publisher
+instead:
 
   ArcFace ResNet100 - https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8
 
@@ -337,7 +385,7 @@ https://operations.osmfoundation.org/policies/tiles/
 7. Optional external programs
 -----------------------------
 
-Not part of this package either, and not linked into it: a separate program that
+Not part of this package either, and not linked into it: separate programs that
 the application starts when the user asks it to.
 
   dnglab, for converting RAW files to DNG
@@ -347,6 +395,14 @@ the application starts when the user asks it to.
   It is run as a command line program, so none of its code becomes part of this
   application. No package ships it; it has to be installed separately, and where
   it is missing the conversion says so while everything else works unchanged.
+
+  G'MIC, for external image filters
+  Copyright (c) the G'MIC contributors (GREYC)
+  CeCILL License, compatible with the GNU General Public License
+  https://gmic.eu/
+  Run as a separate command line program, so none of its code becomes part of
+  this application. No package ships it; where it is missing, the G'MIC entry
+  in the editor has no effect while everything else works unchanged.
 
 
 ================================================================================

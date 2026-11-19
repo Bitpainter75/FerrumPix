@@ -3789,8 +3789,8 @@
   <data name="Avalonia_UI_12_1_1d800bc5" xml:space="preserve">
     <value>Avalonia UI 12.1</value>
   </data>
-  <data name="ReactiveUI_12_0_c41ec9b5" xml:space="preserve">
-    <value>ReactiveUI 12.0</value>
+  <data name="ReactiveUI_27_0_b6d97f77" xml:space="preserve">
+    <value>ReactiveUI 27.0</value>
   </data>
   <data name="SkiaSharp_3_119_ae18eca1" xml:space="preserve">
     <value>SkiaSharp 3.119</value>
@@ -3798,14 +3798,14 @@
   <data name="Svg_Skia_5_1_4e33cc4c" xml:space="preserve">
     <value>Svg.Skia 5.1</value>
   </data>
-  <data name="Microsoft_Data_Sqlite_9_0_bdd43cad" xml:space="preserve">
-    <value>Microsoft.Data.Sqlite 9.0</value>
+  <data name="Microsoft_Data_Sqlite_10_0_b4b596e5" xml:space="preserve">
+    <value>Microsoft.Data.Sqlite 10.0</value>
   </data>
-  <data name="MetadataExtractor_2_8_2582524c" xml:space="preserve">
-    <value>MetadataExtractor 2.8</value>
+  <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
+    <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
-    <value>QRCoder 1.6</value>
+  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
+    <value>QRCoder 1.8</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -4806,8 +4806,8 @@
   <data name="F_llt_alles_was_sonst_durchsichtig_bliebe_erweit_cbc15b0b" xml:space="preserve">
     <value>透明のままになる部分をすべて塗ります。広げたカンバス、角度補正やゆがみ変形のあとに空いた隅、消しゴムで消したところなどです。</value>
   </data>
-  <data name="ONNX_Runtime_1_28_75207326" xml:space="preserve">
-    <value>ONNX Runtime 1.28</value>
+  <data name="ONNX_Runtime_1_31_b4a5d295" xml:space="preserve">
+    <value>ONNX Runtime 1.31</value>
   </data>
   <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_3d10ed60" xml:space="preserve">
     <value>学習済みモデルを実行します。テレメトリーはオフで、データは一切送信されません。FerrumPix はモデルを同梱せず、自動で取得することもありません。</value>
@@ -5103,8 +5103,8 @@
   <data name="Skia_4c0000e3" xml:space="preserve">
     <value>Skia</value>
   </data>
-  <data name="SQLitePCLRaw_3_50_6be15601" xml:space="preserve">
-    <value>SQLitePCLRaw 3.50</value>
+  <data name="SQLitePCLRaw_3_53_f9e566e8" xml:space="preserve">
+    <value>SQLitePCLRaw 3.53</value>
   </data>
   <data name="SQLite_9f09ccbd" xml:space="preserve">
     <value>SQLite</value>
@@ -6174,8 +6174,8 @@
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>まだ確認していません。</value>
   </data>
-  <data name="ONNX_Runtime_WebGPU_0_2_091a6cdf" xml:space="preserve">
-    <value>ONNX Runtime WebGPU 0.2</value>
+  <data name="ONNX_Runtime_WebGPU_0_5_0c75295e" xml:space="preserve">
+    <value>ONNX Runtime WebGPU 0.5</value>
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>学習済みモデルをグラフィックスカードで実行します</value>
@@ -8934,6 +8934,9 @@
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>選択範囲をコピーしています...</value>
   </data>
+  <data name="Bild_wird_kopiert_5c25e66f" xml:space="preserve">
+    <value>画像をコピーしています...</value>
+  </data>
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>選択範囲をコピーできませんでした</value>
   </data>
@@ -11577,11 +11580,20 @@
   <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
     <value>ノイズ除去の結果を RAW の隣に保存できませんでした。</value>
   </data>
-  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
-    <value>LibRaw と libde265 を含む libheif は LGPL、libmpv は GPL のもとで提供されます。いずれも動的に読み込むため、自作ビルドに置き換えられます。ライセンス本文と由来の記録は各パッケージに含まれ、通常はアプリケーションの隣の licenses フォルダーにあります。</value>
+  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_d39de38e" xml:space="preserve">
+    <value>LibRaw と libde265 を含む libheif は LGPL、libmpv は GPL、libheif に含まれる dav1d は BSD ライセンスのもとで提供されます。いずれも動的に読み込むため、自作ビルドに置き換えられます。ライセンス本文と由来の記録は各パッケージに含まれ、通常はアプリケーションの隣の licenses フォルダーにあります。</value>
   </data>
-  <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
-    <value>HEIC と HEIF ファイルの読み込み</value>
+  <data name="HEIC_HEIF_und_AVIF_Dateien_lesen_9f16f069" xml:space="preserve">
+    <value>HEIC、HEIF、AVIF ファイルの読み込み</value>
+  </data>
+  <data name="dav1d_18df8b6f" xml:space="preserve">
+    <value>dav1d</value>
+  </data>
+  <data name="BSD_2_Clause_0216db4c" xml:space="preserve">
+    <value>BSD-2-Clause</value>
+  </data>
+  <data name="AVIF_Dateien_lesen_in_libheif_enthalten_f33c1354" xml:space="preserve">
+    <value>AVIF ファイルの読み込み、libheif に内蔵</value>
   </data>
   <data name="JPEG_XL_Dateien_lesen_und_schreiben_37a1781b" xml:space="preserve">
     <value>JPEG XL ファイルの読み込みと書き出し</value>
@@ -11658,8 +11670,8 @@
   <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
     <value>LibRaw は RAW ファイルを現像します。どのパッケージにも最新版が同梱され、システムの LibRaw より優先して使われるため、どのコンピューターでも同じように現像されます。Flatpak は同じ版を自分でビルドします。ない場合、RAW ファイルにはカメラの埋め込みプレビューが表示されます。</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
-    <value>libheif は HEIC と HEIF ファイルを読み込みます。Flatpak 以外のどのパッケージにも同梱され、システムの libheif より優先して使われます。macOS ではまずシステム自身の読み込み機能を使い、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
+  <data name="libheif_liest_HEIC_HEIF_und_AVIF_Dateien_AVIF_mi_df07dac8" xml:space="preserve">
+    <value>libheif は HEIC、HEIF、AVIF ファイルを読み込みます。AVIF には内蔵の dav1d を使います。Flatpak 以外のどのパッケージにも同梱され、システムの libheif より優先して使われます。macOS ではまずシステム自身の読み込み機能を使い、Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
   </data>
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl は JPEG XL ファイルを読み書きし、BSD ライセンスで提供されています。Flatpak 以外のどのパッケージにも同梱され、システムの libjxl より優先して使われます。Flatpak はそのランタイムから入手します。ない場合はそのファイルが開けないだけで、ほかの機能はそのまま動作します。</value>
@@ -12021,4 +12033,5 @@
   <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
     <value>多くのレンズが開放絞りで見せる、明るくくっきりした輪郭の紫の色にじみを取り除きます。取り除くのは色だけで、明るさはそのままです。レンズプロファイルがなくても働きます。</value>
   </data>
+  <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>複数の語：いずれか1つに一致すれば十分です。+語 は必須、-語 は除外します。</value></data>
 </root>

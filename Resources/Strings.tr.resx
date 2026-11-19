@@ -3789,8 +3789,8 @@
   <data name="Avalonia_UI_12_1_1d800bc5" xml:space="preserve">
     <value>Avalonia UI 12.1</value>
   </data>
-  <data name="ReactiveUI_12_0_c41ec9b5" xml:space="preserve">
-    <value>ReactiveUI 12.0</value>
+  <data name="ReactiveUI_27_0_b6d97f77" xml:space="preserve">
+    <value>ReactiveUI 27.0</value>
   </data>
   <data name="SkiaSharp_3_119_ae18eca1" xml:space="preserve">
     <value>SkiaSharp 3.119</value>
@@ -3798,14 +3798,14 @@
   <data name="Svg_Skia_5_1_4e33cc4c" xml:space="preserve">
     <value>Svg.Skia 5.1</value>
   </data>
-  <data name="Microsoft_Data_Sqlite_9_0_bdd43cad" xml:space="preserve">
-    <value>Microsoft.Data.Sqlite 9.0</value>
+  <data name="Microsoft_Data_Sqlite_10_0_b4b596e5" xml:space="preserve">
+    <value>Microsoft.Data.Sqlite 10.0</value>
   </data>
-  <data name="MetadataExtractor_2_8_2582524c" xml:space="preserve">
-    <value>MetadataExtractor 2.8</value>
+  <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
+    <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
-    <value>QRCoder 1.6</value>
+  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
+    <value>QRCoder 1.8</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -4806,8 +4806,8 @@
   <data name="F_llt_alles_was_sonst_durchsichtig_bliebe_erweit_cbc15b0b" xml:space="preserve">
     <value>Aksi halde saydam kalacak her yeri doldurur: büyütülmüş tuval, düzleştirme ya da bozmadan sonra kalan boş köşeler, silinmiş alanlar.</value>
   </data>
-  <data name="ONNX_Runtime_1_28_75207326" xml:space="preserve">
-    <value>ONNX Runtime 1.28</value>
+  <data name="ONNX_Runtime_1_31_b4a5d295" xml:space="preserve">
+    <value>ONNX Runtime 1.31</value>
   </data>
   <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_3d10ed60" xml:space="preserve">
     <value>Öğrenilmiş modelleri çalıştırır. Telemetri kapalıdır, hiçbir veri iletilmez. FerrumPix modelleri birlikte getirmez ve kendiliğinden indirmez.</value>
@@ -5103,8 +5103,8 @@
   <data name="Skia_4c0000e3" xml:space="preserve">
     <value>Skia</value>
   </data>
-  <data name="SQLitePCLRaw_3_50_6be15601" xml:space="preserve">
-    <value>SQLitePCLRaw 3.50</value>
+  <data name="SQLitePCLRaw_3_53_f9e566e8" xml:space="preserve">
+    <value>SQLitePCLRaw 3.53</value>
   </data>
   <data name="SQLite_9f09ccbd" xml:space="preserve">
     <value>SQLite</value>
@@ -6171,8 +6171,8 @@
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>Henüz denetlenmedi.</value>
   </data>
-  <data name="ONNX_Runtime_WebGPU_0_2_091a6cdf" xml:space="preserve">
-    <value>ONNX Runtime WebGPU 0.2</value>
+  <data name="ONNX_Runtime_WebGPU_0_5_0c75295e" xml:space="preserve">
+    <value>ONNX Runtime WebGPU 0.5</value>
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Öğrenilmiş modelleri ekran kartında çalıştır</value>
@@ -8938,6 +8938,9 @@
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>Seçim kopyalanıyor...</value>
   </data>
+  <data name="Bild_wird_kopiert_5c25e66f" xml:space="preserve">
+    <value>Görüntü kopyalanıyor...</value>
+  </data>
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Seçim kopyalanamadı</value>
   </data>
@@ -11581,11 +11584,20 @@
   <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
     <value>Gürültüsü giderilmiş sonuç RAW dosyasının yanına kaydedilemedi.</value>
   </data>
-  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
-    <value>LibRaw ile libde265 içeren libheif LGPL, libmpv ise GPL ile lisanslıdır. Dinamik olarak yüklenirler ve kendi derlemenizle değiştirilebilirler. Lisans metinleri ve köken notları her pakette bulunur, genellikle uygulamanın yanındaki licenses klasöründe.</value>
+  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_d39de38e" xml:space="preserve">
+    <value>LibRaw ile libde265 içeren libheif LGPL, libmpv GPL, libheif'in içerdiği dav1d ise BSD lisansı ile lisanslıdır. Dinamik olarak yüklenirler ve kendi derlemenizle değiştirilebilirler. Lisans metinleri ve köken notları her pakette bulunur, genellikle uygulamanın yanındaki licenses klasöründe.</value>
   </data>
-  <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
-    <value>HEIC ve HEIF dosyalarını okuma</value>
+  <data name="HEIC_HEIF_und_AVIF_Dateien_lesen_9f16f069" xml:space="preserve">
+    <value>HEIC, HEIF ve AVIF dosyalarını okuma</value>
+  </data>
+  <data name="dav1d_18df8b6f" xml:space="preserve">
+    <value>dav1d</value>
+  </data>
+  <data name="BSD_2_Clause_0216db4c" xml:space="preserve">
+    <value>BSD-2-Clause</value>
+  </data>
+  <data name="AVIF_Dateien_lesen_in_libheif_enthalten_f33c1354" xml:space="preserve">
+    <value>AVIF dosyalarını okuma, libheif'in parçası</value>
   </data>
   <data name="JPEG_XL_Dateien_lesen_und_schreiben_37a1781b" xml:space="preserve">
     <value>JPEG XL dosyalarını okuma ve yazma</value>
@@ -11662,8 +11674,8 @@
   <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
     <value>LibRaw RAW dosyalarını banyo eder. Her paket güncel bir sürümünü getirir ve sistemdeki LibRaw'dan önce kullanır; böylece her bilgisayar aynı şekilde banyo eder. Flatpak aynı sürümü kendisi derler. Yoksa RAW dosyaları kameranın gömülü önizlemesini gösterir.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
-    <value>libheif HEIC ve HEIF dosyalarını okur. Flatpak dışındaki her paket onu getirir ve sistemdeki libheif'ten önce kullanır; macOS önce kendi okuyucusuna başvurur, Flatpak onu kendi çalışma ortamından alır. Yoksa bu tür dosyalar açılmaz, geri kalan her şey değişmeden çalışır.</value>
+  <data name="libheif_liest_HEIC_HEIF_und_AVIF_Dateien_AVIF_mi_df07dac8" xml:space="preserve">
+    <value>libheif HEIC, HEIF ve AVIF dosyalarını okur, AVIF'i içerdiği dav1d ile. Flatpak dışındaki her paket onu getirir ve sistemdeki libheif'ten önce kullanır; macOS önce kendi okuyucusuna başvurur, Flatpak onu kendi çalışma ortamından alır. Yoksa bu tür dosyalar açılmaz, geri kalan her şey değişmeden çalışır.</value>
   </data>
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl JPEG XL dosyalarını okur ve yazar, BSD lisansıyla sunulur. Flatpak dışındaki her paket onu getirir ve sistemdeki libjxl'den önce kullanır; Flatpak onu kendi çalışma ortamından alır. Yoksa bu tür dosyalar açılmaz, geri kalan her şey değişmeden çalışır.</value>
@@ -12025,4 +12037,5 @@
   <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
     <value>Birçok objektifin tam açıklıkta gösterdiği, sert ve parlak kenarlardaki mor renk saçaklarını giderir. Yalnızca renk kaldırılır, parlaklık kalır. Objektif profili olmadan da çalışır.</value>
   </data>
+  <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Birden fazla kelime: biri yeterlidir. +kelime bulunmalı, -kelime bulunmamalı.</value></data>
 </root>

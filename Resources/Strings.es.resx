@@ -3791,8 +3791,8 @@
   <data name="Avalonia_UI_12_1_1d800bc5" xml:space="preserve">
     <value>Avalonia UI 12.1</value>
   </data>
-  <data name="ReactiveUI_12_0_c41ec9b5" xml:space="preserve">
-    <value>ReactiveUI 12.0</value>
+  <data name="ReactiveUI_27_0_b6d97f77" xml:space="preserve">
+    <value>ReactiveUI 27.0</value>
   </data>
   <data name="SkiaSharp_3_119_ae18eca1" xml:space="preserve">
     <value>SkiaSharp 3.119</value>
@@ -3800,14 +3800,14 @@
   <data name="Svg_Skia_5_1_4e33cc4c" xml:space="preserve">
     <value>Svg.Skia 5.1</value>
   </data>
-  <data name="Microsoft_Data_Sqlite_9_0_bdd43cad" xml:space="preserve">
-    <value>Microsoft.Data.Sqlite 9.0</value>
+  <data name="Microsoft_Data_Sqlite_10_0_b4b596e5" xml:space="preserve">
+    <value>Microsoft.Data.Sqlite 10.0</value>
   </data>
-  <data name="MetadataExtractor_2_8_2582524c" xml:space="preserve">
-    <value>MetadataExtractor 2.8</value>
+  <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
+    <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
-    <value>QRCoder 1.6</value>
+  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
+    <value>QRCoder 1.8</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -4808,8 +4808,8 @@
   <data name="F_llt_alles_was_sonst_durchsichtig_bliebe_erweit_cbc15b0b" xml:space="preserve">
     <value>Rellena todo lo que de otro modo quedaría transparente: lienzo ampliado, esquinas vacías tras enderezar o deformar, zonas borradas.</value>
   </data>
-  <data name="ONNX_Runtime_1_28_75207326" xml:space="preserve">
-    <value>ONNX Runtime 1.28</value>
+  <data name="ONNX_Runtime_1_31_b4a5d295" xml:space="preserve">
+    <value>ONNX Runtime 1.31</value>
   </data>
   <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_3d10ed60" xml:space="preserve">
     <value>Ejecuta modelos aprendidos. La telemetría está desactivada, no se transmite ningún dato. FerrumPix no incluye modelos ni los descarga por su cuenta.</value>
@@ -5105,8 +5105,8 @@
   <data name="Skia_4c0000e3" xml:space="preserve">
     <value>Skia</value>
   </data>
-  <data name="SQLitePCLRaw_3_50_6be15601" xml:space="preserve">
-    <value>SQLitePCLRaw 3.50</value>
+  <data name="SQLitePCLRaw_3_53_f9e566e8" xml:space="preserve">
+    <value>SQLitePCLRaw 3.53</value>
   </data>
   <data name="SQLite_9f09ccbd" xml:space="preserve">
     <value>SQLite</value>
@@ -6176,8 +6176,8 @@
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>Todavía sin comprobar.</value>
   </data>
-  <data name="ONNX_Runtime_WebGPU_0_2_091a6cdf" xml:space="preserve">
-    <value>ONNX Runtime WebGPU 0.2</value>
+  <data name="ONNX_Runtime_WebGPU_0_5_0c75295e" xml:space="preserve">
+    <value>ONNX Runtime WebGPU 0.5</value>
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Ejecuta los modelos aprendidos en la tarjeta gráfica</value>
@@ -8894,6 +8894,9 @@
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>Copiando la selección...</value>
   </data>
+  <data name="Bild_wird_kopiert_5c25e66f" xml:space="preserve">
+    <value>Copiando la imagen...</value>
+  </data>
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>No se pudo copiar la selección</value>
   </data>
@@ -11537,11 +11540,20 @@
   <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
     <value>No se pudo guardar el resultado sin ruido junto al RAW.</value>
   </data>
-  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
-    <value>LibRaw y libheif con libde265 están bajo la LGPL, libmpv bajo la GPL. Se cargan dinámicamente y pueden sustituirse por una compilación propia. Los textos de licencia y las notas de procedencia acompañan a cada paquete, normalmente en la carpeta licenses junto a la aplicación.</value>
+  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_d39de38e" xml:space="preserve">
+    <value>LibRaw y libheif con libde265 están bajo la LGPL, libmpv bajo la GPL y dav1d, incluido en libheif, bajo la licencia BSD. Se cargan dinámicamente y pueden sustituirse por una compilación propia. Los textos de licencia y las notas de procedencia acompañan a cada paquete, normalmente en la carpeta licenses junto a la aplicación.</value>
   </data>
-  <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
-    <value>Lectura de archivos HEIC y HEIF</value>
+  <data name="HEIC_HEIF_und_AVIF_Dateien_lesen_9f16f069" xml:space="preserve">
+    <value>Lectura de archivos HEIC, HEIF y AVIF</value>
+  </data>
+  <data name="dav1d_18df8b6f" xml:space="preserve">
+    <value>dav1d</value>
+  </data>
+  <data name="BSD_2_Clause_0216db4c" xml:space="preserve">
+    <value>BSD-2-Clause</value>
+  </data>
+  <data name="AVIF_Dateien_lesen_in_libheif_enthalten_f33c1354" xml:space="preserve">
+    <value>Lectura de archivos AVIF, incluido en libheif</value>
   </data>
   <data name="JPEG_XL_Dateien_lesen_und_schreiben_37a1781b" xml:space="preserve">
     <value>Lectura y escritura de archivos JPEG XL</value>
@@ -11618,8 +11630,8 @@
   <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
     <value>LibRaw revela los archivos RAW. Cada paquete trae una versión actual y la usa antes que la LibRaw del sistema, para que todos los equipos revelen igual; el Flatpak compila esa misma versión. Si falta, los archivos RAW muestran la vista previa incrustada de la cámara.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
-    <value>libheif lee archivos HEIC y HEIF. Cada paquete salvo el Flatpak la trae y la usa antes que la libheif del sistema; macOS consulta primero su propio lector, el Flatpak la toma de su entorno de ejecución. Si falta, esos archivos no se abren y todo lo demás funciona igual.</value>
+  <data name="libheif_liest_HEIC_HEIF_und_AVIF_Dateien_AVIF_mi_df07dac8" xml:space="preserve">
+    <value>libheif lee archivos HEIC, HEIF y AVIF; los AVIF, con el dav1d que incluye. Cada paquete salvo el Flatpak la trae y la usa antes que la libheif del sistema; macOS consulta primero su propio lector, el Flatpak la toma de su entorno de ejecución. Si falta, esos archivos no se abren y todo lo demás funciona igual.</value>
   </data>
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl lee y escribe archivos JPEG XL y está bajo la licencia BSD. Cada paquete salvo el Flatpak la trae y la usa antes que la libjxl del sistema; el Flatpak la toma de su entorno de ejecución. Si falta, esos archivos no se abren y todo lo demás funciona igual.</value>
@@ -11981,4 +11993,5 @@
   <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
     <value>Elimina las franjas de color violeta en bordes duros y claros, como las que muestran muchos objetivos a plena apertura. Solo se quita el color, el brillo se mantiene. Funciona también sin perfil de objetivo.</value>
   </data>
+  <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Varias palabras: basta con una. +palabra debe aparecer, -palabra no debe aparecer.</value></data>
 </root>

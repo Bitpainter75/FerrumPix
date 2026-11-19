@@ -3789,8 +3789,8 @@
   <data name="Avalonia_UI_12_1_1d800bc5" xml:space="preserve">
     <value>Avalonia UI 12.1</value>
   </data>
-  <data name="ReactiveUI_12_0_c41ec9b5" xml:space="preserve">
-    <value>ReactiveUI 12.0</value>
+  <data name="ReactiveUI_27_0_b6d97f77" xml:space="preserve">
+    <value>ReactiveUI 27.0</value>
   </data>
   <data name="SkiaSharp_3_119_ae18eca1" xml:space="preserve">
     <value>SkiaSharp 3.119</value>
@@ -3798,14 +3798,14 @@
   <data name="Svg_Skia_5_1_4e33cc4c" xml:space="preserve">
     <value>Svg.Skia 5.1</value>
   </data>
-  <data name="Microsoft_Data_Sqlite_9_0_bdd43cad" xml:space="preserve">
-    <value>Microsoft.Data.Sqlite 9.0</value>
+  <data name="Microsoft_Data_Sqlite_10_0_b4b596e5" xml:space="preserve">
+    <value>Microsoft.Data.Sqlite 10.0</value>
   </data>
-  <data name="MetadataExtractor_2_8_2582524c" xml:space="preserve">
-    <value>MetadataExtractor 2.8</value>
+  <data name="MetadataExtractor_2_9_b4b4b16f" xml:space="preserve">
+    <value>MetadataExtractor 2.9</value>
   </data>
-  <data name="QRCoder_1_6_c853cfc4" xml:space="preserve">
-    <value>QRCoder 1.6</value>
+  <data name="QRCoder_1_8_9fe99238" xml:space="preserve">
+    <value>QRCoder 1.8</value>
   </data>
   <data name="Phosphor_Icons_db78df19" xml:space="preserve">
     <value>Phosphor Icons</value>
@@ -4806,8 +4806,8 @@
   <data name="F_llt_alles_was_sonst_durchsichtig_bliebe_erweit_cbc15b0b" xml:space="preserve">
     <value>Mengisi segala sesuatu yang jika tidak akan tetap transparan: kanvas yang diperluas, sudut kosong setelah pelurusan atau distorsi, area yang terhapus.</value>
   </data>
-  <data name="ONNX_Runtime_1_28_75207326" xml:space="preserve">
-    <value>ONNX Runtime 1.28</value>
+  <data name="ONNX_Runtime_1_31_b4a5d295" xml:space="preserve">
+    <value>ONNX Runtime 1.31</value>
   </data>
   <data name="F_hrt_gelernte_Modelle_aus_Die_Telemetrie_ist_ab_3d10ed60" xml:space="preserve">
     <value>Menjalankan model terlatih. Telemetri dimatikan, tidak ada data yang dikirim. FerrumPix tidak menyertakan model dan tidak mengambilnya sendiri.</value>
@@ -5103,8 +5103,8 @@
   <data name="Skia_4c0000e3" xml:space="preserve">
     <value>Skia</value>
   </data>
-  <data name="SQLitePCLRaw_3_50_6be15601" xml:space="preserve">
-    <value>SQLitePCLRaw 3.50</value>
+  <data name="SQLitePCLRaw_3_53_f9e566e8" xml:space="preserve">
+    <value>SQLitePCLRaw 3.53</value>
   </data>
   <data name="SQLite_9f09ccbd" xml:space="preserve">
     <value>SQLite</value>
@@ -6171,8 +6171,8 @@
   <data name="Noch_nicht_gepr_ft_2dd7563d" xml:space="preserve">
     <value>Belum diperiksa.</value>
   </data>
-  <data name="ONNX_Runtime_WebGPU_0_2_091a6cdf" xml:space="preserve">
-    <value>ONNX Runtime WebGPU 0.2</value>
+  <data name="ONNX_Runtime_WebGPU_0_5_0c75295e" xml:space="preserve">
+    <value>ONNX Runtime WebGPU 0.5</value>
   </data>
   <data name="Rechnet_gelernte_Modelle_auf_der_Grafikkarte_dbb5970d" xml:space="preserve">
     <value>Jalankan model terlatih di kartu grafis</value>
@@ -8938,6 +8938,9 @@
   <data name="Auswahl_wird_kopiert_5acd3b33" xml:space="preserve">
     <value>Menyalin seleksi...</value>
   </data>
+  <data name="Bild_wird_kopiert_5c25e66f" xml:space="preserve">
+    <value>Menyalin gambar...</value>
+  </data>
   <data name="Auswahl_kopieren_fehlgeschlagen_5a63d8ac" xml:space="preserve">
     <value>Gagal menyalin seleksi</value>
   </data>
@@ -11581,11 +11584,20 @@
   <data name="Das_entrauschte_Ergebnis_konnte_nicht_neben_der__705d9e76" xml:space="preserve">
     <value>Hasil peredaman derau tidak dapat disimpan di samping RAW.</value>
   </data>
-  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_c3c43174" xml:space="preserve">
-    <value>LibRaw serta libheif dengan libde265 berlisensi LGPL, libmpv berlisensi GPL. Semuanya dimuat secara dinamis dan dapat diganti dengan hasil bangunan Anda sendiri. Teks lisensi dan catatan asal-usulnya disertakan di setiap paket, biasanya di folder licenses di sebelah aplikasi.</value>
+  <data name="LibRaw_sowie_libheif_mit_libde265_stehen_unter_d_d39de38e" xml:space="preserve">
+    <value>LibRaw serta libheif dengan libde265 berlisensi LGPL, libmpv berlisensi GPL, dan dav1d yang termasuk dalam libheif berlisensi BSD. Semuanya dimuat secara dinamis dan dapat diganti dengan hasil bangunan Anda sendiri. Teks lisensi dan catatan asal-usulnya disertakan di setiap paket, biasanya di folder licenses di sebelah aplikasi.</value>
   </data>
-  <data name="HEIC_und_HEIF_Dateien_lesen_42ab7fe4" xml:space="preserve">
-    <value>Membaca berkas HEIC dan HEIF</value>
+  <data name="HEIC_HEIF_und_AVIF_Dateien_lesen_9f16f069" xml:space="preserve">
+    <value>Membaca berkas HEIC, HEIF, dan AVIF</value>
+  </data>
+  <data name="dav1d_18df8b6f" xml:space="preserve">
+    <value>dav1d</value>
+  </data>
+  <data name="BSD_2_Clause_0216db4c" xml:space="preserve">
+    <value>BSD-2-Clause</value>
+  </data>
+  <data name="AVIF_Dateien_lesen_in_libheif_enthalten_f33c1354" xml:space="preserve">
+    <value>Membaca berkas AVIF, termasuk dalam libheif</value>
   </data>
   <data name="JPEG_XL_Dateien_lesen_und_schreiben_37a1781b" xml:space="preserve">
     <value>Membaca dan menulis berkas JPEG XL</value>
@@ -11662,8 +11674,8 @@
   <data name="LibRaw_entwickelt_RAW_Dateien_Jedes_Paket_bringt_3cc8b08c" xml:space="preserve">
     <value>LibRaw memproses berkas RAW. Setiap paket membawa versi terbaru dan memakainya lebih dulu daripada LibRaw sistem, sehingga setiap komputer memproses dengan cara yang sama; Flatpak membangun versi yang sama sendiri. Jika tidak ada, berkas RAW menampilkan pratinjau bawaan dari kamera.</value>
   </data>
-  <data name="libheif_liest_HEIC_und_HEIF_Dateien_Jedes_Paket__51eda594" xml:space="preserve">
-    <value>libheif membaca berkas HEIC dan HEIF. Setiap paket kecuali Flatpak membawanya dan memakainya lebih dulu daripada libheif sistem; macOS lebih dulu memakai pembacanya sendiri, Flatpak mengambilnya dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
+  <data name="libheif_liest_HEIC_HEIF_und_AVIF_Dateien_AVIF_mi_df07dac8" xml:space="preserve">
+    <value>libheif membaca berkas HEIC, HEIF, dan AVIF; AVIF dengan dav1d yang disertakan di dalamnya. Setiap paket kecuali Flatpak membawanya dan memakainya lebih dulu daripada libheif sistem; macOS lebih dulu memakai pembacanya sendiri, Flatpak mengambilnya dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
   </data>
   <data name="libjxl_liest_und_schreibt_JPEG_XL_Dateien_und_st_c9e6aad0" xml:space="preserve">
     <value>libjxl membaca dan menulis berkas JPEG XL dan berlisensi BSD. Setiap paket kecuali Flatpak membawanya dan memakainya lebih dulu daripada libjxl sistem; Flatpak mengambilnya dari runtime-nya. Jika tidak ada, berkas seperti itu tetap tidak terbuka dan semua fungsi lain berjalan seperti biasa.</value>
@@ -12025,4 +12037,5 @@
   <data name="Nimmt_violette_Farbs_ume_an_harten_hellen_Kanten_1bdf907e" xml:space="preserve">
     <value>Menghapus pinggiran warna ungu di tepi yang tajam dan terang, seperti yang ditunjukkan banyak lensa pada bukaan penuh. Hanya warnanya yang dihapus, kecerahan tetap. Berfungsi juga tanpa profil lensa.</value>
   </data>
+  <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Beberapa kata: satu saja cukup. +kata harus ada, -kata tidak boleh ada.</value></data>
 </root>
