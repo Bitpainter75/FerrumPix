@@ -1138,9 +1138,13 @@ Namespace Services
         ''' Das Nützliche am ICC-Profil ist der Profilname (sagt "Adobe RGB (1998)" statt nur
         ''' "Farbprofil vorhanden") plus Farbraum und Rendering Intent - der Rest sind Kurven und
         ''' Matrizen ohne Aussagewert für die Galerie.
+        ' "Primary Platform" steht bewusst NICHT darin: das Feld nennt die Plattform, fuer die das
+        ' Profil gedacht ist (Apple, Microsoft), und die Farbbibliothek traegt es je nach Bau ein. Am
+        ' Badge las es sich wie der Urheber des Profils (Forum: ein Profil von RawTherapee "von
+        ' Apple"). Wer es angelegt hat, sagt "Profile Creator".
         Private Shared ReadOnly IccPriorityNames As String() = {
             "Profile Description", "Class", "Color space", "Profile Connection Space",
-            "Rendering Intent", "Primary Platform", "Device manufacturer", "Device model",
+            "Rendering Intent", "Profile Creator", "Device manufacturer", "Device model",
             "Profile Date/Time", "Version", "Copyright"
         }
 

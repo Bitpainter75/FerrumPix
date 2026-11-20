@@ -78,3 +78,6 @@
   was measured on such pictures, among them the K-70, KF and KP, no longer develop other pictures
   a stop too bright.
 
+
+- The ICC badge in the gallery no longer names the platform an embedded colour profile is meant
+  for, which read as if Apple or Microsoft had made it. It shows who created the profile instead.
