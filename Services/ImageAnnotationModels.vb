@@ -347,6 +347,7 @@ Namespace Services
         Private _frameSymbolRotate As Boolean = False
         Private _frameKeylineColor As String = ""
         Private _frameKeylineWidthPercent As Single = 0.25F
+        Private _frameKeylineInsetPercent As Single = 0
         Private _frameFilmOrientation As String = "Automatisch"
         Private _fontSizePixels As Single = 48
         Private _fontFamily As String = "Arial"
@@ -978,6 +979,19 @@ Namespace Services
             End Set
         End Property
 
+        ''' <summary>Lage der feinen Linie beim Rahmen "Keyline": Abstand von der Bildkante in den
+        ''' Rand hinein, in Prozent des Platzes, den der Rand neben der Linie frei laesst. 0 heisst:
+        ''' an der Innenkante wie in alten Dateien, 100: buendig mit der Aussenkante. Bezogen auf den
+        ''' Rand statt auf die Bildseite, damit die Linie bei keiner Staerke aus ihm herausfaellt.</summary>
+        Public Property FrameKeylineInsetPercent As Single
+            Get
+                Return _frameKeylineInsetPercent
+            End Get
+            Set(value As Single)
+                SetField(_frameKeylineInsetPercent, Math.Max(0.0F, Math.Min(100.0F, value)))
+            End Set
+        End Property
+
         Public Property FontSizePixels As Single
             Get
                 Return _fontSizePixels
@@ -1572,6 +1586,7 @@ Namespace Services
                 .FrameSymbolRotate = FrameSymbolRotate,
                 .FrameKeylineColor = FrameKeylineColor,
                 .FrameKeylineWidthPercent = FrameKeylineWidthPercent,
+                .FrameKeylineInsetPercent = FrameKeylineInsetPercent,
                 .FrameFilmOrientation = FrameFilmOrientation,
                 .Warp = Warp?.Clone(),
                 .OwnWarp = OwnWarp?.Clone(),

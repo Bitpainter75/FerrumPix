@@ -14807,6 +14807,9 @@ Namespace ViewModels
                         End If
                         If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                     End If
+                    ' Ein Rahmen aus Ablage oder Anpassungsvorlage ersetzt den des Rezepts; alle
+                    ' anderen Vorlagen bringen keinen mit und lassen ihn stehen.
+                    adj.ApplyTransferredFrameFrom(template)
                     ' Erst danach, sonst passte der Stand oben nie zur Messung.
                     If denoiseStrength.HasValue AndAlso Not adj.RawModelDenoise Then
                         adj.RawModelDenoise = True
@@ -15260,6 +15263,8 @@ Namespace ViewModels
                              ' den Reglern, die er wirklich setzt (siehe MergeNonDefault...).
                              Dim adj = BatchBaseAdjustments(source)
                              adj.MergeNonDefaultPixelAdjustmentsFrom(adjustmentsTemplate)
+                             ' Der Rahmen einer Anpassungsvorlage ersetzt den des Rezepts.
+                             adj.ApplyTransferredFrameFrom(adjustmentsTemplate)
                              If isAutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)
                              ' Das Entrauschen misst bei der Automatik JE BILD, und zwar erst im
                              ' Speicherweg am frisch entwickelten Bild - hier gibt es noch keine Pixel.
@@ -15412,10 +15417,11 @@ Namespace ViewModels
         ' ── Anpassungen kopieren und einfügen ────────────────────────────────────────────────────
         '
         ' EINE Ablage für Editor und Galerie (AppSettings.CopiedAdjustments): im Editor kopieren und
-        ' hier einfügen geht genauso wie umgekehrt. Kopiert werden die Bildanpassungen
-        ' (ExtractPixelAdjustments), ohne Zuschnitt, Drehung, Retusche und Ebenen. Eingefügt wird wie
-        ' im Editor: die Bildanpassungen des Ziels werden ERSETZT (CopyPixelAdjustmentsFrom), seine
-        ' Geometrie und Retusche bleiben. "Anpassungen anwenden" mit einer Vorlage legt dagegen nur
+        ' hier einfügen geht genauso wie umgekehrt. Kopiert werden die Bildanpassungen und der
+        ' Rahmen (ExtractTransferableAdjustments), ohne Zuschnitt, Drehung, Retusche und die übrigen
+        ' Ebenen. Eingefügt wird wie im Editor: die Bildanpassungen des Ziels werden ERSETZT
+        ' (CopyPixelAdjustmentsFrom), ein mitgebrachter Rahmen ersetzt den des Ziels
+        ' (ApplyTransferredFrameFrom), Geometrie und Retusche bleiben. "Anpassungen anwenden" mit einer Vorlage legt dagegen nur
         ' die Regler auf, die die Vorlage setzt; das ist eine andere Frage ("diesen Look dazu") als
         ' das Einfügen ("dasselbe wie dort").
 
@@ -15463,7 +15469,7 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Die Begleitdatei ließ sich nicht lesen.")
                 Return
             End If
-            AppSettingsService.SaveCopiedAdjustments(FpxService.SerializeAdjustments(recipe.ExtractPixelAdjustments()))
+            AppSettingsService.SaveCopiedAdjustments(FpxService.SerializeAdjustments(recipe.ExtractTransferableAdjustments()))
             StatusText = LocalizationService.T("Anpassungen kopiert")
             RefreshContextActions()
         End Sub
@@ -15513,6 +15519,7 @@ Namespace ViewModels
                 Dim writer = Function(source As String, target As String)
                                  Dim adj = BatchBaseAdjustments(source)
                                  adj.CopyPixelAdjustmentsFrom(template)
+                                 adj.ApplyTransferredFrameFrom(template)
                                  Return ImageProcessor.SaveImage(source, target, adj, quality, preserveMetadata:=True,
                                                                  developRaw:=BatchDevelopsRaw(source),
                                                                  cancel:=cancel,
@@ -17085,9 +17092,12 @@ Namespace ViewModels
                              ' MergeNonDefaultPixelAdjustmentsFrom an - das war ein Zufall und haette
                              ' beim Einordnen als Strukturfeld still aufgehoert zu wirken.
                              adj.UpscaleModel = template.UpscaleModel
+                             ' Der Rahmen einer Anpassungsvorlage ersetzt den des Rezepts, statt
+                             ' als zweiter darueber zu liegen; das Wasserzeichen kommt dazu.
+                             adj.ApplyTransferredFrameFrom(template)
                              If template.Annotations IsNot Nothing Then
                                  For Each item In template.Annotations
-                                     If item IsNot Nothing Then adj.Annotations.Add(item.Clone())
+                                     If item IsNot Nothing AndAlso Not ImageAdjustments.IsFrameAnnotation(item) Then adj.Annotations.Add(item.Clone())
                                  Next
                              End If
                              If result.AutoEnhance Then ImageProcessor.ApplyAutoAdjustmentsTo(adj, source)

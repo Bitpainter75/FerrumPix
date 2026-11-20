@@ -216,7 +216,7 @@
                                     IsVisible="{Binding IsCollageBitDepthVisible}"
                                     Click="OnBitDepthClick"
                                     Tag="16"
-                                    ToolTip.Tip="16 Bit gibt es für RAW-Dateien und für TIFF-Dateien mit 16 Bit. Retuschierte und übermalte Stellen bleiben dabei so fein wie 8 Bit.">16 Bit</Button>
+                                    ToolTip.Tip="16 Bit gibt es beim Speichern als TIFF, PNG oder JPEG XL, wenn das Bild aus einer RAW-Datei oder aus einer TIFF-, HEIC- oder AVIF-Datei mit mehr als 8 Bit stammt. Retuschierte und übermalte Stellen bleiben dabei so fein wie 8 Bit.">16 Bit</Button>
                         </WrapPanel>
 
                         <TextBlock Grid.Row="7"

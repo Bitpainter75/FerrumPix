@@ -125,6 +125,17 @@
                                          Value="{Binding FrameKeylineWidth, Mode=TwoWay}" Minimum="0" Maximum="2"
                                          Increment="0.05" FormatString="F2" />
             </Grid>
+            <!-- Wo die Linie im Rand liegt, in Prozent des Platzes neben ihr: 0 am Bild, 100 an der
+                 Aussenkante. So faellt sie bei keiner Staerke aus dem Rand. -->
+            <Grid ColumnDefinitions="92,*,44" VerticalAlignment="Center" IsVisible="{Binding ShowFrameKeylineControls}"
+                  ToolTip.Tip="Abstand der Linie vom Bild in Prozent des Rahmens: bei 0 liegt sie am Bild, bei 100 an der Außenkante.">
+                <TextBlock Text="Linienabstand" Foreground="{DynamicResource FP.Text.Secondary}"
+                           VerticalAlignment="Center" FontSize="{DynamicResource FP.Font.Small}" />
+                <icons:RoundSlider Grid.Column="1" Minimum="0" Maximum="100" DefaultValue="0"
+                                   Value="{Binding FrameKeylineInset}" Margin="0,0" />
+                <icons:SliderValueUpDown Grid.Column="2" Classes="slider-value"
+                                         Value="{Binding FrameKeylineInset, Mode=TwoWay}" Minimum="0" Maximum="100" />
+            </Grid>
             <!-- Rahmen aus Symbolen: die Rahmenart oben bleibt der PFAD, auf dem sie sitzen -
                  gerade, wellig, gezackt oder in zwei Reihen. Die Groesse oben ist ihre Groesse. -->
             <Grid ColumnDefinitions="92,*,Auto" VerticalAlignment="Center">

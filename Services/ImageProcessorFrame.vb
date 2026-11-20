@@ -37,7 +37,8 @@ Namespace Services
                                             Optional marginPercent As Single = 0,
                                             Optional keylineColor As SKColor = Nothing,
                                             Optional keylineWidthPercent As Single = 0.0025F,
-                                            Optional filmOrientation As String = "Automatisch")
+                                            Optional filmOrientation As String = "Automatisch",
+                                            Optional keylineInsetFraction As Single = 0)
             If canvas Is Nothing Then Return
             If bounds.Width <= 0 OrElse bounds.Height <= 0 Then Return
             ' Staerke, Rundung und Abstand beziehen sich auf die kuerzere Seite des GANZEN Rechtecks,
@@ -85,7 +86,7 @@ Namespace Services
                     Dim keylineWidth = If(keylineWidthPercent <= 0, 0.0F,
                                           Math.Max(1.0F, shortSide * Clamp(keylineWidthPercent, 0, 0.02F)))
                     DrawKeylineFrame(canvas, boundsWidth, boundsHeight, thickness, radius, strokePaintColor,
-                                     gradientShader, keylineColor, keylineWidth)
+                                     gradientShader, keylineColor, keylineWidth, keylineInsetFraction)
                     Return
                 End If
                 If normalized = "kleinbildfilm" Then
@@ -152,10 +153,12 @@ Namespace Services
 
         ''' <summary>Rahmen "Keyline": ein voller Rand in der Rahmenfarbe und an seiner Innenkante, wo
         ''' er auf das Bild trifft, eine feine Linie in eigener Farbe und Breite, wie bei einem
-        ''' Passepartout mit Zierlinie. Breiter als der Rand wird die Linie nicht.</summary>
+        ''' Passepartout mit Zierlinie. Breiter als der Rand wird die Linie nicht. insetFraction (0 bis 1)
+        ''' rueckt sie von der Bildkante nach aussen, als Anteil des Platzes, den der Rand neben ihr frei
+        ''' laesst: bei 1 liegt sie buendig an der Aussenkante, nie darueber hinaus.</summary>
         Private Shared Sub DrawKeylineFrame(canvas As SKCanvas, width As Single, height As Single, thickness As Single,
                                             radius As Single, color As SKColor, gradientShader As SKShader,
-                                            keylineColor As SKColor, lineWidth As Single)
+                                            keylineColor As SKColor, lineWidth As Single, insetFraction As Single)
             Using paint = New SKPaint With {.Color = color, .Style = SKPaintStyle.Stroke, .StrokeWidth = thickness, .IsAntialias = True}
                 If gradientShader IsNot Nothing Then paint.Shader = gradientShader
                 Dim inset = thickness / 2.0F
@@ -164,12 +167,21 @@ Namespace Services
             End Using
             If keylineColor.Alpha = 0 OrElse lineWidth <= 0 Then Return
             lineWidth = Math.Min(lineWidth, thickness)
-            ' Ganz im Rand, buendig mit seiner Innenkante: die Linie verdeckt kein Bild.
+            ' Ganz im Rand, ab Werk buendig mit seiner Innenkante: die Linie verdeckt kein Bild. Der
+            ' Abstand verschiebt sie nur im freien Rest des Randes; bei 0 bleibt die Rechnung wie
+            ' zuvor, damit alte Dateien bitgleich zeichnen.
             Dim lineInset = thickness - lineWidth / 2.0F
+            If insetFraction > 0 Then lineInset -= Clamp(insetFraction, 0, 1) * (thickness - lineWidth)
             Dim lineRect = New SKRect(lineInset, lineInset, width - lineInset, height - lineInset)
             If lineRect.Width <= 0 OrElse lineRect.Height <= 0 Then Return
             Using linePaint = New SKPaint With {.Color = keylineColor, .Style = SKPaintStyle.Stroke, .StrokeWidth = lineWidth, .IsAntialias = True}
                 Dim lineRadius = Math.Max(0.0F, radius - lineInset)
+                ' Nach aussen geschoben waechst die Rundung mit, bis sie an der Aussenkante des Randes
+                ' (dort Radius radius + thickness/2) gleichlaufend zu ihr liegt: sonst staeche die
+                ' Linie an den Ecken aus dem Rand.
+                If radius > 0 AndAlso insetFraction > 0 Then
+                    lineRadius = Math.Max(0.0F, radius - lineInset + Clamp(insetFraction, 0, 1) * thickness / 2.0F)
+                End If
                 If lineRadius > 0 Then canvas.DrawRoundRect(lineRect, lineRadius, lineRadius, linePaint) Else canvas.DrawRect(lineRect, linePaint)
             End Using
         End Sub

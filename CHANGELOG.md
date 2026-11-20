@@ -2,6 +2,20 @@
 
 ### Changes
 
+- The keyline frame has a new slider for the position of its fine line. At 0 the line sits
+  against the picture as before, at 100 on the outer edge of the frame, and it follows rounded
+  corners.
+
+- The frame remembers its last settings: a new frame on the next picture, also after a restart,
+  starts with the same kind, colours, gradient, widths, spacings and shadow. The reset button of
+  the frame group goes back to the original settings.
+
+- Copying and pasting adjustments and saved adjustments now take the frame along. Pasting or
+  applying replaces a frame the picture already has; without a frame in the copy, the picture
+  keeps its own. Text, shapes and other objects stay with their picture. To leave the frame out,
+  switch it off in the frame group before copying or saving. A RAW or PSD with a frame can still
+  be saved into its sidecar file.
+
 - The footer of the viewer has a button for focus peaking, next to the one for the mouse wheel.
   It does the same as the key K.
 
@@ -22,6 +36,13 @@
   the negative off and on again uses the new way.
 
 ### Fixes
+
+- The tile ".." that leads up to the parent folder no longer shows a date in the gallery. Its date
+  stood among the pictures as if it belonged to them. Sorting by date keeps it at the front.
+
+- The hint under the 16 bit button now says clearly that 16 bit can be saved as TIFF, PNG or
+  JPEG XL, as long as the picture comes from a RAW file or from a TIFF, HEIC or AVIF file with
+  more than 8 bit. Before, it read as if only TIFF could hold 16 bit.
 
 - The before and after slider in the editor stays on screen when you zoom in or move the picture.
   If it would leave the visible part, it stops at the nearest edge, and its round handle sits in
@@ -50,4 +71,10 @@
 - The before side of the before and after comparison in the editor shows the same frame as the
   edited picture for RAW files shot in a different aspect ratio, such as 65:24 or 16:9 on a
   Fujifilm camera. Before, the whole sensor area was squeezed into the cropped frame.
+
+- Pentax RAW files shot with highlight correction come out as bright as intended. The camera
+  records them a stop darker to protect the highlights, and they used to look a stop too dark;
+  this now shows as a starting value of the exposure slider. Pentax models whose base brightness
+  was measured on such pictures, among them the K-70, KF and KP, no longer develop other pictures
+  a stop too bright.
 

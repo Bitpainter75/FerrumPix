@@ -11691,8 +11691,8 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bitar</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_und_f_r_TIFF_Date_95afbca2" xml:space="preserve">
-    <value>16 bitar finns för RAW-filer och för TIFF-filer med 16 bitar. Retuscherade och övermålade områden förblir lika fina som 8 bitar.</value>
+  <data name="16_Bit_gibt_es_beim_Speichern_als_TIFF_PNG_oder__2a161724" xml:space="preserve">
+    <value>16 bitar finns när du sparar som TIFF, PNG eller JPEG XL, om bilden kommer från en RAW-fil eller från en TIFF-, HEIC- eller AVIF-fil med mer än 8 bitar. Retuscherade och övermålade områden förblir lika fina som 8 bitar.</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
     <value>Sparad med 8 bitar, 16 bitar finns inte för den här bilden: {0}</value>
@@ -12026,6 +12026,12 @@
   </data>
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Linjebredd</value>
+  </data>
+  <data name="Linienabstand_fd6e057a" xml:space="preserve">
+    <value>Linjeavstånd</value>
+  </data>
+  <data name="Abstand_der_Linie_vom_Bild_in_Prozent_des_Rahmen_d6317bba" xml:space="preserve">
+    <value>Linjens avstånd från bilden i procent av ramen: vid 0 ligger den mot bilden, vid 100 vid ytterkanten.</value>
   </data>
   <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
     <value>Ta bort färgsöm</value>

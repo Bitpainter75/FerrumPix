@@ -141,6 +141,129 @@ Namespace Services
         Public Property EdgeHardness As Double = 55
     End Class
 
+    ''' <summary>Was sich der RAHMEN ueber Bildwechsel und Neustart merkt: wie er aussieht, nicht wo
+    ''' er liegt. Ein neuer Rahmen entsteht mit diesen Werten, weil man denselben Rahmen meist um
+    ''' mehrere Bilder legen will.
+    '''
+    ''' <para>DIE FELDLISTE IST DIESE KLASSE. Jede Eigenschaft hier traegt Namen und Typ der
+    ''' gleichnamigen Eigenschaft von <see cref="ImageAnnotation"/>, kopiert wird ueber die Reflexion
+    ''' (<see cref="FromAnnotation"/>, <see cref="ApplyTo"/>). Ein neues Rahmenfeld am Objekt braucht
+    ''' also nur eine Zeile hier; der Pruefstand meldet jedes Frame-Feld des Objekts, das hier fehlt.</para>
+    '''
+    ''' <para>Nicht dabei: Lage, Groesse und Drehung (der Rahmen umfasst immer das ganze Bild),
+    ''' Sichtbarkeit und Ebenenmaske. Dazu die Kontur-Lage, -Haerte und -Ecken: der Rahmen bietet sie
+    ''' nicht an.</para>
+    '''
+    ''' <para>Die Vorgaben kommen aus einem frischen Objekt (Konstruktor): fehlt ein Feld in der Datei
+    ''' einer aelteren Fassung, gilt der Werkswert des Objekts, ohne ihn hier ein zweites Mal
+    ''' hinzuschreiben.</para></summary>
+    Public Class FrameStyleMemory
+        Public Property FrameSizePercent As Single
+        Public Property FrameCornerRadiusPercent As Single
+        Public Property FrameEffect As String
+        Public Property FrameSymbol As String
+        Public Property FrameMarginPercent As Single
+        Public Property FrameSymbolSpacingPercent As Single
+        Public Property FrameSymbolRotate As Boolean
+        Public Property FrameKeylineColor As String
+        Public Property FrameKeylineWidthPercent As Single
+        Public Property FrameKeylineInsetPercent As Single
+        Public Property FrameFilmOrientation As String
+        ' Fuellung samt Verlauf: die Rahmenfarbe.
+        Public Property FillKind As String
+        Public Property FillColor As String
+        Public Property FillColor2 As String
+        Public Property GradientAngleDegrees As Single
+        Public Property GradientInverted As Boolean
+        Public Property GradientStops As String
+        Public Property GradientScalePercent As Single
+        Public Property GradientOffsetXPercent As Single
+        Public Property GradientOffsetYPercent As Single
+        Public Property GradientRepeat As String
+        ' Kontur der Rahmensymbole, Deckkraft und Mischen.
+        Public Property StrokeColor As String
+        Public Property StrokeWidth As Single
+        Public Property Opacity As Single
+        Public Property BlendMode As String
+        Public Property BlendIncludesStroke As Boolean
+        ' Schatten und Gluehen des Rahmens.
+        Public Property ShadowEnabled As Boolean
+        Public Property ShadowOffsetXPercent As Single
+        Public Property ShadowOffsetYPercent As Single
+        Public Property ShadowBlur As Single
+        Public Property ShadowStrength As Single
+        Public Property ShadowColor As String
+        Public Property ShadowRounded As Boolean
+        Public Property ShadowCornerRadiusPercent As Single
+        Public Property ShadowSizePercent As Single
+        Public Property ShadowPlacement As String
+        Public Property GlowEnabled As Boolean
+        Public Property GlowBlur As Single
+        Public Property GlowStrength As Single
+        Public Property GlowColor As String
+        Public Property GlowPlacement As String
+
+        Public Sub New()
+            CopyValues(New ImageAnnotation(), Me, toMemory:=True)
+        End Sub
+
+        ''' <summary>Das Aussehen eines Rahmen-Objekts.</summary>
+        Public Shared Function FromAnnotation(frame As ImageAnnotation) As FrameStyleMemory
+            Dim memory As New FrameStyleMemory()
+            If frame IsNot Nothing Then CopyValues(frame, memory, toMemory:=True)
+            Return memory
+        End Function
+
+        ''' <summary>Legt die gemerkten Werte auf ein Rahmen-Objekt. Geht ueber die Setter des
+        ''' Objekts, die damit auch einen verbogenen Wert aus der Datei klemmen.</summary>
+        Public Sub ApplyTo(frame As ImageAnnotation)
+            If frame Is Nothing Then Return
+            CopyValues(frame, Me, toMemory:=False)
+        End Sub
+
+        Public Function Clone() As FrameStyleMemory
+            Return DirectCast(MemberwiseClone(), FrameStyleMemory)
+        End Function
+
+        ''' <summary>Gleiches Aussehen? Ueber dieselbe Feldliste wie das Kopieren.</summary>
+        Public Function SameAs(other As FrameStyleMemory) As Boolean
+            If other Is Nothing Then Return False
+            For Each pair In PropertyPairs()
+                If Not Object.Equals(pair.Memory.GetValue(Me), pair.Memory.GetValue(other)) Then Return False
+            Next
+            Return True
+        End Function
+
+        ''' <summary>Die Paare aus Eigenschaft hier und gleichnamiger am Objekt, EINMAL ermittelt.
+        ''' Ein Name ohne Gegenstueck oder mit anderem Typ faellt heraus (und der Pruefstand meldet ihn).</summary>
+        Public Shared Function PropertyPairs() As IReadOnlyList(Of (Memory As Reflection.PropertyInfo, Annotation As Reflection.PropertyInfo))
+            Dim cached = _propertyPairs
+            If cached IsNot Nothing Then Return cached
+            Dim list As New List(Of (Memory As Reflection.PropertyInfo, Annotation As Reflection.PropertyInfo))()
+            For Each p In GetType(FrameStyleMemory).GetProperties(Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance)
+                If Not p.CanRead OrElse Not p.CanWrite Then Continue For
+                Dim target = GetType(ImageAnnotation).GetProperty(p.Name, Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance)
+                If target Is Nothing OrElse Not target.CanRead OrElse Not target.CanWrite OrElse target.PropertyType IsNot p.PropertyType Then Continue For
+                list.Add((p, target))
+            Next
+            cached = list.ToArray()
+            _propertyPairs = cached
+            Return cached
+        End Function
+
+        Private Shared _propertyPairs As IReadOnlyList(Of (Memory As Reflection.PropertyInfo, Annotation As Reflection.PropertyInfo)) = Nothing
+
+        Private Shared Sub CopyValues(frame As ImageAnnotation, memory As FrameStyleMemory, toMemory As Boolean)
+            For Each pair In PropertyPairs()
+                If toMemory Then
+                    pair.Memory.SetValue(memory, pair.Annotation.GetValue(frame))
+                Else
+                    pair.Annotation.SetValue(frame, pair.Memory.GetValue(memory))
+                End If
+            Next
+        End Sub
+    End Class
+
     ''' <summary>Welche Darstellung des Analysebildes zu EINEM Anpassungswerkzeug gehoert. Eine
     ''' Liste und keine Eigenschaft je Werkzeug: kommt ein Werkzeug dazu, ist hier nichts zu tun,
     ''' und ein Werkzeug, das es nicht mehr gibt, faellt beim Lesen einfach weg.</summary>
@@ -246,6 +369,11 @@ Namespace Services
         ''' Groesse und Haerte je Malwerkzeug, siehe PaintToolMemory. Ein Werkzeug, das hier fehlt,
         ''' beginnt mit den Werkswerten.
         Public Property PaintToolMemories As New List(Of PaintToolMemory)()
+        ''' Das Aussehen des zuletzt bearbeiteten Rahmens, siehe FrameStyleMemory. Nothing heisst:
+        ''' noch nie gemerkt oder zurueckgesetzt, ein neuer Rahmen beginnt mit den Werkswerten.
+        ''' Wird nie an Ort und Stelle geaendert, nur ersetzt (SaveLastFrameStyle): die flache Kopie
+        ''' der Einstellungen teilt die Instanz.
+        Public Property LastFrameStyle As FrameStyleMemory = Nothing
 
         ' ── Welche Zeilen der Reiter "Allgemein" im Infopanel zeigt ──────────────
         '
@@ -2280,6 +2408,26 @@ Namespace Services
             If list Is Nothing Then Return Nothing
             Return list.FirstOrDefault(Function(e) e IsNot Nothing AndAlso
                                            String.Equals(e.Mode, mode, StringComparison.OrdinalIgnoreCase))
+        End Function
+
+        ''' <summary>Merkt das Aussehen des zuletzt bearbeiteten Rahmens; Nothing vergisst es (ein
+        ''' neuer Rahmen beginnt dann wieder mit den Werkswerten). Schreibt nur, wenn sich etwas
+        ''' geaendert hat - der Aufruf kommt aus jedem Reglerschritt, und auf die Platte geht der
+        ''' Stand ohnehin gesammelt (ScheduleWrite). Gemerkt wird eine eigene Ausfertigung.</summary>
+        Public Shared Sub SaveLastFrameStyle(style As FrameStyleMemory)
+            Dim stored = Load().LastFrameStyle
+            If style Is Nothing Then
+                If stored Is Nothing Then Return
+            ElseIf style.SameAs(stored) Then
+                Return
+            End If
+            Dim copy = style?.Clone()
+            Update(Sub(s) s.LastFrameStyle = copy)
+        End Sub
+
+        ''' <summary>Das gemerkte Aussehen des Rahmens als eigene Ausfertigung, oder Nothing.</summary>
+        Public Shared Function LoadLastFrameStyle() As FrameStyleMemory
+            Return Load().LastFrameStyle?.Clone()
         End Function
 
         ''' <summary>Die Darstellung fuer EIN Anpassungswerkzeug festhalten. Der letzte gewaehlte

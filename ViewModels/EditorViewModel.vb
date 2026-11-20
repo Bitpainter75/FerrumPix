@@ -3484,6 +3484,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFrameKeylineControls))
             Me.RaisePropertyChanged(NameOf(FrameKeylineColorValue))
             Me.RaisePropertyChanged(NameOf(FrameKeylineWidth))
+            Me.RaisePropertyChanged(NameOf(FrameKeylineInset))
             Me.RaisePropertyChanged(NameOf(ShowFrameFilmControls))
             Me.RaisePropertyChanged(NameOf(FrameFilmOrientation))
             Me.RaisePropertyChanged(NameOf(BorderColor))
@@ -8524,7 +8525,11 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Legt das Rahmen-Objekt an, sobald zum ersten Mal an einem seiner Regler gedreht
-        ''' wird. Es kommt ganz nach oben: ein Rahmen gehoert ueber alles andere.</summary>
+        ''' wird. Es kommt ganz nach oben: ein Rahmen gehoert ueber alles andere.
+        '''
+        ''' Er sieht aus wie der zuletzt bearbeitete Rahmen (AppSettings.LastFrameStyle): wer einen
+        ''' Rahmen eingestellt hat, will denselben meist um die naechsten Bilder legen, auch nach
+        ''' einem Neustart. Ohne gemerkten Stand gelten die Werkswerte.</summary>
         Private Function EnsureFrameAnnotation() As ImageAnnotation
             Dim vorhanden = FindFrameAnnotation()
             If vorhanden IsNot Nothing Then Return vorhanden
@@ -8541,10 +8546,23 @@ Namespace ViewModels
                 .IsVisible = True,
                 .FrameEffect = "Einfach"
             }
+            AppSettingsService.LoadLastFrameStyle()?.ApplyTo(frame)
             _annotations.Add(frame)
             RaiseResetButtonStateChanged()
             Return frame
         End Function
+
+        ''' <summary>Merkt das Aussehen des Rahmens, wenn ein Handgriff es geaendert hat. Verglichen
+        ''' wird mit dem Stand VOR dem Handgriff und nicht mit dem gemerkten: ein Rahmen aus einem
+        ''' geladenen Projekt weicht vom gemerkten ab, und schon das Markieren seiner Ebene (das die
+        ''' Puffer unveraendert zurueckschreibt) haette ihn sonst zum gemerkten gemacht. Ohne Stand
+        ''' vorher (Nothing) ist der Rahmen eben entstanden, das zaehlt als Aenderung.</summary>
+        Private Sub RememberFrameStyleIfChanged(before As FrameStyleMemory, frame As ImageAnnotation)
+            If frame Is Nothing Then Return
+            Dim after = FrameStyleMemory.FromAnnotation(frame)
+            If before IsNot Nothing AndAlso before.SameAs(after) Then Return
+            AppSettingsService.SaveLastFrameStyle(after)
+        End Sub
 
         ''' <summary>Aendert einen Wert am Rahmen-Objekt und zieht Undo, Zuruecksetzer und Vorschau
         ''' nach. Ohne Rahmen und ohne Aenderung entsteht dabei KEINES - sonst legte schon das
@@ -8554,9 +8572,11 @@ Namespace ViewModels
             Dim vorhanden = FindFrameAnnotation()
             If vorhanden IsNot Nothing AndAlso unveraendert(vorhanden) Then Return
 
+            Dim before = If(vorhanden Is Nothing, Nothing, FrameStyleMemory.FromAnnotation(vorhanden))
             Dim frame = If(vorhanden, EnsureFrameAnnotation())
             If vorhanden IsNot Nothing Then CaptureUndoState(propertyName)
             schreiben(frame)
+            RememberFrameStyleIfChanged(before, frame)
             Me.RaisePropertyChanged(propertyName)
             ' Staerke null oder ein neu angelegter Rahmen aendern den Haken "Aktiv".
             RaiseFrameGroupActiveChanged()
@@ -8682,6 +8702,19 @@ Namespace ViewModels
                 SetFrameValue(NameOf(FrameKeylineWidth),
                               Function(f) Math.Abs(f.FrameKeylineWidthPercent - target) < 0.0001F,
                               Sub(f) f.FrameKeylineWidthPercent = target)
+            End Set
+        End Property
+
+        ''' <summary>Lage der Keyline im Rand, 0 bis 100: 0 an der Bildkante, 100 an der Aussenkante.</summary>
+        Public Property FrameKeylineInset As Double
+            Get
+                Return CDbl(If(FindFrameAnnotation()?.FrameKeylineInsetPercent, 0.0F))
+            End Get
+            Set(value As Double)
+                Dim target = CSng(Math.Max(0, Math.Min(100, value)))
+                SetFrameValue(NameOf(FrameKeylineInset),
+                              Function(f) Math.Abs(f.FrameKeylineInsetPercent - target) < 0.0001F,
+                              Sub(f) f.FrameKeylineInsetPercent = target)
             End Set
         End Property
 
@@ -8830,6 +8863,7 @@ Namespace ViewModels
             If frame Is Nothing Then Return
             CaptureUndoState("FrameStyle")
             Dim before = ComputeSceneDirtyRectFor(frame)
+            Dim styleBefore = FrameStyleMemory.FromAnnotation(frame)
             frame.FillKind = _annotationFillKind
             frame.FillColor = _annotationFillColor
             ApplyGradientBuffersTo(frame)
@@ -8848,6 +8882,7 @@ Namespace ViewModels
             frame.GlowColor = _annotationGlowColor
             frame.ShadowPlacement = _annotationShadowPlacement
             frame.GlowPlacement = _annotationGlowPlacement
+            RememberFrameStyleIfChanged(styleBefore, frame)
             Me.RaisePropertyChanged(NameOf(BorderColor))
             Me.RaisePropertyChanged(NameOf(BorderColorValue))
             Me.RaisePropertyChanged(NameOf(BorderColorBrush))
@@ -18212,6 +18247,11 @@ Namespace ViewModels
         ' Strukturelle - Zuschnitt, Drehung, Bildgroesse, Objekte, Masken und Korrekturebenen.
         ' Sie beschreiben DIESES Bild und waeren auf einem anderen sinnlos bis schaedlich (eine
         ' Maske aus einem Hochformat auf ein Querformat gelegt trifft irgendetwas).
+        '
+        ' Die eine Ausnahme ist der RAHMEN (ExtractTransferableAdjustments): er sitzt immer an den
+        ' Bildkanten und misst in Anteilen des Bildes, passt also auf jedes Foto. Er wandert mit,
+        ' solange er in der Rahmengruppe aktiv ist, und ersetzt beim Einfuegen einen vorhandenen
+        ' (ApplyTransferredFrameFrom). Bringt die Ablage keinen mit, bleibt der des Ziels.
 
         Public ReadOnly Property CopyAdjustmentsCommand As ICommand
         Public ReadOnly Property PasteAdjustmentsCommand As ICommand
@@ -18236,7 +18276,7 @@ Namespace ViewModels
 
         Public Sub CopyCurrentAdjustments()
             If Not HasDocument Then Return
-            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractPixelAdjustments())
+            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractTransferableAdjustments())
             If String.IsNullOrWhiteSpace(recipe) Then Return
             AppSettingsService.SaveCopiedAdjustments(recipe)
             Me.RaisePropertyChanged(NameOf(CanPasteAdjustments))
@@ -18318,7 +18358,7 @@ Namespace ViewModels
                 StatusText = LocalizationService.T("Bitte einen Namen für die Anpassung eingeben.")
                 Return
             End If
-            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractPixelAdjustments())
+            Dim recipe = FpxService.SerializeAdjustments(GetCurrentAdjustments().ExtractTransferableAdjustments())
             If String.IsNullOrWhiteSpace(recipe) Then Return
 
             AppSettingsService.SaveAdjustmentPreset(name, recipe)
@@ -18336,7 +18376,8 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>Wendet die gewählte Vorlage an - denselben Weg wie das Einfügen der Ablage, also
-        ''' nur die Pixel-Anpassungen auf dem aktuellen Stand ersetzen.</summary>
+        ''' die Pixel-Anpassungen auf dem aktuellen Stand ersetzen und einen mitgebrachten Rahmen
+        ''' setzen.</summary>
         Public Sub ApplySelectedAdjustmentPreset()
             If Not HasDocument Then Return
             Dim name = If(_selectedAdjustmentPresetName, "").Trim()
@@ -18359,6 +18400,7 @@ Namespace ViewModels
             PushUndo()
             Dim target = GetCurrentAdjustments()
             target.CopyPixelAdjustmentsFrom(gespeichert)
+            target.ApplyTransferredFrameFrom(gespeichert)
             ApplyAdjustments(target)
             _hasChanges = True
             Me.RaisePropertyChanged(NameOf(HasUnsavedChanges))
@@ -18385,9 +18427,11 @@ Namespace ViewModels
 
             PushUndo()
             ' Auf dem AKTUELLEN Stand aufsetzen und nur die Pixel-Anpassungen ersetzen: Geometrie,
-            ' Objekte und Masken dieses Bildes bleiben damit unangetastet.
+            ' Objekte und Masken dieses Bildes bleiben damit unangetastet. Einzig ein mitgebrachter
+            ' Rahmen tritt an die Stelle des vorhandenen.
             Dim target = GetCurrentAdjustments()
             target.CopyPixelAdjustmentsFrom(gespeichert)
+            target.ApplyTransferredFrameFrom(gespeichert)
             ApplyAdjustments(target)
             _hasChanges = True
             ' Wie beim Einfuegen in der Galerie: die Kachel soll danach zeigen, was eingefuegt
@@ -24755,6 +24799,11 @@ Namespace ViewModels
         ''' gesichert. In diesen Faellen bleibt nur "Speichern unter" (vorzugsweise .fpx oder ein
         ''' gebackenes Ausgabeformat).
         '''
+        ''' Der RAHMEN ist davon ausgenommen: er hat keine Datei hinter sich, nur Werte, und wandert
+        ''' mit "Anpassungen einfuegen" und den Vorlagen ohnehin ins Rezept einer RAW oder PSD
+        ''' (ImageAdjustments.ApplyTransferredFrameFrom). Sperrte er den Knopf, liesse sich eine
+        ''' solche Datei im Editor nicht mehr in ihr Rezept speichern.
+        '''
         ''' Entrauschen und Objektentfernen gehoeren AUSDRUECKLICH nicht dazu, obwohl auch sie in
         ''' den Pixeln stehen: sie liegen zugleich als Vermerk im Rezept und werden beim naechsten
         ''' Oeffnen neu gerechnet. Vorher sperrten sie den Knopf mit, und wer eine RAW entrauscht
@@ -24767,7 +24816,7 @@ Namespace ViewModels
                 Return RawSidecarService.IsSidecarFormat(RenderSourcePath) AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
                        Not _workingImage.HasUnrecordedBakedContent AndAlso
-                       _annotations.Count = 0 AndAlso
+                       _annotations.All(Function(a) ImageAdjustments.IsFrameAnnotation(a)) AndAlso
                        Not _retouchStrokeActive AndAlso
                        _pendingWorkingCommits = 0
             End Get
@@ -31447,6 +31496,10 @@ Namespace ViewModels
             If _selectedAnnotationIndex < 0 OrElse _selectedAnnotationIndex >= _annotations.Count Then Return
             CaptureUndoState(ObjectHistoryKey(propertyName))
             Dim a = _annotations(_selectedAnnotationIndex)
+            ' Ist die markierte Ebene der Rahmen, merkt sich der Editor sein Aussehen, sobald es
+            ' sich hier aendert (RememberFrameStyleIfChanged, unten nach dem Zurueckschreiben).
+            Dim frameStyleBefore = If(String.Equals(a.Kind, "Frame", StringComparison.OrdinalIgnoreCase),
+                                      FrameStyleMemory.FromAnnotation(a), Nothing)
             Dim previewSource = GetPreviewSource()
             Dim sceneSize = GetCurrentScenePixelSize()
             Dim oldDirtyRect = If(previewSource Is Nothing OrElse sceneSize.Width <= 0 OrElse sceneSize.Height <= 0,
@@ -31553,6 +31606,7 @@ Namespace ViewModels
             a.GlowColor = _annotationGlowColor
             a.ShadowPlacement = _annotationShadowPlacement
             a.GlowPlacement = _annotationGlowPlacement
+            If frameStyleBefore IsNot Nothing Then RememberFrameStyleIfChanged(frameStyleBefore, a)
             _annotationModelVersion += 1
             ' Auch waehrend eines Zuges AKKUMULIEREND vereinen: der Region-Worker koalesziert
             ' Anforderungen, und ein gebogener Zug hat Zwischenlagen, die ein blosses
@@ -32431,8 +32485,13 @@ Namespace ViewModels
         ''' <summary>Setzt den Rahmen zurück, und das heisst seit dem Umbau: das Rahmen-Objekt kommt
         ''' weg. Ein Objekt mit Staerke null bliebe sonst unsichtbar in der Ebenenliste stehen.
         ''' Die Rahmen-Gruppe hing vorher am Effekte-Zurücksetzer und nahm Vignette und Korn mit,
-        ''' die in einer anderen Gruppe stehen.</summary>
+        ''' die in einer anderen Gruppe stehen.
+        '''
+        ''' Er vergisst auch das gemerkte Aussehen (AppSettings.LastFrameStyle): der naechste Rahmen
+        ''' beginnt wieder mit den Werkswerten. Das ist der Weg zurueck auf sie; eine Ebene allein
+        ''' loescht man in der Ebenenliste. Rueckgaengig holt den Rahmen zurueck, das Gemerkte nicht.</summary>
         Private Sub ResetFrameInternal()
+            AppSettingsService.SaveLastFrameStyle(Nothing)
             Dim frame = FindFrameAnnotation()
             If frame Is Nothing Then Return
             PushUndo(ResetHistoryLabel("Rahmen"))
@@ -32503,6 +32562,7 @@ Namespace ViewModels
             Me.RaisePropertyChanged(NameOf(ShowFrameKeylineControls))
             Me.RaisePropertyChanged(NameOf(FrameKeylineColorValue))
             Me.RaisePropertyChanged(NameOf(FrameKeylineWidth))
+            Me.RaisePropertyChanged(NameOf(FrameKeylineInset))
             Me.RaisePropertyChanged(NameOf(ShowFrameFilmControls))
             Me.RaisePropertyChanged(NameOf(FrameFilmOrientation))
             Me.RaisePropertyChanged(NameOf(BorderColor))

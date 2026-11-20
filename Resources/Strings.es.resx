@@ -11651,8 +11651,8 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 bits</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_und_f_r_TIFF_Date_95afbca2" xml:space="preserve">
-    <value>16 bits está disponible para archivos RAW y para archivos TIFF de 16 bits. Las zonas retocadas y pintadas conservan la finura de 8 bits.</value>
+  <data name="16_Bit_gibt_es_beim_Speichern_als_TIFF_PNG_oder__2a161724" xml:space="preserve">
+    <value>16 bits está disponible al guardar como TIFF, PNG o JPEG XL, si la imagen procede de un archivo RAW o de un archivo TIFF, HEIC o AVIF con más de 8 bits. Las zonas retocadas y pintadas conservan la finura de 8 bits.</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
     <value>Guardado con 8 bits, 16 bits no está disponible para esta imagen: {0}</value>
@@ -11986,6 +11986,12 @@
   </data>
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>Ancho de línea</value>
+  </data>
+  <data name="Linienabstand_fd6e057a" xml:space="preserve">
+    <value>Distancia de línea</value>
+  </data>
+  <data name="Abstand_der_Linie_vom_Bild_in_Prozent_des_Rahmen_d6317bba" xml:space="preserve">
+    <value>Distancia de la línea a la imagen en porcentaje del marco: con 0 queda junto a la imagen, con 100 en el borde exterior.</value>
   </data>
   <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
     <value>Eliminar franja de color</value>

@@ -11649,8 +11649,8 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16 位</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_und_f_r_TIFF_Date_95afbca2" xml:space="preserve">
-    <value>16 位适用于 RAW 文件和 16 位的 TIFF 文件。修饰和涂画过的区域仍保持 8 位的精细度。</value>
+  <data name="16_Bit_gibt_es_beim_Speichern_als_TIFF_PNG_oder__2a161724" xml:space="preserve">
+    <value>以 TIFF、PNG 或 JPEG XL 保存时可使用 16 位，前提是图像来自 RAW 文件，或来自高于 8 位的 TIFF、HEIC 或 AVIF 文件。修饰和涂画过的区域仍保持 8 位的精细度。</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
     <value>已以 8 位保存，此图像无法使用 16 位：{0}</value>
@@ -11984,6 +11984,12 @@
   </data>
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>线条宽度</value>
+  </data>
+  <data name="Linienabstand_fd6e057a" xml:space="preserve">
+    <value>线条间距</value>
+  </data>
+  <data name="Abstand_der_Linie_vom_Bild_in_Prozent_des_Rahmen_d6317bba" xml:space="preserve">
+    <value>线条与图片的距离，以边框的百分比表示：为 0 时紧贴图片，为 100 时位于外边缘。</value>
   </data>
   <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
     <value>去除色边</value>

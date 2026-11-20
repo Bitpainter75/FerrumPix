@@ -1779,6 +1779,90 @@ Namespace Services
             Return result
         End Function
 
+        ''' <summary>Ist dieses Objekt der Rahmen? Die eine Stelle für die Frage, die Kopieren,
+        ''' Einfügen, Vorlagen und die Begleitdatei stellen.</summary>
+        Public Shared Function IsFrameAnnotation(annotation As ImageAnnotation) As Boolean
+            Return annotation IsNot Nothing AndAlso
+                   String.Equals(If(annotation.Kind, "").Trim(), "Frame", StringComparison.OrdinalIgnoreCase)
+        End Function
+
+        ''' <summary>Was "Anpassungen kopieren" und "Anpassung speichern" ablegen: die
+        ''' Bildanpassungen (<see cref="ExtractPixelAdjustments"/>) und dazu der Rahmen dieses
+        ''' Bildes.
+        '''
+        ''' DER RAHMEN WANDERT MIT, alle übrigen Objekte nicht. Er sitzt immer an den Bildkanten
+        ''' (ComputeAnnotationRect), und Stärke, Abstand, Rundung, Schatten und Glühen sind
+        ''' Anteile des Bildes; er passt damit auf jedes andere Foto. Text, Formen, Bilder und
+        ''' Wasserzeichen stehen dagegen an einer Stelle DIESES Bildes.
+        '''
+        ''' Nur ein sichtbarer Rahmen mit Stärke: wer ihn in der Rahmengruppe abgehakt hat, will ihn
+        ''' nicht übertragen. Gruppe, Ebenenmaske und Schnittmaske gehören dem Quellbild und bleiben
+        ''' zurück. Ohne Rahmen ist das Ergebnis dasselbe wie <see cref="ExtractPixelAdjustments"/>,
+        ''' eine alte Ablage ohne Objekte also gleichwertig.</summary>
+        Public Function ExtractTransferableAdjustments() As ImageAdjustments
+            Dim result = ExtractPixelAdjustments()
+            Dim frame = If(Annotations, New List(Of ImageAnnotation)()).
+                FirstOrDefault(Function(a) IsFrameAnnotation(a) AndAlso a.IsVisible AndAlso a.FrameSizePercent > 0)
+            If frame IsNot Nothing Then
+                Dim copy = frame.Clone()
+                copy.GroupId = ""
+                copy.MaskId = ""
+                copy.MaskAnchor = Nothing
+                copy.ClipToLayerBelow = False
+                result.Annotations.Add(copy)
+            End If
+            Return result
+        End Function
+
+        ''' <summary>Setzt den Rahmen aus <paramref name="other"/> (Ablage oder Vorlage) in dieses
+        ''' Rezept, als Gegenstück zu <see cref="ExtractTransferableAdjustments"/>. Die
+        ''' Bildanpassungen fasst es nicht an; das tun CopyPixelAdjustmentsFrom oder
+        ''' MergeNonDefaultPixelAdjustmentsFrom davor.
+        '''
+        ''' Bringt <paramref name="other"/> keinen Rahmen mit, bleibt alles, wie es ist, auch ein
+        ''' vorhandener Rahmen. Sonst ERSETZT der mitgebrachte den vorhandenen, an dessen Platz in
+        ''' der Objektliste und mit dessen Kennung, Gruppe, Ebenenmaske und Schnittmaske: was im Ziel
+        ''' auf den Rahmen zeigt (eine Korrekturebene über ihm), zeigt danach auf den neuen. Gibt es
+        ''' keinen, kommt er mit einer neuen Kennung ganz nach oben, wie beim Anlegen im Editor.
+        ''' Weitere Rahmen im Ziel entfallen, es gibt höchstens einen.</summary>
+        ''' <returns>True, wenn ein Rahmen gesetzt wurde.</returns>
+        Public Function ApplyTransferredFrameFrom(other As ImageAdjustments) As Boolean
+            Dim incoming = other?.Annotations?.FirstOrDefault(AddressOf IsFrameAnnotation)
+            If incoming Is Nothing Then Return False
+            If Annotations Is Nothing Then Annotations = New List(Of ImageAnnotation)()
+            Dim frame = incoming.Clone()
+            frame.MaskAnchor = Nothing
+            Dim existingIndex = Annotations.FindIndex(AddressOf IsFrameAnnotation)
+            If existingIndex < 0 Then
+                frame.Id = Guid.NewGuid().ToString("N")
+                frame.GroupId = ""
+                frame.MaskId = ""
+                frame.ClipToLayerBelow = False
+                Annotations.Add(frame)
+                Return True
+            End If
+
+            Dim existing = Annotations(existingIndex)
+            frame.Id = existing.Id
+            frame.GroupId = existing.GroupId
+            frame.MaskId = existing.MaskId
+            frame.ClipToLayerBelow = existing.ClipToLayerBelow
+            Annotations(existingIndex) = frame
+            For i = Annotations.Count - 1 To existingIndex + 1 Step -1
+                If Not IsFrameAnnotation(Annotations(i)) Then Continue For
+                Dim removedId = Annotations(i).Id
+                If MaskedAdjustmentLayers IsNot Nothing Then
+                    For Each layer In MaskedAdjustmentLayers
+                        If layer IsNot Nothing AndAlso String.Equals(layer.StackAboveAnnotationId, removedId, StringComparison.Ordinal) Then
+                            layer.StackAboveAnnotationId = frame.Id
+                        End If
+                    Next
+                End If
+                Annotations.RemoveAt(i)
+            Next
+            Return True
+        End Function
+
         ''' <summary>True, sobald mindestens eine Korrekturebene IN den Objektstapel einsortiert ist.
         ''' Solche Ebenen wirken auf das Komposit und lassen sich deshalb nicht aus dem Basis-Cache
         ''' bedienen - der Editor muss dann voll rendern statt nur eine Region zu flicken.</summary>

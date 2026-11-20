@@ -2120,6 +2120,8 @@ Namespace Models
 
         Public ReadOnly Property DateText As String
             Get
+                ' Der Weg nach oben zeigt kein Datum, siehe CaptionText.
+                If IsParentFolderEntry Then Return ""
                 EnsureFileInfoLoaded()
                 Return LocalizationService.FormatDateTime(DateModified)
             End Get
@@ -2127,6 +2129,7 @@ Namespace Models
 
         Public ReadOnly Property DateFileCreatedText As String
             Get
+                If IsParentFolderEntry Then Return ""
                 EnsureFileInfoLoaded()
                 If FileCreatedAt = DateTime.MinValue Then Return ""
                 Return LocalizationService.FormatDateTime(FileCreatedAt)
@@ -2200,6 +2203,9 @@ Namespace Models
             If IsFolder Then
                 Select Case field
                     Case TileCaptionField.DateTaken, TileCaptionField.FileModified, TileCaptionField.FileCreated
+                        ' Die Kachel ".." ist der Weg nach oben, kein Inhalt dieses Ordners: ihr
+                        ' Aenderungsdatum stand fremd zwischen den Bildern (Forum, Beitrag zur Galerie).
+                        If IsParentFolderEntry Then Return ""
                         Return FileDateText(DateModified)
                     Case TileCaptionField.FileSize
                         Return FileSizeText

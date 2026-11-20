@@ -11695,8 +11695,8 @@
   <data name="16_Bit_8f2daba0" xml:space="preserve">
     <value>16비트</value>
   </data>
-  <data name="16_Bit_gibt_es_f_r_RAW_Dateien_und_f_r_TIFF_Date_95afbca2" xml:space="preserve">
-    <value>16비트는 RAW 파일과 16비트 TIFF 파일에서 사용할 수 있습니다. 리터치하거나 덧칠한 부분은 8비트 수준의 정밀도로 유지됩니다.</value>
+  <data name="16_Bit_gibt_es_beim_Speichern_als_TIFF_PNG_oder__2a161724" xml:space="preserve">
+    <value>16비트는 TIFF, PNG 또는 JPEG XL로 저장할 때, 이미지가 RAW 파일이나 8비트를 넘는 TIFF, HEIC 또는 AVIF 파일에서 온 경우에 사용할 수 있습니다. 리터치하거나 덧칠한 부분은 8비트 수준의 정밀도로 유지됩니다.</value>
   </data>
   <data name="Mit_8_Bit_gespeichert_f_r_dieses_Bild_gibt_es_ke_5fe97a88" xml:space="preserve">
     <value>8비트로 저장했습니다. 이 이미지에는 16비트를 사용할 수 없습니다: {0}</value>
@@ -12030,6 +12030,12 @@
   </data>
   <data name="Linienbreite_b9c0eb00" xml:space="preserve">
     <value>선 두께</value>
+  </data>
+  <data name="Linienabstand_fd6e057a" xml:space="preserve">
+    <value>선 간격</value>
+  </data>
+  <data name="Abstand_der_Linie_vom_Bild_in_Prozent_des_Rahmen_d6317bba" xml:space="preserve">
+    <value>사진에서 선까지의 거리를 테두리에 대한 백분율로 지정합니다. 0이면 사진에 붙고, 100이면 바깥쪽 가장자리에 놓입니다.</value>
   </data>
   <data name="Farbsaum_entfernen_b2688ad6" xml:space="preserve">
     <value>색 번짐 제거</value>

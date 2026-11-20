@@ -476,7 +476,7 @@
                                                 Click="OnDialogBitDepthClick"
                                                 Tag="16">16 Bit</Button>
                                     </StackPanel>
-                                    <TextBlock Text="16 Bit gibt es für RAW-Dateien und für TIFF-Dateien mit 16 Bit. Retuschierte und übermalte Stellen bleiben dabei so fein wie 8 Bit."
+                                    <TextBlock Text="16 Bit gibt es beim Speichern als TIFF, PNG oder JPEG XL, wenn das Bild aus einer RAW-Datei oder aus einer TIFF-, HEIC- oder AVIF-Datei mit mehr als 8 Bit stammt. Retuschierte und übermalte Stellen bleiben dabei so fein wie 8 Bit."
                                                IsVisible="{Binding IsDialogBitDepth16}"
                                                Foreground="{DynamicResource FP.Text.Muted}"
                                                FontSize="{DynamicResource FP.Font.Small}"

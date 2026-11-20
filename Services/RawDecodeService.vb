@@ -5388,7 +5388,8 @@ Namespace Services
         ''' RAW-Dateien fand 21 DNGs, davon 17 mit dem Feld und 16 mit einem Wert ungleich null:
         ''' alle negativ zwischen -0,2 und -1,0 Stufen. Bei einer Fujifilm-RAF der DR-Modus der
         ''' Kamera (siehe <see cref="FujiDynamicRangePercent"/>), bei einer Canon-CR2 oder -CR3 die
-        ''' Tonwertpriorität (siehe <see cref="CanonHighlightTonePriority"/>). Alle uebrigen
+        ''' Tonwertpriorität (siehe <see cref="CanonHighlightTonePriority"/>), bei einer Pentax-PEF
+        ''' die Lichterkorrektur (siehe <see cref="PentaxHighlightCorrection"/>). Alle uebrigen
         ''' Formate sagen nichts.</para>
         '''
         ''' <para>WOFUER ES GEBRAUCHT WIRD: unsere Basisstufe entwickelt mit einer FESTEN
@@ -5401,12 +5402,14 @@ Namespace Services
         ''' und ein Metadatenlauf ueber eine 30-MB-Datei ist zu teuer, um ihn zu wiederholen.</para></summary>
         Public Shared Function BaselineExposureStops(path As String) As Double
             If String.IsNullOrEmpty(path) Then Return 0.0
-            ' Nur DNG, RAF und Canons CR2/CR3 sagen etwas. Die Abkuerzung spart den Metadatenlauf
+            ' Nur DNG, RAF, Canons CR2/CR3 und Pentax' PEF sagen etwas. Die Abkuerzung spart den Metadatenlauf
             ' fuer alle anderen Formate.
             Dim isRaf = path.EndsWith(".raf", StringComparison.OrdinalIgnoreCase)
             Dim isCanon = path.EndsWith(".cr2", StringComparison.OrdinalIgnoreCase) OrElse
                           path.EndsWith(".cr3", StringComparison.OrdinalIgnoreCase)
-            If Not isRaf AndAlso Not isCanon AndAlso Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
+            Dim isPef = path.EndsWith(".pef", StringComparison.OrdinalIgnoreCase)
+            If Not isRaf AndAlso Not isCanon AndAlso Not isPef AndAlso
+               Not path.EndsWith(".dng", StringComparison.OrdinalIgnoreCase) Then Return 0.0
 
             SyncLock BaselineExposuresLock
                 Dim bekannt As Double
@@ -5431,6 +5434,13 @@ Namespace Services
                     Dim priority = CanonHighlightTonePriority(IntegerArray(canon?.GetObject(CanonLightingOptTag)),
                                                               IntegerArray(canon?.GetObject(CanonCustomFunctions2Tag)))
                     stops = If(priority = 1, 1.0, 0.0)
+                    SyncLock BaselineExposuresLock
+                        BaselineExposures(path) = stops
+                    End SyncLock
+                    Return stops
+                End If
+                If isPef Then
+                    stops = If(PentaxHighlightCorrection(PentaxDynamicRangeExpansion(verzeichnisse)) = 1, 1.0, 0.0)
                     SyncLock BaselineExposuresLock
                         BaselineExposures(path) = stops
                     End SyncLock
@@ -5596,6 +5606,50 @@ Namespace Services
                 Next
             Next
             Return -1
+        End Function
+
+        ''' <summary>DynamicRangeExpansion (0x0069) im Herstellerblock von Pentax.</summary>
+        Private Const PentaxDynamicRangeExpansionTag As Integer = &H69
+
+        ''' <summary>Das Feld DynamicRangeExpansion einer Pentax-Aufnahme, Nothing, wenn die Datei
+        ''' keines traegt. Nur bei Marke PENTAX oder RICOH IMAGING: MetadataExtractor legt den Block
+        ''' aelterer Gehaeuse (Kopf "AOC") unter Casio ab, neuere (Kopf "PENTAX") unter
+        ''' PentaxType2; dieselbe Feldnummer bedeutet bei einer echten Casio etwas anderes.</summary>
+        Private Shared Function PentaxDynamicRangeExpansion(verzeichnisse As IEnumerable(Of MetadataExtractor.Directory)) As Long()
+            Dim ifd0 = verzeichnisse.OfType(Of MetadataExtractor.Formats.Exif.ExifIfd0Directory)().FirstOrDefault()
+            Dim make = If(ifd0?.GetDescription(MetadataExtractor.Formats.Exif.ExifDirectoryBase.TagMake), "").Trim()
+            If Not (make.StartsWith("PENTAX", StringComparison.OrdinalIgnoreCase) OrElse
+                    make.StartsWith("RICOH IMAGING", StringComparison.OrdinalIgnoreCase)) Then Return Nothing
+            For Each directory In verzeichnisse
+                If Not (directory.Name.Contains("Pentax", StringComparison.OrdinalIgnoreCase) OrElse
+                        TypeOf directory Is MetadataExtractor.Formats.Exif.Makernotes.CasioType1MakernoteDirectory OrElse
+                        TypeOf directory Is MetadataExtractor.Formats.Exif.Makernotes.CasioType2MakernoteDirectory) Then Continue For
+                If Not directory.ContainsTag(PentaxDynamicRangeExpansionTag) Then Continue For
+                Return IntegerArray(directory.GetObject(PentaxDynamicRangeExpansionTag))
+            Next
+            Return Nothing
+        End Function
+
+        ''' <summary>Die Lichterkorrektur einer Pentax-Aufnahme: 1 an, 0 aus, -1, wenn die Datei
+        ''' nichts dazu sagt.
+        '''
+        ''' <para>WAS SIE TUT: Die Kamera belichtet die Rohdaten eine Stufe knapper, um die Lichter zu
+        ''' schonen, und hebt ihr eigenes JPEG wieder an. Das Referenzprogramm gleicht das je Datei im
+        ''' BaselineExposure der DNG aus, genau eine Stufe ueber den uebrigen Aufnahmen des Modells:
+        ''' am Bestand (55 PEF aus 30 Modellen) tragen alle 13 Dateien mit eingeschalteter Korrektur
+        ''' +0,5 (K-3 Mark III +0,7), alle 42 uebrigen -0,5 (K-3 Mark III -0,3), ohne Ausnahme. Die
+        ''' kamera-eigene DNG schreibt denselben Wert selbst ins Feld BaselineExposure (K-1 Mark II
+        ''' mit Korrektur +0,49).</para>
+        '''
+        ''' <para>WOHER DER WERT KOMMT: Eintrag 0 von DynamicRangeExpansion (0x0069), 0 aus, 1 an;
+        ''' Eintrag 1 sagt nur, ob von Hand oder automatisch (2), und spielt keine Rolle: die K-3
+        ''' Mark III traegt 1,2 und 0,2 und liegt genau eine Stufe auseinander. Die Gehaeuse bis zur
+        ''' K10D tragen das Feld nicht. Andere Werte als 0 und 1 kommen im Bestand nicht vor und
+        ''' werden deshalb nicht ausgeglichen, statt einen Wert zu raten.</para></summary>
+        Public Shared Function PentaxHighlightCorrection(dynamicRangeExpansion As Long()) As Integer
+            If dynamicRangeExpansion Is Nothing OrElse dynamicRangeExpansion.Length < 1 Then Return -1
+            Dim value = dynamicRangeExpansion(0)
+            Return If(value = 0 OrElse value = 1, CInt(value), -1)
         End Function
 
         ''' <summary>Ein Zahlenfeld aus dem Herstellerblock als Long(), gleich welchen Zahlentyp

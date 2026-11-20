@@ -1734,7 +1734,8 @@ Namespace Services
                                       annotation.FrameMarginPercent / 100.0F,
                                       FrameKeylineColorFor(annotation, fill, alphaFactor),
                                       annotation.FrameKeylineWidthPercent / 100.0F,
-                                      annotation.FrameFilmOrientation)
+                                      annotation.FrameFilmOrientation,
+                                      annotation.FrameKeylineInsetPercent / 100.0F)
                 Case "rectangle", "rect", "selectionfill"
                     DrawShape(canvas, rect, fill, stroke, strokeWidth, False, gradient)
                 Case "roundedrectangle", "rounded-rectangle"
