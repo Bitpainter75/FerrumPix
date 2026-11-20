@@ -12038,4 +12038,13 @@
     <value>ลบขอบสีม่วงตามขอบที่คมและสว่าง แบบที่เลนส์หลายตัวแสดงเมื่อเปิดรูรับแสงกว้างสุด ลบเฉพาะสี ความสว่างยังคงเดิม ใช้ได้แม้ไม่มีโปรไฟล์เลนส์</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>หลายคำ: ตรงกับคำใดคำหนึ่งก็พอ +คำ ต้องมี -คำ ต้องไม่มี</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>เปลี่ยนชื่อ ({0} ไฟล์)</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>ส่งออกไปยัง ({0} ไฟล์)</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>ใช้การปรับแต่ง ({0} ไฟล์)</value>
+  </data>
 </root>

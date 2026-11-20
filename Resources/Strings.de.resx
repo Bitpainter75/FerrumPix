@@ -12012,4 +12012,13 @@
     <value>Nimmt violette Farbsäume an harten, hellen Kanten heraus, wie sie viele Objektive bei offener Blende zeigen. Nur die Farbe wird entfernt, die Helligkeit bleibt. Wirkt auch ohne Objektivprofil.</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Mehrere Wörter: eines davon genügt. +Wort muss vorkommen, -Wort darf nicht vorkommen.</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>Umbenennen ({0} Dateien)</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>Exportieren nach ({0} Dateien)</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>Anpassungen anwenden ({0} Dateien)</value>
+  </data>
 </root>

@@ -12034,4 +12034,13 @@
     <value>Fjerner violette farvesømme langs hårde, lyse kanter, som mange objektiver viser ved fuld blændeåbning. Kun farven fjernes, lysstyrken bliver. Virker også uden objektivprofil.</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Flere ord: ét af dem er nok. +ord skal forekomme, -ord må ikke forekomme.</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>Omdøb ({0} filer)</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>Eksporter til ({0} filer)</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>Anvend justeringer ({0} filer)</value>
+  </data>
 </root>

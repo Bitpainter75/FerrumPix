@@ -2574,7 +2574,7 @@ Namespace ViewModels
             PrepareDialogExportForms(settings, samplePath)
             Me.RaisePropertyChanged(NameOf(IsSaveAsImmichAvailable))
 
-            Dim title = $"{LocalizationService.T("Exportieren nach")} ({fileCount} {LocalizationService.T("Dateien")})"
+            Dim title = String.Format(LocalizationService.T("Exportieren nach ({0} Dateien)"), fileCount)
             Dim result = Await ShowDialogAsync(AppDialogKind.ExportTo,
                                                title,
                                                "Stelle den Export zusammen - die Originale bleiben unangetastet.",
@@ -2951,7 +2951,7 @@ Namespace ViewModels
 
             ' Titel vorab zusammensetzen: ShowDialogAsync übersetzt ihn zwar, aber ein interpolierter Text
             ' mit der Dateizahl darin hätte in keiner Sprache einen Schlüssel (siehe LocalizationService).
-            Dim title = $"{LocalizationService.T("Anpassungen anwenden")} ({fileCount} {LocalizationService.T("Dateien")})"
+            Dim title = String.Format(LocalizationService.T("Anpassungen anwenden ({0} Dateien)"), fileCount)
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchFilter,
                                                title,
                                                "Wähle den Look und wohin die Bilder geschrieben werden.",
@@ -6215,7 +6215,8 @@ Namespace ViewModels
             RebuildBatchRenamePreview()
 
             Dim result = Await ShowDialogAsync(AppDialogKind.BatchRename,
-                                               $"Umbenennen ({_dialogBatchRenamePaths.Count} Dateien)",
+                                               String.Format(LocalizationService.T("Umbenennen ({0} Dateien)"),
+                                                             _dialogBatchRenamePaths.Count),
                                                "Lege eine Namensvorlage fest und prüfe die Vorschau vor dem Umbenennen.",
                                                "",
                                                "Umbenennen",

@@ -12034,4 +12034,13 @@
     <value>多くのレンズが開放絞りで見せる、明るくくっきりした輪郭の紫の色にじみを取り除きます。取り除くのは色だけで、明るさはそのままです。レンズプロファイルがなくても働きます。</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>複数の語：いずれか1つに一致すれば十分です。+語 は必須、-語 は除外します。</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>名前を変更（{0} ファイル）</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>書き出し先（{0} ファイル）</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>調整を適用（{0} ファイル）</value>
+  </data>
 </root>

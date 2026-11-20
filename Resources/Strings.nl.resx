@@ -12034,4 +12034,13 @@
     <value>Haalt paarse kleurranden langs harde, lichte randen weg, zoals veel objectieven die bij volle opening tonen. Alleen de kleur wordt verwijderd, de helderheid blijft. Werkt ook zonder objectiefprofiel.</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Meerdere woorden: één ervan volstaat. +woord moet voorkomen, -woord mag niet voorkomen.</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>Naam wijzigen ({0} bestanden)</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>Exporteren naar ({0} bestanden)</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>Aanpassingen toepassen ({0} bestanden)</value>
+  </data>
 </root>

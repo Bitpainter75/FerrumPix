@@ -12034,4 +12034,13 @@
     <value>Tar bort violetta färgsömmar längs hårda, ljusa kanter, som många objektiv visar på full öppning. Bara färgen tas bort, ljusstyrkan blir kvar. Fungerar även utan objektivprofil.</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Flera ord: ett av dem räcker. +ord måste finnas, -ord får inte finnas.</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>Byt namn ({0} filer)</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>Exportera till ({0} filer)</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>Använd justeringar ({0} filer)</value>
+  </data>
 </root>

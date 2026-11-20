@@ -22,3 +22,6 @@
 - The search field in the settings was too narrow for its hint, which was cut off. It now just
   says Search; the shortcut CTRL+F shows when you point at the field.
 
+- The title of the dialog for renaming several pictures at once stayed in German in every other
+  language.
+

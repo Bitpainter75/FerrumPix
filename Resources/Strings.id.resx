@@ -12038,4 +12038,13 @@
     <value>Menghapus pinggiran warna ungu di tepi yang tajam dan terang, seperti yang ditunjukkan banyak lensa pada bukaan penuh. Hanya warnanya yang dihapus, kecerahan tetap. Berfungsi juga tanpa profil lensa.</value>
   </data>
   <data name="Mehrere_W_rter_eines_davon_gen_gt_Wort_muss_vork_978d9333" xml:space="preserve"><value>Beberapa kata: satu saja cukup. +kata harus ada, -kata tidak boleh ada.</value></data>
+  <data name="Umbenennen_0_Dateien_521e6738" xml:space="preserve">
+    <value>Ganti nama ({0} file)</value>
+  </data>
+  <data name="Exportieren_nach_0_Dateien_4bcdd593" xml:space="preserve">
+    <value>Ekspor ke ({0} file)</value>
+  </data>
+  <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
+    <value>Terapkan penyesuaian ({0} file)</value>
+  </data>
 </root>
