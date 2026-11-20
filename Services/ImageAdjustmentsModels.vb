@@ -715,8 +715,13 @@ Namespace Services
         ''' RawDecodeService.HighlightRecoveryKnee linear bis HighlightKneeAtFullLowering, die
         ''' Schulter holt damit mehr der Reserve ueber Weiss ins Bild. Der Regler wirkt danach
         ''' trotzdem voll in der Kette; so ist er gemessen. Angehobene Lichter lassen das Knie
-        ''' stehen, ein Filmnegativ ebenso (dort sind die Lichter der Datei die Tiefen des Bildes).</summary>
+        ''' stehen, ein Filmnegativ ebenso (dort sind die Lichter der Datei die Tiefen des Bildes).
+        ''' Ein Filmnegativ im Modell 1 bekommt statt eines Knies die Anweisung, linear zu entwickeln
+        ''' (<see cref="RawDecodeService.LinearToneKnee"/>, siehe <see cref="NegativeDevelopsLinear"/>);
+        ''' sie laeuft ueber dieselben Wege wie das Knie, bis in den Schluessel des Zwischenspeichers
+        ''' und den Neuaufbau des Arbeitsbilds im Editor.</summary>
         Public Function RawHighlightKnee() As Double
+            If NegativeDevelopsLinear() Then Return RawDecodeService.LinearToneKnee
             If Not RawHighlightRecovery OrElse Not ExposureBelongsToRawStage() Then Return RawDecodeService.HighlightRecoveryKnee
             Dim lowered = Math.Min(1.0, Math.Max(0.0, -Highlights / 100.0))
             Return RawDecodeService.HighlightRecoveryKnee +
@@ -727,6 +732,15 @@ Namespace Services
         ''' wo der Regler gerade steht? Die Automatik fragt das, bevor sie einen Wert waehlt.</summary>
         Public Function ExposureBelongsToRawStage() As Boolean
             Return Not NegativeEnabled
+        End Function
+
+        ''' <summary>Entwickelt die RAW-Stufe fuer die Umkehr LINEAR, also ohne Grundbelichtung,
+        ''' ACR3-Kurve und Lichterschulter? Nur bei eingeschaltetem Negativ im Modell 1
+        ''' (<see cref="NegativeModel"/>). Die Umkehr rechnet dann auf der Durchlaessigkeit des Films
+        ''' statt auf einem Bild, dem schon der Look der Kamera aufgepraegt ist. Alte Rezepte (Modell
+        ''' 0) entwickeln weiter wie zuvor.</summary>
+        Public Function NegativeDevelopsLinear() As Boolean
+            Return NegativeEnabled AndAlso NegativeModel >= 1
         End Function
 
         ''' <summary>Wie viel Belichtung, in Punkten des Reglers, schon im QUELLBILD steckt. Die
@@ -786,7 +800,11 @@ Namespace Services
         ''' <summary>Rechnet die Kette ihre Belichtung wie die RAW-Stufe?
         ''' Siehe <see cref="SourceFollowsRawExposure"/>.</summary>
         Public Function ChainExposureInRawStage() As Boolean
-            Return SourceFollowsRawExposure AndAlso ExposureBelongsToRawStage()
+            ' Ein linear entwickeltes Quellbild (Filmnegativ im Modell 1, gerade ausgeschaltet) traegt
+            ' weder Kurve noch Grundbelichtung; der Vorgriff kann es nicht nachbilden. Bis der
+            ' Neuaufbau kommt, rechnet die Kette die Belichtung als Faktor.
+            Return SourceFollowsRawExposure AndAlso ExposureBelongsToRawStage() AndAlso
+                   KneeInSource <> RawDecodeService.LinearToneKnee
         End Function
 
         ''' <summary>Mit welchem Knie der Lichterschulter das QUELLBILD entwickelt ist (siehe
@@ -1145,6 +1163,17 @@ Namespace Services
         Public Property NegativeDensityColor As String = ""
         ''' <summary>Gradation der Dichtekurve, -100..100 (0 = neutral), wirkt als Gamma 2^(v/100).</summary>
         Public Property NegativeGamma As Single = 0
+        ''' <summary>Rechenweg der Umkehr. 0 ist der Weg bis 0.9.88 und gilt fuer jedes Rezept ohne das
+        ''' Feld: der Logarithmus laeuft auf den KODIERTEN Werten des Arbeitsbilds, und eine RAW kommt
+        ''' mit Grundbelichtung, ACR3-Kurve und Lichterschulter in die Umkehr. 1
+        ''' (<see cref="CurrentNegativeModel"/>): der Logarithmus laeuft auf linearem Licht in
+        ''' Gleitkomma, und eine RAW entwickelt die RAW-Stufe dafuer linear
+        ''' (<see cref="NegativeDevelopsLinear"/>). Der Editor setzt es beim Einschalten der Umkehr und
+        ''' nimmt es beim Ausschalten auf 0 zurueck; gespeicherte Bearbeitungen behalten so ihren Weg
+        ''' und sehen bitgleich aus wie zuvor.</summary>
+        Public Property NegativeModel As Integer = 0
+        ''' <summary>Das Modell, das eine neu eingeschaltete Umkehr bekommt (siehe <see cref="NegativeModel"/>).</summary>
+        Public Const CurrentNegativeModel As Integer = 1
 
         Public Property CurveRgbPoints As String = "0,0;255,255"
         Public Property CurveRedPoints As String = "0,0;255,255"
@@ -2004,6 +2033,7 @@ Namespace Services
                 .NegativeBaseColor = NegativeBaseColor,
                 .NegativeDensityColor = NegativeDensityColor,
                 .NegativeGamma = NegativeGamma,
+                .NegativeModel = NegativeModel,
                 .CurveRgbPoints = CurveRgbPoints,
                 .CurveRedPoints = CurveRedPoints,
                 .CurveGreenPoints = CurveGreenPoints,

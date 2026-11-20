@@ -44,7 +44,7 @@ Namespace Services
                 Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
                 Dim demosaic = ConfiguredDemosaic()
-                Dim wantedKnee = If(recoverHighlights, knee, 1.0)
+                Dim wantedKnee = If(recoverHighlights OrElse knee = LinearToneKnee, knee, 1.0)
                 Dim modelDenoise = If(lensChoice IsNot Nothing AndAlso lensChoice.ModelDenoiseStrength >= 0 AndAlso
                                       HasModelDenoised(path), lensChoice.ModelDenoiseStrength, -1.0)
                 Dim deep = TryBuildFromCachedRaw(path, writeTime, demosaic, lens, baseEv, wantedKnee, exposureEv,
@@ -83,11 +83,13 @@ Namespace Services
                 Dim targetPtr = bitmap.GetPixels()
                 Dim targetStride = bitmap.RowBytes
                 Dim rowLength = width * 4
-                Dim ramp = ToneRampFor(baseEv, normalization, sliderEv)
+                ' Wie BuildFrom16Bit: linear (Filmnegativ) ohne Grundbelichtung und Daempfung der Tiefen.
+                Dim linear = knee = LinearToneKnee
+                Dim ramp = If(linear, LinearToneRampFor(normalization), ToneRampFor(baseEv, normalization, sliderEv))
                 Convert16Rows(data, width, height,
                               Sub(y, row)
                               End Sub,
-                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation, toneMatrix,
+                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, If(linear, Nothing, shadowSaturation), toneMatrix,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength))
                 Return bitmap
             Catch ex As Exception

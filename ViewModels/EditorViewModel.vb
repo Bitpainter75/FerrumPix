@@ -278,6 +278,9 @@ Namespace ViewModels
         ''' MarkNegativeRemeasureAfterRawRebuild). Der naechste uebernommene Neuaufbau misst nach.
         Private _negativeRemeasureAfterRawRebuild As Boolean = False
         Private _negativeGamma As Double = 0
+        ''' Rechenweg der Umkehr (ImageAdjustments.NegativeModel): beim Einschalten das aktuelle
+        ''' Modell, beim Ausschalten 0; ein geladenes Rezept bringt seins mit.
+        Private _negativeModel As Integer = 0
         ''' Solange die Pipette auf die Filmbasis wartet, muss die Umkehr aus der VORSCHAU heraus: die
         ''' Pipette liest die Farbe, die auf dem Schirm steht - im umgerechneten Positiv würde der Nutzer
         ''' also die Farbe des fertigen Bildes als "Filmbasis" setzen statt die des Filmträgers.
@@ -6952,6 +6955,7 @@ Namespace ViewModels
                 If _negativeEnabled = value Then Return
                 CaptureUndoState(NameOf(NegativeEnabled))
                 _negativeEnabled = value
+                _negativeModel = If(value, ImageAdjustments.CurrentNegativeModel, 0)
                 SwitchCameraStartValuesForNegative(value)
                 If value Then MeasureFilmNegative()
                 MarkNegativeRemeasureAfterRawRebuild()
@@ -7969,11 +7973,13 @@ Namespace ViewModels
                 Return New ImageAdjustments With {
                     .Highlights = parked.Highlights,
                     .NegativeEnabled = parked.NegativeEnabled,
+                    .NegativeModel = parked.NegativeModel,
                     .RawHighlightRecovery = _rawHighlightRecovery}.RawHighlightKnee()
             End If
             Return New ImageAdjustments With {
                 .Highlights = CSng(_highlights),
                 .NegativeEnabled = _negativeEnabled,
+                .NegativeModel = _negativeModel,
                 .RawHighlightRecovery = _rawHighlightRecovery}.RawHighlightKnee()
         End Function
 
@@ -14092,6 +14098,7 @@ Namespace ViewModels
                                ' die Startwerte der Kamera weichen denen des Films.
                                If Not _negativeEnabled Then
                                    _negativeEnabled = True
+                                   _negativeModel = ImageAdjustments.CurrentNegativeModel
                                    SwitchCameraStartValuesForNegative(True)
                                    MarkNegativeRemeasureAfterRawRebuild()
                                End If
@@ -14196,6 +14203,7 @@ Namespace ViewModels
             _negativeBasePicked = False
             _negativeRemeasureAfterRawRebuild = False
             _negativeGamma = 0
+            _negativeModel = 0
             RaiseNegativePropertiesChanged()
             RaiseResetButtonStateChanged()
             Me.RaisePropertyChanged(NameOf(TransparencyBackgroundBrush))
@@ -18998,6 +19006,7 @@ Namespace ViewModels
                                                                  MeasureFilmNegative()
                                                                  If Not _negativeEnabled Then
                                                                      _negativeEnabled = True
+                                                                     _negativeModel = ImageAdjustments.CurrentNegativeModel
                                                                      SwitchCameraStartValuesForNegative(True)
                                                                      MarkNegativeRemeasureAfterRawRebuild()
                                                                  End If
@@ -25239,6 +25248,7 @@ Namespace ViewModels
                 .NegativeBaseColor = _negativeBaseColor,
                 .NegativeDensityColor = _negativeDensityColor,
                 .NegativeGamma = CSng(_negativeGamma),
+                .NegativeModel = _negativeModel,
                 .CurveRgbPoints = PointsToCurveString(_curveRgbPoints),
                 .CurveRedPoints = PointsToCurveString(_curveRedPoints),
                 .CurveGreenPoints = PointsToCurveString(_curveGreenPoints),
@@ -26872,6 +26882,7 @@ Namespace ViewModels
             _negativeBaseColor = adj.NegativeBaseColor
             _negativeDensityColor = adj.NegativeDensityColor
             _negativeGamma = adj.NegativeGamma
+            _negativeModel = adj.NegativeModel
             LoadCurvePointsFromString(_curveRgbPoints, adj.CurveRgbPoints)
             LoadCurvePointsFromString(_curveRedPoints, adj.CurveRedPoints)
             LoadCurvePointsFromString(_curveGreenPoints, adj.CurveGreenPoints)
@@ -27538,6 +27549,7 @@ Namespace ViewModels
             _negativeBasePicked = False
             _negativeRemeasureAfterRawRebuild = False
             _negativeGamma = 0
+            _negativeModel = 0
             ResetCurvePoints()
             ResetHslFields()
             _rotationDegrees = 0

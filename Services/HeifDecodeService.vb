@@ -112,6 +112,9 @@ Namespace Services
         Private Const ColorspaceRgb As Integer = 1
         Private Const ChromaInterleavedRgba As Integer = 11
         Private Const ChannelInterleaved As Integer = 10
+        ''' heif_chroma_interleaved_RRGGBBAA_LE: je Kanal zwei Byte, kleines Ende zuerst, die Werte
+        ''' in der Tiefe der Datei (bei 10 Bit also 0 bis 1023), nicht auf 16 Bit gestreckt.
+        Private Const ChromaInterleavedRrggbbaaLe As Integer = 15
 
         Private Shared ReadOnly _initLock As New Object()
         ''' libheif ist nicht garantiert reentrant über einen Kontext hinweg; jeder Aufruf legt
@@ -162,6 +165,12 @@ Namespace Services
         Private Shared _thumbnailCount As HandleIntFn
         Private Shared _thumbnailIds As GetThumbnailIdsFn
         Private Shared _thumbnail As GetThumbnailFn
+        ''' Ebenfalls OPTIONAL, fuer Bilder mit mehr als 8 Bit: Tiefe der Aufnahme, ob sie Alpha
+        ''' traegt, und die Tiefe des dekodierten Bilds. Fehlen sie, wird jedes Bild mit 8 Bit
+        ''' gelesen wie bisher.
+        Private Shared _lumaBits As HandleIntFn
+        Private Shared _hasAlpha As HandleIntFn
+        Private Shared _bitsRange As GetIntFn
 
         Private Shared Sub NoteFallbackToLibheif(what As String)
             If Threading.Interlocked.Exchange(_fallbackLogged, 1) = 0 Then
@@ -336,6 +345,16 @@ Namespace Services
                         _thumbnailIds = Nothing
                         _thumbnail = Nothing
                     End Try
+                    Try
+                        _lumaBits = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_luma_bits_per_pixel")
+                        _hasAlpha = GetExport(Of HandleIntFn)(handle, "heif_image_handle_has_alpha_channel")
+                        _bitsRange = GetExport(Of GetIntFn)(handle, "heif_image_get_bits_per_pixel_range")
+                    Catch
+                        ' Optional: ohne sie kommt jedes Bild mit 8 Bit, wie vorher.
+                        _lumaBits = Nothing
+                        _hasAlpha = Nothing
+                        _bitsRange = Nothing
+                    End Try
                 Catch
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
                     _contextAlloc = Nothing : _contextFree = Nothing : _readFromFile = Nothing
@@ -346,6 +365,7 @@ Namespace Services
                     _profileSize = Nothing : _rawProfile = Nothing
                     _nclxProfile = Nothing : _freeNclx = Nothing
                     _thumbnailCount = Nothing : _thumbnailIds = Nothing : _thumbnail = Nothing
+                    _lumaBits = Nothing : _hasAlpha = Nothing : _bitsRange = Nothing
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
                     _loadedLibrary = Nothing
@@ -403,8 +423,10 @@ Namespace Services
                         Return Nothing
                     End If
                     ' HEIC vom Telefon traegt haeufig Display P3. Ohne diese Wandlung kaeme es als
-                    ' sRGB an und saehe zu blass aus (siehe ColorManagementService).
-                    Dim managed = ColorManagementService.ToSrgb(bitmap, codec.Info.ColorSpace)
+                    ' sRGB an und saehe zu blass aus (siehe ColorManagementService). Sanft wie
+                    ' der libheif-Weg (DecodeHandle), damit dieselbe Datei auf beiden Wegen
+                    ' gleich ankommt.
+                    Dim managed = ColorManagementService.ToSrgbSoftGamut(bitmap, codec.Info.ColorSpace)
                     If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
                     Return managed
                 End Using
@@ -478,9 +500,196 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>Traegt die Aufnahme hinter diesem Handle mehr als 8 Bit, und kennt die
+        ''' Bibliothek die Abfragen dafuer?</summary>
+        Private Shared Function IsHighBitDepth(handle As IntPtr) As Boolean
+            If handle = IntPtr.Zero OrElse _lumaBits Is Nothing OrElse _bitsRange Is Nothing Then Return False
+            Return _lumaBits(handle) > 8
+        End Function
+
+        ''' <summary>Traegt diese Datei mehr als 8 Bit in einer Form, die als tiefe Quelle taugt
+        ''' (ohne Alpha, wie beim TIFF mit 16 Bit)? Danach richtet sich, ob die Dialoge 16 Bit
+        ''' anbieten und ob die Kette ein tiefes Bild bekommt (ImageProcessor.IsDeepFileSource).
+        '''
+        ''' Nur ein Blick in die Kopfdaten, deshalb wie <see cref="TryGetSize"/> NICHT durch die
+        ''' Decode-Schleuse. Auf macOS liefert ImageIO das 8-Bit-Bild; ein tiefes aus libheif
+        ''' daneben waere nicht sicher dasselbe Bild, dort gibt es deshalb keine tiefe Quelle.</summary>
+        Public Shared Function IsDeepHeif(path As String) As Boolean
+            If Not IsSupportedHeif(path) OrElse Not File.Exists(path) Then Return False
+            If MacImageIoService.IsAvailable Then Return False
+            SyncLock _nativeLock
+                If Not LibheifReady OrElse _hasAlpha Is Nothing Then Return False
+                Dim ctx As IntPtr = IntPtr.Zero
+                Dim handle As IntPtr = IntPtr.Zero
+                Dim pathPtr As IntPtr = IntPtr.Zero
+                Try
+                    ctx = _contextAlloc()
+                    If ctx = IntPtr.Zero Then Return False
+                    pathPtr = StringToUtf8(path)
+                    If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return False
+                    If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return False
+                    Return IsHighBitDepth(handle) AndAlso _hasAlpha(handle) = 0
+                Catch
+                    Return False
+                Finally
+                    If handle <> IntPtr.Zero Then _handleRelease(handle)
+                    If ctx <> IntPtr.Zero Then _contextFree(ctx)
+                    If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+                End Try
+            End SyncLock
+        End Function
+
+        ''' <summary>Die Hauptaufnahme mit 16 Bit je Kanal (Rgba16161616, deckend, sRGB ohne
+        ''' Farbraum, Besitz beim Aufrufer) oder Nothing, wenn die Datei keine tiefe Quelle ist
+        ''' (<see cref="IsDeepHeif"/>). DAS TIEFE GEGENSTUECK ZU <see cref="TryDecode"/>: dasselbe
+        ''' Bild, dieselbe Drehung, dieselbe Wandlung des Profils; das 8-Bit-Bild einer solchen
+        ''' Datei ist genau dieses Bild, gerundet.</summary>
+        Friend Shared Function TryDecodeDeep(path As String) As SKBitmap
+            If String.IsNullOrWhiteSpace(path) OrElse Not IsDeepHeif(path) Then Return Nothing
+            Return DecodeGate.Run(Function()
+                                      SyncLock _nativeLock
+                                          If Not LibheifReady Then Return Nothing
+                                          Dim ctx As IntPtr = IntPtr.Zero
+                                          Dim handle As IntPtr = IntPtr.Zero
+                                          Dim pathPtr As IntPtr = IntPtr.Zero
+                                          Try
+                                              ctx = _contextAlloc()
+                                              If ctx = IntPtr.Zero Then Return Nothing
+                                              pathPtr = StringToUtf8(path)
+                                              If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
+                                              If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return Nothing
+                                              If Not IsHighBitDepth(handle) OrElse _hasAlpha(handle) <> 0 Then Return Nothing
+                                              Return DecodeDeepHandle(handle, handle, True)
+                                          Catch ex As Exception
+                                              DiagnosticLogService.LogException("HEIF.TryDecodeDeep", ex)
+                                              Return Nothing
+                                          Finally
+                                              If handle <> IntPtr.Zero Then _handleRelease(handle)
+                                              If ctx <> IntPtr.Zero Then _contextFree(ctx)
+                                              If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+                                          End Try
+                                      End SyncLock
+                                  End Function)
+        End Function
+
+        ''' <summary>Ein Bild mit mehr als 8 Bit aus einem libheif-Handle als Rgba16161616 in sRGB
+        ''' (ohne Farbraum, Besitz beim Aufrufer), oder Nothing.
+        '''
+        ''' libheif liefert die Werte in der Tiefe der Datei (bei 10 Bit 0 bis 1023); sie werden
+        ''' gerundet auf 0 bis 65535 gestreckt, sodass Schwarz und Weiss genau auf den Enden liegen.
+        ''' Das Profil wird danach in 16 Bit gewandelt, sanft an den Raendern von sRGB
+        ''' (<see cref="ColorManagementService.ToSrgbSoftGamut"/>).</summary>
+        ''' <param name="opaque">Deckend anlegen (die tiefe Quelle der Kette); sonst
+        ''' unvormultipliziert mit dem Alpha der Datei.</param>
+        Private Shared Function DecodeDeepHandle(handle As IntPtr, profileHandle As IntPtr, opaque As Boolean) As SKBitmap
+            Dim img As IntPtr = IntPtr.Zero
+            Try
+                If _decodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRrggbbaaLe, IntPtr.Zero).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
+
+                Dim width = _imageGetWidth(img, ChannelInterleaved)
+                Dim height = _imageGetHeight(img, ChannelInterleaved)
+                If width <= 0 OrElse height <= 0 Then Return Nothing
+                If CLng(width) * CLng(height) > Integer.MaxValue \ 8 Then Return Nothing
+                Dim bits = _bitsRange(img, ChannelInterleaved)
+                If bits <= 8 OrElse bits > 16 Then Return Nothing
+                Dim maxValue = (1 << bits) - 1
+
+                Dim stride = 0
+                Dim plane = _getPlane(img, ChannelInterleaved, stride)
+                If plane = IntPtr.Zero OrElse stride < width * 8 Then Return Nothing
+
+                Dim bitmap = ImageProcessor.NewDeepBitmap(width, height, If(opaque, SKAlphaType.Opaque, SKAlphaType.Unpremul))
+                If bitmap Is Nothing Then Return Nothing
+                Try
+                    Dim target = bitmap.GetPixels()
+                    Dim targetStride = bitmap.RowBytes
+                    Threading.Tasks.Parallel.For(0, height,
+                        Sub(y)
+                            ' Short statt UShort: Marshal.Copy kennt kein UShort-Feld. Gelesen
+                            ' wird ueber And &HFFFF, geschrieben ueber ToDeepShort.
+                            Dim row(width * 4 - 1) As Short
+                            Marshal.Copy(New IntPtr(plane.ToInt64() + CLng(y) * stride), row, 0, width * 4)
+                            For i = 0 To row.Length - 1
+                                If opaque AndAlso (i And 3) = 3 Then
+                                    row(i) = -1S
+                                    Continue For
+                                End If
+                                Dim value = Math.Min(CInt(row(i)) And &HFFFF, maxValue)
+                                row(i) = ImageProcessor.ToDeepShort(CInt((CLng(value) * 65535L + (maxValue \ 2)) \ maxValue))
+                            Next
+                            Marshal.Copy(row, 0, New IntPtr(target.ToInt64() + CLng(y) * targetStride), width * 4)
+                        End Sub)
+
+                    Using profile = ReadColorProfile(profileHandle)
+                        Dim managed = ColorManagementService.ToSrgbSoftGamut(bitmap, profile)
+                        If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
+                        Return managed
+                    End Using
+                Catch
+                    bitmap.Dispose()
+                    Return Nothing
+                End Try
+            Catch
+                Return Nothing
+            Finally
+                If img <> IntPtr.Zero Then _imageRelease(img)
+            End Try
+        End Function
+
+        ''' <summary>Das 8-Bit-Bild (Bgra8888, unvormultipliziert, wie der 8-Bit-Weg) aus dem
+        ''' tiefen, je Kanal gerundet: 65535 wird 255, 128 wird 0, 129 wird 1 - dieselbe Rundung
+        ''' wie beim TIFF mit 16 Bit. Die Quelle bleibt beim Aufrufer.</summary>
+        Private Shared Function RoundDeepToBgra(deep As SKBitmap) As SKBitmap
+            Dim width = deep.Width
+            Dim height = deep.Height
+            Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Unpremul))
+            Try
+                Dim source = deep.GetPixels()
+                Dim target = bitmap.GetPixels()
+                If source = IntPtr.Zero OrElse target = IntPtr.Zero Then
+                    bitmap.Dispose()
+                    Return Nothing
+                End If
+                Dim sourceStride = deep.RowBytes
+                Dim targetStride = bitmap.RowBytes
+                Threading.Tasks.Parallel.For(0, height,
+                    Sub(y)
+                        Dim deepRow(width * 4 - 1) As Short
+                        Dim row(width * 4 - 1) As Byte
+                        Marshal.Copy(New IntPtr(source.ToInt64() + CLng(y) * sourceStride), deepRow, 0, width * 4)
+                        For x = 0 To width - 1
+                            Dim o = x * 4
+                            row(o) = CByte(((deepRow(o + 2) And &HFFFF) + 128) \ 257)
+                            row(o + 1) = CByte(((deepRow(o + 1) And &HFFFF) + 128) \ 257)
+                            row(o + 2) = CByte(((deepRow(o) And &HFFFF) + 128) \ 257)
+                            row(o + 3) = CByte(((deepRow(o + 3) And &HFFFF) + 128) \ 257)
+                        Next
+                        Marshal.Copy(row, 0, New IntPtr(target.ToInt64() + CLng(y) * targetStride), width * 4)
+                    End Sub)
+                Return bitmap
+            Catch
+                bitmap.Dispose()
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Ein Bild aus einem libheif-Handle als Bgra8888 in sRGB. Das Farbprofil kommt
-        ''' von <paramref name="profileHandle"/> (beim Vorschaubild ggf. das der Hauptaufnahme).</summary>
+        ''' von <paramref name="profileHandle"/> (beim Vorschaubild ggf. das der Hauptaufnahme).
+        '''
+        ''' Mit mehr als 8 Bit geht es ueber das tiefe Bild (<see cref="DecodeDeepHandle"/>) und wird
+        ''' erst am Ende gerundet: die Wandlung des Profils rechnet so auf den Werten der Datei und
+        ''' nicht auf schon gerundeten. Scheitert das, bleibt der 8-Bit-Weg darunter. Ein Bild mit
+        ''' 8 Bit nimmt ihn unveraendert, ohne Profil oder mit sRGB also Byte fuer Byte wie bisher.</summary>
         Private Shared Function DecodeHandle(handle As IntPtr, profileHandle As IntPtr) As SKBitmap
+            If IsHighBitDepth(handle) Then
+                Dim hasAlpha = _hasAlpha IsNot Nothing AndAlso _hasAlpha(handle) <> 0
+                Using deep = DecodeDeepHandle(handle, profileHandle, Not hasAlpha)
+                    If deep IsNot Nothing Then
+                        Dim rounded = RoundDeepToBgra(deep)
+                        If rounded IsNot Nothing Then Return rounded
+                    End If
+                End Using
+            End If
             Dim img As IntPtr = IntPtr.Zero
             Try
                 ' IMMER mit Alphakanal dekodieren: das kostet bei undurchsichtigen Bildern nur den
@@ -523,9 +732,11 @@ Namespace Services
                     ' sRGB. Ohne die Wandlung kaemen die Zahlen als sRGB an und das Bild saehe zu
                     ' blass aus (siehe ColorManagementService). Das Profil wird danach freigegeben:
                     ' es ist ein eigens erzeugtes natives Objekt, und ein Kachellauf ueber einen
-                    ' Ordner voller HEIC erzeugt eines je Datei.
+                    ' Ordner voller HEIC erzeugt eines je Datei. Gewandelt wird sanft an den
+                    ' Raendern von sRGB, wie im tiefen Weg (DecodeDeepHandle): ein HEIC in
+                    ' Display P3 kommt mit 8 und mit 10 Bit gleich an.
                     Using profile = ReadColorProfile(profileHandle)
-                        Dim managed = ColorManagementService.ToSrgb(bitmap, profile)
+                        Dim managed = ColorManagementService.ToSrgbSoftGamut(bitmap, profile)
                         If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
                         Return managed
                     End Using

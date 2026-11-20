@@ -268,9 +268,11 @@ Namespace Services
             If adj.NegativeEnabled AndAlso measured IsNot Nothing Then
                 Dim stats = ResolveFilmNegativeStats(measured, adj)
                 Dim gamma = CSng(Math.Pow(2.0, adj.NegativeGamma / 100.0))
-                chain.NegR = BuildPointOpFilmNegativeTable(stats.BaseColor.Red, stats.DensityColor.Red, gamma)
-                chain.NegG = BuildPointOpFilmNegativeTable(stats.BaseColor.Green, stats.DensityColor.Green, gamma)
-                chain.NegB = BuildPointOpFilmNegativeTable(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma)
+                ' Ab Modell 1 der Logarithmus auf linearem Licht (siehe ImageAdjustments.NegativeModel).
+                Dim linearLight = adj.NegativeModel >= 1
+                chain.NegR = BuildPointOpFilmNegativeTable(stats.BaseColor.Red, stats.DensityColor.Red, gamma, linearLight)
+                chain.NegG = BuildPointOpFilmNegativeTable(stats.BaseColor.Green, stats.DensityColor.Green, gamma, linearLight)
+                chain.NegB = BuildPointOpFilmNegativeTable(stats.BaseColor.Blue, stats.DensityColor.Blue, gamma, linearLight)
                 chain.NegMonochrome = adj.NegativeMonochrome
                 chain.IsIdentity = False
             End If
@@ -610,15 +612,37 @@ Namespace Services
         ''' <summary>Filmnegativ-Tonwertkurve eines Kanals als stetige Tabelle - wortgleich zu
         ''' BuildFilmNegativeLut, nur an 4097 statt 256 Stuetzstellen und ohne Byte-Rundung. Diese
         ''' Stufe streckt den Tonwertumfang am aggressivsten und rundete bisher als ERSTE, also bevor
-        ''' Belichtung und Kurven ueberhaupt greifen konnten.</summary>
+        ''' Belichtung und Kurven ueberhaupt greifen konnten.
+        '''
+        ''' <paramref name="linearLight"/> (Modell 1): Basis, Dichtepunkt und Bildpunkt werden vor dem
+        ''' Logarithmus von sRGB in lineares Licht gewandelt, die Dichte ist dann die echte
+        ''' Durchlaessigkeit des Films. Ohne das (Modell 0) laeuft er auf den kodierten Werten; ueber
+        ''' den Grossteil des Bereichs kuerzt sich die Kodierung als fester Faktor heraus, im linearen
+        ''' Fuss der sRGB-Kurve aber nicht, und genau dort liegt der Blaukanal eines Farbnegativs in
+        ''' den dichten Stellen. Das Ergebnis ist in beiden Faellen die normierte Dichte, kodiert
+        ''' weitergegeben wie bisher: Kurven, Look und Regler danach greifen auf dieselbe Art.</summary>
         Private Shared Function BuildPointOpFilmNegativeTable(baseValue As Byte, densityValue As Byte,
-                                                              gamma As Single) As Single()
+                                                              gamma As Single,
+                                                              Optional linearLight As Boolean = False) As Single()
             Dim baseLevel = Math.Max(2.0, CDbl(baseValue))
             Dim densityLevel = Math.Min(Math.Max(1.0, CDbl(densityValue)), baseLevel - 1.0)
             Dim span = Math.Log(baseLevel / densityLevel)
             Dim invGamma = 1.0 / Math.Max(0.05, CDbl(gamma))
 
             Dim table = New Single(PointOpTableSize - 1) {}
+            If linearLight Then
+                Dim baseLinear = SrgbToLinear(baseLevel / 255.0)
+                Dim densityLinear = SrgbToLinear(densityLevel / 255.0)
+                Dim linearSpan = Math.Log(baseLinear / densityLinear)
+                ' Untergrenze fuer den Logarithmus: weit unter jeder Stufe, die ein Bild traegt.
+                Const floor As Double = 0.000001
+                For i = 0 To PointOpTableSize - 1
+                    Dim level = Math.Max(floor, SrgbToLinear(i / CDbl(PointOpTableSize - 1)))
+                    Dim t = Clamp(CSng(Math.Log(baseLinear / level) / linearSpan), 0.0F, 1.0F)
+                    table(i) = Clamp(CSng(Math.Pow(t, invGamma)), 0.0F, 1.0F)
+                Next
+                Return table
+            End If
             For i = 0 To PointOpTableSize - 1
                 ' Die Altstufe indiziert mit dem Byte i und klemmt level auf mindestens 1 - in 0..1
                 ' entspricht das v*255.
@@ -845,7 +869,10 @@ Namespace Services
         ''' entwickelt ist: das des Quellbilds, solange die Kette keinem anderen vorgreift, sonst das
         ''' neue (der Vorgriff der RAW-Stufe laeuft vor dem Weissabgleich).</summary>
         Private Shared Function WhiteBalanceRampKnee(adj As ImageAdjustments) As Double
-            If adj.SourceFollowsRawExposure AndAlso Not adj.ChainFollowsRawKnee() Then Return adj.KneeInSource
+            ' Ein linear entwickeltes Quellbild (Filmnegativ im Modell 1, gerade ausgeschaltet) hat
+            ' kein Knie; bis zum Neuaufbau gilt das, mit dem es gleich entsteht.
+            If adj.SourceFollowsRawExposure AndAlso Not adj.ChainFollowsRawKnee() AndAlso
+               adj.KneeInSource <> RawDecodeService.LinearToneKnee Then Return adj.KneeInSource
             Return adj.RawHighlightKnee()
         End Function
 

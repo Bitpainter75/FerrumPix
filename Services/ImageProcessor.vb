@@ -833,6 +833,13 @@ Namespace Services
         ''' <see cref="DecodeForRender"/>, das die Belichtung in die RAW-Stufe legt.</remarks>
         Friend Shared Function DecodeForAdjustments(path As String, adj As ImageAdjustments,
                                                     Optional developRaw As Boolean = True) As SKBitmap
+            ' Ein Negativ im Modell 1 entwickelt die RAW-Stufe linear (ImageAdjustments.NegativeDevelopsLinear);
+            ' die Belichtung gehoert beim Negativ ohnehin nicht in die RAW-Stufe.
+            If adj IsNot Nothing AndAlso adj.NegativeDevelopsLinear() Then
+                Dim applied = 0.0
+                Return DecodeOrientedWithExposure(path, developRaw, LensChoiceFrom(adj), adj.RawHighlightRecovery, 0.0, applied,
+                                                  knee:=RawDecodeService.LinearToneKnee)
+            End If
             Return DecodeOriented(path, developRaw, LensChoiceFrom(adj),
                                   adj IsNot Nothing AndAlso adj.RawHighlightRecovery)
         End Function
@@ -3304,7 +3311,9 @@ Namespace Services
             Dim lights = adj.LightSources
             Dim ambient = adj.LightAmbient
             Dim token = adj.LightDepthToken
-            Dim knee = If(adj.SourceFollowsRawExposure, adj.KneeInSource, 1.0)
+            ' Ein linear entwickeltes Quellbild (Filmnegativ im Modell 1) traegt keine Schulter.
+            Dim knee = If(adj.SourceFollowsRawExposure AndAlso adj.KneeInSource <> RawDecodeService.LinearToneKnee,
+                          adj.KneeInSource, 1.0)
             Return ReplaceBitmapOwned(source, PerformanceTraceService.Measure(
                 "Pixel: Lichtquellen", Function() ApplyLightSources(source, lights, ambient, token, knee)), owned)
         End Function
@@ -5359,7 +5368,7 @@ Namespace Services
             state.ColorGradeBalance = neutral.ColorGradeBalance : state.ColorGradeBlending = neutral.ColorGradeBlending
             state.NegativeEnabled = neutral.NegativeEnabled : state.NegativeMonochrome = neutral.NegativeMonochrome
             state.NegativeBaseColor = neutral.NegativeBaseColor : state.NegativeDensityColor = neutral.NegativeDensityColor
-            state.NegativeGamma = neutral.NegativeGamma
+            state.NegativeGamma = neutral.NegativeGamma : state.NegativeModel = neutral.NegativeModel
             ' Die Farbvorgaben sind eine Matrix der Punktkette; "weich" hat NeutralizeDetailStages schon geleert.
             state.FilterPreset = neutral.FilterPreset : state.FilterStrength = neutral.FilterStrength
             state.LutPath = neutral.LutPath : state.LutStrength = neutral.LutStrength
@@ -5486,6 +5495,7 @@ adj.CalibrationRedHue, adj.CalibrationRedSaturation,
                 ExtensionsKey(adj),
                 adj.Grain, adj.GrainSize, adj.GrainFrequency, adj.GrainColor, adj.Clarity,
                 adj.NegativeEnabled, adj.NegativeMonochrome, adj.NegativeBaseColor, adj.NegativeDensityColor, adj.NegativeGamma,
+                adj.NegativeModel,
                 adj.CurveRgbPoints, adj.CurveRedPoints, adj.CurveGreenPoints, adj.CurveBluePoints, adj.CurveLuminancePoints,
                 adj.RedHue, adj.RedSaturation, adj.RedLuminance, adj.OrangeHue, adj.OrangeSaturation, adj.OrangeLuminance,
                 adj.YellowHue, adj.YellowSaturation, adj.YellowLuminance, adj.GreenHue, adj.GreenSaturation, adj.GreenLuminance,

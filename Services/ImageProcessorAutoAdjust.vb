@@ -125,9 +125,12 @@ Namespace Services
             Dim applied = 0.0
             Dim developed = False
             Dim throughRawStage = False
+            ' Ein Negativ im Modell 1 wird linear entwickelt (ImageAdjustments.NegativeDevelopsLinear),
+            ' gemessen wird an demselben Bild, auf dem die Umkehr rechnet.
+            Dim knee = If(adj.NegativeDevelopsLinear(), RawDecodeService.LinearToneKnee, RawDecodeService.HighlightRecoveryKnee)
             Using bmp = If(isFpx, DecodeForOutput(sourcePath),
                            DecodeOrientedWithExposure(sourcePath, True, Nothing, True, 0.0, applied, developed,
-                                                      rawStage:=throughRawStage))
+                                                      knee:=knee, rawStage:=throughRawStage))
                 If bmp Is Nothing Then Return
                 ' Ein .fpx kommt hier schon fertig gerendert an, samt Umkehr aus seinem Rezept; ein
                 ' zweites Umkehren gaebe wieder das Negativ.
@@ -180,6 +183,7 @@ Namespace Services
                 .NegativeBaseColor = adj.NegativeBaseColor,
                 .NegativeDensityColor = adj.NegativeDensityColor,
                 .NegativeGamma = adj.NegativeGamma,
+                .NegativeModel = adj.NegativeModel,
                 .RotationDegrees = adj.RotationDegrees,
                 .StraightenDegrees = adj.StraightenDegrees,
                 .StraightenExpandCanvas = adj.StraightenExpandCanvas,

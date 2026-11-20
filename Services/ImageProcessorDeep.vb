@@ -201,8 +201,8 @@ Namespace Services
 
         ''' <summary>Kann aus dieser Quelle eine Datei mit 16 Bit entstehen? Aus einer RAW-Datei, die
         ''' durch die RAW-Stufe laeuft (dort liegen die Tonwerte feiner vor als 8 Bit), und aus einer
-        ''' Datei, die selbst 16 Bit traegt und sich tief lesen laesst (<see cref="IsDeepFileSource"/>,
-        ''' heute TIFF). Eine 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein
+        ''' Datei, die selbst mehr als 8 Bit traegt und sich tief lesen laesst (<see cref="IsDeepFileSource"/>,
+        ''' heute TIFF und HEIF/AVIF). Eine 8-Bit-Quelle (JPEG, WebP, PNG) bekommt keine Ausgabe in 16 Bit, und ein
         ''' PNG oder JPEG XL mit 16 Bit wird beim Lesen noch auf 8 gebracht.
         '''
         ''' Die Frage fuer die Dialoge: danach richtet sich, ob sie die Farbtiefe anbieten. Ob die
@@ -214,16 +214,19 @@ Namespace Services
             Return RawPreviewService.IsSupportedRaw(sourcePath) AndAlso RawDecodeService.DevelopsThroughRawStage(sourcePath)
         End Function
 
-        ''' <summary>Eine Bilddatei, die selbst 16 Bit je Kanal traegt und sich tief lesen laesst:
-        ''' heute ein TIFF mit 16 Bit (TiffPreviewService.IsDeepTiff). Die zweite Herkunft eines
-        ''' tiefen Bilds neben der RAW-Stufe. Der Unterschied: hier gibt es keine Entwicklung mit
-        ''' Angaben aus dem Rezept, das tiefe Bild ist die Datei.</summary>
+        ''' <summary>Eine Bilddatei, die selbst mehr als 8 Bit je Kanal traegt und sich tief lesen
+        ''' laesst: ein TIFF mit 16 Bit (TiffPreviewService.IsDeepTiff) oder ein HEIF/AVIF mit 10
+        ''' oder 12 Bit ohne Alpha (HeifDecodeService.IsDeepHeif). Die zweite Herkunft eines tiefen
+        ''' Bilds neben der RAW-Stufe. Der Unterschied: hier gibt es keine Entwicklung mit Angaben
+        ''' aus dem Rezept, das tiefe Bild ist die Datei.</summary>
         Friend Shared Function IsDeepFileSource(path As String) As Boolean
+            If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.IsDeepHeif(path)
             Return TiffPreviewService.IsDeepTiff(path)
         End Function
 
         ''' <summary>Das tiefe Bild einer solchen Datei, oder Nothing.</summary>
         Private Shared Function DecodeDeepFileSource(path As String) As SKBitmap
+            If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.TryDecodeDeep(path)
             Return TiffPreviewService.TryDecodeDeep(path)
         End Function
 

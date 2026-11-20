@@ -436,7 +436,7 @@
     "PANASONICDCG9M2": 0.243,
     "PANASONICDCGF9": 0.243,
     "PANASONICDCGH5": -0.093,
-    "PANASONICDCGH5S": 0.451,
+    "PANASONICDCGH5S": 1.02,
     "PANASONICDCGH6": 0.198,
     "PANASONICDCGH7": -0.299,
     "PANASONICDCGX9": -0.036,
@@ -984,6 +984,13 @@
       "librawRange": 14256,
       "iso": 100,
       "source": "white too low in LibRaw: saturation of blown highlights in the raw data minus the black level of the same file (Grundbelichtung/saettigung.c)"
+    },
+    "Panasonic|DC-GH5S": {
+      "black": -1,
+      "range": 7489,
+      "librawBlack": 511,
+      "librawRange": 15872,
+      "source": "white too high in LibRaw: LibRaw takes 16383 from the 14-bit file, the reference DNG carries WhiteLevel 8000 for all four files (ISO 640, 1250, 1600, 16:9 and 4:3), as does rawspeed for every aspect mode; range is 8000 minus LibRaw's black, which matches the DNG within 1 (Canonpegel with PEGEL_MARKE=panasonic). No file has a blown area: the bulk ends below 6400; above 8000 only one small bright structure at ISO 1600 (up to 12163, unclipped), which this white clips like the reference."
     },
     "Sony|ILCE-7M5|sony_arw6_load_raw": {
       "black": 1024,

@@ -2970,10 +2970,13 @@ Namespace Services
                 ' Halbierung der Daten ist eine Blendenstufe auf der Grundbelichtung, und der
                 ' Schwarzabzug ist ein Anteil des Bereichs. Mit diesem Ausgleich allein bleibt das
                 ' Bild, was es war - die eigentliche Lichterrettung ist das Knie.
-                Dim ramp = ToneRampFor(baseEv, normalization, sliderEv)
+                ' Linear (Filmnegativ) ohne Grundbelichtung und ohne Daempfung der Tiefen.
+                Dim linear = knee = LinearToneKnee
+                Dim ramp = If(linear, LinearToneRampFor(normalization), ToneRampFor(baseEv, normalization, sliderEv))
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
-                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, shadowSaturation, toneMatrix, fringeOwner:=fringeOwner)
+                              lens, ramp.ExposureEv, ramp.BlackLevel, knee, If(linear, Nothing, shadowSaturation), toneMatrix,
+                              fringeOwner:=fringeOwner)
                 Return bitmap
             Catch ex As Exception
                 DiagnosticLogService.LogException("RawDecodeService.BuildFrom16Bit", ex)
@@ -3133,6 +3136,27 @@ Namespace Services
         ''' von -15,9 auf -18,4 (Referenz -19,9). Ein Knie bis 0,15 bleibt in beiden Saetzen
         ''' schwaecher und bessert Lichter -50 kaum.</para></summary>
         Public Const HighlightKneeAtFullLowering As Double = 0.05
+
+        ''' <summary>KEIN Knie, sondern die Anweisung, linear zu entwickeln: ohne Grundbelichtung,
+        ''' ohne ACR3-Kurve, ohne Lichterschulter und ohne Daempfung der Tiefen. Der Weisspunkt des
+        ''' Sensors landet auf 1, das Ergebnis ist lineares Licht in sRGB-Kodierung. Gebraucht vom
+        ''' Filmnegativ im Modell 1 (ImageAdjustments.NegativeDevelopsLinear): die Umkehr rechnet
+        ''' mit der Durchlaessigkeit des Films, und jede Kurve davor verbiegt das Verhaeltnis
+        ''' zwischen Filmbasis und dichtem Bereich je Kanal anders.
+        '''
+        ''' <para>Als Wert des Knies, weil das Knie schon jeden Weg kennt, den die Entwicklung nehmen
+        ''' muss: den Schluessel beider Zwischenspeicher, die Tontabellen, das tiefe Bild, den halben
+        ''' Decode der Kacheln und den Neuaufbau des Arbeitsbilds im Editor. Ein Knie ist sonst
+        ''' immer groesser als 0, der Wert ist also eindeutig.</para></summary>
+        Public Const LinearToneKnee As Double = -1.0
+
+        ''' <summary>Die Rampe der linearen Entwicklung (<see cref="LinearToneKnee"/>): nur der
+        ''' Ausgleich des Datenbereichs (<see cref="ToneRampFor"/>), ohne Grundbelichtung und ohne
+        ''' Schwarzabzug.</summary>
+        Friend Shared Function LinearToneRampFor(normalization As Double) As ToneRamp
+            If Not Double.IsFinite(normalization) OrElse normalization <= 1.0 Then Return New ToneRamp(0.0, 0.0)
+            Return New ToneRamp(Math.Log(normalization, 2.0), 0.0)
+        End Function
 
         ''' <summary>Um wie viel tiefer LibRaw dieselben Sensorwerte legt, sobald der Lichtermodus
         ''' nicht mehr Beschnitt ist: das Verhaeltnis von groesstem zu kleinstem
@@ -3758,7 +3782,8 @@ Namespace Services
             ' und darf nie als Arbeitsbild herauskommen (ausser unter dem Messschalter
             ' HalfSizeRawCacheForMeasurement, dann mit eigenem Schluessel).
             ' sliderEv: der Anteil des Belichtungsreglers an baseEv (ToneRampFor).
-            Dim wantedKnee = If(recoverHighlights, knee, 1.0)
+            ' Die lineare Entwicklung (LinearToneKnee) ist kein Knie und bleibt auch ohne Lichterrettung.
+            Dim wantedKnee = If(recoverHighlights OrElse knee = LinearToneKnee, knee, 1.0)
             DiagnosticLogService.LogAlways("RawDecodeService.HighlightRecovery",
                 $"request file={IO.Path.GetFileName(path)}; enabled={recoverHighlights}; knee={wantedKnee:F2}; half={useHalfSize}")
             Dim writeTime As DateTime = Nothing
@@ -4469,6 +4494,13 @@ Namespace Services
             Dim t(65535) As Integer
             Dim white = 1.0 / (2.0 ^ ev)
             Dim slope = 1.0 / (white - blackLevel)
+            If knee = LinearToneKnee Then
+                ' Linear (Filmnegativ): nur die Rampe, ohne Fuss, Schulter und Kurve.
+                For i = 0 To 65535
+                    t(i) = CInt(Math.Round(Math.Max(0.0, Math.Min(1.0, (i / 65535.0 - blackLevel) * slope)) * 65535.0))
+                Next
+                Return t
+            End If
             ' Weicher Fuss wie im DNG-SDK: eine quadratische Anlaufstrecke um den Schwarzpunkt,
             ' sonst entstuende dort eine sichtbare Kante.
             Dim radius = Math.Min(0.5 * blackLevel, (1.0 / 16.0) / slope)
@@ -4515,6 +4547,7 @@ Namespace Services
                 Dim f = pos - i
                 Return table(i) + (table(i + 1) - table(i)) * f
             End If
+            If beyond.Knee = LinearToneKnee Then Return CSng(Math.Max(0.0, Math.Min(1.0, (x - beyond.Black) * beyond.Slope)))
             Dim v = ShoulderAt((x - beyond.Black) * beyond.Slope, beyond.Knee)
             Return CSng(Math.Max(0.0, Math.Min(1.0, Acr3CurveAt(v))))
         End Function
