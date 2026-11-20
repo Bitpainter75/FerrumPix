@@ -306,7 +306,7 @@ Namespace ViewModels
             Dim jobs = _filterPreviewTiles.Select(Function(t) (Tile:=t, Adjustments:=FilterPreviewAdjustments(current, t.Id))).ToList()
             Dim path = RenderSourcePath
             Dim usesUnbaked = _pixelLayerHidden
-            Dim sourceKey = String.Concat(path, "|", _workingImage.Version.ToString(Globalization.CultureInfo.InvariantCulture),
+            Dim sourceKey = String.Concat(OriginalDecodeKey(path), "|", _workingImage.Version.ToString(Globalization.CultureInfo.InvariantCulture),
                                           "|", If(usesUnbaked, "u", "b"))
             Dim ignored = RenderFilterPreviewsAsync(jobs, path, usesUnbaked, sourceKey, cts.Token)
         End Sub
@@ -326,7 +326,7 @@ Namespace ViewModels
                            Not String.Equals(_filterPreviewSourceKey, sourceKey, StringComparison.Ordinal) Then
                             ' Wie die kleine Quelle des Reglerzugs (BuildSliderPreviewSourceAsync).
                             Dim built = If(usesUnbaked,
-                                           ImageProcessor.LoadPreviewSource(path, FilterPreviewMaxDimension),
+                                           LoadOriginalSource(path, FilterPreviewMaxDimension),
                                            _workingImage.RenderDownscale(FilterPreviewMaxDimension))
                             If built Is Nothing Then Return
                             _filterPreviewSource?.Dispose()

@@ -767,6 +767,15 @@
                             <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/mouse-scroll.svg"
                                            Width="18" Height="18"/>
                         </ToggleButton>
+                        <!-- FOKUS-PEAKING: derselbe Schalter wie die Taste K, gemerkt in den
+                             Einstellungen (ViewerFocusPeaking). Gedrueckt (Akzent) heisst an. -->
+                        <ToggleButton Classes="icon-btn" Width="28" Height="28"
+                                      Margin="-5,0,0,0"
+                                      IsChecked="{Binding IsFocusPeakingEnabled, Mode=TwoWay}"
+                                      ToolTip.Tip="Fokus-Peaking ein/aus">
+                            <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/crosshair-simple.svg"
+                                           Width="18" Height="18"/>
+                        </ToggleButton>
                         <!-- Dateiname steht jetzt als Fenstertitel oben in der Mitte. -->
                         <TextBlock Text="{Binding StatusInfo}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" VerticalAlignment="Center"/>

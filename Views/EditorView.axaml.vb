@@ -2229,6 +2229,11 @@ Namespace Views
 
             Dim ix = Math.Round((cw - iw) / 2.0 + _panX, MidpointRounding.AwayFromZero)
             Dim iy = Math.Round((ch - ih) / 2.0 + _panY, MidpointRounding.AwayFromZero)
+            ' Ist der Vergleich an, bleibt der Teiler im sichtbaren Bildstreifen. Die geklemmte Lage
+            ' wird GESPEICHERT, nicht nur gezeichnet: Beschneidung der Vorher-Seite, Zoom-Detail und
+            ' Treffertest lesen alle _sliderPosition und sehen so denselben Teiler, und beim
+            ' Herauszoomen springt er nicht an eine Stelle zurueck, die eben nicht zu sehen war.
+            If showBefore Then _sliderPosition = ClampComparisonSliderPosition(_sliderPosition, cw, ix, iw)
             Dim sliderX = ix + iw * _sliderPosition
             ' Der Navigator im Infopanel: welcher Teil des Bildes auf der Buehne steht.
             _navigatorImageWidth = iw
@@ -2307,7 +2312,7 @@ Namespace Views
             If handle IsNot Nothing Then
                 handle.IsVisible = showBefore
                 Avalonia.Controls.Canvas.SetLeft(handle, sliderX - 18)
-                Avalonia.Controls.Canvas.SetTop(handle, iy + ih / 2 - 18)
+                Avalonia.Controls.Canvas.SetTop(handle, ComparisonHandleCenterY(ch, iy, ih) - 18)
             End If
 
             Dim beforeLabel = Me.FindControl(Of Border)("BeforeLabel")
@@ -8204,8 +8209,8 @@ Namespace Views
             ' Trennlinien-Griffzone (14 px breit) über die volle Bildhöhe.
             If Math.Abs(point.X - sliderX) <= 7.0 AndAlso point.Y >= iy AndAlso point.Y <= iy + ih Then Return True
 
-            ' Runder Griff, zentriert auf der Bildmitte (36 px Kasten, ±18).
-            Dim handleCenterY = iy + ih / 2.0
+            ' Runder Griff, zentriert auf der Mitte des sichtbaren Bildstreifens (36 px Kasten, ±18).
+            Dim handleCenterY = ComparisonHandleCenterY(ch, iy, ih)
             Return Math.Abs(point.X - sliderX) <= 18.0 AndAlso Math.Abs(point.Y - handleCenterY) <= 18.0
         End Function
 
@@ -8222,8 +8227,8 @@ Namespace Views
 
         ''' <summary>Legt den Vergleichsteiler in die Mitte des SICHTBAREN Bildausschnitts. Das ist
         ''' bei eingepasstem Bild die Bildmitte und beim Hineinzoomen die Mitte dessen, was gerade auf
-        ''' der Buehne steht. Noetig, weil der Teiler bei der halben BILDbreite steht: hineingezoomt
-        ''' liegt die oft weit ausserhalb der Buehne, und dann ist er weder zu sehen noch zu greifen.</summary>
+        ''' der Buehne steht. Aus dem Bild faellt der Teiler nie (das klemmt UpdateSliderLayout an den
+        ''' Rand des sichtbaren Streifens); die Taste holt ihn von dort bewusst in die Mitte.</summary>
         Private Sub CenterComparisonSliderInView()
             Dim canvas = Me.FindControl(Of Canvas)("PreviewCanvas")
             Dim vm = TryCast(DataContext, EditorViewModel)
@@ -8243,6 +8248,56 @@ Namespace Views
 
             MoveSlider((visibleLeft + visibleRight) / 2.0, canvas)
         End Sub
+
+        ''' <summary>Abstand in Punkten, den der Vergleichsteiler zu einem BUEHNENrand haelt, der das
+        ''' Bild abschneidet: der halbe Griff (18) und etwas Luft, damit er dort ganz zu sehen und
+        ''' zu greifen bleibt.</summary>
+        Public Const ComparisonSliderEdgeMargin As Double = 24.0
+
+        ''' <summary>Klemmt die Lage des Vergleichsteilers (Anteil der Bildbreite, 0 bis 1) in den
+        ''' sichtbaren Bildstreifen, also den Schnitt aus Bild (<paramref name="imageLeft"/>,
+        ''' <paramref name="imageWidth"/> in Buehnenpunkten) und Buehne (0 bis
+        ''' <paramref name="stageWidth"/>).
+        '''
+        ''' Regel: Liegt der Teiler im Streifen, bleibt er unveraendert. Liegt er draussen, kommt er an
+        ''' den NAECHSTEN Rand, nicht in die Mitte: er wandert beim Zoomen und Schwenken so wenig wie
+        ''' moeglich, und die Seite, die er vorher zeigte, bleibt die groessere. An einem Rand, den
+        ''' die Buehne zieht, haelt er <see cref="ComparisonSliderEdgeMargin"/> Abstand; an einem
+        ''' Bildrand, der selbst zu sehen ist, darf er bis an die Kante (ganz Vorher, ganz Nachher).
+        ''' Ist der Streifen schmaler als beide Abstaende zusammen, steht er in seiner Mitte.</summary>
+        Public Shared Function ClampComparisonSliderPosition(position As Double, stageWidth As Double,
+                                                             imageLeft As Double, imageWidth As Double) As Double
+            Dim p = If(Double.IsNaN(position), 0.5, Math.Max(0.0, Math.Min(1.0, position)))
+            If imageWidth <= 0 OrElse stageWidth <= 0 Then Return p
+
+            Dim imageRight = imageLeft + imageWidth
+            Dim visibleLeft = Math.Max(imageLeft, 0.0)
+            Dim visibleRight = Math.Min(imageRight, stageWidth)
+            If visibleRight <= visibleLeft Then Return p
+
+            Dim low = If(imageLeft < 0.0, ComparisonSliderEdgeMargin, imageLeft)
+            Dim high = If(imageRight > stageWidth, stageWidth - ComparisonSliderEdgeMargin, imageRight)
+            If high < low Then
+                low = (visibleLeft + visibleRight) / 2.0
+                high = low
+            End If
+
+            Dim x = imageLeft + imageWidth * p
+            If x >= low AndAlso x <= high Then Return p
+            x = If(x < low, low, high)
+            Return Math.Max(0.0, Math.Min(1.0, (x - imageLeft) / imageWidth))
+        End Function
+
+        ''' <summary>Senkrechte Mitte des sichtbaren Bildstreifens (Schnitt aus Bild und Buehne), dort
+        ''' steht der runde Griff des Vergleichs. Bei eingepasstem Bild ist das die Bildmitte.
+        ''' Zeichnung (UpdateSliderLayout) und Treffertest (PointHitsComparisonSlider) nehmen beide
+        ''' diese Funktion, damit sie deckungsgleich bleiben.</summary>
+        Public Shared Function ComparisonHandleCenterY(stageHeight As Double, imageTop As Double, imageHeight As Double) As Double
+            Dim visibleTop = Math.Max(imageTop, 0.0)
+            Dim visibleBottom = Math.Min(imageTop + imageHeight, stageHeight)
+            If visibleBottom <= visibleTop Then Return imageTop + imageHeight / 2.0
+            Return (visibleTop + visibleBottom) / 2.0
+        End Function
 
         Private Sub MoveSlider(mouseX As Double, canvas As Canvas)
             Dim vm = TryCast(DataContext, EditorViewModel)

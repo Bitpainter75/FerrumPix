@@ -2,6 +2,9 @@
 
 ### Changes
 
+- The footer of the viewer has a button for focus peaking, next to the one for the mouse wheel.
+  It does the same as the key K.
+
 - The search field of the gallery and the text of a saved search understand + and -: +word must
   appear, -word must not. +Holiday +Beach -Rain finds pictures with both keywords and without
   rain. Several words without a sign still find pictures with any of them. The search dialog and
@@ -19,6 +22,10 @@
   the negative off and on again uses the new way.
 
 ### Fixes
+
+- The before and after slider in the editor stays on screen when you zoom in or move the picture.
+  If it would leave the visible part, it stops at the nearest edge, and its round handle sits in
+  the middle of what you see instead of the middle of the whole picture.
 
 - In the gallery search field, several words now work as in the catalog search, and file patterns
   like *.jpg work there too. Before, the whole text was looked for as one piece.
@@ -39,4 +46,8 @@
 
 - RAW files from the Panasonic DC-GH5S use the right white level. Bright highlights were rendered
   too dark and blown-out areas never turned fully white.
+
+- The before side of the before and after comparison in the editor shows the same frame as the
+  edited picture for RAW files shot in a different aspect ratio, such as 65:24 or 16:9 on a
+  Fujifilm camera. Before, the whole sensor area was squeezed into the cropped frame.
 

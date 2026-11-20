@@ -1342,7 +1342,7 @@ Namespace ViewModels
         ''' „Vorher" soll aber das echte Original zeigen. Faul erzeugt (nur solange der Regler
         ''' aktiv ist), entsorgt über die Stale-Liste (in-flight-Renders!) bei Bildwechsel/Regler-aus.
         Private _comparisonOriginalSource As SKBitmap
-        Private _comparisonOriginalPath As String
+        Private _comparisonOriginalKey As String       ' Pfad und Beschnitte (OriginalDecodeKey)
         ''' Die von der Kamera eingebettete JPEG-Vorschau als WAHLWEISE Vorher-Seite, bereits auf
         ''' die Maße des Datei-Decodes gebracht. Eigene Felder statt eines gemeinsamen Speichers:
         ''' so bleiben beim Hin- und Herschalten beide Seiten warm, statt sich gegenseitig zu
@@ -23280,7 +23280,7 @@ Namespace ViewModels
             Try
                 built = Await Task.Run(Function()
                                            If usesUnbaked Then
-                                               Return ImageProcessor.LoadPreviewSource(path, maxDimension)
+                                               Return LoadOriginalSource(path, maxDimension)
                                            End If
                                            Return _workingImage.RenderDownscale(maxDimension)
                                        End Function)
@@ -23357,24 +23357,56 @@ Namespace ViewModels
             Return _workingImage.CloneFull()
         End Function
 
+        ''' <summary>Die Wahl fuer jeden Decode der ORIGINAL-Datei im Editor: Vorher-Seite des
+        ''' Vergleichs, Vorher-Seite des Zoom-Details und die ungebackene Quelle bei ausgeblendeter
+        ''' Pixel-Ebene. Sie traegt die beiden Beschnitte des Arbeitsbilds (Sensorrand, Format der
+        ''' Kamera), sonst nichts: die Objektivkorrektur bleibt wie in den Einstellungen vorgegeben,
+        ''' wie vorher ohne Wahl.
+        '''
+        ''' <para>Ohne die Beschnitte kam eine RAW in der ganzen Sensorflaeche heraus, das
+        ''' Arbeitsbild dagegen im Format der Kamera. Die Vorher-Seite wurde dann in den Rahmen des
+        ''' beschnittenen Bildes gestreckt: eine Fujifilm-Aufnahme in 65:24 zeigte links das ganze
+        ''' 4:3-Bild flachgedrueckt. Beim Sensorrand war es nur um wenige Pixel verzogen.</para></summary>
+        Private Function OriginalDecodeChoice() As LensDataService.Wahl
+            Return New LensDataService.Wahl With {
+                .CropSensorEdge = _rawSensorEdgeCrop,
+                .CropCameraAspect = _rawCameraAspectCrop}
+        End Function
+
+        ''' <summary>Der Schluessel eines zwischengespeicherten Original-Decodes: Pfad UND Beschnitte.
+        ''' Ein Schluessel aus dem blossen Pfad passte nach dem Umschalten eines Beschnitts still
+        ''' weiter, mit den Massen von vorher.</summary>
+        Private Function OriginalDecodeKey(path As String) As String
+            If String.IsNullOrEmpty(path) Then Return ""
+            Return path & If(_rawSensorEdgeCrop, "|rand", "") & If(_rawCameraAspectCrop, "|format", "")
+        End Function
+
+        ''' <summary>Die Original-Datei auf <paramref name="maxDimension"/>, beschnitten wie das
+        ''' Arbeitsbild (<see cref="OriginalDecodeChoice"/>). Der einzige Weg im Editor, die Datei
+        ''' selbst neben das Arbeitsbild zu legen.</summary>
+        Private Function LoadOriginalSource(path As String, maxDimension As Integer) As SKBitmap
+            Return ImageProcessor.LoadPreviewSource(path, maxDimension, OriginalDecodeChoice())
+        End Function
+
         ''' <summary>Liefert (und cached) den Vorschau-Decode der ORIGINAL-Datei für das
         ''' „Vorher"-Bild. Läuft im Hintergrund-Render (Task.Run); der Tausch geht über die
         ''' Stale-Liste, damit ein in-flight-Render seine Quelle behalten darf.</summary>
         Private Function GetComparisonOriginalSource() As SKBitmap
             Dim path = RenderSourcePath
             If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            Dim key = OriginalDecodeKey(path)
             SyncLock _previewSync
                 If _comparisonOriginalSource IsNot Nothing AndAlso
-                   String.Equals(_comparisonOriginalPath, path, StringComparison.Ordinal) Then
+                   String.Equals(_comparisonOriginalKey, key, StringComparison.Ordinal) Then
                     Return _comparisonOriginalSource
                 End If
             End SyncLock
-            Dim decoded = ImageProcessor.LoadPreviewSource(path, PreviewMaxDimension)
+            Dim decoded = LoadOriginalSource(path, PreviewMaxDimension)
             If decoded Is Nothing Then Return Nothing
             SyncLock _previewSync
                 If _comparisonOriginalSource IsNot Nothing Then _stalePreviewSources.Add(_comparisonOriginalSource)
                 _comparisonOriginalSource = decoded
-                _comparisonOriginalPath = path
+                _comparisonOriginalKey = key
             End SyncLock
             Return decoded
         End Function
@@ -23425,7 +23457,7 @@ Namespace ViewModels
                 If _comparisonOriginalSource IsNot Nothing Then
                     _stalePreviewSources.Add(_comparisonOriginalSource)
                     _comparisonOriginalSource = Nothing
-                    _comparisonOriginalPath = Nothing
+                    _comparisonOriginalKey = Nothing
                 End If
                 If _cameraJpegSource IsNot Nothing Then
                     _stalePreviewSources.Add(_cameraJpegSource)

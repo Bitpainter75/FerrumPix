@@ -2855,9 +2855,15 @@ Namespace Services
             End Try
         End Function
 
-        Public Shared Function LoadPreviewSource(imagePath As String, maxDimension As Integer) As SKBitmap
+        ''' <summary>Die Datei dekodiert und auf <paramref name="maxDimension"/> verkleinert.</summary>
+        ''' <param name="lensChoice">Wie bei <see cref="DecodeOriented"/>. Wer das Ergebnis neben ein
+        ''' Bild aus dem Editor legt, MUSS hier dessen Beschnitte mitgeben (Sensorrand, Format der
+        ''' Kamera): ohne Wahl kommt eine RAW in der ganzen Sensorflaeche heraus und hat andere Masse
+        ''' als das Arbeitsbild.</param>
+        Public Shared Function LoadPreviewSource(imagePath As String, maxDimension As Integer,
+                                                 Optional lensChoice As LensDataService.Wahl = Nothing) As SKBitmap
             Try
-                Using original = DecodeOriented(imagePath)
+                Using original = DecodeOriented(imagePath, True, lensChoice)
                     If original Is Nothing Then Return Nothing
                     Dim working = CreatePreviewWorkingBitmap(original, maxDimension)
                     If working Is Nothing Then Return Nothing

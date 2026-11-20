@@ -1068,7 +1068,8 @@ Namespace ViewModels
         ''' Ein Schluessel aus dem blossen Pfad wuerde beim Umschalten still passen.</summary>
         Private Function ComparisonBeforeCacheKey(path As String) As String
             If String.IsNullOrEmpty(path) Then Return ""
-            Return If(_compareWithCameraJpeg, path & "|kamera", path)
+            Dim key = OriginalDecodeKey(path)
+            Return If(_compareWithCameraJpeg, key & "|kamera", key)
         End Function
 
         ''' <summary>Die Vorher-Quelle des Zoom-Details. In der Kamera-Wahl die eingebettete
@@ -1079,7 +1080,7 @@ Namespace ViewModels
                 Dim cameraJpeg = CameraJpegService.TryLoadMatching(path, reference.Width, reference.Height)
                 If cameraJpeg IsNot Nothing Then Return cameraJpeg
             End If
-            Return ImageProcessor.LoadPreviewSource(path, detailTarget)
+            Return LoadOriginalSource(path, detailTarget)
         End Function
 
         Private Sub SetZoomDetailImage(value As Bitmap)
@@ -1164,7 +1165,7 @@ Namespace ViewModels
                                    ' Arbeitsbild (noch) nicht initialisiert ist.
                                    source = If(cachedSource,
                                                If(_workingImage.RenderDownscale(detailTarget),
-                                                  ImageProcessor.LoadPreviewSource(path, detailTarget)))
+                                                  LoadOriginalSource(path, detailTarget)))
                                    If source Is Nothing Then Return
                                    ' Die Quelle bleibt ueber mehrere Details dieselbe (siehe oben):
                                    ' der Stand nach dem Farbrauschen darf deshalb gemerkt werden.
