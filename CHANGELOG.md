@@ -57,6 +57,12 @@
 - Scrolling the group view of the gallery is smooth again. Tiles that scrolled into view were
   often built from scratch instead of being reused, which made scrolling stutter.
 
+- Scrolling the gallery grid and group view is much lighter on the graphics card. The stars,
+  heart, metadata signs and buttons on the tiles now share a ready-made shadow instead of
+  computing it for every tile, which made scrolling stutter on many computers. The shadow is a
+  little darker, and the buttons for viewing, adjusting and deleting sit on a darker background,
+  so they stand out better on bright pictures.
+
 - The tile ".." that leads up to the parent folder no longer shows a date in the gallery. Its date
   stood among the pictures as if it belonged to them. Sorting by date keeps it at the front.
 

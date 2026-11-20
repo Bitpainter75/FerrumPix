@@ -285,8 +285,30 @@ Namespace Controls
                 .ViewBox = source.ViewBox,
                 .SvgTransform = source.SvgTransform,
                 .Geometry = geometry,
+                .PathData = source.PathData,
                 .IsStroked = source.IsStroked,
                 .StrokeWidth = source.StrokeWidth
+            }
+        End Function
+
+        ''' <summary>Der Umriss eines Symbols in dieser Groesse fuer eigenes Zeichnen in Skia (das
+        ''' vorgerechnete Schattenbild, <see cref="IconShadowCache"/>): dieselbe Abbildung wie in
+        ''' <see cref="Render"/>, dieselben Pfade, dieselbe Art (gefuellt oder gestrichen). Nothing,
+        ''' wenn das Symbol nicht lesbar ist. Nur auf dem UI-Faden (GetIcon baut Geometrie).</summary>
+        Friend Shared Function GetOutline(source As String, size As Size) As IconOutline
+            If String.IsNullOrWhiteSpace(source) OrElse size.Width <= 0 OrElse size.Height <= 0 Then Return Nothing
+            Dim icon = GetIcon(source)
+            If icon Is Nothing OrElse icon.PathData Is Nothing Then Return Nothing
+            Dim fit = GetUniformFit(icon.ViewBox.Size, size)
+            If fit.Width <= 0 OrElse fit.Height <= 0 Then Return Nothing
+            Return New IconOutline With {
+                .Transform = Matrix.CreateTranslation(-icon.ViewBox.X, -icon.ViewBox.Y) *
+                             icon.SvgTransform *
+                             Matrix.CreateScale(fit.Scale, fit.Scale) *
+                             Matrix.CreateTranslation((size.Width - fit.Width) / 2, (size.Height - fit.Height) / 2),
+                .PathData = icon.PathData,
+                .IsStroked = icon.IsStroked,
+                .StrokeWidth = icon.StrokeWidth
             }
         End Function
 
@@ -446,8 +468,39 @@ Namespace Controls
             Public Property ViewBox As Rect
             Public Property SvgTransform As Matrix
             Public Property Geometry As Geometry
+            Public Property PathData As List(Of String)
             Public Property IsStroked As Boolean
             Public Property StrokeWidth As Double
+        End Class
+
+        ''' <summary>Umriss eines Symbols fuer Skia, siehe <see cref="GetOutline"/>.</summary>
+        Friend NotInheritable Class IconOutline
+            Public Property Transform As Matrix
+            Public Property PathData As List(Of String)
+            Public Property IsStroked As Boolean
+            Public Property StrokeWidth As Double
+
+            ''' <summary>Alle Pfade als EIN Skia-Pfad mit der Fuellregel, die Avalonia nimmt:
+            ''' Geometry.Parse fuellt ohne Vorsatz gerade-ungerade, mit "F1" nach Windungszahl;
+            ''' eine GeometryGroup aus mehreren Pfaden fuellt immer gerade-ungerade.</summary>
+            Public Function BuildSkiaPath() As SkiaSharp.SKPath
+                Dim result As New SkiaSharp.SKPath()
+                Dim fill = SkiaSharp.SKPathFillType.EvenOdd
+                For Each d In PathData
+                    Dim text = d.TrimStart()
+                    If text.StartsWith("F1", StringComparison.Ordinal) Then
+                        If PathData.Count = 1 Then fill = SkiaSharp.SKPathFillType.Winding
+                        text = text.Substring(2)
+                    ElseIf text.StartsWith("F0", StringComparison.Ordinal) Then
+                        text = text.Substring(2)
+                    End If
+                    Using part = SkiaSharp.SKPath.ParseSvgPathData(text)
+                        If part IsNot Nothing Then result.AddPath(part)
+                    End Using
+                Next
+                result.FillType = fill
+                Return result
+            End Function
         End Class
 
         ''' Zwischenstufe ohne Avalonia-Objekte: darf auf jedem Faden entstehen (siehe LoadSource).

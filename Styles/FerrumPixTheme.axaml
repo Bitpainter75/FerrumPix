@@ -52,6 +52,10 @@
              nur, solange es sich vom Akzent abhebt; auf Gelb oder hellem Gruen wird es dunkel.
              Zur Laufzeit setzt SettingsViewModel alle drei neu (SetAccentBrushes). -->
         <SolidColorBrush x:Key="FP.OnAccent" Color="#FFFFFFFF"/>
+        <!-- Der dunkle Kasten der Knoepfe AUF DER KACHEL (Anzeigen, Anpassen, Loeschen, Stapel):
+             deckt kraeftiger als derselbe Knopf im Betrachter, damit das weisse Symbol auch ueber
+             hellem Bild steht. Nicht vom Thema abhaengig: er liegt immer auf dem Bild. -->
+        <SolidColorBrush x:Key="FP.Tile.ButtonBackground" Color="#B00F1318"/>
         <SolidColorBrush x:Key="FP.OnAccent.Soft" Color="#CCFFFFFF"/>
         <SolidColorBrush x:Key="FP.OnAccent.Dim" Color="#99FFFFFF"/>
         <!-- Einzelvergleich eines Reglers (Rechtsklick): die Gegenfarbe zum Akzent, damit sie sich
@@ -1900,6 +1904,9 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <Style Selector="Border.thumb-card Button.gallery-overlay-btn">
+        <Setter Property="Background" Value="{DynamicResource FP.Tile.ButtonBackground}"/>
+    </Style>
     <Style Selector="Button.gallery-overlay-btn:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="#B81A2028"/>
         <Setter Property="BorderBrush" Value="#80536476"/>
@@ -2338,38 +2345,18 @@
         <Setter Property="IconBrush" Value="{DynamicResource FP.Accent}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
-    <!-- AUF DER KACHEL zwei Schatten übereinander, damit Sterne, Herz und die Metadaten-Symbole
-         auch über hellem Himmel, Schnee oder weißer Wand lesbar bleiben. Ein großer Weichzeichner
-         allein hilft NICHT: er verteilt dieselbe Deckung auf mehr Fläche, die Kante wird dünner.
-         Deshalb am Symbol ein enger, voll deckender Rand (Weichzeichnung 2, ohne Versatz) und am
-         Knopf bzw. Kästchen darum ein weicher Hof. Ein Element trägt nur EINEN Effekt; der am
-         Elternteil schließt den Schatten des Kindes mit ein. Der Hintergrund der Knöpfe und
-         Kästchen ist durchsichtig, der Hof folgt also der Form des Symbols. Nur auf der Kachel;
-         in Infoleiste und Betrachter bleibt der schlanke Schatten oben. -->
+    <!-- AUF DER KACHEL KEIN EFFEKT. Sterne, Herz, Metadatenzeichen und die Symbole der
+         Kachelknoepfe sind dort icons:ShadowedSvgIcon und zeichnen ein VORGERECHNETES
+         Schattenbild unter sich (Rand und Hof, Werte in Controls/IconShadow.vb). Als
+         DropShadowEffect waren es zwei je Zeichen, jeder eine eigene Zwischenflaeche je Kachel und
+         Bild, und auf schwaecheren Grafikkarten ruckelte das Rollen. Die schlanken Schatten oben
+         gelten fuer Infoleiste, Betrachter und Suchdialog; hier werden sie fuer die Kachel
+         ausdruecklich abgeschaltet, sonst kaemen sie dort wieder an. -->
     <Style Selector="Border.thumb-card Button.star-btn icons|SvgIcon.rating-star">
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="0" Color="#FF000000"/>
-        </Setter>
+        <Setter Property="Effect" Value="{x:Null}"/>
     </Style>
     <Style Selector="Border.thumb-card Button.favorite-btn icons|SvgIcon.fav-heart">
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="0" Color="#FF000000"/>
-        </Setter>
-    </Style>
-    <Style Selector="Border.thumb-card Button.star-btn">
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1" Color="#C0000000"/>
-        </Setter>
-    </Style>
-    <Style Selector="Border.thumb-card Button.favorite-btn">
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1" Color="#C0000000"/>
-        </Setter>
-    </Style>
-    <Style Selector="StackPanel.gallery-meta-badges > Border">
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="5" OffsetX="0" OffsetY="1" Color="#C0000000"/>
-        </Setter>
+        <Setter Property="Effect" Value="{x:Null}"/>
     </Style>
 
     <!-- SVG-Grafiken bekommen in Kacheln und Filmstreifen eine helle Unterlage wie ein Blatt
