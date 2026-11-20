@@ -423,9 +423,9 @@ Namespace Services
             ' HEIC/AVIF, JPEG XL, TIFF und ICO kennt Skia nicht. Ohne diese Zweige landeten sie beim
             ' Skia-Rueckfall unten - im Filmstreifen, in der Schnellvorschau der Galerie (Leertaste),
             ' im Konfliktdialog und im Editor blieb die Flaeche leer, waehrend die Kachel daneben
-            ' ein Bild zeigte. Die Leser legen die Drehung aus der Datei selbst auf, und keines der
-            ' Formate fuehrt eine Beistelldatei (RawSidecarService.IsSidecarFormat kennt nur RAW und
-            ' PSD); also keine weitere Drehung.
+            ' ein Bild zeigte. Die Leser legen die Drehung aus der Datei selbst auf; also keine
+            ' weitere Drehung. Ein Rezept daneben (RawSidecarService.HasRecipeBeside) rechnet nicht
+            ' dieser Weg ein, sondern der Betrachter und die Kachel ueber die ganze Kette.
             If HeifDecodeService.IsSupportedHeif(filePath) OrElse JxlDecodeService.IsSupportedJxl(filePath) OrElse
                TiffPreviewService.IsSupportedTiff(filePath) OrElse IcoPreviewService.IsSupportedIco(filePath) Then
                 Return ForeignToAvaloniaBitmap(filePath, 0)

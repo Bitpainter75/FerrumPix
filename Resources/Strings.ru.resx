@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Автоматически сохранять при выходе</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Вместо вопроса редактор сохраняет несохранённые изменения, когда вы открываете другой снимок или выходите из редактора. RAW и PSD сохраняют обработку в сопроводительном файле, JPEG, PNG и WebP перезаписываются. Если снимок можно сохранить только под новым именем, вопрос остаётся.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Вместо вопроса редактор сохраняет несохранённые изменения, когда вы открываете другой снимок или выходите из редактора, туда же, куда пишет Сохранить: в сопроводительный файл рядом со снимком или, для JPEG, PNG и WebP при выключенной настройке выше, в файл снимка. Если снимок можно сохранить только под новым именем или обработка не помещается в сопроводительный файл, вопрос остаётся.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Сохранять JPEG, PNG и WebP рядом со снимком</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Если включено, Сохранить помещает обработку в сопроводительный файл рядом со снимком, а оригинал остаётся без изменений. Другие программы и серверы тогда показывают только оригинал; готовый снимок получается через Сохранить как или Экспорт в. Если выключено, Сохранить записывает обработку в файл снимка. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP и GIF всегда хранят обработку в сопроводительном файле.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Обработка не помещается в сопроводительный файл</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Кисть, ретушь, штамп, растрированные слои, деформацию и объекты нельзя сохранить в сопроводительном файле рядом с {0}. Как проект (.fpx) рядом со снимком всё остаётся редактируемым, а оригинал без изменений. Сохранить как записывает новый файл.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Сохранить как проект</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Предложение: {0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>При каждом изменении записывает звёзды, цветную метку и отметку оставить или отклонено прямо в файл JPEG, PNG или WebP, чтобы другие программы видели их сразу. Без переключателя они хранятся только в каталоге, пока не будут записаны в файлы через меню Метаданные.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Коррекции можно скопировать только с одного проявленного изображения RAW или PSD</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Коррекции можно скопировать только с одного снимка, обработка которого хранится в сопроводительном файле</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Коррекции не скопированы</value>

@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Spara automatiskt när du lämnar</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>I stället för att fråga sparar redigeraren osparade ändringar när du öppnar en annan bild eller lämnar redigeraren. RAW och PSD behåller redigeringen i sidofilen, JPEG, PNG och WebP skrivs över. Där bilden bara kan sparas under ett nytt namn får du fortfarande frågan.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>I stället för att fråga sparar redigeraren osparade ändringar när du öppnar en annan bild eller lämnar redigeraren, dit Spara skriver: i sidofilen bredvid bilden eller, för JPEG, PNG och WebP med inställningen ovan avstängd, i bildfilen. Där bilden bara kan sparas under ett nytt namn eller redigeringen inte får plats i sidofilen får du fortfarande frågan.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Spara JPEG, PNG och WebP bredvid bilden</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>På lägger Spara redigeringen i en sidofil bredvid bilden, och originalet förblir oförändrat. Andra program och servrar visar då bara originalet; en färdig bild får du med Spara som eller Exportera till. Av skriver Spara redigeringen i bildfilen. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP och GIF behåller alltid redigeringen i sidofilen.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Redigeringen får inte plats i sidofilen</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Pensel, retuschering, klonstämpel, rastrerade lager, förvrängning och objekt kan inte hållas i sidofilen bredvid {0}. Som projekt (.fpx) bredvid bilden förblir allt redigerbart och originalet oförändrat. Spara som skriver en ny fil.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Spara som projekt</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Förslag: {0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Skriver stjärnor, färgetikett och markeringen behåll eller avvisad vid varje ändring till själva JPEG-, PNG- och WebP-filen, så att andra program ser dem direkt. Utan reglaget finns de bara i katalogen tills de skrivs till filerna från menyn Metadata.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Justeringar kan bara kopieras från en enda framkallad RAW- eller PSD-bild</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Justeringar kan bara kopieras från en enda bild vars redigering ligger i en sidofil</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Inga justeringar har kopierats</value>

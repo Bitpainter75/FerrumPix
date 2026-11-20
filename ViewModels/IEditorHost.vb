@@ -50,6 +50,11 @@ Namespace ViewModels
                                   Optional cancelText As String = "Abbrechen") As Task(Of Boolean)
         Function ShowSaveChangesAsync(titleText As String,
                                       messageText As String) As Task(Of SaveChangesDialogResult)
+        ''' <summary>Die Frage, wenn "Speichern" ins Rezept neben dem Bild gehen soll, die Bearbeitung
+        ''' aber nicht hineinpasst (Pinsel, Retusche, gerasterte Ebenen, Objekte): als Projekt neben
+        ''' dem Bild, als neue Datei ueber "Speichern unter", oder abbrechen. Steht an Stelle eines
+        ''' grauen Knopfs, der nicht sagt, warum.</summary>
+        Function ShowRecipeDoesNotFitAsync(fileName As String) As Task(Of RecipeDoesNotFitChoice)
         ''' <summary>Die Frage nach einer gleichnamigen Datei. Gehoert hierher und nicht in den
         ''' Editor: den Dialog kennt der Anwendungsrahmen, der Editor kennt nur die Antwort.
         '''

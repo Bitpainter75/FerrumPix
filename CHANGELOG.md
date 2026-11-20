@@ -2,6 +2,23 @@
 
 ### Changes
 
+- New setting in the editor settings: Save JPEG, PNG and WebP edits beside the picture. When on,
+  Save keeps the original untouched and stores the edit in a sidecar file next to it, as for RAW.
+  It is off by default, so Save writes into the picture file as before. TIFF, HEIC, AVIF,
+  JPEG XL, BMP and GIF now always save their edit beside the picture, so Save works for them
+  instead of only Save as.
+
+- An edit stored beside a JPEG, PNG, TIFF, HEIC or PSD now shows in the gallery tile, the
+  viewer, the comparison, prints, collages and exports, and can be copied to other pictures.
+  Pasting adjustments, applying adjustments with overwrite and rotating in the viewer add to that
+  edit instead of rewriting the picture. When such a picture is later saved into its file, or
+  resized or watermarked with overwrite, the edit goes into the pixels once and the sidecar file
+  is removed.
+
+- When an edit does not fit into the sidecar file (brush, retouch, layers, objects), Save asks
+  whether to keep it as a project next to the picture or to use Save as, instead of being greyed
+  out. This also applies to RAW and PSD; after saving as a project, the editor continues in it.
+
 - The keyline frame has a new slider for the position of its fine line. At 0 the line sits
   against the picture as before, at 100 on the outer edge of the frame, and it follows rounded
   corners.
@@ -36,6 +53,9 @@
   the negative off and on again uses the new way.
 
 ### Fixes
+
+- Scrolling the group view of the gallery is smooth again. Tiles that scrolled into view were
+  often built from scratch instead of being reused, which made scrolling stutter.
 
 - The tile ".." that leads up to the parent folder no longer shows a date in the gallery. Its date
   stood among the pictures as if it belonged to them. Sorting by date keeps it at the front.

@@ -279,11 +279,12 @@ Namespace Services
             Dim margin = Math.Max(0, options.Margin)
 
             ' Der Zufallsmodus legt Abzuege im Seitenverhaeltnis des Bildes; die Masse kommen aus
-            ' dem Dateikopf, ohne das Bild zu dekodieren.
+            ' dem Dateikopf, ohne das Bild zu dekodieren, mit der Geometrie eines Rezepts daneben
+            ' (gezeigt wird ja das bearbeitete Bild).
             Dim aspects As List(Of Double) = Nothing
             If String.Equals(If(options.LayoutMode, "").Trim(), "Random", StringComparison.OrdinalIgnoreCase) Then
                 aspects = paths.Select(Function(p)
-                                           Dim size = ImageProcessor.GetOrientedImageSize(p)
+                                           Dim size = ImageProcessor.GetDevelopedImageSize(p)
                                            Return If(size.Width > 0 AndAlso size.Height > 0, size.Width / CDbl(size.Height), 1.5)
                                        End Function).ToList()
             End If

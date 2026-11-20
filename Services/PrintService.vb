@@ -199,7 +199,8 @@ Namespace Services
             For Each imagePath In If(pagePaths, New List(Of String)())
                 Dim aspect = 0.0
                 Try
-                    Dim size = ImageProcessor.GetOrientedImageSize(imagePath)
+                    ' Mit der Geometrie eines Rezepts daneben: gedruckt wird das bearbeitete Bild.
+                    Dim size = ImageProcessor.GetDevelopedImageSize(imagePath)
                     If size.Width > 0 AndAlso size.Height > 0 Then aspect = size.Width / CDbl(size.Height)
                 Catch
                 End Try

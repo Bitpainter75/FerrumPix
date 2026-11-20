@@ -510,6 +510,12 @@ Namespace Services
         ''' (Standard AUS). Nur dort, wo "Speichern" ohne Dialog geht; sonst und bei einem Fehler kommt
         ''' die gewohnte Frage (EditorViewModel.ConfirmSaveBeforeLeavingAsync).</summary>
         Public Property EditorAutoSaveOnLeave As Boolean = False
+        ''' <summary>"Speichern" bei JPEG, PNG und WebP legt die Bearbeitung als Rezept in die .fpxmp
+        ''' neben das Bild, statt die Datei zu ueberschreiben (GitHub #157). AB WERK AUS: Speichern
+        ''' schreibt in die Bilddatei wie bisher. Die uebrigen Rasterformate (TIFF, HEIC/AVIF, JPEG XL,
+        ''' BMP, GIF) und RAW/PSD legen ihr Rezept unabhaengig davon immer daneben; gelesen wird ein
+        ''' Rezept in jeder Stellung (RawSidecarService.HasRecipeBeside).</summary>
+        Public Property SaveEditsBesideOriginal As Boolean = False
         ''' Abstand zwischen zwei Kacheln der Galerie in Bildpunkten, in ALLEN Kachelansichten. Ab
         ''' Werk 10, der Aussenrand der Kachel (zweimal 5). Die Zahl geht
         ''' NICHT nur in die Optik: aus ihr und dem Kachelmass rechnen Spaltenzahl, Zeilenhoehe und

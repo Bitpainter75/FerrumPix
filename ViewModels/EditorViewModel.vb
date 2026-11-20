@@ -17886,16 +17886,50 @@ Namespace ViewModels
         End Property
 
         ''' <summary>RAW oder PSD - beide behalten ihre Bearbeitung im .fpxmp-Sidecar, weil wir
-        ''' keines der beiden Formate schreiben koennen.</summary>
+        ''' keines der beiden Formate schreiben koennen (RawSidecarService.IsReadOnlyFormat). Ob
+        ''' "Speichern" ins Rezept geht, sagt <see cref="SavesRecipeBesideCurrentImage"/>.</summary>
         Public ReadOnly Property IsCurrentImageSidecarFormat As Boolean
             Get
-                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso RawSidecarService.IsSidecarFormat(RenderSourcePath)
+                Return Not String.IsNullOrEmpty(_currentImagePath) AndAlso RawSidecarService.IsReadOnlyFormat(RenderSourcePath)
             End Get
         End Property
 
-        ''' Steuert, ob der "Speichern"-Button (in-place) aktiv ist. Bei RAW und PSD schreibt
-        ''' "Speichern" nicht die Datei, sondern das Rezept in die Begleitdatei - der Knopf ist
-        ''' also aktiv, solange dieser Weg offen steht (CanSaveSidecar).
+        ''' <summary>Geht "Speichern" fuer das offene Bild ins Rezept neben der Datei statt in die
+        ''' Datei? Fuer RAW und PSD immer (auch als Arbeitskopie vom Server, deren eigener Weg in den
+        ''' Zweigen von SaveImageAsync steht), sonst nach RawSidecarService.SavesRecipeBeside: TIFF,
+        ''' HEIC, JPEG XL, BMP und GIF immer, JPG, PNG und WebP mit der Einstellung "neben dem Bild
+        ''' speichern".
+        '''
+        ''' Nie fuer ein offenes .fpx (es ist sein eigenes Ziel), ein neues Dokument, eine PSD mit
+        ''' Ebenen (die Renderquelle ist ein entpacktes Basisbild) und alles, was nur "Speichern
+        ''' unter" kennt (_forceSaveAsOnly): dort laege eine Begleitdatei im Temp-Ordner.</summary>
+        Public ReadOnly Property SavesRecipeBesideCurrentImage As Boolean
+            Get
+                If String.IsNullOrEmpty(_currentImagePath) OrElse Not String.IsNullOrEmpty(_currentFpxPath) Then Return False
+                If IsCurrentImageSidecarFormat Then Return True
+                If _forceSaveAsOnly OrElse _isNewDocument OrElse Not String.IsNullOrEmpty(_renderSourcePathOverride) Then Return False
+                Return RawSidecarService.SavesRecipeBeside(_currentImagePath)
+            End Get
+        End Property
+
+        ''' <summary>Darf "Speichern" fragen, ob die Bearbeitung als Projekt neben das Bild soll, wenn
+        ''' sie nicht ins Rezept passt (IEditorHost.ShowRecipeDoesNotFitAsync)? Nur fuer
+        ''' eine lokale Datei: das Projekt einer Arbeitskopie vom Server laege im Temp-Ordner. Und
+        ''' nur, wenn das Projektformat eingeschaltet ist; sonst bleibt es beim grauen Knopf, und
+        ''' STRG+S fuehrt zu "Speichern unter".</summary>
+        Private ReadOnly Property OffersProjectBeside As Boolean
+            Get
+                Return SavesRecipeBesideCurrentImage AndAlso FpxService.Enabled AndAlso
+                       Not ImmichService.IsImmichTempPath(_currentImagePath) AndAlso
+                       Not NextcloudService.IsNextcloudTempPath(_currentImagePath)
+            End Get
+        End Property
+
+        ''' Steuert, ob der "Speichern"-Button (in-place) aktiv ist. Geht "Speichern" ins Rezept
+        ''' (SavesRecipeBesideCurrentImage: RAW, PSD, die nicht schreibbaren Rasterformate und mit der
+        ''' Einstellung JPG, PNG und WebP), schreibt er nicht die Datei, sondern die Begleitdatei - der
+        ''' Knopf ist also aktiv, solange dieser Weg offen steht (CanSaveSidecar) ODER die Frage nach
+        ''' dem Projekt neben dem Bild gestellt werden kann (OffersProjectBeside).
         ''' Immich-Bilder liegen als Temp-Kopie vor (_forceSaveAsOnly): dort ist "Speichern" nur dann
         ''' sinnvoll, wenn es das Quell-Asset ersetzen darf - siehe SavesBackToImmich.
         Public ReadOnly Property CanSaveInPlace As Boolean
@@ -17923,10 +17957,14 @@ Namespace ViewModels
                 ' Ohne diese Pruefung war der Knopf aktiv und schrieb in den Temp-Ordner.
                 If NextcloudService.IsNextcloudTempPath(_currentImagePath) AndAlso
                    Not IsCurrentImageSidecarFormat AndAlso Not SavesBackToNextcloud Then Return False
-                Dim formatWritableInPlace = IsCurrentImageSidecarFormat OrElse SavesBackToImmich OrElse
+                Dim savesRecipe = SavesRecipeBesideCurrentImage
+                Dim formatWritableInPlace = savesRecipe OrElse IsCurrentImageSidecarFormat OrElse SavesBackToImmich OrElse
                     Not String.IsNullOrEmpty(_currentFpxPath) OrElse FpxService.IsFpx(_currentImagePath) OrElse
                     ImageProcessor.CanEncodeToTargetExtension(_currentImagePath)
-                Return (Not IsCurrentImageSidecarFormat OrElse CanSaveSidecar) AndAlso
+                ' Passt die Bearbeitung nicht ins Rezept, bleibt der Knopf trotzdem aktiv, wo die
+                ' Frage nach dem Projekt neben dem Bild kommt (SaveImageAsync). Ein grauer Knopf
+                ' sagte nicht, warum, und nicht, dass ein Projekt der Weg ist.
+                Return (Not savesRecipe OrElse CanSaveSidecar OrElse OffersProjectBeside) AndAlso
                        (Not _forceSaveAsOnly OrElse SavesBackToImmich OrElse Not String.IsNullOrEmpty(_currentFpxPath)) AndAlso
                        formatWritableInPlace
             End Get
@@ -20591,10 +20629,10 @@ Namespace ViewModels
                     newFpxTempDir = psdLoad.TempDir
                     newForceSaveAsOnly = True
                 End If
-            ElseIf RawSidecarService.IsSidecarFormat(path) AndAlso
-                   RawSidecarService.Exists(path) Then
+            ElseIf RawSidecarService.HasRecipeBeside(path) Then
                 ' Rezept-Begleitdatei (.fpxmp): die zuletzt gespeicherten Regler kommen wie beim
-                ' .fpx-Laden wieder an. Beim Blättern meldet eine unlesbare Datei sich in der
+                ' .fpx-Laden wieder an, bei RAW und PSD wie bei JPG, PNG, TIFF und den uebrigen
+                ' Rezeptformaten. Beim Blättern meldet eine unlesbare Datei sich in der
                 ' Statuszeile statt mit einem Fenster mitten in der Pfeiltaste.
                 Dim readState = RawSidecarService.ReadRecipe(ItemPathFor(path), fpxAdjustments)
                 If readState = RawSidecarService.SidecarReadResult.Unreadable Then
@@ -21080,9 +21118,9 @@ Namespace ViewModels
                     newFpxTempDir = psdLoad.TempDir
                     forceSaveAsOnly = True
                 End If
-            ElseIf RawSidecarService.IsSidecarFormat(imagePath) AndAlso
-                   RawSidecarService.Exists(imagePath) Then
-                ' Bleibt nach dem Zweig darüber die RAW: die zuletzt gespeicherten Regler kommen
+            ElseIf RawSidecarService.HasRecipeBeside(imagePath) Then
+                ' Bleibt nach dem Zweig darüber eine Datei mit Rezept daneben (RAW, aber auch JPG,
+                ' PNG, TIFF und die uebrigen Rezeptformate): die zuletzt gespeicherten Regler kommen
                 ' wie beim .fpx-Laden wieder an. Eine vorhandene, aber nicht lesbare Begleitdatei
                 ' wird GEMELDET, nicht still übergangen: das Bild öffnet dann ohne seine Bearbeitung,
                 ' und ohne Hinweis hielte man die Bearbeitung für verloren. Überschrieben wird sie
@@ -24167,7 +24205,10 @@ Namespace ViewModels
             ' betrachtet absichtlich diese Renderquelle und wäre dann True, das Speicherziel ist
             ' aber das .fpx-Projekt selbst. Ohne diese Abgrenzung landete Strg+S im Sidecar-Zweig;
             ' TrySaveSidecar lehnt offene Projekte wiederum ab und der Speichervorgang endete still.
-            If Not saveAs AndAlso String.IsNullOrEmpty(_currentFpxPath) AndAlso IsCurrentImageSidecarFormat Then
+            ' Dasselbe gilt fuer jedes andere Format, dessen "Speichern" ins Rezept geht
+            ' (SavesRecipeBesideCurrentImage: TIFF, HEIC, JPEG XL, BMP, GIF, mit der Einstellung
+            ' auch JPG, PNG und WebP); SavesRecipeBesideCurrentImage schliesst ein offenes .fpx aus.
+            If Not saveAs AndAlso SavesRecipeBesideCurrentImage Then
                 DiagnosticLogService.LogAlways("Editor.Save", "stage=sidecarBranch")
                 ' Stammt das Bild aus Nextcloud, gehoert die Begleitdatei NEBEN DAS ORIGINAL AUF DEM
                 ' SERVER. Sie entsteht zuerst neben der Temp-Kopie (derselbe Weg wie lokal) und wird
@@ -24177,6 +24218,9 @@ Namespace ViewModels
                 ' Stammt es aus Immich, geht das Rezept als App-Daten an das Asset.
                 Dim immichAsset = CurrentImmichAssetId()
                 If immichAsset IsNot Nothing Then Return Await SaveSidecarToImmichAsync(immichAsset)
+                ' Ein laufender Retuschestrich gehoert vor die Frage, ob alles ins Rezept passt.
+                If _retouchStrokeActive Then CommitRetouchStroke()
+                If Not CanSaveSidecar AndAlso OffersProjectBeside Then Return Await SaveWhenRecipeDoesNotFitAsync()
                 Return TrySaveSidecar()
             End If
             ' "Speichern" bei einem Nextcloud-Bild mit der Einstellung "Originale ersetzen": die
@@ -24195,7 +24239,18 @@ Namespace ViewModels
             ' dem erfolgreichen Speichern ausgewertet. Nothing nur bei saveAs=False - dort wird
             ' der Übernahme-Zweig nie erreicht.
             Dim saveAsResult As SaveAsDialogResult = Nothing
-            If saveAs Then
+            ' Das Projekt neben dem Bild (Antwort auf "Bearbeitung passt nicht in die Begleitdatei"):
+            ' ein Speichern unter mit festem Ziel und ohne Dialog. Der Wert gilt fuer genau diesen
+            ' Aufruf und wird sofort geleert.
+            Dim projectBesideTarget = _projectBesideTarget
+            _projectBesideTarget = Nothing
+            If saveAs AndAlso Not String.IsNullOrEmpty(projectBesideTarget) Then
+                isFpxSave = True
+                ' Liegt dort schon ein Projekt, fragt derselbe Dialog wie bei Speichern unter.
+                Dim resolvedProject = Await ResolveSaveTargetConflictAsync(projectBesideTarget)
+                If String.IsNullOrEmpty(resolvedProject) Then Return False
+                targetPath = resolvedProject
+            ElseIf saveAs Then
                 ' Aus einem geöffneten .fpx-Projekt Name/Ordner/Formatvorschlag von der Projektdatei ableiten
                 ' (nicht vom entpackten Basisbild "base" im Temp-Ordner); sonst wie gehabt.
                 Dim fromFpx = Not String.IsNullOrEmpty(_currentFpxPath)
@@ -24587,7 +24642,18 @@ Namespace ViewModels
                             IO.Path.GetFileName(targetPath))
                     End If
                     MarkDocumentSaved()
-                    If saveAs Then
+                    ' Die Bildpunkte DIESER Datei tragen jetzt die Bearbeitung, die vorher als Rezept
+                    ' daneben lag (Speichern in die Datei bei einem JPG mit Rezept). Das Rezept muss
+                    ' weg, sonst kaeme derselbe Zuschnitt beim Neuoeffnen gleich darunter ein zweites
+                    ' Mal darauf. RAW und PSD werden nie neu geschrieben und kommen hier nicht an.
+                    If Not isFpxSave AndAlso Not isPsdSave AndAlso Not (saveAsResult IsNot Nothing AndAlso saveAsResult.IsPdf) AndAlso
+                       String.Equals(targetPath, _currentImagePath, PathIdentity.Comparison) AndAlso
+                       RawSidecarService.HasRecipeBeside(targetPath) Then
+                        If Not RawSidecarService.TryRemoveRecipe(targetPath) Then
+                            DiagnosticLogService.LogAlways("Editor.Save", $"recipeNotRemoved {IO.Path.GetFileName(targetPath)}")
+                        End If
+                    End If
+                    If saveAs AndAlso saveAsResult IsNot Nothing Then
                         ' Katalog-Metadaten zur neuen Datei übernehmen - das Original behält seine.
                         ' Was mitwandert, bestimmen die Einzeloptionen des Dialogs.
                         Dim metaSource = If(Not String.IsNullOrEmpty(_currentFpxPath), _currentFpxPath, _currentImagePath)
@@ -24621,7 +24687,12 @@ Namespace ViewModels
                     ' sich nicht geaendert, der Editor kann also darauf weiterarbeiten. Ob er das
                     ' tut, sagt die Einstellung (ab Werk ja: das alte Bild bleibt). Die Regel steht
                     ' in EINER Funktion, weil an ihr vier Faelle haengen - siehe ShouldOpenSavedTarget.
-                    If Not ShouldOpenSavedTarget(savedAsPdf, savedPixelsIntoFile, targetIsOtherFile) Then
+                    ' Das Projekt neben dem Bild ist die Fortsetzung DERSELBEN Arbeit, kein Export:
+                    ' der Editor wechselt immer hinein, unabhaengig von der Einstellung. Sonst stuende
+                    ' er weiter auf dem Bild, dessen Bearbeitung nicht ins Rezept passt, und jedes
+                    ' weitere Speichern fragte von vorn.
+                    Dim opensProject = Not String.IsNullOrEmpty(projectBesideTarget) AndAlso isFpxSave
+                    If Not opensProject AndAlso Not ShouldOpenSavedTarget(savedAsPdf, savedPixelsIntoFile, targetIsOtherFile) Then
                         ' Das Ausgangsbild bleibt offen. Es steht damit weiterhin so da, wie es VOR
                         ' dem Speichern stand - einschliesslich seiner ungesicherten Aenderungen:
                         ' geschrieben wurde ja die andere Datei. Ohne das Zurueckholen liesse es sich
@@ -24791,13 +24862,15 @@ Namespace ViewModels
             If gallery IsNot Nothing Then Await gallery.RefreshImmichViewAsync()
         End Function
 
-        ''' <summary>Ob "Speichern" (in-place) bei der aktuellen RAW-/PSD-Quelle den Rezept-Sidecar
-        ''' schreiben kann: kein offenes .fpx und nichts im Arbeitsbild, was das Rezept nicht
-        ''' beschreibt.
+        ''' <summary>Ob "Speichern" (in-place) bei der aktuellen Quelle den Rezept-Sidecar schreiben
+        ''' kann: "Speichern" geht dorthin (SavesRecipeBesideCurrentImage: RAW, PSD, TIFF, HEIC,
+        ''' JPEG XL, BMP, GIF, mit der Einstellung auch JPG, PNG und WebP; nie ein offenes .fpx) und
+        ''' nichts im Arbeitsbild, was das Rezept nicht beschreibt.
         ''' Pinsel, Retusche, gerasterte Ebenen, Verzerren und Bokeh stecken NUR im Arbeitsbild;
         ''' Objekte waeren im Sidecar nicht als selbstaendiges Projekt mit eingebetteten Assets
-        ''' gesichert. In diesen Faellen bleibt nur "Speichern unter" (vorzugsweise .fpx oder ein
-        ''' gebackenes Ausgabeformat).
+        ''' gesichert. In diesen Faellen fragt "Speichern", ob die Bearbeitung als Projekt neben das
+        ''' Bild soll oder ueber "Speichern unter" in eine neue Datei (SaveWhenRecipeDoesNotFitAsync);
+        ''' nur ohne diese Frage (Arbeitskopie vom Server, Projektformat aus) bleibt der Knopf grau.
         '''
         ''' Der RAHMEN ist davon ausgenommen: er hat keine Datei hinter sich, nur Werte, und wandert
         ''' mit "Anpassungen einfuegen" und den Vorlagen ohnehin ins Rezept einer RAW oder PSD
@@ -24813,7 +24886,7 @@ Namespace ViewModels
         ''' Speichern).</summary>
         Public ReadOnly Property CanSaveSidecar As Boolean
             Get
-                Return RawSidecarService.IsSidecarFormat(RenderSourcePath) AndAlso
+                Return SavesRecipeBesideCurrentImage AndAlso
                        String.IsNullOrEmpty(_currentFpxPath) AndAlso
                        Not _workingImage.HasUnrecordedBakedContent AndAlso
                        _annotations.All(Function(a) ImageAdjustments.IsFrameAnnotation(a)) AndAlso
@@ -25088,8 +25161,41 @@ Namespace ViewModels
             End Try
         End Function
 
-        ''' <summary>"Speichern" fuer RAW/PSD: schreibt das Rezept in die Begleitdatei
-        ''' (die Quelldatei selbst wird nie angefasst).</summary>
+        ''' <summary>Das feste Ziel fuer den naechsten Aufruf von SaveImageAsync(True): das Projekt
+        ''' neben dem Bild. Gesetzt nur von <see cref="SaveWhenRecipeDoesNotFitAsync"/>, geleert vom
+        ''' Speichern selbst. Ein Feld statt eines Parameters, weil der Pruefstand SaveImageAsync
+        ''' ueber Reflexion mit genau einem Argument ruft.</summary>
+        Private _projectBesideTarget As String
+
+        ''' <summary>"Speichern" soll ins Rezept neben der Datei gehen, die Bearbeitung passt aber nicht
+        ''' hinein (Pinsel, Retusche, gerasterte Ebenen, Objekte): statt eines grauen Knopfs die Frage,
+        ''' ob sie als Projekt (.fpx) neben das Bild soll oder ueber "Speichern unter" in eine neue
+        ''' Datei. Das gilt fuer RAW und PSD wie fuer jedes andere Format, dessen Speichern ins Rezept
+        ''' geht. Das Projekt bekommt den Namen des Bildes ("foto.jpg" wird "foto.fpx"), der Editor
+        ''' wechselt danach hinein, und jedes weitere Speichern geht dorthin.
+        '''
+        ''' "Doch in die Bilddatei schreiben" gibt es hier bewusst nicht: wer das will, schaltet
+        ''' "Bei JPEG, PNG und WebP neben dem Bild speichern" aus.</summary>
+        Private Async Function SaveWhenRecipeDoesNotFitAsync() As Task(Of Boolean)
+            If _mainVm Is Nothing Then Return False
+            DiagnosticLogService.LogAlways("Editor.Save", "stage=recipeDoesNotFit")
+            Dim choice = Await _mainVm.ShowRecipeDoesNotFitAsync(CurrentFileName)
+            Select Case choice
+                Case RecipeDoesNotFitChoice.ProjectBeside
+                    Dim folder = IO.Path.GetDirectoryName(_currentImagePath)
+                    If String.IsNullOrEmpty(folder) Then Return False
+                    _projectBesideTarget = IO.Path.Combine(folder, IO.Path.GetFileNameWithoutExtension(_currentImagePath) & FpxService.Extension)
+                    Return Await SaveImageAsync(True)
+                Case RecipeDoesNotFitChoice.SaveAs
+                    Return Await SaveImageAsync(True)
+                Case Else
+                    Return False
+            End Select
+        End Function
+
+        ''' <summary>"Speichern" ins Rezept: schreibt die Bearbeitung in die Begleitdatei neben der
+        ''' Quelle (RAW, PSD und jedes Format, fuer das SavesRecipeBesideCurrentImage gilt). Die
+        ''' Quelldatei selbst wird nie angefasst.</summary>
         Private Function TrySaveSidecar() As Boolean
             If Not CanSaveSidecar Then
                 DiagnosticLogService.LogAlways("Editor.Save",
@@ -25154,10 +25260,12 @@ Namespace ViewModels
             If _mainVm Is Nothing Then Return True
 
             ' Automatisch speichern, wenn eingestellt (ab Werk aus), aber NUR, wo "Speichern" ohne
-            ' Dialog geht: RAW und PSD in die Begleitdatei, ein .fpx in sich selbst, JPEG, PNG und
-            ' WebP an Ort und Stelle. Wo nur "Speichern unter" bleibt, oeffnete sonst unvermittelt ein
-            ' Dateidialog; dort und nach einem Fehlschlag kommt die gewohnte Frage.
-            If AppSettingsService.Load().EditorAutoSaveOnLeave AndAlso CanSaveInPlace Then
+            ' Dialog geht: in die Begleitdatei (RAW, PSD, TIFF, HEIC ... und mit der Einstellung JPEG,
+            ' PNG und WebP), ein .fpx in sich selbst, sonst JPEG, PNG und WebP an Ort und Stelle. Wo
+            ' nur "Speichern unter" bleibt oder die Bearbeitung nicht ins Rezept passt, oeffnete sonst
+            ' unvermittelt ein Dialog; dort und nach einem Fehlschlag kommt die gewohnte Frage.
+            If AppSettingsService.Load().EditorAutoSaveOnLeave AndAlso CanSaveInPlace AndAlso
+               (Not SavesRecipeBesideCurrentImage OrElse CanSaveSidecar) Then
                 DiagnosticLogService.LogAlways("Editor.Save", $"autoSave action={actionDescription}")
                 If Await SaveImageAsync(False) Then Return True
             End If

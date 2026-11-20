@@ -234,36 +234,6 @@ Namespace Models
         ''' <summary>Zweite Zeile der Gruppenkopfzeile, etwa "24 Bilder".</summary>
         Public Property GroupCountText As String
 
-        ''' <summary>True fuer alles, was eine Kachel bekommt - also alles ausser einer Gruppenkopfzeile.
-        ''' Die Gruppenansicht schaltet damit zwischen Kachel und Kopfzeile um.</summary>
-        Public ReadOnly Property IsContentEntry As Boolean
-            Get
-                Return Not IsGroupHeader
-            End Get
-        End Property
-
-        ''' <summary>Sich selbst - aber NUR fuer eine Gruppenkopfzeile, sonst Nothing.
-        '''
-        ''' <para>Damit entscheidet die Ansicht nicht mehr ueber <c>IsVisible</c>, ob die Kopfzeile
-        ''' zu sehen ist, sondern der ContentControl bekommt schlicht keinen Inhalt und BAUT sie gar
-        ''' nicht erst. Der Unterschied zaehlt: eine ausgeblendete Kopfzeile wurde in jeder Kachel
-        ''' erzeugt, also im Raster vierzigmal je Rollschritt fuer etwas, das dort nie vorkommt.
-        ''' Dasselbe umgekehrt fuer die Kachel selbst (siehe <see cref="TileContent"/>).</para></summary>
-        Public ReadOnly Property GroupHeaderContent As Object
-            Get
-                Return If(IsGroupHeader, CObj(Me), Nothing)
-            End Get
-        End Property
-
-        ''' <summary>Sich selbst - aber NUR fuer eine echte Kachel, sonst Nothing. Das Gegenstueck zu
-        ''' <see cref="GroupHeaderContent"/>: in der Gruppenansicht baut eine Kopfzeile damit keine
-        ''' Kachel mehr auf, und das sind rund fuenfzig Steuerelemente je Kopfzeile.</summary>
-        Public ReadOnly Property TileContent As Object
-            Get
-                Return If(IsContentEntry, CObj(Me), Nothing)
-            End Get
-        End Property
-
         Public ReadOnly Property IsSelectableEntry As Boolean
             Get
                 Return Not IsParentFolderEntry AndAlso Not IsGroupHeader
@@ -396,7 +366,7 @@ Namespace Models
         ''' sich Stand und ETag (<see cref="NextcloudSidecarState"/>). Nur für Formate mit
         ''' Begleitdatei (RAW, PSD).</summary>
         Private Async Function FetchNextcloudSidecarAsync(localCopy As String, keepExistingLocal As Boolean) As Task
-            If Not RawSidecarService.IsSidecarFormat(localCopy) Then Return
+            If Not RawSidecarService.IsReadOnlyFormat(localCopy) Then Return
             Try
                 ' Der Pfad im Dateibaum kommt erst mit den Einzelheiten; hier wird er gebraucht,
                 ' also notfalls jetzt geholt.

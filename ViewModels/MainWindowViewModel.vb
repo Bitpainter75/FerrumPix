@@ -20,6 +20,16 @@ Namespace ViewModels
         Cancelled
     End Enum
 
+    ''' <summary>Die Antwort auf die Frage, wenn "Speichern" ins Rezept gehen soll, die Bearbeitung
+    ''' aber nicht hineinpasst (IEditorHost.ShowRecipeDoesNotFitAsync).</summary>
+    Public Enum RecipeDoesNotFitChoice
+        Cancelled
+        ''' Als Projekt (.fpx) mit dem Namen des Bildes in seinen Ordner.
+        ProjectBeside
+        ''' Der gewohnte Dialog "Speichern unter".
+        SaveAs
+    End Enum
+
     Public Class MainWindowViewModel
         Inherits ViewModelBase
         ' Betrachter und Editor kennen nur noch je eine schmale Sicht auf den Rahmen (siehe
@@ -5331,6 +5341,22 @@ Namespace ViewModels
             Return SaveChangesDialogResult.Save
         End Function
 
+        ''' <summary>Die Frage, wenn die Bearbeitung nicht in die Begleitdatei passt. Das Projekt steht
+        ''' vorn: es macht nichts kaputt, haelt alles bearbeitbar und liegt neben dem Bild, wo man es
+        ''' wiederfindet. "Doch in die Datei schreiben" gibt es hier bewusst nicht: wer das will,
+        ''' schaltet "neben dem Bild speichern" aus.</summary>
+        Public Async Function ShowRecipeDoesNotFitAsync(fileName As String) As Task(Of RecipeDoesNotFitChoice) Implements IEditorHost.ShowRecipeDoesNotFitAsync
+            Dim result = Await ShowDialogAsync(AppDialogKind.Message,
+                                               LocalizationService.T("Bearbeitung passt nicht in die Begleitdatei"),
+                                               String.Format(LocalizationService.T("Pinsel, Retusche, Stempel, gerasterte Ebenen, Verzerren und Objekte lassen sich nicht in der Begleitdatei neben {0} festhalten. Als Projekt (.fpx) neben dem Bild bleibt alles bearbeitbar und das Original unverändert. Speichern unter schreibt eine neue Datei."), fileName),
+                                               "",
+                                               LocalizationService.T("Als Projekt speichern"), LocalizationService.T("Abbrechen"),
+                                               LocalizationService.T("Speichern unter"))
+            If result Is Nothing Then Return RecipeDoesNotFitChoice.Cancelled
+            If String.Equals(result, "Secondary", StringComparison.Ordinal) Then Return RecipeDoesNotFitChoice.SaveAs
+            Return RecipeDoesNotFitChoice.ProjectBeside
+        End Function
+
         Public Function ShowInputAsync(kind As AppDialogKind, titleText As String, messageText As String, initialText As String, Optional confirmText As String = "OK", Optional cancelText As String = "Abbrechen") As Task(Of String)
             Return ShowDialogAsync(kind, titleText, messageText, initialText,
                                    LocalizationService.T(confirmText), LocalizationService.T(cancelText))
@@ -6952,7 +6978,7 @@ Namespace ViewModels
                 ' einen Begleitdatei, die mit der Datei geloescht wird. Das soll niemand erst
                 ' danach merken.
                 Dim variantCount = Await Task.Run(Function() pathList.
-                    Where(Function(p) IO.File.Exists(p) AndAlso RawSidecarService.IsSidecarFormat(p)).
+                    Where(Function(p) IO.File.Exists(p) AndAlso RawSidecarService.IsReadOnlyFormat(p)).
                     Sum(Function(p) RawSidecarService.ReadVariants(p).Count))
                 If variantCount > 0 Then
                     message &= Environment.NewLine & Environment.NewLine &

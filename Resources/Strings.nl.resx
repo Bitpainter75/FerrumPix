@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Automatisch opslaan bij verlaten</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>In plaats van te vragen slaat de editor niet-opgeslagen wijzigingen op wanneer je een andere foto opent of de editor verlaat. RAW en PSD bewaren de bewerking in het begeleidende bestand, JPEG, PNG en WebP worden overschreven. Waar de foto alleen onder een nieuwe naam kan worden opgeslagen, wordt nog steeds gevraagd.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>In plaats van te vragen slaat de editor niet-opgeslagen wijzigingen op wanneer je een andere foto opent of de editor verlaat, op de plek waar Opslaan schrijft: in het begeleidende bestand naast de foto of, bij JPEG, PNG en WebP met de instelling hierboven uit, in het fotobestand. Waar de foto alleen onder een nieuwe naam kan worden opgeslagen of de bewerking niet in het begeleidende bestand past, wordt nog steeds gevraagd.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>JPEG, PNG en WebP naast de foto opslaan</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Aan legt Opslaan de bewerking in een begeleidend bestand naast de foto, en het origineel blijft ongewijzigd. Andere programma's en servers tonen dan alleen het origineel; een afgewerkte foto maak je met Opslaan als of Exporteren naar. Uit schrijft Opslaan de bewerking in het fotobestand. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP en GIF houden hun bewerking altijd in het begeleidende bestand.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>De bewerking past niet in het begeleidende bestand</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Penseel, retoucheren, kloonstempel, gerasterde lagen, vervormen en objecten kunnen niet in het begeleidende bestand naast {0} worden bewaard. Als project (.fpx) naast de foto blijft alles bewerkbaar en het origineel ongewijzigd. Opslaan als schrijft een nieuw bestand.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Opslaan als project</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Voorstel: {0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Schrijft sterren, kleurlabel en de markering behouden of afgewezen bij elke wijziging naar het JPEG-, PNG- of WebP-bestand zelf, zodat andere programma's ze meteen zien. Zonder de schakelaar staan ze alleen in de catalogus totdat ze via het menu Metagegevens naar de bestanden worden geschreven.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Aanpassingen kunnen alleen worden gekopieerd van één ontwikkelde RAW- of PSD-afbeelding</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Aanpassingen kunnen alleen worden gekopieerd van één afbeelding waarvan de bewerking in een begeleidend bestand staat</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Er zijn geen aanpassingen gekopieerd</value>

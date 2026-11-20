@@ -277,7 +277,7 @@ Namespace Services
                                                   Function(descriptions, target) ApplyToXmp(descriptions, target, cleaned),
                                                   createsValues:=cleaned.Values.Any(Function(v) v.Length > 0),
                                                   logName:="Description")
-            If result.Success AndAlso RawSidecarService.IsSidecarFormat(imagePath) Then
+            If result.Success AndAlso RawSidecarService.IsReadOnlyFormat(imagePath) Then
                 If RawSidecarService.TryWriteDescription(imagePath, cleaned) Then
                     ExifService.Invalidate(imagePath)
                 Else

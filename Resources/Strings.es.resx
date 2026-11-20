@@ -11309,8 +11309,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Guardar automáticamente al salir</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>En lugar de preguntar, el editor guarda los cambios sin guardar cuando abres otra foto o sales del editor. RAW y PSD conservan la edición en el archivo complementario, JPEG, PNG y WebP se sobrescriben. Si la foto solo puede guardarse con un nombre nuevo, se sigue preguntando.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>En lugar de preguntar, el editor guarda los cambios sin guardar cuando abres otra foto o sales del editor, allí donde escribe Guardar: en el archivo complementario junto a la foto o, en JPEG, PNG y WebP con el ajuste de arriba desactivado, en el archivo de la foto. Si la foto solo puede guardarse con un nombre nuevo o la edición no cabe en el archivo complementario, se sigue preguntando.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Guardar JPEG, PNG y WebP junto a la foto</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Activado, Guardar pone la edición en un archivo complementario junto a la foto y el original no cambia. Otros programas y servidores solo muestran entonces el original; una foto terminada se obtiene con Guardar como o Exportar a. Desactivado, Guardar escribe la edición en el archivo de la foto. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP y GIF conservan siempre su edición en el archivo complementario.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>La edición no cabe en el archivo complementario</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>El pincel, el retoque, el tampón de clonar, las capas rasterizadas, la deformación y los objetos no se pueden conservar en el archivo complementario junto a {0}. Como proyecto (.fpx) junto a la foto todo sigue siendo editable y el original no cambia. Guardar como escribe un archivo nuevo.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Guardar como proyecto</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Sugerencia: {0}</value>
@@ -11810,8 +11825,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Escribe las estrellas, la etiqueta de color y la marca conservar o rechazada en el propio archivo JPEG, PNG o WebP con cada cambio, para que otros programas las vean de inmediato. Sin el interruptor solo están en el catálogo hasta que se escriben en los archivos desde el menú Metadatos.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Los ajustes solo se pueden copiar de una única imagen RAW o PSD revelada</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Los ajustes solo se pueden copiar de una única imagen cuya edición está en un archivo complementario</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>No hay ajustes copiados</value>

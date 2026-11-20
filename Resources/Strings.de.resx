@@ -11327,8 +11327,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Beim Verlassen automatisch speichern</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Statt nachzufragen, speichert der Editor ungespeicherte Änderungen, wenn du ein anderes Bild öffnest oder den Editor verlässt. RAW und PSD behalten die Bearbeitung in der Begleitdatei, JPEG, PNG und WebP werden dabei überschrieben. Wo das Bild nur unter neuem Namen gespeichert werden kann, wird weiter gefragt.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Statt nachzufragen, speichert der Editor ungespeicherte Änderungen, wenn du ein anderes Bild öffnest oder den Editor verlässt, und zwar dorthin, wohin auch Speichern schreibt: in die Begleitdatei neben dem Bild oder, bei JPEG, PNG und WebP mit ausgeschalteter Einstellung darüber, in die Bilddatei. Wo das Bild nur unter neuem Namen gespeichert werden kann oder die Bearbeitung nicht in die Begleitdatei passt, wird weiter gefragt.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Bei JPEG, PNG und WebP neben dem Bild speichern</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Eingeschaltet legt Speichern die Bearbeitung in eine Begleitdatei neben das Bild, das Original bleibt unverändert. Andere Programme und Server zeigen dann nur das Original, ein fertiges Bild entsteht mit Speichern unter oder Exportieren nach. Ausgeschaltet schreibt Speichern die Bearbeitung in die Bilddatei. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP und GIF behalten ihre Bearbeitung immer in der Begleitdatei.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Bearbeitung passt nicht in die Begleitdatei</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Pinsel, Retusche, Stempel, gerasterte Ebenen, Verzerren und Objekte lassen sich nicht in der Begleitdatei neben {0} festhalten. Als Projekt (.fpx) neben dem Bild bleibt alles bearbeitbar und das Original unverändert. Speichern unter schreibt eine neue Datei.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Als Projekt speichern</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Vorschlag: {0}</value>
@@ -11828,8 +11843,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Schreibt Sterne, Farbetikett und die Markierung behalten oder verworfen bei jeder Änderung in JPEG, PNG und WebP selbst, damit andere Programme sie sofort sehen. Ohne den Schalter stehen sie nur im Katalog, bis sie über das Menü Metadaten in die Dateien geschrieben werden.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Anpassungen lassen sich nur von einem einzelnen entwickelten RAW- oder PSD-Bild kopieren</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Anpassungen lassen sich nur von einem einzelnen Bild kopieren, dessen Bearbeitung in einer Begleitdatei liegt</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Es sind keine Anpassungen kopiert</value>

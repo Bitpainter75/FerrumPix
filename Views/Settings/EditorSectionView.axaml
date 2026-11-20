@@ -596,8 +596,20 @@
 
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
+                                <TextBlock Text="Bei JPEG, PNG und WebP neben dem Bild speichern" FontSize="{DynamicResource FP.Font.Body}"/>
+                                <TextBlock Text="Eingeschaltet legt Speichern die Bearbeitung in eine Begleitdatei neben das Bild, das Original bleibt unverändert. Andere Programme und Server zeigen dann nur das Original, ein fertiges Bild entsteht mit Speichern unter oder Exportieren nach. Ausgeschaltet schreibt Speichern die Bearbeitung in die Bilddatei. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP und GIF behalten ihre Bearbeitung immer in der Begleitdatei." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding SaveEditsBesideOriginal}"
+                                          OnContent=""
+                                          OffContent=""
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" HorizontalAlignment="Left" MaxWidth="660" Margin="0,0,40,0">
                                 <TextBlock Text="Beim Verlassen automatisch speichern" FontSize="{DynamicResource FP.Font.Body}"/>
-                                <TextBlock Text="Statt nachzufragen, speichert der Editor ungespeicherte Änderungen, wenn du ein anderes Bild öffnest oder den Editor verlässt. RAW und PSD behalten die Bearbeitung in der Begleitdatei, JPEG, PNG und WebP werden dabei überschrieben. Wo das Bild nur unter neuem Namen gespeichert werden kann, wird weiter gefragt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                <TextBlock Text="Statt nachzufragen, speichert der Editor ungespeicherte Änderungen, wenn du ein anderes Bild öffnest oder den Editor verlässt, und zwar dorthin, wohin auch Speichern schreibt: in die Begleitdatei neben dem Bild oder, bei JPEG, PNG und WebP mit ausgeschalteter Einstellung darüber, in die Bilddatei. Wo das Bild nur unter neuem Namen gespeichert werden kann oder die Bearbeitung nicht in die Begleitdatei passt, wird weiter gefragt." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <ToggleSwitch Grid.Column="1"
                                           IsChecked="{Binding EditorAutoSaveOnLeave}"

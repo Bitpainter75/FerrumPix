@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Gem automatisk ved forlad</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>I stedet for at spørge gemmer editoren ikke-gemte ændringer, når du åbner et andet billede eller forlader editoren. RAW og PSD beholder redigeringen i sidefilen, JPEG, PNG og WebP overskrives. Hvor billedet kun kan gemmes under et nyt navn, bliver du stadig spurgt.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>I stedet for at spørge gemmer editoren ikke-gemte ændringer, når du åbner et andet billede eller forlader editoren, og det samme sted som Gem skriver: i sidefilen ved siden af billedet eller, for JPEG, PNG og WebP med indstillingen ovenfor slået fra, i billedfilen. Hvor billedet kun kan gemmes under et nyt navn, eller redigeringen ikke passer i sidefilen, bliver du stadig spurgt.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Gem JPEG, PNG og WebP ved siden af billedet</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Slået til lægger Gem redigeringen i en sidefil ved siden af billedet, og originalen forbliver uændret. Andre programmer og servere viser så kun originalen; et færdigt billede får du med Gem som eller Eksporter til. Slået fra skriver Gem redigeringen ind i billedfilen. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP og GIF beholder altid redigeringen i sidefilen.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Redigeringen passer ikke i sidefilen</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Pensel, retouchering, klonstempel, rasteriserede lag, forvrængning og objekter kan ikke gemmes i sidefilen ved siden af {0}. Som projekt (.fpx) ved siden af billedet forbliver alt redigerbart og originalen uændret. Gem som skriver en ny fil.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Gem som projekt</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Forslag: {0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Skriver stjerner, farveetiket og markeringen behold eller afvist ved hver ændring til selve JPEG-, PNG- og WebP-filen, så andre programmer ser dem med det samme. Uden kontakten står de kun i kataloget, indtil de skrives til filerne via menuen Metadata.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Justeringer kan kun kopieres fra et enkelt fremkaldt RAW- eller PSD-billede</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Justeringer kan kun kopieres fra et enkelt billede, hvis redigering ligger i en sidefil</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Der er ikke kopieret nogen justeringer</value>

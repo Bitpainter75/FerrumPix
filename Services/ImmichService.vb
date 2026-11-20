@@ -1792,7 +1792,7 @@ Namespace Services
         ''' daran nicht.</summary>
         Private Shared Async Function SyncRecipeToTempAsync(assetId As String, localImagePath As String,
                                                             cancellationToken As CancellationToken) As Task
-            If Not RawSidecarService.IsSidecarFormat(localImagePath) Then Return
+            If Not RawSidecarService.IsReadOnlyFormat(localImagePath) Then Return
             Try
                 Using timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
                     timeout.CancelAfter(TimeSpan.FromSeconds(5))

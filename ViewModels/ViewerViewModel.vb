@@ -3238,14 +3238,14 @@ Namespace ViewModels
         ''' entwickelte Bild samt Rezept, je nach Einstellung auch halb so gross (half_size); seine
         ''' volle Entwicklung erreicht den Editor ohnehin ueber den Zwischenspeicher von
         ''' RawDecodeService. NEIN fuer ein Buendel (gezeigt wird das Komposit), fuer SVG (gerendert
-        ''' in Anzeigegroesse) und fuer eine PSD mit Drehung in der Beistelldatei (die steckt im
-        ''' Betrachter in den Pixeln, im Editor im Rezept). Alles andere dekodiert der Betrachter
-        ''' voll, ohne Rezept und ohne Verkleinerung.</summary>
+        ''' in Anzeigegroesse) und fuer jedes Bild mit Rezept daneben (der Betrachter zeigt es fertig
+        ''' gerechnet, der Editor rechnet das Rezept selbst auf die Quelle). Alles andere dekodiert
+        ''' der Betrachter voll, ohne Rezept und ohne Verkleinerung.</summary>
         Friend Shared Function QualifiesForEditorHandoff(path As String) As Boolean
             If String.IsNullOrEmpty(path) Then Return False
             If RawPreviewService.IsSupportedRaw(path) OrElse FpxService.IsFpx(path) OrElse
                SvgPreviewService.IsSupportedSvg(path) OrElse VideoPreviewService.IsSupportedVideo(path) Then Return False
-            If RawSidecarService.IsSidecarFormat(path) AndAlso RawSidecarService.ReadRotationDegrees(path) <> 0 Then Return False
+            If RawSidecarService.HasRecipeBeside(path) Then Return False
             Return True
         End Function
 
@@ -3446,6 +3446,21 @@ Namespace ViewModels
                 Using preview = SvgPreviewService.ExtractPreview(path)
                     Return If(preview IsNot Nothing, New Bitmap(preview), Nothing)
                 End Using
+            End If
+            ' Ein Rezept daneben (JPG, PNG, TIFF, HEIC, PSD ...): der Betrachter zeigt das Bild, wie
+            ' Editor und Kachel es zeigen, also durch die ganze Kette gerechnet. Vorher zeigte er bei
+            ' diesen Formaten die unbearbeitete Datei, bei einer PSD nur mit ihrer Drehung.
+            If RawSidecarService.HasRecipeBeside(If(recipeKey, path)) Then
+                Dim recipe = RawSidecarService.TryRead(If(recipeKey, path))
+                If recipe IsNot Nothing Then
+                    Try
+                        Dim rendered = ImageProcessor.ApplyAdjustments(path, recipe)
+                        If rendered IsNot Nothing Then Return rendered
+                    Catch ex As Exception
+                        ' Faellt die Kette aus, lieber die Datei selbst als eine leere Flaeche.
+                        DiagnosticLogService.LogException("Viewer.RecipeDecode", ex)
+                    End Try
+                End If
             End If
             If PsdPreviewService.IsSupportedPsd(path) Then
                 ' Wie RAW: eine gedrehte PSD traegt ihre Drehung im Sidecar, nicht in den Pixeln.
@@ -4177,9 +4192,12 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Kann die Drehung dieses Bildes überhaupt dauerhaft werden - gebacken oder als
-        ''' Rezept neben der Datei?</summary>
+        ''' Rezept neben der Datei? Ins Rezept geht sie, wo RawSidecarService.WritesRecipe es sagt:
+        ''' RAW und PSD, die nicht schreibbaren Rasterformate (TIFF, HEIC, JPEG XL ...), JPG, PNG und
+        ''' WebP mit der Einstellung "neben dem Bild speichern" und jedes Bild, das schon ein Rezept
+        ''' hat (sonst verrutschte dessen Zuschnitt auf den gedrehten Pixeln).</summary>
         Private Shared Function CanPersistRotation(path As String) As Boolean
-            Return CanBakeRotation(path) OrElse RawSidecarService.IsSidecarFormat(path)
+            Return CanBakeRotation(path) OrElse RawSidecarService.WritesRecipe(path)
         End Function
 
         Public Async Function ConfirmPendingRotationAsync(actionDescription As String) As Task(Of Boolean)
@@ -4226,7 +4244,9 @@ Namespace ViewModels
             ' und würden die Datei durch ihre eigene eingebettete Vorschau ersetzen. Die Drehung geht
             ' stattdessen nicht-destruktiv in die Rezept-Begleitdatei (foto.cr2.fpxmp), genau wie
             ' beim Editor. Viewer, Filmstreifen und Kacheln lesen sie beim Anzeigen wieder aus.
-            If RawSidecarService.IsSidecarFormat(source) Then Return Await SaveRotationToSidecarAsync(source, angle)
+            ' Dasselbe fuer jedes Bild, dessen Bearbeitung neben ihm liegt oder liegen soll
+            ' (RawSidecarService.WritesRecipe), auch fuer ein JPG.
+            If RawSidecarService.WritesRecipe(source) Then Return Await SaveRotationToSidecarAsync(source, angle)
 
             Dim ext = IO.Path.GetExtension(source)
             Dim temp = IO.Path.Combine(IO.Path.GetDirectoryName(source), $".{IO.Path.GetFileNameWithoutExtension(source)}.ferrumpix-rotate-{Guid.NewGuid():N}{ext}")
@@ -4835,7 +4855,7 @@ Namespace ViewModels
             Dim refused As String = Nothing
             WithCurrentImage(Sub(g, i)
                                  If Not GalleryViewModel.HasCopyableAdjustments(i(0)) Then
-                                     refused = LocalizationService.T("Anpassungen lassen sich nur von einem einzelnen entwickelten RAW- oder PSD-Bild kopieren")
+                                     refused = LocalizationService.T("Anpassungen lassen sich nur von einem einzelnen Bild kopieren, dessen Bearbeitung in einer Begleitdatei liegt")
                                      Return
                                  End If
                                  g.CopyAdjustmentsFromImageItems(i)

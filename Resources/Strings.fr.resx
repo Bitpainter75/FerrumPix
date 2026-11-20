@@ -11309,8 +11309,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Enregistrer automatiquement en quittant</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Au lieu de demander, l'éditeur enregistre les modifications non enregistrées lorsque vous ouvrez une autre photo ou quittez l'éditeur. RAW et PSD conservent la retouche dans le fichier annexe, JPEG, PNG et WebP sont écrasés. Si la photo ne peut être enregistrée que sous un nouveau nom, la question reste posée.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Au lieu de demander, l'éditeur enregistre les modifications non enregistrées lorsque vous ouvrez une autre photo ou quittez l'éditeur, là où écrit Enregistrer : dans le fichier annexe à côté de la photo ou, pour JPEG, PNG et WebP avec le réglage ci-dessus désactivé, dans le fichier de la photo. Si la photo ne peut être enregistrée que sous un nouveau nom ou si la retouche ne tient pas dans le fichier annexe, la question reste posée.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Enregistrer JPEG, PNG et WebP à côté de la photo</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Activé, Enregistrer place la retouche dans un fichier annexe à côté de la photo, et l'original reste inchangé. Les autres programmes et serveurs ne montrent alors que l'original ; une photo finie s'obtient avec Enregistrer sous ou Exporter vers. Désactivé, Enregistrer écrit la retouche dans le fichier de la photo. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP et GIF gardent toujours leur retouche dans le fichier annexe.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>La retouche ne tient pas dans le fichier annexe</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Le pinceau, la retouche, le tampon de duplication, les calques pixellisés, la déformation et les objets ne peuvent pas être conservés dans le fichier annexe à côté de {0}. En projet (.fpx) à côté de la photo, tout reste modifiable et l'original inchangé. Enregistrer sous écrit un nouveau fichier.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Enregistrer comme projet</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Suggestion : {0}</value>
@@ -11810,8 +11825,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Écrit les étoiles, l'étiquette de couleur et le marquage conserver ou rejetée dans le fichier JPEG, PNG ou WebP lui-même à chaque modification, pour que les autres programmes les voient aussitôt. Sans cet interrupteur, ils ne figurent que dans le catalogue jusqu'à ce qu'ils soient écrits dans les fichiers depuis le menu Métadonnées.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Les réglages ne peuvent être copiés que depuis une seule image RAW ou PSD développée</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Les réglages ne peuvent être copiés que depuis une seule image dont la retouche est dans un fichier annexe</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Aucun réglage n'a été copié</value>

@@ -9,8 +9,12 @@ Imports System.Xml.Linq
 Namespace Services
 
     ''' <summary>
-    ''' Rezept-Begleitdatei fuer NUR-LESBARE Bildformate ("foto.cr2" -> "foto.cr2.fpxmp",
-    ''' "foto.psd" -> "foto.psd.fpxmp"): am XMP-Sidecar-Konzept
+    ''' Rezept-Begleitdatei ("foto.cr2" -> "foto.cr2.fpxmp", "foto.psd" -> "foto.psd.fpxmp",
+    ''' "foto.jpg" -> "foto.jpg.fpxmp"). Gebaut fuer die NUR LESBAREN Formate RAW und PSD; seit der
+    ''' Einstellung "neben dem Bild speichern" traegt sie auch das Rezept von JPG, PNG, WebP und den
+    ''' nicht ueber das Original schreibbaren Rasterformaten (TIFF, HEIC/AVIF, JPEG XL, BMP, GIF).
+    ''' Welche Frage wofuer gilt, steht bei IsReadOnlyFormat, HasRecipeBeside, SavesRecipeBeside und
+    ''' WritesRecipe. Katalogdaten traegt sie nur bei RAW und PSD. Am XMP-Sidecar-Konzept
     ''' orientiert (kleine XML-Datei NEBEN dem Original, wird beim Oeffnen automatisch geladen und
     ''' beim Verlassen aktualisiert), aber ein EIGENES Format - die Reglermodelle sind nicht
     ''' Adobe-kompatibel, ein echtes XMP wuerde nur so tun als ob.
@@ -39,14 +43,92 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        ''' <summary>Formate, deren Bearbeitung in den Sidecar geht statt in die Datei: RAW und
-        ''' PSD/PSB. Beide sind nur-lesend (siehe die Schreibsperre in ImageProcessor.SaveImage),
-        ''' beide sollen trotzdem Reglerwerte behalten koennen.</summary>
-        Public Shared Function IsSidecarFormat(path As String) As Boolean
+        ''' <summary>Die NUR LESBAREN Formate: RAW und PSD/PSB (siehe die Schreibsperre in
+        ''' ImageProcessor.SaveImage). Nur sie tragen Katalogdaten (Sterne, Etikett, Stichwoerter,
+        ''' Beschreibung) in der .fpxmp, nur sie haben Varianten, und ein Serverbild dieser Formate
+        ''' wird nie durch einen Render ersetzt.
+        '''
+        ''' NICHT die Frage, ob ein Rezept daneben liegt oder dorthin gespeichert wird: dafuer gibt
+        ''' es <see cref="HasRecipeBeside"/>, <see cref="SavesRecipeBeside"/> und
+        ''' <see cref="WritesRecipe"/>. Bis zur Einstellung "neben dem Bild speichern" hiess diese
+        ''' Funktion IsSidecarFormat und trug beide Bedeutungen.</summary>
+        Public Shared Function IsReadOnlyFormat(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             ' Auch fuer den Schluessel einer Variante: gefragt ist das Format der Datei dahinter.
             Dim file = VariantKey.FileOf(path)
             Return RawPreviewService.IsSupportedRaw(file) OrElse PsdPreviewService.IsSupportedPsd(file)
+        End Function
+
+        ''' <summary>Rasterformate, die neben sich ein Rezept tragen koennen. Ausgenommen bleiben
+        ''' .fpx (traegt sein Rezept selbst), SVG, ICO, Video und PDF.</summary>
+        Private Shared ReadOnly RecipeRasterExtensions As String() = {
+            ".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff",
+            ".heic", ".heif", ".hif", ".avif", ".jxl", ".bmp", ".gif"}
+
+        ''' <summary>Kann diese Datei ein Rezept in einer .fpxmp neben sich haben? RAW, PSD und die
+        ''' Rasterformate aus <see cref="RecipeRasterExtensions"/>.</summary>
+        Public Shared Function IsRecipeFormat(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) Then Return False
+            If IsReadOnlyFormat(path) Then Return True
+            Dim file = VariantKey.FileOf(path)
+            Return RecipeRasterExtensions.Contains(System.IO.Path.GetExtension(file).ToLowerInvariant())
+        End Function
+
+        ''' <summary>Liegt neben dieser Datei ein Rezept, das beim Lesen eingerechnet wird? GILT FUER
+        ''' JEDES REZEPTFORMAT UND UNABHAENGIG VON DER EINSTELLUNG: wer von "neben dem Bild" auf "in
+        ''' die Datei" umstellt, sieht seine Bearbeitungen weiter. Nur so bleibt das Umlegen folgenlos.
+        ''' Fragen danach Editor (Oeffnen, Blaettern), Betrachter, Kachel, Ausgabe, Stapel, Kopieren
+        ''' und der Vermerk "bearbeitet".</summary>
+        Public Shared Function HasRecipeBeside(path As String) As Boolean
+            Return IsRecipeFormat(path) AndAlso Exists(path)
+        End Function
+
+        ''' <summary>Geht "Speichern" im Editor fuer diese Datei ins Rezept daneben statt in die Datei?
+        ''' Ja fuer RAW und PSD, fuer jedes Rasterformat, das sich nicht ueber das Original schreiben
+        ''' laesst (TIFF, HEIC/AVIF, JPEG XL, BMP, GIF), und fuer JPG, PNG und WebP mit der
+        ''' Einstellung "neben dem Bild speichern" (AppSettings.SaveEditsBesideOriginal).
+        '''
+        ''' Arbeitskopien vom Server bleiben dabei, wie sie waren (nur RAW und PSD): ihre Begleitdatei
+        ''' laege im Temp-Ordner und waere beim naechsten Aufraeumen fort. Den Weg zum Server kennt
+        ''' fuer andere Formate noch niemand.</summary>
+        Public Shared Function SavesRecipeBeside(path As String) As Boolean
+            If Not IsRecipeFormat(path) Then Return False
+            If IsReadOnlyFormat(path) Then Return True
+            Dim file = VariantKey.FileOf(path)
+            If ImmichService.IsImmichTempPath(file) OrElse NextcloudService.IsNextcloudTempPath(file) Then Return False
+            If Not ImageProcessor.CanEncodeToTargetExtension(file) Then Return True
+            Return AppSettingsService.Load().SaveEditsBesideOriginal
+        End Function
+
+        ''' <summary>Die Frage der "leichten" Schreiber, die eine Bearbeitung auf eine Datei legen,
+        ''' ohne sie zu oeffnen (Drehen im Betrachter, Anpassungen einfuegen, "Anpassungen anwenden"
+        ''' mit Ueberschreiben, die Rahmen-Uebertragung): ins Rezept, wenn "Speichern" dorthin geht
+        ''' ODER schon eines daneben liegt. Ein JPG mit Rezept bekommt also auch bei "in die Datei"
+        ''' keine Drehung in die Pixel, deren Zuschnitt im Rezept dann verrutscht waere.</summary>
+        Public Shared Function WritesRecipe(path As String) As Boolean
+            Return SavesRecipeBeside(path) OrElse HasRecipeBeside(path)
+        End Function
+
+        ''' <summary>Entfernt das Rezept einer Datei, deren Bildpunkte gerade MIT diesem Rezept neu
+        ''' geschrieben wurden (Speichern in die Datei, Stapel mit Ueberschreiben). Sonst laege
+        ''' derselbe Zuschnitt auf den Pixeln und noch einmal im Rezept. Nur fuer Formate, die keine
+        ''' Katalogdaten in der .fpxmp tragen: dort steht ausser Rezept und Vermerken nichts darin,
+        ''' die ganze Datei geht also weg, der Vermerk "bearbeitet" mit ihr. RAW und PSD werden nie
+        ''' neu geschrieben und behalten ihre Begleitdatei immer (False). Fehlt sie, ist das kein
+        ''' Fehler (True).</summary>
+        Public Shared Function TryRemoveRecipe(path As String) As Boolean
+            If String.IsNullOrWhiteSpace(path) OrElse IsReadOnlyFormat(path) Then Return False
+            Dim sidecar = SidecarPathFor(path)
+            SyncLock _writeLock
+                Try
+                    If File.Exists(sidecar) Then File.Delete(sidecar)
+                    ForgetDisplayFacts(sidecar)
+                    Return True
+                Catch ex As Exception
+                    DiagnosticLogService.LogException("Sidecar.RemoveRecipe", ex)
+                    Return False
+                End Try
+            End SyncLock
         End Function
 
         Public Const Extension As String = ".fpxmp"
@@ -124,7 +206,7 @@ Namespace Services
         ''' <summary>Der Datenbankstand wird erst unter der Schreibsperre gelesen, damit ein
         ''' wartender Schreiber keinen aelteren Katalogstand nach einem neueren zurueckschreibt.</summary>
         Friend Shared Function TryWriteCatalogFromLibrary(rawPath As String, library As LibraryService) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) OrElse library Is Nothing Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) OrElse library Is Nothing Then Return False
             SyncLock _writeLock
                 Dim catalog = library.GetSidecarCatalogData(rawPath)
                 Return TryWriteCatalog(rawPath, catalog.Rating.Value, catalog.IsFavorite.Value,
@@ -144,7 +226,7 @@ Namespace Services
         Public Shared Function TryWriteCatalog(rawPath As String, rating As Integer, isFavorite As Boolean, colorLabel As String,
                                                keywords As IEnumerable(Of String),
                                                Optional pickState As Integer = 0) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return False
             ' Lesen und Schreiben unter DERSELBEN Sperre: sonst kann ein anderer Schreiber dieser
             ' Anwendung die Datei zwischen beiden aendern, und sie wuerde mit dem alten Rezept ersetzt.
             SyncLock _writeLock
@@ -287,7 +369,12 @@ Namespace Services
                     Dim sidecarAdj = adjustments.Clone()
                     sidecarAdj.BakedOperationsApplied = False
                     Dim json = FpxService.SerializeAdjustments(sidecarAdj)
-                    Dim catalogBlock = CatalogNode(catalog)
+                    ' Den Katalogblock tragen nur RAW und PSD. Sterne, Etikett und Stichwoerter eines
+                    ' JPG oder PNG stehen in der Datenbank und je nach Einstellung in der Datei oder
+                    ' ihrer XMP; ein zweiter Ort in der .fpxmp gaebe dem Katalogindex eine neue
+                    ' Vorrangfrage, und das Rezept liesse sich nicht mehr samt Datei entfernen
+                    ' (TryRemoveRecipe).
+                    Dim catalogBlock = If(IsReadOnlyFormat(rawPath), CatalogNode(catalog), Nothing)
                     Dim doc = New XDocument(
                         New XDeclaration("1.0", "utf-8", Nothing),
                         New XElement(Ns + "recipe",
@@ -1171,15 +1258,17 @@ Namespace Services
             Return If(RawPreviewService.IsSupportedRaw(file), ImageAdjustments.ForUneditedRaw(file), New ImageAdjustments())
         End Function
 
-        ''' <summary>Ist diese Datei bearbeitet? Ein Projektbuendel (.fpx) immer; eine RAW oder PSD,
-        ''' wenn ihre Begleitdatei den Vermerk traegt oder, in einer aelteren Datei ohne ihn, ihr Rezept
-        ''' von den Startwerten abweicht. Eine Begleitdatei allein ist KEIN Beleg: sie entsteht schon
-        ''' durch einen Stern oder ein Stichwort. Andere Formate tragen keine Begleitdatei und gelten
-        ''' als unbearbeitet. Liest dieselbe gemerkte Datei wie die Drehung der Kachel.</summary>
+        ''' <summary>Ist diese Datei bearbeitet? Ein Projektbuendel (.fpx) immer; jedes Rezeptformat
+        ''' (RAW, PSD, JPG, PNG, TIFF und die uebrigen aus IsRecipeFormat), wenn seine Begleitdatei den
+        ''' Vermerk traegt oder, in einer aelteren Datei ohne ihn, ihr Rezept von den Startwerten
+        ''' abweicht. Eine Begleitdatei allein ist KEIN Beleg: bei RAW und PSD entsteht sie schon
+        ''' durch einen Stern oder ein Stichwort. Ohne Begleitdatei gilt eine Datei als unbearbeitet,
+        ''' auch ein JPG, in dessen Bildpunkte eine Bearbeitung gespeichert wurde. Liest dieselbe
+        ''' gemerkte Datei wie die Drehung der Kachel.</summary>
         Public Shared Function IsEditedFile(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             If FpxService.IsFpx(path) Then Return True
-            If Not IsSidecarFormat(path) Then Return False
+            If Not IsRecipeFormat(path) Then Return False
             Dim facts = ReadDisplayFacts(path)
             If facts Is Nothing Then Return False
             If facts.EditedAttribute.HasValue Then Return facts.EditedAttribute.Value
@@ -1209,13 +1298,14 @@ Namespace Services
         ''' Editor und Viewer müssen XMP dadurch überhaupt nicht kennen und arbeiten weiter allein auf
         ''' der .fpxmp.
         '''
-        ''' Drei Bedingungen, alle nötig: nur für RAW/PSD (bei schreibbaren Formaten gibt es kein Rezept
-        ''' daneben), nur wenn noch keine .fpxmp existiert (ein eigenes Rezept wird NIE überschrieben),
+        ''' Drei Bedingungen, alle nötig: nur für RAW/PSD (eine XMP neben einem JPG wird bewusst nicht
+        ''' übernommen: das wäre eine sichtbare Änderung an vielen Bildern auf einmal), nur wenn noch
+        ''' keine .fpxmp existiert (ein eigenes Rezept wird NIE überschrieben),
         ''' und nur wenn die Sidecar wirklich Reglerwerte trägt. Letzteres ist wichtig: die allermeisten
         ''' XMP-Beistelldateien enthalten nur Katalogdaten, und eine neutrale .fpxmp neben jedes Foto zu
         ''' legen wäre eine Dateiflut ohne jeden Inhalt.</summary>
         Public Shared Function TryImportFromXmpSidecar(rawPath As String) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return False
             If Exists(rawPath) Then Return False
             Try
                 Dim xmpPath = XmpSidecarService.FindSidecar(rawPath)
@@ -1242,7 +1332,7 @@ Namespace Services
         ''' denselben Schluesseln gebracht, uebersetzt wird sie dann vom selben Leser wie eine
         ''' XMP-Beistelldatei. Steht beides da, gewinnt die Beistelldatei: sie wird vorher gefragt.</summary>
         Public Shared Function TryImportFromForeignCatalog(rawPath As String) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return False
             If Exists(rawPath) Then Return False
             Try
                 Dim entry = ForeignCatalogService.Lookup(rawPath)
@@ -1423,7 +1513,7 @@ Namespace Services
         ''' XMP-Beistelldatei (ImageDescriptionService.FromExifData); der Dialog schreibt in beide.</summary>
         Public Shared Function TryReadDescription(rawPath As String) As ImageDescription
             Try
-                If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return Nothing
+                If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return Nothing
                 Dim sidecar = SidecarPathFor(rawPath)
                 If Not File.Exists(sidecar) Then Return Nothing
                 Dim root = XDocument.Load(sidecar).Root
@@ -1447,7 +1537,7 @@ Namespace Services
         ''' (False).</summary>
         Public Shared Function TryWriteDescription(rawPath As String,
                                                    changes As IReadOnlyDictionary(Of ImageDescriptionField, String)) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) OrElse changes Is Nothing Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) OrElse changes Is Nothing Then Return False
             ' Titel und Beschreibung gehoeren der Aufnahme, nicht einer Variante.
             rawPath = VariantKey.FileOf(rawPath)
             Try
@@ -1478,7 +1568,7 @@ Namespace Services
         ''' (.fpxmp, XMP-Beistelldatei und Eingebettetes zusammen). Andere Formate bekommen nichts:
         ''' ein Katalogimport schreibt keine Bilddatei um und legt keine XMP an.</summary>
         Public Shared Function TryImportDescriptionFromForeignCatalog(rawPath As String) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return False
             Try
                 Dim entry = ForeignCatalogService.Lookup(rawPath)
                 If entry Is Nothing Then Return False
@@ -1535,7 +1625,7 @@ Namespace Services
         ''' ExifService die Werte beim Lesen aus dem Katalog selbst dazu.</summary>
         Public Shared Function TryReadImported(rawPath As String) As ForeignCatalogService.ImportedMetadata
             Try
-                If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return Nothing
+                If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return Nothing
                 Dim sidecar = SidecarPathFor(rawPath)
                 If Not File.Exists(sidecar) Then Return Nothing
                 Dim root = XDocument.Load(sidecar).Root
@@ -1575,7 +1665,7 @@ Namespace Services
         ''' abgeglichen. Sagt der Katalog nichts (mehr), bleibt ein vorhandener Block stehen.
         ''' Fehlt die .fpxmp, entsteht sie wie beim Titel mit neutralem Rezept.</summary>
         Public Shared Function TryImportMetadataFromForeignCatalog(rawPath As String) As Boolean
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsSidecarFormat(rawPath) Then Return False
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not IsReadOnlyFormat(rawPath) Then Return False
             rawPath = VariantKey.FileOf(rawPath)
             Try
                 Dim entry = ForeignCatalogService.Lookup(rawPath)

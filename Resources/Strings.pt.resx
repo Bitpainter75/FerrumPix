@@ -11308,8 +11308,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Guardar automaticamente ao sair</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Em vez de perguntar, o editor guarda as alterações não guardadas quando abre outra foto ou sai do editor. RAW e PSD mantêm a edição no ficheiro auxiliar, JPEG, PNG e WebP são substituídos. Quando a foto só pode ser guardada com um novo nome, continua a ser perguntado.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Em vez de perguntar, o editor guarda as alterações não guardadas quando abre outra foto ou sai do editor, no mesmo sítio onde Guardar escreve: no ficheiro auxiliar ao lado da foto ou, para JPEG, PNG e WebP com a definição acima desligada, no ficheiro da foto. Quando a foto só pode ser guardada com um novo nome ou a edição não cabe no ficheiro auxiliar, continua a ser perguntado.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Guardar JPEG, PNG e WebP ao lado da foto</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Ligado, Guardar coloca a edição num ficheiro auxiliar ao lado da foto e o original fica inalterado. Outros programas e servidores mostram então apenas o original; uma foto final obtém-se com Salvar como ou Exportar para. Desligado, Guardar escreve a edição no ficheiro da foto. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP e GIF mantêm sempre a edição no ficheiro auxiliar.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>A edição não cabe no ficheiro auxiliar</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Pincel, retoque, carimbo de clonagem, camadas rasterizadas, deformação e objetos não podem ser mantidos no ficheiro auxiliar ao lado de {0}. Como projeto (.fpx) ao lado da foto tudo continua editável e o original inalterado. Salvar como escreve um novo ficheiro.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Guardar como projeto</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Sugestão: {0}</value>
@@ -11809,8 +11824,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Escreve as estrelas, a etiqueta de cor e a marcação manter ou rejeitada no próprio ficheiro JPEG, PNG ou WebP a cada alteração, para que outros programas as vejam de imediato. Sem o interruptor ficam apenas no catálogo até serem escritas nos ficheiros a partir do menu Metadados.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Os ajustes só podem ser copiados de uma única imagem RAW ou PSD revelada</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Os ajustes só podem ser copiados de uma única imagem cuja edição está num ficheiro auxiliar</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Não há ajustes copiados</value>

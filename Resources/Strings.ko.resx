@@ -11353,8 +11353,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>나갈 때 자동 저장</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>묻는 대신 다른 사진을 열거나 편집기를 나갈 때 저장하지 않은 변경 사항을 저장합니다. RAW와 PSD는 편집 내용을 보조 파일에 보관하고, JPEG, PNG, WebP는 덮어씁니다. 새 이름으로만 저장할 수 있는 사진은 계속 묻습니다.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>묻는 대신 다른 사진을 열거나 편집기를 나갈 때 저장하지 않은 변경 사항을 저장이 쓰는 곳에 저장합니다. 사진 옆의 보조 파일이나, 위 설정을 끈 JPEG, PNG, WebP는 사진 파일입니다. 새 이름으로만 저장할 수 있거나 편집 내용이 보조 파일에 맞지 않는 사진은 계속 묻습니다.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>JPEG, PNG, WebP는 사진 옆에 저장</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>켜면 저장이 편집 내용을 사진 옆의 보조 파일에 넣고 원본은 바뀌지 않습니다. 이때 다른 프로그램과 서버에는 원본만 보입니다. 완성된 사진은 다른 이름으로 저장이나 다음으로 내보내기로 만듭니다. 끄면 저장이 편집 내용을 사진 파일에 씁니다. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP, GIF는 항상 편집 내용을 보조 파일에 보관합니다.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>편집 내용이 보조 파일에 맞지 않습니다</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>브러시, 리터치, 복제 도장, 래스터화한 레이어, 왜곡, 개체는 {0} 옆의 보조 파일에 담을 수 없습니다. 사진 옆에 프로젝트(.fpx)로 저장하면 모든 것을 계속 편집할 수 있고 원본도 바뀌지 않습니다. 다른 이름으로 저장은 새 파일을 씁니다.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>프로젝트로 저장</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>제안: {0}</value>
@@ -11854,8 +11869,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>변경할 때마다 별, 색 라벨, 유지 또는 거부됨 표시를 JPEG, PNG, WebP 파일 자체에 써서 다른 프로그램이 바로 볼 수 있게 합니다. 이 스위치가 꺼져 있으면 메타데이터 메뉴에서 파일에 쓸 때까지 카탈로그에만 남습니다.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>조정은 현상된 RAW 또는 PSD 사진 한 장에서만 복사할 수 있습니다</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>조정은 편집 내용이 보조 파일에 있는 사진 한 장에서만 복사할 수 있습니다</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>복사된 조정이 없습니다</value>

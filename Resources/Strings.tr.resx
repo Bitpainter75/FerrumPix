@@ -11353,8 +11353,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Çıkarken otomatik kaydet</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Sormak yerine düzenleyici, başka bir fotoğraf açtığınızda veya düzenleyiciden çıktığınızda kaydedilmemiş değişiklikleri kaydeder. RAW ve PSD düzenlemeyi yan dosyada tutar, JPEG, PNG ve WebP üzerine yazılır. Fotoğraf yalnızca yeni bir adla kaydedilebiliyorsa yine sorulur.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Sormak yerine düzenleyici, başka bir fotoğraf açtığınızda veya düzenleyiciden çıktığınızda kaydedilmemiş değişiklikleri Kaydet'in yazdığı yere kaydeder: fotoğrafın yanındaki yan dosyaya ya da yukarıdaki ayar kapalıyken JPEG, PNG ve WebP için fotoğraf dosyasına. Fotoğraf yalnızca yeni bir adla kaydedilebiliyorsa veya düzenleme yan dosyaya sığmıyorsa yine sorulur.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>JPEG, PNG ve WebP fotoğrafın yanına kaydedilsin</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Açıkken Kaydet düzenlemeyi fotoğrafın yanındaki bir yan dosyaya koyar ve orijinal değişmeden kalır. Diğer programlar ve sunucular o zaman yalnızca orijinali gösterir; bitmiş bir fotoğraf Farklı kaydet veya Şuraya aktar ile oluşur. Kapalıyken Kaydet düzenlemeyi fotoğraf dosyasına yazar. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP ve GIF düzenlemeyi her zaman yan dosyada tutar.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Düzenleme yan dosyaya sığmıyor</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Fırça, rötuş, klon damgası, rasterleştirilmiş katmanlar, bükme ve nesneler {0} yanındaki yan dosyada tutulamaz. Fotoğrafın yanında proje (.fpx) olarak her şey düzenlenebilir kalır ve orijinal değişmez. Farklı kaydet yeni bir dosya yazar.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Proje olarak kaydet</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Öneri: {0}</value>
@@ -11854,8 +11869,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Yıldızları, renk etiketini ve koru ya da reddedildi işaretini her değişiklikte JPEG, PNG ve WebP dosyasının kendisine yazar; böylece diğer programlar bunları hemen görür. Anahtar kapalıyken, Üstveri menüsünden dosyalara yazılana kadar yalnızca katalogda dururlar.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Ayarlamalar yalnızca tek bir işlenmiş RAW veya PSD resimden kopyalanabilir</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Ayarlamalar yalnızca düzenlemesi bir yan dosyada bulunan tek bir resimden kopyalanabilir</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Kopyalanmış ayarlama yok</value>

@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>離れるときに自動保存</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>確認する代わりに、別の画像を開いたりエディターを離れたりするときに未保存の変更を保存します。RAW と PSD は編集内容をサイドカーファイルに保持し、JPEG、PNG、WebP は上書きされます。新しい名前でしか保存できない画像では、引き続き確認します。</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>確認する代わりに、別の画像を開いたりエディターを離れたりするときに、未保存の変更を保存と同じ場所に保存します。つまり画像の横のサイドカーファイル、または上の設定がオフの JPEG、PNG、WebP では画像ファイルです。新しい名前でしか保存できない画像や、編集内容がサイドカーファイルに収まらない場合は、引き続き確認します。</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>JPEG、PNG、WebP は画像の横に保存</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>オンにすると、保存は編集内容を画像の横のサイドカーファイルに書き込み、元の画像は変更されません。その場合、他のプログラムやサーバーには元の画像だけが表示されます。完成した画像は 名前を付けて保存 または 書き出し先 で作成します。オフにすると、保存は編集内容を画像ファイルに書き込みます。RAW、PSD、TIFF、HEIC、AVIF、JPEG XL、BMP、GIF は常に編集内容をサイドカーファイルに保持します。</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>編集内容がサイドカーファイルに収まりません</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>ブラシ、レタッチ、コピースタンプ、ラスタライズしたレイヤー、ゆがみ、オブジェクトは {0} の横のサイドカーファイルに保持できません。画像の横にプロジェクト (.fpx) として保存すると、すべて編集可能なまま元の画像も変わりません。名前を付けて保存 は新しいファイルを書き込みます。</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>プロジェクトとして保存</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>候補：{0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>変更のたびに、星、カラーラベル、残すまたは不採用のマークを JPEG、PNG、WebP ファイル自体に書き込み、他のプログラムですぐに見えるようにします。このスイッチがオフの場合は、メタデータメニューからファイルに書き込むまでカタログにだけ保存されます。</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>調整をコピーできるのは、現像済みの RAW または PSD 画像 1 枚からだけです</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>調整をコピーできるのは、編集内容がサイドカーファイルにある画像 1 枚からだけです</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>コピーされた調整はありません</value>

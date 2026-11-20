@@ -11353,8 +11353,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>บันทึกอัตโนมัติเมื่อออก</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>แทนที่จะถาม ตัวแก้ไขจะบันทึกการเปลี่ยนแปลงที่ยังไม่ได้บันทึกเมื่อคุณเปิดภาพอื่นหรือออกจากตัวแก้ไข RAW และ PSD เก็บการแก้ไขไว้ในไฟล์ประกอบ ส่วน JPEG, PNG และ WebP จะถูกเขียนทับ หากภาพบันทึกได้เฉพาะในชื่อใหม่ ระบบจะยังคงถาม</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>แทนที่จะถาม ตัวแก้ไขจะบันทึกการเปลี่ยนแปลงที่ยังไม่ได้บันทึกเมื่อคุณเปิดภาพอื่นหรือออกจากตัวแก้ไข ไปยังที่เดียวกับที่การบันทึกเขียน คือไฟล์ประกอบข้างภาพ หรือสำหรับ JPEG, PNG และ WebP ที่ปิดการตั้งค่าด้านบน คือไฟล์ภาพ หากภาพบันทึกได้เฉพาะในชื่อใหม่หรือการแก้ไขไม่พอดีกับไฟล์ประกอบ ระบบจะยังคงถาม</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>บันทึก JPEG, PNG และ WebP ไว้ข้างภาพ</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>เมื่อเปิด การบันทึกจะเก็บการแก้ไขไว้ในไฟล์ประกอบข้างภาพ และต้นฉบับจะไม่เปลี่ยนแปลง โปรแกรมและเซิร์ฟเวอร์อื่นจะแสดงเฉพาะต้นฉบับ ภาพที่เสร็จแล้วสร้างได้ด้วย บันทึกเป็น หรือ ส่งออกไปยัง เมื่อปิด การบันทึกจะเขียนการแก้ไขลงในไฟล์ภาพ RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP และ GIF เก็บการแก้ไขไว้ในไฟล์ประกอบเสมอ</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>การแก้ไขไม่พอดีกับไฟล์ประกอบ</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>พู่กัน การรีทัช ตราประทับโคลน เลเยอร์ที่แปลงเป็นแรสเตอร์ การบิดภาพ และวัตถุ ไม่สามารถเก็บไว้ในไฟล์ประกอบข้าง {0} ได้ เมื่อบันทึกเป็นโปรเจกต์ (.fpx) ข้างภาพ ทุกอย่างยังแก้ไขได้และต้นฉบับไม่เปลี่ยนแปลง บันทึกเป็น จะเขียนไฟล์ใหม่</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>บันทึกเป็นโปรเจกต์</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>คำแนะนำ: {0}</value>
@@ -11854,8 +11869,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>เขียนดาว ป้ายสี และเครื่องหมายเก็บไว้หรือปฏิเสธแล้วลงในไฟล์ JPEG, PNG และ WebP โดยตรงทุกครั้งที่เปลี่ยน เพื่อให้โปรแกรมอื่นเห็นได้ทันที หากปิดสวิตช์นี้ ข้อมูลจะอยู่ในแค็ตตาล็อกเท่านั้นจนกว่าจะเขียนลงไฟล์จากเมนูข้อมูลกำกับ</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>คัดลอกการปรับแต่งได้จากรูปภาพ RAW หรือ PSD ที่ประมวลผลแล้วเพียงรูปเดียวเท่านั้น</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>คัดลอกการปรับแต่งได้จากรูปภาพเพียงรูปเดียวที่การแก้ไขอยู่ในไฟล์ประกอบเท่านั้น</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>ยังไม่ได้คัดลอกการปรับแต่งใด</value>

@@ -1609,7 +1609,7 @@ Namespace Services
         ''' lassen den jeweiligen Katalogwert unangetastet. Es wird absichtlich direkt geschrieben,
         ''' damit der Import nicht dieselbe Sidecar erneut speichert und ihren Frische-Stempel bewegt.</summary>
         Public Function ImportFpxmpCatalogData(filePath As String) As RawSidecarService.RawSidecarCatalogData
-            If Not IsCatalogWritable(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return Nothing
+            If Not IsCatalogWritable(filePath) OrElse Not RawSidecarService.IsReadOnlyFormat(filePath) Then Return Nothing
             Dim data = RawSidecarService.TryReadCatalog(filePath)
             If data Is Nothing Then Return Nothing
 
@@ -1662,7 +1662,7 @@ Namespace Services
         ''' eine vorhandene, aber nicht lesbare Datei wird nicht angefasst (siehe
         ''' RawSidecarService.TryWriteCatalog), und das wird gemeldet statt verschluckt.</summary>
         Private Sub SyncCatalogToFpxmp(filePath As String)
-            If String.IsNullOrWhiteSpace(filePath) OrElse Not RawSidecarService.IsSidecarFormat(filePath) Then Return
+            If String.IsNullOrWhiteSpace(filePath) OrElse Not RawSidecarService.IsReadOnlyFormat(filePath) Then Return
             Dim written = False
             Try
                 written = RawSidecarService.TryWriteCatalogFromLibrary(filePath, Me)

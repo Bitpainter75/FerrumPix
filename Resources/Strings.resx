@@ -11328,8 +11328,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Save automatically when leaving</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Instead of asking, the editor saves unsaved changes when you open another picture or leave the editor. RAW and PSD keep the edit in the sidecar file, JPEG, PNG and WebP are overwritten. Where the picture can only be saved under a new name, you are still asked.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Instead of asking, the editor saves unsaved changes when you open another picture or leave the editor, to wherever Save writes: the sidecar file beside the picture or, for JPEG, PNG and WebP with the setting above turned off, the picture file. Where the picture can only be saved under a new name or the edit does not fit into the sidecar file, you are still asked.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Save JPEG, PNG and WebP edits beside the picture</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>When on, Save puts the edit in a sidecar file beside the picture and the original stays unchanged. Other programs and servers then only show the original; a finished picture comes from Save as or Export to. When off, Save writes the edit into the picture file. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP and GIF always keep their edit in the sidecar file.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>The edit does not fit into the sidecar file</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Brush, retouch, clone stamp, rasterized layers, warping and objects cannot be kept in the sidecar file beside {0}. As a project (.fpx) beside the picture everything stays editable and the original unchanged. Save as writes a new file.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Save as project</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Suggestion: {0}</value>
@@ -11829,8 +11844,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Writes stars, color label and the mark keep or rejected into JPEG, PNG and WebP themselves at every change, so that other programs see them at once. Without the switch they are only in the catalog until they are written to the files from the Metadata menu.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Adjustments can only be copied from a single developed RAW or PSD picture</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Adjustments can only be copied from a single picture whose edit is in a sidecar file</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>No adjustments have been copied</value>

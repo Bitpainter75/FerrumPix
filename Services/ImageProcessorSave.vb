@@ -1183,9 +1183,9 @@ Namespace Services
         '''   sich nicht mehr bitgenau zurueckholen),
         ''' - libjxl dieses JPEG nicht umpacken kann (etwa CMYK).
         '''
-        ''' Eine gespeicherte Bearbeitung gibt es fuer JPEG nicht als Beistelldatei - Aenderungen
-        ''' stehen nach dem Speichern in den Bildpunkten. Das Umpacken nimmt die Datei also so, wie
-        ''' sie in der Galerie zu sehen ist.
+        ''' Ein JPEG mit Rezept daneben (RawSidecarService.HasRecipeBeside) wird NICHT umgepackt: in
+        ''' der Galerie ist es bearbeitet zu sehen, umgepackt kaeme das unbearbeitete Original heraus.
+        ''' Dann gilt der gewoehnliche Weg, der das Rezept einrechnet.
         '''
         ''' DIE SCHALTER "UEBERNEHMEN" (<paramref name="metadataParts"/>) gelten auch hier. Umgepackt
         ''' werden die Segmente des JPEG unveraendert mit; deshalb laufen die Schalter vorher ueber
@@ -1200,6 +1200,7 @@ Namespace Services
             If Not preserveMetadata OrElse CopyrightService.NormalizeText(copyrightText).Length > 0 Then Return False
             If Not JxlEncodeService.CanTranscodeJpeg OrElse Not File.Exists(sourcePath) Then Return False
             If PathIdentity.AreSame(sourcePath, targetPath) Then Return False
+            If RawSidecarService.HasRecipeBeside(sourcePath) Then Return False
             If Not JxlDecodeService.CanReplaceExisting(targetPath) Then Return False
             Try
                 Dim jpeg = File.ReadAllBytes(sourcePath)

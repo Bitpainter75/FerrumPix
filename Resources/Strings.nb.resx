@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Lagre automatisk når du forlater</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>I stedet for å spørre lagrer redigeringsprogrammet ulagrede endringer når du åpner et annet bilde eller forlater redigeringen. RAW og PSD beholder redigeringen i sidefilen, JPEG, PNG og WebP blir overskrevet. Der bildet bare kan lagres under et nytt navn, blir du fortsatt spurt.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>I stedet for å spørre lagrer redigeringsprogrammet ulagrede endringer når du åpner et annet bilde eller forlater redigeringen, dit Lagre skriver: i sidefilen ved siden av bildet eller, for JPEG, PNG og WebP med innstillingen over slått av, i bildefilen. Der bildet bare kan lagres under et nytt navn, eller redigeringen ikke passer i sidefilen, blir du fortsatt spurt.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Lagre JPEG, PNG og WebP ved siden av bildet</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Slått på legger Lagre redigeringen i en sidefil ved siden av bildet, og originalen forblir uendret. Andre programmer og servere viser da bare originalen; et ferdig bilde får du med Lagre som eller Eksporter til. Slått av skriver Lagre redigeringen inn i bildefilen. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP og GIF beholder alltid redigeringen i sidefilen.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Redigeringen passer ikke i sidefilen</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Pensel, retusjering, klonestempel, rasteriserte lag, forvrengning og objekter kan ikke holdes i sidefilen ved siden av {0}. Som prosjekt (.fpx) ved siden av bildet forblir alt redigerbart og originalen uendret. Lagre som skriver en ny fil.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Lagre som prosjekt</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Forslag: {0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Skriver stjerner, fargeetikett og markeringen behold eller avvist ved hver endring til selve JPEG-, PNG- og WebP-filen, slik at andre programmer ser dem med en gang. Uten bryteren står de bare i katalogen til de skrives til filene fra menyen Metadata.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Justeringer kan bare kopieres fra ett enkelt fremkalt RAW- eller PSD-bilde</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Justeringer kan bare kopieres fra ett enkelt bilde der redigeringen ligger i en sidefil</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Ingen justeringer er kopiert</value>

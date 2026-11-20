@@ -11307,8 +11307,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>离开时自动保存</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>编辑器不再询问，而是在你打开其他图片或离开编辑器时保存未保存的更改。RAW 和 PSD 将编辑保存在附属文件中，JPEG、PNG 和 WebP 会被覆盖。如果图片只能以新名称保存，仍会询问。</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>编辑器不再询问，而是在你打开其他图片或离开编辑器时，把未保存的更改保存到保存所写入的位置：图片旁边的附属文件，或在上方设置关闭时，JPEG、PNG 和 WebP 的图片文件。如果图片只能以新名称保存，或编辑无法放入附属文件，仍会询问。</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>JPEG、PNG 和 WebP 保存在图片旁边</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>开启后，保存会把编辑放入图片旁边的附属文件，原图保持不变。其他程序和服务器届时只显示原图；成品图片可通过另存为或导出到生成。关闭后，保存会把编辑写入图片文件。RAW、PSD、TIFF、HEIC、AVIF、JPEG XL、BMP 和 GIF 始终把编辑保存在附属文件中。</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>编辑无法放入附属文件</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>画笔、修饰、仿制图章、栅格化图层、变形和对象无法保存在 {0} 旁边的附属文件中。作为项目 (.fpx) 保存在图片旁边，一切都可继续编辑，原图保持不变。另存为会写入新文件。</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>保存为项目</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>建议：{0}</value>
@@ -11808,8 +11823,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>每次更改时，将星级、色标以及保留或已拒绝的标记直接写入 JPEG、PNG 和 WebP 文件本身，以便其他程序立即看到。关闭此开关时，它们只保存在目录中，直到通过元数据菜单写入文件。</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>只能从单张已冲洗的 RAW 或 PSD 图片复制调整</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>只能从编辑保存在附属文件中的单张图片复制调整</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>尚未复制任何调整</value>

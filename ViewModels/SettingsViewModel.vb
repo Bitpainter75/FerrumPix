@@ -89,6 +89,7 @@ Namespace ViewModels
         Private _filmstripTileGap As Integer = 10
         Private _editorSaveAsOpensTarget As Boolean = False
         Private _editorAutoSaveOnLeave As Boolean = False
+        Private _saveEditsBesideOriginal As Boolean = False
         Private _galleryShowFooter As Boolean = True
         Private _viewerShowFooter As Boolean = True
         Private _editorShowFooter As Boolean = True
@@ -291,6 +292,7 @@ Namespace ViewModels
         Private _savedFilmstripTileGap As Integer = 10
         Private _savedEditorSaveAsOpensTarget As Boolean = False
         Private _savedEditorAutoSaveOnLeave As Boolean = False
+        Private _savedSaveEditsBesideOriginal As Boolean = False
         Private _savedGalleryShowFooter As Boolean = True
         Private _savedViewerShowFooter As Boolean = True
         Private _savedEditorShowFooter As Boolean = True
@@ -2695,6 +2697,21 @@ Namespace ViewModels
                 If _editorAutoSaveOnLeave = value Then Return
                 Me.RaiseAndSetIfChanged(_editorAutoSaveOnLeave, value)
                 SaveEditorBehaviourSettings()
+            End Set
+        End Property
+
+        ''' <summary>"Speichern" bei JPEG, PNG und WebP legt die Bearbeitung neben das Bild, statt die
+        ''' Datei zu ueberschreiben (AppSettings.SaveEditsBesideOriginal). Ein offenes Bild im Editor
+        ''' muss das sofort mitbekommen: der Speichern-Knopf geht dann einen anderen Weg.</summary>
+        Public Property SaveEditsBesideOriginal As Boolean
+            Get
+                Return _saveEditsBesideOriginal
+            End Get
+            Set(value As Boolean)
+                If _saveEditsBesideOriginal = value Then Return
+                Me.RaiseAndSetIfChanged(_saveEditsBesideOriginal, value)
+                SaveEditorBehaviourSettings()
+                _mainVm?.Editor?.RefreshImmichSaveState()
             End Set
         End Property
 
@@ -5299,6 +5316,7 @@ Namespace ViewModels
             _filmstripTileGap = AppSettingsService.NormalizeFilmstripTileGap(_appSettings.FilmstripTileGap)
             _editorSaveAsOpensTarget = _appSettings.EditorSaveAsOpensTarget
             _editorAutoSaveOnLeave = _appSettings.EditorAutoSaveOnLeave
+            _saveEditsBesideOriginal = _appSettings.SaveEditsBesideOriginal
             _galleryShowFooter = _appSettings.GalleryShowFooter
             _viewerShowFooter = _appSettings.ViewerShowFooter
             _editorShowFooter = _appSettings.EditorShowFooter
@@ -5763,6 +5781,7 @@ Namespace ViewModels
             _savedFilmstripTileGap = _filmstripTileGap
             _savedEditorSaveAsOpensTarget = _editorSaveAsOpensTarget
             _savedEditorAutoSaveOnLeave = _editorAutoSaveOnLeave
+            _savedSaveEditsBesideOriginal = _saveEditsBesideOriginal
             _savedGalleryShowFooter = _galleryShowFooter
             _savedViewerShowFooter = _viewerShowFooter
             _savedEditorShowFooter = _editorShowFooter
@@ -5989,6 +6008,7 @@ Namespace ViewModels
             FilmstripTileGap = _savedFilmstripTileGap
             EditorSaveAsOpensTarget = _savedEditorSaveAsOpensTarget
             EditorAutoSaveOnLeave = _savedEditorAutoSaveOnLeave
+            SaveEditsBesideOriginal = _savedSaveEditsBesideOriginal
             GalleryShowFooter = _savedGalleryShowFooter
             ViewerShowFooter = _savedViewerShowFooter
             EditorShowFooter = _savedEditorShowFooter
@@ -6150,6 +6170,7 @@ Namespace ViewModels
             FilmstripTileGap = 10
             EditorSaveAsOpensTarget = False
             EditorAutoSaveOnLeave = False
+            SaveEditsBesideOriginal = False
             GalleryShowFooter = True
             ViewerShowFooter = True
             EditorShowFooter = True
@@ -6501,6 +6522,7 @@ Namespace ViewModels
             AppSettingsService.Update(Sub(s)
                                           s.EditorSaveAsOpensTarget = _editorSaveAsOpensTarget
                                           s.EditorAutoSaveOnLeave = _editorAutoSaveOnLeave
+                                          s.SaveEditsBesideOriginal = _saveEditsBesideOriginal
                                       End Sub)
         End Sub
 

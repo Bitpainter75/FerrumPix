@@ -131,8 +131,23 @@ Namespace Views
             GetVm()?.OpenKeywordManager()
         End Sub
 
+        ''' <summary>Gibt dem Repeater der Gruppenansicht seine Fabrik mit getrennten Vorraeten fuer
+        ''' Kopfzeile und Kachel (siehe GalleryGroupElementFactory). Im Code und nicht im XAML: die
+        ''' Kachelvorlage steht dort weiter unten, und StaticResource loest zur Konstruktionszeit
+        ''' auf. FindResource vom Repeater aus findet beide, die Kachel im Grid darueber und die
+        ''' Kopfzeile in den Ressourcen der Ansicht.</summary>
+        Private Sub AttachGroupElementFactory()
+            Dim groupRepeater = Me.FindControl(Of ItemsRepeater)("GalleryGroupRepeater")
+            If groupRepeater Is Nothing Then Return
+            Dim headerTemplate = TryCast(groupRepeater.FindResource("GalleryGroupHeaderTemplate"), Avalonia.Controls.Templates.IDataTemplate)
+            Dim tileTemplate = TryCast(groupRepeater.FindResource("GalleryTileTemplate"), Avalonia.Controls.Templates.IDataTemplate)
+            If headerTemplate Is Nothing OrElse tileTemplate Is Nothing Then Return
+            groupRepeater.ItemTemplate = New GalleryGroupElementFactory(headerTemplate, tileTemplate)
+        End Sub
+
         Public Sub New()
             AvaloniaXamlLoader.Load(Me)
+            AttachGroupElementFactory()
             AddHandler DataContextChanged, AddressOf OnViewDataContextChanged
             ContextMenuAttachment.Attach(Me.FindControl(Of Grid)("GalleryRootGrid"), AddressOf OnContextRequested)
             HookFooterZoomFit()

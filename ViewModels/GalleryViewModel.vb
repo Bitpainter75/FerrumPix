@@ -14636,15 +14636,17 @@ Namespace ViewModels
 
         ''' <summary>Der Ausgangspunkt einer Stapel-Bearbeitung fuer EINE Quelle.
         '''
-        ''' Liegt neben einer RAW- oder PSD-Datei ein .fpxmp-Rezept, IST das die Grundlage: der
-        ''' Stapel setzt dann auf der Bearbeitung auf, die im Editor entstanden ist, statt sie
-        ''' stillschweigend zu verwerfen. Ein entwickeltes RAW kam sonst flach aus dem Stapel
-        ''' zurueck, obwohl es im Editor und in der Galerie entwickelt aussieht.
+        ''' Liegt neben der Datei ein .fpxmp-Rezept (RAW, PSD, aber auch JPG, PNG, TIFF und die
+        ''' uebrigen Rezeptformate), IST das die Grundlage: der Stapel setzt dann auf der Bearbeitung
+        ''' auf, die im Editor entstanden ist, statt sie stillschweigend zu verwerfen. Ein entwickeltes
+        ''' RAW kam sonst flach aus dem Stapel zurueck, obwohl es im Editor und in der Galerie
+        ''' entwickelt aussieht. Wer damit die Datei SELBST neu schreibt, raeumt das Rezept danach
+        ''' (RewriteImagesInPlaceAsync mit bakesRecipe), sonst kaeme es beim naechsten Oeffnen doppelt.
         '''
         ''' .fpx bleibt aussen vor: dort rendert SaveImage das Buendel bereits aus Basisbild und
         ''' Rezept - ein zweites Mal angewandt kaeme die Bearbeitung doppelt.</summary>
         Private Shared Function BatchBaseAdjustments(sourcePath As String) As ImageAdjustments
-            If RawSidecarService.IsSidecarFormat(sourcePath) AndAlso RawSidecarService.Exists(sourcePath) Then
+            If RawSidecarService.HasRecipeBeside(sourcePath) Then
                 Dim rezept = RawSidecarService.TryRead(BatchRecipeSource(sourcePath))
                 If rezept IsNot Nothing Then Return rezept
             End If
@@ -14718,13 +14720,15 @@ Namespace ViewModels
         End Function
 
         ''' <summary>Bekommt dieses Element beim Ueberschreiben in "Anpassungen anwenden" sein REZEPT
-        ''' statt neuer Bilddaten? RAW und PSD lassen sich nicht schreiben, ihre Bearbeitung steht in
-        ''' der .fpxmp daneben (RawSidecarService.IsSidecarFormat). Nur lokal: ein Serverelement hat
-        ''' keine Beistelldatei, beim Ueberschreiben entsteht dort ein neues Asset, und eine RAW
-        ''' laesst sich als solches nicht rechnen.</summary>
+        ''' statt neuer Bilddaten? Ja, wo RawSidecarService.WritesRecipe es sagt: RAW und PSD (nicht
+        ''' schreibbar), TIFF, HEIC, JPEG XL, BMP und GIF (nicht ueber das Original schreibbar), JPG,
+        ''' PNG und WebP mit der Einstellung "neben dem Bild speichern", und jedes Bild, das schon ein
+        ''' Rezept daneben hat. Dort bleibt die Datei bytegleich, und es wird nicht gefragt. Nur lokal:
+        ''' ein Serverelement hat keine Beistelldatei, beim Ueberschreiben entsteht dort ein neues
+        ''' Asset, und eine RAW laesst sich als solches nicht rechnen.</summary>
         Public Shared Function IsBatchRecipeWritable(item As ImageItem) As Boolean
             If item Is Nothing OrElse item.IsRemoteAsset Then Return False
-            Return RawSidecarService.IsSidecarFormat(item.FilePath)
+            Return RawSidecarService.WritesRecipe(item.FilePath)
         End Function
 
         ''' <summary>Legt die Vorlage in das Rezept EINER RAW- oder PSD-Datei, beim Ueberschreiben in
@@ -15069,7 +15073,9 @@ Namespace ViewModels
 
             If resize.Overwrite Then
                 Dim localTargets = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
-                changedCount = Await RewriteImagesInPlaceAsync(localTargets, writer)
+                ' Der Schreiber setzt auf dem Rezept auf (BatchBaseAdjustments): danach steckt es in
+                ' den Bildpunkten und wird geraeumt.
+                changedCount = Await RewriteImagesInPlaceAsync(localTargets, writer, bakesRecipe:=True)
                 ' In Immich gibt es kein Überschreiben an Ort und Stelle - dort entsteht wie bei den
                 ' übrigen Stapelaktionen ein neues Asset.
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
@@ -15296,13 +15302,14 @@ Namespace ViewModels
 
             If result.Overwrite Then
                 Dim localPaths = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
-                ' RAW und PSD bekommen ihr Rezept, alle anderen neue Bilddaten - in einem Lauf.
+                ' Was seine Bearbeitung neben sich traegt oder tragen soll, bekommt sein Rezept
+                ' (RawSidecarService.WritesRecipe), alle anderen neue Bilddaten - in einem Lauf.
                 ' Mit dem Schluessel der Kachel: eine zusaetzliche Variante bekommt die Anpassungen
                 ' in IHR Rezept, nicht in das der Standardvariante.
                 Dim recipePaths = localItems.
-                    Where(Function(i) File.Exists(i.FilePath) AndAlso RawSidecarService.IsSidecarFormat(i.FilePath)).
+                    Where(Function(i) File.Exists(i.FilePath) AndAlso RawSidecarService.WritesRecipe(i.FilePath)).
                     Select(Function(i) i.ItemPath).ToList()
-                Dim pixelPaths = localPaths.Where(Function(p) Not RawSidecarService.IsSidecarFormat(p)).ToList()
+                Dim pixelPaths = localPaths.Where(Function(p) Not RawSidecarService.WritesRecipe(p)).ToList()
                 changedCount = Await RewriteImagesInPlaceAsync(pixelPaths, writer)
                 changedCount += Await WriteRecipesInPlaceAsync(recipePaths, adjustmentsTemplate, isAutoEnhance,
                                                                denoise:=result.Denoise)
@@ -15425,13 +15432,13 @@ Namespace ViewModels
         ' die Regler auf, die die Vorlage setzt; das ist eine andere Frage ("diesen Look dazu") als
         ' das Einfügen ("dasselbe wie dort").
 
-        ''' <summary>Trägt diese Kachel ein Rezept, das sich kopieren lässt? RAW und PSD mit einer
-        ''' .fpxmp daneben. Ein bearbeitetes JPG, PNG oder WebP hat seine Bearbeitung beim Speichern
-        ''' in die Bildpunkte gerechnet, da gibt es nichts mehr abzulesen.</summary>
+        ''' <summary>Trägt diese Kachel ein Rezept, das sich kopieren lässt? Jedes Bild mit einer
+        ''' .fpxmp daneben (RawSidecarService.HasRecipeBeside): RAW und PSD, aber auch ein JPG, PNG
+        ''' oder TIFF, dessen Bearbeitung neben ihm liegt. Ein JPG, in dessen Bildpunkte eine
+        ''' Bearbeitung gespeichert wurde, hat nichts mehr abzulesen.</summary>
         Public Shared Function HasCopyableAdjustments(item As ImageItem) As Boolean
             If item Is Nothing OrElse Not item.IsImage OrElse item.IsRemoteAsset Then Return False
-            If Not RawSidecarService.IsSidecarFormat(item.FilePath) Then Return False
-            Return File.Exists(RawSidecarService.SidecarPathFor(item.FilePath))
+            Return RawSidecarService.HasRecipeBeside(item.FilePath)
         End Function
 
         ''' <summary>Liegt etwas in der Ablage?</summary>
@@ -15441,8 +15448,10 @@ Namespace ViewModels
             End Get
         End Property
 
-        ''' <summary>Lässt sich auf diese Kachel einfügen? RAW und PSD bekommen ihr Rezept, JPG, PNG
-        ''' und WebP neue Bildpunkte; alles andere (HEIC, TIFF, Serverbilder, Videos) nicht.</summary>
+        ''' <summary>Lässt sich auf diese Kachel einfügen? Ins Rezept, wo IsBatchRecipeWritable es
+        ''' sagt (RAW, PSD, TIFF, HEIC, JPEG XL, BMP, GIF, jedes Bild mit Rezept und JPG, PNG und WebP
+        ''' mit der Einstellung "neben dem Bild speichern"), sonst bekommen JPG, PNG und WebP neue
+        ''' Bildpunkte; Serverbilder und Videos nicht.</summary>
         Public Shared Function CanPasteAdjustments(item As ImageItem) As Boolean
             If item Is Nothing OrElse Not item.IsImage OrElse item.IsRemoteAsset OrElse Not item.CanEditFile Then Return False
             Return IsBatchRecipeWritable(item) OrElse IsBatchImageEditWritable(item.FilePath)
@@ -15460,7 +15469,7 @@ Namespace ViewModels
             If items.Count <> 1 OrElse Not HasCopyableAdjustments(items(0)) Then
                 ' Das Menü bietet den Befehl dann gar nicht an; über die Tasten kommt man trotzdem
                 ' hierher, und ohne Meldung sähe es aus, als wäre kopiert worden.
-                StatusText = LocalizationService.T("Anpassungen lassen sich nur von einem einzelnen entwickelten RAW- oder PSD-Bild kopieren")
+                StatusText = LocalizationService.T("Anpassungen lassen sich nur von einem einzelnen Bild kopieren, dessen Bearbeitung in einer Begleitdatei liegt")
                 Return
             End If
             Dim recipe As ImageAdjustments = Nothing
@@ -15562,8 +15571,9 @@ Namespace ViewModels
         ''' gewöhnlichen Pfad herein, ihre Begleitdatei liegt aber nur im Temp-Ordner.</summary>
         Public Shared Function CanHaveVariants(item As ImageItem) As Boolean
             If item Is Nothing OrElse Not item.IsImage OrElse Not item.CanEditFile OrElse Not IsBatchRecipeWritable(item) Then Return False
-            ' Nur RAW. Eine PSD haelt ihre Bearbeitung zwar auch in der Begleitdatei, aber ihre
-            ' Kachel rechnet kein Rezept ein, und mit Ebenen laesst sie sich nur "unter" speichern.
+            ' Nur RAW. Eine PSD haelt ihre Bearbeitung zwar auch in der Begleitdatei, mit Ebenen
+            ' laesst sie sich aber nur "unter" speichern; JPG, PNG und die uebrigen Rasterformate
+            ' tragen in ihrer Begleitdatei nur das eine Rezept.
             If Not RawPreviewService.IsSupportedRaw(item.FilePath) Then Return False
             Return Not ImmichService.IsImmichTempPath(item.FilePath) AndAlso Not NextcloudService.IsNextcloudTempPath(item.FilePath)
         End Function
@@ -15579,7 +15589,7 @@ Namespace ViewModels
         ''' hat: dann gibt es nichts zu unterscheiden. Die Begleitdatei ist dafür nach Zeitstempel
         ''' gemerkt (RawSidecarService.ReadVariants).</summary>
         Public Shared Function VariantTitle(itemPath As String) As String
-            If String.IsNullOrEmpty(itemPath) OrElse Not RawSidecarService.IsSidecarFormat(itemPath) Then Return ""
+            If String.IsNullOrEmpty(itemPath) OrElse Not RawSidecarService.IsReadOnlyFormat(itemPath) Then Return ""
             Try
                 Dim name = RawSidecarService.VariantName(itemPath)
                 If name.Length > 0 Then Return name
@@ -15994,7 +16004,8 @@ Namespace ViewModels
 
             If result.Overwrite Then
                 Dim localTargets = localItems.Where(Function(i) File.Exists(i.FilePath)).Select(Function(i) i.FilePath).ToList()
-                changedCount = Await RewriteImagesInPlaceAsync(localTargets, writer)
+                ' Wie beim Verkleinern: das Rezept geht mit in die Bildpunkte und wird geraeumt.
+                changedCount = Await RewriteImagesInPlaceAsync(localTargets, writer, bakesRecipe:=True)
                 uploadedCount = Await ProcessImmichBatchItemsAsync(immichItems, writer,
                                                                    Function(source) IO.Path.GetExtension(source),
                                                                    uploadedAssetIds).ConfigureAwait(True)
@@ -16240,8 +16251,14 @@ Namespace ViewModels
         ''' ersetzt wurde. Fuer Aufrufer, die danach an DIESEN Dateien weiterarbeiten (Metadaten
         ''' entfernen bereinigt Beistelldatei und Katalog) - ein Schreibfehler oder Abbruch darf dort
         ''' nicht dazu fuehren, dass die Nebendaten weg sind und das Bild seine Metadaten behaelt.</param>
+        ''' <param name="bakesRecipe">Der Schreiber rechnet das Rezept neben der Datei mit in die
+        ''' Bildpunkte (BatchBaseAdjustments: Bildgroesse, Wasserzeichen, Filter). Dann wird es nach
+        ''' jedem ersetzten Bild entfernt (RawSidecarService.TryRemoveRecipe), sonst laege derselbe
+        ''' Zuschnitt auf den Pixeln und noch einmal im Rezept. Ein Schreiber ohne Rezept (Metadaten
+        ''' entfernen) laesst es stehen: die Bildpunkte sind dieselben, das Rezept gilt weiter.</param>
         Private Async Function RewriteImagesInPlaceAsync(targets As List(Of String), writer As Func(Of String, String, Boolean),
-                                                         Optional rewritten As List(Of String) = Nothing) As Task(Of Integer)
+                                                         Optional rewritten As List(Of String) = Nothing,
+                                                         Optional bakesRecipe As Boolean = False) As Task(Of Integer)
             Dim changedCount = 0
             Dim errorMessage As String = Nothing
             Try
@@ -16268,6 +16285,8 @@ Namespace ViewModels
                                 changedCount += 1
                                 rewritten?.Add(source)
                                 ExifService.Invalidate(source)
+                                ' Die EINE Stelle, an der ein Stapel ein mitgebackenes Rezept raeumt.
+                                If bakesRecipe Then RawSidecarService.TryRemoveRecipe(source)
                             End If
                         Finally
                             Try

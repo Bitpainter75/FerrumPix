@@ -295,7 +295,7 @@ Namespace Services
             If FpxService.IsFpx(path) Then Return RenderFpxFullResolution(path)
 
             Dim rezept As ImageAdjustments = Nothing
-            If RawSidecarService.IsSidecarFormat(path) AndAlso RawSidecarService.Exists(path) Then
+            If RawSidecarService.HasRecipeBeside(path) Then
                 rezept = RawSidecarService.TryRead(path)
             End If
 
@@ -356,8 +356,7 @@ Namespace Services
             Dim count = 0
             For Each path In paths
                 If String.IsNullOrWhiteSpace(path) Then Continue For
-                If Not RawSidecarService.IsSidecarFormat(path) Then Continue For
-                If Not RawSidecarService.Exists(path) Then Continue For
+                If Not RawSidecarService.HasRecipeBeside(path) Then Continue For
                 Dim recipe = RawSidecarService.TryRead(path)
                 If HasPendingBakedOperations(recipe) OrElse NeedsModelDenoiseRun(path, recipe) Then count += 1
             Next
@@ -2785,6 +2784,25 @@ Namespace Services
                 rawDeveloped = False
                 rawStage = False
                 Return Nothing
+            End Try
+        End Function
+
+        ''' <summary>Die Maße des Bildes, wie die Ausgabe es zeigt (<see cref="DecodeDevelopedForOutput"/>):
+        ''' die orientierten Maße der Datei und, wenn ein Rezept daneben liegt, dessen Geometrie
+        ''' darauf (Zuschnitt, Drehung, Leinwand, Größe). Für Seitenverhältnisse in Collage und Druck:
+        ''' der Dateikopf allein nannte bei einem zugeschnittenen Bild das Seitenverhältnis des
+        ''' Originals. (0,0) wie bei <see cref="GetOrientedImageSize"/>, wenn nichts zu haben ist.</summary>
+        Public Shared Function GetDevelopedImageSize(path As String) As (Width As Integer, Height As Integer)
+            Dim size = GetOrientedImageSize(path)
+            If size.Width <= 0 OrElse size.Height <= 0 OrElse Not RawSidecarService.HasRecipeBeside(path) Then Return size
+            Try
+                Dim recipe = RawSidecarService.TryRead(path)
+                If recipe Is Nothing Then Return size
+                Dim developed = ComputeGeometryOutputSize(size.Width, size.Height, recipe)
+                If developed.Width <= 0 OrElse developed.Height <= 0 Then Return size
+                Return (developed.Width, developed.Height)
+            Catch
+                Return size
             End Try
         End Function
 

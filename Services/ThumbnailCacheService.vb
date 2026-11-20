@@ -268,11 +268,44 @@ Namespace Services
         ''' zwei Kameramatrizen.</summary>
         Private Const DevelopedRawBaseVersion As Integer = 3
 
+        ''' <summary>Wird die Kachel dieser Datei aus Quelle und Rezept GERECHNET, obwohl sie keine RAW
+        ''' ist? Ja fuer jedes andere Rezeptformat (JPG, PNG, TIFF, HEIC, PSD ...) mit einer .fpxmp
+        ''' daneben, ohne Einstellung: das Rezept ist die Bearbeitung, und ohne sie zeigte die Kachel
+        ''' ein anderes Bild als Betrachter und Editor.</summary>
+        Private Shared Function RendersRecipeTile(filePath As String) As Boolean
+            Return Not RawPreviewService.IsSupportedRaw(filePath) AndAlso RawSidecarService.HasRecipeBeside(filePath)
+        End Function
+
+        ''' <summary>Die Kachel einer Nicht-RAW mit Rezept als PNG-Strom: die Quelle dekodiert, auf
+        ''' Kachelbreite verkleinert und dann durch die Kette (RenderPngStream). Voll orientiert und
+        ''' mit der Geometrie des Rezepts, also wie die entwickelte RAW-Kachel ohne erneute Drehung zu
+        ''' schreiben. Nothing, wenn das Rezept nicht lesbar ist: dann gilt der gewoehnliche Weg.</summary>
+        Private Shared Function TryRenderRecipeSource(filePath As String, width As Integer) As MemoryStream
+            Dim adj = RawSidecarService.TryRead(filePath)
+            If adj Is Nothing Then Return Nothing
+            Try
+                Dim d, p, e As Long
+                Return ImageProcessor.RenderPngStream(filePath, adj, width, d, p, e)
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
         ''' <summary>Teil des Cache-Dateinamens für die ENTWICKELTE RAW-Vorschau: leer, solange die Option
         ''' aus ist oder keine .fpxmp existiert (dann gilt der eingebettete-JPG-Schlüssel unverändert).
         ''' Sonst der Zeitstempel der .fpxmp - so baut jede Bearbeitung (die die .fpxmp neu schreibt) die
         ''' Kachel neu, ohne alte Kacheln zu entwerten.</summary>
         Private Shared Function DevelopedThumbnailSuffix(filePath As String) As String
+            If RendersRecipeTile(filePath) Then
+                ' Nicht-RAW mit Rezept: immer gerechnet, eine Kameravorschau gibt es dort nicht. Der
+                ' Zeitstempel der .fpxmp gehoert in den Namen, sonst bliebe die Kachel nach einer
+                ' Aenderung am Rezept stehen; die Datei selbst aendert sich dabei ja nicht.
+                Try
+                    Return "_rec" & File.GetLastWriteTimeUtc(RawSidecarService.SidecarPathFor(filePath)).Ticks.ToString(Globalization.CultureInfo.InvariantCulture)
+                Catch
+                    Return ""
+                End Try
+            End If
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawSidecarService.Exists(filePath) Then Return ""
             If Not DevelopsThumbnail(filePath) Then Return ""
             Try
@@ -289,6 +322,7 @@ Namespace Services
         ''' dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
         ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.</summary>
         Private Shared Function TryRenderDevelopedRawSource(filePath As String, width As Integer) As MemoryStream
+            If RendersRecipeTile(filePath) Then Return TryRenderRecipeSource(filePath, width)
             If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.IsAvailable Then Return Nothing
             If Not DevelopsThumbnail(filePath) Then Return Nothing
             Dim adj = RawSidecarService.TryRead(VariantKey.Make(filePath, AmbientVariantId))
@@ -975,8 +1009,9 @@ Namespace Services
         End Function
 
         Private Shared Function TryWriteCacheFile(filePath As String, cachePath As String, quality As Integer, width As Integer, Optional isStillWanted As Func(Of Boolean) = Nothing) As Boolean
-            ' Entwickelte RAW-Kachel (nur bei aktiver Option + vorhandener .fpxmp): bereits orientiert und
-            ' mit Rezept-Geometrie - deshalb ein eigener Schreibweg OHNE erneute Drehung.
+            ' Entwickelte RAW-Kachel (nur bei aktiver Option + vorhandener .fpxmp) oder gerechnete Kachel
+            ' eines anderen Formats mit Rezept: bereits orientiert und mit Rezept-Geometrie - deshalb
+            ' ein eigener Schreibweg OHNE erneute Drehung.
             Dim developed = TryRenderDevelopedRawSource(filePath, width)
             If developed IsNot Nothing Then
                 Using developed
@@ -1422,9 +1457,10 @@ Namespace Services
         End Function
 
         ''' <summary>Drehung aus dem RAW-Sidecar (0 fuer alle anderen Formate). Die Vorschau in der
-        ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben.</summary>
+        ''' RAW-Datei bleibt beim Drehen im Viewer unangetastet - die Drehung liegt daneben. Jedes
+        ''' andere Format mit Rezept wird ganz gerechnet (RendersRecipeTile) und kommt hier nicht an.</summary>
         Private Shared Function SidecarRotationFor(filePath As String) As Integer
-            If Not RawSidecarService.IsSidecarFormat(filePath) Then Return 0
+            If Not RawSidecarService.IsReadOnlyFormat(filePath) Then Return 0
             Return RawSidecarService.ReadRotationDegrees(VariantKey.Make(filePath, AmbientVariantId))
         End Function
 
@@ -1468,6 +1504,17 @@ Namespace Services
             Dim width = CurrentCacheWidth()
             Try
                 cancellationToken.ThrowIfCancellationRequested()
+                If RendersRecipeTile(filePath) Then
+                    ' Nicht-RAW mit Rezept: gerechnet wie im Kachelspeicher (TryWriteCacheFile).
+                    Dim rendered = TryRenderRecipeSource(filePath, width)
+                    If rendered IsNot Nothing Then
+                        Using rendered
+                            cancellationToken.ThrowIfCancellationRequested()
+                            rendered.Position = 0
+                            Return New Bitmap(rendered)
+                        End Using
+                    End If
+                End If
                 If RawPreviewService.IsSupportedRaw(filePath) Then
                     ' Entwickelte RAW-Vorschau (bereits orientiert + Rezept-Geometrie) hat Vorrang.
                     Dim developed = TryRenderDevelopedRawSource(filePath, width)

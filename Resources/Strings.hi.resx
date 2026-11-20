@@ -11353,8 +11353,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>छोड़ते समय अपने आप सहेजें</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>पूछने के बजाय, जब आप कोई दूसरी फ़ोटो खोलते हैं या संपादक छोड़ते हैं, तो संपादक बिना सहेजे बदलाव सहेज लेता है। RAW और PSD संपादन को साथ वाली फ़ाइल में रखते हैं, JPEG, PNG और WebP पर दोबारा लिखा जाता है। जहाँ फ़ोटो केवल नए नाम से सहेजी जा सकती है, वहाँ अब भी पूछा जाता है।</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>पूछने के बजाय, जब आप कोई दूसरी फ़ोटो खोलते हैं या संपादक छोड़ते हैं, तो संपादक बिना सहेजे बदलाव वहीं सहेजता है जहाँ सहेजें लिखता है: फ़ोटो के बगल में साथ वाली फ़ाइल में, या JPEG, PNG और WebP के लिए ऊपर की सेटिंग बंद होने पर फ़ोटो फ़ाइल में। जहाँ फ़ोटो केवल नए नाम से सहेजी जा सकती है या संपादन साथ वाली फ़ाइल में नहीं समाता, वहाँ अब भी पूछा जाता है।</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>JPEG, PNG और WebP को फ़ोटो के बगल में सहेजें</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>चालू होने पर सहेजें संपादन को फ़ोटो के बगल में साथ वाली फ़ाइल में रखता है, और मूल फ़ाइल नहीं बदलती। तब दूसरे प्रोग्राम और सर्वर केवल मूल दिखाते हैं; तैयार फ़ोटो इस रूप में सहेजें या इसमें निर्यात करें से बनती है। बंद होने पर सहेजें संपादन को फ़ोटो फ़ाइल में लिखता है। RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP और GIF अपना संपादन हमेशा साथ वाली फ़ाइल में रखते हैं।</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>संपादन साथ वाली फ़ाइल में नहीं समाता</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>ब्रश, रीटच, क्लोन स्टैम्प, रास्टर की गई परतें, विरूपण और ऑब्जेक्ट {0} के बगल की साथ वाली फ़ाइल में नहीं रखे जा सकते। फ़ोटो के बगल में प्रोजेक्ट (.fpx) के रूप में सब कुछ संपादन योग्य रहता है और मूल नहीं बदलता। इस रूप में सहेजें एक नई फ़ाइल लिखता है।</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>प्रोजेक्ट के रूप में सहेजें</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>सुझाव: {0}</value>
@@ -11854,8 +11869,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>हर बदलाव पर सितारे, रंग लेबल और रखें या अस्वीकृत का निशान सीधे JPEG, PNG और WebP फ़ाइल में लिखता है, ताकि दूसरे प्रोग्राम उन्हें तुरंत देख सकें। स्विच के बिना वे केवल कैटलॉग में रहते हैं, जब तक उन्हें मेटाडेटा मेनू से फ़ाइलों में न लिखा जाए।</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>समायोजन केवल एक विकसित RAW या PSD तस्वीर से कॉपी किए जा सकते हैं</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>समायोजन केवल ऐसी एक तस्वीर से कॉपी किए जा सकते हैं जिसका संपादन साथ वाली फ़ाइल में है</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>कोई समायोजन कॉपी नहीं किया गया है</value>

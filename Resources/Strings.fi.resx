@@ -11349,8 +11349,23 @@
   <data name="Beim_Verlassen_automatisch_speichern_11c701c0" xml:space="preserve">
     <value>Tallenna automaattisesti poistuttaessa</value>
   </data>
-  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_84b0f991" xml:space="preserve">
-    <value>Kysymisen sijaan editori tallentaa tallentamattomat muutokset, kun avaat toisen kuvan tai poistut editorista. RAW ja PSD säilyttävät muokkauksen sivutiedostossa, JPEG, PNG ja WebP korvataan. Jos kuvan voi tallentaa vain uudella nimellä, sinulta kysytään edelleen.</value>
+  <data name="Statt_nachzufragen_speichert_der_Editor_ungespei_1c74710a" xml:space="preserve">
+    <value>Kysymisen sijaan editori tallentaa tallentamattomat muutokset, kun avaat toisen kuvan tai poistut editorista, samaan paikkaan kuin Tallenna: sivutiedostoon kuvan viereen tai, JPEG-, PNG- ja WebP-kuvilla yllä olevan asetuksen ollessa pois päältä, kuvatiedostoon. Jos kuvan voi tallentaa vain uudella nimellä tai muokkaus ei mahdu sivutiedostoon, sinulta kysytään edelleen.</value>
+  </data>
+  <data name="Bei_JPEG_PNG_und_WebP_neben_dem_Bild_speichern_2de269f4" xml:space="preserve">
+    <value>Tallenna JPEG, PNG ja WebP kuvan viereen</value>
+  </data>
+  <data name="Eingeschaltet_legt_Speichern_die_Bearbeitung_in__16337d01" xml:space="preserve">
+    <value>Päällä Tallenna vie muokkauksen sivutiedostoon kuvan viereen, ja alkuperäinen pysyy muuttumattomana. Muut ohjelmat ja palvelimet näyttävät silloin vain alkuperäisen; valmiin kuvan saat toiminnoilla Tallenna nimellä tai Vie kohteeseen. Pois päältä Tallenna kirjoittaa muokkauksen kuvatiedostoon. RAW, PSD, TIFF, HEIC, AVIF, JPEG XL, BMP ja GIF säilyttävät muokkauksen aina sivutiedostossa.</value>
+  </data>
+  <data name="Bearbeitung_passt_nicht_in_die_Begleitdatei_6c763851" xml:space="preserve">
+    <value>Muokkaus ei mahdu sivutiedostoon</value>
+  </data>
+  <data name="Pinsel_Retusche_Stempel_gerasterte_Ebenen_Verzer_7af3c50d" xml:space="preserve">
+    <value>Sivellintä, retusointia, kloonausleimasinta, rasteroituja tasoja, vääristystä ja objekteja ei voi säilyttää sivutiedostossa tiedoston {0} vieressä. Projektina (.fpx) kuvan vieressä kaikki pysyy muokattavana ja alkuperäinen muuttumattomana. Tallenna nimellä kirjoittaa uuden tiedoston.</value>
+  </data>
+  <data name="Als_Projekt_speichern_929ebe7e" xml:space="preserve">
+    <value>Tallenna projektina</value>
   </data>
   <data name="Vorschlag_0_e66b1b5f" xml:space="preserve">
     <value>Ehdotus: {0}</value>
@@ -11850,8 +11865,8 @@
   <data name="Schreibt_Sterne_Farbetikett_und_die_Markierung_b_25d6a269" xml:space="preserve">
     <value>Kirjoittaa tähdet, värimerkinnän ja valintamerkin säilytä tai hylätty jokaisen muutoksen yhteydessä itse JPEG-, PNG- ja WebP-tiedostoon, jotta muut ohjelmat näkevät ne heti. Ilman kytkintä ne ovat vain luettelossa, kunnes ne kirjoitetaan tiedostoihin Metatiedot-valikosta.</value>
   </data>
-  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__db318d39" xml:space="preserve">
-    <value>Säädöt voi kopioida vain yhdestä kehitetystä RAW- tai PSD-kuvasta</value>
+  <data name="Anpassungen_lassen_sich_nur_von_einem_einzelnen__fdb4a49e" xml:space="preserve">
+    <value>Säädöt voi kopioida vain yhdestä kuvasta, jonka muokkaus on sivutiedostossa</value>
   </data>
   <data name="Es_sind_keine_Anpassungen_kopiert_f7b1a93a" xml:space="preserve">
     <value>Säätöjä ei ole kopioitu</value>
