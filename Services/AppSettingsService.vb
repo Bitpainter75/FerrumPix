@@ -892,6 +892,9 @@ Namespace Services
         ''' (präzisiert: gemeint war diese Linie, nicht das Zuschneiden-Werkzeug).
         ''' 0 = deaktiviert; Ränder und Mitte rasten immer. 4 = bisheriges festes Verhalten.
         Public Property EditorSnapMarginPercent As Integer = 4
+        ''' <summary>Was die kleine Anzeige neben der Pipette nennt: "Hex", "Rgb" oder "Both"
+        ''' (siehe <see cref="AppSettingsService.PickerReadoutChoices"/>). Ab Werk beides.</summary>
+        Public Property PickerReadout As String = AppSettingsService.PickerReadoutDefault
         ''' Ob der Vorher/Nachher-Vergleich im Editor zuletzt eingeschaltet war - gemerkter Bedienzustand
         ''' (wie die Info-Leiste), kein Schalter in den Einstellungen.
         Public Property EditorShowComparison As Boolean = True
@@ -1509,6 +1512,7 @@ Namespace Services
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
+                settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -1760,6 +1764,7 @@ Namespace Services
                 settings.DefaultSaveFormat = NormalizeDefaultSaveFormat(settings.DefaultSaveFormat)
                 settings.RawDemosaicAlgorithm = NormalizeRawDemosaicAlgorithm(settings.RawDemosaicAlgorithm)
                 NormalizeMacGraphicsSettings(settings)
+                settings.PickerReadout = NormalizePickerReadout(settings.PickerReadout)
                 settings.ViewerSlideshowIntervalSeconds = NormalizeViewerSlideshowIntervalSeconds(settings.ViewerSlideshowIntervalSeconds)
                 settings.ViewerDoubleClickTarget = NormalizeViewerDoubleClickTarget(settings.ViewerDoubleClickTarget)
                 settings.EditorHomeTarget = NormalizeEditorHomeTarget(settings.EditorHomeTarget)
@@ -2990,6 +2995,22 @@ Namespace Services
                 If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
             Next
             Return MacRenderingModeDefault
+        End Function
+
+        ''' <summary>Die Anzeige neben der Pipette nennt ab Werk Hex-Wert und R G B.</summary>
+        Public Const PickerReadoutDefault As String = "Both"
+
+        ''' <summary>Die waehlbaren Inhalte der Anzeige neben der Pipette, in der Reihenfolge der
+        ''' Auswahlliste. Die Namen liegen in der settings.json und sind keine Anzeigetexte.</summary>
+        Public Shared ReadOnly PickerReadoutChoices As String() = {"Both", "Hex", "Rgb"}
+
+        Public Shared Function NormalizePickerReadout(value As String) As String
+            If String.IsNullOrWhiteSpace(value) Then Return PickerReadoutDefault
+            Dim trimmed = value.Trim()
+            For Each choice In PickerReadoutChoices
+                If String.Equals(choice, trimmed, StringComparison.OrdinalIgnoreCase) Then Return choice
+            Next
+            Return PickerReadoutDefault
         End Function
 
         ''' <summary>Farbraum-Verfahren und Zeichenweg geradeziehen, samt der einmaligen Uebernahme

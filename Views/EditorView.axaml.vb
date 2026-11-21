@@ -1987,6 +1987,9 @@ Namespace Views
                     ShowBrushPreviewLine(False)
                     UpdateCompactGroups()
                     ScrollAdjustmentsToTop()
+                    HideColorRangeReadoutIfInactive()
+                Case NameOf(EditorViewModel.IsMaskColorRangeMode)
+                    HideColorRangeReadoutIfInactive()
                 Case NameOf(EditorViewModel.IsCompactAdjustments)
                     ' Einer der beiden Schalter des Kompaktmodus wurde umgelegt, vielleicht waehrend
                     ' sein Werkzeug offen ist: dann gilt sofort die neue Regel.
@@ -2010,6 +2013,7 @@ Namespace Views
                     ' Rechteck, Ellipse, Lasso und Zauberstab nicht - dort schluckte er den Druck,
                     ' mit dem man die Pixelauswahl aufzieht.
                     UpdateTextOverlayVisibility()
+                    HideColorRangeReadoutIfInactive()
                     UpdateSliderLayout()
                 Case NameOf(EditorViewModel.HasActiveSelection),
                      NameOf(EditorViewModel.SelectionXPercent),
@@ -3555,7 +3559,16 @@ Namespace Views
                 Else
                     cursorVm.ColorPickPreview = Nothing
                 End If
-                UpdatePickColorBadge(cursorCanvas, pickPoint, cursorVm.ColorPickPreview)
+                ' Die Anzeige an der Pipette nennt, was der Klick übernähme - dieselbe Stelle wie
+                ' beim Klick (OnSliderPointerPressed), das ViewModel weiß, woher die Pipette misst.
+                Dim pickReadout As Color? = Nothing
+                If cursorVm.ColorPickPreview.HasValue AndAlso pickRect.Width > 0 AndAlso pickRect.Height > 0 Then
+                    Dim clampedPick = ClampPointToRect(pickPoint, pickRect)
+                    pickReadout = cursorVm.ResolveColorPickReadout(cursorVm.ColorPickPreview,
+                                                                   (clampedPick.X - pickRect.Left) / pickRect.Width,
+                                                                   (clampedPick.Y - pickRect.Top) / pickRect.Height)
+                End If
+                UpdatePickColorBadge(cursorCanvas, pickPoint, pickReadout)
             ElseIf cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso cursorVm.IsStraightenLineActive Then
                 ' Linie ziehen: der naechste Zug legt eine Linie, das Fadenkreuz sagt das. Auch hier
                 ' vor dem Rueckfall unten, der den Zeiger sonst je Bewegung zuruecksetzte.
@@ -3575,6 +3588,25 @@ Namespace Views
                 cursorCanvas.Cursor = GetCursorForTextDragMode(mode, IsSelectedAnnotationTextLayer(cursorVm))
             ElseIf cursorCanvas IsNot Nothing Then
                 cursorCanvas.Cursor = Nothing
+            End If
+
+            ' DIE PIPETTE DES FARBBEREICHS (Maske im Modus Farbe, Auswahl im Modus Farbbereich) ist
+            ' ein Werkzeugmodus und keine wartende Aufnahme, zeigt aber dieselbe Anzeige: mit der
+            ' Farbe, mit der ein Klick an dieser Stelle den Bereich vergleicht.
+            If cursorCanvas IsNot Nothing AndAlso cursorVm IsNot Nothing AndAlso Not cursorVm.IsPickingColorFromImage Then
+                Dim rangeActive = cursorVm.IsColorRangePickActive AndAlso Not _isPanMode
+                Dim rangeRect = If(rangeActive, GetDisplayedImageRect(cursorCanvas, cursorVm), New Avalonia.Rect())
+                Dim rangePoint = e.GetPosition(cursorCanvas)
+                If rangeActive AndAlso rangeRect.Width > 0 AndAlso rangeRect.Height > 0 AndAlso rangeRect.Contains(rangePoint) Then
+                    Dim rangePos = ClampPointToRect(rangePoint, rangeRect)
+                    Dim displayed = SampleDisplayedColor(cursorVm, rangeRect, rangePoint)
+                    UpdatePickColorBadge(cursorCanvas, rangePoint,
+                                         cursorVm.ResolveColorRangeReadout(displayed,
+                                                                           (rangePos.X - rangeRect.Left) / rangeRect.Width * 100.0,
+                                                                           (rangePos.Y - rangeRect.Top) / rangeRect.Height * 100.0))
+                Else
+                    HidePickColorBadge()
+                End If
             End If
 
             If _isGuideDragging Then
@@ -5575,39 +5607,25 @@ Namespace Views
             _pickSampleSource = Nothing
         End Sub
 
-        ''' Die kleine Anzeige neben der Pipette: Farbfeld und Hex-Wert der Farbe unter der Spitze.
-        ''' Sie sitzt rechts unter dem Zeiger, weil das Pipettensymbol nach rechts oben ragt, und
-        ''' klappt an den Rändern des Canvas auf die andere Seite, statt abgeschnitten zu werden.
-        ''' Ohne Farbe (Zeiger neben dem Bild) verschwindet sie.
+        ''' Die Anzeige an der Pipette (PickColorReadout): Farbfeld und Wert der Farbe, die der
+        ''' Klick übernähme, als Hex-Wert, R G B oder beides (Einstellung PickerReadout). Welche
+        ''' Farbe das ist, sagt das ViewModel je Pipette (ResolveColorPickReadout,
+        ''' ResolveColorRangeReadout); hier wird nur noch gezeigt.
         Private Sub UpdatePickColorBadge(previewCanvas As Canvas, position As Avalonia.Point, color As Color?)
-            Dim badge = Me.FindControl(Of Border)("PickColorBadge")
-            If badge Is Nothing Then Return
-            If Not color.HasValue Then
-                badge.IsVisible = False
-                Return
-            End If
-
-            Dim c = color.Value
-            Dim swatch = Me.FindControl(Of Border)("PickColorBadgeSwatch")
-            If swatch IsNot Nothing Then swatch.Background = New SolidColorBrush(c)
-            Dim text = Me.FindControl(Of TextBlock)("PickColorBadgeText")
-            If text IsNot Nothing Then text.Text = $"#{c.R:X2}{c.G:X2}{c.B:X2}"
-            badge.IsVisible = True
-
-            Const offset As Double = 16.0
-            badge.Measure(Size.Infinity)
-            Dim badgeSize = badge.DesiredSize
-            Dim left = position.X + offset
-            Dim top = position.Y + offset
-            If left + badgeSize.Width > previewCanvas.Bounds.Width Then left = position.X - offset - badgeSize.Width
-            If top + badgeSize.Height > previewCanvas.Bounds.Height Then top = position.Y - offset - badgeSize.Height
-            Canvas.SetLeft(badge, Math.Max(0, left))
-            Canvas.SetTop(badge, Math.Max(0, top))
+            Me.FindControl(Of PickColorReadout)("PickColorBadge")?.ShowAt(previewCanvas, position, color)
         End Sub
 
         Private Sub HidePickColorBadge()
-            Dim badge = Me.FindControl(Of Border)("PickColorBadge")
-            If badge IsNot Nothing Then badge.IsVisible = False
+            Me.FindControl(Of PickColorReadout)("PickColorBadge")?.HideReadout()
+        End Sub
+
+        ''' Verlässt das Werkzeug den Farbbereich, verschwindet dessen Anzeige sofort und nicht erst
+        ''' bei der nächsten Bewegung; das für sie dekodierte Anzeigebild wird mit frei.
+        Private Sub HideColorRangeReadoutIfInactive()
+            Dim vm = TryCast(DataContext, EditorViewModel)
+            If vm Is Nothing OrElse vm.IsPickingColorFromImage OrElse vm.IsColorRangePickActive Then Return
+            HidePickColorBadge()
+            ReleasePickSampleBitmap()
         End Sub
 
         Private Sub UpdateSelectionOverlayFromDrag()

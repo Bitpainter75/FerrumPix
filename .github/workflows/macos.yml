@@ -104,6 +104,7 @@ jobs:
             packaging/libraw/osx-${{ matrix.arch }}-build/libraw.dylib
             packaging/libraw/osx-${{ matrix.arch }}-build/HERKUNFT.txt
             packaging/libraw/osx-${{ matrix.arch }}-build/LICENSE.libomp.txt
+            packaging/libraw/osx-${{ matrix.arch }}-build/LICENSE.x3f.txt
           if-no-files-found: error
           retention-days: 14
 
@@ -202,6 +203,8 @@ jobs:
             cp "$src/HERKUNFT.txt" "$dst/licenses/HERKUNFT.txt"
             test -s "$src/LICENSE.libomp.txt" || { echo "Fehlt im Artefakt: $src/LICENSE.libomp.txt" >&2; exit 1; }
             cp "$src/LICENSE.libomp.txt" "$dst/licenses/LICENSE.libomp.txt"
+            test -s "$src/LICENSE.x3f.txt" || { echo "Fehlt im Artefakt: $src/LICENSE.x3f.txt" >&2; exit 1; }
+            cp "$src/LICENSE.x3f.txt" "$dst/licenses/LICENSE.x3f.txt"
             echo "osx-$arch: $(sha256sum "$dst/libraw.dylib" | cut -d' ' -f1)"
           done
 

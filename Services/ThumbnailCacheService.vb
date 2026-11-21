@@ -318,12 +318,13 @@ Namespace Services
         End Function
 
         ''' <summary>Entwickelte RAW-Vorschau als PNG-Strom (LibRaw-Decode + .fpxmp-Rezept, auf Kachelbreite
-        ''' herunterskaliert). Nothing, wenn die Option aus ist, keine .fpxmp existiert oder LibRaw fehlt -
-        ''' dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
+        ''' herunterskaliert). Nothing, wenn die Option aus ist, keine .fpxmp existiert oder die Datei nicht
+        ''' entwickelt werden kann (RawDecodeService.CanDevelop: LibRaw fehlt, bei linearem Licht dessen
+        ''' Leser) - dann gilt der eingebettete-JPG-Weg. Das Ergebnis ist bereits voll orientiert und trägt die
         ''' Rezept-Geometrie; es darf NICHT über DecodeCorrectedAndResize erneut gedreht werden.</summary>
         Private Shared Function TryRenderDevelopedRawSource(filePath As String, width As Integer) As MemoryStream
             If RendersRecipeTile(filePath) Then Return TryRenderRecipeSource(filePath, width)
-            If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.IsAvailable Then Return Nothing
+            If Not RawPreviewService.IsSupportedRaw(filePath) OrElse Not RawDecodeService.CanDevelop(filePath) Then Return Nothing
             If Not DevelopsThumbnail(filePath) Then Return Nothing
             Dim adj = RawSidecarService.TryRead(VariantKey.Make(filePath, AmbientVariantId))
             If adj Is Nothing Then Return Nothing
@@ -481,7 +482,7 @@ Namespace Services
 
         ' SVG/GIF/ICO-Quelldateien sind selbst schon winzig - das Dekodieren kostet kaum mehr als
         ' der Cache-Datei-Zugriff, daher lohnt sich für sie kein Thumbnail-Cache-Eintrag.
-        Private Shared ReadOnly UncachedExtensions As String() = {".svg", ".gif", ".ico"}
+        Private Shared ReadOnly UncachedExtensions As String() = {".svg", ".gif", ".ico", ".cur", ".wbmp"}
 
         ''' <summary>Das Systemtemp-Verzeichnis, einmal kanonisch aufgeloest.</summary>
         Private Shared ReadOnly TempRoot As String = PathIdentity.Normalize(IO.Path.GetTempPath())
@@ -1022,7 +1023,11 @@ Namespace Services
             ' Formate mit eigenem Leser: das Bild direkt, ohne PNG-Strom dazwischen. Die Leser
             ' liefern es schon aufrecht; dazu kommt nur die Drehung aus der Beistelldatei (PSD).
             If ForeignImageDecoder.CanDecode(filePath) Then
-                Dim foreign = ForeignImageDecoder.TryDecode(filePath)
+                ' JPEG 2000 verkleinert: OpenJPEG laesst die feineren Aufloesungsstufen weg, solange
+                ' die kuerzere Kante die Kachelbreite noch erreicht.
+                Dim foreign = If(Jpeg2000DecodeService.IsSupportedJpeg2000(filePath),
+                                 ForeignImageDecoder.ToDecodedFormOrNothing(Jpeg2000DecodeService.TryDecodeReduced(filePath, width)),
+                                 ForeignImageDecoder.TryDecode(filePath))
                 If foreign Is Nothing Then Return False
                 Using foreign
                     If isStillWanted IsNot Nothing AndAlso Not isStillWanted() Then Return False
@@ -1334,6 +1339,16 @@ Namespace Services
                 Dim tiff = TiffPreviewService.ExtractPreview(filePath)
                 If tiff IsNot Nothing Then Return tiff
             End If
+            ' JPEG mit 12 Bit oder verlustfrei (der Kopf entscheidet): Skia liest es nicht.
+            If JpegTurboDecodeService.IsTurboJpeg(filePath) Then
+                Dim turbo = JpegTurboDecodeService.ExtractPreview(filePath)
+                If turbo IsNot Nothing Then Return turbo
+            End If
+            ' JPEG 2000 verkleinert gelesen: nur die Aufloesungsstufen, die die Kachel braucht.
+            If Jpeg2000DecodeService.IsSupportedJpeg2000(filePath) AndAlso Jpeg2000DecodeService.IsAvailable Then
+                Dim jp2 = Jpeg2000DecodeService.ExtractPreview(filePath, width)
+                If jp2 IsNot Nothing Then Return jp2
+            End If
             If FpxService.IsFpx(filePath) Then
                 Return FpxService.ExtractComposite(filePath)
             End If
@@ -1347,14 +1362,20 @@ Namespace Services
         ' Dekodiert per SKCodec, korrigiert die EXIF-Orientierung und skaliert auf maxWidth.
         ' Fällt bei jedem SKCodec-Fehler auf das bisherige Bitmap.DecodeToWidth zurück.
         ''' <summary>Ein schneller PLATZHALTER fuer die Kachel, solange das scharfe Bild noch nicht
-        ''' im Zwischenspeicher liegt: das eingebettete Vorschaubild einer HEIC, oder Nothing. Es ist
-        ''' kleiner als eine Kachel (gesehen 240x320 und 384x512) und wird deshalb weder abgelegt
-        ''' noch behalten; ImageItem tauscht es gegen das scharfe Bild, sobald die
-        ''' Hintergrund-Schlange dazu kommt. HEIF fuehrt keine Beistelldatei, eine Drehung kommt also
-        ''' nicht dazu; die aus dem Container legt libheif selbst auf.</summary>
+        ''' im Zwischenspeicher liegt: das eingebettete Vorschaubild einer HEIC, oder Nothing. Bei
+        ''' Telefonen ist es kleiner als eine Kachel (gesehen 240x320 und 384x512), bei Fujifilm
+        ''' 1600x1200; es wird weder abgelegt noch behalten, ImageItem tauscht es gegen das scharfe
+        ''' Bild, sobald die Hintergrund-Schlange dazu kommt.
+        '''
+        ''' Die Lage ist die des Hauptbilds: die Drehung aus dem Container legt
+        ''' HeifDecodeService.TryDecodeEmbeddedThumbnail auf, auch wenn das Vorschaubild sie nicht
+        ''' selbst traegt (libheif dreht es nur nach seinen eigenen Angaben). Liegt neben der Datei ein
+        ''' Rezept (RendersRecipeTile), gibt es keinen Platzhalter: das Vorschaubild zeigte das Bild
+        ''' ohne dessen Drehung und Zuschnitt, die scharfe Kachel danach mit, und die Kachel sprange.</summary>
         Public Shared Function TryLoadEmbeddedPreview(filePath As String) As Bitmap
             If String.IsNullOrEmpty(filePath) OrElse Not HeifDecodeService.IsSupportedHeif(filePath) OrElse
                Not HeifDecodeService.IsAvailable Then Return Nothing
+            If RendersRecipeTile(filePath) Then Return Nothing
             Try
                 Using raw = HeifDecodeService.TryDecodeEmbeddedThumbnail(filePath)
                     If raw Is Nothing Then Return Nothing

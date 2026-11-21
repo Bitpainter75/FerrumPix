@@ -12068,4 +12068,79 @@
   <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
     <value>ใช้การปรับแต่ง ({0} ไฟล์)</value>
   </data>
+  <data name="Farbwert_an_der_Pipette_062f9a83" xml:space="preserve">
+    <value>ค่าสีที่หลอดดูดสี</value>
+  </data>
+  <data name="Was_die_kleine_Anzeige_neben_der_Pipette_ber_die_91e386a5" xml:space="preserve">
+    <value>สิ่งที่ตัวแสดงเล็กๆ ข้างหลอดดูดสีบอกเกี่ยวกับสีใต้ปลาย: ค่าเลขฐานสิบหก ค่าสีแดง เขียว และน้ำเงินตั้งแต่ 0 ถึง 255 หรือทั้งสองอย่าง</value>
+  </data>
+  <data name="Hex_Wert_200ae7f9" xml:space="preserve">
+    <value>ค่าเลขฐานสิบหก</value>
+  </data>
+  <data name="R_G_B_einzeln_5267f844" xml:space="preserve">
+    <value>R G B แยกกัน</value>
+  </data>
+  <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
+    <value>ค่าเลขฐานสิบหกและ R G B</value>
+  </data>
+  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
+    <value>ใช้ไลบรารีของระบบแทน</value>
+  </data>
+  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
+    <value>หากไลบรารีที่มาพร้อมโปรแกรมเปิดไฟล์ไม่ได้ FerrumPix จะลองเปิดไฟล์เดียวกันด้วยเวอร์ชันที่ติดตั้งในระบบ ใช้ได้เฉพาะบน Linux นอก Flatpak การใช้แทนทุกครั้งจะถูกบันทึกในไฟล์นี้ แม้ไม่ได้เปิดบันทึกการวินิจฉัย:</value>
+  </data>
+  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
+    <value>ไม่มีใน Flatpak เนื่องจากไม่มีไลบรารีของระบบ</value>
+  </data>
+  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
+    <value>ไม่มีในระบบปฏิบัติการนี้</value>
+  </data>
+  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
+    <value>ไม่จำเป็น ไม่ได้ใช้เวอร์ชันที่มาพร้อมโปรแกรม</value>
+  </data>
+  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
+    <value>ไม่พบเวอร์ชันของระบบ</value>
+  </data>
+  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
+    <value>พร้อม: เวอร์ชัน {0} ที่ {1} จะโหลดเมื่อเวอร์ชันที่มาพร้อมโปรแกรมเปิดไฟล์ไม่ได้เท่านั้น</value>
+  </data>
+  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
+    <value>โหลดแล้ว: เวอร์ชัน {0} ที่ {1} อ่านไฟล์ไปแล้ว {2} ไฟล์</value>
+  </data>
+  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
+    <value>พบที่ {0} แต่ใช้ไม่ได้ ดูสาเหตุในบันทึก</value>
+  </data>
+  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
+    <value>libjpeg-turbo</value>
+  </data>
+  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
+    <value>อ่าน JPEG 12 บิตและ JPEG แบบไม่สูญเสียข้อมูล</value>
+  </data>
+  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
+    <value>IJG, BSD-3-Clause, Zlib</value>
+  </data>
+  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
+    <value>libjpeg-turbo อ่านไฟล์ JPEG 12 บิตและ JPEG แบบไม่สูญเสียข้อมูลที่ไลบรารีกราฟิกของแอปเปิดไม่ได้ ส่วน JPEG อื่นทั้งหมดยังคงอ่านด้วยไลบรารีนั้น อยู่ภายใต้สัญญาอนุญาต IJG และ BSD ส่วนที่รวมมาด้วยอยู่ภายใต้สัญญาอนุญาต zlib ทุกแพ็กเกจยกเว้น Flatpak มีไลบรารีนี้มาด้วยและใช้ก่อน libjpeg-turbo ของระบบ ส่วน Flatpak ใช้จากรันไทม์ของตน หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
+  </data>
+  <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
+    <value>การอ่านไฟล์ JPEG 2000</value>
+  </data>
+  <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
+    <value>การอ่านไฟล์ EXR</value>
+  </data>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
+    <value>OpenJPEG อ่านไฟล์ JPEG 2000 รวมถึง HTJ2K และใช้สัญญาอนุญาต BSD Windows และ Linux มีมาให้ Flatpak ใช้จากรันไทม์ของตน ส่วน macOS ยังไม่มี หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
+  </data>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
+    <value>OpenEXR อ่านไฟล์ EXR และใช้สัญญาอนุญาต BSD ส่วน libdeflate, OpenJPH และ zstd ที่รวมอยู่ใช้สัญญาอนุญาต MIT และ BSD Windows, Linux และ Flatpak มีมาให้ ส่วน macOS ยังไม่มี หากไม่มี จะเปิดไม่ได้เฉพาะไฟล์เหล่านี้</value>
+  </data>
+  <data name="OpenJPEG_fc68646e" xml:space="preserve">
+    <value>OpenJPEG</value>
+  </data>
+  <data name="OpenEXR_f86ff74c" xml:space="preserve">
+    <value>OpenEXR</value>
+  </data>
+  <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
+    <value>ภาพที่ไฟล์ HEIF เก็บไว้เป็น JPEG เช่น ภาพตัวอย่างของกล้องบางรุ่น libheif จะอ่านด้วย libjpeg-turbo ที่รวมอยู่ภายใน ส่วน Flatpak จะใช้ libheif ของรันไทม์</value>
+  </data>
 </root>

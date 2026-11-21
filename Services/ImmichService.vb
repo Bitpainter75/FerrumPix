@@ -845,7 +845,7 @@ Namespace Services
 
         Private Shared Function GuessMimeType(filePath As String) As String
             Select Case IO.Path.GetExtension(filePath).ToLowerInvariant()
-                Case ".jpg", ".jpeg" : Return "image/jpeg"
+                Case ".jpg", ".jpeg", ".jpe", ".jfif" : Return "image/jpeg"
                 Case ".png" : Return "image/png"
                 Case ".gif" : Return "image/gif"
                 Case ".webp" : Return "image/webp"

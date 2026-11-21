@@ -434,10 +434,11 @@ Namespace Controls
             Dim vm = TryCast(DataContext, EditorViewModel)
             If vm Is Nothing Then Return
             SetPickingActive(True)
+            ' Die Farbe geht samt Deckung ins Feld, die Anzeige an der Pipette nennt Alpha deshalb mit.
             vm.BeginColorPick(Sub(picked As Color)
                                   ActiveColor = picked
                                   RegisterRecent(picked)
-                              End Sub)
+                              End Sub, takesAlpha:=True)
         End Sub
 
     End Class

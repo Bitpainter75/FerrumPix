@@ -513,9 +513,12 @@ Namespace Models
 
         Private Shared ReadOnly _videoFormats As String() = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"}
 
+        ''' <summary>Eine Kameradatei (RAW-Endung). Lineares Licht (EXR, Radiance, TIFF mit
+        ''' Gleitkomma) geht zwar den RAW-Weg, ist aber kein RAW zu einem Kamera-JPEG daneben; die
+        ''' Stapel aus RAW und JPEG fragen genau das.</summary>
         Public ReadOnly Property IsRawFile As Boolean
             Get
-                Return Not IsFolder AndAlso RawPreviewService.IsSupportedRaw(FilePath)
+                Return Not IsFolder AndAlso RawPreviewService.IsCameraRaw(FilePath)
             End Get
         End Property
 

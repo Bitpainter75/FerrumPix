@@ -4,7 +4,8 @@ Imports SkiaSharp
 Namespace Services
 
     ''' <summary>
-    ''' Die Formate, die Skia selbst nicht lesen kann (JPEG XL, HEIF/AVIF, TIFF, PSD/PSB, ICO), als
+    ''' Die Formate, die Skia selbst nicht lesen kann (JPEG XL, HEIF/AVIF, TIFF, PSD/PSB, ICO,
+    ''' JPEG mit 12 Bit oder verlustfrei und JPEG 2000), als
     ''' fertiges Skia-Bitmap, OHNE PNG dazwischen.
     '''
     ''' Bis hierher reichte jeder Leser seinen Decode als PNG-Strom weiter, und der Abnehmer las ihn
@@ -27,15 +28,18 @@ Namespace Services
         Private Sub New()
         End Sub
 
-        ''' <summary>Liest die Datei ueber einen eigenen Leser? HEIF und JPEG XL nur, wenn die
-        ''' Bibliothek da ist - wie bisher in OpenSourceStream.</summary>
+        ''' <summary>Liest die Datei ueber einen eigenen Leser? HEIF, JPEG XL und JPEG 2000 nur, wenn
+        ''' die Bibliothek da ist - wie bisher in OpenSourceStream. Ein TIFF mit Gleitkomma nicht:
+        ''' es ist lineares Licht und geht den RAW-Weg (RawPreviewService.IsSupportedRaw).</summary>
         Public Shared Function CanDecode(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
             Return IcoPreviewService.IsSupportedIco(path) OrElse
                    PsdPreviewService.IsSupportedPsd(path) OrElse
                    (HeifDecodeService.IsSupportedHeif(path) AndAlso HeifDecodeService.IsAvailable) OrElse
                    (JxlDecodeService.IsSupportedJxl(path) AndAlso JxlDecodeService.IsAvailable) OrElse
-                   TiffPreviewService.IsSupportedTiff(path)
+                   (TiffPreviewService.IsSupportedTiff(path) AndAlso Not TiffPreviewService.IsFloatTiff(path)) OrElse
+                   (JpegTurboDecodeService.IsTurboJpeg(path) AndAlso JpegTurboDecodeService.IsAvailable) OrElse
+                   (Jpeg2000DecodeService.IsSupportedJpeg2000(path) AndAlso Jpeg2000DecodeService.IsAvailable)
         End Function
 
         ''' <summary>Das Bild in der Form, die das Einlesen eines PNG ergab (Besitz beim
@@ -53,9 +57,27 @@ Namespace Services
                 raw = JxlDecodeService.TryDecode(path)
             ElseIf TiffPreviewService.IsSupportedTiff(path) Then
                 raw = TiffPreviewService.TryDecode(path)
+            ElseIf JpegTurboDecodeService.IsTurboJpeg(path) Then
+                ' JPEG mit 12 Bit oder verlustfrei: der Kopf entscheidet, nicht die Endung. Jedes
+                ' andere JPEG bleibt bei Skia und kommt hier nicht an.
+                raw = JpegTurboDecodeService.TryDecode(path)
+            ElseIf Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then
+                raw = Jpeg2000DecodeService.TryDecode(path)
             Else
                 Return Nothing
             End If
+            If raw Is Nothing Then Return Nothing
+            Try
+                Return ToDecodedForm(raw)
+            Finally
+                raw.Dispose()
+            End Try
+        End Function
+
+        ''' <summary>Das Bild eines eigenen Lesers in der Form von <see cref="TryDecode"/>; das
+        ''' uebergebene wird verbraucht. Fuer Wege, die den Leser selbst rufen (die verkleinerte
+        ''' Kachel aus JPEG 2000).</summary>
+        Friend Shared Function ToDecodedFormOrNothing(raw As SKBitmap) As SKBitmap
             If raw Is Nothing Then Return Nothing
             Try
                 Return ToDecodedForm(raw)

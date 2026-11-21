@@ -12042,4 +12042,79 @@
   <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
     <value>Anpassungen anwenden ({0} Dateien)</value>
   </data>
+  <data name="Farbwert_an_der_Pipette_062f9a83" xml:space="preserve">
+    <value>Farbwert an der Pipette</value>
+  </data>
+  <data name="Was_die_kleine_Anzeige_neben_der_Pipette_ber_die_91e386a5" xml:space="preserve">
+    <value>Was die kleine Anzeige neben der Pipette über die Farbe unter der Spitze nennt: den Hex-Wert, die Werte für Rot, Grün und Blau von 0 bis 255 oder beides.</value>
+  </data>
+  <data name="Hex_Wert_200ae7f9" xml:space="preserve">
+    <value>Hex-Wert</value>
+  </data>
+  <data name="R_G_B_einzeln_5267f844" xml:space="preserve">
+    <value>R G B einzeln</value>
+  </data>
+  <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
+    <value>Hex-Wert und R G B</value>
+  </data>
+  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
+    <value>Rückfall auf die Bibliotheken des Systems</value>
+  </data>
+  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
+    <value>Scheitert eine mitgelieferte Bibliothek an einer Datei, versucht FerrumPix dieselbe Datei mit der Fassung, die auf dem System installiert ist. Das gibt es nur unter Linux außerhalb des Flatpak. Jeder Rückfall wird in dieser Datei festgehalten, auch ohne Fehlerdiagnose-Protokoll:</value>
+  </data>
+  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
+    <value>Im Flatpak nicht vorgesehen, dort gibt es keine Bibliotheken des Systems</value>
+  </data>
+  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
+    <value>Auf diesem Betriebssystem nicht vorgesehen</value>
+  </data>
+  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
+    <value>Nicht nötig, es läuft keine mitgelieferte Fassung</value>
+  </data>
+  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
+    <value>Keine Fassung des Systems gefunden</value>
+  </data>
+  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
+    <value>Bereit: Fassung {0} unter {1}, sie wird erst geladen, wenn die mitgelieferte an einer Datei scheitert</value>
+  </data>
+  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
+    <value>Geladen: Fassung {0} unter {1}, bisher {2} Dateien damit gelesen</value>
+  </data>
+  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
+    <value>Gefunden unter {0}, aber nicht nutzbar, der Grund steht im Protokoll</value>
+  </data>
+  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
+    <value>libjpeg-turbo</value>
+  </data>
+  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
+    <value>JPEG mit 12 Bit und verlustfreies JPEG lesen</value>
+  </data>
+  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
+    <value>IJG, BSD-3-Clause, Zlib</value>
+  </data>
+  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
+    <value>libjpeg-turbo liest JPEG-Dateien mit 12 Bit und verlustfreie JPEG-Dateien, die die Grafikbibliothek der Anwendung nicht öffnet; jedes andere JPEG liest weiter diese. Sie steht unter der IJG- und der BSD-Lizenz, enthaltene Teile unter der zlib-Lizenz. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libjpeg-turbo des Systems; der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben nur diese Dateien ungeöffnet.</value>
+  </data>
+  <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
+    <value>JPEG-2000-Dateien lesen</value>
+  </data>
+  <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
+    <value>EXR-Dateien lesen</value>
+  </data>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
+    <value>OpenJPEG liest JPEG-2000-Dateien, auch HTJ2K, und steht unter der BSD-Lizenz. Windows und Linux bringen sie mit, der Flatpak nimmt sie aus seiner Laufzeit; unter macOS fehlt sie noch. Fehlt sie, bleiben nur diese Dateien ungeöffnet.</value>
+  </data>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
+    <value>OpenEXR liest EXR-Dateien und steht unter der BSD-Lizenz, die darin enthaltenen libdeflate, OpenJPH und zstd unter der MIT- und der BSD-Lizenz. Windows, Linux und der Flatpak bringen sie mit; unter macOS fehlt sie noch. Fehlt sie, bleiben nur diese Dateien ungeöffnet.</value>
+  </data>
+  <data name="OpenJPEG_fc68646e" xml:space="preserve">
+    <value>OpenJPEG</value>
+  </data>
+  <data name="OpenEXR_f86ff74c" xml:space="preserve">
+    <value>OpenEXR</value>
+  </data>
+  <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
+    <value>Bilder, die eine HEIF-Datei als JPEG trägt, etwa die Vorschaubilder mancher Kameras, liest libheif mit der darin enthaltenen libjpeg-turbo, der Flatpak mit der libheif seiner Laufzeit.</value>
+  </data>
 </root>

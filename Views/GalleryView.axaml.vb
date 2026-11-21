@@ -1837,7 +1837,7 @@ Namespace Views
                 e.Handled = True
                 Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType(LocalizationService.T("Bilder & Videos")) With {
                     .Patterns = New List(Of String) From {
-                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
+                        "*.jpg", "*.jpeg", "*.jpe", "*.jfif", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
                         "*.heic", "*.heif", "*.hif", "*.avif", "*.jxl", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
                 }
                 Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {
@@ -1890,7 +1890,7 @@ Namespace Views
                 e.Handled = True
                 Dim mediaType = New Avalonia.Platform.Storage.FilePickerFileType(LocalizationService.T("Bilder & Videos")) With {
                     .Patterns = New List(Of String) From {
-                        "*.jpg", "*.jpeg", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
+                        "*.jpg", "*.jpeg", "*.jpe", "*.jfif", "*.png", "*.gif", "*.bmp", "*.tif", "*.tiff", "*.webp",
                         "*.heic", "*.heif", "*.hif", "*.avif", "*.jxl", "*.mp4", "*.mov", "*.mkv", "*.avi", "*.webm"}
                 }
                 Dim files = Await storageProvider.OpenFilePickerAsync(New Avalonia.Platform.Storage.FilePickerOpenOptions With {

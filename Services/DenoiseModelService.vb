@@ -124,7 +124,7 @@ Namespace Services
         ''' Kostet ein open_file (unter einer Millisekunde); das Ergebnis der letzten Datei wird
         ''' gemerkt, weil die Oberflaeche oft fragt.</summary>
         Public Shared Function SupportsFile(path As String) As Boolean
-            If String.IsNullOrWhiteSpace(path) OrElse Not RawPreviewService.IsSupportedRaw(path) Then Return False
+            If String.IsNullOrWhiteSpace(path) OrElse Not RawPreviewService.IsCameraRaw(path) Then Return False
             Dim writeTime As DateTime
             Try
                 writeTime = IO.File.GetLastWriteTimeUtc(path)

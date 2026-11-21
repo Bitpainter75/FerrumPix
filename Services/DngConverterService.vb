@@ -45,7 +45,7 @@ Namespace Services
         Public Shared Function ConvertRawToDng(sourcePath As String, targetPath As String,
                                                Optional cancel As Threading.CancellationToken = Nothing) As Boolean
             If String.IsNullOrWhiteSpace(sourcePath) OrElse String.IsNullOrWhiteSpace(targetPath) Then Return False
-            If Not RawPreviewService.IsSupportedRaw(sourcePath) OrElse
+            If Not RawPreviewService.IsCameraRaw(sourcePath) OrElse
                String.Equals(Path.GetExtension(sourcePath), ".dng", StringComparison.OrdinalIgnoreCase) Then Return False
             ' DER KONVERTER SCHREIBT NIE INS ZIEL, sondern in eine versteckte Nachbardatei im selben
             ' Ordner, und erst nach einem sauberen Ende wird sie umgehaengt. Frueher bekam dnglab das

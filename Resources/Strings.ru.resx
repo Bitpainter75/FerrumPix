@@ -12064,4 +12064,79 @@
   <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
     <value>Применить коррекции (файлов: {0})</value>
   </data>
+  <data name="Farbwert_an_der_Pipette_062f9a83" xml:space="preserve">
+    <value>Значение цвета у пипетки</value>
+  </data>
+  <data name="Was_die_kleine_Anzeige_neben_der_Pipette_ber_die_91e386a5" xml:space="preserve">
+    <value>Что маленький индикатор рядом с пипеткой показывает о цвете под её кончиком: шестнадцатеричное значение, значения красного, зелёного и синего от 0 до 255 или и то и другое.</value>
+  </data>
+  <data name="Hex_Wert_200ae7f9" xml:space="preserve">
+    <value>Шестнадцатеричное значение</value>
+  </data>
+  <data name="R_G_B_einzeln_5267f844" xml:space="preserve">
+    <value>R G B по отдельности</value>
+  </data>
+  <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
+    <value>Шестнадцатеричное значение и R G B</value>
+  </data>
+  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
+    <value>Резервные системные библиотеки</value>
+  </data>
+  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
+    <value>Если встроенная библиотека не может открыть файл, FerrumPix пробует тот же файл с версией, установленной в системе. Это доступно только в Linux вне Flatpak. Каждый такой случай записывается в этот файл, даже без журнала диагностики:</value>
+  </data>
+  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
+    <value>Недоступно во Flatpak, там нет системных библиотек</value>
+  </data>
+  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
+    <value>Недоступно в этой операционной системе</value>
+  </data>
+  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
+    <value>Не требуется, встроенная версия не используется</value>
+  </data>
+  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
+    <value>Системная версия не найдена</value>
+  </data>
+  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
+    <value>Готово: версия {0} в {1}, загружается, только если встроенная не справится с файлом</value>
+  </data>
+  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
+    <value>Загружена: версия {0} в {1}, прочитано файлов: {2}</value>
+  </data>
+  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
+    <value>Найдена в {0}, но непригодна; причина указана в журнале</value>
+  </data>
+  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
+    <value>libjpeg-turbo</value>
+  </data>
+  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
+    <value>Чтение 12-битных JPEG и JPEG без потерь</value>
+  </data>
+  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
+    <value>IJG, BSD-3-Clause, Zlib</value>
+  </data>
+  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
+    <value>libjpeg-turbo читает 12-битные файлы JPEG и JPEG без потерь, которые графическая библиотека приложения не открывает; все остальные JPEG по-прежнему читает она. Распространяется по лицензиям IJG и BSD, входящие в неё части по лицензии zlib. Каждый пакет, кроме Flatpak, включает её и предпочитает её системной libjpeg-turbo; Flatpak берёт её из своей среды выполнения. Если её нет, не открываются только эти файлы.</value>
+  </data>
+  <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
+    <value>Чтение файлов JPEG 2000</value>
+  </data>
+  <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
+    <value>Чтение файлов EXR</value>
+  </data>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
+    <value>OpenJPEG читает файлы JPEG 2000, в том числе HTJ2K, и распространяется по лицензии BSD. Windows и Linux поставляют её вместе с программой, Flatpak берёт её из своей среды выполнения; в macOS её пока нет. Без неё не открываются только эти файлы.</value>
+  </data>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
+    <value>OpenEXR читает файлы EXR и распространяется по лицензии BSD, входящие в неё libdeflate, OpenJPH и zstd по лицензиям MIT и BSD. Windows, Linux и Flatpak поставляют её вместе с программой; в macOS её пока нет. Без неё не открываются только эти файлы.</value>
+  </data>
+  <data name="OpenJPEG_fc68646e" xml:space="preserve">
+    <value>OpenJPEG</value>
+  </data>
+  <data name="OpenEXR_f86ff74c" xml:space="preserve">
+    <value>OpenEXR</value>
+  </data>
+  <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
+    <value>Изображения, которые файл HEIF хранит в формате JPEG, например превью некоторых камер, libheif читает с помощью встроенной libjpeg-turbo, а Flatpak с помощью libheif из своей среды выполнения.</value>
+  </data>
 </root>

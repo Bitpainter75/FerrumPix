@@ -76,7 +76,8 @@ Namespace Services
                                                    baseEv As Double, normalization As Double,
                                                    knee As Double, sliderEv As Double,
                                                    shadowSaturation As Single(),
-                                                   toneMatrix As Single()) As SKBitmap
+                                                   toneMatrix As Single(),
+                                                   Optional magentaRecovery As Boolean = True) As SKBitmap
             Dim bitmap = ImageProcessor.NewDeepBitmap(width, height, SKAlphaType.Opaque)
             If bitmap Is Nothing Then Return Nothing
             Try
@@ -90,7 +91,8 @@ Namespace Services
                               Sub(y, row)
                               End Sub,
                               lens, ramp.ExposureEv, ramp.BlackLevel, knee, If(linear, Nothing, shadowSaturation), toneMatrix,
-                              Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength))
+                              Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
+                              magentaRecovery:=magentaRecovery)
                 Return bitmap
             Catch ex As Exception
                 DiagnosticLogService.LogException("RawDecodeService.BuildDeepFrom16Bit", ex)

@@ -80,6 +80,9 @@ Namespace Services
         ''' aus dem TIFF-Tag ist bereits angewandt - KEINE zweite Korrektur nachschalten.</summary>
         Public Shared Function TryDecode(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then Return Nothing
+            ' Gleitkomma lehnt libtiffs RGBA-Schnittstelle ab; die Datei traegt lineares Licht und
+            ' geht wie ein entwickeltes RAW durch die RAW-Grundstufe, hier mit deren Vorgaben.
+            If IsFloatTiff(path) Then Return RawDecodeService.TryDecode(path)
             EnsureSilentHandler()
             ' Eine Datei mit 16 Bit, die der tiefe Leser kann, kommt AUS dem tiefen Bild (siehe
             ' ShallowFromDeep). Alle anderen gehen den Weg darunter.
@@ -416,6 +419,192 @@ Namespace Services
                 Return SKColorSpace.CreateIcc(bytes)
             Catch ex As Exception
                 DiagnosticLogService.LogException("Tiff.ReadIccProfile", ex)
+                Return Nothing
+            End Try
+        End Function
+
+        ' ---------------------------------------------------------------- Gleitkomma
+
+        ''' <summary>Je Datei die letzte Antwort von <see cref="IsFloatTiff"/>, mit Groesse und
+        ''' Zeitstempel als Schluessel. Gefragt wird sie fuer jedes TIFF an jeder Weiche, weil ein
+        ''' TIFF mit Gleitkomma als RAW gilt (RawPreviewService.IsSupportedRaw); geoeffnet werden
+        ''' soll die Datei dafuer nur einmal.</summary>
+        Private Shared ReadOnly _floatCache As New Collections.Concurrent.ConcurrentDictionary(Of String, (Length As Long, Stamp As Long, IsFloat As Boolean))(StringComparer.Ordinal)
+        Private Const FloatCacheLimit As Integer = 4096
+
+        ''' <summary>Traegt die erste Seite Gleitkomma (16, 32 oder 64 Bit, SampleFormat 3) in RGB
+        ''' oder Graustufen? Dann ist sie lineares Licht und geht durch die RAW-Grundstufe
+        ''' (RawDecodeServiceLinear.vb) statt durch libtiffs RGBA-Schnittstelle, die Gleitkomma
+        ''' ablehnt. 24 Bit Gleitkomma (eine Form aus DNG) bleibt aussen vor.</summary>
+        Public Shared Function IsFloatTiff(path As String) As Boolean
+            If Not IsSupportedTiff(path) Then Return False
+            Try
+                Dim info = New FileInfo(path)
+                If Not info.Exists Then Return False
+                Dim stamp = info.LastWriteTimeUtc.Ticks
+                Dim cached As (Length As Long, Stamp As Long, IsFloat As Boolean) = Nothing
+                If _floatCache.TryGetValue(path, cached) AndAlso cached.Length = info.Length AndAlso cached.Stamp = stamp Then Return cached.IsFloat
+                Dim result = False
+                EnsureSilentHandler()
+                Using tif = Tiff.Open(path, "r")
+                    If tif IsNot Nothing Then
+                        Dim layout As FloatLayout
+                        result = ReadFloatLayout(tif, layout)
+                    End If
+                End Using
+                If _floatCache.Count >= FloatCacheLimit Then _floatCache.Clear()
+                _floatCache(path) = (info.Length, stamp, result)
+                Return result
+            Catch
+                Return False
+            End Try
+        End Function
+
+        Private Structure FloatLayout
+            Public Width As Integer
+            Public Height As Integer
+            Public Bits As Integer
+            ''' <summary>Werte je Bildpunkt in der Datei, Farbe und weitere (Alpha) zusammen.</summary>
+            Public Samples As Integer
+            Public IsGray As Boolean
+            Public Separate As Boolean
+            Public FlipHorizontal As Boolean
+            Public FlipVertical As Boolean
+        End Structure
+
+        Private Shared Function ReadFloatLayout(tif As Tiff, ByRef layout As FloatLayout) As Boolean
+            Dim format = tif.GetFieldDefaulted(TiffTag.SAMPLEFORMAT)
+            If format Is Nothing OrElse format(0).ToInt() <> CInt(SampleFormat.IEEEFP) Then Return False
+            Dim bits = tif.GetFieldDefaulted(TiffTag.BITSPERSAMPLE)
+            If bits Is Nothing Then Return False
+            layout.Bits = bits(0).ToInt()
+            If layout.Bits <> 16 AndAlso layout.Bits <> 32 AndAlso layout.Bits <> 64 Then Return False
+            Dim widthField = tif.GetField(TiffTag.IMAGEWIDTH)
+            Dim heightField = tif.GetField(TiffTag.IMAGELENGTH)
+            If widthField Is Nothing OrElse heightField Is Nothing Then Return False
+            layout.Width = widthField(0).ToInt()
+            layout.Height = heightField(0).ToInt()
+            If Not LinearLightImage.SizeAllowed(layout.Width, layout.Height) Then Return False
+            Dim samples = tif.GetFieldDefaulted(TiffTag.SAMPLESPERPIXEL)
+            layout.Samples = If(samples Is Nothing, 1, samples(0).ToInt())
+            Dim photometricField = tif.GetField(TiffTag.PHOTOMETRIC)
+            If photometricField Is Nothing Then Return False
+            Select Case CType(photometricField(0).ToInt(), Photometric)
+                Case Photometric.RGB
+                    If layout.Samples < 3 Then Return False
+                Case Photometric.MINISBLACK
+                    If layout.Samples < 1 Then Return False
+                    layout.IsGray = True
+                Case Else
+                    Return False
+            End Select
+            If layout.Samples > 16 Then Return False
+            Dim planar = tif.GetFieldDefaulted(TiffTag.PLANARCONFIG)
+            layout.Separate = planar IsNot Nothing AndAlso planar(0).ToInt() = CInt(PlanarConfig.SEPARATE) AndAlso layout.Samples > 1
+            ' Die Ausrichtung wie beim tiefen Leser (ReadDeepLayout): die gestuerzten Lagen wie
+            ' ihre aufrechten Gegenstuecke, ohne Breite und Hoehe zu tauschen.
+            Dim orientationField = tif.GetFieldDefaulted(TiffTag.ORIENTATION)
+            Dim orientationValue = If(orientationField Is Nothing, 1, orientationField(0).ToInt())
+            Select Case orientationValue
+                Case 2, 6 : layout.FlipHorizontal = True
+                Case 3, 7 : layout.FlipHorizontal = True : layout.FlipVertical = True
+                Case 4, 8 : layout.FlipVertical = True
+            End Select
+            Return True
+        End Function
+
+        ''' <summary>Die erste Seite eines TIFF mit Gleitkomma als lineares Licht (Rot, Gruen, Blau;
+        ''' Grau auf alle drei, weitere Kanaele wie Alpha bleiben weg), oder Nothing. Die Werte gelten
+        ''' als lineares sRGB; ein eingebettetes Profil wird nicht angewandt (Gleitkomma-TIFF tragen
+        ''' selten eines, und Skia rechnet ein Profil nur auf 8 und 16 Bit ohne Kopfraum).</summary>
+        Friend Shared Function TryReadLinear(path As String) As LinearLightImage
+            If Not IsSupportedTiff(path) OrElse Not File.Exists(path) Then Return Nothing
+            EnsureSilentHandler()
+            Try
+                Using tif = Tiff.Open(path, "r")
+                    If tif Is Nothing Then Return Nothing
+                    Dim layout As FloatLayout
+                    If Not ReadFloatLayout(tif, layout) Then Return Nothing
+                    Dim width = layout.Width
+                    Dim height = layout.Height
+                    Dim colors = If(layout.IsGray, 1, 3)
+                    Dim bytesPerSample = layout.Bits \ 8
+                    Dim planes = If(layout.Separate, layout.Samples, 1)
+                    Dim samplesPerPlane = If(layout.Separate, 1, layout.Samples)
+                    Dim rgb(CInt(CLng(width) * height * 3) - 1) As Single
+
+                    ' Ein Wert aus den Bytes der Datei; libtiff liefert sie in der Reihenfolge des Rechners.
+                    Dim ValueAt = Function(data As Byte(), offset As Integer) As Single
+                                      Select Case bytesPerSample
+                                          Case 2 : Return CSng(BitConverter.ToHalf(data, offset))
+                                          Case 4 : Return BitConverter.ToSingle(data, offset)
+                                          Case Else : Return CSng(BitConverter.ToDouble(data, offset))
+                                      End Select
+                                  End Function
+                    ' Legt einen Wert an seinen Platz im aufrechten Bild.
+                    Dim Store = Sub(x As Integer, y As Integer, sample As Integer, value As Single)
+                                    If sample >= colors Then Return
+                                    Dim tx = If(layout.FlipHorizontal, width - 1 - x, x)
+                                    Dim ty = If(layout.FlipVertical, height - 1 - y, y)
+                                    Dim o = (ty * width + tx) * 3
+                                    If Not Single.IsFinite(value) Then value = 0.0F
+                                    If colors = 1 Then
+                                        rgb(o) = value : rgb(o + 1) = value : rgb(o + 2) = value
+                                    Else
+                                        rgb(o + sample) = value
+                                    End If
+                                End Sub
+
+                    If tif.IsTiled() Then
+                        Dim tileWidthField = tif.GetField(TiffTag.TILEWIDTH)
+                        Dim tileHeightField = tif.GetField(TiffTag.TILELENGTH)
+                        If tileWidthField Is Nothing OrElse tileHeightField Is Nothing Then Return Nothing
+                        Dim tileWidth = tileWidthField(0).ToInt()
+                        Dim tileHeight = tileHeightField(0).ToInt()
+                        If tileWidth <= 0 OrElse tileHeight <= 0 OrElse CLng(tileWidth) * tileHeight > 64L * 1024 * 1024 Then Return Nothing
+                        Dim tile(tif.TileSize() - 1) As Byte
+                        If tile.Length < tileWidth * tileHeight * samplesPerPlane * bytesPerSample Then Return Nothing
+                        For plane = 0 To planes - 1
+                            If layout.Separate AndAlso plane >= colors Then Exit For
+                            For tileY = 0 To height - 1 Step tileHeight
+                                For tileX = 0 To width - 1 Step tileWidth
+                                    If tif.ReadTile(tile, 0, tileX, tileY, 0, CShort(plane)) < 0 Then Return Nothing
+                                    Dim rows = Math.Min(tileHeight, height - tileY)
+                                    Dim columns = Math.Min(tileWidth, width - tileX)
+                                    For y = 0 To rows - 1
+                                        Dim rowStart = y * tileWidth * samplesPerPlane * bytesPerSample
+                                        For x = 0 To columns - 1
+                                            For s = 0 To samplesPerPlane - 1
+                                                Dim sample = If(layout.Separate, plane, s)
+                                                Store(tileX + x, tileY + y, sample, ValueAt(tile, rowStart + (x * samplesPerPlane + s) * bytesPerSample))
+                                            Next
+                                        Next
+                                    Next
+                                Next
+                            Next
+                        Next
+                    Else
+                        Dim line(tif.ScanlineSize() - 1) As Byte
+                        If line.Length < width * samplesPerPlane * bytesPerSample Then Return Nothing
+                        For plane = 0 To planes - 1
+                            If layout.Separate AndAlso plane >= colors Then Exit For
+                            For y = 0 To height - 1
+                                If Not tif.ReadScanline(line, y, CShort(plane)) Then Return Nothing
+                                For x = 0 To width - 1
+                                    For s = 0 To Math.Min(samplesPerPlane, colors) - 1
+                                        Dim sample = If(layout.Separate, plane, s)
+                                        Store(x, y, sample, ValueAt(line, (x * samplesPerPlane + s) * bytesPerSample))
+                                    Next
+                                Next
+                            Next
+                        Next
+                    End If
+                    Return New LinearLightImage With {
+                        .Width = width, .Height = height, .Rgb = rgb,
+                        .Description = $"TIFF {layout.Bits} Bit Gleitkomma, {If(layout.IsGray, "Grau", "RGB")}"}
+                End Using
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Tiff.TryReadLinear", ex)
                 Return Nothing
             End Try
         End Function

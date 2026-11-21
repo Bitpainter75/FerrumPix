@@ -12064,4 +12064,79 @@
   <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
     <value>Použít úpravy (soubory: {0})</value>
   </data>
+  <data name="Farbwert_an_der_Pipette_062f9a83" xml:space="preserve">
+    <value>Hodnota barvy u kapátka</value>
+  </data>
+  <data name="Was_die_kleine_Anzeige_neben_der_Pipette_ber_die_91e386a5" xml:space="preserve">
+    <value>Co malý údaj vedle kapátka uvádí o barvě pod hrotem: šestnáctkovou hodnotu, hodnoty červené, zelené a modré od 0 do 255, nebo obojí.</value>
+  </data>
+  <data name="Hex_Wert_200ae7f9" xml:space="preserve">
+    <value>Šestnáctková hodnota</value>
+  </data>
+  <data name="R_G_B_einzeln_5267f844" xml:space="preserve">
+    <value>R G B jednotlivě</value>
+  </data>
+  <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
+    <value>Šestnáctková hodnota a R G B</value>
+  </data>
+  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
+    <value>Záložní systémové knihovny</value>
+  </data>
+  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
+    <value>Pokud přibalená knihovna nedokáže otevřít soubor, FerrumPix zkusí stejný soubor s verzí nainstalovanou v systému. Je to k dispozici jen v Linuxu mimo Flatpak. Každé takové použití se zapíše do tohoto souboru, i bez diagnostického protokolu:</value>
+  </data>
+  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
+    <value>Ve Flatpaku není k dispozici, nejsou v něm systémové knihovny</value>
+  </data>
+  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
+    <value>V tomto operačním systému není k dispozici</value>
+  </data>
+  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
+    <value>Není potřeba, neběží žádná přibalená verze</value>
+  </data>
+  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
+    <value>Nebyla nalezena žádná systémová verze</value>
+  </data>
+  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
+    <value>Připraveno: verze {0} v {1}, načte se, až když přibalená selže u nějakého souboru</value>
+  </data>
+  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
+    <value>Načteno: verze {0} v {1}, zatím s ní přečteno {2} souborů</value>
+  </data>
+  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
+    <value>Nalezeno v {0}, ale nepoužitelné; důvod je v protokolu</value>
+  </data>
+  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
+    <value>libjpeg-turbo</value>
+  </data>
+  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
+    <value>Čtení 12bitových a bezeztrátových souborů JPEG</value>
+  </data>
+  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
+    <value>IJG, BSD-3-Clause, Zlib</value>
+  </data>
+  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
+    <value>libjpeg-turbo čte 12bitové a bezeztrátové soubory JPEG, které grafická knihovna aplikace neotevře; každý jiný JPEG dál čte ona. Je pod licencemi IJG a BSD, obsažené části pod licencí zlib. Každý balíček kromě Flatpaku ji přibaluje a dává jí přednost před systémovou libjpeg-turbo; Flatpak ji bere ze svého běhového prostředí. Pokud chybí, zůstanou neotevřené jen tyto soubory.</value>
+  </data>
+  <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
+    <value>Čtení souborů JPEG 2000</value>
+  </data>
+  <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
+    <value>Čtení souborů EXR</value>
+  </data>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
+    <value>OpenJPEG čte soubory JPEG 2000 včetně HTJ2K a je šířena pod licencí BSD. Windows a Linux ji přinášejí s sebou, Flatpak ji bere ze svého runtime; v macOS zatím chybí. Bez ní zůstanou neotevřené jen tyto soubory.</value>
+  </data>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
+    <value>OpenEXR čte soubory EXR a je šířena pod licencí BSD, obsažené knihovny libdeflate, OpenJPH a zstd pod licencemi MIT a BSD. Windows, Linux i Flatpak ji přinášejí s sebou; v macOS zatím chybí. Bez ní zůstanou neotevřené jen tyto soubory.</value>
+  </data>
+  <data name="OpenJPEG_fc68646e" xml:space="preserve">
+    <value>OpenJPEG</value>
+  </data>
+  <data name="OpenEXR_f86ff74c" xml:space="preserve">
+    <value>OpenEXR</value>
+  </data>
+  <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
+    <value>Obrázky, které soubor HEIF ukládá jako JPEG, například náhledy některých fotoaparátů, čte libheif pomocí vestavěné knihovny libjpeg-turbo, Flatpak pomocí libheif ze svého běhového prostředí.</value>
+  </data>
 </root>

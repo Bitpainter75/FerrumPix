@@ -226,6 +226,7 @@ Namespace ViewModels
         Private _savedEditorAdjustmentsScrollBarAlwaysVisible As Boolean = False
         Private _savedEditorToolSwitcher As Boolean = False
         Private _savedColoredSliders As Boolean = False
+        Private _savedPickerReadout As String = AppSettingsService.PickerReadoutDefault
         Private _savedEditorCompactAdjustments As Boolean = False
         Private _savedEditorCompactAutoCollapse As Boolean = True
         Private _savedEditorCompactGroupOrder As String = ""
@@ -3223,6 +3224,61 @@ Namespace ViewModels
             End Set
         End Property
 
+        ''' <summary>Was die Anzeige neben der Pipette nennt (AppSettings.PickerReadout). Die
+        ''' Eintraege tragen den gespeicherten Wert als Key und den UEBERSETZTEN Namen; nach einem
+        ''' Sprachwechsel zieht RefreshLocalization die Namen am selben Eintrag nach.</summary>
+        Public ReadOnly Property PickerReadoutOptions As New ObservableCollection(Of PickerReadoutOption)()
+
+        Public Property PickerReadout As String
+            Get
+                Return _pickerReadout
+            End Get
+            Set(value As String)
+                Dim key = AppSettingsService.NormalizePickerReadout(value)
+                If String.Equals(key, _pickerReadout, StringComparison.Ordinal) Then Return
+                Me.RaiseAndSetIfChanged(_pickerReadout, key)
+                Me.RaisePropertyChanged(NameOf(SelectedPickerReadout))
+                ' Der Editor liest den Wert bei jeder Bewegung der Pipette aus dem
+                ' zwischengespeicherten Stand; er sieht die Wahl also sofort.
+                AppSettingsService.Update(Sub(s) s.PickerReadout = key)
+            End Set
+        End Property
+        Private _pickerReadout As String = AppSettingsService.PickerReadoutDefault
+
+        Public Property SelectedPickerReadout As PickerReadoutOption
+            Get
+                Return If(PickerReadoutOptions.FirstOrDefault(
+                              Function(o) String.Equals(o.Key, _pickerReadout, StringComparison.Ordinal)),
+                          PickerReadoutOptions.FirstOrDefault())
+            End Get
+            Set(value As PickerReadoutOption)
+                If value Is Nothing Then Return
+                PickerReadout = value.Key
+            End Set
+        End Property
+
+        ''' <summary>Baut die Auswahl oder zieht ihre Namen nach. Jeder Name steht als Literal in
+        ''' T(), damit der Sammler des Pruefstands ihn findet; am selben Eintrag nachziehen statt
+        ''' leeren, sonst verliert die offene Liste ihre Wahl.</summary>
+        Private Sub BuildPickerReadoutOptions()
+            For Each key In AppSettingsService.PickerReadoutChoices
+                Dim name As String
+                Select Case key
+                    Case "Hex" : name = LocalizationService.T("Hex-Wert")
+                    Case "Rgb" : name = LocalizationService.T("R G B einzeln")
+                    Case Else : name = LocalizationService.T("Hex-Wert und R G B")
+                End Select
+                Dim existing = PickerReadoutOptions.FirstOrDefault(
+                    Function(o) String.Equals(o.Key, key, StringComparison.Ordinal))
+                If existing Is Nothing Then
+                    PickerReadoutOptions.Add(New PickerReadoutOption With {.Key = key, .Name = name})
+                Else
+                    existing.Name = name
+                End If
+            Next
+            Me.RaisePropertyChanged(NameOf(SelectedPickerReadout))
+        End Sub
+
         ''' <summary>Kompaktmodus der Anpassungen: ein Werkzeug "Anpassungen" statt der fuenf. Ab Werk
         ''' aus. Der Editor stellt Leiste und Werkzeug sofort um
         ''' (EditorViewModel.RefreshCompactAdjustments).</summary>
@@ -5348,6 +5404,7 @@ Namespace ViewModels
             _editorToolSwitcher = _appSettings.EditorToolSwitcher
             _coloredSliders = _appSettings.ColoredSliders
             Controls.RoundSlider.ColoredTracks = _coloredSliders
+            _pickerReadout = AppSettingsService.NormalizePickerReadout(_appSettings.PickerReadout)
             _editorCompactAdjustments = _appSettings.EditorCompactAdjustments
             _editorCompactAutoCollapse = _appSettings.EditorCompactAutoCollapse
             _editorCompactGroupOrder = AppSettingsService.NormalizeEditorCompactGroupOrder(_appSettings.EditorCompactGroupOrder)
@@ -5561,6 +5618,7 @@ Namespace ViewModels
             LocalizationService.LanguageMode = _languageMode
             LocalizationService.DateFormatMode = _dateFormatMode
             BuildDateFormatOptions()
+            BuildPickerReadoutOptions()
             SnapshotSettings()
         End Sub
 
@@ -5703,6 +5761,7 @@ Namespace ViewModels
             _savedEditorAdjustmentsScrollBarAlwaysVisible = _editorAdjustmentsScrollBarAlwaysVisible
             _savedEditorToolSwitcher = _editorToolSwitcher
             _savedColoredSliders = _coloredSliders
+            _savedPickerReadout = _pickerReadout
             _savedEditorCompactAdjustments = _editorCompactAdjustments
             _savedEditorCompactAutoCollapse = _editorCompactAutoCollapse
             _savedEditorCompactGroupOrder = _editorCompactGroupOrder
@@ -5929,6 +5988,7 @@ Namespace ViewModels
             EditorAdjustmentsScrollBarAlwaysVisible = _savedEditorAdjustmentsScrollBarAlwaysVisible
             EditorToolSwitcher = _savedEditorToolSwitcher
             ColoredSliders = _savedColoredSliders
+            PickerReadout = _savedPickerReadout
             EditorCompactAdjustments = _savedEditorCompactAdjustments
             EditorCompactAutoCollapse = _savedEditorCompactAutoCollapse
             EditorCompactGroupOrder = _savedEditorCompactGroupOrder
@@ -6099,6 +6159,7 @@ Namespace ViewModels
             EditorAdjustmentsScrollBarAlwaysVisible = False
             EditorToolSwitcher = False
             ColoredSliders = False
+            PickerReadout = AppSettingsService.PickerReadoutDefault
             EditorCompactAdjustments = False
             EditorCompactAutoCollapse = True
             EditorCompactGroupOrder = ""
@@ -7012,13 +7073,15 @@ Namespace ViewModels
             BuildModelGroups()
             BuildLanguageOptions()
             BuildDateFormatOptions()
+            BuildPickerReadoutOptions()
             ' Die Kartennamen tragen ihre Bauart als übersetztes Wort in sich - sie stünden nach
             ' einem Sprachwechsel sonst in der alten Sprache da. Nur, wenn schon abgefragt.
             If GpuAccelerationService.IsChecked Then BuildGpuDeviceOptions()
             For Each n In {NameOf(FolderSummaryText),
                            NameOf(LensDatabaseInfo), NameOf(AdjustmentGroupItems),
                            NameOf(InfoPanelRowItems), NameOf(InfoPanelSectionItems),
-                           NameOf(ModelGroups), NameOf(GpuAccelerationStatusText)}
+                           NameOf(ModelGroups), NameOf(GpuAccelerationStatusText),
+                           NameOf(SystemLibraryFallbackRows)}
                 Me.RaisePropertyChanged(n)
             Next
             ' Die Zeilen tragen ihre Texte selbst (Titel, Zahlen, "Ordner fehlt") und lesen sie beim
@@ -7865,6 +7928,31 @@ Namespace ViewModels
 
         ''' <summary>Meldet seine Aenderung: das Beispiel im Namen haengt an Sprache und Format und
         ''' wird am selben Eintrag nachgezogen.</summary>
+        Public Property Name As String
+            Get
+                Return _name
+            End Get
+            Set(value As String)
+                Me.RaiseAndSetIfChanged(_name, If(value, ""))
+            End Set
+        End Property
+
+        Public Overrides Function ToString() As String
+            Return Name
+        End Function
+    End Class
+
+    ''' <summary>Ein Eintrag in der Auswahl, was die Anzeige neben der Pipette nennt. Key ist der
+    ''' gespeicherte Wert, Name der uebersetzte Anzeigetext.</summary>
+    Public Class PickerReadoutOption
+        Inherits ReactiveObject
+
+        Private _name As String = ""
+
+        Public Property Key As String = ""
+
+        ''' <summary>Meldet seine Aenderung: nach einem Sprachwechsel wird der Name am selben
+        ''' Eintrag nachgezogen.</summary>
         Public Property Name As String
             Get
                 Return _name

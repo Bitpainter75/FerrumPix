@@ -323,6 +323,42 @@
                                 </Grid>
                                 <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
                                     <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="libjpeg-turbo" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="JPEG mit 12 Bit und verlustfreies JPEG lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/libjpeg-turbo/libjpeg-turbo" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/libjpeg-turbo/libjpeg-turbo/blob/main/LICENSE.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="IJG, BSD-3-Clause, Zlib" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="OpenJPEG" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="JPEG-2000-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/uclouvain/openjpeg" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/uclouvain/openjpeg/blob/master/LICENSE" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="BSD-2-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="OpenEXR" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="EXR-Dateien lesen" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/AcademySoftwareFoundation/openexr" Click="OnLicenseLinkClick" ToolTip.Tip="Projektseite öffnen">
+                                        <icons:SvgIcon Source="avares://FerrumPix/Assets/Icons/phosphor/regular/github-logo.svg" Width="18" Height="18"/>
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="ghost" Padding="8,5" VerticalAlignment="Center" Tag="https://github.com/AcademySoftwareFoundation/openexr/blob/main/LICENSE.md" Click="OnLicenseLinkClick" ToolTip.Tip="Lizenztext öffnen">
+                                        <TextBlock Text="BSD-3-Clause" FontSize="{DynamicResource FP.Font.Small}"/>
+                                    </Button>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4" Margin="0,0,12,6">
+                                    <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="dnglab" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="RAW in DNG umwandeln, nur vom System" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Small}" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
@@ -502,7 +538,31 @@
                         <TextBlock Text="LibRaw sowie libheif mit libde265 stehen unter der LGPL, libmpv unter der GPL, das in libheif enthaltene dav1d unter der BSD-Lizenz. Sie werden dynamisch geladen und lassen sich durch eigene Übersetzungen ersetzen. Die Lizenztexte und Herkunftsnachweise liegen jedem Paket bei, meist im Ordner licenses neben der Anwendung." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="LibRaw entwickelt RAW-Dateien. Jedes Paket bringt einen aktuellen Stand mit und nimmt ihn vor einer LibRaw des Systems, damit jeder Rechner gleich entwickelt; der Flatpak baut denselben Stand selbst. Fehlt sie, zeigen RAW-Dateien die eingebettete Vorschau der Kamera." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="libheif liest HEIC-, HEIF- und AVIF-Dateien, AVIF mit dem enthaltenen dav1d. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libheif des Systems; macOS fragt zuerst seinen eigenen Leser, der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <TextBlock Text="Bilder, die eine HEIF-Datei als JPEG trägt, etwa die Vorschaubilder mancher Kameras, liest libheif mit der darin enthaltenen libjpeg-turbo, der Flatpak mit der libheif seiner Laufzeit." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="libjxl liest und schreibt JPEG-XL-Dateien und steht unter der BSD-Lizenz. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libjxl des Systems; der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben solche Dateien ungeöffnet, alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <TextBlock Text="libjpeg-turbo liest JPEG-Dateien mit 12 Bit und verlustfreie JPEG-Dateien, die die Grafikbibliothek der Anwendung nicht öffnet; jedes andere JPEG liest weiter diese. Sie steht unter der IJG- und der BSD-Lizenz, enthaltene Teile unter der zlib-Lizenz. Jedes Paket außer dem Flatpak bringt sie mit und nimmt sie vor einer libjpeg-turbo des Systems; der Flatpak nimmt sie aus seiner Laufzeit. Fehlt sie, bleiben nur diese Dateien ungeöffnet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <TextBlock Text="OpenJPEG liest JPEG-2000-Dateien, auch HTJ2K, und steht unter der BSD-Lizenz. Windows und Linux bringen sie mit, der Flatpak nimmt sie aus seiner Laufzeit; unter macOS fehlt sie noch. Fehlt sie, bleiben nur diese Dateien ungeöffnet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                        <TextBlock Text="OpenEXR liest EXR-Dateien und steht unter der BSD-Lizenz, die darin enthaltenen libdeflate, OpenJPH und zstd unter der MIT- und der BSD-Lizenz. Windows, Linux und der Flatpak bringen sie mit; unter macOS fehlt sie noch. Fehlt sie, bleiben nur diese Dateien ungeöffnet." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+
+                        <!-- DER RUECKFALL AUF DIE BIBLIOTHEKEN DES SYSTEMS: eine Zeile je Bibliothek
+                             aus SystemLibraryFallbackRows (SettingsViewModelSystemLibraries.vb). Eine
+                             weitere Bibliothek kommt dort mit einer Zeile dazu, hier aendert sich
+                             nichts. Die Texte der Zeilen sind schon uebersetzt, deshalb no-translate. -->
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Rückfall auf die Bibliotheken des Systems" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Scheitert eine mitgelieferte Bibliothek an einer Datei, versucht FerrumPix dieselbe Datei mit der Fassung, die auf dem System installiert ist. Das gibt es nur unter Linux außerhalb des Flatpak. Jeder Rückfall wird in dieser Datei festgehalten, auch ohne Fehlerdiagnose-Protokoll:" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                            <TextBlock Classes="no-translate" Text="{Binding SystemFallbackLogFile}" Foreground="{DynamicResource FP.Text.Muted}" FontSize="{DynamicResource FP.Font.Small}" TextWrapping="Wrap"/>
+                            <ItemsControl ItemsSource="{Binding SystemLibraryFallbackRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="110,*" ColumnSpacing="8" Margin="0,2">
+                                            <TextBlock Classes="no-translate" Text="{Binding Name}" FontSize="{DynamicResource FP.Font.Body}" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="1" Classes="no-translate" Text="{Binding Status}" Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                         <TextBlock Text="Die Kartenansicht zeichnet FerrumPix selbst; die Kartenkacheln kommen ab Werk von OpenStreetMap. Die Kartendaten stehen unter der Open Database License, Namensnennung: OpenStreetMap contributors. Abgerufen wird nach der Kachelrichtlinie der OpenStreetMap Foundation, mit eigener Kennung und einem Zwischenspeicher auf diesem Gerät." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="dnglab wandelt RAW-Dateien in DNG um und wird dafür als eigenes Programm aufgerufen, nicht eingebunden. Es liegt keinem Paket bei und muss selbst installiert werden; fehlt es, sagt das Stapel-Konvertieren das beim Versuch, und alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>
                         <TextBlock Text="G'MIC wird für externe Bildfilter als eigenes Programm aufgerufen, nicht eingebunden. Es liegt keinem Paket bei und muss selbst installiert werden; fehlt es, bleibt der G'MIC-Eintrag im Editor ohne Wirkung, und alles andere arbeitet unverändert." Foreground="{DynamicResource FP.Text.Secondary}" FontSize="{DynamicResource FP.Font.Body}" TextWrapping="Wrap"/>

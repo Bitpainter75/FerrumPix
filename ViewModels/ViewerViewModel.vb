@@ -3186,8 +3186,8 @@ Namespace ViewModels
                     DiagnosticLogService.LogAlways("Viewer.RawWarm", $"ueberholt vor dem Start file={name}; token={token}; jetzt={current}")
                     Return
                 End If
-                If Not RawDecodeService.IsAvailable Then
-                    DiagnosticLogService.LogAlways("Viewer.RawWarm", $"LibRaw fehlt file={name}")
+                If Not RawDecodeService.CanDevelop(path) Then
+                    DiagnosticLogService.LogAlways("Viewer.RawWarm", $"nicht entwickelbar (LibRaw oder Leser fehlt) file={name}")
                     Return
                 End If
                 Dim filled = Await Task.Run(Function() RawDecodeService.WarmRawCache(
@@ -3356,7 +3356,7 @@ Namespace ViewModels
         Private Shared Function WillDevelopRawInViewer(path As String) As Boolean
             If Not RawPreviewService.IsSupportedRaw(path) Then Return False
             Dim settings = AppSettingsService.Load()
-            Return ShouldDevelopRaw(False, RawDecodeService.IsAvailable,
+            Return ShouldDevelopRaw(False, RawDecodeService.CanDevelop(path),
                                     settings.DevelopRawInViewer,
                                     RawSidecarService.Exists(path),
                                     settings.DevelopRawInViewerWithoutRecipe)
@@ -3369,11 +3369,14 @@ Namespace ViewModels
         ''' Im Vergleich gilt sie IMMER: dort ist die Kamera-Vorschau die falsche Quelle. Sonst
         ''' entweder bei eingeschalteter Einstellung UND vorhandener Begleitdatei, oder wenn die
         ''' zweite Einstellung das Rezept gar nicht zur Bedingung macht - dann wird auch ein
-        ''' unbearbeitetes RAW entwickelt, was je Bild einen vollen Decode kostet.</summary>
-        Friend Shared Function ShouldDevelopRaw(alwaysDevelop As Boolean, libRawAvailable As Boolean,
+        ''' unbearbeitetes RAW entwickelt, was je Bild einen vollen Decode kostet.
+        '''
+        ''' <paramref name="canDevelop"/> ist RawDecodeService.CanDevelop der Datei: LibRaw, bei
+        ''' linearem Licht dessen eigener Leser.</summary>
+        Friend Shared Function ShouldDevelopRaw(alwaysDevelop As Boolean, canDevelop As Boolean,
                                                 settingEnabled As Boolean, sidecarExists As Boolean,
                                                 developWithoutRecipe As Boolean) As Boolean
-            If Not libRawAvailable Then Return False
+            If Not canDevelop Then Return False
             If alwaysDevelop OrElse developWithoutRecipe Then Return True
             Return settingEnabled AndAlso sidecarExists
         End Function
@@ -3413,7 +3416,7 @@ Namespace ViewModels
             ' auch ohne Rezept. ApplyAdjustments liefert bereits orientiert + mit
             ' Rezept-Geometrie. Einmal laden genuegt, beide Schalter stehen in derselben Datei.
             Dim settings = AppSettingsService.Load()
-            If ShouldDevelopRaw(alwaysDevelop, RawDecodeService.IsAvailable,
+            If ShouldDevelopRaw(alwaysDevelop, RawDecodeService.CanDevelop(path),
                                 settings.DevelopRawInViewer,
                                 RawSidecarService.Exists(path),
                                 settings.DevelopRawInViewerWithoutRecipe) Then
@@ -3472,7 +3475,8 @@ Namespace ViewModels
             ' Datei selbst auf, und keines der Formate fuehrt eine Beistelldatei - keine zweite
             ' Korrektur. Direkt aus dem Bitmap, ohne PNG dazwischen (ForeignImageDecoder).
             If IcoPreviewService.IsSupportedIco(path) OrElse TiffPreviewService.IsSupportedTiff(path) OrElse
-               HeifDecodeService.IsSupportedHeif(path) OrElse JxlDecodeService.IsSupportedJxl(path) Then
+               HeifDecodeService.IsSupportedHeif(path) OrElse JxlDecodeService.IsSupportedJxl(path) OrElse
+               JpegTurboDecodeService.IsTurboJpeg(path) OrElse Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then
                 Return ImageOrientationService.ForeignToAvaloniaBitmap(path, 0)
             End If
             If FpxService.IsFpx(path) Then

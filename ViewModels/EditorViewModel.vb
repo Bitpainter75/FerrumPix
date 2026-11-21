@@ -6790,7 +6790,11 @@ Namespace ViewModels
         ''' neutrale Fläche ist das Ziel, nicht ein einzelner Punkt, und das Rauschen eines
         ''' Bildpunkts ginge sonst unmittelbar in die Farbtemperatur ein.</summary>
         Private Sub BeginWhiteBalancePick()
-            BeginColorPickAt(AddressOf ApplyWhiteBalanceFromPick, sampleRadius:=WhiteBalancePickRadius)
+            ' Die Anzeige an der Pipette nennt, was der Klick misst: den gemittelten Bildpunkt im
+            ' Vergleichsbild OHNE Farbbearbeitung (siehe ApplyWhiteBalanceFromPick), nie Alpha.
+            BeginColorPickAt(AddressOf ApplyWhiteBalanceFromPick, sampleRadius:=WhiteBalancePickRadius,
+                             previewSampler:=CreateProbePickSampler(
+                                 Sub(probe) probe.CopyPixelAdjustmentsFrom(New ImageAdjustments())))
         End Sub
 
         ''' <summary>Wie weit die Pipette des Weissabgleichs mittelt, in Bildpunkten.</summary>
@@ -6914,29 +6918,36 @@ Namespace ViewModels
             If source Is Nothing OrElse probe Is Nothing Then Return Nothing
 
             Using rendered = ImageProcessor.RenderPreviewSkBitmap(source, probe)
-                If rendered Is Nothing OrElse rendered.Width <= 0 OrElse rendered.Height <= 0 Then Return Nothing
-
-                Dim px = Math.Max(0, Math.Min(rendered.Width - 1, CInt(xPercent * rendered.Width)))
-                Dim py = Math.Max(0, Math.Min(rendered.Height - 1, CInt(yPercent * rendered.Height)))
-
-                Dim firstX = Math.Max(0, px - WhiteBalancePickRadius)
-                Dim lastX = Math.Min(rendered.Width - 1, px + WhiteBalancePickRadius)
-                Dim firstY = Math.Max(0, py - WhiteBalancePickRadius)
-                Dim lastY = Math.Min(rendered.Height - 1, py + WhiteBalancePickRadius)
-
-                Dim sumR As Long = 0, sumG As Long = 0, sumB As Long = 0, count As Integer = 0
-                For sampleY As Integer = firstY To lastY
-                    For sampleX As Integer = firstX To lastX
-                        Dim pixel = rendered.GetPixel(sampleX, sampleY)
-                        sumR += pixel.Red
-                        sumG += pixel.Green
-                        sumB += pixel.Blue
-                        count += 1
-                    Next
-                Next
-                If count = 0 Then Return Nothing
-                Return New SKColor(CByte(sumR \ count), CByte(sumG \ count), CByte(sumB \ count))
+                Return AverageProbePixel(rendered, xPercent, yPercent)
             End Using
+        End Function
+
+        ''' <summary>Der gemittelte Bildpunkt eines Vergleichsbilds an der Stelle (Anteile 0 bis 1).
+        ''' Geteilt zwischen dem Klick (<see cref="SampleProbePixel"/>) und der Anzeige an der
+        ''' Pipette (<see cref="CreateProbePickSampler"/>), damit beide denselben Wert nennen.</summary>
+        Private Shared Function AverageProbePixel(rendered As SKBitmap,
+                                                  xPercent As Double, yPercent As Double) As SKColor?
+            If rendered Is Nothing OrElse rendered.Width <= 0 OrElse rendered.Height <= 0 Then Return Nothing
+            Dim px = Math.Max(0, Math.Min(rendered.Width - 1, CInt(xPercent * rendered.Width)))
+            Dim py = Math.Max(0, Math.Min(rendered.Height - 1, CInt(yPercent * rendered.Height)))
+
+            Dim firstX = Math.Max(0, px - WhiteBalancePickRadius)
+            Dim lastX = Math.Min(rendered.Width - 1, px + WhiteBalancePickRadius)
+            Dim firstY = Math.Max(0, py - WhiteBalancePickRadius)
+            Dim lastY = Math.Min(rendered.Height - 1, py + WhiteBalancePickRadius)
+
+            Dim sumR As Long = 0, sumG As Long = 0, sumB As Long = 0, count As Integer = 0
+            For sampleY As Integer = firstY To lastY
+                For sampleX As Integer = firstX To lastX
+                    Dim pixel = rendered.GetPixel(sampleX, sampleY)
+                    sumR += pixel.Red
+                    sumG += pixel.Green
+                    sumB += pixel.Blue
+                    count += 1
+                Next
+            Next
+            If count = 0 Then Return Nothing
+            Return New SKColor(CByte(sumR \ count), CByte(sumG \ count), CByte(sumB \ count))
         End Function
 
         ''' <summary>sRGB-Gamma nach Linearlicht, für die eine Farbe der Pipette. Die Kette nimmt
@@ -7552,7 +7563,10 @@ Namespace ViewModels
                 ' Genau der Pfad, den PreparePreviewSource dekodiert - sonst richtete sich die
                 ' Anzeige nach einer anderen Datei als die Wirkung. Bei einer .fpx ist das die
                 ' entpackte Basis, nicht das Buendel.
-                Return IsRawSourceEditable AndAlso RawDecodeService.IsAvailable
+                ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) traegt weder Kamera noch
+                ' Objektiv; die Gruppe haette nichts, worauf sie wirken koennte.
+                Return IsRawSourceEditable AndAlso RawDecodeService.IsAvailable AndAlso
+                       Not RawDecodeService.IsLinearLightSource(RenderSourcePath)
             End Get
         End Property
 
@@ -7564,7 +7578,8 @@ Namespace ViewModels
         Public ReadOnly Property LensCorrectionBlockedByBakedContent As Boolean
             Get
                 Return RawPreviewService.IsSupportedRaw(RenderSourcePath) AndAlso
-                       _workingImage.HasBakedContent AndAlso RawDecodeService.IsAvailable
+                       _workingImage.HasBakedContent AndAlso RawDecodeService.IsAvailable AndAlso
+                       Not RawDecodeService.IsLinearLightSource(RenderSourcePath)
             End Get
         End Property
 
@@ -14043,19 +14058,103 @@ Namespace ViewModels
         ''' beim nächsten Bildklick gesetzt werden soll, statt eine feste ViewModel-Farbe zu kennen -
         ''' dadurch bleibt die Pipette für jede beliebige ColorPickerButton-Instanz wiederverwendbar.
         Public Sub BeginColorPick(onPicked As Action(Of Avalonia.Media.Color),
-                                  Optional sampleRadius As Integer = 0)
-            BeginColorPickAt(Sub(picked, unusedX, unusedY) onPicked(picked), sampleRadius)
+                                  Optional sampleRadius As Integer = 0,
+                                  Optional takesAlpha As Boolean = False)
+            BeginColorPickAt(Sub(picked, unusedX, unusedY) onPicked(picked), sampleRadius, takesAlpha:=takesAlpha)
         End Sub
 
         ''' <summary>Wie <see cref="BeginColorPick"/>, aber die Rückmeldung nennt auch die STELLE,
         ''' in Anteilen der Bildbreite und -höhe. Für alles, was den Bildpunkt noch einmal woanders
         ''' nachschlagen muss.</summary>
+        ''' <param name="previewSampler">Für Pipetten, deren Klick die Farbe NICHT vom Schirm nimmt:
+        ''' liefert zur Stelle (Anteile 0 bis 1) die Farbe, die der Klick übernehmen würde, für die
+        ''' Anzeige an der Pipette. Nothing heißt: die angezeigte Farbe gilt.</param>
+        ''' <param name="takesAlpha">Ob die Pipette die Deckung mit übernimmt. Nur dann nennt die
+        ''' Anzeige an der Pipette Alpha.</param>
         Public Sub BeginColorPickAt(onPicked As Action(Of Avalonia.Media.Color, Double, Double),
-                                    Optional sampleRadius As Integer = 0)
+                                    Optional sampleRadius As Integer = 0,
+                                    Optional previewSampler As Func(Of Double, Double, Avalonia.Media.Color?) = Nothing,
+                                    Optional takesAlpha As Boolean = False)
+            ResetColorPickReadoutState()
             _pendingColorPickCallback = onPicked
             _colorPickSampleRadius = Math.Max(0, sampleRadius)
+            _colorPickPreviewSampler = previewSampler
+            _colorPickTakesAlpha = takesAlpha
             ColorPickPreview = Nothing
             IsPickingColorFromImage = True
+        End Sub
+
+        ' Die Anzeige an der Pipette (siehe ResolveColorPickReadout): woher die Farbe kommt, ob
+        ' Alpha dazugehört, und das einmal gerechnete Vergleichsbild der messenden Pipetten.
+        Private _colorPickPreviewSampler As Func(Of Double, Double, Avalonia.Media.Color?) = Nothing
+        Private _colorPickTakesAlpha As Boolean = False
+        Private _colorPickProbeImage As SKBitmap = Nothing
+        Private _colorPickProbeTried As Boolean = False
+
+        ''' <summary>Ob die laufende Pipette die Deckung mit übernimmt.</summary>
+        Public ReadOnly Property ColorPickTakesAlpha As Boolean
+            Get
+                Return _colorPickTakesAlpha
+            End Get
+        End Property
+
+        ''' <summary>Die Farbe für die Anzeige an der Pipette: GENAU die, die ein Klick an dieser
+        ''' Stelle übernähme.
+        '''
+        ''' <para>Die Ansicht reicht die angezeigte Farbe (schon gemittelt, wenn die Pipette mittelt)
+        ''' und die Stelle in Anteilen 0 bis 1 herein. Eine messende Pipette (Weißabgleich,
+        ''' Punktfarbe, Farbmischer) nennt stattdessen den Bildpunkt ihres Vergleichsbilds, die
+        ''' Malfarbe beim Malen aufs Foto den des Arbeitsbilds. Alpha bleibt nur stehen, wenn die
+        ''' Pipette es übernimmt; sonst ist das Ergebnis voll deckend.</para>
+        '''
+        ''' <para>Nothing ohne angezeigte Farbe (Zeiger neben dem Bild): dann verschwindet die
+        ''' Anzeige.</para></summary>
+        Public Function ResolveColorPickReadout(displayed As Avalonia.Media.Color?,
+                                                xFraction As Double, yFraction As Double) As Avalonia.Media.Color?
+            If Not displayed.HasValue OrElse Not _isPickingColorFromImage Then Return Nothing
+            Dim result = displayed.Value
+            Dim sampled As Avalonia.Media.Color? = Nothing
+            If _colorPickPreviewSampler IsNot Nothing Then sampled = _colorPickPreviewSampler(xFraction, yFraction)
+            If Not sampled.HasValue Then sampled = SampleWorkingImageForPaintPick(xFraction, yFraction, wait:=False)
+            If sampled.HasValue Then result = sampled.Value
+            If Not _colorPickTakesAlpha Then result = Avalonia.Media.Color.FromRgb(result.R, result.G, result.B)
+            Return result
+        End Function
+
+        ''' <summary>Baut die Vorschau einer messenden Pipette: beim ersten Aufruf wird das
+        ''' Vergleichsbild einmal gerechnet (derselbe Render wie beim Klick, nur früher) und bis zum
+        ''' Ende der Aufnahme behalten; jede Bewegung liest dann nur noch den gemittelten Bildpunkt
+        ''' daraus (<see cref="AverageProbePixel"/>, dieselbe Rechnung wie beim Klick).</summary>
+        ''' <param name="neutralize">Stellt im Rezept ab, was die Pipette nicht sehen soll, genau wie
+        ''' ihr Klick.</param>
+        ''' <param name="usesDisplayedColor">True, wenn der Klick gerade doch die angezeigte Farbe
+        ''' nimmt (Regler bedienen eine Ebene); dann gilt auch hier die angezeigte.</param>
+        Private Function CreateProbePickSampler(neutralize As Action(Of ImageAdjustments),
+                                                Optional usesDisplayedColor As Func(Of Boolean) = Nothing) As Func(Of Double, Double, Avalonia.Media.Color?)
+            Return Function(xFraction As Double, yFraction As Double) As Avalonia.Media.Color?
+                       If usesDisplayedColor IsNot Nothing AndAlso usesDisplayedColor() Then Return Nothing
+                       If _colorPickProbeImage Is Nothing AndAlso Not _colorPickProbeTried Then
+                           _colorPickProbeTried = True
+                           Dim probe = GetCurrentAdjustments(forPreview:=True)
+                           Dim source = GetPreviewSource()
+                           If probe IsNot Nothing AndAlso source IsNot Nothing Then
+                               neutralize(probe)
+                               _colorPickProbeImage = ImageProcessor.RenderPreviewSkBitmap(source, probe)
+                           End If
+                       End If
+                       Dim sample = AverageProbePixel(_colorPickProbeImage, xFraction, yFraction)
+                       If Not sample.HasValue Then Return Nothing
+                       Return Avalonia.Media.Color.FromRgb(sample.Value.Red, sample.Value.Green, sample.Value.Blue)
+                   End Function
+        End Function
+
+        ''' <summary>Vergisst Quelle, Alpha-Regel und Vergleichsbild der Anzeige an der Pipette.</summary>
+        Private Sub ResetColorPickReadoutState()
+            _colorPickPreviewSampler = Nothing
+            _colorPickTakesAlpha = False
+            _colorPickProbeImage?.Dispose()
+            _colorPickProbeImage = Nothing
+            _colorPickProbeTried = False
         End Sub
 
         Public Sub CompleteColorPick(color As Avalonia.Media.Color,
@@ -14075,6 +14174,7 @@ Namespace ViewModels
             Dim callback = _pendingColorPickCallback
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
+            ResetColorPickReadoutState()
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
             callback?.Invoke(color, xPercent, yPercent)
@@ -14086,8 +14186,11 @@ Namespace ViewModels
         ''' sie gehört nicht zum Malen.
         '''
         ''' Gelesen wird unter der Sperre des Arbeitsbilds. Läuft gerade ein Festschreiben, wartet der
-        ''' Klick bis zu dessen Ende; im Zeichnen-Werkzeug sind das die Striche davor, also kurz.</summary>
-        Private Function SampleWorkingImageForPaintPick(xFraction As Double, yFraction As Double) As Avalonia.Media.Color?
+        ''' Klick bis zu dessen Ende; im Zeichnen-Werkzeug sind das die Striche davor, also kurz. Die
+        ''' Anzeige an der Pipette fragt bei jeder Bewegung und wartet NICHT (wait:=False): ist die
+        ''' Sperre belegt, kommt Nothing, und sie zeigt für diesen Schritt die angezeigte Farbe.</summary>
+        Private Function SampleWorkingImageForPaintPick(xFraction As Double, yFraction As Double,
+                                                        Optional wait As Boolean = True) As Avalonia.Media.Color?
             If _currentTool <> EditorTool.Draw OrElse _colorPickSampleRadius > 0 Then Return Nothing
             If Not _workingImage.IsInitialized OrElse Not CanUsePixelTools Then Return Nothing
             If FindStrokeTargetImageAnnotation() IsNot Nothing Then Return Nothing
@@ -14095,11 +14198,18 @@ Namespace ViewModels
             If Double.IsNaN(wip.X) OrElse Double.IsNaN(wip.Y) Then Return Nothing
             Dim px = CInt(Math.Floor(PercentXToPixels(wip.X)))
             Dim py = CInt(Math.Floor(PercentYToPixels(wip.Y)))
-            Dim sampled = _workingImage.WithFull(Function(full) As SKColor?
-                                                     If full Is Nothing OrElse px < 0 OrElse py < 0 OrElse
-                                                        px >= full.Width OrElse py >= full.Height Then Return Nothing
-                                                     Return full.GetPixel(px, py)
-                                                 End Function)
+            Dim read As Func(Of SKBitmap, SKColor?) =
+                Function(full) As SKColor?
+                    If full Is Nothing OrElse px < 0 OrElse py < 0 OrElse
+                       px >= full.Width OrElse py >= full.Height Then Return Nothing
+                    Return full.GetPixel(px, py)
+                End Function
+            Dim sampled As SKColor? = Nothing
+            If wait Then
+                sampled = _workingImage.WithFull(read)
+            ElseIf Not _workingImage.TryWithFull(read, sampled) Then
+                Return Nothing
+            End If
             If Not sampled.HasValue Then Return Nothing
             Dim c = sampled.Value
             Return Avalonia.Media.Color.FromArgb(255, c.Red, c.Green, c.Blue)
@@ -14108,6 +14218,7 @@ Namespace ViewModels
         Public Sub CancelColorPick()
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
+            ResetColorPickReadoutState()
             ColorPickPreview = Nothing
             IsPickingColorFromImage = False
             EndNegativePickSuppression()
@@ -17341,7 +17452,8 @@ Namespace ViewModels
                 If Not IsRawSourceEditable Then Return Nothing
                 If IsRawDeveloped Then Return LocalizationService.T("RAW entwickelt")
                 ' Der Tooltip hat Platz fuer den ganzen Grund, die Statuszeile nur fuer den Merksatz.
-                If Not RawDecodeService.IsAvailable Then
+                ' Lineares Licht braucht LibRaw nicht (RawDecodeService.CanDevelop).
+                If Not RawDecodeService.IsAvailable AndAlso Not RawDecodeService.IsLinearLightSource(RenderSourcePath) Then
                     Return LocalizationService.T("RAW-Vorschau (LibRaw fehlt)") & vbLf &
                            RawDecodeService.MissingLibraryHint()
                 End If
@@ -17752,7 +17864,8 @@ Namespace ViewModels
             If Not IsRawSourceEditable Then Return ""
             ' Fehlt LibRaw ganz, ist "RAW-Vorschau" die halbe Auskunft: sie sagt, WAS angezeigt wird,
             ' aber nicht, dass sich das beheben laesst. Genau daran scheiterte ein Mac-Nutzer.
-            If Not RawDecodeService.IsAvailable Then
+            ' Lineares Licht braucht LibRaw nicht.
+            If Not RawDecodeService.IsAvailable AndAlso Not RawDecodeService.IsLinearLightSource(RenderSourcePath) Then
                 Return "  •  " & LocalizationService.T("RAW-Vorschau (LibRaw fehlt)")
             End If
             Dim developed = RawDecodeService.TryGetCachedSize(RenderSourcePath).Width > 0
@@ -17852,6 +17965,8 @@ Namespace ViewModels
             If _missingRawLibraryNoticeShown Then Return
             If Not RawPreviewService.IsSupportedRaw(RenderSourcePath) Then Return
             If RawDecodeService.IsAvailable Then Return
+            ' Lineares Licht entwickelt ohne LibRaw; der Hinweis gaelte keiner Datei, die hier offen ist.
+            If RawDecodeService.IsLinearLightSource(RenderSourcePath) Then Return
             ' VOR dem Anzeigen setzen: der Dialog laeuft asynchron, und bis er steht, kann der
             ' naechste Bildwechsel schon hier durch sein.
             _missingRawLibraryNoticeShown = True
@@ -21679,8 +21794,9 @@ Namespace ViewModels
             If SvgPreviewService.IsSupportedSvg(path) Then Return True
 
             Dim ext = IO.Path.GetExtension(path).ToLowerInvariant()
-            Dim editableExts = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp",
-                                ".heic", ".heif", ".hif", ".avif", ".jxl", ".ico"}
+            Dim editableExts = {".jpg", ".jpeg", ".jpe", ".jfif", ".jps", ".png", ".apng", ".bmp", ".wbmp", ".gif", ".tiff", ".tif", ".webp",
+                                ".heic", ".heif", ".hif", ".avif", ".jxl", ".ico", ".cur",
+                                ".jp2", ".j2k", ".jph", ".j2c", ".jpc", ".jpf", ".jhc"}
             ' .fpx-Projekte sind im Editor voll bearbeitbar (Rezept wird wiederhergestellt) und
             ' gehoeren deshalb in den Filmstreifen - solange das Format aktiviert ist.
             Return editableExts.Contains(ext) OrElse RawPreviewService.IsSupportedRaw(path) OrElse
@@ -27885,6 +28001,7 @@ Namespace ViewModels
             _isPickingColorFromImage = False
             _pendingColorPickCallback = Nothing
             _colorPickSampleRadius = 0
+            ResetColorPickReadoutState()
             ' Die Pipette wird hier abgebrochen - ihre Nebenwirkung auf die Vorschau muss mit weg.
             ' Blieb die Unterdrueckung stehen, zeigte das naechste Bild seine Filmumkehr nicht an,
             ' sobald sie dort eingeschaltet wird: der Regler stuende auf an, das Bild bliebe negativ.
@@ -28873,7 +28990,8 @@ Namespace ViewModels
         ''' Filmstreifens, damit die Leinwand nicht annimmt, was der Dialog gar nicht erst anbietet
         ''' (PSD/RAW zeichnen als Objekt nicht).
         Public Shared ReadOnly InsertableImageExtensions As String() =
-            {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff", ".avif", ".ico"}
+            {".png", ".apng", ".jpg", ".jpeg", ".jpe", ".jfif", ".jps", ".bmp", ".wbmp", ".gif", ".webp", ".tif", ".tiff", ".avif", ".ico", ".cur",
+             ".jp2", ".j2k", ".jph"}
 
         ''' <summary>Laesst sich diese Datei als Bild-Ebene einsetzen? Die Datei muss es GEBEN: der
         ''' Pseudo-Pfad eines Serverbildes endet ebenfalls auf .jpg, DrawImageAnnotation findet

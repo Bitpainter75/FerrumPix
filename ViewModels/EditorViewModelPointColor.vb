@@ -225,7 +225,13 @@ Namespace ViewModels
         Public ReadOnly Property PickPointColorCommand As ICommand
             Get
                 If _pickPointColorCommand Is Nothing Then
-                    _pickPointColorCommand = ReactiveCommand.Create(Sub() BeginColorPickAt(AddressOf AddPointColorFromPick, sampleRadius:=2))
+                    ' Die Anzeige an der Pipette nennt das Vergleichsbild des Klicks (siehe
+                    ' AddPointColorFromPick), auf einer Ebene die angezeigte Farbe; nie Alpha.
+                    _pickPointColorCommand = ReactiveCommand.Create(
+                        Sub() BeginColorPickAt(AddressOf AddPointColorFromPick, sampleRadius:=2,
+                                               previewSampler:=CreateProbePickSampler(
+                                                   AddressOf NeutralizeStagesAfterPointColor,
+                                                   AddressOf IsObjectAdjustModeActive)))
                 End If
                 Return _pickPointColorCommand
             End Get
@@ -332,7 +338,12 @@ Namespace ViewModels
         Public ReadOnly Property PickHslBandCommand As ICommand
             Get
                 If _pickHslBandCommand Is Nothing Then
-                    _pickHslBandCommand = ReactiveCommand.Create(Sub() BeginColorPickAt(AddressOf SelectHslBandFromPick, sampleRadius:=2))
+                    ' Wie bei der Punktfarbe: die Anzeige nennt das Bild, das der Mischer sieht.
+                    _pickHslBandCommand = ReactiveCommand.Create(
+                        Sub() BeginColorPickAt(AddressOf SelectHslBandFromPick, sampleRadius:=2,
+                                               previewSampler:=CreateProbePickSampler(
+                                                   AddressOf NeutralizeStagesFromMixer,
+                                                   AddressOf IsObjectAdjustModeActive)))
                 End If
                 Return _pickHslBandCommand
             End Get

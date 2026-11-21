@@ -23,9 +23,9 @@ It runs on Windows, Linux and macOS, stays fast and local-first, and is built fo
 - Browse local photo folders with fast thumbnails, ratings, favourites, keywords and saved searches.
 - View photos and videos fullscreen, compare two side by side, and check metadata and histogram.
 - Edit: crop, resize, rotate and distort, exposure and colour, curves, filters, masks, retouching, text and shapes, layers.
-- Develop RAW files from the sensor data, the small JPEG XL compressed DNGs included, with lens correction from measured data for more than 1500 lenses.
+- Develop RAW files from the sensor data, Sigma X3F and the small JPEG XL compressed DNGs included, with lens correction from measured data for more than 1500 lenses.
 - Run batch work over a whole selection: rename, convert, resize, watermark, filters, metadata, export.
-- Open JPEG, PNG, WEBP, JPEG XL, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF read-only, and Photoshop files with their layers.
+- Open JPEG, PNG, WEBP, JPEG XL, TIFF, BMP, GIF and RAW, plus HEIC/HEIF/AVIF, JPEG 2000, OpenEXR and Radiance HDR read-only, and Photoshop files with their layers.
 - Hand a picture to another program with *Open with*, and pass it through G'MIC from the editor if you have it installed.
 - Find the people in your photos and search by them, and search by where a photo was taken - both entirely on your own machine. If you switch it on, a map shows where your photos were taken.
 - Connect to your own Immich or Nextcloud server for browsing, upload, download, editing and metadata sync.
@@ -359,6 +359,11 @@ Without it those files simply stay closed and everything else works.
 libjxl opens and saves JPEG XL. Every package except the Flatpak brings it along, the
 Flatpak takes it from its runtime.
 
+OpenJPEG opens JPEG 2000 and OpenEXR opens EXR files; Windows, Linux and the Flatpak bring them
+along, macOS does not have them yet. EXR, Radiance HDR and TIFF with floating point values are
+developed like a RAW, so light brighter than white can be brought back with Exposure and
+Highlights.
+
 ## Building from source
 
 Requires the [.NET SDK 10](https://dotnet.microsoft.com/) or newer.
@@ -370,7 +375,7 @@ dotnet run --project FerrumPix.vbproj
 
 ## Licence
 
-FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), the Nikon, Sony, Pentax and Canon lens identifiers from [ExifTool](https://github.com/exiftool/exiftool) (GPL), [Phosphor Icons](https://github.com/phosphor-icons/core) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0) and [dav1d](https://code.videolan.org/videolan/dav1d) (BSD-2-Clause), and [libjxl](https://github.com/libjxl/libjxl) (BSD-3-Clause). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe. The map view, once switched on, shows tiles from [OpenStreetMap](https://www.openstreetmap.org/copyright); the map data is © OpenStreetMap contributors under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
+FerrumPix is [GPL-3.0-only](LICENSE). Every package carries that licence text and a `THIRD-PARTY-NOTICES.txt` naming each component and the licence it is used under: Avalonia UI, .NET, ReactiveUI, SkiaSharp, Svg.Skia, Microsoft.Data.Sqlite with SQLitePCLRaw, MetadataExtractor with XmpCore, QRCoder, BitMiracle.LibTiff.NET and ONNX Runtime (MIT, Apache-2.0 or BSD-3-Clause), the [Lensfun](https://github.com/lensfun/lensfun) lens database (CC-BY-SA 3.0), the Nikon, Sony, Pentax and Canon lens identifiers from [ExifTool](https://github.com/exiftool/exiftool) (GPL), [Phosphor Icons](https://github.com/phosphor-icons/core) (MIT), and the bundled [LibRaw](https://www.libraw.org/) (LGPL-2.1) with [zlib](https://zlib.net/) (zlib licence) and [libjpeg](https://www.ijg.org/) (IJG licence), [libmpv](https://mpv.io/) (GPL-2.0-or-later) and [libheif](https://github.com/strukturag/libheif) with [libde265](https://github.com/strukturag/libde265) (both LGPL-3.0) and [dav1d](https://code.videolan.org/videolan/dav1d) (BSD-2-Clause), [libjxl](https://github.com/libjxl/libjxl) (BSD-3-Clause), [OpenJPEG](https://github.com/uclouvain/openjpeg) (BSD-2-Clause) and [OpenEXR](https://github.com/AcademySoftwareFoundation/openexr) (BSD-3-Clause). For the GPL and LGPL libraries the packages also name the matching source: version, commit and build recipe. The map view, once switched on, shows tiles from [OpenStreetMap](https://www.openstreetmap.org/copyright); the map data is © OpenStreetMap contributors under the [Open Database License](https://opendatacommons.org/licenses/odbl/1-0/).
 
 Project website: [FerrumPix.app](https://ferrumpix.app/)
 

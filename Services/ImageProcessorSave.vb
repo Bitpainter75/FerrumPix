@@ -745,6 +745,16 @@ Namespace Services
                 workingFull?.Dispose()
                 Return False
             End If
+            ' Ein vorhandenes JPEG mit 12 Bit oder verlustfrei wird nie ersetzt, weder als Quelle
+            ' selbst noch als anderes Ziel: Skia schriebe ein verlustbehaftetes 8-Bit-JPEG darueber.
+            ' Gefragt wird der Kopf, nicht die Endung; "Speichern" im Editor geht fuer eine solche
+            ' Quelle ohnehin ins Rezept daneben (RawSidecarService.SavesRecipeBeside).
+            If JpegTurboDecodeService.IsTurboJpeg(targetPath) Then
+                DiagnosticLogService.LogAlways("ImageProcessor.Save",
+                    $"refused: vorhandenes JPEG mit mehr als 8 Bit oder verlustfrei target={IO.Path.GetFileName(targetPath)}")
+                workingFull?.Dispose()
+                Return False
+            End If
             ' Dieselbe Fehlerklasse eine Formatstufe weiter: die Formatwahl unten
             ' kennt nur PNG/WEBP/TIFF/PDF und faellt sonst auf JPEG zurueck. Ein Ziel ".bmp"/
             ' ".gif"/".heic"/... bekam damit still JPEG-Bytes unter fremder Endung - beim

@@ -345,6 +345,24 @@ Namespace Services
             End SyncLock
         End Function
 
+        ''' <summary>Wie <see cref="WithFull"/>, aber OHNE ZU WARTEN: haelt gerade ein Commit die
+        ''' Sperre, kommt sofort False zurueck. Fuer Leser auf dem Anzeigefaden, die bei jeder
+        ''' Mausbewegung fragen (die Anzeige an der Pipette) und lieber einen Schritt auslassen, als
+        ''' die Oberflaeche fuer die Dauer eines Commits anzuhalten.</summary>
+        Public Function TryWithFull(Of T)(fn As Func(Of SKBitmap, T), ByRef result As T) As Boolean
+            If fn Is Nothing Then Return False
+            Dim taken = False
+            Threading.Monitor.TryEnter(_lock, taken)
+            If Not taken Then Return False
+            Try
+                If _full Is Nothing Then Return False
+                result = fn(_full)
+                Return True
+            Finally
+                Threading.Monitor.Exit(_lock)
+            End Try
+        End Function
+
         ''' <summary>Herunterskalierte Kopie des Arbeitsbilds (z.B. Zoom-Detail-Quelle), gleiche
         ''' Skalierung wie die Vorschau-Ableitung. Nothing ohne Init.
         '''

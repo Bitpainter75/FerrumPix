@@ -1657,6 +1657,96 @@ Namespace ViewModels
                 _rangeMaskGate.Release()
             End Try
         End Sub
+
+        ' Die Anzeige an der Pipette des Farbbereichs (siehe ResolveColorRangeReadout).
+        Private _rangeReadoutCheckedAt As Long = 0
+        Private _rangeReadoutFresh As Boolean = False
+        Private _rangeReadoutPrefetching As Boolean = False
+        Private Const RangeReadoutRecheckMilliseconds As Integer = 400
+
+        ''' <summary>Ob gerade ein Klick ins Bild einen Farbbereich bildet: Maske im Modus Farbe
+        ''' oder Auswahl im Modus Farbbereich. Dann zeigt die Ansicht die Anzeige an der Pipette.</summary>
+        Public ReadOnly Property IsColorRangePickActive As Boolean
+            Get
+                Return (_currentTool = EditorTool.Mask AndAlso IsMaskColorRangeMode) OrElse
+                       (_currentTool = EditorTool.Selection AndAlso SelectionMode = "ColorRange")
+            End Get
+        End Property
+
+        ''' <summary>Die Farbe für die Anzeige an der Pipette des Farbbereichs: GENAU der Bildpunkt,
+        ''' mit dem ein Klick an dieser Stelle den Bereich vergleicht
+        ''' (<see cref="SetSelectionColorRangeMask"/>), also aus dem Messbild ohne die bearbeitete
+        ''' Ebene, an derselben gerundeten Stelle. Der Vergleich rechnet nur mit Rot, Grün und Blau,
+        ''' Alpha nennt die Anzeige hier deshalb nie.
+        '''
+        ''' <para>DAS MESSBILD IST TEUER (ein voller Render). Ob es zum jetzigen Rezept passt, wird
+        ''' deshalb höchstens alle 400 ms geprüft und nicht bei jeder Bewegung; passt es nicht, wird
+        ''' es im Hintergrund vorbereitet - der Klick findet es dann schon im Speicher. Bis es da ist
+        ''' oder solange ein Auftrag es gerade liest, nennt die Anzeige die angezeigte Farbe.</para>
+        ''' </summary>
+        ''' <param name="displayed">Die angezeigte Farbe an der Stelle; Nothing neben dem Bild.</param>
+        ''' <param name="xPercent">Stelle in Prozent der Bildbreite, wie beim Klick.</param>
+        ''' <param name="yPercent">Stelle in Prozent der Bildhöhe, wie beim Klick.</param>
+        Public Function ResolveColorRangeReadout(displayed As Avalonia.Media.Color?,
+                                                 xPercent As Double, yPercent As Double) As Avalonia.Media.Color?
+            If Not displayed.HasValue Then Return Nothing
+            Dim fallback = Avalonia.Media.Color.FromRgb(displayed.Value.R, displayed.Value.G, displayed.Value.B)
+            If String.IsNullOrWhiteSpace(_currentImagePath) Then Return fallback
+
+            Dim now = Environment.TickCount64
+            If now - _rangeReadoutCheckedAt >= RangeReadoutRecheckMilliseconds Then
+                _rangeReadoutCheckedAt = now
+                _rangeReadoutFresh = IsRangeSampleImageCurrent()
+                If Not _rangeReadoutFresh Then PrefetchRangeSampleImage()
+            End If
+            If Not _rangeReadoutFresh Then Return fallback
+
+            If Not _rangeMaskGate.Wait(0) Then Return fallback
+            Try
+                Dim rendered = _rangeSampleImage
+                If rendered Is Nothing Then Return fallback
+                Dim size = GetAnnotationDisplayPixelSize()
+                If size.Width <= 0 OrElse size.Height <= 0 Then Return fallback
+                Dim x = Math.Max(0, Math.Min(size.Width - 1, CInt(Math.Round(xPercent / 100.0 * size.Width))))
+                Dim y = Math.Max(0, Math.Min(size.Height - 1, CInt(Math.Round(yPercent / 100.0 * size.Height))))
+                If x >= rendered.Width OrElse y >= rendered.Height Then Return fallback
+                Dim pixel = rendered.GetPixel(x, y)
+                Return Avalonia.Media.Color.FromRgb(pixel.Red, pixel.Green, pixel.Blue)
+            Finally
+                _rangeMaskGate.Release()
+            End Try
+        End Function
+
+        ''' <summary>Passt das gespeicherte Messbild zum jetzigen Rezept? Dieselbe Frage wie in
+        ''' <see cref="GetRangeSampleImageAsync"/>.</summary>
+        Private Function IsRangeSampleImageCurrent() As Boolean
+            If _rangeSampleImage Is Nothing Then Return False
+            Dim adjustments = GetCurrentAdjustments()
+            If adjustments Is Nothing Then Return False
+            Return String.Equals(RangeSampleKey(RenderSourcePath, RangeSampleAdjustments(adjustments)),
+                                 _rangeSampleKey, StringComparison.Ordinal)
+        End Function
+
+        ''' <summary>Bereitet das Messbild im Hintergrund vor, höchstens ein Auftrag zur Zeit.</summary>
+        Private Async Sub PrefetchRangeSampleImage()
+            If _rangeReadoutPrefetching Then Return
+            _rangeReadoutPrefetching = True
+            Try
+                Await _rangeMaskGate.WaitAsync()
+                Try
+                    Dim adjustments = GetCurrentAdjustments()
+                    If adjustments IsNot Nothing Then Await GetRangeSampleImageAsync(RenderSourcePath, adjustments)
+                Finally
+                    _rangeMaskGate.Release()
+                End Try
+                ' Die nächste Bewegung prüft sofort wieder und nimmt dann das fertige Bild.
+                _rangeReadoutCheckedAt = 0
+            Catch ex As Exception
+                DiagnosticLogService.LogException("Editor.ColorRangeReadout", ex)
+            Finally
+                _rangeReadoutPrefetching = False
+            End Try
+        End Sub
         ' Beim Oeffnen einer gespeicherten Bereichsmaske werden nur Modus und Regler angezeigt.
         ' Der gespeicherte Raster ist bereits die verbindliche Form und darf nicht durch einen
         ' nebenlaeufig gestarteten Neuaufbau ersetzt werden.

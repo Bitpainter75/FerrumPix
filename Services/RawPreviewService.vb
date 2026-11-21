@@ -35,25 +35,32 @@ Namespace Services
             ".erf",                            ' Epson
             ".mef",                            ' Mamiya
             ".mos",                            ' Leaf
-            ".kdc", ".dcr"                     ' Kodak
+            ".kdc", ".dcr",                    ' Kodak
+            X3fPreviewService.Extension        ' Sigma (Foveon), Polaroid x530
         }
 
-        ''' <summary>
-        ''' .x3f (Sigma Foveon) steht bewusst NICHT in der Liste. Gemessen am Pruefbestand mit 335
-        ''' RAW-Dateien aus 21 Formaten und 19 Herstellern dekodieren 327 sauber; ALLE acht
-        ''' Fehlschlaege sind x3f, und auch die eingebettete Vorschau laesst sich dort nicht
-        ''' auslesen. Das ist eine Grenze von LibRaw, kein Fehler bei uns.
-        '''
-        ''' Aufgefuehrt und nicht funktionierend war die schlechtere der beiden Moeglichkeiten: ein
-        ''' Sigma-Nutzer bekam eine leere Kachel statt eines Bildes und keinen Hinweis, woran es
-        ''' liegt. Nicht aufgefuehrt taucht die Datei gar nicht erst auf. Sobald LibRaw das Format
-        ''' traegt, gehoert die Endung zurueck in die Liste oben.
-        ''' </summary>
-        Public Const UnsupportedRawFormat As String = ".x3f"
+        ' .x3f entwickelt LibRaw nur mit dem Schalter USE_X3FTOOLS, der ihren X3F-Leser einschaltet;
+        ' die mitgelieferten Bauten setzen ihn (packaging/libraw). Die Vorschau liest trotzdem
+        ' X3fPreviewService und nicht der Scanner hier (siehe ExtractPreview), und sie bleibt der
+        ' Rueckfall, wenn eine LibRaw ohne den Schalter geladen ist.
 
+        ''' <summary>Geht die Datei den RAW-Weg? Jede RAW-Endung aus <see cref="SupportedExtensions"/>
+        ''' und dazu LINEARES LICHT: OpenEXR, Radiance HDR und TIFF mit Gleitkomma
+        ''' (RawDecodeService.IsLinearLightSource). Die laufen wie ein entwickeltes RAW durch die
+        ''' RAW-Grundstufe, mit den RAW-Reglern im Editor und dem Rezept neben der Datei; sie stehen
+        ''' aber nicht in der Liste der RAW-Endungen, weil sie keine Kameradateien sind (Filter RAW
+        ''' der Galerie, Import, Umwandeln nach DNG).</summary>
         Public Shared Function IsSupportedRaw(filePath As String) As Boolean
             Dim ext = Path.GetExtension(filePath).ToLowerInvariant()
-            Return SupportedExtensions.Contains(ext)
+            Return SupportedExtensions.Contains(ext) OrElse RawDecodeService.IsLinearLightSource(filePath)
+        End Function
+
+        ''' <summary>Eine Kameradatei, also eine Endung aus <see cref="SupportedExtensions"/>, OHNE das
+        ''' lineare Licht. Fuer die Stellen, die einen Sensor oder eine Vorschau der Kamera
+        ''' voraussetzen: Umwandeln nach DNG, Kamera-JPEG daneben, Entrauschen mit Modell.</summary>
+        Public Shared Function IsCameraRaw(filePath As String) As Boolean
+            If String.IsNullOrWhiteSpace(filePath) Then Return False
+            Return SupportedExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant())
         End Function
 
         ''' <summary>Grosse Vorschau fuer Betrachter/Editor-Anzeige in ZWEI Stufen: erst der eigene
@@ -150,12 +157,22 @@ Namespace Services
             Try
                 Dim ext = Path.GetExtension(filePath).ToLowerInvariant()
 
+                ' Lineares Licht traegt keine Vorschau; die Anzeigewege entwickeln es dann
+                ' (ExtractPreviewWithFallback, Kachel). Der Scanner faende in einer EXR hoechstens
+                ' zufaellige JPEG-Kennungen.
+                If RawDecodeService.IsLinearLightSource(filePath) Then Return Nothing
+
                 ' CR3: zuerst ueber die Kastenstruktur - schneller, weil sie gezielt die
                 ' richtigen Kaesten ansteuert statt die Datei abzusuchen.
                 If ext = ".cr3" Then
                     Dim r = ExtractBmffPreview(filePath)
                     If r IsNot Nothing Then Return r
                 End If
+
+                ' X3F: der eigene Leser ueber das Inhaltsverzeichnis der Datei. Er findet alle drei
+                ' Vorschauformen; der Scanner faende nur ein JPEG, und die Vorschau der SD9 und
+                ' SD10 ist keines.
+                If X3fPreviewService.IsSupportedX3f(filePath) Then Return X3fPreviewService.ExtractPreview(filePath)
 
                 ' Fuer alle anderen: die Datei nach dem groessten eingebetteten und anzeigbaren
                 ' JPEG absuchen.

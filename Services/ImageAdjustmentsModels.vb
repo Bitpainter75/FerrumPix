@@ -1660,6 +1660,14 @@ Namespace Services
             ' wer auf einem langsamen Rechner arbeitet, soll sie abstellen oder durch die billigere
             ' einstufige ersetzen koennen. Ab Werk bleibt es beim bisherigen Bild.
             Dim settings = AppSettingsService.Load()
+            ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) startet neutral: die Startwerte
+            ' fuer Rauschen und Schaerfe gelten Sensordaten nach dem Demosaic, Kalibrierung und
+            ' Aufnahme-Weissabgleich einer Kamera, und eine solche Datei hat beides nicht. Sensorrand
+            ' und Seitenverhaeltnis stehen an wie bei jeder RAW; ohne Sensor beschneiden sie nichts,
+            ' und die Zuruecksetzer des Editors kehren zu denselben Werten zurueck.
+            If Not String.IsNullOrWhiteSpace(path) AndAlso RawDecodeService.IsLinearLightSource(path) Then
+                Return New ImageAdjustments With {.RawSensorEdgeCrop = True, .RawCameraAspectCrop = True}
+            End If
             Dim values = New ImageAdjustments With {
                 .FarbrauschGrob = UneditedRawCoarseColorNoise,
                 .ColorNoiseReduction = Math.Max(0, Math.Min(100, settings.UneditedRawColorNoise)),

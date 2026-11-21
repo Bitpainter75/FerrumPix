@@ -17,7 +17,10 @@ Namespace Services
     '''   Linux    AppImage, portables ZIP (und damit AUR), deb und rpm liefern eine
     '''            libjxl.so.0.13 mit, gebaut wie die jxl.dll als eine Datei mit Faden-Bibliothek
     '''            darin (packaging/libjxl/build-linux.sh); sie geht der des Systems vor
-    '''            (BundledLibraryOrder). Der Flatpak nimmt libjxl aus seiner Laufzeit.
+    '''            (BundledLibraryOrder). Scheitert sie beim Oeffnen einer Datei (Bild oder
+    '''            Kopfdaten), springt die des Systems fuer diese Datei ein
+    '''            (<see cref="SystemLibraryFallback"/>). Der Flatpak nimmt libjxl aus seiner
+    '''            Laufzeit und kennt keinen Rueckfall.
     '''   macOS    MITGELIEFERT als libjxl.dylib unter runtimes/osx-*/native, eine Datei mit
     '''            Faden-Bibliothek darin wie die jxl.dll (packaging/libjxl/build-macos.sh). Sie
     '''            geht einer libjxl aus Homebrew vor.
@@ -166,6 +169,69 @@ Namespace Services
         Private Shared _releaseBoxBuffer As ReleaseBufferFn
         Private Shared _setJpegBuffer As SetInputFn
         Private Shared _releaseJpegBuffer As ReleaseBufferFn
+
+        ''' <summary>Die Einstiege, die das Lesen einer Datei braucht, fuer EINE geladene libjxl.
+        ''' Die zuerst geladene stellt sie aus den Feldern oben zusammen (<see cref="_primaryApi"/>),
+        ''' die des Systems bindet sie als Rueckfall selbst (<see cref="BindSystem"/>). Metadaten,
+        ''' JPEG-Rekonstruktion, das Gleitkomma-Lesen fuer DNG und der Encoder bleiben bei der zuerst
+        ''' geladenen: der Rueckfall gilt dem Oeffnen einer Datei.</summary>
+        Private NotInheritable Class JxlApi
+            Public Version As UInteger
+            Public Create As CreateFn
+            Public Destroy As DestroyFn
+            Public SubscribeEvents As SubscribeEventsFn
+            Public SetInput As SetInputFn
+            Public CloseInput As CloseInputFn
+            Public ProcessInput As ProcessInputFn
+            Public GetBasicInfo As GetBasicInfoFn
+            Public OutBufferSize As OutBufferSizeFn
+            Public SetOutBuffer As SetOutBufferFn
+            Public SetUnpremultiply As SetBoolFn
+            Public SetParallelRunner As SetParallelRunnerFn
+            Public IccSize As IccSizeFn
+            Public Icc As IccFn
+            Public IccSizeLegacy As IccSizeLegacyFn
+            Public IccLegacy As IccLegacyFn
+            Public RunnerCreate As RunnerCreateFn
+            Public RunnerDestroy As RunnerDestroyFn
+            Public DefaultWorkers As DefaultWorkersFn
+            Public RunnerFunction As IntPtr
+
+            Public ReadOnly Property RunnerReady As Boolean
+                Get
+                    Return SetParallelRunner IsNot Nothing AndAlso RunnerCreate IsNot Nothing AndAlso
+                           RunnerDestroy IsNot Nothing AndAlso DefaultWorkers IsNot Nothing AndAlso
+                           RunnerFunction <> IntPtr.Zero
+                End Get
+            End Property
+        End Class
+
+        Private Shared _primaryApi As JxlApi
+        Private Shared _systemApi As JxlApi
+
+        ''' <summary>Der Rueckfall auf die libjxl des Systems, wenn die mitgelieferte an einer Datei
+        ''' scheitert. Nur unter Linux ausserhalb des Flatpak, siehe <see cref="SystemLibraryFallback"/>.
+        ''' Unter macOS laedt die mitgelieferte vor einer aus Homebrew wie bisher, einen Rueckfall
+        ''' je Datei gibt es dort nicht.</summary>
+        Private Shared ReadOnly _fallback As New SystemLibraryFallback("libjxl", SystemFileNames())
+
+        ''' <summary>Der Rueckfall fuer die Seite Technik und den Pruefstand.</summary>
+        Friend Shared ReadOnly Property SystemFallback As SystemLibraryFallback
+            Get
+                EnsureLoaded()
+                Return _fallback
+            End Get
+        End Property
+
+        ''' <summary>Die Namen der Hauptbibliothek aus <see cref="LibraryNames"/>, unter Linux die
+        ''' Sonamen von neu nach alt.</summary>
+        Private Shared Function SystemFileNames() As String()
+            Dim names As New List(Of String)()
+            For Each pair In LibraryNames()
+                names.Add(pair.Main)
+            Next
+            Return names.ToArray()
+        End Function
 
         ''' <summary>Die geladene libjxl fuer <see cref="JxlEncodeService"/>, oder IntPtr.Zero. Der
         ''' Encoder steckt in derselben Bibliothek; eine zweite Ladelogik wuerde nur eine zweite
@@ -368,10 +434,104 @@ Namespace Services
                     _threadsLibrary = threadsHandle
                 End If
 
+                _primaryApi = New JxlApi With {
+                    .Version = _version, .Create = _create, .Destroy = _destroy,
+                    .SubscribeEvents = _subscribeEvents, .SetInput = _setInput, .CloseInput = _closeInput,
+                    .ProcessInput = _processInput, .GetBasicInfo = _getBasicInfo,
+                    .OutBufferSize = _outBufferSize, .SetOutBuffer = _setOutBuffer,
+                    .SetUnpremultiply = _setUnpremultiply, .SetParallelRunner = _setParallelRunner,
+                    .IccSize = _iccSize, .Icc = _icc, .IccSizeLegacy = _iccSizeLegacy, .IccLegacy = _iccLegacy,
+                    .RunnerCreate = _runnerCreate, .RunnerDestroy = _runnerDestroy,
+                    .DefaultWorkers = _defaultWorkers, .RunnerFunction = _runnerFunction}
+                ' Der Rueckfall muss wissen, ob die geladene die mitgelieferte ist: nur dann gibt es
+                ' eine zweite, andere Datei des Systems.
+                _fallback.PrimaryPath = If(IO.Path.IsPathRooted(loadedPath), loadedPath, "")
+                _fallback.PrimaryVersion = VersionText(_version)
+
                 DiagnosticLogService.LogAlways("JXL", $"geladen: {LoadedLibraryNameUnlocked()}" &
                     If(RunnerReady, "", ", ohne Faden-Bibliothek (Decode auf einem Kern)"))
             End SyncLock
         End Sub
+
+        Private Shared Function VersionText(version As UInteger) As String
+            Return $"{version \ 1000000UI}.{(version \ 1000UI) Mod 1000UI}.{version Mod 1000UI}"
+        End Function
+
+        ''' <summary>Bindet die libjxl des Systems fuer den Rueckfall (siehe
+        ''' <see cref="SystemLibraryFallback.EnsureLoaded"/>). Dieselbe Mindestfassung 0.7 und
+        ''' dieselben Pflichtexporte wie beim ersten Laden. Die Faden-Bibliothek kommt aus demselben
+        ''' Ordner in denselben Namensraum; fehlt sie, dekodiert die des Systems auf einem Kern.</summary>
+        Private Shared Function BindSystem(handle As IntPtr, fullPath As String, reason As Text.StringBuilder) As String
+            Dim versionFn = SystemLibraryFallback.TryGetExport(Of VersionFn)(handle, "JxlDecoderVersion")
+            If versionFn Is Nothing Then
+                reason.Append("JxlDecoderVersion fehlt")
+                Return Nothing
+            End If
+            Dim version = versionFn()
+            If version < 7000UI Then
+                reason.Append($"Fassung {VersionText(version)} ist aelter als 0.7")
+                Return Nothing
+            End If
+            Dim api As New JxlApi With {
+                .Version = version,
+                .Create = SystemLibraryFallback.TryGetExport(Of CreateFn)(handle, "JxlDecoderCreate"),
+                .Destroy = SystemLibraryFallback.TryGetExport(Of DestroyFn)(handle, "JxlDecoderDestroy"),
+                .SubscribeEvents = SystemLibraryFallback.TryGetExport(Of SubscribeEventsFn)(handle, "JxlDecoderSubscribeEvents"),
+                .SetInput = SystemLibraryFallback.TryGetExport(Of SetInputFn)(handle, "JxlDecoderSetInput"),
+                .ProcessInput = SystemLibraryFallback.TryGetExport(Of ProcessInputFn)(handle, "JxlDecoderProcessInput"),
+                .GetBasicInfo = SystemLibraryFallback.TryGetExport(Of GetBasicInfoFn)(handle, "JxlDecoderGetBasicInfo"),
+                .OutBufferSize = SystemLibraryFallback.TryGetExport(Of OutBufferSizeFn)(handle, "JxlDecoderImageOutBufferSize"),
+                .SetOutBuffer = SystemLibraryFallback.TryGetExport(Of SetOutBufferFn)(handle, "JxlDecoderSetImageOutBuffer"),
+                .CloseInput = SystemLibraryFallback.TryGetExport(Of CloseInputFn)(handle, "JxlDecoderCloseInput"),
+                .SetUnpremultiply = SystemLibraryFallback.TryGetExport(Of SetBoolFn)(handle, "JxlDecoderSetUnpremultiplyAlpha"),
+                .SetParallelRunner = SystemLibraryFallback.TryGetExport(Of SetParallelRunnerFn)(handle, "JxlDecoderSetParallelRunner")}
+            If api.Create Is Nothing OrElse api.Destroy Is Nothing OrElse api.SubscribeEvents Is Nothing OrElse
+               api.SetInput Is Nothing OrElse api.ProcessInput Is Nothing OrElse api.GetBasicInfo Is Nothing OrElse
+               api.OutBufferSize Is Nothing OrElse api.SetOutBuffer Is Nothing Then
+                reason.Append("ein Pflichtexport fehlt")
+                Return Nothing
+            End If
+            If version >= 9000UI Then
+                api.IccSize = SystemLibraryFallback.TryGetExport(Of IccSizeFn)(handle, "JxlDecoderGetICCProfileSize")
+                api.Icc = SystemLibraryFallback.TryGetExport(Of IccFn)(handle, "JxlDecoderGetColorAsICCProfile")
+            Else
+                api.IccSizeLegacy = SystemLibraryFallback.TryGetExport(Of IccSizeLegacyFn)(handle, "JxlDecoderGetICCProfileSize")
+                api.IccLegacy = SystemLibraryFallback.TryGetExport(Of IccLegacyFn)(handle, "JxlDecoderGetColorAsICCProfile")
+            End If
+
+            ' Die Faden-Bibliothek gehoert zur selben Fassung und liegt im selben Ordner.
+            Dim threadsHandle As IntPtr
+            Dim ownRunner As IntPtr
+            If NativeLibrary.TryGetExport(handle, "JxlThreadParallelRunner", ownRunner) Then
+                threadsHandle = handle
+            Else
+                Dim threadsName = IO.Path.GetFileName(fullPath).Replace("libjxl.so", "libjxl_threads.so")
+                Dim threadsPath = IO.Path.Combine(IO.Path.GetDirectoryName(fullPath), threadsName)
+                Dim failure As String = ""
+                If Not IO.File.Exists(threadsPath) OrElse Not SystemLibraryFallback.LoadIsolated(threadsPath, threadsHandle, failure) Then
+                    threadsHandle = IntPtr.Zero
+                End If
+            End If
+            If threadsHandle <> IntPtr.Zero Then
+                api.RunnerCreate = SystemLibraryFallback.TryGetExport(Of RunnerCreateFn)(threadsHandle, "JxlThreadParallelRunnerCreate")
+                api.RunnerDestroy = SystemLibraryFallback.TryGetExport(Of RunnerDestroyFn)(threadsHandle, "JxlThreadParallelRunnerDestroy")
+                api.DefaultWorkers = SystemLibraryFallback.TryGetExport(Of DefaultWorkersFn)(threadsHandle, "JxlThreadParallelRunnerDefaultNumWorkerThreads")
+                Dim runnerFunction As IntPtr
+                If NativeLibrary.TryGetExport(threadsHandle, "JxlThreadParallelRunner", runnerFunction) Then api.RunnerFunction = runnerFunction
+            End If
+            _systemApi = api
+            Return VersionText(version)
+        End Function
+
+        ''' <summary>Ein Lesevorgang an einer Datei, erst mit der zuerst geladenen libjxl, und
+        ''' scheitert sie, mit der des Systems. Der Aufrufer haelt Schleuse und Schloss schon.</summary>
+        Private Shared Function WithFallback(Of T)(path As String, operation As String,
+                                                   work As Func(Of JxlApi, FallbackAttempt, T)) As T
+            Return _fallback.Run(path, operation,
+                                 Function(attempt) work(_primaryApi, attempt),
+                                 AddressOf BindSystem,
+                                 Function(attempt) work(_systemApi, attempt))
+        End Function
 
         Private Shared Function LoadedLibraryNameUnlocked() As String
             Return $"{_loadedLibrary} {_version \ 1000000UI}.{(_version \ 1000UI) Mod 1000UI}.{_version Mod 1000UI}"
@@ -401,9 +561,20 @@ Namespace Services
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
-                                          Return DecodeCore(path)
+                                          Return DecodeFile(path)
                                       End SyncLock
                                   End Function)
+        End Function
+
+        ''' <summary>Das erste Bild einer Datei, mit Rueckfall auf die libjxl des Systems. Kommt kein
+        ''' Bild, gilt das als Scheitern.</summary>
+        Private Shared Function DecodeFile(path As String) As SKBitmap
+            Return WithFallback(path, "Bild",
+                                Function(api, attempt)
+                                    Dim bitmap = DecodeCore(api, path, attempt)
+                                    If bitmap Is Nothing AndAlso Not attempt.Failed Then attempt.Fail("leer", "kein Bild geliefert")
+                                    Return bitmap
+                                End Function)
         End Function
 
         ''' <summary>Die Datei als PNG-Strom, die Form, die OpenSourceStream und die Miniaturen
@@ -412,7 +583,7 @@ Namespace Services
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
-                                          Using bmp = DecodeCore(path)
+                                          Using bmp = DecodeFile(path)
                                               Return PngEncoder.EncodeToStream(bmp, PngPurpose.Transient)
                                           End Using
                                       End SyncLock
@@ -426,7 +597,7 @@ Namespace Services
             If bytes Is Nothing OrElse bytes.Length = 0 OrElse Not IsAvailable Then Return Nothing
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
-                                          Return DecodeBytesCore(bytes)
+                                          Return DecodeBytesCore(_primaryApi, bytes, New FallbackAttempt())
                                       End SyncLock
                                   End Function)
         End Function
@@ -520,17 +691,24 @@ Namespace Services
             End Try
         End Function
 
-        Private Shared Function DecodeCore(path As String) As SKBitmap
+        Private Shared Function DecodeCore(api As JxlApi, path As String, attempt As FallbackAttempt) As SKBitmap
             Dim bytes As Byte()
             Try
                 bytes = File.ReadAllBytes(path)
             Catch
+                ' Eine unlesbare Datei liest auch keine andere Bibliothek: kein Scheitern der libjxl.
                 Return Nothing
             End Try
-            Return DecodeBytesCore(bytes)
+            Return DecodeBytesCore(api, bytes, attempt)
         End Function
 
-        Private Shared Function DecodeBytesCore(bytes As Byte()) As SKBitmap
+        ''' <summary>Ein Status der libjxl, der kein Bild mehr erwarten laesst, als Scheitern im
+        ''' Versuch. libjxl hat keinen Fehlertext, nur die Zahl.</summary>
+        Private Shared Sub NoteStatus(attempt As FallbackAttempt, stage As String, status As Integer)
+            attempt.Fail($"{stage} {status}", $"{stage} meldet Status {status}")
+        End Sub
+
+        Private Shared Function DecodeBytesCore(api As JxlApi, bytes As Byte(), attempt As FallbackAttempt) As SKBitmap
             If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
 
             Dim dec As IntPtr = IntPtr.Zero
@@ -541,21 +719,21 @@ Namespace Services
             Dim profile As SKColorSpace = Nothing
             Dim complete = False
             Try
-                dec = _create(IntPtr.Zero)
+                dec = api.Create(IntPtr.Zero)
                 If dec = IntPtr.Zero Then Return Nothing
 
-                If RunnerReady Then
-                    runner = _runnerCreate(IntPtr.Zero, _defaultWorkers())
-                    If runner <> IntPtr.Zero Then _setParallelRunner(dec, _runnerFunction, runner)
+                If api.RunnerReady Then
+                    runner = api.RunnerCreate(IntPtr.Zero, api.DefaultWorkers())
+                    If runner <> IntPtr.Zero Then api.SetParallelRunner(dec, api.RunnerFunction, runner)
                 End If
-                If _subscribeEvents(dec, StatusBasicInfo Or StatusColorEncoding Or StatusFullImage) <> StatusSuccess Then Return Nothing
+                If api.SubscribeEvents(dec, StatusBasicInfo Or StatusColorEncoding Or StatusFullImage) <> StatusSuccess Then Return Nothing
                 ' Skia erwartet unvormultipliziertes Alpha; ein JPEG XL darf vormultipliziert
                 ' gespeichert sein.
-                _setUnpremultiply?.Invoke(dec, 1)
+                api.SetUnpremultiply?.Invoke(dec, 1)
 
                 pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
-                If _setInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return Nothing
-                _closeInput?.Invoke(dec)
+                If api.SetInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return Nothing
+                api.CloseInput?.Invoke(dec)
 
                 info = Marshal.AllocHGlobal(BasicInfoBufferSize)
                 Dim format = New JxlPixelFormat With {.NumChannels = 4, .DataType = TypeUint8, .Endianness = NativeEndian, .Align = UIntPtr.Zero}
@@ -563,10 +741,10 @@ Namespace Services
                 Dim height = 0
 
                 Do
-                    Dim status = _processInput(dec)
+                    Dim status = api.ProcessInput(dec)
                     Select Case status
                         Case StatusBasicInfo
-                            If _getBasicInfo(dec, info) <> StatusSuccess Then Return Nothing
+                            If api.GetBasicInfo(dec, info) <> StatusSuccess Then Return Nothing
                             Dim size = OrientedSize(info)
                             width = size.Width
                             height = size.Height
@@ -574,18 +752,18 @@ Namespace Services
                             If CLng(width) * CLng(height) > Integer.MaxValue \ 4 Then Return Nothing
 
                         Case StatusColorEncoding
-                            profile = ReadColorProfile(dec)
+                            profile = ReadColorProfile(api, dec)
 
                         Case StatusNeedImageOutBuffer
                             If width <= 0 OrElse height <= 0 Then Return Nothing
                             Dim needed As UIntPtr
-                            If _outBufferSize(dec, format, needed) <> StatusSuccess Then Return Nothing
+                            If api.OutBufferSize(dec, format, needed) <> StatusSuccess Then Return Nothing
                             ' Stimmt die Groesse nicht mit den Massen ueberein, ist die Annahme ueber
                             ' die Drehung falsch. Dann lieber nichts als ein verschobenes Bild.
                             If needed.ToUInt64() <> CULng(width) * CULng(height) * 4UL Then Return Nothing
                             bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul))
                             If bitmap.GetPixels() = IntPtr.Zero OrElse bitmap.RowBytes <> width * 4 Then Return Nothing
-                            If _setOutBuffer(dec, format, bitmap.GetPixels(), needed) <> StatusSuccess Then Return Nothing
+                            If api.SetOutBuffer(dec, format, bitmap.GetPixels(), needed) <> StatusSuccess Then Return Nothing
 
                         Case StatusFullImage
                             ' Das erste vollstaendige Bild. Bei einer Animation folgten weitere
@@ -597,11 +775,13 @@ Namespace Services
                             Exit Do
 
                         Case StatusError, StatusNeedMoreInput
+                            NoteStatus(attempt, "JxlDecoderProcessInput", status)
                             Return Nothing
 
                         Case Else
                             ' Ereignisse, die nicht bestellt wurden, kommen nicht; alles andere
                             ' waere ein Zustand, den dieser Weg nicht kennt.
+                            NoteStatus(attempt, "JxlDecoderProcessInput", status)
                             Return Nothing
                     End Select
                 Loop
@@ -631,11 +811,12 @@ Namespace Services
                 End Try
             Catch ex As Exception
                 DiagnosticLogService.LogException("JXL.DecodeCore", ex)
+                attempt.Fail(ex.GetType().Name, ex.Message)
                 Return Nothing
             Finally
                 ' Der Dekoder zuerst: er haelt Zeiger auf den Ausgabepuffer und die Eingabe.
-                If dec <> IntPtr.Zero Then _destroy(dec)
-                If runner <> IntPtr.Zero Then _runnerDestroy(runner)
+                If dec <> IntPtr.Zero Then api.Destroy(dec)
+                If runner <> IntPtr.Zero Then api.RunnerDestroy(runner)
                 If info <> IntPtr.Zero Then Marshal.FreeHGlobal(info)
                 If pin.IsAllocated Then pin.Free()
                 bitmap?.Dispose()
@@ -661,15 +842,15 @@ Namespace Services
         ''' beschreibt genau die Zahlen, die im Puffer stehen.
         '''
         ''' Kann Skia das Profil nicht lesen (etwa bei PQ oder HLG), bleibt das Bild unverwaltet.</summary>
-        Private Shared Function ReadColorProfile(dec As IntPtr) As SKColorSpace
+        Private Shared Function ReadColorProfile(api As JxlApi, dec As IntPtr) As SKColorSpace
             Dim buffer As IntPtr = IntPtr.Zero
             Try
                 Dim size As UIntPtr
                 Dim status As Integer
-                If _iccSize IsNot Nothing AndAlso _icc IsNot Nothing Then
-                    status = _iccSize(dec, ProfileTargetData, size)
-                ElseIf _iccSizeLegacy IsNot Nothing AndAlso _iccLegacy IsNot Nothing Then
-                    status = _iccSizeLegacy(dec, IntPtr.Zero, ProfileTargetData, size)
+                If api.IccSize IsNot Nothing AndAlso api.Icc IsNot Nothing Then
+                    status = api.IccSize(dec, ProfileTargetData, size)
+                ElseIf api.IccSizeLegacy IsNot Nothing AndAlso api.IccLegacy IsNot Nothing Then
+                    status = api.IccSizeLegacy(dec, IntPtr.Zero, ProfileTargetData, size)
                 Else
                     Return Nothing
                 End If
@@ -678,10 +859,10 @@ Namespace Services
                 If length = 0UL OrElse length > 16UL * 1024UL * 1024UL Then Return Nothing
 
                 buffer = Marshal.AllocHGlobal(CInt(length))
-                If _icc IsNot Nothing Then
-                    status = _icc(dec, ProfileTargetData, buffer, size)
+                If api.Icc IsNot Nothing Then
+                    status = api.Icc(dec, ProfileTargetData, buffer, size)
                 Else
-                    status = _iccLegacy(dec, IntPtr.Zero, ProfileTargetData, buffer, size)
+                    status = api.IccLegacy(dec, IntPtr.Zero, ProfileTargetData, buffer, size)
                 End If
                 If status <> StatusSuccess Then Return Nothing
 
@@ -733,19 +914,35 @@ Namespace Services
         Private Shared Function TryReadBasicFields(path As String) As BasicFields
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             SyncLock _nativeLock
+                Dim length As Long
                 Try
-                    Dim length = New FileInfo(path).Length
-                    If length <= 0 Then Return Nothing
-                    Dim probe = ReadHead(path, CInt(Math.Min(length, HeaderProbeBytes)))
-                    Dim fields = ReadBasicFields(probe, isComplete:=probe.Length >= length)
-                    If fields IsNot Nothing OrElse probe.Length >= length Then Return fields
-                    ' Die Kopfdaten lagen weiter hinten, etwa hinter einer grossen EXIF-Box.
-                    If length > Integer.MaxValue Then Return Nothing
-                    Return ReadBasicFields(File.ReadAllBytes(path), isComplete:=True)
+                    length = New FileInfo(path).Length
                 Catch
                     Return Nothing
                 End Try
+                If length <= 0 Then Return Nothing
+                Return WithFallback(path, "Kopf",
+                                    Function(api, attempt)
+                                        Dim fields = ReadBasicFieldsOfFile(api, path, length, attempt)
+                                        If fields Is Nothing AndAlso Not attempt.Failed Then attempt.Fail("leer", "keine Kopfdaten gelesen")
+                                        Return fields
+                                    End Function)
             End SyncLock
+        End Function
+
+        Private Shared Function ReadBasicFieldsOfFile(api As JxlApi, path As String, length As Long, attempt As FallbackAttempt) As BasicFields
+            Try
+                Dim probe = ReadHead(path, CInt(Math.Min(length, HeaderProbeBytes)))
+                Dim complete = probe.Length >= length
+                ' Ein unvollstaendiger erster Blick zaehlt nicht als Scheitern: die Kopfdaten koennen
+                ' weiter hinten liegen, etwa hinter einer grossen EXIF-Box.
+                Dim fields = ReadBasicFields(api, probe, complete, If(complete, attempt, New FallbackAttempt()))
+                If fields IsNot Nothing OrElse complete Then Return fields
+                If length > Integer.MaxValue Then Return Nothing
+                Return ReadBasicFields(api, File.ReadAllBytes(path), True, attempt)
+            Catch
+                Return Nothing
+            End Try
         End Function
 
         Private Shared Function ReadHead(path As String, count As Integer) As Byte()
@@ -764,21 +961,25 @@ Namespace Services
 
         ''' <summary>Liest nur die Kopfdaten. Bei unvollstaendiger Eingabe darf CloseInput NICHT
         ''' gerufen werden: dann meldete libjxl einen Fehler statt "mehr Eingabe noetig".</summary>
-        Private Shared Function ReadBasicFields(bytes As Byte(), isComplete As Boolean) As BasicFields
+        Private Shared Function ReadBasicFields(api As JxlApi, bytes As Byte(), isComplete As Boolean, attempt As FallbackAttempt) As BasicFields
             If bytes Is Nothing OrElse bytes.Length = 0 Then Return Nothing
             Dim dec As IntPtr = IntPtr.Zero
             Dim info As IntPtr = IntPtr.Zero
             Dim pin As GCHandle
             Try
-                dec = _create(IntPtr.Zero)
+                dec = api.Create(IntPtr.Zero)
                 If dec = IntPtr.Zero Then Return Nothing
-                If _subscribeEvents(dec, StatusBasicInfo) <> StatusSuccess Then Return Nothing
+                If api.SubscribeEvents(dec, StatusBasicInfo) <> StatusSuccess Then Return Nothing
                 pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
-                If _setInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return Nothing
-                If isComplete Then _closeInput?.Invoke(dec)
-                If _processInput(dec) <> StatusBasicInfo Then Return Nothing
+                If api.SetInput(dec, pin.AddrOfPinnedObject(), CType(bytes.Length, UIntPtr)) <> StatusSuccess Then Return Nothing
+                If isComplete Then api.CloseInput?.Invoke(dec)
+                Dim status = api.ProcessInput(dec)
+                If status <> StatusBasicInfo Then
+                    NoteStatus(attempt, "JxlDecoderProcessInput", status)
+                    Return Nothing
+                End If
                 info = Marshal.AllocHGlobal(BasicInfoBufferSize)
-                If _getBasicInfo(dec, info) <> StatusSuccess Then Return Nothing
+                If api.GetBasicInfo(dec, info) <> StatusSuccess Then Return Nothing
                 Dim size = OrientedSize(info)
                 If size.Width <= 0 OrElse size.Height <= 0 Then Return Nothing
                 Return New BasicFields With {
@@ -787,10 +988,11 @@ Namespace Services
                     .BitsPerSample = Marshal.ReadInt32(info, BasicInfoBitsOffset),
                     .ExponentBits = Marshal.ReadInt32(info, BasicInfoExponentBitsOffset),
                     .HasAnimation = Marshal.ReadInt32(info, BasicInfoHaveAnimationOffset) <> 0}
-            Catch
+            Catch ex As Exception
+                attempt.Fail(ex.GetType().Name, ex.Message)
                 Return Nothing
             Finally
-                If dec <> IntPtr.Zero Then _destroy(dec)
+                If dec <> IntPtr.Zero Then api.Destroy(dec)
                 If info <> IntPtr.Zero Then Marshal.FreeHGlobal(info)
                 If pin.IsAllocated Then pin.Free()
             End Try

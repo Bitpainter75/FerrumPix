@@ -65,7 +65,7 @@ Namespace Services
         ''' in <see cref="TryLoadMatching"/> durch.</summary>
         Public Shared Function IsAvailable(rawPath As String) As Boolean
             If String.IsNullOrWhiteSpace(rawPath) Then Return False
-            If Not RawPreviewService.IsSupportedRaw(rawPath) Then Return False
+            If Not RawPreviewService.IsCameraRaw(rawPath) Then Return False
 
             Dim key As String
             Try
@@ -96,7 +96,7 @@ Namespace Services
         ''' <summary>Die eingebettete Vorschau als sRGB-Bitmap, richtig herum gedreht. Nothing,
         ''' wenn die Datei keine brauchbare mitbringt.</summary>
         Public Shared Function TryLoadOriented(rawPath As String) As SKBitmap
-            If String.IsNullOrWhiteSpace(rawPath) OrElse Not RawPreviewService.IsSupportedRaw(rawPath) Then Return Nothing
+            If String.IsNullOrWhiteSpace(rawPath) OrElse Not RawPreviewService.IsCameraRaw(rawPath) Then Return Nothing
             Try
                 Using stream = OpenEmbeddedPreview(rawPath)
                     If stream Is Nothing Then Return Nothing

@@ -82,7 +82,6 @@ Namespace Services
         ''' <summary>Serialisiert die nativen Aufrufe, wenn nur die NICHT-reentrante libraw da ist.
         ''' Mit der _r-Variante bleibt der Sperrbereich ungenutzt und die Threads laufen parallel.</summary>
         Private Shared ReadOnly _nativeLock As New Object()
-        Private Shared _reentrant As Boolean
         Private Shared _loadedLibrary As String
 
         ''' <summary>Welche libraw-Variante geladen wurde - für die Diagnose und für Feldberichte,
@@ -103,41 +102,8 @@ Namespace Services
         Private Shared _initialized As Boolean
         Private Shared _library As IntPtr
 
-        Private Shared _init As InitFn
-        Private Shared _openFile As OpenFileFn
-        ''' OPTIONAL: ohne ihn bleibt ein DNG mit JPEG-XL-Rohdaten bei der Vorschau (DngJxlRawService).
-        Private Shared _openBuffer As OpenBufferFn
-        Private Shared _unpack As IntFn
-        Private Shared _setOutputBps As SetIntFn
-        Private Shared _setOutputColor As SetIntFn
-        Private Shared _getCamMul As GetCamMulFn
-        Private Shared _getPreMul As GetCamMulFn
-        Private Shared _getRgbCam As GetRgbCamFn
-        Private Shared _getIparams As GetStructFn
-        Private Shared _getImgOther As GetStructFn
-        Private Shared _getIwidth As IntFn
-        Private Shared _getIheight As IntFn
-        Private Shared _getRawWidth As IntFn
-        Private Shared _getRawHeight As IntFn
-        ''' LibRaws Weisspunkt (color.maximum); nur fuer den gemessenen Schwarzpunkt, siehe
-        ''' MeasureMaskedBlack. Optional wie die Getter darueber.
-        Private Shared _getColorMaximum As IntFn
-        Private Shared _setUserMul As SetUserMulFn
-        Private Shared _setNoAutoBright As SetIntFn
-        Private Shared _setGamma As SetGammaFn
-        Private Shared _setFbdd As SetIntFn
-        Private Shared _setDemosaic As SetIntFn
-        Private Shared _setHighlight As SetIntFn
-        Private Shared _setAdjustMaximumThr As SetFloatFn
-        Private Shared _process As IntFn
-        Private Shared _unpackThumb As IntFn
-        Private Shared _unpackThumbEx As IndexedIntFn
-        Private Shared _makeMemThumb As MakeMemImageFn
-        Private Shared _makeMemImage As MakeMemImageFn
-        Private Shared _clearMem As PtrFn
-        Private Shared _close As PtrFn
-        Private Shared _cameraList As CameraListFn
-        Private Shared _cameraCount As CameraCountFn
+        ' Die Einstiege der C-API (_init, _openFile, _unpack ...) sind Eigenschaften, die die
+        ' Bindung des laufenden Fadens liefern: siehe RawDecodeServiceFallback.vb.
 
         ' ── Datenfehler beim Entpacken ───────────────────────────────────────────
         ' LibRaw meldet beschaedigte Rohdaten nicht ueber den Rueckgabewert von unpack, sondern ueber
@@ -176,8 +142,6 @@ Namespace Services
         ''' aufgenommen, was gemessen ist; siehe den Block oben.
         Private Shared ReadOnly DecodersFatalOnDataError As String() = {"nikon_load_raw"}
 
-        Private Shared _setDataErrorHandler As SetDataErrorHandlerFn
-        Private Shared _getDecoderInfo As GetDecoderInfoFn
         ''' Der Delegat MUSS in einem statischen Feld leben: nur ein Funktionszeiger geht an LibRaw,
         ''' und raeumte die Speicherbereinigung den Delegaten weg, spraenge der naechste Aufruf ins Leere.
         Private Shared ReadOnly _dataErrorCallback As DataErrorCallback = AddressOf OnLibRawDataError
@@ -217,7 +181,6 @@ Namespace Services
         ''' <summary>LIBRAW_CANCELLED_BY_CALLBACK aus libraw_const.h.</summary>
         Private Const LibRawCancelledByCallback As Integer = -100010
 
-        Private Shared _setProgressHandler As SetProgressHandlerFn
         ''' Wie beim Datenfehler: der Delegat lebt in einem statischen Feld, sonst raeumte ihn die
         ''' Speicherbereinigung weg, waehrend LibRaw noch seinen Zeiger haelt.
         Private Shared ReadOnly _progressCallback As ProgressCallback = AddressOf OnLibRawProgress
@@ -273,7 +236,7 @@ Namespace Services
             Dim check = _stillWanted
             If check Is Nothing OrElse _setProgressHandler Is Nothing OrElse _progressCallbackPointer = IntPtr.Zero Then Return False
             _stillWantedByHandle(handle) = check
-            _setProgressHandler(handle, _progressCallbackPointer, handle)
+            _setProgressHandler.Invoke(handle, _progressCallbackPointer, handle)
             Return True
         End Function
 
@@ -300,7 +263,7 @@ Namespace Services
                _dataErrorCallbackPointer = IntPtr.Zero Then Return _unpack(handle)
             Dim ignored As Byte
             _handlesWithDataError.TryRemove(handle, ignored)
-            _setDataErrorHandler(handle, _dataErrorCallbackPointer, handle)
+            _setDataErrorHandler.Invoke(handle, _dataErrorCallbackPointer, handle)
             Dim result = _unpack(handle)
             If Not _handlesWithDataError.TryRemove(handle, ignored) Then Return result
 
@@ -320,13 +283,21 @@ Namespace Services
             Return result
         End Function
 
-        ''' <summary>True, wenn das System-libraw geladen werden konnte (Ergebnis wird gecacht).</summary>
+        ''' <summary>True, wenn das System-libraw geladen werden konnte (Ergebnis wird gecacht).
+        ''' Allgemein gemeint (Seite Technik, Hinweise auf eine fehlende LibRaw). Wo es um eine
+        ''' bestimmte Datei geht, fragt der Aufrufer <see cref="CanDevelop"/>: lineares Licht braucht
+        ''' LibRaw nicht.</summary>
         Public Shared ReadOnly Property IsAvailable As Boolean
             Get
                 EnsureLoaded()
-                Return _library <> IntPtr.Zero
+                Return _library <> IntPtr.Zero AndAlso Not LibRawHiddenForTest
             End Get
         End Property
+
+        ''' <summary>Nur fuer den Pruefstand: LibRaw gilt als nicht geladen, und jeder Einstieg der
+        ''' C-API liefert Nothing (<see cref="ActiveBinding"/>). Ein Aufruf in LibRaw wuerfe dann,
+        ''' statt still zu gelingen; so belegt eine Pruefung, dass ein Weg ohne LibRaw auskommt.</summary>
+        Friend Shared LibRawHiddenForTest As Boolean = False
 
         ''' <summary>Wie sich eine fehlende LibRaw auf DIESEM System nachruesten laesst, als fertiger
         ''' Satz fuer die Oberflaeche.
@@ -481,140 +452,21 @@ Namespace Services
                 ' Ist es die reentrante Variante? Wenn nicht, werden die nativen Aufrufe serialisiert -
                 ' lieber langsamere Thumbnails als sporadische Abstürze.
                 _loadedLibrary = loadedName
-                _reentrant = loadedName IsNot Nothing AndAlso
-                             (loadedName.Contains("_r.") OrElse OperatingSystem.IsWindows() OrElse OperatingSystem.IsMacOS())
+                Dim reentrant = loadedName IsNot Nothing AndAlso
+                                (loadedName.Contains("_r.") OrElse OperatingSystem.IsWindows() OrElse OperatingSystem.IsMacOS())
 
-                Try
-                    _init = GetExport(Of InitFn)(handle, "libraw_init")
-                    _openFile = GetExport(Of OpenFileFn)(handle, "libraw_open_file")
-                    _unpack = GetExport(Of IntFn)(handle, "libraw_unpack")
-                    _setOutputBps = GetExport(Of SetIntFn)(handle, "libraw_set_output_bps")
-                    _setOutputColor = GetExport(Of SetIntFn)(handle, "libraw_set_output_color")
-                    _getCamMul = GetExport(Of GetCamMulFn)(handle, "libraw_get_cam_mul")
-                    _setUserMul = GetExport(Of SetUserMulFn)(handle, "libraw_set_user_mul")
-                    _setNoAutoBright = GetExport(Of SetIntFn)(handle, "libraw_set_no_auto_bright")
-                    _setGamma = GetExport(Of SetGammaFn)(handle, "libraw_set_gamma")
-                    _process = GetExport(Of IntFn)(handle, "libraw_dcraw_process")
-                    _unpackThumb = GetExport(Of IntFn)(handle, "libraw_unpack_thumb")
-                    _makeMemThumb = GetExport(Of MakeMemImageFn)(handle, "libraw_dcraw_make_mem_thumb")
-                    _makeMemImage = GetExport(Of MakeMemImageFn)(handle, "libraw_dcraw_make_mem_image")
-                    _clearMem = GetExport(Of PtrFn)(handle, "libraw_dcraw_clear_mem")
-                    _close = GetExport(Of PtrFn)(handle, "libraw_close")
-                    ' OPTIONAL, deshalb eigenes Try: eine aeltere libraw ohne diesen Export ist
-                    ' voll brauchbar, sie rauscht nur mehr. Im Hauptblock wuerde sie hier
-                    ' komplett durchfallen und die RAW-Entwicklung ganz abschalten.
-                    Try
-                        _setFbdd = GetExport(Of SetIntFn)(handle, "libraw_set_fbdd_noiserd")
-                    Catch
-                        _setFbdd = Nothing
-                    End Try
-                    ' OPTIONAL wie die uebrigen: ohne ihn bleibt es beim alten Verhalten, ein
-                    ' Datenfehler beim Entpacken wird dann nicht erkannt (siehe UnpackChecked).
-                    Try
-                        _setDataErrorHandler = GetExport(Of SetDataErrorHandlerFn)(handle, "libraw_set_dataerror_handler")
-                        _getDecoderInfo = GetExport(Of GetDecoderInfoFn)(handle, "libraw_get_decoder_info")
-                        _dataErrorCallbackPointer = Marshal.GetFunctionPointerForDelegate(_dataErrorCallback)
-                    Catch
-                        _setDataErrorHandler = Nothing
-                        _getDecoderInfo = Nothing
-                        _dataErrorCallbackPointer = IntPtr.Zero
-                    End Try
-                    ' OPTIONAL: ohne ihn nimmt die Kachel weiter die groesste Vorschau.
-                    Try
-                        _unpackThumbEx = GetExport(Of IndexedIntFn)(handle, "libraw_unpack_thumb_ex")
-                    Catch
-                        _unpackThumbEx = Nothing
-                    End Try
-                    Try
-                        _openBuffer = GetExport(Of OpenBufferFn)(handle, "libraw_open_buffer")
-                    Catch
-                        _openBuffer = Nothing
-                    End Try
-                    ' OPTIONAL: ohne ihn laeuft ein ueberholter Decode zu Ende (siehe RunWhileWanted).
-                    Try
-                        _setProgressHandler = GetExport(Of SetProgressHandlerFn)(handle, "libraw_set_progress_handler")
-                        _progressCallbackPointer = Marshal.GetFunctionPointerForDelegate(_progressCallback)
-                    Catch
-                        _setProgressHandler = Nothing
-                        _progressCallbackPointer = IntPtr.Zero
-                    End Try
-                    Try
-                        _setDemosaic = GetExport(Of SetIntFn)(handle, "libraw_set_demosaic")
-                    Catch
-                        _setDemosaic = Nothing
-                    End Try
-                    Try
-                        _setHighlight = GetExport(Of SetIntFn)(handle, "libraw_set_highlight")
-                    Catch
-                        _setHighlight = Nothing
-                    End Try
-                    Try
-                        _setAdjustMaximumThr = GetExport(Of SetFloatFn)(handle, "libraw_set_adjust_maximum_thr")
-                    Catch
-                        _setAdjustMaximumThr = Nothing
-                    End Try
-                    ' OPTIONAL, eigenes Try wie oben: diese zwei tragen NUR den Aufnahme-
-                    ' Weissabgleich als Zahl (siehe ReadCameraColorFacts). Fehlen sie, entwickelt
-                    ' die Anwendung unveraendert weiter - es fehlt dann die Kelvin-Angabe, kein
-                    ' Bildpunkt. Beide zusammen oder keiner: die Rechnung braucht pre_mul UND
-                    ' rgb_cam, mit nur einem davon waere sie nicht bloss ungenau, sondern falsch.
-                    Try
-                        _getPreMul = GetExport(Of GetCamMulFn)(handle, "libraw_get_pre_mul")
-                        _getRgbCam = GetExport(Of GetRgbCamFn)(handle, "libraw_get_rgb_cam")
-                    Catch
-                        _getPreMul = Nothing
-                        _getRgbCam = Nothing
-                    End Try
-                    ' OPTIONAL, eigenes Try wie oben: die beiden liefern die AUFNAHMEDATEN, die
-                    ' LibRaw beim Oeffnen selbst aus der Datei liest - fuer die Container, zu denen
-                    ' unser Metadatenleser gar keinen Leser mitbringt (siehe ReadFileMetadata).
-                    ' Fehlen sie, bleibt es bei dem, was aus den Aufnahmedaten kommt.
-                    Try
-                        _getIparams = GetExport(Of GetStructFn)(handle, "libraw_get_iparams")
-                        _getImgOther = GetExport(Of GetStructFn)(handle, "libraw_get_imgother")
-                        _getIwidth = GetExport(Of IntFn)(handle, "libraw_get_iwidth")
-                        _getIheight = GetExport(Of IntFn)(handle, "libraw_get_iheight")
-                        _getRawWidth = GetExport(Of IntFn)(handle, "libraw_get_raw_width")
-                        _getRawHeight = GetExport(Of IntFn)(handle, "libraw_get_raw_height")
-                        _getColorMaximum = GetExport(Of IntFn)(handle, "libraw_get_color_maximum")
-                    Catch
-                        _getIparams = Nothing
-                        _getImgOther = Nothing
-                        _getIwidth = Nothing
-                        _getIheight = Nothing
-                        _getRawWidth = Nothing
-                        _getRawHeight = Nothing
-                        _getColorMaximum = Nothing
-                    End Try
-                    ' OPTIONAL, eigenes Try wie oben: die Modellliste beantwortet EINE Frage, und
-                    ' zwar die nach der Ursache eines kaputt aussehenden Bildes (siehe
-                    ' CameraIsKnown). Fehlt sie, entwickelt die Anwendung unveraendert weiter und
-                    ' sagt nur nichts dazu.
-                    Try
-                        _cameraList = GetExport(Of CameraListFn)(handle, "libraw_cameraList")
-                        _cameraCount = GetExport(Of CameraCountFn)(handle, "libraw_cameraCount")
-                    Catch
-                        _cameraList = Nothing
-                        _cameraCount = Nothing
-                    End Try
-                    _library = handle
-                Catch
-                    ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
-                    _init = Nothing : _openFile = Nothing : _unpack = Nothing
-                    _setOutputBps = Nothing : _setOutputColor = Nothing
-                    _getCamMul = Nothing : _setUserMul = Nothing
-                    _getPreMul = Nothing : _getRgbCam = Nothing
-                    _getIparams = Nothing : _getImgOther = Nothing
-                    _getIwidth = Nothing : _getIheight = Nothing
-                    _getRawWidth = Nothing : _getRawHeight = Nothing : _getColorMaximum = Nothing
-                    _setHighlight = Nothing : _setAdjustMaximumThr = Nothing
-                    _setNoAutoBright = Nothing : _setGamma = Nothing : _setFbdd = Nothing : _setDemosaic = Nothing
-                    _process = Nothing : _makeMemImage = Nothing : _clearMem = Nothing : _close = Nothing
-                    _unpackThumb = Nothing : _unpackThumbEx = Nothing : _makeMemThumb = Nothing
-                    _cameraList = Nothing : _cameraCount = Nothing
+                ' Die Einstiege binden (BindExports, RawDecodeServiceFallback.vb). Fehlt ein
+                ' Pflichteinstieg, ist die Bibliothek unbrauchbar und alles bleibt auf Anfang.
+                Dim bound = BindExports(handle, loadedName, reentrant)
+                If bound Is Nothing Then
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
-                End Try
+                    Return
+                End If
+                _primaryBinding = bound
+                _library = handle
+                ' Fuer den Rueckfall je Datei (RawDecodeServiceFallback.vb): welche Datei laeuft.
+                RegisterPrimaryForFallback()
             End SyncLock
         End Sub
 
@@ -633,12 +485,18 @@ Namespace Services
         ''' Liefert einen dekodierbaren Strom (JPEG oder PNG) oder Nothing.</summary>
         Public Shared Function TryExtractThumbnail(path As String) As MemoryStream
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
-            If Not _reentrant Then
-                SyncLock _nativeLock
+            ' Lineares Licht traegt keine Vorschau; die Kachel entwickelt (TryRenderPreviewBitmap).
+            If IsLinearLightSource(path) Then Return Nothing
+            ' Scheitert die mitgelieferte, versucht es die des Systems (RawDecodeServiceFallback.vb).
+            Return WithSystemFallback(path, FallbackStage.Thumbnail,
+                Function()
+                    If Not _reentrant Then
+                        SyncLock _nativeLock
+                            Return ExtractThumbnailCore(path)
+                        End SyncLock
+                    End If
                     Return ExtractThumbnailCore(path)
-                End SyncLock
-            End If
-            Return ExtractThumbnailCore(path)
+                End Function)
         End Function
 
         Private Shared Function ExtractThumbnailCore(path As String) As MemoryStream
@@ -690,8 +548,8 @@ Namespace Services
             Catch
                 Return Nothing
             Finally
-                If thumb <> IntPtr.Zero Then _clearMem(thumb)
-                _close(handle)
+                If thumb <> IntPtr.Zero Then _clearMem.Invoke(thumb)
+                _close.Invoke(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
@@ -712,6 +570,9 @@ Namespace Services
         ''' </summary>
         Public Shared Function TryExtractSmallestThumbnail(path As String, minShortSide As Integer) As MemoryStream
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable OrElse _unpackThumbEx Is Nothing Then Return Nothing
+            If IsLinearLightSource(path) Then Return Nothing
+            ' KEIN Rueckfall hier: Nothing heisst oft nur "keine Vorschau gross genug", und die
+            ' Kachel fragt danach TryExtractThumbnail, das den Rueckfall traegt.
             If Not _reentrant Then
                 SyncLock _nativeLock
                     Return ExtractSmallestThumbnailCore(path, minShortSide)
@@ -748,7 +609,7 @@ Namespace Services
                         payloads.Add(payload)
                         sizes.Add(size)
                     Finally
-                        _clearMem(thumb)
+                        _clearMem.Invoke(thumb)
                     End Try
                 Next
                 If payloads.Count < 2 Then Return Nothing
@@ -771,7 +632,7 @@ Namespace Services
             Catch
                 Return Nothing
             Finally
-                _close(handle)
+                _close.Invoke(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
@@ -923,7 +784,8 @@ Namespace Services
                                          Optional recoverHighlights As Boolean = True,
                                          Optional knee As Double = HighlightRecoveryKnee,
                                          Optional exposureEv As Double = 0.0) As SKBitmap
-            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            ' Lineares Licht braucht seinen Leser, nicht LibRaw (CanDevelop).
+            If Not CanDevelop(path) Then Return Nothing
             ' Wie lange vor dem Tor gewartet wurde (ein anderer Decode lief), steht mit den
             ' Schritten von DecodeIntern in einer Zeile "RawDecodeService.Zeiten".
             Dim requested = Stopwatch.GetTimestamp()
@@ -940,7 +802,7 @@ Namespace Services
                                                    Optional recoverHighlights As Boolean = True,
                                                    Optional exposureEv As Double = 0.0,
                                                    Optional knee As Double = HighlightRecoveryKnee) As SKBitmap
-            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If Not CanDevelop(path) Then Return Nothing
             Return DecodeGate.Run(Function() DecodeThumbnailIntern(path, lensChoice, recoverHighlights, exposureEv, knee))
         End Function
 
@@ -952,14 +814,16 @@ Namespace Services
             Try
                 Dim baseEv = BaseExposureForFile(path) + exposureEv
                 Dim lens = LensCorrectionForFile(path, lensChoice)
-                Dim decoded As SKBitmap
-                If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
-                Else
-                    SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
-                    End SyncLock
-                End If
+                ' Scheitert die mitgelieferte, versucht es die des Systems (RawDecodeServiceFallback.vb).
+                Dim decoded = WithSystemFallback(path, FallbackStage.Develop,
+                    Function()
+                        If _reentrant Then
+                            Return DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
+                        End If
+                        SyncLock _nativeLock
+                            Return DecodeCore(path, baseEv, lens, useHalfSize:=True, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv)
+                        End SyncLock
+                    End Function)
                 Return WithDistortion(WithSensorEdgeCrop(decoded, path, lensChoice, halfSize:=True), lens)
             Catch
                 Return Nothing
@@ -1022,16 +886,18 @@ Namespace Services
 
                 ' Ohne reentrante libraw laufen die nativen Aufrufe nacheinander - die
                 ' Thumbnail-Erzeugung ruft aus mehreren Threads hier herein (Parallel.For).
-                Dim decoded As SKBitmap
-                If _reentrant Then
-                    decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
-                                         modelDenoise:=modelDenoise)
-                Else
-                    SyncLock _nativeLock
-                        decoded = DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
-                                             modelDenoise:=modelDenoise)
-                    End SyncLock
-                End If
+                ' Scheitert die mitgelieferte, versucht es die des Systems (RawDecodeServiceFallback.vb).
+                Dim decoded = WithSystemFallback(path, FallbackStage.Develop,
+                    Function()
+                        If _reentrant Then
+                            Return DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                              modelDenoise:=modelDenoise)
+                        End If
+                        SyncLock _nativeLock
+                            Return DecodeCore(path, baseEv, lens, recoverHighlights:=recoverHighlights, knee:=knee, sliderEv:=exposureEv,
+                                              modelDenoise:=modelDenoise)
+                        End SyncLock
+                    End Function)
                 If decoded Is Nothing Then Return Nothing
                 Dim coreMs = clock.Elapsed.TotalMilliseconds
 
@@ -1219,6 +1085,8 @@ Namespace Services
         Private Shared Function EdgesFor(path As String) As (Sensor As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?,
                                                              CameraAspect As (Left As Integer, Top As Integer, Right As Integer, Bottom As Integer)?)
             If String.IsNullOrWhiteSpace(path) Then Return (Nothing, Nothing)
+            ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) hat keinen Sensor und keine Kamera.
+            If IsLinearLightSource(path) Then Return (Nothing, Nothing)
             Dim writeTime As DateTime
             Try
                 writeTime = File.GetLastWriteTimeUtc(path)
@@ -1359,6 +1227,8 @@ Namespace Services
         ''' bleibt hier aussen vor - sie ist eine eigene Stufe hinter dem Decode.</summary>
         Private Shared Function LensCorrectionForFile(path As String,
                                                            wahl As LensDataService.Wahl) As LensDataService.Korrektur
+            ' Lineares Licht kommt ohne Kamera und Objektiv; ein Profil gehoerte zu keinen Daten.
+            If IsLinearLightSource(path) Then Return Nothing
             Try
                 Dim vorgabe = AppSettingsService.Load().LensCorrectionEnabled
                 Dim modell = If(wahl IsNot Nothing, wahl.LensModel, "")
@@ -1710,14 +1580,22 @@ Namespace Services
         ''' Genau daran scheitert der Schwarzpunkt (siehe OFFENE_PUNKTE.md): den koennte man nicht
         ''' pruefen, ein verschobener Aufbau schriebe dort still einen falschen Wert ins Bild.</summary>
         Public Shared Function ReadFileMetadata(path As String) As FileMetadata
-            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If String.IsNullOrWhiteSpace(path) Then Return Nothing
+            ' Lineares Licht: nur die Masse aus dem eigenen Leser, keine Kamera (LibRaw kennt das
+            ' Format nicht und soll die Datei gar nicht erst oeffnen).
+            If IsLinearLightSource(path) Then Return LinearLightMetadata(path)
+            If Not IsAvailable Then Return Nothing
             If _getIparams Is Nothing OrElse _getImgOther Is Nothing Then Return Nothing
-            If Not _reentrant Then
-                SyncLock _nativeLock
+            Return WithSystemFallback(path, FallbackStage.Metadata,
+                Function()
+                    If _getIparams Is Nothing OrElse _getImgOther Is Nothing Then Return Nothing
+                    If Not _reentrant Then
+                        SyncLock _nativeLock
+                            Return ReadFileMetadataCore(path)
+                        End SyncLock
+                    End If
                     Return ReadFileMetadataCore(path)
-                End SyncLock
-            End If
-            Return ReadFileMetadataCore(path)
+                End Function)
         End Function
 
         Private Shared Function ReadFileMetadataCore(path As String) As FileMetadata
@@ -1787,7 +1665,7 @@ Namespace Services
                 DiagnosticLogService.LogException("RawDecodeService.ReadFileMetadata", ex)
                 Return Nothing
             Finally
-                _close(handle)
+                _close.Invoke(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
@@ -2050,11 +1928,11 @@ Namespace Services
             If _knownCameras IsNot Nothing Then Return _knownCameras
             If _cameraList Is Nothing OrElse _cameraCount Is Nothing Then Return Nothing
             Try
-                Dim count = _cameraCount()
+                Dim count = _cameraCount.Invoke()
                 ' Eine Zahl weit jenseits des Plausiblen heisst: der Export ist nicht der, fuer den
                 ' wir ihn halten. Dieselbe Regel wie bei den Strukturversaetzen.
                 If count <= 0 OrElse count > 100000 Then Return Nothing
-                Dim listPtr = _cameraList()
+                Dim listPtr = _cameraList.Invoke()
                 If listPtr = IntPtr.Zero Then Return Nothing
                 Dim byMaker As New Dictionary(Of String, HashSet(Of String))(StringComparer.Ordinal)
                 For i = 0 To count - 1
@@ -2229,6 +2107,7 @@ Namespace Services
         Public Shared Function ReadCameraColorFacts(path As String,
                                                     Optional includeProcessed As Boolean = False) As CameraColorFacts
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If IsLinearLightSource(path) Then Return Nothing
             If _getPreMul Is Nothing OrElse _getRgbCam Is Nothing Then Return Nothing
             If Not _reentrant Then
                 SyncLock _nativeLock
@@ -2270,8 +2149,8 @@ Namespace Services
                     ' verschiedene Dinge. Und dcraw_process braucht entpackte Daten - deshalb die
                     ' Marke: ob ein zweiter unpack-Aufruf gutgeht, ist nicht zugesagt, also wird er
                     ' nicht gemacht.
-                    _setOutputBps(handle, DecodeOutputBits)
-                    _setOutputColor(handle, 1) ' sRGB
+                    _setOutputBps.Invoke(handle, DecodeOutputBits)
+                    _setOutputColor.Invoke(handle, 1) ' sRGB
                     If unpacked OrElse _unpack(handle) = 0 Then
                         If _process(handle) = 0 Then facts.RgbCamAfterProcess = If(OwnCameraMatrix(handle)?.RgbFromCamera, ReadRgbCamMatrix(handle))
                     End If
@@ -2282,7 +2161,7 @@ Namespace Services
                 DiagnosticLogService.LogException("RawDecodeService.ReadCameraColorFacts", ex)
                 Return Nothing
             Finally
-                _close(handle)
+                _close.Invoke(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
@@ -2299,6 +2178,7 @@ Namespace Services
         ''' nicht nachgerechnet: eine zweite Fassung der Regel liefe irgendwann auseinander.</summary>
         Public Shared Function AppliedLevelOverride(path As String) As (Black As Integer, Range As Integer)?
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
+            If IsLinearLightSource(path) Then Return Nothing
             Return DecodeGate.Run(Function()
                                       If Not _reentrant Then
                                           SyncLock _nativeLock
@@ -2325,7 +2205,7 @@ Namespace Services
                 DiagnosticLogService.LogException("RawDecodeService.AppliedLevelOverride", ex)
                 Return Nothing
             Finally
-                _close(handle)
+                _close.Invoke(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function
@@ -2775,7 +2655,7 @@ Namespace Services
         ''' Liegen die Daten schon da (etwa weil der Betrachter selbst in voller Groesse entwickelt
         ''' hat), laeuft nichts. Liefert True, wenn die Daten danach daliegen.</summary>
         Public Shared Function WarmRawCache(path As String, Optional stillWanted As Func(Of Boolean) = Nothing) As Boolean
-            If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return False
+            If Not CanDevelop(path) Then Return False
             Return DecodeGate.Run(
                 Function()
                     If stillWanted IsNot Nothing AndAlso Not stillWanted() Then
@@ -2951,7 +2831,8 @@ Namespace Services
                                                knee As Double, sliderEv As Double,
                                                shadowSaturation As Single(),
                                                toneMatrix As Single(),
-                                               Optional fringeOwner As Object = Nothing) As SKBitmap
+                                               Optional fringeOwner As Object = Nothing,
+                                               Optional magentaRecovery As Boolean = True) As SKBitmap
             Dim bitmap = New SKBitmap(New SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque))
             Try
                 ' ZEILENWEISE direkt in die Bitmap. Ein 8-Bit-Vollbildpuffer waere bei 45
@@ -2976,7 +2857,7 @@ Namespace Services
                 Convert16Rows(data, width, height,
                               Sub(y, row) Marshal.Copy(row, 0, IntPtr.Add(targetPtr, y * targetStride), rowLength),
                               lens, ramp.ExposureEv, ramp.BlackLevel, knee, If(linear, Nothing, shadowSaturation), toneMatrix,
-                              fringeOwner:=fringeOwner)
+                              fringeOwner:=fringeOwner, magentaRecovery:=magentaRecovery)
                 Return bitmap
             Catch ex As Exception
                 DiagnosticLogService.LogException("RawDecodeService.BuildFrom16Bit", ex)
@@ -3015,6 +2896,8 @@ Namespace Services
                 toneMatrix = _cachedRawToneMatrix
             End SyncLock
 
+            ' Lineares Licht ohne die Korrektur rosa Lichter (siehe Convert16Rows).
+            Dim magenta = Not IsLinearLightSource(path)
             Dim pin = GCHandle.Alloc(bytes, GCHandleType.Pinned)
             Try
                 ' Mit Entrauschen aus dessen Ergebnis (RawDecodeServiceModelDenoise.vb).
@@ -3034,10 +2917,10 @@ Namespace Services
                 End If
                 If deep Then
                     Return BuildDeepFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
-                                              ShadowSaturationForFile(path), toneMatrix)
+                                              ShadowSaturationForFile(path), toneMatrix, magenta)
                 End If
                 Return BuildFrom16Bit(pin.AddrOfPinnedObject(), width, height, lens, baseEv, normalization, knee, sliderEv,
-                                      ShadowSaturationForFile(path), toneMatrix, bytes)
+                                      ShadowSaturationForFile(path), toneMatrix, bytes, magenta)
             Finally
                 pin.Free()
             End Try
@@ -3727,9 +3610,9 @@ Namespace Services
             Const markerDemosaic As Integer = 7
             Dim foundBase As Integer = -1
             Try
-                _setOutputColor(handle, markerOutputColor)
-                _setOutputBps(handle, markerOutputBps)
-                _setDemosaic(handle, markerDemosaic)
+                _setOutputColor.Invoke(handle, markerOutputColor)
+                _setOutputBps.Invoke(handle, markerOutputBps)
+                _setDemosaic.Invoke(handle, markerDemosaic)
 
                 For candidate = ParamsSearchStart To ParamsSearchEnd Step 4
                     If Marshal.ReadInt32(handle, candidate + OutputColorOffset) <> markerOutputColor Then Continue For
@@ -3751,15 +3634,15 @@ Namespace Services
                 ' danach ein VOLLER Decode lief, wurde er also mit dem schwaechsten Verfahren
                 ' gerechnet.
                 Try
-                    _setOutputColor(handle, 1)
-                    _setOutputBps(handle, DecodeOutputBits)
-                    _setDemosaic(handle, ConfiguredDemosaic())
+                    _setOutputColor.Invoke(handle, 1)
+                    _setOutputBps.Invoke(handle, DecodeOutputBits)
+                    _setDemosaic.Invoke(handle, ConfiguredDemosaic())
                     ' Ausdruecklich, nicht auf die Vorgabe der Bibliothek verlassen (HighlightMode).
-                    If _setHighlight IsNot Nothing Then _setHighlight(handle, HighlightMode)
+                    If _setHighlight IsNot Nothing Then _setHighlight.Invoke(handle, HighlightMode)
                     ' Dasselbe fuer die motivabhaengige Weisspunkt-Nachfuehrung, siehe
                     ' AdjustMaximumThreshold. Sie gehoert HIERHER wie in den vollen Decode: der
                     ' Halbbild-Weg entwickelt dieselben Daten, nur in halber Kantenlaenge.
-                    If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
+                    If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr.Invoke(handle, AdjustMaximumThreshold)
                 Catch
                 End Try
             End Try
@@ -3803,6 +3686,13 @@ Namespace Services
                 Catch
                     ' Nicht lesbare Aenderungszeit heisst nur: kein Treffer. Der Decode laeuft.
                 End Try
+            End If
+
+            ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma): derselbe Zwischenspeicher und
+            ' dieselbe Umsetzung, nur kommen die Daten aus dem eigenen Leser statt aus LibRaw
+            ' (RawDecodeServiceLinear.vb).
+            If IsLinearLightSource(path) Then
+                Return DecodeLinearCore(path, baseEv, useHalfSize, wantedKnee, sliderEv, warmOnly, keepRaw, writeTime, demosaic)
             End If
 
             ' Rohdaten in JPEG XL (DNG 1.7) kann LibRaw nicht dekodieren. Dann bekommt sie dieselbe
@@ -3853,8 +3743,8 @@ Namespace Services
                 ' wird sie nach dem Entwickeln auf die linearen Daten, siehe ApplyCameraMatrix.
                 Dim ownMatrix = OwnCameraMatrix(handle)
 
-                _setOutputBps(handle, DecodeOutputBits)
-                _setOutputColor(handle, 1) ' sRGB
+                _setOutputBps.Invoke(handle, DecodeOutputBits)
+                _setOutputColor.Invoke(handle, 1) ' sRGB
                 ' LINEAR und OHNE Auto-Aufhellung dekodieren - die Tonabbildung macht Convert16.
                 ' LibRaws Auto-Aufhellung ist ein Histogramm-Stretch: gemessen faellt sie an einem
                 ' dunklen Motiv zu HELL und an einem hellen zu DUNKEL aus (P50 0,140 gegen die
@@ -3873,13 +3763,13 @@ Namespace Services
                 Dim bereitsGerendert = IsFinishedRgb(path)
                 Dim linearMoeglich = Not bereitsGerendert AndAlso
                                      _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing
-                If bereitsGerendert AndAlso _setNoAutoBright IsNot Nothing Then _setNoAutoBright(handle, 1)
+                If bereitsGerendert AndAlso _setNoAutoBright IsNot Nothing Then _setNoAutoBright.Invoke(handle, 1)
                 If linearMoeglich Then
-                    _setNoAutoBright(handle, 1)
-                    _setGamma(handle, 0, 1.0F) ' Gamma-Kurve neutral: 1/1 = linear
-                    _setGamma(handle, 1, 1.0F)
+                    _setNoAutoBright.Invoke(handle, 1)
+                    _setGamma.Invoke(handle, 0, 1.0F) ' Gamma-Kurve neutral: 1/1 = linear
+                    _setGamma.Invoke(handle, 1, 1.0F)
                 Else
-                    _setOutputBps(handle, 8)
+                    _setOutputBps.Invoke(handle, 8)
                 End If
                 ' Rauschminderung VOR dem Demosaic. Sie greift an der einzigen Stelle, an der das
                 ' Muster des Sensors noch bekannt ist - danach hat das Demosaic den Fehler bereits
@@ -3889,10 +3779,10 @@ Namespace Services
                 ' Kostet rund eine halbe Sekunde bei 20 MP.
                 ' LEICHT (1), nicht VOLL (2): voll ist beim Farbrauschen gemessen SCHLECHTER
                 ' (1,74 gegen 1,31) - hier gilt nicht "mehr ist besser".
-                If _setFbdd IsNot Nothing Then _setFbdd(handle, FbddRauschminderung)
+                If _setFbdd IsNot Nothing Then _setFbdd.Invoke(handle, FbddRauschminderung)
                 ' Das gewaehlte Demosaic-Verfahren. Fehlt der Setter (aeltere libraw), bleibt es bei
                 ' LibRaws Vorgabe - die Auswahl ist dann wirkungslos, aber nichts geht kaputt.
-                If _setDemosaic IsNot Nothing Then _setDemosaic(handle, ConfiguredDemosaic())
+                If _setDemosaic IsNot Nothing Then _setDemosaic.Invoke(handle, ConfiguredDemosaic())
                 ' Kamera-Weißabgleich: die As-Shot-Multiplikatoren als user_mul setzen (die C-API
                 ' hat keinen use_camera_wb-Setter). Ohne gültige cam_mul bleibt der Standard.
                 '
@@ -3911,7 +3801,7 @@ Namespace Services
                 Dim bakedWhiteBalance = usingCamMul AndAlso HasBakedWhiteBalance(handle)
                 If usingCamMul Then
                     For i = 0 To 3
-                        _setUserMul(handle, i, If(bakedWhiteBalance AndAlso i = 3, 0.0F, camMul(i)))
+                        _setUserMul.Invoke(handle, i, If(bakedWhiteBalance AndAlso i = 3, 0.0F, camMul(i)))
                     Next
                 ElseIf ownMatrix IsNot Nothing Then
                     ' Ohne Aufnahme-Weissabgleich nimmt dcraw pre_mul, und das stuende bei einer
@@ -3920,7 +3810,7 @@ Namespace Services
                     camMul = ownMatrix.DaylightMultipliers
                     usingCamMul = True
                     For i = 0 To 3
-                        _setUserMul(handle, i, camMul(i))
+                        _setUserMul.Invoke(handle, i, camMul(i))
                     Next
                 ElseIf camMul(0) = -1.0F Then
                     ' -1 IST DCRAWS ZEICHEN FUER "KAMERA AUF AUTOMATIK": die Datei traegt den Wert,
@@ -3962,13 +3852,13 @@ Namespace Services
                 ' geratenen Zahl beruht, verschoebe die Grundhelligkeit - und an der haengt die
                 ' ganze Kennlinie.
                 If _setHighlight IsNot Nothing Then
-                    _setHighlight(handle, If(unclipping, HighlightRecoveryMode, HighlightMode))
+                    _setHighlight.Invoke(handle, If(unclipping, HighlightRecoveryMode, HighlightMode))
                 End If
                 DiagnosticLogService.LogAlways("RawDecodeService.HighlightRecovery",
                     $"libraw file={IO.Path.GetFileName(path)}; enabled={recoverHighlights}; knee={wantedKnee:F2}; " &
                     $"unclip={unclipping}; normalization={normalization:F4}")
                 ' Die motivabhaengige Weisspunkt-Nachfuehrung aus, siehe AdjustMaximumThreshold.
-                If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr(handle, AdjustMaximumThreshold)
+                If _setAdjustMaximumThr IsNot Nothing Then _setAdjustMaximumThr.Invoke(handle, AdjustMaximumThreshold)
 
                 ' IM KAMERARAUM ENTWICKELN, wenn die Lichter rekonstruiert werden sollen: nur dort ist
                 ' noch zu erkennen, welcher Sensorkanal geklemmt hat (RawDecodeServiceHighlights.vb).
@@ -3984,7 +3874,7 @@ Namespace Services
                                     IlluminantSolution(handle, camMul), Nothing)
                 Dim cameraMatrix As Single() = If(illuminant?.RgbFromCamera, ownMatrix?.RgbFromCamera)
                 If illuminant IsNot Nothing Then
-                    _setOutputColor(handle, 0) ' Kameraraum
+                    _setOutputColor.Invoke(handle, 0) ' Kameraraum
                     DiagnosticLogService.LogAlways("RawDecodeService.CameraMatrix",
                         $"zwei Matrizen: {illuminant.Kelvin:F0} K, Anteil der warmen {illuminant.Weight:F3}")
                 End If
@@ -3995,7 +3885,7 @@ Namespace Services
                     Dim libRawMatrix = ReadRgbCamMatrix(handle)
                     If IsUsableCameraMatrix(libRawMatrix) Then
                         cameraMatrix = libRawMatrix
-                        _setOutputColor(handle, 0) ' Kameraraum
+                        _setOutputColor.Invoke(handle, 0) ' Kameraraum
                     End If
                 End If
                 Dim clipLevels = If(HighlightReconstruction AndAlso HighlightReconstructionRebuild AndAlso
@@ -4020,7 +3910,7 @@ Namespace Services
                 ' rund 450 MB). Bis zum Ende dieser Funktion gehalten, lagen sie waehrend des
                 ' Sicherns und des ganzen Umsetzens nach 8 Bit ungenutzt daneben.
                 If abortable Then EndAbortable(handle)
-                _close(handle)
+                _close.Invoke(handle)
                 handleClosed = True
 
                 ' libraw_processed_image_t: type(4) height(2) width(2) colors(2) bits(2) data_size(4) data.
@@ -4146,7 +4036,7 @@ Namespace Services
                             Marshal.FreeHGlobal(expanded)
                             expanded = IntPtr.Zero
                         End If
-                        _clearMem(image)
+                        _clearMem.Invoke(image)
                         image = IntPtr.Zero
                     End If
                     ' Mit Entrauschen aus dessen Ergebnis statt aus den verrauschten Daten.
@@ -4215,13 +4105,13 @@ Namespace Services
             Finally
                 If keptPin.IsAllocated Then keptPin.Free()
                 If expanded <> IntPtr.Zero Then Marshal.FreeHGlobal(expanded)
-                If image <> IntPtr.Zero Then _clearMem(image)
+                If image <> IntPtr.Zero Then _clearMem.Invoke(image)
                 ' VOR dem Schliessen austragen: danach kann ein neues Handle dieselbe Adresse
                 ' bekommen, und das Austragen naehme ihm seine Frage weg. Nach einem gelungenen
                 ' make_mem_image ist beides schon geschehen (handleClosed).
                 If Not handleClosed Then
                     If abortable Then EndAbortable(handle)
-                    _close(handle)
+                    _close.Invoke(handle)
                 End If
                 ' Was LibRaw an kleineren Bloecken freigegeben hat, liegt noch im Haufen der
                 ' C-Bibliothek; ans System geht es erst auf Anstoss (NativeHeap).
@@ -4633,10 +4523,14 @@ Namespace Services
                                          Optional shadowSaturation As Single() = Nothing,
                                          Optional toneMatrix As Single() = Nothing,
                                          Optional onDeepRow As Action(Of Integer, Short()) = Nothing,
-                                         Optional fringeOwner As Object = Nothing)
+                                         Optional fringeOwner As Object = Nothing,
+                                         Optional magentaRecovery As Boolean = True)
             ' <onDeepRow>: dieselbe Zeile VOR dem Dither, 16 Bit je Kanal nach der Gammatabelle, vier
             ' Werte je Bildpunkt (Rot, Gruen, Blau, Alpha) fuer das tiefe Bild der 16-Bit-Ausgabe
             ' (ImageProcessorDeep.vb). Das 8-Bit-Bild ist genau diese Zeile mit Dither.
+            ' <magentaRecovery>: False fuer lineares Licht (RawDecodeServiceLinear.vb). Die Korrektur
+            ' rosa Lichter gilt Sensorkanaelen, die nach dem Weissabgleich einzeln klemmen; eine EXR
+            ' oder ein Gleitkomma-TIFF kennt das nicht, dort waere ein helles Magenta echt.
             Dim thresholds = If(DitherEnabled, DitherThresholds, Enumerable.Repeat(32767, 64).ToArray())
             Dim ton = ToneTableFor(exposureEv, blackLevel, knee)
             ' Tonstufe in ProPhoto (WideToneStage): die Kameramatrix nach linearem sRGB, schon durch
@@ -4892,7 +4786,7 @@ Namespace Services
                             ' Auf dem Weg in ProPhoto laeuft sie erst nach der Kameramatrix (unten), wie
                             ' hier auf dem alten Weg: im Kameraraum zog die Matrix die Kanaele danach
                             ' wieder auseinander, und rosa Lichter blieben rosa.
-                            If MagentaHighlightRecovery AndAlso Not wide Then RecoverMagentaHighlight(r, g, b)
+                            If MagentaHighlightRecovery AndAlso magentaRecovery AndAlso Not wide Then RecoverMagentaHighlight(r, g, b)
                             ' DIESELBE Schwelle fuer alle drei Kanaele eines Pixels (wie in der
                             ' Punktoperationskette): kanalweise verschiedene Schwellen faerben neutrale
                             ' Flaechen ein. (v*255 + T) \ 65535 liegt fuer T < 65535 immer in 0..255,
@@ -4909,7 +4803,7 @@ Namespace Services
                                 Dim sr = If(tcaSrgb, tcaRed * vignetteGain, pm(0) * fr + pm(1) * fg + pm(2) * fb)
                                 Dim sg = pm(3) * fr + pm(4) * fg + pm(5) * fb
                                 Dim sb = If(tcaSrgb, tcaBlue * vignetteGain, pm(6) * fr + pm(7) * fg + pm(8) * fb)
-                                If MagentaHighlightRecovery Then RecoverMagentaHighlightFloat(sr, sg, sb)
+                                If MagentaHighlightRecovery AndAlso magentaRecovery Then RecoverMagentaHighlightFloat(sr, sg, sb)
                                 Dim pr = Math.Max(0.0F, tp(0) * sr + tp(1) * sg + tp(2) * sb)
                                 Dim pg = Math.Max(0.0F, tp(3) * sr + tp(4) * sg + tp(5) * sb)
                                 Dim pb = Math.Max(0.0F, tp(6) * sr + tp(7) * sg + tp(8) * sb)
@@ -5008,6 +4902,8 @@ Namespace Services
         ''' gemerkt, weil jeder Aufbau aus 16 Bit sie braucht und der Metadatenlauf das nicht soll.</summary>
         Friend Shared Function ShadowSaturationForFile(path As String) As Single()
             If Not ShadowSaturationEnabled OrElse String.IsNullOrEmpty(path) Then Return Nothing
+            ' Die Kennlinie gehoert zu einer Kamerageneration; lineares Licht hat keine.
+            If IsLinearLightSource(path) Then Return Nothing
             Return _shadowSaturationByPath.GetOrAdd(path,
                 Function(p)
                     Try
@@ -5146,6 +5042,9 @@ Namespace Services
         ''' Bild (<see cref="IsFinishedRgb"/>) und eine LibRaw ohne lineare Ausgabe liefern 8 Bit,
         ''' die nur umgepackt werden; dort muss die Kette die Belichtung rechnen.</summary>
         Friend Shared Function DevelopsThroughRawStage(path As String) As Boolean
+            ' Lineares Licht geht durch die Stufe, ohne LibRaw, sobald sein Leser da ist
+            ' (RawDecodeServiceLinear.vb).
+            If IsLinearLightSource(path) Then Return LinearLightReaderAvailable(path)
             Return IsAvailable AndAlso _setNoAutoBright IsNot Nothing AndAlso _setGamma IsNot Nothing AndAlso
                    Not IsFinishedRgb(path)
         End Function
@@ -5321,6 +5220,9 @@ Namespace Services
         ''' festen Wert; mit ihr entscheidet das Kameramodell aus den EXIF-Daten. Ein unbekanntes
         ''' Modell oder eine unlesbare Datei fuehrt IMMER auf den festen Wert zurueck - nie raten.</summary>
         Private Shared Function BaseExposureForFile(path As String) As Double
+            ' Lineares Licht: keine Grundbelichtung, weder die feste noch eine je Kamera (siehe
+            ' LinearBaseExposureEv).
+            If IsLinearLightSource(path) Then Return LinearBaseExposureEv
             Try
                 If Not AppSettingsService.Load().UseCameraBaselineTable Then Return BaseExposureEv
                 ' ZUERST LIBRAWS NAMEN: die Tabelle ist nach ihnen geschluesselt, und nur sie reichen
@@ -5350,6 +5252,8 @@ Namespace Services
         ''' Name allein, und der volle Metadatenlauf entfaellt. Nur ohne ihn sind die EXIF-Angaben
         ''' der zweite Anlauf. Die Einstellung prueft der Aufrufer.</summary>
         Public Shared Function ColorCalibrationForFile(path As String) As CameraBaselineTable.ColorCalibration
+            ' Die Kalibrierung gilt einer Kamera; lineares Licht hat keine.
+            If IsLinearLightSource(path) Then Return Nothing
             Try
                 Dim facts = ReadFileMetadata(path)
                 If facts IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(facts.NormalizedModel) Then

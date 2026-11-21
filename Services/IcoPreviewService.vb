@@ -27,7 +27,9 @@ Namespace Services
         Private Shared ReadOnly PngSignature As Byte() = {&H89, &H50, &H4E, &H47, &HD, &HA, &H1A, &HA}
 
         Public Shared Function IsSupportedIco(filePath As String) As Boolean
-            Return String.Equals(Path.GetExtension(filePath), ".ico", StringComparison.OrdinalIgnoreCase)
+            Dim ext = Path.GetExtension(filePath)
+            Return String.Equals(ext, ".ico", StringComparison.OrdinalIgnoreCase) OrElse
+                   String.Equals(ext, ".cur", StringComparison.OrdinalIgnoreCase)
         End Function
 
         ''' Liefert einen MemoryStream mit PNG-Daten (Position 0) oder Nothing bei Fehler.
@@ -48,8 +50,11 @@ Namespace Services
 
         Private Shared Function DecodeLargestEntry(data As Byte()) As SKBitmap
             If data Is Nothing OrElse data.Length < IconDirSize Then Return Nothing
-            ' Reserviert muss 0 sein, Typ 1 = Icon (2 wäre ein Mauszeiger).
-            If BitConverter.ToUInt16(data, 0) <> 0US OrElse BitConverter.ToUInt16(data, 2) <> 1US Then Return Nothing
+            ' Reserviert muss 0 sein, Typ 1 = Icon, Typ 2 = Mauszeiger (.cur). Ein Mauszeiger hat
+            ' denselben Aufbau; nur stehen in den Bytes 4 bis 7 eines Eintrags statt Ebenen und
+            ' Farbtiefe die Koordinaten des Klickpunkts. Die Farbtiefe gilt dort deshalb nicht.
+            Dim kind As Integer = BitConverter.ToUInt16(data, 2)
+            If BitConverter.ToUInt16(data, 0) <> 0US OrElse (kind <> 1 AndAlso kind <> 2) Then Return Nothing
 
             Dim count As Integer = BitConverter.ToUInt16(data, 4)
             If count <= 0 OrElse data.Length < IconDirSize + count * IconDirEntrySize Then Return Nothing
@@ -62,7 +67,7 @@ Namespace Services
                 ' Kantenlänge 0 steht laut Format für 256.
                 Dim width = If(data(entry) = 0, 256, CInt(data(entry)))
                 Dim height = If(data(entry + 1) = 0, 256, CInt(data(entry + 1)))
-                Dim depth As Integer = BitConverter.ToUInt16(data, entry + 6)
+                Dim depth As Integer = If(kind = 1, CInt(BitConverter.ToUInt16(data, entry + 6)), 0)
                 Dim size = BitConverter.ToInt32(data, entry + 8)
                 Dim offset = BitConverter.ToInt32(data, entry + 12)
                 If size <= 0 OrElse offset < 0 OrElse offset + size > data.Length Then Continue For

@@ -261,6 +261,16 @@ Namespace Services
                 Dim tiff = TiffPreviewService.ExtractPreview(path)
                 If tiff IsNot Nothing Then Return tiff
             End If
+            ' JPEG mit 12 Bit oder verlustfrei: Skia liest es nicht, libjpeg-turbo schon.
+            If JpegTurboDecodeService.IsTurboJpeg(path) Then
+                Dim turbo = JpegTurboDecodeService.ExtractPreview(path)
+                If turbo IsNot Nothing Then Return turbo
+            End If
+            ' JPEG 2000 kennt Skia nicht, OpenJPEG schon.
+            If Jpeg2000DecodeService.IsSupportedJpeg2000(path) AndAlso Jpeg2000DecodeService.IsAvailable Then
+                Dim jp2 = Jpeg2000DecodeService.ExtractPreview(path)
+                If jp2 IsNot Nothing Then Return jp2
+            End If
             Return File.OpenRead(path)
         End Function
 
@@ -728,6 +738,7 @@ Namespace Services
                    HeifDecodeService.IsSupportedHeif(path) OrElse
                    JxlDecodeService.IsSupportedJxl(path) OrElse
                    TiffPreviewService.IsSupportedTiff(path) OrElse
+                   Jpeg2000DecodeService.IsSupportedJpeg2000(path) OrElse
                    FpxService.IsFpx(path)
         End Function
 
@@ -748,7 +759,10 @@ Namespace Services
             ' Echte RAW-Entwicklung, wenn das System-libraw da ist: voll aufgelöstes Demosaic mit
             ' Kamera-Weißabgleich statt der eingebetteten JPEG-Vorschau. Liefert der Decode nichts
             ' (defekte Datei, exotisches Format), greift darunter der bisherige Vorschau-Weg.
-            If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+            ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) traegt keine Vorschau: es wird
+            ' immer entwickelt, auch wenn der Aufrufer die Vorschau einer RAW wollte.
+            If (developRaw OrElse RawDecodeService.IsLinearLightSource(path)) AndAlso
+               RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) Then
                 Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights)
                 If developed IsNot Nothing Then Return developed
                 ' Abgebrochen, weil niemand das Ergebnis mehr braucht (RawDecodeService.RunWhileWanted):
@@ -864,7 +878,9 @@ Namespace Services
             appliedEv = 0.0
             rawDeveloped = False
             rawStage = False
-            If developRaw AndAlso RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+            ' Lineares Licht immer entwickelt, siehe DecodeOriented.
+            If (developRaw OrElse RawDecodeService.IsLinearLightSource(path)) AndAlso
+               RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) Then
                 ' Ohne Belichtung und mit dem Knie ab Werk derselbe Aufruf wie in DecodeOriented.
                 Dim developed = RawDecodeService.TryDecode(path, lensChoice, recoverHighlights, knee:=knee, exposureEv:=exposureEv)
                 If developed IsNot Nothing Then
@@ -2817,7 +2833,7 @@ Namespace Services
                 ' einzige Weg und ist bei vielen Kameras kleiner (ARW: 1616 x 1080): beim schnellen
                 ' Blättern stand im Infopanel mal die eine, mal die andere Größe, je nachdem, ob
                 ' der Decode des Bildes schon fertig war.
-                If RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.IsAvailable Then
+                If RawPreviewService.IsSupportedRaw(path) AndAlso RawDecodeService.CanDevelop(path) Then
                     Dim cached = RawDecodeService.TryGetCachedSize(path)
                     If cached.Width > 0 Then Return cached
                     Dim facts = RawDecodeService.ReadFileMetadata(path)
@@ -2927,6 +2943,8 @@ Namespace Services
             If HeifDecodeService.IsSupportedHeif(path) Then Return HeifDecodeService.TryGetSize(path)
             If TiffPreviewService.IsSupportedTiff(path) Then Return TiffPreviewService.TryGetSize(path)
             If PsdPreviewService.IsSupportedPsd(path) Then Return PsdPreviewService.TryGetSize(path)
+            If JpegTurboDecodeService.IsTurboJpeg(path) Then Return JpegTurboDecodeService.TryGetSize(path)
+            If Jpeg2000DecodeService.IsSupportedJpeg2000(path) Then Return Jpeg2000DecodeService.TryGetSize(path)
             Return (0, 0)
         End Function
 
@@ -2945,6 +2963,22 @@ Namespace Services
             If TiffPreviewService.IsSupportedTiff(imagePath) Then
                 Dim tiffSize = TiffPreviewService.TryGetSize(imagePath)
                 If tiffSize.Width > 0 AndAlso tiffSize.Height > 0 Then Return tiffSize
+            End If
+            ' Ein JPEG mit 12 Bit oder verlustfrei: SKCodec kennt es nicht, der Kopf schon. Wie bei
+            ' jedem JPEG hier die Masse, wie sie gespeichert sind, ohne die Drehung aus dem EXIF.
+            If JpegTurboDecodeService.IsJpegExtension(imagePath) Then
+                Dim turboSize = JpegTurboDecodeService.TryGetEncodedSize(imagePath)
+                If turboSize.Width > 0 AndAlso turboSize.Height > 0 Then Return turboSize
+            End If
+            ' JPEG 2000 aus seinem Kopf; lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) aus dem
+            ' Kopf seines Lesers, so wie die RAW-Stufe es ausgibt.
+            If Jpeg2000DecodeService.IsSupportedJpeg2000(imagePath) Then
+                Dim jp2Size = Jpeg2000DecodeService.TryGetSize(imagePath)
+                If jp2Size.Width > 0 AndAlso jp2Size.Height > 0 Then Return jp2Size
+            End If
+            If RawDecodeService.IsLinearLightSource(imagePath) Then
+                Dim linearSize = RawDecodeService.LinearLightSize(imagePath)
+                If linearSize.Width > 0 AndAlso linearSize.Height > 0 Then Return linearSize
             End If
             Try
                 Using codec = SKCodec.Create(imagePath)

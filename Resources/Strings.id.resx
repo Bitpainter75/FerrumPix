@@ -12068,4 +12068,79 @@
   <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
     <value>Terapkan penyesuaian ({0} file)</value>
   </data>
+  <data name="Farbwert_an_der_Pipette_062f9a83" xml:space="preserve">
+    <value>Nilai warna pada pipet</value>
+  </data>
+  <data name="Was_die_kleine_Anzeige_neben_der_Pipette_ber_die_91e386a5" xml:space="preserve">
+    <value>Apa yang ditampilkan penunjuk kecil di samping pipet tentang warna di bawah ujungnya: nilai heksadesimal, nilai merah, hijau, dan biru dari 0 sampai 255, atau keduanya.</value>
+  </data>
+  <data name="Hex_Wert_200ae7f9" xml:space="preserve">
+    <value>Nilai heksadesimal</value>
+  </data>
+  <data name="R_G_B_einzeln_5267f844" xml:space="preserve">
+    <value>R G B terpisah</value>
+  </data>
+  <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
+    <value>Nilai heksadesimal dan R G B</value>
+  </data>
+  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
+    <value>Cadangan ke pustaka sistem</value>
+  </data>
+  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
+    <value>Jika pustaka bawaan tidak dapat membuka sebuah file, FerrumPix mencoba file yang sama dengan versi yang terpasang di sistem. Ini hanya tersedia di Linux di luar Flatpak. Setiap cadangan dicatat dalam file ini, bahkan tanpa log diagnostik:</value>
+  </data>
+  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
+    <value>Tidak tersedia di Flatpak, di sana tidak ada pustaka sistem</value>
+  </data>
+  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
+    <value>Tidak tersedia di sistem operasi ini</value>
+  </data>
+  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
+    <value>Tidak perlu, tidak ada versi bawaan yang berjalan</value>
+  </data>
+  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
+    <value>Tidak ditemukan versi sistem</value>
+  </data>
+  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
+    <value>Siap: versi {0} di {1}, baru dimuat jika versi bawaan gagal membuka sebuah file</value>
+  </data>
+  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
+    <value>Dimuat: versi {0} di {1}, sejauh ini {2} file dibaca dengannya</value>
+  </data>
+  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
+    <value>Ditemukan di {0}, tetapi tidak dapat digunakan; alasannya ada di log</value>
+  </data>
+  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
+    <value>libjpeg-turbo</value>
+  </data>
+  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
+    <value>Baca JPEG 12-bit dan lossless</value>
+  </data>
+  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
+    <value>IJG, BSD-3-Clause, Zlib</value>
+  </data>
+  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
+    <value>libjpeg-turbo membaca berkas JPEG 12-bit dan JPEG lossless yang tidak dibuka oleh pustaka grafis aplikasi; JPEG lainnya tetap dibaca oleh pustaka itu. Lisensinya IJG dan BSD, bagian yang disertakan berlisensi zlib. Setiap paket kecuali Flatpak menyertakannya dan mendahulukannya daripada libjpeg-turbo milik sistem; Flatpak mengambilnya dari runtime-nya. Jika tidak ada, hanya berkas-berkas ini yang tidak terbuka.</value>
+  </data>
+  <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
+    <value>Membaca berkas JPEG 2000</value>
+  </data>
+  <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
+    <value>Membaca berkas EXR</value>
+  </data>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
+    <value>OpenJPEG membaca berkas JPEG 2000, termasuk HTJ2K, dan berlisensi BSD. Windows dan Linux menyertakannya, Flatpak mengambilnya dari runtime-nya; di macOS belum tersedia. Tanpanya, hanya berkas ini yang tidak terbuka.</value>
+  </data>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
+    <value>OpenEXR membaca berkas EXR dan berlisensi BSD, sedangkan libdeflate, OpenJPH, dan zstd di dalamnya berlisensi MIT dan BSD. Windows, Linux, dan Flatpak menyertakannya; di macOS belum tersedia. Tanpanya, hanya berkas ini yang tidak terbuka.</value>
+  </data>
+  <data name="OpenJPEG_fc68646e" xml:space="preserve">
+    <value>OpenJPEG</value>
+  </data>
+  <data name="OpenEXR_f86ff74c" xml:space="preserve">
+    <value>OpenEXR</value>
+  </data>
+  <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
+    <value>Gambar yang disimpan file HEIF sebagai JPEG, misalnya pratinjau dari beberapa kamera, dibaca libheif dengan libjpeg-turbo bawaannya, dan di Flatpak oleh libheif dari runtime-nya.</value>
+  </data>
 </root>

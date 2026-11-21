@@ -2,6 +2,22 @@
 
 ### Changes
 
+- JPEG files with 12 bits and lossless JPEG files now open in the gallery, viewer and editor
+  instead of staying empty, with their full tonal depth for 16-bit exports. Such a file is never
+  overwritten: Save keeps the edit beside it.
+
+- JPEG 2000 files (JP2, J2K, HTJ2K) now open in the gallery, viewer and editor, with their full
+  tonal depth for 16-bit exports. Save keeps the edit beside the file.
+
+- OpenEXR, Radiance HDR and TIFF files with floating point values now open and are developed like
+  a RAW: light brighter than white is kept, and Exposure and Highlights bring it back into the
+  picture. The editor offers the RAW adjustments for them, Save keeps the edit beside the file.
+  Not yet on macOS for JPEG 2000 and EXR.
+
+- The previews inside HEIF files from Fujifilm cameras now load on Windows and Linux without help
+  from the system, and the gallery placeholders of rotated HEIF pictures are upright like the
+  picture.
+
 - New setting in the editor settings: Save JPEG, PNG and WebP edits beside the picture. When on,
   Save keeps the original untouched and stores the edit in a sidecar file next to it, as for RAW.
   It is off by default, so Save writes into the picture file as before. TIFF, HEIC, AVIF,
@@ -67,6 +83,25 @@
   loaded. In folders with more pictures than the thumbnail memory holds, the gallery kept loading
   and throwing away thumbnails, which slowed down the visible tiles while scrolling and drove up
   memory use.
+
+- More picture endings show in the gallery and open in the viewer and the editor: JPEG saved as
+  .jfif or .jpe, as browsers on Windows often do, stereo JPEG (.jps) as the side by side pair,
+  animated PNG (.apng, first frame), WBMP and Windows cursors (.cur). Their edits are kept beside
+  the picture.
+
+- Sigma X3F files now show in the gallery, the viewer and the editor, with camera and shot data,
+  and are developed from the sensor data like other RAW files, with the RAW controls in the
+  editor. Edits are kept beside the picture, as for RAW.
+
+- If a bundled decoder for RAW, HEIC, AVIF or JPEG XL cannot open a file, FerrumPix tries the one
+  installed on the system (Linux, not in the Flatpak). Settings, Technology shows which ones are
+  available.
+
+- Every eyedropper in the editor now shows the colour under its tip next to the pointer, also
+  the colour range of masks and selections, and it shows the colour that a click would take. A
+  new editor setting chooses what it says: the hex value, R G B, or both, which is the default.
+  Where the eyedropper takes transparency along and the spot is not fully opaque, the value
+  includes alpha.
 
 - The tile ".." that leads up to the parent folder no longer shows a date in the gallery. Its date
   stood among the pictures as if it belonged to them. Sorting by date keeps it at the front.

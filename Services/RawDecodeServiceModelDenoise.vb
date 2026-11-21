@@ -107,7 +107,7 @@ Namespace Services
                 DiagnosticLogService.LogException("RawDecodeService.ReadSensorPattern", ex)
                 Return SensorPattern.Unknown
             Finally
-                _close(handle)
+                _close.Invoke(handle)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
         End Function

@@ -137,6 +137,13 @@ and checksums of each. flatpak-builder places their license texts in
   linked dynamically, not built into LibRaw here. License text, version and
   source reference: /app/share/licenses/ferrumpix/libraw/.
 
+  X3F library (x3f_tools)
+  Copyright (c) 2010, Roland Karlsson
+  Used under a BSD-style license
+  Part of the LibRaw source and built into the LibRaw module of this Flatpak,
+  where it reads Sigma X3F files. License text: LICENSE.x3f.txt in
+  /app/share/licenses/ferrumpix/libraw/.
+
   libmpv (mpv)
   Copyright (c) the mpv developers
   Used under the GNU General Public License, version 2 or later
@@ -164,6 +171,18 @@ and checksums of each. flatpak-builder places their license texts in
   https://gitlab.freedesktop.org/xorg/lib/libxpresent
   For the X11 video output of libmpv.
 
+  OpenEXR (only its C library, OpenEXRCore)
+  Copyright (c) Contributors to the OpenEXR Project
+  Used under the BSD 3-Clause License, with the additional grant in PATENTS
+  https://github.com/AcademySoftwareFoundation/openexr
+  Reads EXR files. Built from the unmodified OpenEXR 3.5.4 source release,
+  which carries three libraries that are compiled into it: libdeflate (MIT
+  License, https://github.com/ebiggers/libdeflate), OpenJPH (BSD 2-Clause
+  License, https://github.com/aous72/OpenJPH) and zstd (BSD 3-Clause License,
+  https://github.com/facebook/zstd). Imath (BSD 3-Clause License,
+  https://github.com/AcademySoftwareFoundation/Imath) is used for one header
+  only. All license texts: /app/share/licenses/io.github.bitpainter75.ferrumpix/openexr-core/.
+
 Used from the org.freedesktop.Platform runtime and not shipped in this Flatpak:
 
   libjxl
@@ -171,6 +190,22 @@ Used from the org.freedesktop.Platform runtime and not shipped in this Flatpak:
   Used under the BSD 3-Clause License, with the patent grant in PATENTS
   https://github.com/libjxl/libjxl
   Reads and writes JPEG XL files. It is loaded dynamically from the runtime.
+
+  OpenJPEG
+  Copyright (c) the OpenJPEG contributors
+  Used under the BSD 2-Clause License
+  https://github.com/uclouvain/openjpeg
+  Reads JPEG 2000 files. It comes from the runtime (OpenJPEG 2.5.4).
+
+  libjpeg-turbo (TurboJPEG library, libturbojpeg.so.0)
+  Copyright (c) the libjpeg-turbo Project and contributors, and
+  Copyright (c) Thomas G. Lane and Guido Vollbeding (Independent JPEG Group)
+  Used under the IJG License and the BSD 3-Clause License
+  https://libjpeg-turbo.org
+  This software is based in part on the work of the Independent JPEG Group.
+  Reads 12-bit JPEG and lossless JPEG, which the graphics library does not
+  open. It comes from the runtime (libjpeg-turbo 3.2.0) and is loaded
+  dynamically.
 
 
 4. Data and assets

@@ -324,7 +324,7 @@ Namespace Services
                             .Size = info.Length,
                             .CapturedAt = info.LastWriteTime,
                             .ModifiedAt = info.LastWriteTime,
-                            .IsRaw = RawPreviewService.IsSupportedRaw(file)}
+                            .IsRaw = RawPreviewService.IsCameraRaw(file)}
                         If readCaptureData Then candidate.ApplyCaptureData(CaptureDataOf(file, info))
                         result.Add(candidate)
                     Next
@@ -374,7 +374,7 @@ Namespace Services
                             .Size = entry.Size,
                             .CapturedAt = entry.ModifiedAt,
                             .ModifiedAt = entry.ModifiedAt,
-                            .IsRaw = RawPreviewService.IsSupportedRaw(entry.Name),
+                            .IsRaw = RawPreviewService.IsCameraRaw(entry.Name),
                             .MtpStorage = storage,
                             .MtpPath = entryPath,
                             .CaptureResolved = True})

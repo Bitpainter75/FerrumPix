@@ -60,10 +60,15 @@ Namespace Services
         End Function
 
         ''' <summary>Rasterformate, die neben sich ein Rezept tragen koennen. Ausgenommen bleiben
-        ''' .fpx (traegt sein Rezept selbst), SVG, ICO, Video und PDF.</summary>
+        ''' .fpx (traegt sein Rezept selbst), SVG, ICO samt Mauszeiger (.cur), Video und PDF. .jpe,
+        ''' .jfif und .jps sind JPEG, .apng ist PNG, lassen sich aber nicht an Ort und Stelle schreiben
+        ''' (CanEncodeToTargetExtension); ihr Speichern geht deshalb wie bei TIFF immer ins Rezept,
+        ''' ebenso bei .wbmp, fuer das es keinen Encoder gibt, und bei JPEG 2000. EXR, Radiance HDR
+        ''' und TIFF mit Gleitkomma stehen nicht hier: sie gehen den RAW-Weg (IsReadOnlyFormat).</summary>
         Private Shared ReadOnly RecipeRasterExtensions As String() = {
-            ".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff",
-            ".heic", ".heif", ".hif", ".avif", ".jxl", ".bmp", ".gif"}
+            ".jpg", ".jpeg", ".jpe", ".jfif", ".jps", ".png", ".apng", ".webp", ".tif", ".tiff",
+            ".heic", ".heif", ".hif", ".avif", ".jxl", ".bmp", ".wbmp", ".gif",
+            ".jp2", ".j2k", ".jph", ".j2c", ".jpc", ".jpf", ".jhc"}
 
         ''' <summary>Kann diese Datei ein Rezept in einer .fpxmp neben sich haben? RAW, PSD und die
         ''' Rasterformate aus <see cref="RecipeRasterExtensions"/>.</summary>
@@ -85,8 +90,9 @@ Namespace Services
 
         ''' <summary>Geht "Speichern" im Editor fuer diese Datei ins Rezept daneben statt in die Datei?
         ''' Ja fuer RAW und PSD, fuer jedes Rasterformat, das sich nicht ueber das Original schreiben
-        ''' laesst (TIFF, HEIC/AVIF, JPEG XL, BMP, GIF), und fuer JPG, PNG und WebP mit der
-        ''' Einstellung "neben dem Bild speichern" (AppSettings.SaveEditsBesideOriginal).
+        ''' laesst (TIFF, HEIC/AVIF, JPEG XL, BMP, GIF, JPEG mit 12 Bit oder verlustfrei), und fuer
+        ''' JPG, PNG und WebP mit der Einstellung "neben dem Bild speichern"
+        ''' (AppSettings.SaveEditsBesideOriginal).
         '''
         ''' Arbeitskopien vom Server bleiben dabei, wie sie waren (nur RAW und PSD): ihre Begleitdatei
         ''' laege im Temp-Ordner und waere beim naechsten Aufraeumen fort. Den Weg zum Server kennt
@@ -97,6 +103,10 @@ Namespace Services
             Dim file = VariantKey.FileOf(path)
             If ImmichService.IsImmichTempPath(file) OrElse NextcloudService.IsNextcloudTempPath(file) Then Return False
             If Not ImageProcessor.CanEncodeToTargetExtension(file) Then Return True
+            ' Ein JPEG mit 12 Bit oder verlustfrei steht unter derselben Endung wie jedes andere,
+            ' laesst sich aber nicht ueber das Original schreiben (Skia schriebe 8 Bit). Gefragt
+            ' wird deshalb der Kopf, nicht die Endung, wie in ImageProcessor.SaveImage.
+            If JpegTurboDecodeService.IsTurboJpeg(file) Then Return True
             Return AppSettingsService.Load().SaveEditsBesideOriginal
         End Function
 

@@ -1322,6 +1322,9 @@ Namespace Services
                     header = TiffPreviewService.TryGetSize(imagePath)
                 ElseIf PsdPreviewService.IsSupportedPsd(imagePath) Then
                     header = PsdPreviewService.TryGetSize(imagePath)
+                ElseIf Jpeg2000DecodeService.IsSupportedJpeg2000(imagePath) Then
+                    ' JPEG 2000 dreht nicht; die Masse aus dem Kopf (ihdr oder SIZ).
+                    header = Jpeg2000DecodeService.TryGetSize(imagePath)
                 Else
                     Using codec = SkiaSharp.SKCodec.Create(imagePath)
                         If codec Is Nothing Then Return (Nothing, Nothing)
@@ -1421,6 +1424,9 @@ Namespace Services
         ''' Das braucht nur eine Entscheidung, die das Aussehen bestimmt und bisher am Wurf hing
         ''' (RawDecodeService.IsFinishedRgb).</summary>
         Public Shared Function ReadMetadataDirectories(path As String, Optional retryWithoutEmptyXmp As Boolean = True) As IReadOnlyList(Of MetadataExtractor.Directory)
+            ' Sigma X3F kennt MetadataExtractor nicht; die Angaben kommen aus dem eingebetteten JPEG
+            ' oder dem Kopfdatenblock der Datei (siehe X3fPreviewService.ReadMetadataDirectories).
+            If X3fPreviewService.IsSupportedX3f(path) Then Return X3fPreviewService.ReadMetadataDirectories(path)
             Dim fileType As MetadataExtractor.Util.FileType
             Using stream = New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)
                 fileType = MetadataExtractor.Util.FileTypeDetector.DetectFileType(stream, path)

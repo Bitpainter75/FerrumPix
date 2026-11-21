@@ -162,6 +162,14 @@ libraries are part of this package.
   it spreads the RAW development over several cores. Version, source URL,
   checksum and license text (LICENSE.libomp.txt) are in licenses/libraw/.
 
+  X3F library (x3f_tools)
+  Copyright (c) 2010, Roland Karlsson
+  Used under a BSD-style license
+  Part of the LibRaw source and built into the bundled LibRaw on Windows, macOS
+  and in the AppImage, the portable Linux ZIP and the deb, rpm and AUR packages,
+  and into the LibRaw module of the Flatpak, where it reads Sigma X3F files. License text: LICENSE.x3f.txt in
+  licenses/libraw/.
+
   libmpv (mpv)
   Copyright (c) the mpv developers
   Used under the GNU General Public License, version 2 or later
@@ -232,11 +240,24 @@ libraries are part of this package.
   is covered by the royalty-free patent license of the Alliance for Open Media.
   Both license texts are in licenses/libheif/ in this package.
 
-  Corresponding source for libheif and libde265 is available from the URLs
-  above at the versions named in licenses/libheif/HERKUNFT.txt;
-  packaging/libheif/build-windows.sh (Windows), packaging/libheif/build-linux.sh
-  (Linux) and packaging/libheif/build-macos.sh (macOS) are the build recipes
-  that produced these binaries.
+  libjpeg-turbo (inside libheif)
+  Copyright (c) the libjpeg-turbo Project and contributors, and
+  Copyright (c) Thomas G. Lane and Guido Vollbeding (Independent JPEG Group)
+  Used under the IJG License, the BSD 3-Clause License and the zlib License
+  https://libjpeg-turbo.org
+  This software is based in part on the work of the Independent JPEG Group.
+  Its libjpeg library is statically linked into the bundled libheif, which
+  uses it to decode pictures that a HEIF file stores as JPEG, such as the
+  previews in HEIF files from Fujifilm cameras. Its functions stay inside
+  libheif and are not exported, so it never meets another libjpeg in the same
+  process. Only the decoder is used. The license texts (LICENSE.libjpeg-turbo.md
+  and README.ijg) are in licenses/libheif/ in this package.
+
+  Corresponding source for libheif, libde265, dav1d and libjpeg-turbo is
+  available from the URLs above at the versions named in
+  licenses/libheif/HERKUNFT.txt; packaging/libheif/build-windows.sh (Windows),
+  packaging/libheif/build-linux.sh (Linux) and packaging/libheif/build-macos.sh
+  (macOS) are the build recipes that produced these binaries.
 
   libjxl
   Copyright (c) the JPEG XL Project Authors
@@ -260,14 +281,56 @@ libraries are part of this package.
   Statically linked into the bundled jxl.dll, libjxl.so.0.13 and libjxl.dylib as their
   compression, SIMD and colour management code.
 
+  OpenJPEG
+  Copyright (c) the OpenJPEG contributors
+  Used under the BSD 2-Clause License
+  https://github.com/uclouvain/openjpeg
+  Bundled on Windows (libopenjp2.dll) and in every Linux package except the
+  Flatpak (libopenjp2.so.7), where it reads JPEG 2000 files. The Flatpak takes
+  it from its runtime. License text and the exact build, including version,
+  source checksum and build options, are in licenses/openjpeg/ in this package.
+
+  OpenEXR (only its C library, OpenEXRCore)
+  Copyright (c) Contributors to the OpenEXR Project
+  Used under the BSD 3-Clause License, with the additional grant in PATENTS
+  https://github.com/AcademySoftwareFoundation/openexr
+  Bundled on Windows (libOpenEXRCore.dll), in every Linux package
+  (libOpenEXRCore.so.34) and in the Flatpak, where it reads EXR files. Built
+  from the unmodified OpenEXR source release, which carries three libraries that
+  are compiled into it: libdeflate (MIT License,
+  https://github.com/ebiggers/libdeflate), OpenJPH (BSD 2-Clause License,
+  https://github.com/aous72/OpenJPH) and zstd (BSD 3-Clause License,
+  https://github.com/facebook/zstd). Imath (BSD 3-Clause License,
+  https://github.com/AcademySoftwareFoundation/Imath) is used for one header
+  only. All license texts and the exact build are in licenses/openexr/ in this
+  package.
+
+  libjpeg-turbo (only its TurboJPEG library)
+  Copyright (c) the libjpeg-turbo Project and contributors, and
+  Copyright (c) Thomas G. Lane and Guido Vollbeding (Independent JPEG Group)
+  Used under the IJG License and the BSD 3-Clause License
+  https://libjpeg-turbo.org
+  This software is based in part on the work of the Independent JPEG Group.
+  Bundled on Windows (ferrumpix-turbojpeg.dll) and in every Linux package except
+  the Flatpak (libferrumpix-turbojpeg.so.0), renamed so it cannot be confused
+  with a libturbojpeg of the system. It reads 12-bit JPEG and lossless JPEG,
+  which the graphics library does not open; every other JPEG still goes through
+  that library. The Flatpak takes libturbojpeg.so.0 from its runtime. Built from
+  the unmodified libjpeg-turbo source release, which carries zlib (zlib License,
+  https://zlib.net) and libspng (BSD 2-Clause License, parts under the libpng
+  License 2.0, https://libspng.org), both compiled into the same file and used
+  only for its PNG functions. All license texts and the exact build, including
+  version, source checksum and build options, are in licenses/libjpeg-turbo/ in
+  this package. The file can be replaced by one of the same name.
+
   GCC runtime (libstdc++, libgcc)
   Copyright (c) the Free Software Foundation
   Used under the GNU General Public License, version 3, with the GCC Runtime
   Library Exception
   https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
-  Statically linked into the bundled LibRaw, libheif and libjxl libraries of the
-  Linux packages (all except the Flatpak), so they need no C++ runtime from the
-  system.
+  Statically linked into the bundled LibRaw, libheif, libjxl and OpenEXRCore
+  libraries of the Linux packages (all except the Flatpak), so they need no C++
+  runtime from the system.
 
   Microsoft Visual C++ runtime (msvcp140*.dll, vcruntime140*.dll)
   Copyright (c) Microsoft Corporation

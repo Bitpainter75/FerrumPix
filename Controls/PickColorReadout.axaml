@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="FerrumPix.Controls.PickColorReadout"
+             IsVisible="False"
+             IsHitTestVisible="False">
+    <!-- Die Anzeige an einer Pipette: Farbfeld und Wert der Farbe unter der Spitze, nach der
+         Einstellung PickerReadout. Ein Steuerelement fuer jede Pipette, die Ansicht setzt es in
+         ihren Canvas und ruft ShowAt bei jeder Bewegung (siehe PickColorReadout.axaml.vb). -->
+    <Border Background="{DynamicResource FP.Bg.Elevated}"
+            BorderBrush="{DynamicResource FP.Border.Normal}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="6,4">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <!-- Unter dem Farbfeld das Schachbrett: ein nicht voll deckender Punkt zeigt es durch. -->
+            <Border x:Name="SwatchBackground"
+                    Width="26" Height="22"
+                    VerticalAlignment="Center"
+                    CornerRadius="4"
+                    ClipToBounds="True">
+                <Border x:Name="Swatch"
+                        BorderThickness="1" CornerRadius="4"
+                        BorderBrush="{DynamicResource FP.Border.Strong}" />
+            </Border>
+            <TextBlock x:Name="ReadoutText"
+                       Classes="no-translate"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource FP.Text.Primary}"
+                       FontSize="{DynamicResource FP.Font.Small}" />
+        </StackPanel>
+    </Border>
+</UserControl>

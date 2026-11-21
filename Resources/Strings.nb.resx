@@ -12064,4 +12064,79 @@
   <data name="Anpassungen_anwenden_0_Dateien_01b2991c" xml:space="preserve">
     <value>Bruk justeringer ({0} filer)</value>
   </data>
+  <data name="Farbwert_an_der_Pipette_062f9a83" xml:space="preserve">
+    <value>Fargeverdi ved pipetten</value>
+  </data>
+  <data name="Was_die_kleine_Anzeige_neben_der_Pipette_ber_die_91e386a5" xml:space="preserve">
+    <value>Hva den lille visningen ved siden av pipetten oppgir om fargen under spissen: hexverdien, verdiene for rødt, grønt og blått fra 0 til 255, eller begge deler.</value>
+  </data>
+  <data name="Hex_Wert_200ae7f9" xml:space="preserve">
+    <value>Hexverdi</value>
+  </data>
+  <data name="R_G_B_einzeln_5267f844" xml:space="preserve">
+    <value>R G B hver for seg</value>
+  </data>
+  <data name="Hex_Wert_und_R_G_B_92c85fbe" xml:space="preserve">
+    <value>Hexverdi og R G B</value>
+  </data>
+  <data name="R_ckfall_auf_die_Bibliotheken_des_Systems_31361321" xml:space="preserve">
+    <value>Reserve: systemets biblioteker</value>
+  </data>
+  <data name="Scheitert_eine_mitgelieferte_Bibliothek_an_einer_485ef676" xml:space="preserve">
+    <value>Hvis et medfølgende bibliotek ikke kan åpne en fil, prøver FerrumPix den samme filen med versjonen som er installert på systemet. Dette finnes bare på Linux utenfor Flatpak. Hver gang det skjer, føres det i denne filen, også uten diagnoselogg:</value>
+  </data>
+  <data name="Im_Flatpak_nicht_vorgesehen_dort_gibt_es_keine_B_65e7c67b" xml:space="preserve">
+    <value>Finnes ikke i Flatpak, der er det ingen systembiblioteker</value>
+  </data>
+  <data name="Auf_diesem_Betriebssystem_nicht_vorgesehen_3d1fa0cf" xml:space="preserve">
+    <value>Finnes ikke på dette operativsystemet</value>
+  </data>
+  <data name="Nicht_n_tig_es_l_uft_keine_mitgelieferte_Fassung_984da18e" xml:space="preserve">
+    <value>Ikke nødvendig, ingen medfølgende versjon kjører</value>
+  </data>
+  <data name="Keine_Fassung_des_Systems_gefunden_5a9d7db3" xml:space="preserve">
+    <value>Fant ingen systemversjon</value>
+  </data>
+  <data name="Bereit_Fassung_0_unter_1_sie_wird_erst_geladen_w_cf809f06" xml:space="preserve">
+    <value>Klar: versjon {0} i {1}, lastes først når den medfølgende ikke klarer en fil</value>
+  </data>
+  <data name="Geladen_Fassung_0_unter_1_bisher_2_Dateien_damit_97ceb6db" xml:space="preserve">
+    <value>Lastet: versjon {0} i {1}, hittil {2} filer lest med den</value>
+  </data>
+  <data name="Gefunden_unter_0_aber_nicht_nutzbar_der_Grund_st_ebdf3fd2" xml:space="preserve">
+    <value>Funnet i {0}, men ikke brukbar, årsaken står i loggen</value>
+  </data>
+  <data name="libjpeg_turbo_8d5bdfd8" xml:space="preserve">
+    <value>libjpeg-turbo</value>
+  </data>
+  <data name="JPEG_mit_12_Bit_und_verlustfreies_JPEG_lesen_f9bc12ae" xml:space="preserve">
+    <value>Les 12-biters og tapsfri JPEG</value>
+  </data>
+  <data name="IJG_BSD_3_Clause_Zlib_84203779" xml:space="preserve">
+    <value>IJG, BSD-3-Clause, Zlib</value>
+  </data>
+  <data name="libjpeg_turbo_liest_JPEG_Dateien_mit_12_Bit_und__425706e0" xml:space="preserve">
+    <value>libjpeg-turbo leser 12-biters JPEG-filer og tapsfrie JPEG-filer som programmets grafikkbibliotek ikke åpner; alle andre JPEG-filer leses fortsatt av det. Den er lisensiert under IJG- og BSD-lisensen, medfølgende deler under zlib-lisensen. Alle pakker unntatt Flatpak har den med og foretrekker den fremfor systemets libjpeg-turbo; Flatpak henter den fra kjøretidsmiljøet sitt. Mangler den, forblir bare disse filene uåpnet.</value>
+  </data>
+  <data name="JPEG_2000_Dateien_lesen_b1019379" xml:space="preserve">
+    <value>Lesing av JPEG 2000-filer</value>
+  </data>
+  <data name="EXR_Dateien_lesen_49df259a" xml:space="preserve">
+    <value>Lesing av EXR-filer</value>
+  </data>
+  <data name="OpenJPEG_liest_JPEG_2000_Dateien_auch_HTJ2K_und__7934f082" xml:space="preserve">
+    <value>OpenJPEG leser JPEG 2000-filer, også HTJ2K, og er lisensiert under BSD-lisensen. Windows og Linux har den med, Flatpak tar den fra sin kjøretid; på macOS mangler den ennå. Uten den forblir bare disse filene uåpnet.</value>
+  </data>
+  <data name="OpenEXR_liest_EXR_Dateien_und_steht_unter_der_BS_62671d4b" xml:space="preserve">
+    <value>OpenEXR leser EXR-filer og er lisensiert under BSD-lisensen, de inkluderte libdeflate, OpenJPH og zstd under MIT- og BSD-lisensen. Windows, Linux og Flatpak har den med; på macOS mangler den ennå. Uten den forblir bare disse filene uåpnet.</value>
+  </data>
+  <data name="OpenJPEG_fc68646e" xml:space="preserve">
+    <value>OpenJPEG</value>
+  </data>
+  <data name="OpenEXR_f86ff74c" xml:space="preserve">
+    <value>OpenEXR</value>
+  </data>
+  <data name="Bilder_die_eine_HEIF_Datei_als_JPEG_tr_gt_etwa_d_9b9571ac" xml:space="preserve">
+    <value>Bilder som en HEIF-fil lagrer som JPEG, for eksempel forhåndsvisningene fra enkelte kameraer, leser libheif med den innebygde libjpeg-turbo, Flatpak med libheif fra sitt kjøremiljø.</value>
+  </data>
 </root>

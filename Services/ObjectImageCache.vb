@@ -103,7 +103,11 @@ Namespace Services
             ' Ausserhalb der Sperre dekodieren: zwei Faeden, die dasselbe Bild zugleich brauchen,
             ' dekodieren es im schlimmsten Fall zweimal, aber keiner wartet auf fremde Dateien.
             Dim image As SKImage
-            Using bitmap = SKBitmap.Decode(path)
+            ' Was Skia nicht kennt (TIFF, AVIF, JPEG 2000), liest der eigene Leser; sonst blieb eine
+            ' eingesetzte Ebene aus einer solchen Datei leer, obwohl der Dialog die Endung anbot.
+            Dim decoded = SKBitmap.Decode(path)
+            If decoded Is Nothing AndAlso ForeignImageDecoder.CanDecode(path) Then decoded = ForeignImageDecoder.TryDecode(path)
+            Using bitmap = decoded
                 If bitmap Is Nothing OrElse bitmap.Width <= 0 OrElse bitmap.Height <= 0 Then Return Nothing
                 bitmap.SetImmutable()
                 image = SKImage.FromBitmap(bitmap)

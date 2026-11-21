@@ -22,11 +22,19 @@ Namespace Services
         ''' <summary>Feste Formate plus die kanonischen RAW-Endungen.
         '''
         ''' ".fpx" gehoert dazu: FerrumPix-Projekte erscheinen wie Bilder in Galerie und Filmstreifen
-        ''' (Vorschaubild aus dem eingebetteten Composite, siehe ThumbnailCacheService).</summary>
+        ''' (Vorschaubild aus dem eingebetteten Composite, siehe ThumbnailCacheService).
+        '''
+        ''' JPEG 2000 (Jpeg2000DecodeService) mit allen sieben Endungen; .j2c, .jpc, .jpf und .jhc
+        ''' oeffnet der Leser nur, wenn der Kopf passt. EXR und Radiance HDR sind lineares Licht und
+        ''' gehen den RAW-Weg (RawPreviewService.IsSupportedRaw), stehen aber nicht in der Liste der
+        ''' RAW-Endungen; ".hdr" ist wie ".raw" generisch, eine gleichnamige Nicht-Bilddatei erscheint
+        ''' als leere Kachel.</summary>
         Public Shared ReadOnly Displayable As String() = {
-            ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp",
+            ".jpg", ".jpeg", ".jpe", ".jfif", ".jps", ".png", ".apng", ".bmp", ".wbmp", ".gif", ".tiff", ".tif", ".webp",
             ".heic", ".heif", ".hif", ".avif", ".jxl",
-            ".ico", ".svg", ".fpx", ".psd", ".psb",
+            ".jp2", ".j2k", ".jph", ".j2c", ".jpc", ".jpf", ".jhc",
+            ".exr", ".hdr", ".rgbe",
+            ".ico", ".cur", ".svg", ".fpx", ".psd", ".psb",
             ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"
         }.Concat(RawPreviewService.SupportedExtensions).ToArray()
 

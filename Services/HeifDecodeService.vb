@@ -7,7 +7,9 @@ Namespace Services
 
     ''' <summary>
     ''' Liest HEIC/HEIF und AVIF über libheif - SkiaSharp kann beides nicht. Die mitgelieferte
-    ''' libheif bringt für HEIC libde265 und für AVIF dav1d mit (packaging/libheif/dav1d.sh); fehlt
+    ''' libheif bringt für HEIC libde265 und für AVIF dav1d mit (packaging/libheif/dav1d.sh), für
+    ''' Bilder, die eine HEIF als JPEG trägt (die Vorschaubilder von Fujifilm), ihren eingebauten
+    ''' JPEG-Dekoder gegen eine eigene libjpeg (packaging/libheif/jpeg.sh); fehlt
     ''' einer Bibliothek der Dekoder, scheitert heif_decode_image, und die Datei bleibt leer. Damit lassen sich iPhone-Fotos direkt ansehen und bearbeiten,
     ''' statt sie vorher umwandeln zu müssen; geschrieben wird HEIC bewusst NICHT (siehe unten).
     '''
@@ -32,9 +34,12 @@ Namespace Services
     ''' WOHER DIE BIBLIOTHEK KOMMT, hängt von der Plattform ab:
     '''
     '''   Linux    AppImage, portables ZIP (und damit AUR), deb und rpm bringen eine eigene
-    '''            libheif.so.1 mit libde265 und dav1d darin mit (packaging/libheif/build-linux.sh); sie geht
-    '''            der des Systems vor (siehe BundledLibraryOrder), die nur noch Rueckfall ist. Der
-    '''            Flatpak nimmt libheif aus seiner Laufzeit.
+    '''            libheif.so.1 mit libde265, dav1d und libjpeg darin mit (packaging/libheif/build-linux.sh); sie geht
+    '''            der des Systems vor (siehe BundledLibraryOrder), die nur noch Rueckfall ist: fuer
+    '''            den Fall, dass die mitgelieferte fehlt, und je Datei, wenn die mitgelieferte an ihr
+    '''            scheitert (<see cref="SystemLibraryFallback"/>; jeder Weg unten bekommt dafuer
+    '''            die Bindung, gegen die er rechnet). Der Flatpak nimmt libheif aus seiner Laufzeit
+    '''            und kennt keinen Rueckfall.
     '''   macOS    zuerst ImageIO (siehe oben). Als Rueckfall dahinter bringt das Mac-Paket eine
     '''            libheif.dylib im Zuschnitt der Windows-Datei mit, unter runtimes/osx-*/native
     '''            (packaging/libheif/build-macos.sh). Sie geht einer libheif aus Homebrew vor.
@@ -83,6 +88,13 @@ Namespace Services
         ''' Die eingebetteten Vorschaubilder. heif_item_id ist uint32, deshalb UInteger.
         Private Delegate Function GetThumbnailIdsFn(handle As IntPtr, ids As UInteger(), count As Integer) As Integer
         Private Delegate Function GetThumbnailFn(handle As IntPtr, id As UInteger, ByRef thumbnail As IntPtr) As HeifError
+        ''' Die Transformationen eines Eintrags (irot, imir, clap) in der Reihenfolge der Datei, fuer
+        ''' das Vorschaubild. heif_property_id ist wie heif_item_id ein uint32; die Aufzaehlungen
+        ''' fuer Art und Spiegelrichtung sind je vier Byte. Mit outList = Nothing liefert die
+        ''' Abfrage nur die Anzahl.
+        Private Delegate Function GetItemIdFn(handle As IntPtr) As UInteger
+        Private Delegate Function GetTransformPropertiesFn(ctx As IntPtr, itemId As UInteger, outList As UInteger(), count As Integer) As Integer
+        Private Delegate Function GetPropertyIntFn(ctx As IntPtr, itemId As UInteger, propertyId As UInteger) As Integer
 
         ''' <summary>Die Farbangabe eines HEIF als ZAHLEN statt als Profildatei.
         '''
@@ -137,40 +149,80 @@ Namespace Services
         ''' hundertfach im Log und deckte alles andere zu.</summary>
         Private Shared _fallbackLogged As Integer
 
+        Private Delegate Function GetVersionFn() As IntPtr
+        Private Delegate Function InitFn(params As IntPtr) As HeifError
+
         Private Shared _initialized As Boolean
+        ''' Der Handle der zuerst geladenen libheif (der Pruefstand liest ihn per Reflexion).
         Private Shared _library As IntPtr
         Private Shared _loadedLibrary As String
 
-        Private Shared _contextAlloc As ContextAllocFn
-        Private Shared _contextFree As ContextFreeFn
-        Private Shared _readFromFile As ReadFromFileFn
-        Private Shared _getPrimaryHandle As GetPrimaryHandleFn
-        Private Shared _decodeImage As DecodeImageFn
-        Private Shared _getPlane As GetPlaneFn
-        Private Shared _imageGetWidth As GetIntFn
-        Private Shared _imageGetHeight As GetIntFn
-        Private Shared _handleGetWidth As HandleIntFn
-        Private Shared _handleGetHeight As HandleIntFn
-        Private Shared _handleRelease As ReleaseFn
-        Private Shared _imageRelease As ReleaseFn
-        ''' Die beiden fuer das Farbprofil sind OPTIONAL: fehlen sie in einer aelteren libheif,
-        ''' bleibt HEIF vollstaendig nutzbar und nur das Farbmanagement entfaellt. Sie duerfen
-        ''' deshalb nicht im selben Block geladen werden wie die Pflichtexporte, wo ein Fehlgriff
-        ''' die ganze Bibliothek verwirft.
-        Private Shared _profileSize As GetProfileSizeFn
-        Private Shared _rawProfile As GetRawProfileFn
-        Private Shared _nclxProfile As GetNclxProfileFn
-        Private Shared _freeNclx As FreeNclxProfileFn
-        ''' Ebenfalls OPTIONAL: ohne sie gibt es keine schnelle Kachel, sonst aendert sich nichts.
-        Private Shared _thumbnailCount As HandleIntFn
-        Private Shared _thumbnailIds As GetThumbnailIdsFn
-        Private Shared _thumbnail As GetThumbnailFn
-        ''' Ebenfalls OPTIONAL, fuer Bilder mit mehr als 8 Bit: Tiefe der Aufnahme, ob sie Alpha
-        ''' traegt, und die Tiefe des dekodierten Bilds. Fehlen sie, wird jedes Bild mit 8 Bit
-        ''' gelesen wie bisher.
-        Private Shared _lumaBits As HandleIntFn
-        Private Shared _hasAlpha As HandleIntFn
-        Private Shared _bitsRange As GetIntFn
+        ''' <summary>Die Einstiege EINER geladenen libheif. Zwei koennen nebeneinander bestehen: die
+        ''' zuerst geladene (<see cref="_api"/>) und die des Systems als Rueckfall
+        ''' (<see cref="_systemApi"/>, siehe <see cref="SystemLibraryFallback"/>). Jeder Weg unten
+        ''' bekommt die Bindung, gegen die er rechnet, als Parameter; Handles und Bilder der einen
+        ''' gehen nie an die andere.</summary>
+        Private NotInheritable Class LibheifApi
+            Public Library As IntPtr
+            Public Version As String = ""
+            Public ContextAlloc As ContextAllocFn
+            Public ContextFree As ContextFreeFn
+            Public ReadFromFile As ReadFromFileFn
+            Public GetPrimaryHandle As GetPrimaryHandleFn
+            Public DecodeImage As DecodeImageFn
+            Public GetPlane As GetPlaneFn
+            Public ImageGetWidth As GetIntFn
+            Public ImageGetHeight As GetIntFn
+            Public HandleGetWidth As HandleIntFn
+            Public HandleGetHeight As HandleIntFn
+            Public HandleRelease As ReleaseFn
+            Public ImageRelease As ReleaseFn
+            ''' Die beiden fuer das Farbprofil sind OPTIONAL: fehlen sie in einer aelteren libheif,
+            ''' bleibt HEIF vollstaendig nutzbar und nur das Farbmanagement entfaellt. Sie duerfen
+            ''' deshalb nicht im selben Block geladen werden wie die Pflichtexporte, wo ein Fehlgriff
+            ''' die ganze Bibliothek verwirft.
+            Public ProfileSize As GetProfileSizeFn
+            Public RawProfile As GetRawProfileFn
+            Public NclxProfile As GetNclxProfileFn
+            Public FreeNclx As FreeNclxProfileFn
+            ''' Ebenfalls OPTIONAL: ohne sie gibt es keine schnelle Kachel, sonst aendert sich nichts.
+            Public ThumbnailCount As HandleIntFn
+            Public ThumbnailIds As GetThumbnailIdsFn
+            Public Thumbnail As GetThumbnailFn
+            ''' Ebenfalls OPTIONAL (aeltere libheif kennen sie nicht): die Transformationen eines Eintrags. Ohne sie
+            ''' kommt das Vorschaubild so, wie libheif es liefert, auch wenn es die Drehung des
+            ''' Hauptbilds nicht traegt.
+            Public ItemId As GetItemIdFn
+            Public TransformProperties As GetTransformPropertiesFn
+            Public PropertyType As GetPropertyIntFn
+            Public RotationCcw As GetPropertyIntFn
+            Public MirrorDirection As GetPropertyIntFn
+            ''' Ebenfalls OPTIONAL, fuer Bilder mit mehr als 8 Bit: Tiefe der Aufnahme, ob sie Alpha
+            ''' traegt, und die Tiefe des dekodierten Bilds. Fehlen sie, wird jedes Bild mit 8 Bit
+            ''' gelesen wie bisher.
+            Public LumaBits As HandleIntFn
+            Public HasAlpha As HandleIntFn
+            Public BitsRange As GetIntFn
+        End Class
+
+        Private Shared _api As LibheifApi
+        Private Shared _systemApi As LibheifApi
+
+        ''' <summary>Der Rueckfall auf die libheif des Systems, wenn die mitgelieferte an einer
+        ''' Datei scheitert. Nur unter Linux ausserhalb des Flatpak, siehe
+        ''' <see cref="SystemLibraryFallback"/>. Unter macOS bleibt es beim Weg ueber ImageIO und
+        ''' der mitgelieferten dahinter; eine libheif aus Homebrew wird schon heute geladen, wenn
+        ''' die mitgelieferte fehlt.</summary>
+        Private Shared ReadOnly _fallback As New SystemLibraryFallback("libheif", {"libheif.so.1", "libheif.so"})
+
+        ''' <summary>Der Rueckfall fuer die Seite Technik und den Pruefstand. Laedt vorher die
+        ''' zuerst geladene, damit feststeht, ob sie die mitgelieferte ist.</summary>
+        Friend Shared ReadOnly Property SystemFallback As SystemLibraryFallback
+            Get
+                EnsureLoaded()
+                Return _fallback
+            End Get
+        End Property
 
         Private Shared Sub NoteFallbackToLibheif(what As String)
             If Threading.Interlocked.Exchange(_fallbackLogged, 1) = 0 Then
@@ -285,9 +337,11 @@ Namespace Services
                 ' hinlegt" rot - sie ruft diese Liste per Reflexion ab. Die mitgelieferte kommt vor
                 ' der des Systems (BundledLibraryOrder): ueberall dieselbe Fassung, Ubuntu 22.04
                 ' fuehrt nur libheif 1.12, und nicht ueberall ist sie samt libde265 installiert.
+                Dim loadedPath As String = Nothing
                 For Each candidate In BundledLibraryOrder.Arrange(BundledCandidates(candidates))
                     If NativeLibrary.TryLoad(candidate, handle) Then
                         _loadedLibrary = IO.Path.GetFileName(candidate)
+                        loadedPath = candidate
                         Exit For
                     End If
                     handle = IntPtr.Zero
@@ -303,78 +357,138 @@ Namespace Services
                     Return
                 End If
 
-                Try
-                    _contextAlloc = GetExport(Of ContextAllocFn)(handle, "heif_context_alloc")
-                    _contextFree = GetExport(Of ContextFreeFn)(handle, "heif_context_free")
-                    _readFromFile = GetExport(Of ReadFromFileFn)(handle, "heif_context_read_from_file")
-                    _getPrimaryHandle = GetExport(Of GetPrimaryHandleFn)(handle, "heif_context_get_primary_image_handle")
-                    _decodeImage = GetExport(Of DecodeImageFn)(handle, "heif_decode_image")
-                    _getPlane = GetExport(Of GetPlaneFn)(handle, "heif_image_get_plane_readonly")
-                    _imageGetWidth = GetExport(Of GetIntFn)(handle, "heif_image_get_width")
-                    _imageGetHeight = GetExport(Of GetIntFn)(handle, "heif_image_get_height")
-                    _handleGetWidth = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_width")
-                    _handleGetHeight = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_height")
-                    _handleRelease = GetExport(Of ReleaseFn)(handle, "heif_image_handle_release")
-                    _imageRelease = GetExport(Of ReleaseFn)(handle, "heif_image_release")
-                    _library = handle
-                    Try
-                        _profileSize = GetExport(Of GetProfileSizeFn)(handle, "heif_image_handle_get_raw_color_profile_size")
-                        _rawProfile = GetExport(Of GetRawProfileFn)(handle, "heif_image_handle_get_raw_color_profile")
-                    Catch
-                        ' Aeltere libheif ohne diese Exporte: HEIF bleibt nutzbar, nur unverwaltet.
-                        _profileSize = Nothing
-                        _rawProfile = Nothing
-                        DiagnosticLogService.LogAlways("HEIF",
-                            "libheif kennt die Profilabfrage nicht - HEIC wird ohne Farbmanagement gelesen")
-                    End Try
-                    Try
-                        _nclxProfile = GetExport(Of GetNclxProfileFn)(handle, "heif_image_handle_get_nclx_color_profile")
-                        _freeNclx = GetExport(Of FreeNclxProfileFn)(handle, "heif_nclx_color_profile_free")
-                    Catch
-                        ' Ebenfalls optional: ohne sie bleibt nur der Weg ueber ein ICC-Profil.
-                        _nclxProfile = Nothing
-                        _freeNclx = Nothing
-                    End Try
-                    Try
-                        _thumbnailCount = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_number_of_thumbnails")
-                        _thumbnailIds = GetExport(Of GetThumbnailIdsFn)(handle, "heif_image_handle_get_list_of_thumbnail_IDs")
-                        _thumbnail = GetExport(Of GetThumbnailFn)(handle, "heif_image_handle_get_thumbnail")
-                    Catch
-                        ' Optional: ohne sie wird jede Kachel aus dem vollen Bild gerechnet.
-                        _thumbnailCount = Nothing
-                        _thumbnailIds = Nothing
-                        _thumbnail = Nothing
-                    End Try
-                    Try
-                        _lumaBits = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_luma_bits_per_pixel")
-                        _hasAlpha = GetExport(Of HandleIntFn)(handle, "heif_image_handle_has_alpha_channel")
-                        _bitsRange = GetExport(Of GetIntFn)(handle, "heif_image_get_bits_per_pixel_range")
-                    Catch
-                        ' Optional: ohne sie kommt jedes Bild mit 8 Bit, wie vorher.
-                        _lumaBits = Nothing
-                        _hasAlpha = Nothing
-                        _bitsRange = Nothing
-                    End Try
-                Catch
+                Dim api = Bind(handle, "libheif")
+                If api Is Nothing Then
                     ' Ein fehlender Export = Bibliothek unbrauchbar; alles auf Anfang.
-                    _contextAlloc = Nothing : _contextFree = Nothing : _readFromFile = Nothing
-                    _getPrimaryHandle = Nothing : _decodeImage = Nothing : _getPlane = Nothing
-                    _imageGetWidth = Nothing : _imageGetHeight = Nothing
-                    _handleGetWidth = Nothing : _handleGetHeight = Nothing
-                    _handleRelease = Nothing : _imageRelease = Nothing
-                    _profileSize = Nothing : _rawProfile = Nothing
-                    _nclxProfile = Nothing : _freeNclx = Nothing
-                    _thumbnailCount = Nothing : _thumbnailIds = Nothing : _thumbnail = Nothing
-                    _lumaBits = Nothing : _hasAlpha = Nothing : _bitsRange = Nothing
                     NativeLibrary.Free(handle)
                     _library = IntPtr.Zero
                     _loadedLibrary = Nothing
-                End Try
+                    Return
+                End If
+                _api = api
+                _library = handle
+                ' Der Rueckfall muss wissen, ob die geladene die mitgelieferte ist: nur dann gibt es
+                ' eine zweite, andere Datei des Systems.
+                _fallback.PrimaryPath = If(IO.Path.IsPathRooted(loadedPath), loadedPath, "")
+                _fallback.PrimaryVersion = api.Version
             End SyncLock
         End Sub
 
+        ''' <summary>Die Einstiege einer geladenen libheif, oder Nothing, wenn ein Pflichtexport
+        ''' fehlt. Fuer die zuerst geladene wie fuer die des Systems derselbe Weg.</summary>
+        Private Shared Function Bind(handle As IntPtr, label As String) As LibheifApi
+            Dim api As New LibheifApi With {.Library = handle}
+            Try
+                api.ContextAlloc = GetExport(Of ContextAllocFn)(handle, "heif_context_alloc")
+                api.ContextFree = GetExport(Of ContextFreeFn)(handle, "heif_context_free")
+                api.ReadFromFile = GetExport(Of ReadFromFileFn)(handle, "heif_context_read_from_file")
+                api.GetPrimaryHandle = GetExport(Of GetPrimaryHandleFn)(handle, "heif_context_get_primary_image_handle")
+                api.DecodeImage = GetExport(Of DecodeImageFn)(handle, "heif_decode_image")
+                api.GetPlane = GetExport(Of GetPlaneFn)(handle, "heif_image_get_plane_readonly")
+                api.ImageGetWidth = GetExport(Of GetIntFn)(handle, "heif_image_get_width")
+                api.ImageGetHeight = GetExport(Of GetIntFn)(handle, "heif_image_get_height")
+                api.HandleGetWidth = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_width")
+                api.HandleGetHeight = GetExport(Of HandleIntFn)(handle, "heif_image_handle_get_height")
+                api.HandleRelease = GetExport(Of ReleaseFn)(handle, "heif_image_handle_release")
+                api.ImageRelease = GetExport(Of ReleaseFn)(handle, "heif_image_release")
+            Catch
+                Return Nothing
+            End Try
+            ' Aeltere libheif ohne diese Exporte: HEIF bleibt nutzbar, nur unverwaltet.
+            api.ProfileSize = SystemLibraryFallback.TryGetExport(Of GetProfileSizeFn)(handle, "heif_image_handle_get_raw_color_profile_size")
+            api.RawProfile = SystemLibraryFallback.TryGetExport(Of GetRawProfileFn)(handle, "heif_image_handle_get_raw_color_profile")
+            If api.ProfileSize Is Nothing OrElse api.RawProfile Is Nothing Then
+                api.ProfileSize = Nothing
+                api.RawProfile = Nothing
+                DiagnosticLogService.LogAlways("HEIF",
+                    $"{label} kennt die Profilabfrage nicht - HEIC wird ohne Farbmanagement gelesen")
+            End If
+            ' Ebenfalls optional: ohne sie bleibt nur der Weg ueber ein ICC-Profil.
+            api.NclxProfile = SystemLibraryFallback.TryGetExport(Of GetNclxProfileFn)(handle, "heif_image_handle_get_nclx_color_profile")
+            api.FreeNclx = SystemLibraryFallback.TryGetExport(Of FreeNclxProfileFn)(handle, "heif_nclx_color_profile_free")
+            If api.NclxProfile Is Nothing OrElse api.FreeNclx Is Nothing Then
+                api.NclxProfile = Nothing
+                api.FreeNclx = Nothing
+            End If
+            ' Optional: ohne sie wird jede Kachel aus dem vollen Bild gerechnet.
+            api.ThumbnailCount = SystemLibraryFallback.TryGetExport(Of HandleIntFn)(handle, "heif_image_handle_get_number_of_thumbnails")
+            api.ThumbnailIds = SystemLibraryFallback.TryGetExport(Of GetThumbnailIdsFn)(handle, "heif_image_handle_get_list_of_thumbnail_IDs")
+            api.Thumbnail = SystemLibraryFallback.TryGetExport(Of GetThumbnailFn)(handle, "heif_image_handle_get_thumbnail")
+            If api.ThumbnailCount Is Nothing OrElse api.ThumbnailIds Is Nothing OrElse api.Thumbnail Is Nothing Then
+                api.ThumbnailCount = Nothing
+                api.ThumbnailIds = Nothing
+                api.Thumbnail = Nothing
+            End If
+            ' Optional: ohne sie bleibt ein Vorschaubild, das die Drehung des Hauptbilds nicht
+            ' traegt, liegen, wie es gespeichert ist.
+            api.ItemId = SystemLibraryFallback.TryGetExport(Of GetItemIdFn)(handle, "heif_image_handle_get_item_id")
+            api.TransformProperties = SystemLibraryFallback.TryGetExport(Of GetTransformPropertiesFn)(handle, "heif_item_get_transformation_properties")
+            api.PropertyType = SystemLibraryFallback.TryGetExport(Of GetPropertyIntFn)(handle, "heif_item_get_property_type")
+            api.RotationCcw = SystemLibraryFallback.TryGetExport(Of GetPropertyIntFn)(handle, "heif_item_get_property_transform_rotation_ccw")
+            api.MirrorDirection = SystemLibraryFallback.TryGetExport(Of GetPropertyIntFn)(handle, "heif_item_get_property_transform_mirror")
+            If api.ItemId Is Nothing OrElse api.TransformProperties Is Nothing OrElse api.PropertyType Is Nothing OrElse
+               api.RotationCcw Is Nothing OrElse api.MirrorDirection Is Nothing Then
+                api.ItemId = Nothing
+                api.TransformProperties = Nothing
+                api.PropertyType = Nothing
+                api.RotationCcw = Nothing
+                api.MirrorDirection = Nothing
+            End If
+            ' Optional: ohne sie kommt jedes Bild mit 8 Bit, wie vorher.
+            api.LumaBits = SystemLibraryFallback.TryGetExport(Of HandleIntFn)(handle, "heif_image_handle_get_luma_bits_per_pixel")
+            api.HasAlpha = SystemLibraryFallback.TryGetExport(Of HandleIntFn)(handle, "heif_image_handle_has_alpha_channel")
+            api.BitsRange = SystemLibraryFallback.TryGetExport(Of GetIntFn)(handle, "heif_image_get_bits_per_pixel_range")
+            If api.LumaBits Is Nothing OrElse api.HasAlpha Is Nothing OrElse api.BitsRange Is Nothing Then
+                api.LumaBits = Nothing
+                api.HasAlpha = Nothing
+                api.BitsRange = Nothing
+            End If
+            Dim getVersion = SystemLibraryFallback.TryGetExport(Of GetVersionFn)(handle, "heif_get_version")
+            If getVersion IsNot Nothing Then
+                Dim text = getVersion()
+                If text <> IntPtr.Zero Then api.Version = If(Marshal.PtrToStringUTF8(text), "")
+            End If
+            Return api
+        End Function
+
+        ''' <summary>Bindet die libheif des Systems fuer den Rueckfall (siehe
+        ''' <see cref="SystemLibraryFallback.EnsureLoaded"/>): dieselben Pflichtexporte wie bei der
+        ''' zuerst geladenen, sonst wird sie nicht benutzt. heif_init laedt dabei die Erweiterungen
+        ''' der Distribution, unter Debian und Ubuntu stecken dort die Dekoder.</summary>
+        Private Shared Function BindSystem(handle As IntPtr, fullPath As String, reason As Text.StringBuilder) As String
+            Dim api = Bind(handle, "libheif des Systems")
+            If api Is Nothing Then
+                reason.Append("ein Pflichtexport fehlt")
+                Return Nothing
+            End If
+            Dim init = SystemLibraryFallback.TryGetExport(Of InitFn)(handle, "heif_init")
+            If init IsNot Nothing Then
+                Dim result = init(IntPtr.Zero)
+                If result.Code <> 0 Then
+                    reason.Append($"heif_init: {ErrorText(result)}")
+                    Return Nothing
+                End If
+            End If
+            _systemApi = api
+            Return If(api.Version.Length > 0, api.Version, SystemLibraryFallback.VersionFromFileName(fullPath))
+        End Function
+
         Private Shared Function GetExport(Of T)(handle As IntPtr, name As String) As T
             Return Marshal.GetDelegateForFunctionPointer(Of T)(NativeLibrary.GetExport(handle, name))
+        End Function
+
+        ''' <summary>Der Fehler einer libheif als Text: Code, Untercode und die Meldung der
+        ''' Bibliothek.</summary>
+        Private Shared Function ErrorText(err As HeifError) As String
+            Dim message = If(err.Message = IntPtr.Zero, "", Marshal.PtrToStringUTF8(err.Message))
+            Return $"heif_error {err.Code}/{err.Subcode} {message}".TrimEnd()
+        End Function
+
+        ''' <summary>Ist der Aufruf gelungen? Wenn nicht, steht der Fehler im Versuch.</summary>
+        Private Shared Function Succeeded(err As HeifError, attempt As FallbackAttempt) As Boolean
+            If err.Code = 0 Then Return True
+            attempt.Fail($"{err.Code}/{err.Subcode}", ErrorText(err))
+            Return False
         End Function
 
         ''' <summary>Dekodiert die Hauptaufnahme der Datei als Bgra8888 (Besitz beim Aufrufer) oder
@@ -401,8 +515,19 @@ Namespace Services
                     NoteFallbackToLibheif("das Bild")
                 End If
                 If Not LibheifReady Then Return Nothing
-                Return DecodeCore(path)
+                Return WithFallback(path, "Bild", Function(api, attempt) DecodeImage(api, path, attempt))
             End SyncLock
+        End Function
+
+        ''' <summary>Ein Vorgang an einer Datei, erst mit der zuerst geladenen libheif, und
+        ''' scheitert sie, mit der des Systems (<see cref="SystemLibraryFallback.Run"/>). Der Aufrufer
+        ''' haelt Schleuse und Schloss schon, beide Versuche laufen also nacheinander.</summary>
+        Private Shared Function WithFallback(Of T)(path As String, operation As String,
+                                                   work As Func(Of LibheifApi, FallbackAttempt, T)) As T
+            Return _fallback.Run(path, operation,
+                                 Function(attempt) work(_api, attempt),
+                                 AddressOf BindSystem,
+                                 Function(attempt) work(_systemApi, attempt))
         End Function
 
         ''' <summary>Einen PNG-Strom in genau das Format bringen, das der libheif-Weg liefert.
@@ -433,25 +558,40 @@ Namespace Services
             End Using
         End Function
 
-        Private Shared Function DecodeCore(path As String) As SKBitmap
+        ''' <summary>Die Hauptaufnahme mit <paramref name="api"/>. Kommt kein Bild, gilt das als
+        ''' Scheitern, auch ohne Fehler der Bibliothek: eine HEIF-Datei ohne Bild gibt es nicht.</summary>
+        Private Shared Function DecodeImage(api As LibheifApi, path As String, attempt As FallbackAttempt) As SKBitmap
+            Dim bitmap = DecodeCore(api, path, attempt)
+            Return RequireResult(bitmap, bitmap Is Nothing, attempt)
+        End Function
+
+        Private Shared Function DecodeCore(api As LibheifApi, path As String, attempt As FallbackAttempt) As SKBitmap
             Dim ctx As IntPtr = IntPtr.Zero
             Dim handle As IntPtr = IntPtr.Zero
             Dim pathPtr As IntPtr = IntPtr.Zero
             Try
-                ctx = _contextAlloc()
+                ctx = api.ContextAlloc()
                 If ctx = IntPtr.Zero Then Return Nothing
 
                 pathPtr = StringToUtf8(path)
-                If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
-                If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return Nothing
-                Return DecodeHandle(handle, handle)
-            Catch
+                If Not Succeeded(api.ReadFromFile(ctx, pathPtr, IntPtr.Zero), attempt) Then Return Nothing
+                If Not Succeeded(api.GetPrimaryHandle(ctx, handle), attempt) OrElse handle = IntPtr.Zero Then Return Nothing
+                Return DecodeHandle(api, handle, handle, attempt)
+            Catch ex As Exception
+                attempt.Fail(ex.GetType().Name, ex.Message)
                 Return Nothing
             Finally
-                If handle <> IntPtr.Zero Then _handleRelease(handle)
-                If ctx <> IntPtr.Zero Then _contextFree(ctx)
+                If handle <> IntPtr.Zero Then api.HandleRelease(handle)
+                If ctx <> IntPtr.Zero Then api.ContextFree(ctx)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
             End Try
+        End Function
+
+        ''' <summary>Ein leeres Ergebnis ohne Fehler der Bibliothek ist trotzdem ein Scheitern,
+        ''' wo der Vorgang immer etwas liefern muss (das Bild, die Masse).</summary>
+        Private Shared Function RequireResult(Of T)(value As T, isEmpty As Boolean, attempt As FallbackAttempt) As T
+            If isEmpty AndAlso Not attempt.Failed Then attempt.Fail("leer", "kein Ergebnis geliefert")
+            Return value
         End Function
 
         ''' <summary>Das eingebettete Vorschaubild der Hauptaufnahme (Bgra8888, Besitz beim
@@ -459,52 +599,150 @@ Namespace Services
         ''' kennt. Fuer die schnelle Kachel: ein Telefon-HEIC von 12 MP kostete voll dekodiert 130 bis
         ''' 460 ms, sein Vorschaubild (gesehen: 240x320 und 384x512) einige Millisekunden. Es ist
         ''' KLEINER als eine Kachel und deshalb nur ein Platzhalter, bis das scharfe Bild da ist
-        ''' (siehe ImageItem). Gedreht wie das Hauptbild, mit dessen Farbprofil, wenn es kein
-        ''' eigenes traegt.</summary>
+        ''' (siehe ImageItem). Mit dem Farbprofil der Hauptaufnahme, wenn es kein eigenes traegt.
+        '''
+        ''' Gedreht wie das Hauptbild, aber NICHT von selbst: libheif legt auf ein Vorschaubild nur
+        ''' dessen EIGENE Transformationen. Telefone geben ihm die Drehung des Hauptbilds mit,
+        ''' Fujifilm nicht: dort kommt das Hauptbild nach irot 270 hochkant, die drei Vorschaubilder
+        ''' (1600x1200, 640x480, 160x120) quer. Traegt das Vorschaubild keine eigene, legt
+        ''' <see cref="ApplyPrimaryTransforms"/> die des Hauptbilds darauf.</summary>
         Public Shared Function TryDecodeEmbeddedThumbnail(path As String) As SKBitmap
             If String.IsNullOrWhiteSpace(path) OrElse Not IsAvailable Then Return Nothing
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
-                                          If Not LibheifReady OrElse _thumbnailCount Is Nothing Then Return Nothing
-                                          Return DecodeThumbnailCore(path)
+                                          If Not LibheifReady OrElse _api.ThumbnailCount Is Nothing Then Return Nothing
+                                          Return WithFallback(path, "Vorschaubild", Function(api, attempt) DecodeThumbnailCore(api, path, attempt))
                                       End SyncLock
                                   End Function)
         End Function
 
-        Private Shared Function DecodeThumbnailCore(path As String) As SKBitmap
+        ''' <summary>Das Vorschaubild mit <paramref name="api"/>. Traegt die Datei keines, ist das
+        ''' kein Scheitern; nur ein Fehler der Bibliothek ist eines.</summary>
+        Private Shared Function DecodeThumbnailCore(api As LibheifApi, path As String, attempt As FallbackAttempt) As SKBitmap
+            If api.ThumbnailCount Is Nothing Then Return Nothing
             Dim ctx As IntPtr = IntPtr.Zero
             Dim handle As IntPtr = IntPtr.Zero
             Dim thumb As IntPtr = IntPtr.Zero
             Dim pathPtr As IntPtr = IntPtr.Zero
             Try
-                ctx = _contextAlloc()
+                ctx = api.ContextAlloc()
                 If ctx = IntPtr.Zero Then Return Nothing
                 pathPtr = StringToUtf8(path)
-                If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
-                If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return Nothing
-                Dim count = _thumbnailCount(handle)
+                If Not Succeeded(api.ReadFromFile(ctx, pathPtr, IntPtr.Zero), attempt) Then Return Nothing
+                If Not Succeeded(api.GetPrimaryHandle(ctx, handle), attempt) OrElse handle = IntPtr.Zero Then Return Nothing
+                Dim count = api.ThumbnailCount(handle)
                 If count <= 0 Then Return Nothing
                 Dim ids(count - 1) As UInteger
-                If _thumbnailIds(handle, ids, count) <= 0 Then Return Nothing
-                If _thumbnail(handle, ids(0), thumb).Code <> 0 OrElse thumb = IntPtr.Zero Then Return Nothing
+                If api.ThumbnailIds(handle, ids, count) <= 0 Then Return Nothing
+                If Not Succeeded(api.Thumbnail(handle, ids(0), thumb), attempt) OrElse thumb = IntPtr.Zero Then Return Nothing
                 ' Ein Vorschaubild ohne eigenes Profil teilt das der Hauptaufnahme.
-                Dim hasOwnProfile = (_profileSize IsNot Nothing AndAlso _profileSize(thumb) <> IntPtr.Zero)
-                Return DecodeHandle(thumb, If(hasOwnProfile, thumb, handle))
-            Catch
+                Dim hasOwnProfile = (api.ProfileSize IsNot Nothing AndAlso api.ProfileSize(thumb) <> IntPtr.Zero)
+                Dim decoded = DecodeHandle(api, thumb, If(hasOwnProfile, thumb, handle), attempt)
+                If decoded Is Nothing Then Return Nothing
+                Return ApplyPrimaryTransforms(api, ctx, handle, thumb, decoded)
+            Catch ex As Exception
+                attempt.Fail(ex.GetType().Name, ex.Message)
                 Return Nothing
             Finally
-                If thumb <> IntPtr.Zero Then _handleRelease(thumb)
-                If handle <> IntPtr.Zero Then _handleRelease(handle)
-                If ctx <> IntPtr.Zero Then _contextFree(ctx)
+                If thumb <> IntPtr.Zero Then api.HandleRelease(thumb)
+                If handle <> IntPtr.Zero Then api.HandleRelease(handle)
+                If ctx <> IntPtr.Zero Then api.ContextFree(ctx)
                 If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
+        End Function
+
+        ' heif_item_property_type als fourcc: 'irot' und 'imir'.
+        Private Const PropertyTypeRotation As Integer = &H69726F74
+        Private Const PropertyTypeMirror As Integer = &H696D6972
+        ' heif_transform_mirror_direction: 0 kehrt oben und unten um, 1 links und rechts.
+        Private Const MirrorTopBottom As Integer = 0
+        Private Const MirrorLeftRight As Integer = 1
+
+        ''' <summary>Legt die Drehung und Spiegelung des Hauptbilds (irot, imir, in der Reihenfolge
+        ''' der Datei) auf ein Vorschaubild, das selbst keine traegt. libheif wendet beim Dekodieren
+        ''' nur die Transformationen des dekodierten Eintrags an, und manche Kameras geben sie dem
+        ''' Vorschaubild nicht mit. Gibt <paramref name="decoded"/> unveraendert zurueck, wenn nichts
+        ''' zu tun ist, sonst ein neues Bild (das alte ist dann freigegeben).
+        '''
+        ''' Zwei Faelle bleiben unangetastet:
+        '''   - Das Vorschaubild traegt eigene Transformationen: die hat libheif schon angewandt.
+        '''   - Bei einer Vierteldrehung liegt es schon so wie das angezeigte Hauptbild (hochkant zu
+        '''     hochkant oder quer zu quer): dann sind die Pixel selbst gedreht gespeichert, und eine
+        '''     zweite Drehung stellte es quer.
+        ''' Der Beschnitt (clap) bleibt aussen vor: er steht in Bildpunkten des Hauptbilds, und fuer
+        ''' einen Platzhalter zaehlt nur die Lage.</summary>
+        Private Shared Function ApplyPrimaryTransforms(api As LibheifApi, ctx As IntPtr, primary As IntPtr,
+                                                       thumb As IntPtr, decoded As SKBitmap) As SKBitmap
+            Dim steps = PrimaryTransformSteps(api, ctx, primary, thumb, decoded)
+            If steps Is Nothing Then Return decoded
+            Dim current = decoded
+            For Each [step] In steps
+                Dim nextBitmap As SKBitmap
+                If [step].IsRotation Then
+                    ' irot zaehlt gegen den Uhrzeigersinn, ApplyQuarterRotation mit ihm.
+                    nextBitmap = ImageOrientationService.ApplyQuarterRotation(current, 360 - [step].Value)
+                Else
+                    nextBitmap = ImageOrientationService.ApplyOrientation(current,
+                        If([step].Value = MirrorLeftRight, SKEncodedOrigin.TopRight, SKEncodedOrigin.BottomLeft))
+                End If
+                If Not Object.ReferenceEquals(nextBitmap, current) Then
+                    current.Dispose()
+                    current = nextBitmap
+                End If
+            Next
+            Return current
+        End Function
+
+        ''' <summary>Die Schritte fuer <see cref="ApplyPrimaryTransforms"/>, oder Nothing, wenn das
+        ''' Vorschaubild bleibt, wie es ist. Nur Abfragen an libheif, kein Bild wird angefasst.</summary>
+        Private Shared Function PrimaryTransformSteps(api As LibheifApi, ctx As IntPtr, primary As IntPtr,
+                                                      thumb As IntPtr, decoded As SKBitmap) As List(Of (IsRotation As Boolean, Value As Integer))
+            If api.TransformProperties Is Nothing Then Return Nothing
+            Try
+                Dim thumbId = api.ItemId(thumb)
+                If api.TransformProperties(ctx, thumbId, Nothing, 0) > 0 Then Return Nothing
+                Dim primaryId = api.ItemId(primary)
+                Dim count = api.TransformProperties(ctx, primaryId, Nothing, 0)
+                If count <= 0 Then Return Nothing
+                Dim ids(count - 1) As UInteger
+                count = Math.Min(count, api.TransformProperties(ctx, primaryId, ids, count))
+
+                ' Erst sammeln, dann pruefen: die Pruefung braucht die Summe der Drehungen.
+                Dim steps As New List(Of (IsRotation As Boolean, Value As Integer))
+                Dim quarterTurns = 0
+                For i = 0 To count - 1
+                    Select Case api.PropertyType(ctx, primaryId, ids(i))
+                        Case PropertyTypeRotation
+                            Dim ccw = ImageOrientationService.NormalizeQuarterTurn(api.RotationCcw(ctx, primaryId, ids(i)))
+                            If ccw <> 0 Then
+                                steps.Add((True, ccw))
+                                If ccw <> 180 Then quarterTurns += 1
+                            End If
+                        Case PropertyTypeMirror
+                            Dim direction = api.MirrorDirection(ctx, primaryId, ids(i))
+                            If direction = MirrorTopBottom OrElse direction = MirrorLeftRight Then steps.Add((False, direction))
+                    End Select
+                Next
+                If steps.Count = 0 Then Return Nothing
+
+                If quarterTurns Mod 2 = 1 Then
+                    Dim shownWidth = api.HandleGetWidth(primary)
+                    Dim shownHeight = api.HandleGetHeight(primary)
+                    If shownWidth <> shownHeight AndAlso decoded.Width <> decoded.Height AndAlso
+                       (shownHeight > shownWidth) = (decoded.Height > decoded.Width) Then Return Nothing
+                End If
+                Return steps
+            Catch ex As Exception
+                DiagnosticLogService.LogException("HEIF.ThumbnailTransform", ex)
+                Return Nothing
             End Try
         End Function
 
         ''' <summary>Traegt die Aufnahme hinter diesem Handle mehr als 8 Bit, und kennt die
         ''' Bibliothek die Abfragen dafuer?</summary>
-        Private Shared Function IsHighBitDepth(handle As IntPtr) As Boolean
-            If handle = IntPtr.Zero OrElse _lumaBits Is Nothing OrElse _bitsRange Is Nothing Then Return False
-            Return _lumaBits(handle) > 8
+        Private Shared Function IsHighBitDepth(api As LibheifApi, handle As IntPtr) As Boolean
+            If handle = IntPtr.Zero OrElse api.LumaBits Is Nothing OrElse api.BitsRange Is Nothing Then Return False
+            Return api.LumaBits(handle) > 8
         End Function
 
         ''' <summary>Traegt diese Datei mehr als 8 Bit in einer Form, die als tiefe Quelle taugt
@@ -518,25 +756,33 @@ Namespace Services
             If Not IsSupportedHeif(path) OrElse Not File.Exists(path) Then Return False
             If MacImageIoService.IsAvailable Then Return False
             SyncLock _nativeLock
-                If Not LibheifReady OrElse _hasAlpha Is Nothing Then Return False
-                Dim ctx As IntPtr = IntPtr.Zero
-                Dim handle As IntPtr = IntPtr.Zero
-                Dim pathPtr As IntPtr = IntPtr.Zero
-                Try
-                    ctx = _contextAlloc()
-                    If ctx = IntPtr.Zero Then Return False
-                    pathPtr = StringToUtf8(path)
-                    If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return False
-                    If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return False
-                    Return IsHighBitDepth(handle) AndAlso _hasAlpha(handle) = 0
-                Catch
-                    Return False
-                Finally
-                    If handle <> IntPtr.Zero Then _handleRelease(handle)
-                    If ctx <> IntPtr.Zero Then _contextFree(ctx)
-                    If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
-                End Try
+                If Not LibheifReady OrElse _api.HasAlpha Is Nothing Then Return False
+                Return WithFallback(path, "Tiefe", Function(api, attempt) IsDeepCore(api, path, attempt))
             End SyncLock
+        End Function
+
+        ''' <summary>Der Blick in die Kopfdaten fuer <see cref="IsDeepHeif"/>. False ist auch eine
+        ''' gueltige Antwort; gescheitert ist nur, wer die Kopfdaten nicht lesen konnte.</summary>
+        Private Shared Function IsDeepCore(api As LibheifApi, path As String, attempt As FallbackAttempt) As Boolean
+            If api.HasAlpha Is Nothing Then Return False
+            Dim ctx As IntPtr = IntPtr.Zero
+            Dim handle As IntPtr = IntPtr.Zero
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                ctx = api.ContextAlloc()
+                If ctx = IntPtr.Zero Then Return False
+                pathPtr = StringToUtf8(path)
+                If Not Succeeded(api.ReadFromFile(ctx, pathPtr, IntPtr.Zero), attempt) Then Return False
+                If Not Succeeded(api.GetPrimaryHandle(ctx, handle), attempt) OrElse handle = IntPtr.Zero Then Return False
+                Return IsHighBitDepth(api, handle) AndAlso api.HasAlpha(handle) = 0
+            Catch ex As Exception
+                attempt.Fail(ex.GetType().Name, ex.Message)
+                Return False
+            Finally
+                If handle <> IntPtr.Zero Then api.HandleRelease(handle)
+                If ctx <> IntPtr.Zero Then api.ContextFree(ctx)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
         End Function
 
         ''' <summary>Die Hauptaufnahme mit 16 Bit je Kanal (Rgba16161616, deckend, sRGB ohne
@@ -549,27 +795,37 @@ Namespace Services
             Return DecodeGate.Run(Function()
                                       SyncLock _nativeLock
                                           If Not LibheifReady Then Return Nothing
-                                          Dim ctx As IntPtr = IntPtr.Zero
-                                          Dim handle As IntPtr = IntPtr.Zero
-                                          Dim pathPtr As IntPtr = IntPtr.Zero
-                                          Try
-                                              ctx = _contextAlloc()
-                                              If ctx = IntPtr.Zero Then Return Nothing
-                                              pathPtr = StringToUtf8(path)
-                                              If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return Nothing
-                                              If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return Nothing
-                                              If Not IsHighBitDepth(handle) OrElse _hasAlpha(handle) <> 0 Then Return Nothing
-                                              Return DecodeDeepHandle(handle, handle, True)
-                                          Catch ex As Exception
-                                              DiagnosticLogService.LogException("HEIF.TryDecodeDeep", ex)
-                                              Return Nothing
-                                          Finally
-                                              If handle <> IntPtr.Zero Then _handleRelease(handle)
-                                              If ctx <> IntPtr.Zero Then _contextFree(ctx)
-                                              If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
-                                          End Try
+                                          Return WithFallback(path, "tiefes Bild",
+                                                              Function(api, attempt)
+                                                                  Dim deep = DecodeDeepCore(api, path, attempt)
+                                                                  Return RequireResult(deep, deep Is Nothing, attempt)
+                                                              End Function)
                                       End SyncLock
                                   End Function)
+        End Function
+
+        Private Shared Function DecodeDeepCore(api As LibheifApi, path As String, attempt As FallbackAttempt) As SKBitmap
+            If api.HasAlpha Is Nothing Then Return Nothing
+            Dim ctx As IntPtr = IntPtr.Zero
+            Dim handle As IntPtr = IntPtr.Zero
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                ctx = api.ContextAlloc()
+                If ctx = IntPtr.Zero Then Return Nothing
+                pathPtr = StringToUtf8(path)
+                If Not Succeeded(api.ReadFromFile(ctx, pathPtr, IntPtr.Zero), attempt) Then Return Nothing
+                If Not Succeeded(api.GetPrimaryHandle(ctx, handle), attempt) OrElse handle = IntPtr.Zero Then Return Nothing
+                If Not IsHighBitDepth(api, handle) OrElse api.HasAlpha(handle) <> 0 Then Return Nothing
+                Return DecodeDeepHandle(api, handle, handle, True, attempt)
+            Catch ex As Exception
+                DiagnosticLogService.LogException("HEIF.TryDecodeDeep", ex)
+                attempt.Fail(ex.GetType().Name, ex.Message)
+                Return Nothing
+            Finally
+                If handle <> IntPtr.Zero Then api.HandleRelease(handle)
+                If ctx <> IntPtr.Zero Then api.ContextFree(ctx)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
         End Function
 
         ''' <summary>Ein Bild mit mehr als 8 Bit aus einem libheif-Handle als Rgba16161616 in sRGB
@@ -581,21 +837,22 @@ Namespace Services
         ''' (<see cref="ColorManagementService.ToSrgbSoftGamut"/>).</summary>
         ''' <param name="opaque">Deckend anlegen (die tiefe Quelle der Kette); sonst
         ''' unvormultipliziert mit dem Alpha der Datei.</param>
-        Private Shared Function DecodeDeepHandle(handle As IntPtr, profileHandle As IntPtr, opaque As Boolean) As SKBitmap
+        Private Shared Function DecodeDeepHandle(api As LibheifApi, handle As IntPtr, profileHandle As IntPtr, opaque As Boolean,
+                                                 attempt As FallbackAttempt) As SKBitmap
             Dim img As IntPtr = IntPtr.Zero
             Try
-                If _decodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRrggbbaaLe, IntPtr.Zero).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
+                If Not Succeeded(api.DecodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRrggbbaaLe, IntPtr.Zero), attempt) OrElse img = IntPtr.Zero Then Return Nothing
 
-                Dim width = _imageGetWidth(img, ChannelInterleaved)
-                Dim height = _imageGetHeight(img, ChannelInterleaved)
+                Dim width = api.ImageGetWidth(img, ChannelInterleaved)
+                Dim height = api.ImageGetHeight(img, ChannelInterleaved)
                 If width <= 0 OrElse height <= 0 Then Return Nothing
                 If CLng(width) * CLng(height) > Integer.MaxValue \ 8 Then Return Nothing
-                Dim bits = _bitsRange(img, ChannelInterleaved)
+                Dim bits = api.BitsRange(img, ChannelInterleaved)
                 If bits <= 8 OrElse bits > 16 Then Return Nothing
                 Dim maxValue = (1 << bits) - 1
 
                 Dim stride = 0
-                Dim plane = _getPlane(img, ChannelInterleaved, stride)
+                Dim plane = api.GetPlane(img, ChannelInterleaved, stride)
                 If plane = IntPtr.Zero OrElse stride < width * 8 Then Return Nothing
 
                 Dim bitmap = ImageProcessor.NewDeepBitmap(width, height, If(opaque, SKAlphaType.Opaque, SKAlphaType.Unpremul))
@@ -620,7 +877,7 @@ Namespace Services
                             Marshal.Copy(row, 0, New IntPtr(target.ToInt64() + CLng(y) * targetStride), width * 4)
                         End Sub)
 
-                    Using profile = ReadColorProfile(profileHandle)
+                    Using profile = ReadColorProfile(api, profileHandle)
                         Dim managed = ColorManagementService.ToSrgbSoftGamut(bitmap, profile)
                         If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
                         Return managed
@@ -632,7 +889,7 @@ Namespace Services
             Catch
                 Return Nothing
             Finally
-                If img <> IntPtr.Zero Then _imageRelease(img)
+                If img <> IntPtr.Zero Then api.ImageRelease(img)
             End Try
         End Function
 
@@ -680,10 +937,13 @@ Namespace Services
         ''' erst am Ende gerundet: die Wandlung des Profils rechnet so auf den Werten der Datei und
         ''' nicht auf schon gerundeten. Scheitert das, bleibt der 8-Bit-Weg darunter. Ein Bild mit
         ''' 8 Bit nimmt ihn unveraendert, ohne Profil oder mit sRGB also Byte fuer Byte wie bisher.</summary>
-        Private Shared Function DecodeHandle(handle As IntPtr, profileHandle As IntPtr) As SKBitmap
-            If IsHighBitDepth(handle) Then
-                Dim hasAlpha = _hasAlpha IsNot Nothing AndAlso _hasAlpha(handle) <> 0
-                Using deep = DecodeDeepHandle(handle, profileHandle, Not hasAlpha)
+        Private Shared Function DecodeHandle(api As LibheifApi, handle As IntPtr, profileHandle As IntPtr,
+                                             attempt As FallbackAttempt) As SKBitmap
+            If IsHighBitDepth(api, handle) Then
+                Dim hasAlpha = api.HasAlpha IsNot Nothing AndAlso api.HasAlpha(handle) <> 0
+                ' Ein eigener Versuch fuer den tiefen Weg: scheitert er, bleibt der 8-Bit-Weg
+                ' darunter, und erst dessen Fehler zaehlt.
+                Using deep = DecodeDeepHandle(api, handle, profileHandle, Not hasAlpha, New FallbackAttempt())
                     If deep IsNot Nothing Then
                         Dim rounded = RoundDeepToBgra(deep)
                         If rounded IsNot Nothing Then Return rounded
@@ -694,15 +954,15 @@ Namespace Services
             Try
                 ' IMMER mit Alphakanal dekodieren: das kostet bei undurchsichtigen Bildern nur den
                 ' vierten Kanal, erspart aber einen zweiten Zweig - und HEIC kann Transparenz.
-                If _decodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRgba, IntPtr.Zero).Code <> 0 OrElse img = IntPtr.Zero Then Return Nothing
+                If Not Succeeded(api.DecodeImage(handle, img, ColorspaceRgb, ChromaInterleavedRgba, IntPtr.Zero), attempt) OrElse img = IntPtr.Zero Then Return Nothing
 
-                Dim width = _imageGetWidth(img, ChannelInterleaved)
-                Dim height = _imageGetHeight(img, ChannelInterleaved)
+                Dim width = api.ImageGetWidth(img, ChannelInterleaved)
+                Dim height = api.ImageGetHeight(img, ChannelInterleaved)
                 If width <= 0 OrElse height <= 0 Then Return Nothing
                 If CLng(width) * CLng(height) > Integer.MaxValue \ 4 Then Return Nothing
 
                 Dim stride = 0
-                Dim plane = _getPlane(img, ChannelInterleaved, stride)
+                Dim plane = api.GetPlane(img, ChannelInterleaved, stride)
                 If plane = IntPtr.Zero OrElse stride < width * 4 Then Return Nothing
 
                 ' libheif liefert R,G,B,A - Skia erwartet bei Bgra8888 B,G,R,A. Zeilenweise
@@ -735,7 +995,7 @@ Namespace Services
                     ' Ordner voller HEIC erzeugt eines je Datei. Gewandelt wird sanft an den
                     ' Raendern von sRGB, wie im tiefen Weg (DecodeDeepHandle): ein HEIC in
                     ' Display P3 kommt mit 8 und mit 10 Bit gleich an.
-                    Using profile = ReadColorProfile(profileHandle)
+                    Using profile = ReadColorProfile(api, profileHandle)
                         Dim managed = ColorManagementService.ToSrgbSoftGamut(bitmap, profile)
                         If Not Object.ReferenceEquals(managed, bitmap) Then bitmap.Dispose()
                         Return managed
@@ -748,7 +1008,7 @@ Namespace Services
                 Return Nothing
             Finally
                 ' Nur das eigene Bild: Handle und Kontext gehoeren dem Aufrufer.
-                If img <> IntPtr.Zero Then _imageRelease(img)
+                If img <> IntPtr.Zero Then api.ImageRelease(img)
             End Try
         End Function
 
@@ -757,10 +1017,10 @@ Namespace Services
         ''' Zwei Wege, in dieser Reihenfolge: ein eingebettetes ICC-Profil, sonst die nclx-Angabe.
         ''' Das ICC hat Vorrang, weil es die genauere Auskunft ist - nclx nennt nur Kennzahlen aus
         ''' einer Tabelle, ein Profil beschreibt die Kurve selbst.</summary>
-        Private Shared Function ReadColorProfile(handle As IntPtr) As SKColorSpace
-            Dim icc = ReadIccProfile(handle)
+        Private Shared Function ReadColorProfile(api As LibheifApi, handle As IntPtr) As SKColorSpace
+            Dim icc = ReadIccProfile(api, handle)
             If icc IsNot Nothing Then Return icc
-            Return ReadNclxProfile(handle)
+            Return ReadNclxProfile(api, handle)
         End Function
 
         ''' <summary>Die nclx-Angabe als Farbraum, oder Nothing.
@@ -772,11 +1032,11 @@ Namespace Services
         '''
         ''' sRGB (Primaerfarben 1 mit Kurve 13) kommt ebenfalls als Nothing zurueck: da ist nichts
         ''' zu wandeln, und der Aufrufer spart sich die Kopie.</summary>
-        Private Shared Function ReadNclxProfile(handle As IntPtr) As SKColorSpace
-            If handle = IntPtr.Zero OrElse _nclxProfile Is Nothing Then Return Nothing
+        Private Shared Function ReadNclxProfile(api As LibheifApi, handle As IntPtr) As SKColorSpace
+            If handle = IntPtr.Zero OrElse api.NclxProfile Is Nothing Then Return Nothing
             Dim raw As IntPtr = IntPtr.Zero
             Try
-                If _nclxProfile(handle, raw).Code <> 0 OrElse raw = IntPtr.Zero Then Return Nothing
+                If api.NclxProfile(handle, raw).Code <> 0 OrElse raw = IntPtr.Zero Then Return Nothing
                 Dim nclx = Marshal.PtrToStructure(Of HeifNclx)(raw)
 
                 ' Grobe Plausibilitaet: die Schluessel von H.273 liegen in diesem Bereich. Kommt
@@ -814,23 +1074,23 @@ Namespace Services
                 DiagnosticLogService.LogException("HEIF.ReadNclxProfile", ex)
                 Return Nothing
             Finally
-                If raw <> IntPtr.Zero Then _freeNclx?.Invoke(raw)
+                If raw <> IntPtr.Zero Then api.FreeNclx?.Invoke(raw)
             End Try
         End Function
 
         ''' <summary>Das eingebettete ICC-Profil der Aufnahme, oder Nothing.</summary>
-        Private Shared Function ReadIccProfile(handle As IntPtr) As SKColorSpace
-            If handle = IntPtr.Zero OrElse _profileSize Is Nothing OrElse _rawProfile Is Nothing Then Return Nothing
+        Private Shared Function ReadIccProfile(api As LibheifApi, handle As IntPtr) As SKColorSpace
+            If handle = IntPtr.Zero OrElse api.ProfileSize Is Nothing OrElse api.RawProfile Is Nothing Then Return Nothing
             Dim buffer As IntPtr = IntPtr.Zero
             Try
-                Dim size = _profileSize(handle).ToInt64()
+                Dim size = api.ProfileSize(handle).ToInt64()
                 ' Null heisst schlicht "kein ICC an dieser Datei". Die obere Schranke faengt einen
                 ' unsinnigen Wert ab, bevor daraus eine Speicheranforderung wird.
                 If size <= 0 OrElse size > 16 * 1024 * 1024 Then Return Nothing
 
                 Dim length = CInt(size)
                 buffer = Marshal.AllocCoTaskMem(length)
-                If _rawProfile(handle, buffer).Code <> 0 Then Return Nothing
+                If api.RawProfile(handle, buffer).Code <> 0 Then Return Nothing
 
                 Dim bytes(length - 1) As Byte
                 Marshal.Copy(buffer, bytes, 0, length)
@@ -864,7 +1124,8 @@ Namespace Services
                 End If
                 If Not LibheifReady Then Return Nothing
 
-                Using bmp = DecodeCore(path)
+                ' Derselbe Vorgang wie beim Bild: was dort die des Systems las, liest sie auch hier.
+                Using bmp = WithFallback(path, "Bild", Function(api, attempt) DecodeImage(api, path, attempt))
                     Return PngEncoder.EncodeToStream(bmp, PngPurpose.Transient)
                 End Using
             End SyncLock
@@ -887,25 +1148,33 @@ Namespace Services
                     NoteFallbackToLibheif("die Maße")
                 End If
                 If Not LibheifReady Then Return (0, 0)
-
-                Dim ctx As IntPtr = IntPtr.Zero
-                Dim handle As IntPtr = IntPtr.Zero
-                Dim pathPtr As IntPtr = IntPtr.Zero
-                Try
-                    ctx = _contextAlloc()
-                    If ctx = IntPtr.Zero Then Return (0, 0)
-                    pathPtr = StringToUtf8(path)
-                    If _readFromFile(ctx, pathPtr, IntPtr.Zero).Code <> 0 Then Return (0, 0)
-                    If _getPrimaryHandle(ctx, handle).Code <> 0 OrElse handle = IntPtr.Zero Then Return (0, 0)
-                    Return (_handleGetWidth(handle), _handleGetHeight(handle))
-                Catch
-                    Return (0, 0)
-                Finally
-                    If handle <> IntPtr.Zero Then _handleRelease(handle)
-                    If ctx <> IntPtr.Zero Then _contextFree(ctx)
-                    If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
-                End Try
+                Return WithFallback(path, "Kopf",
+                                    Function(api, attempt)
+                                        Dim size = SizeCore(api, path, attempt)
+                                        Return RequireResult(size, size.Width <= 0 OrElse size.Height <= 0, attempt)
+                                    End Function)
             End SyncLock
+        End Function
+
+        Private Shared Function SizeCore(api As LibheifApi, path As String, attempt As FallbackAttempt) As (Width As Integer, Height As Integer)
+            Dim ctx As IntPtr = IntPtr.Zero
+            Dim handle As IntPtr = IntPtr.Zero
+            Dim pathPtr As IntPtr = IntPtr.Zero
+            Try
+                ctx = api.ContextAlloc()
+                If ctx = IntPtr.Zero Then Return (0, 0)
+                pathPtr = StringToUtf8(path)
+                If Not Succeeded(api.ReadFromFile(ctx, pathPtr, IntPtr.Zero), attempt) Then Return (0, 0)
+                If Not Succeeded(api.GetPrimaryHandle(ctx, handle), attempt) OrElse handle = IntPtr.Zero Then Return (0, 0)
+                Return (api.HandleGetWidth(handle), api.HandleGetHeight(handle))
+            Catch ex As Exception
+                attempt.Fail(ex.GetType().Name, ex.Message)
+                Return (0, 0)
+            Finally
+                If handle <> IntPtr.Zero Then api.HandleRelease(handle)
+                If ctx <> IntPtr.Zero Then api.ContextFree(ctx)
+                If pathPtr <> IntPtr.Zero Then Marshal.FreeCoTaskMem(pathPtr)
+            End Try
         End Function
 
         Private Shared Function StringToUtf8(value As String) As IntPtr

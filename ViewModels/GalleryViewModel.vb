@@ -14398,7 +14398,7 @@ Namespace ViewModels
         ''' zusätzlich drin, weil der Renderer es lesen kann und die Collage es bisher annahm.</summary>
         Private Shared Function IsCollageSourcePath(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            If IO.Path.GetExtension(path).ToLowerInvariant() = ".ico" Then Return True
+            If IcoPreviewService.IsSupportedIco(path) Then Return True
             Return IsBatchImageEditReadable(path)
         End Function
 
@@ -14690,6 +14690,8 @@ Namespace ViewModels
         ''' Einstellung; da geht es um Geschwindigkeit gegen Aufloesung.</summary>
         Private Shared Function BatchDevelopsRaw(sourcePath As String) As Boolean
             If Not RawPreviewService.IsSupportedRaw(sourcePath) Then Return True
+            ' Lineares Licht (EXR, Radiance, TIFF mit Gleitkomma) hat keine Vorschau zum Ausweichen.
+            If RawDecodeService.IsLinearLightSource(sourcePath) Then Return True
             If RawSidecarService.Exists(sourcePath) Then Return True
             Return AppSettingsService.Load().DevelopRawInBatch
         End Function
@@ -14714,9 +14716,15 @@ Namespace ViewModels
                    FpxService.IsFpx(path)
         End Function
 
+        ''' <summary>Laesst sich diese Datei an Ort und Stelle ueberschreiben? Die Endung allein
+        ''' reicht nicht: ein JPEG mit 12 Bit oder verlustfrei endet ebenfalls auf .jpg, SaveImage
+        ''' lehnt es als Ziel aber ab, weil Skia es nur als gewoehnliches 8-Bit-JPEG schreiben
+        ''' koennte. Ohne diese Frage bot der Stapel "Originale ueberschreiben" an, und die Datei
+        ''' zaehlte danach als nicht geschrieben.</summary>
         Public Shared Function IsBatchImageEditWritable(path As String) As Boolean
             If String.IsNullOrWhiteSpace(path) Then Return False
-            Return BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant())
+            If Not BatchImageEditWritableExtensions.Contains(IO.Path.GetExtension(path).ToLowerInvariant()) Then Return False
+            Return Not JpegTurboDecodeService.IsTurboJpeg(path)
         End Function
 
         ''' <summary>Bekommt dieses Element beim Ueberschreiben in "Anpassungen anwenden" sein REZEPT
@@ -14923,9 +14931,10 @@ Namespace ViewModels
         ''' dafuer entstehen NEUE Dateien im gewaehlten Zielformat. GIF liefert das erste Einzelbild.
         ''' HEIC steht hier ohne Verfuegbarkeitspruefung: ohne libheif scheitert der Decode sichtbar,
         ''' statt dass der Menuepunkt je nach System verschwindet.</summary>
-        Private Shared ReadOnly BatchImageEditReadableExtensions As String() = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif",
+        Private Shared ReadOnly BatchImageEditReadableExtensions As String() = {".jpg", ".jpeg", ".jpe", ".jfif", ".jps", ".png", ".apng", ".webp", ".bmp", ".wbmp", ".gif",
                                                                                 ".heic", ".heif", ".hif", ".avif", ".jxl",
-                                                                                ".tif", ".tiff"}
+                                                                                ".tif", ".tiff",
+                                                                                ".jp2", ".j2k", ".jph", ".j2c", ".jpc", ".jpf", ".jhc"}
 
         ''' <summary>Formate, die sich AN ORT UND STELLE ueberschreiben lassen - dafuer braucht es
         ''' einen Encoder fuer genau dieses Format (siehe ImageProcessor.CanEncodeToTargetExtension).
@@ -17236,7 +17245,7 @@ Namespace ViewModels
             If result Is Nothing Then Return
             Dim isDngConversion = String.Equals(result.Format, "DNG", StringComparison.OrdinalIgnoreCase)
             If isDngConversion Then
-                targetItems = targetItems.Where(Function(i) RawPreviewService.IsSupportedRaw(i.FilePath) AndAlso
+                targetItems = targetItems.Where(Function(i) RawPreviewService.IsCameraRaw(i.FilePath) AndAlso
                                                         Not String.Equals(Path.GetExtension(i.FilePath), ".dng", StringComparison.OrdinalIgnoreCase)).
                                           ToList()
                 If targetItems.Count = 0 Then
