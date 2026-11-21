@@ -1,4 +1,4 @@
-## Unreleased
+## 0.9.89
 
 ### Changes
 
@@ -62,6 +62,11 @@
   computing it for every tile, which made scrolling stutter on many computers. The shadow is a
   little darker, and the buttons for viewing, adjusting and deleting sit on a darker background,
   so they stand out better on bright pictures.
+
+- Preloading the thumbnails of a large folder no longer pushes out thumbnails that were just
+  loaded. In folders with more pictures than the thumbnail memory holds, the gallery kept loading
+  and throwing away thumbnails, which slowed down the visible tiles while scrolling and drove up
+  memory use.
 
 - The tile ".." that leads up to the parent folder no longer shows a date in the gallery. Its date
   stood among the pictures as if it belonged to them. Sorting by date keeps it at the front.

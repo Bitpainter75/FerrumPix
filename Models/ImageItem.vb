@@ -2498,7 +2498,8 @@ Namespace Models
                         _viewportQueue.RemoveAt(_viewportQueue.Count - 1)
                         item._inViewportQueue = False
                         item._isThumbnailLoading = True
-                    ElseIf _backgroundQueue.Count > 0 AndAlso _runningBackgroundWorkers < MaxConcurrentBackgroundJobs Then
+                    ElseIf _backgroundQueue.Count > 0 AndAlso _runningBackgroundWorkers < MaxConcurrentBackgroundJobs AndAlso
+                           TakeBackgroundItemsWhileRoomLocked() Then
                         ' LIFO: most recently accessed background item first
                         item = _backgroundQueue(_backgroundQueue.Count - 1)
                         _backgroundQueue.RemoveAt(_backgroundQueue.Count - 1)
@@ -2528,6 +2529,36 @@ Namespace Models
                     If isBackgroundItem Then _runningBackgroundWorkers -= 1
                 End SyncLock
             End While
+        End Function
+
+        ''' <summary>Raeumt die Hintergrund-Schlange auf, solange der Speicher der Vorschaubilder voll
+        ''' ist, und sagt, ob danach noch ein Element zum Laden obenauf liegt. Unter
+        ''' _thumbnailQueueLock aufrufen.
+        '''
+        ''' VORLADEN DARF NICHTS VERDRAENGEN. Die Hintergrund-Schlange nimmt ganze Ordner samt
+        ''' Unterordnern auf, leicht mehrere tausend Bilder. Lud sie ueber die Grenze
+        ''' (MaxResidentThumbnails) hinaus weiter, warf jedes neue Bild ein anderes, kurz vorher
+        ''' geladenes wieder hinaus: ein Kreislauf aus Laden und Verwerfen ohne Ende, der die
+        ''' sichtbaren Kacheln beim schnellen Rollen hinter sich warten liess und den Speicher
+        ''' hochtrieb. Ist die Grenze erreicht, faellt ein noch nicht gehaltenes Element deshalb aus
+        ''' der Schlange (Zustand 0); es kommt wieder dran, sobald es sichtbar wird. Ein Element,
+        ''' das schon gehalten wird (Platzhalter, der sein scharfes Bild bekommt), ersetzt nur sein
+        ''' eigenes Bild und bleibt. Ebenso bleibt ein als sichtbar gepinntes Element: ueber die
+        ''' Hintergrund-Schlange laeuft auch der zweite Versuch nach einem Ladefehler
+        ''' (RetryLocalThumbnailAfterFailure), und eine sichtbare Kachel, die hier herausfiele,
+        ''' bliebe dunkel, bis wieder gerollt wird.</summary>
+        Private Shared Function TakeBackgroundItemsWhileRoomLocked() As Boolean
+            While _backgroundQueue.Count > 0
+                Dim candidate = _backgroundQueue(_backgroundQueue.Count - 1)
+                If candidate._residentLruNode IsNot Nothing OrElse candidate._isPinnedVisible OrElse
+                   _residentLru.Count < _maxResidentThumbnails Then Return True
+                _backgroundQueue.RemoveAt(_backgroundQueue.Count - 1)
+                candidate._inBackgroundQueue = False
+                If candidate._thumbState = 1 AndAlso Not candidate._inViewportQueue AndAlso Not candidate._isThumbnailLoading Then
+                    candidate._thumbState = 0
+                End If
+            End While
+            Return False
         End Function
 
         ' Günstiger, unsynchronisierter Best-Effort-Check (kein Lock nötig - im schlimmsten Fall
